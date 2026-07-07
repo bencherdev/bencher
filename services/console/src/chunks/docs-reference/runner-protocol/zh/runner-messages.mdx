@@ -4,7 +4,7 @@
 
 | Event       | 描述                                       | 负载                                                                 |
 | ----------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
-| `ready`     | Runner 空闲并请求一个 Job           | 可选的 `poll_timeout`（1-900 秒）和 `runner` 元数据（`os`、`arch`、`version`） |
+| `ready`     | Runner 空闲并请求一个 Job           | 可选的 `poll_timeout`（1-900 秒）和 `runner` 元数据（`os`、`arch`、`version`、可选的更新通道 `channel` 和可选的二进制校验和 `checksum`） |
 | `running`   | Job 设置完成，基准测试正在启动 | 无                                                                  |
 | `heartbeat` | 周期性存活信号（约每秒一次）  | 无                                                                    |
 | `completed` | 基准测试成功完成              | `job`（Job UUID）和 `results`（每次迭代的输出）                   |

@@ -28,6 +28,8 @@ mod messenger;
 mod rate_limiting;
 mod rbac;
 #[cfg(feature = "plus")]
+mod runner_update;
+#[cfg(feature = "plus")]
 mod stats;
 
 #[cfg(feature = "plus")]
@@ -43,6 +45,8 @@ pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
 #[cfg(feature = "plus")]
 pub use rate_limiting::{HeaderMap, RateLimiting, RateLimitingError};
 pub use rbac::{Rbac, RbacError};
+#[cfg(feature = "plus")]
+pub use runner_update::RunnerUpdate;
 #[cfg(feature = "plus")]
 pub use stats::StatsSettings;
 #[cfg(feature = "plus")]
@@ -84,6 +88,9 @@ pub struct ApiContext {
     pub job_timeout_grace_period: std::time::Duration,
     #[cfg(feature = "plus")]
     pub heartbeat_tasks: HeartbeatTasks,
+    /// Runner self-update URL construction and cloud channel checksum cache.
+    #[cfg(feature = "plus")]
+    pub runner_update: RunnerUpdate,
     /// Cancellation signal tripped on graceful shutdown so long-lived handlers (the runner WebSocket
     /// channel) can wind down and let `server.close()` complete.
     #[cfg(feature = "plus")]

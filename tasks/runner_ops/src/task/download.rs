@@ -18,7 +18,10 @@ pub fn download(run_id: Option<u64>) -> anyhow::Result<(Utf8PathBuf, TempDir)> {
         (id, DEFAULT_BRANCH.into())
     };
 
-    let artifact_name = format!("runner-{branch}-linux-x86-64");
+    // Runner artifacts are named by branch, except on `cloud` where the
+    // build is versioned as `canary` for the rolling canary prerelease.
+    let artifact_version = if branch == "cloud" { "canary" } else { &branch };
+    let artifact_name = format!("runner-{artifact_version}-linux-x86-64");
     println!("Downloading artifact {artifact_name} from run {run_id}...");
 
     let temp_dir = tempfile::tempdir()?;

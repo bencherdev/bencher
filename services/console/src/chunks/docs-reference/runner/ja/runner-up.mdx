@@ -52,6 +52,16 @@ Job を待機する際のロングポーリングのタイムアウト (秒)。`
 デフォルトでは、サーバーが新しいバージョンを提供すると、Runner は Job の合間に自身を更新します。
 `BENCHER_NO_AUTO_UPDATE` 環境変数でも設定できます。
 
+### `--update-channel <UPDATE_CHANNEL>`
+
+自動更新に使用する更新チャネル。`stable` または `canary` のいずれかです。
+デフォルトでは `stable` が使用されます。
+`stable` チャネルはバージョン付きリリースへ更新します。
+`canary` チャネルはローリング canary ビルドを追跡し、
+このビルドは Bencher Cloud のデプロイで Runner が変更されるたびに再ビルドされます。
+`BENCHER_UPDATE_CHANNEL` 環境変数でも設定できます。
+`--no-auto-update` と競合します。
+
 ### `--max-download-size <MAX_DOWNLOAD_SIZE>`
 
 自己更新バイナリの最大ダウンロードサイズ (バイト)。

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use bencher_json::{RunnerResourceId, Secret};
+use bencher_json::{RunnerResourceId, Secret, UpdateChannel};
 use camino::Utf8PathBuf;
 use serde::Deserialize;
 
@@ -17,6 +17,7 @@ pub struct Server {
     pub user: Option<String>,
     pub key: Option<Secret>,
     pub host: Option<url::Url>,
+    pub update_channel: Option<UpdateChannel>,
 }
 
 pub fn load_server(runner: &RunnerResourceId) -> anyhow::Result<Option<Server>> {

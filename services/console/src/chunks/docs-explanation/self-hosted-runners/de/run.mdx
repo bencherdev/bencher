@@ -25,6 +25,9 @@ Das `runner`-Binary öffnet eine einzige [WebSocket-Verbindung][runner protocol]
 fragt Jobs ab, die zu seinen Specs passen, führt jeden aus und meldet die Ergebnisse zurück.
 Die Verbindung bleibt über Jobs hinweg offen,
 und das Binary [aktualisiert sich selbst][runner up] zwischen Jobs, wenn eine neue Version verfügbar ist.
+Standardmäßig folgt der Runner dem `stable` [Update-Kanal][update channel]
+und aktualisiert nur auf versionierte Releases.
+Der `canary`-Kanal folgt stattdessen dem rollierenden Canary-Build von Bencher Cloud.
 
 Standardmäßig lehnt ein Runner jeden Job ab, dessen Spec keine [Sandbox][sandbox] hat.
 Um einem Runner zu erlauben, Jobs ohne Sandbox direkt auf dem Host auszuführen,
@@ -46,6 +49,7 @@ Die [`runner` CLI][runner reference]-Referenz beschreibt jede Option,
 und die [Runner Protocol][runner protocol]-Referenz beschreibt die mit dem Server ausgetauschten Nachrichten.
 
 [runner up]: /de/docs/reference/runner/#runner-up
+[update channel]: /de/docs/reference/runner/#--update-channel-update_channel
 [runner reference]: /de/docs/reference/runner/
 [runner protocol]: /de/docs/reference/runner-protocol/
 [sandbox]: /de/docs/explanation/bare-metal/#sandbox

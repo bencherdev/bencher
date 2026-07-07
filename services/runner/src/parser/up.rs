@@ -55,7 +55,60 @@ pub struct CliUp {
     #[arg(long, env = "BENCHER_NO_AUTO_UPDATE")]
     pub no_auto_update: bool,
 
+    /// Update channel for automatic updates (default: stable).
+    /// The canary channel tracks the rolling Bencher Cloud runner build.
+    #[arg(
+        long,
+        env = "BENCHER_UPDATE_CHANNEL",
+        default_value_t,
+        conflicts_with = "no_auto_update"
+    )]
+    pub update_channel: bencher_json::UpdateChannel,
+
     /// Maximum download size in bytes for self-update binaries (default: 500 MiB).
     #[arg(long, conflicts_with = "no_auto_update")]
     pub max_download_size: Option<u64>,
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::UpdateChannel;
+    use clap::Parser as _;
+    use pretty_assertions::assert_eq;
+
+    use super::CliUp;
+
+    const BASE_ARGS: &[&str] = &[
+        "up",
+        "--key",
+        "bencher_runner_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
+        "--runner",
+        "00000000-0000-0000-0000-000000000000",
+    ];
+
+    fn parse(extra: &[&str]) -> Result<CliUp, clap::Error> {
+        CliUp::try_parse_from(BASE_ARGS.iter().chain(extra))
+    }
+
+    #[test]
+    fn update_channel_defaults_to_stable() {
+        let up = parse(&[]).unwrap();
+        assert_eq!(up.update_channel, UpdateChannel::Stable);
+    }
+
+    #[test]
+    fn update_channel_canary_parses() {
+        let up = parse(&["--update-channel", "canary"]).unwrap();
+        assert_eq!(up.update_channel, UpdateChannel::Canary);
+    }
+
+    #[test]
+    fn update_channel_invalid_rejected() {
+        parse(&["--update-channel", "nightly"]).unwrap_err();
+    }
+
+    #[test]
+    fn update_channel_conflicts_with_no_auto_update() {
+        parse(&["--update-channel", "canary", "--no-auto-update"]).unwrap_err();
+    }
 }

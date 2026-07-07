@@ -4,7 +4,7 @@ Messages sent from the Runner to the server.
 
 | Event       | Description                                       | Payload                                                                 |
 | ----------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
-| `ready`     | The Runner is idle and requesting a Job           | Optional `poll_timeout` (1-900s) and `runner` metadata (`os`, `arch`, `version`) |
+| `ready`     | The Runner is idle and requesting a Job           | Optional `poll_timeout` (1-900s) and `runner` metadata (`os`, `arch`, `version`, optional update `channel`, and optional binary `checksum`) |
 | `running`   | Job setup is complete and the benchmark is starting | None                                                                  |
 | `heartbeat` | Periodic liveness signal (about once per second)  | None                                                                    |
 | `completed` | The benchmark completed successfully              | `job` (Job UUID) and `results` (per-iteration output)                   |

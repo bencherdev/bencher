@@ -13,3 +13,8 @@ Nachrichten, die vom Server an den Runner gesendet werden.
 Das OCI-Pull-Token in einer `job`-Nachricht wird beim Beanspruchen des Jobs generiert und niemals gespeichert.
 Es ist auf das einzelne Projekt beschränkt, zu dem der Job gehört, ist nur zum Herunterladen (Pull) gedacht und ist kurzlebig,
 sodass ein kompromittierter Runner nur Images für das Projekt des von ihm beanspruchten Jobs herunterladen kann.
+
+Auf dem `stable`-Update-Kanal wird ein `update` gesendet, wenn die Runner-Version von der Server-Version abweicht.
+Auf dem `canary`-Update-Kanal ist `version` gleich `canary`,
+und ein `update` wird gesendet, wenn die vom Runner selbst gemeldete Prüfsumme des Binaries
+vom veröffentlichten rollierenden Canary-Build abweicht.

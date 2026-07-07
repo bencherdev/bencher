@@ -25,6 +25,9 @@ runner up
 轮询与其 Spec 匹配的 Job，逐个执行，并将结果报告回去。
 该连接在多个 Job 之间保持打开，
 并且当有新版本可用时，二进制文件会在 Job 之间[自我更新][runner up]。
+默认情况下，Runner 遵循 `stable` [更新通道][update channel]，
+仅更新到版本化的发布版本。
+`canary` 通道则跟踪部署到 Bencher Cloud 的滚动 canary 构建。
 
 默认情况下，Runner 会拒绝任何其 Spec 没有 [Sandbox][sandbox] 的 Job。
 要让 Runner 直接在主机上执行非沙箱化的 Job，
@@ -46,6 +49,7 @@ runner up
 有关与服务器交换的消息，请参阅 [Runner 协议][runner protocol] 参考。
 
 [runner up]: /zh/docs/reference/runner/#runner-up
+[update channel]: /zh/docs/reference/runner/#--update-channel-update_channel
 [runner reference]: /zh/docs/reference/runner/
 [runner protocol]: /zh/docs/reference/runner-protocol/
 [sandbox]: /zh/docs/explanation/bare-metal/#sandbox

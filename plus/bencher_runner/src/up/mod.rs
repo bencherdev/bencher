@@ -17,7 +17,7 @@ pub use error::UpError;
 
 use api_client::RunnerApiClient;
 use bencher_json::runner::{RunnerMessage, ServerMessage};
-use error::{SelfUpdateError, WebSocketError};
+use error::{SelfChecksumError, SelfUpdateError, WebSocketError};
 use job::execute_job;
 use state_machine::{ChannelStateMachine, Effect, Input, LogLevel};
 
@@ -63,6 +63,8 @@ pub struct UpConfig {
     pub allow_no_sandbox: bool,
     /// Disable auto-update: do not send runner metadata to the server.
     pub no_auto_update: bool,
+    /// Update channel for automatic updates.
+    pub update_channel: bencher_valid::UpdateChannel,
     /// Maximum download size in bytes for self-update binaries.
     pub max_download_size: Option<u64>,
 }
@@ -136,18 +138,28 @@ impl Up {
 /// function executes effects and feeds I/O results back.
 #[expect(clippy::print_stdout, reason = "runner CLI status output")]
 fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpError> {
-    let runner_metadata = if config.no_auto_update {
-        None
-    } else {
-        bencher_valid::OperatingSystem::from_host()
-            .ok()
-            .zip(bencher_valid::Architecture::from_host().ok())
-            .map(|(os, arch)| bencher_json::runner::JsonRunnerMetadata {
-                os,
-                arch,
-                version: bencher_json::BENCHER_API_VERSION.to_owned(),
-            })
-    };
+    // Only the canary channel converges by checksum, so stable runners skip
+    // the full-binary read and keep their wire format checksum-free.
+    let checksum =
+        if config.no_auto_update || config.update_channel != bencher_valid::UpdateChannel::Canary {
+            None
+        } else {
+            match self_checksum() {
+                Ok(checksum) => Some(checksum),
+                Err(e) => {
+                    println!("  Warning: failed to compute runner binary checksum: {e}");
+                    None
+                },
+            }
+        };
+    let runner_metadata =
+        build_runner_metadata(config.no_auto_update, config.update_channel, checksum);
+    if let Some(channel) = runner_metadata
+        .as_ref()
+        .and_then(|metadata| metadata.channel)
+    {
+        println!("  Update channel: {channel}");
+    }
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
     let mut effects: VecDeque<Effect> =
         ChannelStateMachine::initial_effects().into_iter().collect();
@@ -543,5 +555,141 @@ fn self_update(
         let err = std::process::Command::new(&current_exe).args(&args).exec();
         let _restore_current = std::fs::rename(&old_path, &current_exe);
         Err(SelfUpdateError::Exec(err))
+    }
+}
+
+/// Build the runner metadata sent with `Ready` messages, or `None` when
+/// auto-update is disabled. The stable channel is sent as absent, with no
+/// checksum, so the wire format matches pre-channel runners; only the canary
+/// channel reports a checksum, since only it converges by content.
+fn build_runner_metadata(
+    no_auto_update: bool,
+    update_channel: bencher_valid::UpdateChannel,
+    checksum: Option<bencher_valid::Sha256>,
+) -> Option<bencher_json::runner::JsonRunnerMetadata> {
+    if no_auto_update {
+        return None;
+    }
+    let (channel, checksum) = match update_channel {
+        bencher_valid::UpdateChannel::Stable => (None, None),
+        channel @ bencher_valid::UpdateChannel::Canary => (Some(channel), checksum),
+    };
+    bencher_valid::OperatingSystem::from_host()
+        .ok()
+        .zip(bencher_valid::Architecture::from_host().ok())
+        .map(|(os, arch)| bencher_json::runner::JsonRunnerMetadata {
+            os,
+            arch,
+            version: bencher_json::BENCHER_API_VERSION.to_owned(),
+            channel,
+            checksum,
+        })
+}
+
+/// Compute the SHA-256 checksum of the currently running binary.
+///
+/// Reported to the server so canary channel runners converge on the published
+/// build by content rather than by version number.
+fn self_checksum() -> Result<bencher_valid::Sha256, SelfChecksumError> {
+    let current_exe = std::env::current_exe().map_err(SelfChecksumError::CurrentExe)?;
+    file_checksum(&current_exe)
+}
+
+/// Compute the SHA-256 checksum of a file by streaming its contents.
+fn file_checksum(path: &std::path::Path) -> Result<bencher_valid::Sha256, SelfChecksumError> {
+    use sha2::Digest as _;
+    use std::io::Read as _;
+
+    let mut file = std::fs::File::open(path).map_err(SelfChecksumError::Read)?;
+    let mut hasher = sha2::Sha256::new();
+    let mut buf = [0u8; 8192];
+    loop {
+        let n = file.read(&mut buf).map_err(SelfChecksumError::Read)?;
+        if n == 0 {
+            break;
+        }
+        let chunk = buf.get(..n).ok_or_else(|| {
+            SelfChecksumError::Read(std::io::Error::other(
+                "read returned byte count exceeding buffer",
+            ))
+        })?;
+        hasher.update(chunk);
+    }
+    hex::encode(hasher.finalize())
+        .parse()
+        .map_err(SelfChecksumError::Parse)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn file_checksum_known_contents() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("checksum-test");
+        std::fs::write(&path, b"hello world").unwrap();
+
+        let checksum = file_checksum(&path).unwrap();
+        // Precomputed: sha256("hello world")
+        let expected: bencher_valid::Sha256 =
+            "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
+                .parse()
+                .unwrap();
+        assert_eq!(checksum, expected);
+    }
+
+    #[test]
+    fn self_checksum_matches_current_exe() {
+        let current_exe = std::env::current_exe().unwrap();
+        assert_eq!(
+            self_checksum().unwrap(),
+            file_checksum(&current_exe).unwrap()
+        );
+    }
+
+    #[test]
+    fn metadata_none_when_no_auto_update() {
+        assert!(build_runner_metadata(true, bencher_valid::UpdateChannel::Canary, None).is_none());
+    }
+
+    #[test]
+    fn metadata_stable_channel_is_absent() {
+        let metadata =
+            build_runner_metadata(false, bencher_valid::UpdateChannel::Stable, None).unwrap();
+        assert!(metadata.channel.is_none());
+        assert!(metadata.checksum.is_none());
+        assert_eq!(metadata.version, bencher_json::BENCHER_API_VERSION);
+    }
+
+    #[test]
+    fn metadata_stable_channel_drops_checksum() {
+        // Stable runners must stay checksum-free on the wire, even if a
+        // checksum was computed.
+        let checksum: bencher_valid::Sha256 =
+            "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+                .parse()
+                .unwrap();
+        let metadata =
+            build_runner_metadata(false, bencher_valid::UpdateChannel::Stable, Some(checksum))
+                .unwrap();
+        assert!(metadata.channel.is_none());
+        assert!(metadata.checksum.is_none());
+    }
+
+    #[test]
+    fn metadata_canary_channel_with_checksum() {
+        let checksum: bencher_valid::Sha256 =
+            "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+                .parse()
+                .unwrap();
+        let metadata = build_runner_metadata(
+            false,
+            bencher_valid::UpdateChannel::Canary,
+            Some(checksum.clone()),
+        )
+        .unwrap();
+        assert_eq!(metadata.channel, Some(bencher_valid::UpdateChannel::Canary));
+        assert_eq!(metadata.checksum, Some(checksum));
     }
 }

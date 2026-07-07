@@ -67,6 +67,18 @@ pub enum WebSocketError {
 }
 
 #[derive(Debug, Error)]
+pub enum SelfChecksumError {
+    #[error("Failed to determine current binary path: {0}")]
+    CurrentExe(std::io::Error),
+
+    #[error("Failed to read current binary: {0}")]
+    Read(std::io::Error),
+
+    #[error("Failed to parse computed checksum: {0}")]
+    Parse(bencher_valid::ValidError),
+}
+
+#[derive(Debug, Error)]
 pub enum SelfUpdateError {
     #[error("Failed to determine current binary path: {0}")]
     CurrentExe(std::io::Error),

@@ -13,3 +13,8 @@ Messages sent from the server to the Runner.
 The OCI pull token in a `job` message is generated when the Job is claimed and is never stored.
 It is scoped to the single project the Job belongs to, is pull only, and is short-lived,
 so a compromised Runner can only pull Images for the project of the Job it claimed.
+
+On the `stable` update channel, an `update` is sent when the Runner version differs from the server version.
+On the `canary` update channel, `version` is `canary`
+and an `update` is sent when the Runner's self-reported binary checksum
+differs from the published rolling canary build.

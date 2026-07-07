@@ -43,7 +43,7 @@ pub mod urlencoded;
 pub mod user;
 
 #[cfg(feature = "plus")]
-pub use bencher_valid::{Architecture, OperatingSystem, Sandbox, Sha256};
+pub use bencher_valid::{Architecture, OperatingSystem, Sandbox, Sha256, UpdateChannel};
 pub use big_int::BigInt;
 pub use clock::Clock;
 pub use organization::{

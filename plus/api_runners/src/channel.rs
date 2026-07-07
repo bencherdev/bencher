@@ -1281,37 +1281,10 @@ impl Drop for RunnerStateGuard {
     }
 }
 
-// Trailing slash is required: Url::join appends to the last path segment,
-// so without it the join would replace "download" instead of extending it.
-#[expect(
-    clippy::expect_used,
-    reason = "Constant URL literal, infallible at runtime"
-)]
-static RUNNER_RELEASE_BASE_URL: std::sync::LazyLock<url::Url> = std::sync::LazyLock::new(|| {
-    "https://github.com/bencherdev/bencher/releases/download/"
-        .parse()
-        .expect("valid base URL")
-});
-
-/// Construct the GitHub Releases download URL for a runner binary.
-fn runner_download_url(
-    version: &str,
-    arch: bencher_json::Architecture,
-) -> Result<url::Url, ChannelError> {
-    let tag = format!("v{version}");
-    let artifact = format!("runner-{tag}-{}", arch.linux_artifact_slug());
-    let path = format!("{tag}/{artifact}");
-    RUNNER_RELEASE_BASE_URL
-        .join(&path)
-        .map_err(ChannelError::UpdateUrl)
-}
-
 const MAX_CHECKSUM_RESPONSE_BYTES: usize = 1024;
 
 /// Fetch the SHA-256 checksum for a runner binary from its companion `.sha256` file.
-async fn fetch_runner_checksum(
-    binary_url: &url::Url,
-) -> Result<bencher_json::Sha256, ChannelError> {
+async fn fetch_runner_checksum(binary_url: url::Url) -> Result<bencher_json::Sha256, ChannelError> {
     let checksum_url = format!("{binary_url}.sha256");
     let response = reqwest::get(&checksum_url)
         .await
@@ -1384,50 +1357,32 @@ where
                         poll_timeout,
                         runner,
                     } => {
-                        return handle_ready(log, tx, poll_timeout, runner.as_ref()).await;
+                        // Boxed to keep the long-lived `runner_channel` future small;
+                        // this runs once per poll cycle, so the allocation is cheap.
+                        return Box::pin(handle_ready(
+                            log,
+                            &context.runner_update,
+                            &context.clock,
+                            tx,
+                            poll_timeout,
+                            runner.as_ref(),
+                            fetch_runner_checksum,
+                        ))
+                        .await;
                     },
-                    RunnerMessage::Completed {
-                        job: job_uuid,
-                        results,
-                    } => {
-                        slog::info!(log, "Received Completed during Idle (retry after reconnect)"; "job_uuid" => %job_uuid);
-                        if let Some(job) =
-                            lookup_runner_job(log, context, runner_id, job_uuid).await?
-                        {
-                            handle_completed(log, context, &job, results).await?;
-                        }
-                        let ack = serde_json::to_string(&ServerMessage::Ack {
-                            job: Some(job_uuid),
-                        })?;
-                        tx.send(Message::Text(ack.into())).await?;
-                    },
-                    RunnerMessage::Failed {
-                        job: job_uuid,
-                        results,
-                        error,
-                    } => {
-                        slog::info!(log, "Received Failed during Idle (retry after reconnect)"; "job_uuid" => %job_uuid, "error" => &error);
-                        if let Some(job) =
-                            lookup_runner_job(log, context, runner_id, job_uuid).await?
-                        {
-                            handle_failed(log, context, &job, results, error).await?;
-                        }
-                        let ack = serde_json::to_string(&ServerMessage::Ack {
-                            job: Some(job_uuid),
-                        })?;
-                        tx.send(Message::Text(ack.into())).await?;
-                    },
-                    RunnerMessage::Canceled { job: job_uuid } => {
-                        slog::info!(log, "Received Canceled during Idle (retry after reconnect)"; "job_uuid" => %job_uuid);
-                        if let Some(job) =
-                            lookup_runner_job(log, context, runner_id, job_uuid).await?
-                        {
-                            handle_canceled(log, context, job.id).await?;
-                        }
-                        let ack = serde_json::to_string(&ServerMessage::Ack {
-                            job: Some(job_uuid),
-                        })?;
-                        tx.send(Message::Text(ack.into())).await?;
+                    terminal_msg @ (RunnerMessage::Completed { .. }
+                    | RunnerMessage::Failed { .. }
+                    | RunnerMessage::Canceled { .. }) => {
+                        // Boxed to keep the long-lived `runner_channel` future small;
+                        // reconnect retries are rare, so the allocation is cheap.
+                        Box::pin(handle_idle_terminal(
+                            log,
+                            context,
+                            runner_id,
+                            tx,
+                            terminal_msg,
+                        ))
+                        .await?;
                     },
                     RunnerMessage::Running | RunnerMessage::Heartbeat => {
                         slog::warn!(log, "Unexpected message in Idle state, expected Ready"; "msg" => ?runner_msg);
@@ -1450,20 +1405,89 @@ where
     }
 }
 
-/// Check the runner version against the server version.
-///
-/// If runner metadata is absent, skips auto-update and returns `ReadyOutcome::Ready`.
-/// If the versions match, returns `ReadyOutcome::Ready` with the poll timeout.
-/// If they differ, sends `ServerMessage::Update` with the download URL and
-/// checksum, then returns `ReadyOutcome::UpdateSent`.
-async fn handle_ready<S>(
+/// Handle a terminal message (Completed/Failed/Canceled) received during Idle,
+/// which occurs when a runner reconnects with a pending result that was not acknowledged.
+async fn handle_idle_terminal<S>(
     log: &slog::Logger,
+    context: &ApiContext,
+    runner_id: RunnerId,
+    tx: &mut S,
+    terminal_msg: RunnerMessage,
+) -> Result<(), ChannelError>
+where
+    S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+{
+    let job_uuid = match terminal_msg {
+        RunnerMessage::Completed {
+            job: job_uuid,
+            results,
+        } => {
+            slog::info!(log, "Received Completed during Idle (retry after reconnect)"; "job_uuid" => %job_uuid);
+            if let Some(job) = lookup_runner_job(log, context, runner_id, job_uuid).await? {
+                handle_completed(log, context, &job, results).await?;
+            }
+            job_uuid
+        },
+        RunnerMessage::Failed {
+            job: job_uuid,
+            results,
+            error,
+        } => {
+            slog::info!(log, "Received Failed during Idle (retry after reconnect)"; "job_uuid" => %job_uuid, "error" => &error);
+            if let Some(job) = lookup_runner_job(log, context, runner_id, job_uuid).await? {
+                handle_failed(log, context, &job, results, error).await?;
+            }
+            job_uuid
+        },
+        RunnerMessage::Canceled { job: job_uuid } => {
+            slog::info!(log, "Received Canceled during Idle (retry after reconnect)"; "job_uuid" => %job_uuid);
+            if let Some(job) = lookup_runner_job(log, context, runner_id, job_uuid).await? {
+                handle_canceled(log, context, job.id).await?;
+            }
+            job_uuid
+        },
+        // Non-terminal messages are never passed in by the caller.
+        RunnerMessage::Ready { .. } | RunnerMessage::Running | RunnerMessage::Heartbeat => {
+            return Ok(());
+        },
+    };
+
+    let ack = serde_json::to_string(&ServerMessage::Ack {
+        job: Some(job_uuid),
+    })?;
+    tx.send(Message::Text(ack.into())).await?;
+    Ok(())
+}
+
+/// The display version sent with canary channel updates; convergence is checksum-based.
+const CANARY_UPDATE_VERSION: &str = "canary";
+
+/// Check whether the runner should self-update, per its update channel.
+///
+/// If runner metadata is absent (or the runner is not on Linux), skips auto-update
+/// and returns `ReadyOutcome::Ready` with the poll timeout.
+/// On the stable channel, the runner is up to date when its version matches the
+/// server version. On the canary channel, the runner is up to date when its
+/// self-reported binary checksum matches the published canary channel checksum.
+/// If an update is due, sends `ServerMessage::Update` with the download URL and
+/// checksum, then returns `ReadyOutcome::UpdateSent`.
+///
+/// A failure to fetch the published checksum skips the update (with a warning
+/// and an adverse event counter) rather than erroring the channel: the runner
+/// stays on its current version and the check retries at its next `Ready`.
+async fn handle_ready<S, F, Fut>(
+    log: &slog::Logger,
+    runner_update: &bencher_schema::context::RunnerUpdate,
+    clock: &bencher_json::Clock,
     tx: &mut S,
     poll_timeout: Option<bencher_json::PollTimeout>,
     runner: Option<&bencher_json::runner::JsonRunnerMetadata>,
+    fetch_checksum: F,
 ) -> Result<ReadyOutcome, ChannelError>
 where
     S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+    F: Fn(url::Url) -> Fut,
+    Fut: Future<Output = Result<bencher_json::Sha256, ChannelError>>,
 {
     let timeout = poll_timeout.map_or(DEFAULT_POLL_TIMEOUT, u32::from);
 
@@ -1472,24 +1496,148 @@ where
         return Ok(ReadyOutcome::Ready(timeout));
     };
 
+    let channel = runner.channel.unwrap_or_default();
     let server_version = bencher_json::BENCHER_API_VERSION;
-    slog::info!(log, "Runner ready"; "os" => %runner.os, "arch" => %runner.arch, "version" => &runner.version, "server_version" => server_version);
+    slog::info!(log, "Runner ready"; "os" => %runner.os, "arch" => %runner.arch, "version" => &runner.version, "channel" => %channel, "server_version" => server_version);
 
-    if runner.version != server_version && runner.os == bencher_json::OperatingSystem::Linux {
-        slog::info!(log, "Runner version mismatch, sending update"; "runner" => &runner.version, "server" => server_version);
-        let url = runner_download_url(server_version, runner.arch)?;
-        let checksum = fetch_runner_checksum(&url).await?;
-        let update = ServerMessage::Update {
-            version: server_version.to_owned(),
-            url,
-            checksum,
-        };
-        let text = serde_json::to_string(&update)?;
-        tx.send(Message::Text(text.into())).await?;
-        return Ok(ReadyOutcome::UpdateSent);
+    if runner.os != bencher_json::OperatingSystem::Linux {
+        return Ok(ReadyOutcome::Ready(timeout));
     }
 
-    Ok(ReadyOutcome::Ready(timeout))
+    let update = match channel {
+        bencher_json::UpdateChannel::Stable => {
+            stable_update(log, runner_update, runner, server_version, &fetch_checksum).await?
+        },
+        bencher_json::UpdateChannel::Canary => {
+            canary_update(log, runner_update, clock, runner, &fetch_checksum).await?
+        },
+    };
+
+    let Some(update) = update else {
+        return Ok(ReadyOutcome::Ready(timeout));
+    };
+
+    let text = serde_json::to_string(&update)?;
+    tx.send(Message::Text(text.into())).await?;
+
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerSelfUpdateSent(
+        update_channel_kind(channel),
+    ));
+
+    Ok(ReadyOutcome::UpdateSent)
+}
+
+/// Stable channel: update when the runner version differs from the server version,
+/// targeting the versioned GitHub Release.
+///
+/// The published checksum is deliberately not cached (unlike the canary channel):
+/// it is only fetched while a stale runner has not yet updated, which is rare
+/// and self-limiting.
+async fn stable_update<F, Fut>(
+    log: &slog::Logger,
+    runner_update: &bencher_schema::context::RunnerUpdate,
+    runner: &bencher_json::runner::JsonRunnerMetadata,
+    server_version: &str,
+    fetch_checksum: &F,
+) -> Result<Option<ServerMessage>, ChannelError>
+where
+    F: Fn(url::Url) -> Fut,
+    Fut: Future<Output = Result<bencher_json::Sha256, ChannelError>>,
+{
+    if runner.version == server_version {
+        return Ok(None);
+    }
+
+    let url = runner_update
+        .stable_url(server_version, runner.arch)
+        .map_err(ChannelError::UpdateUrl)?;
+    let checksum = match fetch_checksum(url.clone()).await {
+        Ok(checksum) => checksum,
+        Err(e) => {
+            slog::warn!(log, "Failed to fetch stable runner checksum, skipping update"; "url" => %url, "error" => %e);
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(
+                bencher_otel::ApiCounter::RunnerSelfUpdateCheckFailed(
+                    bencher_otel::UpdateChannelKind::Stable,
+                ),
+            );
+            return Ok(None);
+        },
+    };
+
+    slog::info!(log, "Runner version mismatch, sending update"; "runner" => &runner.version, "server" => server_version);
+    Ok(Some(ServerMessage::Update {
+        version: server_version.to_owned(),
+        url,
+        checksum,
+    }))
+}
+
+/// Canary channel: update when the runner's self-reported binary checksum differs
+/// from the published rolling canary channel checksum (TTL-cached per architecture).
+async fn canary_update<F, Fut>(
+    log: &slog::Logger,
+    runner_update: &bencher_schema::context::RunnerUpdate,
+    clock: &bencher_json::Clock,
+    runner: &bencher_json::runner::JsonRunnerMetadata,
+    fetch_checksum: &F,
+) -> Result<Option<ServerMessage>, ChannelError>
+where
+    F: Fn(url::Url) -> Fut,
+    Fut: Future<Output = Result<bencher_json::Sha256, ChannelError>>,
+{
+    let Some(runner_checksum) = &runner.checksum else {
+        slog::warn!(
+            log,
+            "Canary channel runner reported no checksum, skipping auto-update"
+        );
+        return Ok(None);
+    };
+
+    let url = runner_update
+        .canary_url(runner.arch)
+        .map_err(ChannelError::UpdateUrl)?;
+
+    let published = if let Some(cached) = runner_update.cached_canary_checksum(clock, runner.arch) {
+        cached
+    } else {
+        match fetch_checksum(url.clone()).await {
+            Ok(checksum) => {
+                runner_update.store_canary_checksum(clock, runner.arch, checksum.clone());
+                checksum
+            },
+            Err(e) => {
+                slog::warn!(log, "Failed to fetch canary runner checksum, skipping update"; "url" => %url, "error" => %e);
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(
+                    bencher_otel::ApiCounter::RunnerSelfUpdateCheckFailed(
+                        bencher_otel::UpdateChannelKind::Canary,
+                    ),
+                );
+                return Ok(None);
+            },
+        }
+    };
+
+    if published == *runner_checksum {
+        return Ok(None);
+    }
+
+    slog::info!(log, "Canary channel runner checksum mismatch, sending update"; "runner" => %runner_checksum, "published" => %published);
+    Ok(Some(ServerMessage::Update {
+        version: CANARY_UPDATE_VERSION.to_owned(),
+        url,
+        checksum: published,
+    }))
+}
+
+#[cfg(feature = "otel")]
+fn update_channel_kind(channel: bencher_json::UpdateChannel) -> bencher_otel::UpdateChannelKind {
+    match channel {
+        bencher_json::UpdateChannel::Stable => bencher_otel::UpdateChannelKind::Stable,
+        bencher_json::UpdateChannel::Canary => bencher_otel::UpdateChannelKind::Canary,
+    }
 }
 
 /// Look up a job by UUID and verify it belongs to the given runner.
@@ -1938,5 +2086,412 @@ mod tests {
                 organization_id: job.organization_id
             })
         );
+    }
+
+    // --- handle_ready update channel tests ---
+
+    mod ready {
+        use std::sync::{
+            Arc, Mutex,
+            atomic::{AtomicUsize, Ordering},
+        };
+
+        use bencher_json::{Sha256, UpdateChannel, runner::JsonRunnerMetadata};
+        use bencher_schema::context::RunnerUpdate;
+        use futures::{SinkExt as _, channel::mpsc};
+
+        use super::super::{Message, ReadyOutcome, ServerMessage, handle_ready};
+        use crate::channel::ChannelError;
+
+        fn test_log() -> slog::Logger {
+            slog::Logger::root(slog::Discard, slog::o!())
+        }
+
+        fn test_clock() -> bencher_json::Clock {
+            bencher_json::Clock::Custom(Arc::new(|| bencher_json::DateTime::TEST))
+        }
+
+        fn running_checksum() -> Sha256 {
+            "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+                .parse()
+                .unwrap()
+        }
+
+        fn published_checksum() -> Sha256 {
+            "b3a8e0e1f9ab1bfe3a36f231f676f78bb30a519d2b21e6c530c0eee8ebb4a5d0"
+                .parse()
+                .unwrap()
+        }
+
+        fn metadata(
+            channel: Option<UpdateChannel>,
+            version: &str,
+            checksum: Option<Sha256>,
+        ) -> JsonRunnerMetadata {
+            JsonRunnerMetadata {
+                os: bencher_json::OperatingSystem::Linux,
+                arch: bencher_json::Architecture::X86_64,
+                version: version.to_owned(),
+                channel,
+                checksum,
+            }
+        }
+
+        /// A checksum fetcher that records requested URLs, counts calls,
+        /// and returns a fixed result.
+        struct FakeFetcher {
+            calls: Arc<AtomicUsize>,
+            urls: Arc<Mutex<Vec<url::Url>>>,
+            result: Result<Sha256, ()>,
+        }
+
+        impl FakeFetcher {
+            fn ok(checksum: Sha256) -> Self {
+                Self {
+                    calls: Arc::new(AtomicUsize::new(0)),
+                    urls: Arc::new(Mutex::new(Vec::new())),
+                    result: Ok(checksum),
+                }
+            }
+
+            fn err() -> Self {
+                Self {
+                    calls: Arc::new(AtomicUsize::new(0)),
+                    urls: Arc::new(Mutex::new(Vec::new())),
+                    result: Err(()),
+                }
+            }
+
+            fn call_count(&self) -> usize {
+                self.calls.load(Ordering::SeqCst)
+            }
+
+            fn requested_urls(&self) -> Vec<url::Url> {
+                self.urls.lock().unwrap().clone()
+            }
+
+            fn fetch(
+                &self,
+            ) -> impl Fn(url::Url) -> futures::future::Ready<Result<Sha256, ChannelError>> + use<>
+            {
+                let calls = self.calls.clone();
+                let urls = self.urls.clone();
+                let result = self.result.clone();
+                move |url| {
+                    calls.fetch_add(1, Ordering::SeqCst);
+                    urls.lock().unwrap().push(url);
+                    futures::future::ready(result.clone().map_err(|()| {
+                        ChannelError::UpdateHttpStatus(reqwest::StatusCode::NOT_FOUND)
+                    }))
+                }
+            }
+        }
+
+        /// A sink that collects sent WebSocket messages.
+        fn test_sink() -> (
+            impl futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+            mpsc::Receiver<Message>,
+        ) {
+            let (tx, rx) = mpsc::channel(8);
+            (
+                tx.sink_map_err(|_| tokio_tungstenite::tungstenite::Error::ConnectionClosed),
+                rx,
+            )
+        }
+
+        fn sent_update(rx: &mut mpsc::Receiver<Message>) -> ServerMessage {
+            let Ok(Message::Text(text)) = rx.try_recv() else {
+                panic!("Expected a text message to have been sent");
+            };
+            serde_json::from_str(&text).unwrap()
+        }
+
+        #[tokio::test]
+        async fn no_metadata_is_ready() {
+            let (mut tx, mut rx) = test_sink();
+            let fetcher = FakeFetcher::ok(published_checksum());
+            let outcome = handle_ready(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                None,
+                None,
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::Ready(_)));
+            assert_eq!(fetcher.call_count(), 0);
+            assert!(rx.try_recv().is_err(), "no message should be sent");
+        }
+
+        #[tokio::test]
+        async fn non_linux_is_ready() {
+            let (mut tx, _rx) = test_sink();
+            let fetcher = FakeFetcher::ok(published_checksum());
+            let mut runner = metadata(Some(UpdateChannel::Stable), "0.0.0", None);
+            runner.os = bencher_json::OperatingSystem::Macos;
+            let outcome = handle_ready(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                None,
+                Some(&runner),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::Ready(_)));
+            assert_eq!(fetcher.call_count(), 0);
+        }
+
+        #[tokio::test]
+        async fn stable_version_match_is_ready() {
+            let (mut tx, _rx) = test_sink();
+            let fetcher = FakeFetcher::ok(published_checksum());
+            let runner = metadata(None, bencher_json::BENCHER_API_VERSION, None);
+            let outcome = handle_ready(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                None,
+                Some(&runner),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::Ready(_)));
+            assert_eq!(fetcher.call_count(), 0);
+        }
+
+        #[tokio::test]
+        async fn absent_channel_defaults_to_stable() {
+            // A legacy runner sends no channel; a version mismatch must take
+            // the stable update path.
+            let (mut tx, mut rx) = test_sink();
+            let fetcher = FakeFetcher::ok(published_checksum());
+            let runner = metadata(None, "0.0.0", None);
+            let outcome = handle_ready(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                None,
+                Some(&runner),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::UpdateSent));
+
+            let ServerMessage::Update { version, .. } = sent_update(&mut rx) else {
+                panic!("Expected Update message");
+            };
+            assert_eq!(version, bencher_json::BENCHER_API_VERSION);
+        }
+
+        #[tokio::test]
+        async fn stable_version_mismatch_sends_update() {
+            let (mut tx, mut rx) = test_sink();
+            let fetcher = FakeFetcher::ok(published_checksum());
+            let runner = metadata(Some(UpdateChannel::Stable), "0.0.0", None);
+            let outcome = handle_ready(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                None,
+                Some(&runner),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::UpdateSent));
+
+            let server_version = bencher_json::BENCHER_API_VERSION;
+            let expected_url = format!(
+                "https://github.com/bencherdev/bencher/releases/download/v{server_version}/runner-v{server_version}-linux-x86-64"
+            );
+            assert_eq!(
+                fetcher.requested_urls(),
+                vec![expected_url.parse().unwrap()]
+            );
+
+            let ServerMessage::Update {
+                version,
+                url,
+                checksum,
+            } = sent_update(&mut rx)
+            else {
+                panic!("Expected Update message");
+            };
+            assert_eq!(version, server_version);
+            assert_eq!(url.as_str(), expected_url);
+            assert_eq!(checksum, published_checksum());
+        }
+
+        #[tokio::test]
+        async fn stable_checksum_fetch_failure_is_ready() {
+            let (mut tx, mut rx) = test_sink();
+            let fetcher = FakeFetcher::err();
+            let runner = metadata(Some(UpdateChannel::Stable), "0.0.0", None);
+            let outcome = handle_ready(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                None,
+                Some(&runner),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::Ready(_)));
+            assert_eq!(fetcher.call_count(), 1);
+            assert!(rx.try_recv().is_err(), "no message should be sent");
+        }
+
+        #[tokio::test]
+        async fn canary_checksum_match_is_ready() {
+            let (mut tx, _rx) = test_sink();
+            let fetcher = FakeFetcher::ok(running_checksum());
+            let runner = metadata(
+                Some(UpdateChannel::Canary),
+                "0.0.0",
+                Some(running_checksum()),
+            );
+            let outcome = handle_ready(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                None,
+                Some(&runner),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::Ready(_)));
+            assert_eq!(fetcher.call_count(), 1);
+        }
+
+        #[tokio::test]
+        async fn canary_checksum_mismatch_sends_update() {
+            let (mut tx, mut rx) = test_sink();
+            let fetcher = FakeFetcher::ok(published_checksum());
+            let runner = metadata(
+                Some(UpdateChannel::Canary),
+                "0.0.0",
+                Some(running_checksum()),
+            );
+            let outcome = handle_ready(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                None,
+                Some(&runner),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::UpdateSent));
+
+            let expected_url = "https://github.com/bencherdev/bencher/releases/download/canary/runner-canary-linux-x86-64";
+            let ServerMessage::Update {
+                version,
+                url,
+                checksum,
+            } = sent_update(&mut rx)
+            else {
+                panic!("Expected Update message");
+            };
+            assert_eq!(version, "canary");
+            assert_eq!(url.as_str(), expected_url);
+            assert_eq!(checksum, published_checksum());
+        }
+
+        #[tokio::test]
+        async fn canary_no_runner_checksum_is_ready() {
+            let (mut tx, mut rx) = test_sink();
+            let fetcher = FakeFetcher::ok(published_checksum());
+            let runner = metadata(Some(UpdateChannel::Canary), "0.0.0", None);
+            let outcome = handle_ready(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                None,
+                Some(&runner),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::Ready(_)));
+            assert_eq!(fetcher.call_count(), 0);
+            assert!(rx.try_recv().is_err(), "no message should be sent");
+        }
+
+        #[tokio::test]
+        async fn canary_checksum_fetch_failure_is_ready() {
+            let (mut tx, mut rx) = test_sink();
+            let fetcher = FakeFetcher::err();
+            let runner = metadata(
+                Some(UpdateChannel::Canary),
+                "0.0.0",
+                Some(running_checksum()),
+            );
+            let outcome = handle_ready(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                None,
+                Some(&runner),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::Ready(_)));
+            assert_eq!(fetcher.call_count(), 1);
+            assert!(rx.try_recv().is_err(), "no message should be sent");
+        }
+
+        #[tokio::test]
+        async fn canary_checksum_is_cached_within_ttl() {
+            let (mut tx, _rx) = test_sink();
+            let fetcher = FakeFetcher::ok(running_checksum());
+            let runner_update = RunnerUpdate::new(None);
+            let clock = test_clock();
+            let runner = metadata(
+                Some(UpdateChannel::Canary),
+                "0.0.0",
+                Some(running_checksum()),
+            );
+
+            for _ in 0..3 {
+                let outcome = handle_ready(
+                    &test_log(),
+                    &runner_update,
+                    &clock,
+                    &mut tx,
+                    None,
+                    Some(&runner),
+                    fetcher.fetch(),
+                )
+                .await
+                .unwrap();
+                assert!(matches!(outcome, ReadyOutcome::Ready(_)));
+            }
+
+            assert_eq!(
+                fetcher.call_count(),
+                1,
+                "checksum should be fetched once and then served from cache"
+            );
+        }
     }
 }

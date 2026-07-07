@@ -1,6 +1,4 @@
-#[cfg(feature = "plus")]
-use bencher_valid::Sha256;
-use bencher_valid::{Architecture, OperatingSystem, PollTimeout};
+use bencher_valid::{Architecture, OperatingSystem, PollTimeout, Sha256, UpdateChannel};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -60,6 +58,12 @@ pub struct JsonRunnerMetadata {
     pub arch: Architecture,
     /// Runner binary version
     pub version: String,
+    /// Update channel (absent means stable)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channel: Option<UpdateChannel>,
+    /// SHA-256 checksum of the running runner binary
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub checksum: Option<Sha256>,
 }
 
 /// Messages sent from the server to the runner over the WebSocket channel.
@@ -136,6 +140,8 @@ mod tests {
                 os: OperatingSystem::Linux,
                 arch: Architecture::X86_64,
                 version: test_version(),
+                channel: None,
+                checksum: None,
             }),
         };
         let json = serde_json::to_string(&msg).unwrap();
@@ -150,6 +156,8 @@ mod tests {
                 assert_eq!(runner.os, OperatingSystem::Linux);
                 assert_eq!(runner.arch, Architecture::X86_64);
                 assert_eq!(runner.version, test_version());
+                assert!(runner.channel.is_none());
+                assert!(runner.checksum.is_none());
             },
             other => panic!("Expected Ready, got {other:?}"),
         }
@@ -163,6 +171,8 @@ mod tests {
                 os: OperatingSystem::Linux,
                 arch: Architecture::Aarch64,
                 version: test_version(),
+                channel: None,
+                checksum: None,
             }),
         };
         let json = serde_json::to_string(&msg).unwrap();
@@ -177,9 +187,77 @@ mod tests {
                 assert_eq!(runner.os, OperatingSystem::Linux);
                 assert_eq!(runner.arch, Architecture::Aarch64);
                 assert_eq!(runner.version, test_version());
+                assert!(runner.channel.is_none());
+                assert!(runner.checksum.is_none());
             },
             other => panic!("Expected Ready, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn ready_canary_channel_roundtrip() {
+        let checksum: Sha256 = "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+            .parse()
+            .unwrap();
+        let msg = RunnerMessage::Ready {
+            poll_timeout: None,
+            runner: Some(JsonRunnerMetadata {
+                os: OperatingSystem::Linux,
+                arch: Architecture::X86_64,
+                version: test_version(),
+                channel: Some(UpdateChannel::Canary),
+                checksum: Some(checksum.clone()),
+            }),
+        };
+        let json = serde_json::to_string(&msg).unwrap();
+        let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            RunnerMessage::Ready { runner, .. } => {
+                let runner = runner.unwrap();
+                assert_eq!(runner.channel, Some(UpdateChannel::Canary));
+                assert_eq!(runner.checksum, Some(checksum));
+            },
+            other => panic!("Expected Ready, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ready_legacy_metadata_deserializes() {
+        // A pre-channel runner sends only os/arch/version; the new fields
+        // must default to the stable channel with no checksum.
+        let json = format!(
+            r#"{{"event":"ready","runner":{{"os":"linux","arch":"x86_64","version":"{version}"}}}}"#,
+            version = test_version(),
+        );
+        let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
+        match deserialized {
+            RunnerMessage::Ready { runner, .. } => {
+                let runner = runner.unwrap();
+                assert_eq!(runner.version, test_version());
+                assert!(runner.channel.is_none());
+                assert!(runner.checksum.is_none());
+            },
+            other => panic!("Expected Ready, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ready_stable_metadata_wire_format_is_legacy() {
+        // A stable runner without a checksum must serialize exactly like a
+        // pre-channel runner: no channel or checksum fields on the wire.
+        let msg = RunnerMessage::Ready {
+            poll_timeout: None,
+            runner: Some(JsonRunnerMetadata {
+                os: OperatingSystem::Linux,
+                arch: Architecture::X86_64,
+                version: test_version(),
+                channel: None,
+                checksum: None,
+            }),
+        };
+        let json = serde_json::to_string(&msg).unwrap();
+        assert!(!json.contains("channel"), "unexpected channel in {json}");
+        assert!(!json.contains("checksum"), "unexpected checksum in {json}");
     }
 
     #[test]

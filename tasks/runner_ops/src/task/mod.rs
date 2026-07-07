@@ -111,7 +111,7 @@ fn merge_ssh(
     Ok((server, ssh, user))
 }
 
-/// Merge SSH + key/host fields from CLI flags and server config file.
+/// Merge SSH + key/host/channel fields from CLI flags and server config file.
 fn merge_ssh_with_extras(
     runner: RunnerResourceId,
     server: Option<String>,
@@ -119,7 +119,14 @@ fn merge_ssh_with_extras(
     user: Option<String>,
     key: Option<Secret>,
     host: Option<url::Url>,
-) -> anyhow::Result<(Ssh, url::Url, RunnerResourceId, Secret)> {
+    update_channel: Option<bencher_json::UpdateChannel>,
+) -> anyhow::Result<(
+    Ssh,
+    url::Url,
+    RunnerResourceId,
+    Secret,
+    Option<bencher_json::UpdateChannel>,
+)> {
     let file = load_server(&runner)?;
     let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
     let key = key
@@ -128,5 +135,12 @@ fn merge_ssh_with_extras(
     let host = host
         .or(file.as_ref().and_then(|f| f.host.clone()))
         .unwrap_or_else(|| DEFAULT_HOST.clone());
-    Ok((Ssh::new(server, ssh, user), host, runner, key))
+    let update_channel = update_channel.or(file.as_ref().and_then(|f| f.update_channel));
+    Ok((
+        Ssh::new(server, ssh, user),
+        host,
+        runner,
+        key,
+        update_channel,
+    ))
 }

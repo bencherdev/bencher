@@ -2650,6 +2650,8 @@ async fn non_linux_version_mismatch_skips_update() {
             os: bencher_json::OperatingSystem::Macos,
             arch: bencher_json::Architecture::Aarch64,
             version: "0.0.0".to_owned(),
+            channel: None,
+            checksum: None,
         }),
     };
     send_msg(&mut ws, &ready).await;
@@ -2674,6 +2676,90 @@ async fn no_metadata_skips_update() {
     let ready = RunnerMessage::Ready {
         poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
         runner: None,
+    };
+    send_msg(&mut ws, &ready).await;
+
+    let response = recv_msg(&mut ws).await;
+    assert!(
+        matches!(response, ServerMessage::NoJob),
+        "Expected NoJob, got: {response:?}"
+    );
+}
+
+/// A stable channel Linux runner whose version matches the server version
+/// is up to date: the server proceeds to job polling and returns `NoJob`.
+#[tokio::test]
+async fn stable_channel_version_match_no_update() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-stable-match@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Runner stable-match").await;
+
+    let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        runner: Some(runner_metadata()),
+    };
+    send_msg(&mut ws, &ready).await;
+
+    let response = recv_msg(&mut ws).await;
+    assert!(
+        matches!(response, ServerMessage::NoJob),
+        "Expected NoJob, got: {response:?}"
+    );
+}
+
+/// A stable channel Linux runner with a stale version whose published checksum
+/// cannot be fetched (unroutable update base URL) skips the update gracefully
+/// instead of erroring the channel: the server proceeds and returns `NoJob`.
+#[tokio::test]
+async fn stable_channel_checksum_fetch_failure_proceeds() {
+    let base_url: url::Url = "http://127.0.0.1:1/".parse().expect("Invalid base URL");
+    let server = TestServer::new_with_runner_update_base_url(base_url).await;
+    let admin = server.signup("Admin", "ws-stable-fetch@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Runner stable-fetch").await;
+
+    let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        runner: Some(bencher_json::runner::JsonRunnerMetadata {
+            version: "0.0.0".to_owned(),
+            ..runner_metadata()
+        }),
+    };
+    send_msg(&mut ws, &ready).await;
+
+    let response = recv_msg(&mut ws).await;
+    assert!(
+        matches!(response, ServerMessage::NoJob),
+        "Expected NoJob, got: {response:?}"
+    );
+}
+
+/// A canary channel Linux runner whose published checksum cannot be fetched
+/// (unroutable update base URL) skips the update gracefully and proceeds
+/// to job polling.
+#[tokio::test]
+async fn canary_channel_checksum_fetch_failure_proceeds() {
+    let base_url: url::Url = "http://127.0.0.1:1/".parse().expect("Invalid base URL");
+    let server = TestServer::new_with_runner_update_base_url(base_url).await;
+    let admin = server.signup("Admin", "ws-canary-fetch@example.com").await;
+
+    let runner = create_runner(&server, &admin.token, "Runner canary-fetch").await;
+
+    let checksum: bencher_json::Sha256 =
+        "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+            .parse()
+            .expect("Invalid checksum");
+    let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        runner: Some(bencher_json::runner::JsonRunnerMetadata {
+            channel: Some(bencher_json::UpdateChannel::Canary),
+            checksum: Some(checksum),
+            ..runner_metadata()
+        }),
     };
     send_msg(&mut ws, &ready).await;
 

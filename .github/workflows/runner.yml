@@ -12,6 +12,13 @@ on:
       zig-build-version:
         type: string
         required: true
+      # Skip the KVM scenario tests and only build the binaries.
+      # Used on the cloud branch, where the same commits already ran the
+      # scenario tests on devel.
+      build-only:
+        type: boolean
+        required: false
+        default: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -20,6 +27,7 @@ env:
 jobs:
   test_runner_scenarios:
     name: Test Runner Scenarios
+    if: ${{ !inputs.build-only }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -71,6 +79,11 @@ jobs:
           HEAD_REF: ${{ github.head_ref || github.ref_name }}
         run: |
           VERSION="$HEAD_REF"
+          # Cloud branch builds are versioned as `canary` for the rolling
+          # canary prerelease that Bencher Cloud runners track.
+          if [[ "$GITHUB_REF" == "refs/heads/cloud" ]]; then
+            VERSION="canary"
+          fi
           echo "RUNNER_VERSION=${VERSION//\//-}" >> "$GITHUB_ENV"
       - name: Setup Rust
         uses: ./.github/actions/setup-rust

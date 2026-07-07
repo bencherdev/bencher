@@ -13,3 +13,8 @@ Messages envoyés du serveur vers le Runner.
 Le jeton de récupération OCI dans un message `job` est généré lorsque le Job est réclamé et n'est jamais stocké.
 Il est limité au seul projet auquel le Job appartient, est en lecture seule (pull only), et a une courte durée de vie,
 de sorte qu'un Runner compromis ne peut récupérer que les Images du projet du Job qu'il a réclamé.
+
+Sur le canal de mise à jour `stable`, un `update` est envoyé lorsque la version du Runner diffère de la version du serveur.
+Sur le canal de mise à jour `canary`, `version` vaut `canary`
+et un `update` est envoyé lorsque le checksum du binaire rapporté par le Runner lui-même
+diffère du build canary continu publié.

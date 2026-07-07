@@ -4,7 +4,7 @@ Mensajes enviados desde el Runner al servidor.
 
 | Event       | Descripción                                       | Payload                                                                 |
 | ----------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
-| `ready`     | El Runner está inactivo y solicitando un Job      | `poll_timeout` opcional (1-900s) y metadatos del `runner` (`os`, `arch`, `version`) |
+| `ready`     | El Runner está inactivo y solicitando un Job      | `poll_timeout` opcional (1-900s) y metadatos del `runner` (`os`, `arch`, `version`, `channel` de actualización opcional, y `checksum` del binario opcional) |
 | `running`   | La configuración del Job está completa y el benchmark está comenzando | Ninguno                                                |
 | `heartbeat` | Señal periódica de vida (aproximadamente una vez por segundo) | Ninguno                                                      |
 | `completed` | El benchmark se completó correctamente            | `job` (UUID del Job) y `results` (salida por iteración)                 |

@@ -73,6 +73,10 @@ pub struct TaskDeploy {
     #[clap(long)]
     pub host: Option<url::Url>,
 
+    /// Update channel for automatic updates (stable or canary)
+    #[clap(long)]
+    pub update_channel: Option<bencher_json::UpdateChannel>,
+
     /// GitHub Actions run ID (defaults to latest successful `devel` run)
     #[clap(long)]
     pub run_id: Option<u64>,
@@ -120,6 +124,10 @@ pub struct TaskStart {
     /// Bencher API host URL
     #[clap(long)]
     pub host: Option<url::Url>,
+
+    /// Update channel for automatic updates (stable or canary)
+    #[clap(long)]
+    pub update_channel: Option<bencher_json::UpdateChannel>,
 
     /// Allow executing jobs without a sandbox (sets `BENCHER_DANGER_ALLOW_NO_SANDBOX=true`).
     #[clap(long)]

@@ -53,6 +53,16 @@ Job을 기다리는 동안의 롱 폴(long-poll) 타임아웃(초)으로, `1`에
 기본적으로, 서버가 새 버전을 제공하면 Runner는 Job 사이에 스스로 업데이트합니다.
 `BENCHER_NO_AUTO_UPDATE` 환경 변수로도 설정할 수 있습니다.
 
+### `--update-channel <UPDATE_CHANNEL>`
+
+자동 업데이트에 사용할 업데이트 채널로, `stable` 또는 `canary`입니다.
+기본적으로 `stable`이 사용됩니다.
+`stable` 채널은 버전이 지정된 릴리스로 업데이트합니다.
+`canary` 채널은 롤링 canary 빌드를 추적하며,
+이 빌드는 Bencher Cloud 배포에서 Runner가 변경될 때마다 다시 빌드됩니다.
+`BENCHER_UPDATE_CHANNEL` 환경 변수로도 설정할 수 있습니다.
+`--no-auto-update`와 충돌합니다.
+
 ### `--max-download-size <MAX_DOWNLOAD_SIZE>`
 
 자체 업데이트 바이너리의 최대 다운로드 크기(바이트)입니다.

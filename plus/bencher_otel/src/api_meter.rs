@@ -155,6 +155,8 @@ pub enum ApiCounter {
     RunnerHeartbeatTimeout,
     RunnerJobTimeout,
     RunnerDisconnect,
+    RunnerSelfUpdateSent(UpdateChannelKind),
+    RunnerSelfUpdateCheckFailed(UpdateChannelKind),
 
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
@@ -188,7 +190,7 @@ impl ApiCounter {
 
             Self::UserSignup(_) => "{signup}",
             Self::UserLogin(_) => "{login}",
-            Self::UserRecaptchaFailure => "{failure}",
+            Self::UserRecaptchaFailure | Self::RunnerSelfUpdateCheckFailed(_) => "{failure}",
             Self::UserInvite | Self::UserInviteMax(_) => "{invite}",
             Self::UserAccept(_) => "{accept}",
             Self::UserConfirm => "{confirmation}",
@@ -221,6 +223,7 @@ impl ApiCounter {
             Self::RunnerMinutesBilled | Self::RunnerMinutesBilledFailed => "{minute}",
             Self::RunnerHeartbeatTimeout | Self::RunnerJobTimeout => "{timeout}",
             Self::RunnerDisconnect => "{disconnect}",
+            Self::RunnerSelfUpdateSent(_) => "{update}",
         }
     }
 
@@ -311,6 +314,8 @@ impl ApiCounter {
             Self::RunnerHeartbeatTimeout => "runner.heartbeat.timeout",
             Self::RunnerJobTimeout => "runner.job.timeout",
             Self::RunnerDisconnect => "runner.disconnect",
+            Self::RunnerSelfUpdateSent(_) => "runner.self_update.sent",
+            Self::RunnerSelfUpdateCheckFailed(_) => "runner.self_update.check.failed",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
@@ -431,6 +436,12 @@ impl ApiCounter {
                 "Counts the number of jobs canceled due to exceeding job timeout"
             },
             Self::RunnerDisconnect => "Counts the number of runner disconnections",
+            Self::RunnerSelfUpdateSent(_) => {
+                "Counts the number of runner self-update directives sent"
+            },
+            Self::RunnerSelfUpdateCheckFailed(_) => {
+                "Counts the number of runner self-update checksum fetch failures"
+            },
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
@@ -499,6 +510,10 @@ impl ApiCounter {
             },
             Self::Create(authorization_kind) | Self::CreateMax(authorization_kind) => {
                 vec![authorization_kind.into()]
+            },
+            Self::RunnerSelfUpdateSent(update_channel_kind)
+            | Self::RunnerSelfUpdateCheckFailed(update_channel_kind) => {
+                vec![update_channel_kind.into()]
             },
             Self::RunnerRequestMax(interval_kind)
             | Self::RunUnclaimedMax(interval_kind)
@@ -673,6 +688,31 @@ impl From<JobStatusKind> for opentelemetry::KeyValue {
 
 impl JobStatusKind {
     const KEY: &str = "job.status";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum UpdateChannelKind {
+    Stable,
+    Canary,
+}
+
+impl fmt::Display for UpdateChannelKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Stable => write!(f, "stable"),
+            Self::Canary => write!(f, "canary"),
+        }
+    }
+}
+
+impl From<UpdateChannelKind> for opentelemetry::KeyValue {
+    fn from(update_channel_kind: UpdateChannelKind) -> Self {
+        opentelemetry::KeyValue::new(UpdateChannelKind::KEY, update_channel_kind.to_string())
+    }
+}
+
+impl UpdateChannelKind {
+    const KEY: &str = "update.channel";
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -25,6 +25,7 @@ mod runner_key_hash;
 mod sandbox;
 mod sha256;
 mod timeout;
+mod update_channel;
 mod year;
 
 pub use architecture::Architecture;
@@ -52,4 +53,5 @@ pub use runner_key_hash::RunnerKeyHash;
 pub use sandbox::Sandbox;
 pub use sha256::Sha256;
 pub use timeout::Timeout;
+pub use update_channel::UpdateChannel;
 pub use year::ExpirationYear;

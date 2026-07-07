@@ -53,6 +53,16 @@ Deaktiviert automatische Updates vom Server.
 Standardmäßig aktualisiert sich der Runner zwischen Jobs selbst, wenn der Server eine neue Version anbietet.
 Kann auch mit der Umgebungsvariable `BENCHER_NO_AUTO_UPDATE` gesetzt werden.
 
+### `--update-channel <UPDATE_CHANNEL>`
+
+Der Update-Kanal für automatische Updates, entweder `stable` oder `canary`.
+Standardmäßig wird `stable` verwendet.
+Der `stable`-Kanal aktualisiert auf versionierte Releases.
+Der `canary`-Kanal folgt dem rollierenden Canary-Build,
+der neu gebaut wird, wann immer sich der Runner bei einem Bencher Cloud-Deployment ändert.
+Kann auch mit der Umgebungsvariable `BENCHER_UPDATE_CHANNEL` gesetzt werden.
+Steht im Konflikt mit `--no-auto-update`.
+
 ### `--max-download-size <MAX_DOWNLOAD_SIZE>`
 
 Die maximale Download-Größe in Bytes für Self-Update-Binaries.

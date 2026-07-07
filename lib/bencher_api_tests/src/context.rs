@@ -44,13 +44,13 @@ pub struct TestServer {
 impl TestServer {
     /// Create a new test server with default settings.
     pub async fn new() -> Self {
-        Self::build(None, None, None).await
+        Self::build(None, None, None, None).await
     }
 
     /// Create a new test server with custom upload timeout and max body size.
     #[cfg(feature = "plus")]
     pub async fn new_with_limits(upload_timeout: u64, max_body_size: u64) -> Self {
-        Self::build(Some(upload_timeout), Some(max_body_size), None).await
+        Self::build(Some(upload_timeout), Some(max_body_size), None, None).await
     }
 
     /// Create a new test server with custom upload timeout, max body size, and injectable clock.
@@ -60,7 +60,13 @@ impl TestServer {
         max_body_size: u64,
         clock: bencher_json::Clock,
     ) -> Self {
-        Self::build(Some(upload_timeout), Some(max_body_size), Some(clock)).await
+        Self::build(Some(upload_timeout), Some(max_body_size), Some(clock), None).await
+    }
+
+    /// Create a new test server with a custom runner self-update base URL.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_runner_update_base_url(base_url: url::Url) -> Self {
+        Self::build(None, None, None, Some(base_url)).await
     }
 
     #[cfg(feature = "plus")]
@@ -73,6 +79,7 @@ impl TestServer {
         upload_timeout: Option<u64>,
         max_body_size: Option<u64>,
         clock: Option<bencher_json::Clock>,
+        runner_update_base_url: Option<url::Url>,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
@@ -147,6 +154,7 @@ impl TestServer {
             heartbeat_timeout: std::time::Duration::from_secs(5),
             job_timeout_grace_period: std::time::Duration::from_mins(1),
             heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
+            runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
             shutdown: bencher_schema::context::CancellationToken::new(),
         };
 
@@ -164,6 +172,7 @@ impl TestServer {
         upload_timeout: Option<u64>,
         max_body_size: Option<u64>,
         _clock: Option<()>,
+        _runner_update_base_url: Option<url::Url>,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {

@@ -31,6 +31,8 @@ pub fn runner_metadata() -> JsonRunnerMetadata {
         os: bencher_json::OperatingSystem::Linux,
         arch: bencher_json::Architecture::X86_64,
         version: bencher_json::BENCHER_API_VERSION.to_owned(),
+        channel: None,
+        checksum: None,
     }
 }
 
