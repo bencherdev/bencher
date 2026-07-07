@@ -37,6 +37,8 @@ pub mod kernel;
 #[cfg(feature = "plus")]
 mod local;
 #[cfg(feature = "plus")]
+mod local_isolation;
+#[cfg(feature = "plus")]
 mod log_level;
 #[cfg(feature = "plus")]
 pub mod metrics;
