@@ -1,6 +1,7 @@
 use std::sync::LazyLock;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
+    num::NonZeroU32,
     ops::Deref,
 };
 
@@ -46,6 +47,14 @@ const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Debug;
 const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::Info;
 
 const DEFAULT_BUSY_TIMEOUT: u32 = 5_000;
+
+// 64 MiB, in KiB. Large report deletions and ingests dirty far more pages
+// than the SQLite default (2 MiB); a bigger writer cache avoids re-reading
+// evicted pages mid-operation.
+const DEFAULT_CACHE_SIZE: NonZeroU32 = match NonZeroU32::new(0x1_0000) {
+    Some(cache_size) => cache_size,
+    None => panic!("default cache size is zero"),
+};
 
 const DEFAULT_CONSOLE_URL_STR: &str = "http://localhost:3000";
 #[expect(clippy::panic, reason = "compile-time constant URL must be valid")]
@@ -220,6 +229,7 @@ impl Default for Config {
                 file: DEFAULT_DB_PATH.into(),
                 data_store: None,
                 busy_timeout: None,
+                cache_size: None,
             },
             smtp: None,
             logging: JsonLogging {

@@ -12658,6 +12658,13 @@
             "format": "uint32",
             "minimum": 0
           },
+          "cache_size": {
+            "nullable": true,
+            "description": "The database page cache size in KiB for the writer connection",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 1
+          },
           "data_store": {
             "nullable": true,
             "allOf": [

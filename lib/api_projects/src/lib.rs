@@ -23,6 +23,8 @@ mod thresholds;
 
 mod macros;
 
+pub use reports::DELETE_CHUNK_SIZE;
+
 pub struct Api;
 
 impl bencher_endpoint::Registrar for Api {

@@ -33,7 +33,7 @@ tabled = { workspace = true, optional = true }
 thiserror.workspace = true
 typeshare.workspace = true
 url = { workspace = true, features = ["serde"] }
-uuid = { workspace = true, features = ["v4", "serde"] }
+uuid = { workspace = true, features = ["v7", "serde"] }
 
 [dev-dependencies]
 pretty_assertions.workspace = true

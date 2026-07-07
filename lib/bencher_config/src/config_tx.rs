@@ -44,7 +44,7 @@ use slog::{Logger, debug, error, info};
 
 #[cfg(feature = "plus")]
 use super::plus::Plus;
-use super::{Config, DEFAULT_BUSY_TIMEOUT};
+use super::{Config, DEFAULT_BUSY_TIMEOUT, DEFAULT_CACHE_SIZE};
 
 const DATABASE_URL: &str = "DATABASE_URL";
 const SQLITE_TMPDIR: &str = "SQLITE_TMPDIR";
@@ -208,9 +208,10 @@ async fn into_context(
     // busy_timeout prevents immediate SQLITE_BUSY errors under lock contention.
     // synchronous=NORMAL is safe with WAL mode and reduces fsync overhead.
     let busy_timeout = json_database.busy_timeout.unwrap_or(DEFAULT_BUSY_TIMEOUT);
+    let cache_size = json_database.cache_size.unwrap_or(DEFAULT_CACHE_SIZE);
     info!(
         log,
-        "Setting database PRAGMAs (busy_timeout: {busy_timeout}ms)"
+        "Setting database PRAGMAs (busy_timeout: {busy_timeout}ms, cache_size: {cache_size} KiB)"
     );
     database_connection
         .batch_execute("PRAGMA journal_mode = WAL")
@@ -220,6 +221,12 @@ async fn into_context(
         .map_err(ConfigTxError::Pragma)?;
     database_connection
         .batch_execute("PRAGMA synchronous = NORMAL")
+        .map_err(ConfigTxError::Pragma)?;
+    // Writer connection only: the read pools hold many connections, so a
+    // large per-connection cache would multiply memory, and reads are served
+    // by the OS page cache. Negative value = KiB in SQLite.
+    database_connection
+        .batch_execute(&format!("PRAGMA cache_size = -{cache_size}"))
         .map_err(ConfigTxError::Pragma)?;
     // Surfaces `SQLITE_BUSY_SNAPSHOT` (517) etc. distinctly from plain `SQLITE_BUSY` (5)
     // in error messages, instead of both rendering as "database is locked".
