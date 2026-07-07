@@ -842,13 +842,41 @@ const PerfPanel = (props: Props) => {
 			setReportsTotalCount(headers?.[X_TOTAL_COUNT]),
 		),
 	);
+	// The reports list endpoint does not include the results,
+	// so fetch the full first report to bootstrap the default perf plot.
+	const first_report_fetcher = createMemo(() => {
+		if (
+			!clear() &&
+			branchesIsEmpty() &&
+			testbedsIsEmpty() &&
+			benchmarksIsEmpty() &&
+			measuresIsEmpty() &&
+			tab() === DEFAULT_PERF_TAB
+		) {
+			return reports_data()?.[0]?.uuid;
+		}
+		return undefined;
+	});
+	const [first_report_data] = createResource<undefined | JsonReport>(
+		first_report_fetcher,
+		async (uuid) => {
+			const path = `/v0/projects/${project_slug()}/reports/${uuid}`;
+			return await httpGet(props.apiUrl, path, user?.token)
+				.then((resp) => resp?.data)
+				.catch((error) => {
+					console.error(error);
+					Sentry.captureException(error);
+					return undefined;
+				});
+		},
+	);
 	createEffect(() => {
 		const data = reports_data();
 		if (data) {
 			setReportsTab(resourcesToCheckable(data, [report()]));
 		}
 		const first = 0;
-		const first_report = data?.[first];
+		const first_report = first_report_data();
 		if (
 			!clear() &&
 			first_report &&
@@ -1345,6 +1373,7 @@ const PerfPanel = (props: Props) => {
 			>
 				<Show when={!props.isEmbed}>
 					<PlotTab
+						apiUrl={props.apiUrl}
 						project_slug={project_slug}
 						theme={theme}
 						isConsole={props.isConsole === true}

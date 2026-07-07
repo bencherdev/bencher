@@ -532,7 +532,7 @@ impl Run {
         json_report: JsonReport,
         ci_check: &mut Option<CiCheck>,
     ) -> Result<(), RunError> {
-        let alerts_count = json_report.alerts.len();
+        let alerts_count = usize::try_from(json_report.counts.alerts.total).unwrap_or(usize::MAX);
         self.display_results(json_report, ci_check).await?;
         if self.error_on_alert && alerts_count > 0 {
             Err(RunError::Alerts(alerts_count))

@@ -1,5 +1,7 @@
 #![expect(
     unused_crate_dependencies,
+    clippy::expect_used,
+    clippy::missing_assert_message,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
     reason = "integration test file"
@@ -11,7 +13,7 @@ use bencher_api_tests::{
     helpers::{base_timestamp, create_test_report, get_project_id},
 };
 use bencher_json::{
-    BenchmarkUuid, BoundaryUuid, JsonReports, MeasureUuid, MetricUuid, ModelUuid,
+    BenchmarkUuid, BoundaryUuid, JsonReport, JsonReports, MeasureUuid, MetricUuid, ModelUuid,
     ReportBenchmarkUuid, ThresholdUuid,
 };
 use bencher_schema::{
@@ -299,6 +301,43 @@ async fn reports_delete_chunked() {
     delete_report_and_assert_empty(count).await;
 }
 
+/// Create a report with two iterations, each with two benchmarks and one measure.
+async fn post_report(server: &TestServer, token: &str, project_slug: &str) -> JsonReport {
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/reports", project_slug)))
+        .header(bencher_json::AUTHORIZATION, bencher_json::bearer_header(token))
+        .json(&serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": [
+                "{\"bench_one\": {\"latency\": {\"value\": 100.0}}, \"bench_two\": {\"latency\": {\"value\": 200.0}}}",
+                "{\"bench_one\": {\"latency\": {\"value\": 101.0}}, \"bench_two\": {\"latency\": {\"value\": 201.0}}}"
+            ]
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    resp.json().await.expect("Failed to parse response")
+}
+
+fn assert_counts(counts: &serde_json::Value) {
+    assert_eq!(
+        counts,
+        &serde_json::json!({
+            "results": [
+                { "benchmarks": 2, "measures": 1 },
+                { "benchmarks": 2, "measures": 1 }
+            ],
+            "alerts": { "total": 0, "active": 0 }
+        })
+    );
+}
+
 // GET /v0/projects/{project}/reports - list reports (empty)
 #[tokio::test]
 async fn reports_list_empty() {
@@ -381,6 +420,144 @@ async fn reports_get_not_found() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// GET /v0/projects/{project}/reports - results and alerts are collapsed by default
+#[tokio::test]
+async fn reports_list_collapses_by_default() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "reportcollapse@example.com")
+        .await;
+    let org = server.create_org(&user, "Report Collapse Org").await;
+    let project = server
+        .create_project(&user, &org, "Report Collapse Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    post_report(&server, &user.token, project_slug).await;
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{}/reports", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let reports: serde_json::Value = resp.json().await.expect("Failed to parse response");
+    let report = reports
+        .as_array()
+        .expect("Response is not an array")
+        .first()
+        .expect("Response is empty");
+    // The results and alerts keys are omitted entirely, not just empty
+    assert!(report.get("results").is_none());
+    assert!(report.get("alerts").is_none());
+    assert_counts(report.get("counts").expect("Report missing counts"));
+
+    // The collapsed response still parses as the typed JsonReports
+    let reports: JsonReports =
+        serde_json::from_value(reports).expect("Failed to parse typed response");
+    let report = reports.0.first().expect("Reports are empty");
+    assert!(report.results.is_none());
+    assert!(report.alerts.is_none());
+}
+
+// GET /v0/projects/{project}/reports?expand=true - full results and alerts
+#[tokio::test]
+async fn reports_list_expand_true_includes_full_report() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "reportexpand@example.com").await;
+    let org = server.create_org(&user, "Report Expand Org").await;
+    let project = server
+        .create_project(&user, &org, "Report Expand Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    post_report(&server, &user.token, project_slug).await;
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/reports?expand=true",
+            project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let reports: JsonReports = resp.json().await.expect("Failed to parse response");
+    let report = reports.0.first().expect("Reports are empty");
+    let results = report.results.as_ref().expect("Report missing results");
+    let alerts = report.alerts.as_ref().expect("Report missing alerts");
+    // The counts are consistent with the full results and alerts
+    assert_eq!(results.len(), report.counts.results.len());
+    for (iteration, counts) in results.iter().zip(&report.counts.results) {
+        assert_eq!(iteration.len(), counts.benchmarks as usize);
+    }
+    assert_eq!(alerts.len(), report.counts.alerts.total as usize);
+}
+
+// GET /v0/projects/{project}/reports/{report} - always returns the full report
+#[tokio::test]
+async fn reports_get_one_always_full() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "reportgetone@example.com").await;
+    let org = server.create_org(&user, "Report GetOne Org").await;
+    let project = server
+        .create_project(&user, &org, "Report GetOne Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let report = post_report(&server, &user.token, project_slug).await;
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/reports/{}",
+            project_slug, report.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+    assert!(report.results.is_some());
+    assert!(report.alerts.is_some());
+}
+
+// POST /v0/projects/{project}/reports - response includes full results, alerts, and counts
+#[tokio::test]
+async fn reports_post_full_with_counts() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "reportpost@example.com").await;
+    let org = server.create_org(&user, "Report Post Org").await;
+    let project = server
+        .create_project(&user, &org, "Report Post Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let report = post_report(&server, &user.token, project_slug).await;
+
+    assert!(report.results.is_some());
+    assert!(report.alerts.is_some());
+    let counts = serde_json::to_value(&report.counts).expect("Failed to serialize counts");
+    assert_counts(&counts);
 }
 
 // DELETE /v0/projects/{project}/reports/{report} - not found

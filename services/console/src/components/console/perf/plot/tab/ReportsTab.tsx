@@ -1,4 +1,13 @@
-import { type Accessor, For, Match, Show, Switch, createMemo } from "solid-js";
+import * as Sentry from "@sentry/astro";
+import {
+	type Accessor,
+	For,
+	Match,
+	Show,
+	Switch,
+	createMemo,
+	createResource,
+} from "solid-js";
 import { BENCHMARK_ICON } from "../../../../../config/project/benchmarks";
 import { BRANCH_ICON } from "../../../../../config/project/branches";
 import { MEASURE_ICON } from "../../../../../config/project/measures";
@@ -6,6 +15,8 @@ import { TESTBED_ICON } from "../../../../../config/project/testbeds";
 import type { PerfTab } from "../../../../../config/types";
 import { fmtDateTime, resourcePath } from "../../../../../config/util";
 import type { JsonReport } from "../../../../../types/bencher";
+import { authUser } from "../../../../../util/auth";
+import { httpGet } from "../../../../../util/http";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
 import DateRange from "../../../../field/kinds/DateRange";
 import type { Theme } from "../../../../navbar/theme/theme";
@@ -15,6 +26,7 @@ import TableReportRow from "../../../table/rows/ReportRow";
 import DimensionLabel from "../../../table/rows/DimensionLabel";
 
 const ReportsTab = (props: {
+	apiUrl: string;
 	project_slug: Accessor<undefined | string>;
 	theme: Accessor<Theme>;
 	isConsole: boolean;
@@ -80,6 +92,7 @@ const ReportsTab = (props: {
 						{(report, index) => {
 							return (
 								<ReportRow
+									apiUrl={props.apiUrl}
 									project_slug={props.project_slug}
 									theme={props.theme}
 									isConsole={props.isConsole}
@@ -101,6 +114,7 @@ const ReportsTab = (props: {
 };
 
 const ReportRow = (props: {
+	apiUrl: string;
 	project_slug: Accessor<undefined | string>;
 	theme: Accessor<Theme>;
 	isConsole: boolean;
@@ -114,11 +128,28 @@ const ReportRow = (props: {
 }) => {
 	const report = props.report?.resource as JsonReport;
 	const hasBenchmarks =
-		report?.results
-			?.map((iteration) => iteration?.length)
-			?.reduce((acc, n) => acc + n, 0) > 0;
+		(report?.counts?.results?.reduce(
+			(acc, counts) => acc + (counts?.benchmarks ?? 0),
+			0,
+		) ?? 0) > 0;
 
 	const viewReport = createMemo(() => props.isChecked && hasBenchmarks);
+
+	// The reports list endpoint does not include the results,
+	// so fetch the full report when it is expanded.
+	const [fullReport] = createResource(
+		() => (viewReport() ? report?.uuid : undefined),
+		async (uuid) => {
+			const path = `/v0/projects/${props.project_slug()}/reports/${uuid}`;
+			return await httpGet(props.apiUrl, path, authUser()?.token)
+				.then((resp) => resp?.data)
+				.catch((error) => {
+					console.error(error);
+					Sentry.captureException(error);
+					return undefined;
+				});
+		},
+	);
 
 	return (
 		<div id={report.uuid} class="panel-block is-block">
@@ -168,14 +199,25 @@ const ReportRow = (props: {
 				</div>
 			</div>
 			<Show when={viewReport()}>
-				<ReportCard
-					isConsole={props.isConsole}
-					params={{
-						project: props.project_slug(),
-					}}
-					value={() => report}
-					width={props.width}
-				/>
+				<Show
+					when={fullReport()}
+					fallback={
+						<progress
+							class="progress is-primary"
+							style="margin-top: 1rem;"
+							max="100"
+						/>
+					}
+				>
+					<ReportCard
+						isConsole={props.isConsole}
+						params={{
+							project: props.project_slug(),
+						}}
+						value={fullReport}
+						width={props.width}
+					/>
+				</Show>
 			</Show>
 		</div>
 	);

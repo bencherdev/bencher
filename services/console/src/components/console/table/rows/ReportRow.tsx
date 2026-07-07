@@ -1,23 +1,19 @@
 import { Show } from "solid-js";
 import { fmtDateTime } from "../../../../config/util";
-import { AlertStatus, type JsonReport } from "../../../../types/bencher";
+import type { JsonReport } from "../../../../types/bencher";
 import { ALERT_ICON, ALERT_OFF_ICON } from "../../../../config/project/alerts";
 import { BRANCH_ICON } from "../../../../config/project/branches";
 import { TESTBED_ICON } from "../../../../config/project/testbeds";
 import { BENCHMARK_ICON } from "../../../../config/project/benchmarks";
 import { MEASURE_ICON } from "../../../../config/project/measures";
-import { boundaryLimitsMap } from "../../deck/hand/card/ReportCard";
 import DimensionLabel, { ADAPTER_ICON } from "./DimensionLabel";
 
 export const ReportRow = (props: { report: JsonReport }) => {
-	const benchmarkCount = props.report?.results?.map(
-		(iteration) => iteration?.length,
-	);
+	const benchmarkCount =
+		props.report?.counts?.results?.map((counts) => counts?.benchmarks) ?? [];
 
-	const totalAlerts = props.report?.alerts?.length;
-	const activeAlerts = props.report?.alerts?.filter(
-		(alert) => alert.status === AlertStatus.Active,
-	).length;
+	const totalAlerts = props.report?.counts?.alerts?.total ?? 0;
+	const activeAlerts = props.report?.counts?.alerts?.active ?? 0;
 
 	return (
 		<div>
@@ -54,9 +50,9 @@ export const ReportRow = (props: { report: JsonReport }) => {
 			<DimensionLabel
 				icon={MEASURE_ICON}
 				name={(() => {
-					const measureCount = props.report?.results?.map(
-						(iteration) => boundaryLimitsMap(iteration).size,
-					);
+					const measureCount =
+						props.report?.counts?.results?.map((counts) => counts?.measures) ??
+						[];
 					if (measureCount.length === 0) {
 						return "0 measures";
 					}

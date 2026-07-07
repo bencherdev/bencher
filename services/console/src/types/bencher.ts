@@ -1056,6 +1056,30 @@ export enum Adapter {
 	DartBenchmarkHarness = "dart_benchmark_harness",
 }
 
+/** Counts for a single iteration of a report. */
+export interface JsonReportIterationCounts {
+	/** The number of benchmarks in this iteration. */
+	benchmarks: number;
+	/** The number of distinct measures in this iteration. */
+	measures: number;
+}
+
+/** Counts for the alerts of a report. */
+export interface JsonReportAlertsCounts {
+	/** The total number of alerts. */
+	total: number;
+	/** The number of active alerts. */
+	active: number;
+}
+
+/** Counts for a report. */
+export interface JsonReportCounts {
+	/** Counts for the report results, one entry per iteration. */
+	results: JsonReportIterationCounts[];
+	/** Counts for the report alerts. */
+	alerts: JsonReportAlertsCounts;
+}
+
 export interface JsonReport {
 	uuid: Uuid;
 	user?: JsonPubUser;
@@ -1065,8 +1089,18 @@ export interface JsonReport {
 	start_time: string;
 	end_time: string;
 	adapter: Adapter;
-	results: JsonReportResults;
-	alerts: JsonReportAlerts;
+	/**
+	 * The report results, one list of results per iteration.
+	 * Omitted by default from the reports list endpoint; use the `expand` query param to include them.
+	 */
+	results?: JsonReportResults;
+	/**
+	 * The report alerts.
+	 * Omitted by default from the reports list endpoint; use the `expand` query param to include them.
+	 */
+	alerts?: JsonReportAlerts;
+	/** The report counts. */
+	counts?: JsonReportCounts;
 	job?: Uuid;
 	created: string;
 }

@@ -371,8 +371,17 @@ pub struct JsonReport {
     pub start_time: DateTime,
     pub end_time: DateTime,
     pub adapter: Adapter,
-    pub results: JsonReportResults,
-    pub alerts: JsonReportAlerts,
+    /// The report results, one list of results per iteration.
+    /// Omitted by default from the reports list endpoint; use the `expand` query param to include them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub results: Option<JsonReportResults>,
+    /// The report alerts.
+    /// Omitted by default from the reports list endpoint; use the `expand` query param to include them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alerts: Option<JsonReportAlerts>,
+    /// The report counts.
+    #[serde(default)]
+    pub counts: JsonReportCounts,
     #[cfg(feature = "plus")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub job: Option<JobUuid>,
@@ -407,6 +416,39 @@ pub struct JsonReportMeasure {
 #[typeshare::typeshare]
 pub type JsonReportAlerts = Vec<JsonAlert>;
 
+/// Counts for a report.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportCounts {
+    /// Counts for the report results, one entry per iteration.
+    pub results: Vec<JsonReportIterationCounts>,
+    /// Counts for the report alerts.
+    pub alerts: JsonReportAlertsCounts,
+}
+
+/// Counts for a single iteration of a report.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportIterationCounts {
+    /// The number of benchmarks in this iteration.
+    pub benchmarks: u32,
+    /// The number of distinct measures in this iteration.
+    pub measures: u32,
+}
+
+/// Counts for the alerts of a report.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportAlertsCounts {
+    /// The total number of alerts.
+    pub total: u32,
+    /// The number of active alerts.
+    pub active: u32,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportQueryParams {
@@ -421,6 +463,9 @@ pub struct JsonReportQueryParams {
     /// If set to `true`, only return reports with an archived branch or testbed.
     /// If not set or set to `false`, only returns reports with non-archived branches and testbeds.
     pub archived: Option<bool>,
+    /// If set to `true`, include the full results and alerts for each report.
+    /// If not set or set to `false`, the results and alerts are omitted and only the counts are included.
+    pub expand: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -430,6 +475,7 @@ pub struct JsonReportQuery {
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
     pub archived: Option<bool>,
+    pub expand: Option<bool>,
 }
 
 impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
@@ -442,6 +488,7 @@ impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
             start_time,
             end_time,
             archived,
+            expand,
         } = query_params;
 
         let branch = if let Some(branch) = branch {
@@ -461,6 +508,7 @@ impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
             start_time: start_time.map(Into::into),
             end_time: end_time.map(Into::into),
             archived,
+            expand,
         })
     }
 }

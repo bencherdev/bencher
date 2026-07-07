@@ -29,7 +29,10 @@ use bencher_schema::{
                 head::HeadId,
                 version::{QueryVersion, VersionId},
             },
-            report::{NewRunReport, QueryReport, ReportId, report_benchmark::ReportBenchmarkId},
+            report::{
+                NewRunReport, QueryReport, ReportId, ReportMode,
+                report_benchmark::ReportBenchmarkId,
+            },
         },
         user::{
             actor::{ApiActor, PubProjectBearerToken},
@@ -87,6 +90,8 @@ pub async fn proj_reports_options(
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project,
 /// or provide a valid project key for the project.
 /// By default, the reports are sorted by date time in reverse chronological order.
+/// By default, the results and alerts for each report are omitted and only their counts are included.
+/// Set the `expand` query param to `true` to include the full results and alerts.
 /// The HTTP response header `X-Total-Count` contains the total number of reports.
 #[endpoint {
     method = GET,
@@ -149,10 +154,15 @@ async fn get_ls_inner(
             (&query_project, &pagination_params, &query_params)
         ))?;
 
+    let mode = if query_params.expand.unwrap_or_default() {
+        ReportMode::Full
+    } else {
+        ReportMode::Collapsed
+    };
     // Drop connection lock before iterating
     let json_reports = reports
         .into_iter()
-        .map(|report| async { report.into_json(log, actor_conn!(context, api_actor)) })
+        .map(|report| async { report.into_json(log, actor_conn!(context, api_actor), mode) })
         .collect::<FuturesOrdered<_>>()
         .collect::<Vec<_>>()
         .await
@@ -419,7 +429,7 @@ async fn get_one_inner(
                 Report,
                 (&query_project, path_params.report)
             ))?
-            .into_json(log, conn)
+            .into_json(log, conn, ReportMode::Full)
     })
 }
 

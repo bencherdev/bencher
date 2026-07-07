@@ -27,6 +27,7 @@ export interface TabElement<T> {
 }
 
 export interface Props {
+	apiUrl: string;
 	project_slug: Accessor<undefined | string>;
 	theme: Accessor<Theme>;
 	isConsole: boolean;
@@ -341,6 +342,7 @@ const PlotTab = (props: Props) => {
 				</nav>
 			</div>
 			<Tab
+				apiUrl={props.apiUrl}
 				project_slug={props.project_slug}
 				theme={props.theme}
 				isConsole={props.isConsole}
