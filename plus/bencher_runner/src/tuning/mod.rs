@@ -18,9 +18,11 @@ mod kernel_work;
 mod perf_event_paranoid;
 pub mod preflight;
 mod swappiness;
+mod thp;
 
 pub use perf_event_paranoid::PerfEventParanoid;
 pub use swappiness::Swappiness;
+pub use thp::{ParseThpModeError, ThpMode};
 
 use crate::cpu::CpuLayout;
 
@@ -70,6 +72,9 @@ pub struct TuningConfig {
     /// isolated cpuset partition, the runtime equivalent of `isolcpus=`
     /// (default: true; only applied when the CPU layout has isolation).
     pub cpuset_partition: bool,
+    /// Host transparent hugepage mode (default: `never` for deterministic
+    /// memory backing; `leave` preserves the host configuration).
+    pub thp: ThpMode,
 }
 
 impl Default for TuningConfig {
@@ -89,6 +94,7 @@ impl Default for TuningConfig {
             disable_cstates: true,
             steer_kernel_work: true,
             cpuset_partition: true,
+            thp: ThpMode::Never,
         }
     }
 }
@@ -111,6 +117,7 @@ impl TuningConfig {
             disable_cstates: false,
             steer_kernel_work: false,
             cpuset_partition: false,
+            thp: ThpMode::Leave,
         }
     }
 }
@@ -248,6 +255,21 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
         dma_latency::hold_dma_latency(&mut guard, dma_latency::CPU_DMA_LATENCY);
     }
 
+    if let Some(value) = config.thp.sysfs_value() {
+        write_bracketed_sysctl(
+            &mut guard,
+            "/sys/kernel/mm/transparent_hugepage/enabled",
+            value,
+            "THP enabled",
+        );
+        write_bracketed_sysctl(
+            &mut guard,
+            "/sys/kernel/mm/transparent_hugepage/defrag",
+            value,
+            "THP defrag",
+        );
+    }
+
     guard
 }
 
@@ -303,6 +325,63 @@ fn write_sysctl(guard: &mut TuningGuard, path: &str, value: &str, label: &str) {
         value: current,
         label: label.to_owned(),
     });
+}
+
+/// Like [`write_sysctl`], but for files using the bracketed selection
+/// format (e.g., `always [madvise] never` under
+/// `/sys/kernel/mm/transparent_hugepage/`). The current value is the
+/// bracketed token; writes take the plain token, so save and restore
+/// work with the parsed value.
+#[cfg(target_os = "linux")]
+fn write_bracketed_sysctl(guard: &mut TuningGuard, path: &str, value: &str, label: &str) {
+    let path = Utf8PathBuf::from(path);
+
+    if !path.exists() {
+        println!("  Tuning: {label} - skipped (path not found)");
+        return;
+    }
+
+    let content = match std::fs::read_to_string(&path) {
+        Ok(v) => v,
+        Err(e) => {
+            println!("  Tuning: {label} - skipped (read failed: {e})");
+            return;
+        },
+    };
+    let Some(current) = parse_bracketed_value(&content) else {
+        println!(
+            "  Tuning: {label} - skipped (unrecognized format: {})",
+            content.trim()
+        );
+        return;
+    };
+    let current = current.to_owned();
+
+    if current == value {
+        println!("  Tuning: {label} - already {value}");
+        return;
+    }
+
+    if let Err(e) = std::fs::write(path.as_str(), value) {
+        println!("  Tuning: {label} - skipped (write failed: {e})");
+        return;
+    }
+
+    println!("  Tuning: {label} - set to {value} (was {current})");
+    guard.saved.push(SavedSetting {
+        path,
+        value: current,
+        label: label.to_owned(),
+    });
+}
+
+/// Extract the selected token from a bracketed sysfs value like
+/// `always [madvise] never`.
+#[cfg(target_os = "linux")]
+fn parse_bracketed_value(content: &str) -> Option<&str> {
+    content
+        .split_whitespace()
+        .find_map(|token| token.strip_prefix('[')?.strip_suffix(']'))
 }
 
 /// Set the CPU scaling governor on all CPUs.
@@ -457,6 +536,7 @@ mod tests {
         assert!(config.disable_cstates);
         assert!(config.steer_kernel_work);
         assert!(config.cpuset_partition);
+        assert_eq!(config.thp, ThpMode::Never);
     }
 
     #[test]
@@ -476,6 +556,7 @@ mod tests {
         assert!(!config.disable_cstates);
         assert!(!config.steer_kernel_work);
         assert!(!config.cpuset_partition);
+        assert_eq!(config.thp, ThpMode::Leave);
     }
 
     #[test]
@@ -615,6 +696,87 @@ mod tests {
             guard.saved.is_empty(),
             "should not save when value already matches"
         );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn parse_bracketed_value_variants() {
+        assert_eq!(
+            parse_bracketed_value("always [madvise] never\n"),
+            Some("madvise")
+        );
+        assert_eq!(
+            parse_bracketed_value("[always] madvise never"),
+            Some("always")
+        );
+        assert_eq!(
+            parse_bracketed_value("always defer defer+madvise madvise [never]\n"),
+            Some("never")
+        );
+        assert_eq!(parse_bracketed_value("no brackets here"), None);
+        assert_eq!(parse_bracketed_value(""), None);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn write_bracketed_sysctl_saves_and_writes() {
+        use std::fs;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("enabled");
+        fs::write(&path, "always [madvise] never\n").unwrap();
+
+        let mut guard = TuningGuard {
+            saved: Vec::new(),
+            held_fds: Vec::new(),
+        };
+        write_bracketed_sysctl(&mut guard, path.to_str().unwrap(), "never", "test");
+
+        assert_eq!(guard.saved.len(), 1);
+        assert_eq!(guard.saved[0].value, "madvise");
+        assert_eq!(fs::read_to_string(&path).unwrap(), "never");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn write_bracketed_sysctl_skips_if_already_set() {
+        use std::fs;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("enabled");
+        fs::write(&path, "always madvise [never]\n").unwrap();
+
+        let mut guard = TuningGuard {
+            saved: Vec::new(),
+            held_fds: Vec::new(),
+        };
+        write_bracketed_sysctl(&mut guard, path.to_str().unwrap(), "never", "test");
+
+        assert!(guard.saved.is_empty());
+        // The file is untouched (still in the kernel's bracketed format)
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "always madvise [never]\n"
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn write_bracketed_sysctl_skips_unrecognized_format() {
+        use std::fs;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("enabled");
+        fs::write(&path, "garbage\n").unwrap();
+
+        let mut guard = TuningGuard {
+            saved: Vec::new(),
+            held_fds: Vec::new(),
+        };
+        write_bracketed_sysctl(&mut guard, path.to_str().unwrap(), "never", "test");
+
+        assert!(guard.saved.is_empty());
+        assert_eq!(fs::read_to_string(&path).unwrap(), "garbage\n");
     }
 
     #[cfg(target_os = "linux")]

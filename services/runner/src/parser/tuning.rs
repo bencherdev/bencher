@@ -1,4 +1,4 @@
-use bencher_runner::{PerfEventParanoid, Swappiness, TuningConfig};
+use bencher_runner::{PerfEventParanoid, Swappiness, ThpMode, TuningConfig};
 use clap::Args;
 
 /// Host tuning flags shared by `run` and `up` subcommands.
@@ -68,6 +68,11 @@ pub struct CliTuning {
     /// Set `perf_event_paranoid` value (default: -1).
     #[arg(long, allow_hyphen_values = true)]
     pub perf_event_paranoid: Option<i32>,
+
+    /// Set host transparent hugepage mode (default: never).
+    /// Use "leave" to preserve the host configuration.
+    #[arg(long)]
+    pub thp: Option<ThpMode>,
 }
 
 impl TryFrom<CliTuning> for TuningConfig {
@@ -100,6 +105,7 @@ impl TryFrom<CliTuning> for TuningConfig {
             disable_cstates: !cli.cstates,
             steer_kernel_work: !cli.no_irq_steering,
             cpuset_partition: !cli.no_cpuset_partition,
+            thp: cli.thp.unwrap_or_default(),
         })
     }
 }
@@ -125,6 +131,7 @@ mod tests {
             swappiness: None,
             governor: None,
             perf_event_paranoid: None,
+            thp: None,
         }
     }
 
@@ -142,6 +149,7 @@ mod tests {
         assert!(config.disable_cstates);
         assert!(config.steer_kernel_work);
         assert!(config.cpuset_partition);
+        assert_eq!(config.thp, ThpMode::Never);
         assert_eq!(config.swappiness, Some(Swappiness::DEFAULT));
         assert_eq!(config.perf_event_paranoid, Some(PerfEventParanoid::DEFAULT));
         assert_eq!(config.governor.as_deref(), Some("performance"));
@@ -159,8 +167,19 @@ mod tests {
         assert!(!config.disable_cstates);
         assert!(!config.steer_kernel_work);
         assert!(!config.cpuset_partition);
+        assert_eq!(config.thp, ThpMode::Leave);
         assert_eq!(config.swappiness, None);
         assert_eq!(config.governor, None);
+    }
+
+    #[test]
+    fn thp_override_passed_through() {
+        let cli = CliTuning {
+            thp: Some(ThpMode::Leave),
+            ..default_cli()
+        };
+        let config = TuningConfig::try_from(cli).unwrap();
+        assert_eq!(config.thp, ThpMode::Leave);
     }
 
     #[test]

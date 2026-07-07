@@ -175,8 +175,26 @@ fn default_disk() -> Disk {
     DEFAULT_DISK
 }
 
+/// Default guest kernel command line.
+///
+/// Shared determinism params on both architectures: `norandmaps` disables
+/// guest ASLR (opt-out parity with the host `--aslr` flag via the
+/// user-overridable `kernel_cmdline`), `nokaslr` disables guest KASLR
+/// (every run boots a fresh VM, so KASLR is per-run variance unique to
+/// the sandbox path), and `transparent_hugepage=never` makes guest memory
+/// backing deterministic.
+///
+/// Arch differences: `reboot=t` (triple fault) is x86-only; aarch64 uses
+/// `reboot=k` and needs `keep_bootcon` for console output during boot.
 fn default_kernel_cmdline() -> String {
-    "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init".to_owned()
+    #[cfg(target_arch = "aarch64")]
+    {
+        "keep_bootcon console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw init=/init norandmaps nokaslr transparent_hugepage=never".to_owned()
+    }
+    #[cfg(not(target_arch = "aarch64"))]
+    {
+        "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init norandmaps nokaslr transparent_hugepage=never".to_owned()
+    }
 }
 
 const fn default_timeout_secs() -> u64 {
@@ -557,5 +575,37 @@ mod tests {
     #[test]
     fn config_with_empty_token_errors() {
         Config::new("img").with_token("").unwrap_err();
+    }
+
+    #[test]
+    fn default_kernel_cmdline_guest_determinism() {
+        let config = Config::new("img");
+        assert!(config.kernel_cmdline.contains("norandmaps"));
+        assert!(config.kernel_cmdline.contains("nokaslr"));
+        assert!(config.kernel_cmdline.contains("transparent_hugepage=never"));
+        assert!(config.kernel_cmdline.contains("init=/init"));
+    }
+
+    #[cfg(target_arch = "aarch64")]
+    #[test]
+    fn default_kernel_cmdline_aarch64() {
+        let config = Config::new("img");
+        assert!(config.kernel_cmdline.starts_with("keep_bootcon "));
+        assert!(config.kernel_cmdline.contains("reboot=k"));
+        assert!(!config.kernel_cmdline.contains("reboot=t"));
+    }
+
+    #[cfg(not(target_arch = "aarch64"))]
+    #[test]
+    fn default_kernel_cmdline_x86() {
+        let config = Config::new("img");
+        assert!(config.kernel_cmdline.contains("reboot=t"));
+        assert!(!config.kernel_cmdline.contains("keep_bootcon"));
+    }
+
+    #[test]
+    fn kernel_cmdline_override_preserved() {
+        let config = Config::new("img").with_kernel_cmdline("console=ttyS0 custom=1");
+        assert_eq!(config.kernel_cmdline, "console=ttyS0 custom=1");
     }
 }
