@@ -64,6 +64,10 @@ impl LocalIsolation {
                 if let Err(e) = cgroup.apply_cpuset(layout) {
                     eprintln!("Warning: failed to apply cpuset for local run: {e}");
                 }
+                // Keep benchmark memory resident, mirroring the Firecracker path
+                if let Err(e) = cgroup.disable_swap() {
+                    eprintln!("Warning: failed to disable swap for local run: {e}");
+                }
                 Some(cgroup)
             },
             Err(e) => {
