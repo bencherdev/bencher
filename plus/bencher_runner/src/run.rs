@@ -13,7 +13,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use bencher_json::Iteration;
 
 use crate::error::RunnerError;
-use crate::tuning::TuningConfig;
+use crate::tuning::{TuningConfig, preflight};
 
 /// Output from a benchmark run.
 #[derive(Debug)]
@@ -128,11 +128,41 @@ fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::er
 ///
 /// Dispatches to Firecracker VM or local host execution based on the sandbox
 /// setting in the configuration.
+#[cfg_attr(
+    not(target_os = "linux"),
+    expect(
+        unused_mut,
+        unused_variables,
+        reason = "tuning guard and config only mutated on Linux for CPU isolation"
+    )
+)]
 pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
-    // Apply host tuning — guard restores settings on drop (no-op on non-Linux)
-    let _tuning_guard = crate::tuning::apply(&args.tuning);
+    // Warn about host conditions that limit benchmark accuracy (Linux only)
+    preflight::print_host_warnings();
 
-    let config = build_config_from_run_args(args)?;
+    // Apply host tuning — guard restores settings on drop (no-op on non-Linux)
+    let mut tuning_guard = crate::tuning::apply(&args.tuning);
+
+    let mut config = build_config_from_run_args(args)?;
+
+    // Detect the CPU layout after tuning (disabling SMT changes the core
+    // count), steer kernel work off the benchmark cores, and pin the run
+    // to them. Mirrors the `runner up` path.
+    #[cfg(target_os = "linux")]
+    {
+        let cpu_layout = crate::cpu::CpuLayout::detect();
+        crate::tuning::apply_cpu_scoped(&args.tuning, &cpu_layout, &mut tuning_guard);
+        if cpu_layout.has_isolation() {
+            println!(
+                "  CPU isolation: housekeeping={}, benchmark={}",
+                cpu_layout.housekeeping_cpuset(),
+                cpu_layout.benchmark_cpuset()
+            );
+            config = config.with_cpu_layout(cpu_layout);
+        } else {
+            println!("  CPU isolation: disabled (insufficient cores)");
+        }
+    }
 
     let iter_count = args.iter.as_usize();
     for iteration in 0..iter_count {

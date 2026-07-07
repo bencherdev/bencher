@@ -200,11 +200,60 @@ fn format_cpuset(cpus: &[usize]) -> String {
     result
 }
 
+/// Format a list of CPU IDs as a kernel hex bitmask string.
+///
+/// Produces the comma-separated 32-bit word format used by files like
+/// `/proc/irq/default_smp_affinity` and
+/// `/sys/devices/virtual/workqueue/cpumask`. Words are ordered most
+/// significant first; all words after the first are zero-padded to
+/// 8 hex digits (e.g., `[0, 1]` -> `"3"`, `[32]` -> `"1,00000000"`).
+#[must_use]
+#[expect(
+    clippy::integer_division,
+    reason = "dividing CPU IDs into 32-bit mask words"
+)]
+pub fn format_cpumask(cpus: &[usize]) -> String {
+    use std::fmt::Write as _;
+
+    let Some(&max) = cpus.iter().max() else {
+        return "0".to_owned();
+    };
+
+    let mut words = vec![0u32; max / 32 + 1];
+    for &cpu in cpus {
+        if let Some(word) = words.get_mut(cpu / 32) {
+            *word |= 1u32 << (cpu % 32);
+        }
+    }
+
+    let mut result = String::new();
+    for (index, word) in words.iter().rev().enumerate() {
+        if index == 0 {
+            // write! to String is infallible
+            _ = write!(result, "{word:x}");
+        } else {
+            _ = write!(result, ",{word:08x}");
+        }
+    }
+
+    result
+}
+
 /// Pin the current thread to the specified CPU cores.
 ///
 /// Uses `sched_setaffinity` on Linux via the `nix` crate.
 #[cfg(target_os = "linux")]
 pub fn pin_current_thread(cpus: &[usize]) -> io::Result<()> {
+    pin_tid(0, cpus)
+}
+
+/// Pin a thread by its kernel thread ID (TID) to the specified CPU cores.
+///
+/// Unlike [`pin_thread`], this works on threads of other processes
+/// (e.g., Firecracker vCPU threads found under `/proc/<pid>/task`).
+/// A TID of 0 targets the calling thread.
+#[cfg(target_os = "linux")]
+pub fn pin_tid(tid: libc::pid_t, cpus: &[usize]) -> io::Result<()> {
     use nix::sched::{CpuSet, sched_setaffinity};
     use nix::unistd::Pid;
 
@@ -218,7 +267,7 @@ pub fn pin_current_thread(cpus: &[usize]) -> io::Result<()> {
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
     }
 
-    sched_setaffinity(Pid::from_raw(0), &set).map_err(io::Error::other)
+    sched_setaffinity(Pid::from_raw(tid), &set).map_err(io::Error::other)
 }
 
 /// Pin the current thread to the specified CPU cores.
@@ -332,6 +381,46 @@ mod tests {
     #[test]
     fn format_cpuset_unsorted() {
         assert_eq!(format_cpuset(&[5, 3, 4, 2]), "2-5");
+    }
+
+    #[test]
+    fn format_cpumask_empty() {
+        assert_eq!(format_cpumask(&[]), "0");
+    }
+
+    #[test]
+    fn format_cpumask_single() {
+        assert_eq!(format_cpumask(&[0]), "1");
+    }
+
+    #[test]
+    fn format_cpumask_low_cores() {
+        assert_eq!(format_cpumask(&[0, 1]), "3");
+    }
+
+    #[test]
+    fn format_cpumask_full_byte() {
+        assert_eq!(format_cpumask(&[0, 1, 2, 3, 4, 5, 6, 7]), "ff");
+    }
+
+    #[test]
+    fn format_cpumask_high_bit() {
+        assert_eq!(format_cpumask(&[31]), "80000000");
+    }
+
+    #[test]
+    fn format_cpumask_second_word() {
+        assert_eq!(format_cpumask(&[32]), "1,00000000");
+    }
+
+    #[test]
+    fn format_cpumask_spanning_words() {
+        assert_eq!(format_cpumask(&[0, 32, 33]), "3,00000001");
+    }
+
+    #[test]
+    fn format_cpumask_third_word() {
+        assert_eq!(format_cpumask(&[64, 1]), "1,00000000,00000002");
     }
 
     #[test]

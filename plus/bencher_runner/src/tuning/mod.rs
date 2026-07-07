@@ -11,11 +11,18 @@
     expect(clippy::print_stdout, reason = "tuning prints applied settings")
 )]
 
+#[cfg(target_os = "linux")]
+mod dma_latency;
+#[cfg(target_os = "linux")]
+mod kernel_work;
 mod perf_event_paranoid;
+pub mod preflight;
 mod swappiness;
 
 pub use perf_event_paranoid::PerfEventParanoid;
 pub use swappiness::Swappiness;
+
+use crate::cpu::CpuLayout;
 
 #[cfg(target_os = "linux")]
 use camino::{Utf8Path, Utf8PathBuf};
@@ -46,6 +53,19 @@ pub struct TuningConfig {
     pub disable_smt: bool,
     /// Disable turboboost (default: true).
     pub disable_turbo: bool,
+    /// Disable automatic NUMA balancing page migration (default: true).
+    pub disable_numa_balancing: bool,
+    /// Disable timer migration between CPUs (default: true).
+    pub disable_timer_migration: bool,
+    /// Disable the soft lockup watchdog (default: true).
+    pub disable_soft_watchdog: bool,
+    /// Disable kernel samepage merging scanning (default: true).
+    pub disable_ksm: bool,
+    /// Hold CPUs out of deep C-states via `/dev/cpu_dma_latency` (default: true).
+    pub disable_cstates: bool,
+    /// Steer device IRQs and unbound workqueues to housekeeping cores
+    /// (default: true; only applied when the CPU layout has isolation).
+    pub steer_kernel_work: bool,
 }
 
 impl Default for TuningConfig {
@@ -58,6 +78,12 @@ impl Default for TuningConfig {
             governor: Some("performance".to_owned()),
             disable_smt: true,
             disable_turbo: true,
+            disable_numa_balancing: true,
+            disable_timer_migration: true,
+            disable_soft_watchdog: true,
+            disable_ksm: true,
+            disable_cstates: true,
+            steer_kernel_work: true,
         }
     }
 }
@@ -73,6 +99,12 @@ impl TuningConfig {
             governor: None,
             disable_smt: false,
             disable_turbo: false,
+            disable_numa_balancing: false,
+            disable_timer_migration: false,
+            disable_soft_watchdog: false,
+            disable_ksm: false,
+            disable_cstates: false,
+            steer_kernel_work: false,
         }
     }
 }
@@ -92,6 +124,10 @@ struct SavedSetting {
 #[cfg(target_os = "linux")]
 pub struct TuningGuard {
     saved: Vec<SavedSetting>,
+    /// File descriptors held open for the lifetime of the guard
+    /// (e.g., the PM `QoS` constraint on `/dev/cpu_dma_latency`).
+    /// Dropped after the saved settings are restored.
+    held_fds: Vec<std::fs::File>,
 }
 
 #[cfg(target_os = "linux")]
@@ -106,7 +142,10 @@ impl Drop for TuningGuard {
 /// Apply host tuning. Returns a guard that restores settings on drop.
 #[cfg(target_os = "linux")]
 pub fn apply(config: &TuningConfig) -> TuningGuard {
-    let mut guard = TuningGuard { saved: Vec::new() };
+    let mut guard = TuningGuard {
+        saved: Vec::new(),
+        held_fds: Vec::new(),
+    };
 
     if config.disable_aslr {
         write_sysctl(
@@ -156,7 +195,54 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
         set_turbo(&mut guard);
     }
 
+    if config.disable_numa_balancing {
+        write_sysctl(
+            &mut guard,
+            "/proc/sys/kernel/numa_balancing",
+            "0",
+            "NUMA balancing",
+        );
+    }
+
+    if config.disable_timer_migration {
+        write_sysctl(
+            &mut guard,
+            "/proc/sys/kernel/timer_migration",
+            "0",
+            "timer migration",
+        );
+    }
+
+    if config.disable_soft_watchdog {
+        write_sysctl(
+            &mut guard,
+            "/proc/sys/kernel/soft_watchdog",
+            "0",
+            "soft watchdog",
+        );
+    }
+
+    if config.disable_ksm {
+        write_sysctl(&mut guard, "/sys/kernel/mm/ksm/run", "0", "KSM");
+    }
+
+    if config.disable_cstates {
+        dma_latency::hold_dma_latency(&mut guard, dma_latency::CPU_DMA_LATENCY);
+    }
+
     guard
+}
+
+/// Apply CPU-layout-scoped tuning (IRQ and workqueue steering).
+///
+/// Must be called after [`apply`] and after [`CpuLayout::detect`], because
+/// [`apply`] may disable SMT and change the core count. Settings are saved
+/// on the same guard and restored on drop.
+#[cfg(target_os = "linux")]
+pub fn apply_cpu_scoped(config: &TuningConfig, layout: &CpuLayout, guard: &mut TuningGuard) {
+    if config.steer_kernel_work && layout.has_isolation() {
+        kernel_work::steer_kernel_work(guard, layout, Utf8Path::new("/"));
+    }
 }
 
 /// Read current value, write new value, and push restore entry onto the guard.
@@ -319,6 +405,10 @@ pub fn apply(_config: &TuningConfig) -> TuningGuard {
     TuningGuard
 }
 
+/// No-op on non-Linux.
+#[cfg(not(target_os = "linux"))]
+pub fn apply_cpu_scoped(_config: &TuningConfig, _layout: &CpuLayout, _guard: &mut TuningGuard) {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -336,6 +426,12 @@ mod tests {
         assert_eq!(config.governor.as_deref(), Some("performance"));
         assert!(config.disable_smt);
         assert!(config.disable_turbo);
+        assert!(config.disable_numa_balancing);
+        assert!(config.disable_timer_migration);
+        assert!(config.disable_soft_watchdog);
+        assert!(config.disable_ksm);
+        assert!(config.disable_cstates);
+        assert!(config.steer_kernel_work);
     }
 
     #[test]
@@ -348,6 +444,34 @@ mod tests {
         assert_eq!(config.governor, None);
         assert!(!config.disable_smt);
         assert!(!config.disable_turbo);
+        assert!(!config.disable_numa_balancing);
+        assert!(!config.disable_timer_migration);
+        assert!(!config.disable_soft_watchdog);
+        assert!(!config.disable_ksm);
+        assert!(!config.disable_cstates);
+        assert!(!config.steer_kernel_work);
+    }
+
+    #[test]
+    fn apply_cpu_scoped_disabled_saves_nothing() {
+        let config = TuningConfig::disabled();
+        let layout = CpuLayout::with_core_count(8);
+        let mut guard = apply(&config);
+        apply_cpu_scoped(&config, &layout, &mut guard);
+        #[cfg(target_os = "linux")]
+        assert!(guard.saved.is_empty());
+    }
+
+    #[test]
+    fn apply_cpu_scoped_no_isolation_saves_nothing() {
+        let config = TuningConfig::default();
+        let layout = CpuLayout::with_core_count(1);
+        // Empty guard from a disabled config; the single-core layout means
+        // apply_cpu_scoped must not touch anything.
+        let mut guard = apply(&TuningConfig::disabled());
+        apply_cpu_scoped(&config, &layout, &mut guard);
+        #[cfg(target_os = "linux")]
+        assert!(guard.saved.is_empty());
     }
 
     #[test]
@@ -383,7 +507,10 @@ mod tests {
         fs::write(&file_path, "original").unwrap();
 
         {
-            let mut guard = TuningGuard { saved: Vec::new() };
+            let mut guard = TuningGuard {
+                saved: Vec::new(),
+                held_fds: Vec::new(),
+            };
             guard.saved.push(SavedSetting {
                 path: file_path.clone(),
                 value: "original".to_owned(),
@@ -410,7 +537,10 @@ mod tests {
         fs::write(&path2, "b").unwrap();
 
         {
-            let mut guard = TuningGuard { saved: Vec::new() };
+            let mut guard = TuningGuard {
+                saved: Vec::new(),
+                held_fds: Vec::new(),
+            };
             guard.saved.push(SavedSetting {
                 path: path1.clone(),
                 value: "a_orig".to_owned(),
@@ -430,7 +560,10 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn write_sysctl_skips_missing_path() {
-        let mut guard = TuningGuard { saved: Vec::new() };
+        let mut guard = TuningGuard {
+            saved: Vec::new(),
+            held_fds: Vec::new(),
+        };
         write_sysctl(&mut guard, "/nonexistent/path/value", "0", "test");
         assert!(
             guard.saved.is_empty(),
@@ -447,7 +580,10 @@ mod tests {
         let path = dir.path().join("value");
         fs::write(&path, "0").unwrap();
 
-        let mut guard = TuningGuard { saved: Vec::new() };
+        let mut guard = TuningGuard {
+            saved: Vec::new(),
+            held_fds: Vec::new(),
+        };
         write_sysctl(&mut guard, path.to_str().unwrap(), "0", "test");
         assert!(
             guard.saved.is_empty(),
@@ -464,7 +600,10 @@ mod tests {
         let path = dir.path().join("value");
         fs::write(&path, "60").unwrap();
 
-        let mut guard = TuningGuard { saved: Vec::new() };
+        let mut guard = TuningGuard {
+            saved: Vec::new(),
+            held_fds: Vec::new(),
+        };
         write_sysctl(&mut guard, path.to_str().unwrap(), "10", "test");
 
         assert_eq!(guard.saved.len(), 1);
