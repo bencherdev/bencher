@@ -140,7 +140,7 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     // Warn about host conditions that limit benchmark accuracy (Linux only)
     preflight::print_host_warnings();
 
-    // Apply host tuning — guard restores settings on drop (no-op on non-Linux)
+    // Apply host tuning - guard restores settings on drop (no-op on non-Linux)
     let mut tuning_guard = crate::tuning::apply(&args.tuning);
 
     let mut config = build_config_from_run_args(args)?;

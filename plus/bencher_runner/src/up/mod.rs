@@ -104,7 +104,7 @@ impl Up {
         // Warn about host conditions that limit benchmark accuracy (Linux only)
         preflight::print_host_warnings();
 
-        // Apply host tuning — guard restores settings on drop (no-op on non-Linux).
+        // Apply host tuning - guard restores settings on drop (no-op on non-Linux).
         // This must happen before CPU layout detection so that SMT changes
         // are reflected in the core count.
         let mut tuning_guard = crate::tuning::apply(&self.config.tuning);

@@ -33,21 +33,37 @@ impl CpuLayout {
     /// Detect available CPUs and create a layout.
     ///
     /// Reserves 1-2 cores for housekeeping (depending on total core count)
-    /// and assigns the rest to benchmarks.
+    /// and assigns the rest to benchmarks. On Linux this reads the actual
+    /// online CPU IDs rather than a count: disabling SMT on topologies with
+    /// interleaved sibling numbering (common on AMD) leaves a non-contiguous
+    /// online set like `0,2,4,6`, and a count-based layout would pin to
+    /// offline cores.
     #[must_use]
     pub fn detect() -> Self {
-        let num_cores = Self::available_cores();
-        Self::with_core_count(num_cores)
+        #[cfg(target_os = "linux")]
+        if let Ok(online) = fs::read_to_string("/sys/devices/system/cpu/online")
+            && let Some(ids) = parse_cpu_id_list(&online)
+            && !ids.is_empty()
+        {
+            return Self::with_cpu_ids(ids);
+        }
+
+        Self::with_core_count(Self::available_cores())
     }
 
-    /// Create a layout for a given number of cores.
+    /// Create a layout from an explicit list of online CPU IDs.
     ///
-    /// - 1 core: housekeeping = [0], benchmark = [0] (shared, no isolation)
-    /// - 2-7 cores: housekeeping = [0], benchmark = [1..n]
-    /// - 8+ cores: housekeeping = [0, 1], benchmark = [2..n]
+    /// IDs need not be contiguous. The lowest 1-2 IDs become housekeeping
+    /// cores and the rest benchmark cores:
+    /// - 1 ID: housekeeping and benchmark share it (no isolation)
+    /// - 2-7 IDs: housekeeping = first, benchmark = rest
+    /// - 8+ IDs: housekeeping = first two, benchmark = rest
     #[must_use]
-    pub fn with_core_count(num_cores: usize) -> Self {
-        if num_cores == 0 {
+    pub fn with_cpu_ids(mut ids: Vec<usize>) -> Self {
+        ids.sort_unstable();
+        ids.dedup();
+
+        if ids.is_empty() {
             // Fallback for edge cases
             return Self {
                 housekeeping: vec![0],
@@ -55,27 +71,33 @@ impl CpuLayout {
             };
         }
 
-        if num_cores == 1 {
+        if ids.len() == 1 {
             // Single core - no isolation possible
             return Self {
-                housekeeping: vec![0],
-                benchmark: vec![0],
+                housekeeping: ids.clone(),
+                benchmark: ids,
             };
         }
 
         // Reserve 1 core for housekeeping on small systems, 2 on larger ones
-        let housekeeping_count = if num_cores >= 8 { 2 } else { 1 };
-
-        let housekeeping: Vec<usize> = (0..housekeeping_count).collect();
-        let benchmark: Vec<usize> = (housekeeping_count..num_cores).collect();
+        let housekeeping_count = if ids.len() >= 8 { 2 } else { 1 };
+        let benchmark = ids.split_off(housekeeping_count);
 
         Self {
-            housekeeping,
+            housekeeping: ids,
             benchmark,
         }
     }
 
+    /// Create a layout for a given number of contiguous cores `0..n`.
+    #[must_use]
+    pub fn with_core_count(num_cores: usize) -> Self {
+        Self::with_cpu_ids((0..num_cores).collect())
+    }
+
     /// Get the number of available CPU cores.
+    ///
+    /// Count-based fallback for when the online CPU ID list is unavailable.
     #[cfg(target_os = "linux")]
     #[expect(
         clippy::cast_possible_truncation,
@@ -83,14 +105,6 @@ impl CpuLayout {
         reason = "sysconf returns c_long; core count always fits in usize"
     )]
     fn available_cores() -> usize {
-        // Try reading from /sys/devices/system/cpu/online first
-        if let Ok(online) = fs::read_to_string("/sys/devices/system/cpu/online")
-            && let Some(count) = parse_cpu_list(&online)
-        {
-            return count;
-        }
-
-        // Fallback to nix sysconf
         match nix::unistd::sysconf(nix::unistd::SysconfVar::_NPROCESSORS_ONLN) {
             Ok(Some(n)) if n > 0 => n as usize,
             _ => 1, // Ultimate fallback
@@ -128,24 +142,25 @@ impl CpuLayout {
     }
 }
 
-/// Parse a CPU list string like "0-3" or "0,2,4" or "0-3,8-11".
-///
-/// Returns the total count of CPUs in the list.
+/// Parse a kernel CPU list string like "0-3" or "0,2,4" or "0-3,8-11"
+/// into the expanded list of CPU IDs.
 #[cfg(target_os = "linux")]
-fn parse_cpu_list(s: &str) -> Option<usize> {
-    let mut count = 0;
+fn parse_cpu_id_list(s: &str) -> Option<Vec<usize>> {
+    let mut ids = Vec::new();
     for part in s.trim().split(',') {
         let part = part.trim();
         if let Some((start, end)) = part.split_once('-') {
             let start: usize = start.trim().parse().ok()?;
             let end: usize = end.trim().parse().ok()?;
-            count += end - start + 1;
+            if end < start {
+                return None;
+            }
+            ids.extend(start..=end);
         } else {
-            let _: usize = part.parse().ok()?;
-            count += 1;
+            ids.push(part.parse().ok()?);
         }
     }
-    Some(count)
+    Some(ids)
 }
 
 /// Format a list of CPU IDs as a cpuset string.
@@ -359,6 +374,48 @@ mod tests {
     }
 
     #[test]
+    fn layout_interleaved_smt_offline() {
+        // SMT disabled on an interleaved-sibling topology (e.g., AMD):
+        // only the even-numbered cores remain online.
+        let layout = CpuLayout::with_cpu_ids(vec![0, 2, 4, 6]);
+        assert_eq!(layout.housekeeping, vec![0]);
+        assert_eq!(layout.benchmark, vec![2, 4, 6]);
+        assert!(layout.has_isolation());
+        assert_eq!(layout.benchmark_cpuset(), "2,4,6");
+    }
+
+    #[test]
+    fn layout_interleaved_eight_ids() {
+        let layout = CpuLayout::with_cpu_ids(vec![0, 2, 4, 6, 8, 10, 12, 14]);
+        assert_eq!(layout.housekeeping, vec![0, 2]);
+        assert_eq!(layout.benchmark, vec![4, 6, 8, 10, 12, 14]);
+        assert!(layout.has_isolation());
+    }
+
+    #[test]
+    fn layout_ids_unsorted_and_duplicated() {
+        let layout = CpuLayout::with_cpu_ids(vec![6, 2, 0, 4, 2]);
+        assert_eq!(layout.housekeeping, vec![0]);
+        assert_eq!(layout.benchmark, vec![2, 4, 6]);
+    }
+
+    #[test]
+    fn layout_single_nonzero_id() {
+        let layout = CpuLayout::with_cpu_ids(vec![5]);
+        assert_eq!(layout.housekeeping, vec![5]);
+        assert_eq!(layout.benchmark, vec![5]);
+        assert!(!layout.has_isolation());
+    }
+
+    #[test]
+    fn layout_empty_ids() {
+        let layout = CpuLayout::with_cpu_ids(Vec::new());
+        assert_eq!(layout.housekeeping, vec![0]);
+        assert_eq!(layout.benchmark, vec![0]);
+        assert!(!layout.has_isolation());
+    }
+
+    #[test]
     fn format_cpuset_empty() {
         assert_eq!(format_cpuset(&[]), "");
     }
@@ -437,19 +494,29 @@ mod tests {
 
     #[cfg(target_os = "linux")]
     #[test]
-    fn parse_cpu_list_simple() {
-        assert_eq!(parse_cpu_list("0-3"), Some(4));
+    fn parse_cpu_id_list_simple() {
+        assert_eq!(parse_cpu_id_list("0-3"), Some(vec![0, 1, 2, 3]));
     }
 
     #[cfg(target_os = "linux")]
     #[test]
-    fn parse_cpu_list_complex() {
-        assert_eq!(parse_cpu_list("0-3,8-11"), Some(8));
+    fn parse_cpu_id_list_complex() {
+        assert_eq!(
+            parse_cpu_id_list("0-3,8-11\n"),
+            Some(vec![0, 1, 2, 3, 8, 9, 10, 11])
+        );
     }
 
     #[cfg(target_os = "linux")]
     #[test]
-    fn parse_cpu_list_individual() {
-        assert_eq!(parse_cpu_list("0,2,4"), Some(3));
+    fn parse_cpu_id_list_individual() {
+        assert_eq!(parse_cpu_id_list("0,2,4"), Some(vec![0, 2, 4]));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn parse_cpu_id_list_invalid() {
+        assert_eq!(parse_cpu_id_list("abc"), None);
+        assert_eq!(parse_cpu_id_list("3-1"), None);
     }
 }

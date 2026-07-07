@@ -3,7 +3,7 @@
 //! Applies system-level optimizations (ASLR, CPU governor, SMT, etc.)
 //! to reduce benchmark noise. All settings are restored on drop via
 //! a RAII guard. Missing sysfs/procfs files are skipped with an
-//! informational message — this handles ARM and other platforms
+//! informational message - this handles ARM and other platforms
 //! where certain controls do not exist.
 //!
 //! # Crash safety
@@ -50,7 +50,7 @@ const INTEL_NO_TURBO: &str = "/sys/devices/system/cpu/intel_pstate/no_turbo";
 #[cfg(target_os = "linux")]
 const CPUFREQ_BOOST: &str = "/sys/devices/system/cpu/cpufreq/boost";
 
-/// Host tuning configuration — all defaults optimize for benchmark accuracy.
+/// Host tuning configuration - all defaults optimize for benchmark accuracy.
 #[expect(
     clippy::struct_excessive_bools,
     reason = "each bool maps to an independent system knob"
@@ -116,7 +116,7 @@ impl Default for TuningConfig {
 }
 
 impl TuningConfig {
-    /// A config with all tuning disabled — no changes will be made.
+    /// A config with all tuning disabled - no changes will be made.
     pub fn disabled() -> Self {
         Self {
             disable_aslr: false,
@@ -313,29 +313,29 @@ fn write_sysctl(guard: &mut TuningGuard, path: &str, value: &str, label: &str) {
     let path = Utf8PathBuf::from(path);
 
     if !path.exists() {
-        println!("  Tuning: {label} — skipped (path not found)");
+        println!("  Tuning: {label} - skipped (path not found)");
         return;
     }
 
     let current = match std::fs::read_to_string(&path) {
         Ok(v) => v.trim().to_owned(),
         Err(e) => {
-            println!("  Tuning: {label} — skipped (read failed: {e})");
+            println!("  Tuning: {label} - skipped (read failed: {e})");
             return;
         },
     };
 
     if current == value {
-        println!("  Tuning: {label} — already {value}");
+        println!("  Tuning: {label} - already {value}");
         return;
     }
 
     if let Err(e) = std::fs::write(path.as_str(), value) {
-        println!("  Tuning: {label} — skipped (write failed: {e})");
+        println!("  Tuning: {label} - skipped (write failed: {e})");
         return;
     }
 
-    println!("  Tuning: {label} — set to {value} (was {current})");
+    println!("  Tuning: {label} - set to {value} (was {current})");
     guard.saved.push(SavedSetting {
         path,
         value: current,
@@ -405,7 +405,7 @@ fn parse_bracketed_value(content: &str) -> Option<&str> {
 fn set_cpu_governor(guard: &mut TuningGuard, target: &str) {
     let base = Utf8Path::new("/sys/devices/system/cpu");
     let Ok(entries) = std::fs::read_dir(base) else {
-        println!("  Tuning: CPU governor — skipped (cannot read {base})");
+        println!("  Tuning: CPU governor - skipped (cannot read {base})");
         return;
     };
 
@@ -438,11 +438,11 @@ fn set_cpu_governor(guard: &mut TuningGuard, target: &str) {
         }
 
         if let Err(e) = std::fs::write(&gov_path, target) {
-            println!("  Tuning: CPU governor ({name_str}) — skipped (write failed: {e})");
+            println!("  Tuning: CPU governor ({name_str}) - skipped (write failed: {e})");
             continue;
         }
 
-        println!("  Tuning: CPU governor ({name_str}) — set to {target} (was {current})");
+        println!("  Tuning: CPU governor ({name_str}) - set to {target} (was {current})");
         let gov_utf8_path = Utf8PathBuf::try_from(gov_path)
             .unwrap_or_else(|p| Utf8PathBuf::from(p.into_path_buf().to_string_lossy().as_ref()));
         guard.saved.push(SavedSetting {
@@ -459,29 +459,29 @@ fn set_smt(guard: &mut TuningGuard) {
     let path = Utf8PathBuf::from("/sys/devices/system/cpu/smt/control");
 
     if !path.exists() {
-        println!("  Tuning: SMT — skipped (not available on this platform)");
+        println!("  Tuning: SMT - skipped (not available on this platform)");
         return;
     }
 
     let current = match std::fs::read_to_string(&path) {
         Ok(v) => v.trim().to_owned(),
         Err(e) => {
-            println!("  Tuning: SMT — skipped (read failed: {e})");
+            println!("  Tuning: SMT - skipped (read failed: {e})");
             return;
         },
     };
 
     if current == "off" || current == "notsupported" || current == "notimplemented" {
-        println!("  Tuning: SMT — already {current}");
+        println!("  Tuning: SMT - already {current}");
         return;
     }
 
     if let Err(e) = std::fs::write(path.as_str(), "off") {
-        println!("  Tuning: SMT — skipped (write failed: {e})");
+        println!("  Tuning: SMT - skipped (write failed: {e})");
         return;
     }
 
-    println!("  Tuning: SMT — disabled (was {current})");
+    println!("  Tuning: SMT - disabled (was {current})");
     guard.saved.push(SavedSetting {
         path,
         value: current,
@@ -497,7 +497,7 @@ fn set_turbo(guard: &mut TuningGuard) {
     } else if Utf8Path::new(CPUFREQ_BOOST).exists() {
         write_sysctl(guard, CPUFREQ_BOOST, "0", "turboboost (generic)");
     } else {
-        println!("  Tuning: turboboost — skipped (not available on this platform)");
+        println!("  Tuning: turboboost - skipped (not available on this platform)");
     }
 }
 
@@ -505,8 +505,8 @@ fn set_turbo(guard: &mut TuningGuard) {
 #[cfg(target_os = "linux")]
 fn restore(path: &Utf8Path, value: &str, label: &str) {
     match std::fs::write(path.as_str(), value) {
-        Ok(()) => println!("  Tuning: {label} — restored to {value}"),
-        Err(e) => println!("  Tuning: {label} — restore failed: {e}"),
+        Ok(()) => println!("  Tuning: {label} - restored to {value}"),
+        Err(e) => println!("  Tuning: {label} - restore failed: {e}"),
     }
 }
 
@@ -518,7 +518,7 @@ fn restore(path: &Utf8Path, value: &str, label: &str) {
 #[cfg(not(target_os = "linux"))]
 pub struct TuningGuard;
 
-/// No-op on non-Linux — returns a stub guard.
+/// No-op on non-Linux - returns a stub guard.
 #[cfg(not(target_os = "linux"))]
 pub fn apply(_config: &TuningConfig) -> TuningGuard {
     TuningGuard
@@ -643,7 +643,7 @@ mod tests {
             fs::write(&file_path, "changed").unwrap();
             assert_eq!(fs::read_to_string(&file_path).unwrap(), "changed");
         }
-        // Guard dropped — should restore
+        // Guard dropped - should restore
         assert_eq!(fs::read_to_string(&file_path).unwrap(), "original");
     }
 
