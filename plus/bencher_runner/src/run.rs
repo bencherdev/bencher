@@ -147,7 +147,9 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
 
     // Detect the CPU layout after tuning (disabling SMT changes the core
     // count), steer kernel work off the benchmark cores, and pin the run
-    // to them. Mirrors the `runner up` path.
+    // to them. Mirrors the `runner up` path. Core pinning is core runner
+    // behavior, deliberately independent of --no-tuning: the tuning config
+    // only gates the tuning knobs (including the partition and steering).
     #[cfg(target_os = "linux")]
     {
         let cpu_layout = crate::cpu::CpuLayout::detect();

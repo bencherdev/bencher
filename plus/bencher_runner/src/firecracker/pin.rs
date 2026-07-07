@@ -106,7 +106,10 @@ fn parse_vcpu_comm(comm: &str) -> Option<usize> {
 ///
 /// vCPU `N` gets its own core (`benchmark[N % len]`); all other threads
 /// (VMM, API server) share the last benchmark core, keeping them off the
-/// cores running the earlier vCPUs.
+/// cores running the earlier vCPUs. When the vCPU count equals the
+/// benchmark core count, the highest-index vCPU therefore shares its
+/// core with the VMM threads and sees more scheduling noise than its
+/// peers; the lower-index vCPUs keep dedicated cores.
 fn assign_core(comm: &str, benchmark: &[usize]) -> Option<usize> {
     let &last = benchmark.last()?;
     match parse_vcpu_comm(comm) {

@@ -101,6 +101,8 @@ pub fn local_execute(
     isolation.configure_command(&mut cmd);
 
     let start = Instant::now();
+    // No metrics are emitted on spawn failure: nothing ran, so there is
+    // no wall clock or cgroup usage to report.
     let child = cmd
         .spawn()
         .map_err(|e| crate::error::ConfigError::BinaryNotFound {

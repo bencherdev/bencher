@@ -2,6 +2,13 @@ use bencher_runner::{PerfEventParanoid, Swappiness, ThpMode, TuningConfig};
 use clap::Args;
 
 /// Host tuning flags shared by `run` and `up` subcommands.
+///
+/// Flag polarity: hardware features that tuning disables use positive
+/// keep-enabled flags naming the feature (`--smt`, `--turbo`,
+/// `--cstates`, `--ksm`); actions the runner itself performs use `--no-`
+/// flags naming the skipped action (`--no-irq-steering`,
+/// `--no-cpuset-partition`), since a bare `--irq-steering` would read
+/// as enabling something that is already on by default.
 #[expect(
     clippy::struct_excessive_bools,
     reason = "CLI flags map to independent tuning knobs"
