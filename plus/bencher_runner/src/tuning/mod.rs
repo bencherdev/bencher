@@ -66,6 +66,10 @@ pub struct TuningConfig {
     /// Steer device IRQs and unbound workqueues to housekeeping cores
     /// (default: true; only applied when the CPU layout has isolation).
     pub steer_kernel_work: bool,
+    /// Detach benchmark cores from the root scheduling domain via an
+    /// isolated cpuset partition, the runtime equivalent of `isolcpus=`
+    /// (default: true; only applied when the CPU layout has isolation).
+    pub cpuset_partition: bool,
 }
 
 impl Default for TuningConfig {
@@ -84,6 +88,7 @@ impl Default for TuningConfig {
             disable_ksm: true,
             disable_cstates: true,
             steer_kernel_work: true,
+            cpuset_partition: true,
         }
     }
 }
@@ -105,6 +110,7 @@ impl TuningConfig {
             disable_ksm: false,
             disable_cstates: false,
             steer_kernel_work: false,
+            cpuset_partition: false,
         }
     }
 }
@@ -128,6 +134,18 @@ pub struct TuningGuard {
     /// (e.g., the PM `QoS` constraint on `/dev/cpu_dma_latency`).
     /// Dropped after the saved settings are restored.
     held_fds: Vec<std::fs::File>,
+}
+
+#[cfg(target_os = "linux")]
+impl TuningGuard {
+    /// Record a file to restore to `value` when the guard drops.
+    ///
+    /// Restoration happens in reverse recording order, so dependent writes
+    /// (e.g., a cpuset partition mode that must be reverted before its
+    /// cpuset can shrink) are undone correctly.
+    pub(crate) fn save_restore(&mut self, path: Utf8PathBuf, value: String, label: String) {
+        self.saved.push(SavedSetting { path, value, label });
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -240,6 +258,12 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
 /// on the same guard and restored on drop.
 #[cfg(target_os = "linux")]
 pub fn apply_cpu_scoped(config: &TuningConfig, layout: &CpuLayout, guard: &mut TuningGuard) {
+    if config.cpuset_partition && layout.has_isolation() {
+        let partition = crate::jail::BencherPartition::new(Utf8Path::new("/sys/fs/cgroup"));
+        let level = partition.apply(layout, guard);
+        println!("  Tuning: cpuset partition - achieved level '{level}'");
+    }
+
     if config.steer_kernel_work && layout.has_isolation() {
         kernel_work::steer_kernel_work(guard, layout, Utf8Path::new("/"));
     }
@@ -432,6 +456,7 @@ mod tests {
         assert!(config.disable_ksm);
         assert!(config.disable_cstates);
         assert!(config.steer_kernel_work);
+        assert!(config.cpuset_partition);
     }
 
     #[test]
@@ -450,6 +475,7 @@ mod tests {
         assert!(!config.disable_ksm);
         assert!(!config.disable_cstates);
         assert!(!config.steer_kernel_work);
+        assert!(!config.cpuset_partition);
     }
 
     #[test]

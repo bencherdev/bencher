@@ -7,7 +7,7 @@
 mod cgroup;
 
 #[cfg(target_os = "linux")]
-pub use cgroup::CgroupManager;
+pub use cgroup::{BencherPartition, CgroupManager, PartitionLevel};
 
 use serde::{Deserialize, Serialize};
 

@@ -55,6 +55,9 @@ pub enum JailError {
         path: Utf8PathBuf,
         source: std::io::Error,
     },
+
+    #[error("Cpuset partition mode '{mode}' rejected by the kernel: {state}")]
+    PartitionInvalid { mode: String, state: String },
 }
 
 #[derive(Debug, Error)]

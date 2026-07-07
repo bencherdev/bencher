@@ -52,6 +52,11 @@ pub struct CliTuning {
     #[arg(long)]
     pub no_irq_steering: bool,
 
+    /// Do not detach benchmark cores from the scheduler via an isolated
+    /// cpuset partition.
+    #[arg(long)]
+    pub no_cpuset_partition: bool,
+
     /// Set swappiness value (default: 10).
     #[arg(long)]
     pub swappiness: Option<u32>,
@@ -94,6 +99,7 @@ impl TryFrom<CliTuning> for TuningConfig {
             disable_ksm: !cli.ksm,
             disable_cstates: !cli.cstates,
             steer_kernel_work: !cli.no_irq_steering,
+            cpuset_partition: !cli.no_cpuset_partition,
         })
     }
 }
@@ -115,6 +121,7 @@ mod tests {
             ksm: false,
             cstates: false,
             no_irq_steering: false,
+            no_cpuset_partition: false,
             swappiness: None,
             governor: None,
             perf_event_paranoid: None,
@@ -134,6 +141,7 @@ mod tests {
         assert!(config.disable_ksm);
         assert!(config.disable_cstates);
         assert!(config.steer_kernel_work);
+        assert!(config.cpuset_partition);
         assert_eq!(config.swappiness, Some(Swappiness::DEFAULT));
         assert_eq!(config.perf_event_paranoid, Some(PerfEventParanoid::DEFAULT));
         assert_eq!(config.governor.as_deref(), Some("performance"));
@@ -150,6 +158,7 @@ mod tests {
         assert!(!config.disable_numa_balancing);
         assert!(!config.disable_cstates);
         assert!(!config.steer_kernel_work);
+        assert!(!config.cpuset_partition);
         assert_eq!(config.swappiness, None);
         assert_eq!(config.governor, None);
     }
@@ -160,12 +169,14 @@ mod tests {
             numa_balancing: true,
             cstates: true,
             no_irq_steering: true,
+            no_cpuset_partition: true,
             ..default_cli()
         };
         let config = TuningConfig::try_from(cli).unwrap();
         assert!(!config.disable_numa_balancing);
         assert!(!config.disable_cstates);
         assert!(!config.steer_kernel_work);
+        assert!(!config.cpuset_partition);
         // Everything else stays enabled
         assert!(config.disable_aslr);
         assert!(config.disable_timer_migration);

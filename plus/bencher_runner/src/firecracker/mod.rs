@@ -14,6 +14,7 @@
 mod client;
 pub mod config;
 pub mod error;
+mod pin;
 mod process;
 mod vsock;
 
@@ -121,6 +122,10 @@ pub fn run_firecracker(
                             layout.benchmark_cpuset()
                         );
                     }
+                    // Keep VM memory resident: swap adds run-to-run variance
+                    if let Err(e) = cg.disable_swap() {
+                        eprintln!("Warning: failed to disable swap for VM cgroup: {e}");
+                    }
                     Some(cg)
                 },
                 Err(e) => {
@@ -195,6 +200,15 @@ pub fn run_firecracker(
         action_type: ActionType::InstanceStart,
     })?;
 
+    // Pin vCPU threads (spawned during InstanceStart) to dedicated
+    // benchmark cores. Required companion to the isolated cpuset
+    // partition, which has no load balancing between cores.
+    if let Some(layout) = &config.cpu_layout
+        && layout.has_isolation()
+    {
+        pin::pin_vcpu_threads(fc_process.pid(), layout, config.vcpus);
+    }
+
     // Step 5: Collect results via vsock
     let timeout = if config.timeout_secs > 0 {
         Duration::from_secs(config.timeout_secs)
@@ -218,7 +232,9 @@ pub fn run_firecracker(
                 wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
                 timed_out: matches!(e, FirecrackerError::Timeout(_)),
                 transport: "vsock".to_owned(),
-                cgroup: None,
+                cgroup: cgroup
+                    .as_ref()
+                    .and_then(|cg| metrics::read_cgroup_metrics(cg.path())),
             };
             if let Some(line) = metrics::format_metrics(&run_metrics) {
                 eprintln!("{line}");
@@ -234,7 +250,9 @@ pub fn run_firecracker(
         wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
         timed_out: false,
         transport: "vsock".to_owned(),
-        cgroup: None,
+        cgroup: cgroup
+            .as_ref()
+            .and_then(|cg| metrics::read_cgroup_metrics(cg.path())),
     };
     if let Some(line) = metrics::format_metrics(&run_metrics) {
         eprintln!("{line}");
