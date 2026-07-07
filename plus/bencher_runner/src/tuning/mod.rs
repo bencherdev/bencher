@@ -5,6 +5,17 @@
 //! a RAII guard. Missing sysfs/procfs files are skipped with an
 //! informational message — this handles ARM and other platforms
 //! where certain controls do not exist.
+//!
+//! # Crash safety
+//!
+//! Restoration only happens on clean shutdown (guard drop). On SIGKILL
+//! or panic-abort, sysctl writes, IRQ affinities, THP mode, and the
+//! cpuset partition stay applied. Worse, the next run then reads the
+//! already-tuned value as "current", saves nothing, and a later clean
+//! exit cannot restore the true pre-tuning value; a reboot (or manual
+//! reset) recovers it. Two mechanisms self-heal by construction: the
+//! `/dev/cpu_dma_latency` fd releases its PM `QoS` constraint when the
+//! process dies, and per-run cgroups are removed by their own cleanup.
 
 #![cfg_attr(
     target_os = "linux",

@@ -14,7 +14,9 @@ use super::TuningGuard;
 pub(super) const CPU_DMA_LATENCY: &str = "/dev/cpu_dma_latency";
 
 /// The kernel expects a native-endian i32 latency in microseconds.
-/// The target value 0 has the same byte representation on all endiannesses.
+/// Only the value 0 is supported here, whose byte representation is
+/// endianness-independent; any future non-zero latency must be encoded
+/// with `i32::to_ne_bytes` instead of a literal array.
 const ZERO_LATENCY: [u8; 4] = [0; 4];
 
 /// Request a maximum CPU exit latency of 0 us and hold the constraint.

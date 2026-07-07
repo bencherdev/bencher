@@ -26,6 +26,11 @@ const POLL_INTERVAL: Duration = Duration::from_millis(20);
 /// Polls `/proc/<pid>/task/*/comm` until `vcpu_count` vCPU threads appear
 /// (they are spawned during `InstanceStart`) or the discovery timeout
 /// elapses, then pins whatever was found.
+///
+/// vCPU threads necessarily run for a moment before being pinned (they
+/// do not exist until `InstanceStart`). The cgroup cpuset is the hard
+/// confinement to benchmark cores; per-thread pinning is a refinement
+/// on top of it that stops migration between those cores.
 pub(super) fn pin_vcpu_threads(fc_pid: u32, layout: &CpuLayout, vcpu_count: u8) {
     let task_dir = Utf8PathBuf::from(format!("/proc/{fc_pid}/task"));
     let deadline = Instant::now() + DISCOVERY_TIMEOUT;
