@@ -61,36 +61,33 @@ impl CgroupManager {
     /// Enable controllers in a cgroup.
     ///
     /// Enables cpu, memory, and pids controllers (required), and io/cpuset controllers
-    /// (optional, for I/O throttling and CPU pinning). Returns an error if required
-    /// controllers cannot be enabled.
+    /// (optional, for I/O throttling and CPU pinning). The verification read is the
+    /// real gate: write failures are tolerated when the required controllers are
+    /// already enabled (e.g., pre-configured by an admin for an unprivileged runner).
     fn enable_controllers(path: &Utf8Path) -> Result<(), RunnerError> {
         let subtree_control = path.join("cgroup.subtree_control");
 
-        // Try to enable all controllers at once (most efficient)
-        if fs::write(&subtree_control, "+cpu +memory +pids +io +cpuset").is_err() {
-            // Fall back to enabling without cpuset
-            if fs::write(&subtree_control, "+cpu +memory +pids +io").is_err() {
-                // Fall back to enabling required controllers without io or cpuset
-                fs::write(&subtree_control, "+cpu +memory +pids").map_err(|e| {
-                    JailError::EnableControllers {
-                        path: subtree_control.clone(),
-                        source: e,
-                    }
-                })?;
-            }
-        }
+        // Try to enable all controllers at once, falling back to smaller sets
+        let write_result = fs::write(&subtree_control, "+cpu +memory +pids +io +cpuset")
+            .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids +io"))
+            .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids"));
 
         // Verify that required controllers are enabled
         let enabled = fs::read_to_string(&subtree_control).unwrap_or_default();
-        for required in ["cpu", "memory", "pids"] {
-            if !enabled.contains(required) {
-                return Err(JailError::MissingController {
-                    controller: required.to_owned(),
-                    path: subtree_control.clone(),
-                    enabled: enabled.clone(),
+        if let Some(missing) = missing_required_controller(&enabled) {
+            return Err(match write_result {
+                Err(e) => JailError::EnableControllers {
+                    path: subtree_control,
+                    source: e,
                 }
-                .into());
-            }
+                .into(),
+                Ok(()) => JailError::MissingController {
+                    controller: missing.to_owned(),
+                    path: subtree_control,
+                    enabled,
+                }
+                .into(),
+            });
         }
 
         Ok(())
@@ -376,7 +373,7 @@ impl BencherPartition {
 
         let partition_path = self.path.join("cpuset.cpus.partition");
         let original = match fs::read_to_string(&partition_path) {
-            Ok(value) => value.trim().to_owned(),
+            Ok(value) => partition_mode_token(&value).to_owned(),
             Err(e) => {
                 // Missing on kernels without cpuset partition support.
                 eprintln!("Warning: cpuset partitions unavailable ({partition_path}: {e})");
@@ -384,19 +381,22 @@ impl BencherPartition {
             },
         };
 
+        // Save the restore entry before attempting any mode write: a write
+        // can succeed at the syscall level while the kernel rejects the
+        // partition in the read-back, and the file must still revert on
+        // drop. Restoring an unchanged value is a harmless no-op.
+        guard.save_restore(
+            partition_path.clone(),
+            original,
+            "bencher cpuset partition".to_owned(),
+        );
+
         for (mode, level) in [
             ("isolated", PartitionLevel::Isolated),
             ("root", PartitionLevel::Root),
         ] {
             match try_partition_mode(&partition_path, mode) {
-                Ok(()) => {
-                    guard.save_restore(
-                        partition_path,
-                        original,
-                        "bencher cpuset partition".to_owned(),
-                    );
-                    return level;
-                },
+                Ok(()) => return level,
                 Err(e) => {
                     eprintln!("Warning: cpuset partition mode '{mode}' not achieved: {e}");
                 },
@@ -429,6 +429,16 @@ fn try_partition_mode(path: &Utf8Path, mode: &str) -> Result<(), JailError> {
     })?;
 
     verify_partition_state(path, mode)
+}
+
+/// Extract the mode token from a `cpuset.cpus.partition` read-back.
+///
+/// A healthy partition reads back as just the mode (`member`, `root`,
+/// `isolated`); a rejected one as `<mode> invalid (<reason>)`. Only the
+/// mode token is a valid value to write back on restore. An empty or
+/// unreadable value falls back to the kernel default `member`.
+fn partition_mode_token(state: &str) -> &str {
+    state.split_whitespace().next().unwrap_or("member")
 }
 
 /// Read back a partition file and check the kernel reports exactly `mode`.
@@ -484,6 +494,16 @@ fn save_and_write(
     };
     guard.save_restore(path.to_owned(), restore_value, label.to_owned());
     true
+}
+
+/// Return the first required controller missing from a
+/// `cgroup.subtree_control` listing, or `None` when all are enabled.
+///
+/// Matches whole tokens: `cpuset` alone must not satisfy `cpu`.
+fn missing_required_controller(enabled: &str) -> Option<&'static str> {
+    ["cpu", "memory", "pids"]
+        .into_iter()
+        .find(|required| !enabled.split_whitespace().any(|token| token == *required))
 }
 
 /// Check if cgroup v2 is available.
@@ -596,6 +616,59 @@ mod tests {
         let level = BencherPartition::new(&root).apply(&layout, &mut guard);
 
         assert_eq!(level, PartitionLevel::Member);
+    }
+
+    #[test]
+    fn partition_restore_entry_saved_before_mode_writes() {
+        let (_dir, root) = fake_cgroup_root();
+        // A previous run (or crash) left the partition file dirty: the
+        // kernel reports rejected partitions inline in the read-back.
+        fs::write(
+            root.join("bencher/cpuset.cpus.partition"),
+            "isolated invalid (Cpu list not exclusive)\n",
+        )
+        .unwrap();
+        let layout = CpuLayout::with_core_count(8);
+
+        {
+            let mut guard = empty_guard();
+            let level = BencherPartition::new(&root).apply(&layout, &mut guard);
+            assert_eq!(level, PartitionLevel::Isolated);
+        }
+
+        // The restore writes back the normalized mode token, never the
+        // full dirty state (which is not a valid value to write).
+        assert_eq!(
+            fs::read_to_string(root.join("bencher/cpuset.cpus.partition")).unwrap(),
+            "isolated"
+        );
+    }
+
+    #[test]
+    fn partition_mode_token_normalizes_states() {
+        assert_eq!(partition_mode_token("member\n"), "member");
+        assert_eq!(partition_mode_token("isolated\n"), "isolated");
+        assert_eq!(
+            partition_mode_token("isolated invalid (Cpu list not exclusive)\n"),
+            "isolated"
+        );
+        assert_eq!(partition_mode_token(""), "member");
+    }
+
+    #[test]
+    fn missing_required_controller_matches_whole_tokens() {
+        assert_eq!(missing_required_controller("cpu memory pids"), None);
+        assert_eq!(
+            missing_required_controller("cpuset cpu memory pids io"),
+            None
+        );
+        assert_eq!(missing_required_controller(""), Some("cpu"));
+        // "cpuset" alone must not satisfy the "cpu" controller
+        assert_eq!(
+            missing_required_controller("cpuset memory pids"),
+            Some("cpu")
+        );
+        assert_eq!(missing_required_controller("cpu memory"), Some("pids"));
     }
 
     #[test]
