@@ -14,6 +14,18 @@ please alert the developer working with you and indicate that this is the case b
 - SQLite
 - Litestream
 
+## Replication (`plus/bencher_replica` and Litestream)
+
+`plus/bencher_replica` is the in-process replacement for Litestream: it ships WAL segments to a file or S3 replica, snapshots via a single-step `SQLite` online backup, and restores at startup. Configure via `plus.replica` in the server config; when BOTH `plus.litestream` and `plus.replica` are set, the replica runs in shadow mode (Litestream keeps checkpoint ownership and remains the restore source). The crate's `src/lib.rs` documents the six invariants (I1 to I6) that govern every design decision; read them before touching the sync engine. Its tests require `--features plus,testing`.
+
+## Litestream
+
+Litestream (v0.5.x, LTX-based) runs as a child process of the API server and is the sole WAL checkpointer (`wal_autocheckpoint = 0`).
+
+- When Litestream decides it needs a full re-snapshot (WAL continuity break, salt reset, or process restart), it copies the entire database into a local LTX file while holding the SQLite write lock via its `_litestream_lock` table. While that copy runs, API writes cannot take the write lock: each one burns its `busy_timeout` and fails with "database is locked" (surfaced as retryable 503s plus Sentry tripwires). The copy scales with database size, so the larger the database the longer the stall; removing this blocking failure mode is the reason `plus/bencher_replica` exists. A burst of "database is locked" Conflicts arriving together with a large read-plus-write burst on the data volume points at a Litestream re-snapshot, not the `/v0/server/backup` endpoint.
+- `truncate-page-n: 0` genuinely disables blocking TRUNCATE checkpoints in v0.5.x (`TruncatePageN` is a `*int` in Litestream's config, so explicit 0 is honored, verified against the v0.5.13 source).
+- `JsonLitestream.metrics_port` enables Litestream's Prometheus endpoint (serialized as the top-level `addr` setting in `litestream.yml`). The Fly configs (`services/api/fly/*.toml`) scrape port 9090 via their `[[metrics]]` section.
+
 ## Building & Running
 
 ```bash

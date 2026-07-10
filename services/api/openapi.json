@@ -8933,7 +8933,7 @@
           "server"
         ],
         "summary": "View server configuration",
-        "description": "View the API server configuration. The user must be an admin on the server to use this route.",
+        "description": "View the API server configuration. Secrets in the configuration are masked in the response. The user must be an admin on the server to use this route.",
         "operationId": "server_config_get",
         "responses": {
           "200": {
@@ -13124,6 +13124,13 @@
               }
             ]
           },
+          "metrics_port": {
+            "nullable": true,
+            "description": "Port for the Prometheus metrics endpoint (serialized as the Litestream `addr` setting)",
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0
+          },
           "replica": {
             "description": "Disaster recovery replica",
             "allOf": [
@@ -15334,6 +15341,14 @@
               }
             ]
           },
+          "replica": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReplication"
+              }
+            ]
+          },
           "runners": {
             "nullable": true,
             "allOf": [
@@ -16004,6 +16019,80 @@
             ]
           }
         ]
+      },
+      "JsonReplication": {
+        "description": "In-process disaster recovery replication (`bencher_replica`).\n\nStreams `SQLite` WAL frames to a replica target, takes periodic snapshots, and restores the latest state at API server startup. Replaces Litestream. When both `litestream` and `replica` are configured, the replica runs in shadow mode: Litestream keeps checkpoint ownership and remains the restore source.\n\nExactly one server may replicate to a given target. There is no fencing between concurrent writers, so pointing two servers at the same target interleaves their lineages and corrupts the replica.\n\n`deny_unknown_fields` is deliberate: this is disaster-recovery config, so a misspelled key (e.g. `sync_interval` for `sync_interval_secs`) must fail loudly at load time instead of silently applying a default.",
+        "type": "object",
+        "properties": {
+          "checkpoint_interval_secs": {
+            "nullable": true,
+            "description": "Minimum interval between checkpoints (seconds; default 60)",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "min_checkpoint_pages": {
+            "nullable": true,
+            "description": "Minimum WAL pages before a checkpoint triggers (default 1000)",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "retention_generations": {
+            "nullable": true,
+            "description": "Number of generations to retain (default 3)",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "shutdown_sync_timeout_secs": {
+            "nullable": true,
+            "description": "Deadline for the final WAL ship at shutdown (seconds; default 4, which fits inside Fly's 6 second kill timeout)",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "snapshot_interval_secs": {
+            "nullable": true,
+            "description": "How often to start a new generation with a fresh snapshot (seconds; default 86400)",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "snapshot_throttle_mib": {
+            "nullable": true,
+            "description": "Snapshot copy throttle (MiB per second; default 32)",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "sync_interval_secs": {
+            "nullable": true,
+            "description": "How often to ship new WAL frames (seconds; default 1)",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "target": {
+            "description": "Replica target",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReplicationTarget"
+              }
+            ]
+          },
+          "verification_interval_secs": {
+            "nullable": true,
+            "description": "How often to run restore-and-compare verification (seconds; default 86400, 0 disables). Each run restores a full copy of the database next to the live one, so expect a transient doubling of data-volume usage while it runs.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "additionalProperties": false
       },
       "JsonReport": {
         "type": "object",
@@ -18573,6 +18662,71 @@
               "secret_access_key",
               "service"
             ]
+          }
+        ]
+      },
+      "ReplicationTarget": {
+        "description": "Where the replica lives: a local directory XOR S3-compatible storage.",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "scheme": {
+                "type": "string",
+                "enum": [
+                  "file"
+                ]
+              }
+            },
+            "required": [
+              "path",
+              "scheme"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "S3-compatible object storage. Configure a lifecycle rule on the bucket to abort incomplete multipart uploads: a crashed snapshot upload leaves orphaned parts that otherwise accrue storage cost indefinitely.",
+            "type": "object",
+            "properties": {
+              "access_key_id": {
+                "type": "string"
+              },
+              "bucket": {
+                "type": "string"
+              },
+              "endpoint": {
+                "nullable": true,
+                "description": "Endpoint override for S3-compatible services (R2, `MinIO`)",
+                "type": "string"
+              },
+              "path": {
+                "nullable": true,
+                "type": "string"
+              },
+              "region": {
+                "nullable": true,
+                "type": "string"
+              },
+              "scheme": {
+                "type": "string",
+                "enum": [
+                  "s3"
+                ]
+              },
+              "secret_access_key": {
+                "$ref": "#/components/schemas/Secret"
+              }
+            },
+            "required": [
+              "access_key_id",
+              "bucket",
+              "scheme",
+              "secret_access_key"
+            ],
+            "additionalProperties": false
           }
         ]
       },

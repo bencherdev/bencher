@@ -8,6 +8,10 @@ use bencher_logger as _;
 use bencher_otel as _;
 #[cfg(any(feature = "plus", feature = "otel"))]
 use bencher_otel_provider as _;
+#[cfg(feature = "plus")]
+use bencher_replica as _;
+#[cfg(feature = "plus")]
+use camino as _;
 use futures_concurrency as _;
 use futures_util as _;
 #[cfg(feature = "sentry")]

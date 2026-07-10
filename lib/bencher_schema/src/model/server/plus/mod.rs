@@ -11,7 +11,7 @@ use bencher_json::{
 };
 use bencher_license::Licensor;
 use chrono::{Duration, Utc};
-use diesel::{Connection as _, RunQueryDsl as _, connection::SimpleConnection as _};
+use diesel::{Connection as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use slog::Logger;
 use url::Url;
@@ -19,7 +19,9 @@ use url::Url;
 use crate::resource_not_found_err;
 use crate::{
     context::StatsSettings,
-    context::{Body, DbConnection, Message, Messenger, ServerStatsBody},
+    context::{
+        Body, DbConnection, Message, Messenger, ServerStatsBody, configure_standalone_connection,
+    },
     error::{request_timeout_error, resource_conflict_err},
     macros::fn_get::fn_get,
     model::{organization::plan::LicenseUsage, user::QueryUser},
@@ -79,6 +81,7 @@ impl QueryServer {
         log: Logger,
         db_path: PathBuf,
         busy_timeout: u32,
+        replicated: bool,
         stats: StatsSettings,
         messenger: Option<Messenger>,
         licensor: Licensor,
@@ -122,7 +125,8 @@ impl QueryServer {
                     continue;
                 };
 
-                if let Err(e) = configure_standalone_connection(&mut conn, busy_timeout) {
+                if let Err(e) = configure_standalone_connection(&mut conn, busy_timeout, replicated)
+                {
                     slog::error!(log, "Failed to configure database connection PRAGMAs: {e}");
                     continue;
                 }
@@ -198,7 +202,9 @@ impl QueryServer {
                         continue;
                     };
 
-                    if let Err(e) = configure_standalone_connection(&mut conn, busy_timeout) {
+                    if let Err(e) =
+                        configure_standalone_connection(&mut conn, busy_timeout, replicated)
+                    {
                         slog::error!(
                             log,
                             "Failed to configure database connection PRAGMAs for sending stats: {e}"
@@ -327,14 +333,4 @@ impl Default for InsertServer {
             created: DateTime::now(),
         }
     }
-}
-
-pub(super) fn configure_standalone_connection(
-    conn: &mut DbConnection,
-    busy_timeout: u32,
-) -> diesel::QueryResult<()> {
-    conn.batch_execute(&format!("PRAGMA busy_timeout = {busy_timeout}"))?;
-    conn.batch_execute("PRAGMA synchronous = NORMAL")?;
-    conn.batch_execute("PRAGMA extended_result_codes = ON")?;
-    Ok(())
 }

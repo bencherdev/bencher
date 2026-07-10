@@ -3,7 +3,7 @@
     reason = "dependencies used by lib but not binary"
 )]
 
-#[cfg(feature = "sentry")]
+#[cfg(any(feature = "plus", feature = "sentry"))]
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -39,6 +39,21 @@ pub enum ApiError {
     #[cfg(feature = "plus")]
     #[error("{0}")]
     Litestream(#[from] LitestreamError),
+    #[cfg(feature = "plus")]
+    #[error("Replica config: {0}")]
+    ReplicaConfig(bencher_replica::ReplicaConfigError),
+    #[cfg(feature = "plus")]
+    #[error("Replica restore: {0}")]
+    ReplicaRestore(bencher_replica::RestoreError),
+    #[cfg(feature = "plus")]
+    #[error("Replica: {0}")]
+    ReplicaSync(bencher_replica::SyncError),
+    #[cfg(feature = "plus")]
+    #[error("Failed to resolve the database path for replication: {0}")]
+    ReplicaDbPath(std::io::Error),
+    #[cfg(feature = "plus")]
+    #[error("Database path is not valid UTF-8: {0}")]
+    ReplicaDbPathUtf8(PathBuf),
     #[error("{0}")]
     ConfigTxError(bencher_config::ConfigTxError),
     #[error("Failed to listen for ctrl-c signal: {0}")]
@@ -98,7 +113,22 @@ async fn run(
         .map_err(ApiError::OpenTelemetry)?;
 
     #[cfg(feature = "plus")]
-    if let Some(litestream) = config
+    let replica_config = config
+        .plus
+        .as_ref()
+        .and_then(|plus| plus.replica.clone())
+        .map(bencher_replica::ReplicaConfig::try_from)
+        .transpose()
+        .map_err(ApiError::ReplicaConfig)?;
+    #[cfg(feature = "plus")]
+    let replica_shutdown_timeout = replica_config
+        .as_ref()
+        .map(|replica| replica.shutdown_sync_timeout);
+
+    // Restore precedence: Litestream owns restore whenever it is configured
+    // (during the shadow burn-in the replica is NOT the restore source).
+    #[cfg(feature = "plus")]
+    let litestream_handle = if let Some(litestream) = config
         .plus
         .as_ref()
         .and_then(|plus| plus.litestream.clone())
@@ -107,29 +137,68 @@ async fn run(
         let litestream_handle = run_litestream(log, &config, litestream, restore_tx)?;
         // Wait for Litestream restore to complete (replicate starts in background)
         restore_rx.await.map_err(LitestreamError::RestoreRecv)?;
+        Some(litestream_handle)
+    } else {
+        if let Some(replica) = &replica_config {
+            // Same handshake as `litestream restore`: the restore fully
+            // completes before any SQLite connection is opened.
+            let db_path = replica_db_path(&config.database.file)?;
+            let outcome = bencher_replica::restore_if_missing(log, replica, &db_path)
+                .await
+                .map_err(ApiError::ReplicaRestore)?;
+            info!(log, "Replica restore: {outcome:?}");
+        }
+        None
+    };
+    // Both configured: the replica runs in shadow mode (no checkpoints;
+    // Litestream keeps checkpoint ownership until cutover).
+    #[cfg(feature = "plus")]
+    let shadow = litestream_handle.is_some();
 
-        let server = create_api_server(config).await?;
-        let shutdown_wait = server.wait_for_shutdown();
-        let result = (
-            tokio::signal::ctrl_c().map(|r| r.map_err(ApiError::CtrlC)),
-            async {
-                litestream_handle
+    let server = create_api_server(config).await?;
+
+    #[cfg(feature = "plus")]
+    let mut replica_handle = start_replica(log, &server, replica_config, shadow)?;
+
+    let shutdown_wait = server.wait_for_shutdown();
+    #[cfg(feature = "plus")]
+    let result = {
+        let litestream_wait = async {
+            match litestream_handle {
+                Some(litestream_handle) => litestream_handle
                     .await
                     .map_err(LitestreamError::JoinHandle)?
-                    .map_err(Into::into)
-            },
+                    .map_err(Into::into),
+                None => std::future::pending::<Result<(), ApiError>>().await,
+            }
+        };
+        let replica_fatal = async {
+            match replica_handle.as_mut() {
+                // Resolves only if the replication task dies; storage
+                // outages back off internally and never resolve this.
+                //
+                // SOLE mode only: in shadow mode the replica is the unproven
+                // system burning in while Litestream stays authoritative, so
+                // a fatal replica error must never take down a healthy
+                // production server. The task still logs and meters the
+                // fatal; it just does not race the server here.
+                Some(replica_handle) if !shadow => replica_handle
+                    .wait_fatal()
+                    .await
+                    .map_err(ApiError::ReplicaSync),
+                Some(_) | None => std::future::pending::<Result<(), ApiError>>().await,
+            }
+        };
+        (
+            tokio::signal::ctrl_c().map(|r| r.map_err(ApiError::CtrlC)),
+            litestream_wait,
+            replica_fatal,
             shutdown_wait.map(|r| r.map_err(ApiError::RunServer)),
         )
             .race()
-            .await;
-
-        shutdown(log, server).await;
-
-        return result;
-    }
-
-    let server = create_api_server(config).await?;
-    let shutdown_wait = server.wait_for_shutdown();
+            .await
+    };
+    #[cfg(not(feature = "plus"))]
     let result = (
         tokio::signal::ctrl_c().map(|r| r.map_err(ApiError::CtrlC)),
         shutdown_wait.map(|r| r.map_err(ApiError::RunServer)),
@@ -139,7 +208,80 @@ async fn run(
 
     shutdown(log, server).await;
 
+    // Final replica sync AFTER the server has drained: ship the remaining WAL
+    // tail within the shutdown budget. On a COMPLETE drain in sole mode a
+    // final checkpoint then runs (after the budget, unbounded) to seal the
+    // epoch so the next boot resumes in place; on the deadline the tail stays
+    // in the local WAL (lag, never loss).
+    #[cfg(feature = "plus")]
+    if let Some(replica_handle) = replica_handle {
+        // `replica_shutdown_timeout` is always `Some` here (it is derived from
+        // the same `replica_config` that produced this handle); the fallback
+        // is defensive and reuses the crate default rather than a magic value.
+        let deadline =
+            replica_shutdown_timeout.unwrap_or(bencher_replica::DEFAULT_SHUTDOWN_SYNC_TIMEOUT);
+        if let Err(e) = replica_handle.shutdown(deadline).await {
+            error!(log, "Replica final sync failed: {e}");
+        }
+    }
+
     result
+}
+
+/// Spawn the in-process replication task over the server's database.
+#[cfg(feature = "plus")]
+fn start_replica(
+    log: &Logger,
+    server: &HttpServer<ApiContext>,
+    replica_config: Option<bencher_replica::ReplicaConfig>,
+    shadow: bool,
+) -> Result<Option<bencher_replica::ReplicatorHandle>, ApiError> {
+    let Some(replica) = replica_config else {
+        return Ok(None);
+    };
+    let ctx = server.app_private();
+    let db_path = replica_db_path(&ctx.database.path)?;
+    Ok(Some(bencher_replica::Replicator::start(
+        log.clone(),
+        replica,
+        bencher_replica::ReplicaDb {
+            db_path,
+            writer: ctx.database.connection.clone(),
+            busy_timeout_ms: ctx.database.busy_timeout,
+        },
+        ctx.clock.clone(),
+        shadow,
+    )))
+}
+
+/// The absolute, UTF-8 database path handed to the replicator.
+///
+/// Canonicalized when the file exists: `SQLite` resolves a symlinked
+/// database file and creates the real `-wal` next to the TARGET, so the
+/// replicator must derive its WAL path from the resolved location or it
+/// would silently watch a never-existing file.
+#[cfg(feature = "plus")]
+fn replica_db_path(file: &std::path::Path) -> Result<camino::Utf8PathBuf, ApiError> {
+    let absolute = if file.is_absolute() {
+        file.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(ApiError::ReplicaDbPath)?
+            .join(file)
+    };
+    let resolved = match std::fs::canonicalize(&absolute) {
+        Ok(resolved) => resolved,
+        // A missing database (fresh start before the first connection) has
+        // nothing to resolve yet; canonicalize the parent instead so a
+        // symlinked data directory still lands on the real location.
+        Err(_missing) => match (absolute.parent(), absolute.file_name()) {
+            (Some(parent), Some(file_name)) => std::fs::canonicalize(parent)
+                .map(|parent| parent.join(file_name))
+                .unwrap_or(absolute),
+            _ => absolute,
+        },
+    };
+    camino::Utf8PathBuf::from_path_buf(resolved).map_err(ApiError::ReplicaDbPathUtf8)
 }
 
 async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {

@@ -161,6 +161,26 @@ pub enum ApiCounter {
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
     SelfHostedServerStats(Uuid),
+
+    // Replica (in-process disaster recovery) metrics
+    ReplicaInitFailed,
+    ReplicaSegmentShip,
+    ReplicaShipFailed,
+    ReplicaCheckpoint,
+    ReplicaCheckpointPartial,
+    ReplicaCheckpointSkipped,
+    ReplicaCheckpointSkippedUnshipped,
+    ReplicaCheckpointFailed,
+    ReplicaSnapshot,
+    ReplicaSnapshotFailed,
+    ReplicaGenerationCreate,
+    ReplicaDivergence,
+    ReplicaRestore,
+    ReplicaRestoreSoftStop,
+    ReplicaVerifyPass,
+    ReplicaVerifyDivergence,
+    ReplicaVerifyFailed,
+    ReplicaShadowUnverifiedBoundary,
 }
 
 impl ApiCounter {
@@ -224,6 +244,24 @@ impl ApiCounter {
             Self::RunnerHeartbeatTimeout | Self::RunnerJobTimeout => "{timeout}",
             Self::RunnerDisconnect => "{disconnect}",
             Self::RunnerSelfUpdateSent(_) => "{update}",
+
+            Self::ReplicaSegmentShip => "{segment}",
+            Self::ReplicaInitFailed | Self::ReplicaShipFailed | Self::ReplicaSnapshotFailed => {
+                "{error}"
+            },
+            Self::ReplicaCheckpoint
+            | Self::ReplicaCheckpointPartial
+            | Self::ReplicaCheckpointSkipped
+            | Self::ReplicaCheckpointSkippedUnshipped
+            | Self::ReplicaCheckpointFailed => "{checkpoint}",
+            Self::ReplicaSnapshot => "{snapshot}",
+            Self::ReplicaGenerationCreate => "{generation}",
+            Self::ReplicaDivergence => "{divergence}",
+            Self::ReplicaRestore | Self::ReplicaRestoreSoftStop => "{restore}",
+            Self::ReplicaVerifyPass | Self::ReplicaVerifyDivergence | Self::ReplicaVerifyFailed => {
+                "{verification}"
+            },
+            Self::ReplicaShadowUnverifiedBoundary => "{boundary}",
         }
     }
 
@@ -320,9 +358,33 @@ impl ApiCounter {
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
             Self::SelfHostedServerStats(_) => "self_hosted.server.stats",
+
+            // Replica metrics
+            Self::ReplicaInitFailed => "replica.init.failed",
+            Self::ReplicaSegmentShip => "replica.segment.ship",
+            Self::ReplicaShipFailed => "replica.ship.failed",
+            Self::ReplicaCheckpoint => "replica.checkpoint",
+            Self::ReplicaCheckpointPartial => "replica.checkpoint.partial",
+            Self::ReplicaCheckpointSkipped => "replica.checkpoint.skipped",
+            Self::ReplicaCheckpointSkippedUnshipped => "replica.checkpoint.skipped_unshipped",
+            Self::ReplicaCheckpointFailed => "replica.checkpoint.failed",
+            Self::ReplicaSnapshot => "replica.snapshot",
+            Self::ReplicaSnapshotFailed => "replica.snapshot.failed",
+            Self::ReplicaGenerationCreate => "replica.generation.create",
+            Self::ReplicaDivergence => "replica.divergence",
+            Self::ReplicaRestore => "replica.restore",
+            Self::ReplicaRestoreSoftStop => "replica.restore.soft_stop",
+            Self::ReplicaVerifyPass => "replica.verify.pass",
+            Self::ReplicaVerifyDivergence => "replica.verify.divergence",
+            Self::ReplicaVerifyFailed => "replica.verify.failed",
+            Self::ReplicaShadowUnverifiedBoundary => "replica.shadow.unverified_boundary",
         }
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "exhaustive one-line-per-counter metadata match"
+    )]
     fn description(&self) -> &'static str {
         match self {
             Self::ServerStartup => "Counts the number of server startups",
@@ -446,6 +508,32 @@ impl ApiCounter {
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
             Self::SelfHostedServerStats(_) => "Counts the number of self-hosted server stats sent",
+
+            // Replica metrics
+            Self::ReplicaInitFailed => "Counts replica engine construction failures",
+            Self::ReplicaSegmentShip => "Counts the number of replica WAL segments shipped",
+            Self::ReplicaShipFailed => "Counts the number of replica segment ship failures",
+            Self::ReplicaCheckpoint => "Counts the number of replica checkpoints completed",
+            Self::ReplicaCheckpointPartial => "Counts the number of partial replica checkpoints",
+            Self::ReplicaCheckpointSkipped => "Counts the number of skipped replica checkpoints",
+            Self::ReplicaCheckpointSkippedUnshipped => {
+                "Counts replica checkpoints skipped due to an unshipped WAL tail"
+            },
+            Self::ReplicaCheckpointFailed => "Counts the number of replica checkpoint failures",
+            Self::ReplicaSnapshot => "Counts the number of replica snapshots completed",
+            Self::ReplicaSnapshotFailed => "Counts the number of replica snapshot failures",
+            Self::ReplicaGenerationCreate => "Counts the number of replica generations created",
+            Self::ReplicaDivergence => "Counts the number of replica divergences detected",
+            Self::ReplicaRestore => "Counts the number of replica restores at startup",
+            Self::ReplicaRestoreSoftStop => {
+                "Counts restores that dropped replica data (older generation or epoch prefix)"
+            },
+            Self::ReplicaVerifyPass => "Counts the number of replica verification passes",
+            Self::ReplicaVerifyDivergence => {
+                "Counts replica verifications that found content divergence"
+            },
+            Self::ReplicaVerifyFailed => "Counts replica verifications that failed to complete",
+            Self::ReplicaShadowUnverifiedBoundary => "Counts unverified shadow WAL boundaries",
         }
     }
 
@@ -493,7 +581,25 @@ impl ApiCounter {
             | Self::RunnerMinutesBilledFailed
             | Self::RunnerHeartbeatTimeout
             | Self::RunnerJobTimeout
-            | Self::RunnerDisconnect => Vec::new(),
+            | Self::RunnerDisconnect
+            | Self::ReplicaInitFailed
+            | Self::ReplicaSegmentShip
+            | Self::ReplicaShipFailed
+            | Self::ReplicaCheckpoint
+            | Self::ReplicaCheckpointPartial
+            | Self::ReplicaCheckpointSkipped
+            | Self::ReplicaCheckpointSkippedUnshipped
+            | Self::ReplicaCheckpointFailed
+            | Self::ReplicaSnapshot
+            | Self::ReplicaSnapshotFailed
+            | Self::ReplicaGenerationCreate
+            | Self::ReplicaDivergence
+            | Self::ReplicaRestore
+            | Self::ReplicaRestoreSoftStop
+            | Self::ReplicaVerifyPass
+            | Self::ReplicaVerifyDivergence
+            | Self::ReplicaVerifyFailed
+            | Self::ReplicaShadowUnverifiedBoundary => Vec::new(),
             Self::Run(priority)
             | Self::MetricsCreate(priority)
             | Self::OciBandwidthMax(priority) => {

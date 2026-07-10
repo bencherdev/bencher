@@ -18,7 +18,9 @@ use bencher_json::{
     },
 };
 use bencher_rbac::init_rbac;
-use bencher_schema::context::{ApiContext, Database, DbConnection};
+use bencher_schema::context::{
+    ApiContext, Database, DbConnection, configure_standalone_connection,
+};
 #[cfg(feature = "plus")]
 use bencher_schema::{
     context::RateLimiting,
@@ -212,18 +214,32 @@ async fn into_context(
     // synchronous=NORMAL is safe with WAL mode and reduces fsync overhead.
     let busy_timeout = json_database.busy_timeout.unwrap_or(DEFAULT_BUSY_TIMEOUT);
     let cache_size = json_database.cache_size.unwrap_or(DEFAULT_CACHE_SIZE);
+    #[cfg(feature = "plus")]
+    let replicated = plus.as_ref().is_some_and(|plus| {
+        // Litestream (external) or bencher_replica (in-process): either way,
+        // the replication system is the sole checkpointer.
+        plus.litestream.is_some() || plus.replica.is_some()
+    });
+    #[cfg(not(feature = "plus"))]
+    let replicated = false;
     info!(
         log,
         "Setting database PRAGMAs (busy_timeout: {busy_timeout}ms, cache_size: {cache_size} KiB)"
     );
+    if replicated {
+        info!(
+            log,
+            "Replication owns checkpoints: disabling auto-checkpoint"
+        );
+    }
+    // Writer connection only: WAL mode is persistent in the database header
+    // and set once here; the shared PRAGMAs (busy_timeout, synchronous,
+    // extended_result_codes, autocheckpoint) come from the single source of
+    // truth in `bencher_schema`.
     database_connection
         .batch_execute("PRAGMA journal_mode = WAL")
         .map_err(ConfigTxError::Pragma)?;
-    database_connection
-        .batch_execute(&format!("PRAGMA busy_timeout = {busy_timeout}"))
-        .map_err(ConfigTxError::Pragma)?;
-    database_connection
-        .batch_execute("PRAGMA synchronous = NORMAL")
+    configure_standalone_connection(&mut database_connection, busy_timeout, replicated)
         .map_err(ConfigTxError::Pragma)?;
     // Writer connection only: the read pools hold many connections, so a
     // large per-connection cache would multiply memory, and reads are served
@@ -231,27 +247,12 @@ async fn into_context(
     database_connection
         .batch_execute(&format!("PRAGMA cache_size = -{cache_size}"))
         .map_err(ConfigTxError::Pragma)?;
-    // Surfaces `SQLITE_BUSY_SNAPSHOT` (517) etc. distinctly from plain `SQLITE_BUSY` (5)
-    // in error messages, instead of both rendering as "database is locked".
-    database_connection
-        .batch_execute("PRAGMA extended_result_codes = ON")
-        .map_err(ConfigTxError::Pragma)?;
-
-    #[cfg(feature = "plus")]
-    if plus
-        .as_ref()
-        .and_then(|plus| plus.litestream.as_ref())
-        .is_some()
-    {
-        info!(log, "Configuring Litestream");
-        run_litestream(&mut database_connection)?;
-    }
 
     info!(log, "Running database migrations");
     bencher_schema::run_migrations(&mut database_connection)?;
 
-    let public_pool = connection_pool(log, &database_path, busy_timeout)?;
-    let auth_pool = connection_pool(log, &database_path, busy_timeout)?;
+    let public_pool = connection_pool(log, &database_path, busy_timeout, replicated)?;
+    let auth_pool = connection_pool(log, &database_path, busy_timeout, replicated)?;
 
     let data_store = if let Some(data_store) = json_database.data_store {
         Some(data_store.try_into().map_err(ConfigTxError::DataStore)?)
@@ -262,6 +263,7 @@ async fn into_context(
     let database = Database {
         path: json_database.file,
         busy_timeout,
+        replicated,
         public_pool,
         auth_pool,
         connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
@@ -429,44 +431,25 @@ fn sqlite_tmpdir(log: &Logger, database_path: &Path) -> Result<(), ConfigTxError
     Ok(())
 }
 
-/// Configure litestream-specific PRAGMAs.
-///
-/// WAL mode, `busy_timeout`, and `synchronous=NORMAL` are now set unconditionally
-/// on all connections. This function only sets the litestream-specific PRAGMA
-/// to disable auto-checkpoints (so litestream can manage them).
-#[cfg(feature = "plus")]
-fn run_litestream(database: &mut DbConnection) -> Result<(), ConfigTxError> {
-    // Disable auto-checkpoints
-    // https://litestream.io/tips/#disable-autocheckpoints-for-high-write-load-servers
-    // https://sqlite.org/wal.html#automatic_checkpoint
-    database
-        .batch_execute("PRAGMA wal_autocheckpoint = 0")
-        .map_err(ConfigTxError::Pragma)?;
-
-    Ok(())
-}
-
-/// Sets essential `SQLite` PRAGMAs on every new pool connection.
-///
-/// `busy_timeout` is per-connection and prevents immediate `SQLITE_BUSY` failures
-/// under lock contention. `synchronous = NORMAL` is safe with WAL mode and
-/// reduces fsync overhead.
+/// Sets essential `SQLite` PRAGMAs on every new pool connection, via the
+/// shared `configure_standalone_connection` in `bencher_schema` (the single
+/// source of truth these pool connections, the standalone writer above, the
+/// stats sweep, and the test harness all share). `wal_autocheckpoint = 0` is
+/// defense in depth when replication owns checkpointing: pool connections are
+/// read-only by convention, but an accidental write through one must not
+/// checkpoint.
 #[derive(Debug)]
 struct SqliteConnectionCustomizer {
     busy_timeout: u32,
+    replicated: bool,
 }
 
 impl diesel::r2d2::CustomizeConnection<DbConnection, diesel::r2d2::Error>
     for SqliteConnectionCustomizer
 {
     fn on_acquire(&self, conn: &mut DbConnection) -> Result<(), diesel::r2d2::Error> {
-        conn.batch_execute(&format!("PRAGMA busy_timeout = {}", self.busy_timeout))
-            .map_err(diesel::r2d2::Error::QueryError)?;
-        conn.batch_execute("PRAGMA synchronous = NORMAL")
-            .map_err(diesel::r2d2::Error::QueryError)?;
-        conn.batch_execute("PRAGMA extended_result_codes = ON")
-            .map_err(diesel::r2d2::Error::QueryError)?;
-        Ok(())
+        configure_standalone_connection(conn, self.busy_timeout, self.replicated)
+            .map_err(diesel::r2d2::Error::QueryError)
     }
 }
 
@@ -474,6 +457,7 @@ fn connection_pool(
     log: &Logger,
     database_path: &str,
     busy_timeout: u32,
+    replicated: bool,
 ) -> Result<Pool<ConnectionManager<DbConnection>>, ConfigTxError> {
     let cpu_count = std::thread::available_parallelism()
         .map(NonZeroUsize::get)
@@ -488,7 +472,10 @@ fn connection_pool(
     );
 
     let connection_manager = ConnectionManager::new(database_path);
-    let customizer = SqliteConnectionCustomizer { busy_timeout };
+    let customizer = SqliteConnectionCustomizer {
+        busy_timeout,
+        replicated,
+    };
 
     Pool::builder()
         .max_size(max_size)
@@ -624,6 +611,7 @@ async fn spawn_stats(log: &Logger, context: &ApiContext) -> Result<(), ConfigTxE
             log.clone(),
             context.database.path.clone(),
             context.database.busy_timeout,
+            context.database.replicated,
             context.stats,
             context
                 .is_bencher_cloud

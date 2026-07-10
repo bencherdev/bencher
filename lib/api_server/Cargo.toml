@@ -42,8 +42,12 @@ slog.workspace = true
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
-bencher_json = { workspace = true, features = ["server", "schema"] }
+bencher_json = { workspace = true, features = ["server", "schema", "test-clock"] }
+bencher_replica = { workspace = true, features = ["plus", "testing"] }
+camino.workspace = true
 http.workspace = true
+rusqlite.workspace = true
+tempfile.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 
 [lints]

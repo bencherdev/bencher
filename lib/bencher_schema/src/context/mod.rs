@@ -34,7 +34,9 @@ mod stats;
 
 #[cfg(feature = "plus")]
 use bencher_recaptcha::RecaptchaClient;
-pub use database::{DataStore, DataStoreError, Database, DbConnection};
+pub use database::{
+    DataStore, DataStoreError, Database, DbConnection, configure_standalone_connection,
+};
 #[cfg(feature = "plus")]
 pub use heartbeat_tasks::HeartbeatTasks;
 #[cfg(feature = "plus")]
@@ -162,7 +164,7 @@ macro_rules! write_conn {
 // `BEGIN IMMEDIATE` (not the diesel default `BEGIN` deferred): take the writer lock at
 // transaction start. Deferred begins as a reader and fails the read→write upgrade with
 // `SQLITE_BUSY_SNAPSHOT` (which bypasses `busy_timeout`) when the WAL has advanced since
-// `BEGIN` — e.g. between a Litestream PASSIVE checkpoint and the first `INSERT`.
+// `BEGIN`, e.g. between a Litestream PASSIVE checkpoint and the first `INSERT`.
 // `BEGIN IMMEDIATE` has no read-snapshot to invalidate, so contention waits via `busy_timeout`.
 //
 // Does NOT compose: nested calls fail with "cannot start a transaction within a transaction"
