@@ -16,6 +16,8 @@ pub enum ApiHistogram {
     ReportProcessDuration,
     /// Time spent in the batched DB write transaction per iteration.
     ReportWriteDuration,
+    /// Time the replica checkpoint critical section held the `SQLite` write lock.
+    ReplicaCriticalSectionDuration,
 }
 
 impl ApiHistogram {
@@ -27,6 +29,7 @@ impl ApiHistogram {
             Self::ReportCreateDuration => "report.create.duration",
             Self::ReportProcessDuration => "report.process.duration",
             Self::ReportWriteDuration => "report.write.duration",
+            Self::ReplicaCriticalSectionDuration => "replica.critical_section.duration",
         }
     }
 
@@ -46,6 +49,9 @@ impl ApiHistogram {
             Self::ReportWriteDuration => {
                 "Time spent in the batched DB write transaction per iteration"
             },
+            Self::ReplicaCriticalSectionDuration => {
+                "Time the replica checkpoint critical section held the SQLite write lock"
+            },
         }
     }
 
@@ -56,7 +62,8 @@ impl ApiHistogram {
             | Self::JobCompleteDuration(_)
             | Self::ReportCreateDuration
             | Self::ReportProcessDuration
-            | Self::ReportWriteDuration => "s",
+            | Self::ReportWriteDuration
+            | Self::ReplicaCriticalSectionDuration => "s",
         }
     }
 
@@ -67,7 +74,8 @@ impl ApiHistogram {
             | Self::JobCompleteDuration(priority) => vec![priority_attribute(priority)],
             Self::ReportCreateDuration
             | Self::ReportProcessDuration
-            | Self::ReportWriteDuration => Vec::new(),
+            | Self::ReportWriteDuration
+            | Self::ReplicaCriticalSectionDuration => Vec::new(),
         }
     }
 }

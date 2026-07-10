@@ -323,14 +323,18 @@ dependencies = [
  "bencher_endpoint",
  "bencher_json",
  "bencher_otel",
+ "bencher_replica",
  "bencher_schema",
+ "camino",
  "diesel",
  "dropshot",
  "http 1.4.1",
+ "rusqlite",
  "schemars",
  "serde",
  "serde_json",
  "slog",
+ "tempfile",
  "tokio",
 ]
 
@@ -1116,7 +1120,9 @@ dependencies = [
  "bencher_logger",
  "bencher_otel",
  "bencher_otel_provider",
+ "bencher_replica",
  "bencher_schema",
+ "camino",
  "dropshot",
  "futures-concurrency",
  "futures-util",
@@ -1140,8 +1146,10 @@ dependencies = [
  "bencher_license",
  "bencher_oci_storage",
  "bencher_rbac",
+ "bencher_replica",
  "bencher_schema",
  "bencher_token",
+ "camino",
  "diesel",
  "dropshot",
  "hex",
@@ -1557,6 +1565,33 @@ dependencies = [
  "serde_json",
  "slog",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "bencher_replica"
+version = "0.6.10"
+dependencies = [
+ "async-compression",
+ "aws-credential-types",
+ "aws-sdk-s3",
+ "bencher_json",
+ "bencher_otel",
+ "bytes",
+ "camino",
+ "futures",
+ "hex",
+ "pretty_assertions",
+ "rand 0.10.1",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "slog",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "uuid",
+ "zstd",
 ]
 
 [[package]]
@@ -2159,6 +2194,8 @@ dependencies = [
  "compression-core",
  "flate2",
  "memchr",
+ "zstd",
+ "zstd-safe",
 ]
 
 [[package]]

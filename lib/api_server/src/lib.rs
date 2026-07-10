@@ -2,7 +2,15 @@
 #[cfg(test)]
 use bencher_api_tests as _;
 #[cfg(test)]
+use bencher_replica as _;
+#[cfg(test)]
+use camino as _;
+#[cfg(test)]
 use http as _;
+#[cfg(test)]
+use rusqlite as _;
+#[cfg(test)]
+use tempfile as _;
 #[cfg(test)]
 use tokio as _;
 
