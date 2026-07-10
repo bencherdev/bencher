@@ -27,6 +27,8 @@ ignore = [
     "RUSTSEC-2025-0134",
     # https://rustsec.org/advisories/RUSTSEC-2026-0173.html
     "RUSTSEC-2026-0173",
+    # https://rustsec.org/advisories/RUSTSEC-2026-0192.html
+    "RUSTSEC-2026-0192",
 ]
 
 [bans]
