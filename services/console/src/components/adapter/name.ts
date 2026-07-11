@@ -30,6 +30,8 @@ export const adapterName = (adapter: Adapter): string => {
 			return "Benchmark.js";
 		case Adapter.JsTime:
 			return "console.time/console.timeEnd";
+		case Adapter.JsVitest:
+			return "Vitest";
 		case Adapter.PythonAsv:
 			return "airspeed velocity";
 		case Adapter.PythonPytest:
@@ -66,6 +68,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.JsBenchmark:
 		case Adapter.JsTime:
 			return `bencher run${host} "node benchmark.js"`;
+		case Adapter.JsVitest:
+			return `bencher run${host} --file results.json "vitest bench --run --outputJson results.json"`;
 		case Adapter.PythonAsv:
 			return `bencher run${host} "asv run"`;
 		case Adapter.PythonPytest:

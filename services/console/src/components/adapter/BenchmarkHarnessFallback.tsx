@@ -33,7 +33,7 @@ const BenchmarkHarnessFallback = () => (
 			<LanguageBox
 				icon="devicon-javascript-plain"
 				name="JavaScript"
-				adapters={[Adapter.JsBenchmark, Adapter.JsTime]}
+				adapters={[Adapter.JsBenchmark, Adapter.JsTime, Adapter.JsVitest]}
 			/>
 		</div>
 		<div class="column is-half">

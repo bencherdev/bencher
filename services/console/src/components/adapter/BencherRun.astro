@@ -130,6 +130,16 @@ const { isConsole } = Astro.props;
         code={adapterCommand(isConsole, Adapter.JsTime)}
     />
     <Code
+        slot="js_vitest_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.JsVitest)}
+    />
+    <Code
+        slot="js_vitest_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.JsVitest)}
+    />
+    <Code
         slot="python_asv_bash"
         lang="bash"
         code={adapterCommand(isConsole, Adapter.PythonAsv)}
