@@ -1,5 +1,3 @@
-#[cfg(feature = "plus")]
-use bencher_json::project::Visibility;
 use bencher_json::{JsonMetric, JsonNewMetric, MetricUuid};
 #[cfg(feature = "plus")]
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -37,6 +35,10 @@ pub struct QueryMetric {
 impl QueryMetric {
     fn_from_uuid!(metric, MetricUuid, Metric);
 
+    /// Count metric usage for an organization over a time window, across all project
+    /// visibilities. This is the billable figure for legacy Team (and metered
+    /// Enterprise) plans and the licensed entitlements check; Pro bills on active
+    /// series instead (see `series::count_active`).
     #[cfg(feature = "plus")]
     pub fn usage(
         conn: &mut DbConnection,
@@ -44,42 +46,7 @@ impl QueryMetric {
         start_time: bencher_json::DateTime,
         end_time: bencher_json::DateTime,
     ) -> Result<u32, HttpError> {
-        Self::usage_inner(conn, organization_id, start_time, end_time, None)
-    }
-
-    /// Count private-project metric usage for an organization over a time window.
-    ///
-    /// This is the billable figure only for plan levels where Public Project Metrics
-    /// are free (see `metered_bills_public_metrics`); levels that bill public metrics
-    /// use `usage` (all visibilities) instead. The selection lives in the metered
-    /// usage estimate and mirrors the skip in `PlanKind::check_usage`.
-    #[cfg(feature = "plus")]
-    pub fn private_usage(
-        conn: &mut DbConnection,
-        organization_id: OrganizationId,
-        start_time: bencher_json::DateTime,
-        end_time: bencher_json::DateTime,
-    ) -> Result<u32, HttpError> {
-        Self::usage_inner(
-            conn,
-            organization_id,
-            start_time,
-            end_time,
-            Some(Visibility::Private),
-        )
-    }
-
-    /// Count metric usage for an organization over a time window, optionally
-    /// restricted to projects of a given `visibility`.
-    #[cfg(feature = "plus")]
-    fn usage_inner(
-        conn: &mut DbConnection,
-        organization_id: OrganizationId,
-        start_time: bencher_json::DateTime,
-        end_time: bencher_json::DateTime,
-        visibility: Option<Visibility>,
-    ) -> Result<u32, HttpError> {
-        let mut query = schema::metric::table
+        schema::metric::table
             .inner_join(
                 schema::report_benchmark::table
                     .inner_join(schema::benchmark::table.inner_join(schema::project::table))
@@ -90,16 +57,11 @@ impl QueryMetric {
             .filter(schema::report::end_time.ge(start_time))
             .filter(schema::report::end_time.le(end_time))
             .select(diesel::dsl::count_star())
-            .into_boxed();
-        if let Some(visibility) = visibility {
-            query = query.filter(schema::project::visibility.eq(visibility));
-        }
-        query
             .get_result::<i64>(conn)
             .map_err(|e| {
                 crate::error::issue_error(
                     "Failed to count metric usage",
-                    &format!("Failed to count metric usage (visibility: {visibility:?}) for organization ({organization_id}) between {start_time} and {end_time}."),
+                    &format!("Failed to count metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
                     e,
                 )
             })?
@@ -107,7 +69,7 @@ impl QueryMetric {
             .map_err(|e| {
                 crate::error::issue_error(
                     "Failed to count metric usage",
-                    &format!("Failed to count metric usage (visibility: {visibility:?}) for organization ({organization_id}) between {start_time} and {end_time}."),
+                    &format!("Failed to count metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
                     e,
                 )
             })
@@ -163,8 +125,8 @@ impl InsertMetric {
     }
 }
 
-// `private_usage` and `Visibility::Private` are `plus`-only, so this module
-// compiles with the `plus` feature (as the rest of the test target already does).
+// `usage` and `Visibility::Private` are `plus`-only, so this module compiles
+// with the `plus` feature (as the rest of the test target already does).
 #[cfg(test)]
 mod tests {
     use bencher_json::{DateTime, project::Visibility};
@@ -244,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn private_usage_counts_only_private_projects() {
+    fn usage_counts_public_and_private_projects() {
         let mut conn = setup_test_db();
         // `create_base_entities` makes a Public project (visibility 0).
         let base = create_base_entities(&mut conn);
@@ -259,18 +221,7 @@ mod tests {
             DateTime::TEST,
         )
         .unwrap();
-        let private = QueryMetric::private_usage(
-            &mut conn,
-            base.organization_id,
-            DateTime::TEST,
-            DateTime::TEST,
-        )
-        .unwrap();
 
         assert_eq!(all, 2, "usage counts Public and Private Project metrics");
-        assert_eq!(
-            private, 1,
-            "private_usage counts only Private Project metrics"
-        );
     }
 }

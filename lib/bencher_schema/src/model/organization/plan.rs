@@ -469,22 +469,6 @@ impl PlanKind {
     }
 }
 
-/// Whether a metered (Stripe) subscription counts *public* project metrics in the usage
-/// estimate shown by the usage endpoint.
-///
-/// Only legacy Team (and metered Enterprise, which the price heuristic resolves to
-/// `Team`) plans bill public metrics, so their estimate counts all metrics; Pro's
-/// estimate counts only private metrics. This governs only the metrics figure shown for
-/// metered plans. Pro itself now bills on active series, not metrics (see
-/// [`metered_bills_active_series`]).
-pub fn metered_bills_public_metrics(level: PlanLevel) -> bool {
-    // Matched exhaustively so a new `PlanLevel` variant forces a decision here.
-    match level {
-        PlanLevel::Free | PlanLevel::Pro => false,
-        PlanLevel::Team | PlanLevel::Enterprise => true,
-    }
-}
-
 /// Whether a metered (Stripe) subscription is billed on the active-series meter.
 ///
 /// Active-series billing is the Pro plan only: Pro's tiered price bills the base fee and
@@ -571,23 +555,7 @@ impl LicenseUsage {
 mod tests {
     use bencher_json::{DateTime, PlanLevel};
 
-    use super::{MeteredPlan, PlanKind, metered_bills_active_series, metered_bills_public_metrics};
-
-    #[test]
-    fn does_not_bill_public_metrics() {
-        assert!(!metered_bills_public_metrics(PlanLevel::Free));
-        // Pro is the only metered tier whose public metrics are free.
-        assert!(!metered_bills_public_metrics(PlanLevel::Pro));
-    }
-
-    #[test]
-    fn bills_public_metrics() {
-        // Legacy Team and metered Enterprise are billed for public metrics. Free is
-        // included for completeness even though metered plans only resolve to
-        // Pro/Team via the Pro-price heuristic.
-        assert!(metered_bills_public_metrics(PlanLevel::Team));
-        assert!(metered_bills_public_metrics(PlanLevel::Enterprise));
-    }
+    use super::{MeteredPlan, PlanKind, metered_bills_active_series};
 
     #[test]
     fn bills_active_series_pro_only() {
