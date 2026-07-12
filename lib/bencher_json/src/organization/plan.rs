@@ -12,6 +12,12 @@ use crate::{BigInt, OrganizationUuid, system::payment::JsonCustomer};
 
 pub const DEFAULT_PRICE_NAME: &str = "default";
 pub const METRICS_METER_NAME: &str = "metrics";
+/// Stripe meter for monthly-active series (distinct testbed x benchmark x measure).
+/// Backs the Pro tiered price (tier 1 flat fee plus per-series step-ups) and is billed
+/// with `last` aggregation: after each report we post the org's cumulative
+/// period-to-date series count, so the final post of the period is the period total and
+/// a missed post self-heals on the next report.
+pub const ACTIVE_SERIES_METER_NAME: &str = "active_series";
 pub const RUNNER_MINUTES_METER_NAME: &str = "runner_minutes";
 
 #[typeshare::typeshare]

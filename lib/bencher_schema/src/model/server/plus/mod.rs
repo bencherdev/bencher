@@ -26,10 +26,7 @@ use crate::{
     schema::{self, server as server_table},
 };
 
-mod credit;
 mod stats;
-
-pub use credit::spawn_credit_grants;
 
 crate::macros::typed_id::typed_id!(ServerId);
 

@@ -23,7 +23,10 @@ use crate::model::spec::SpecId;
 #[cfg(feature = "plus")]
 use crate::model::{
     organization::plan::PlanKind,
-    project::testbed::{RunJob, RunTestbed},
+    project::{
+        series::count_active,
+        testbed::{RunJob, RunTestbed},
+    },
     runner::{PendingInsertJob, SourceIp},
 };
 use crate::{
@@ -472,6 +475,10 @@ impl QueryReport {
     ) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]
         let mut usage = 0;
+        // Capture the Pro active-series billing context (customer + period) before
+        // `check_usage` consumes the plan kind; `None` for any non-Pro plan.
+        #[cfg(feature = "plus")]
+        let series_billing = plan_kind.metered_series_billing();
 
         let mut report_results = ReportResults::new(
             self.project_id,
@@ -480,6 +487,11 @@ impl QueryReport {
             self.testbed_id,
             self.spec_id,
             self.id,
+            #[cfg(feature = "plus")]
+            results::SeriesCacheContext {
+                organization_id: query_project.organization_id,
+                report_created: self.created,
+            },
         );
         let processed = report_results
             .process(
@@ -506,8 +518,98 @@ impl QueryReport {
             .check_usage(context.biller.as_ref(), query_project, usage)
             .await?;
 
+        // Pro active-series billing: once the report's metrics and series cache are
+        // committed, count the organization's period-to-date active series on the request
+        // connection and post it to Stripe in a detached task (only the Stripe post is
+        // off the hot path). Skipped if processing failed (the cache rolled back).
+        #[cfg(feature = "plus")]
+        if processed.is_ok()
+            && let Some((customer_id, period_start, period_end)) = series_billing
+        {
+            post_series_usage(
+                log,
+                context,
+                query_project,
+                customer_id,
+                period_start,
+                period_end,
+            )
+            .await;
+        }
+
         processed
     }
+}
+
+/// Post a Pro organization's period-to-date active-series count to the `active_series`
+/// meter after a report. Counts on the request connection (a single indexed range scan);
+/// only the Stripe meter post is detached, so it never blocks returning the report.
+/// Best-effort: a count or post failure is logged (and reported via
+/// `ActiveSeriesBilledFailed`) but never surfaced. The next report re-posts the
+/// cumulative count, so a dropped post self-heals within the period. The one gap is a
+/// failed post on a period's final report with no later report before the period closes,
+/// which under-bills by the delta: an accepted availability-over-accuracy tradeoff now
+/// that the reconciliation sweep is gone.
+#[cfg(feature = "plus")]
+async fn post_series_usage(
+    log: &Logger,
+    context: &ApiContext,
+    query_project: &QueryProject,
+    customer_id: bencher_billing::CustomerId,
+    period_start: DateTime,
+    period_end: DateTime,
+) {
+    let Some(biller) = context.biller.clone() else {
+        return;
+    };
+    let organization_id = query_project.organization_id;
+    // Acquire a read connection and count on the request path (a single indexed range
+    // scan). Best-effort: a connection or count failure logs and returns without
+    // surfacing, since the report itself is already committed.
+    let mut conn = match context.database.get_public_conn().await {
+        Ok(conn) => conn,
+        Err(e) => {
+            slog::warn!(
+                log,
+                "Failed to acquire a connection to count active series for organization ({organization_id}): {e}"
+            );
+            return;
+        },
+    };
+    let count = match count_active(&mut conn, organization_id, period_start, period_end) {
+        Ok(count) => count,
+        Err(e) => {
+            slog::warn!(
+                log,
+                "Failed to count active series for organization ({organization_id}): {e}"
+            );
+            return;
+        },
+    };
+    drop(conn);
+
+    // Stamp the meter post with the count time so the `active_series` meter's `last`
+    // aggregation orders deterministically across concurrent reports.
+    let counted_at = context.clock.now();
+    let log = log.clone();
+    tokio::spawn(async move {
+        if let Err(e) = biller
+            .record_series_usage(&customer_id, count, counted_at)
+            .await
+        {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ActiveSeriesBilledFailed);
+            slog::warn!(
+                log,
+                "Failed to record active-series usage for organization ({organization_id}): {e}"
+            );
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+        } else {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ActiveSeriesBilled);
+        }
+    });
 }
 
 type ResultsQuery = (

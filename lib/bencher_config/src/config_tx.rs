@@ -24,7 +24,7 @@ use bencher_schema::{
     context::RateLimiting,
     model::{
         runner::job::{reprocess_completed_jobs, spawn_heartbeat_timeout},
-        server::{QueryServer, spawn_credit_grants},
+        server::QueryServer,
     },
     write_conn,
 };
@@ -172,22 +172,6 @@ impl ConfigTx {
 
         #[cfg(feature = "plus")]
         spawn_stats(log, server.app_private()).await?;
-
-        // Bencher Cloud only (a Biller is configured): keep each metered
-        // subscription's monthly usage credit granted and reconcile lapses on a
-        // daily sweep, off the report-ingestion path.
-        #[cfg(feature = "plus")]
-        {
-            let context = server.app_private();
-            if let Some(biller) = context.biller.clone() {
-                spawn_credit_grants(
-                    log.clone(),
-                    context.database.path.clone(),
-                    context.database.busy_timeout,
-                    biller,
-                );
-            }
-        }
 
         Ok(server)
     }
