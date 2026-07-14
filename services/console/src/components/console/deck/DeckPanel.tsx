@@ -16,7 +16,7 @@ import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { pathname, useSearchParams } from "../../../util/url";
-import { type InitValid, init_valid, validJwt } from "../../../util/valid";
+import { init_valid, jwtRequiredInvalid } from "../../../util/valid";
 import Deck, { type DeckConfig } from "./hand/Deck";
 import DeckHeader, { type DeckHeaderConfig } from "./header/DeckHeader";
 
@@ -45,17 +45,16 @@ const DeckPanel = (props: Props) => {
 
 	const fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			token: authUser()?.token,
 		};
 	});
 
 	const getData = async (fetcher: {
-		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
-		if (!fetcher.bencher_valid || !validJwt(fetcher.token)) {
+		// Fire in parallel with WASM init; the server validates the token regardless.
+		if (jwtRequiredInvalid(bencher_valid(), fetcher.token)) {
 			return EMPTY_OBJECT;
 		}
 		return await httpGet(props.apiUrl, path(), fetcher.token)

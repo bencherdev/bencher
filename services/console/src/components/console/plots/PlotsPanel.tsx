@@ -24,9 +24,8 @@ import { setPageTitle } from "../../../util/resource";
 import { useSearchParams } from "../../../util/url";
 import {
 	DEBOUNCE_DELAY,
-	type InitValid,
 	init_valid,
-	validJwt,
+	jwtOptionalInvalid,
 } from "../../../util/valid";
 import FallbackPlots from "./FallbackPlots";
 import Pinned from "./Pinned";
@@ -70,21 +69,17 @@ const PlotsPanel = (props: Props) => {
 	const project_slug = createMemo(() => params().project);
 	const projectFetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			token: user?.token,
 		};
 	});
 	const getProject = async (fetcher: {
-		bencher_valid: InitValid;
 		project_slug: string;
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
-		if (!fetcher.bencher_valid) {
-			return EMPTY_OBJECT;
-		}
-		if (fetcher.token && !validJwt(fetcher.token)) {
+		// Fire in parallel with WASM init; the server validates the token regardless.
+		if (jwtOptionalInvalid(bencher_valid(), fetcher.token)) {
 			return EMPTY_OBJECT;
 		}
 		const path = `/v0/projects/${fetcher.project_slug}`;
@@ -108,14 +103,12 @@ const PlotsPanel = (props: Props) => {
 	});
 	const plotsFetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			searchQuery: searchQuery(),
 			token: user?.token,
 		};
 	});
 	const getPlots = async (fetcher: {
-		bencher_valid: InitValid;
 		project_slug: string;
 		searchQuery: {
 			per_page: number;
@@ -124,10 +117,8 @@ const PlotsPanel = (props: Props) => {
 		token: string;
 	}) => {
 		const EMPTY_ARRAY: JsonPlot[] = [];
-		if (!fetcher.bencher_valid) {
-			return EMPTY_ARRAY;
-		}
-		if (fetcher.token && !validJwt(fetcher.token)) {
+		// Fire in parallel with WASM init; the server validates the token regardless.
+		if (jwtOptionalInvalid(bencher_valid(), fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
 		const searchParams = new URLSearchParams();
