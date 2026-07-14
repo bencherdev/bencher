@@ -17,6 +17,7 @@ import { timeToDateOnlyIso } from "../../../util/convert";
 import { theme } from "../../navbar/theme/util";
 import PerfFrame from "../perf/PerfFrame";
 import FallbackPlot from "./FallbackPlot";
+import { PLOT_PRELOAD_MARGIN, isNearViewport } from "./util";
 
 export interface Props {
 	children?: Element;
@@ -39,26 +40,68 @@ const PinnedFrame = (props: Props) => {
 
 	const [isVisible, setIsVisible] = createSignal(false);
 
-	const handleIntersection = (entries) => {
-		const [entry] = entries;
-		// Set to true if the element is visible,
-		// but do not set to false if it is no longer visible
-		if (!isVisible() && entry.isIntersecting) {
-			setIsVisible(entry.isIntersecting);
-		}
-	};
-
 	onMount(() => {
+		let observer: IntersectionObserver | undefined;
+		let resizeObserver: ResizeObserver | undefined;
+		let retryTimeout: ReturnType<typeof setTimeout> | undefined;
+		const stopObserving = () => {
+			clearTimeout(retryTimeout);
+			observer?.disconnect();
+			resizeObserver?.disconnect();
+		};
+		// Registered synchronously within the onMount owner so cleanup runs even
+		// when the element lookup below has to retry asynchronously.
+		onCleanup(stopObserving);
+
+		const isTargetVisible = (target: HTMLElement) =>
+			isNearViewport(target.getBoundingClientRect(), window.innerHeight);
+		const reveal = () => {
+			setIsVisible(true);
+			// Once visible we never hide again, so stop watching.
+			stopObserving();
+		};
+
 		const setupObserver = () => {
-			const observer = new IntersectionObserver(handleIntersection);
 			const target = document.getElementById(plotId());
-			if (target) {
-				observer.observe(target);
-				onCleanup(() => observer.disconnect());
-			} else {
-				// Retry if the target is not found
-				setTimeout(setupObserver, 1);
+			if (!target) {
+				// Retry if the target is not yet in the DOM
+				retryTimeout = setTimeout(setupObserver, 1);
+				return;
 			}
+			// If the plot is already on (or near) the screen at mount time, load it
+			// immediately instead of relying on the IntersectionObserver's initial
+			// callback, whose delivery timing is engine dependent and can be delayed
+			// or missed for elements that are already in view and never subsequently
+			// move, which left pinned plots stuck on the loading skeleton until a
+			// manual refresh re-mounted them.
+			if (isTargetVisible(target)) {
+				reveal();
+				return;
+			}
+			// Observe for the plot being scrolled into view later.
+			observer = new IntersectionObserver(
+				(entries) => {
+					if (entries.some((entry) => entry.isIntersecting)) {
+						reveal();
+					}
+				},
+				{ rootMargin: `${PLOT_PRELOAD_MARGIN}px` },
+			);
+			observer.observe(target);
+			// As sibling plots stream in their data, the layout shifts and can move
+			// this plot into view without a scroll. The IntersectionObserver does not
+			// reliably report that on an otherwise idle page, which left an in-view
+			// plot stuck on the skeleton until the user scrolled or refreshed. So also
+			// re-check the plot's position whenever the page layout changes. A
+			// ResizeObserver fires only on real layout changes (not on a timer) and
+			// delivers an initial callback, so a settled-but-mismeasured mount is
+			// caught too.
+			resizeObserver = new ResizeObserver(() => {
+				if (isTargetVisible(target)) {
+					reveal();
+				}
+			});
+			resizeObserver.observe(document.body);
 		};
 		setupObserver();
 	});
