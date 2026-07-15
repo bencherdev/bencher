@@ -4,12 +4,10 @@ use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQuer
 use dropshot::HttpError;
 
 use crate::{
-    auth_conn,
-    context::{ApiContext, DbConnection},
-    error::{resource_conflict_err, resource_not_found_err},
+    context::DbConnection,
+    error::resource_not_found_err,
     model::project::benchmark::{BenchmarkId, QueryBenchmark},
     schema::plot_benchmark as plot_benchmark_table,
-    write_conn,
 };
 
 use super::{PlotId, QueryPlot};
@@ -84,27 +82,6 @@ impl InsertPlotBenchmark {
             diesel::insert_into(plot_benchmark_table::table)
                 .values(&inserts)
                 .execute(conn)?;
-        }
-        Ok(())
-    }
-
-    pub async fn from_json(
-        context: &ApiContext,
-        plot_id: PlotId,
-        benchmarks: Vec<BenchmarkUuid>,
-    ) -> Result<(), HttpError> {
-        let ranker = RankGenerator::new(benchmarks.len());
-        for (uuid, rank) in benchmarks.into_iter().zip(ranker) {
-            let benchmark_id = QueryBenchmark::get_id(auth_conn!(context), uuid)?;
-            let insert_plot_benchmark = Self {
-                plot_id,
-                benchmark_id,
-                rank,
-            };
-            diesel::insert_into(plot_benchmark_table::table)
-                .values(&insert_plot_benchmark)
-                .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(PlotBenchmark, insert_plot_benchmark))?;
         }
         Ok(())
     }

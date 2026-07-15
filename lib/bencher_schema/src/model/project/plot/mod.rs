@@ -7,8 +7,11 @@ use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQuer
 use dropshot::HttpError;
 
 use super::{
-    ProjectId, QueryProject, benchmark::QueryBenchmark, branch::QueryBranch, measure::QueryMeasure,
-    testbed::QueryTestbed,
+    ProjectId, QueryProject,
+    benchmark::{BenchmarkId, QueryBenchmark},
+    branch::{BranchId, QueryBranch},
+    measure::{MeasureId, QueryMeasure},
+    testbed::{QueryTestbed, TestbedId},
 };
 use crate::{
     auth_conn,
@@ -18,8 +21,12 @@ use crate::{
         resource_not_found_err,
     },
     macros::sql::last_insert_rowid,
-    schema::plot as plot_table,
-    write_conn,
+    schema::{
+        plot as plot_table, plot_benchmark as plot_benchmark_table,
+        plot_branch as plot_branch_table, plot_measure as plot_measure_table,
+        plot_testbed as plot_testbed_table,
+    },
+    write_conn, write_transaction,
 };
 
 mod benchmark;
@@ -117,6 +124,11 @@ impl QueryPlot {
                 let update_plot = UpdatePlot {
                     rank: Some(rank),
                     title: None,
+                    lower_value: None,
+                    upper_value: None,
+                    lower_boundary: None,
+                    upper_boundary: None,
+                    x_axis: None,
                     window: None,
                     modified: now,
                 };
@@ -165,6 +177,11 @@ impl QueryPlot {
                 let update_plot = UpdatePlot {
                     rank: Some(rank),
                     title: None,
+                    lower_value: None,
+                    upper_value: None,
+                    lower_boundary: None,
+                    upper_boundary: None,
+                    x_axis: None,
                     window: None,
                     modified: now,
                 };
@@ -233,6 +250,194 @@ impl QueryPlot {
             modified,
         })
     }
+
+    #[expect(clippy::too_many_lines, reason = "one branch per updatable component")]
+    pub async fn update(
+        &self,
+        context: &ApiContext,
+        query_project: &QueryProject,
+        update: JsonUpdatePlot,
+    ) -> Result<(), HttpError> {
+        let (
+            index,
+            title,
+            lower_value,
+            upper_value,
+            lower_boundary,
+            upper_boundary,
+            x_axis,
+            window,
+            branches,
+            testbeds,
+            benchmarks,
+            measures,
+        ) = match update {
+            JsonUpdatePlot::Patch(patch) => {
+                let JsonPlotPatch {
+                    index,
+                    title,
+                    lower_value,
+                    upper_value,
+                    lower_boundary,
+                    upper_boundary,
+                    x_axis,
+                    window,
+                    branches,
+                    testbeds,
+                    benchmarks,
+                    measures,
+                } = patch;
+                (
+                    index,
+                    title.map(Some),
+                    lower_value,
+                    upper_value,
+                    lower_boundary,
+                    upper_boundary,
+                    x_axis,
+                    window,
+                    branches,
+                    testbeds,
+                    benchmarks,
+                    measures,
+                )
+            },
+            JsonUpdatePlot::Null(patch_null) => {
+                let JsonPlotPatchNull {
+                    index,
+                    title: (),
+                    lower_value,
+                    upper_value,
+                    lower_boundary,
+                    upper_boundary,
+                    x_axis,
+                    window,
+                    branches,
+                    testbeds,
+                    benchmarks,
+                    measures,
+                } = patch_null;
+                (
+                    index,
+                    Some(None),
+                    lower_value,
+                    upper_value,
+                    lower_boundary,
+                    upper_boundary,
+                    x_axis,
+                    window,
+                    branches,
+                    testbeds,
+                    benchmarks,
+                    measures,
+                )
+            },
+        };
+
+        // Phase 1: resolve the provided component UUIDs to IDs, scoped to the
+        // project so a foreign or missing UUID is rejected (404) up front.
+        // A `None` list leaves that component unchanged; a `Some` list replaces it.
+        macro_rules! resolve_ids {
+            ($uuids:expr, $query:ty) => {
+                match $uuids {
+                    Some(uuids) => {
+                        let mut ids = Vec::with_capacity(uuids.len());
+                        for uuid in &uuids {
+                            ids.push(
+                                <$query>::from_uuid(auth_conn!(context), query_project.id, *uuid)?
+                                    .id,
+                            );
+                        }
+                        Some(ids)
+                    },
+                    None => None,
+                }
+            };
+        }
+        let branch_ids = resolve_ids!(branches, QueryBranch);
+        let testbed_ids = resolve_ids!(testbeds, QueryTestbed);
+        let benchmark_ids = resolve_ids!(benchmarks, QueryBenchmark);
+        let measure_ids = resolve_ids!(measures, QueryMeasure);
+
+        // Recompute the rank when a new index is requested (may redistribute atomically).
+        let rank = if let Some(index) = index {
+            Some(self.update_rank(write_conn!(context), query_project, index)?)
+        } else {
+            None
+        };
+
+        let update_plot = UpdatePlot {
+            rank,
+            title,
+            lower_value,
+            upper_value,
+            lower_boundary,
+            upper_boundary,
+            x_axis,
+            window,
+            modified: DateTime::now(),
+        };
+
+        // Phase 2: apply the scalar changeset and replace each provided component
+        // list (delete then re-insert) atomically in a single write transaction.
+        let plot_id = self.id;
+        write_transaction!(context, |conn| Self::apply_update(
+            conn,
+            plot_id,
+            &update_plot,
+            branch_ids.as_deref(),
+            testbed_ids.as_deref(),
+            benchmark_ids.as_deref(),
+            measure_ids.as_deref(),
+        ))
+        .map_err(resource_conflict_err!(Plot, self))?;
+
+        Ok(())
+    }
+
+    /// Apply a scalar changeset and replace each provided component list within an
+    /// existing transaction. A `None` list leaves that component unchanged; a `Some`
+    /// list replaces it wholesale (delete then re-insert with fresh ranks).
+    fn apply_update(
+        conn: &mut DbConnection,
+        plot_id: PlotId,
+        update_plot: &UpdatePlot,
+        branch_ids: Option<&[BranchId]>,
+        testbed_ids: Option<&[TestbedId]>,
+        benchmark_ids: Option<&[BenchmarkId]>,
+        measure_ids: Option<&[MeasureId]>,
+    ) -> diesel::QueryResult<()> {
+        diesel::update(plot_table::table.filter(plot_table::id.eq(plot_id)))
+            .set(update_plot)
+            .execute(conn)?;
+        if let Some(branch_ids) = branch_ids {
+            diesel::delete(plot_branch_table::table.filter(plot_branch_table::plot_id.eq(plot_id)))
+                .execute(conn)?;
+            InsertPlotBranch::from_resolved(conn, plot_id, branch_ids)?;
+        }
+        if let Some(testbed_ids) = testbed_ids {
+            diesel::delete(
+                plot_testbed_table::table.filter(plot_testbed_table::plot_id.eq(plot_id)),
+            )
+            .execute(conn)?;
+            InsertPlotTestbed::from_resolved(conn, plot_id, testbed_ids)?;
+        }
+        if let Some(benchmark_ids) = benchmark_ids {
+            diesel::delete(
+                plot_benchmark_table::table.filter(plot_benchmark_table::plot_id.eq(plot_id)),
+            )
+            .execute(conn)?;
+            InsertPlotBenchmark::from_resolved(conn, plot_id, benchmark_ids)?;
+        }
+        if let Some(measure_ids) = measure_ids {
+            diesel::delete(
+                plot_measure_table::table.filter(plot_measure_table::plot_id.eq(plot_id)),
+            )
+            .execute(conn)?;
+            InsertPlotMeasure::from_resolved(conn, plot_id, measure_ids)?;
+        }
+        Ok(())
+    }
 }
 
 impl Ranked for QueryPlot {
@@ -286,22 +491,27 @@ impl InsertPlot {
             measures,
         } = plot;
 
-        // Phase 1: Resolve UUIDs to IDs via read connections
+        // Phase 1: Resolve UUIDs to IDs via read connections, scoped to the
+        // project so a foreign or missing UUID is rejected (404) up front.
         let mut branch_ids = Vec::with_capacity(branches.len());
         for uuid in &branches {
-            branch_ids.push(QueryBranch::get_id(auth_conn!(context), *uuid)?);
+            branch_ids
+                .push(QueryBranch::from_uuid(auth_conn!(context), query_project.id, *uuid)?.id);
         }
         let mut testbed_ids = Vec::with_capacity(testbeds.len());
         for uuid in &testbeds {
-            testbed_ids.push(QueryTestbed::get_id(auth_conn!(context), *uuid)?);
+            testbed_ids
+                .push(QueryTestbed::from_uuid(auth_conn!(context), query_project.id, *uuid)?.id);
         }
         let mut benchmark_ids = Vec::with_capacity(benchmarks.len());
         for uuid in &benchmarks {
-            benchmark_ids.push(QueryBenchmark::get_id(auth_conn!(context), *uuid)?);
+            benchmark_ids
+                .push(QueryBenchmark::from_uuid(auth_conn!(context), query_project.id, *uuid)?.id);
         }
         let mut measure_ids = Vec::with_capacity(measures.len());
         for uuid in &measures {
-            measure_ids.push(QueryMeasure::get_id(auth_conn!(context), *uuid)?);
+            measure_ids
+                .push(QueryMeasure::from_uuid(auth_conn!(context), query_project.id, *uuid)?.id);
         }
 
         // Phase 2: Single write_conn + transaction for all writes
@@ -351,57 +561,24 @@ impl InsertPlot {
 pub struct UpdatePlot {
     pub rank: Option<Rank>,
     pub title: Option<Option<ResourceName>>,
+    pub lower_value: Option<bool>,
+    pub upper_value: Option<bool>,
+    pub lower_boundary: Option<bool>,
+    pub upper_boundary: Option<bool>,
+    pub x_axis: Option<XAxis>,
     pub window: Option<Window>,
     pub modified: DateTime,
-}
-
-impl UpdatePlot {
-    pub async fn from_json(
-        context: &ApiContext,
-        query_project: &QueryProject,
-        query_plot: &QueryPlot,
-        update: JsonUpdatePlot,
-    ) -> Result<Self, HttpError> {
-        let (index, title, window) = match update {
-            JsonUpdatePlot::Patch(patch) => {
-                let JsonPlotPatch {
-                    index,
-                    title,
-                    window,
-                } = patch;
-                (index, title.map(Some), window)
-            },
-            JsonUpdatePlot::Null(patch_url) => {
-                let JsonPlotPatchNull {
-                    index,
-                    title: (),
-                    window,
-                } = patch_url;
-                (index, Some(None), window)
-            },
-        };
-        let rank = if let Some(index) = index {
-            Some(query_plot.update_rank(write_conn!(context), query_project, index)?)
-        } else {
-            None
-        };
-        Ok(Self {
-            rank,
-            title,
-            window,
-            modified: DateTime::now(),
-        })
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 
-    use bencher_json::project::plot::XAxis;
+    use bencher_json::{DateTime, project::plot::XAxis};
 
     use super::{
-        InsertPlot, PlotId, QueryPlot, branch::InsertPlotBranch, measure::InsertPlotMeasure,
+        InsertPlot, PlotId, QueryPlot, UpdatePlot, benchmark::InsertPlotBenchmark,
+        branch::InsertPlotBranch, measure::InsertPlotMeasure, testbed::InsertPlotTestbed,
     };
     use crate::{
         context::DbConnection,
@@ -634,7 +811,7 @@ mod tests {
         // Insert plot + all components in a single transaction
         let plot_id = conn
             .immediate_transaction(|conn| {
-                let timestamp = bencher_json::DateTime::now();
+                let timestamp = DateTime::now();
                 let insert_plot = InsertPlot {
                     uuid: bencher_json::PlotUuid::new(),
                     project_id: base.project_id,
@@ -754,5 +931,185 @@ mod tests {
         assert_eq!(measures.len(), 2);
         assert!(measures.contains(&m1));
         assert!(measures.contains(&m2));
+    }
+
+    /// Build a plot seeded with a single branch, testbed, benchmark, and measure.
+    fn seed_plot_with_components(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+    ) -> (
+        PlotId,
+        super::BranchId,
+        super::TestbedId,
+        super::BenchmarkId,
+        super::MeasureId,
+    ) {
+        let branch = create_branch_with_head(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000011",
+        )
+        .branch_id;
+        let testbed = create_testbed(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "localhost",
+            "localhost",
+        );
+        let benchmark = create_benchmark(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "bench1",
+            "bench1",
+        );
+        let measure = create_measure(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000040",
+            "latency",
+            "latency",
+        );
+        let plot_id = create_plot(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000050",
+            1_000_000,
+        );
+        InsertPlotBranch::from_resolved(conn, plot_id, &[branch]).expect("seed branch");
+        InsertPlotTestbed::from_resolved(conn, plot_id, &[testbed]).expect("seed testbed");
+        InsertPlotBenchmark::from_resolved(conn, plot_id, &[benchmark]).expect("seed benchmark");
+        InsertPlotMeasure::from_resolved(conn, plot_id, &[measure]).expect("seed measure");
+        (plot_id, branch, testbed, benchmark, measure)
+    }
+
+    /// A changeset that touches only `modified` (all other fields left unchanged).
+    fn noop_update() -> UpdatePlot {
+        UpdatePlot {
+            rank: None,
+            title: None,
+            lower_value: None,
+            upper_value: None,
+            lower_boundary: None,
+            upper_boundary: None,
+            x_axis: None,
+            window: None,
+            modified: DateTime::TEST,
+        }
+    }
+
+    #[test]
+    fn apply_update_replaces_only_provided_components() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let (plot_id, branch, testbed, benchmark, measure) =
+            seed_plot_with_components(&mut conn, base.project_id);
+
+        // A second branch and measure to switch to.
+        let branch2 = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000012",
+            "dev",
+            "dev",
+            "00000000-0000-0000-0000-000000000013",
+        )
+        .branch_id;
+        let measure2 = create_measure(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000041",
+            "throughput",
+            "throughput",
+        );
+
+        // Replace branches with [branch, branch2] and measures with [measure2];
+        // leave testbeds and benchmarks untouched (None).
+        QueryPlot::apply_update(
+            &mut conn,
+            plot_id,
+            &noop_update(),
+            Some(&[branch, branch2]),
+            None,
+            None,
+            Some(&[measure2]),
+        )
+        .expect("apply_update failed");
+
+        assert_eq!(get_plot_branches(&mut conn, plot_id), vec![branch, branch2]);
+        assert_eq!(get_plot_measures(&mut conn, plot_id), vec![measure2]);
+        // Unprovided components are left as-is.
+        assert_eq!(get_plot_testbeds(&mut conn, plot_id), vec![testbed]);
+        assert_eq!(get_plot_benchmarks(&mut conn, plot_id), vec![benchmark]);
+        // The originally seeded measure was replaced.
+        assert!(!get_plot_measures(&mut conn, plot_id).contains(&measure));
+    }
+
+    #[test]
+    fn apply_update_empty_list_clears_component() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let (plot_id, _branch, testbed, _benchmark, _measure) =
+            seed_plot_with_components(&mut conn, base.project_id);
+
+        // An empty branch list clears all branches for the plot.
+        QueryPlot::apply_update(
+            &mut conn,
+            plot_id,
+            &noop_update(),
+            Some(&[]),
+            None,
+            None,
+            None,
+        )
+        .expect("apply_update failed");
+
+        assert!(get_plot_branches(&mut conn, plot_id).is_empty());
+        // Other components are untouched.
+        assert_eq!(get_plot_testbeds(&mut conn, plot_id), vec![testbed]);
+    }
+
+    #[test]
+    fn apply_update_scalar_flags_and_x_axis() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let (plot_id, branch, testbed, benchmark, measure) =
+            seed_plot_with_components(&mut conn, base.project_id);
+
+        // Toggle some flags and the x-axis; leave the rest unchanged (None).
+        let update_plot = UpdatePlot {
+            rank: None,
+            title: None,
+            lower_value: Some(false),
+            upper_value: None,
+            lower_boundary: Some(true),
+            upper_boundary: None,
+            x_axis: Some(XAxis::Version),
+            window: None,
+            modified: DateTime::TEST,
+        };
+        QueryPlot::apply_update(&mut conn, plot_id, &update_plot, None, None, None, None)
+            .expect("apply_update failed");
+
+        let plot: QueryPlot = schema::plot::table
+            .filter(schema::plot::id.eq(plot_id))
+            .select(QueryPlot::as_select())
+            .first(&mut conn)
+            .expect("Failed to get plot");
+        assert!(!plot.lower_value); // set to false
+        assert!(plot.upper_value); // unchanged (create default true)
+        assert!(plot.lower_boundary); // set to true
+        assert!(!plot.upper_boundary); // unchanged (create default false)
+        assert!(matches!(plot.x_axis, XAxis::Version));
+
+        // Components were not provided, so they remain intact.
+        assert_eq!(get_plot_branches(&mut conn, plot_id), vec![branch]);
+        assert_eq!(get_plot_testbeds(&mut conn, plot_id), vec![testbed]);
+        assert_eq!(get_plot_benchmarks(&mut conn, plot_id), vec![benchmark]);
+        assert_eq!(get_plot_measures(&mut conn, plot_id), vec![measure]);
     }
 }

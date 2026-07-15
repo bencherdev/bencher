@@ -19,6 +19,7 @@ import { isAllowedProjectManage } from "../../../../util/auth";
 import { setPageTitle } from "../../../../util/resource";
 import PinModal from "./PinModal";
 import ShareModal from "./ShareModal";
+import UpdateModal from "./UpdateModal";
 
 export interface Props {
 	isConsole: boolean;
@@ -44,6 +45,7 @@ export interface Props {
 const PerfHeader = (props: Props) => {
 	const [share, setShare] = createSignal(false);
 	const [pin, setPin] = createSignal(false);
+	const [update, setUpdate] = createSignal(false);
 
 	const isAllowedFetcher = createMemo(() => {
 		return {
@@ -59,6 +61,9 @@ const PerfHeader = (props: Props) => {
 			}),
 	);
 	const showPin = createMemo(() => isAllowed() && props.plot() === undefined);
+	const showUpdate = createMemo(
+		() => isAllowed() && props.plot() !== undefined,
+	);
 
 	createEffect(() => {
 		setPageTitle(props.project()?.name);
@@ -98,6 +103,24 @@ const PerfHeader = (props: Props) => {
 				measures={props.measures}
 				pin={pin}
 				setPin={setPin}
+			/>
+			<UpdateModal
+				apiUrl={props.apiUrl}
+				user={props.user}
+				project={props.project}
+				plot={props.plot}
+				lower_value={props.lower_value}
+				upper_value={props.upper_value}
+				lower_boundary={props.lower_boundary}
+				upper_boundary={props.upper_boundary}
+				x_axis={props.x_axis}
+				branches={props.branches}
+				testbeds={props.testbeds}
+				benchmarks={props.benchmarks}
+				measures={props.measures}
+				update={update}
+				setUpdate={setUpdate}
+				handleRefresh={props.handleRefresh}
 			/>
 			<div class="column is-narrow">
 				<nav class="level">
@@ -154,6 +177,25 @@ const PerfHeader = (props: Props) => {
 												<i class="fas fa-thumbtack" />
 											</span>
 											<span>Pin</span>
+										</button>
+									</div>
+								</Show>
+
+								<Show when={showUpdate()}>
+									<div class="level-item">
+										<button
+											class="button is-fullwidth"
+											type="button"
+											title="Update this pinned plot"
+											onMouseDown={(e) => {
+												e.preventDefault();
+												setUpdate(true);
+											}}
+										>
+											<span class="icon">
+												<i class="fas fa-thumbtack" />
+											</span>
+											<span>Update Pin</span>
 										</button>
 									</div>
 								</Show>

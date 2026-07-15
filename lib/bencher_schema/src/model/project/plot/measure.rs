@@ -4,12 +4,10 @@ use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQuer
 use dropshot::HttpError;
 
 use crate::{
-    auth_conn,
-    context::{ApiContext, DbConnection},
-    error::{resource_conflict_err, resource_not_found_err},
+    context::DbConnection,
+    error::resource_not_found_err,
     model::project::measure::{MeasureId, QueryMeasure},
     schema::plot_measure as plot_measure_table,
-    write_conn,
 };
 
 use super::{PlotId, QueryPlot};
@@ -84,27 +82,6 @@ impl InsertPlotMeasure {
             diesel::insert_into(plot_measure_table::table)
                 .values(&inserts)
                 .execute(conn)?;
-        }
-        Ok(())
-    }
-
-    pub async fn from_json(
-        context: &ApiContext,
-        plot_id: PlotId,
-        measures: Vec<MeasureUuid>,
-    ) -> Result<(), HttpError> {
-        let ranker = RankGenerator::new(measures.len());
-        for (uuid, rank) in measures.into_iter().zip(ranker) {
-            let measure_id = QueryMeasure::get_id(auth_conn!(context), uuid)?;
-            let insert_plot_measure = Self {
-                plot_id,
-                measure_id,
-                rank,
-            };
-            diesel::insert_into(plot_measure_table::table)
-                .values(&insert_plot_measure)
-                .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(PlotMeasure, insert_plot_measure))?;
         }
         Ok(())
     }

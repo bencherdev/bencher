@@ -961,9 +961,9 @@ const PerfPanel = (props: Props) => {
 	) => {
 		// Uncheck all
 		if (index === undefined) {
+			// Keep PLOT_PARAM so an edited pinned plot can be updated in place.
 			setSearchParams({
 				[REPORT_PARAM]: null,
-				[PLOT_PARAM]: null,
 				[param]: null,
 				[CLEAR_PARAM]: true,
 			});
@@ -983,7 +983,6 @@ const PerfPanel = (props: Props) => {
 			: addToArray(param_array, uuid);
 		setSearchParams({
 			[REPORT_PARAM]: null,
-			[PLOT_PARAM]: null,
 			[param]: arrayToString(array),
 			[CLEAR_PARAM]: true,
 			...customParams?.(checked, i),
@@ -1082,7 +1081,6 @@ const PerfPanel = (props: Props) => {
 		setSearchParams({
 			[REPORT_PARAM]: null,
 			[MEASURES_PARAM]: arrayToString(array),
-			[PLOT_PARAM]: null,
 			[CLEAR_PARAM]: true,
 		});
 	};
@@ -1110,11 +1108,10 @@ const PerfPanel = (props: Props) => {
 
 	const handleStartTime = (date: string) =>
 		setSearchParams({
-			[PLOT_PARAM]: null,
 			[START_TIME_PARAM]: dateToTime(date),
 		});
 	const handleEndTime = (date: string) =>
-		setSearchParams({ [PLOT_PARAM]: null, [END_TIME_PARAM]: dateToTime(date) });
+		setSearchParams({ [END_TIME_PARAM]: dateToTime(date) });
 
 	const handleTab = (tab: PerfTab) => {
 		if (isPerfTab(tab)) {
@@ -1124,7 +1121,7 @@ const PerfPanel = (props: Props) => {
 
 	const handleBool = (param: string, value: boolean) => {
 		if (typeof value === "boolean") {
-			setSearchParams({ [PLOT_PARAM]: null, [param]: value });
+			setSearchParams({ [param]: value });
 		}
 	};
 
@@ -1134,7 +1131,7 @@ const PerfPanel = (props: Props) => {
 
 	const handleXAxis = (x_axis: XAxis) => {
 		if (isXAxis(x_axis)) {
-			setSearchParams({ [PLOT_PARAM]: null, [X_AXIS_PARAM]: x_axis });
+			setSearchParams({ [X_AXIS_PARAM]: x_axis });
 		}
 	};
 

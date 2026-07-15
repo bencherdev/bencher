@@ -161,10 +161,50 @@ pub struct CliPlotUpdate {
     #[clap(long)]
     pub title: Option<ElidedOption<ResourceName>>,
 
+    /// Display metric lower values.
+    #[clap(long, value_name = "BOOL")]
+    pub lower_value: Option<bool>,
+
+    /// Display metric upper values.
+    #[clap(long, value_name = "BOOL")]
+    pub upper_value: Option<bool>,
+
+    /// Display lower boundary limits.
+    #[clap(long, value_name = "BOOL")]
+    pub lower_boundary: Option<bool>,
+
+    /// Display upper boundary limits.
+    #[clap(long, value_name = "BOOL")]
+    pub upper_boundary: Option<bool>,
+
+    /// The x-axis to use for the plot.
+    #[clap(long)]
+    pub x_axis: Option<CliXAxis>,
+
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.
     #[clap(long, value_name = "SECONDS")]
     pub window: Option<Window>,
+
+    /// The branches to include in the plot.
+    /// Replaces the current branches for the plot.
+    #[clap(long, value_name = "BRANCH")]
+    pub branches: Option<Vec<BranchUuid>>,
+
+    /// The testbeds to include in the plot.
+    /// Replaces the current testbeds for the plot.
+    #[clap(long, value_name = "TESTBED")]
+    pub testbeds: Option<Vec<TestbedUuid>>,
+
+    /// The benchmarks to include in the plot.
+    /// Replaces the current benchmarks for the plot.
+    #[clap(long, value_name = "BENCHMARK")]
+    pub benchmarks: Option<Vec<BenchmarkUuid>>,
+
+    /// The measures to include in the plot.
+    /// Replaces the current measures for the plot.
+    #[clap(long, value_name = "MEASURE")]
+    pub measures: Option<Vec<MeasureUuid>>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

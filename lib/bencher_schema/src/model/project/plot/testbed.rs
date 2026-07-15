@@ -4,12 +4,10 @@ use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQuer
 use dropshot::HttpError;
 
 use crate::{
-    auth_conn,
-    context::{ApiContext, DbConnection},
-    error::{resource_conflict_err, resource_not_found_err},
+    context::DbConnection,
+    error::resource_not_found_err,
     model::project::testbed::{QueryTestbed, TestbedId},
     schema::plot_testbed as plot_testbed_table,
-    write_conn,
 };
 
 use super::{PlotId, QueryPlot};
@@ -84,27 +82,6 @@ impl InsertPlotTestbed {
             diesel::insert_into(plot_testbed_table::table)
                 .values(&inserts)
                 .execute(conn)?;
-        }
-        Ok(())
-    }
-
-    pub async fn from_json(
-        context: &ApiContext,
-        plot_id: PlotId,
-        testbeds: Vec<TestbedUuid>,
-    ) -> Result<(), HttpError> {
-        let ranker = RankGenerator::new(testbeds.len());
-        for (uuid, rank) in testbeds.into_iter().zip(ranker) {
-            let testbed_id = QueryTestbed::get_id(auth_conn!(context), uuid)?;
-            let insert_plot_testbed = Self {
-                plot_id,
-                testbed_id,
-                rank,
-            };
-            diesel::insert_into(plot_testbed_table::table)
-                .values(&insert_plot_testbed)
-                .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(PlotTestbed, insert_plot_testbed))?;
         }
         Ok(())
     }

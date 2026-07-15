@@ -15066,6 +15066,22 @@
       "JsonPlotPatch": {
         "type": "object",
         "properties": {
+          "benchmarks": {
+            "nullable": true,
+            "description": "The benchmarks to include in the plot. Replaces the current benchmarks for the plot.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkUuid"
+            }
+          },
+          "branches": {
+            "nullable": true,
+            "description": "The branches to include in the plot. Replaces the current branches for the plot.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BranchUuid"
+            }
+          },
           "index": {
             "nullable": true,
             "description": "The new index for the plot. Maximum index is 64.",
@@ -15074,6 +15090,32 @@
                 "$ref": "#/components/schemas/Index"
               }
             ]
+          },
+          "lower_boundary": {
+            "nullable": true,
+            "description": "Display lower boundary limits.",
+            "type": "boolean"
+          },
+          "lower_value": {
+            "nullable": true,
+            "description": "Display metric lower values.",
+            "type": "boolean"
+          },
+          "measures": {
+            "nullable": true,
+            "description": "The measures to include in the plot. Replaces the current measures for the plot.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeasureUuid"
+            }
+          },
+          "testbeds": {
+            "nullable": true,
+            "description": "The testbeds to include in the plot. Replaces the current testbeds for the plot.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestbedUuid"
+            }
           },
           "title": {
             "nullable": true,
@@ -15084,6 +15126,16 @@
               }
             ]
           },
+          "upper_boundary": {
+            "nullable": true,
+            "description": "Display upper boundary limits.",
+            "type": "boolean"
+          },
+          "upper_value": {
+            "nullable": true,
+            "description": "Display metric upper values.",
+            "type": "boolean"
+          },
           "window": {
             "nullable": true,
             "description": "The window of time for the plot, in seconds. Metrics outside of this window will be omitted.",
@@ -15092,12 +15144,35 @@
                 "$ref": "#/components/schemas/Window"
               }
             ]
+          },
+          "x_axis": {
+            "nullable": true,
+            "description": "The x-axis to use for the plot.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/XAxis"
+              }
+            ]
           }
         }
       },
       "JsonPlotPatchNull": {
         "type": "object",
         "properties": {
+          "benchmarks": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkUuid"
+            }
+          },
+          "branches": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BranchUuid"
+            }
+          },
           "index": {
             "nullable": true,
             "allOf": [
@@ -15106,17 +15181,55 @@
               }
             ]
           },
+          "lower_boundary": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "lower_value": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "measures": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MeasureUuid"
+            }
+          },
+          "testbeds": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TestbedUuid"
+            }
+          },
           "title": {
             "type": "string",
             "enum": [
               null
             ]
           },
+          "upper_boundary": {
+            "nullable": true,
+            "type": "boolean"
+          },
+          "upper_value": {
+            "nullable": true,
+            "type": "boolean"
+          },
           "window": {
             "nullable": true,
             "allOf": [
               {
                 "$ref": "#/components/schemas/Window"
+              }
+            ]
+          },
+          "x_axis": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/XAxis"
               }
             ]
           }
