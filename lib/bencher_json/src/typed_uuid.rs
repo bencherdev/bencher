@@ -61,8 +61,11 @@ macro_rules! typed_uuid {
         }
 
         impl $uuid {
+            // Time-ordered UUIDv7 keeps same-batch rows adjacent in the
+            // database's uuid indexes, avoiding the B-tree page scatter that
+            // random v4 uuids cause on bulk insert and delete.
             pub fn new() -> Self {
-                Self(uuid::Uuid::new_v4())
+                Self(uuid::Uuid::now_v7())
             }
         }
 
@@ -71,3 +74,14 @@ macro_rules! typed_uuid {
 }
 
 pub(crate) use typed_uuid;
+
+#[cfg(test)]
+mod tests {
+    use crate::project::metric::MetricUuid;
+
+    #[test]
+    fn typed_uuid_new_is_v7() {
+        let uuid: uuid::Uuid = MetricUuid::new().into();
+        assert_eq!(uuid.get_version_num(), 7);
+    }
+}

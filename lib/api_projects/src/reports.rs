@@ -29,7 +29,7 @@ use bencher_schema::{
                 head::HeadId,
                 version::{QueryVersion, VersionId},
             },
-            report::{NewRunReport, QueryReport, ReportId},
+            report::{NewRunReport, QueryReport, ReportId, report_benchmark::ReportBenchmarkId},
         },
         user::{
             actor::{ApiActor, PubProjectBearerToken},
@@ -446,6 +446,12 @@ pub async fn proj_report_delete(
     Ok(Delete::auth_response_deleted())
 }
 
+/// Number of `report_benchmark` rows deleted per write statement when
+/// deleting a report's results. Bounds how long each delete holds the single
+/// writer connection (validated at ~1s per chunk against a production-scale
+/// report).
+pub const DELETE_CHUNK_SIZE: i64 = 1024;
+
 async fn delete_inner(
     context: &ApiContext,
     path_params: ProjReportParams,
@@ -470,9 +476,14 @@ async fn delete_inner(
             Report,
             (&query_project, path_params.report)
         ))?;
+    delete_report_results(context, &query_project, report_id).await?;
+
     diesel::delete(schema::report::table.filter(schema::report::id.eq(report_id)))
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Report, report_id))?;
+
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportDelete);
 
     // If there are no more reports for this version, delete the version
     // This is necessary because multiple reports can use the same version via a git hash
@@ -549,8 +560,41 @@ async fn delete_inner(
             (&query_project, report_id, &query_version)
         ))?;
 
-    #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportDelete);
-
     Ok(())
+}
+
+/// Delete a report's results in bounded chunks, each in its own write
+/// statement, so a large report does not hold the single writer connection
+/// for its entire cascade (`report_benchmark` -> metric -> boundary -> alert).
+/// Other writers interleave between chunks. Any rows that land between the
+/// final chunk and the report row delete are cleaned up by the report's own
+/// cascade.
+///
+/// The deletion is deliberately not atomic: if the server fails mid-loop, the
+/// report remains visible with a partial set of results (and a stale
+/// `metric_count_by_report` rollup) until the delete is retried. This is
+/// acceptable because reports are immutable after creation, the delete is
+/// idempotent, and the report was already condemned by the caller.
+async fn delete_report_results(
+    context: &ApiContext,
+    query_project: &QueryProject,
+    report_id: ReportId,
+) -> Result<(), HttpError> {
+    loop {
+        let report_benchmark_ids = schema::report_benchmark::table
+            .filter(schema::report_benchmark::report_id.eq(report_id))
+            .select(schema::report_benchmark::id)
+            .limit(DELETE_CHUNK_SIZE)
+            .load::<ReportBenchmarkId>(auth_conn!(context))
+            .map_err(resource_not_found_err!(Report, (query_project, report_id)))?;
+        if report_benchmark_ids.is_empty() {
+            return Ok(());
+        }
+        diesel::delete(
+            schema::report_benchmark::table
+                .filter(schema::report_benchmark::id.eq_any(report_benchmark_ids)),
+        )
+        .execute(write_conn!(context))
+        .map_err(resource_conflict_err!(Report, report_id))?;
+    }
 }

@@ -21,6 +21,10 @@ Version control uses Jujutsu (`jj`) with Git.
 - Do **NOT** add `Co-Authored-By` lines to commit messages
 - Do **NOT** add `🤖 Generated with [Claude Code](https://claude.com/claude-code)` to PR descriptions
 
+## Public Disclosure
+
+This is a public repository. **NEVER** disclose sensitive information about the production setup, data, or operations in any public-facing artifact: PR descriptions, PR/issue comments, commit messages, code comments, or docs. This includes production database sizes, row counts, table statistics, customer or project identifiers, incident details and timelines, and measured production performance characteristics. Describe changes in relative terms (e.g., "a large report" instead of actual production numbers) and keep concrete production figures in private channels.
+
 ## Writing Style
 
 - **NEVER** use emdashes in any writing output: code comments, commit messages, PR descriptions, docs, issue/PR replies, and chat responses. Use a colon, semicolon, comma, parentheses, or two sentences instead.
