@@ -108,6 +108,7 @@ const PerfHeader = (props: Props) => {
 				apiUrl={props.apiUrl}
 				user={props.user}
 				project={props.project}
+				isPlotInit={props.isPlotInit}
 				plot={props.plot}
 				lower_value={props.lower_value}
 				upper_value={props.upper_value}

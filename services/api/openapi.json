@@ -15068,7 +15068,7 @@
         "properties": {
           "benchmarks": {
             "nullable": true,
-            "description": "The benchmarks to include in the plot. Replaces the current benchmarks for the plot.",
+            "description": "The benchmarks to include in the plot. Replaces the current benchmarks for the plot. At least one benchmark must be specified.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BenchmarkUuid"
@@ -15076,7 +15076,7 @@
           },
           "branches": {
             "nullable": true,
-            "description": "The branches to include in the plot. Replaces the current branches for the plot.",
+            "description": "The branches to include in the plot. Replaces the current branches for the plot. At least one branch must be specified.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BranchUuid"
@@ -15103,7 +15103,7 @@
           },
           "measures": {
             "nullable": true,
-            "description": "The measures to include in the plot. Replaces the current measures for the plot.",
+            "description": "The measures to include in the plot. Replaces the current measures for the plot. At least one measure must be specified.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MeasureUuid"
@@ -15111,7 +15111,7 @@
           },
           "testbeds": {
             "nullable": true,
-            "description": "The testbeds to include in the plot. Replaces the current testbeds for the plot.",
+            "description": "The testbeds to include in the plot. Replaces the current testbeds for the plot. At least one testbed must be specified.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TestbedUuid"

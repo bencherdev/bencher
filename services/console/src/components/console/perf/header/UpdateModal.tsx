@@ -12,6 +12,7 @@ export interface Props {
 	apiUrl: string;
 	user: JsonAuthUser;
 	project: Accessor<undefined | JsonProject>;
+	isPlotInit: Accessor<boolean>;
 	plot: Accessor<undefined | string>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -41,7 +42,8 @@ const UpdateModal = (props: Props) => {
 	const handleSubmit = () => {
 		const projectUuid = props.project()?.uuid;
 		const plotUuid = props.plot();
-		if (!projectUuid || !plotUuid) {
+		// An empty component list would leave a pinned plot that renders nothing.
+		if (props.isPlotInit() || !projectUuid || !plotUuid) {
 			return;
 		}
 
@@ -125,7 +127,7 @@ const UpdateModal = (props: Props) => {
 					<button
 						class="button is-primary is-fullwidth"
 						type="button"
-						disabled={submitting()}
+						disabled={submitting() || props.isPlotInit()}
 						onMouseDown={(e) => {
 							e.preventDefault();
 							handleSubmit();

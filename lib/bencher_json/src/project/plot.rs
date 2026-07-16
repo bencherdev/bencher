@@ -117,15 +117,19 @@ pub struct JsonPlotPatch {
     pub window: Option<Window>,
     /// The branches to include in the plot.
     /// Replaces the current branches for the plot.
+    /// At least one branch must be specified.
     pub branches: Option<Vec<BranchUuid>>,
     /// The testbeds to include in the plot.
     /// Replaces the current testbeds for the plot.
+    /// At least one testbed must be specified.
     pub testbeds: Option<Vec<TestbedUuid>>,
     /// The benchmarks to include in the plot.
     /// Replaces the current benchmarks for the plot.
+    /// At least one benchmark must be specified.
     pub benchmarks: Option<Vec<BenchmarkUuid>>,
     /// The measures to include in the plot.
     /// Replaces the current measures for the plot.
+    /// At least one measure must be specified.
     pub measures: Option<Vec<MeasureUuid>>,
 }
 
@@ -515,7 +519,9 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_empty_component_list_clears() {
+    fn deserialize_empty_component_list_parses() {
+        // An empty list is valid on the wire; the API layer rejects it (400)
+        // since a plot must have at least one of each dimension.
         let update: JsonUpdatePlot = serde_json::from_str(r#"{"branches": []}"#).unwrap();
         let JsonUpdatePlot::Patch(patch) = update else {
             panic!("expected Patch variant");
