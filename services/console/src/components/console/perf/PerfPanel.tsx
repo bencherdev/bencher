@@ -725,6 +725,33 @@ const PerfPanel = (props: Props) => {
 		});
 	};
 
+	const [plot_memo, setPlotMemo] = createStore<JsonPlot[]>([]);
+	const selectedPlotFetcher = createMemo(() => {
+		const plot_uuid = plot();
+		return {
+			bencher_valid: bencher_valid(),
+			project_slug: project_slug(),
+			param_uuids: plot_uuid ? [plot_uuid] : [],
+			token: user?.token,
+		};
+	});
+	const [plot_selected] = createResource<JsonPlot[]>(
+		selectedPlotFetcher,
+		async (fetcher) => getSelected<JsonPlot>(PerfTab.PLOTS, plot_memo, fetcher),
+	);
+	createEffect(() => {
+		const data = plot_selected();
+		if (data) {
+			setPlotMemo(data);
+		}
+	});
+	// Drop only the pinned plot association; the rest of the view is untouched.
+	const handlePlotSelected = () => {
+		setSearchParams({
+			[PLOT_PARAM]: null,
+		});
+	};
+
 	// Resource tabs data: Reports, Branches, Testbeds, Benchmarks, Plots
 	async function getPerfTab<T>(
 		perfTab: PerfTab,
@@ -1315,6 +1342,7 @@ const PerfPanel = (props: Props) => {
 						branches_selected={branches_selected}
 						testbeds_selected={testbeds_selected}
 						benchmarks_selected={benchmarks_selected}
+						plot_selected={plot_selected}
 						reports_data={reports_data}
 						branches_data={branches_data}
 						testbeds_data={testbeds_data}
@@ -1350,6 +1378,7 @@ const PerfPanel = (props: Props) => {
 						handleBranchSelected={handleBranchSelected}
 						handleTestbedSelected={handleTestbedSelected}
 						handleBenchmarkSelected={handleBenchmarkSelected}
+						handlePlotSelected={handlePlotSelected}
 						handleReportChecked={handleReportChecked}
 						handleBranchChecked={handleBranchChecked}
 						handleTestbedChecked={handleTestbedChecked}

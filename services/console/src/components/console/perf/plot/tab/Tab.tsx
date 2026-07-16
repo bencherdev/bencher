@@ -36,6 +36,7 @@ const Tab = (props: {
 	branches_selected: Resource<JsonBranch[]>;
 	testbeds_selected: Resource<JsonTestbed[]>;
 	benchmarks_selected: Resource<JsonBenchmark[]>;
+	plot_selected: Resource<JsonPlot[]>;
 	// Tabs
 	reports_tab: TabList<JsonReport>;
 	branches_tab: TabList<JsonBranch>;
@@ -54,6 +55,7 @@ const Tab = (props: {
 	handleBranchSelected: (uuid: string) => void;
 	handleTestbedSelected: (uuid: string) => void;
 	handleBenchmarkSelected: (uuid: string) => void;
+	handlePlotSelected: () => void;
 	handlePage: (page: number) => void;
 	handleChecked: (index?: number, slug?: string) => void;
 	handleSearch: FieldHandler;
@@ -187,9 +189,11 @@ const Tab = (props: {
 					isConsole={props.isConsole}
 					loading={props.loading}
 					tab={props.tab}
+					plot_selected={props.plot_selected}
 					tabList={tabList as Accessor<TabList<JsonPlot>>}
 					per_page={props.per_page}
 					search={props.search}
+					handleSelected={props.handlePlotSelected}
 					handleChecked={props.handleChecked}
 					handleSearch={props.handleSearch}
 				/>

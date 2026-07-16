@@ -343,6 +343,7 @@ impl QueryPlot {
         // recompute the rank when a new index is requested (which may
         // redistribute all plot ranks), apply the scalar changeset, and replace
         // each provided component list (delete then re-insert).
+        let modified = context.clock.now();
         write_transaction!(context, |conn| {
             let rank = if let Some(index) = index {
                 Some(self.update_rank(conn, query_project, index)?)
@@ -358,7 +359,7 @@ impl QueryPlot {
                 upper_boundary,
                 x_axis,
                 window,
-                modified: DateTime::now(),
+                modified,
             };
             Self::apply_update(
                 conn,

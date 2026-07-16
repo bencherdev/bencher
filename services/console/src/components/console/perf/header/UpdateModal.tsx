@@ -42,7 +42,9 @@ const UpdateModal = (props: Props) => {
 	const handleSubmit = () => {
 		const projectUuid = props.project()?.uuid;
 		const plotUuid = props.plot();
-		// An empty component list would leave a pinned plot that renders nothing.
+		// `isPlotInit` is `true` whenever any of the branches, testbeds,
+		// benchmarks, or measures lists is empty. An empty component list is
+		// rejected by the API, since the plot would never render anything.
 		if (props.isPlotInit() || !projectUuid || !plotUuid) {
 			return;
 		}

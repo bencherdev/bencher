@@ -42,6 +42,7 @@ export interface Props {
 	branches_selected: Resource<JsonBranch[]>;
 	testbeds_selected: Resource<JsonTestbed[]>;
 	benchmarks_selected: Resource<JsonBenchmark[]>;
+	plot_selected: Resource<JsonPlot[]>;
 	// Tab data
 	reports_data: Resource<JsonReport>;
 	branches_data: Resource<JsonBranch>;
@@ -83,6 +84,7 @@ export interface Props {
 	handleBranchSelected: (uuid: string) => void;
 	handleTestbedSelected: (uuid: string) => void;
 	handleBenchmarkSelected: (uuid: string) => void;
+	handlePlotSelected: () => void;
 	// Handle checked
 	handleReportChecked: (index: number) => void;
 	handleBranchChecked: (index: undefined | number) => void;
@@ -350,6 +352,7 @@ const PlotTab = (props: Props) => {
 				branches_selected={props.branches_selected}
 				testbeds_selected={props.testbeds_selected}
 				benchmarks_selected={props.benchmarks_selected}
+				plot_selected={props.plot_selected}
 				reports_tab={props.reports_tab}
 				branches_tab={props.branches_tab}
 				testbeds_tab={props.testbeds_tab}
@@ -366,6 +369,7 @@ const PlotTab = (props: Props) => {
 				handleBranchSelected={props.handleBranchSelected}
 				handleTestbedSelected={props.handleTestbedSelected}
 				handleBenchmarkSelected={props.handleBenchmarkSelected}
+				handlePlotSelected={props.handlePlotSelected}
 				handlePage={handlePage}
 				handleChecked={handleChecked}
 				handleSearch={handleSearch as FieldHandler}
