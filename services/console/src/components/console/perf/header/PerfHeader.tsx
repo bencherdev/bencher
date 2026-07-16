@@ -11,6 +11,7 @@ import { resourcePath } from "../../../../config/util";
 import {
 	type JsonAuthUser,
 	type JsonPerfQuery,
+	type JsonPlot,
 	type JsonProject,
 	Visibility,
 	type XAxis,
@@ -39,6 +40,7 @@ export interface Props {
 	benchmarks: Accessor<string[]>;
 	measures: Accessor<string[]>;
 	plot: Accessor<undefined | string>;
+	plot_selected: Resource<JsonPlot[]>;
 	handleRefresh: () => void;
 }
 
@@ -110,6 +112,7 @@ const PerfHeader = (props: Props) => {
 				project={props.project}
 				isPlotInit={props.isPlotInit}
 				plot={props.plot}
+				plot_selected={props.plot_selected}
 				lower_value={props.lower_value}
 				upper_value={props.upper_value}
 				lower_boundary={props.lower_boundary}

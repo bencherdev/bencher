@@ -1,8 +1,8 @@
 ## Pending
 - Add Vitest adapter (`js_vitest`)
 - Add a `database.cache_size` server config option for the writer connection page cache in KiB (default 64 MiB)
-- Update a pinned plot in place: `PATCH /v0/projects/{project}/plots/{plot}` now also accepts the value/boundary toggles, x-axis, and the branches, testbeds, benchmarks, and measures lists (a provided list replaces the current one; duplicates are ignored). The Console adds an "Update Pin" button to the Perf explorer so an edited pinned plot can be saved without re-pinning, and the Pinned tab now shows the loaded plot above the search box with an `x` to deselect it, like the other dimension tabs. `bencher plot update` gains matching flags.
-- The plot endpoints now validate the branch, testbed, benchmark, and measure lists: a UUID that does not belong to the project is rejected with a `404 Not Found`, and an empty list is rejected with a `400 Bad Request`. Previously, `POST /v0/projects/{project}/plots` accepted UUIDs from other projects and empty lists.
+- Update a pinned plot in place with `PATCH /v0/projects/{project}/plots/{plot}`, the Perf explorer "Update Pin" button, or `bencher plot update`
+- Reject plot dimension UUIDs from other projects with a `404 Not Found` and empty dimension lists with a `400 Bad Request`
 
 ## `v0.6.8`
 - **BREAKING CHANGE** Change the default self-hosted API server port from `61016` to the newly [IANA-registered](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=6610) `6610`. Deployments relying on the default now serve the API on `6610`. Update clients, reverse proxies, and `--host`/`BENCHER_HOST` references (Docker Compose, devcontainer, and docs are updated to match). To stay on `61016`, set `server.bind_address` to `0.0.0.0:61016` (or run `bencher up --api-port 61016`).

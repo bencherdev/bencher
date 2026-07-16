@@ -725,26 +725,40 @@ const PerfPanel = (props: Props) => {
 		});
 	};
 
-	const [plot_memo, setPlotMemo] = createStore<JsonPlot[]>([]);
+	// The loaded pinned plot; refetched on refresh so an in-place update
+	// (e.g. a new title) is reflected without reloading the page.
 	const selectedPlotFetcher = createMemo(() => {
-		const plot_uuid = plot();
 		return {
 			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
-			param_uuids: plot_uuid ? [plot_uuid] : [],
+			plot: plot(),
+			refresh: refresh(),
 			token: user?.token,
 		};
 	});
 	const [plot_selected] = createResource<JsonPlot[]>(
 		selectedPlotFetcher,
-		async (fetcher) => getSelected<JsonPlot>(PerfTab.PLOTS, plot_memo, fetcher),
+		async (fetcher) => {
+			if (
+				!fetcher.bencher_valid ||
+				!fetcher.plot ||
+				!fetcher.project_slug ||
+				fetcher.project_slug === "undefined" ||
+				(props.isConsole && !validJwt(fetcher.token)) ||
+				props.isEmbed === true
+			) {
+				return [];
+			}
+			const path = `/v0/projects/${fetcher.project_slug}/plots/${fetcher.plot}`;
+			return await httpGet(props.apiUrl, path, fetcher.token)
+				.then((resp) => [resp?.data as JsonPlot])
+				.catch((error) => {
+					console.error(error);
+					Sentry.captureException(error);
+					return [];
+				});
+		},
 	);
-	createEffect(() => {
-		const data = plot_selected();
-		if (data) {
-			setPlotMemo(data);
-		}
-	});
 	// Drop only the pinned plot association; the rest of the view is untouched.
 	const handlePlotSelected = () => {
 		setSearchParams({
@@ -1284,6 +1298,7 @@ const PerfPanel = (props: Props) => {
 					benchmarks={benchmarks}
 					measures={measures}
 					plot={plot}
+					plot_selected={plot_selected}
 					handleRefresh={handleRefresh}
 				/>
 			</Show>
