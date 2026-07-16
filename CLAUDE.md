@@ -173,6 +173,7 @@ Defined in `.cargo/config.toml`:
 - Deploy to Bencher Cloud: reset `cloud` to `devel` and push
 - After successful deploy: CI resets `main` to `cloud`
 - Release tags (e.g., `v0.5.10`) are created off `devel`
+- Do **NOT** use auto-closing keywords (`Closes #N`, `Fixes #N`) in PR descriptions if there have been changes to the CLI
 
 ### Type Sharing Flow
 
