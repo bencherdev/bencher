@@ -1172,7 +1172,7 @@
           "organizations"
         ],
         "summary": "Delete an organization",
-        "description": "Delete an organization where the user is a member. The user must have `delete` permissions for the organization. By default, organizations are soft-deleted (along with their child projects). Set the `hard` query parameter to `true` to permanently delete the organization (requires server admin).",
+        "description": "Delete an organization where the user is a member. The user must have `delete` permissions for the organization. By default, organizations are soft-deleted (along with their child projects). Set the `hard` query parameter to `true` to permanently delete the organization (requires server admin). On Bencher Cloud, deleting an organization also immediately cancels any active subscription.",
         "operationId": "organization_delete",
         "parameters": [
           {

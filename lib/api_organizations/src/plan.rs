@@ -5,7 +5,7 @@ use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
 use bencher_json::{
-    DateTime, OrganizationResourceId, PlanStatus,
+    OrganizationResourceId, PlanStatus,
     organization::plan::{JsonNewPlan, JsonPlan, JsonUpdatePlan},
 };
 use bencher_rbac::organization::Permission;
@@ -28,7 +28,10 @@ use bencher_schema::{
     },
     schema, write_conn,
 };
-use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    BelongingToDsl as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
+    RunQueryDsl as _,
+};
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -350,14 +353,16 @@ async fn prune_or_conflict_existing_plan(
         .await
         .map_err(service_unavailable_error)?;
 
-    match existing_plan_action(status) {
-        ExistingPlan::Conflict => Err(plan_conflict(query_organization, query_plan)),
-        ExistingPlan::Prune => {
-            diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
-                .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(Plan, query_plan))?;
-            Ok(())
-        },
+    if subscription_is_live(status) {
+        // Still live in Stripe (active, trialing, or dunning): block, so we never orphan a
+        // live subscription and let the org create a duplicate.
+        Err(plan_conflict(query_organization, query_plan))
+    } else {
+        // Gone or terminal: prune the stale row so the org can subscribe again.
+        diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
+            .execute(write_conn!(context))
+            .map_err(resource_conflict_err!(Plan, query_plan))?;
+        Ok(())
     }
 }
 
@@ -371,23 +376,21 @@ fn plan_conflict(query_organization: &QueryOrganization, query_plan: QueryPlan) 
     )
 }
 
-/// Whether an organization's existing metered plan row blocks creating a new plan, or is
-/// a stale row to prune. `status` is `None` when Stripe reports the subscription gone
-/// (404), else its live status.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ExistingPlan {
-    Conflict,
-    Prune,
-}
-
-/// Prune (allow re-subscribe) only when the subscription is gone or *terminal* (canceled
-/// / incomplete-expired). An active, trialing, or recoverable (dunning) subscription
-/// still exists in Stripe and must block, so we never orphan a live subscription and let
-/// the org create a duplicate. Matched exhaustively so a new `PlanStatus` forces a
-/// decision here.
-fn existing_plan_action(status: Option<PlanStatus>) -> ExistingPlan {
+/// Whether a subscription is still live in Stripe, given its status (`None` when Stripe
+/// reports it gone via a 404).
+///
+/// Live means active, trialing, or in a recoverable dunning state (`past_due` / `unpaid` /
+/// `incomplete` / `paused`): the subscription still exists in Stripe. Not live means gone
+/// (404) or *terminal* (canceled / incomplete-expired). Matched exhaustively so a new
+/// `PlanStatus` forces a decision here.
+///
+/// This answers the single question behind two separate decisions: plan creation blocks on
+/// a live subscription (otherwise it prunes the stale row so the org can re-subscribe), and
+/// plan deletion cancels a live subscription (otherwise it skips, since canceling a
+/// gone/terminal one would 404).
+fn subscription_is_live(status: Option<PlanStatus>) -> bool {
     match status {
-        None | Some(PlanStatus::Canceled | PlanStatus::IncompleteExpired) => ExistingPlan::Prune,
+        None | Some(PlanStatus::Canceled | PlanStatus::IncompleteExpired) => false,
         Some(
             PlanStatus::Active
             | PlanStatus::Trialing
@@ -395,7 +398,7 @@ fn existing_plan_action(status: Option<PlanStatus>) -> ExistingPlan {
             | PlanStatus::Unpaid
             | PlanStatus::Incomplete
             | PlanStatus::Paused,
-        ) => ExistingPlan::Conflict,
+        ) => true,
     }
 }
 
@@ -470,6 +473,46 @@ async fn delete_inner(
     delete_plan_result
 }
 
+/// Cancel an organization's live Stripe subscription (if any) and remove its local plan
+/// row. Called from organization deletion so no dangling subscription is left in Stripe
+/// when an organization is deleted. A no-op when the server has no biller (Self-Hosted) or
+/// the organization has no plan row.
+///
+/// The Stripe cancel cannot share a database transaction with the caller's organization
+/// delete, so there is a small non-atomic window. Cancel-first ordering keeps it on the safe
+/// side: if the org delete then fails, the org is briefly present with its subscription
+/// already canceled (recoverable on retry) rather than deleted with a live subscription.
+pub(crate) async fn cancel_and_remove_plan(
+    context: &ApiContext,
+    query_organization: &QueryOrganization,
+) -> Result<(), HttpError> {
+    // Only Bencher Cloud has a biller and plan rows; nothing to cancel otherwise.
+    let Ok(biller) = context.biller() else {
+        return Ok(());
+    };
+    // A missing plan row means nothing to cancel, but a real database error must not be
+    // mistaken for "no plan" (that would delete the org while its subscription is still
+    // live). `.optional()` maps only `NotFound` to `None` and propagates every other error.
+    let Some(query_plan) = QueryPlan::belonging_to(query_organization)
+        .first::<QueryPlan>(auth_conn!(context))
+        .optional()
+        .map_err(resource_conflict_err!(Plan, query_organization))?
+    else {
+        return Ok(());
+    };
+
+    // Cancel in Stripe first; propagate the error (aborting the organization deletion) if it
+    // fails so we never delete the organization while its subscription is still live.
+    delete_plan(context, biller, query_organization, &query_plan, true).await?;
+
+    // The subscription is canceled (or was already gone); remove the local plan row.
+    diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
+        .execute(write_conn!(context))
+        .map_err(resource_conflict_err!(Plan, query_plan))?;
+
+    Ok(())
+}
+
 async fn delete_plan(
     context: &ApiContext,
     biller: &Biller,
@@ -479,17 +522,35 @@ async fn delete_plan(
 ) -> Result<(), HttpError> {
     if let Some(metered_plan_id) = query_plan.metered_plan.as_ref() {
         if remote {
-            biller
-                .cancel_metered_subscription(metered_plan_id)
+            // Only cancel a subscription still live in Stripe; a gone/terminal one is
+            // already effectively canceled, so canceling it again would 404. A transient
+            // Stripe error surfaces as 503 rather than being mistaken for "gone".
+            let status = biller
+                .metered_plan_status(metered_plan_id)
                 .await
-                .map_err(resource_not_found_err!(Plan, query_plan))?;
+                .map_err(service_unavailable_error)?;
+            if subscription_is_live(status) {
+                biller
+                    .cancel_metered_subscription(metered_plan_id)
+                    .await
+                    .map_err(resource_not_found_err!(Plan, query_plan))?;
+            }
         }
     } else if let Some(licensed_plan_id) = query_plan.licensed_plan.as_ref() {
         if remote {
-            biller
-                .cancel_licensed_subscription(licensed_plan_id)
+            // Only cancel a subscription still live in Stripe; a gone/terminal one is
+            // already effectively canceled, so canceling it again would 404. A transient
+            // Stripe error surfaces as 503 rather than being mistaken for "gone".
+            let status = biller
+                .licensed_plan_status(licensed_plan_id)
                 .await
-                .map_err(resource_not_found_err!(Plan, query_plan))?;
+                .map_err(service_unavailable_error)?;
+            if subscription_is_live(status) {
+                biller
+                    .cancel_licensed_subscription(licensed_plan_id)
+                    .await
+                    .map_err(resource_not_found_err!(Plan, query_plan))?;
+            }
         }
 
         if query_organization.license.is_some() {
@@ -499,7 +560,7 @@ async fn delete_plan(
                 name: None,
                 slug: None,
                 license: Some(None),
-                modified: DateTime::now(),
+                modified: context.clock.now(),
             };
             diesel::update(organization_query)
                 .set(&update_organization)
@@ -523,22 +584,18 @@ async fn delete_plan(
 mod tests {
     use bencher_json::PlanStatus;
 
-    use super::{ExistingPlan, existing_plan_action};
+    use super::subscription_is_live;
 
     #[test]
-    fn existing_plan_action_decides() {
-        // Gone in Stripe (404) or terminal: prune the stale row.
-        assert_eq!(existing_plan_action(None), ExistingPlan::Prune);
-        assert_eq!(
-            existing_plan_action(Some(PlanStatus::Canceled)),
-            ExistingPlan::Prune,
-        );
-        assert_eq!(
-            existing_plan_action(Some(PlanStatus::IncompleteExpired)),
-            ExistingPlan::Prune,
-        );
-        // Active, trialing, or recoverable (dunning) still exists in Stripe: block, so we
-        // never orphan a live subscription and let the org create a duplicate.
+    fn subscription_is_live_decides() {
+        // Gone in Stripe (404) or terminal: not live, so plan creation prunes the stale row
+        // and plan deletion skips canceling.
+        assert!(!subscription_is_live(None));
+        assert!(!subscription_is_live(Some(PlanStatus::Canceled)));
+        assert!(!subscription_is_live(Some(PlanStatus::IncompleteExpired)));
+        // Active, trialing, or recoverable (dunning) still exists in Stripe: live, so plan
+        // creation blocks (never orphan a live subscription and let the org create a
+        // duplicate) and plan deletion cancels.
         for status in [
             PlanStatus::Active,
             PlanStatus::Trialing,
@@ -547,7 +604,7 @@ mod tests {
             PlanStatus::Incomplete,
             PlanStatus::Paused,
         ] {
-            assert_eq!(existing_plan_action(Some(status)), ExistingPlan::Conflict);
+            assert!(subscription_is_live(Some(status)));
         }
     }
 }

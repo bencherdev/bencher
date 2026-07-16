@@ -25,6 +25,9 @@ use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+#[cfg(feature = "plus")]
+use crate::plan::cancel_and_remove_plan;
+
 pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
 
 #[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
@@ -334,6 +337,7 @@ async fn patch_inner(
 /// The user must have `delete` permissions for the organization.
 /// By default, organizations are soft-deleted (along with their child projects).
 /// Set the `hard` query parameter to `true` to permanently delete the organization (requires server admin).
+/// On Bencher Cloud, deleting an organization also immediately cancels any active subscription.
 #[endpoint {
     method = DELETE,
     path =  "/v0/organizations/{organization}",
@@ -384,6 +388,12 @@ async fn delete_inner(
                 Organization,
                 &path_params.organization
             ))?;
+
+        // Cancel any active Stripe subscription and remove the plan row before deleting the
+        // organization so no dangling subscription is left in Stripe.
+        #[cfg(feature = "plus")]
+        cancel_and_remove_plan(context, &query_organization).await?;
+
         diesel::delete(
             schema::organization::table.filter(schema::organization::id.eq(query_organization.id)),
         )
@@ -398,6 +408,11 @@ async fn delete_inner(
             auth_user,
             Permission::Delete,
         )?;
+
+        // Cancel any active Stripe subscription and remove the plan row before deleting the
+        // organization so no dangling subscription is left in Stripe.
+        #[cfg(feature = "plus")]
+        cancel_and_remove_plan(context, &query_organization).await?;
 
         // Soft delete the organization and all its child projects
         let now = context.clock.now();
