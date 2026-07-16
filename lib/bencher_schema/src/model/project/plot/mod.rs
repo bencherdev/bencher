@@ -187,6 +187,7 @@ impl QueryPlot {
         conn: &mut DbConnection,
         query_project: &QueryProject,
         index: Index,
+        modified: DateTime,
     ) -> diesel::QueryResult<Rank> {
         let index = u8::from(index).into();
 
@@ -201,7 +202,6 @@ impl QueryPlot {
         // If the rank cannot be calculated, then we need to redistribute all the
         // ranks within the caller's transaction.
         let all_plots = QueryPlot::all_for_project(conn, query_project)?;
-        let now = DateTime::now();
         let plot_ranker = RankGenerator::new(all_plots.len());
         for (plot, rank) in all_plots.iter().zip(plot_ranker) {
             let update_plot = UpdatePlot {
@@ -213,7 +213,7 @@ impl QueryPlot {
                 upper_boundary: None,
                 x_axis: None,
                 window: None,
-                modified: now,
+                modified,
             };
             diesel::update(plot_table::table.filter(plot_table::id.eq(plot.id)))
                 .set(&update_plot)
@@ -346,7 +346,7 @@ impl QueryPlot {
         let modified = context.clock.now();
         write_transaction!(context, |conn| {
             let rank = if let Some(index) = index {
-                Some(self.update_rank(conn, query_project, index)?)
+                Some(self.update_rank(conn, query_project, index, modified)?)
             } else {
                 None
             };
@@ -814,7 +814,9 @@ mod tests {
         // Atomicity comes from the caller's transaction.
         let index = bencher_json::Index::try_from(0u8).unwrap();
         let _rank = conn
-            .immediate_transaction(|conn| query_p3.update_rank(conn, &project, index))
+            .immediate_transaction(|conn| {
+                query_p3.update_rank(conn, &project, index, DateTime::TEST)
+            })
             .expect("Failed to update rank");
 
         // Redistribution should have happened; all plots now have well-spaced ranks
@@ -865,7 +867,7 @@ mod tests {
         // Fail the transaction after the rank redistribution has run.
         let index = bencher_json::Index::try_from(0u8).unwrap();
         let result: diesel::QueryResult<()> = conn.immediate_transaction(|conn| {
-            query_p3.update_rank(conn, &project, index)?;
+            query_p3.update_rank(conn, &project, index, DateTime::TEST)?;
             Err(diesel::result::Error::RollbackTransaction)
         });
         assert!(result.is_err());
