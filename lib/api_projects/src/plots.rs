@@ -14,7 +14,7 @@ use bencher_schema::{
     model::{
         project::{
             QueryProject,
-            plot::{InsertPlot, QueryPlot, UpdatePlot},
+            plot::{InsertPlot, QueryPlot},
         },
         user::{
             actor::{ApiActor, PubProjectBearerToken},
@@ -367,12 +367,9 @@ async fn patch_inner(
     let query_plot =
         QueryPlot::get_with_uuid(auth_conn!(context), &query_project, path_params.plot)?;
 
-    let update_plot =
-        UpdatePlot::from_json(context, &query_project, &query_plot, json_plot.clone()).await?;
-    diesel::update(schema::plot::table.filter(schema::plot::id.eq(query_plot.id)))
-        .set(&update_plot)
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Plot, (&query_plot, &json_plot)))?;
+    query_plot
+        .update(context, &query_project, json_plot)
+        .await?;
 
     auth_conn!(context, |conn| {
         QueryPlot::get_with_uuid(conn, &query_project, path_params.plot)

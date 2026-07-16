@@ -110,6 +110,8 @@ The clippy script will install the target automatically and warn if no cross-com
 
 ## Code Quality
 
+**Core Axiom: Less is more. Err on the side of simplicity. KISS.**
+
 - Always run `cargo fmt` and `cargo clippy` when testing or before committing
 - Run `cargo fmt` one final time after all changes are complete (including any generated code or lint fixes), since clippy fixes and other automated changes can introduce formatting drift
 - Use `#[expect(...)]` instead of `#[allow(...)]` for lint suppression

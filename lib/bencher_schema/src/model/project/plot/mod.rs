@@ -1,5 +1,6 @@
 use bencher_json::{
-    DateTime, Index, JsonNewPlot, JsonPlot, PlotUuid, ResourceName, Window,
+    BenchmarkUuid, BranchUuid, DateTime, Index, JsonNewPlot, JsonPlot, MeasureUuid, PlotUuid,
+    ResourceName, TestbedUuid, Window,
     project::plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis},
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
@@ -7,19 +8,26 @@ use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQuer
 use dropshot::HttpError;
 
 use super::{
-    ProjectId, QueryProject, benchmark::QueryBenchmark, branch::QueryBranch, measure::QueryMeasure,
-    testbed::QueryTestbed,
+    ProjectId, QueryProject,
+    benchmark::{BenchmarkId, QueryBenchmark},
+    branch::{BranchId, QueryBranch},
+    measure::{MeasureId, QueryMeasure},
+    testbed::{QueryTestbed, TestbedId},
 };
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
     error::{
-        BencherResource, assert_parentage, resource_conflict_err, resource_conflict_error,
-        resource_not_found_err,
+        BencherResource, assert_parentage, bad_request_error, resource_conflict_err,
+        resource_conflict_error, resource_not_found_err,
     },
     macros::sql::last_insert_rowid,
-    schema::plot as plot_table,
-    write_conn,
+    schema::{
+        plot as plot_table, plot_benchmark as plot_benchmark_table,
+        plot_branch as plot_branch_table, plot_measure as plot_measure_table,
+        plot_testbed as plot_testbed_table,
+    },
+    write_conn, write_transaction,
 };
 
 mod benchmark;
@@ -33,6 +41,32 @@ use measure::{InsertPlotMeasure, QueryPlotMeasure};
 use testbed::{InsertPlotTestbed, QueryPlotTestbed};
 
 crate::macros::typed_id::typed_id!(PlotId);
+
+/// Resolve component UUIDs to IDs via read connections, scoped to the project
+/// so a foreign or missing UUID is rejected (404) up front. An empty list is
+/// rejected (400): a plot missing any dimension would never render anything.
+/// Duplicate UUIDs collapse to a single ID, preserving first-occurrence order,
+/// since a repeat would violate the `(plot_id, component_id)` primary key on
+/// insert.
+macro_rules! resolve_component_ids {
+    ($context:expr, $query_project:expr, $uuids:expr, $query:ty, $name:literal) => {{
+        let uuids = $uuids;
+        if uuids.is_empty() {
+            return Err(bad_request_error(concat!(
+                "A plot must have at least one ",
+                $name
+            )));
+        }
+        let mut ids = Vec::with_capacity(uuids.len());
+        for uuid in &uuids {
+            let id = <$query>::from_uuid(auth_conn!($context), $query_project.id, *uuid)?.id;
+            if !ids.contains(&id) {
+                ids.push(id);
+            }
+        }
+        ids
+    }};
+}
 
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
@@ -74,23 +108,21 @@ impl QueryPlot {
     fn all_for_project(
         conn: &mut DbConnection,
         query_project: &QueryProject,
-    ) -> Result<Vec<Self>, HttpError> {
+    ) -> diesel::QueryResult<Vec<Self>> {
         Self::belonging_to(query_project)
             .order(plot_table::rank.asc())
             .load::<Self>(conn)
-            .map_err(resource_not_found_err!(Plot, &query_project))
     }
 
     fn all_others_for_project(
         &self,
         conn: &mut DbConnection,
         query_project: &QueryProject,
-    ) -> Result<Vec<Self>, HttpError> {
+    ) -> diesel::QueryResult<Vec<Self>> {
         Self::belonging_to(query_project)
             .filter(plot_table::id.ne(self.id))
             .order(plot_table::rank.asc())
             .load::<Self>(conn)
-            .map_err(resource_not_found_err!(Plot, &query_project))
     }
 
     fn new_rank(
@@ -101,7 +133,8 @@ impl QueryPlot {
         let index = u8::from(index.unwrap_or_default()).into();
 
         // Get the current plots.
-        let plots = QueryPlot::all_for_project(conn, query_project)?;
+        let plots = QueryPlot::all_for_project(conn, query_project)
+            .map_err(resource_not_found_err!(Plot, &query_project))?;
 
         // Try to calculate the rank within the current plots.
         if let Some(rank) = Rank::calculate(&plots, index) {
@@ -117,6 +150,11 @@ impl QueryPlot {
                 let update_plot = UpdatePlot {
                     rank: Some(rank),
                     title: None,
+                    lower_value: None,
+                    upper_value: None,
+                    lower_boundary: None,
+                    upper_boundary: None,
+                    x_axis: None,
                     window: None,
                     modified: now,
                 };
@@ -129,7 +167,8 @@ impl QueryPlot {
         .map_err(|e| resource_conflict_error(BencherResource::Plot, &plots, e))?;
 
         // Try to calculate the rank within the redistributed plots.
-        let redistributed_plots = QueryPlot::all_for_project(conn, query_project)?;
+        let redistributed_plots = QueryPlot::all_for_project(conn, query_project)
+            .map_err(resource_not_found_err!(Plot, &query_project))?;
         Rank::calculate(&redistributed_plots, index).ok_or_else(|| {
             resource_conflict_error(
                 BencherResource::Plot,
@@ -139,12 +178,17 @@ impl QueryPlot {
         })
     }
 
+    /// Recompute this plot's rank for the requested index, redistributing all
+    /// plot ranks when the index cannot fit between the current ranks.
+    /// Must be called within a write transaction: the redistribution writes
+    /// rely on the caller's transaction for atomicity.
     fn update_rank(
         &self,
         conn: &mut DbConnection,
         query_project: &QueryProject,
         index: Index,
-    ) -> Result<Rank, HttpError> {
+        modified: DateTime,
+    ) -> diesel::QueryResult<Rank> {
         let index = u8::from(index).into();
 
         // Get the current plots, except for self.
@@ -155,36 +199,33 @@ impl QueryPlot {
             return Ok(rank);
         }
 
-        // If the rank cannot be calculated, then we need to redistribute all the ranks.
-        // Wrap the redistribution in a transaction for atomicity.
+        // If the rank cannot be calculated, then we need to redistribute all the
+        // ranks within the caller's transaction.
         let all_plots = QueryPlot::all_for_project(conn, query_project)?;
-        let now = DateTime::now();
-        conn.immediate_transaction(|conn| {
-            let plot_ranker = RankGenerator::new(all_plots.len());
-            for (plot, rank) in all_plots.iter().zip(plot_ranker) {
-                let update_plot = UpdatePlot {
-                    rank: Some(rank),
-                    title: None,
-                    window: None,
-                    modified: now,
-                };
-                diesel::update(plot_table::table.filter(plot_table::id.eq(plot.id)))
-                    .set(&update_plot)
-                    .execute(conn)?;
-            }
-            diesel::QueryResult::Ok(())
-        })
-        .map_err(|e| resource_conflict_error(BencherResource::Plot, &all_plots, e))?;
+        let plot_ranker = RankGenerator::new(all_plots.len());
+        for (plot, rank) in all_plots.iter().zip(plot_ranker) {
+            let update_plot = UpdatePlot {
+                rank: Some(rank),
+                title: None,
+                lower_value: None,
+                upper_value: None,
+                lower_boundary: None,
+                upper_boundary: None,
+                x_axis: None,
+                window: None,
+                modified,
+            };
+            diesel::update(plot_table::table.filter(plot_table::id.eq(plot.id)))
+                .set(&update_plot)
+                .execute(conn)?;
+        }
 
         // Try to calculate the rank within the redistributed plots.
+        // Redistribution guarantees well-spaced ranks, so this should never fail;
+        // roll back the enclosing transaction if it somehow does.
         let redistributed_plots = self.all_others_for_project(conn, query_project)?;
-        Rank::calculate(&redistributed_plots, index).ok_or_else(|| {
-            resource_conflict_error(
-                BencherResource::Plot,
-                (redistributed_plots, index),
-                "Failed to redistribute plots.",
-            )
-        })
+        Rank::calculate(&redistributed_plots, index)
+            .ok_or(diesel::result::Error::RollbackTransaction)
     }
 
     pub fn into_json_for_project(
@@ -232,6 +273,151 @@ impl QueryPlot {
             created,
             modified,
         })
+    }
+
+    pub async fn update(
+        &self,
+        context: &ApiContext,
+        query_project: &QueryProject,
+        update: JsonUpdatePlot,
+    ) -> Result<(), HttpError> {
+        let UpdatePlotFields {
+            index,
+            title,
+            lower_value,
+            upper_value,
+            lower_boundary,
+            upper_boundary,
+            x_axis,
+            window,
+            branches,
+            testbeds,
+            benchmarks,
+            measures,
+        } = update.into();
+
+        // Phase 1: resolve the provided component UUIDs to IDs.
+        // A `None` list leaves that component unchanged; a `Some` list replaces it.
+        let branch_ids = match branches {
+            Some(uuids) => Some(resolve_component_ids!(
+                context,
+                query_project,
+                uuids,
+                QueryBranch,
+                "branch"
+            )),
+            None => None,
+        };
+        let testbed_ids = match testbeds {
+            Some(uuids) => Some(resolve_component_ids!(
+                context,
+                query_project,
+                uuids,
+                QueryTestbed,
+                "testbed"
+            )),
+            None => None,
+        };
+        let benchmark_ids = match benchmarks {
+            Some(uuids) => Some(resolve_component_ids!(
+                context,
+                query_project,
+                uuids,
+                QueryBenchmark,
+                "benchmark"
+            )),
+            None => None,
+        };
+        let measure_ids = match measures {
+            Some(uuids) => Some(resolve_component_ids!(
+                context,
+                query_project,
+                uuids,
+                QueryMeasure,
+                "measure"
+            )),
+            None => None,
+        };
+
+        // Phase 2: apply everything atomically in a single write transaction:
+        // recompute the rank when a new index is requested (which may
+        // redistribute all plot ranks), apply the scalar changeset, and replace
+        // each provided component list (delete then re-insert).
+        let modified = context.clock.now();
+        write_transaction!(context, |conn| {
+            let rank = if let Some(index) = index {
+                Some(self.update_rank(conn, query_project, index, modified)?)
+            } else {
+                None
+            };
+            let update_plot = UpdatePlot {
+                rank,
+                title,
+                lower_value,
+                upper_value,
+                lower_boundary,
+                upper_boundary,
+                x_axis,
+                window,
+                modified,
+            };
+            Self::apply_update(
+                conn,
+                self.id,
+                &update_plot,
+                branch_ids.as_deref(),
+                testbed_ids.as_deref(),
+                benchmark_ids.as_deref(),
+                measure_ids.as_deref(),
+            )
+        })
+        .map_err(resource_conflict_err!(Plot, self))?;
+
+        Ok(())
+    }
+
+    /// Apply a scalar changeset and replace each provided component list within an
+    /// existing transaction. A `None` list leaves that component unchanged; a `Some`
+    /// list replaces it wholesale (delete then re-insert with fresh ranks).
+    fn apply_update(
+        conn: &mut DbConnection,
+        plot_id: PlotId,
+        update_plot: &UpdatePlot,
+        branch_ids: Option<&[BranchId]>,
+        testbed_ids: Option<&[TestbedId]>,
+        benchmark_ids: Option<&[BenchmarkId]>,
+        measure_ids: Option<&[MeasureId]>,
+    ) -> diesel::QueryResult<()> {
+        diesel::update(plot_table::table.filter(plot_table::id.eq(plot_id)))
+            .set(update_plot)
+            .execute(conn)?;
+        if let Some(branch_ids) = branch_ids {
+            diesel::delete(plot_branch_table::table.filter(plot_branch_table::plot_id.eq(plot_id)))
+                .execute(conn)?;
+            InsertPlotBranch::from_resolved(conn, plot_id, branch_ids)?;
+        }
+        if let Some(testbed_ids) = testbed_ids {
+            diesel::delete(
+                plot_testbed_table::table.filter(plot_testbed_table::plot_id.eq(plot_id)),
+            )
+            .execute(conn)?;
+            InsertPlotTestbed::from_resolved(conn, plot_id, testbed_ids)?;
+        }
+        if let Some(benchmark_ids) = benchmark_ids {
+            diesel::delete(
+                plot_benchmark_table::table.filter(plot_benchmark_table::plot_id.eq(plot_id)),
+            )
+            .execute(conn)?;
+            InsertPlotBenchmark::from_resolved(conn, plot_id, benchmark_ids)?;
+        }
+        if let Some(measure_ids) = measure_ids {
+            diesel::delete(
+                plot_measure_table::table.filter(plot_measure_table::plot_id.eq(plot_id)),
+            )
+            .execute(conn)?;
+            InsertPlotMeasure::from_resolved(conn, plot_id, measure_ids)?;
+        }
+        Ok(())
     }
 }
 
@@ -287,22 +473,19 @@ impl InsertPlot {
         } = plot;
 
         // Phase 1: Resolve UUIDs to IDs via read connections
-        let mut branch_ids = Vec::with_capacity(branches.len());
-        for uuid in &branches {
-            branch_ids.push(QueryBranch::get_id(auth_conn!(context), *uuid)?);
-        }
-        let mut testbed_ids = Vec::with_capacity(testbeds.len());
-        for uuid in &testbeds {
-            testbed_ids.push(QueryTestbed::get_id(auth_conn!(context), *uuid)?);
-        }
-        let mut benchmark_ids = Vec::with_capacity(benchmarks.len());
-        for uuid in &benchmarks {
-            benchmark_ids.push(QueryBenchmark::get_id(auth_conn!(context), *uuid)?);
-        }
-        let mut measure_ids = Vec::with_capacity(measures.len());
-        for uuid in &measures {
-            measure_ids.push(QueryMeasure::get_id(auth_conn!(context), *uuid)?);
-        }
+        let branch_ids =
+            resolve_component_ids!(context, query_project, branches, QueryBranch, "branch");
+        let testbed_ids =
+            resolve_component_ids!(context, query_project, testbeds, QueryTestbed, "testbed");
+        let benchmark_ids = resolve_component_ids!(
+            context,
+            query_project,
+            benchmarks,
+            QueryBenchmark,
+            "benchmark"
+        );
+        let measure_ids =
+            resolve_component_ids!(context, query_project, measures, QueryMeasure, "measure");
 
         // Phase 2: Single write_conn + transaction for all writes
         let conn = write_conn!(context);
@@ -351,46 +534,100 @@ impl InsertPlot {
 pub struct UpdatePlot {
     pub rank: Option<Rank>,
     pub title: Option<Option<ResourceName>>,
+    pub lower_value: Option<bool>,
+    pub upper_value: Option<bool>,
+    pub lower_boundary: Option<bool>,
+    pub upper_boundary: Option<bool>,
+    pub x_axis: Option<XAxis>,
     pub window: Option<Window>,
     pub modified: DateTime,
 }
 
-impl UpdatePlot {
-    pub async fn from_json(
-        context: &ApiContext,
-        query_project: &QueryProject,
-        query_plot: &QueryPlot,
-        update: JsonUpdatePlot,
-    ) -> Result<Self, HttpError> {
-        let (index, title, window) = match update {
+/// The fields of a [`JsonUpdatePlot`], unified across its `Patch` and `Null`
+/// variants. A `Some(None)` title clears the current title.
+#[expect(
+    clippy::option_option,
+    reason = "None = not specified, Some(None) = explicitly unset"
+)]
+struct UpdatePlotFields {
+    index: Option<Index>,
+    title: Option<Option<ResourceName>>,
+    lower_value: Option<bool>,
+    upper_value: Option<bool>,
+    lower_boundary: Option<bool>,
+    upper_boundary: Option<bool>,
+    x_axis: Option<XAxis>,
+    window: Option<Window>,
+    branches: Option<Vec<BranchUuid>>,
+    testbeds: Option<Vec<TestbedUuid>>,
+    benchmarks: Option<Vec<BenchmarkUuid>>,
+    measures: Option<Vec<MeasureUuid>>,
+}
+
+impl From<JsonUpdatePlot> for UpdatePlotFields {
+    fn from(update: JsonUpdatePlot) -> Self {
+        match update {
             JsonUpdatePlot::Patch(patch) => {
                 let JsonPlotPatch {
                     index,
                     title,
+                    lower_value,
+                    upper_value,
+                    lower_boundary,
+                    upper_boundary,
+                    x_axis,
                     window,
+                    branches,
+                    testbeds,
+                    benchmarks,
+                    measures,
                 } = patch;
-                (index, title.map(Some), window)
+                Self {
+                    index,
+                    title: title.map(Some),
+                    lower_value,
+                    upper_value,
+                    lower_boundary,
+                    upper_boundary,
+                    x_axis,
+                    window,
+                    branches,
+                    testbeds,
+                    benchmarks,
+                    measures,
+                }
             },
-            JsonUpdatePlot::Null(patch_url) => {
+            JsonUpdatePlot::Null(patch_null) => {
                 let JsonPlotPatchNull {
                     index,
                     title: (),
+                    lower_value,
+                    upper_value,
+                    lower_boundary,
+                    upper_boundary,
+                    x_axis,
                     window,
-                } = patch_url;
-                (index, Some(None), window)
+                    branches,
+                    testbeds,
+                    benchmarks,
+                    measures,
+                } = patch_null;
+                Self {
+                    index,
+                    title: Some(None),
+                    lower_value,
+                    upper_value,
+                    lower_boundary,
+                    upper_boundary,
+                    x_axis,
+                    window,
+                    branches,
+                    testbeds,
+                    benchmarks,
+                    measures,
+                }
             },
-        };
-        let rank = if let Some(index) = index {
-            Some(query_plot.update_rank(write_conn!(context), query_project, index)?)
-        } else {
-            None
-        };
-        Ok(Self {
-            rank,
-            title,
-            window,
-            modified: DateTime::now(),
-        })
+        }
     }
 }
 
@@ -398,10 +635,11 @@ impl UpdatePlot {
 mod tests {
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 
-    use bencher_json::project::plot::XAxis;
+    use bencher_json::{DateTime, project::plot::XAxis};
 
     use super::{
-        InsertPlot, PlotId, QueryPlot, branch::InsertPlotBranch, measure::InsertPlotMeasure,
+        InsertPlot, PlotId, QueryPlot, UpdatePlot, benchmark::InsertPlotBenchmark,
+        branch::InsertPlotBranch, measure::InsertPlotMeasure, testbed::InsertPlotTestbed,
     };
     use crate::{
         context::DbConnection,
@@ -573,12 +811,15 @@ mod tests {
             .first(&mut conn)
             .expect("Failed to get plot");
 
+        // Atomicity comes from the caller's transaction.
         let index = bencher_json::Index::try_from(0u8).unwrap();
-        let _rank = query_p3
-            .update_rank(&mut conn, &project, index)
+        let _rank = conn
+            .immediate_transaction(|conn| {
+                query_p3.update_rank(conn, &project, index, DateTime::TEST)
+            })
             .expect("Failed to update rank");
 
-        // Redistribution should have happened — all plots now have well-spaced ranks
+        // Redistribution should have happened; all plots now have well-spaced ranks
         let p1_rank = get_plot_rank(&mut conn, p1);
         let p2_rank = get_plot_rank(&mut conn, p2);
         let p3_rank = get_plot_rank(&mut conn, p3);
@@ -589,6 +830,52 @@ mod tests {
         assert_ne!(p1_rank, p3_rank);
         // p1 and p2 should still be ordered
         assert!(p1_rank < p2_rank);
+    }
+
+    #[test]
+    fn update_rank_redistribution_rolls_back_with_transaction() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let project = get_query_project(&mut conn, base.project_id);
+
+        // Create 3 plots with adjacent ranks so moving p3 forces redistribution
+        let p1 = create_plot(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            100,
+        );
+        let p2 = create_plot(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000011",
+            101,
+        );
+        let p3 = create_plot(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000012",
+            102,
+        );
+
+        let query_p3: QueryPlot = schema::plot::table
+            .filter(schema::plot::id.eq(p3))
+            .select(QueryPlot::as_select())
+            .first(&mut conn)
+            .expect("Failed to get plot");
+
+        // Fail the transaction after the rank redistribution has run.
+        let index = bencher_json::Index::try_from(0u8).unwrap();
+        let result: diesel::QueryResult<()> = conn.immediate_transaction(|conn| {
+            query_p3.update_rank(conn, &project, index, DateTime::TEST)?;
+            Err(diesel::result::Error::RollbackTransaction)
+        });
+        assert!(result.is_err());
+
+        // The redistribution was rolled back with the transaction.
+        assert_eq!(get_plot_rank(&mut conn, p1), 100);
+        assert_eq!(get_plot_rank(&mut conn, p2), 101);
+        assert_eq!(get_plot_rank(&mut conn, p3), 102);
     }
 
     /// Test that a plot and all its components can be inserted in a single transaction.
@@ -634,7 +921,7 @@ mod tests {
         // Insert plot + all components in a single transaction
         let plot_id = conn
             .immediate_transaction(|conn| {
-                let timestamp = bencher_json::DateTime::now();
+                let timestamp = DateTime::now();
                 let insert_plot = InsertPlot {
                     uuid: bencher_json::PlotUuid::new(),
                     project_id: base.project_id,
@@ -754,5 +1041,161 @@ mod tests {
         assert_eq!(measures.len(), 2);
         assert!(measures.contains(&m1));
         assert!(measures.contains(&m2));
+    }
+
+    /// Build a plot seeded with a single branch, testbed, benchmark, and measure.
+    fn seed_plot_with_components(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+    ) -> (
+        PlotId,
+        super::BranchId,
+        super::TestbedId,
+        super::BenchmarkId,
+        super::MeasureId,
+    ) {
+        let branch = create_branch_with_head(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000011",
+        )
+        .branch_id;
+        let testbed = create_testbed(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "localhost",
+            "localhost",
+        );
+        let benchmark = create_benchmark(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "bench1",
+            "bench1",
+        );
+        let measure = create_measure(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000040",
+            "latency",
+            "latency",
+        );
+        let plot_id = create_plot(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000050",
+            1_000_000,
+        );
+        InsertPlotBranch::from_resolved(conn, plot_id, &[branch]).expect("seed branch");
+        InsertPlotTestbed::from_resolved(conn, plot_id, &[testbed]).expect("seed testbed");
+        InsertPlotBenchmark::from_resolved(conn, plot_id, &[benchmark]).expect("seed benchmark");
+        InsertPlotMeasure::from_resolved(conn, plot_id, &[measure]).expect("seed measure");
+        (plot_id, branch, testbed, benchmark, measure)
+    }
+
+    /// A changeset that touches only `modified` (all other fields left unchanged).
+    fn noop_update() -> UpdatePlot {
+        UpdatePlot {
+            rank: None,
+            title: None,
+            lower_value: None,
+            upper_value: None,
+            lower_boundary: None,
+            upper_boundary: None,
+            x_axis: None,
+            window: None,
+            modified: DateTime::TEST,
+        }
+    }
+
+    #[test]
+    fn apply_update_replaces_only_provided_components() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let (plot_id, branch, testbed, benchmark, measure) =
+            seed_plot_with_components(&mut conn, base.project_id);
+
+        // A second branch and measure to switch to.
+        let branch2 = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000012",
+            "dev",
+            "dev",
+            "00000000-0000-0000-0000-000000000013",
+        )
+        .branch_id;
+        let measure2 = create_measure(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000041",
+            "throughput",
+            "throughput",
+        );
+
+        // Replace branches with [branch, branch2] and measures with [measure2];
+        // leave testbeds and benchmarks untouched (None).
+        QueryPlot::apply_update(
+            &mut conn,
+            plot_id,
+            &noop_update(),
+            Some(&[branch, branch2]),
+            None,
+            None,
+            Some(&[measure2]),
+        )
+        .expect("apply_update failed");
+
+        assert_eq!(get_plot_branches(&mut conn, plot_id), vec![branch, branch2]);
+        assert_eq!(get_plot_measures(&mut conn, plot_id), vec![measure2]);
+        // Unprovided components are left as-is.
+        assert_eq!(get_plot_testbeds(&mut conn, plot_id), vec![testbed]);
+        assert_eq!(get_plot_benchmarks(&mut conn, plot_id), vec![benchmark]);
+        // The originally seeded measure was replaced.
+        assert!(!get_plot_measures(&mut conn, plot_id).contains(&measure));
+    }
+
+    #[test]
+    fn apply_update_scalar_flags_and_x_axis() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let (plot_id, branch, testbed, benchmark, measure) =
+            seed_plot_with_components(&mut conn, base.project_id);
+
+        // Toggle some flags and the x-axis; leave the rest unchanged (None).
+        let update_plot = UpdatePlot {
+            rank: None,
+            title: None,
+            lower_value: Some(false),
+            upper_value: None,
+            lower_boundary: Some(true),
+            upper_boundary: None,
+            x_axis: Some(XAxis::Version),
+            window: None,
+            modified: DateTime::TEST,
+        };
+        QueryPlot::apply_update(&mut conn, plot_id, &update_plot, None, None, None, None)
+            .expect("apply_update failed");
+
+        let plot: QueryPlot = schema::plot::table
+            .filter(schema::plot::id.eq(plot_id))
+            .select(QueryPlot::as_select())
+            .first(&mut conn)
+            .expect("Failed to get plot");
+        assert!(!plot.lower_value); // set to false
+        assert!(plot.upper_value); // unchanged (create default true)
+        assert!(plot.lower_boundary); // set to true
+        assert!(!plot.upper_boundary); // unchanged (create default false)
+        assert!(matches!(plot.x_axis, XAxis::Version));
+
+        // Components were not provided, so they remain intact.
+        assert_eq!(get_plot_branches(&mut conn, plot_id), vec![branch]);
+        assert_eq!(get_plot_testbeds(&mut conn, plot_id), vec![testbed]);
+        assert_eq!(get_plot_benchmarks(&mut conn, plot_id), vec![benchmark]);
+        assert_eq!(get_plot_measures(&mut conn, plot_id), vec![measure]);
     }
 }

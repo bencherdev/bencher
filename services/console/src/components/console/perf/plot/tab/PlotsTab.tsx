@@ -1,4 +1,12 @@
-import { type Accessor, For, Match, Show, Switch, createMemo } from "solid-js";
+import {
+	type Accessor,
+	For,
+	Match,
+	type Resource,
+	Show,
+	Switch,
+	createMemo,
+} from "solid-js";
 import type { PerfTab } from "../../../../../config/types";
 import { fmtDateTime } from "../../../../../config/util";
 import type { JsonPlot } from "../../../../../types/bencher";
@@ -13,14 +21,25 @@ const PlotsTab = (props: {
 	isConsole: boolean;
 	loading: Accessor<boolean>;
 	tab: Accessor<PerfTab>;
+	plot_selected: Resource<JsonPlot[]>;
 	tabList: Accessor<TabList<JsonPlot>>;
 	per_page: Accessor<number>;
 	search: Accessor<undefined | string>;
+	handleSelected: () => void;
 	handleChecked: (index: number, slug?: string) => void;
 	handleSearch: FieldHandler;
 }) => {
 	return (
 		<>
+			<Show when={(props.plot_selected()?.length ?? 0) > 0}>
+				<PlotSelected
+					project_slug={props.project_slug}
+					isConsole={props.isConsole}
+					tab={props.tab}
+					plot_selected={props.plot_selected}
+					handleSelected={props.handleSelected}
+				/>
+			</Show>
 			<div class="panel-block is-block">
 				<Field
 					kind={FieldKind.SEARCH}
@@ -75,6 +94,55 @@ const PlotsTab = (props: {
 	);
 };
 
+const PlotSelected = (props: {
+	project_slug: Accessor<undefined | string>;
+	isConsole: boolean;
+	tab: Accessor<PerfTab>;
+	plot_selected: Resource<JsonPlot[]>;
+	handleSelected: () => void;
+}) => {
+	return (
+		<For each={props.plot_selected()}>
+			{(plot) => (
+				<div class="panel-block is-block">
+					<div class="level">
+						<div class="level-left">
+							<div class="level-item">
+								<div class="columns is-vcentered is-mobile">
+									<div class="column is-narrow">
+										<button
+											class="delete"
+											type="button"
+											title={`Remove ${plotTitle(plot)} from ${props.tab()}`}
+											onMouseDown={(_e) => props.handleSelected()}
+										/>
+									</div>
+									<div class="column">
+										<small style="word-break: break-word;">
+											{plotTitle(plot)}
+										</small>
+									</div>
+								</div>
+							</div>
+						</div>
+						<Show when={props.isConsole}>
+							<div class="level-right">
+								<div class="level-item">
+									<ViewPlotButton
+										project_slug={props.project_slug}
+										tab={props.tab}
+										plot={() => plot}
+									/>
+								</div>
+							</div>
+						</Show>
+					</div>
+				</div>
+			)}
+		</For>
+	);
+};
+
 const PlotRow = (props: {
 	theme: Accessor<Theme>;
 	isConsole: boolean;
@@ -102,8 +170,7 @@ const PlotRow = (props: {
 							</div>
 							<div class="column">
 								<small style="word-break: break-word;">
-									{plot().title ??
-										`Untitled Plot (${fmtDateTime(plot().created)})`}
+									{plotTitle(plot())}
 								</small>
 							</div>
 						</div>
@@ -124,6 +191,9 @@ const PlotRow = (props: {
 		</div>
 	);
 };
+
+const plotTitle = (plot: JsonPlot) =>
+	plot?.title ?? `Untitled Plot (${fmtDateTime(plot?.created)})`;
 
 const ViewPlotButton = (props: {
 	project_slug: Accessor<undefined | string>;

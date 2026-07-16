@@ -698,3 +698,523 @@ async fn projects_soft_delete_endpoints_inaccessible() {
         );
     }
 }
+
+// Plot dimensions seeded directly in the DB for the plot PATCH test.
+struct PlotDimensions {
+    branch1: bencher_json::BranchUuid,
+    branch2: bencher_json::BranchUuid,
+    testbed: bencher_json::TestbedUuid,
+    benchmark: bencher_json::BenchmarkUuid,
+    measure: bencher_json::MeasureUuid,
+}
+
+#[expect(clippy::expect_used, reason = "test helper seeding plot dimensions")]
+fn seed_plot_dimensions(server: &TestServer, project_id: i32) -> PlotDimensions {
+    use bencher_api_tests::helpers::base_timestamp;
+    use bencher_json::{BenchmarkUuid, BranchUuid, MeasureUuid, TestbedUuid};
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, RunQueryDsl as _};
+
+    let now = base_timestamp();
+    let branch1 = BranchUuid::new();
+    let branch2 = BranchUuid::new();
+    let testbed = TestbedUuid::new();
+    let benchmark = BenchmarkUuid::new();
+    let measure = MeasureUuid::new();
+
+    let mut conn = server.db_conn();
+    for (uuid, name) in [(&branch1, "branch-one"), (&branch2, "branch-two")] {
+        diesel::insert_into(schema::branch::table)
+            .values((
+                schema::branch::uuid.eq(uuid),
+                schema::branch::project_id.eq(project_id),
+                schema::branch::name.eq(name),
+                schema::branch::slug.eq(&format!("{name}-{uuid}")),
+                schema::branch::created.eq(&now),
+                schema::branch::modified.eq(&now),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert branch");
+    }
+    diesel::insert_into(schema::testbed::table)
+        .values((
+            schema::testbed::uuid.eq(&testbed),
+            schema::testbed::project_id.eq(project_id),
+            schema::testbed::name.eq("testbed-one"),
+            schema::testbed::slug.eq(&format!("testbed-one-{testbed}")),
+            schema::testbed::created.eq(&now),
+            schema::testbed::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert testbed");
+    diesel::insert_into(schema::benchmark::table)
+        .values((
+            schema::benchmark::uuid.eq(&benchmark),
+            schema::benchmark::project_id.eq(project_id),
+            schema::benchmark::name.eq("benchmark-one"),
+            schema::benchmark::slug.eq(&format!("benchmark-one-{benchmark}")),
+            schema::benchmark::created.eq(&now),
+            schema::benchmark::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert benchmark");
+    diesel::insert_into(schema::measure::table)
+        .values((
+            schema::measure::uuid.eq(&measure),
+            schema::measure::project_id.eq(project_id),
+            schema::measure::name.eq("latency"),
+            schema::measure::slug.eq(&format!("latency-{measure}")),
+            schema::measure::units.eq("nanoseconds"),
+            schema::measure::created.eq(&now),
+            schema::measure::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert measure");
+
+    PlotDimensions {
+        branch1,
+        branch2,
+        testbed,
+        benchmark,
+        measure,
+    }
+}
+
+// PATCH /v0/projects/{project}/plots/{plot} - full update (flags, x-axis, components)
+#[tokio::test]
+async fn plot_patch_updates_full_config() {
+    use bencher_api_tests::helpers::get_project_id;
+    use bencher_json::{JsonPlot, project::plot::XAxis};
+
+    let server = TestServer::new().await;
+    let user = server.signup("Plot User", "plotpatch@example.com").await;
+    let org = server.create_org(&user, "Plot Org").await;
+    let project = server.create_project(&user, &org, "Plot Project").await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+
+    let PlotDimensions {
+        branch1,
+        branch2,
+        testbed,
+        benchmark,
+        measure,
+    } = seed_plot_dimensions(&server, project_id);
+
+    // Create the plot via the API.
+    let new_plot = serde_json::json!({
+        "lower_value": true,
+        "upper_value": true,
+        "lower_boundary": false,
+        "upper_boundary": false,
+        "x_axis": "date_time",
+        "window": 2_592_000,
+        "branches": [branch1.to_string()],
+        "testbeds": [testbed.to_string()],
+        "benchmarks": [benchmark.to_string()],
+        "measures": [measure.to_string()],
+    });
+    let created: JsonPlot = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/plots")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&new_plot)
+        .send()
+        .await
+        .expect("Request failed")
+        .json()
+        .await
+        .expect("Failed to parse created plot");
+    assert_eq!(created.branches, vec![branch1]);
+    assert!(created.lower_value);
+    assert!(matches!(created.x_axis, XAxis::DateTime));
+
+    // PATCH: flip a flag, switch the x-axis, and replace the branches.
+    let patch = serde_json::json!({
+        "lower_value": false,
+        "x_axis": "version",
+        "branches": [branch1.to_string(), branch2.to_string()],
+    });
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{project_slug}/plots/{}",
+            created.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&patch)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let updated: JsonPlot = resp.json().await.expect("Failed to parse updated plot");
+
+    // Provided fields changed.
+    assert!(!updated.lower_value);
+    assert!(matches!(updated.x_axis, XAxis::Version));
+    assert_eq!(updated.branches, vec![branch1, branch2]);
+    // Omitted fields left unchanged.
+    assert!(updated.upper_value);
+    assert_eq!(updated.testbeds, vec![testbed]);
+    assert_eq!(updated.benchmarks, vec![benchmark]);
+    assert_eq!(updated.measures, vec![measure]);
+}
+
+// PATCH referencing a component that does not belong to the project is rejected.
+#[tokio::test]
+async fn plot_patch_rejects_unknown_component() {
+    use bencher_api_tests::helpers::get_project_id;
+    use bencher_json::{BranchUuid, JsonPlot};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Plot User 404", "plotpatch404@example.com")
+        .await;
+    let org = server.create_org(&user, "Plot Org 404").await;
+    let project = server.create_project(&user, &org, "Plot Project 404").await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+
+    let dims = seed_plot_dimensions(&server, project_id);
+    let new_plot = serde_json::json!({
+        "lower_value": true,
+        "upper_value": true,
+        "lower_boundary": false,
+        "upper_boundary": false,
+        "x_axis": "date_time",
+        "window": 2_592_000,
+        "branches": [dims.branch1.to_string()],
+        "testbeds": [dims.testbed.to_string()],
+        "benchmarks": [dims.benchmark.to_string()],
+        "measures": [dims.measure.to_string()],
+    });
+    let created: JsonPlot = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/plots")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&new_plot)
+        .send()
+        .await
+        .expect("Request failed")
+        .json()
+        .await
+        .expect("Failed to parse created plot");
+
+    // A branch UUID that was never created in this project must be rejected
+    // rather than silently referenced or returning a 500.
+    let unknown = BranchUuid::new();
+    let patch = serde_json::json!({ "branches": [unknown.to_string()] });
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{project_slug}/plots/{}",
+            created.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&patch)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// POST a plot via the API and parse the response.
+#[expect(clippy::expect_used, reason = "test helper creating a plot")]
+async fn post_plot(
+    server: &TestServer,
+    user: &bencher_api_tests::TestUser,
+    project_slug: &str,
+    new_plot: &serde_json::Value,
+) -> bencher_json::JsonPlot {
+    server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/plots")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(new_plot)
+        .send()
+        .await
+        .expect("Request failed")
+        .json()
+        .await
+        .expect("Failed to parse created plot")
+}
+
+// PATCH a plot via the API, assert success, and parse the response.
+#[expect(clippy::expect_used, reason = "test helper patching a plot")]
+async fn patch_plot(
+    server: &TestServer,
+    user: &bencher_api_tests::TestUser,
+    project_slug: &str,
+    plot: bencher_json::PlotUuid,
+    patch: &serde_json::Value,
+) -> bencher_json::JsonPlot {
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project_slug}/plots/{plot}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(patch)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "Failed to update plot");
+    resp.json().await.expect("Failed to parse updated plot")
+}
+
+// PATCH with `"title": null` (the `Null` variant) clears the title while
+// still applying the other provided fields.
+#[tokio::test]
+async fn plot_patch_null_title_clears_it() {
+    use bencher_api_tests::helpers::get_project_id;
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Plot User Null", "plotpatchnull@example.com")
+        .await;
+    let org = server.create_org(&user, "Plot Org Null").await;
+    let project = server
+        .create_project(&user, &org, "Plot Project Null")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+
+    let dims = seed_plot_dimensions(&server, project_id);
+    let created = post_plot(
+        &server,
+        &user,
+        project_slug,
+        &serde_json::json!({
+            "title": "My Titled Plot",
+            "lower_value": true,
+            "upper_value": true,
+            "lower_boundary": false,
+            "upper_boundary": false,
+            "x_axis": "date_time",
+            "window": 2_592_000,
+            "branches": [dims.branch1.to_string()],
+            "testbeds": [dims.testbed.to_string()],
+            "benchmarks": [dims.benchmark.to_string()],
+            "measures": [dims.measure.to_string()],
+        }),
+    )
+    .await;
+    assert!(created.title.is_some());
+
+    // Clear the title and flip a flag in the same PATCH.
+    let patch = serde_json::json!({ "title": null, "upper_boundary": true });
+    let updated = patch_plot(&server, &user, project_slug, created.uuid, &patch).await;
+
+    assert!(updated.title.is_none());
+    assert!(updated.upper_boundary);
+    // Everything else is unchanged.
+    assert!(updated.lower_value);
+    assert_eq!(updated.branches, vec![dims.branch1]);
+}
+
+// PATCH with both `index` (rank move) and a component list applies both.
+#[tokio::test]
+async fn plot_patch_index_and_components() {
+    use bencher_api_tests::helpers::get_project_id;
+    use bencher_json::JsonPlots;
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Plot User Index", "plotpatchindex@example.com")
+        .await;
+    let org = server.create_org(&user, "Plot Org Index").await;
+    let project = server
+        .create_project(&user, &org, "Plot Project Index")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+
+    let dims = seed_plot_dimensions(&server, project_id);
+    let base_plot = |index: u8| {
+        serde_json::json!({
+            "index": index,
+            "lower_value": true,
+            "upper_value": true,
+            "lower_boundary": false,
+            "upper_boundary": false,
+            "x_axis": "date_time",
+            "window": 2_592_000,
+            "branches": [dims.branch1.to_string()],
+            "testbeds": [dims.testbed.to_string()],
+            "benchmarks": [dims.benchmark.to_string()],
+            "measures": [dims.measure.to_string()],
+        })
+    };
+    let first = post_plot(&server, &user, project_slug, &base_plot(0)).await;
+    let second = post_plot(&server, &user, project_slug, &base_plot(1)).await;
+
+    // Move the second plot to the front and replace its branches.
+    let patch = serde_json::json!({
+        "index": 0,
+        "branches": [dims.branch2.to_string()],
+    });
+    let updated = patch_plot(&server, &user, project_slug, second.uuid, &patch).await;
+    assert_eq!(updated.branches, vec![dims.branch2]);
+
+    // The plots list (rank order) now has the patched plot first.
+    let plots: JsonPlots = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/plots")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed")
+        .json()
+        .await
+        .expect("Failed to parse plots");
+    let uuids: Vec<_> = plots.0.iter().map(|plot| plot.uuid).collect();
+    assert_eq!(uuids, vec![second.uuid, first.uuid]);
+}
+
+// Empty component lists are rejected on both POST and PATCH:
+// a plot missing any dimension would never render anything.
+#[tokio::test]
+async fn plot_rejects_empty_component_list() {
+    use bencher_api_tests::helpers::get_project_id;
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Plot User Empty", "plotpatchempty@example.com")
+        .await;
+    let org = server.create_org(&user, "Plot Org Empty").await;
+    let project = server
+        .create_project(&user, &org, "Plot Project Empty")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+
+    let dims = seed_plot_dimensions(&server, project_id);
+
+    // POST with an empty branch list is rejected.
+    let empty_branches = serde_json::json!({
+        "lower_value": true,
+        "upper_value": true,
+        "lower_boundary": false,
+        "upper_boundary": false,
+        "x_axis": "date_time",
+        "window": 2_592_000,
+        "branches": [],
+        "testbeds": [dims.testbed.to_string()],
+        "benchmarks": [dims.benchmark.to_string()],
+        "measures": [dims.measure.to_string()],
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/plots")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&empty_branches)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+    // Create a valid plot, then PATCH with an empty measure list is rejected.
+    let created = post_plot(
+        &server,
+        &user,
+        project_slug,
+        &serde_json::json!({
+            "lower_value": true,
+            "upper_value": true,
+            "lower_boundary": false,
+            "upper_boundary": false,
+            "x_axis": "date_time",
+            "window": 2_592_000,
+            "branches": [dims.branch1.to_string()],
+            "testbeds": [dims.testbed.to_string()],
+            "benchmarks": [dims.benchmark.to_string()],
+            "measures": [dims.measure.to_string()],
+        }),
+    )
+    .await;
+    let patch = serde_json::json!({ "measures": [] });
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{project_slug}/plots/{}",
+            created.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&patch)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+// Duplicate UUIDs in a component list collapse to one entry instead of
+// failing with a conflict on the `(plot_id, component_id)` primary key.
+#[tokio::test]
+async fn plot_component_lists_dedupe() {
+    use bencher_api_tests::helpers::get_project_id;
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Plot User Dupe", "plotpatchdupe@example.com")
+        .await;
+    let org = server.create_org(&user, "Plot Org Dupe").await;
+    let project = server
+        .create_project(&user, &org, "Plot Project Dupe")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+
+    let dims = seed_plot_dimensions(&server, project_id);
+    // POST with a duplicated branch dedupes on create.
+    let created = post_plot(
+        &server,
+        &user,
+        project_slug,
+        &serde_json::json!({
+            "lower_value": true,
+            "upper_value": true,
+            "lower_boundary": false,
+            "upper_boundary": false,
+            "x_axis": "date_time",
+            "window": 2_592_000,
+            "branches": [dims.branch1.to_string(), dims.branch1.to_string()],
+            "testbeds": [dims.testbed.to_string()],
+            "benchmarks": [dims.benchmark.to_string()],
+            "measures": [dims.measure.to_string()],
+        }),
+    )
+    .await;
+    assert_eq!(created.branches, vec![dims.branch1]);
+
+    // PATCH with a duplicated branch dedupes on update.
+    let patch = serde_json::json!({
+        "branches": [dims.branch2.to_string(), dims.branch2.to_string()],
+    });
+    let updated = patch_plot(&server, &user, project_slug, created.uuid, &patch).await;
+    assert_eq!(updated.branches, vec![dims.branch2]);
+}

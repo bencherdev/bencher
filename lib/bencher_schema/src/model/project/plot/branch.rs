@@ -4,12 +4,10 @@ use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQuer
 use dropshot::HttpError;
 
 use crate::{
-    auth_conn,
-    context::{ApiContext, DbConnection},
-    error::{resource_conflict_err, resource_not_found_err},
+    context::DbConnection,
+    error::resource_not_found_err,
     model::project::branch::{BranchId, QueryBranch},
     schema::plot_branch as plot_branch_table,
-    write_conn,
 };
 
 use super::{PlotId, QueryPlot};
@@ -85,27 +83,6 @@ impl InsertPlotBranch {
             diesel::insert_into(plot_branch_table::table)
                 .values(&inserts)
                 .execute(conn)?;
-        }
-        Ok(())
-    }
-
-    pub async fn from_json(
-        context: &ApiContext,
-        plot_id: PlotId,
-        branches: Vec<BranchUuid>,
-    ) -> Result<(), HttpError> {
-        let ranker = RankGenerator::new(branches.len());
-        for (uuid, rank) in branches.into_iter().zip(ranker) {
-            let branch_id = QueryBranch::get_id(auth_conn!(context), uuid)?;
-            let insert_plot_branch = Self {
-                plot_id,
-                branch_id,
-                rank,
-            };
-            diesel::insert_into(plot_branch_table::table)
-                .values(&insert_plot_branch)
-                .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(PlotBranch, insert_plot_branch))?;
         }
         Ok(())
     }

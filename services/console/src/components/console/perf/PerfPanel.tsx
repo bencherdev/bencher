@@ -725,6 +725,47 @@ const PerfPanel = (props: Props) => {
 		});
 	};
 
+	// The loaded pinned plot; refetched on refresh so an in-place update
+	// (e.g. a new title) is reflected without reloading the page.
+	const selectedPlotFetcher = createMemo(() => {
+		return {
+			bencher_valid: bencher_valid(),
+			project_slug: project_slug(),
+			plot: plot(),
+			refresh: refresh(),
+			token: user?.token,
+		};
+	});
+	const [plot_selected] = createResource<JsonPlot[]>(
+		selectedPlotFetcher,
+		async (fetcher) => {
+			if (
+				!fetcher.bencher_valid ||
+				!fetcher.plot ||
+				!fetcher.project_slug ||
+				fetcher.project_slug === "undefined" ||
+				(props.isConsole && !validJwt(fetcher.token)) ||
+				props.isEmbed === true
+			) {
+				return [];
+			}
+			const path = `/v0/projects/${fetcher.project_slug}/plots/${fetcher.plot}`;
+			return await httpGet(props.apiUrl, path, fetcher.token)
+				.then((resp) => [resp?.data as JsonPlot])
+				.catch((error) => {
+					console.error(error);
+					Sentry.captureException(error);
+					return [];
+				});
+		},
+	);
+	// Drop only the pinned plot association; the rest of the view is untouched.
+	const handlePlotSelected = () => {
+		setSearchParams({
+			[PLOT_PARAM]: null,
+		});
+	};
+
 	// Resource tabs data: Reports, Branches, Testbeds, Benchmarks, Plots
 	async function getPerfTab<T>(
 		perfTab: PerfTab,
@@ -961,9 +1002,9 @@ const PerfPanel = (props: Props) => {
 	) => {
 		// Uncheck all
 		if (index === undefined) {
+			// Keep PLOT_PARAM so an edited pinned plot can be updated in place.
 			setSearchParams({
 				[REPORT_PARAM]: null,
-				[PLOT_PARAM]: null,
 				[param]: null,
 				[CLEAR_PARAM]: true,
 			});
@@ -983,7 +1024,6 @@ const PerfPanel = (props: Props) => {
 			: addToArray(param_array, uuid);
 		setSearchParams({
 			[REPORT_PARAM]: null,
-			[PLOT_PARAM]: null,
 			[param]: arrayToString(array),
 			[CLEAR_PARAM]: true,
 			...customParams?.(checked, i),
@@ -1082,7 +1122,6 @@ const PerfPanel = (props: Props) => {
 		setSearchParams({
 			[REPORT_PARAM]: null,
 			[MEASURES_PARAM]: arrayToString(array),
-			[PLOT_PARAM]: null,
 			[CLEAR_PARAM]: true,
 		});
 	};
@@ -1110,11 +1149,10 @@ const PerfPanel = (props: Props) => {
 
 	const handleStartTime = (date: string) =>
 		setSearchParams({
-			[PLOT_PARAM]: null,
 			[START_TIME_PARAM]: dateToTime(date),
 		});
 	const handleEndTime = (date: string) =>
-		setSearchParams({ [PLOT_PARAM]: null, [END_TIME_PARAM]: dateToTime(date) });
+		setSearchParams({ [END_TIME_PARAM]: dateToTime(date) });
 
 	const handleTab = (tab: PerfTab) => {
 		if (isPerfTab(tab)) {
@@ -1124,7 +1162,7 @@ const PerfPanel = (props: Props) => {
 
 	const handleBool = (param: string, value: boolean) => {
 		if (typeof value === "boolean") {
-			setSearchParams({ [PLOT_PARAM]: null, [param]: value });
+			setSearchParams({ [param]: value });
 		}
 	};
 
@@ -1134,7 +1172,7 @@ const PerfPanel = (props: Props) => {
 
 	const handleXAxis = (x_axis: XAxis) => {
 		if (isXAxis(x_axis)) {
-			setSearchParams({ [PLOT_PARAM]: null, [X_AXIS_PARAM]: x_axis });
+			setSearchParams({ [X_AXIS_PARAM]: x_axis });
 		}
 	};
 
@@ -1260,6 +1298,7 @@ const PerfPanel = (props: Props) => {
 					benchmarks={benchmarks}
 					measures={measures}
 					plot={plot}
+					plot_selected={plot_selected}
 					handleRefresh={handleRefresh}
 				/>
 			</Show>
@@ -1318,6 +1357,7 @@ const PerfPanel = (props: Props) => {
 						branches_selected={branches_selected}
 						testbeds_selected={testbeds_selected}
 						benchmarks_selected={benchmarks_selected}
+						plot_selected={plot_selected}
 						reports_data={reports_data}
 						branches_data={branches_data}
 						testbeds_data={testbeds_data}
@@ -1353,6 +1393,7 @@ const PerfPanel = (props: Props) => {
 						handleBranchSelected={handleBranchSelected}
 						handleTestbedSelected={handleTestbedSelected}
 						handleBenchmarkSelected={handleBenchmarkSelected}
+						handlePlotSelected={handlePlotSelected}
 						handleReportChecked={handleReportChecked}
 						handleBranchChecked={handleBranchChecked}
 						handleTestbedChecked={handleTestbedChecked}
