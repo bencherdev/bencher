@@ -836,18 +836,41 @@ impl Biller {
         })
     }
 
-    /// Resolve a metered subscription's live status for re-subscription gating:
-    /// `Some(status)` when the subscription exists, and `None` when Stripe reports it no
-    /// longer exists (a definitive 404, safe to treat as gone). Returns an error only for
-    /// indeterminate failures (network, 5xx, rate limit), so a transient outage is never
-    /// mistaken for "gone" (which would risk pruning a still-live subscription). The
+    /// Resolve a metered subscription's live status for the two decisions keyed on whether
+    /// it is still live in Stripe (re-subscription gating on plan creation, and
+    /// cancel-vs-skip on plan deletion): `Some(status)` when the subscription exists, and
+    /// `None` when Stripe reports it no longer exists (a definitive 404, safe to treat as
+    /// gone). Returns an error only for indeterminate failures (network, 5xx, rate limit),
+    /// so a transient outage is never mistaken for "gone" (which would risk orphaning a
+    /// still-live subscription: pruned on creation, or left uncanceled on deletion). The
     /// caller distinguishes terminal from recoverable (dunning) statuses.
     pub async fn metered_plan_status(
         &self,
         metered_plan_id: &MeteredPlanId,
     ) -> Result<Option<PlanStatus>, BillingError> {
         let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
-        match self.get_subscription(&subscription_id).await {
+        self.subscription_status(&subscription_id).await
+    }
+
+    /// The live status of a licensed subscription, or `None` when Stripe reports it gone
+    /// (404). Mirrors [`Self::metered_plan_status`] so callers can tell a still-live
+    /// subscription from one that is already gone or terminal. Unlike
+    /// [`Self::get_licensed_plan_status`], a 404 is reported as `None` rather than an error.
+    pub async fn licensed_plan_status(
+        &self,
+        licensed_plan_id: &LicensedPlanId,
+    ) -> Result<Option<PlanStatus>, BillingError> {
+        let subscription_id: SubscriptionId = licensed_plan_id.as_ref().into();
+        self.subscription_status(&subscription_id).await
+    }
+
+    /// The live status of a subscription, or `None` when Stripe reports it gone (404). A
+    /// transient Stripe error is returned as-is so callers can distinguish it from "gone".
+    async fn subscription_status(
+        &self,
+        subscription_id: &SubscriptionId,
+    ) -> Result<Option<PlanStatus>, BillingError> {
+        match self.get_subscription(subscription_id).await {
             Ok(subscription) => Ok(Some(Self::map_status(&subscription.status))),
             Err(BillingError::Stripe(stripe::StripeError::Stripe(_, 404))) => Ok(None),
             Err(e) => Err(e),
@@ -868,6 +891,9 @@ impl Biller {
         )
     }
 
+    /// The status of a licensed subscription, erroring if Stripe reports it gone (404). For
+    /// callers that must treat a gone subscription as absent rather than an error, see
+    /// [`Self::licensed_plan_status`].
     pub async fn get_licensed_plan_status(
         &self,
         licensed_plan_id: &LicensedPlanId,
@@ -1061,6 +1087,55 @@ mod tests {
         // resolves to Pro; any other paid metered subscription resolves to Team.
         assert_eq!(plan_level_from_pro_price(true), PlanLevel::Pro);
         assert_eq!(plan_level_from_pro_price(false), PlanLevel::Team);
+    }
+
+    #[test]
+    fn map_status_maps_subscription_status() {
+        use stripe_billing::SubscriptionStatus;
+
+        // Each Stripe subscription status maps to the matching plan status. This mapping
+        // feeds `metered_plan_status`/`licensed_plan_status`, which drive the
+        // cancel-vs-skip decision in `subscription_is_live`, so a wrong mapping (e.g. a
+        // terminal status reading as `Active`) would cancel or skip incorrectly.
+        assert_eq!(
+            Biller::map_status(&SubscriptionStatus::Active),
+            PlanStatus::Active,
+        );
+        assert_eq!(
+            Biller::map_status(&SubscriptionStatus::Canceled),
+            PlanStatus::Canceled,
+        );
+        assert_eq!(
+            Biller::map_status(&SubscriptionStatus::Incomplete),
+            PlanStatus::Incomplete,
+        );
+        assert_eq!(
+            Biller::map_status(&SubscriptionStatus::IncompleteExpired),
+            PlanStatus::IncompleteExpired,
+        );
+        assert_eq!(
+            Biller::map_status(&SubscriptionStatus::PastDue),
+            PlanStatus::PastDue,
+        );
+        assert_eq!(
+            Biller::map_status(&SubscriptionStatus::Paused),
+            PlanStatus::Paused,
+        );
+        assert_eq!(
+            Biller::map_status(&SubscriptionStatus::Trialing),
+            PlanStatus::Trialing,
+        );
+        assert_eq!(
+            Biller::map_status(&SubscriptionStatus::Unpaid),
+            PlanStatus::Unpaid,
+        );
+        // An unrecognized/future Stripe status falls through the wildcard arm to `Unpaid`.
+        // That is the safe side for deletion: `Unpaid` reads as live, so a cancel is
+        // attempted rather than silently skipped and left to orphan.
+        assert_eq!(
+            Biller::map_status(&SubscriptionStatus::Unknown("future_status".to_owned())),
+            PlanStatus::Unpaid,
+        );
     }
 
     #[test]
