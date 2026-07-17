@@ -27,6 +27,11 @@ const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(720);
 
 const EMPTY_CELL: &str = "<td></td>";
 
+/// The branded report title markup.
+/// Shared with the `bencher` CLI GitHub Check summaries,
+/// so the in-progress and completed states cannot drift apart.
+pub const BENCHER_REPORT_TITLE: &str = r#"<img src="https://bencher.dev/favicon.svg" width="24" height="24" alt="🐰" /> Bencher Report"#;
+
 pub struct ReportComment {
     console_url: Url,
     project_slug: ProjectSlug,
@@ -185,7 +190,7 @@ impl ReportComment {
 
     fn html_header(&self, html: &mut String) {
         html.push_str(&format!(
-            r#"<h2><a href="{url}"><img src="https://bencher.dev/favicon.svg" width="24" height="24" alt="🐰" /> Bencher Report</a></h2>"#,
+            r#"<h2><a href="{url}">{BENCHER_REPORT_TITLE}</a></h2>"#,
             url = self.resource_url(Resource::Report(self.json_report.uuid)),
         ));
     }

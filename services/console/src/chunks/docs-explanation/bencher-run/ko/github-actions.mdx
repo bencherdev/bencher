@@ -7,6 +7,8 @@
 이 옵션이 설정되고 GitHub Actions에서 `bencher run`이 사용될 경우,
 결과가 `Bencher Report`라는 이름의 GitHub Check로 헤드 커밋에 추가됩니다(`--ci-id`가 설정된 경우 `Bencher Report (<ID>)`).
 경고가 생성되면 GitHub Check가 실패하므로, 브랜치 보호에서 필수 상태 검사로 사용할 수 있습니다.
+GitHub Check는 벤치마크가 시작되기 전에 `in_progress` 상태로 생성되며, 벤치마크가 끝나면 결과와 함께 완료됩니다.
+결과가 게시되기 전에 `bencher run`이 오류로 종료되면 GitHub Check는 실패로 표시됩니다.
 이 경우 토큰에 [`write` 권한을 가진 `checks` 범위가 필요합니다][github token permissions].
 GitHub Check를 생성할 수 없는 경우, `bencher run`은 경고를 기록하고 계속 진행합니다.
 `bencher run`이 pull request의 일부로 사용될 경우,

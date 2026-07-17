@@ -6,6 +6,7 @@
 これを行う最も便利な方法は、[GitHub Actions `GITHUB_TOKEN` 環境変数][github token]を使用することです（例：`--github-actions ${{ secrets.GITHUB_TOKEN }}`）。
 このオプションが設定され、GitHub Actions内で`bencher run`が使用されると、結果は`Bencher Report`という名前のGitHubチェック（`--ci-id`が設定されている場合は`Bencher Report (<ID>)`）としてヘッドコミットに追加されます。
 アラートが生成されるとGitHubチェックは失敗するため、ブランチ保護の必須ステータスチェックとして使用できます。
+GitHubチェックはベンチマークの開始前に`in_progress`ステータスで作成され、ベンチマークが終了すると結果とともに完了します。結果が投稿される前に`bencher run`がエラーで終了した場合、GitHubチェックは失敗としてマークされます。
 これにはトークンが[`checks` スコープに対する`write`権限][github token permissions]を持っている必要があります。
 GitHubチェックを作成できない場合、`bencher run`は警告をログに記録して続行します。
 `bencher run`がプルリクエストの一部として使用されると、結果はコメントとしてプルリクエストにも追加されます。

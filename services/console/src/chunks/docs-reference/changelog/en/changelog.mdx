@@ -4,6 +4,7 @@
 - Update a pinned plot in place with `PATCH /v0/projects/{project}/plots/{plot}`, the Perf explorer "Update Pin" button, or `bencher plot update`
 - Reject plot dimension UUIDs from other projects with a `404 Not Found` and empty dimension lists with a `400 Bad Request`
 - Add the project name and link as the first row of the PR comment report table (Thank you [@OmarTawfik](https://github.com/OmarTawfik))
+- Create the GitHub Check with an `in_progress` status before benchmarks run and complete it with the results once they finish, so reruns no longer show a stale conclusion; if `bencher run` exits with an error before the results are posted, the check is marked as failed (Thank you [@OmarTawfik](https://github.com/OmarTawfik))
 
 ## `v0.6.8`
 - **BREAKING CHANGE** Change the default self-hosted API server port from `61016` to the newly [IANA-registered](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml?search=6610) `6610`. Deployments relying on the default now serve the API on `6610`. Update clients, reverse proxies, and `--host`/`BENCHER_HOST` references (Docker Compose, devcontainer, and docs are updated to match). To stay on `61016`, set `server.bind_address` to `0.0.0.0:61016` (or run `bencher up --api-port 61016`).

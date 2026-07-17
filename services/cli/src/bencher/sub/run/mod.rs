@@ -29,7 +29,7 @@ pub mod runner;
 mod sub_adapter;
 
 use branch::Branch;
-use ci::Ci;
+use ci::{Ci, CiCheck};
 pub use error::RunError;
 use format::Format;
 use project::resolve_project;
@@ -230,6 +230,28 @@ impl Run {
             ci.safety_check(self.log)?;
         }
 
+        // Start the in-progress CI check before the benchmark runs,
+        // so a rerun immediately clears the stale conclusion left by a previous run.
+        // Dry runs never post results, so they never start a check.
+        let mut ci_check = match &self.ci {
+            Some(ci) if !self.dry_run => ci.start(self.log).await,
+            _ => None,
+        };
+
+        let result = self.run_and_report(&mut ci_check).await;
+        // Every path that posts results consumes the check handle,
+        // so an unconsumed handle means the check was never completed.
+        // Best-effort: mark it as failed rather than leave it in progress forever.
+        // Today only error paths leave the handle unconsumed. Any future path
+        // that returns `Ok` without posting results will mark the check as
+        // failed here, which is still better than an eternally pending check.
+        if let (Some(ci), Some(check)) = (&self.ci, ci_check.take()) {
+            ci.fail(&check, self.log).await;
+        }
+        result
+    }
+
+    async fn run_and_report(&self, ci_check: &mut Option<CiCheck>) -> Result<(), RunError> {
         let Some(json_new_run) = self.generate_report().await? else {
             return Ok(());
         };
@@ -257,12 +279,12 @@ impl Run {
         if let Some(job_uuid) = json_report.job {
             if self.job.as_ref().is_some_and(|j| j.detach) {
                 cli_eprintln_quietable!(self.log, "Remote job submitted successfully: {job_uuid}");
-                return self.display_and_check_alerts(json_report).await;
+                return self.display_and_check_alerts(json_report, ci_check).await;
             }
-            return self.poll_job(json_report, job_uuid).await;
+            return self.poll_job(json_report, job_uuid, ci_check).await;
         }
 
-        self.display_and_check_alerts(json_report).await
+        self.display_and_check_alerts(json_report, ci_check).await
     }
 
     async fn generate_report(&self) -> Result<Option<JsonNewRun>, RunError> {
@@ -395,6 +417,7 @@ impl Run {
         &self,
         json_report: JsonReport,
         job_uuid: bencher_json::JobUuid,
+        ci_check: &mut Option<CiCheck>,
     ) -> Result<(), RunError> {
         use bencher_json::JobStatus;
 
@@ -462,7 +485,7 @@ impl Run {
                         .fetch_report(&project_resource_id, json_report.uuid)
                         .await
                         .map_err(RunError::FetchReport)?;
-                    return self.display_and_check_alerts(report).await;
+                    return self.display_and_check_alerts(report, ci_check).await;
                 },
                 JobStatus::Failed => {
                     self.log_job_output(json_job.output.as_ref());
@@ -470,8 +493,12 @@ impl Run {
                         .output
                         .and_then(|o| o.error)
                         .unwrap_or_else(|| "Unknown error".to_owned());
-                    self.best_effort_display_report(&project_resource_id, json_report.uuid)
-                        .await;
+                    self.best_effort_display_report(
+                        &project_resource_id,
+                        json_report.uuid,
+                        ci_check,
+                    )
+                    .await;
                     return Err(RunError::JobFailed(error_msg));
                 },
                 JobStatus::Canceled => {
@@ -480,8 +507,12 @@ impl Run {
                         .output
                         .and_then(|o| o.error)
                         .unwrap_or_else(|| "Job was canceled".to_owned());
-                    self.best_effort_display_report(&project_resource_id, json_report.uuid)
-                        .await;
+                    self.best_effort_display_report(
+                        &project_resource_id,
+                        json_report.uuid,
+                        ci_check,
+                    )
+                    .await;
                     return Err(RunError::JobCanceled(error_msg));
                 },
                 // Non-terminal states: keep polling.
@@ -496,9 +527,13 @@ impl Run {
         }
     }
 
-    async fn display_and_check_alerts(&self, json_report: JsonReport) -> Result<(), RunError> {
+    async fn display_and_check_alerts(
+        &self,
+        json_report: JsonReport,
+        ci_check: &mut Option<CiCheck>,
+    ) -> Result<(), RunError> {
         let alerts_count = json_report.alerts.len();
-        self.display_results(json_report).await?;
+        self.display_results(json_report, ci_check).await?;
         if self.error_on_alert && alerts_count > 0 {
             Err(RunError::Alerts(alerts_count))
         } else {
@@ -551,10 +586,11 @@ impl Run {
         &self,
         project: &ProjectResourceId,
         report_uuid: bencher_json::ReportUuid,
+        ci_check: &mut Option<CiCheck>,
     ) {
         match self.fetch_report(project, report_uuid).await {
             Ok(report) => {
-                if let Err(err) = self.display_and_check_alerts(report).await {
+                if let Err(err) = self.display_and_check_alerts(report, ci_check).await {
                     cli_eprintln_quietable!(self.log, "Warning: failed to display report: {err}");
                 }
             },
@@ -564,7 +600,11 @@ impl Run {
         }
     }
 
-    async fn display_results(&self, json_report: JsonReport) -> Result<(), RunError> {
+    async fn display_results(
+        &self,
+        json_report: JsonReport,
+        ci_check: &mut Option<CiCheck>,
+    ) -> Result<(), RunError> {
         let console_url = self
             .backend
             .get_console_url()
@@ -586,7 +626,7 @@ impl Run {
         cli_println!("{newline_prefix}{report_str}");
 
         if let Some(ci) = &self.ci {
-            ci.run(&report_comment, self.log).await?;
+            ci.run(ci_check.take(), &report_comment, self.log).await?;
         }
 
         Ok(())
