@@ -7,6 +7,8 @@ Die bequemste Methode hierfür ist die Verwendung der [GitHub Actions `GITHUB_TO
 Wenn diese Option gesetzt ist und `bencher run` in GitHub Actions verwendet wird,
 dann werden die Ergebnisse dem Head-Commit als GitHub-Prüfung mit dem Namen `Bencher Report` hinzugefügt (oder `Bencher Report (<ID>)`, wenn `--ci-id` gesetzt ist).
 Die GitHub-Prüfung schlägt fehl, wenn ein Alert generiert wird, sodass sie als erforderliche Statusprüfung im Branch-Schutz verwendet werden kann.
+Die GitHub-Prüfung wird mit dem Status `in_progress` erstellt, bevor die Benchmarks starten, und wird mit den Ergebnissen abgeschlossen, sobald sie beendet sind.
+Wenn `bencher run` mit einem Fehler endet, bevor die Ergebnisse veröffentlicht wurden, wird die GitHub-Prüfung als fehlgeschlagen markiert.
 Dies erfordert, dass das Token [den `checks` Bereich mit `write` Berechtigungen][github token permissions] hat.
 Wenn die GitHub-Prüfung nicht erstellt werden kann, protokolliert `bencher run` eine Warnung und fährt fort.
 Wenn `bencher run` als Teil einer Pull-Anfrage verwendet wird,

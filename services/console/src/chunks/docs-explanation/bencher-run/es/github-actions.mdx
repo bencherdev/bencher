@@ -7,6 +7,8 @@ La forma más conveniente de hacer esto es la [variable de entorno `GITHUB_TOKEN
 Cuando esta opción está configurada y `bencher run` se utiliza en GitHub Actions,
 los resultados se agregarán al commit de encabezado como una Verificación de GitHub llamada `Bencher Report` (o `Bencher Report (<ID>)` si `--ci-id` está configurado).
 La Verificación de GitHub fallará si se genera una Alerta, por lo que puede usarse como una verificación de estado requerida en la protección de ramas.
+La Verificación de GitHub se crea con un estado `in_progress` antes de que comiencen los benchmarks y se completa con los resultados una vez que terminan.
+Si `bencher run` termina con un error antes de que se publiquen los resultados, entonces la Verificación de GitHub se marca como fallida.
 Esto requiere que el token tenga [el alcance `checks` con permisos de `escritura`][github token permissions].
 Si no se puede crear la Verificación de GitHub, entonces `bencher run` registrará una advertencia y continuará.
 Cuando `bencher run` se utiliza como parte de una solicitud de extracción,

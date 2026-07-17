@@ -7,6 +7,8 @@ The most convenient way to do this is the [GitHub Actions `GITHUB_TOKEN` environ
 When this option is set and `bencher run` is used in GitHub Actions,
 then the results will be added to the head commit as a GitHub Check named `Bencher Report` (or `Bencher Report (<ID>)` if `--ci-id` is set).
 The GitHub Check will fail if an Alert is generated, so it can be used as a required status check in branch protection.
+The GitHub Check is created with an `in_progress` status before the benchmarks start and is completed with the results once they finish.
+If `bencher run` exits with an error before the results are posted, then the GitHub Check is marked as failed.
 This requires the token to have [the `checks` scope with `write` permissions][github token permissions].
 If the GitHub Check cannot be created, then `bencher run` will log a warning and continue.
 When `bencher run` is used as a part of a pull request,

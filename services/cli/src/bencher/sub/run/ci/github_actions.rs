@@ -1,8 +1,8 @@
-use bencher_comment::ReportComment;
+use bencher_comment::{BENCHER_REPORT_TITLE, ReportComment};
 use octocrab::{
     Octocrab,
-    models::CommentId,
-    params::checks::{CheckRunConclusion, CheckRunOutput},
+    models::{CheckRunId, CommentId},
+    params::checks::{CheckRunConclusion, CheckRunOutput, CheckRunStatus},
 };
 
 use crate::{cli_eprintln_quietable, cli_println_quietable};
@@ -20,6 +20,9 @@ const PULL_REQUEST_TARGET: &str = "pull_request_target";
 const FULL_NAME: &str = "full_name";
 
 const BENCHER_REPORT: &str = "Bencher Report";
+const IN_PROGRESS_SUMMARY: &str =
+    "<p>Benchmarks are running. Results will be posted here when they complete.</p>";
+const FAILED_SUMMARY: &str = "<p><code>bencher run</code> failed to complete before posting results. See the CI job logs for details.</p>";
 
 // There is an undocumented maximum length of 65536 characters for comments.
 // - Check Run (https://github.com/bencherdev/bencher/issues/534):
@@ -109,6 +112,10 @@ pub enum GitHubError {
     NoSha,
     #[error("Failed to create GitHub Check: {0}")]
     CreateCheck(octocrab::Error),
+    #[error("Failed to start GitHub Check: {0}")]
+    StartCheck(octocrab::Error),
+    #[error("Failed to update GitHub Check: {0}")]
+    UpdateCheck(octocrab::Error),
     #[error("{}", permissions_help("checks", "base-branch", _0))]
     BadCheckPermissions(octocrab::Error),
 }
@@ -178,7 +185,54 @@ impl GitHubActions {
         Ok(())
     }
 
-    pub async fn run(&self, report_comment: &ReportComment, log: bool) -> Result<(), GitHubError> {
+    /// Best-effort: create the GitHub Check with an `in_progress` status
+    /// before the benchmark runs, so a rerun immediately clears the stale
+    /// conclusion left by a previous run. Failures are logged, never fatal.
+    pub async fn start_check(&self, log: bool) -> Option<CheckRunHandle> {
+        if !is_github_actions() {
+            // `run` prints the "Not running as a GitHub Action" message later,
+            // so stay quiet here to avoid printing it twice.
+            return None;
+        }
+        match self.try_start_check(log).await {
+            Ok(handle) => Some(handle),
+            Err(err) => {
+                cli_eprintln_quietable!(
+                    log,
+                    "Failed to start GitHub Check. The check will still be created when the results are posted.\n{err}"
+                );
+                None
+            },
+        }
+    }
+
+    async fn try_start_check(&self, log: bool) -> Result<CheckRunHandle, GitHubError> {
+        let (event_str, event) = github_event()?;
+        let full_name = repository_full_name(&event_str, &event)?;
+        let (owner, repo) = split_full_name(full_name)?;
+        let head_sha = resolve_head_sha(&event, std::env::var(GITHUB_SHA).ok())?;
+        let check = self
+            .github_client(log)?
+            .checks(owner, repo)
+            .create_check_run(check_run_name(self.ci_id.as_deref()), head_sha)
+            .status(CheckRunStatus::InProgress)
+            .output(check_run_output(branded_summary(IN_PROGRESS_SUMMARY)))
+            .send()
+            .await
+            .map_err(|e| check_error(e, GitHubError::StartCheck))?;
+        Ok(CheckRunHandle {
+            owner: owner.to_owned(),
+            repo: repo.to_owned(),
+            id: check.id,
+        })
+    }
+
+    pub async fn run(
+        &self,
+        check: Option<CheckRunHandle>,
+        report_comment: &ReportComment,
+        log: bool,
+    ) -> Result<(), GitHubError> {
         if !is_github_actions() {
             cli_println_quietable!(
                 log,
@@ -194,15 +248,15 @@ impl GitHubActions {
 
         let (event_str, event) = github_event()?;
 
-        // Always create a GitHub Check, best-effort.
-        // The check is created regardless of `--ci-only-thresholds` and
+        // Always complete the GitHub Check, best-effort.
+        // The check is completed regardless of `--ci-only-thresholds` and
         // `--ci-only-on-alert` so that a `success`/`failure` conclusion is always
         // reported and the check can be used as a required status check.
         if let Err(err) = self
-            .create_github_check(report_comment, log, &event_str, &event)
+            .complete_github_check(check, report_comment, log, &event_str, &event)
             .await
         {
-            cli_eprintln_quietable!(log, "Failed to create GitHub Check\n{err}");
+            cli_eprintln_quietable!(log, "Failed to complete GitHub Check\n{err}");
         }
 
         // Only post a pull request comment if there are thresholds set
@@ -251,65 +305,79 @@ impl GitHubActions {
         }
     }
 
-    async fn create_github_check(
+    async fn complete_github_check(
         &self,
+        check: Option<CheckRunHandle>,
         report_comment: &ReportComment,
         log: bool,
         event_str: &str,
         event: &serde_json::Value,
     ) -> Result<(), GitHubError> {
-        let full_name = repository_full_name(event_str, event)?;
-        let (owner, repo) = split_full_name(full_name)?;
-        let head_sha = if let Some(head_sha) = check_head_sha(event) {
-            head_sha.to_owned()
-        } else {
-            let Ok(head_sha) = std::env::var(GITHUB_SHA) else {
-                return Err(GitHubError::NoSha);
-            };
-            head_sha
-        };
         let summary = report_comment.html_with_max_length(
             self.ci_only_thresholds,
             self.ci_id.as_deref(),
             MAX_LENGTH,
         );
-        let report = CheckRunOutput {
-            title: String::new(),
-            summary,
-            text: None,
-            annotations: Vec::new(),
-            images: Vec::new(),
-        };
+        let output = check_run_output(summary);
+        let conclusion = check_conclusion(report_comment.has_alert());
 
+        // Providing a conclusion sets the check status to `completed`.
+        if let Some(CheckRunHandle { owner, repo, id }) = check {
+            self.github_client(log)?
+                .checks(owner, repo)
+                .update_check_run(id)
+                .output(output)
+                .conclusion(conclusion)
+                .send()
+                .await
+                .map(|_| ())
+                .map_err(|e| check_error(e, GitHubError::UpdateCheck))
+        } else {
+            // The in-progress check was skipped or failed to be created,
+            // so fall back to creating the check with a conclusion.
+            let full_name = repository_full_name(event_str, event)?;
+            let (owner, repo) = split_full_name(full_name)?;
+            let head_sha = resolve_head_sha(event, std::env::var(GITHUB_SHA).ok())?;
+            self.github_client(log)?
+                .checks(owner, repo)
+                .create_check_run(check_run_name(self.ci_id.as_deref()), head_sha)
+                .output(output)
+                .conclusion(conclusion)
+                .send()
+                .await
+                .map(|_| ())
+                .map_err(|e| check_error(e, GitHubError::CreateCheck))
+        }
+    }
+
+    /// Best-effort: complete a still in-progress check as failed when
+    /// `bencher run` errors before the results are posted, so the check
+    /// does not linger `in_progress` forever. Failures are logged, never fatal.
+    pub async fn fail_check(&self, handle: &CheckRunHandle, log: bool) {
+        if let Err(err) = self.try_fail_check(handle, log).await {
+            cli_eprintln_quietable!(log, "Failed to fail GitHub Check\n{err}");
+        }
+    }
+
+    async fn try_fail_check(&self, handle: &CheckRunHandle, log: bool) -> Result<(), GitHubError> {
+        let CheckRunHandle { owner, repo, id } = handle;
+        self.github_client(log)?
+            .checks(owner.clone(), repo.clone())
+            .update_check_run(*id)
+            .output(check_run_output(branded_summary(FAILED_SUMMARY)))
+            .conclusion(CheckRunConclusion::Failure)
+            .send()
+            .await
+            .map(|_| ())
+            .map_err(|e| check_error(e, GitHubError::UpdateCheck))
+    }
+
+    fn github_client(&self, log: bool) -> Result<Octocrab, GitHubError> {
         let mut builder = Octocrab::builder().user_access_token(self.token.clone());
         if let Some(url) = github_api_url(log) {
             builder = builder.base_uri(url).map_err(GitHubError::BaseUri)?;
         }
-        let check = builder
-            .build()
-            .map_err(GitHubError::Auth)?
-            .checks(owner, repo)
-            .create_check_run(check_run_name(self.ci_id.as_deref()), head_sha)
-            .output(report)
-            .conclusion(if report_comment.has_alert() {
-                CheckRunConclusion::Failure
-            } else {
-                CheckRunConclusion::Success
-            })
-            .send()
-            .await;
-        if let Err(e) = check {
-            Err(
-                // https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
-                if is_permissions_error(&e) {
-                    GitHubError::BadCheckPermissions(e)
-                } else {
-                    GitHubError::CreateCheck(e)
-                },
-            )
-        } else {
-            Ok(())
-        }
+        builder.build().map_err(GitHubError::Auth)
     }
 
     pub async fn create_pull_request_comment(
@@ -371,6 +439,15 @@ impl GitHubActions {
             Ok(())
         }
     }
+}
+
+/// A GitHub Check created with an `in_progress` status before the benchmark runs.
+/// The check is completed with a conclusion once the results are ready.
+#[derive(Debug)]
+pub struct CheckRunHandle {
+    owner: String,
+    repo: String,
+    id: CheckRunId,
 }
 
 // https://docs.github.com/en/actions/learn-github-actions/variables#default-environment-variables
@@ -435,6 +512,20 @@ fn check_head_sha(event: &serde_json::Value) -> Option<&str> {
         .and_then(serde_json::Value::as_str)
 }
 
+// Resolve the head SHA for the GitHub Check from the event payload,
+// falling back to the `GITHUB_SHA` environment variable value.
+// The environment variable value is passed in so this stays deterministic in tests.
+fn resolve_head_sha(
+    event: &serde_json::Value,
+    github_sha: Option<String>,
+) -> Result<String, GitHubError> {
+    if let Some(head_sha) = check_head_sha(event) {
+        Ok(head_sha.to_owned())
+    } else {
+        github_sha.ok_or(GitHubError::NoSha)
+    }
+}
+
 // Required status checks in branch protection match by exact check run name,
 // so the name must be stable across runs for a given `bencher run` invocation.
 fn check_run_name(ci_id: Option<&str>) -> String {
@@ -443,6 +534,30 @@ fn check_run_name(ci_id: Option<&str>) -> String {
     } else {
         BENCHER_REPORT.to_owned()
     }
+}
+
+fn check_conclusion(has_alert: bool) -> CheckRunConclusion {
+    if has_alert {
+        CheckRunConclusion::Failure
+    } else {
+        CheckRunConclusion::Success
+    }
+}
+
+fn check_run_output(summary: String) -> CheckRunOutput {
+    CheckRunOutput {
+        title: String::new(),
+        summary,
+        text: None,
+        annotations: Vec::new(),
+        images: Vec::new(),
+    }
+}
+
+// Render the same branded header that `ReportComment` renders for the
+// completed check, so the check reads as a Bencher Report in every state.
+fn branded_summary(body: &str) -> String {
+    format!("<h2>{BENCHER_REPORT_TITLE}</h2>{body}")
 }
 
 pub async fn get_comment(
@@ -491,6 +606,15 @@ fn is_permissions_error(err: &octocrab::Error) -> bool {
         .contains("Resource not accessible by integration")
 }
 
+// https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+fn check_error(err: octocrab::Error, variant: fn(octocrab::Error) -> GitHubError) -> GitHubError {
+    if is_permissions_error(&err) {
+        GitHubError::BadCheckPermissions(err)
+    } else {
+        variant(err)
+    }
+}
+
 fn github_api_url(log: bool) -> Option<String> {
     if let Ok(url) = std::env::var(GITHUB_API_URL) {
         Some(url)
@@ -506,7 +630,12 @@ fn github_api_url(log: bool) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{check_head_sha, check_run_name};
+    use octocrab::params::checks::CheckRunConclusion;
+
+    use super::{
+        FAILED_SUMMARY, GitHubError, IN_PROGRESS_SUMMARY, branded_summary, check_conclusion,
+        check_head_sha, check_run_name, check_run_output, resolve_head_sha,
+    };
 
     #[test]
     fn check_head_sha_pull_request() {
@@ -566,6 +695,94 @@ mod tests {
             "pull_request": { "head": { "sha": 1234 } }
         });
         assert_eq!(check_head_sha(&event), None);
+    }
+
+    #[test]
+    fn resolve_head_sha_pull_request() {
+        // The event head SHA wins even when `GITHUB_SHA` is set
+        let event = serde_json::json!({
+            "pull_request": {
+                "head": { "sha": "f1e2d3c4b5a697887766554433221100ffeeddcc" }
+            }
+        });
+        assert_eq!(
+            resolve_head_sha(
+                &event,
+                Some("0011223344556677889900aabbccddeeff001122".to_owned())
+            )
+            .expect("head SHA"),
+            "f1e2d3c4b5a697887766554433221100ffeeddcc"
+        );
+    }
+
+    #[test]
+    fn resolve_head_sha_env_fallback() {
+        let event = serde_json::json!({
+            "ref": "refs/heads/main",
+            "repository": { "full_name": "owner/repo" }
+        });
+        assert_eq!(
+            resolve_head_sha(
+                &event,
+                Some("0011223344556677889900aabbccddeeff001122".to_owned())
+            )
+            .expect("env SHA"),
+            "0011223344556677889900aabbccddeeff001122"
+        );
+    }
+
+    #[test]
+    fn resolve_head_sha_missing() {
+        let event = serde_json::json!({
+            "ref": "refs/heads/main",
+            "repository": { "full_name": "owner/repo" }
+        });
+        assert!(matches!(
+            resolve_head_sha(&event, None),
+            Err(GitHubError::NoSha)
+        ));
+    }
+
+    #[test]
+    fn check_conclusion_alert() {
+        assert!(matches!(
+            check_conclusion(true),
+            CheckRunConclusion::Failure
+        ));
+    }
+
+    #[test]
+    fn check_conclusion_no_alert() {
+        assert!(matches!(
+            check_conclusion(false),
+            CheckRunConclusion::Success
+        ));
+    }
+
+    #[test]
+    fn branded_summary_in_progress() {
+        let summary = branded_summary(IN_PROGRESS_SUMMARY);
+        assert!(summary.starts_with("<h2>"));
+        assert!(summary.contains("Bencher Report"));
+        assert!(summary.ends_with(IN_PROGRESS_SUMMARY));
+    }
+
+    #[test]
+    fn branded_summary_failed() {
+        let summary = branded_summary(FAILED_SUMMARY);
+        assert!(summary.starts_with("<h2>"));
+        assert!(summary.contains("Bencher Report"));
+        assert!(summary.ends_with(FAILED_SUMMARY));
+    }
+
+    #[test]
+    fn check_run_output_shape() {
+        let output = check_run_output("Benchmarks are running.".to_owned());
+        assert_eq!(output.title, "");
+        assert_eq!(output.summary, "Benchmarks are running.");
+        assert!(output.text.is_none());
+        assert!(output.annotations.is_empty());
+        assert!(output.images.is_empty());
     }
 
     #[test]
