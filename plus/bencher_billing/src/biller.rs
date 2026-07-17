@@ -982,13 +982,19 @@ impl Biller {
     }
 
     /// Immediately cancel a metered subscription. Used by the admin-only DELETE
-    /// path; the organization downgrades to Free right away.
+    /// path; the organization downgrades to Free right away. `invoice_now`
+    /// generates a final invoice for any un-invoiced metered usage; a bare
+    /// cancel would silently discard all usage accrued since the last invoice.
     pub async fn cancel_metered_subscription(
         &self,
         metered_plan_id: &MeteredPlanId,
     ) -> Result<Subscription, BillingError> {
         let subscription_id: SubscriptionId = metered_plan_id.as_ref().into();
-        self.cancel_subscription(&subscription_id).await
+        CancelSubscription::new(subscription_id)
+            .invoice_now(true)
+            .send(&self.client)
+            .await
+            .map_err(Into::into)
     }
 
     /// Schedule (`true`) or clear (`false`) a metered subscription's
@@ -1074,6 +1080,7 @@ mod tests {
     use literally::hmap;
     use pretty_assertions::assert_eq;
     use stripe_shared::{CustomerId, PaymentMethodId};
+    use stripe_types::Expandable;
 
     use rustls::crypto::aws_lc_rs::default_provider;
 
@@ -1334,12 +1341,24 @@ mod tests {
             .await
             .unwrap();
         assert!(!resumed.cancel_at_period_end);
+        // Snapshot the latest invoice just before cancellation. Only the id is kept
+        // across the awaits below; holding the whole `Subscription` would bloat the
+        // future (`clippy::large_futures`).
+        let pre_cancel_invoice_id = resumed.latest_invoice.map(Expandable::into_id);
 
-        // DELETE path: immediate cancel.
-        biller
+        // DELETE path: immediate cancel. `invoice_now` generates a final invoice
+        // so the usage recorded above is billed instead of discarded.
+        let final_invoice_id = biller
             .cancel_metered_subscription(&subscription_id.parse().unwrap())
             .await
-            .unwrap();
+            .unwrap()
+            .latest_invoice
+            .map(Expandable::into_id)
+            .expect("final invoice for un-invoiced metered usage");
+        // The final invoice must be new: distinct from the pre-cancel one when that
+        // exists, and its mere presence (via `expect` above) proves generation when
+        // no prior invoice existed.
+        assert_ne!(Some(final_invoice_id), pre_cancel_invoice_id);
         let billing = biller
             .get_metered_plan_billing(metered_plan_id)
             .await
@@ -1495,9 +1514,7 @@ mod tests {
             lookup_key: None,
             metadata: HashMap::new(),
             nickname: None,
-            product: stripe_types::Expandable::Id(
-                "prod_test".parse::<stripe_shared::ProductId>().unwrap(),
-            ),
+            product: Expandable::Id("prod_test".parse::<stripe_shared::ProductId>().unwrap()),
             recurring: None,
             tax_behavior: None,
             tiers: None,
