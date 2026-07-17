@@ -194,6 +194,11 @@ impl ReportComment {
         html.push_str("<table>");
         for (row, name, url) in [
             (
+                "Project",
+                self.json_report.project.name.to_string(),
+                self.resource_url(Resource::Project),
+            ),
+            (
                 "Branch",
                 self.json_report.branch.name.to_string(),
                 self.resource_url(Resource::Branch {
@@ -688,21 +693,14 @@ impl ReportComment {
     fn resource_url_inner(&self, resource: Resource, utm: bool) -> Url {
         let url = self.console_url.clone();
         let query_param = resource.query_param();
-        let path = if self.public_links {
-            format!(
-                "/perf/{project}/{resource_name}/{id}",
-                project = self.project_slug,
-                resource_name = resource.name(),
-                id = resource.into_id()
-            )
+        let mut path = if self.public_links {
+            format!("/perf/{project}", project = self.project_slug)
         } else {
-            format!(
-                "/console/projects/{project}/{resource_name}/{id}",
-                project = self.project_slug,
-                resource_name = resource.name(),
-                id = resource.into_id()
-            )
+            format!("/console/projects/{project}", project = self.project_slug)
         };
+        if let Some((resource_name, id)) = resource.into_suffix() {
+            path.push_str(&format!("/{resource_name}/{id}"));
+        }
         let mut url = url.join(&path).unwrap_or(url);
 
         if let Some((key, value)) = query_param {
@@ -791,6 +789,7 @@ impl ReportComment {
 }
 
 enum Resource {
+    Project,
     Report(ReportUuid),
     Branch {
         slug: BranchSlug,
@@ -811,27 +810,16 @@ enum Resource {
 }
 
 impl Resource {
-    fn name(&self) -> &'static str {
+    fn into_suffix(self) -> Option<(&'static str, String)> {
         match self {
-            Resource::Report(_) => "reports",
-            Resource::Branch { .. } => "branches",
-            Resource::Testbed { .. } => "testbeds",
-            Resource::Benchmark(_) => "benchmarks",
-            Resource::Measure(_) => "measures",
-            Resource::Threshold { .. } => "thresholds",
-            Resource::Alert(_) => "alerts",
-        }
-    }
-
-    fn into_id(self) -> String {
-        match self {
-            Resource::Report(uuid) => uuid.to_string(),
-            Resource::Branch { slug, .. } => slug.to_string(),
-            Resource::Testbed { slug, .. } => slug.to_string(),
-            Resource::Benchmark(slug) => slug.to_string(),
-            Resource::Measure(slug) => slug.to_string(),
-            Resource::Threshold { uuid, .. } => uuid.to_string(),
-            Resource::Alert(uuid) => uuid.to_string(),
+            Resource::Project => None,
+            Resource::Report(uuid) => Some(("reports", uuid.to_string())),
+            Resource::Branch { slug, .. } => Some(("branches", slug.to_string())),
+            Resource::Testbed { slug, .. } => Some(("testbeds", slug.to_string())),
+            Resource::Benchmark(slug) => Some(("benchmarks", slug.to_string())),
+            Resource::Measure(slug) => Some(("measures", slug.to_string())),
+            Resource::Threshold { uuid, .. } => Some(("thresholds", uuid.to_string())),
+            Resource::Alert(uuid) => Some(("alerts", uuid.to_string())),
         }
     }
 
@@ -845,7 +833,8 @@ impl Resource {
             Resource::Threshold {
                 model: Some(model), ..
             } => Some(("model", model.to_string())),
-            Resource::Report(_)
+            Resource::Project
+            | Resource::Report(_)
             | Resource::Testbed { .. }
             | Resource::Benchmark(_)
             | Resource::Measure(_)
@@ -1126,4 +1115,109 @@ fn boundary_limits_map(
         }
     }
     map
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::{
+        DateTime, JsonBranch, JsonHead, JsonProject, JsonReport, JsonTestbed,
+        project::{Visibility, report::Adapter},
+    };
+
+    use crate::{ReportComment, SubAdapter};
+
+    const CONSOLE_URL: &str = "https://bencher.example.com";
+
+    fn json_report(visibility: Visibility) -> JsonReport {
+        let project_uuid = "11111111-1111-1111-1111-111111111111".parse().unwrap();
+        JsonReport {
+            uuid: "00000000-0000-0000-0000-000000000000".parse().unwrap(),
+            user: None,
+            project: JsonProject {
+                uuid: project_uuid,
+                organization: "22222222-2222-2222-2222-222222222222".parse().unwrap(),
+                name: "My Project".parse().unwrap(),
+                slug: "my-project".parse().unwrap(),
+                url: None,
+                visibility,
+                created: DateTime::TEST,
+                modified: DateTime::TEST,
+                claimed: Some(DateTime::TEST),
+            },
+            branch: JsonBranch {
+                uuid: "33333333-3333-3333-3333-333333333333".parse().unwrap(),
+                project: project_uuid,
+                name: "main".parse().unwrap(),
+                slug: "main".parse().unwrap(),
+                head: JsonHead {
+                    uuid: "44444444-4444-4444-4444-444444444444".parse().unwrap(),
+                    start_point: None,
+                    version: None,
+                    created: DateTime::TEST,
+                    replaced: None,
+                },
+                created: DateTime::TEST,
+                modified: DateTime::TEST,
+                archived: None,
+            },
+            testbed: JsonTestbed {
+                uuid: "55555555-5555-5555-5555-555555555555".parse().unwrap(),
+                project: project_uuid,
+                name: "localhost".parse().unwrap(),
+                slug: "localhost".parse().unwrap(),
+                #[cfg(feature = "plus")]
+                spec: None,
+                created: DateTime::TEST,
+                modified: DateTime::TEST,
+                archived: None,
+            },
+            start_time: DateTime::TEST,
+            end_time: DateTime::TEST,
+            adapter: Adapter::Magic,
+            results: Vec::new(),
+            alerts: Vec::new(),
+            #[cfg(feature = "plus")]
+            job: None,
+            created: DateTime::TEST,
+        }
+    }
+
+    fn report_comment(visibility: Visibility) -> ReportComment {
+        ReportComment::new(
+            CONSOLE_URL.parse().unwrap(),
+            json_report(visibility),
+            SubAdapter {
+                build_time: false,
+                file_size: false,
+            },
+            "cli".to_owned(),
+        )
+    }
+
+    #[test]
+    fn report_table_public_project() {
+        let html = report_comment(Visibility::Public).html(false, None);
+        let project = r#"<tr><td>Project</td><td><a href="https://bencher.example.com/perf/my-project">My Project</a></td></tr>"#;
+        let branch = r#"<tr><td>Branch</td><td><a href="https://bencher.example.com/perf/my-project/branches/main?head=44444444-4444-4444-4444-444444444444">main</a></td></tr>"#;
+        let testbed = r#"<tr><td>Testbed</td><td><a href="https://bencher.example.com/perf/my-project/testbeds/localhost">localhost</a></td></tr>"#;
+        let project_pos = html.find(project).expect("missing project row");
+        let branch_pos = html.find(branch).expect("missing branch row");
+        let testbed_pos = html.find(testbed).expect("missing testbed row");
+        assert!(project_pos < branch_pos);
+        assert!(branch_pos < testbed_pos);
+    }
+
+    #[cfg(feature = "plus")]
+    #[test]
+    fn report_table_private_project() {
+        let html = report_comment(Visibility::Private).html(false, None);
+        let project = r#"<tr><td>Project</td><td><a href="https://bencher.example.com/console/projects/my-project">My Project</a></td></tr>"#;
+        let branch = r#"<tr><td>Branch</td><td><a href="https://bencher.example.com/console/projects/my-project/branches/main?head=44444444-4444-4444-4444-444444444444">main</a></td></tr>"#;
+        let testbed = r#"<tr><td>Testbed</td><td><a href="https://bencher.example.com/console/projects/my-project/testbeds/localhost">localhost</a></td></tr>"#;
+        let project_pos = html.find(project).expect("missing project row");
+        let branch_pos = html.find(branch).expect("missing branch row");
+        let testbed_pos = html.find(testbed).expect("missing testbed row");
+        assert!(project_pos < branch_pos);
+        assert!(branch_pos < testbed_pos);
+    }
 }
