@@ -33,8 +33,8 @@ bencher up --detach
 # Start only the API
 bencher up api --detach
 
-# Pin to a specific version
-bencher up --tag v0.6.8
+# Pin to a specific version tag (defaults to the CLI's own version)
+bencher up --tag vX.Y.Z
 
 # Custom ports
 bencher up --api-port 8080 --console-port 8081
