@@ -13,3 +13,8 @@ Mensajes enviados desde el servidor al Runner.
 El token de descarga OCI en un mensaje `job` se genera cuando se reclama el Job y nunca se almacena.
 Está limitado al único proyecto al que pertenece el Job, es solo de descarga, y es de corta duración,
 de modo que un Runner comprometido solo puede descargar Images del proyecto del Job que reclamó.
+
+En el canal de actualización `stable`, se envía un `update` cuando la versión del Runner difiere de la versión del servidor.
+En el canal de actualización `canary`, `version` es `canary`
+y se envía un `update` cuando la suma de comprobación del binario reportada por el propio Runner
+difiere de la compilación canary continua publicada.

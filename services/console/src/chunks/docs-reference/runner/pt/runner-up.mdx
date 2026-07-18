@@ -53,6 +53,16 @@ Desabilita as atualizações automáticas do servidor.
 Por padrão, o runner se atualiza entre os Jobs quando o servidor oferece uma nova versão.
 Também pode ser definida com a variável de ambiente `BENCHER_NO_AUTO_UPDATE`.
 
+### `--update-channel <UPDATE_CHANNEL>`
+
+O canal de atualização para as atualizações automáticas, `stable` ou `canary`.
+Por padrão, `stable` é usado.
+O canal `stable` atualiza para releases versionadas.
+O canal `canary` acompanha o build canary contínuo,
+que é reconstruído sempre que o runner muda em um deploy do Bencher Cloud.
+Também pode ser definido com a variável de ambiente `BENCHER_UPDATE_CHANNEL`.
+Conflita com `--no-auto-update`.
+
 ### `--max-download-size <MAX_DOWNLOAD_SIZE>`
 
 O tamanho máximo de download em bytes para binários de auto-atualização.

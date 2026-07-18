@@ -1302,3 +1302,8 @@ export enum RecaptchaAction {
 	Login = "login",
 }
 
+export enum UpdateChannel {
+	Stable = "stable",
+	Canary = "canary",
+}
+

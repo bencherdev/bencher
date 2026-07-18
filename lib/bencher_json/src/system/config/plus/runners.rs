@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use bencher_valid::{GracePeriod, HeartbeatTimeout};
+use bencher_valid::{GracePeriod, HeartbeatTimeout, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -35,6 +35,10 @@ pub struct JsonRunners {
     /// Defaults to 60 seconds.
     #[serde(default = "default_job_timeout_grace_period")]
     pub job_timeout_grace_period: GracePeriod,
+    /// Base URL for runner self-update downloads.
+    /// Defaults to the Bencher GitHub Releases download URL.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub update_base_url: Option<Url>,
 }
 
 fn default_heartbeat_timeout() -> HeartbeatTimeout {

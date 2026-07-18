@@ -13,3 +13,8 @@
 `job` 消息中的 OCI 拉取令牌在 Job 被认领时生成，且从不存储。
 它的作用域限定在 Job 所属的单个 project，仅可拉取，且短期有效，
 因此一个被攻陷的 Runner 只能拉取其所认领 Job 对应 project 的 Image。
+
+在 `stable` 更新通道上，当 Runner 的版本与服务器版本不同时，会发送 `update`。
+在 `canary` 更新通道上，`version` 为 `canary`，
+并且当 Runner 自行报告的二进制校验和
+与已发布的滚动 canary 构建不同时，会发送 `update`。

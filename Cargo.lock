@@ -1129,6 +1129,7 @@ dependencies = [
  "slog",
  "tempfile",
  "tokio",
+ "url",
 ]
 
 [[package]]
@@ -1582,6 +1583,7 @@ dependencies = [
  "bencher_runner",
  "camino",
  "clap",
+ "pretty_assertions",
  "rustls",
  "thiserror 2.0.18",
  "url",

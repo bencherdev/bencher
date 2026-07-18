@@ -122,12 +122,65 @@ jobs:
   runner:
     name: Runner
     needs: changes
-    if: ${{ github.ref != 'refs/heads/cloud' && (needs.changes.outputs.runner == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) }}
+    # On cloud pushes, the runner is only rebuilt when runner code changed
+    # (avoids pointless canary fleet updates) and skips the scenario tests
+    # (the same commits already ran them on devel).
+    # "Changed" on cloud pushes means changed since the last deploy: the
+    # changes filter has no explicit base, so it diffs against the default
+    # branch (main), which CI resets to cloud after each successful deploy.
+    if: ${{ needs.changes.outputs.runner == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') }}
     uses: ./.github/workflows/runner.yml
     with:
       mold-version: "2.34.1"
       zig-version: "0.13.0"
       zig-build-version: "0.19.3"
+      build-only: ${{ github.ref == 'refs/heads/cloud' }}
+
+  # Publish the cloud branch runner build to the rolling `canary` prerelease.
+  # Canary channel runners poll this release's checksums and self-update when
+  # the published binary changes.
+  publish_runner_canary:
+    name: Publish Runner Canary
+    permissions:
+      contents: write
+    needs: runner
+    if: ${{ !failure() && !cancelled() && github.ref == 'refs/heads/cloud' && needs.runner.result == 'success' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download Runner Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: runner-canary-linux-*
+          merge-multiple: true
+      - name: Publish to canary prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if ! gh release view canary > /dev/null 2>&1; then
+            gh release create canary \
+              --prerelease \
+              --latest=false \
+              --target "$GITHUB_SHA" \
+              --title "Runner Canary" \
+              --notes "Rolling prerelease of the runner, rebuilt on cloud branch deploys."
+          fi
+          # Binaries first, checksums last: the server triggers updates off
+          # the .sha256 files, so a partial upload never advertises a binary
+          # that is not yet in place.
+          gh release upload canary --clobber \
+            runner-canary-linux-x86-64 \
+            runner-canary-linux-arm-64
+          gh release upload canary --clobber \
+            runner-canary-linux-x86-64.sha256 \
+            runner-canary-linux-arm-64.sha256
+          # Keep the canary tag pointing at the commit the assets were built
+          # from. Downloads are by asset, so this is purely for humans
+          # inspecting the release; tag moves do not trigger CI (tags: v**).
+          gh api --method PATCH "repos/{owner}/{repo}/git/refs/tags/canary" \
+            -f "sha=$GITHUB_SHA" -F force=true > /dev/null
+          gh release edit canary --notes "Rolling prerelease of the runner, rebuilt on cloud branch deploys. Currently built from $GITHUB_SHA."
 
   test:
     name: Test
@@ -232,7 +285,7 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [lint, cli, runner, test, build, docker, deploy, release]
+    needs: [lint, cli, runner, publish_runner_canary, test, build, docker, deploy, release]
     runs-on: ubuntu-22.04
     steps:
       - name: Check all jobs passed
@@ -247,6 +300,10 @@ jobs:
           fi
           if [[ "${{ needs.runner.result }}" != "success" && "${{ needs.runner.result }}" != "skipped" ]]; then
             echo "Runner failed"
+            exit 1
+          fi
+          if [[ "${{ needs.publish_runner_canary.result }}" != "success" && "${{ needs.publish_runner_canary.result }}" != "skipped" ]]; then
+            echo "Publish Runner Canary failed"
             exit 1
           fi
           if [[ "${{ needs.test.result }}" != "success" && "${{ needs.test.result }}" != "skipped" ]]; then

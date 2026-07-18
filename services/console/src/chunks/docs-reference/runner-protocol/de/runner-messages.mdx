@@ -4,7 +4,7 @@ Nachrichten, die vom Runner an den Server gesendet werden.
 
 | Event       | Beschreibung                                       | Payload                                                                 |
 | ----------- | -------------------------------------------------- | ----------------------------------------------------------------------- |
-| `ready`     | Der Runner ist im Leerlauf und fordert einen Job an | Optionales `poll_timeout` (1-900s) und `runner`-Metadaten (`os`, `arch`, `version`) |
+| `ready`     | Der Runner ist im Leerlauf und fordert einen Job an | Optionales `poll_timeout` (1-900s) und `runner`-Metadaten (`os`, `arch`, `version`, optionaler Update-`channel` und optionale Binary-`checksum`) |
 | `running`   | Job-Setup ist abgeschlossen und der Benchmark startet | Keine                                                                |
 | `heartbeat` | Periodisches Lebenszeichen (etwa einmal pro Sekunde) | Keine                                                                   |
 | `completed` | Der Benchmark wurde erfolgreich abgeschlossen      | `job` (Job-UUID) und `results` (Ausgabe pro Iteration)                  |

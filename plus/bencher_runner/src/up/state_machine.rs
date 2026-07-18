@@ -647,6 +647,8 @@ mod tests {
                 os: OperatingSystem::Linux,
                 arch: Architecture::X86_64,
                 version: bencher_json::BENCHER_API_VERSION.to_owned(),
+                channel: None,
+                checksum: None,
             }),
         )
     }
@@ -1244,6 +1246,8 @@ mod tests {
                 os: OperatingSystem::Linux,
                 arch: Architecture::X86_64,
                 version: bencher_json::BENCHER_API_VERSION.to_owned(),
+                channel: None,
+                checksum: None,
             }),
         );
         let effects = sm.step(Input::Connected);

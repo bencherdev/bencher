@@ -45,6 +45,7 @@ sha2 = { workspace = true, optional = true }
 slog.workspace = true
 tempfile.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+url.workspace = true
 
 [lints]
 workspace = true

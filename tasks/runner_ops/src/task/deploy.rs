@@ -1,4 +1,4 @@
-use bencher_json::{RunnerResourceId, Secret};
+use bencher_json::{RunnerResourceId, Secret, UpdateChannel};
 
 use super::deploy_setup;
 use super::download;
@@ -13,6 +13,7 @@ pub struct Deploy {
     host: url::Url,
     runner: RunnerResourceId,
     key: Secret,
+    update_channel: Option<UpdateChannel>,
     run_id: Option<u64>,
 }
 
@@ -27,14 +28,17 @@ impl TryFrom<TaskDeploy> for Deploy {
             user,
             key,
             host,
+            update_channel,
             run_id,
         } = task;
-        let (ssh, host, runner, key) = merge_ssh_with_extras(runner, server, ssh, user, key, host)?;
+        let (ssh, host, runner, key, update_channel) =
+            merge_ssh_with_extras(runner, server, ssh, user, key, host, update_channel)?;
         Ok(Self {
             ssh,
             host,
             runner,
             key,
+            update_channel,
             run_id,
         })
     }
@@ -47,11 +51,12 @@ impl Deploy {
             host,
             runner,
             key,
+            update_channel,
             run_id,
         } = self;
         let (runner_binary, _temp_dir) = download::download(run_id)?;
         deploy_setup::deploy(&ssh, Some(runner_binary.as_path()))?;
-        let start = Start::new(ssh, host, runner, key, false);
+        let start = Start::new(ssh, host, runner, key, update_channel, false);
         start.exec()?;
         Ok(())
     }

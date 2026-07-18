@@ -28,6 +28,9 @@ rustls = { workspace = true, optional = true }
 thiserror.workspace = true
 url = { workspace = true, optional = true }
 
+[dev-dependencies]
+pretty_assertions.workspace = true
+
 [lints]
 workspace = true
 

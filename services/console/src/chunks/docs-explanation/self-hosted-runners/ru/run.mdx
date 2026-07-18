@@ -25,6 +25,9 @@ runner up
 опрашивает на наличие Job, соответствующих его Spec, выполняет каждую и сообщает результаты обратно.
 Соединение остаётся открытым между Job,
 и бинарный файл [обновляет себя][runner up] между Job, когда доступна новая версия.
+По умолчанию Runner следует [каналу обновлений][update channel] `stable`
+и обновляется только до версионированных релизов.
+Канал `canary` вместо этого отслеживает скользящую canary-сборку, развёрнутую в Bencher Cloud.
 
 По умолчанию Runner отклоняет любую Job, чей Spec не имеет [Sandbox][sandbox].
 Чтобы разрешить Runner выполнять не изолированные Job напрямую на хосте,
@@ -46,6 +49,7 @@ runner up
 а сообщения, которыми обмениваются с сервером, — в справочнике по [Runner Protocol][runner protocol].
 
 [runner up]: /ru/docs/reference/runner/#runner-up
+[update channel]: /ru/docs/reference/runner/#--update-channel-update_channel
 [runner reference]: /ru/docs/reference/runner/
 [runner protocol]: /ru/docs/reference/runner-protocol/
 [sandbox]: /ru/docs/explanation/bare-metal/#sandbox

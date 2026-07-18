@@ -85,6 +85,9 @@ pub enum ConfigTxError {
     #[error("Failed to get server ID: {0}")]
     ServerId(dropshot::HttpError),
     #[cfg(feature = "plus")]
+    #[error("Invalid runner update base URL: {0}")]
+    RunnerUpdateBaseUrl(bencher_json::ValidError),
+    #[cfg(feature = "plus")]
     #[error("Failed to spawn stats: {0}")]
     SpawnStats(dropshot::HttpError),
 }
@@ -290,6 +293,13 @@ async fn into_context(
                 u64::from(u32::from(r.job_timeout_grace_period))
             }),
     );
+    #[cfg(feature = "plus")]
+    let runner_update_base_url = plus
+        .as_ref()
+        .and_then(|p| p.runners.as_ref())
+        .and_then(|r| r.update_base_url.clone())
+        .map(|url| url.try_into().map_err(ConfigTxError::RunnerUpdateBaseUrl))
+        .transpose()?;
 
     info!(log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
@@ -359,6 +369,8 @@ async fn into_context(
         job_timeout_grace_period,
         #[cfg(feature = "plus")]
         heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
+        #[cfg(feature = "plus")]
+        runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
         #[cfg(feature = "plus")]
         shutdown: bencher_schema::context::CancellationToken::new(),
     })

@@ -541,6 +541,7 @@ mod tests {
             sandbox_log_level: crate::SandboxLogLevel::default(),
             allow_no_sandbox: false,
             no_auto_update: false,
+            update_channel: bencher_valid::UpdateChannel::default(),
             max_download_size: None,
         }
     }

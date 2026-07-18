@@ -13,3 +13,8 @@ Mensagens enviadas do servidor para o Runner.
 O token de pull OCI em uma mensagem `job` é gerado quando o Job é reivindicado e nunca é armazenado.
 Ele é restrito ao único projeto ao qual o Job pertence, é somente para pull e é de curta duração,
 de modo que um Runner comprometido só pode baixar Images do projeto do Job que reivindicou.
+
+No canal de atualização `stable`, um `update` é enviado quando a versão do Runner difere da versão do servidor.
+No canal de atualização `canary`, `version` é `canary`
+e um `update` é enviado quando o checksum do binário reportado pelo próprio Runner
+difere do build canary contínuo publicado.
