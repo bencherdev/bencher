@@ -140,8 +140,13 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     // Warn about host conditions that limit benchmark accuracy (Linux only)
     preflight::print_host_warnings();
 
+    // Serialize host-global tuning across runner processes. Declared
+    // before the guard so the lock releases only after restore completes.
+    let host_lock = crate::tuning::HostTuningLock::acquire();
+    let tuning = host_lock.effective_tuning(&args.tuning);
+
     // Apply host tuning - guard restores settings on drop (no-op on non-Linux)
-    let mut tuning_guard = crate::tuning::apply(&args.tuning);
+    let mut tuning_guard = crate::tuning::apply(&tuning);
 
     let mut config = build_config_from_run_args(args)?;
 
@@ -153,7 +158,7 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     #[cfg(target_os = "linux")]
     {
         let cpu_layout = crate::cpu::CpuLayout::detect();
-        crate::tuning::apply_cpu_scoped(&args.tuning, &cpu_layout, &mut tuning_guard);
+        crate::tuning::apply_cpu_scoped(&tuning, &cpu_layout, &mut tuning_guard);
         if cpu_layout.has_isolation() {
             println!(
                 "  CPU isolation: housekeeping={}, benchmark={}",

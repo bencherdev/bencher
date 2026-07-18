@@ -81,11 +81,7 @@ fn steer_existing_irqs(guard: &mut TuningGuard, layout: &CpuLayout, root: &Utf8P
         }
 
         moved += 1;
-        guard.saved.push(super::SavedSetting {
-            path: affinity_path,
-            value: current,
-            label: format!("IRQ {name_str} affinity"),
-        });
+        guard.save_restore(affinity_path, current, format!("IRQ {name_str} affinity"));
     }
 
     println!(

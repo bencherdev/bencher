@@ -8,6 +8,8 @@
 //! leave the host stuck in polling mode. This works on both x86 and ARM,
 //! unlike per-cpu `cpuidle/state*/disable` writes.
 
+use camino::Utf8Path;
+
 use super::TuningGuard;
 
 /// PM `QoS` device node.
@@ -24,10 +26,10 @@ const ZERO_LATENCY: [u8; 4] = [0; 4];
 /// The opened file is pushed onto the guard so the constraint stays active
 /// until the guard drops. Missing device nodes (e.g., kernels without
 /// `CONFIG_CPU_IDLE`) are skipped with an informational message.
-pub(super) fn hold_dma_latency(guard: &mut TuningGuard, path: &str) {
+pub(super) fn hold_dma_latency(guard: &mut TuningGuard, path: &Utf8Path) {
     use std::io::Write as _;
 
-    if !std::path::Path::new(path).exists() {
+    if !path.exists() {
         println!("  Tuning: C-states - skipped (path not found)");
         return;
     }
@@ -67,7 +69,7 @@ mod tests {
         std::fs::write(&path, [0xffu8; 4]).unwrap();
 
         let mut guard = empty_guard();
-        hold_dma_latency(&mut guard, path.to_str().unwrap());
+        hold_dma_latency(&mut guard, Utf8Path::new(path.to_str().unwrap()));
 
         assert_eq!(guard.held_fds.len(), 1);
         // The write starts at offset 0 and covers all 4 original bytes.
@@ -78,7 +80,7 @@ mod tests {
     #[test]
     fn skips_missing_path() {
         let mut guard = empty_guard();
-        hold_dma_latency(&mut guard, "/nonexistent/cpu_dma_latency");
+        hold_dma_latency(&mut guard, Utf8Path::new("/nonexistent/cpu_dma_latency"));
         assert!(guard.held_fds.is_empty());
     }
 
@@ -89,7 +91,7 @@ mod tests {
         std::fs::write(&path, []).unwrap();
 
         let mut guard = empty_guard();
-        hold_dma_latency(&mut guard, path.to_str().unwrap());
+        hold_dma_latency(&mut guard, Utf8Path::new(path.to_str().unwrap()));
         assert_eq!(guard.held_fds.len(), 1);
         // Dropping the guard must not panic and releases the fd.
         drop(guard);

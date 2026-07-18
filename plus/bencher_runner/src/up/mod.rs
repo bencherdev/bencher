@@ -104,10 +104,15 @@ impl Up {
         // Warn about host conditions that limit benchmark accuracy (Linux only)
         preflight::print_host_warnings();
 
+        // Serialize host-global tuning across runner processes. Declared
+        // before the guard so the lock releases only after restore completes.
+        let host_lock = crate::tuning::HostTuningLock::acquire();
+        let tuning = host_lock.effective_tuning(&self.config.tuning);
+
         // Apply host tuning - guard restores settings on drop (no-op on non-Linux).
         // This must happen before CPU layout detection so that SMT changes
         // are reflected in the core count.
-        let mut tuning_guard = crate::tuning::apply(&self.config.tuning);
+        let mut tuning_guard = crate::tuning::apply(&tuning);
 
         // Re-detect CPU layout after tuning (SMT may have changed core count).
         // Linux-only: CpuLayout::detect() reads /sys/devices which only exists on Linux.
@@ -115,7 +120,7 @@ impl Up {
         {
             self.config.cpu_layout = Some(CpuLayout::detect());
             if let Some(cpu_layout) = &self.config.cpu_layout {
-                crate::tuning::apply_cpu_scoped(&self.config.tuning, cpu_layout, &mut tuning_guard);
+                crate::tuning::apply_cpu_scoped(&tuning, cpu_layout, &mut tuning_guard);
                 if cpu_layout.has_isolation() {
                     println!(
                         "  CPU isolation: housekeeping={}, benchmark={}",

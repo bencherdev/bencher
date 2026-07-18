@@ -38,7 +38,7 @@ impl std::fmt::Display for PreflightWarning {
             ),
             Self::NoIsolationBootArgs => write!(
                 f,
-                "kernel booted without `isolcpus=`/`nohz_full=`; using a runtime cpuset partition as fallback (for full isolation add boot args `isolcpus= nohz_full= rcu_nocbs=` listing the benchmark cores)"
+                "kernel booted without `isolcpus=`/`nohz_full=`; for full isolation add boot args `isolcpus= nohz_full= rcu_nocbs=` listing the benchmark cores (when tuning is enabled, the runtime cpuset partition compensates in part)"
             ),
         }
     }

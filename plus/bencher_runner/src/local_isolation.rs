@@ -163,6 +163,17 @@ impl LocalIsolation {
             .as_ref()
             .and_then(|cgroup| crate::metrics::read_cgroup_metrics(cgroup.path()))
     }
+
+    /// SIGKILL every process left in the run's cgroup (best-effort).
+    ///
+    /// On timeout or cancellation only the direct child is killed by the
+    /// wait loop; grandchildren it spawned survive on the benchmark cores
+    /// and block cgroup removal. `cgroup.kill` reaps the whole subtree.
+    pub(crate) fn kill_all(&self) {
+        if let Some(cgroup) = &self.cgroup {
+            cgroup.kill_all();
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +199,8 @@ impl LocalIsolation {
     pub(crate) fn read_metrics(&self) -> Option<CgroupMetrics> {
         None
     }
+
+    pub(crate) fn kill_all(&self) {}
 }
 
 #[cfg(test)]
@@ -197,6 +210,8 @@ mod tests {
     #[test]
     fn no_layout_is_noop() {
         let isolation = LocalIsolation::prepare(None);
+        // Without a cgroup, killing the subtree is a no-op.
+        isolation.kill_all();
         assert!(isolation.read_metrics().is_none());
         #[cfg(target_os = "linux")]
         {

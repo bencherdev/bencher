@@ -17,10 +17,11 @@
 //! `/dev/cpu_dma_latency` fd releases its PM `QoS` constraint when the
 //! process dies, and per-run cgroups are removed by their own cleanup.
 //!
-//! Tuning also assumes a single runner process per host: the sysctls,
-//! IRQ affinities, THP mode, and cpuset partition are host-global, so a
-//! second concurrent runner's shutdown restores them out from under the
-//! first.
+//! Tuning requires a single runner process per host: the sysctls, IRQ
+//! affinities, THP mode, and cpuset partition are host-global, so a
+//! second concurrent runner's shutdown would restore them out from under
+//! the first. [`HostTuningLock`] enforces this: callers acquire it before
+//! [`apply`], and a contended lock disables host tuning for that process.
 
 #![cfg_attr(
     target_os = "linux",
@@ -29,13 +30,17 @@
 
 #[cfg(target_os = "linux")]
 mod dma_latency;
+mod host_lock;
 #[cfg(target_os = "linux")]
 mod kernel_work;
+#[cfg(target_os = "linux")]
+mod partition;
 mod perf_event_paranoid;
 pub mod preflight;
 mod swappiness;
 mod thp;
 
+pub use host_lock::HostTuningLock;
 pub use perf_event_paranoid::PerfEventParanoid;
 pub use swappiness::Swappiness;
 pub use thp::{ParseThpModeError, ThpMode};
@@ -268,7 +273,7 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
     }
 
     if config.disable_cstates {
-        dma_latency::hold_dma_latency(&mut guard, dma_latency::CPU_DMA_LATENCY);
+        dma_latency::hold_dma_latency(&mut guard, Utf8Path::new(dma_latency::CPU_DMA_LATENCY));
     }
 
     if let Some(value) = config.thp.sysfs_value() {
@@ -297,8 +302,8 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
 #[cfg(target_os = "linux")]
 pub fn apply_cpu_scoped(config: &TuningConfig, layout: &CpuLayout, guard: &mut TuningGuard) {
     if config.cpuset_partition && layout.has_isolation() {
-        let partition = crate::jail::BencherPartition::new(Utf8Path::new("/sys/fs/cgroup"));
-        let level = partition.apply(layout, guard);
+        let bencher = partition::BencherPartition::new(Utf8Path::new("/sys/fs/cgroup"));
+        let level = bencher.apply(layout, guard);
         println!("  Tuning: cpuset partition - achieved level '{level}'");
     }
 

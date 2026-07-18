@@ -222,12 +222,13 @@ fn format_cpuset(cpus: &[usize]) -> String {
 /// `/sys/devices/virtual/workqueue/cpumask`. Words are ordered most
 /// significant first; all words after the first are zero-padded to
 /// 8 hex digits (e.g., `[0, 1]` -> `"3"`, `[32]` -> `"1,00000000"`).
+#[cfg(target_os = "linux")]
 #[must_use]
 #[expect(
     clippy::integer_division,
     reason = "dividing CPU IDs into 32-bit mask words"
 )]
-pub fn format_cpumask(cpus: &[usize]) -> String {
+pub(crate) fn format_cpumask(cpus: &[usize]) -> String {
     use std::fmt::Write as _;
 
     let Some(&max) = cpus.iter().max() else {
@@ -440,41 +441,49 @@ mod tests {
         assert_eq!(format_cpuset(&[5, 3, 4, 2]), "2-5");
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn format_cpumask_empty() {
         assert_eq!(format_cpumask(&[]), "0");
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn format_cpumask_single() {
         assert_eq!(format_cpumask(&[0]), "1");
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn format_cpumask_low_cores() {
         assert_eq!(format_cpumask(&[0, 1]), "3");
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn format_cpumask_full_byte() {
         assert_eq!(format_cpumask(&[0, 1, 2, 3, 4, 5, 6, 7]), "ff");
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn format_cpumask_high_bit() {
         assert_eq!(format_cpumask(&[31]), "80000000");
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn format_cpumask_second_word() {
         assert_eq!(format_cpumask(&[32]), "1,00000000");
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn format_cpumask_spanning_words() {
         assert_eq!(format_cpumask(&[0, 32, 33]), "3,00000001");
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn format_cpumask_third_word() {
         assert_eq!(format_cpumask(&[64, 1]), "1,00000000,00000002");

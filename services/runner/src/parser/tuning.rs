@@ -76,8 +76,9 @@ pub struct CliTuning {
     #[arg(long, allow_hyphen_values = true)]
     pub perf_event_paranoid: Option<i32>,
 
-    /// Set host transparent hugepage mode (default: never).
-    /// Use "leave" to preserve the host configuration.
+    /// Set host transparent hugepage mode: never, madvise, always,
+    /// or leave (default: never). Use "leave" to preserve the host
+    /// configuration.
     #[arg(long)]
     pub thp: Option<ThpMode>,
 }

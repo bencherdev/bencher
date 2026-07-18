@@ -117,6 +117,9 @@ pub fn local_execute(
                 e,
                 RunnerError::Execution(crate::error::ExecutionError::Timeout(_))
             );
+            // Reap any grandchildren the direct-child kill missed before
+            // reading metrics and removing the cgroup.
+            isolation.kill_all();
             emit_run_metrics(start.elapsed(), timed_out, &isolation);
             return Err(e);
         },
