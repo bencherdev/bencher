@@ -63,30 +63,52 @@ pub async fn run_post(
     )
     .await?;
 
-    let json = match api_actor {
-        ApiActor::ProjectKey(project_key_actor) => post_inner_project_key(
-            &rqctx.log,
-            rqctx.context(),
-            project_key_actor,
-            #[cfg(feature = "plus")]
-            rqctx.request.headers(),
-            body.into_inner(),
-        )
-        .await
-        .map_err(with_auth_hint)?,
-        ApiActor::Public(public_user) => post_inner(
-            &rqctx.log,
-            rqctx.context(),
-            &public_user,
-            #[cfg(feature = "plus")]
-            rqctx.request.headers(),
-            body.into_inner(),
-        )
-        .await
-        .map_err(with_auth_hint)?,
-    };
+    let json = post_run(
+        &rqctx.log,
+        rqctx.context(),
+        api_actor,
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        body.into_inner(),
+    )
+    .await
+    .map_err(with_auth_hint)?;
 
     Ok(Post::auth_response_created(json))
+}
+
+/// Dispatch a run submission for an [`ApiActor`].
+pub async fn post_run(
+    log: &Logger,
+    context: &ApiContext,
+    api_actor: ApiActor,
+    #[cfg(feature = "plus")] headers: &http::HeaderMap,
+    json_run: JsonNewRun,
+) -> Result<JsonReport, HttpError> {
+    match api_actor {
+        ApiActor::ProjectKey(project_key_actor) => {
+            post_inner_project_key(
+                log,
+                context,
+                project_key_actor,
+                #[cfg(feature = "plus")]
+                headers,
+                json_run,
+            )
+            .await
+        },
+        ApiActor::Public(public_user) => {
+            post_inner(
+                log,
+                context,
+                &public_user,
+                #[cfg(feature = "plus")]
+                headers,
+                json_run,
+            )
+            .await
+        },
+    }
 }
 
 async fn post_inner(

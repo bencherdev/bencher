@@ -86,3 +86,26 @@ Default builds include all features. Build without: `cargo build --no-default-fe
 
 The API server includes an OCI Distribution Spec compliant container registry,
 registered at `/v2/` paths.
+
+## MCP Server (Plus Feature)
+
+The API server includes a stateless MCP (Model Context Protocol) server
+(`plus/api_mcp`), registered at `POST /mcp` (`unpublished`, so it does not
+appear in the OpenAPI spec). On Bencher Cloud it is fronted by
+`mcp.bencher.dev`, a DNS alias for the API server; routing is purely path-based.
+
+Its tools call the same `pub` `*_inner` functions as the REST endpoints in
+`lib/api_projects` and `lib/api_run`, and the tool surface deliberately mirrors
+what a project API key (`bencher_run_`) can do.
+
+### MCP Sync
+
+When changing any `ApiActor`-accepting endpoint (its params, semantics, or the
+set of operations a `bencher_run_` key can perform), also update:
+
+- The corresponding tool in `plus/api_mcp/src/tools/`
+- The Bencher skill docs: `skills/bencher/mcp.md`
+
+MCP tool input types must not be recursive: tool schemas are generated with
+`schemars` `inline_subschemas`, which recurses without bound, so a recursive
+input type would overflow the stack at schema generation time.

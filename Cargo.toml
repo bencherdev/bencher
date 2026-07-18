@@ -51,6 +51,7 @@ api_run = { path = "lib/api_run" }
 api_server = { path = "lib/api_server" }
 api_users = { path = "lib/api_users" }
 # plus API endpoints
+api_mcp = { path = "plus/api_mcp" }
 api_oci = { path = "plus/api_oci" }
 # plus
 api_runners = { path = "plus/api_runners" }
@@ -149,6 +150,7 @@ rand = "0.10"
 regex = "1.12"
 regex-lite = "0.1"
 reqwest = { version = "0.13", default-features = false }
+rmcp = { version = "2.2", default-features = false }
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs"] }
 rusqlite = "0.38"
 rust_decimal = "1.40"
@@ -167,6 +169,7 @@ slog-term = "2.9"
 slug = "0.1"
 statrs = "0.18"
 strip-ansi-escapes = "0.2"
+strum = { version = "0.27", features = ["derive"] }
 syn = "2.0"
 tabled = "0.20"
 tar = "0.4"

@@ -113,7 +113,7 @@ pub async fn proj_branches_get(
     ))
 }
 
-async fn get_ls_inner(
+pub async fn get_ls_inner(
     context: &ApiContext,
     api_actor: &ApiActor,
     path_params: ProjBranchesParams,
@@ -240,7 +240,7 @@ pub async fn proj_branch_post(
     Ok(Post::auth_response_created(json))
 }
 
-async fn post_inner(
+pub async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     path_params: ProjBranchesParams,
@@ -329,7 +329,7 @@ pub async fn proj_branch_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_one_inner(
+pub async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjBranchParams,
     query_params: ProjBranchQuery,
@@ -408,7 +408,7 @@ pub async fn proj_branch_patch(
     Ok(Patch::auth_response_ok(json))
 }
 
-async fn patch_inner(
+pub async fn patch_inner(
     log: &Logger,
     context: &ApiContext,
     api_actor: &ApiActor,

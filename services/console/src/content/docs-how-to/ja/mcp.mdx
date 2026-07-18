@@ -1,0 +1,66 @@
+---
+title: "Bencher MCP"
+description: "ホスト型 MCP サーバーで AI エージェントやアシスタントを Bencher に接続し、ベンチマークデータの照会と結果の送信を行います"
+heading: "Bencher MCP の使い方"
+published: "2026-07-18T07:00:00Z"
+modified: "2026-07-18T07:00:00Z"
+sortOrder: 11
+---
+
+import McpClaudeCode from "../../../chunks/docs-how-to/mcp/mcp-claude-code.mdx";
+import McpJson from "../../../chunks/docs-how-to/mcp/mcp-json.mdx";
+
+Bencher MCP はホスト型の [Model Context Protocol](https://modelcontextprotocol.io)（MCP）サーバーです。
+`bencher` CLI をインストールしなくても、AI エージェントやアシスタントがベンチマークデータを照会し、ベンチマーク結果を送信できます。
+
+`bencher` CLI が利用できる場合は、引き続き CLI が Bencher を使う推奨の方法です。
+[`bencher run`](/ja/docs/explanation/bencher-run/) はベンチマークハーネスのアダプター、イテレーション、CI 連携を処理します。
+CLI がインストールされていない場合や、MCP クライアントがシェルコマンドを実行できない場合に Bencher MCP を使用してください。
+
+## 接続
+
+| デプロイメント | URL |
+| :--- | :--- |
+| Bencher Cloud | `https://mcp.bencher.dev/mcp` |
+| Bencher Self-Hosted | `https://<api-host>/mcp` |
+
+たとえば、[Claude Code](https://docs.anthropic.com/en/docs/claude-code) から接続するには:
+
+<McpClaudeCode />
+
+または、汎用的な MCP クライアント設定を使用します:
+
+<McpJson />
+
+## 認証
+
+Bencher MCP は Bencher API と同じ `Authorization: Bearer` 認証情報を受け付けます:
+プロジェクト API キー（`bencher_run_*`）またはユーザー API キー（`bencher_user_*`）です。
+パブリックプロジェクトは認証情報なしで読み取れます。
+OAuth はまだサポートされていないため、リモートサーバーに対して OAuth のみをサポートする MCP クライアントは現時点では接続できません。
+
+プロジェクト API キーは単一のプロジェクトにスコープされるため、ほとんどのエージェントに最適な選択です。
+ユーザー API キーはユーザーのすべてのプロジェクトにアクセスできます。
+
+## ツール
+
+ツールの範囲は、プロジェクト API キー（`bencher_run_*`）で実行できる操作を反映しています:
+プロジェクトスコープの読み取りと、非破壊的な書き込みです。
+削除やリネームのツールは存在せず、プロジェクト API キーではアラートの更新はステータスのみに制限されます。
+ほとんどのツールは `project` 引数を取り、プロジェクトのスラッグまたは UUID を受け付けます。
+
+| ツール | 用途 |
+| :--- | :--- |
+| `submit_run` | ベンチマークハーネスの生の出力を送信します。サーバーが解析し、ブランチ、テストベッド、しきい値を必要に応じて自動作成します |
+| `query_perf`, `perf_image` | ベンチマークメトリクスの推移を照会し、パフォーマンスプロット画像を生成します |
+| `list_projects`, `view_project` | プロジェクト |
+| `list_reports`, `create_report`, `view_report` | レポート |
+| `list_branches`, `create_branch`, `view_branch`, `update_branch` | ブランチ |
+| `list_testbeds`, `create_testbed`, `view_testbed`, `update_testbed` | テストベッド |
+| `list_benchmarks`, `create_benchmark`, `view_benchmark`, `update_benchmark` | ベンチマーク |
+| `list_measures`, `create_measure`, `view_measure`, `update_measure` | メジャー |
+| `list_thresholds`, `create_threshold`, `view_threshold`, `update_threshold` | しきい値 |
+| `list_alerts`, `view_alert`, `update_alert` | アラート |
+| `view_metric` | 単一のメトリクスとその完全なコンテキスト |
+| `list_plots`, `view_plot` | 保存済みダッシュボードプロット |
+| `list_jobs`, `view_job` | ベアメタルランナージョブ |

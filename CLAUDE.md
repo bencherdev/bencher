@@ -194,10 +194,8 @@ Typeshare walks the whole repo and errors on dangling symlinks; delete the symli
 ## Docker
 
 When adding a new crate, update all four `Dockerfile`s:
-- [`services/api/Dockerfile`](./services/api/Dockerfile)
-- [`services/cli/Dockerfile`](./services/cli/Dockerfile)
-- [`services/console/Dockerfile`](./services/console/Dockerfile)
-- [`docker/bench.Dockerfile`](./docker/bench.Dockerfile)
+- [`services/api/Dockerfile`](./services/api/Dockerfile) copies the whole workspace (`COPY . .`), so it usually needs no change
+- [`services/cli/Dockerfile`](./services/cli/Dockerfile), [`services/console/Dockerfile`](./services/console/Dockerfile), and [`docker/bench.Dockerfile`](./docker/bench.Dockerfile) stub out unused workspace members with `cargo init --lib`, so each needs a stub line for the new crate
 
 ## CI Path Filters
 

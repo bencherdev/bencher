@@ -128,7 +128,7 @@ pub async fn proj_reports_get(
     ))
 }
 
-async fn get_ls_inner(
+pub async fn get_ls_inner(
     log: &Logger,
     context: &ApiContext,
     path_params: ProjReportsParams,
@@ -317,7 +317,7 @@ pub async fn proj_report_post(
     Ok(Post::auth_response_created(json))
 }
 
-async fn post_inner(
+pub async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     path_params: ProjReportsParams,
@@ -406,7 +406,7 @@ pub async fn proj_report_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_one_inner(
+pub async fn get_one_inner(
     log: &Logger,
     context: &ApiContext,
     path_params: ProjReportParams,

@@ -50,6 +50,9 @@ impl Registrar for Api {
         )?;
 
         #[cfg(feature = "plus")]
+        api_mcp::Api::register(api_description, http_options, is_bencher_cloud)?;
+
+        #[cfg(feature = "plus")]
         api_oci::Api::register(api_description, http_options, is_bencher_cloud)?;
 
         #[cfg(feature = "plus")]

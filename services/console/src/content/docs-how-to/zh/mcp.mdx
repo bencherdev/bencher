@@ -1,0 +1,66 @@
+---
+title: "Bencher MCP"
+description: "通过托管的 MCP 服务器将 AI 代理和助手连接到 Bencher，以查询基准测试数据并提交结果"
+heading: "如何使用 Bencher MCP"
+published: "2026-07-18T07:00:00Z"
+modified: "2026-07-18T07:00:00Z"
+sortOrder: 11
+---
+
+import McpClaudeCode from "../../../chunks/docs-how-to/mcp/mcp-claude-code.mdx";
+import McpJson from "../../../chunks/docs-how-to/mcp/mcp-json.mdx";
+
+Bencher MCP 是一个托管的 [Model Context Protocol](https://modelcontextprotocol.io)（MCP）服务器。
+它让 AI 代理和助手无需安装 `bencher` CLI 即可查询基准测试数据并提交基准测试结果。
+
+当 `bencher` CLI 可用时，它仍然是使用 Bencher 的推荐方式。
+[`bencher run`](/zh/docs/explanation/bencher-run/) 负责处理基准测试工具适配器、迭代运行和 CI 集成。
+当未安装 CLI，或您的 MCP 客户端无法执行 shell 命令时，请使用 Bencher MCP。
+
+## 连接
+
+| 部署方式 | URL |
+| :--- | :--- |
+| Bencher Cloud | `https://mcp.bencher.dev/mcp` |
+| Bencher Self-Hosted | `https://<api-host>/mcp` |
+
+例如，从 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 连接：
+
+<McpClaudeCode />
+
+或使用通用的 MCP 客户端配置：
+
+<McpJson />
+
+## 认证
+
+Bencher MCP 接受与 Bencher API 相同的 `Authorization: Bearer` 凭据：
+项目 API 密钥（`bencher_run_*`）或用户 API 密钥（`bencher_user_*`）。
+公开项目无需任何凭据即可读取。
+目前尚不支持 OAuth，因此仅支持通过 OAuth 连接远程服务器的 MCP 客户端暂时无法连接。
+
+项目 API 密钥的权限范围限定在单个项目内，因此是大多数代理的最佳选择。
+用户 API 密钥可以访问该用户的所有项目。
+
+## 工具
+
+工具范围与项目 API 密钥（`bencher_run_*`）的权限一致：
+项目范围内的读取和非破坏性的写入。
+没有删除或重命名工具，并且使用项目 API 密钥时，警报更新仅限于状态变更。
+大多数工具都接受 `project` 参数，可以是项目的 slug 或 UUID。
+
+| 工具 | 用途 |
+| :--- | :--- |
+| `submit_run` | 提交基准测试工具的原始输出；服务器会解析它，并按需自动创建分支、测试环境和阈值 |
+| `query_perf`, `perf_image` | 查询基准测试指标随时间的变化；生成性能图表图片 |
+| `list_projects`, `view_project` | 项目 |
+| `list_reports`, `create_report`, `view_report` | 报告 |
+| `list_branches`, `create_branch`, `view_branch`, `update_branch` | 分支 |
+| `list_testbeds`, `create_testbed`, `view_testbed`, `update_testbed` | 测试环境 |
+| `list_benchmarks`, `create_benchmark`, `view_benchmark`, `update_benchmark` | 基准测试 |
+| `list_measures`, `create_measure`, `view_measure`, `update_measure` | 度量 |
+| `list_thresholds`, `create_threshold`, `view_threshold`, `update_threshold` | 阈值 |
+| `list_alerts`, `view_alert`, `update_alert` | 警报 |
+| `view_metric` | 带有完整上下文的单个指标 |
+| `list_plots`, `view_plot` | 已保存的仪表板图表 |
+| `list_jobs`, `view_job` | 裸机运行器任务 |

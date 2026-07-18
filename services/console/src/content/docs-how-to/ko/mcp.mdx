@@ -1,0 +1,66 @@
+---
+title: "Bencher MCP"
+description: "호스팅된 MCP 서버로 AI 에이전트와 어시스턴트를 Bencher에 연결하여 벤치마크 데이터를 조회하고 결과를 제출하세요"
+heading: "Bencher MCP 사용 방법"
+published: "2026-07-18T07:00:00Z"
+modified: "2026-07-18T07:00:00Z"
+sortOrder: 11
+---
+
+import McpClaudeCode from "../../../chunks/docs-how-to/mcp/mcp-claude-code.mdx";
+import McpJson from "../../../chunks/docs-how-to/mcp/mcp-json.mdx";
+
+Bencher MCP는 호스팅된 [Model Context Protocol](https://modelcontextprotocol.io)(MCP) 서버입니다.
+`bencher` CLI를 설치하지 않고도 AI 에이전트와 어시스턴트가 벤치마크 데이터를 조회하고 벤치마크 결과를 제출할 수 있습니다.
+
+`bencher` CLI를 사용할 수 있다면 여전히 CLI가 Bencher를 사용하는 권장 방법입니다.
+[`bencher run`](/ko/docs/explanation/bencher-run/)은 벤치마크 하네스 어댑터, 반복 실행, CI 통합을 처리합니다.
+CLI가 설치되어 있지 않거나 MCP 클라이언트가 셸 명령을 실행할 수 없을 때 Bencher MCP를 사용하세요.
+
+## 연결
+
+| 배포 | URL |
+| :--- | :--- |
+| Bencher Cloud | `https://mcp.bencher.dev/mcp` |
+| Bencher Self-Hosted | `https://<api-host>/mcp` |
+
+예를 들어 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)에서 연결하려면:
+
+<McpClaudeCode />
+
+또는 일반적인 MCP 클라이언트 구성을 사용하세요:
+
+<McpJson />
+
+## 인증
+
+Bencher MCP는 Bencher API와 동일한 `Authorization: Bearer` 자격 증명을 허용합니다:
+프로젝트 API 키(`bencher_run_*`) 또는 사용자 API 키(`bencher_user_*`)입니다.
+공개 프로젝트는 자격 증명 없이 읽을 수 있습니다.
+OAuth는 아직 지원되지 않으므로, 원격 서버에 대해 OAuth만 지원하는 MCP 클라이언트는 아직 연결할 수 없습니다.
+
+프로젝트 API 키는 단일 프로젝트로 범위가 제한되므로 대부분의 에이전트에 가장 적합한 선택입니다.
+사용자 API 키는 사용자의 모든 프로젝트에 접근할 수 있습니다.
+
+## 도구
+
+도구 범위는 프로젝트 API 키(`bencher_run_*`)로 수행할 수 있는 작업을 반영합니다:
+프로젝트 범위의 읽기와 비파괴적 쓰기입니다.
+삭제나 이름 변경 도구는 없으며, 프로젝트 API 키로는 알림 업데이트가 상태 변경으로 제한됩니다.
+대부분의 도구는 프로젝트 슬러그 또는 UUID를 받는 `project` 인수를 사용합니다.
+
+| 도구 | 용도 |
+| :--- | :--- |
+| `submit_run` | 벤치마크 하네스의 원시 출력을 제출합니다. 서버가 이를 파싱하고 브랜치, 테스트베드, 임계값을 필요에 따라 자동 생성합니다 |
+| `query_perf`, `perf_image` | 시간에 따른 벤치마크 메트릭을 조회하고 성능 플롯 이미지를 생성합니다 |
+| `list_projects`, `view_project` | 프로젝트 |
+| `list_reports`, `create_report`, `view_report` | 리포트 |
+| `list_branches`, `create_branch`, `view_branch`, `update_branch` | 브랜치 |
+| `list_testbeds`, `create_testbed`, `view_testbed`, `update_testbed` | 테스트베드 |
+| `list_benchmarks`, `create_benchmark`, `view_benchmark`, `update_benchmark` | 벤치마크 |
+| `list_measures`, `create_measure`, `view_measure`, `update_measure` | 메저 |
+| `list_thresholds`, `create_threshold`, `view_threshold`, `update_threshold` | 임계값 |
+| `list_alerts`, `view_alert`, `update_alert` | 알림 |
+| `view_metric` | 전체 컨텍스트를 포함한 단일 메트릭 |
+| `list_plots`, `view_plot` | 저장된 대시보드 플롯 |
+| `list_jobs`, `view_job` | 베어 메탈 러너 작업 |

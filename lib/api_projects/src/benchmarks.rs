@@ -112,7 +112,7 @@ pub async fn proj_benchmarks_get(
     ))
 }
 
-async fn get_ls_inner(
+pub async fn get_ls_inner(
     context: &ApiContext,
     api_actor: &ApiActor,
     path_params: ProjBenchmarksParams,
@@ -223,7 +223,7 @@ pub async fn proj_benchmark_post(
     Ok(Post::auth_response_created(json))
 }
 
-async fn post_inner(
+pub async fn post_inner(
     context: &ApiContext,
     path_params: ProjBenchmarksParams,
     json_benchmark: JsonNewBenchmark,
@@ -295,7 +295,7 @@ pub async fn proj_benchmark_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_one_inner(
+pub async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjBenchmarkParams,
     api_actor: &ApiActor,
@@ -356,7 +356,7 @@ pub async fn proj_benchmark_patch(
     Ok(Patch::auth_response_ok(json))
 }
 
-async fn patch_inner(
+pub async fn patch_inner(
     context: &ApiContext,
     api_actor: &ApiActor,
     path_params: ProjBenchmarkParams,

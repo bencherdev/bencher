@@ -5,8 +5,8 @@ description: >
   benchmark code, track performance, detect regressions, set up CI performance
   checks, run bare metal benchmarks, configure thresholds, or use the bencher CLI.
   Also use when you see BENCHER_API_KEY, BENCHER_API_TOKEN, bencher_run_ or
-  bencher_user_ API keys, bencher CLI usage, bencher.dev URLs, or port 6610
-  (Bencher self-hosted default) in the project.
+  bencher_user_ API keys, bencher CLI usage, bencher.dev URLs, mcp.bencher.dev
+  (Bencher MCP server), or port 6610 (Bencher self-hosted default) in the project.
 argument-hint: [task]
 ---
 
@@ -31,6 +31,7 @@ Choose your workflow:
 | Set up CI regression detection | See [ci.md](./ci.md) |
 | Configure statistical thresholds | See [thresholds.md](./thresholds.md) |
 | Set up a self-hosted Bencher instance | See [self-hosted.md](./self-hosted.md) |
+| Query data via MCP (no CLI required) | See [mcp.md](./mcp.md) |
 | Quick command reference | See [reference.md](./reference.md) |
 
 Simplest possible run (generates mock data to verify setup):
@@ -93,3 +94,7 @@ bencher threshold list <project>
 ```
 
 Use `--format json` on any command for machine-readable output.
+
+Without the CLI, the same data is available through the hosted MCP server
+(a Bencher Plus feature): see [mcp.md](./mcp.md). The CLI remains the
+recommended route when it is installed.
