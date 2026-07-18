@@ -1,6 +1,6 @@
 {
   "name": "bencher",
   "description": "Bencher continuous benchmarking CLI",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "author": { "name": "Bencher" }
 }
