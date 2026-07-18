@@ -15,6 +15,7 @@ import {
 	type JsonProject,
 	Visibility,
 	type XAxis,
+	type YAxis,
 } from "../../../../types/bencher";
 import { isAllowedProjectManage } from "../../../../util/auth";
 import { setPageTitle } from "../../../../util/resource";
@@ -35,6 +36,7 @@ export interface Props {
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
 	x_axis: Accessor<XAxis>;
+	y_axis: Accessor<YAxis>;
 	branches: Accessor<string[]>;
 	testbeds: Accessor<string[]>;
 	benchmarks: Accessor<string[]>;
@@ -99,6 +101,7 @@ const PerfHeader = (props: Props) => {
 				lower_boundary={props.lower_boundary}
 				upper_boundary={props.upper_boundary}
 				x_axis={props.x_axis}
+				y_axis={props.y_axis}
 				branches={props.branches}
 				testbeds={props.testbeds}
 				benchmarks={props.benchmarks}
@@ -118,6 +121,7 @@ const PerfHeader = (props: Props) => {
 				lower_boundary={props.lower_boundary}
 				upper_boundary={props.upper_boundary}
 				x_axis={props.x_axis}
+				y_axis={props.y_axis}
 				branches={props.branches}
 				testbeds={props.testbeds}
 				benchmarks={props.benchmarks}

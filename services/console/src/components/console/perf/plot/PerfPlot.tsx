@@ -11,6 +11,7 @@ import type {
 	JsonPerf,
 	JsonProject,
 	XAxis,
+	YAxis,
 } from "../../../../types/bencher";
 import {
 	type Theme,
@@ -43,6 +44,7 @@ export interface Props {
 	end_date: Accessor<undefined | string>;
 	key: Accessor<boolean>;
 	x_axis: Accessor<XAxis>;
+	y_axis: Accessor<YAxis>;
 	clear: Accessor<boolean>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
@@ -58,6 +60,7 @@ export interface Props {
 	handleTab: (tab: PerfTab) => void;
 	handleKey: (key: boolean) => void;
 	handleXAxis: (x_axis: XAxis) => void;
+	handleYAxis: (y_axis: YAxis) => void;
 	handleClear: (clear: boolean) => void;
 	handleLowerValue: (lower_value: boolean) => void;
 	handleUpperValue: (upper_value: boolean) => void;
@@ -89,6 +92,7 @@ const PerfPlot = (props: Props) => {
 						end_date={props.end_date}
 						refresh={props.refresh}
 						x_axis={props.x_axis}
+						y_axis={props.y_axis}
 						clear={props.clear}
 						lower_value={props.lower_value}
 						upper_value={props.upper_value}
@@ -101,6 +105,7 @@ const PerfPlot = (props: Props) => {
 						handleStartTime={props.handleStartTime}
 						handleEndTime={props.handleEndTime}
 						handleXAxis={props.handleXAxis}
+						handleYAxis={props.handleYAxis}
 						handleClear={props.handleClear}
 						handleLowerValue={props.handleLowerValue}
 						handleUpperValue={props.handleUpperValue}
@@ -117,6 +122,7 @@ const PerfPlot = (props: Props) => {
 									plotId={props.plotId}
 									measures={props.measures}
 									x_axis={props.x_axis}
+									y_axis={props.y_axis}
 									lower_value={props.lower_value}
 									upper_value={props.upper_value}
 									lower_boundary={props.lower_boundary}

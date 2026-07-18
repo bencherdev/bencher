@@ -93,6 +93,10 @@ pub struct CliPlotCreate {
     #[clap(long)]
     pub x_axis: CliXAxis,
 
+    /// The y-axis scale to use for the plot.
+    #[clap(long, default_value = "auto")]
+    pub y_axis: CliYAxis,
+
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.
     #[clap(long, value_name = "SECONDS")]
@@ -128,6 +132,15 @@ pub struct CliPlotCreate {
 pub enum CliXAxis {
     DateTime,
     Version,
+}
+
+/// Supported Y-Axis scales
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliYAxis {
+    Auto,
+    Linear,
+    Log,
 }
 
 #[derive(Parser, Debug)]
@@ -180,6 +193,10 @@ pub struct CliPlotUpdate {
     /// The x-axis to use for the plot.
     #[clap(long)]
     pub x_axis: Option<CliXAxis>,
+
+    /// The y-axis scale to use for the plot.
+    #[clap(long)]
+    pub y_axis: Option<CliYAxis>,
 
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.

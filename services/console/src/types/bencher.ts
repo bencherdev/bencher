@@ -601,6 +601,15 @@ export enum XAxis {
 	Version = "version",
 }
 
+export enum YAxis {
+	/** Automatically adapt the y-axis scale to the data spread. */
+	Auto = "auto",
+	/** A linear y-axis scale that shows true magnitudes. */
+	Linear = "linear",
+	/** A logarithmic y-axis scale. */
+	Log = "log",
+}
+
 export interface JsonNewPlot {
 	/**
 	 * The index of the plot.
@@ -622,6 +631,11 @@ export interface JsonNewPlot {
 	upper_boundary: boolean;
 	/** The x-axis to use for the plot. */
 	x_axis: XAxis;
+	/**
+	 * The y-axis scale to use for the plot.
+	 * Defaults to `auto` when omitted.
+	 */
+	y_axis?: YAxis;
 	/**
 	 * The window of time for the plot, in seconds.
 	 * Metrics outside of this window will be omitted.
@@ -985,6 +999,7 @@ export interface JsonPlot {
 	lower_boundary: boolean;
 	upper_boundary: boolean;
 	x_axis: XAxis;
+	y_axis: YAxis;
 	window: Window;
 	branches: Uuid[];
 	testbeds: Uuid[];
@@ -1316,6 +1331,7 @@ export enum PlotKey {
 	LowerBoundary = "lower_boundary",
 	UpperBoundary = "upper_boundary",
 	XAxis = "x_axis",
+	YAxis = "y_axis",
 }
 
 export enum ProjectPermission {

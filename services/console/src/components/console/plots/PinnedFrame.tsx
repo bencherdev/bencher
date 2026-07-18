@@ -12,6 +12,7 @@ import {
 	type JsonPerfQuery,
 	type JsonPlot,
 	XAxis,
+	YAxis,
 } from "../../../types/bencher";
 import { timeToDateOnlyIso } from "../../../util/convert";
 import { theme } from "../../navbar/theme/util";
@@ -156,6 +157,7 @@ const PinnedFrame = (props: Props) => {
 
 	const [key, setKey] = createSignal(false);
 	const x_axis = createMemo(() => props.plot?.x_axis ?? XAxis.DateTime);
+	const y_axis = createMemo(() => props.plot?.y_axis ?? YAxis.Auto);
 	const clear = createMemo(() => false);
 
 	const lower_value = createMemo(() => props.plot?.lower_value ?? false);
@@ -170,7 +172,9 @@ const PinnedFrame = (props: Props) => {
 	const embed_header = createMemo(() => props.embed?.header === true);
 	const embed_key = createMemo(() => props.embed?.key === true);
 
-	const handleVoid = (_void: string | PerfTab | boolean | XAxis | null) => {};
+	const handleVoid = (
+		_void: string | PerfTab | boolean | XAxis | YAxis | null,
+	) => {};
 
 	return (
 		<div id={plotId()}>
@@ -195,6 +199,7 @@ const PinnedFrame = (props: Props) => {
 					end_date={end_date}
 					key={key}
 					x_axis={x_axis}
+					y_axis={y_axis}
 					clear={clear}
 					lower_value={lower_value}
 					upper_value={upper_value}
@@ -210,6 +215,7 @@ const PinnedFrame = (props: Props) => {
 					handleTab={handleVoid}
 					handleKey={setKey}
 					handleXAxis={handleVoid}
+					handleYAxis={handleVoid}
 					handleClear={handleVoid}
 					handleLowerValue={handleVoid}
 					handleUpperValue={handleVoid}

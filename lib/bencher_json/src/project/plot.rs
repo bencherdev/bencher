@@ -36,6 +36,10 @@ pub struct JsonNewPlot {
     pub upper_boundary: bool,
     /// The x-axis to use for the plot.
     pub x_axis: XAxis,
+    /// The y-axis scale to use for the plot.
+    /// Defaults to `auto` when omitted.
+    #[serde(default)]
+    pub y_axis: YAxis,
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.
     pub window: Window,
@@ -75,6 +79,7 @@ pub struct JsonPlot {
     pub lower_boundary: bool,
     pub upper_boundary: bool,
     pub x_axis: XAxis,
+    pub y_axis: YAxis,
     pub window: Window,
     pub branches: Vec<BranchUuid>,
     pub testbeds: Vec<TestbedUuid>,
@@ -112,6 +117,8 @@ pub struct JsonPlotPatch {
     pub upper_boundary: Option<bool>,
     /// The x-axis to use for the plot.
     pub x_axis: Option<XAxis>,
+    /// The y-axis scale to use for the plot.
+    pub y_axis: Option<YAxis>,
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.
     pub window: Option<Window>,
@@ -143,6 +150,7 @@ pub struct JsonPlotPatchNull {
     pub lower_boundary: Option<bool>,
     pub upper_boundary: Option<bool>,
     pub x_axis: Option<XAxis>,
+    pub y_axis: Option<YAxis>,
     pub window: Option<Window>,
     pub branches: Option<Vec<BranchUuid>>,
     pub testbeds: Option<Vec<TestbedUuid>>,
@@ -163,6 +171,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
         const LOWER_BOUNDARY_FIELD: &str = "lower_boundary";
         const UPPER_BOUNDARY_FIELD: &str = "upper_boundary";
         const X_AXIS_FIELD: &str = "x_axis";
+        const Y_AXIS_FIELD: &str = "y_axis";
         const WINDOW_FIELD: &str = "window";
         const BRANCHES_FIELD: &str = "branches";
         const TESTBEDS_FIELD: &str = "testbeds";
@@ -176,6 +185,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
             LOWER_BOUNDARY_FIELD,
             UPPER_BOUNDARY_FIELD,
             X_AXIS_FIELD,
+            Y_AXIS_FIELD,
             WINDOW_FIELD,
             BRANCHES_FIELD,
             TESTBEDS_FIELD,
@@ -193,6 +203,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
             LowerBoundary,
             UpperBoundary,
             XAxis,
+            YAxis,
             Window,
             Branches,
             Testbeds,
@@ -221,6 +232,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                 let mut lower_boundary = None;
                 let mut upper_boundary = None;
                 let mut x_axis = None;
+                let mut y_axis = None;
                 let mut window = None;
                 let mut branches = None;
                 let mut testbeds = None;
@@ -271,6 +283,12 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                             }
                             x_axis = Some(map.next_value()?);
                         },
+                        Field::YAxis => {
+                            if y_axis.is_some() {
+                                return Err(de::Error::duplicate_field(Y_AXIS_FIELD));
+                            }
+                            y_axis = Some(map.next_value()?);
+                        },
                         Field::Window => {
                             if window.is_some() {
                                 return Err(de::Error::duplicate_field(WINDOW_FIELD));
@@ -313,6 +331,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         lower_boundary,
                         upper_boundary,
                         x_axis,
+                        y_axis,
                         window,
                         branches,
                         testbeds,
@@ -327,6 +346,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         lower_boundary,
                         upper_boundary,
                         x_axis,
+                        y_axis,
                         window,
                         branches,
                         testbeds,
@@ -341,6 +361,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         lower_boundary,
                         upper_boundary,
                         x_axis,
+                        y_axis,
                         window,
                         branches,
                         testbeds,
@@ -365,6 +386,7 @@ pub enum PlotKey {
     LowerBoundary,
     UpperBoundary,
     XAxis,
+    YAxis,
 }
 
 pub const LOWER_VALUE: &str = "lower_value";
@@ -372,12 +394,15 @@ pub const UPPER_VALUE: &str = "upper_value";
 pub const LOWER_BOUNDARY: &str = "lower_boundary";
 pub const UPPER_BOUNDARY: &str = "upper_boundary";
 pub const X_AXIS: &str = "x_axis";
+pub const Y_AXIS: &str = "y_axis";
 
 const DATE_TIME_INT: i32 = 0;
 const VERSION_INT: i32 = 1;
 
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Default, derive_more::Display, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, derive_more::Display, Serialize, Deserialize,
+)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
@@ -430,9 +455,107 @@ mod plot_x_axis {
     }
 }
 
+const AUTO_INT: i32 = 0;
+const LINEAR_INT: i32 = 1;
+const LOG_INT: i32 = 2;
+
+#[typeshare::typeshare]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, derive_more::Display, Serialize, Deserialize,
+)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
+#[serde(rename_all = "snake_case")]
+#[repr(i32)]
+pub enum YAxis {
+    /// Automatically adapt the y-axis scale to the data spread.
+    #[default]
+    Auto = AUTO_INT,
+    /// A linear y-axis scale that shows true magnitudes.
+    Linear = LINEAR_INT,
+    /// A logarithmic y-axis scale.
+    Log = LOG_INT,
+}
+
+#[cfg(feature = "db")]
+mod plot_y_axis {
+    use super::{AUTO_INT, LINEAR_INT, LOG_INT, YAxis};
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum YAxisError {
+        #[error("Invalid plot y-axis value: {0}")]
+        Invalid(i32),
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for YAxis
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Auto => AUTO_INT.to_sql(out),
+                Self::Linear => LINEAR_INT.to_sql(out),
+                Self::Log => LOG_INT.to_sql(out),
+            }
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for YAxis
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            match i32::from_sql(bytes)? {
+                AUTO_INT => Ok(Self::Auto),
+                LINEAR_INT => Ok(Self::Linear),
+                LOG_INT => Ok(Self::Log),
+                value => Err(Box::new(YAxisError::Invalid(value))),
+            }
+        }
+    }
+}
+
 #[cfg(all(test, any(feature = "server", feature = "client")))]
 mod tests {
-    use super::{JsonUpdatePlot, XAxis};
+    use super::{JsonUpdatePlot, XAxis, YAxis};
+
+    #[test]
+    fn y_axis_serde_round_trip() {
+        for (y_axis, expected) in [
+            (YAxis::Auto, "\"auto\""),
+            (YAxis::Linear, "\"linear\""),
+            (YAxis::Log, "\"log\""),
+        ] {
+            let json = serde_json::to_string(&y_axis).unwrap();
+            assert_eq!(json, expected);
+            let parsed: YAxis = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, y_axis);
+        }
+    }
+
+    #[test]
+    fn y_axis_default_is_auto() {
+        assert_eq!(YAxis::default(), YAxis::Auto);
+    }
+
+    #[test]
+    fn x_axis_serde_round_trip() {
+        for (x_axis, expected) in [
+            (XAxis::DateTime, "\"date_time\""),
+            (XAxis::Version, "\"version\""),
+        ] {
+            let json = serde_json::to_string(&x_axis).unwrap();
+            assert_eq!(json, expected);
+            let parsed: XAxis = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, x_axis);
+        }
+    }
 
     #[test]
     fn deserialize_empty_is_patch_with_all_none() {
@@ -447,6 +570,7 @@ mod tests {
         assert!(patch.lower_boundary.is_none());
         assert!(patch.upper_boundary.is_none());
         assert!(patch.x_axis.is_none());
+        assert!(patch.y_axis.is_none());
         assert!(patch.window.is_none());
         assert!(patch.branches.is_none());
         assert!(patch.testbeds.is_none());
@@ -474,14 +598,15 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_flags_and_x_axis() {
+    fn deserialize_flags_and_axes() {
         let update: JsonUpdatePlot = serde_json::from_str(
             r#"{
                 "lower_value": true,
                 "upper_value": false,
                 "lower_boundary": true,
                 "upper_boundary": false,
-                "x_axis": "version"
+                "x_axis": "version",
+                "y_axis": "log"
             }"#,
         )
         .unwrap();
@@ -493,6 +618,7 @@ mod tests {
         assert_eq!(patch.lower_boundary, Some(true));
         assert_eq!(patch.upper_boundary, Some(false));
         assert!(matches!(patch.x_axis, Some(XAxis::Version)));
+        assert_eq!(patch.y_axis, Some(YAxis::Log));
     }
 
     #[test]

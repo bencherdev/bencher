@@ -1,13 +1,14 @@
 use bencher_client::types::JsonNewPlot;
 use bencher_json::{
     BenchmarkUuid, BranchUuid, Index, MeasureUuid, ProjectResourceId, ResourceName, TestbedUuid,
-    Window, project::plot::XAxis,
+    Window,
+    project::plot::{XAxis, YAxis},
 };
 
 use crate::{
     CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::project::plot::{CliPlotCreate, CliXAxis},
+    parser::project::plot::{CliPlotCreate, CliXAxis, CliYAxis},
 };
 
 #[derive(Debug, Clone)]
@@ -24,6 +25,7 @@ pub struct Create {
     pub lower_boundary: bool,
     pub upper_boundary: bool,
     pub x_axis: XAxis,
+    pub y_axis: YAxis,
     pub window: Window,
     pub branches: Vec<BranchUuid>,
     pub testbeds: Vec<TestbedUuid>,
@@ -45,6 +47,7 @@ impl TryFrom<CliPlotCreate> for Create {
             lower_boundary,
             upper_boundary,
             x_axis,
+            y_axis,
             window,
             branches,
             testbeds,
@@ -63,6 +66,11 @@ impl TryFrom<CliPlotCreate> for Create {
             x_axis: match x_axis {
                 CliXAxis::DateTime => XAxis::DateTime,
                 CliXAxis::Version => XAxis::Version,
+            },
+            y_axis: match y_axis {
+                CliYAxis::Auto => YAxis::Auto,
+                CliYAxis::Linear => YAxis::Linear,
+                CliYAxis::Log => YAxis::Log,
             },
             window,
             branches,
@@ -84,6 +92,7 @@ impl From<Create> for JsonNewPlot {
             lower_boundary,
             upper_boundary,
             x_axis,
+            y_axis,
             window,
             branches,
             testbeds,
@@ -101,6 +110,11 @@ impl From<Create> for JsonNewPlot {
             x_axis: match x_axis {
                 XAxis::DateTime => bencher_client::types::XAxis::DateTime,
                 XAxis::Version => bencher_client::types::XAxis::Version,
+            },
+            y_axis: match y_axis {
+                YAxis::Auto => bencher_client::types::YAxis::Auto,
+                YAxis::Linear => bencher_client::types::YAxis::Linear,
+                YAxis::Log => bencher_client::types::YAxis::Log,
             },
             window: window.into(),
             branches: branches.into_iter().map(Into::into).collect(),

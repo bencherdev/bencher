@@ -1,10 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { XAxis } from "../types/bencher";
+import { XAxis, YAxis } from "../types/bencher";
 import {
 	BencherResource,
 	PerfTab,
 	isPerfTab,
 	isXAxis,
+	isYAxis,
 	resourcePlural,
 	resourceSingular,
 } from "./types";
@@ -102,5 +103,30 @@ describe("isXAxis", () => {
 
 	test("returns false for undefined", () => {
 		expect(isXAxis(undefined)).toBe(false);
+	});
+});
+
+describe("isYAxis", () => {
+	test("returns true for Auto", () => {
+		expect(isYAxis(YAxis.Auto)).toBe(true);
+		expect(isYAxis("auto")).toBe(true);
+	});
+
+	test("returns true for Linear", () => {
+		expect(isYAxis(YAxis.Linear)).toBe(true);
+		expect(isYAxis("linear")).toBe(true);
+	});
+
+	test("returns true for Log", () => {
+		expect(isYAxis(YAxis.Log)).toBe(true);
+		expect(isYAxis("log")).toBe(true);
+	});
+
+	test("returns false for invalid string", () => {
+		expect(isYAxis("invalid")).toBe(false);
+	});
+
+	test("returns false for undefined", () => {
+		expect(isYAxis(undefined)).toBe(false);
 	});
 });

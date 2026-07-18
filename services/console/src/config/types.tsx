@@ -1,4 +1,4 @@
-import { XAxis } from "../types/bencher";
+import { XAxis, YAxis } from "../types/bencher";
 
 export enum BencherResource {
 	ORGANIZATIONS = "organizations",
@@ -205,6 +205,17 @@ export const isXAxis = (xAxis: undefined | string) => {
 	switch (xAxis) {
 		case XAxis.DateTime:
 		case XAxis.Version:
+			return true;
+		default:
+			return false;
+	}
+};
+
+export const isYAxis = (yAxis: undefined | string) => {
+	switch (yAxis) {
+		case YAxis.Auto:
+		case YAxis.Linear:
+		case YAxis.Log:
 			return true;
 		default:
 			return false;

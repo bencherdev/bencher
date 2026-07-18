@@ -23,6 +23,7 @@ export const plotQueryString = (plot: JsonPlot) => {
 	newParams.set(PlotKey.LowerBoundary, plot?.lower_boundary.toString());
 	newParams.set(PlotKey.UpperBoundary, plot?.upper_boundary.toString());
 	newParams.set(PlotKey.XAxis, plot?.x_axis);
+	newParams.set(PlotKey.YAxis, plot?.y_axis);
 	newParams.set(PerfQueryKey.Branches, plot?.branches.toString());
 	newParams.set(PerfQueryKey.Testbeds, plot?.testbeds.toString());
 	newParams.set(PerfQueryKey.Benchmarks, plot?.benchmarks.toString());

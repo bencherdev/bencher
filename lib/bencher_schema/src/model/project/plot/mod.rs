@@ -1,7 +1,7 @@
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, Index, JsonNewPlot, JsonPlot, MeasureUuid, PlotUuid,
     ResourceName, TestbedUuid, Window,
-    project::plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis},
+    project::plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis, YAxis},
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -88,6 +88,7 @@ pub struct QueryPlot {
     pub lower_boundary: bool,
     pub upper_boundary: bool,
     pub x_axis: XAxis,
+    pub y_axis: YAxis,
     pub window: Window,
     pub created: DateTime,
     pub modified: DateTime,
@@ -155,6 +156,7 @@ impl QueryPlot {
                     lower_boundary: None,
                     upper_boundary: None,
                     x_axis: None,
+                    y_axis: None,
                     window: None,
                     modified: now,
                 };
@@ -212,6 +214,7 @@ impl QueryPlot {
                 lower_boundary: None,
                 upper_boundary: None,
                 x_axis: None,
+                y_axis: None,
                 window: None,
                 modified,
             };
@@ -251,6 +254,7 @@ impl QueryPlot {
             lower_boundary,
             upper_boundary,
             x_axis,
+            y_axis,
             window,
             created,
             modified,
@@ -265,6 +269,7 @@ impl QueryPlot {
             lower_boundary,
             upper_boundary,
             x_axis,
+            y_axis,
             window,
             branches,
             testbeds,
@@ -289,6 +294,7 @@ impl QueryPlot {
             lower_boundary,
             upper_boundary,
             x_axis,
+            y_axis,
             window,
             branches,
             testbeds,
@@ -358,6 +364,7 @@ impl QueryPlot {
                 lower_boundary,
                 upper_boundary,
                 x_axis,
+                y_axis,
                 window,
                 modified,
             };
@@ -443,6 +450,7 @@ pub struct InsertPlot {
     pub lower_boundary: bool,
     pub upper_boundary: bool,
     pub x_axis: XAxis,
+    pub y_axis: YAxis,
     pub window: Window,
     pub created: DateTime,
     pub modified: DateTime,
@@ -465,6 +473,7 @@ impl InsertPlot {
             lower_boundary,
             upper_boundary,
             x_axis,
+            y_axis,
             window,
             branches,
             testbeds,
@@ -501,6 +510,7 @@ impl InsertPlot {
             lower_boundary,
             upper_boundary,
             x_axis,
+            y_axis,
             window,
             created: timestamp,
             modified: timestamp,
@@ -539,6 +549,7 @@ pub struct UpdatePlot {
     pub lower_boundary: Option<bool>,
     pub upper_boundary: Option<bool>,
     pub x_axis: Option<XAxis>,
+    pub y_axis: Option<YAxis>,
     pub window: Option<Window>,
     pub modified: DateTime,
 }
@@ -557,6 +568,7 @@ struct UpdatePlotFields {
     lower_boundary: Option<bool>,
     upper_boundary: Option<bool>,
     x_axis: Option<XAxis>,
+    y_axis: Option<YAxis>,
     window: Option<Window>,
     branches: Option<Vec<BranchUuid>>,
     testbeds: Option<Vec<TestbedUuid>>,
@@ -576,6 +588,7 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     lower_boundary,
                     upper_boundary,
                     x_axis,
+                    y_axis,
                     window,
                     branches,
                     testbeds,
@@ -590,6 +603,7 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     lower_boundary,
                     upper_boundary,
                     x_axis,
+                    y_axis,
                     window,
                     branches,
                     testbeds,
@@ -606,6 +620,7 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     lower_boundary,
                     upper_boundary,
                     x_axis,
+                    y_axis,
                     window,
                     branches,
                     testbeds,
@@ -620,6 +635,7 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     lower_boundary,
                     upper_boundary,
                     x_axis,
+                    y_axis,
                     window,
                     branches,
                     testbeds,
@@ -635,7 +651,10 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
 mod tests {
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 
-    use bencher_json::{DateTime, project::plot::XAxis};
+    use bencher_json::{
+        DateTime,
+        project::plot::{XAxis, YAxis},
+    };
 
     use super::{
         InsertPlot, PlotId, QueryPlot, UpdatePlot, benchmark::InsertPlotBenchmark,
@@ -932,6 +951,7 @@ mod tests {
                     lower_boundary: false,
                     upper_boundary: false,
                     x_axis: XAxis::DateTime,
+                    y_axis: YAxis::Auto,
                     window: bencher_json::Window::try_from(2_592_000u32).unwrap(),
                     created: timestamp,
                     modified: timestamp,
@@ -1107,6 +1127,7 @@ mod tests {
             lower_boundary: None,
             upper_boundary: None,
             x_axis: None,
+            y_axis: None,
             window: None,
             modified: DateTime::TEST,
         }
@@ -1160,13 +1181,13 @@ mod tests {
     }
 
     #[test]
-    fn apply_update_scalar_flags_and_x_axis() {
+    fn apply_update_scalar_flags_and_axes() {
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
         let (plot_id, branch, testbed, benchmark, measure) =
             seed_plot_with_components(&mut conn, base.project_id);
 
-        // Toggle some flags and the x-axis; leave the rest unchanged (None).
+        // Toggle some flags and both axes; leave the rest unchanged (None).
         let update_plot = UpdatePlot {
             rank: None,
             title: None,
@@ -1175,6 +1196,7 @@ mod tests {
             lower_boundary: Some(true),
             upper_boundary: None,
             x_axis: Some(XAxis::Version),
+            y_axis: Some(YAxis::Log),
             window: None,
             modified: DateTime::TEST,
         };
@@ -1191,11 +1213,53 @@ mod tests {
         assert!(plot.lower_boundary); // set to true
         assert!(!plot.upper_boundary); // unchanged (create default false)
         assert!(matches!(plot.x_axis, XAxis::Version));
+        assert_eq!(plot.y_axis, YAxis::Log); // updated from the create default
 
         // Components were not provided, so they remain intact.
         assert_eq!(get_plot_branches(&mut conn, plot_id), vec![branch]);
         assert_eq!(get_plot_testbeds(&mut conn, plot_id), vec![testbed]);
         assert_eq!(get_plot_benchmarks(&mut conn, plot_id), vec![benchmark]);
         assert_eq!(get_plot_measures(&mut conn, plot_id), vec![measure]);
+    }
+
+    /// Test that a non-default `y_axis` round-trips through insert and query.
+    #[test]
+    fn plot_y_axis_round_trips() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let project = get_query_project(&mut conn, base.project_id);
+
+        let rank = QueryPlot::new_rank(&mut conn, &project, None).expect("Failed to get rank");
+        let timestamp = DateTime::TEST;
+        let insert_plot = InsertPlot {
+            uuid: bencher_json::PlotUuid::new(),
+            project_id: base.project_id,
+            rank,
+            title: None,
+            lower_value: true,
+            upper_value: true,
+            lower_boundary: false,
+            upper_boundary: false,
+            x_axis: XAxis::DateTime,
+            y_axis: YAxis::Log,
+            window: bencher_json::Window::try_from(2_592_000u32).unwrap(),
+            created: timestamp,
+            modified: timestamp,
+        };
+        diesel::insert_into(schema::plot::table)
+            .values(&insert_plot)
+            .execute(&mut conn)
+            .expect("Failed to insert plot");
+        let plot_id: PlotId = diesel::select(last_insert_rowid())
+            .get_result(&mut conn)
+            .expect("Failed to get plot id");
+
+        let query_plot: QueryPlot = schema::plot::table
+            .filter(schema::plot::id.eq(plot_id))
+            .select(QueryPlot::as_select())
+            .first(&mut conn)
+            .expect("Failed to get plot");
+
+        assert_eq!(query_plot.y_axis, YAxis::Log);
     }
 }

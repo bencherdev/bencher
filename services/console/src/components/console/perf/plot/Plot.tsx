@@ -7,7 +7,7 @@ import {
 	createResource,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import type { JsonPerf, XAxis } from "../../../../types/bencher";
+import type { JsonPerf, XAxis, YAxis } from "../../../../types/bencher";
 import type { Theme } from "../../../navbar/theme/theme";
 import PlotKey from "./key/PlotKey";
 import LinePlot from "./line/LinePlot";
@@ -19,6 +19,7 @@ export interface Props {
 	plotId: string | undefined;
 	measures: Accessor<string[]>;
 	x_axis: Accessor<XAxis>;
+	y_axis: Accessor<YAxis>;
 	lower_value: Accessor<boolean>;
 	upper_value: Accessor<boolean>;
 	lower_boundary: Accessor<boolean>;
@@ -75,6 +76,7 @@ const Plot = (props: Props) => {
 					perfData={props.perfData}
 					measures={props.measures}
 					x_axis={props.x_axis}
+					y_axis={props.y_axis}
 					lower_value={props.lower_value}
 					upper_value={props.upper_value}
 					lower_boundary={props.lower_boundary}

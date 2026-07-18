@@ -13,6 +13,7 @@ import type {
 	JsonPerfQuery,
 	JsonProject,
 	XAxis,
+	YAxis,
 } from "../../../../types/bencher";
 import { httpPost } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
@@ -32,6 +33,7 @@ export interface Props {
 	lower_boundary: Accessor<boolean>;
 	upper_boundary: Accessor<boolean>;
 	x_axis: Accessor<XAxis>;
+	y_axis: Accessor<YAxis>;
 	branches: Accessor<string[]>;
 	testbeds: Accessor<string[]>;
 	benchmarks: Accessor<string[]>;
@@ -94,6 +96,7 @@ const PinModal = (props: Props) => {
 			lower_boundary: props.lower_boundary(),
 			upper_boundary: props.upper_boundary(),
 			x_axis: props.x_axis(),
+			y_axis: props.y_axis(),
 			window: Number.parseInt(form?.window?.value),
 			branches: props.branches(),
 			testbeds: props.testbeds(),
