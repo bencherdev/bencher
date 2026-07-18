@@ -89,6 +89,25 @@ export const validJwt = (token: undefined | null | string): boolean =>
 export const validOptionJwt = (token: undefined | null | string): boolean =>
 	validOptionString(token, (i) => i.length === 0 || is_valid_jwt(i));
 
+// Best-effort JWT pre-checks used to gate data fetches without blocking on WASM
+// init. The `validJwt` format check needs the `bencher_valid` WASM validator, so
+// it is only run once that validator has loaded (`valid` truthy); until then the
+// request is allowed through and the server validates the token regardless.
+
+// Required token: returns true when the fetch should be skipped, i.e. there is no
+// token, or the validator is loaded and the token is malformed.
+export const jwtRequiredInvalid = (
+	valid: InitValid,
+	token: undefined | null | string,
+): boolean => !token || (!!valid && !validJwt(token));
+
+// Optional token: returns true only when a token is present, the validator is
+// loaded, and the token is malformed. A missing token is allowed (public access).
+export const jwtOptionalInvalid = (
+	valid: InitValid,
+	token: undefined | null | string,
+): boolean => !!token && !!valid && !validJwt(token);
+
 export const validOptionUrl = (url: undefined | null | string): boolean =>
 	validOptionString(url, (i) => i.length === 0 || is_valid_url(i));
 

@@ -25,9 +25,8 @@ import { NotifyKind, pageNotify } from "../../../util/notify";
 import { useSearchParams } from "../../../util/url";
 import {
 	DEBOUNCE_DELAY,
-	type InitValid,
 	init_valid,
-	validJwt,
+	jwtRequiredInvalid,
 	validU32,
 } from "../../../util/valid";
 import Pagination, { PaginationSize } from "../../site/Pagination";
@@ -137,7 +136,6 @@ const TablePanel = (props: Props) => {
 
 	const fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			searchQuery: searchQuery(),
 			token: authUser()?.token,
 		};
@@ -146,7 +144,6 @@ const TablePanel = (props: Props) => {
 	const [state, setState] = createSignal(TableState.LOADING);
 	const [totalCount, setTotalCount] = createSignal(0);
 	const getData = async (fetcher: {
-		bencher_valid: InitValid;
 		searchQuery: {
 			per_page: number;
 			page: number;
@@ -159,7 +156,8 @@ const TablePanel = (props: Props) => {
 		token: string;
 	}) => {
 		const EMPTY_ARRAY: object[] = [];
-		if (!fetcher.bencher_valid || !validJwt(fetcher.token)) {
+		// Fire in parallel with WASM init; the server validates the token regardless.
+		if (jwtRequiredInvalid(bencher_valid(), fetcher.token)) {
 			return EMPTY_ARRAY;
 		}
 		const searchParams = new URLSearchParams();

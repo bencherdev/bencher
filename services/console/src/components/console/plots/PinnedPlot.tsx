@@ -9,7 +9,7 @@ import {
 } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { NotifyKind, navigateNotify } from "../../../util/notify";
-import { type InitValid, init_valid, validJwt } from "../../../util/valid";
+import { init_valid, jwtOptionalInvalid } from "../../../util/valid";
 import Pinned from "./Pinned";
 
 export interface Props {
@@ -26,19 +26,15 @@ const PinnedPlot = (props: Props) => {
 	const project_slug = createMemo(() => props.params?.project);
 	const plotFetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			token: user?.token,
 		};
 	});
 	const getPlot = async (fetcher: {
-		bencher_valid: InitValid;
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
-		if (!fetcher.bencher_valid) {
-			return EMPTY_OBJECT;
-		}
-		if (fetcher.token && !validJwt(fetcher.token)) {
+		// Fire in parallel with WASM init; the server validates the token regardless.
+		if (jwtOptionalInvalid(bencher_valid(), fetcher.token)) {
 			return EMPTY_OBJECT;
 		}
 		const path = `/v0/projects/${props.params?.project}/plots/${props.params?.plot}`;

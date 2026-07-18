@@ -40,9 +40,8 @@ import { X_TOTAL_COUNT, httpGet } from "../../../util/http";
 import { useSearchParams } from "../../../util/url";
 import {
 	DEBOUNCE_DELAY,
-	type InitValid,
 	init_valid,
-	validJwt,
+	jwtRequiredInvalid,
 	validU32,
 } from "../../../util/valid";
 import { theme } from "../../navbar/theme/util";
@@ -612,19 +611,16 @@ const PerfPanel = (props: Props) => {
 		perfTab: PerfTab,
 		memo: T[],
 		fetcher: {
-			bencher_valid: InitValid;
 			project_slug: undefined | string;
 			param_uuids: string[];
 			token: string;
 		},
 	) {
 		const EMPTY_ARRAY: T[] = [];
-		if (!fetcher.bencher_valid) {
-			return EMPTY_ARRAY;
-		}
-
+		// Fire in parallel with WASM init; the server validates the token regardless.
+		// On the console still require a token to be present.
 		if (
-			(props.isConsole && !validJwt(fetcher.token)) ||
+			(props.isConsole && jwtRequiredInvalid(bencher_valid(), fetcher.token)) ||
 			!fetcher.project_slug ||
 			fetcher.project_slug === "undefined" ||
 			props.isEmbed === true
@@ -654,7 +650,6 @@ const PerfPanel = (props: Props) => {
 	const [branches_memo, setBranchesMemo] = createStore<JsonBranch[]>([]);
 	const selectedBranchesFetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			param_uuids: branches(),
 			token: user?.token,
@@ -686,7 +681,6 @@ const PerfPanel = (props: Props) => {
 	const [testbeds_memo, setTestbedsMemo] = createStore<JsonTestbed[]>([]);
 	const selectedTestbedFetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			param_uuids: testbeds(),
 			token: user?.token,
@@ -718,7 +712,6 @@ const PerfPanel = (props: Props) => {
 	const [benchmarks_memo, setBenchmarksMemo] = createStore<JsonBenchmark[]>([]);
 	const selectedBenchmarkFetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			param_uuids: benchmarks(),
 			token: user?.token,
@@ -787,7 +780,6 @@ const PerfPanel = (props: Props) => {
 	async function getPerfTab<T>(
 		perfTab: PerfTab,
 		fetcher: {
-			bencher_valid: InitValid;
 			project_slug: undefined | string;
 			per_page: number;
 			page: number;
@@ -800,12 +792,10 @@ const PerfPanel = (props: Props) => {
 		totalCount: (headers: { [X_TOTAL_COUNT]: string }) => void,
 	) {
 		const EMPTY_ARRAY: T[] = [];
-		if (!fetcher.bencher_valid) {
-			return EMPTY_ARRAY;
-		}
-
+		// Fire in parallel with WASM init; the server validates the token regardless.
+		// On the console still require a token to be present.
 		if (
-			(props.isConsole && !validJwt(fetcher.token)) ||
+			(props.isConsole && jwtRequiredInvalid(bencher_valid(), fetcher.token)) ||
 			!fetcher.project_slug ||
 			fetcher.project_slug === "undefined" ||
 			props.isEmbed === true ||
@@ -844,7 +834,6 @@ const PerfPanel = (props: Props) => {
 
 	const reports_fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: reports_per_page(),
 			page: reports_page(),
@@ -939,7 +928,6 @@ const PerfPanel = (props: Props) => {
 
 	const branches_fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: branches_per_page(),
 			page: branches_page(),
@@ -962,7 +950,6 @@ const PerfPanel = (props: Props) => {
 
 	const testbeds_fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: testbeds_per_page(),
 			page: testbeds_page(),
@@ -985,7 +972,6 @@ const PerfPanel = (props: Props) => {
 
 	const benchmarks_fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: benchmarks_per_page(),
 			page: benchmarks_page(),
@@ -1010,7 +996,6 @@ const PerfPanel = (props: Props) => {
 
 	const plots_fetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: project_slug(),
 			per_page: plots_per_page(),
 			page: plots_page(),

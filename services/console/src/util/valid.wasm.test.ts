@@ -2,6 +2,8 @@
 import { describe, expect, test } from "vitest";
 import {
 	init_valid,
+	jwtOptionalInvalid,
+	jwtRequiredInvalid,
 	validBenchmarkName,
 	validBoundary,
 	validBranchName,
@@ -347,6 +349,51 @@ describe.skipIf(!wasmReady)("WASM validators", () => {
 
 		test("rejects undefined", () => {
 			expect(validPlanLevel(undefined)).toBe(false);
+		});
+	});
+
+	describe("jwtRequiredInvalid (best-effort, required token)", () => {
+		test("skips when token is missing, regardless of validator", () => {
+			expect(jwtRequiredInvalid(undefined, undefined)).toBe(true);
+			expect(jwtRequiredInvalid(undefined, "")).toBe(true);
+			expect(jwtRequiredInvalid(wasmReady, undefined)).toBe(true);
+			expect(jwtRequiredInvalid(wasmReady, "")).toBe(true);
+		});
+
+		test("does not reject a malformed token before the validator loads", () => {
+			// best-effort: let the request through; the server validates it
+			expect(jwtRequiredInvalid(undefined, "not.a.jwt")).toBe(false);
+			expect(jwtRequiredInvalid(undefined, fakeJwt)).toBe(false);
+		});
+
+		test("rejects a malformed token once the validator has loaded", () => {
+			expect(jwtRequiredInvalid(wasmReady, "not.a.jwt")).toBe(true);
+		});
+
+		test("allows a well-formed token once the validator has loaded", () => {
+			expect(jwtRequiredInvalid(wasmReady, fakeJwt)).toBe(false);
+		});
+	});
+
+	describe("jwtOptionalInvalid (best-effort, optional token)", () => {
+		test("allows a missing token (public access)", () => {
+			expect(jwtOptionalInvalid(undefined, undefined)).toBe(false);
+			expect(jwtOptionalInvalid(undefined, "")).toBe(false);
+			expect(jwtOptionalInvalid(wasmReady, undefined)).toBe(false);
+			expect(jwtOptionalInvalid(wasmReady, "")).toBe(false);
+		});
+
+		test("does not reject a present token before the validator loads", () => {
+			expect(jwtOptionalInvalid(undefined, "not.a.jwt")).toBe(false);
+			expect(jwtOptionalInvalid(undefined, fakeJwt)).toBe(false);
+		});
+
+		test("rejects a present malformed token once the validator has loaded", () => {
+			expect(jwtOptionalInvalid(wasmReady, "not.a.jwt")).toBe(true);
+		});
+
+		test("allows a present well-formed token once the validator has loaded", () => {
+			expect(jwtOptionalInvalid(wasmReady, fakeJwt)).toBe(false);
 		});
 	});
 });

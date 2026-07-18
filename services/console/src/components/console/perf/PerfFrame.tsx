@@ -21,7 +21,7 @@ import {
 	NotifyKind,
 	pageNotify,
 } from "../../../util/notify";
-import { type InitValid, init_valid, validJwt } from "../../../util/valid";
+import { init_valid, jwtRequiredInvalid } from "../../../util/valid";
 import type { Theme } from "../../navbar/theme/theme";
 import PerfPlot from "./plot/PerfPlot";
 
@@ -76,7 +76,6 @@ const PerfFrame = (props: Props) => {
 
 	const perfFetcher = createMemo(() => {
 		return {
-			bencher_valid: bencher_valid(),
 			project_slug: props.project_slug(),
 			perfQuery: props.perfQuery(),
 			refresh: props.refresh(),
@@ -84,20 +83,18 @@ const PerfFrame = (props: Props) => {
 		};
 	});
 	const getPerf = async (fetcher: {
-		bencher_valid: InitValid;
 		project_slug: string;
 		perfQuery: JsonPerfQuery;
 		refresh: number;
 		token: string;
 	}) => {
 		const EMPTY_OBJECT = {};
-		if (!fetcher.bencher_valid) {
-			return EMPTY_OBJECT;
-		}
 
-		// Don't even send query if there isn't at least one: branch, testbed, and benchmark
+		// Fire in parallel with WASM init; the server validates the token regardless.
+		// On the console still require a token to be present. Also don't send a query
+		// without at least one branch, testbed, and benchmark.
 		if (
-			(props.isConsole && !validJwt(fetcher.token)) ||
+			(props.isConsole && jwtRequiredInvalid(bencher_valid(), fetcher.token)) ||
 			props.isPlotInit() ||
 			!fetcher.project_slug ||
 			fetcher.project_slug === "undefined"
