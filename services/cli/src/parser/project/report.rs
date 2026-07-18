@@ -51,6 +51,10 @@ pub struct CliReportList {
     #[clap(long)]
     pub archived: bool,
 
+    /// Include the full results and alerts for each report
+    #[clap(long)]
+    pub expand: bool,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

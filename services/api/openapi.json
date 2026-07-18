@@ -6668,7 +6668,7 @@
           "reports"
         ],
         "summary": "List reports for a project",
-        "description": "List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the reports are sorted by date time in reverse chronological order. The HTTP response header `X-Total-Count` contains the total number of reports.",
+        "description": "List all reports for a project. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the reports are sorted by date time in reverse chronological order. By default, the results and alerts for each report are omitted and only their counts are included. Set the `expand` query param to `true` to include the full results and alerts. The HTTP response header `X-Total-Count` contains the total number of reports.",
         "operationId": "proj_reports_get",
         "parameters": [
           {
@@ -6742,6 +6742,15 @@
             "description": "Filter for reports before the given date time in milliseconds.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
+            }
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "description": "If set to `true`, include the full results and alerts for each report. If not set or set to `false`, the results and alerts are omitted and only the counts are included.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
             }
           },
           {
@@ -15973,6 +15982,8 @@
             "$ref": "#/components/schemas/Adapter"
           },
           "alerts": {
+            "nullable": true,
+            "description": "The report alerts. Omitted by default from the reports list endpoint; use the `expand` query param to include them.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonAlert"
@@ -15980,6 +15991,21 @@
           },
           "branch": {
             "$ref": "#/components/schemas/JsonBranch"
+          },
+          "counts": {
+            "description": "The report counts.",
+            "default": {
+              "alerts": {
+                "active": 0,
+                "total": 0
+              },
+              "results": []
+            },
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReportCounts"
+              }
+            ]
           },
           "created": {
             "$ref": "#/components/schemas/DateTime"
@@ -15999,6 +16025,8 @@
             "$ref": "#/components/schemas/JsonProject"
           },
           "results": {
+            "nullable": true,
+            "description": "The report results, one list of results per iteration. Omitted by default from the reports list endpoint; use the `expand` query param to include them.",
             "type": "array",
             "items": {
               "type": "array",
@@ -16027,15 +16055,82 @@
         },
         "required": [
           "adapter",
-          "alerts",
           "branch",
           "created",
           "end_time",
           "project",
-          "results",
           "start_time",
           "testbed",
           "uuid"
+        ]
+      },
+      "JsonReportAlertsCounts": {
+        "description": "Counts for the alerts of a report.",
+        "type": "object",
+        "properties": {
+          "active": {
+            "description": "The number of active alerts.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "total": {
+            "description": "The total number of alerts.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "active",
+          "total"
+        ]
+      },
+      "JsonReportCounts": {
+        "description": "Counts for a report.",
+        "type": "object",
+        "properties": {
+          "alerts": {
+            "description": "Counts for the report alerts.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReportAlertsCounts"
+              }
+            ]
+          },
+          "results": {
+            "description": "Counts for the report results, one entry per iteration.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonReportIterationCounts"
+            }
+          }
+        },
+        "required": [
+          "alerts",
+          "results"
+        ]
+      },
+      "JsonReportIterationCounts": {
+        "description": "Counts for a single iteration of a report.",
+        "type": "object",
+        "properties": {
+          "benchmarks": {
+            "description": "The number of benchmarks in this iteration.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "measures": {
+            "description": "The number of distinct measures in this iteration.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "benchmarks",
+          "measures"
         ]
       },
       "JsonReportMeasure": {

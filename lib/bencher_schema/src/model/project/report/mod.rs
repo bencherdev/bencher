@@ -1,16 +1,22 @@
 #[cfg(feature = "plus")]
 use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
+use std::collections::HashSet;
+
 use bencher_json::{
-    DateTime, JsonNewReport, JsonReport, ReportUuid,
-    project::report::{
-        Adapter, Iteration, JsonReportAlerts, JsonReportMeasure, JsonReportResult,
-        JsonReportResults, JsonReportSettings, ReportIdempotencyKey,
+    DateTime, JsonNewReport, JsonReport, JsonReportAlertsCounts, JsonReportCounts,
+    JsonReportIterationCounts, ReportUuid,
+    project::{
+        alert::AlertStatus,
+        report::{
+            Adapter, Iteration, JsonReportAlerts, JsonReportMeasure, JsonReportResult,
+            JsonReportResults, JsonReportSettings, ReportIdempotencyKey,
+        },
     },
 };
 use diesel::OptionalExtension as _;
 use diesel::{
-    ExpressionMethods as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    AggregateExpressionMethods as _, ExpressionMethods as _, NullableExpressionMethods as _,
+    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 
 use dropshot::HttpError;
@@ -164,7 +170,7 @@ impl QueryReport {
         if let Some(existing) =
             Self::check_idempotency(actor_conn!(context, api_actor), project_id, idempotency_key)?
         {
-            return existing.into_json(log, actor_conn!(context, api_actor));
+            return existing.into_json(log, actor_conn!(context, api_actor), ReportMode::Full);
         }
 
         #[cfg(all(feature = "plus", not(feature = "otel")))]
@@ -404,10 +410,15 @@ impl QueryReport {
             );
         }
 
-        self.into_json(log, actor_conn!(context, api_actor))
+        self.into_json(log, actor_conn!(context, api_actor), ReportMode::Full)
     }
 
-    pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonReport, HttpError> {
+    pub fn into_json(
+        self,
+        log: &Logger,
+        conn: &mut DbConnection,
+        mode: ReportMode,
+    ) -> Result<JsonReport, HttpError> {
         let Self {
             id,
             uuid,
@@ -432,8 +443,16 @@ impl QueryReport {
         };
         let branch = QueryBranch::get_json_for_report(conn, &query_project, head_id, version_id)?;
         let testbed = QueryTestbed::get_json_for_report(conn, &query_project, testbed_id, spec_id)?;
-        let results = get_report_results(log, conn, &query_project, id)?;
-        let alerts = get_report_alerts(conn, &query_project, id, head_id, version_id, spec_id)?;
+        let (results, alerts, counts) = match mode {
+            ReportMode::Full => {
+                let results = get_report_results(log, conn, &query_project, id)?;
+                let alerts =
+                    get_report_alerts(conn, &query_project, id, head_id, version_id, spec_id)?;
+                let counts = report_counts(&results, &alerts);
+                (Some(results), Some(alerts), counts)
+            },
+            ReportMode::Collapsed => (None, None, get_report_counts(conn, id)?),
+        };
         #[cfg(feature = "plus")]
         let job = get_report_job(conn, id)?;
 
@@ -450,6 +469,7 @@ impl QueryReport {
             adapter,
             results,
             alerts,
+            counts,
             #[cfg(feature = "plus")]
             job,
             created,
@@ -612,6 +632,15 @@ async fn post_series_usage(
     });
 }
 
+/// Whether to materialize the full results and alerts when converting a report to JSON.
+#[derive(Debug, Clone, Copy)]
+pub enum ReportMode {
+    /// Include the full report results and alerts and compute the counts from them.
+    Full,
+    /// Omit the report results and alerts and compute the counts with aggregate queries.
+    Collapsed,
+}
+
 type ResultsQuery = (
     Iteration,
     QueryBenchmark,
@@ -751,6 +780,93 @@ fn into_report_results_json(
     slog::trace!(log, "Report results: {report_results:#?}");
 
     report_results
+}
+
+/// Compute the report counts with aggregate queries, without loading the results or alerts.
+fn get_report_counts(
+    conn: &mut DbConnection,
+    report_id: ReportId,
+) -> Result<JsonReportCounts, HttpError> {
+    // Only count benchmarks that have at least one metric,
+    // matching the inner join used to build the full results JSON.
+    let results = schema::report_benchmark::table
+        .filter(schema::report_benchmark::report_id.eq(report_id))
+        .inner_join(schema::metric::table)
+        .group_by(schema::report_benchmark::iteration)
+        .order(schema::report_benchmark::iteration.asc())
+        .select((
+            schema::report_benchmark::iteration,
+            diesel::dsl::count(schema::report_benchmark::benchmark_id).aggregate_distinct(),
+            diesel::dsl::count(schema::metric::measure_id).aggregate_distinct(),
+        ))
+        .load::<(Iteration, i64, i64)>(conn)
+        .map_err(resource_not_found_err!(ReportBenchmark, report_id))?
+        .into_iter()
+        .map(
+            |(_iteration, benchmarks, measures)| JsonReportIterationCounts {
+                benchmarks: u32::try_from(benchmarks).unwrap_or(u32::MAX),
+                measures: u32::try_from(measures).unwrap_or(u32::MAX),
+            },
+        )
+        .collect();
+
+    let mut alerts = JsonReportAlertsCounts::default();
+    schema::alert::table
+        .inner_join(
+            schema::boundary::table
+                .inner_join(schema::metric::table.inner_join(schema::report_benchmark::table)),
+        )
+        .filter(schema::report_benchmark::report_id.eq(report_id))
+        .group_by(schema::alert::status)
+        .select((schema::alert::status, diesel::dsl::count_star()))
+        .load::<(AlertStatus, i64)>(conn)
+        .map_err(resource_not_found_err!(Alert, report_id))?
+        .into_iter()
+        .for_each(|(status, count)| {
+            // The GROUP BY yields at most one row per status,
+            // so a direct assignment suffices for the active count.
+            let count = u32::try_from(count).unwrap_or(u32::MAX);
+            alerts.total = alerts.total.saturating_add(count);
+            if matches!(status, AlertStatus::Active) {
+                alerts.active = count;
+            }
+        });
+
+    Ok(JsonReportCounts { results, alerts })
+}
+
+/// Compute the report counts from already loaded results and alerts.
+fn report_counts(results: &JsonReportResults, alerts: &JsonReportAlerts) -> JsonReportCounts {
+    let results = results
+        .iter()
+        .map(|iteration| {
+            let measures = iteration
+                .iter()
+                .flat_map(|result| {
+                    result
+                        .measures
+                        .iter()
+                        .map(|report_measure| report_measure.measure.uuid)
+                })
+                .collect::<HashSet<_>>();
+            JsonReportIterationCounts {
+                benchmarks: u32::try_from(iteration.len()).unwrap_or(u32::MAX),
+                measures: u32::try_from(measures.len()).unwrap_or(u32::MAX),
+            }
+        })
+        .collect();
+
+    let active = alerts
+        .iter()
+        .filter(|alert| matches!(alert.status, AlertStatus::Active))
+        .count();
+    JsonReportCounts {
+        results,
+        alerts: JsonReportAlertsCounts {
+            total: u32::try_from(alerts.len()).unwrap_or(u32::MAX),
+            active: u32::try_from(active).unwrap_or(u32::MAX),
+        },
+    }
 }
 
 #[cfg(feature = "plus")]
@@ -924,20 +1040,468 @@ pub fn upsert_metric_count(
 
 #[cfg(test)]
 mod tests {
-    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 
-    use bencher_json::DateTime;
+    use bencher_json::{
+        DateTime, JsonReportAlertsCounts, JsonReportIterationCounts,
+        project::{alert::AlertStatus, boundary::BoundaryLimit},
+    };
 
     use crate::{
+        context::DbConnection,
         schema,
         test_util::{
-            create_base_entities, create_branch_with_head, create_head_version, create_testbed,
+            BranchIds, create_alert, create_base_entities, create_benchmark, create_boundary,
+            create_branch_with_head, create_head_version, create_measure, create_metric,
+            create_model, create_report, create_report_benchmark, create_testbed, create_threshold,
             create_version, setup_test_db,
         },
     };
 
-    use super::ReportId;
+    use super::{QueryReport, ReportId, ReportMode, get_report_counts, report_counts};
     use crate::macros::sql::last_insert_rowid;
+    use crate::model::project::{ProjectId, testbed::TestbedId};
+
+    fn test_logger() -> slog::Logger {
+        slog::Logger::root(slog::Discard, slog::o!())
+    }
+
+    struct ReportFixture {
+        project_id: ProjectId,
+        branch: BranchIds,
+        testbed_id: TestbedId,
+        report_id: ReportId,
+    }
+
+    fn create_report_fixture(conn: &mut DbConnection) -> ReportFixture {
+        let base = create_base_entities(conn);
+        let branch = create_branch_with_head(
+            conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+        let version_id = create_version(
+            conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            0,
+            None,
+        );
+        create_head_version(conn, branch.head_id, version_id);
+        let report_id = create_report(
+            conn,
+            "00000000-0000-0000-0000-000000000050",
+            base.project_id,
+            branch.head_id,
+            version_id,
+            testbed_id,
+        );
+        ReportFixture {
+            project_id: base.project_id,
+            branch,
+            testbed_id,
+            report_id,
+        }
+    }
+
+    #[test]
+    #[expect(clippy::too_many_lines, reason = "test data setup")]
+    fn get_report_counts_per_iteration() {
+        let mut conn = setup_test_db();
+        let fixture = create_report_fixture(&mut conn);
+
+        let measure_one = create_measure(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000060",
+            "Latency",
+            "latency",
+        );
+        let measure_two = create_measure(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000061",
+            "Throughput",
+            "throughput",
+        );
+        let benchmark_one = create_benchmark(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000070",
+            "bench_one",
+            "bench-one",
+        );
+        let benchmark_two = create_benchmark(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000071",
+            "bench_two",
+            "bench-two",
+        );
+
+        // Iteration 0: two benchmarks, each with both measures
+        let report_benchmark = create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000080",
+            fixture.report_id,
+            0,
+            benchmark_one,
+        );
+        create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000090",
+            report_benchmark,
+            measure_one,
+            1.0,
+        );
+        create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000091",
+            report_benchmark,
+            measure_two,
+            2.0,
+        );
+        let report_benchmark = create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000081",
+            fixture.report_id,
+            0,
+            benchmark_two,
+        );
+        create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000092",
+            report_benchmark,
+            measure_one,
+            3.0,
+        );
+        create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000093",
+            report_benchmark,
+            measure_two,
+            4.0,
+        );
+
+        // Iteration 1: two benchmarks, only the first measure
+        let report_benchmark = create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000082",
+            fixture.report_id,
+            1,
+            benchmark_one,
+        );
+        create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000094",
+            report_benchmark,
+            measure_one,
+            5.0,
+        );
+        let report_benchmark = create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000083",
+            fixture.report_id,
+            1,
+            benchmark_two,
+        );
+        create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000095",
+            report_benchmark,
+            measure_one,
+            6.0,
+        );
+
+        // A benchmark with no metrics is excluded, matching the full results JSON
+        let benchmark_three = create_benchmark(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000072",
+            "bench_three",
+            "bench-three",
+        );
+        create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000084",
+            fixture.report_id,
+            0,
+            benchmark_three,
+        );
+
+        let counts =
+            get_report_counts(&mut conn, fixture.report_id).expect("Failed to get report counts");
+        assert_eq!(
+            counts.results,
+            vec![
+                JsonReportIterationCounts {
+                    benchmarks: 2,
+                    measures: 2,
+                },
+                JsonReportIterationCounts {
+                    benchmarks: 2,
+                    measures: 1,
+                },
+            ]
+        );
+        assert_eq!(counts.alerts, JsonReportAlertsCounts::default());
+    }
+
+    #[test]
+    fn get_report_counts_empty_report() {
+        let mut conn = setup_test_db();
+        let fixture = create_report_fixture(&mut conn);
+
+        let counts =
+            get_report_counts(&mut conn, fixture.report_id).expect("Failed to get report counts");
+        assert!(counts.results.is_empty());
+        assert_eq!(counts.alerts, JsonReportAlertsCounts::default());
+    }
+
+    #[test]
+    #[expect(clippy::too_many_lines, reason = "test data setup")]
+    fn get_report_counts_alerts() {
+        let mut conn = setup_test_db();
+        let fixture = create_report_fixture(&mut conn);
+
+        let measure_id = create_measure(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000060",
+            "Latency",
+            "latency",
+        );
+        let benchmark_one = create_benchmark(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000070",
+            "bench_one",
+            "bench-one",
+        );
+        let benchmark_two = create_benchmark(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000071",
+            "bench_two",
+            "bench-two",
+        );
+        let threshold_id = create_threshold(
+            &mut conn,
+            fixture.project_id,
+            fixture.branch.branch_id,
+            fixture.testbed_id,
+            measure_id,
+            "00000000-0000-0000-0000-0000000000a0",
+        );
+        let model_id = create_model(
+            &mut conn,
+            threshold_id,
+            "00000000-0000-0000-0000-0000000000b0",
+            0,
+        );
+
+        let report_benchmark = create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000080",
+            fixture.report_id,
+            0,
+            benchmark_one,
+        );
+        let metric_id = create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000090",
+            report_benchmark,
+            measure_id,
+            1.0,
+        );
+        let boundary_id = create_boundary(
+            &mut conn,
+            "00000000-0000-0000-0000-0000000000c0",
+            metric_id,
+            threshold_id,
+            model_id,
+        );
+        create_alert(
+            &mut conn,
+            "00000000-0000-0000-0000-0000000000d0",
+            boundary_id,
+            BoundaryLimit::Upper,
+            AlertStatus::Active,
+        );
+
+        let report_benchmark = create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000081",
+            fixture.report_id,
+            0,
+            benchmark_two,
+        );
+        let metric_id = create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000091",
+            report_benchmark,
+            measure_id,
+            2.0,
+        );
+        let boundary_id = create_boundary(
+            &mut conn,
+            "00000000-0000-0000-0000-0000000000c1",
+            metric_id,
+            threshold_id,
+            model_id,
+        );
+        create_alert(
+            &mut conn,
+            "00000000-0000-0000-0000-0000000000d1",
+            boundary_id,
+            BoundaryLimit::Upper,
+            AlertStatus::Dismissed,
+        );
+
+        let counts =
+            get_report_counts(&mut conn, fixture.report_id).expect("Failed to get report counts");
+        assert_eq!(
+            counts.alerts,
+            JsonReportAlertsCounts {
+                total: 2,
+                active: 1,
+            }
+        );
+    }
+
+    #[test]
+    #[expect(clippy::too_many_lines, reason = "test data setup")]
+    fn into_json_full_and_collapsed_agree() {
+        let mut conn = setup_test_db();
+        let fixture = create_report_fixture(&mut conn);
+
+        let measure_id = create_measure(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000060",
+            "Latency",
+            "latency",
+        );
+        let benchmark_one = create_benchmark(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000070",
+            "bench_one",
+            "bench-one",
+        );
+        let benchmark_two = create_benchmark(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000071",
+            "bench_two",
+            "bench-two",
+        );
+        let threshold_id = create_threshold(
+            &mut conn,
+            fixture.project_id,
+            fixture.branch.branch_id,
+            fixture.testbed_id,
+            measure_id,
+            "00000000-0000-0000-0000-0000000000a0",
+        );
+        let model_id = create_model(
+            &mut conn,
+            threshold_id,
+            "00000000-0000-0000-0000-0000000000b0",
+            0,
+        );
+
+        let report_benchmark = create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000080",
+            fixture.report_id,
+            0,
+            benchmark_one,
+        );
+        let metric_id = create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000090",
+            report_benchmark,
+            measure_id,
+            1.0,
+        );
+        let boundary_id = create_boundary(
+            &mut conn,
+            "00000000-0000-0000-0000-0000000000c0",
+            metric_id,
+            threshold_id,
+            model_id,
+        );
+        create_alert(
+            &mut conn,
+            "00000000-0000-0000-0000-0000000000d0",
+            boundary_id,
+            BoundaryLimit::Upper,
+            AlertStatus::Active,
+        );
+        let report_benchmark = create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000081",
+            fixture.report_id,
+            0,
+            benchmark_two,
+        );
+        create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000091",
+            report_benchmark,
+            measure_id,
+            2.0,
+        );
+
+        let log = test_logger();
+        let load_report = |conn: &mut DbConnection| -> QueryReport {
+            schema::report::table
+                .filter(schema::report::id.eq(fixture.report_id))
+                .select(QueryReport::as_select())
+                .first(conn)
+                .expect("Failed to load report")
+        };
+
+        let full = load_report(&mut conn)
+            .into_json(&log, &mut conn, ReportMode::Full)
+            .expect("Failed to convert full report");
+        let results = full.results.as_ref().expect("Full report missing results");
+        let alerts = full.alerts.as_ref().expect("Full report missing alerts");
+        assert_eq!(full.counts, report_counts(results, alerts));
+
+        let collapsed = load_report(&mut conn)
+            .into_json(&log, &mut conn, ReportMode::Collapsed)
+            .expect("Failed to convert collapsed report");
+        assert!(collapsed.results.is_none());
+        assert!(collapsed.alerts.is_none());
+
+        assert_eq!(full.counts, collapsed.counts);
+        assert_eq!(
+            full.counts.results,
+            vec![JsonReportIterationCounts {
+                benchmarks: 2,
+                measures: 1,
+            }]
+        );
+        assert_eq!(
+            full.counts.alerts,
+            JsonReportAlertsCounts {
+                total: 1,
+                active: 1,
+            }
+        );
+    }
 
     #[test]
     fn last_insert_rowid_returns_report_id() {

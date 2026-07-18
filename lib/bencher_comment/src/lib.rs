@@ -56,17 +56,26 @@ impl ReportComment {
         sub_adapter: SubAdapter,
         source: String,
     ) -> Self {
+        let results = json_report.results.as_deref().unwrap_or_default();
         Self {
             console_url,
             project_slug: json_report.project.slug.clone(),
             public_links: json_report.project.visibility.is_public(),
-            multiple_iterations: json_report.results.len() > 1,
-            benchmark_count: json_report.results.iter().map(Vec::len).sum(),
+            multiple_iterations: results.len() > 1,
+            benchmark_count: results.iter().map(Vec::len).sum(),
             missing_threshold: Measure::missing_threshold(&json_report),
             json_report,
             sub_adapter,
             source,
         }
+    }
+
+    fn results(&self) -> &[JsonReportIteration] {
+        self.json_report.results.as_deref().unwrap_or_default()
+    }
+
+    fn alerts(&self) -> &[JsonAlert] {
+        self.json_report.alerts.as_deref().unwrap_or_default()
     }
 
     pub fn human(&self) -> String {
@@ -95,7 +104,7 @@ impl ReportComment {
             return;
         }
         text.push_str("\n\nView results:");
-        for (i, iteration) in self.json_report.results.iter().enumerate() {
+        for (i, iteration) in self.results().iter().enumerate() {
             if self.multiple_iterations {
                 if i != 0 {
                     text.push('\n');
@@ -121,12 +130,12 @@ impl ReportComment {
     }
 
     fn human_alerts_list(&self, text: &mut String) {
-        if self.json_report.alerts.is_empty() {
+        if self.alerts().is_empty() {
             return;
         }
 
         text.push_str("\n\nView alerts:");
-        for alert in &self.json_report.alerts {
+        for alert in self.alerts() {
             text.push_str(&format!(
                 "\n- {benchmark_name} ({measure_name}){iter}: {console_url}",
                 benchmark_name = alert.benchmark.name,
@@ -269,10 +278,10 @@ impl ReportComment {
     }
 
     fn html_alerts(&self, html: &mut String, truncated: bool) {
-        if self.json_report.alerts.is_empty() {
+        if self.alerts().is_empty() {
             return;
         }
-        let alerts_len = self.json_report.alerts.len();
+        let alerts_len = self.alerts().len();
         html.push_str(&format!(
             "<h3>🚨 {alerts_len} {alert}</h3>",
             alert = if alerts_len == 1 { "Alert" } else { "Alerts" },
@@ -313,7 +322,7 @@ impl ReportComment {
     fn html_alerts_table_body(&self, html: &mut String) {
         html.push_str("<tbody>");
 
-        for alert in &self.json_report.alerts {
+        for alert in self.alerts() {
             let (factor, units, units_symbol) = {
                 let mut min = alert.metric.value;
                 if let Some(lower_limit) = alert.boundary.lower_limit {
@@ -408,7 +417,7 @@ impl ReportComment {
 
         html.push_str("<details><summary>Click to view all benchmark results</summary>");
         html.push_str("<br />");
-        for iteration in &self.json_report.results {
+        for iteration in self.results() {
             self.html_iteration_table(html, iteration, require_threshold);
         }
         html.push_str("</details>");
@@ -423,8 +432,7 @@ impl ReportComment {
     }
 
     fn has_boundary_alert(&self, boundary_limit: BoundaryLimit) -> bool {
-        self.json_report
-            .alerts
+        self.alerts()
             .iter()
             .any(|alert| alert.limit == boundary_limit)
     }
@@ -651,7 +659,7 @@ impl ReportComment {
     }
 
     pub fn has_threshold(&self) -> bool {
-        for iteration in &self.json_report.results {
+        for iteration in self.results() {
             for result in iteration {
                 for report_measure in &result.measures {
                     if report_measure.threshold.is_some() {
@@ -664,11 +672,11 @@ impl ReportComment {
     }
 
     pub fn has_alert(&self) -> bool {
-        !self.json_report.alerts.is_empty()
+        !self.alerts().is_empty()
     }
 
     pub fn find_alert(&self, result: &JsonReportResult, measure: &Measure) -> Option<&JsonAlert> {
-        self.json_report.alerts.iter().find(|alert| {
+        self.alerts().iter().find(|alert| {
             alert.benchmark.slug == result.benchmark.slug
                 && alert.threshold.measure.slug == measure.slug
         })
@@ -869,6 +877,8 @@ impl Measure {
     fn missing_threshold(json_report: &JsonReport) -> HashSet<Measure> {
         json_report
             .results
+            .as_deref()
+            .unwrap_or_default()
             .iter()
             .flat_map(|iteration| {
                 iteration.iter().flat_map(|result| {
@@ -1125,7 +1135,7 @@ fn boundary_limits_map(
 #[cfg(test)]
 mod tests {
     use bencher_json::{
-        DateTime, JsonBranch, JsonHead, JsonProject, JsonReport, JsonTestbed,
+        DateTime, JsonBranch, JsonHead, JsonProject, JsonReport, JsonReportCounts, JsonTestbed,
         project::{Visibility, report::Adapter},
     };
 
@@ -1179,8 +1189,9 @@ mod tests {
             start_time: DateTime::TEST,
             end_time: DateTime::TEST,
             adapter: Adapter::Magic,
-            results: Vec::new(),
-            alerts: Vec::new(),
+            results: Some(Vec::new()),
+            alerts: Some(Vec::new()),
+            counts: JsonReportCounts::default(),
             #[cfg(feature = "plus")]
             job: None,
             created: DateTime::TEST,

@@ -23,6 +23,7 @@ import PlotsTab from "./PlotsTab";
 import ReportsTab from "./ReportsTab";
 
 const Tab = (props: {
+	apiUrl: string;
 	project_slug: Accessor<undefined | string>;
 	theme: Accessor<Theme>;
 	isConsole: boolean;
@@ -157,6 +158,7 @@ const Tab = (props: {
 				}
 			>
 				<ReportsTab
+					apiUrl={props.apiUrl}
 					project_slug={props.project_slug}
 					theme={props.theme}
 					isConsole={props.isConsole}

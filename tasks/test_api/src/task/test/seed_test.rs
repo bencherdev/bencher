@@ -1139,6 +1139,55 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(alerts.0.len(), 5);
 
+        // cargo run -- report ls --host http://localhost:6610 the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["report", "ls", HOST_ARG, host, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let reports: bencher_json::JsonReports =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        // The reports list collapses the results and alerts by default
+        for report in &reports.0 {
+            assert!(
+                report.results.is_none(),
+                "Report results should be collapsed by default"
+            );
+            assert!(
+                report.alerts.is_none(),
+                "Report alerts should be collapsed by default"
+            );
+            assert!(
+                !report.counts.results.is_empty(),
+                "Report counts should always be included"
+            );
+        }
+        // The reports are in reverse chronological order,
+        // so the first report is the one that generated the alerts
+        let first_report = reports.0.first().unwrap();
+        assert_eq!(first_report.counts.alerts.total, 5);
+        assert_eq!(first_report.counts.alerts.active, 5);
+
+        // cargo run -- report ls --host http://localhost:6610 --expand the-computer
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args(["report", "ls", HOST_ARG, host, "--expand", PROJECT_SLUG])
+            .current_dir(CLI_DIR);
+        let assert = cmd.assert().success();
+        let reports: bencher_json::JsonReports =
+            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        // Expanded reports include the full results and alerts,
+        // and the counts are consistent with them
+        for report in &reports.0 {
+            let results = report.results.as_ref().unwrap();
+            assert_eq!(results.len(), report.counts.results.len());
+            let alerts = report.alerts.as_ref().unwrap();
+            assert_eq!(
+                u32::try_from(alerts.len()).unwrap(),
+                report.counts.alerts.total
+            );
+        }
+        let first_report = reports.0.first().unwrap();
+        assert_eq!(first_report.counts.alerts.total, 5);
+
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // Reset the feature branch

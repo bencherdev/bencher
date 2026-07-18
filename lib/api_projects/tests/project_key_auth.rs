@@ -1114,12 +1114,13 @@ async fn project_key_can_dismiss_alert() {
     let report: JsonReport = resp.json().await.expect("Failed to parse report");
 
     // Check that an alert was generated
+    let alerts = report.alerts.as_deref().expect("Report missing alerts");
     assert!(
-        !report.alerts.is_empty(),
+        !alerts.is_empty(),
         "Expected at least one alert from the spike run"
     );
 
-    let alert_uuid = report.alerts[0].uuid;
+    let alert_uuid = alerts[0].uuid;
 
     // Dismiss the alert with the project key
     let resp = server
