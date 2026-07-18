@@ -12,7 +12,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2 # zizmor: ignore[artipacked] this job commits and force-pushes the update/sandbox branch, so it needs the persisted GITHUB_TOKEN
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6.0.2 # zizmor: ignore[artipacked] this job commits and force-pushes the update/sandbox branch, so it needs the persisted GITHUB_TOKEN
         with:
           ref: devel
       - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
