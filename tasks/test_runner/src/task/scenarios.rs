@@ -2141,6 +2141,40 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
             },
         },
         Scenario {
+            name: "nosandbox_metrics",
+            description: "Non-sandboxed: run metrics on stderr with local transport",
+            // Verifies the local path emits ---BENCHER_METRICS:{json}--- with
+            // transport "local" (it previously emitted no metrics at all).
+            dockerfile: r#"FROM busybox:musl
+CMD ["echo", "local_metrics_test"]"#,
+            cancel_after_secs: None,
+            sandboxed: false,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                let metrics_line = output
+                    .stderr
+                    .lines()
+                    .find(|l| l.contains("---BENCHER_METRICS:"));
+                let Some(line) = metrics_line else {
+                    bail!(
+                        "No BENCHER_METRICS line found in stderr.\nstderr: {}",
+                        output.stderr
+                    )
+                };
+                let json_str = extract_json_substr(line);
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str)
+                    && let Some(transport) =
+                        json.get("transport").and_then(serde_json::Value::as_str)
+                {
+                    if transport == "local" {
+                        return Ok(());
+                    }
+                    bail!("Unexpected transport type: {transport}")
+                }
+                bail!("Could not find transport in metrics: {json_str}")
+            },
+        },
+        Scenario {
             name: "nosandbox_exit_code",
             description: "Non-sandboxed: non-zero exit code propagation",
             dockerfile: r#"FROM busybox:musl

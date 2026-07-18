@@ -1,7 +1,14 @@
-use bencher_runner::{PerfEventParanoid, Swappiness, TuningConfig};
+use bencher_runner::{PerfEventParanoid, Swappiness, ThpMode, TuningConfig};
 use clap::Args;
 
 /// Host tuning flags shared by `run` and `up` subcommands.
+///
+/// Flag polarity: hardware features that tuning disables use positive
+/// keep-enabled flags naming the feature (`--smt`, `--turbo`,
+/// `--cstates`, `--ksm`); actions the runner itself performs use `--no-`
+/// flags naming the skipped action (`--no-irq-steering`,
+/// `--no-cpuset-partition`), since a bare `--irq-steering` would read
+/// as enabling something that is already on by default.
 #[expect(
     clippy::struct_excessive_bools,
     reason = "CLI flags map to independent tuning knobs"
@@ -28,6 +35,35 @@ pub struct CliTuning {
     #[arg(long)]
     pub turbo: bool,
 
+    /// Keep automatic NUMA balancing enabled (default: disabled for benchmarks).
+    #[arg(long)]
+    pub numa_balancing: bool,
+
+    /// Keep timer migration enabled (default: disabled for benchmarks).
+    #[arg(long)]
+    pub timer_migration: bool,
+
+    /// Keep the soft lockup watchdog enabled (default: disabled for benchmarks).
+    #[arg(long)]
+    pub soft_watchdog: bool,
+
+    /// Keep kernel samepage merging (KSM) enabled (default: disabled for benchmarks).
+    #[arg(long)]
+    pub ksm: bool,
+
+    /// Keep deep C-states enabled (default: disabled for benchmarks).
+    #[arg(long)]
+    pub cstates: bool,
+
+    /// Do not steer device IRQs and kernel workqueues to housekeeping cores.
+    #[arg(long)]
+    pub no_irq_steering: bool,
+
+    /// Do not detach benchmark cores from the scheduler via an isolated
+    /// cpuset partition.
+    #[arg(long)]
+    pub no_cpuset_partition: bool,
+
     /// Set swappiness value (default: 10).
     #[arg(long)]
     pub swappiness: Option<u32>,
@@ -39,6 +75,12 @@ pub struct CliTuning {
     /// Set `perf_event_paranoid` value (default: -1).
     #[arg(long, allow_hyphen_values = true)]
     pub perf_event_paranoid: Option<i32>,
+
+    /// Set host transparent hugepage mode: never, madvise, always,
+    /// or leave (default: never). Use "leave" to preserve the host
+    /// configuration.
+    #[arg(long)]
+    pub thp: Option<ThpMode>,
 }
 
 impl TryFrom<CliTuning> for TuningConfig {
@@ -64,6 +106,108 @@ impl TryFrom<CliTuning> for TuningConfig {
             governor: cli.governor.or_else(|| Some("performance".to_owned())),
             disable_smt: !cli.smt,
             disable_turbo: !cli.turbo,
+            disable_numa_balancing: !cli.numa_balancing,
+            disable_timer_migration: !cli.timer_migration,
+            disable_soft_watchdog: !cli.soft_watchdog,
+            disable_ksm: !cli.ksm,
+            disable_cstates: !cli.cstates,
+            steer_kernel_work: !cli.no_irq_steering,
+            cpuset_partition: !cli.no_cpuset_partition,
+            thp: cli.thp.unwrap_or_default(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn default_cli() -> CliTuning {
+        CliTuning {
+            no_tuning: false,
+            aslr: false,
+            nmi_watchdog: false,
+            smt: false,
+            turbo: false,
+            numa_balancing: false,
+            timer_migration: false,
+            soft_watchdog: false,
+            ksm: false,
+            cstates: false,
+            no_irq_steering: false,
+            no_cpuset_partition: false,
+            swappiness: None,
+            governor: None,
+            perf_event_paranoid: None,
+            thp: None,
+        }
+    }
+
+    #[test]
+    fn default_flags_enable_all_tuning() {
+        let config = TuningConfig::try_from(default_cli()).unwrap();
+        assert!(config.disable_aslr);
+        assert!(config.disable_nmi_watchdog);
+        assert!(config.disable_smt);
+        assert!(config.disable_turbo);
+        assert!(config.disable_numa_balancing);
+        assert!(config.disable_timer_migration);
+        assert!(config.disable_soft_watchdog);
+        assert!(config.disable_ksm);
+        assert!(config.disable_cstates);
+        assert!(config.steer_kernel_work);
+        assert!(config.cpuset_partition);
+        assert_eq!(config.thp, ThpMode::Never);
+        assert_eq!(config.swappiness, Some(Swappiness::DEFAULT));
+        assert_eq!(config.perf_event_paranoid, Some(PerfEventParanoid::DEFAULT));
+        assert_eq!(config.governor.as_deref(), Some("performance"));
+    }
+
+    #[test]
+    fn no_tuning_disables_everything() {
+        let cli = CliTuning {
+            no_tuning: true,
+            ..default_cli()
+        };
+        let config = TuningConfig::try_from(cli).unwrap();
+        assert!(!config.disable_aslr);
+        assert!(!config.disable_numa_balancing);
+        assert!(!config.disable_cstates);
+        assert!(!config.steer_kernel_work);
+        assert!(!config.cpuset_partition);
+        assert_eq!(config.thp, ThpMode::Leave);
+        assert_eq!(config.swappiness, None);
+        assert_eq!(config.governor, None);
+    }
+
+    #[test]
+    fn thp_override_passed_through() {
+        let cli = CliTuning {
+            thp: Some(ThpMode::Leave),
+            ..default_cli()
+        };
+        let config = TuningConfig::try_from(cli).unwrap();
+        assert_eq!(config.thp, ThpMode::Leave);
+    }
+
+    #[test]
+    fn individual_keep_flags_disable_single_knobs() {
+        let cli = CliTuning {
+            numa_balancing: true,
+            cstates: true,
+            no_irq_steering: true,
+            no_cpuset_partition: true,
+            ..default_cli()
+        };
+        let config = TuningConfig::try_from(cli).unwrap();
+        assert!(!config.disable_numa_balancing);
+        assert!(!config.disable_cstates);
+        assert!(!config.steer_kernel_work);
+        assert!(!config.cpuset_partition);
+        // Everything else stays enabled
+        assert!(config.disable_aslr);
+        assert!(config.disable_timer_migration);
+        assert!(config.disable_soft_watchdog);
+        assert!(config.disable_ksm);
     }
 }

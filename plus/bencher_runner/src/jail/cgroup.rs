@@ -15,7 +15,7 @@ use crate::jail::ResourceLimits;
 const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 
 /// Bencher cgroup hierarchy base.
-const BENCHER_CGROUP_BASE: &str = "bencher";
+pub(crate) const BENCHER_CGROUP_BASE: &str = "bencher";
 
 /// A cgroup manager for a single run.
 pub struct CgroupManager {
@@ -37,10 +37,12 @@ impl CgroupManager {
                 path: parent.clone(),
                 source: e,
             })?;
-
-            // Enable controllers in parent
-            Self::enable_controllers(&parent)?;
         }
+
+        // Enable controllers in the parent. Always attempted (idempotent):
+        // the parent may have been created without controllers, e.g. by
+        // the tuning cpuset partition at startup.
+        Self::enable_controllers(&parent)?;
 
         // Create this run's cgroup
         if !cgroup_path.exists() {
@@ -59,36 +61,33 @@ impl CgroupManager {
     /// Enable controllers in a cgroup.
     ///
     /// Enables cpu, memory, and pids controllers (required), and io/cpuset controllers
-    /// (optional, for I/O throttling and CPU pinning). Returns an error if required
-    /// controllers cannot be enabled.
+    /// (optional, for I/O throttling and CPU pinning). The verification read is the
+    /// real gate: write failures are tolerated when the required controllers are
+    /// already enabled (e.g., pre-configured by an admin for an unprivileged runner).
     fn enable_controllers(path: &Utf8Path) -> Result<(), RunnerError> {
         let subtree_control = path.join("cgroup.subtree_control");
 
-        // Try to enable all controllers at once (most efficient)
-        if fs::write(&subtree_control, "+cpu +memory +pids +io +cpuset").is_err() {
-            // Fall back to enabling without cpuset
-            if fs::write(&subtree_control, "+cpu +memory +pids +io").is_err() {
-                // Fall back to enabling required controllers without io or cpuset
-                fs::write(&subtree_control, "+cpu +memory +pids").map_err(|e| {
-                    JailError::EnableControllers {
-                        path: subtree_control.clone(),
-                        source: e,
-                    }
-                })?;
-            }
-        }
+        // Try to enable all controllers at once, falling back to smaller sets
+        let write_result = fs::write(&subtree_control, "+cpu +memory +pids +io +cpuset")
+            .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids +io"))
+            .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids"));
 
         // Verify that required controllers are enabled
         let enabled = fs::read_to_string(&subtree_control).unwrap_or_default();
-        for required in ["cpu", "memory", "pids"] {
-            if !enabled.contains(required) {
-                return Err(JailError::MissingController {
-                    controller: required.to_owned(),
-                    path: subtree_control.clone(),
-                    enabled: enabled.clone(),
+        if let Some(missing) = missing_required_controller(&enabled) {
+            return Err(match write_result {
+                Err(e) => JailError::EnableControllers {
+                    path: subtree_control,
+                    source: e,
                 }
-                .into());
-            }
+                .into(),
+                Ok(()) => JailError::MissingController {
+                    controller: missing.to_owned(),
+                    path: subtree_control,
+                    enabled,
+                }
+                .into(),
+            });
         }
 
         Ok(())
@@ -108,7 +107,7 @@ impl CgroupManager {
 
             // Disable swap to ensure benchmark memory measurements are accurate
             // and to prevent swap thrashing from affecting benchmark results.
-            drop(self.write_file("memory.swap.max", "0"));
+            drop(self.disable_swap());
         }
 
         // OOM group kill: when the cgroup hits its memory limit, kill ALL processes
@@ -161,10 +160,15 @@ impl CgroupManager {
                 "Warning: failed to set cpuset.cpus to '{cpuset}' (cpuset controller may not be available): {e}"
             );
         } else {
-            // Also need to set cpuset.mems for cpuset to work
-            // Use all memory nodes (typically just "0" on most systems)
+            // Also need to set cpuset.mems for cpuset to work. Use the
+            // parent's effective memory nodes so multi-node NUMA hosts
+            // are not forced onto node 0.
+            let mems = self
+                .cgroup_path
+                .parent()
+                .map_or_else(|| "0".to_owned(), effective_mems);
             let mems_path = self.cgroup_path.join("cpuset.mems");
-            if let Err(e) = fs::write(&mems_path, "0") {
+            if let Err(e) = fs::write(&mems_path, &mems) {
                 eprintln!("Warning: failed to set cpuset.mems: {e}");
             }
         }
@@ -234,6 +238,14 @@ impl CgroupManager {
         devices
     }
 
+    /// Disable swap for this cgroup.
+    ///
+    /// Keeps benchmark memory resident: swap thrashing adds run-to-run
+    /// variance and distorts memory measurements.
+    pub fn disable_swap(&self) -> Result<(), RunnerError> {
+        self.write_file("memory.swap.max", "0")
+    }
+
     /// Add the current process to this cgroup.
     pub fn add_self(&self) -> Result<(), RunnerError> {
         let pid = std::process::id();
@@ -258,6 +270,18 @@ impl CgroupManager {
         &self.cgroup_path
     }
 
+    /// SIGKILL every process in this cgroup's subtree (best-effort).
+    ///
+    /// Writes `1` to `cgroup.kill` (Linux 5.14+). Reaps grandchildren
+    /// that survive a direct-child kill, e.g. on timeout or cancellation,
+    /// so no stray work lingers on benchmark cores and the cgroup can be
+    /// removed.
+    pub fn kill_all(&self) {
+        if let Err(e) = self.write_file("cgroup.kill", "1") {
+            eprintln!("Warning: failed to kill cgroup subtree: {e}");
+        }
+    }
+
     /// Clean up the cgroup.
     pub fn cleanup(&mut self) -> Result<(), RunnerError> {
         if self.created && self.cgroup_path.exists() {
@@ -278,6 +302,29 @@ impl Drop for CgroupManager {
     }
 }
 
+/// Read a cgroup's effective memory nodes (`cpuset.mems.effective`).
+///
+/// Falls back to node `0` when the file is missing or empty (e.g., the
+/// cpuset controller is not enabled). Using effective mems instead of a
+/// hardcoded node keeps multi-node NUMA hosts from forcing all benchmark
+/// memory onto node 0.
+pub(crate) fn effective_mems(cgroup: &Utf8Path) -> String {
+    match fs::read_to_string(cgroup.join("cpuset.mems.effective")) {
+        Ok(mems) if !mems.trim().is_empty() => mems.trim().to_owned(),
+        _ => "0".to_owned(),
+    }
+}
+
+/// Return the first required controller missing from a
+/// `cgroup.subtree_control` listing, or `None` when all are enabled.
+///
+/// Matches whole tokens: `cpuset` alone must not satisfy `cpu`.
+fn missing_required_controller(enabled: &str) -> Option<&'static str> {
+    ["cpu", "memory", "pids"]
+        .into_iter()
+        .find(|required| !enabled.split_whitespace().any(|token| token == *required))
+}
+
 /// Check if cgroup v2 is available.
 #[expect(dead_code, reason = "utility for future cgroup v2 feature detection")]
 #[must_use]
@@ -285,4 +332,53 @@ pub fn is_cgroup_v2_available() -> bool {
     Utf8Path::new(CGROUP_ROOT)
         .join("cgroup.controllers")
         .exists()
+}
+
+#[cfg(test)]
+mod tests {
+    use camino::Utf8PathBuf;
+
+    use super::*;
+
+    #[test]
+    fn missing_required_controller_matches_whole_tokens() {
+        assert_eq!(missing_required_controller("cpu memory pids"), None);
+        assert_eq!(
+            missing_required_controller("cpuset cpu memory pids io"),
+            None
+        );
+        assert_eq!(missing_required_controller(""), Some("cpu"));
+        // "cpuset" alone must not satisfy the "cpu" controller
+        assert_eq!(
+            missing_required_controller("cpuset memory pids"),
+            Some("cpu")
+        );
+        assert_eq!(missing_required_controller("cpu memory"), Some("pids"));
+    }
+
+    #[test]
+    fn effective_mems_reads_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        fs::write(root.join("cpuset.mems.effective"), "0-1\n").unwrap();
+
+        assert_eq!(effective_mems(&root), "0-1");
+    }
+
+    #[test]
+    fn effective_mems_missing_falls_back_to_node_zero() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        assert_eq!(effective_mems(&root), "0");
+    }
+
+    #[test]
+    fn effective_mems_empty_falls_back_to_node_zero() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        fs::write(root.join("cpuset.mems.effective"), "\n").unwrap();
+
+        assert_eq!(effective_mems(&root), "0");
+    }
 }

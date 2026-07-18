@@ -26,6 +26,8 @@ use std::time::{Duration, Instant};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
+use crate::local_isolation::LocalIsolation;
+use crate::metrics::{self, RunMetrics};
 use crate::run::{RunOutput, prepare_oci_workspace};
 
 /// Execute a single benchmark run locally on the host system.
@@ -92,6 +94,15 @@ pub fn local_execute(
         },
     };
 
+    // Isolate the benchmark on the benchmark cores (cgroup cpuset with a
+    // CPU affinity fallback), mirroring the Firecracker path. Best-effort:
+    // failures degrade to no isolation with a warning.
+    let isolation = LocalIsolation::prepare(config.cpu_layout.as_ref());
+    isolation.configure_command(&mut cmd);
+
+    let start = Instant::now();
+    // No metrics are emitted on spawn failure: nothing ran, so there is
+    // no wall clock or cgroup usage to report.
     let child = cmd
         .spawn()
         .map_err(|e| crate::error::ConfigError::BinaryNotFound {
@@ -99,7 +110,21 @@ pub fn local_execute(
             hint: format!("Failed to spawn process: {e}"),
         })?;
 
-    let output = wait_with_timeout(child, config.timeout_secs, cancel_flag)?;
+    let output = match wait_with_timeout(child, config.timeout_secs, cancel_flag) {
+        Ok(output) => output,
+        Err(e) => {
+            let timed_out = matches!(
+                e,
+                RunnerError::Execution(crate::error::ExecutionError::Timeout(_))
+            );
+            // Reap any grandchildren the direct-child kill missed before
+            // reading metrics and removing the cgroup.
+            isolation.kill_all();
+            emit_run_metrics(start.elapsed(), timed_out, &isolation);
+            return Err(e);
+        },
+    };
+    emit_run_metrics(start.elapsed(), false, &isolation);
 
     // Collect output files from the unpacked rootfs
     let output_files = collect_output_files(
@@ -114,6 +139,22 @@ pub fn local_execute(
         stderr: output.stderr,
         output_files,
     })
+}
+
+/// Output run metrics to stderr in the standard marker format.
+///
+/// Reads cgroup metrics before the isolation (and with it the cgroup)
+/// is dropped.
+fn emit_run_metrics(elapsed: Duration, timed_out: bool, isolation: &LocalIsolation) {
+    let run_metrics = RunMetrics {
+        wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
+        timed_out,
+        transport: "local".to_owned(),
+        cgroup: isolation.read_metrics(),
+    };
+    if let Some(line) = metrics::format_metrics(&run_metrics) {
+        eprintln!("{line}");
+    }
 }
 
 /// Output from waiting on a child process.

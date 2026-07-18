@@ -8,6 +8,8 @@ mod cgroup;
 
 #[cfg(target_os = "linux")]
 pub use cgroup::CgroupManager;
+#[cfg(target_os = "linux")]
+pub(crate) use cgroup::{BENCHER_CGROUP_BASE, effective_mems};
 
 use serde::{Deserialize, Serialize};
 

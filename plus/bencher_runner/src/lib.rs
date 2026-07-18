@@ -37,6 +37,8 @@ pub mod kernel;
 #[cfg(feature = "plus")]
 mod local;
 #[cfg(feature = "plus")]
+mod local_isolation;
+#[cfg(feature = "plus")]
 mod log_level;
 #[cfg(feature = "plus")]
 pub mod metrics;
@@ -64,4 +66,4 @@ pub use log_level::SandboxLogLevel;
 #[cfg(feature = "plus")]
 pub use run::{RunArgs, RunOutput, execute, resolve_oci_image, run_with_args};
 #[cfg(feature = "plus")]
-pub use tuning::{PerfEventParanoid, Swappiness, TuningConfig};
+pub use tuning::{ParseThpModeError, PerfEventParanoid, Swappiness, ThpMode, TuningConfig};
