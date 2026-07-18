@@ -104,7 +104,7 @@ pub async fn proj_alerts_get(
     ))
 }
 
-async fn get_ls_inner(
+pub async fn get_ls_inner(
     context: &ApiContext,
     api_actor: &ApiActor,
     path_params: ProjAlertsParams,
@@ -341,7 +341,7 @@ pub async fn proj_alert_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_one_inner(
+pub async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjAlertParams,
     api_actor: &ApiActor,
@@ -396,7 +396,7 @@ pub async fn proj_alert_patch(
     Ok(Patch::auth_response_ok(json))
 }
 
-async fn patch_inner(
+pub async fn patch_inner(
     context: &ApiContext,
     api_actor: &ApiActor,
     path_params: ProjAlertParams,

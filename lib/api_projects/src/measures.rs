@@ -111,7 +111,7 @@ pub async fn proj_measures_get(
     ))
 }
 
-async fn get_ls_inner(
+pub async fn get_ls_inner(
     context: &ApiContext,
     api_actor: &ApiActor,
     path_params: ProjMeasuresParams,
@@ -222,7 +222,7 @@ pub async fn proj_measure_post(
     Ok(Post::auth_response_created(json))
 }
 
-async fn post_inner(
+pub async fn post_inner(
     context: &ApiContext,
     path_params: ProjMeasuresParams,
     json_measure: JsonNewMeasure,
@@ -294,7 +294,7 @@ pub async fn proj_measure_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_one_inner(
+pub async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjMeasureParams,
     api_actor: &ApiActor,
@@ -355,7 +355,7 @@ pub async fn proj_measure_patch(
     Ok(Patch::auth_response_ok(json))
 }
 
-async fn patch_inner(
+pub async fn patch_inner(
     context: &ApiContext,
     api_actor: &ApiActor,
     path_params: ProjMeasureParams,

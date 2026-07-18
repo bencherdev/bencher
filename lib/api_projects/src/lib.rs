@@ -6,20 +6,20 @@ use serde_json as _;
 #[cfg(test)]
 use tokio as _;
 
-mod alerts;
+pub mod alerts;
 mod allowed;
-mod benchmarks;
-mod branches;
-mod jobs;
+pub mod benchmarks;
+pub mod branches;
+pub mod jobs;
 mod keys;
-mod measures;
-mod metrics;
-mod perf;
-mod plots;
-mod projects;
-mod reports;
-mod testbeds;
-mod thresholds;
+pub mod measures;
+pub mod metrics;
+pub mod perf;
+pub mod plots;
+pub mod projects;
+pub mod reports;
+pub mod testbeds;
+pub mod thresholds;
 
 mod macros;
 

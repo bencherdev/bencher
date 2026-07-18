@@ -28,6 +28,7 @@ RUN cargo init --lib bencher_token
 COPY lib/bencher_valid bencher_valid
 
 WORKDIR /usr/src/bencher/plus
+RUN cargo init --lib api_mcp
 RUN cargo init --lib api_oci
 RUN cargo init --lib api_runners
 RUN cargo init --lib api_specs

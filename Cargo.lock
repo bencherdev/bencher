@@ -169,6 +169,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "api_mcp"
+version = "0.6.9"
+dependencies = [
+ "api_projects",
+ "api_run",
+ "base64",
+ "bencher_api_tests",
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_schema",
+ "diesel",
+ "dropshot",
+ "http 1.4.1",
+ "reqwest",
+ "rmcp",
+ "schemars",
+ "serde",
+ "serde_json",
+ "slog",
+ "strum",
+ "tokio",
+]
+
+[[package]]
 name = "api_oci"
 version = "0.6.9"
 dependencies = [
@@ -1077,6 +1101,7 @@ version = "0.6.9"
 dependencies = [
  "api_auth",
  "api_checkout",
+ "api_mcp",
  "api_oci",
  "api_organizations",
  "api_projects",
@@ -7053,6 +7078,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "rmcp"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14db48ee17a9ba61810ab1a9c1beb7d06d8136ae39ac25a1137f10d357af01af"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "futures",
+ "pin-project-lite",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "roff"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7990,6 +8033,9 @@ name = "strum"
 version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
+dependencies = [
+ "strum_macros 0.27.2",
+]
 
 [[package]]
 name = "strum_macros"

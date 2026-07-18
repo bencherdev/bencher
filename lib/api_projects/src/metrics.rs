@@ -83,7 +83,7 @@ pub async fn proj_metric_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_one_inner(
+pub async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjMetricParams,
     api_actor: &ApiActor,

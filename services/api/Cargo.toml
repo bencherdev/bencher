@@ -9,11 +9,13 @@ publish = false
 [features]
 default = ["plus", "sentry", "otel"]
 plus = [
+    "dep:api_mcp",
     "dep:api_oci",
     "dep:api_runners",
     "dep:api_specs",
     "api_auth/plus",
     "api_checkout/plus",
+    "api_mcp/plus",
     "api_oci/plus",
     "api_organizations/plus",
     "api_projects/plus",
@@ -65,6 +67,7 @@ otel = [
 [dependencies]
 api_auth.workspace = true
 api_checkout = { workspace = true, optional = true }
+api_mcp = { workspace = true, optional = true }
 api_oci = { workspace = true, optional = true }
 api_organizations.workspace = true
 api_projects.workspace = true

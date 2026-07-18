@@ -1,0 +1,66 @@
+---
+title: "Bencher MCP"
+description: "Connect AI agents and assistants to Bencher with the hosted MCP server to query benchmark data and submit results"
+heading: "How to Use Bencher MCP"
+published: "2026-07-18T07:00:00Z"
+modified: "2026-07-18T07:00:00Z"
+sortOrder: 11
+---
+
+import McpClaudeCode from "../../../chunks/docs-how-to/mcp/mcp-claude-code.mdx";
+import McpJson from "../../../chunks/docs-how-to/mcp/mcp-json.mdx";
+
+Bencher MCP is a hosted [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server.
+It lets AI agents and assistants query benchmark data and submit benchmark results without needing the `bencher` CLI installed.
+
+When the `bencher` CLI is available, it is still the recommended way to work with Bencher.
+[`bencher run`](/docs/explanation/bencher-run/) handles benchmark harness adapters, iterations, and CI integration.
+Use Bencher MCP when the CLI is not installed or when your MCP client cannot run shell commands.
+
+## Connect
+
+| Deployment | URL |
+| :--- | :--- |
+| Bencher Cloud | `https://mcp.bencher.dev/mcp` |
+| Bencher Self-Hosted | `https://<api-host>/mcp` |
+
+For example, connect from [Claude Code](https://docs.anthropic.com/en/docs/claude-code):
+
+<McpClaudeCode />
+
+Or use a generic MCP client configuration:
+
+<McpJson />
+
+## Authentication
+
+Bencher MCP accepts the same `Authorization: Bearer` credentials as the Bencher API:
+a project API key (`bencher_run_*`) or a user API key (`bencher_user_*`).
+Public projects can be read without any credential.
+OAuth is not yet supported, so MCP clients that only support OAuth for remote servers cannot connect yet.
+
+A project API key is scoped to a single project, so it is the best choice for most agents.
+A user API key can access all of the user's projects.
+
+## Tools
+
+The tool surface mirrors what a project API key (`bencher_run_*`) can do:
+project-scoped reads and non-destructive writes.
+There are no delete or rename tools, and with a project API key alert updates are status only.
+Most tools take a `project` argument that accepts either a project slug or UUID.
+
+| Tool | Purpose |
+| :--- | :--- |
+| `submit_run` | Submit raw benchmark harness output; the server parses it and creates branches, testbeds, and thresholds on the fly |
+| `query_perf`, `perf_image` | Query benchmark metrics over time; render a perf plot image |
+| `list_projects`, `view_project` | Projects |
+| `list_reports`, `create_report`, `view_report` | Reports |
+| `list_branches`, `create_branch`, `view_branch`, `update_branch` | Branches |
+| `list_testbeds`, `create_testbed`, `view_testbed`, `update_testbed` | Testbeds |
+| `list_benchmarks`, `create_benchmark`, `view_benchmark`, `update_benchmark` | Benchmarks |
+| `list_measures`, `create_measure`, `view_measure`, `update_measure` | Measures |
+| `list_thresholds`, `create_threshold`, `view_threshold`, `update_threshold` | Thresholds |
+| `list_alerts`, `view_alert`, `update_alert` | Alerts |
+| `view_metric` | A single metric with its full context |
+| `list_plots`, `view_plot` | Saved dashboard plots |
+| `list_jobs`, `view_job` | Bare metal runner jobs |

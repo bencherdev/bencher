@@ -93,7 +93,7 @@ pub async fn proj_jobs_get(
 /// Output is only included in single-job GET responses for terminal jobs,
 /// since fetching output from blob storage for every job in a list would
 /// be a performance concern.
-async fn get_ls_inner(
+pub async fn get_ls_inner(
     context: &ApiContext,
     path_params: ProjJobsParams,
     pagination_params: ProjJobsPagination,
@@ -217,7 +217,7 @@ pub async fn proj_job_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_one_inner(
+pub async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjJobParams,
     api_actor: &ApiActor,

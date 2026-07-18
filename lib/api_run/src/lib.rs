@@ -11,7 +11,7 @@ use tokio as _;
 #[cfg(test)]
 use uuid as _;
 
-mod run;
+pub mod run;
 
 pub struct Api;
 

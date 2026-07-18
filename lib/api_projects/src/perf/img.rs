@@ -82,7 +82,7 @@ pub async fn proj_perf_img_get(
         .map_err(Into::into)
 }
 
-async fn get_inner(
+pub async fn get_inner(
     log: &slog::Logger,
     context: &ApiContext,
     path_params: ProjPerfParams,

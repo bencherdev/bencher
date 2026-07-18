@@ -112,7 +112,7 @@ pub async fn proj_perf_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_inner(
+pub async fn get_inner(
     log: &slog::Logger,
     context: &ApiContext,
     path_params: ProjPerfParams,

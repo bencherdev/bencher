@@ -117,7 +117,7 @@ pub async fn proj_thresholds_get(
     ))
 }
 
-async fn get_ls_inner(
+pub async fn get_ls_inner(
     context: &ApiContext,
     path_params: ProjThresholdsParams,
     pagination_params: ProjThresholdsPagination,
@@ -278,7 +278,7 @@ pub async fn proj_threshold_post(
     Ok(Post::auth_response_created(json))
 }
 
-async fn post_inner(
+pub async fn post_inner(
     context: &ApiContext,
     path_params: ProjThresholdsParams,
     json_threshold: &JsonNewThreshold,
@@ -394,7 +394,7 @@ pub async fn proj_threshold_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_one_inner(
+pub async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjThresholdParams,
     query_params: ProjThresholdQuery,
@@ -474,7 +474,7 @@ pub async fn proj_threshold_put(
     Ok(Put::auth_response_ok(json))
 }
 
-async fn put_inner(
+pub async fn put_inner(
     context: &ApiContext,
     path_params: ProjThresholdParams,
     json_threshold: JsonUpdateThreshold,

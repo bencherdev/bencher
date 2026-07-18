@@ -108,7 +108,7 @@ pub async fn proj_plots_get(
     ))
 }
 
-async fn get_ls_inner(
+pub async fn get_ls_inner(
     context: &ApiContext,
     api_actor: &ApiActor,
     path_params: ProjPlotsParams,
@@ -299,7 +299,7 @@ pub async fn proj_plot_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_one_inner(
+pub async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjPlotParams,
     api_actor: &ApiActor,

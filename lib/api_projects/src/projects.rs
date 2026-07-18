@@ -110,7 +110,7 @@ pub async fn projects_get(
     ))
 }
 
-async fn get_ls_inner(
+pub async fn get_ls_inner(
     context: &ApiContext,
     pagination_params: ProjectsPagination,
     query_params: ProjectsQuery,
@@ -255,7 +255,7 @@ pub async fn project_get(
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_one_inner(
+pub async fn get_one_inner(
     context: &ApiContext,
     path_params: ProjectParams,
     api_actor: &ApiActor,

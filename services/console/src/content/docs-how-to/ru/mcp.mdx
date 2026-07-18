@@ -1,0 +1,66 @@
+---
+title: "Bencher MCP"
+description: "Подключайте ИИ-агентов и ассистентов к Bencher через размещённый MCP-сервер для запроса данных бенчмарков и отправки результатов"
+heading: "Как использовать Bencher MCP"
+published: "2026-07-18T07:00:00Z"
+modified: "2026-07-18T07:00:00Z"
+sortOrder: 11
+---
+
+import McpClaudeCode from "../../../chunks/docs-how-to/mcp/mcp-claude-code.mdx";
+import McpJson from "../../../chunks/docs-how-to/mcp/mcp-json.mdx";
+
+Bencher MCP - это размещённый сервер [Model Context Protocol](https://modelcontextprotocol.io) (MCP).
+Он позволяет ИИ-агентам и ассистентам запрашивать данные бенчмарков и отправлять результаты без установки CLI `bencher`.
+
+Если CLI `bencher` доступен, он остаётся рекомендуемым способом работы с Bencher.
+[`bencher run`](/ru/docs/explanation/bencher-run/) берёт на себя адаптеры бенчмарк-харнессов, итерации и интеграцию с CI.
+Используйте Bencher MCP, когда CLI не установлен или когда ваш MCP-клиент не может выполнять команды оболочки.
+
+## Подключение
+
+| Развёртывание | URL |
+| :--- | :--- |
+| Bencher Cloud | `https://mcp.bencher.dev/mcp` |
+| Bencher Self-Hosted | `https://<api-host>/mcp` |
+
+Например, подключитесь из [Claude Code](https://docs.anthropic.com/en/docs/claude-code):
+
+<McpClaudeCode />
+
+Или используйте универсальную конфигурацию MCP-клиента:
+
+<McpJson />
+
+## Аутентификация
+
+Bencher MCP принимает те же учётные данные `Authorization: Bearer`, что и API Bencher:
+API-ключ проекта (`bencher_run_*`) или API-ключ пользователя (`bencher_user_*`).
+Публичные проекты можно читать без каких-либо учётных данных.
+OAuth пока не поддерживается, поэтому MCP-клиенты, которые поддерживают только OAuth для удалённых серверов, пока не могут подключиться.
+
+API-ключ проекта ограничен одним проектом, поэтому это лучший выбор для большинства агентов.
+API-ключ пользователя имеет доступ ко всем проектам пользователя.
+
+## Инструменты
+
+Набор инструментов отражает то, что может делать API-ключ проекта (`bencher_run_*`):
+чтение в рамках проекта и неразрушающая запись.
+Инструментов удаления и переименования нет, а с API-ключом проекта обновления алертов ограничены изменением статуса.
+Большинство инструментов принимают аргумент `project`, который может быть слагом или UUID проекта.
+
+| Инструмент | Назначение |
+| :--- | :--- |
+| `submit_run` | Отправить необработанный вывод бенчмарк-харнесса; сервер разбирает его и на лету создаёт ветки, тестбеды и пороги |
+| `query_perf`, `perf_image` | Запросить метрики бенчмарков во времени; построить изображение графика производительности |
+| `list_projects`, `view_project` | Проекты |
+| `list_reports`, `create_report`, `view_report` | Отчёты |
+| `list_branches`, `create_branch`, `view_branch`, `update_branch` | Ветки |
+| `list_testbeds`, `create_testbed`, `view_testbed`, `update_testbed` | Тестбеды |
+| `list_benchmarks`, `create_benchmark`, `view_benchmark`, `update_benchmark` | Бенчмарки |
+| `list_measures`, `create_measure`, `view_measure`, `update_measure` | Меры |
+| `list_thresholds`, `create_threshold`, `view_threshold`, `update_threshold` | Пороги |
+| `list_alerts`, `view_alert`, `update_alert` | Алерты |
+| `view_metric` | Отдельная метрика с полным контекстом |
+| `list_plots`, `view_plot` | Сохранённые графики дашборда |
+| `list_jobs`, `view_job` | Задачи bare metal раннеров |

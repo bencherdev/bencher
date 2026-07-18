@@ -1,0 +1,66 @@
+---
+title: "Bencher MCP"
+description: "Connectez des agents et assistants IA à Bencher avec le serveur MCP hébergé pour interroger les données de benchmark et soumettre des résultats"
+heading: "Comment utiliser Bencher MCP"
+published: "2026-07-18T07:00:00Z"
+modified: "2026-07-18T07:00:00Z"
+sortOrder: 11
+---
+
+import McpClaudeCode from "../../../chunks/docs-how-to/mcp/mcp-claude-code.mdx";
+import McpJson from "../../../chunks/docs-how-to/mcp/mcp-json.mdx";
+
+Bencher MCP est un serveur [Model Context Protocol](https://modelcontextprotocol.io) (MCP) hébergé.
+Il permet aux agents et assistants IA d'interroger les données de benchmark et de soumettre des résultats sans que la CLI `bencher` soit installée.
+
+Lorsque la CLI `bencher` est disponible, elle reste la méthode recommandée pour travailler avec Bencher.
+[`bencher run`](/fr/docs/explanation/bencher-run/) gère les adaptateurs de harnais de benchmark, les itérations et l'intégration CI.
+Utilisez Bencher MCP lorsque la CLI n'est pas installée ou lorsque votre client MCP ne peut pas exécuter de commandes shell.
+
+## Se connecter
+
+| Déploiement | URL |
+| :--- | :--- |
+| Bencher Cloud | `https://mcp.bencher.dev/mcp` |
+| Bencher Self-Hosted | `https://<api-host>/mcp` |
+
+Par exemple, connectez-vous depuis [Claude Code](https://docs.anthropic.com/en/docs/claude-code) :
+
+<McpClaudeCode />
+
+Ou utilisez une configuration générique de client MCP :
+
+<McpJson />
+
+## Authentification
+
+Bencher MCP accepte les mêmes identifiants `Authorization: Bearer` que l'API Bencher :
+une clé d'API de projet (`bencher_run_*`) ou une clé d'API utilisateur (`bencher_user_*`).
+Les projets publics peuvent être lus sans aucun identifiant.
+OAuth n'est pas encore pris en charge, donc les clients MCP qui ne prennent en charge que OAuth pour les serveurs distants ne peuvent pas encore se connecter.
+
+Une clé d'API de projet est limitée à un seul projet, ce qui en fait le meilleur choix pour la plupart des agents.
+Une clé d'API utilisateur peut accéder à tous les projets de l'utilisateur.
+
+## Outils
+
+L'ensemble des outils reflète ce qu'une clé d'API de projet (`bencher_run_*`) peut faire :
+des lectures limitées au projet et des écritures non destructives.
+Il n'existe aucun outil de suppression ni de renommage, et avec une clé d'API de projet les mises à jour d'alertes se limitent au statut.
+La plupart des outils prennent un argument `project` qui accepte le slug ou l'UUID du projet.
+
+| Outil | Rôle |
+| :--- | :--- |
+| `submit_run` | Soumettre la sortie brute du harnais de benchmark ; le serveur l'analyse et crée les branches, testbeds et thresholds à la volée |
+| `query_perf`, `perf_image` | Interroger les métriques de benchmark dans le temps ; générer une image du graphique de performance |
+| `list_projects`, `view_project` | Projets |
+| `list_reports`, `create_report`, `view_report` | Rapports |
+| `list_branches`, `create_branch`, `view_branch`, `update_branch` | Branches |
+| `list_testbeds`, `create_testbed`, `view_testbed`, `update_testbed` | Testbeds |
+| `list_benchmarks`, `create_benchmark`, `view_benchmark`, `update_benchmark` | Benchmarks |
+| `list_measures`, `create_measure`, `view_measure`, `update_measure` | Measures |
+| `list_thresholds`, `create_threshold`, `view_threshold`, `update_threshold` | Thresholds |
+| `list_alerts`, `view_alert`, `update_alert` | Alertes |
+| `view_metric` | Une métrique individuelle avec tout son contexte |
+| `list_plots`, `view_plot` | Graphiques enregistrés du tableau de bord |
+| `list_jobs`, `view_job` | Jobs des runners bare metal |
