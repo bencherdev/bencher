@@ -84,10 +84,10 @@ Query existing data:
 
 ```bash
 bencher project view <project>
-bencher branch list --project <project>
-bencher report list --project <project>
-bencher alert list --project <project>
-bencher threshold list --project <project>
+bencher branch list <project>
+bencher report list <project>
+bencher alert list <project>
+bencher threshold list <project>
 ```
 
 Use `--format json` on any command for machine-readable output.

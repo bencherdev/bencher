@@ -99,18 +99,18 @@ but may include stale data from before an intentional performance change.
 
 ```bash
 # List thresholds for a project
-bencher threshold list --project my-project
+bencher threshold list my-project
 
 # View a specific threshold
-bencher threshold view --project my-project <threshold-uuid>
+bencher threshold view my-project <threshold-uuid>
 
 # Create a threshold outside of bencher run
-bencher threshold create --project my-project \
+bencher threshold create my-project \
   --branch main --testbed localhost --measure latency \
   --test t --upper-boundary 0.99
 
 # Delete a threshold
-bencher threshold delete --project my-project <threshold-uuid>
+bencher threshold delete my-project <threshold-uuid>
 ```
 
 ## Multiple Measures

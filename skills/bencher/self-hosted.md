@@ -64,10 +64,14 @@ bencher down console
 
 ### Environment Variables
 
-Pass environment variables to containers:
+Pass environment variables to containers. The API server is configured via
+`BENCHER_CONFIG` (a JSON string) or `BENCHER_CONFIG_PATH` (a path to a JSON
+file inside the container), not individual settings variables:
 ```bash
-bencher up --api-env SECRET_KEY=mykey --api-env DATABASE_URL=sqlite:///data/bencher.db
+bencher up --api-env BENCHER_CONFIG="$(cat bencher.json)"
 ```
+
+See https://bencher.dev/docs/reference/server-config/ for the config JSON schema.
 
 ### Volumes
 

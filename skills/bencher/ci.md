@@ -82,7 +82,7 @@ benchmark_main:
         --branch main
         --testbed gitlab-ci
         --threshold-measure latency
-        --threshold-test t
+        --threshold-test t_test
         --threshold-upper-boundary 0.99
         --error-on-alert
         "cargo bench"
@@ -110,10 +110,13 @@ benchmark_mr:
         "cargo bench")
     - |
       curl --request POST \
-        --header "PRIVATE-TOKEN: $CI_JOB_TOKEN" \
+        --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
         --data-urlencode "body=$REPORT" \
         "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/notes"
 ```
+
+`$GITLAB_ACCESS_TOKEN` is a project access token with the `api` scope, stored as a
+masked CI/CD variable. The built-in `CI_JOB_TOKEN` cannot post MR notes.
 
 ## Generic CI (Any Platform)
 

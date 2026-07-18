@@ -29,6 +29,7 @@ If auto-detection fails, specify the adapter explicitly with `--adapter`:
 | `java_jmh` | Java | JMH |
 | `js_benchmark` | JavaScript | Benchmark.js |
 | `js_time` | JavaScript | console.time / console.timeEnd |
+| `js_vitest` | JavaScript | Vitest |
 | `python_asv` | Python | ASV |
 | `python_pytest` | Python | pytest-benchmark |
 | `ruby_benchmark` | Ruby | Benchmark module |

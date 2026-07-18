@@ -115,6 +115,7 @@
 | `java_jmh` | Java | JMH |
 | `js_benchmark` | JavaScript | Benchmark.js |
 | `js_time` | JavaScript | console.time/timeEnd |
+| `js_vitest` | JavaScript | Vitest |
 | `python_asv` | Python | ASV |
 | `python_pytest` | Python | pytest-benchmark |
 | `ruby_benchmark` | Ruby | Benchmark module |
@@ -190,50 +191,50 @@ bencher noise
 
 ```bash
 # Projects
-bencher project list
+bencher project list [organization]
 bencher project view <project>
-bencher project create --org <org> --name <name>
+bencher project create <organization> --name <name>
 
 # Branches
-bencher branch list --project <project>
-bencher branch view --project <project> <branch>
-bencher branch create --project <project> --name <name>
+bencher branch list <project>
+bencher branch view <project> <branch>
+bencher branch create <project> --name <name>
 
 # Testbeds
-bencher testbed list --project <project>
-bencher testbed view --project <project> <testbed>
-bencher testbed create --project <project> --name <name>
+bencher testbed list <project>
+bencher testbed view <project> <testbed>
+bencher testbed create <project> --name <name>
 
 # Benchmarks
-bencher benchmark list --project <project>
-bencher benchmark view --project <project> <benchmark>
+bencher benchmark list <project>
+bencher benchmark view <project> <benchmark>
 
 # Measures
-bencher measure list --project <project>
-bencher measure view --project <project> <measure>
+bencher measure list <project>
+bencher measure view <project> <measure>
 
 # Reports
-bencher report list --project <project>
-bencher report view --project <project> <report>
+bencher report list <project>
+bencher report view <project> <report>
 
 # Alerts
-bencher alert list --project <project>
-bencher alert view --project <project> <alert>
+bencher alert list <project>
+bencher alert view <project> <alert>
 
 # Thresholds
-bencher threshold list --project <project>
-bencher threshold view --project <project> <threshold>
+bencher threshold list <project>
+bencher threshold view <project> <threshold>
 
-# Metrics
-bencher metric list --project <project>
+# Metrics (view only, no list)
+bencher metric view <project> <metric>
 
 # Plots
-bencher plot list --project <project>
-bencher plot view --project <project> <plot>
+bencher plot list <project>
+bencher plot view <project> <plot>
 
 # Jobs (Bencher Plus)
-bencher job list --project <project>
-bencher job view --project <project> <job>
+bencher job list <project>
+bencher job view <project> <job>
 
 # Runners (Bencher Plus)
 bencher runner list
@@ -247,6 +248,6 @@ bencher spec view <spec>
 bencher archive --project <project> --branch <branch>
 bencher unarchive --project <project> --branch <branch>
 
-# Performance query
-bencher perf --project <project> --branch <branch> --testbed <testbed> --benchmark <benchmark> --measure <measure>
+# Performance query (all flags are repeatable and take UUIDs only)
+bencher perf <project> --branches <branch-uuid> --testbeds <testbed-uuid> --benchmarks <benchmark-uuid> --measures <measure-uuid>
 ```
