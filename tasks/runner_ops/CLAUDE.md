@@ -51,6 +51,15 @@ cargo ops logs <runner> --follow
 cargo ops provision <runner>
 ```
 
+### CPU isolation boot args
+
+Configure `isolcpus=`/`nohz_full=`/`rcu_nocbs=` kernel boot args for the benchmark cores via a GRUB drop-in (`/etc/default/grub.d/99-bencher-isolation.cfg`), then reboot the server and verify. This clears the runner preflight notice about missing isolation boot args. Idempotent: exits early if the cmdline already has the args (presence-only; it will not re-scope an existing CPU list, even with `--cpus`). The benchmark CPU list defaults to `1-(nproc-1)` (CPU 0 is housekeeping); override with `--cpus`.
+
+```bash
+cargo ops isolate <runner>
+cargo ops isolate <runner> --cpus 1-5
+```
+
 ## How It Works
 
 1. `deploy` downloads the runner binary from a GitHub Actions CI artifact, SSHes into the server, stops the existing service, copies the new binary, configures systemd, and starts the service.

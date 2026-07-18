@@ -3,6 +3,7 @@ mod deploy_setup;
 mod download;
 mod harden;
 mod install_os;
+mod isolate;
 mod logs;
 mod provision;
 pub mod ssh;
@@ -17,6 +18,7 @@ use clap::Parser as _;
 use crate::parser::server::{Server, load_server};
 use crate::parser::{TaskRunnerOps, TaskSub};
 use deploy::Deploy;
+use isolate::Isolate;
 use logs::Logs;
 use provision::Provision;
 use ssh::Ssh;
@@ -37,6 +39,7 @@ pub struct Task {
 #[derive(Debug)]
 enum Sub {
     Provision(Provision),
+    Isolate(Isolate),
     Deploy(Deploy),
     Version(Version),
     Start(Start),
@@ -60,6 +63,7 @@ impl TryFrom<TaskSub> for Sub {
     fn try_from(sub: TaskSub) -> anyhow::Result<Self> {
         Ok(match sub {
             TaskSub::Provision(provision) => Self::Provision(provision.try_into()?),
+            TaskSub::Isolate(isolate) => Self::Isolate(isolate.try_into()?),
             TaskSub::Deploy(deploy) => Self::Deploy(deploy.try_into()?),
             TaskSub::Version(version) => Self::Version(version.try_into()?),
             TaskSub::Start(start) => Self::Start(start.try_into()?),
@@ -83,6 +87,7 @@ impl Sub {
     fn exec(self) -> anyhow::Result<()> {
         match self {
             Self::Provision(provision) => provision.exec(),
+            Self::Isolate(isolate) => isolate.exec(),
             Self::Deploy(deploy) => deploy.exec(),
             Self::Version(version) => version.exec(),
             Self::Start(start) => start.exec(),

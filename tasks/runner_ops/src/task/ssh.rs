@@ -1,6 +1,12 @@
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 use camino::{Utf8Path, Utf8PathBuf};
+
+const REBOOT_POLL_INTERVAL: Duration = Duration::from_secs(10);
+const REBOOT_TIMEOUT: Duration = Duration::from_mins(5);
+const BOOT_ID_CMD: &str = "cat /proc/sys/kernel/random/boot_id";
 
 #[derive(Debug)]
 pub struct Ssh {
@@ -93,6 +99,44 @@ impl Ssh {
             Ok(())
         } else {
             anyhow::bail!("SSH command failed (exit {})", status.code().unwrap_or(-1));
+        }
+    }
+
+    /// Read the kernel boot ID, used to detect when a reboot has completed.
+    pub fn boot_id(&self) -> anyhow::Result<String> {
+        Ok(self.run(BOOT_ID_CMD)?.trim().to_owned())
+    }
+
+    /// Wait for the server to come back online after a reboot.
+    /// A probe only counts once the boot ID differs from `old_boot_id`,
+    /// so a not-yet-rebooted system cannot satisfy the wait.
+    pub fn wait_for_reboot(&self, old_boot_id: &str) -> anyhow::Result<()> {
+        println!("Waiting for server to come back online...");
+        let mut elapsed = Duration::ZERO;
+        loop {
+            thread::sleep(REBOOT_POLL_INTERVAL);
+            elapsed += REBOOT_POLL_INTERVAL;
+
+            if elapsed > REBOOT_TIMEOUT {
+                anyhow::bail!(
+                    "Server did not come back online within {} seconds",
+                    REBOOT_TIMEOUT.as_secs()
+                );
+            }
+
+            match self.run(BOOT_ID_CMD) {
+                Ok(boot_id) if boot_id.trim() != old_boot_id => {
+                    println!("Server is back online");
+                    return Ok(());
+                },
+                _ => {
+                    println!(
+                        "Still waiting... ({}/{}s)",
+                        elapsed.as_secs(),
+                        REBOOT_TIMEOUT.as_secs()
+                    );
+                },
+            }
         }
     }
 

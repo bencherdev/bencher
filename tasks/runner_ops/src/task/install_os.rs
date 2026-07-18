@@ -1,6 +1,3 @@
-use std::thread;
-use std::time::Duration;
-
 use super::ssh::Ssh;
 
 const AUTOSETUP_CONFIG: &str = "\
@@ -14,9 +11,6 @@ PART /boot ext4 1G
 PART swap swap 4G
 PART / ext4 all
 IMAGE /root/.oldroot/nfs/images/Ubuntu-2404-noble-amd64-base.tar.gz";
-
-const REBOOT_POLL_INTERVAL: Duration = Duration::from_secs(10);
-const REBOOT_TIMEOUT: Duration = Duration::from_mins(5);
 
 pub fn install_os(ssh: &Ssh) -> anyhow::Result<()> {
     // Detect if we're in rescue mode
@@ -34,7 +28,10 @@ pub fn install_os(ssh: &Ssh) -> anyhow::Result<()> {
     ))?;
     ssh.run("/root/.oldroot/nfs/install/installimage -a -c /tmp/autosetup")?;
 
-    // Reboot (will disconnect — ignore connection error)
+    // Capture the rescue system's boot ID to detect the post-install boot
+    let boot_id = ssh.boot_id()?;
+
+    // Reboot (will disconnect; ignore connection error)
     println!("Rebooting server...");
     let _ignored = ssh.run("reboot");
 
@@ -44,37 +41,7 @@ pub fn install_os(ssh: &Ssh) -> anyhow::Result<()> {
     ssh.remove_known_host()?;
 
     // Wait for SSH to come back up
-    wait_for_ssh(ssh)?;
+    ssh.wait_for_reboot(&boot_id)?;
 
     Ok(())
-}
-
-fn wait_for_ssh(ssh: &Ssh) -> anyhow::Result<()> {
-    println!("Waiting for server to come back online...");
-    let mut elapsed = Duration::ZERO;
-    loop {
-        thread::sleep(REBOOT_POLL_INTERVAL);
-        elapsed += REBOOT_POLL_INTERVAL;
-
-        if elapsed > REBOOT_TIMEOUT {
-            anyhow::bail!(
-                "Server did not come back online within {} seconds",
-                REBOOT_TIMEOUT.as_secs()
-            );
-        }
-
-        match ssh.check("true") {
-            Ok(true) => {
-                println!("Server is back online");
-                return Ok(());
-            },
-            _ => {
-                println!(
-                    "Still waiting... ({}/{}s)",
-                    elapsed.as_secs(),
-                    REBOOT_TIMEOUT.as_secs()
-                );
-            },
-        }
-    }
 }
