@@ -84,7 +84,7 @@
 | `--env KEY=VALUE` | Environment variable (repeatable) |
 | `--job-timeout <secs>` | Maximum execution time |
 | `--job-poll-interval <secs>` | Poll interval |
-| `--detach` | Submit without waiting |
+| `--detach` | Submit without waiting (conflicts with `--job-poll-interval`) |
 
 ### Backend
 

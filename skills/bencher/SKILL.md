@@ -58,13 +58,15 @@ owning user across everything a session can do (except minting other keys), and 
 create a project on the fly, so `--project` is optional.
 ```bash
 export BENCHER_API_KEY=bencher_user_...
-bencher run --project my-project "cargo bench"
+bencher run "cargo bench"
 ```
 
 **Deprecated, user API token (`--token` / `BENCHER_API_TOKEN`, a JWT):** existing
 tokens still work, but new ones can no longer be created. Use an API key instead.
 
-`--key` and `--token` are mutually exclusive; `--key` takes precedence.
+`--key` and `--token` are mutually exclusive: supplying both is an error, even
+when one comes from an environment variable. When migrating, unset
+`BENCHER_API_TOKEN` before setting `BENCHER_API_KEY`.
 
 ## Common Options
 

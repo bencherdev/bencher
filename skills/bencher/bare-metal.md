@@ -90,7 +90,7 @@ bencher run \
 | `--env KEY=VALUE` | Set environment variables (repeatable) |
 | `--job-timeout <secs>` | Maximum execution time |
 | `--job-poll-interval <secs>` | How often to check for completion |
-| `--detach` | Submit without waiting for results |
+| `--detach` | Submit without waiting for results (conflicts with `--job-poll-interval`) |
 
 ## Build Time and File Size Tracking
 
