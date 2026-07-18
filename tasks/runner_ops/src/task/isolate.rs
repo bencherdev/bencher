@@ -6,7 +6,10 @@ use super::stop::stop_service;
 use crate::parser::TaskIsolate;
 use crate::parser::server::load_server;
 
-const GRUB_DROP_IN: &str = "/etc/default/grub.d/99-bencher-isolation.cfg";
+// The `zz-` prefix sorts this drop-in after provider drop-ins (e.g. Hetzner's
+// `hetzner.cfg`) that overwrite GRUB_CMDLINE_LINUX_DEFAULT instead of
+// appending; /etc/default/grub.d/*.cfg files are sourced in glob order.
+const GRUB_DROP_IN: &str = "/etc/default/grub.d/zz-bencher-isolation.cfg";
 
 #[derive(Debug)]
 pub struct Isolate {
@@ -62,6 +65,11 @@ impl Isolate {
             "mkdir -p /etc/default/grub.d && cat > {GRUB_DROP_IN} << 'GRUB_EOF'\n{cfg}\nGRUB_EOF"
         ))?;
         ssh.run("update-grub")?;
+        if !ssh.check(&format!("grep -qF 'isolcpus={cpus}' /boot/grub/grub.cfg"))? {
+            anyhow::bail!(
+                "generated GRUB config is missing the isolation args; another /etc/default/grub.d drop-in may be overwriting GRUB_CMDLINE_LINUX_DEFAULT"
+            );
+        }
 
         let boot_id = ssh.boot_id()?;
         stop_service(&ssh)?;
