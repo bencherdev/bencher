@@ -20,6 +20,9 @@ pub struct JsonLitestream {
     /// Checkpoint configuration
     #[serde(skip_serializing_if = "Option::is_none")]
     pub checkpoint: Option<JsonCheckpoint>,
+    /// Port for the Prometheus metrics endpoint (serialized as the Litestream `addr` setting)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metrics_port: Option<u16>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,7 +145,9 @@ mod db {
                 snapshot,
                 validation,
                 checkpoint,
+                metrics_port,
             } = self;
+            let addr = metrics_port.map(|port| format!(":{port}"));
             let replica = LitestreamReplica::from(replica);
             let snapshot = snapshot.map(LitestreamSnapshot::from);
             let validation = validation.map(LitestreamValidation::from);
@@ -170,6 +175,7 @@ mod db {
                 level: Some(log_level.into()),
             });
             let litestream = Litestream {
+                addr,
                 dbs,
                 snapshot,
                 validation,
@@ -182,6 +188,9 @@ mod db {
     #[derive(Debug, Clone, Serialize)]
     #[serde(rename_all = "kebab-case")]
     pub struct Litestream {
+        // https://litestream.io/reference/config/#metrics
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub addr: Option<String>,
         pub dbs: Vec<LitestreamDb>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub snapshot: Option<LitestreamSnapshot>,
@@ -367,6 +376,7 @@ mod db {
             snapshot: None,
             validation: None,
             checkpoint: None,
+            metrics_port: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -408,6 +418,7 @@ logging:
                 interval: Some("6h".to_owned()),
             }),
             checkpoint: None,
+            metrics_port: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -453,6 +464,7 @@ logging:
                 min_page_count: Some(2000),
                 truncate_page_n: Some(121_359),
             }),
+            metrics_port: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -477,6 +489,44 @@ logging:
     }
 
     #[test]
+    fn into_yaml_with_metrics_port() {
+        let json_litestream = JsonLitestream {
+            replica: JsonReplica::S3 {
+                bucket: "bucket".to_owned(),
+                path: Some("/path/to/backup".to_owned()),
+                endpoint: None,
+                region: None,
+                access_key_id: "access_key_id".to_owned(),
+                secret_access_key: "secret_access_key".parse().unwrap(),
+                sync_interval: None,
+            },
+            snapshot: None,
+            validation: None,
+            checkpoint: None,
+            metrics_port: Some(9090),
+        };
+        let path = PathBuf::from("/path/to/db");
+        let log_level = LogLevel::Info;
+        let yaml = json_litestream.into_yaml(path, log_level).unwrap();
+        pretty_assertions::assert_eq!(
+            yaml,
+            "addr: :9090
+dbs:
+- path: /path/to/db
+  replica:
+    type: s3
+    bucket: bucket
+    path: /path/to/backup
+    access-key-id: access_key_id
+    secret-access-key: secret_access_key
+  truncate-page-n: 0
+logging:
+  level: info
+"
+        );
+    }
+
+    #[test]
     fn into_yaml_file() {
         let json_litestream = JsonLitestream {
             replica: JsonReplica::File {
@@ -486,6 +536,7 @@ logging:
             snapshot: None,
             validation: None,
             checkpoint: None,
+            metrics_port: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
@@ -520,6 +571,7 @@ logging:
             snapshot: None,
             validation: None,
             checkpoint: None,
+            metrics_port: None,
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;

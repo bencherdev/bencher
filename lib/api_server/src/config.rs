@@ -27,6 +27,7 @@ pub async fn server_config_options(
 /// View server configuration
 ///
 /// View the API server configuration.
+/// Secrets in the configuration are masked in the response.
 /// The user must be an admin on the server to use this route.
 #[endpoint {
     method = GET,
@@ -53,7 +54,7 @@ async fn get_one_inner(log: &Logger) -> Result<JsonConfig, HttpError> {
             )
         })?
         .unwrap_or_default()
-        .into())
+        .sanitized())
 }
 
 #[endpoint {

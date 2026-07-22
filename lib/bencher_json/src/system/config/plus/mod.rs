@@ -11,6 +11,7 @@ pub mod google;
 pub mod litestream;
 pub mod rate_limiting;
 pub mod registry;
+pub mod replica;
 pub mod runners;
 pub mod stats;
 
@@ -20,6 +21,7 @@ pub use google::JsonGoogle;
 pub use litestream::JsonLitestream;
 pub use rate_limiting::JsonRateLimiting;
 pub use registry::JsonRegistry;
+pub use replica::JsonReplication;
 pub use runners::JsonRunners;
 pub use stats::JsonStats;
 
@@ -35,6 +37,8 @@ pub struct JsonPlus {
     #[serde(alias = "disaster_recovery", skip_serializing_if = "Option::is_none")]
     pub litestream: Option<JsonLitestream>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub replica: Option<JsonReplication>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub stats: Option<JsonStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cloud: Option<JsonCloud>,
@@ -49,6 +53,7 @@ impl Sanitize for JsonPlus {
         self.github.sanitize();
         self.google.sanitize();
         self.litestream.sanitize();
+        self.replica.sanitize();
         self.cloud.sanitize();
         self.registry.sanitize();
     }

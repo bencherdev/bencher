@@ -1,0 +1,12 @@
+magic little_endian
+page_size 4096
+checkpoint_seq 0
+salt 0x1b5b450b 0x7a0670a4
+frame offset=32 page_no=1 db_size=0 commit=false
+frame offset=4152 page_no=2 db_size=2 commit=true
+frame offset=8272 page_no=2 db_size=2 commit=true
+frame offset=12392 page_no=2 db_size=2 commit=true
+frame offset=16512 page_no=2 db_size=2 commit=true
+end_offset 20632
+commit_count 4
+db_size_pages 2

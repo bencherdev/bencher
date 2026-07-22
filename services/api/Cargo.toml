@@ -13,6 +13,8 @@ plus = [
     "dep:api_oci",
     "dep:api_runners",
     "dep:api_specs",
+    "dep:bencher_replica",
+    "dep:camino",
     "api_auth/plus",
     "api_checkout/plus",
     "api_mcp/plus",
@@ -29,6 +31,7 @@ plus = [
     "bencher_json/plus",
     "bencher_otel?/plus",
     "bencher_otel_provider/plus",
+    "bencher_replica/plus",
     "bencher_schema/plus",
 ]
 sentry = [
@@ -61,6 +64,7 @@ otel = [
     "api_users/otel",
     "bencher_config/otel",
     "bencher_endpoint/otel",
+    "bencher_replica?/otel",
     "bencher_schema/otel",
 ]
 
@@ -83,6 +87,8 @@ bencher_logger.workspace = true
 bencher_schema.workspace = true
 bencher_otel = { workspace = true, optional = true }
 bencher_otel_provider = { workspace = true, optional = true }
+bencher_replica = { workspace = true, optional = true }
+camino = { workspace = true, optional = true }
 dropshot.workspace = true
 futures-concurrency.workspace = true
 futures-util.workspace = true

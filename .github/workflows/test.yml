@@ -281,3 +281,76 @@ jobs:
         env:
           RUST_BACKTRACE: full
         run: cargo test-api smoke docker
+
+  replica_live_s3:
+    name: Replica Live S3 (${{ matrix.server.name }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        server:
+          # Two S3-compatible implementations: MinIO exercises the full API
+          # (including ListMultipartUploads for the orphan sweep); RustFS
+          # pins compatibility with a second, Rust-native implementation.
+          - name: minio
+            start: >-
+              docker run -d --name live-s3 -p 9000:9000
+              -e MINIO_ROOT_USER=bencher-test
+              -e MINIO_ROOT_PASSWORD=bencher-test-secret
+              minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+          - name: rustfs
+            start: >-
+              docker run -d --name live-s3 -p 9000:9000
+              -e RUSTFS_ACCESS_KEY=bencher-test
+              -e RUSTFS_SECRET_KEY=bencher-test-secret
+              rustfs/rustfs:1.0.0-beta.10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: replica-live-s3
+          mold-version: ${{ inputs.mold-version }}
+      - name: Start S3 server
+        env:
+          START_SERVER: ${{ matrix.server.start }}
+        run: |
+          ${START_SERVER}
+          for _ in $(seq 1 30); do
+            if curl -s -o /dev/null http://127.0.0.1:9000/; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "S3 server did not come up" >&2
+          docker logs live-s3 >&2 || true
+          exit 1
+      - name: Create bucket
+        env:
+          AWS_ACCESS_KEY_ID: bencher-test
+          AWS_SECRET_ACCESS_KEY: bencher-test-secret
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          for _ in $(seq 1 15); do
+            if aws --endpoint-url http://127.0.0.1:9000 s3api create-bucket \
+              --bucket bencher-replica-test; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "failed to create the test bucket" >&2
+          docker logs live-s3 >&2 || true
+          exit 1
+      - name: Run live S3 tier
+        env:
+          RUST_BACKTRACE: "1"
+          BENCHER_REPLICA_TEST_S3_BUCKET: bencher-replica-test
+          BENCHER_REPLICA_TEST_S3_ACCESS_KEY_ID: bencher-test
+          BENCHER_REPLICA_TEST_S3_SECRET_ACCESS_KEY: bencher-test-secret
+          BENCHER_REPLICA_TEST_S3_ENDPOINT: http://127.0.0.1:9000
+          BENCHER_REPLICA_TEST_S3_REGION: us-east-1
+          BENCHER_REPLICA_TEST_S3_PREFIX: ci-live-s3
+        run: |
+          cargo nextest run -p bencher_replica --features plus,testing \
+            --run-ignored ignored-only --no-fail-fast -E 'binary(live_s3)'

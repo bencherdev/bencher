@@ -12,9 +12,12 @@ plus = [
     "bencher_api/plus",
     "bencher_config/plus",
     "bencher_oci_storage/plus",
+    "bencher_replica/plus",
     "bencher_schema/plus",
     "dep:bencher_license",
     "dep:bencher_oci_storage",
+    "dep:bencher_replica",
+    "dep:camino",
     "dep:hex",
     "dep:http",
     "dep:serde_json",
@@ -30,6 +33,8 @@ bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }
 bencher_license = { workspace = true, optional = true }
 bencher_oci_storage = { workspace = true, optional = true, features = ["test-clock"] }
+bencher_replica = { workspace = true, optional = true, features = ["test-clock"] }
+camino = { workspace = true, optional = true }
 bencher_rbac.workspace = true
 bencher_schema.workspace = true
 bencher_token.workspace = true

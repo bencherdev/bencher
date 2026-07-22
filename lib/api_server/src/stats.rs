@@ -4,7 +4,7 @@ use bencher_json::{
 };
 use bencher_schema::{
     auth_conn,
-    context::{ApiContext, DbConnection},
+    context::{ApiContext, DbConnection, configure_standalone_connection},
     error::{forbidden_error, issue_error, not_found_error},
     model::{
         server::QueryServer,
@@ -49,8 +49,23 @@ pub async fn server_stats_get(
 
 async fn get_one_inner(log: &Logger, context: &ApiContext) -> Result<JsonServerStats, HttpError> {
     let query_server = QueryServer::get_server(auth_conn!(context))?;
-    let conn = DbConnection::establish(context.database.path.to_string_lossy().as_ref())
+    let mut conn = DbConnection::establish(context.database.path.to_string_lossy().as_ref())
         .map_err(not_found_error)?;
+    // Route this standalone connection through the shared configuration so it
+    // does not bypass the busy_timeout / autocheckpoint settings the pools and
+    // the writer use: under replication a stray write must never checkpoint.
+    configure_standalone_connection(
+        &mut conn,
+        context.database.busy_timeout,
+        context.database.replicated,
+    )
+    .map_err(|e| {
+        issue_error(
+            "Failed to configure server stats connection",
+            "Failed to configure the server stats database connection PRAGMAs",
+            e,
+        )
+    })?;
     query_server
         .get_stats(log.clone(), conn, context.is_bencher_cloud)
         .await

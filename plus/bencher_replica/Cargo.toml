@@ -1,0 +1,70 @@
+[package]
+name = "bencher_replica"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+test-clock = ["bencher_json?/test-clock"]
+# Exposes the `testing` module (fixtures, fault injection, workload generator)
+# to downstream integration tests (e.g. lib/api_server).
+testing = ["dep:rand", "test-clock"]
+# Required due to feature unification
+# https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
+plus = [
+    "dep:async-compression",
+    "dep:aws-credential-types",
+    "dep:aws-sdk-s3",
+    "dep:bencher_json",
+    "dep:bytes",
+    "dep:camino",
+    "dep:hex",
+    "dep:rusqlite",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:sha2",
+    "dep:slog",
+    "dep:thiserror",
+    "dep:tokio",
+    "dep:uuid",
+    "dep:zstd",
+]
+otel = ["dep:bencher_otel", "bencher_otel/plus"]
+
+[dependencies]
+# Bencher internal crates
+bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
+bencher_otel = { workspace = true, optional = true }
+
+# AWS S3 (same as database backup and OCI storage)
+aws-credential-types = { workspace = true, optional = true }
+aws-sdk-s3 = { workspace = true, optional = true }
+
+# External dependencies
+async-compression = { workspace = true, optional = true, features = ["tokio", "zstd"] }
+bytes = { workspace = true, optional = true }
+camino = { workspace = true, optional = true }
+hex = { workspace = true, optional = true }
+rand = { workspace = true, optional = true }
+rusqlite = { workspace = true, optional = true, features = ["backup"] }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+slog = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["fs", "io-util", "macros", "rt", "sync", "time"] }
+uuid = { workspace = true, optional = true, features = ["v4"] }
+zstd = { workspace = true, optional = true }
+
+[dev-dependencies]
+futures.workspace = true
+pretty_assertions.workspace = true
+rand.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true
