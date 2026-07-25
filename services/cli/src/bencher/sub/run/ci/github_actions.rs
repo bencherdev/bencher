@@ -1,4 +1,5 @@
 use bencher_comment::{BENCHER_REPORT_TITLE, ReportComment};
+use bencher_json::ResourceName;
 use octocrab::{
     Octocrab,
     models::{CheckRunId, CommentId},
@@ -36,6 +37,16 @@ const FAILED_SUMMARY: &str = "<p><code>bencher run</code> failed to complete bef
 //     - https://docs.github.com/en/graphql/reference/mutations#addcomment
 //     - https://docs.github.com/en/graphql/reference/input-objects#addcommentinput
 const MAX_LENGTH: usize = 1 << 16;
+
+// GitHub does not document a maximum length for the Check Run name, so cap it
+// conservatively at the 255 that commit status contexts are capped at. The cap
+// is counted in bytes, which is stricter than characters for a multi-byte ID.
+// A Project name is a `ResourceName`, so it can never reach this. Only a custom
+// `--ci-id`, which is not length validated, can.
+const MAX_NAME_LEN: usize = 255;
+// The ` `, `(`, and `)` that `check_run_name` wraps around the ID
+const NAME_FORMAT_LEN: usize = 3;
+const MAX_ID_LEN: usize = MAX_NAME_LEN - BENCHER_REPORT.len() - NAME_FORMAT_LEN;
 
 #[expect(
     clippy::struct_excessive_bools,
@@ -185,16 +196,25 @@ impl GitHubActions {
         Ok(())
     }
 
+    /// Whether the Check name needs the Project name resolved before the run.
+    pub fn needs_project_name(&self) -> bool {
+        needs_project_name(self.ci_id.as_deref(), is_github_actions())
+    }
+
     /// Best-effort: create the GitHub Check with an `in_progress` status
     /// before the benchmark runs, so a rerun immediately clears the stale
     /// conclusion left by a previous run. Failures are logged, never fatal.
-    pub async fn start_check(&self, log: bool) -> Option<CheckRunHandle> {
+    pub async fn start_check(
+        &self,
+        project_name: Option<&ResourceName>,
+        log: bool,
+    ) -> Option<CheckRunHandle> {
         if !is_github_actions() {
             // `run` prints the "Not running as a GitHub Action" message later,
             // so stay quiet here to avoid printing it twice.
             return None;
         }
-        match self.try_start_check(log).await {
+        match self.try_start_check(project_name, log).await {
             Ok(handle) => Some(handle),
             Err(err) => {
                 cli_eprintln_quietable!(
@@ -206,7 +226,12 @@ impl GitHubActions {
         }
     }
 
-    async fn try_start_check(&self, log: bool) -> Result<CheckRunHandle, GitHubError> {
+    async fn try_start_check(
+        &self,
+        project_name: Option<&ResourceName>,
+        log: bool,
+    ) -> Result<CheckRunHandle, GitHubError> {
+        let id = check_run_id(self.ci_id.as_deref(), project_name);
         let (event_str, event) = github_event()?;
         let full_name = repository_full_name(&event_str, &event)?;
         let (owner, repo) = split_full_name(full_name)?;
@@ -214,7 +239,7 @@ impl GitHubActions {
         let check = self
             .github_client(log)?
             .checks(owner, repo)
-            .create_check_run(check_run_name(self.ci_id.as_deref()), head_sha)
+            .create_check_run(check_run_name(id), head_sha)
             .status(CheckRunStatus::InProgress)
             .output(check_run_output(branded_summary(IN_PROGRESS_SUMMARY)))
             .send()
@@ -320,12 +345,22 @@ impl GitHubActions {
         );
         let output = check_run_output(summary);
         let conclusion = check_conclusion(report_comment.has_alert());
+        // The Report always names its Project, so the completed check is always
+        // named for it, even when the pre-run lookup could not name the
+        // in-progress check. Required status checks match by exact name, so the
+        // completed name has to be the same whether or not that lookup worked.
+        let name = check_run_name(check_run_id(
+            self.ci_id.as_deref(),
+            Some(report_comment.project_name()),
+        ));
 
         // Providing a conclusion sets the check status to `completed`.
         if let Some(CheckRunHandle { owner, repo, id }) = check {
             self.github_client(log)?
                 .checks(owner, repo)
                 .update_check_run(id)
+                // A no-op unless the in-progress check fell back to a bare name.
+                .name(name)
                 .output(output)
                 .conclusion(conclusion)
                 .send()
@@ -333,14 +368,14 @@ impl GitHubActions {
                 .map(|_| ())
                 .map_err(|e| check_error(e, GitHubError::UpdateCheck))
         } else {
-            // The in-progress check was skipped or failed to be created,
+            // The in-progress check failed to be created,
             // so fall back to creating the check with a conclusion.
             let full_name = repository_full_name(event_str, event)?;
             let (owner, repo) = split_full_name(full_name)?;
             let head_sha = resolve_head_sha(event, std::env::var(GITHUB_SHA).ok())?;
             self.github_client(log)?
                 .checks(owner, repo)
-                .create_check_run(check_run_name(self.ci_id.as_deref()), head_sha)
+                .create_check_run(name, head_sha)
                 .output(output)
                 .conclusion(conclusion)
                 .send()
@@ -353,6 +388,12 @@ impl GitHubActions {
     /// Best-effort: complete a still in-progress check as failed when
     /// `bencher run` errors before the results are posted, so the check
     /// does not linger `in_progress` forever. Failures are logged, never fatal.
+    ///
+    /// The check keeps whatever name it was started with. Unlike the completed
+    /// check, there is no Report to name it after, and the Project name is
+    /// precisely what could not be resolved before the run. So a run that both
+    /// failed to resolve the Project name and errored before posting results
+    /// reports under the bare `Bencher Report` name.
     pub async fn fail_check(&self, handle: &CheckRunHandle, log: bool) {
         if let Err(err) = self.try_fail_check(handle, log).await {
             cli_eprintln_quietable!(log, "Failed to fail GitHub Check\n{err}");
@@ -526,14 +567,43 @@ fn resolve_head_sha(
     }
 }
 
+// An explicit `--ci-id` names the check instead of the Project, and outside of
+// GitHub Actions no check is created at all, so neither needs the lookup.
+// The environment is read by the caller so this stays deterministic in tests.
+fn needs_project_name(ci_id: Option<&str>, is_github_actions: bool) -> bool {
+    ci_id.is_none() && is_github_actions
+}
+
+// An explicit `--ci-id` takes the Project name's place in the check run name.
+// The `in_progress` create and the fallback create must resolve the ID the same
+// way, or a required status check would never be reported, so both go through here.
+fn check_run_id<'a>(
+    ci_id: Option<&'a str>,
+    project_name: Option<&'a ResourceName>,
+) -> Option<&'a str> {
+    ci_id.or_else(|| project_name.map(ResourceName::as_ref))
+}
+
 // Required status checks in branch protection match by exact check run name,
 // so the name must be stable across runs for a given `bencher run` invocation.
-fn check_run_name(ci_id: Option<&str>) -> String {
-    if let Some(ci_id) = ci_id {
-        format!("{BENCHER_REPORT} ({ci_id})")
+// Without an ID the in-progress check falls back to the bare `Bencher Report`
+// name, which `complete_github_check` renames to the Report's Project.
+fn check_run_name(id: Option<&str>) -> String {
+    if let Some(id) = id {
+        format!("{BENCHER_REPORT} ({id})", id = truncate_id(id))
     } else {
         BENCHER_REPORT.to_owned()
     }
+}
+
+// A Project name is a `ResourceName`, so it is always well under `MAX_ID_LEN`.
+// Only a custom `--ci-id`, which is not length validated, can ever be truncated.
+// `floor_char_boundary` always lands on a boundary at or below the length, so
+// `get` is always `Some`. It is used over a slice to satisfy `clippy::string_slice`,
+// and defaults to empty so that an unreachable `None` still fails closed.
+fn truncate_id(id: &str) -> &str {
+    id.get(..id.floor_char_boundary(MAX_ID_LEN))
+        .unwrap_or_default()
 }
 
 fn check_conclusion(has_alert: bool) -> CheckRunConclusion {
@@ -632,9 +702,12 @@ fn github_api_url(log: bool) -> Option<String> {
 mod tests {
     use octocrab::params::checks::CheckRunConclusion;
 
+    use bencher_json::ResourceName;
+
     use super::{
-        FAILED_SUMMARY, GitHubError, IN_PROGRESS_SUMMARY, branded_summary, check_conclusion,
-        check_head_sha, check_run_name, check_run_output, resolve_head_sha,
+        BENCHER_REPORT, FAILED_SUMMARY, GitHubError, IN_PROGRESS_SUMMARY, MAX_ID_LEN, MAX_NAME_LEN,
+        NAME_FORMAT_LEN, branded_summary, check_conclusion, check_head_sha, check_run_id,
+        check_run_name, check_run_output, needs_project_name, resolve_head_sha,
     };
 
     #[test]
@@ -785,17 +858,122 @@ mod tests {
         assert!(output.images.is_empty());
     }
 
+    fn project_name() -> ResourceName {
+        "Slang Solidity".parse().expect("Invalid Project name")
+    }
+
+    #[test]
+    fn check_run_id_project_name() {
+        assert_eq!(
+            check_run_id(None, Some(&project_name())),
+            Some("Slang Solidity")
+        );
+    }
+
+    // An explicit `--ci-id` takes the Project name's place
+    #[test]
+    fn check_run_id_ci_id_wins() {
+        assert_eq!(
+            check_run_id(Some("embedded"), Some(&project_name())),
+            Some("embedded")
+        );
+    }
+
+    // Both create paths resolve the ID here, so they can never disagree
+    #[test]
+    fn check_run_id_none() {
+        assert_eq!(check_run_id(None, None), None);
+    }
+
+    #[test]
+    fn needs_project_name_github_actions() {
+        assert!(needs_project_name(None, true));
+    }
+
+    // A `--ci-id` names the check, so there is nothing to look up
+    #[test]
+    fn needs_project_name_ci_id() {
+        assert!(!needs_project_name(Some("embedded"), true));
+    }
+
+    // No check is created outside of GitHub Actions, so there is nothing to name
+    #[test]
+    fn needs_project_name_not_github_actions() {
+        assert!(!needs_project_name(None, false));
+        assert!(!needs_project_name(Some("embedded"), false));
+    }
+
+    #[test]
+    fn check_run_name_project_name() {
+        assert_eq!(
+            check_run_name(Some("Slang Solidity")),
+            "Bencher Report (Slang Solidity)"
+        );
+    }
+
+    #[test]
+    fn check_run_name_ci_id() {
+        assert_eq!(
+            check_run_name(Some("embedded")),
+            "Bencher Report (embedded)"
+        );
+    }
+
+    // Neither a Project name nor a `--ci-id` is known before the benchmarks run
     #[test]
     fn check_run_name_default() {
         assert_eq!(check_run_name(None), "Bencher Report");
     }
 
+    // The regression from https://github.com/bencherdev/bencher/issues/944:
+    // runs for different Projects on the same commit must not collide.
     #[test]
-    fn check_run_name_with_ci_id() {
-        assert_eq!(
-            check_run_name(Some("embedded")),
-            "Bencher Report (embedded)"
+    fn check_run_name_distinct_per_project() {
+        assert_ne!(
+            check_run_name(Some("Slang Solidity")),
+            check_run_name(Some("Slang Testlang"))
         );
+    }
+
+    #[test]
+    fn check_run_name_max_project_name() {
+        // A Project name is a `ResourceName`, so it can never reach `MAX_NAME_LEN`
+        let project_name = "a".repeat(ResourceName::MAX_LEN);
+        let name = check_run_name(Some(&project_name));
+        assert_eq!(
+            name.len(),
+            BENCHER_REPORT.len() + NAME_FORMAT_LEN + ResourceName::MAX_LEN
+        );
+        assert!(name.len() < MAX_NAME_LEN, "{}", name.len());
+        assert!(name.ends_with(&format!("({project_name})")));
+    }
+
+    // An ID at exactly the cap is kept whole, so the boundary is not off by one
+    #[test]
+    fn check_run_name_exact_max_id() {
+        let ci_id = "a".repeat(MAX_ID_LEN);
+        let name = check_run_name(Some(&ci_id));
+        assert_eq!(name.len(), MAX_NAME_LEN);
+        assert!(name.ends_with(&format!("({ci_id})")));
+    }
+
+    #[test]
+    fn check_run_name_truncates_long_ci_id() {
+        // `--ci-id` is unvalidated, so only truncation keeps the name under the max
+        let ci_id = "a".repeat(MAX_NAME_LEN * 2);
+        let name = check_run_name(Some(&ci_id));
+        assert_eq!(name.len(), MAX_NAME_LEN);
+        assert!(name.starts_with("Bencher Report ("));
+        assert!(name.ends_with(')'));
+    }
+
+    #[test]
+    fn check_run_name_truncates_on_char_boundary() {
+        // Truncating mid-code-point would panic, so the cut must land on a boundary
+        let ci_id = "🐰".repeat(MAX_NAME_LEN);
+        let name = check_run_name(Some(&ci_id));
+        assert!(name.len() <= MAX_NAME_LEN, "{}", name.len());
+        assert!(name.ends_with("🐰)"), "{name}");
     }
 
     #[test]

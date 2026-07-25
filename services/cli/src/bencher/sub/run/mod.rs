@@ -10,7 +10,8 @@ use bencher_comment::ReportComment;
 #[cfg(feature = "plus")]
 use bencher_json::SpecResourceId;
 use bencher_json::{
-    DateTime, JsonReport, ProjectResourceId, RunContext, TestbedNameId, project::report::Iteration,
+    DateTime, JsonProject, JsonReport, ProjectResourceId, ResourceName, RunContext, TestbedNameId,
+    project::report::Iteration,
 };
 
 use crate::{
@@ -234,7 +235,14 @@ impl Run {
         // so a rerun immediately clears the stale conclusion left by a previous run.
         // Dry runs never post results, so they never start a check.
         let mut ci_check = match &self.ci {
-            Some(ci) if !self.dry_run => ci.start(self.log).await,
+            Some(ci) if !self.dry_run => {
+                let project_name = if ci.needs_project_name() {
+                    self.project_name().await
+                } else {
+                    None
+                };
+                ci.start(project_name.as_ref(), self.log).await
+            },
             _ => None,
         };
 
@@ -249,6 +257,30 @@ impl Run {
             ci.fail(&check, self.log).await;
         }
         result
+    }
+
+    /// Best-effort: look up the Project name so the CI check can be named for it.
+    /// The name is only knowable before the benchmarks run if `--project` is set,
+    /// so an on-the-fly Project simply goes without the Project name in the check name.
+    async fn project_name(&self) -> Option<ResourceName> {
+        let project = self.project.clone()?;
+        let json_project: JsonProject = self
+            .backend
+            .send_with(|client| {
+                let project = project.clone();
+                async move { client.project_get().project(project).send().await }
+            })
+            .await
+            .inspect_err(|err| {
+                // Expected on the very first run of an on-the-fly Project,
+                // which is only created once the Report is posted.
+                cli_eprintln_quietable!(
+                    self.log,
+                    "Could not resolve the Project name for the CI check: {err}"
+                );
+            })
+            .ok()?;
+        Some(json_project.name)
     }
 
     async fn run_and_report(&self, ci_check: &mut Option<CiCheck>) -> Result<(), RunError> {

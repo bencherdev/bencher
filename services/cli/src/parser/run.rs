@@ -254,7 +254,7 @@ pub struct CliRunCi {
     /// All links should be to public URLs that do not require a login (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_public_links: bool,
-    /// Custom ID for posting results to CI, also appended to the GitHub Check name (ie `Bencher Report (<ID>)`) (requires: `--github-actions`)
+    /// Custom ID for posting results to CI, used in place of the Project name in the GitHub Check name (ie `Bencher Report (<ID>)`) (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_id: Option<String>,
     /// Issue number for posting results to CI (requires: `--github-actions`)

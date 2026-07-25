@@ -70,7 +70,7 @@
 | `--ci-only-thresholds` | Post only if threshold exists |
 | `--ci-only-on-alert` | Post only on alert |
 | `--ci-public-links` | Use public URLs |
-| `--ci-id <id>` | Custom CI comment identifier |
+| `--ci-id <id>` | Custom CI comment identifier, replaces the project name in the GitHub Check name |
 | `--ci-number <n>` | Issue/PR number |
 
 ### Bare Metal (Bencher Plus)

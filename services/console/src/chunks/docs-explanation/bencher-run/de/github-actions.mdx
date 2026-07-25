@@ -5,10 +5,13 @@
 Optional: Setzen Sie das GitHub API-Authentifizierungstoken.
 Die bequemste Methode hierfür ist die Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token] (d.h. `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
 Wenn diese Option gesetzt ist und `bencher run` in GitHub Actions verwendet wird,
-dann werden die Ergebnisse dem Head-Commit als GitHub-Prüfung mit dem Namen `Bencher Report` hinzugefügt (oder `Bencher Report (<ID>)`, wenn `--ci-id` gesetzt ist).
+dann werden die Ergebnisse dem Head-Commit als GitHub-Prüfung mit dem Namen `Bencher Report (<PROJEKTNAME>)` hinzugefügt (oder `Bencher Report (<ID>)`, wenn `--ci-id` gesetzt ist),
+sodass Läufe für verschiedene Projekte im selben Commit jeweils eine eigene GitHub-Prüfung erhalten.
 Die GitHub-Prüfung schlägt fehl, wenn ein Alert generiert wird, sodass sie als erforderliche Statusprüfung im Branch-Schutz verwendet werden kann.
+Beachten Sie, dass das Umbenennen des Projekts auch die GitHub-Prüfung umbenennt. Verwenden Sie `--ci-id`, wenn Sie einen Namen benötigen, den nur Sie kontrollieren.
 Die GitHub-Prüfung wird mit dem Status `in_progress` erstellt, bevor die Benchmarks starten, und wird mit den Ergebnissen abgeschlossen, sobald sie beendet sind.
-Wenn `bencher run` mit einem Fehler endet, bevor die Ergebnisse veröffentlicht wurden, wird die GitHub-Prüfung als fehlgeschlagen markiert.
+Dies erfordert, dass der Projektname vor dem Start der Benchmarks aufgelöst wird, was nur möglich ist, wenn `--project` gesetzt ist und das Projekt bereits existiert. Andernfalls heißt die laufende GitHub-Prüfung `Bencher Report`, bis die Ergebnisse veröffentlicht werden.
+Wenn `bencher run` mit einem Fehler endet, bevor die Ergebnisse veröffentlicht wurden, wird die GitHub-Prüfung als fehlgeschlagen markiert und behält den Namen, mit dem sie erstellt wurde.
 Dies erfordert, dass das Token [den `checks` Bereich mit `write` Berechtigungen][github token permissions] hat.
 Wenn die GitHub-Prüfung nicht erstellt werden kann, protokolliert `bencher run` eine Warnung und fährt fort.
 Wenn `bencher run` als Teil einer Pull-Anfrage verwendet wird,

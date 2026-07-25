@@ -55,7 +55,7 @@ as PR comments.
 | `--ci-only-thresholds` | Only post if a threshold exists for the branch/testbed/measure |
 | `--ci-only-on-alert` | Only post when an alert is generated |
 | `--ci-public-links` | Use public URLs (no login required to view) |
-| `--ci-id <id>` | Custom identifier for the CI comment |
+| `--ci-id <id>` | Custom identifier for the CI comment, used in place of the project name in the GitHub Check name (`Bencher Report (<id>)`) |
 | `--ci-number <n>` | Issue/PR number to post on |
 
 ### On-the-Fly Project Creation

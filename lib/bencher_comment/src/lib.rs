@@ -658,6 +658,13 @@ impl ReportComment {
         )
     }
 
+    /// The name of the Project that the Report belongs to.
+    /// Used by the `bencher` CLI to name the GitHub Check,
+    /// so Reports for different Projects on the same commit do not collide.
+    pub fn project_name(&self) -> &ResourceName {
+        &self.json_report.project.name
+    }
+
     pub fn has_threshold(&self) -> bool {
         for iteration in self.results() {
             for result in iteration {
