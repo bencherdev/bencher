@@ -5,10 +5,13 @@
 Optionnel : Définissez le jeton d'authentification de l'API GitHub.
 La manière la plus pratique de le faire est d'utiliser la [variable d'environnement `GITHUB_TOKEN` des GitHub Actions][github token] (c'est-à-dire `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
 Lorsque cette option est définie et que `bencher run` est utilisé dans les GitHub Actions,
-les résultats seront alors ajoutés au commit de tête en tant que vérification GitHub nommée `Bencher Report` (ou `Bencher Report (<ID>)` si `--ci-id` est défini).
+les résultats seront alors ajoutés au commit de tête en tant que vérification GitHub nommée `Bencher Report (<NOM DU PROJET>)` (ou `Bencher Report (<ID>)` si `--ci-id` est défini),
+afin que les exécutions de différents Projets sur le même commit obtiennent chacune leur propre vérification GitHub.
 La vérification GitHub échouera si une Alerte est générée, elle peut donc être utilisée comme vérification de statut requise dans la protection de branche.
+Notez que renommer le Projet renomme aussi la vérification GitHub, donc utilisez `--ci-id` si vous avez besoin d'un nom que vous seul contrôlez.
 La vérification GitHub est créée avec un statut `in_progress` avant le démarrage des benchmarks et est complétée avec les résultats une fois qu'ils sont terminés.
-Si `bencher run` se termine avec une erreur avant la publication des résultats, la vérification GitHub est alors marquée comme échouée.
+Cela nécessite que le nom du Projet soit résolu avant le démarrage des benchmarks, ce qui n'est possible que si `--project` est défini et que le Projet existe déjà. Sinon, la vérification GitHub en cours est nommée `Bencher Report` jusqu'à la publication des résultats.
+Si `bencher run` se termine avec une erreur avant la publication des résultats, la vérification GitHub est alors marquée comme échouée, en conservant le nom avec lequel elle a été créée.
 Cela nécessite que le jeton ait [le scope `checks` avec les permissions `write`][github token permissions].
 Si la vérification GitHub ne peut pas être créée, `bencher run` enregistrera alors un avertissement et continuera.
 Lorsque `bencher run` est utilisé dans le cadre d'une pull request,

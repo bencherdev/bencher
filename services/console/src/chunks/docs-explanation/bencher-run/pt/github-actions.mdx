@@ -5,10 +5,13 @@
 Opcional: Defina o token de autenticação da API do GitHub.
 A maneira mais conveniente de fazer isso é usando a [variável de ambiente `GITHUB_TOKEN` do GitHub Actions][github token] (ou seja, `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
 Quando esta opção é definida e `bencher run` é usado no GitHub Actions,
-os resultados serão adicionados ao commit head como uma Verificação do GitHub chamada `Bencher Report` (ou `Bencher Report (<ID>)` se `--ci-id` estiver definido).
+os resultados serão adicionados ao commit head como uma Verificação do GitHub chamada `Bencher Report (<NOME DO PROJETO>)` (ou `Bencher Report (<ID>)` se `--ci-id` estiver definido),
+de modo que execuções de Projetos diferentes no mesmo commit recebam cada uma a sua própria Verificação do GitHub.
 A Verificação do GitHub falhará se um Alerta for gerado, então ela pode ser usada como uma verificação de status obrigatória na proteção de branch.
+Observe que renomear o Projeto também renomeia a Verificação do GitHub, então use `--ci-id` se precisar de um nome que só você controle.
 A Verificação do GitHub é criada com um status `in_progress` antes do início dos benchmarks e é concluída com os resultados assim que eles terminam.
-Se o `bencher run` terminar com um erro antes de os resultados serem publicados, a Verificação do GitHub será marcada como falha.
+Isso requer que o nome do Projeto seja resolvido antes do início dos benchmarks, o que só é possível se `--project` estiver definido e o Projeto já existir. Caso contrário, a Verificação do GitHub em andamento é chamada `Bencher Report` até que os resultados sejam publicados.
+Se o `bencher run` terminar com um erro antes de os resultados serem publicados, a Verificação do GitHub será marcada como falha, mantendo o nome com o qual foi criada.
 Isso requer que o token tenha [o escopo de `checks` com permissões de `write`][github token permissions].
 Se a Verificação do GitHub não puder ser criada, o `bencher run` registrará um aviso e continuará.
 Quando `bencher run` é usado como parte de um pull request,

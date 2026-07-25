@@ -5,10 +5,13 @@
 선택 사항: GitHub API 인증 토큰을 설정하세요.
 가장 편리한 방법은 [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하는 것입니다(예: `--github-actions ${{ secrets.GITHUB_TOKEN }}`).
 이 옵션이 설정되고 GitHub Actions에서 `bencher run`이 사용될 경우,
-결과가 `Bencher Report`라는 이름의 GitHub Check로 헤드 커밋에 추가됩니다(`--ci-id`가 설정된 경우 `Bencher Report (<ID>)`).
+결과가 `Bencher Report (<프로젝트 이름>)`이라는 이름의 GitHub Check로 헤드 커밋에 추가됩니다(`--ci-id`가 설정된 경우 `Bencher Report (<ID>)`).
+따라서 동일한 커밋에 대한 서로 다른 프로젝트의 실행은 각각 고유한 GitHub Check를 갖게 됩니다.
 경고가 생성되면 GitHub Check가 실패하므로, 브랜치 보호에서 필수 상태 검사로 사용할 수 있습니다.
+프로젝트 이름을 변경하면 GitHub Check 이름도 변경되므로, 직접 관리하는 이름이 필요하면 `--ci-id`를 사용하세요.
 GitHub Check는 벤치마크가 시작되기 전에 `in_progress` 상태로 생성되며, 벤치마크가 끝나면 결과와 함께 완료됩니다.
-결과가 게시되기 전에 `bencher run`이 오류로 종료되면 GitHub Check는 실패로 표시됩니다.
+이를 위해서는 벤치마크가 시작되기 전에 프로젝트 이름을 확인해야 하며, 이는 `--project`가 설정되어 있고 프로젝트가 이미 존재하는 경우에만 가능합니다. 그렇지 않으면 진행 중인 GitHub Check의 이름은 결과가 게시될 때까지 `Bencher Report`가 됩니다.
+결과가 게시되기 전에 `bencher run`이 오류로 종료되면 GitHub Check는 생성될 때의 이름을 유지한 채 실패로 표시됩니다.
 이 경우 토큰에 [`write` 권한을 가진 `checks` 범위가 필요합니다][github token permissions].
 GitHub Check를 생성할 수 없는 경우, `bencher run`은 경고를 기록하고 계속 진행합니다.
 `bencher run`이 pull request의 일부로 사용될 경우,

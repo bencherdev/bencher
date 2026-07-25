@@ -1,4 +1,5 @@
 use bencher_comment::ReportComment;
+use bencher_json::ResourceName;
 
 use crate::parser::run::CliRunCi;
 
@@ -60,11 +61,18 @@ impl Ci {
         }
     }
 
+    /// Whether the CI check name needs the Project name resolved before the run.
+    pub fn needs_project_name(&self) -> bool {
+        match self {
+            Self::GitHubActions(github_actions) => github_actions.needs_project_name(),
+        }
+    }
+
     /// Best-effort: start an in-progress check before the benchmark runs.
-    pub async fn start(&self, log: bool) -> Option<CiCheck> {
+    pub async fn start(&self, project_name: Option<&ResourceName>, log: bool) -> Option<CiCheck> {
         match self {
             Self::GitHubActions(github_actions) => github_actions
-                .start_check(log)
+                .start_check(project_name, log)
                 .await
                 .map(CiCheck::GitHubActions),
         }
