@@ -21,6 +21,7 @@ import {
 	scale_units_symbol,
 } from "../../../../../util/scale";
 import { BACK_PARAM, encodePath } from "../../../../../util/url";
+import { percentDifference, percentOf } from "./percent";
 
 export interface Props {
 	isConsole?: boolean;
@@ -543,9 +544,7 @@ const ValueCell = (props: {
 
 		const percent =
 			typeof props.baseline === "number"
-				? props.value > 0 && props.baseline > 0
-					? ((props.value - props.baseline) / props.baseline) * 100
-					: 0.0
+				? percentDifference(props.value, props.baseline)
 				: null;
 
 		return (
@@ -609,10 +608,7 @@ const LowerLimitCell = (props: {
 		return <td />;
 	}
 
-	const percent =
-		props.value > 0 && props.lowerLimit > 0
-			? (props.lowerLimit / props.value) * 100
-			: 0.0;
+	const percent = percentOf(props.lowerLimit, props.value);
 
 	return (
 		<LimitCell
@@ -640,10 +636,7 @@ const UpperLimitCell = (props: {
 		return <td />;
 	}
 
-	const percent =
-		props.value > 0 && props.upperLimit > 0
-			? (props.value / props.upperLimit) * 100
-			: 0.0;
+	const percent = percentOf(props.value, props.upperLimit);
 
 	return (
 		<LimitCell

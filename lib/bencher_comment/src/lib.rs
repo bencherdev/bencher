@@ -920,11 +920,7 @@ fn value_cell(
         }
 
         if let Some(baseline) = baseline {
-            let percent = if value.is_normal() && baseline.is_normal() {
-                ((value - baseline) / baseline) * 100.0
-            } else {
-                0.0.into()
-            };
+            let percent = percent_difference(value, baseline);
             let plus = if percent > 0.0.into() { "+" } else { "" };
             let percent = Units::format_float(percent.into());
             let baseline = Units::format_float((baseline / factor).into());
@@ -955,6 +951,21 @@ fn value_cell(
     html.push_str("</td>");
 }
 
+/// The percent difference between a value and its baseline.
+///
+/// Only the baseline has to be non-zero.
+/// A value of zero is a `-100.00%` difference from a positive baseline,
+/// not a `0.00%` difference.
+/// There is no percent difference from a zero baseline (`±∞`)
+/// nor from a non-finite value, so fall back to zero.
+fn percent_difference(value: OrderedFloat<f64>, baseline: OrderedFloat<f64>) -> OrderedFloat<f64> {
+    if baseline.is_normal() && value.is_finite() {
+        ((value - baseline) / baseline) * 100.0
+    } else {
+        0.0.into()
+    }
+}
+
 fn lower_limit_cell(
     html: &mut String,
     value: OrderedFloat<f64>,
@@ -968,11 +979,7 @@ fn lower_limit_cell(
         return;
     };
 
-    let percent = if value.is_normal() && limit.is_normal() {
-        (limit / value) * 100.0
-    } else {
-        0.0.into()
-    };
+    let percent = percent_of(limit, value);
 
     limit_cell(html, limit, percent, factor, units_symbol, bold);
 }
@@ -990,13 +997,23 @@ fn upper_limit_cell(
         return;
     };
 
-    let percent = if value.is_normal() && limit.is_normal() {
-        (value / limit) * 100.0
-    } else {
-        0.0.into()
-    };
+    let percent = percent_of(value, limit);
 
     limit_cell(html, limit, percent, factor, units_symbol, bold);
+}
+
+/// The numerator as a percent of the denominator.
+///
+/// Only the denominator has to be non-zero.
+/// A numerator of zero is `0.00%` of a positive denominator.
+/// There is no percent of a zero denominator (`±∞`)
+/// nor of a non-finite numerator, so fall back to zero.
+fn percent_of(numerator: OrderedFloat<f64>, denominator: OrderedFloat<f64>) -> OrderedFloat<f64> {
+    if denominator.is_normal() && numerator.is_finite() {
+        (numerator / denominator) * 100.0
+    } else {
+        0.0.into()
+    }
 }
 
 fn limit_cell(
@@ -1138,8 +1155,9 @@ mod tests {
         DateTime, JsonBranch, JsonHead, JsonProject, JsonReport, JsonReportCounts, JsonTestbed,
         project::{Visibility, report::Adapter},
     };
+    use ordered_float::OrderedFloat;
 
-    use crate::{ReportComment, SubAdapter};
+    use crate::{ReportComment, SubAdapter, percent_difference, percent_of, value_cell};
 
     const CONSOLE_URL: &str = "https://bencher.example.com";
 
@@ -1235,5 +1253,97 @@ mod tests {
         let testbed_pos = html.find(testbed).expect("missing testbed row");
         assert!(project_pos < branch_pos);
         assert!(branch_pos < testbed_pos);
+    }
+
+    #[test]
+    fn percent_difference_value() {
+        // A value that drops all the way to zero is a 100% improvement,
+        // not a 0% no-op.
+        assert_eq!(
+            percent_difference(OrderedFloat(0.0), OrderedFloat(3_069_448.0)),
+            OrderedFloat(-100.0)
+        );
+        assert_eq!(
+            percent_difference(OrderedFloat(50.0), OrderedFloat(100.0)),
+            OrderedFloat(-50.0)
+        );
+        assert_eq!(
+            percent_difference(OrderedFloat(150.0), OrderedFloat(100.0)),
+            OrderedFloat(50.0)
+        );
+        assert_eq!(
+            percent_difference(OrderedFloat(100.0), OrderedFloat(100.0)),
+            OrderedFloat(0.0)
+        );
+    }
+
+    #[test]
+    fn percent_difference_zero_baseline() {
+        // There is no percent difference from a zero baseline
+        // nor from a non-finite value,
+        // so fall back to zero instead of infinity or `NaN`.
+        assert_eq!(
+            percent_difference(OrderedFloat(0.0), OrderedFloat(0.0)),
+            OrderedFloat(0.0)
+        );
+        assert_eq!(
+            percent_difference(OrderedFloat(100.0), OrderedFloat(0.0)),
+            OrderedFloat(0.0)
+        );
+        assert_eq!(
+            percent_difference(OrderedFloat(100.0), OrderedFloat(f64::INFINITY)),
+            OrderedFloat(0.0)
+        );
+        assert_eq!(
+            percent_difference(OrderedFloat(f64::INFINITY), OrderedFloat(100.0)),
+            OrderedFloat(0.0)
+        );
+    }
+
+    #[test]
+    fn percent_of_value() {
+        // A zero numerator is zero percent of the denominator.
+        assert_eq!(
+            percent_of(OrderedFloat(0.0), OrderedFloat(100.0)),
+            OrderedFloat(0.0)
+        );
+        assert_eq!(
+            percent_of(OrderedFloat(50.0), OrderedFloat(100.0)),
+            OrderedFloat(50.0)
+        );
+        assert_eq!(
+            percent_of(OrderedFloat(100.0), OrderedFloat(100.0)),
+            OrderedFloat(100.0)
+        );
+        // A zero denominator has no percent, so fall back to zero.
+        assert_eq!(
+            percent_of(OrderedFloat(100.0), OrderedFloat(0.0)),
+            OrderedFloat(0.0)
+        );
+        assert_eq!(
+            percent_of(OrderedFloat(0.0), OrderedFloat(0.0)),
+            OrderedFloat(0.0)
+        );
+    }
+
+    #[test]
+    fn value_cell_zero_value() {
+        let mut html = String::new();
+        value_cell(
+            &mut html,
+            OrderedFloat(0.0),
+            Some(OrderedFloat(3_069_448.0)),
+            OrderedFloat(1.0),
+            "B",
+            false,
+        );
+        assert!(
+            html.contains("<summary>(-100.00%)</summary>"),
+            "unexpected value cell: {html}"
+        );
+        assert!(
+            html.contains("Baseline: 3,069,448.00 B"),
+            "unexpected value cell: {html}"
+        );
     }
 }
