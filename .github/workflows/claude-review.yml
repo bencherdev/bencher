@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CLAUDE_MODEL: claude-opus-4-8
+  CLAUDE_MODEL: claude-opus-5
   CLAUDE_MAX_TURNS: 64
 
 jobs:
