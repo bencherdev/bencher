@@ -1,3 +1,6 @@
+## Pending `v0.6.11`
+- Fix the percent difference shown in the report table when a metric drops to zero; a value of `0.00` against a positive baseline now shows `-100.00%` instead of `0.00%` in both the Console and the CI comment (Thank you [@OmarTawfik](https://github.com/OmarTawfik))
+
 ## `v0.6.10`
 - Add a Y-Axis scale toggle to perf plots with three modes (Auto, Linear, and Log); the Auto default preserves the existing adaptive scaling, Log falls back to Auto when the data includes zero or negative values, and the selection is saved in the plot URL, restored for pinned plots, and can be set with `bencher plot create --y-axis` or changed with `bencher plot update --y-axis`
 - Selecting a pinned plot from the Plots tab in the Perf explorer now applies the plot's saved X-Axis and Y-Axis instead of the defaults
