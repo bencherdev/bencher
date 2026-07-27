@@ -543,6 +543,7 @@ mod tests {
             no_auto_update: false,
             update_channel: bencher_valid::UpdateChannel::default(),
             max_download_size: None,
+            state_dir: Utf8PathBuf::from(crate::jail::DEFAULT_STATE_DIR),
         }
     }
 

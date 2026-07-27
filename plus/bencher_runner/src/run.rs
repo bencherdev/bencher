@@ -71,6 +71,8 @@ pub struct RunArgs {
     pub sandbox_log_level: crate::SandboxLogLevel,
     /// Sandbox mode for benchmark execution.
     pub sandbox: Option<bencher_json::Sandbox>,
+    /// The runner's persistent state directory.
+    pub state_dir: Utf8PathBuf,
 }
 
 /// Build a `Config` from CLI `RunArgs`.
@@ -121,6 +123,7 @@ fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::er
     config = config.with_grace_period(args.grace_period);
     config.sandbox_log_level = args.sandbox_log_level;
     config = config.with_sandbox(args.sandbox);
+    config = config.with_state_dir(args.state_dir.clone());
     Ok(config)
 }
 
@@ -149,6 +152,13 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     let mut tuning_guard = crate::tuning::apply(&tuning);
 
     let mut config = build_config_from_run_args(args)?;
+
+    // Prepare the host only for the sandboxed path: the one-shot CLI can
+    // execute on the host without a jail, and that path has no business
+    // requiring the runner's state directory.
+    if config.sandbox.is_some() {
+        crate::jail::prepare_host(&config.state_dir)?;
+    }
 
     // Detect the CPU layout after tuning (disabling SMT changes the core
     // count), steer kernel work off the benchmark cores, and pin the run

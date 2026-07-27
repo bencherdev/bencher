@@ -60,7 +60,13 @@ libc = { workspace = true }
 
 # Linux-only dependencies
 [target.'cfg(target_os = "linux")'.dependencies]
-nix = { workspace = true, features = ["feature", "poll", "sched", "signal"] }
+nix = { workspace = true, features = [
+    "feature",
+    "mount",
+    "poll",
+    "sched",
+    "signal",
+] }
 
 [build-dependencies]
 flate2 = { workspace = true }

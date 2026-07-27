@@ -62,7 +62,7 @@ pub use config::Config;
 #[cfg(feature = "plus")]
 pub use error::{ConfigError, ExecutionError, JailError, RunnerError};
 #[cfg(feature = "plus")]
-pub use jail::ResourceLimits;
+pub use jail::{DEFAULT_STATE_DIR, ResourceLimits};
 #[cfg(feature = "plus")]
 pub use log_level::SandboxLogLevel;
 #[cfg(feature = "plus")]

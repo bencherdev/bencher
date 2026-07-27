@@ -35,6 +35,14 @@ También se puede establecer con la variable de entorno `BENCHER_RUNNER_KEY`.
 El tiempo de espera del long-poll en segundos mientras se espera un Job, entre `1` y `900`.
 Por defecto, se usa `55`.
 
+### `--state-dir <STATE_DIR>`
+
+El directorio de estado persistente del Runner.
+La jaula que confina el sandbox se crea dentro de este directorio,
+y las jaulas que quedaron tras una salida no limpia se eliminan de él antes de ejecutar un Job.
+Por defecto, se usa `/var/lib/bencher-runner`.
+También se puede establecer con la variable de entorno `BENCHER_STATE_DIR`.
+
 ### `--danger-allow-no-sandbox`
 
 Permite ejecutar Jobs sin un [Sandbox][sandbox].
