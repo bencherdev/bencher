@@ -151,6 +151,13 @@ pub struct Config {
     /// directly on the host (non-sandboxed mode, any platform).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<Sandbox>,
+
+    /// The runner's persistent state directory.
+    ///
+    /// The jail chroot for each sandboxed run is built under this directory.
+    /// This field is not serialized.
+    #[serde(skip, default = "default_state_dir")]
+    pub state_dir: Utf8PathBuf,
 }
 
 fn default_vcpus() -> Cpu {
@@ -222,6 +229,10 @@ fn default_grace_period() -> GracePeriod {
     GracePeriod::MIN
 }
 
+fn default_state_dir() -> Utf8PathBuf {
+    Utf8PathBuf::from(crate::jail::DEFAULT_STATE_DIR)
+}
+
 impl Config {
     /// Create a new configuration with the bundled kernel.
     ///
@@ -255,6 +266,7 @@ impl Config {
             cpu_layout: None,
             sandbox_log_level: SandboxLogLevel::default(),
             sandbox: None,
+            state_dir: default_state_dir(),
         }
     }
 
@@ -442,6 +454,13 @@ impl Config {
     #[must_use]
     pub fn with_registry_scheme(mut self, scheme: RegistryScheme) -> Self {
         self.registry_scheme = scheme;
+        self
+    }
+
+    /// Set the runner's persistent state directory.
+    #[must_use]
+    pub fn with_state_dir(mut self, state_dir: Utf8PathBuf) -> Self {
+        self.state_dir = state_dir;
         self
     }
 

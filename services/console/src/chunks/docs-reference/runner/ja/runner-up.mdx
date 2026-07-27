@@ -34,6 +34,14 @@ runner up [OPTIONS]
 Job を待機する際のロングポーリングのタイムアウト (秒)。`1` から `900` の範囲です。
 デフォルトでは `55` が使用されます。
 
+### `--state-dir <STATE_DIR>`
+
+Runner の永続的な状態ディレクトリ。
+サンドボックスを閉じ込める jail はこのディレクトリの下に作成され、
+異常終了で残った jail は Job の実行前にここから一掃されます。
+デフォルトでは `/var/lib/bencher-runner` が使用されます。
+環境変数 `BENCHER_STATE_DIR` でも設定できます。
+
 ### `--danger-allow-no-sandbox`
 
 [Sandbox][sandbox] なしでの Job の実行を許可します。

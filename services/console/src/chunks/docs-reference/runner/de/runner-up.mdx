@@ -35,6 +35,14 @@ Kann auch mit der Umgebungsvariable `BENCHER_RUNNER_KEY` gesetzt werden.
 Das Long-Poll-Timeout in Sekunden beim Warten auf einen Job, zwischen `1` und `900`.
 Standardmäßig wird `55` verwendet.
 
+### `--state-dir <STATE_DIR>`
+
+Das persistente Zustandsverzeichnis für den Runner.
+Das Jail, das die Sandbox einschließt, wird unter diesem Verzeichnis erstellt,
+und Jails, die durch eine unsaubere Beendigung zurückgeblieben sind, werden vor der Ausführung eines Jobs daraus entfernt.
+Standardmäßig wird `/var/lib/bencher-runner` verwendet.
+Kann auch mit der Umgebungsvariable `BENCHER_STATE_DIR` gesetzt werden.
+
 ### `--danger-allow-no-sandbox`
 
 Erlaubt das Ausführen von Jobs ohne [Sandbox][sandbox].

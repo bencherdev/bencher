@@ -62,6 +62,10 @@ pub struct CliRun {
     #[arg(long, default_value = "300")]
     pub timeout: u64,
 
+    /// Persistent state directory for the runner.
+    #[arg(long, env = "BENCHER_STATE_DIR", default_value = bencher_runner::DEFAULT_STATE_DIR)]
+    pub state_dir: Utf8PathBuf,
+
     /// Output file paths inside guest (may be repeated).
     #[arg(long)]
     pub output: Vec<Utf8PathBuf>,
