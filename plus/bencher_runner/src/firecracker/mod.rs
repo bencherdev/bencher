@@ -166,11 +166,7 @@ pub fn run_firecracker(
         .as_ref()
         .map(|l| l.housekeeping.clone())
         .unwrap_or_default();
-    let cgroup_procs = cgroup
-        .as_ref()
-        .map(CgroupManager::open_procs)
-        .transpose()
-        .map_err(FirecrackerError::CgroupPlacement)?;
+    let cgroup_procs = placement_target(cgroup.as_ref())?;
     let mut fc_process = FirecrackerProcess::start(JailedSpawn {
         jailer_bin: &config.jailer_bin,
         exec_file: &config.firecracker_bin,
@@ -188,17 +184,7 @@ pub fn run_firecracker(
     // `spawn` returns only after `pre_exec` and the exec have completed, so
     // this read is race free. A failed write already surfaced as a failed
     // spawn; this catches a write that succeeded against the wrong cgroup.
-    if let Some(cg) = &cgroup {
-        let placed = cg
-            .contains_pid(fc_process.pid())
-            .map_err(FirecrackerError::CgroupPlacement)?;
-        if !placed {
-            return Err(FirecrackerError::CgroupMissingPid {
-                pid: fc_process.pid(),
-                cgroup: cg.path().to_owned(),
-            });
-        }
-    }
+    verify_placement(cgroup.as_ref(), fc_process.pid())?;
 
     let client = fc_process.client();
 
@@ -331,6 +317,44 @@ pub fn run_firecracker(
     })
 }
 
+/// Open the descriptor the VMM will be placed through, if there is a cgroup.
+///
+/// Placement is conditional on the cgroup existing, not unconditional: a host
+/// with no CPU layout or no isolation gets no cgroup, and therefore no
+/// placement, which is the existing degrade behavior. When the cgroup does
+/// exist, failing to open it aborts the job.
+fn placement_target(
+    cgroup: Option<&CgroupManager>,
+) -> Result<Option<std::fs::File>, FirecrackerError> {
+    cgroup
+        .map(CgroupManager::open_procs)
+        .transpose()
+        .map_err(FirecrackerError::CgroupPlacement)
+}
+
+/// Confirm the VMM landed in its cgroup, if there is one.
+///
+/// Skipped, not failed, when no cgroup exists. When one does, a pid that is
+/// not a member aborts the job: a cgroup that exists but does not contain the
+/// VMM is a silent lie about which cores the benchmark ran on, which is worse
+/// than a declared absence of isolation.
+fn verify_placement(cgroup: Option<&CgroupManager>, pid: u32) -> Result<(), FirecrackerError> {
+    let Some(cgroup) = cgroup else {
+        return Ok(());
+    };
+    let placed = cgroup
+        .contains_pid(pid)
+        .map_err(FirecrackerError::CgroupPlacement)?;
+    if placed {
+        Ok(())
+    } else {
+        Err(FirecrackerError::CgroupMissingPid {
+            pid,
+            cgroup: cgroup.path().to_owned(),
+        })
+    }
+}
+
 /// Decode the length-prefixed binary protocol for multiple output files.
 fn decode_output_files(
     data: &[u8],
@@ -351,6 +375,48 @@ fn parse_exit_code(s: &str) -> i32 {
 #[expect(clippy::get_unwrap, reason = "test assertions")]
 mod tests {
     use super::*;
+
+    // --- placement is conditional on the cgroup existing ---
+
+    #[test]
+    fn no_cgroup_skips_placement() {
+        // A host that cannot isolate is a declared limitation, so the job
+        // proceeds without a cgroup rather than failing.
+        assert!(
+            placement_target(None).unwrap().is_none(),
+            "no cgroup means nothing to place through"
+        );
+    }
+
+    #[test]
+    fn no_cgroup_skips_verification() {
+        verify_placement(None, 1).unwrap();
+    }
+
+    #[test]
+    fn a_cgroup_without_the_pid_aborts() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        std::fs::write(root.join("cgroup.procs"), "999\n").unwrap();
+        let cgroup = CgroupManager::detached(root);
+
+        let err = verify_placement(Some(&cgroup), 123).unwrap_err();
+
+        assert!(
+            matches!(err, FirecrackerError::CgroupMissingPid { pid: 123, .. }),
+            "a cgroup that does not contain the VMM must abort, got: {err}"
+        );
+    }
+
+    #[test]
+    fn a_cgroup_holding_the_pid_verifies() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        std::fs::write(root.join("cgroup.procs"), "123\n456\n").unwrap();
+        let cgroup = CgroupManager::detached(root);
+
+        verify_placement(Some(&cgroup), 123).unwrap();
+    }
 
     #[test]
     fn parse_exit_code_zero() {

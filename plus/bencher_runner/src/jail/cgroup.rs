@@ -58,6 +58,19 @@ impl CgroupManager {
         })
     }
 
+    /// Wrap an existing cgroup directory without creating or removing it.
+    ///
+    /// For tests that exercise the placement logic against a stand-in tree
+    /// rather than the real cgroup filesystem.
+    #[cfg(test)]
+    #[must_use]
+    pub fn detached(cgroup_path: Utf8PathBuf) -> Self {
+        Self {
+            cgroup_path,
+            created: false,
+        }
+    }
+
     /// Enable controllers in a cgroup.
     ///
     /// Enables cpu, memory, and pids controllers (required), and io/cpuset controllers

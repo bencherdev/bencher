@@ -134,6 +134,18 @@ mod tests {
     }
 
     #[test]
+    fn an_unbuildable_chroot_is_an_error_not_a_warning() {
+        // A chroot that cannot be built is a confinement failure, so it has
+        // to abort the job rather than degrade into an unjailed run.
+        let (_dir, state) = state_in_tmpdir();
+        // A file where the jail directory has to go makes the tree
+        // impossible to create.
+        fs::write(state.jail_dir("vm-1"), b"in the way").unwrap();
+
+        JailDir::create(&state, "vm-1").unwrap_err();
+    }
+
+    #[test]
     fn drop_tolerates_an_already_removed_tree() {
         let (_dir, state) = state_in_tmpdir();
         let jail = JailDir::create(&state, "vm-1").unwrap();

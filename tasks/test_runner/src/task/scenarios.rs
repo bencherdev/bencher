@@ -37,6 +37,15 @@ fn extract_json_substr(line: &str) -> &str {
     &line[start..end]
 }
 
+/// A host-side check run while the runner is still executing.
+///
+/// Some confinement invariants only exist while the VMM is alive and cannot
+/// be recovered from the runner's output afterwards. The probe receives the
+/// runner's state directory and returns `Ok(false)` while the VMM has not
+/// appeared yet, `Ok(true)` once the invariant has been observed to hold, and
+/// `Err` once it has been observed to be violated.
+type Probe = fn(&Utf8Path) -> Result<bool>;
+
 /// Test scenario definition.
 struct Scenario {
     name: &'static str,
@@ -47,6 +56,8 @@ struct Scenario {
     cancel_after_secs: Option<u64>,
     /// Whether to use `--sandbox firecracker` (default: true).
     sandboxed: bool,
+    /// If set, a host-side check run while the runner is executing.
+    probe: Option<Probe>,
     validate: fn(&ScenarioOutput) -> Result<()>,
 }
 
@@ -105,6 +116,7 @@ impl Scenarios {
         let runner_bin = ensure_runner_bin()?;
 
         let mut scenarios = all_scenarios();
+        scenarios.extend(jail_scenarios());
         scenarios.extend(nosandbox_scenarios());
 
         if let Some(name) = &self.scenario {
@@ -125,6 +137,7 @@ impl Scenarios {
 /// List all available scenarios.
 fn list_scenarios() {
     let mut scenarios = all_scenarios();
+    scenarios.extend(jail_scenarios());
     scenarios.extend(nosandbox_scenarios());
     println!("Available scenarios:");
     println!();
@@ -179,16 +192,23 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     let image_path = build_test_image(scenario.name, scenario.dockerfile)
         .with_context(|| format!("Failed to build image for {}", scenario.name))?;
 
+    // Every scenario gets its own state directory, so jail assertions are
+    // scoped to the scenario and never touch a real runner's state.
+    let state_dir = scenario_state_dir();
+    drop(fs::remove_dir_all(&state_dir));
+
     // Prepend --sandbox firecracker for sandboxed scenarios
-    let mut args: Vec<&str> = Vec::new();
+    let mut args: Vec<&str> = vec!["--state-dir", state_dir.as_str()];
     if scenario.sandboxed {
         args.extend(["--sandbox", "firecracker"]);
     }
     args.extend(scenario.extra_args);
 
-    // Run the runner (with optional cancellation)
+    // Run the runner (with optional cancellation or host-side probe)
     let output = if let Some(secs) = scenario.cancel_after_secs {
         run_runner_with_cancel(&image_path, &args, Duration::from_secs(secs), runner_bin)
+    } else if let Some(probe) = scenario.probe {
+        run_runner_with_probe(&image_path, &args, probe, &state_dir, runner_bin)
     } else {
         run_runner(&image_path, &args, runner_bin)
     }
@@ -219,6 +239,7 @@ fn all_scenarios() -> Vec<Scenario> {
             dockerfile: r#"FROM busybox
 CMD ["echo", "hello from vm"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -236,6 +257,7 @@ CMD ["echo", "hello from vm"]"#,
 ENV MY_VAR=test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -258,6 +280,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
 WORKDIR /myapp
 CMD ["pwd"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -274,6 +297,7 @@ CMD ["pwd"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.json"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
             validate: |output| {
@@ -290,6 +314,7 @@ CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "exit 42"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -307,6 +332,7 @@ CMD ["sh", "-c", "exit 42"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
@@ -324,6 +350,7 @@ CMD ["sleep", "3600"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -343,6 +370,7 @@ CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -360,6 +388,7 @@ CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "10", "--vcpus", "4"],
             validate: |output| {
@@ -387,6 +416,7 @@ CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
 ENTRYPOINT ["echo"]
 CMD ["hello", "world"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -403,6 +433,7 @@ CMD ["hello", "world"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -427,6 +458,7 @@ CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && echo DONE"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "120", "--max-output-size", "10485760"],
             validate: |output| {
@@ -449,6 +481,7 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && e
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
@@ -480,6 +513,7 @@ CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]
             dockerfile: r#"FROM busybox
 CMD ["id"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -506,6 +540,7 @@ CMD ["id"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "kvm_test_ok"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -528,6 +563,7 @@ CMD ["echo", "kvm_test_ok"]"#,
             dockerfile: r#"FROM busybox
 CMD ["cat", "/proc/version"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -552,6 +588,7 @@ CMD ["cat", "/proc/version"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -577,6 +614,7 @@ CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "10"],
             validate: |output| {
@@ -603,6 +641,7 @@ CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
@@ -636,6 +675,7 @@ FROM busybox
 COPY --from=build /test_iopl /test_iopl
 CMD ["/test_iopl"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -665,6 +705,7 @@ CMD ["/test_iopl"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -693,6 +734,7 @@ CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -725,6 +767,7 @@ CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0' ' ')"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -752,6 +795,7 @@ CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0
             dockerfile: r#"FROM busybox
 CMD ["echo", "metrics_test"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -774,6 +818,7 @@ CMD ["echo", "metrics_test"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "fast_benchmark"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -811,6 +856,7 @@ CMD ["echo", "fast_benchmark"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
@@ -849,6 +895,7 @@ CMD ["sleep", "3600"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "hmac_test_output"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -881,6 +928,7 @@ CMD ["echo", "hmac_test_output"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "transport_test"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -915,6 +963,7 @@ CMD ["echo", "transport_test"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             cancel_after_secs: Some(5),
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
@@ -941,6 +990,7 @@ CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo error_output >&2"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -961,6 +1011,7 @@ CMD ["sh", "-c", "echo error_output >&2"]"#,
             dockerfile: r#"FROM busybox
 CMD ["true"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -983,6 +1034,7 @@ CMD ["true"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1017,6 +1069,7 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
             // which differs from exec form ["echo", "shell_form_works"].
             dockerfile: "FROM busybox\nCMD echo shell_form_works",
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1040,6 +1093,7 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1062,6 +1116,7 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
             // in OCI config. CMD is ignored when ENTRYPOINT uses shell form.
             dockerfile: "FROM busybox\nENTRYPOINT echo shell_entrypoint_works",
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1091,6 +1146,7 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
 ENTRYPOINT echo ep_marker
 CMD ["cmd_arg"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1120,6 +1176,7 @@ CMD ["cmd_arg"]"#,
             dockerfile: r#"FROM busybox
 RUN echo "no command set""#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "30"],
             validate: |output| {
@@ -1147,6 +1204,7 @@ RUN echo "no command set""#,
             dockerfile: r#"FROM ghcr.io/bencherdev/bencher:latest
 CMD ["mock"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
@@ -1190,6 +1248,7 @@ FROM gcr.io/distroless/cc-debian12
 COPY --from=builder /tmp/hello /usr/bin/hello
 CMD ["/usr/bin/hello"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
@@ -1228,6 +1287,7 @@ CMD ["/usr/bin/hello"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "rapid_exit_marker"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1261,6 +1321,7 @@ CMD ["echo", "rapid_exit_marker"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "exit 137"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1293,6 +1354,7 @@ ENV B1=val11 B2=val12 B3=val13 B4=val14 B5=val15 B6=val16 B7=val17 B8=val18 B9=v
 ENV LARGE_VALUE=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1325,6 +1387,7 @@ CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "no file written"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/nonexistent/path.json"],
             validate: |output| {
@@ -1343,6 +1406,7 @@ CMD ["echo", "no file written"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /tmp/output.json && echo done"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
             validate: |output| {
@@ -1359,6 +1423,7 @@ CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\":true}' > /tmp/out.json"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/out.json"],
             validate: |output| {
@@ -1381,6 +1446,7 @@ CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}' > /tmp/b.json && echo done"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &[
                 "--timeout",
@@ -1410,6 +1476,7 @@ RUN mkdir -p /opt && echo "b" > /opt/file_b.txt
 RUN echo "c" > /var/file_c.txt
 CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1434,6 +1501,7 @@ CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
 RUN echo "target" > /tmp/target.txt && ln -s /tmp/target.txt /tmp/link.txt
 CMD ["cat", "/tmp/link.txt"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1460,6 +1528,7 @@ CMD ["cat", "/tmp/link.txt"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1479,6 +1548,7 @@ CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "1"],
             validate: |output| {
@@ -1495,6 +1565,7 @@ CMD ["sleep", "3600"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1024 count=50 2>/dev/null | tr '\\0' 'X'"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--max-output-size", "1024"],
             validate: |output| {
@@ -1518,6 +1589,7 @@ ENV LD_LIBRARY_PATH=/testlib
 ENV SAFE_VAR=safe_value
 CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH SAFE=$SAFE_VAR"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1557,6 +1629,7 @@ CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH S
             dockerfile: r#"FROM busybox
 CMD ["free", "-m"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--memory", "64", "--timeout", "60"],
             validate: |output| {
@@ -1584,6 +1657,7 @@ CMD ["free", "-m"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--disk", "64", "--timeout", "60"],
             validate: |output| {
@@ -1611,6 +1685,7 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--disk", "64", "--timeout", "60"],
             validate: |output| {
@@ -1643,6 +1718,7 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
             dockerfile: r#"FROM busybox
 CMD ["nproc"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1668,6 +1744,7 @@ CMD ["nproc"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.txt && echo net_ok || echo net_fail"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "30", "--network"],
             validate: |output| {
@@ -1698,6 +1775,7 @@ CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.t
 RUN mkdir -p /data && echo "content_ok" > /data/file.txt
 CMD ["cat", "/data/file.txt"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1721,6 +1799,7 @@ CMD ["cat", "/data/file.txt"]"#,
 RUN mkdir -p /data && printf '#!/bin/sh\necho hello' > /data/test.sh && chmod +x /data/test.sh
 CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1747,6 +1826,7 @@ CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
 RUN mkdir -p /data/restricted && chmod 750 /data/restricted
 CMD ["stat", "-c", "%a", "/data/restricted"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1773,6 +1853,7 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
             // Use Docker's multi-line ENV syntax with quotes for values with spaces.
             dockerfile: "FROM busybox\nENV SPACED=\"hello world\" WITH_EQ=\"key=value\"\nCMD [\"sh\", \"-c\", \"echo SPACED=$SPACED EQ=$WITH_EQ\"]",
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1802,6 +1883,7 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
 ENTRYPOINT ["echo", "image_ep"]
 CMD ["image_cmd"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--entrypoint", "echo", "cli_ep"],
             validate: |output| {
@@ -1839,6 +1921,7 @@ CMD ["image_cmd"]"#,
 ENTRYPOINT ["echo"]
 CMD ["image_cmd"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--cmd", "cli_cmd"],
             validate: |output| {
@@ -1869,6 +1952,7 @@ CMD ["image_cmd"]"#,
 ENTRYPOINT ["echo", "image_ep"]
 CMD ["image_cmd"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &[
                 "--timeout",
@@ -1906,6 +1990,7 @@ CMD ["image_cmd"]"#,
 ENV MY_VAR=image_value
 CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "MY_VAR=cli_value"],
             validate: |output| {
@@ -1931,6 +2016,7 @@ CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
 ENV EXISTING=from_image
 CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "NEW_VAR=from_cli"],
             validate: |output| {
@@ -1959,6 +2045,7 @@ CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo A=$A B=$B"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "A=one", "--env", "B=two"],
             validate: |output| {
@@ -1981,6 +2068,7 @@ CMD ["sh", "-c", "echo A=$A B=$B"]"#,
             dockerfile: r#"FROM busybox
 CMD ["hello", "world"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--entrypoint", "echo"],
             validate: |output| {
@@ -2006,6 +2094,7 @@ CMD ["hello", "world"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "iter_output"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3"],
             validate: |output| {
@@ -2026,6 +2115,7 @@ CMD ["echo", "iter_output"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "should_not_appear"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "0"],
             validate: |output| {
@@ -2044,6 +2134,7 @@ CMD ["echo", "should_not_appear"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3"],
             validate: |output| {
@@ -2070,6 +2161,7 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3", "--allow-failure"],
             validate: |output| {
@@ -2105,6 +2197,7 @@ fn nosandbox_scenarios() -> Vec<Scenario> {
             dockerfile: r#"FROM busybox:musl
 CMD ["echo", "hello from host"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2126,6 +2219,7 @@ CMD ["echo", "hello from host"]"#,
 ENV MY_VAR=host_test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2148,6 +2242,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
             dockerfile: r#"FROM busybox:musl
 CMD ["echo", "local_metrics_test"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2180,6 +2275,7 @@ CMD ["echo", "local_metrics_test"]"#,
             dockerfile: r#"FROM busybox:musl
 CMD ["sh", "-c", "exit 42"]"#,
             cancel_after_secs: None,
+            probe: None,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2370,6 +2466,256 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
     }
 
     Ok(runner_bin)
+}
+
+// ---------------------------------------------------------------------------
+// Jail confinement
+// ---------------------------------------------------------------------------
+
+/// How long to wait for the jailed VMM to appear before giving up.
+///
+/// Generous: the runner pulls and unpacks the image and builds the rootfs
+/// before the VMM is spawned.
+const PROBE_TIMEOUT: Duration = Duration::from_mins(3);
+
+/// How often to look for the jailed VMM.
+const PROBE_INTERVAL: Duration = Duration::from_millis(100);
+
+/// The state directory scenarios run against.
+fn scenario_state_dir() -> Utf8PathBuf {
+    super::work_dir().join("state")
+}
+
+/// The directory holding one chroot per jailed VMM.
+fn jail_parent(state_dir: &Utf8Path) -> Utf8PathBuf {
+    state_dir.join("jail").join("firecracker")
+}
+
+/// Scenarios covering the confinement of the VMM itself.
+fn jail_scenarios() -> Vec<Scenario> {
+    vec![
+        Scenario {
+            name: "jail_confinement",
+            description: "VMM runs unprivileged in its cgroup, and its chroot is reclaimed",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "jailed"]"#,
+            cancel_after_secs: None,
+            probe: Some(probe_confinement),
+            sandboxed: true,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                if !output.stdout.contains("jailed") {
+                    bail!("Expected 'jailed' in output, got: {}", output.stdout);
+                }
+                assert_no_chroot_remains(&scenario_state_dir())
+            },
+        },
+        Scenario {
+            name: "jail_teardown_on_cancel",
+            description: "A cancelled job leaves no chroot behind",
+            dockerfile: r#"FROM busybox
+CMD ["sleep", "300"]"#,
+            cancel_after_secs: Some(20),
+            probe: None,
+            sandboxed: true,
+            extra_args: &["--timeout", "300"],
+            validate: |_output| assert_no_chroot_remains(&scenario_state_dir()),
+        },
+    ]
+}
+
+/// Assert every chroot has been reclaimed.
+///
+/// The jailer cleans up nothing by design, so a leftover here means the
+/// runner's teardown did not run: each one holds a copy of the VMM binary and
+/// a full guest rootfs image.
+fn assert_no_chroot_remains(state_dir: &Utf8Path) -> Result<()> {
+    let parent = jail_parent(state_dir);
+    let leftovers: Vec<String> = match fs::read_dir(&parent) {
+        Ok(entries) => entries
+            .flatten()
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .collect(),
+        Err(_) => Vec::new(),
+    };
+    if leftovers.is_empty() {
+        Ok(())
+    } else {
+        bail!("Chroots left behind under {parent}: {leftovers:?}")
+    }
+}
+
+/// Check that the jailed VMM is unprivileged and already in its cgroup.
+///
+/// Both invariants disappear with the process, so they cannot be recovered
+/// from the runner's output. Cgroup membership in particular must already
+/// hold the first time the VMM is seen: it is established before the exec,
+/// not after the VM is running.
+fn probe_confinement(state_dir: &Utf8Path) -> Result<bool> {
+    let parent = jail_parent(state_dir);
+    let Some((vm_id, jail_root)) = find_jail(&parent) else {
+        return Ok(false);
+    };
+    let Some(pid) = find_jailed_vmm(&jail_root) else {
+        return Ok(false);
+    };
+
+    check_unprivileged(pid, &jail_root)?;
+    check_cgroup_membership(&vm_id, pid)?;
+
+    Ok(true)
+}
+
+/// Find the single chroot under the jail parent, if one exists yet.
+fn find_jail(parent: &Utf8Path) -> Option<(String, Utf8PathBuf)> {
+    for entry in fs::read_dir(parent).ok()?.flatten() {
+        if !entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
+            continue;
+        }
+        let vm_id = entry.file_name().to_string_lossy().into_owned();
+        let jail_root = parent.join(&vm_id).join("root");
+        if jail_root.is_dir() {
+            return Some((vm_id, jail_root));
+        }
+    }
+    None
+}
+
+/// Find the pid of the VMM confined to `jail_root`, if it is running yet.
+///
+/// The jailer chroots before exec, so the process's root directory is the
+/// jail root. That identifies it unambiguously, even if another Firecracker
+/// is running on the host.
+fn find_jailed_vmm(jail_root: &Utf8Path) -> Option<u32> {
+    for entry in fs::read_dir("/proc").ok()?.flatten() {
+        let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
+            continue;
+        };
+        let Ok(root) = fs::read_link(format!("/proc/{pid}/root")) else {
+            continue;
+        };
+        if root == Path::new(jail_root.as_str()) {
+            return Some(pid);
+        }
+    }
+    None
+}
+
+/// Check the VMM dropped root and runs as the user the jail was handed to.
+fn check_unprivileged(pid: u32, jail_root: &Utf8Path) -> Result<()> {
+    let status = fs::read_to_string(format!("/proc/{pid}/status"))
+        .with_context(|| format!("Failed to read the status of the VMM (pid {pid})"))?;
+    let uid_line = status
+        .lines()
+        .find_map(|line| line.strip_prefix("Uid:"))
+        .context("No Uid line in the VMM's /proc status")?;
+    let vmm_uid: u32 = uid_line
+        .split_whitespace()
+        .next()
+        .context("Empty Uid line in the VMM's /proc status")?
+        .parse()
+        .context("Unparsable uid in the VMM's /proc status")?;
+
+    if vmm_uid == 0 {
+        bail!("The VMM (pid {pid}) is running as root; the jailer did not drop privilege");
+    }
+
+    // The jailer chowns the chroot root to the jail uid, so the two must
+    // agree: a VMM running as some other unprivileged user would not be
+    // confined to the jail it was given.
+    let jail_uid = jail_root_uid(jail_root)?;
+    if vmm_uid != jail_uid {
+        bail!("The VMM (pid {pid}) runs as uid {vmm_uid} but its jail is owned by uid {jail_uid}");
+    }
+
+    Ok(())
+}
+
+/// The uid the jailer handed the chroot root to.
+fn jail_root_uid(jail_root: &Utf8Path) -> Result<u32> {
+    use std::os::unix::fs::MetadataExt as _;
+
+    let uid = fs::metadata(jail_root)
+        .with_context(|| format!("Failed to stat the jail root {jail_root}"))?
+        .uid();
+    if uid == 0 {
+        bail!("The jail root {jail_root} is still owned by root");
+    }
+    Ok(uid)
+}
+
+/// Check the VMM is in its cgroup.
+///
+/// Placement happens before the exec, so the pid is already a member the
+/// first time the process is observable.
+fn check_cgroup_membership(vm_id: &str, pid: u32) -> Result<()> {
+    let procs_path = format!("/sys/fs/cgroup/bencher/{vm_id}/cgroup.procs");
+    // No cgroup means no isolation was possible on this host, which is a
+    // declared limitation rather than a confinement failure.
+    let Ok(procs) = fs::read_to_string(&procs_path) else {
+        return Ok(());
+    };
+    if procs.lines().any(|line| line.trim() == pid.to_string()) {
+        Ok(())
+    } else {
+        bail!("The VMM (pid {pid}) is not in {procs_path}, which holds: {procs:?}")
+    }
+}
+
+/// Run the runner while checking a host-side invariant.
+fn run_runner_with_probe(
+    image_path: &Utf8Path,
+    args: &[&str],
+    probe: Probe,
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let mut child = Command::new(runner_bin.as_str())
+        .arg("run")
+        .arg("--image")
+        .arg(image_path.as_str())
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let mut observed = None;
+    loop {
+        match probe(state_dir) {
+            Ok(true) => {
+                observed = Some(Ok(()));
+                break;
+            },
+            Ok(false) => {},
+            Err(e) => {
+                observed = Some(Err(e));
+                break;
+            },
+        }
+        // Stop looking once the runner is gone or the wait is hopeless: the
+        // output is collected either way so the failure can be explained.
+        if child.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
+            break;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    }
+
+    let output = child.wait_with_output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    match observed {
+        Some(Ok(())) => Ok(ScenarioOutput {
+            stdout,
+            stderr,
+            exit_code: output.status.code().unwrap_or(-1),
+        }),
+        Some(Err(e)) => Err(e).with_context(|| format!("stdout: {stdout}\nstderr: {stderr}")),
+        None => bail!(
+            "The jailed VMM was never observed within {PROBE_TIMEOUT:?}.\nstdout: {stdout}\nstderr: {stderr}"
+        ),
+    }
 }
 
 /// Run the runner and capture output.
