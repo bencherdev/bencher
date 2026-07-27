@@ -3,6 +3,10 @@
 //! This module manages Firecracker microVMs for running benchmarks in isolation.
 //! Instead of a custom VMM, we use Firecracker as an external process controlled
 //! via its REST API over a Unix domain socket.
+//!
+//! The VMM is never a plain child of the runner. It runs under the Firecracker
+//! jailer, in a chroot as an unprivileged user with no host network, and is
+//! placed in its cgroup before it execs. See [`crate::jail`].
 
 #![expect(
     clippy::print_stdout,
