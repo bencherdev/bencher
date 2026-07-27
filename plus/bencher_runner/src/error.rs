@@ -93,6 +93,34 @@ pub enum JailError {
     #[cfg(target_os = "linux")]
     #[error("The network namespace thread panicked")]
     NetnsThread,
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to create jail chroot {path}: {source}")]
+    CreateJail {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to hand {path} to the jail uid and gid: {source}")]
+    ChownJail {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to open {path} for cgroup placement: {source}")]
+    OpenCgroupProcs {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to read cgroup file {path}: {source}")]
+    ReadCgroup {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
 }
 
 #[derive(Debug, Error)]
@@ -111,6 +139,13 @@ pub enum ConfigError {
 
     #[error("Binary not found: {name}. {hint}")]
     BinaryNotFound { name: String, hint: String },
+
+    #[error("Failed to copy {src} to {dest}: {source}")]
+    CopyFile {
+        src: Utf8PathBuf,
+        dest: Utf8PathBuf,
+        source: std::io::Error,
+    },
 
     #[error("Failed to copy init binary from {src} to {dest}: {source}")]
     CopyInit {

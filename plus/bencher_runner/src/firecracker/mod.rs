@@ -28,6 +28,7 @@ use std::time::{Duration, Instant};
 use camino::Utf8PathBuf;
 
 use crate::cpu::CpuLayout;
+use crate::jail::{CgroupManager, JailPaths};
 use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
@@ -46,18 +47,26 @@ const GUEST_CID: u32 = 3;
 use crate::run::RunOutput;
 
 use config::{Action, ActionType, BootSource, Drive, MachineConfig, VsockConfig};
-use process::FirecrackerProcess;
+use process::{FirecrackerProcess, JailedSpawn};
 use vsock::VsockListener;
 
 /// Configuration for a Firecracker-based benchmark run.
 #[derive(Debug)]
 pub struct FirecrackerJobConfig {
-    /// Path to the Firecracker binary.
+    /// Path to the staged Firecracker binary, outside the jail.
     pub firecracker_bin: Utf8PathBuf,
-    /// Path to the kernel image.
-    pub kernel_path: Utf8PathBuf,
-    /// Path to the ext4 rootfs image.
-    pub rootfs_path: Utf8PathBuf,
+    /// Path to the jailer binary.
+    pub jailer_bin: Utf8PathBuf,
+    /// Identity of this microVM: the jailer id, the chroot name, and the
+    /// cgroup name. Minted before the job's artifacts, because the jail root
+    /// they are built in is a function of it.
+    pub vm_id: String,
+    /// Both views of every file inside the jail chroot.
+    pub jail: JailPaths,
+    /// The jailer's `--chroot-base-dir`.
+    pub chroot_base_dir: Utf8PathBuf,
+    /// Handle of the empty network namespace the VMM joins.
+    pub netns: Utf8PathBuf,
     /// Number of vCPUs.
     pub vcpus: u8,
     /// Memory size in MiB.
@@ -66,8 +75,6 @@ pub struct FirecrackerJobConfig {
     pub boot_args: String,
     /// Execution timeout in seconds.
     pub timeout_secs: u64,
-    /// Working directory for temporary files (API socket, vsock UDS).
-    pub work_dir: Utf8PathBuf,
     /// Optional CPU layout for core isolation via cpuset.
     pub cpu_layout: Option<CpuLayout>,
     /// Firecracker process log level.
@@ -82,16 +89,24 @@ pub struct FirecrackerJobConfig {
     pub grace_period: bencher_json::GracePeriod,
 }
 
-/// Run a benchmark inside a Firecracker microVM.
+/// Run a benchmark inside a jailed Firecracker microVM.
 ///
 /// This function:
 /// 1. Optionally creates a cgroup with cpuset for CPU isolation
-/// 2. Starts a Firecracker process (and moves it into the cgroup)
-/// 3. Configures the VM via REST API
-/// 4. Creates vsock listeners for result collection
-/// 5. Boots the VM
-/// 6. Collects results via vsock
-/// 7. Cleans up (including cgroup)
+/// 2. Starts Firecracker under the jailer, placed in the cgroup before exec
+/// 3. Verifies the placement landed
+/// 4. Configures the VM via REST API
+/// 5. Creates vsock listeners for result collection and hands them to the jail
+/// 6. Boots the VM
+/// 7. Collects results via vsock
+/// 8. Cleans up (including cgroup)
+///
+/// The cgroup is a fidelity mechanism, so its absence degrades: no CPU layout,
+/// no isolation, or a cgroup that cannot be created means the job proceeds with
+/// a warning. Placement and verification are conditional on the cgroup
+/// existing, but when it does they are hard requirements: a host that cannot
+/// isolate is a declared limitation, while a cgroup that exists but does not
+/// contain the VMM is a silent lie about where the benchmark ran.
 ///
 /// Returns the benchmark output including exit code and stdout.
 #[expect(
@@ -102,16 +117,15 @@ pub fn run_firecracker(
     config: &FirecrackerJobConfig,
     cancel_flag: Option<&Arc<AtomicBool>>,
 ) -> Result<RunOutput, FirecrackerError> {
-    let vm_id = uuid::Uuid::new_v4().to_string();
-    let api_socket_path = format!("{}/firecracker-{vm_id}.sock", config.work_dir);
-    let vsock_uds_path = format!("{}/vsock-{vm_id}.sock", config.work_dir);
+    let vm_id = config.vm_id.as_str();
+    let jail = &config.jail;
 
     let start_time = Instant::now();
 
     // Step 0: Create cgroup with cpuset if CPU layout is provided
     let cgroup = if let Some(layout) = &config.cpu_layout {
         if layout.has_isolation() {
-            match crate::jail::CgroupManager::new(&vm_id) {
+            match CgroupManager::new(vm_id) {
                 Ok(cg) => {
                     // Apply cpuset to pin Firecracker to benchmark cores
                     if let Err(e) = cg.apply_cpuset(layout) {
@@ -140,26 +154,50 @@ pub fn run_firecracker(
         None
     };
 
-    // Step 1: Start Firecracker process
-    println!("Starting Firecracker process...");
+    // Step 1: Start the jailed Firecracker process.
+    //
+    // The cgroup descriptor is opened before the fork so the placement inside
+    // `pre_exec` is a bare write on an existing descriptor. Placing the VMM
+    // before it execs, rather than after it is already running, keeps it from
+    // booting its API and touching memory on the wrong cores first.
+    println!("Starting jailed Firecracker process...");
     let housekeeping_cores = config
         .cpu_layout
         .as_ref()
         .map(|l| l.housekeeping.clone())
         .unwrap_or_default();
-    let mut fc_process = FirecrackerProcess::start(
-        config.firecracker_bin.as_str(),
-        &api_socket_path,
-        &vm_id,
-        config.log_level.as_str(),
+    let cgroup_procs = cgroup
+        .as_ref()
+        .map(CgroupManager::open_procs)
+        .transpose()
+        .map_err(FirecrackerError::CgroupPlacement)?;
+    let mut fc_process = FirecrackerProcess::start(JailedSpawn {
+        jailer_bin: &config.jailer_bin,
+        exec_file: &config.firecracker_bin,
+        vm_id,
+        chroot_base_dir: &config.chroot_base_dir,
+        netns: &config.netns,
+        api_socket: jail.api_socket(),
+        log_level: config.log_level.as_str(),
         housekeeping_cores,
-    )?;
+        cgroup_procs,
+    })?;
 
-    // Move Firecracker process into cgroup for CPU isolation
-    if let Some(cg) = &cgroup
-        && let Err(e) = cg.add_pid(fc_process.pid())
-    {
-        eprintln!("Warning: failed to add Firecracker to cgroup: {e}");
+    // Step 1b: Verify the placement landed.
+    //
+    // `spawn` returns only after `pre_exec` and the exec have completed, so
+    // this read is race free. A failed write already surfaced as a failed
+    // spawn; this catches a write that succeeded against the wrong cgroup.
+    if let Some(cg) = &cgroup {
+        let placed = cg
+            .contains_pid(fc_process.pid())
+            .map_err(FirecrackerError::CgroupPlacement)?;
+        if !placed {
+            return Err(FirecrackerError::CgroupMissingPid {
+                pid: fc_process.pid(),
+                cgroup: cg.path().to_owned(),
+            });
+        }
     }
 
     let client = fc_process.client();
@@ -173,26 +211,33 @@ pub fn run_firecracker(
         smt: false,
     })?;
 
+    // Every path in an API body is the chroot view: these resolve inside the
+    // jail, not on the host filesystem the runner sees.
     client.put_boot_source(&BootSource {
-        kernel_image_path: config.kernel_path.to_string(),
+        kernel_image_path: jail.kernel().chroot().clone(),
         boot_args: config.boot_args.clone(),
     })?;
 
     client.put_drive(&Drive {
         drive_id: "rootfs".to_owned(),
-        path_on_host: config.rootfs_path.to_string(),
+        path_on_host: jail.rootfs().chroot().clone(),
         is_root_device: true,
         is_read_only: false,
     })?;
 
     client.put_vsock(&VsockConfig {
         guest_cid: GUEST_CID,
-        uds_path: vsock_uds_path.clone(),
+        uds_path: jail.vsock().chroot().clone(),
     })?;
 
     // Step 3: Create vsock listeners (must be before boot)
     println!("Setting up vsock listeners...");
-    let vsock_listener = VsockListener::new(&vsock_uds_path)?;
+    let vsock_listener = VsockListener::new(jail.vsock().host())?;
+    // Firecracker connects out to these as the unprivileged jail user, so it
+    // needs write access to the inodes. After bind and before InstanceStart.
+    vsock_listener
+        .chown_to_jail()
+        .map_err(FirecrackerError::Chown)?;
 
     // Step 4: Boot the VM
     println!("Booting VM...");

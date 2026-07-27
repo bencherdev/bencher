@@ -37,4 +37,24 @@ pub enum FirecrackerError {
     /// Job was cancelled.
     #[error("Job cancelled")]
     Cancelled,
+
+    /// The VMM could not be placed in, or verified against, its cgroup.
+    #[error("Cgroup placement failed: {0}")]
+    CgroupPlacement(#[source] crate::error::JailError),
+
+    /// The cgroup exists but the VMM is not in it.
+    ///
+    /// Fatal: a cgroup that does not contain the VMM is a silent lie about
+    /// which cores the benchmark ran on.
+    #[error("Firecracker (pid {pid}) is not in its cgroup {cgroup}")]
+    CgroupMissingPid {
+        /// PID of the Firecracker process.
+        pid: u32,
+        /// The cgroup it should be in.
+        cgroup: camino::Utf8PathBuf,
+    },
+
+    /// A jail artifact could not be handed to the jail uid and gid.
+    #[error("Jail ownership failed: {0}")]
+    Chown(#[source] crate::error::JailError),
 }
