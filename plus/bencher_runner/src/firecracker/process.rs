@@ -20,9 +20,10 @@ pub struct JailedSpawn<'a> {
     pub jailer_bin: &'a Utf8Path,
     /// The staged Firecracker binary, outside the jail.
     ///
-    /// The jailer copies this into the chroot itself and rejects a multiply
-    /// linked file, so it is neither placed in the chroot by hand nor
-    /// hardlinked anywhere. Its base name determines the chroot layout.
+    /// The jailer copies this into the chroot itself, and refuses to write
+    /// over a multiply linked destination, so it is neither placed in the
+    /// chroot by hand nor hardlinked there. Its base name determines the
+    /// chroot layout, so it is fixed rather than incidental.
     pub exec_file: &'a Utf8Path,
     /// The jailer `--id`, which is also the chroot name and the cgroup name.
     pub vm_id: &'a str,
