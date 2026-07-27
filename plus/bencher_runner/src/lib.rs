@@ -33,6 +33,8 @@ pub mod init;
 #[cfg(feature = "plus")]
 pub mod jail;
 #[cfg(all(feature = "plus", target_os = "linux"))]
+pub mod jailer_bin;
+#[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod kernel;
 #[cfg(feature = "plus")]
 mod local;
