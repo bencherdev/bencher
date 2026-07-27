@@ -2583,18 +2583,26 @@ fn find_jail(parent: &Utf8Path) -> Option<(String, Utf8PathBuf)> {
 
 /// Find the pid of the VMM confined to `jail_root`, if it is running yet.
 ///
-/// The jailer chroots before exec, so the process's root directory is the
-/// jail root. That identifies it unambiguously, even if another Firecracker
-/// is running on the host.
+/// The jailer pivots into a private mount namespace, so the process's root
+/// path reads back as `/` and is useless as an identifier. Its identity is
+/// compared instead: the bind mount the jailer pivots onto preserves the
+/// device and inode of the chroot directory, so stat'ing through
+/// `/proc/<pid>/root` and stat'ing the jail root agree for exactly the VMM
+/// confined to this jail and for no other process on the host.
 fn find_jailed_vmm(jail_root: &Utf8Path) -> Option<u32> {
+    use std::os::unix::fs::MetadataExt as _;
+
+    let jail = fs::metadata(jail_root).ok()?;
     for entry in fs::read_dir("/proc").ok()?.flatten() {
         let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
             continue;
         };
-        let Ok(root) = fs::read_link(format!("/proc/{pid}/root")) else {
+        // Following the magic symlink crosses into the process's own mount
+        // namespace, which a privileged reader is allowed to do.
+        let Ok(root) = fs::metadata(format!("/proc/{pid}/root")) else {
             continue;
         };
-        if root == Path::new(jail_root.as_str()) {
+        if root.dev() == jail.dev() && root.ino() == jail.ino() {
             return Some(pid);
         }
     }

@@ -37,9 +37,9 @@ impl JailDir {
             path: root.clone(),
             source: e,
         })?;
-        // The jailer chowns the chroot root to the jail uid but does not
-        // change the mode of a directory that already exists, so the runner
-        // sets it. The tree holds the guest rootfs.
+        // The jailer eventually sets the chroot root to 0700 owned by the jail
+        // user, but only once it runs. The runner builds the guest rootfs in
+        // here before that, so the tree is private from the moment it exists.
         for path in [&dir, &root] {
             fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(|e| {
                 JailError::CreateJail {
@@ -71,10 +71,11 @@ impl Drop for JailDir {
 
 /// Hand a file the runner placed inside the chroot to the jail uid and gid.
 ///
-/// The jailer creates and chowns the chroot root and the device nodes it
-/// makes, but it does not recursively chown what the runner put there. Every
-/// artifact Firecracker touches has to be handed over explicitly, and getting
-/// it wrong produces an opaque boot failure, so each one is checked.
+/// The jailer chowns the chroot root and the device nodes it makes, but that
+/// chown is not recursive: files the runner placed inside keep the ownership
+/// they were created with, which is root. Every artifact Firecracker touches
+/// has to be handed over explicitly, and getting it wrong produces an opaque
+/// boot failure, so each one is checked.
 pub fn chown_to_jail(path: &Utf8Path) -> Result<(), JailError> {
     chown(path, Some(JAIL_UID), Some(JAIL_GID)).map_err(|e| JailError::ChownJail {
         path: path.to_owned(),
