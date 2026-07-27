@@ -35,6 +35,14 @@ Peut aussi être défini avec la variable d'environnement `BENCHER_RUNNER_KEY`.
 Le délai d'attente du long-poll en secondes pendant l'attente d'un Job, entre `1` et `900`.
 Par défaut, `55` est utilisé.
 
+### `--state-dir <STATE_DIR>`
+
+Le répertoire d'état persistant du Runner.
+La prison qui confine le bac à sable est créée dans ce répertoire,
+et les prisons laissées par un arrêt brutal en sont supprimées avant l'exécution d'un Job.
+Par défaut, `/var/lib/bencher-runner` est utilisé.
+Peut également être défini avec la variable d'environnement `BENCHER_STATE_DIR`.
+
 ### `--danger-allow-no-sandbox`
 
 Autorise l'exécution de Jobs sans [Sandbox][sandbox].

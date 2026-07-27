@@ -1,17 +1,70 @@
-//! Resource management for Firecracker microVMs.
+//! Confinement for Firecracker microVMs.
 //!
-//! This module provides cgroup-based resource limits
-//! for controlling Firecracker microVM processes.
+//! Managed runners execute arbitrary code submitted by anyone, so the VMM must
+//! not inherit the runner's root. This module owns everything that confines it:
+//! the persistent state directory the chroots are built under, the empty
+//! network namespace the VMM joins, and the cgroup that both places it on the
+//! benchmark cores and bounds its resources.
 
 #[cfg(target_os = "linux")]
 mod cgroup;
+#[cfg(target_os = "linux")]
+pub mod netns;
+#[cfg(target_os = "linux")]
+pub mod state;
 
 #[cfg(target_os = "linux")]
 pub use cgroup::CgroupManager;
 #[cfg(target_os = "linux")]
 pub(crate) use cgroup::{BENCHER_CGROUP_BASE, effective_mems};
+#[cfg(target_os = "linux")]
+pub use state::StateDir;
 
 use serde::{Deserialize, Serialize};
+
+/// Default location of the runner's persistent state directory.
+pub const DEFAULT_STATE_DIR: &str = "/var/lib/bencher-runner";
+
+/// The unprivileged uid the jailed Firecracker VMM runs as.
+///
+/// One dedicated id, not one per job: jobs run serially and each gets a fresh
+/// chroot that is swept, so a per-job allocator adds a scheme without closing
+/// a live vector. The value sits in the gap between the ids `systemd-homed`
+/// claims and the `DynamicUser` range (61184-65519), and well clear of both
+/// the regular user range and `nobody` (65534), so it is unlikely to collide
+/// with an account that owns anything on the host. No passwd entry is needed:
+/// the jailer sets the numeric id directly.
+pub const JAIL_UID: u32 = 60613;
+
+/// The unprivileged gid the jailed Firecracker VMM runs as.
+///
+/// See [`JAIL_UID`].
+pub const JAIL_GID: u32 = 60613;
+
+/// Prepare the host for jailed execution.
+///
+/// Idempotent, and called from every entry point that can reach the VM
+/// executor: the `up` daemon has a startup hook, the one-shot `run` CLI does
+/// not, so the work lives here rather than in daemon startup.
+///
+/// Failure is fatal. Untrusted code never runs with silently degraded
+/// confinement, so a host that cannot be prepared does not execute a job.
+#[cfg(target_os = "linux")]
+pub fn prepare_host(state_dir: &camino::Utf8Path) -> Result<(), crate::error::JailError> {
+    let state = StateDir::new(state_dir.to_owned());
+    state.create()?;
+    state::sweep_jails(&state.jail_parent());
+    netns::ensure()?;
+    Ok(())
+}
+
+/// Prepare the host for jailed execution.
+///
+/// The jail is Linux-only, as is the VM executor it protects.
+#[cfg(not(target_os = "linux"))]
+pub fn prepare_host(_state_dir: &camino::Utf8Path) -> Result<(), crate::error::JailError> {
+    Ok(())
+}
 
 /// Resource limits for the Firecracker microVM process.
 #[derive(Debug, Clone, Serialize, Deserialize)]

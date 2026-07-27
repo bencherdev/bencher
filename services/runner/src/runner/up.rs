@@ -31,6 +31,7 @@ impl TryFrom<CliUp> for Up {
                 no_auto_update: task.no_auto_update,
                 update_channel: task.update_channel,
                 max_download_size: task.max_download_size,
+                state_dir: task.state_dir,
             },
         })
     }

@@ -58,6 +58,41 @@ pub enum JailError {
 
     #[error("Cpuset partition mode '{mode}' rejected by the kernel: {state}")]
     PartitionInvalid { mode: String, state: String },
+
+    #[error("Failed to create runner state directory {path}: {source}")]
+    CreateStateDir {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to create network namespace directory {path}: {source}")]
+    NetnsDir {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to create network namespace handle {path}: {source}")]
+    NetnsHandle {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to unshare the network namespace: {0}")]
+    Unshare(#[source] nix::Error),
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to bind the network namespace handle {path}: {source}")]
+    BindNetns {
+        path: Utf8PathBuf,
+        source: nix::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("The network namespace thread panicked")]
+    NetnsThread,
 }
 
 #[derive(Debug, Error)]

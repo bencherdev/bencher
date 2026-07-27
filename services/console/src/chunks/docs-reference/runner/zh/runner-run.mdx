@@ -32,6 +32,14 @@ runner run --image <IMAGE> [OPTIONS]
 执行超时（秒）。
 默认使用 `300`。
 
+### `--state-dir <STATE_DIR>`
+
+Runner 的持久状态目录。
+限制沙箱的 jail 在该目录下创建，
+非正常退出遗留的 jail 会在 Job 运行前从中清除。
+默认使用 `/var/lib/bencher-runner`。
+也可以通过 `BENCHER_STATE_DIR` 环境变量设置。
+
 ### `--iter <ITER>`
 
 要执行的基准测试迭代次数。

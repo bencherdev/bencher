@@ -1,4 +1,5 @@
 use bencher_json::RunnerResourceId;
+use camino::Utf8PathBuf;
 use clap::Parser;
 
 use super::CliTuning;
@@ -21,6 +22,10 @@ pub struct CliUp {
     /// Long-poll timeout in seconds (1-900).
     #[arg(long, default_value = "55", value_parser = clap::value_parser!(u32).range(1..=900))]
     pub poll_timeout: u32,
+
+    /// Persistent state directory for the runner.
+    #[arg(long, env = "BENCHER_STATE_DIR", default_value = bencher_runner::DEFAULT_STATE_DIR)]
+    pub state_dir: Utf8PathBuf,
 
     #[command(flatten)]
     pub tuning: CliTuning,

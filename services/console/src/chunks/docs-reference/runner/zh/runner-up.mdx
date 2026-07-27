@@ -34,6 +34,14 @@ runner up [OPTIONS]
 等待 Job 时的长轮询超时（秒），介于 `1` 和 `900` 之间。
 默认使用 `55`。
 
+### `--state-dir <STATE_DIR>`
+
+Runner 的持久状态目录。
+限制沙箱的 jail 在该目录下创建，
+非正常退出遗留的 jail 会在 Job 运行前从中清除。
+默认使用 `/var/lib/bencher-runner`。
+也可以通过 `BENCHER_STATE_DIR` 环境变量设置。
+
 ### `--danger-allow-no-sandbox`
 
 允许在没有 [Sandbox][sandbox] 的情况下执行 Job。

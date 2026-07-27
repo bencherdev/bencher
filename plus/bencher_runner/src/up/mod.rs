@@ -67,6 +67,8 @@ pub struct UpConfig {
     pub update_channel: bencher_valid::UpdateChannel,
     /// Maximum download size in bytes for self-update binaries.
     pub max_download_size: Option<u64>,
+    /// The runner's persistent state directory.
+    pub state_dir: camino::Utf8PathBuf,
 }
 
 pub struct Up {
@@ -103,6 +105,13 @@ impl Up {
 
         // Warn about host conditions that limit benchmark accuracy (Linux only)
         preflight::print_host_warnings();
+
+        // Create the state directory, sweep chroots left behind by a runner
+        // that exited without unwinding, and ensure the empty network
+        // namespace. The daemon claims sandboxed jobs, so this is required
+        // before the first one arrives, not on demand.
+        crate::jail::prepare_host(&self.config.state_dir).map_err(crate::RunnerError::from)?;
+        println!("  State directory: {}", self.config.state_dir);
 
         // Serialize host-global tuning across runner processes. Declared
         // before the guard so the lock releases only after restore completes.
