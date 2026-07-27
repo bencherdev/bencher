@@ -9,7 +9,11 @@
 #[cfg(target_os = "linux")]
 mod cgroup;
 #[cfg(target_os = "linux")]
+pub mod chroot;
+#[cfg(target_os = "linux")]
 pub mod netns;
+#[cfg(target_os = "linux")]
+pub mod paths;
 #[cfg(target_os = "linux")]
 pub mod state;
 
@@ -17,6 +21,10 @@ pub mod state;
 pub use cgroup::CgroupManager;
 #[cfg(target_os = "linux")]
 pub(crate) use cgroup::{BENCHER_CGROUP_BASE, effective_mems};
+#[cfg(target_os = "linux")]
+pub use chroot::JailDir;
+#[cfg(target_os = "linux")]
+pub use paths::{ChrootPath, HostPath, JailFile, JailPaths};
 #[cfg(target_os = "linux")]
 pub use state::StateDir;
 

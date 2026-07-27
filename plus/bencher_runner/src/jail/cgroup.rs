@@ -252,9 +252,33 @@ impl CgroupManager {
         self.write_file("cgroup.procs", &pid.to_string())
     }
 
-    /// Add a process by PID to this cgroup.
-    pub fn add_pid(&self, pid: u32) -> Result<(), RunnerError> {
-        self.write_file("cgroup.procs", &pid.to_string())
+    /// Open this cgroup's `cgroup.procs` for writing.
+    ///
+    /// The descriptor is opened before the fork so the `pre_exec` closure that
+    /// joins the cgroup performs only a `write` of a fixed byte on an existing
+    /// descriptor: no allocation, no path resolution, nothing that is not
+    /// async-signal-safe.
+    pub fn open_procs(&self) -> Result<fs::File, JailError> {
+        let path = self.cgroup_path.join("cgroup.procs");
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&path)
+            .map_err(|e| JailError::OpenCgroupProcs { path, source: e })
+    }
+
+    /// Whether `pid` is a member of this cgroup.
+    ///
+    /// A failed `pre_exec` write already surfaces as a failed spawn; this is
+    /// for the different case of a write that succeeded against the wrong
+    /// destination. A cgroup that exists but does not contain the VMM is a
+    /// silent lie about where the benchmark ran.
+    pub fn contains_pid(&self, pid: u32) -> Result<bool, JailError> {
+        let path = self.cgroup_path.join("cgroup.procs");
+        let procs = fs::read_to_string(&path).map_err(|e| JailError::ReadCgroup {
+            path: path.clone(),
+            source: e,
+        })?;
+        Ok(procs_contains_pid(&procs, pid))
     }
 
     /// Write to a cgroup file.
@@ -315,6 +339,15 @@ pub(crate) fn effective_mems(cgroup: &Utf8Path) -> String {
     }
 }
 
+/// Whether a `cgroup.procs` listing contains `pid`.
+///
+/// Matches whole lines: pid `7` must not be satisfied by pid `70`.
+fn procs_contains_pid(procs: &str, pid: u32) -> bool {
+    procs
+        .lines()
+        .any(|line| line.trim().parse::<u32>() == Ok(pid))
+}
+
 /// Return the first required controller missing from a
 /// `cgroup.subtree_control` listing, or `None` when all are enabled.
 ///
@@ -354,6 +387,43 @@ mod tests {
             Some("cpu")
         );
         assert_eq!(missing_required_controller("cpu memory"), Some("pids"));
+    }
+
+    #[test]
+    fn procs_contains_pid_matches_whole_lines() {
+        assert!(procs_contains_pid("7\n70\n701\n", 7));
+        assert!(procs_contains_pid("7\n70\n701\n", 701));
+        // A prefix match must not count: pid 7 is not pid 70.
+        assert!(!procs_contains_pid("70\n701\n", 7));
+        assert!(!procs_contains_pid("", 7));
+        assert!(!procs_contains_pid("\n", 7));
+    }
+
+    #[test]
+    fn open_procs_reports_a_missing_cgroup() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let manager = CgroupManager {
+            cgroup_path: root.join("absent"),
+            created: false,
+        };
+
+        manager.open_procs().unwrap_err();
+        manager.contains_pid(1).unwrap_err();
+    }
+
+    #[test]
+    fn contains_pid_reads_the_listing() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        fs::write(root.join("cgroup.procs"), "123\n456\n").unwrap();
+        let manager = CgroupManager {
+            cgroup_path: root,
+            created: false,
+        };
+
+        assert!(manager.contains_pid(456).unwrap());
+        assert!(!manager.contains_pid(789).unwrap());
     }
 
     #[test]

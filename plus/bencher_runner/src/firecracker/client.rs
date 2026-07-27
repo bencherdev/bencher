@@ -13,6 +13,7 @@ use camino::Utf8Path;
 
 use crate::firecracker::config::{Action, BootSource, Drive, MachineConfig, VsockConfig};
 use crate::firecracker::error::FirecrackerError;
+use crate::jail::HostPath;
 
 /// Client for the Firecracker REST API.
 pub struct FirecrackerClient {
@@ -20,10 +21,13 @@ pub struct FirecrackerClient {
 }
 
 impl FirecrackerClient {
-    /// Create a new client for the given API socket path.
-    pub fn new(socket_path: &str) -> Self {
+    /// Create a new client for the API socket.
+    ///
+    /// The runner reaches the socket from outside the chroot, so this is the
+    /// host view; the jailed VMM binds the chroot view of the same file.
+    pub fn new(socket_path: &HostPath) -> Self {
         Self {
-            socket_path: socket_path.to_owned(),
+            socket_path: socket_path.as_str().to_owned(),
         }
     }
 

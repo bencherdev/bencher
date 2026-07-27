@@ -2,8 +2,12 @@
 //!
 //! Firecracker's vsock implementation uses Unix domain sockets on the host side.
 //! When the guest connects to CID 2 (host) on port N, Firecracker connects to
-//! `{uds_path}_{N}` on the host. The host must have Unix listeners at those
-//! paths before VM boot.
+//! `{uds_path}_{N}`. The runner binds those sockets, from outside the chroot,
+//! before VM boot; Firecracker reaches the same inodes at the chroot view of
+//! the path and creates the base `uds_path` itself.
+//!
+//! Unix domain sockets are scoped by the filesystem, not by the network
+//! namespace, so the empty namespace the VMM joins does not affect them.
 
 use std::io::Read as _;
 use std::os::fd::AsFd as _;
@@ -12,9 +16,12 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use camino::Utf8Path;
 use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 
 use crate::firecracker::error::FirecrackerError;
+use crate::jail::HostPath;
+use crate::jail::chroot::chown_to_jail;
 
 /// Poll timeout for vsock listeners (50ms).
 ///
@@ -32,6 +39,9 @@ mod ports {
     pub const STDERR: u32 = 5001;
     pub const EXIT_CODE: u32 = 5002;
     pub const OUTPUT_FILES: u32 = 5005;
+
+    /// Every port the runner listens on.
+    pub const ALL: [u32; 4] = [STDOUT, STDERR, EXIT_CODE, OUTPUT_FILES];
 }
 
 /// Results collected from the guest via vsock.
@@ -61,9 +71,11 @@ pub struct VsockListener {
 impl VsockListener {
     /// Create vsock listeners for all expected ports.
     ///
-    /// Creates Unix listeners at `{vsock_uds_path}_{port}` for each port.
-    /// These must be created before the VM boots.
-    pub fn new(vsock_uds_path: &str) -> Result<Self, FirecrackerError> {
+    /// Creates Unix listeners at `{vsock_uds_path}_{port}` for each port,
+    /// using the host view of the path: the runner binds them from outside
+    /// the chroot. These must be created before the VM boots.
+    pub fn new(vsock_uds_path: &HostPath) -> Result<Self, FirecrackerError> {
+        let vsock_uds_path = vsock_uds_path.as_str();
         let stdout_path = format!("{vsock_uds_path}_{}", ports::STDOUT);
         let stderr_path = format!("{vsock_uds_path}_{}", ports::STDERR);
         let exit_code_path = format!("{vsock_uds_path}_{}", ports::EXIT_CODE);
@@ -263,17 +275,30 @@ impl VsockListener {
         })
     }
 
+    /// Hand the listener sockets to the jail uid and gid.
+    ///
+    /// Firecracker connects out to these sockets as the unprivileged jail
+    /// user, so it needs write permission on the inodes. After `pivot_root`
+    /// the only directory it traverses is `/`, which the jailer chowns itself,
+    /// so the inodes are all that is left to hand over. Must run after bind
+    /// and before `InstanceStart`.
+    pub fn chown_to_jail(&self) -> Result<(), crate::error::JailError> {
+        for port in ports::ALL {
+            chown_to_jail(Utf8Path::new(&self.socket_path(port)))?;
+        }
+        Ok(())
+    }
+
     /// Remove all socket files created by this listener.
     pub fn cleanup(&self) {
-        for port in [
-            ports::STDOUT,
-            ports::STDERR,
-            ports::EXIT_CODE,
-            ports::OUTPUT_FILES,
-        ] {
-            let path = format!("{}_{port}", self.vsock_uds_path);
-            drop(std::fs::remove_file(path));
+        for port in ports::ALL {
+            drop(std::fs::remove_file(self.socket_path(port)));
         }
+    }
+
+    /// The host path of the listener socket for a port.
+    fn socket_path(&self, port: u32) -> String {
+        format!("{}_{port}", self.vsock_uds_path)
     }
 }
 
@@ -333,11 +358,22 @@ mod tests {
     /// Short grace period for tests to avoid slowing down the test suite.
     const TEST_GRACE_PERIOD: Duration = Duration::from_millis(50);
 
+    /// Helper: resolve the jail paths for a temp directory standing in for a
+    /// chroot root, so the tests bind the same host paths production does.
+    fn jail_paths(dir: &tempfile::TempDir) -> crate::jail::JailPaths {
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        crate::jail::JailPaths::new(root)
+    }
+
+    /// Helper: the host path of the vsock base in a temp directory.
+    fn vsock_base(dir: &tempfile::TempDir) -> String {
+        jail_paths(dir).vsock().host().as_str().to_owned()
+    }
+
     /// Helper: create a `VsockListener` in a temp directory.
     fn listener_in_tmpdir() -> (tempfile::TempDir, VsockListener) {
         let dir = tempfile::tempdir().unwrap();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
-        let listener = VsockListener::new(&base).unwrap();
+        let listener = VsockListener::new(jail_paths(&dir).vsock().host()).unwrap();
         (dir, listener)
     }
 
@@ -352,8 +388,8 @@ mod tests {
     #[test]
     fn vsock_listener_creates_socket_files() {
         let dir = tempfile::tempdir().unwrap();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
-        let _listener = VsockListener::new(&base).unwrap();
+        let base = vsock_base(&dir);
+        let _listener = VsockListener::new(jail_paths(&dir).vsock().host()).unwrap();
 
         for port in [5000, 5001, 5002, 5005] {
             let path = format!("{base}_{port}");
@@ -367,10 +403,10 @@ mod tests {
     #[test]
     fn vsock_listener_cleanup_removes_files() {
         let dir = tempfile::tempdir().unwrap();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let base = vsock_base(&dir);
 
         {
-            let _listener = VsockListener::new(&base).unwrap();
+            let _listener = VsockListener::new(jail_paths(&dir).vsock().host()).unwrap();
             // listener drops here
         }
 
@@ -386,7 +422,7 @@ mod tests {
     #[test]
     fn collect_all_ports() {
         let (dir, listener) = listener_in_tmpdir();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let base = vsock_base(&dir);
 
         // Build protocol-encoded data: 1 file, path="out.bin", content=\x00\x01\x02
         let mut encoded = Vec::new();
@@ -428,7 +464,7 @@ mod tests {
     #[test]
     fn collect_exit_code_only() {
         let (dir, listener) = listener_in_tmpdir();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let base = vsock_base(&dir);
 
         let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
@@ -474,7 +510,7 @@ mod tests {
     #[test]
     fn collect_non_utf8_stdout() {
         let (dir, listener) = listener_in_tmpdir();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let base = vsock_base(&dir);
 
         let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
@@ -503,7 +539,7 @@ mod tests {
     #[test]
     fn collect_exit_code_triggers_final_pass() {
         let (dir, listener) = listener_in_tmpdir();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let base = vsock_base(&dir);
 
         let base_clone = base.clone();
         let sender = std::thread::spawn(move || {

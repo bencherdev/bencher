@@ -8,9 +8,10 @@ use std::sync::atomic::AtomicBool;
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
+use crate::jail::{JailDir, JailPaths, StateDir, chroot, netns, state};
 use crate::run::{RunOutput, prepare_oci_workspace};
 
-/// Execute a single benchmark run in a Firecracker microVM.
+/// Execute a single benchmark run in a jailed Firecracker microVM.
 pub fn vm_execute(
     config: &crate::Config,
     cancel_flag: Option<&Arc<AtomicBool>>,
@@ -27,24 +28,33 @@ pub fn vm_execute(
     println!("  Memory: {} MiB", config.memory.to_mib());
     println!("  Timeout: {} seconds", config.timeout_secs);
 
+    // The jail root is a function of the VM id, and the job's artifacts are
+    // built inside it rather than copied in afterwards, so the id is minted
+    // before any of them exist. Dropping this guard removes the chroot tree,
+    // which is what the workspace temp directory used to cover.
+    let vm_id = uuid::Uuid::new_v4().to_string();
+    let state_dir = StateDir::new(config.state_dir.clone());
+    let jail_dir = JailDir::create(&state_dir, &vm_id)?;
+    let jail = JailPaths::new(jail_dir.root());
+    println!("  Jail: {}", jail.root());
+
     let workspace = prepare_oci_workspace(config)?;
     let work_dir = &workspace.work_dir;
     let unpack_dir = &workspace.unpack_dir;
     let oci_config = workspace.oci_config;
 
-    let rootfs_path = work_dir.join("rootfs.ext4");
-
-    // Get kernel path - use bundled, provided, or find system kernel
-    let kernel_path = if let Some(kernel) = &config.kernel {
-        kernel.clone()
+    // Everything Firecracker reads has to be inside the chroot, so the kernel
+    // lands in the jail root whatever its source: bundled, supplied by the
+    // job, or found on the host.
+    let kernel_dest = jail.kernel().host().as_path();
+    if let Some(kernel) = &config.kernel {
+        copy_into_jail(kernel, kernel_dest)?;
     } else if crate::kernel::KERNEL_BUNDLED {
-        let kernel_dest = work_dir.join("vmlinux");
-        crate::kernel::write_kernel_to_file(&kernel_dest)?;
+        crate::kernel::write_kernel_to_file(kernel_dest)?;
         println!("  Extracted bundled kernel to {kernel_dest}");
-        kernel_dest
     } else {
-        find_kernel()?
-    };
+        copy_into_jail(&find_kernel()?, kernel_dest)?;
+    }
 
     let command = oci_config.command;
     let working_dir = &oci_config.working_dir;
@@ -65,38 +75,60 @@ pub fn vm_execute(
     println!("Installing init binary...");
     install_init_binary(unpack_dir)?;
 
-    // Step 6: Create ext4 rootfs
+    // Step 6: Create the ext4 rootfs directly in the jail root
+    let rootfs_dest = jail.rootfs().host().as_path();
     println!(
-        "Creating ext4 at {rootfs_path} ({} MiB)...",
+        "Creating ext4 at {rootfs_dest} ({} MiB)...",
         config.disk.to_mib()
     );
-    bencher_rootfs::create_ext4_with_size(unpack_dir, &rootfs_path, config.disk.to_mib())?;
+    bencher_rootfs::create_ext4_with_size(unpack_dir, rootfs_dest, config.disk.to_mib())?;
 
-    // Step 7–8: Build Firecracker config and run the microVM
-    let fc_config = build_firecracker_config(config, work_dir, kernel_path, rootfs_path)?;
+    // The jailer chowns the chroot root and the device nodes it creates, but
+    // not what the runner placed inside, so hand over each artifact
+    // explicitly: Firecracker writes the rootfs and reads the kernel.
+    chroot::chown_to_jail(rootfs_dest)?;
+    chroot::chown_to_jail(kernel_dest)?;
+
+    // Step 7-8: Build Firecracker config and run the microVM
+    let fc_config = build_firecracker_config(config, work_dir, vm_id, &state_dir, jail)?;
 
     let run_output = run_firecracker(&fc_config, cancel_flag)?;
 
     Ok(run_output)
 }
 
-/// Build the Firecracker job config: resolve the binary and convert types.
+/// Build the Firecracker job config: stage the binaries and convert types.
 fn build_firecracker_config(
     config: &crate::Config,
     work_dir: &Utf8Path,
-    kernel_path: Utf8PathBuf,
-    rootfs_path: Utf8PathBuf,
+    vm_id: String,
+    state_dir: &StateDir,
+    jail: JailPaths,
 ) -> Result<crate::firecracker::FirecrackerJobConfig, RunnerError> {
-    let firecracker_bin = if crate::firecracker_bin::FIRECRACKER_BUNDLED {
-        let fc_dest = work_dir.join("firecracker");
-        crate::firecracker_bin::write_firecracker_to_file(&fc_dest)?;
-        println!("  Extracted bundled firecracker to {fc_dest}");
-        fc_dest
+    // The jailer copies `--exec-file` into the chroot itself and rejects a
+    // multiply linked file, so Firecracker is staged outside the jail and is
+    // never placed in the chroot by hand or hardlinked. Its base name is what
+    // the jailer derives the chroot layout from, so it is fixed.
+    let firecracker_bin = work_dir.join(state::EXEC_FILE_NAME);
+    if crate::firecracker_bin::FIRECRACKER_BUNDLED {
+        crate::firecracker_bin::write_firecracker_to_file(&firecracker_bin)?;
+        println!("  Extracted bundled firecracker to {firecracker_bin}");
     } else {
-        find_firecracker_binary()?
+        copy_binary(&find_firecracker_binary()?, &firecracker_bin)?;
+    }
+
+    // The jailer runs outside the chroot and is never copied into it, so it
+    // can be used wherever it is found.
+    let jailer_bin = if crate::jailer_bin::JAILER_BUNDLED {
+        let jailer_dest = work_dir.join("jailer");
+        crate::jailer_bin::write_jailer_to_file(&jailer_dest)?;
+        println!("  Extracted bundled jailer to {jailer_dest}");
+        jailer_dest
+    } else {
+        find_jailer_binary()?
     };
 
-    println!("Launching Firecracker microVM...");
+    println!("Launching jailed Firecracker microVM...");
     let vcpus = u8::try_from(u32::from(config.vcpus)).map_err(|_err| {
         crate::error::ConfigError::OutOfRange {
             name: "vCPU count",
@@ -112,13 +144,15 @@ fn build_firecracker_config(
 
     Ok(crate::firecracker::FirecrackerJobConfig {
         firecracker_bin,
-        kernel_path,
-        rootfs_path,
+        jailer_bin,
+        vm_id,
+        jail,
+        chroot_base_dir: state_dir.chroot_base(),
+        netns: netns::handle_path(),
         vcpus,
         memory_mib,
         boot_args: config.kernel_cmdline.clone(),
         timeout_secs: config.timeout_secs,
-        work_dir: work_dir.to_owned(),
         cpu_layout: config.cpu_layout.clone(),
         log_level: config.sandbox_log_level,
         max_file_count: config.max_file_count,
@@ -126,6 +160,31 @@ fn build_firecracker_config(
         max_output_size: config.max_output_size,
         grace_period: config.grace_period,
     })
+}
+
+/// Copy a file the jailed VMM has to read into the jail root.
+///
+/// The rule is uniform: a path that resolves outside the chroot is
+/// unreachable once Firecracker is confined, whatever produced it.
+fn copy_into_jail(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
+    std::fs::copy(src, dest).map_err(|e| crate::error::ConfigError::CopyFile {
+        src: src.to_owned(),
+        dest: dest.to_owned(),
+        source: e,
+    })?;
+    println!("  Copied {src} into the jail at {dest}");
+    Ok(())
+}
+
+/// Stage an executable found on the host, preserving its executable bit.
+fn copy_binary(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    copy_into_jail(src, dest)?;
+    let mut perms = std::fs::metadata(dest)?.permissions();
+    perms.set_mode(0o755);
+    std::fs::set_permissions(dest, perms)?;
+    Ok(())
 }
 
 /// Write the init config for the VM.
@@ -242,6 +301,33 @@ fn find_firecracker_binary() -> Result<Utf8PathBuf, RunnerError> {
 
     Err(crate::error::ConfigError::BinaryNotFound {
         name: "firecracker".to_owned(),
+        hint: "Install from: https://github.com/firecracker-microvm/firecracker/releases"
+            .to_owned(),
+    }
+    .into())
+}
+
+/// Find the jailer binary on the system (fallback when not bundled).
+fn find_jailer_binary() -> Result<Utf8PathBuf, RunnerError> {
+    let candidates = [
+        // Next to the current executable
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("jailer")))
+            .and_then(|p| Utf8PathBuf::try_from(p).ok()),
+        // Common installation paths
+        Some(Utf8PathBuf::from("/usr/local/bin/jailer")),
+        Some(Utf8PathBuf::from("/usr/bin/jailer")),
+    ];
+
+    for candidate in candidates.into_iter().flatten() {
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+
+    Err(crate::error::ConfigError::BinaryNotFound {
+        name: "jailer".to_owned(),
         hint: "Install from: https://github.com/firecracker-microvm/firecracker/releases"
             .to_owned(),
     }
