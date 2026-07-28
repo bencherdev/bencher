@@ -32,7 +32,7 @@ use std::time::{Duration, Instant};
 use camino::Utf8PathBuf;
 
 use crate::cpu::CpuLayout;
-use crate::jail::{CgroupManager, JailPaths};
+use crate::jail::{CgroupManager, JailPaths, JailUser};
 use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
@@ -67,6 +67,8 @@ pub struct FirecrackerJobConfig {
     pub vm_id: String,
     /// Both views of every file inside the jail chroot.
     pub jail: JailPaths,
+    /// The unprivileged uid and gid the VMM drops to.
+    pub jail_user: JailUser,
     /// The jailer's `--chroot-base-dir`.
     pub chroot_base_dir: Utf8PathBuf,
     /// Handle of the empty network namespace the VMM joins.
@@ -175,6 +177,7 @@ pub fn run_firecracker(
         jailer_bin: &config.jailer_bin,
         exec_file: &config.firecracker_bin,
         vm_id,
+        jail_user: config.jail_user,
         chroot_base_dir: &config.chroot_base_dir,
         netns: &config.netns,
         api_socket: jail.api_socket(),
@@ -226,7 +229,7 @@ pub fn run_firecracker(
     // Firecracker connects out to these as the unprivileged jail user, so it
     // needs write access to the inodes. After bind and before InstanceStart.
     vsock_listener
-        .chown_to_jail()
+        .chown_to_jail(config.jail_user)
         .map_err(FirecrackerError::Chown)?;
 
     // Step 4: Boot the VM

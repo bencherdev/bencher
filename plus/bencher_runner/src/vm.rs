@@ -92,8 +92,8 @@ pub fn vm_execute(
     // The jailer chowns the chroot root and the device nodes it creates, but
     // not what the runner placed inside, so hand over each artifact
     // explicitly: Firecracker writes the rootfs and reads the kernel.
-    chroot::chown_to_jail(rootfs_dest)?;
-    chroot::chown_to_jail(kernel_dest)?;
+    chroot::chown_to_jail(rootfs_dest, config.jail_user)?;
+    chroot::chown_to_jail(kernel_dest, config.jail_user)?;
 
     // Step 7-8: Build Firecracker config and run the microVM
     let fc_config = build_firecracker_config(config, work_dir, vm_id, &state_dir, jail)?;
@@ -153,6 +153,7 @@ fn build_firecracker_config(
         jailer_bin,
         vm_id,
         jail,
+        jail_user: config.jail_user,
         chroot_base_dir: state_dir.chroot_base(),
         netns: netns::handle_path(),
         vcpus,

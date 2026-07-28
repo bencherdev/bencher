@@ -42,6 +42,20 @@ Runner の永続的な状態ディレクトリ。
 デフォルトでは `/var/lib/bencher-runner` が使用されます。
 環境変数 `BENCHER_STATE_DIR` でも設定できます。
 
+### `--jail-uid <JAIL_UID>`
+
+サンドボックスプロセスが移行する非特権ユーザー ID。
+デフォルトでは `61016` が使用されます。
+このユーザー ID を所有するホスト上のプロセスはサンドボックスにシグナルを送れるため、
+ホストが他の用途に割り当てていない ID を指定してください。
+環境変数 `BENCHER_JAIL_UID` でも設定できます。
+
+### `--jail-gid <JAIL_GID>`
+
+サンドボックスプロセスが移行する非特権グループ ID。
+デフォルトでは `61016` が使用されます。
+環境変数 `BENCHER_JAIL_GID` でも設定できます。
+
 ### `--danger-allow-no-sandbox`
 
 [Sandbox][sandbox] なしでの Job の実行を許可します。
