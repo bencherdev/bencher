@@ -44,6 +44,7 @@ pub fn execute_job(
     config: &UpConfig,
     job: &JsonClaimedJob,
     ws: &Arc<Mutex<JobChannel>>,
+    host: &mut crate::jail::HostPreparation,
 ) -> JobFinishResult {
     // Only allow jobs with a known sandbox type or explicit opt-in for non-sandboxed.
     if let Err(reason) = check_sandbox_allowed(job.spec.sandbox, config.allow_no_sandbox) {
@@ -101,7 +102,7 @@ pub fn execute_job(
             job.uuid
         );
         let start = build_time.then(std::time::Instant::now);
-        let result = crate::execute(&job_config, Some(&cancel_flag));
+        let result = crate::execute(&job_config, host, Some(&cancel_flag));
         let elapsed = start.map(|s| s.elapsed());
         match result {
             Ok(output) => {
