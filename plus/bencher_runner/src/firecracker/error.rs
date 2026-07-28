@@ -30,6 +30,18 @@ pub enum FirecrackerError {
     #[error("Firecracker API socket not ready after {0:?}")]
     SocketNotReady(std::time::Duration),
 
+    /// The API socket address itself cannot be used.
+    ///
+    /// Distinct from [`Self::SocketNotReady`]: waiting will not help, so the
+    /// error names the path and the cause instead of a timeout.
+    #[error("Firecracker API socket {path} is unusable: {source}")]
+    SocketUnusable {
+        /// The socket path the runner tried to reach.
+        path: String,
+        /// Why it could not be reached.
+        source: std::io::Error,
+    },
+
     /// Failed to collect results via vsock.
     #[error("Vsock result collection failed: {0}")]
     VsockCollection(String),

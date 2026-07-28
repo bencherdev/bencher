@@ -21,7 +21,7 @@ use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 
 use crate::firecracker::error::FirecrackerError;
 use crate::jail::chroot::chown_to_jail;
-use crate::jail::{HostPath, JailUser};
+use crate::jail::{JailUser, SocketPath};
 
 /// Poll timeout for vsock listeners (50ms).
 ///
@@ -74,12 +74,12 @@ impl VsockListener {
     /// Creates Unix listeners at `{vsock_uds_path}_{port}` for each port,
     /// using the host view of the path: the runner binds them from outside
     /// the chroot. These must be created before the VM boots.
-    pub fn new(vsock_uds_path: &HostPath) -> Result<Self, FirecrackerError> {
+    pub fn new(vsock_uds_path: &SocketPath) -> Result<Self, FirecrackerError> {
+        let stdout_path = vsock_uds_path.with_suffix(&format!("_{}", ports::STDOUT));
+        let stderr_path = vsock_uds_path.with_suffix(&format!("_{}", ports::STDERR));
+        let exit_code_path = vsock_uds_path.with_suffix(&format!("_{}", ports::EXIT_CODE));
+        let output_files_path = vsock_uds_path.with_suffix(&format!("_{}", ports::OUTPUT_FILES));
         let vsock_uds_path = vsock_uds_path.as_str();
-        let stdout_path = format!("{vsock_uds_path}_{}", ports::STDOUT);
-        let stderr_path = format!("{vsock_uds_path}_{}", ports::STDERR);
-        let exit_code_path = format!("{vsock_uds_path}_{}", ports::EXIT_CODE);
-        let output_files_path = format!("{vsock_uds_path}_{}", ports::OUTPUT_FILES);
 
         // Remove stale socket files
         for path in [
@@ -349,6 +349,7 @@ fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<
 )]
 mod tests {
     use super::*;
+    use crate::jail::JailPaths;
 
     use std::io::Write as _;
     use std::os::unix::net::UnixStream;
@@ -358,23 +359,24 @@ mod tests {
     /// Short grace period for tests to avoid slowing down the test suite.
     const TEST_GRACE_PERIOD: Duration = Duration::from_millis(50);
 
-    /// Helper: resolve the jail paths for a temp directory standing in for a
-    /// chroot root, so the tests bind the same host paths production does.
-    fn jail_paths(dir: &tempfile::TempDir) -> crate::jail::JailPaths {
-        let root = Utf8Path::from_path(dir.path()).unwrap();
-        crate::jail::JailPaths::new(root)
-    }
-
-    /// Helper: the host path of the vsock base in a temp directory.
-    fn vsock_base(dir: &tempfile::TempDir) -> String {
-        jail_paths(dir).vsock().host().as_str().to_owned()
-    }
-
-    /// Helper: create a `VsockListener` in a temp directory.
-    fn listener_in_tmpdir() -> (tempfile::TempDir, VsockListener) {
+    /// Helper: a jail whose descriptor stays open for the whole test.
+    ///
+    /// The socket view names an open descriptor by number, so the `JailPaths`
+    /// has to outlive every path derived from it. Dropping it early leaves the
+    /// paths addressing whatever the kernel hands that number to next, which
+    /// is exactly the failure this binding prevents.
+    fn jail_in_tmpdir() -> (tempfile::TempDir, JailPaths) {
         let dir = tempfile::tempdir().unwrap();
-        let listener = VsockListener::new(jail_paths(&dir).vsock().host()).unwrap();
-        (dir, listener)
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let jail = JailPaths::new(root).unwrap();
+        (dir, jail)
+    }
+
+    /// Helper: create a `VsockListener` on a jail that stays alive.
+    fn listener_in_tmpdir() -> (tempfile::TempDir, JailPaths, VsockListener) {
+        let (dir, jail) = jail_in_tmpdir();
+        let listener = VsockListener::new(jail.vsock().socket()).unwrap();
+        (dir, jail, listener)
     }
 
     /// Helper: connect to a vsock port and write data.
@@ -387,9 +389,8 @@ mod tests {
 
     #[test]
     fn vsock_listener_creates_socket_files() {
-        let dir = tempfile::tempdir().unwrap();
-        let base = vsock_base(&dir);
-        let _listener = VsockListener::new(jail_paths(&dir).vsock().host()).unwrap();
+        let (_dir, jail, _listener) = listener_in_tmpdir();
+        let base = jail.vsock().socket().as_str().to_owned();
 
         for port in [5000, 5001, 5002, 5005] {
             let path = format!("{base}_{port}");
@@ -402,11 +403,11 @@ mod tests {
 
     #[test]
     fn vsock_listener_cleanup_removes_files() {
-        let dir = tempfile::tempdir().unwrap();
-        let base = vsock_base(&dir);
+        let (_dir, jail) = jail_in_tmpdir();
+        let base = jail.vsock().socket().as_str().to_owned();
 
         {
-            let _listener = VsockListener::new(jail_paths(&dir).vsock().host()).unwrap();
+            let _listener = VsockListener::new(jail.vsock().socket()).unwrap();
             // listener drops here
         }
 
@@ -421,8 +422,8 @@ mod tests {
 
     #[test]
     fn collect_all_ports() {
-        let (dir, listener) = listener_in_tmpdir();
-        let base = vsock_base(&dir);
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().socket().as_str().to_owned();
 
         // Build protocol-encoded data: 1 file, path="out.bin", content=\x00\x01\x02
         let mut encoded = Vec::new();
@@ -463,8 +464,8 @@ mod tests {
 
     #[test]
     fn collect_exit_code_only() {
-        let (dir, listener) = listener_in_tmpdir();
-        let base = vsock_base(&dir);
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().socket().as_str().to_owned();
 
         let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
@@ -490,7 +491,7 @@ mod tests {
 
     #[test]
     fn collect_timeout_returns_error() {
-        let (_dir, listener) = listener_in_tmpdir();
+        let (_dir, _jail, listener) = listener_in_tmpdir();
 
         // No data sent — should timeout with an error
         let result = listener.collect_results(
@@ -509,8 +510,8 @@ mod tests {
 
     #[test]
     fn collect_non_utf8_stdout() {
-        let (dir, listener) = listener_in_tmpdir();
-        let base = vsock_base(&dir);
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().socket().as_str().to_owned();
 
         let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
@@ -538,8 +539,8 @@ mod tests {
 
     #[test]
     fn collect_exit_code_triggers_final_pass() {
-        let (dir, listener) = listener_in_tmpdir();
-        let base = vsock_base(&dir);
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().socket().as_str().to_owned();
 
         let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
@@ -641,7 +642,7 @@ mod tests {
 
     #[test]
     fn collect_cancelled_returns_error() {
-        let (_dir, listener) = listener_in_tmpdir();
+        let (_dir, _jail, listener) = listener_in_tmpdir();
 
         // Set the cancel flag before collecting
         let cancel_flag = Arc::new(AtomicBool::new(true));
