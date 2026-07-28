@@ -13,6 +13,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::JailError;
 use crate::jail::VmId;
+use crate::jail::reap::Reaped;
 
 /// Subdirectory of the state directory used as the jailer's chroot base.
 const CHROOT_BASE: &str = "jail";
@@ -157,6 +158,11 @@ pub fn sweep_jails(jail_parent: &Utf8Path) -> Result<usize, JailError> {
     };
 
     let mut swept = 0;
+    // The first failure is remembered but does not abandon the rest: one jail
+    // whose cgroup will not go away must not leave every other stale jail
+    // unreaped, with its chroot and cgroup still in place.
+    let mut failure = None;
+
     for entry in entries.flatten() {
         if !entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
             continue;
@@ -164,10 +170,19 @@ pub fn sweep_jails(jail_parent: &Utf8Path) -> Result<usize, JailError> {
         let vm_id = VmId::from_chroot_name(entry.file_name().to_string_lossy().into_owned());
         let jail_dir = jail_parent.join(vm_id.as_str());
 
-        // Reap before removing. Pulling the rootfs out from under a process
-        // that is still running leaves it running anyway, so the process goes
-        // first and the directory second.
-        super::reap::reap_jailed_vmm(&jail_dir.join(JAIL_ROOT));
+        // Reap before removing, and only remove once the jail is clear.
+        // Deleting the tree under a live VMM would not stop it, and it would
+        // destroy the only handle for identifying that process later: without
+        // the directory the next sweep never sees this id, never removes its
+        // cgroup, and the cgroup leaks for good.
+        if let Reaped::StillRunning { pid } =
+            super::reap::reap_jailed_vmm(&jail_dir.join(JAIL_ROOT))
+        {
+            eprintln!(
+                "Warning: leaving stale jail {jail_dir} in place because VMM pid {pid} is still running. It still holds the benchmark CPUs through cgroup {vm_id}, so runs will not be isolated until it is gone."
+            );
+            continue;
+        }
 
         // A chroot that will not go away costs disk. Worth a warning, not
         // worth refusing to run.
@@ -180,9 +195,17 @@ pub fn sweep_jails(jail_parent: &Utf8Path) -> Result<usize, JailError> {
         // exclusive benchmark CPUs, so leaving it makes every later job's
         // cpuset write fail. It shares the chroot's name by construction, and
         // failing to remove it is reported rather than swallowed.
-        super::cgroup::remove_stale_cgroup(&vm_id)?;
+        if let Err(e) = super::cgroup::remove_stale_cgroup(&vm_id)
+            && failure.is_none()
+        {
+            failure = Some(e);
+        }
     }
-    Ok(swept)
+
+    match failure {
+        Some(e) => Err(e),
+        None => Ok(swept),
+    }
 }
 
 #[cfg(test)]
