@@ -77,8 +77,7 @@ impl Drop for JailDir {
 /// has to be handed over explicitly, and getting it wrong produces an opaque
 /// boot failure, so each one is checked.
 pub fn chown_to_jail(path: &Utf8Path, jail_user: JailUser) -> Result<(), JailError> {
-    let JailUser { uid, gid } = jail_user;
-    chown(path, Some(uid), Some(gid)).map_err(|e| JailError::ChownJail {
+    chown(path, Some(jail_user.uid()), Some(jail_user.gid())).map_err(|e| JailError::ChownJail {
         path: path.to_owned(),
         source: e,
     })

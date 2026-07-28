@@ -16,6 +16,12 @@ use crate::error::JailError;
 /// Subdirectory of the state directory used as the jailer's chroot base.
 const CHROOT_BASE: &str = "jail";
 
+/// The jail lock file, which lives beside the chroot base.
+///
+/// Named here as well as in the lock module so the state directory knows
+/// which of its entries it created.
+const LOCK_FILE: &str = ".lock";
+
 /// The `--exec-file` base name the jailer derives the chroot layout from.
 ///
 /// The jailer builds `<chroot_base>/<exec_file_name>/<id>/root`, so the
@@ -43,6 +49,34 @@ impl StateDir {
     #[must_use]
     pub fn path(&self) -> &Utf8Path {
         &self.root
+    }
+
+    /// Refuse a state directory that belongs to the host rather than to us.
+    ///
+    /// A path that does not exist, or exists and is empty, is ours to take. A
+    /// populated one is only ours if it already carries something the runner
+    /// put there. Without this, `--state-dir /var/lib` would be chmodded to
+    /// 0700 and take the host down with it.
+    fn check_root_is_ours(&self) -> Result<(), JailError> {
+        let Ok(mut entries) = fs::read_dir(&self.root) else {
+            // Missing, or unreadable: creating it is the next step and will
+            // report the real error.
+            return Ok(());
+        };
+        let mut populated = false;
+        for entry in entries.by_ref().flatten() {
+            populated = true;
+            let name = entry.file_name();
+            if RUNNER_ENTRIES.iter().any(|ours| name == *ours) {
+                return Ok(());
+            }
+        }
+        if populated {
+            return Err(JailError::ForeignStateDir {
+                path: self.root.clone(),
+            });
+        }
+        Ok(())
     }
 
     /// The jailer's `--chroot-base-dir`.
@@ -74,8 +108,12 @@ impl StateDir {
     /// Create the state directory tree at mode 0700.
     ///
     /// Idempotent. The mode is applied on every call so a directory created
-    /// with a laxer mode by an older runner is tightened on upgrade.
+    /// with a laxer mode by an older runner is tightened on upgrade. That
+    /// tightening is why the root has to be one the runner owns: pointed at a
+    /// populated system directory it would otherwise chmod that directory to
+    /// 0700 and break the host.
     pub fn create(&self) -> Result<(), JailError> {
+        self.check_root_is_ours()?;
         for dir in [&self.root, &self.chroot_base(), &self.jail_parent()] {
             fs::create_dir_all(dir).map_err(|e| JailError::CreateStateDir {
                 path: dir.clone(),
@@ -91,6 +129,12 @@ impl StateDir {
         Ok(())
     }
 }
+
+/// Entries the runner creates directly in its state directory.
+///
+/// Their presence is what distinguishes a directory the runner has used from
+/// one that belongs to the host.
+const RUNNER_ENTRIES: [&str; 2] = [CHROOT_BASE, LOCK_FILE];
 
 /// Remove every jail directory under `jail_parent`, returning how many were
 /// reclaimed.
@@ -183,6 +227,51 @@ mod tests {
 
         let mode = fs::metadata(state.path()).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o700);
+    }
+
+    #[test]
+    fn a_populated_foreign_directory_is_refused() {
+        // The mode tightening would otherwise chmod a system directory to
+        // 0700: `--state-dir /var/lib` must not take the host down.
+        let (_dir, root) = temp_root();
+        let foreign = root.join("var-lib");
+        fs::create_dir_all(foreign.join("dpkg")).unwrap();
+        fs::create_dir_all(foreign.join("systemd")).unwrap();
+
+        StateDir::new(foreign.clone()).create().unwrap_err();
+
+        let mode = fs::metadata(&foreign).unwrap().permissions().mode();
+        assert_ne!(mode & 0o777, 0o700, "a refused root must not be chmodded");
+    }
+
+    #[test]
+    fn an_empty_directory_is_ours_to_take() {
+        let (_dir, root) = temp_root();
+        let empty = root.join("empty");
+        fs::create_dir_all(&empty).unwrap();
+
+        StateDir::new(empty).create().unwrap();
+    }
+
+    #[test]
+    fn a_directory_the_runner_already_used_is_ours() {
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state"));
+        state.create().unwrap();
+        // Something the host put there afterwards does not disown it.
+        fs::write(state.path().join("notes.txt"), b"operator note").unwrap();
+
+        state.create().unwrap();
+    }
+
+    #[test]
+    fn a_directory_holding_only_the_lock_is_ours() {
+        let (_dir, root) = temp_root();
+        let state = root.join("state");
+        fs::create_dir_all(&state).unwrap();
+        fs::write(state.join(".lock"), b"").unwrap();
+
+        StateDir::new(state).create().unwrap();
     }
 
     #[test]

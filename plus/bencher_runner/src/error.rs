@@ -59,6 +59,16 @@ pub enum JailError {
     #[error("Cpuset partition mode '{mode}' rejected by the kernel: {state}")]
     PartitionInvalid { mode: String, state: String },
 
+    #[error(
+        "The jail {field} must not be 0: the sandbox is built by dropping privilege, so a jail user of root is no jail at all"
+    )]
+    PrivilegedJailUser { field: &'static str },
+
+    #[error(
+        "The state directory {path} already exists, is not empty, and was not created by the runner. Point --state-dir at a directory the runner owns."
+    )]
+    ForeignStateDir { path: Utf8PathBuf },
+
     #[error("Failed to create runner state directory {path}: {source}")]
     CreateStateDir {
         path: Utf8PathBuf,
@@ -106,6 +116,43 @@ pub enum JailError {
     JailLock {
         path: Utf8PathBuf,
         source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to open the network namespace lock {path}: {source}")]
+    OpenNetnsLock {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to take the network namespace lock {path}: {source}")]
+    NetnsLock {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error(
+        "The network namespace handle {path} is not a namespace distinct from the runner's own"
+    )]
+    NetnsNotDistinct { path: Utf8PathBuf },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to open the jail chroot {path}: {source}")]
+    OpenJailRoot {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error(
+        "The socket path {path} is {length} bytes, over the {limit} byte sun_path limit for a Unix domain socket"
+    )]
+    SocketPathTooLong {
+        path: String,
+        length: usize,
+        limit: usize,
     },
 
     #[cfg(target_os = "linux")]
