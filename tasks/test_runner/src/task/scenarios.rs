@@ -2743,21 +2743,51 @@ fn run_runner_after_orphan(
         );
     }
 
-    // Reap the VMM the killed runner left behind. The sweep reclaims the
-    // chroot but nothing reaps an orphaned VMM or its cgroup, so without this
-    // a stray Firecracker would burn benchmark cores for the rest of the
-    // suite. Compensating for a known gap, not hiding one.
-    kill_pid(vmm_pid, libc::SIGKILL);
-
-    println!("  orphaned jail {vm_id} (VMM pid {vmm_pid}), running a second job...");
+    // Deliberately NOT reaping the VMM here. Killing it by hand would leave
+    // the next job's sweep with nothing to find, so the reap, the pidfd
+    // handling, and the cgroup removal would all be skipped and the scenario
+    // would prove only that a directory can be deleted. The stray Firecracker
+    // that a hand-reap guards against is exactly what the sweep now exists to
+    // prevent, so if the sweep fails this scenario has to go red.
+    let cgroup = stale_cgroup(&vm_id);
+    let cgroup_existed = cgroup.exists();
+    println!(
+        "  orphaned jail {vm_id} (VMM pid {vmm_pid}, cgroup present: {cgroup_existed}), running a second job..."
+    );
 
     let output = run_runner(image_path, args, runner_bin)?;
 
     if jail_root.exists() {
         bail!("The orphaned chroot {jail_root} survived the next job, so it was never swept");
     }
+    if is_firecracker(vmm_pid) {
+        bail!(
+            "The orphaned VMM (pid {vmm_pid}) is still running after the next job, so the sweep never reaped it. It still holds the benchmark cores."
+        );
+    }
+    // Only meaningful where a cgroup was created at all: a host with no CPU
+    // isolation never makes one, and asserting its absence would pass for the
+    // wrong reason.
+    if cgroup_existed && cgroup.exists() {
+        bail!(
+            "The orphaned cgroup {cgroup} survived the next job. It still owns the exclusive benchmark CPUs, so no later run can be isolated."
+        );
+    }
 
     Ok(output)
+}
+
+/// The cgroup a jail leaves behind, which shares the jail's name.
+fn stale_cgroup(vm_id: &str) -> Utf8PathBuf {
+    Utf8PathBuf::from("/sys/fs/cgroup/bencher").join(vm_id)
+}
+
+/// Whether a pid is a running Firecracker.
+///
+/// Checking the command as well as the pid keeps a recycled pid from reading
+/// as a VMM that was never reaped.
+fn is_firecracker(pid: u32) -> bool {
+    fs::read_to_string(format!("/proc/{pid}/comm")).is_ok_and(|comm| comm.trim() == "firecracker")
 }
 
 /// Send a signal to a process, ignoring the result.
