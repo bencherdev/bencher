@@ -30,6 +30,13 @@ const NETNS_NAME: &str = "bencher-jail";
 /// whether a handle is a live namespace distinct from the host's.
 const SELF_NETNS: &str = "/proc/self/ns/net";
 
+/// How many stacked mounts to unwind at the handle before giving up.
+///
+/// Bounded rather than unbounded: a path that keeps reporting a successful
+/// unmount forever is a kernel fault, and the failed unlink that follows
+/// reports the real state either way.
+const MAX_STACKED_MOUNTS: usize = 32;
+
 /// The calling *thread's* network namespace.
 ///
 /// `/proc/self` resolves through the thread group leader, so it must not be
@@ -60,10 +67,7 @@ pub fn ensure() -> Result<Utf8PathBuf, JailError> {
         return Ok(handle);
     }
 
-    // Clear whatever is at the path. A bind mount over a file does not
-    // report EBUSY, so mounts would otherwise stack up silently.
-    let _detached = umount2(handle.as_std_path(), MntFlags::MNT_DETACH);
-    drop(fs::remove_file(&handle));
+    clear(&handle)?;
 
     // The bind mount needs a regular file to land on.
     fs::File::create(&handle).map_err(|e| JailError::NetnsHandle {
@@ -77,6 +81,33 @@ pub fn ensure() -> Result<Utf8PathBuf, JailError> {
     }
 
     Ok(handle)
+}
+
+/// Remove whatever is at the handle path, mounts included.
+///
+/// Bind mounting over a file does not report `EBUSY`, so mounts stack: a
+/// handle that has been recreated more than once carries more than one. A
+/// single detach unwinds only the top mount, the unlink of the still-mounted
+/// path then fails with `EBUSY`, and `File::create` on the surviving nsfs
+/// mount fails with `EPERM` even as root. Unwinding one mount at a time and
+/// reporting a failed unlink is what keeps a stacked handle from wedging the
+/// host: without it, `ensure` fails permanently and every sandboxed job with
+/// it, until an operator loops `umount` by hand.
+fn clear(handle: &Utf8Path) -> Result<(), JailError> {
+    for _ in 0..MAX_STACKED_MOUNTS {
+        if umount2(handle.as_std_path(), MntFlags::MNT_DETACH).is_err() {
+            break;
+        }
+    }
+
+    match fs::remove_file(handle) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(JailError::NetnsHandle {
+            path: handle.to_owned(),
+            source: e,
+        }),
+    }
 }
 
 /// Whether `handle` is a live network namespace other than the runner's own.
@@ -146,6 +177,40 @@ mod tests {
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
         assert!(!is_live_netns(&root.join("absent")));
+    }
+
+    #[test]
+    fn clear_removes_a_plain_handle() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let path = root.join("net");
+        fs::write(&path, b"").unwrap();
+
+        clear(&path).unwrap();
+
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn clear_is_idempotent_on_a_missing_handle() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        clear(&root.join("absent")).unwrap();
+    }
+
+    #[test]
+    fn clear_reports_a_handle_it_cannot_remove() {
+        // A directory stands in for the unremovable handle: the real case is
+        // a still-mounted path, which unlinks with EBUSY. Either way the
+        // failure has to surface rather than be swallowed into a confusing
+        // File::create error further down.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let path = root.join("net");
+        fs::create_dir(&path).unwrap();
+
+        clear(&path).unwrap_err();
     }
 
     #[test]
