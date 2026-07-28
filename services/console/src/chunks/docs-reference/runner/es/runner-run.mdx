@@ -36,7 +36,7 @@ Por defecto, se usa `300`.
 
 El directorio de estado persistente del Runner.
 La jaula que confina el sandbox se crea dentro de este directorio,
-y las jaulas que quedaron tras una salida no limpia se eliminan de él antes de ejecutar un Job.
+y las jaulas que quedaron tras una salida no limpia se eliminan de él antes del primer Job con sandbox.
 Por defecto, se usa `/var/lib/bencher-runner`.
 También se puede establecer con la variable de entorno `BENCHER_STATE_DIR`.
 
