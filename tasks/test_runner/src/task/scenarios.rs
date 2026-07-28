@@ -2656,8 +2656,13 @@ fn jail_scenarios() -> Vec<Scenario> {
             description: "A jailed job succeeds with the VMM unprivileged and in its cgroup",
             // The guest sleeps so the VMM is alive long enough to be observed
             // by a probe that polls every 100ms.
+            //
+            // The marker is a token the runner's own output cannot contain.
+            // "jailed" collided with the runner announcing "Launching jailed
+            // Firecracker microVM...", so the check passed on the runner
+            // saying it was about to start a VM that then never booted.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo jailed && sleep 5"]"#,
+CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
             cancel_after_secs: None,
             probe: Some(probe_confinement),
             orphan_then_rerun: false,
@@ -2669,22 +2674,24 @@ CMD ["sh", "-c", "echo jailed && sleep 5"]"#,
                 // checks is equally true of a VMM that started and then never
                 // booted a guest, so without this the scenario stays green
                 // while the product is broken.
-                assert_job_succeeded(output, "jailed")?;
+                assert_job_succeeded(output, "JAIL_CONFINEMENT_a7f3b2c9")?;
                 assert_no_chroot_remains(&scenario_state_dir())
             },
         },
         Scenario {
             name: "jail_sweep_reclaims_orphan",
             description: "A chroot orphaned by a runner that never unwound is swept by the next job",
+            // Likewise a token the runner cannot print: "swept" sits one
+            // refactor away from colliding with the sweep's own reporting.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo swept && sleep 10"]"#,
+CMD ["sh", "-c", "echo JAIL_SWEEP_a7f3b2c9 && sleep 10"]"#,
             cancel_after_secs: None,
             probe: None,
             orphan_then_rerun: true,
             sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
-                assert_job_succeeded(output, "swept")?;
+                assert_job_succeeded(output, "JAIL_SWEEP_a7f3b2c9")?;
                 assert_no_chroot_remains(&scenario_state_dir())
             },
         },
@@ -2697,6 +2704,10 @@ CMD ["sh", "-c", "echo swept && sleep 10"]"#,
 /// the VM never boots: the VMM process exists, is unprivileged, and is in its
 /// cgroup either way. Success of the job itself is the precondition for any of
 /// that meaning anything.
+///
+/// `marker` has to be a token the runner's own progress output cannot contain.
+/// This captures the runner's stdout, not the guest's, and the runner prints
+/// plenty about jails and sweeps on its way to launching a VM.
 fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
     if output.exit_code != 0 {
         bail!(
