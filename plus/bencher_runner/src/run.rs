@@ -156,13 +156,6 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
 
     let mut config = build_config_from_run_args(args)?;
 
-    // Prepare the host only for the sandboxed path: the one-shot CLI can
-    // execute on the host without a jail, and that path has no business
-    // requiring the runner's state directory.
-    if config.sandbox.is_some() {
-        crate::jail::prepare_host(&config.state_dir, config.jail_user)?;
-    }
-
     // Detect the CPU layout after tuning (disabling SMT changes the core
     // count), steer kernel work off the benchmark cores, and pin the run
     // to them. Mirrors the `runner up` path. Core pinning is core runner

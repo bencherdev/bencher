@@ -850,16 +850,13 @@ mod tests {
         // reach the job, or the VMM shares a uid with a local account that can
         // signal it.
         let mut up_config = test_up_config();
-        up_config.jail_user = crate::jail::JailUser {
-            uid: 4242,
-            gid: 4243,
-        };
+        up_config.jail_user = crate::jail::JailUser::new(4242, 4243).unwrap();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
 
         let result = build_config_from_job(&up_config, &job).unwrap();
 
-        assert_eq!(result.jail_user.uid, 4242);
-        assert_eq!(result.jail_user.gid, 4243);
+        assert_eq!(result.jail_user.uid(), 4242);
+        assert_eq!(result.jail_user.gid(), 4243);
     }
 
     #[test]

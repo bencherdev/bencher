@@ -36,7 +36,7 @@ Firecracker microVM(Linux 전용)을 사용하려면 `firecracker`를 사용하�
 
 Runner의 영구 상태 디렉터리입니다.
 샌드박스를 가두는 jail이 이 디렉터리 아래에 생성되며,
-비정상 종료로 남겨진 jail은 Job 실행 전에 이곳에서 정리됩니다.
+비정상 종료로 남겨진 jail은 첫 번째 샌드박스 Job 실행 전에 이곳에서 정리됩니다.
 기본적으로 `/var/lib/bencher-runner`가 사용됩니다.
 `BENCHER_STATE_DIR` 환경 변수로도 설정할 수 있습니다.
 

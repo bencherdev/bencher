@@ -108,12 +108,11 @@ impl Up {
         // Warn about host conditions that limit benchmark accuracy (Linux only)
         preflight::print_host_warnings();
 
-        // Create the state directory, sweep chroots left behind by a runner
-        // that exited without unwinding, and ensure the empty network
-        // namespace. The daemon claims sandboxed jobs, so this is required
-        // before the first one arrives, not on demand.
-        crate::jail::prepare_host(&self.config.state_dir, self.config.jail_user)
-            .map_err(crate::RunnerError::from)?;
+        // The host is deliberately NOT prepared here. A Runner that serves
+        // only non-sandboxed Specs is a supported configuration and must come
+        // up without root, and the daemon learns its Specs from the server, so
+        // it cannot know at startup whether it will ever build a jail.
+        // Preparation happens on demand, before the first job that does.
         println!("  State directory: {}", self.config.state_dir);
 
         // Serialize host-global tuning across runner processes. Declared
