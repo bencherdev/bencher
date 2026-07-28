@@ -6,9 +6,17 @@
 //! reparented and keeps running, holding the benchmark cores through its
 //! cgroup. Reclaiming only the disk leaves the more damaging half behind.
 //!
-//! The consequence is not leakage but wrong numbers that look right. An
-//! orphaned cgroup still owns the exclusive benchmark CPUs, so the next job's
-//! cpuset write is rejected and, before this, the job reported success anyway.
+//! The consequence is not leakage but wrong numbers that look right, and
+//! nothing downstream catches it. The per-VM cgroups set only `cpuset.cpus`
+//! and `cpuset.mems`, never `cpuset.cpus.exclusive`, so a leftover cgroup
+//! claims nothing and does not narrow the next job's effective set: the next
+//! job's cpuset applies cleanly and verifies cleanly while the stray VMM runs
+//! untrusted guest code on the very same cores. The harm is contention, which
+//! is invisible in the result.
+//!
+//! That is why a jail that cannot be cleared fails the job rather than merely
+//! warning: it is the one remaining path where the runner would knowingly
+//! emit a number it has reason to distrust.
 //!
 //! Killing a process the runner does not own is a destructive capability, so
 //! the target is identified as narrowly as possible: only a process whose root
