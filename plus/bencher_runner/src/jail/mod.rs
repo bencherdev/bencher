@@ -11,6 +11,8 @@ mod cgroup;
 #[cfg(target_os = "linux")]
 pub mod chroot;
 #[cfg(target_os = "linux")]
+pub mod lock;
+#[cfg(target_os = "linux")]
 pub mod netns;
 #[cfg(target_os = "linux")]
 pub mod paths;
@@ -23,6 +25,8 @@ pub use cgroup::CgroupManager;
 pub(crate) use cgroup::{BENCHER_CGROUP_BASE, effective_mems};
 #[cfg(target_os = "linux")]
 pub use chroot::JailDir;
+#[cfg(target_os = "linux")]
+pub use lock::JailLock;
 #[cfg(target_os = "linux")]
 pub use paths::{ChrootPath, HostPath, JailFile, JailPaths};
 #[cfg(target_os = "linux")]
@@ -57,10 +61,19 @@ pub const JAIL_GID: u32 = 60613;
 ///
 /// Failure is fatal. Untrusted code never runs with silently degraded
 /// confinement, so a host that cannot be prepared does not execute a job.
+///
+/// The sweep and the network namespace handle are both taken under the jail
+/// lock. The sweep removes every chroot it finds on the reasoning that jobs
+/// are serial, so it must not run while another runner has one in flight, and
+/// two processes rebinding the namespace handle at once can stack mounts on
+/// it. Holding the lock makes serialization a constraint rather than an
+/// assumption.
 #[cfg(target_os = "linux")]
 pub fn prepare_host(state_dir: &camino::Utf8Path) -> Result<(), crate::error::JailError> {
     let state = StateDir::new(state_dir.to_owned());
     state.create()?;
+
+    let _lock = JailLock::acquire(state.path())?;
     state::sweep_jails(&state.jail_parent());
     netns::ensure()?;
     Ok(())

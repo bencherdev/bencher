@@ -8,7 +8,7 @@ use std::sync::atomic::AtomicBool;
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
-use crate::jail::{JailDir, JailPaths, StateDir, chroot, netns, state};
+use crate::jail::{JailDir, JailLock, JailPaths, StateDir, chroot, netns, state};
 use crate::run::{RunOutput, prepare_oci_workspace};
 
 /// Execute a single benchmark run in a jailed Firecracker microVM.
@@ -28,12 +28,18 @@ pub fn vm_execute(
     println!("  Memory: {} MiB", config.memory.to_mib());
     println!("  Timeout: {} seconds", config.timeout_secs);
 
+    let state_dir = StateDir::new(config.state_dir.clone());
+
+    // Held for the whole job. Another runner's sweep removes every chroot it
+    // finds, so it must not run while this one is live. Declared before the
+    // jail guard so the lock outlives the teardown it protects.
+    let _lock = JailLock::acquire(state_dir.path())?;
+
     // The jail root is a function of the VM id, and the job's artifacts are
     // built inside it rather than copied in afterwards, so the id is minted
     // before any of them exist. Dropping this guard removes the chroot tree,
     // which is what the workspace temp directory used to cover.
     let vm_id = uuid::Uuid::new_v4().to_string();
-    let state_dir = StateDir::new(config.state_dir.clone());
     let jail_dir = JailDir::create(&state_dir, &vm_id)?;
     let jail = JailPaths::new(jail_dir.root());
     println!("  Jail: {}", jail.root());

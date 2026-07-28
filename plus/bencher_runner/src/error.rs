@@ -95,6 +95,20 @@ pub enum JailError {
     NetnsThread,
 
     #[cfg(target_os = "linux")]
+    #[error("Failed to open the jail lock {path}: {source}")]
+    OpenJailLock {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to take the jail lock {path}: {source}")]
+    JailLock {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
     #[error("Failed to create jail chroot {path}: {source}")]
     CreateJail {
         path: Utf8PathBuf,
