@@ -14,6 +14,7 @@ use nix::mount::{MntFlags, MsFlags, mount, umount2};
 use nix::sched::{CloneFlags, unshare};
 
 use crate::error::JailError;
+use crate::jail::lock::flock_exclusive;
 
 /// Directory holding named network namespace handles.
 ///
@@ -37,6 +38,9 @@ const SELF_NETNS: &str = "/proc/self/ns/net";
 /// reports the real state either way.
 const MAX_STACKED_MOUNTS: usize = 32;
 
+/// Lock file serializing access to the global network namespace handle.
+const NETNS_LOCK_PATH: &str = "/run/bencher_runner_netns.lock";
+
 /// The calling *thread's* network namespace.
 ///
 /// `/proc/self` resolves through the thread group leader, so it must not be
@@ -50,11 +54,24 @@ pub fn handle_path() -> Utf8PathBuf {
     Utf8Path::new(NETNS_DIR).join(NETNS_NAME)
 }
 
-/// Ensure the empty network namespace exists, returning its handle path.
+/// Build a fresh empty network namespace, returning its handle path.
 ///
-/// Idempotent: a handle that is already a live namespace distinct from the
-/// runner's own is reused. Anything else at the path (a leftover placeholder
-/// file, or a handle whose mount is gone) is cleared and recreated.
+/// The handle is always cleared and recreated rather than reused. Proving a
+/// handle is a namespace and is not the runner's own does not prove it is
+/// empty: a `bencher-jail` left by an operator experimenting with `ip netns`,
+/// or by a name collision, could hold interfaces, and the VMM would silently
+/// regain the host network reach this module exists to remove. Recreating is
+/// both cheaper and stronger than trying to assert a namespace holds nothing
+/// but a down `lo`.
+///
+/// Called per job rather than once per daemon lifetime. `/run` is a tmpfs and
+/// the handle is a shared, operator-visible object, so an `ip netns del` or a
+/// remount would otherwise break every subsequent job until a restart.
+///
+/// The namespace is process-global while the jail lock is per state directory,
+/// so this takes its own lock: two runners started with different
+/// `--state-dir` values hold different jail locks and would otherwise clear
+/// and rebind the same handle concurrently.
 pub fn ensure() -> Result<Utf8PathBuf, JailError> {
     let handle = handle_path();
 
@@ -63,9 +80,7 @@ pub fn ensure() -> Result<Utf8PathBuf, JailError> {
         source: e,
     })?;
 
-    if is_live_netns(&handle) {
-        return Ok(handle);
-    }
+    let _lock = NetnsLock::acquire()?;
 
     clear(&handle)?;
 
@@ -78,6 +93,15 @@ pub fn ensure() -> Result<Utf8PathBuf, JailError> {
     if let Err(e) = create(&handle) {
         drop(fs::remove_file(&handle));
         return Err(e);
+    }
+
+    // The namespace has to be a real one and not the runner's own, or the VMM
+    // would keep host network reach. Cheap, and the whole point of the module.
+    if !is_live_netns(&handle) {
+        drop(fs::remove_file(&handle));
+        return Err(JailError::NetnsNotDistinct {
+            path: handle.clone(),
+        });
     }
 
     Ok(handle)
@@ -107,6 +131,37 @@ fn clear(handle: &Utf8Path) -> Result<(), JailError> {
             path: handle.to_owned(),
             source: e,
         }),
+    }
+}
+
+/// Advisory lock over the process-global network namespace handle.
+///
+/// Separate from the jail lock, which is scoped to a state directory: the
+/// handle is a single global object and two runners with different state
+/// directories must still not rebind it at the same time. It lives beside the
+/// host tuning lock, in root-writable tmpfs that clears on reboot.
+struct NetnsLock {
+    _file: fs::File,
+}
+
+impl NetnsLock {
+    /// Take the lock, waiting for whichever runner holds it.
+    fn acquire() -> Result<Self, JailError> {
+        let path = Utf8Path::new(NETNS_LOCK_PATH);
+        let file = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(false)
+            .open(path)
+            .map_err(|e| JailError::OpenNetnsLock {
+                path: path.to_owned(),
+                source: e,
+            })?;
+        flock_exclusive(&file).map_err(|e| JailError::NetnsLock {
+            path: path.to_owned(),
+            source: e,
+        })?;
+        Ok(Self { _file: file })
     }
 }
 

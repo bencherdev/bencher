@@ -28,11 +28,21 @@ pub struct CliUp {
     pub state_dir: Utf8PathBuf,
 
     /// Unprivileged uid the jailed sandbox process drops to.
-    #[arg(long, env = "BENCHER_JAIL_UID", default_value_t = bencher_runner::DEFAULT_JAIL_UID)]
+    #[arg(
+        long,
+        env = "BENCHER_JAIL_UID",
+        default_value_t = bencher_runner::DEFAULT_JAIL_UID,
+        value_parser = clap::value_parser!(u32).range(1..),
+    )]
     pub jail_uid: u32,
 
     /// Unprivileged gid the jailed sandbox process drops to.
-    #[arg(long, env = "BENCHER_JAIL_GID", default_value_t = bencher_runner::DEFAULT_JAIL_GID)]
+    #[arg(
+        long,
+        env = "BENCHER_JAIL_GID",
+        default_value_t = bencher_runner::DEFAULT_JAIL_GID,
+        value_parser = clap::value_parser!(u32).range(1..),
+    )]
     pub jail_gid: u32,
 
     #[command(flatten)]
