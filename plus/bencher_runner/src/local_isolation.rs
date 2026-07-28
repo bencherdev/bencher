@@ -57,12 +57,21 @@ impl LocalIsolation {
         };
 
         let benchmark = layout.benchmark.clone();
-        let run_id = format!("local-{}", uuid::Uuid::new_v4());
+        let run_id = crate::jail::VmId::from_chroot_name(format!("local-{}", uuid::Uuid::new_v4()));
 
         let cgroup = match crate::jail::CgroupManager::new(&run_id) {
             Ok(cgroup) => {
-                if let Err(e) = cgroup.apply_cpuset(layout) {
-                    eprintln!("Warning: failed to apply cpuset for local run: {e}");
+                // Best effort here, unlike the sandboxed path: a local run
+                // makes no confinement claim to begin with, so losing the
+                // cpuset degrades its numbers rather than falsifying them.
+                match cgroup.apply_cpuset(layout) {
+                    Ok(crate::jail::Cpuset::Applied) => {},
+                    Ok(crate::jail::Cpuset::ControllerUnavailable) => {
+                        eprintln!(
+                            "Warning: the cpuset controller is not delegated, so this local run has no CPU isolation"
+                        );
+                    },
+                    Err(e) => eprintln!("Warning: failed to apply cpuset for local run: {e}"),
                 }
                 // Keep benchmark memory resident, mirroring the Firecracker path
                 if let Err(e) = cgroup.disable_swap() {

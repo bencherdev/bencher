@@ -9,7 +9,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::RunnerError;
 use crate::cpu::CpuLayout;
 use crate::error::JailError;
-use crate::jail::ResourceLimits;
+use crate::jail::{ResourceLimits, VmId};
 
 /// Default cgroup v2 mount point.
 const CGROUP_ROOT: &str = "/sys/fs/cgroup";
@@ -24,11 +24,11 @@ pub struct CgroupManager {
 }
 
 impl CgroupManager {
-    /// Create a new cgroup for the given run ID.
-    pub fn new(run_id: &str) -> Result<Self, RunnerError> {
+    /// Create a new cgroup for the given microVM.
+    pub fn new(vm_id: &VmId) -> Result<Self, RunnerError> {
         let cgroup_path = Utf8PathBuf::from(CGROUP_ROOT)
             .join(BENCHER_CGROUP_BASE)
-            .join(run_id);
+            .join(vm_id.as_str());
 
         // Ensure parent bencher cgroup exists
         let parent = Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE);
@@ -152,28 +152,36 @@ impl CgroupManager {
     ///
     /// # Errors
     ///
-    /// Returns an error when the cgroup exists but the cpuset cannot be
-    /// applied to it. A cgroup with no cpuset does not confine the VMM to the
-    /// benchmark cores, so the run would report a number measured somewhere
-    /// other than where it claims. A half-applied fidelity mechanism is a
-    /// confinement-grade failure; a host that cannot isolate at all is handled
-    /// earlier, by not creating a cgroup in the first place.
-    pub fn apply_cpuset(&self, layout: &CpuLayout) -> Result<(), RunnerError> {
+    /// Returns an error when the cpuset controller is present but rejects the
+    /// write. That is a half-applied fidelity mechanism: the cgroup would
+    /// exist without confining the VMM to the benchmark cores, so the run
+    /// would report a number measured somewhere other than where it claims.
+    ///
+    /// A controller that is not there at all is a different thing and is not
+    /// an error. `enable_controllers` falls back as far as `+cpu +memory
+    /// +pids`, and only those three are required, so a host that does not
+    /// delegate `cpuset` (a containerized runner, or a cgroup namespace
+    /// without it in `subtree_control`) creates its cgroup successfully and
+    /// then has no `cpuset.cpus` to write. That is a declared absence of
+    /// isolation, which the caller degrades on rather than failing.
+    pub fn apply_cpuset(&self, layout: &CpuLayout) -> Result<Cpuset, RunnerError> {
         if !layout.has_isolation() {
             // No meaningful isolation possible (single core or overlapping sets)
-            return Ok(());
+            return Ok(Cpuset::Applied);
         }
 
         let cpuset = layout.benchmark_cpuset();
         if cpuset.is_empty() {
-            return Ok(());
+            return Ok(Cpuset::Applied);
         }
 
         let path = self.cgroup_path.join("cpuset.cpus");
-        fs::write(&path, &cpuset).map_err(|e| JailError::WriteCgroup {
-            path: path.clone(),
-            source: e,
-        })?;
+        if !path.exists() {
+            return Ok(Cpuset::ControllerUnavailable);
+        }
+        if let Err(e) = fs::write(&path, &cpuset) {
+            return classify_cpuset_error(path, e);
+        }
 
         // Also need to set cpuset.mems for cpuset to work. Use the parent's
         // effective memory nodes so multi-node NUMA hosts are not forced onto
@@ -183,12 +191,11 @@ impl CgroupManager {
             .parent()
             .map_or_else(|| "0".to_owned(), effective_mems);
         let mems_path = self.cgroup_path.join("cpuset.mems");
-        fs::write(&mems_path, &mems).map_err(|e| JailError::WriteCgroup {
-            path: mems_path,
-            source: e,
-        })?;
+        if let Err(e) = fs::write(&mems_path, &mems) {
+            return classify_cpuset_error(mems_path, e);
+        }
 
-        Ok(())
+        Ok(Cpuset::Applied)
     }
 
     /// Apply I/O bandwidth limits.
@@ -354,6 +361,43 @@ pub(crate) fn effective_mems(cgroup: &Utf8Path) -> String {
     }
 }
 
+/// Whether the cpuset actually confined the VMM to the benchmark cores.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Cpuset {
+    /// The cgroup confines the VMM to the benchmark cores.
+    Applied,
+    /// The host does not delegate the cpuset controller, so there is nothing
+    /// to write and no CPU isolation to be had.
+    ControllerUnavailable,
+}
+
+/// Decide whether a failed cpuset write is an absent controller or a refusal.
+///
+/// A file that is not there is the controller not being delegated, which is a
+/// limitation. Anything else is the kernel refusing a cpuset it does
+/// understand, which would leave the cgroup claiming an isolation it does not
+/// have.
+fn classify_cpuset_error(path: Utf8PathBuf, error: std::io::Error) -> Result<Cpuset, RunnerError> {
+    if error.kind() == std::io::ErrorKind::NotFound {
+        Ok(Cpuset::ControllerUnavailable)
+    } else {
+        Err(JailError::WriteCgroup {
+            path,
+            source: error,
+        }
+        .into())
+    }
+}
+
+/// How long to keep trying to remove a stale cgroup.
+///
+/// `rmdir` fails while the cgroup still holds a process, and the reap that
+/// precedes it may need a moment to land.
+const REMOVE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// How often to retry.
+const REMOVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50);
+
 /// Remove the cgroup a swept jail left behind.
 ///
 /// The cgroup and the chroot are named by the same VM id by construction, so
@@ -363,18 +407,32 @@ pub(crate) fn effective_mems(cgroup: &Utf8Path) -> String {
 /// still holds a process fails, which is what forces that ordering. A cgroup
 /// that survives is worth shouting about, because it holds the exclusive
 /// benchmark CPUs and the next job's cpuset will be rejected because of it.
-pub(crate) fn remove_stale_cgroup(vm_id: &str) {
+pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
     let path = Utf8PathBuf::from(CGROUP_ROOT)
         .join(BENCHER_CGROUP_BASE)
-        .join(vm_id);
+        .join(vm_id.as_str());
     if !path.exists() {
-        return;
+        return Ok(());
     }
-    match fs::remove_dir(&path) {
-        Ok(()) => eprintln!("Warning: removed stale cgroup {path} left by a previous runner"),
-        Err(e) => eprintln!(
-            "Warning: failed to remove stale cgroup {path}: {e}. It still holds the benchmark CPUs, so the next run's CPU isolation will be rejected."
-        ),
+
+    let deadline = std::time::Instant::now() + REMOVE_TIMEOUT;
+    loop {
+        match fs::remove_dir(&path) {
+            Ok(()) => {
+                eprintln!("Warning: removed stale cgroup {path} left by a previous runner");
+                return Ok(());
+            },
+            // Someone else got there first, which is the outcome either way.
+            Err(_) if !path.exists() => return Ok(()),
+            Err(e) if std::time::Instant::now() >= deadline => {
+                // Reported rather than warned. The leftover still owns the
+                // exclusive benchmark CPUs, so every later job's cpuset would
+                // be rejected; failing here means the next job sweeps again
+                // instead of inheriting a host that can never isolate.
+                return Err(JailError::StaleCgroup { path, source: e });
+            },
+            Err(_) => std::thread::sleep(REMOVE_INTERVAL),
+        }
     }
 }
 

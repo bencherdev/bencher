@@ -32,7 +32,7 @@ use std::time::{Duration, Instant};
 use camino::Utf8PathBuf;
 
 use crate::cpu::CpuLayout;
-use crate::jail::{CgroupManager, JailPaths, JailUser};
+use crate::jail::{CgroupManager, Cpuset, JailPaths, JailUser, VmId};
 use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
@@ -64,7 +64,7 @@ pub struct FirecrackerJobConfig {
     /// Identity of this microVM: the jailer id, the chroot name, and the
     /// cgroup name. Minted before the job's artifacts, because the jail root
     /// they are built in is a function of it.
-    pub vm_id: String,
+    pub vm_id: VmId,
     /// Both views of every file inside the jail chroot.
     pub jail: JailPaths,
     /// The unprivileged uid and gid the VMM drops to.
@@ -123,7 +123,7 @@ pub fn run_firecracker(
     config: &FirecrackerJobConfig,
     cancel_flag: Option<&Arc<AtomicBool>>,
 ) -> Result<RunOutput, FirecrackerError> {
-    let vm_id = config.vm_id.as_str();
+    let vm_id = &config.vm_id;
     let jail = &config.jail;
 
     let start_time = Instant::now();
@@ -133,23 +133,36 @@ pub fn run_firecracker(
         if layout.has_isolation() {
             match CgroupManager::new(vm_id) {
                 Ok(cg) => {
-                    // A cgroup that exists but has no cpuset does not confine
-                    // the VMM to the benchmark cores, so the run would report
-                    // a number measured somewhere other than where it claims.
-                    // Fatal, unlike failing to create the cgroup at all, which
-                    // is a declared absence of isolation rather than a lie
-                    // about it.
-                    cg.apply_cpuset(layout)
-                        .map_err(|e| FirecrackerError::CpusetFailed(Box::new(e)))?;
-                    println!(
-                        "CPU isolation: Firecracker pinned to cores {}",
-                        layout.benchmark_cpuset()
-                    );
-                    // Keep VM memory resident: swap adds run-to-run variance
-                    if let Err(e) = cg.disable_swap() {
-                        eprintln!("Warning: failed to disable swap for VM cgroup: {e}");
+                    // A cgroup that exists but does not confine the VMM to the
+                    // benchmark cores would report a number measured somewhere
+                    // other than where it claims, so a rejected cpuset is
+                    // fatal. A controller the host does not delegate is a
+                    // different thing: there is no isolation to be had, which
+                    // is a declared limitation, so the cgroup is dropped and
+                    // the job runs without one exactly as on a host that could
+                    // not create it at all.
+                    match cg
+                        .apply_cpuset(layout)
+                        .map_err(|e| FirecrackerError::CpusetFailed(Box::new(e)))?
+                    {
+                        Cpuset::Applied => {
+                            println!(
+                                "CPU isolation: Firecracker pinned to cores {}",
+                                layout.benchmark_cpuset()
+                            );
+                            // Keep VM memory resident: swap adds run-to-run variance
+                            if let Err(e) = cg.disable_swap() {
+                                eprintln!("Warning: failed to disable swap for VM cgroup: {e}");
+                            }
+                            Some(cg)
+                        },
+                        Cpuset::ControllerUnavailable => {
+                            eprintln!(
+                                "Warning: the cpuset controller is not delegated to this cgroup, so this run has no CPU isolation and its numbers carry more variance"
+                            );
+                            None
+                        },
                     }
-                    Some(cg)
                 },
                 Err(e) => {
                     eprintln!("Warning: failed to create cgroup for CPU isolation: {e}");
