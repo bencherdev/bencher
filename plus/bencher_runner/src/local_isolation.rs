@@ -66,10 +66,8 @@ impl LocalIsolation {
                 // cpuset degrades its numbers rather than falsifying them.
                 match cgroup.apply_cpuset(layout) {
                     Ok(crate::jail::Cpuset::Applied) => {},
-                    Ok(crate::jail::Cpuset::ControllerUnavailable) => {
-                        eprintln!(
-                            "Warning: the cpuset controller is not delegated, so this local run has no CPU isolation"
-                        );
+                    Ok(crate::jail::Cpuset::Unavailable(reason)) => {
+                        eprintln!("Warning: this local run has no CPU isolation ({reason})");
                     },
                     Err(e) => eprintln!("Warning: failed to apply cpuset for local run: {e}"),
                 }
