@@ -32,6 +32,13 @@ const LOCK_FILE: &str = ".lock";
 ///
 /// The kernel releases a `flock` when the holder exits or dies, so a crashed
 /// runner cannot wedge future runs.
+///
+/// `flock` is per open file description, not per process, so a second
+/// `acquire` on the same path from a process that already holds it opens a new
+/// description and blocks on itself forever. Nothing nests today: host
+/// preparation takes and releases this lock before a job takes it, and the
+/// network namespace uses a different lock file. Any new caller has to keep it
+/// that way.
 #[derive(Debug)]
 pub struct JailLock {
     /// The locked file, held only for its `flock`.
@@ -62,13 +69,18 @@ impl JailLock {
         }
         println!("  Waiting for another bencher runner to release {path}...");
 
-        flock(&file, libc::LOCK_EX).map_err(|e| JailError::JailLock {
+        flock_exclusive(&file).map_err(|e| JailError::JailLock {
             path: path.clone(),
             source: e,
         })?;
 
         Ok(Self { _file: file })
     }
+}
+
+/// Take an exclusive `flock`, waiting for whichever holder has it.
+pub(super) fn flock_exclusive(file: &File) -> std::io::Result<()> {
+    flock(file, libc::LOCK_EX)
 }
 
 /// Apply `flock` to a file, retrying if a signal interrupts the wait.
