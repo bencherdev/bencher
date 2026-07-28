@@ -12,6 +12,7 @@ use std::os::unix::fs::PermissionsExt as _;
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::JailError;
+use crate::jail::VmId;
 
 /// Subdirectory of the state directory used as the jailer's chroot base.
 const CHROOT_BASE: &str = "jail";
@@ -61,13 +62,13 @@ impl StateDir {
     /// put there. Without this, `--state-dir /var/lib` would be chmodded to
     /// 0700 and take the host down with it.
     fn check_root_is_ours(&self) -> Result<(), JailError> {
-        let Ok(mut entries) = fs::read_dir(&self.root) else {
+        let Ok(entries) = fs::read_dir(&self.root) else {
             // Missing, or unreadable: creating it is the next step and will
             // report the real error.
             return Ok(());
         };
         let mut populated = false;
-        for entry in entries.by_ref().flatten() {
+        for entry in entries.flatten() {
             populated = true;
             let name = entry.file_name();
             if RUNNER_ENTRIES.iter().any(|ours| name == *ours) {
@@ -98,13 +99,13 @@ impl StateDir {
 
     /// The jail directory for a VM, the tree teardown removes.
     #[must_use]
-    pub fn jail_dir(&self, vm_id: &str) -> Utf8PathBuf {
-        self.jail_parent().join(vm_id)
+    pub fn jail_dir(&self, vm_id: &VmId) -> Utf8PathBuf {
+        self.jail_parent().join(vm_id.as_str())
     }
 
     /// The chroot root for a VM, which becomes `/` inside the jail.
     #[must_use]
-    pub fn jail_root(&self, vm_id: &str) -> Utf8PathBuf {
+    pub fn jail_root(&self, vm_id: &VmId) -> Utf8PathBuf {
         self.jail_dir(vm_id).join(JAIL_ROOT)
     }
 
@@ -150,9 +151,9 @@ const RUNNER_ENTRIES: [&str; 2] = [CHROOT_BASE, LOCK_FILE];
 ///
 /// Non-directory entries are left alone: the jailer only ever creates
 /// directories here, so anything else was put there by someone else.
-pub fn sweep_jails(jail_parent: &Utf8Path) -> usize {
+pub fn sweep_jails(jail_parent: &Utf8Path) -> Result<usize, JailError> {
     let Ok(entries) = fs::read_dir(jail_parent) else {
-        return 0;
+        return Ok(0);
     };
 
     let mut swept = 0;
@@ -160,25 +161,28 @@ pub fn sweep_jails(jail_parent: &Utf8Path) -> usize {
         if !entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
             continue;
         }
-        let vm_id = entry.file_name().to_string_lossy().into_owned();
-        let jail_dir = jail_parent.join(&vm_id);
+        let vm_id = VmId::from_chroot_name(entry.file_name().to_string_lossy().into_owned());
+        let jail_dir = jail_parent.join(vm_id.as_str());
 
         // Reap before removing. Pulling the rootfs out from under a process
         // that is still running leaves it running anyway, so the process goes
         // first and the directory second.
         super::reap::reap_jailed_vmm(&jail_dir.join(JAIL_ROOT));
 
+        // A chroot that will not go away costs disk. Worth a warning, not
+        // worth refusing to run.
         match fs::remove_dir_all(&jail_dir) {
             Ok(()) => swept += 1,
             Err(e) => eprintln!("Warning: failed to sweep stale jail {jail_dir}: {e}"),
         }
 
-        // The cgroup is the half that actually corrupts later runs: it holds
-        // the exclusive benchmark CPUs, so leaving it makes the next job's
-        // cpuset write fail. It shares the chroot's name by construction.
-        super::cgroup::remove_stale_cgroup(&vm_id);
+        // The cgroup is the half that corrupts later runs: it holds the
+        // exclusive benchmark CPUs, so leaving it makes every later job's
+        // cpuset write fail. It shares the chroot's name by construction, and
+        // failing to remove it is reported rather than swallowed.
+        super::cgroup::remove_stale_cgroup(&vm_id)?;
     }
-    swept
+    Ok(swept)
 }
 
 #[cfg(test)]
@@ -200,12 +204,12 @@ mod tests {
             "/var/lib/bencher-runner/jail/firecracker"
         );
         assert_eq!(
-            state.jail_dir("abc"),
+            state.jail_dir(&VmId::from_chroot_name("abc".to_owned())),
             "/var/lib/bencher-runner/jail/firecracker/abc"
         );
         // <chroot_base>/<exec_file_name>/<id>/root
         assert_eq!(
-            state.jail_root("abc"),
+            state.jail_root(&VmId::from_chroot_name("abc".to_owned())),
             state
                 .chroot_base()
                 .join(EXEC_FILE_NAME)
@@ -293,13 +297,27 @@ mod tests {
         state.create().unwrap();
 
         // Two stale jails, one with a nested chroot tree.
-        fs::create_dir_all(state.jail_root("one")).unwrap();
-        fs::write(state.jail_root("one").join("rootfs.ext4"), b"stale").unwrap();
-        fs::create_dir_all(state.jail_dir("two")).unwrap();
+        fs::create_dir_all(state.jail_root(&VmId::from_chroot_name("one".to_owned()))).unwrap();
+        fs::write(
+            state
+                .jail_root(&VmId::from_chroot_name("one".to_owned()))
+                .join("rootfs.ext4"),
+            b"stale",
+        )
+        .unwrap();
+        fs::create_dir_all(state.jail_dir(&VmId::from_chroot_name("two".to_owned()))).unwrap();
 
-        assert_eq!(sweep_jails(&state.jail_parent()), 2);
-        assert!(!state.jail_dir("one").exists());
-        assert!(!state.jail_dir("two").exists());
+        assert_eq!(sweep_jails(&state.jail_parent()).unwrap(), 2);
+        assert!(
+            !state
+                .jail_dir(&VmId::from_chroot_name("one".to_owned()))
+                .exists()
+        );
+        assert!(
+            !state
+                .jail_dir(&VmId::from_chroot_name("two".to_owned()))
+                .exists()
+        );
         assert!(state.jail_parent().exists());
     }
 
@@ -311,16 +329,20 @@ mod tests {
 
         let note = state.jail_parent().join("NOTES.txt");
         fs::write(&note, b"not a jail").unwrap();
-        fs::create_dir_all(state.jail_dir("stale")).unwrap();
+        fs::create_dir_all(state.jail_dir(&VmId::from_chroot_name("stale".to_owned()))).unwrap();
 
-        assert_eq!(sweep_jails(&state.jail_parent()), 1);
-        assert!(!state.jail_dir("stale").exists());
+        assert_eq!(sweep_jails(&state.jail_parent()).unwrap(), 1);
+        assert!(
+            !state
+                .jail_dir(&VmId::from_chroot_name("stale".to_owned()))
+                .exists()
+        );
         assert!(note.exists(), "non-directory entries are not the sweep's");
     }
 
     #[test]
     fn sweep_missing_parent_is_zero() {
         let (_dir, root) = temp_root();
-        assert_eq!(sweep_jails(&root.join("nope")), 0);
+        assert_eq!(sweep_jails(&root.join("nope")).unwrap(), 0);
     }
 }
