@@ -28,9 +28,12 @@ pub use chroot::JailDir;
 #[cfg(target_os = "linux")]
 pub use lock::JailLock;
 #[cfg(target_os = "linux")]
-pub use paths::{ChrootPath, HostPath, JailFile, JailPaths};
+pub use paths::{ChrootPath, HostPath, JailFile, JailPaths, SocketPath};
 #[cfg(target_os = "linux")]
 pub use state::StateDir;
+
+#[cfg(target_os = "linux")]
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::{Deserialize, Serialize};
 
@@ -61,17 +64,46 @@ pub const DEFAULT_JAIL_UID: u32 = 61016;
 /// See [`DEFAULT_JAIL_UID`].
 pub const DEFAULT_JAIL_GID: u32 = 61016;
 
-/// The uid and gid the jailed Firecracker VMM drops to.
+/// The unprivileged uid and gid the jailed Firecracker VMM drops to.
 ///
 /// A host process owning this uid can signal the VMM and, depending on the
 /// `ptrace` scope, trace it, so it must not be an id the host allocates to
 /// anything else.
+///
+/// The fields are private because `0` must never reach them. The whole
+/// sandbox is built by dropping privilege, so a jail user of root is not a
+/// weaker jail, it is no jail at all: untrusted code would run against a root
+/// VMM, which is the one thing the confinement exists to prevent. An operator
+/// hitting a permission error is exactly the person most likely to try it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct JailUser {
+    uid: u32,
+    gid: u32,
+}
+
+impl JailUser {
+    /// Build a jail user, rejecting root.
+    pub fn new(uid: u32, gid: u32) -> Result<Self, crate::error::JailError> {
+        if uid == 0 {
+            return Err(crate::error::JailError::PrivilegedJailUser { field: "uid" });
+        }
+        if gid == 0 {
+            return Err(crate::error::JailError::PrivilegedJailUser { field: "gid" });
+        }
+        Ok(Self { uid, gid })
+    }
+
     /// The uid the VMM drops to.
-    pub uid: u32,
+    #[must_use]
+    pub fn uid(self) -> u32 {
+        self.uid
+    }
+
     /// The gid the VMM drops to.
-    pub gid: u32,
+    #[must_use]
+    pub fn gid(self) -> u32 {
+        self.gid
+    }
 }
 
 impl Default for JailUser {
@@ -83,23 +115,50 @@ impl Default for JailUser {
     }
 }
 
-/// Prepare the host for jailed execution.
+/// Set once the host has been prepared, so it happens at most once per
+/// runner process.
+#[cfg(target_os = "linux")]
+static HOST_PREPARED: AtomicBool = AtomicBool::new(false);
+
+/// Prepare the host for jailed execution, once per runner process.
 ///
-/// Idempotent, and called from every entry point that can reach the VM
-/// executor: the `up` daemon has a startup hook, the one-shot `run` CLI does
-/// not, so the work lives here rather than in daemon startup.
+/// Called on demand, immediately before the first job builds a jail, never at
+/// startup. The daemon learns which Specs it serves from the server, so at
+/// startup it cannot know whether it will ever need a jail, and a Runner that
+/// serves only non-sandboxed Specs is a supported configuration that must come
+/// up on a host where the runner is not root. Preparing eagerly would make
+/// `runner up` require root just to start.
 ///
 /// Failure is fatal. Untrusted code never runs with silently degraded
-/// confinement, so a host that cannot be prepared does not execute a job.
-///
-/// The sweep and the network namespace handle are both taken under the jail
-/// lock. The sweep removes every chroot it finds on the reasoning that jobs
-/// are serial, so it must not run while another runner has one in flight, and
-/// two processes rebinding the namespace handle at once can stack mounts on
-/// it. Holding the lock makes serialization a constraint rather than an
-/// assumption.
+/// confinement, so a host that cannot be prepared does not execute a job. A
+/// failure is not remembered, so a transient permission problem is retried by
+/// the next job rather than requiring a restart.
 #[cfg(target_os = "linux")]
-pub fn prepare_host(
+pub fn prepare_host_once(
+    state_dir: &camino::Utf8Path,
+    jail_user: JailUser,
+) -> Result<(), crate::error::JailError> {
+    if HOST_PREPARED.load(Ordering::SeqCst) {
+        return Ok(());
+    }
+    prepare_host(state_dir, jail_user)?;
+    HOST_PREPARED.store(true, Ordering::SeqCst);
+    Ok(())
+}
+
+/// Create the state directory and reclaim what a previous runner left behind.
+///
+/// The sweep is taken under the jail lock: it removes every chroot it finds on
+/// the reasoning that jobs are serial, so it must not run while another runner
+/// has one in flight. Running before any jail exists in this process is what
+/// the sweep's purpose actually requires.
+///
+/// The network namespace is deliberately not built here. It is a process-
+/// global object on a tmpfs, so it is rebuilt per job rather than once per
+/// daemon lifetime.
+#[cfg(target_os = "linux")]
+#[expect(clippy::print_stdout, reason = "host preparation reports what it did")]
+fn prepare_host(
     state_dir: &camino::Utf8Path,
     jail_user: JailUser,
 ) -> Result<(), crate::error::JailError> {
@@ -109,8 +168,12 @@ pub fn prepare_host(
     warn_on_named_account(jail_user);
 
     let _lock = JailLock::acquire(state.path())?;
-    state::sweep_jails(&state.jail_parent());
-    netns::ensure()?;
+    let swept = state::sweep_jails(&state.jail_parent());
+    if swept > 0 {
+        // Each one held a copy of the VMM binary and a full guest rootfs
+        // image, so an operator should hear about it.
+        println!("  Reclaimed {swept} stale jail(s) from {state_dir}");
+    }
     Ok(())
 }
 
@@ -124,7 +187,7 @@ pub fn prepare_host(
 #[cfg(target_os = "linux")]
 #[expect(clippy::print_stderr, reason = "host preparation prints diagnostics")]
 fn warn_on_named_account(jail_user: JailUser) {
-    let JailUser { uid, gid } = jail_user;
+    let (uid, gid) = (jail_user.uid(), jail_user.gid());
     if let Some(name) = passwd_name(uid) {
         eprintln!(
             "Warning: jail uid {uid} belongs to the existing account '{name}'. That account can signal the jailed VMM; pass --jail-uid to pick an unallocated id."
@@ -139,9 +202,13 @@ fn warn_on_named_account(jail_user: JailUser) {
 
 /// The account name for a uid, read from `/etc/passwd`.
 ///
-/// Deliberately not a `getpwuid` call: the runner ships as a self-contained
-/// binary and pulling in NSS would make it depend on the host's resolver
-/// configuration. A local account is what matters here, and that is the file.
+/// Best effort, and blind to anything the local files do not know about: a
+/// host backed by LDAP, Active Directory, or SSSD allocates ids that never
+/// appear here, and those are the hosts most likely to allocate in this range
+/// at all. Deliberately not a `getpwuid` call even so, because the runner
+/// ships as a self-contained binary and NSS would make it depend on the host's
+/// resolver configuration. This catches the cheap case; it is not a guarantee
+/// that the id is unallocated.
 #[cfg(target_os = "linux")]
 fn passwd_name(uid: u32) -> Option<String> {
     lookup_name("/etc/passwd", uid)
@@ -178,7 +245,7 @@ fn lookup_name_in(database: &str, id: u32) -> Option<String> {
 ///
 /// The jail is Linux-only, as is the VM executor it protects.
 #[cfg(not(target_os = "linux"))]
-pub fn prepare_host(
+pub fn prepare_host_once(
     _state_dir: &camino::Utf8Path,
     _jail_user: JailUser,
 ) -> Result<(), crate::error::JailError> {
@@ -291,6 +358,50 @@ mod tests {
             assert!(id > 60513, "{id} must clear the systemd-homed range");
             assert!(id < 61184, "{id} must clear the DynamicUser range");
         }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn preparation_is_lazy_and_happens_at_most_once() {
+        // A daemon that prepared at startup would need root just to come up,
+        // which breaks a Runner serving only non-sandboxed Specs. Nothing may
+        // touch the state directory until a job actually builds a jail.
+        let dir = tempfile::tempdir().unwrap();
+        let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let state_dir = root.join("state");
+        assert!(!state_dir.exists(), "startup has not prepared anything");
+
+        prepare_host_once(&state_dir, JailUser::default()).unwrap();
+        assert!(state_dir.join("jail").is_dir(), "the first job prepares");
+
+        // A second job must not redo it: proven by removing the tree and
+        // seeing that it is not rebuilt.
+        std::fs::remove_dir_all(&state_dir).unwrap();
+        prepare_host_once(&state_dir, JailUser::default()).unwrap();
+        assert!(!state_dir.exists(), "preparation happens at most once");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn the_jail_user_rejects_root() {
+        // Untrusted code against a root VMM is the one thing the confinement
+        // exists to prevent, so this must not be reachable by a typo.
+        JailUser::new(0, DEFAULT_JAIL_GID).unwrap_err();
+        JailUser::new(DEFAULT_JAIL_UID, 0).unwrap_err();
+        JailUser::new(0, 0).unwrap_err();
+
+        let user = JailUser::new(1234, 5678).unwrap();
+        assert_eq!(user.uid(), 1234);
+        assert_eq!(user.gid(), 5678);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn the_default_jail_user_is_unprivileged() {
+        let default = JailUser::default();
+        assert_eq!(default.uid(), DEFAULT_JAIL_UID);
+        assert_eq!(default.gid(), DEFAULT_JAIL_GID);
+        JailUser::new(default.uid(), default.gid()).unwrap();
     }
 
     #[cfg(target_os = "linux")]

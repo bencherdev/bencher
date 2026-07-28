@@ -30,10 +30,19 @@ pub fn vm_execute(
 
     let state_dir = StateDir::new(config.state_dir.clone());
 
+    // Prepare the host on demand, before the first jail this process builds.
+    // Must come before the lock is taken: preparation takes the same lock, and
+    // `flock` is per open file description, so nesting would block on itself.
+    crate::jail::prepare_host_once(state_dir.path(), config.jail_user)?;
+
     // Held for the whole job. Another runner's sweep removes every chroot it
     // finds, so it must not run while this one is live. Declared before the
     // jail guard so the lock outlives the teardown it protects.
     let _lock = JailLock::acquire(state_dir.path())?;
+
+    // Rebuilt per job rather than once per daemon lifetime: the handle lives
+    // on a tmpfs and is operator visible, so it has to be self-healing.
+    let netns = netns::ensure()?;
 
     // The jail root is a function of the VM id, and the job's artifacts are
     // built inside it rather than copied in afterwards, so the id is minted
@@ -41,7 +50,7 @@ pub fn vm_execute(
     // which is what the workspace temp directory used to cover.
     let vm_id = uuid::Uuid::new_v4().to_string();
     let jail_dir = JailDir::create(&state_dir, &vm_id)?;
-    let jail = JailPaths::new(jail_dir.root());
+    let jail = JailPaths::new(jail_dir.root())?;
     println!("  Jail: {}", jail.root());
 
     let workspace = prepare_oci_workspace(config)?;
@@ -96,7 +105,7 @@ pub fn vm_execute(
     chroot::chown_to_jail(kernel_dest, config.jail_user)?;
 
     // Step 7-8: Build Firecracker config and run the microVM
-    let fc_config = build_firecracker_config(config, work_dir, vm_id, &state_dir, jail)?;
+    let fc_config = build_firecracker_config(config, work_dir, vm_id, &state_dir, jail, netns)?;
 
     let run_output = run_firecracker(&fc_config, cancel_flag)?;
 
@@ -110,6 +119,7 @@ fn build_firecracker_config(
     vm_id: String,
     state_dir: &StateDir,
     jail: JailPaths,
+    netns: Utf8PathBuf,
 ) -> Result<crate::firecracker::FirecrackerJobConfig, RunnerError> {
     // The jailer copies `--exec-file` into the chroot itself and rejects a
     // multiply linked file, so Firecracker is staged outside the jail and is
@@ -155,7 +165,7 @@ fn build_firecracker_config(
         jail,
         jail_user: config.jail_user,
         chroot_base_dir: state_dir.chroot_base(),
-        netns: netns::handle_path(),
+        netns,
         vcpus,
         memory_mib,
         boot_args: config.kernel_cmdline.clone(),
