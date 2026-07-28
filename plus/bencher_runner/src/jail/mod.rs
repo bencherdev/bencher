@@ -469,6 +469,32 @@ mod tests {
 
     #[cfg(target_os = "linux")]
     #[test]
+    fn a_failure_is_not_latched_and_self_heals() {
+        // Fatal to the job, not to the runner. A host that cannot be prepared
+        // has to fail every job that needs a jail, and recover on its own the
+        // moment the cause goes away, rather than wedging until a restart.
+        let dir = tempfile::tempdir().unwrap();
+        let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let state_dir = root.join("state");
+        // A populated directory the runner did not create is refused.
+        std::fs::create_dir_all(state_dir.join("someone-elses-data")).unwrap();
+
+        let mut host = HostPreparation::new();
+        for attempt in 1..=3 {
+            assert!(
+                host.ensure(&state_dir, JailUser::default()).is_err(),
+                "attempt {attempt} must fail"
+            );
+        }
+
+        // Remove the cause and the very next job succeeds, with no restart.
+        std::fs::remove_dir(state_dir.join("someone-elses-data")).unwrap();
+        host.ensure(&state_dir, JailUser::default()).unwrap();
+        assert!(state_dir.join("jail").is_dir());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
     fn the_jail_user_rejects_root() {
         // Untrusted code against a root VMM is the one thing the confinement
         // exists to prevent, so this must not be reachable by a typo.
