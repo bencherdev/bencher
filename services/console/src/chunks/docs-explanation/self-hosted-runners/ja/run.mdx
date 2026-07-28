@@ -29,6 +29,10 @@ runner up
 バージョン付きリリースへのみ更新します。
 `canary` チャネルは、Bencher Cloud にデプロイされるローリング canary ビルドを追跡します。
 
+サンドボックス化された Job を実行する Runner は `root` として動かす必要があるため、
+上記のコマンドは `root` ユーザーが実行する場合、
+あるいは Runner を `root` で起動するサービスマネージャー配下での実行を想定しています。
+
 デフォルトでは、Runner は [Sandbox][sandbox] のない Spec の Job をすべて拒否します。
 Runner にサンドボックスなしの Job をホスト上で直接実行させるには、
 [`--danger-allow-no-sandbox` フラグ][danger allow no sandbox] を付けて起動します。
