@@ -133,15 +133,18 @@ pub fn run_firecracker(
         if layout.has_isolation() {
             match CgroupManager::new(vm_id) {
                 Ok(cg) => {
-                    // Apply cpuset to pin Firecracker to benchmark cores
-                    if let Err(e) = cg.apply_cpuset(layout) {
-                        eprintln!("Warning: failed to apply cpuset: {e}");
-                    } else {
-                        println!(
-                            "CPU isolation: Firecracker pinned to cores {}",
-                            layout.benchmark_cpuset()
-                        );
-                    }
+                    // A cgroup that exists but has no cpuset does not confine
+                    // the VMM to the benchmark cores, so the run would report
+                    // a number measured somewhere other than where it claims.
+                    // Fatal, unlike failing to create the cgroup at all, which
+                    // is a declared absence of isolation rather than a lie
+                    // about it.
+                    cg.apply_cpuset(layout)
+                        .map_err(|e| FirecrackerError::CpusetFailed(Box::new(e)))?;
+                    println!(
+                        "CPU isolation: Firecracker pinned to cores {}",
+                        layout.benchmark_cpuset()
+                    );
                     // Keep VM memory resident: swap adds run-to-run variance
                     if let Err(e) = cg.disable_swap() {
                         eprintln!("Warning: failed to disable swap for VM cgroup: {e}");
@@ -225,7 +228,7 @@ pub fn run_firecracker(
 
     // Step 3: Create vsock listeners (must be before boot)
     println!("Setting up vsock listeners...");
-    let vsock_listener = VsockListener::new(jail.vsock().socket())?;
+    let vsock_listener = VsockListener::new(jail.vsock())?;
     // Firecracker connects out to these as the unprivileged jail user, so it
     // needs write access to the inodes. After bind and before InstanceStart.
     vsock_listener

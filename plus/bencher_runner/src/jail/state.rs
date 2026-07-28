@@ -16,6 +16,9 @@ use crate::error::JailError;
 /// Subdirectory of the state directory used as the jailer's chroot base.
 const CHROOT_BASE: &str = "jail";
 
+/// The chroot directory inside a jail, which the jailer makes `/`.
+const JAIL_ROOT: &str = "root";
+
 /// The jail lock file, which lives beside the chroot base.
 ///
 /// Named here as well as in the lock module so the state directory knows
@@ -102,7 +105,7 @@ impl StateDir {
     /// The chroot root for a VM, which becomes `/` inside the jail.
     #[must_use]
     pub fn jail_root(&self, vm_id: &str) -> Utf8PathBuf {
-        self.jail_dir(vm_id).join("root")
+        self.jail_dir(vm_id).join(JAIL_ROOT)
     }
 
     /// Create the state directory tree at mode 0700.
@@ -154,17 +157,26 @@ pub fn sweep_jails(jail_parent: &Utf8Path) -> usize {
 
     let mut swept = 0;
     for entry in entries.flatten() {
-        let path = entry.path();
         if !entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
             continue;
         }
-        match fs::remove_dir_all(&path) {
+        let vm_id = entry.file_name().to_string_lossy().into_owned();
+        let jail_dir = jail_parent.join(&vm_id);
+
+        // Reap before removing. Pulling the rootfs out from under a process
+        // that is still running leaves it running anyway, so the process goes
+        // first and the directory second.
+        super::reap::reap_jailed_vmm(&jail_dir.join(JAIL_ROOT));
+
+        match fs::remove_dir_all(&jail_dir) {
             Ok(()) => swept += 1,
-            Err(e) => eprintln!(
-                "Warning: failed to sweep stale jail {}: {e}",
-                path.display()
-            ),
+            Err(e) => eprintln!("Warning: failed to sweep stale jail {jail_dir}: {e}"),
         }
+
+        // The cgroup is the half that actually corrupts later runs: it holds
+        // the exclusive benchmark CPUs, so leaving it makes the next job's
+        // cpuset write fail. It shares the chroot's name by construction.
+        super::cgroup::remove_stale_cgroup(&vm_id);
     }
     swept
 }

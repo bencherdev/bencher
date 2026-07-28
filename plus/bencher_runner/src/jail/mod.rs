@@ -17,6 +17,8 @@ pub mod netns;
 #[cfg(target_os = "linux")]
 pub mod paths;
 #[cfg(target_os = "linux")]
+pub mod reap;
+#[cfg(target_os = "linux")]
 pub mod state;
 
 #[cfg(target_os = "linux")]

@@ -152,8 +152,12 @@ impl CgroupManager {
     ///
     /// # Errors
     ///
-    /// Returns Ok even if cpuset is not available (logs a warning).
-    /// CPU pinning is best-effort for isolation but not required for correctness.
+    /// Returns an error when the cgroup exists but the cpuset cannot be
+    /// applied to it. A cgroup with no cpuset does not confine the VMM to the
+    /// benchmark cores, so the run would report a number measured somewhere
+    /// other than where it claims. A half-applied fidelity mechanism is a
+    /// confinement-grade failure; a host that cannot isolate at all is handled
+    /// earlier, by not creating a cgroup in the first place.
     pub fn apply_cpuset(&self, layout: &CpuLayout) -> Result<(), RunnerError> {
         if !layout.has_isolation() {
             // No meaningful isolation possible (single core or overlapping sets)
@@ -165,26 +169,24 @@ impl CgroupManager {
             return Ok(());
         }
 
-        // Try to write cpuset.cpus - may fail if cpuset controller is not available
         let path = self.cgroup_path.join("cpuset.cpus");
-        if let Err(e) = fs::write(&path, &cpuset) {
-            // Log warning but don't fail - cpuset is optional for isolation
-            eprintln!(
-                "Warning: failed to set cpuset.cpus to '{cpuset}' (cpuset controller may not be available): {e}"
-            );
-        } else {
-            // Also need to set cpuset.mems for cpuset to work. Use the
-            // parent's effective memory nodes so multi-node NUMA hosts
-            // are not forced onto node 0.
-            let mems = self
-                .cgroup_path
-                .parent()
-                .map_or_else(|| "0".to_owned(), effective_mems);
-            let mems_path = self.cgroup_path.join("cpuset.mems");
-            if let Err(e) = fs::write(&mems_path, &mems) {
-                eprintln!("Warning: failed to set cpuset.mems: {e}");
-            }
-        }
+        fs::write(&path, &cpuset).map_err(|e| JailError::WriteCgroup {
+            path: path.clone(),
+            source: e,
+        })?;
+
+        // Also need to set cpuset.mems for cpuset to work. Use the parent's
+        // effective memory nodes so multi-node NUMA hosts are not forced onto
+        // node 0. Applied cpus without mems is the half-applied case.
+        let mems = self
+            .cgroup_path
+            .parent()
+            .map_or_else(|| "0".to_owned(), effective_mems);
+        let mems_path = self.cgroup_path.join("cpuset.mems");
+        fs::write(&mems_path, &mems).map_err(|e| JailError::WriteCgroup {
+            path: mems_path,
+            source: e,
+        })?;
 
         Ok(())
     }
@@ -349,6 +351,30 @@ pub(crate) fn effective_mems(cgroup: &Utf8Path) -> String {
     match fs::read_to_string(cgroup.join("cpuset.mems.effective")) {
         Ok(mems) if !mems.trim().is_empty() => mems.trim().to_owned(),
         _ => "0".to_owned(),
+    }
+}
+
+/// Remove the cgroup a swept jail left behind.
+///
+/// The cgroup and the chroot are named by the same VM id by construction, so
+/// the id read off the chroot directory names the cgroup exactly.
+///
+/// Must run after the VMM in it has been reaped: `rmdir` on a cgroup that
+/// still holds a process fails, which is what forces that ordering. A cgroup
+/// that survives is worth shouting about, because it holds the exclusive
+/// benchmark CPUs and the next job's cpuset will be rejected because of it.
+pub(crate) fn remove_stale_cgroup(vm_id: &str) {
+    let path = Utf8PathBuf::from(CGROUP_ROOT)
+        .join(BENCHER_CGROUP_BASE)
+        .join(vm_id);
+    if !path.exists() {
+        return;
+    }
+    match fs::remove_dir(&path) {
+        Ok(()) => eprintln!("Warning: removed stale cgroup {path} left by a previous runner"),
+        Err(e) => eprintln!(
+            "Warning: failed to remove stale cgroup {path}: {e}. It still holds the benchmark CPUs, so the next run's CPU isolation will be rejected."
+        ),
     }
 }
 
