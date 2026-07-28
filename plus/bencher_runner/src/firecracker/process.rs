@@ -11,7 +11,7 @@ use camino::Utf8Path;
 use crate::firecracker::client::FirecrackerClient;
 use crate::firecracker::config::{Action, ActionType};
 use crate::firecracker::error::FirecrackerError;
-use crate::jail::{JailFile, JailUser, SocketPath};
+use crate::jail::{JailFile, JailUser};
 
 /// Everything needed to spawn the VMM under the jailer.
 #[derive(Debug)]
@@ -46,7 +46,7 @@ pub struct JailedSpawn<'a> {
 /// A running, jailed Firecracker process.
 pub struct FirecrackerProcess {
     child: Child,
-    api_socket_path: SocketPath,
+    api_socket: JailFile,
     stderr_thread: Option<std::thread::JoinHandle<()>>,
 }
 
@@ -141,7 +141,7 @@ impl FirecrackerProcess {
 
         let process = Self {
             child,
-            api_socket_path: api_socket.socket().clone(),
+            api_socket: api_socket.clone(),
             stderr_thread: Some(stderr_thread),
         };
 
@@ -153,7 +153,7 @@ impl FirecrackerProcess {
 
     /// Get a client for the Firecracker REST API.
     pub fn client(&self) -> FirecrackerClient {
-        FirecrackerClient::new(&self.api_socket_path)
+        FirecrackerClient::new(self.api_socket.socket())
     }
 
     /// Get the PID of the Firecracker process.
@@ -195,8 +195,15 @@ impl FirecrackerProcess {
     ///
     /// The chroot itself is reclaimed wholesale by the jail teardown; this
     /// only keeps the socket from outliving the process within a job.
+    ///
+    /// Unlinks through the host view. Unlinking has no `sun_path` limit, so
+    /// the socket view buys nothing here and costs a dependency on a
+    /// descriptor still being open. This runs from `Drop`, where a future
+    /// reordering could close that descriptor first, and where the failure
+    /// would not be an error but the deletion of whatever file inherited the
+    /// number.
     pub fn cleanup(&self) {
-        drop(std::fs::remove_file(self.api_socket_path.as_str()));
+        drop(std::fs::remove_file(self.api_socket.host().as_path()));
     }
 
     /// Join the stderr reader thread if it exists.
