@@ -5,9 +5,31 @@ use thiserror::Error;
 /// Errors from the Firecracker integration.
 #[derive(Debug, Error)]
 pub enum FirecrackerError {
-    /// Failed to start the Firecracker process.
-    #[error("Failed to start Firecracker process: {0}")]
-    ProcessStart(String),
+    /// Failed to spawn the jailer that starts the Firecracker process.
+    #[error("Failed to spawn {path}: {source}")]
+    Spawn {
+        /// The binary that could not be spawned.
+        path: camino::Utf8PathBuf,
+        /// Why it could not be spawned.
+        source: std::io::Error,
+    },
+
+    /// The spawned process did not provide the stdio the runner asked for.
+    #[error("Firecracker process stdio unavailable: {0}")]
+    Stdio(&'static str),
+
+    /// A Firecracker API request or response could not be handled.
+    #[error("Firecracker API {context}: {source}")]
+    ApiEncoding {
+        /// What was being encoded or decoded.
+        context: &'static str,
+        /// The underlying serialization failure.
+        source: serde_json::Error,
+    },
+
+    /// The Firecracker API returned a response that could not be parsed.
+    #[error("Firecracker API response malformed: {0}")]
+    MalformedResponse(&'static str),
 
     /// Firecracker API returned an error.
     #[error("Firecracker API error: {status} {body}")]
