@@ -45,7 +45,20 @@ pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Option<u32> {
     // pidfd refers to one process for as long as it is open and keeps the
     // number from being reused, which turns the check below into a guarantee
     // rather than a narrow window.
-    let pidfd = pidfd_open(pid)?;
+    let pidfd = match pidfd_open(pid) {
+        Ok(Some(pidfd)) => pidfd,
+        // Already gone, which is the common case and not a failure.
+        Ok(None) => return None,
+        Err(e) => {
+            // Silence here is what wedges a runner: the orphan keeps the
+            // benchmark CPUs, the cgroup cannot be removed, and nothing says
+            // why. Kernels before 5.3 have no pidfd_open at all.
+            eprintln!(
+                "Warning: cannot pin orphaned VMM (pid {pid}) in {jail_root} to reap it: {e}. It is still running and still holds the benchmark CPUs."
+            );
+            return None;
+        },
+    };
 
     // Re-check now that the pid cannot change underneath us.
     if !is_jailed_vmm(pid, jail_root) {
@@ -103,9 +116,17 @@ fn matches_jail(pid: u32, jail: &fs::Metadata) -> bool {
 
 /// Open a descriptor pinned to a process.
 ///
-/// `None` when the process is already gone, which is the common case and not
-/// an error: something else reaped it first.
-fn pidfd_open(pid: u32) -> Option<OwnedFd> {
+/// `Ok(None)` means the process is already gone, which is the common case and
+/// not a failure. Everything else is distinguished and reported by the caller,
+/// because a reap that quietly does nothing leaves an orphan holding the
+/// benchmark CPUs: `ENOSYS` on a kernel before 5.3, `EPERM` under a
+/// restrictive policy, and a pid too large to convert all look identical from
+/// the outside otherwise.
+fn pidfd_open(pid: u32) -> std::io::Result<Option<OwnedFd>> {
+    let pid = libc::pid_t::try_from(pid).map_err(|_err| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "pid out of range")
+    })?;
+
     #[expect(
         unsafe_code,
         reason = "pidfd_open has no std wrapper; it takes plain integers"
@@ -113,11 +134,19 @@ fn pidfd_open(pid: u32) -> Option<OwnedFd> {
     // SAFETY: `pidfd_open` takes a pid and a flag word and touches no memory.
     // It returns a new descriptor or -1, and the descriptor is handed straight
     // to `OwnedFd` so it is closed exactly once.
-    let raw = unsafe { libc::syscall(libc::SYS_pidfd_open, libc::pid_t::try_from(pid).ok()?, 0) };
-    let raw = libc::c_int::try_from(raw).ok()?;
+    let raw = unsafe { libc::syscall(libc::SYS_pidfd_open, pid, 0) };
+
     if raw < 0 {
-        return None;
+        let error = std::io::Error::last_os_error();
+        return if error.raw_os_error() == Some(libc::ESRCH) {
+            Ok(None)
+        } else {
+            Err(error)
+        };
     }
+
+    let raw = libc::c_int::try_from(raw)
+        .map_err(|_err| std::io::Error::other("pidfd out of descriptor range"))?;
     #[expect(
         unsafe_code,
         reason = "taking ownership of a descriptor this call just created"
@@ -125,7 +154,7 @@ fn pidfd_open(pid: u32) -> Option<OwnedFd> {
     // SAFETY: `raw` is a fresh descriptor returned by the syscall above and is
     // not owned by anything else.
     let fd = unsafe { OwnedFd::from_raw_fd(raw) };
-    Some(fd)
+    Ok(Some(fd))
 }
 
 /// SIGKILL the process a descriptor is pinned to.
@@ -156,16 +185,38 @@ fn pidfd_kill(pidfd: &OwnedFd) -> std::io::Result<()> {
     }
 }
 
-/// Wait for a killed process to disappear.
+/// Wait for a killed process to stop running.
+///
+/// A zombie counts as exited. The orphan reparents to whatever is PID 1, and
+/// if the runner is itself PID 1 (a container with no init) nothing ever reaps
+/// it, so `/proc/<pid>` persists forever. Waiting on the directory alone would
+/// then stall the full timeout on every sweep and warn about a process that is
+/// already dead.
 fn wait_for_exit(pid: u32) -> bool {
     let deadline = Instant::now() + REAP_TIMEOUT;
     while Instant::now() < deadline {
-        if !Utf8Path::new(&format!("/proc/{pid}")).exists() {
+        if !is_running(pid) {
             return true;
         }
         std::thread::sleep(REAP_INTERVAL);
     }
     false
+}
+
+/// Whether a process still exists and is not a zombie.
+fn is_running(pid: u32) -> bool {
+    let Ok(status) = fs::read_to_string(format!("/proc/{pid}/status")) else {
+        return false;
+    };
+    !is_zombie(&status)
+}
+
+/// Whether a `/proc/<pid>/status` listing describes a zombie.
+fn is_zombie(status: &str) -> bool {
+    status
+        .lines()
+        .find_map(|line| line.strip_prefix("State:"))
+        .is_some_and(|state| state.trim_start().starts_with('Z'))
 }
 
 #[cfg(test)]
@@ -214,13 +265,43 @@ mod tests {
     }
 
     #[test]
-    fn a_pidfd_pins_a_live_process_and_refuses_a_dead_one() {
-        pidfd_open(std::process::id()).expect("this process is alive");
+    fn a_pidfd_pins_a_live_process() {
+        let pidfd = pidfd_open(std::process::id()).expect("pidfd_open is available");
+        assert!(pidfd.is_some(), "this process is alive");
+    }
 
-        // Pid 0 is never a process: the syscall rejects it rather than
-        // signalling the caller's process group, which is what the plain
-        // `kill` interface would have done.
-        assert!(pidfd_open(0).is_none());
+    #[test]
+    fn a_pidfd_distinguishes_gone_from_broken() {
+        // Pid 0 is never a process, and the syscall rejects it rather than
+        // signalling the caller's process group the way plain `kill` would.
+        // The distinction matters: an absent process is nothing to report,
+        // while a refusal leaves an orphan running and has to be said out loud.
+        match pidfd_open(0) {
+            Ok(None) => {},
+            Ok(Some(_)) => panic!("pid 0 must never yield a pidfd"),
+            Err(e) => assert_ne!(
+                e.raw_os_error(),
+                Some(libc::ESRCH),
+                "ESRCH must be reported as gone, not as an error"
+            ),
+        }
+    }
+
+    #[test]
+    fn a_zombie_counts_as_exited() {
+        // Without this the reap stalls its full timeout whenever the runner is
+        // PID 1 and never reaps what reparents to it.
+        let zombie = "Name:\tfirecracker\nUmask:\t0022\nState:\tZ (zombie)\nTgid:\t42\n";
+        let running = "Name:\tfirecracker\nUmask:\t0022\nState:\tS (sleeping)\nTgid:\t42\n";
+
+        assert!(is_zombie(zombie));
+        assert!(!is_zombie(running));
+        assert!(!is_zombie(""));
+    }
+
+    #[test]
+    fn this_process_is_running() {
+        assert!(is_running(std::process::id()));
     }
 
     #[test]

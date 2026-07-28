@@ -139,6 +139,15 @@ pub enum JailError {
     NetnsNotDistinct { path: Utf8PathBuf },
 
     #[cfg(target_os = "linux")]
+    #[error(
+        "Failed to remove the stale cgroup {path}: {source}. It still owns the exclusive benchmark CPUs, so no run can be isolated until it is gone."
+    )]
+    StaleCgroup {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
     #[error("Failed to open the jail chroot {path}: {source}")]
     OpenJailRoot {
         path: Utf8PathBuf,
