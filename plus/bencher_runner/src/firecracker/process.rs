@@ -67,39 +67,25 @@ impl FirecrackerProcess {
     /// `[firecracker]`. The jailer inherits that stdio and its own diagnostics
     /// appear under the same prefix.
     pub fn start(spawn: JailedSpawn<'_>) -> Result<Self, FirecrackerError> {
+        let args = jailer_args(&spawn);
+
+        // Destructured rather than read field by field so that adding a field
+        // without deciding what it does here is a build error.
         let JailedSpawn {
             jailer_bin,
-            exec_file,
-            vm_id,
-            chroot_base_dir,
-            netns,
+            exec_file: _,
+            vm_id: _,
+            chroot_base_dir: _,
+            netns: _,
             api_socket,
-            log_level,
+            log_level: _,
             housekeeping_cores,
             cgroup_procs,
         } = spawn;
 
         let mut command = Command::new(jailer_bin);
         command
-            .arg("--id")
-            .arg(vm_id)
-            .arg("--exec-file")
-            .arg(exec_file)
-            .arg("--uid")
-            .arg(JAIL_UID.to_string())
-            .arg("--gid")
-            .arg(JAIL_GID.to_string())
-            .arg("--chroot-base-dir")
-            .arg(chroot_base_dir)
-            .arg("--netns")
-            .arg(netns)
-            .arg("--")
-            // `--id` is deliberately not forwarded: the jailer already passes
-            // it to Firecracker, and Firecracker rejects a duplicate argument.
-            .arg("--api-sock")
-            .arg(api_socket.chroot().as_str())
-            .arg("--level")
-            .arg(log_level)
+            .args(&args)
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::piped());
@@ -225,6 +211,41 @@ impl Drop for FirecrackerProcess {
     }
 }
 
+/// Build the jailer's argument vector.
+///
+/// Split out from the spawn so it can be asserted without a host that can
+/// boot a VM. Getting this wrong fails every job at startup and, before the
+/// VM boots, produces errors that point at Firecracker rather than at the
+/// command line that caused them.
+fn jailer_args(spawn: &JailedSpawn<'_>) -> Vec<String> {
+    vec![
+        "--id".to_owned(),
+        spawn.vm_id.to_owned(),
+        "--exec-file".to_owned(),
+        spawn.exec_file.to_string(),
+        "--uid".to_owned(),
+        JAIL_UID.to_string(),
+        "--gid".to_owned(),
+        JAIL_GID.to_string(),
+        "--chroot-base-dir".to_owned(),
+        spawn.chroot_base_dir.to_string(),
+        "--netns".to_owned(),
+        spawn.netns.to_string(),
+        // No cgroup flags of any kind, and neither --daemonize nor
+        // --new-pid-ns: see `FirecrackerProcess::start`.
+        "--".to_owned(),
+        // `--id` is deliberately not forwarded: the jailer already passes it
+        // to Firecracker, which rejects the duplicate with DuplicateArgument
+        // and fails every job at startup.
+        "--api-sock".to_owned(),
+        // The chroot view. Firecracker binds this after it has been confined,
+        // so the host path would name a directory it cannot reach.
+        spawn.api_socket.chroot().as_str().to_owned(),
+        "--level".to_owned(),
+        spawn.log_level.to_owned(),
+    ]
+}
+
 /// Join the calling task to the cgroup behind a pre-opened `cgroup.procs`.
 ///
 /// The kernel reads `0` as the calling task, which is why no pid has to be
@@ -233,4 +254,129 @@ fn place_in_cgroup(mut procs: &File) -> std::io::Result<()> {
     use std::io::Write as _;
 
     procs.write_all(b"0")
+}
+
+#[cfg(test)]
+mod tests {
+    use camino::Utf8Path;
+
+    use super::*;
+    use crate::jail::JailPaths;
+
+    const JAIL_ROOT: &str = "/var/lib/bencher-runner/jail/firecracker/vm-1/root";
+
+    fn spawn_for(jail: &JailPaths) -> JailedSpawn<'_> {
+        JailedSpawn {
+            jailer_bin: Utf8Path::new("/tmp/work/jailer"),
+            exec_file: Utf8Path::new("/tmp/work/firecracker"),
+            vm_id: "vm-1",
+            chroot_base_dir: Utf8Path::new("/var/lib/bencher-runner/jail"),
+            netns: Utf8Path::new("/run/netns/bencher-jail"),
+            api_socket: jail.api_socket(),
+            log_level: "Warning",
+            housekeeping_cores: Vec::new(),
+            cgroup_procs: None,
+        }
+    }
+
+    fn args() -> Vec<String> {
+        let jail = JailPaths::new(Utf8Path::new(JAIL_ROOT));
+        jailer_args(&spawn_for(&jail))
+    }
+
+    /// The value following `flag`, if the flag is present.
+    fn value_of<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
+        let index = args.iter().position(|arg| arg == flag)?;
+        args.get(index + 1).map(String::as_str)
+    }
+
+    #[test]
+    fn confinement_flags_are_all_present() {
+        let args = args();
+
+        assert_eq!(value_of(&args, "--id"), Some("vm-1"));
+        assert_eq!(
+            value_of(&args, "--exec-file"),
+            Some("/tmp/work/firecracker")
+        );
+        assert_eq!(value_of(&args, "--uid"), Some("60613"));
+        assert_eq!(value_of(&args, "--gid"), Some("60613"));
+        assert_eq!(
+            value_of(&args, "--chroot-base-dir"),
+            Some("/var/lib/bencher-runner/jail")
+        );
+        assert_eq!(value_of(&args, "--netns"), Some("/run/netns/bencher-jail"));
+    }
+
+    #[test]
+    fn id_appears_exactly_once() {
+        // The jailer passes `--id` to Firecracker itself. Forwarding it again
+        // after the separator makes Firecracker reject the duplicate and fail
+        // every job at startup.
+        let args = args();
+
+        assert_eq!(
+            args.iter().filter(|arg| *arg == "--id").count(),
+            1,
+            "--id must be given to the jailer only: {args:?}"
+        );
+    }
+
+    #[test]
+    fn only_the_api_socket_and_level_are_forwarded() {
+        let args = args();
+        let separator = args
+            .iter()
+            .position(|arg| arg == "--")
+            .expect("the jailer needs a -- separator before Firecracker's own arguments");
+
+        assert_eq!(
+            args.get(separator + 1..),
+            Some(
+                [
+                    "--api-sock".to_owned(),
+                    "/api.sock".to_owned(),
+                    "--level".to_owned(),
+                    "Warning".to_owned(),
+                ]
+                .as_slice()
+            )
+        );
+    }
+
+    #[test]
+    fn the_api_socket_is_the_chroot_view() {
+        // Firecracker binds the socket after it has been confined, so it must
+        // receive the path as it will exist inside the chroot. The host view
+        // names a directory the jailed process cannot reach.
+        let jail = JailPaths::new(Utf8Path::new(JAIL_ROOT));
+        let args = jailer_args(&spawn_for(&jail));
+
+        assert_eq!(value_of(&args, "--api-sock"), Some("/api.sock"));
+        assert!(
+            !args.iter().any(|arg| arg.contains(JAIL_ROOT)),
+            "no host-side jail path may reach the jailed process: {args:?}"
+        );
+    }
+
+    #[test]
+    fn no_cgroup_or_forking_flags_are_passed() {
+        // The runner owns the cgroup end to end, and both --daemonize and
+        // --new-pid-ns make the jailer fork, which breaks the pid identity the
+        // process management relies on.
+        let args = args();
+
+        for forbidden in [
+            "--cgroup",
+            "--parent-cgroup",
+            "--cgroup-version",
+            "--daemonize",
+            "--new-pid-ns",
+        ] {
+            assert!(
+                !args.iter().any(|arg| arg == forbidden),
+                "{forbidden} must not be passed: {args:?}"
+            );
+        }
+    }
 }
