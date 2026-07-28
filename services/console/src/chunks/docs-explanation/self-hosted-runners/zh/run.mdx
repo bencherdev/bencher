@@ -29,6 +29,10 @@ runner up
 仅更新到版本化的发布版本。
 `canary` 通道则跟踪部署到 Bencher Cloud 的滚动 canary 构建。
 
+执行沙箱 Job 的 Runner 必须以 `root` 身份运行，
+因此上面的命令是按 `root` 用户执行的方式给出的，
+或者在以 `root` 启动 Runner 的服务管理器下运行。
+
 默认情况下，Runner 会拒绝任何其 Spec 没有 [Sandbox][sandbox] 的 Job。
 要让 Runner 直接在主机上执行非沙箱化的 Job，
 请使用 [`--danger-allow-no-sandbox` 标志][danger allow no sandbox] 启动它。
