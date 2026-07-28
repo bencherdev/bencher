@@ -309,6 +309,44 @@ mod tests {
     }
 
     #[test]
+    fn the_socket_view_stops_naming_the_jail_once_the_paths_are_dropped() {
+        // This is why `bind` and `connect` are the only callers of the socket
+        // view: the descriptor number is reused the moment it is released, and
+        // the identical string then resolves to a different directory with no
+        // error at all. Anything that only needs a path, unlinking above all,
+        // uses the host view, which cannot go stale.
+        let jail = tempfile::tempdir().unwrap();
+        let jail_root = Utf8Path::from_path(jail.path()).unwrap();
+        std::fs::write(jail_root.join("rootfs.ext4"), b"the jail").unwrap();
+
+        let socket_view = {
+            let paths = JailPaths::new(jail_root).unwrap();
+            let view = paths.rootfs().socket().as_str().to_owned();
+            assert_eq!(std::fs::read(&view).unwrap(), b"the jail");
+            view
+        };
+
+        // Claim the number the jail's descriptor just released.
+        let impostor = tempfile::tempdir().unwrap();
+        let impostor_root = Utf8Path::from_path(impostor.path()).unwrap();
+        std::fs::write(impostor_root.join("rootfs.ext4"), b"somewhere else").unwrap();
+        let _claim = std::fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_PATH | libc::O_DIRECTORY)
+            .open(impostor_root)
+            .unwrap();
+
+        // The same string no longer names the jail. It either names the
+        // impostor or fails; what it must never do is still work.
+        let stale = std::fs::read(&socket_view);
+        assert_ne!(
+            stale.unwrap_or_default(),
+            b"the jail",
+            "a dropped descriptor must not leave the socket view pointing at the jail"
+        );
+    }
+
+    #[test]
     fn every_socket_view_fits_the_sun_path_limit() {
         let (_dir, paths) = jail_in_tmpdir();
         for file in [paths.api_socket(), paths.vsock()] {
