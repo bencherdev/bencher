@@ -14,7 +14,7 @@ use std::os::unix::fs::{PermissionsExt as _, chown};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::JailError;
-use crate::jail::{JailUser, StateDir};
+use crate::jail::{JailUser, StateDir, VmId};
 
 /// A job's chroot tree, removed when this value is dropped.
 ///
@@ -29,7 +29,7 @@ pub struct JailDir {
 
 impl JailDir {
     /// Create the chroot tree for `vm_id` at mode 0700.
-    pub fn create(state: &StateDir, vm_id: &str) -> Result<Self, JailError> {
+    pub fn create(state: &StateDir, vm_id: &VmId) -> Result<Self, JailError> {
         let dir = state.jail_dir(vm_id);
         let root = state.jail_root(vm_id);
 
@@ -87,6 +87,11 @@ pub fn chown_to_jail(path: &Utf8Path, jail_user: JailUser) -> Result<(), JailErr
 mod tests {
     use super::*;
 
+    /// A stand-in identity for tests.
+    fn vm_id() -> VmId {
+        VmId::from_chroot_name("vm-1".to_owned())
+    }
+
     fn state_in_tmpdir() -> (tempfile::TempDir, StateDir) {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
@@ -99,11 +104,11 @@ mod tests {
     fn create_builds_a_private_chroot_tree() {
         let (_dir, state) = state_in_tmpdir();
 
-        let jail = JailDir::create(&state, "vm-1").unwrap();
+        let jail = JailDir::create(&state, &vm_id()).unwrap();
 
-        assert_eq!(jail.root(), state.jail_root("vm-1"));
+        assert_eq!(jail.root(), state.jail_root(&vm_id()));
         assert!(jail.root().is_dir());
-        for path in [state.jail_dir("vm-1"), state.jail_root("vm-1")] {
+        for path in [state.jail_dir(&vm_id()), state.jail_root(&vm_id())] {
             let mode = fs::metadata(&path).unwrap().permissions().mode();
             assert_eq!(mode & 0o777, 0o700, "{path} should be private");
         }
@@ -112,9 +117,9 @@ mod tests {
     #[test]
     fn create_tolerates_an_existing_directory() {
         let (_dir, state) = state_in_tmpdir();
-        fs::create_dir_all(state.jail_root("vm-1")).unwrap();
+        fs::create_dir_all(state.jail_root(&vm_id())).unwrap();
 
-        JailDir::create(&state, "vm-1").unwrap();
+        JailDir::create(&state, &vm_id()).unwrap();
     }
 
     #[test]
@@ -122,13 +127,13 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
 
         {
-            let jail = JailDir::create(&state, "vm-1").unwrap();
+            let jail = JailDir::create(&state, &vm_id()).unwrap();
             fs::write(jail.root().join("rootfs.ext4"), b"guest").unwrap();
             fs::create_dir_all(jail.root().join("dev")).unwrap();
         }
 
         assert!(
-            !state.jail_dir("vm-1").exists(),
+            !state.jail_dir(&vm_id()).exists(),
             "the chroot is the runner's to reclaim, not the jailer's"
         );
         assert!(state.jail_parent().exists());
@@ -141,16 +146,16 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
         // A file where the jail directory has to go makes the tree
         // impossible to create.
-        fs::write(state.jail_dir("vm-1"), b"in the way").unwrap();
+        fs::write(state.jail_dir(&vm_id()), b"in the way").unwrap();
 
-        JailDir::create(&state, "vm-1").unwrap_err();
+        JailDir::create(&state, &vm_id()).unwrap_err();
     }
 
     #[test]
     fn drop_tolerates_an_already_removed_tree() {
         let (_dir, state) = state_in_tmpdir();
-        let jail = JailDir::create(&state, "vm-1").unwrap();
-        fs::remove_dir_all(state.jail_dir("vm-1")).unwrap();
+        let jail = JailDir::create(&state, &vm_id()).unwrap();
+        fs::remove_dir_all(state.jail_dir(&vm_id())).unwrap();
         drop(jail);
     }
 }

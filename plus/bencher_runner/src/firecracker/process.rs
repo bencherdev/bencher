@@ -11,7 +11,7 @@ use camino::Utf8Path;
 use crate::firecracker::client::FirecrackerClient;
 use crate::firecracker::config::{Action, ActionType};
 use crate::firecracker::error::FirecrackerError;
-use crate::jail::{JailFile, JailUser};
+use crate::jail::{JailFile, JailUser, VmId};
 
 /// Everything needed to spawn the VMM under the jailer.
 #[derive(Debug)]
@@ -26,7 +26,7 @@ pub struct JailedSpawn<'a> {
     /// chroot layout, so it is fixed rather than incidental.
     pub exec_file: &'a Utf8Path,
     /// The jailer `--id`, which is also the chroot name and the cgroup name.
-    pub vm_id: &'a str,
+    pub vm_id: &'a VmId,
     /// The unprivileged uid and gid the VMM drops to.
     pub jail_user: JailUser,
     /// The jailer `--chroot-base-dir`.
@@ -115,14 +115,15 @@ impl FirecrackerProcess {
             }
         }
 
-        let mut child = command.spawn().map_err(|e| {
-            FirecrackerError::ProcessStart(format!("failed to spawn {jailer_bin}: {e}"))
+        let mut child = command.spawn().map_err(|e| FirecrackerError::Spawn {
+            path: jailer_bin.to_owned(),
+            source: e,
         })?;
 
         // Spawn a thread to read stderr line-by-line
-        let stderr = child.stderr.take().ok_or_else(|| {
-            FirecrackerError::ProcessStart("stderr was piped but not available".into())
-        })?;
+        let stderr = child.stderr.take().ok_or(FirecrackerError::Stdio(
+            "stderr was piped but not available",
+        ))?;
         let stderr_thread = std::thread::spawn(move || {
             use std::io::BufRead as _;
 
@@ -230,7 +231,7 @@ impl Drop for FirecrackerProcess {
 fn jailer_args(spawn: &JailedSpawn<'_>) -> Vec<String> {
     vec![
         "--id".to_owned(),
-        spawn.vm_id.to_owned(),
+        spawn.vm_id.to_string(),
         "--exec-file".to_owned(),
         spawn.exec_file.to_string(),
         "--uid".to_owned(),
@@ -273,11 +274,11 @@ mod tests {
     use super::*;
     use crate::jail::JailPaths;
 
-    fn spawn_for(jail: &JailPaths) -> JailedSpawn<'_> {
+    fn spawn_for<'a>(jail: &'a JailPaths, vm_id: &'a VmId) -> JailedSpawn<'a> {
         JailedSpawn {
             jailer_bin: Utf8Path::new("/tmp/work/jailer"),
             exec_file: Utf8Path::new("/tmp/work/firecracker"),
-            vm_id: "vm-1",
+            vm_id,
             jail_user: JailUser::default(),
             chroot_base_dir: Utf8Path::new("/var/lib/bencher-runner/jail"),
             netns: Utf8Path::new("/run/netns/bencher-jail"),
@@ -290,7 +291,12 @@ mod tests {
 
     fn args() -> Vec<String> {
         let (_dir, jail) = jail_in_tmpdir();
-        jailer_args(&spawn_for(&jail))
+        jailer_args(&spawn_for(&jail, &vm_id()))
+    }
+
+    /// A stand-in identity for tests.
+    fn vm_id() -> VmId {
+        VmId::from_chroot_name("vm-1".to_owned())
     }
 
     /// The jail root has to exist: the paths hold a descriptor on it.
@@ -367,7 +373,7 @@ mod tests {
         // receive the path as it will exist inside the chroot. The host view
         // names a directory the jailed process cannot reach.
         let (_dir, jail) = jail_in_tmpdir();
-        let args = jailer_args(&spawn_for(&jail));
+        let args = jailer_args(&spawn_for(&jail, &vm_id()));
 
         assert_eq!(value_of(&args, "--api-sock"), Some("/api.sock"));
         let jail_root = jail.root().as_str();
