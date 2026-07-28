@@ -2770,7 +2770,7 @@ fn run_runner_after_orphan(
     // wrong reason.
     if cgroup_existed && cgroup.exists() {
         bail!(
-            "The orphaned cgroup {cgroup} survived the next job. It still owns the exclusive benchmark CPUs, so no later run can be isolated."
+            "The orphaned cgroup {cgroup} survived the next job, so the sweep never removed it. Stale cgroups accumulate, and one that will not go away usually means its VMM is still running."
         );
     }
 

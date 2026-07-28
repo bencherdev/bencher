@@ -140,6 +140,12 @@ pub enum JailError {
 
     #[cfg(target_os = "linux")]
     #[error(
+        "A stale jail at {path} still has VMM pid {pid} running in it. It is executing untrusted guest code on the benchmark cores, so any measurement taken now is contended. The jail is left in place until it can be reaped."
+    )]
+    JailStillRunning { path: Utf8PathBuf, pid: u32 },
+
+    #[cfg(target_os = "linux")]
+    #[error(
         "The kernel narrowed the cgroup cpuset at {path}: asked for cpus {requested}, got {effective}. The benchmark would not have run on the cores it claims."
     )]
     CpusetNarrowed {
@@ -150,7 +156,7 @@ pub enum JailError {
 
     #[cfg(target_os = "linux")]
     #[error(
-        "Failed to remove the stale cgroup {path}: {source}. It still owns the exclusive benchmark CPUs, so no run can be isolated until it is gone."
+        "Failed to remove the stale cgroup {path}: {source}. Stale cgroups accumulate under the parent, and one that cannot be removed usually means something is still running in it."
     )]
     StaleCgroup {
         path: Utf8PathBuf,
