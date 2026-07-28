@@ -11,7 +11,7 @@ use camino::Utf8Path;
 use crate::firecracker::client::FirecrackerClient;
 use crate::firecracker::config::{Action, ActionType};
 use crate::firecracker::error::FirecrackerError;
-use crate::jail::{HostPath, JailFile, JailUser};
+use crate::jail::{JailFile, JailUser, SocketPath};
 
 /// Everything needed to spawn the VMM under the jailer.
 #[derive(Debug)]
@@ -46,7 +46,7 @@ pub struct JailedSpawn<'a> {
 /// A running, jailed Firecracker process.
 pub struct FirecrackerProcess {
     child: Child,
-    api_socket_path: HostPath,
+    api_socket_path: SocketPath,
     stderr_thread: Option<std::thread::JoinHandle<()>>,
 }
 
@@ -141,7 +141,7 @@ impl FirecrackerProcess {
 
         let process = Self {
             child,
-            api_socket_path: api_socket.host().clone(),
+            api_socket_path: api_socket.socket().clone(),
             stderr_thread: Some(stderr_thread),
         };
 
@@ -196,7 +196,7 @@ impl FirecrackerProcess {
     /// The chroot itself is reclaimed wholesale by the jail teardown; this
     /// only keeps the socket from outliving the process within a job.
     pub fn cleanup(&self) {
-        drop(std::fs::remove_file(self.api_socket_path.as_path()));
+        drop(std::fs::remove_file(self.api_socket_path.as_str()));
     }
 
     /// Join the stderr reader thread if it exists.
@@ -227,9 +227,9 @@ fn jailer_args(spawn: &JailedSpawn<'_>) -> Vec<String> {
         "--exec-file".to_owned(),
         spawn.exec_file.to_string(),
         "--uid".to_owned(),
-        spawn.jail_user.uid.to_string(),
+        spawn.jail_user.uid().to_string(),
         "--gid".to_owned(),
-        spawn.jail_user.gid.to_string(),
+        spawn.jail_user.gid().to_string(),
         "--chroot-base-dir".to_owned(),
         spawn.chroot_base_dir.to_string(),
         "--netns".to_owned(),
@@ -266,8 +266,6 @@ mod tests {
     use super::*;
     use crate::jail::JailPaths;
 
-    const JAIL_ROOT: &str = "/var/lib/bencher-runner/jail/firecracker/vm-1/root";
-
     fn spawn_for(jail: &JailPaths) -> JailedSpawn<'_> {
         JailedSpawn {
             jailer_bin: Utf8Path::new("/tmp/work/jailer"),
@@ -284,8 +282,16 @@ mod tests {
     }
 
     fn args() -> Vec<String> {
-        let jail = JailPaths::new(Utf8Path::new(JAIL_ROOT));
+        let (_dir, jail) = jail_in_tmpdir();
         jailer_args(&spawn_for(&jail))
+    }
+
+    /// The jail root has to exist: the paths hold a descriptor on it.
+    fn jail_in_tmpdir() -> (tempfile::TempDir, JailPaths) {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let jail = JailPaths::new(root).unwrap();
+        (dir, jail)
     }
 
     /// The value following `flag`, if the flag is present.
@@ -353,12 +359,13 @@ mod tests {
         // Firecracker binds the socket after it has been confined, so it must
         // receive the path as it will exist inside the chroot. The host view
         // names a directory the jailed process cannot reach.
-        let jail = JailPaths::new(Utf8Path::new(JAIL_ROOT));
+        let (_dir, jail) = jail_in_tmpdir();
         let args = jailer_args(&spawn_for(&jail));
 
         assert_eq!(value_of(&args, "--api-sock"), Some("/api.sock"));
+        let jail_root = jail.root().as_str();
         assert!(
-            !args.iter().any(|arg| arg.contains(JAIL_ROOT)),
+            !args.iter().any(|arg| arg.contains(jail_root)),
             "no host-side jail path may reach the jailed process: {args:?}"
         );
     }

@@ -1,13 +1,43 @@
-//! The two views of every file inside the jail chroot.
+//! The views of every file inside the jail chroot.
 //!
 //! Once Firecracker is jailed, every path it receives resolves inside the
-//! chroot, while the runner reaches the same file from outside. The two views
-//! are different types rather than two strings, so handing Firecracker a host
-//! path (or the runner a chroot path) is a compile error instead of a boot
-//! that hangs waiting for a socket that will never appear.
+//! chroot, while the runner reaches the same file from outside. The views are
+//! different types rather than strings, so handing Firecracker a host path (or
+//! the runner a chroot path) is a compile error instead of a boot that hangs
+//! waiting for a socket that will never appear.
+//!
+//! There is a third view because of a hard kernel limit. `sockaddr_un.sun_path`
+//! is 108 bytes, and the limit applies to the string handed to `bind` and
+//! `connect`, before any resolution. A jail deep under an operator's
+//! `--state-dir` blows that limit long before it comes near `PATH_MAX`, so the
+//! runner addresses the jail's sockets through a descriptor it holds open on
+//! the chroot. Resolution happens after the length check, so a short string
+//! naming a long directory is exactly what is needed.
+
+use std::fs::File;
+use std::os::fd::AsRawFd as _;
+use std::os::unix::fs::OpenOptionsExt as _;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Serialize;
+
+use crate::error::JailError;
+
+/// Size of `sockaddr_un.sun_path` on Linux.
+const SUN_PATH_LEN: usize = 108;
+
+/// Longest path a socket name may occupy, leaving room for the NUL.
+///
+/// Linux accepts a full 108 unterminated bytes when `addrlen` says so, but
+/// `unix(7)` warns against relying on it and the standard library rejects
+/// anything that does not leave room for the terminator.
+const MAX_SOCKET_PATH: usize = SUN_PATH_LEN - 1;
+
+/// Room reserved after the vsock base path for its `_<port>` suffix.
+///
+/// Sized for the widest port a `u32` can print rather than for the ports in
+/// use, so adding a port can never silently eat the margin.
+const VSOCK_SUFFIX_RESERVE: usize = "_4294967295".len();
 
 /// A path as the runner sees it: the host filesystem, outside the chroot.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,24 +85,64 @@ impl std::fmt::Display for ChrootPath {
     }
 }
 
-/// One file in the jail, in both views.
+/// A path the runner may hand to `bind` or `connect`.
+///
+/// The type makes the length limit unforgeable: every value has been checked
+/// against `sun_path`, so a path that would not fit is reported when the jail
+/// is built, naming the limit and the offending string, rather than surfacing
+/// later as a socket that never becomes ready.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SocketPath(String);
+
+impl SocketPath {
+    /// Check a path against the `sun_path` limit.
+    ///
+    /// `reserve` is the longest suffix that will later be appended, so a base
+    /// that fits only without its suffix is still rejected.
+    fn new(path: String, reserve: usize) -> Result<Self, JailError> {
+        let length = path.len() + reserve;
+        if length > MAX_SOCKET_PATH {
+            return Err(JailError::SocketPathTooLong {
+                path,
+                length,
+                limit: MAX_SOCKET_PATH,
+            });
+        }
+        Ok(Self(path))
+    }
+
+    /// The path as a string.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// This path with a suffix appended.
+    ///
+    /// The suffix was reserved when the base was checked, so the result is
+    /// within the limit by construction.
+    #[must_use]
+    pub fn with_suffix(&self, suffix: &str) -> String {
+        format!("{}{suffix}", self.0)
+    }
+}
+
+impl std::fmt::Display for SocketPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+/// One file in the jail, in every view that reaches it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JailFile {
     host: HostPath,
     chroot: ChrootPath,
+    socket: SocketPath,
 }
 
 impl JailFile {
-    /// Build both views of `name` directly under the chroot root.
-    #[must_use]
-    pub fn new(jail_root: &Utf8Path, name: &str) -> Self {
-        Self {
-            host: HostPath(jail_root.join(name)),
-            chroot: ChrootPath(Utf8Path::new("/").join(name)),
-        }
-    }
-
-    /// The path the runner uses.
+    /// The path the runner uses to create, read, and own the file.
     #[must_use]
     pub fn host(&self) -> &HostPath {
         &self.host
@@ -83,12 +153,25 @@ impl JailFile {
     pub fn chroot(&self) -> &ChrootPath {
         &self.chroot
     }
+
+    /// The path the runner binds or connects to.
+    #[must_use]
+    pub fn socket(&self) -> &SocketPath {
+        &self.socket
+    }
 }
 
 /// Every file the runner places in, or reaches inside, a jail chroot.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct JailPaths {
     root: Utf8PathBuf,
+    /// Held open for the life of the job.
+    ///
+    /// The socket views name this descriptor by number, so closing it would
+    /// leave them addressing whatever directory the kernel hands that number
+    /// to next. `O_PATH` because the runner never reads or writes through it:
+    /// it exists only to be named.
+    _dir: File,
     api_socket: JailFile,
     kernel: JailFile,
     rootfs: JailFile,
@@ -96,17 +179,40 @@ pub struct JailPaths {
 }
 
 impl JailPaths {
-    /// Resolve both views of every jail file for a chroot rooted at
-    /// `jail_root`.
-    #[must_use]
-    pub fn new(jail_root: &Utf8Path) -> Self {
-        Self {
+    /// Resolve every view of every jail file for a chroot that already exists.
+    pub fn new(jail_root: &Utf8Path) -> Result<Self, JailError> {
+        let dir = std::fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_PATH | libc::O_DIRECTORY)
+            .open(jail_root)
+            .map_err(|e| JailError::OpenJailRoot {
+                path: jail_root.to_owned(),
+                source: e,
+            })?;
+
+        // Naming the directory by descriptor keeps the string short however
+        // deep the operator's state directory is. The descriptor also pins the
+        // directory's identity for the whole job.
+        let dir_path = format!("/proc/self/fd/{}", dir.as_raw_fd());
+
+        let file = |name: &str, reserve: usize| -> Result<JailFile, JailError> {
+            Ok(JailFile {
+                host: HostPath(jail_root.join(name)),
+                chroot: ChrootPath(Utf8Path::new("/").join(name)),
+                socket: SocketPath::new(format!("{dir_path}/{name}"), reserve)?,
+            })
+        };
+
+        Ok(Self {
             root: jail_root.to_owned(),
-            api_socket: JailFile::new(jail_root, "api.sock"),
-            kernel: JailFile::new(jail_root, "vmlinux"),
-            rootfs: JailFile::new(jail_root, "rootfs.ext4"),
-            vsock: JailFile::new(jail_root, "v.sock"),
-        }
+            api_socket: file("api.sock", 0)?,
+            kernel: file("vmlinux", 0)?,
+            rootfs: file("rootfs.ext4", 0)?,
+            // The runner binds `{base}_{port}` for each vsock port, so the
+            // base has to leave room for the longest of those suffixes.
+            vsock: file("v.sock", VSOCK_SUFFIX_RESERVE)?,
+            _dir: dir,
+        })
     }
 
     /// The chroot root on the host, which becomes `/` inside the jail.
@@ -144,15 +250,16 @@ impl JailPaths {
 mod tests {
     use super::*;
 
-    const JAIL_ROOT: &str = "/var/lib/bencher-runner/jail/firecracker/vm-1/root";
-
-    fn paths() -> JailPaths {
-        JailPaths::new(Utf8Path::new(JAIL_ROOT))
+    fn jail_in_tmpdir() -> (tempfile::TempDir, JailPaths) {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let paths = JailPaths::new(root).unwrap();
+        (dir, paths)
     }
 
     #[test]
     fn chroot_view_is_rooted_at_the_chroot() {
-        let paths = paths();
+        let (_dir, paths) = jail_in_tmpdir();
         assert_eq!(paths.api_socket().chroot().as_str(), "/api.sock");
         assert_eq!(paths.kernel().chroot().as_str(), "/vmlinux");
         assert_eq!(paths.rootfs().chroot().as_str(), "/rootfs.ext4");
@@ -161,25 +268,17 @@ mod tests {
 
     #[test]
     fn host_view_is_under_the_jail_root() {
-        let paths = paths();
-        assert_eq!(
-            paths.api_socket().host().as_str(),
-            format!("{JAIL_ROOT}/api.sock")
-        );
-        assert_eq!(
-            paths.kernel().host().as_str(),
-            format!("{JAIL_ROOT}/vmlinux")
-        );
-        assert_eq!(
-            paths.rootfs().host().as_str(),
-            format!("{JAIL_ROOT}/rootfs.ext4")
-        );
-        assert_eq!(paths.vsock().host().as_str(), format!("{JAIL_ROOT}/v.sock"));
+        let (_dir, paths) = jail_in_tmpdir();
+        let root = paths.root().to_owned();
+        assert_eq!(paths.api_socket().host().as_path(), root.join("api.sock"));
+        assert_eq!(paths.kernel().host().as_path(), root.join("vmlinux"));
+        assert_eq!(paths.rootfs().host().as_path(), root.join("rootfs.ext4"));
+        assert_eq!(paths.vsock().host().as_path(), root.join("v.sock"));
     }
 
     #[test]
-    fn the_two_views_round_trip_through_the_jail_root() {
-        let paths = paths();
+    fn the_chroot_and_host_views_round_trip_through_the_jail_root() {
+        let (_dir, paths) = jail_in_tmpdir();
         for file in [
             paths.api_socket(),
             paths.kernel(),
@@ -198,8 +297,81 @@ mod tests {
     }
 
     #[test]
+    fn the_socket_view_resolves_to_the_same_file_as_the_host_view() {
+        // The whole point: a short string naming the same inode. If this ever
+        // stops holding, the runner and Firecracker stop meeting.
+        let (_dir, paths) = jail_in_tmpdir();
+        std::fs::write(paths.rootfs().host().as_path(), b"guest").unwrap();
+
+        let through_socket_view = std::fs::read(paths.rootfs().socket().as_str()).unwrap();
+
+        assert_eq!(through_socket_view, b"guest");
+    }
+
+    #[test]
+    fn every_socket_view_fits_the_sun_path_limit() {
+        let (_dir, paths) = jail_in_tmpdir();
+        for file in [paths.api_socket(), paths.vsock()] {
+            assert!(
+                file.socket().as_str().len() <= MAX_SOCKET_PATH,
+                "{} must fit sun_path",
+                file.socket()
+            );
+        }
+        // And the longest name the vsock base ever grows into still fits.
+        let longest = paths.vsock().socket().with_suffix("_4294967295");
+        assert!(longest.len() <= MAX_SOCKET_PATH, "{longest} must fit");
+    }
+
+    #[test]
+    fn the_socket_view_survives_a_jail_root_far_past_the_limit() {
+        // A deep state directory is exactly the case that produced a five
+        // second timeout pointing at Firecracker instead of at the path.
+        let dir = tempfile::tempdir().unwrap();
+        let mut root = Utf8Path::from_path(dir.path()).unwrap().to_owned();
+        for _ in 0..8 {
+            root = root.join("a-fairly-long-directory-name");
+        }
+        std::fs::create_dir_all(&root).unwrap();
+        assert!(
+            root.as_str().len() > MAX_SOCKET_PATH,
+            "the host path has to be over the limit for this to prove anything"
+        );
+
+        let paths = JailPaths::new(&root).unwrap();
+
+        assert!(paths.api_socket().socket().as_str().len() <= MAX_SOCKET_PATH);
+    }
+
+    #[test]
+    fn an_oversized_socket_path_names_the_limit_and_the_length() {
+        let err = SocketPath::new("/x".repeat(80), 0).unwrap_err();
+        let message = err.to_string();
+
+        assert!(message.contains("107"), "the limit is named: {message}");
+        assert!(message.contains("160"), "the length is named: {message}");
+    }
+
+    #[test]
+    fn a_reserved_suffix_counts_against_the_limit() {
+        let base = "/a".repeat(52);
+        assert_eq!(base.len(), 104);
+
+        SocketPath::new(base.clone(), 0).unwrap();
+        SocketPath::new(base, 8).unwrap_err();
+    }
+
+    #[test]
+    fn a_missing_jail_root_is_reported() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap().join("absent");
+
+        JailPaths::new(&root).unwrap_err();
+    }
+
+    #[test]
     fn chroot_paths_serialize_as_bare_strings() {
-        let paths = paths();
+        let (_dir, paths) = jail_in_tmpdir();
         assert_eq!(
             serde_json::to_string(paths.rootfs().chroot()).unwrap(),
             "\"/rootfs.ext4\""
