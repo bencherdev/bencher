@@ -66,6 +66,13 @@ pub enum FirecrackerError {
         cgroup: camino::Utf8PathBuf,
     },
 
+    /// The cgroup exists but its cpuset could not be applied.
+    ///
+    /// Boxed because [`crate::error::RunnerError`] contains this type, and it
+    /// in turn contains a `RunnerError`.
+    #[error("Failed to confine Firecracker to the benchmark cores: {0}")]
+    CpusetFailed(#[source] Box<crate::error::RunnerError>),
+
     /// A jail artifact could not be handed to the jail uid and gid.
     #[error("Jail ownership failed: {0}")]
     Chown(#[source] crate::error::JailError),
