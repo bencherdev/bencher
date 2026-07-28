@@ -73,6 +73,7 @@ struct ScenarioOutput {
 pub struct Scenarios {
     scenario: Option<String>,
     list: bool,
+    build_only: bool,
 }
 
 impl TryFrom<TaskScenarios> for Scenarios {
@@ -82,6 +83,7 @@ impl TryFrom<TaskScenarios> for Scenarios {
         Ok(Self {
             scenario: task.scenario,
             list: task.list,
+            build_only: task.build_only,
         })
     }
 }
@@ -93,7 +95,29 @@ impl Scenarios {
             return Ok(());
         }
 
-        // Check prerequisites
+        if self.build_only {
+            let runner_bin = ensure_runner_bin()?;
+            println!("Built runner: {runner_bin}");
+            println!("Run the scenarios with:");
+            println!("  sudo {RUNNER_BIN_ENV}={runner_bin} <test_runner binary> scenarios");
+            return Ok(());
+        }
+
+        // Check prerequisites.
+        //
+        // Root is one of them. The jailer creates the chroot's device nodes
+        // with mknod, chowns the tree to the jail user, pivot_roots, and joins
+        // a network namespace, none of which an unprivileged process can do.
+        // A udev rule that makes /dev/kvm world accessible is enough to *use*
+        // KVM without root but not to build the jail around it.
+        if !is_root() {
+            bail!(
+                "The scenarios must run as root: the sandbox is built by dropping privilege, not by starting without it.\n\
+                 Build unprivileged first, then run elevated:\n\
+                 \x20 cargo test-runner scenarios --build-only\n\
+                 \x20 sudo {RUNNER_BIN_ENV}=./target/debug/runner ./target/debug/test_runner scenarios"
+            );
+        }
         if !kvm_available() {
             bail!("KVM is not available (/dev/kvm not found)");
         }
@@ -2312,6 +2336,31 @@ fn kvm_available() -> bool {
     Path::new("/dev/kvm").exists()
 }
 
+/// The cargo target directory the builds above land in.
+///
+/// `CARGO_TARGET_DIR` is honored rather than assumed away: a caller that
+/// redirects it would otherwise have the binaries built in one place and
+/// looked for in another, and the harness would report a missing binary
+/// immediately after reporting a successful build.
+fn target_dir() -> Utf8PathBuf {
+    std::env::var_os("CARGO_TARGET_DIR").map_or_else(
+        || super::workspace_root().join("target"),
+        |dir| Utf8PathBuf::from(dir.to_string_lossy().into_owned()),
+    )
+}
+
+/// Whether this process is running as root.
+fn is_root() -> bool {
+    #[expect(
+        unsafe_code,
+        reason = "geteuid has no std wrapper and cannot fail or touch memory"
+    )]
+    // SAFETY: `geteuid` takes no arguments, returns a plain integer, and is
+    // always successful.
+    let euid = unsafe { libc::geteuid() };
+    euid == 0
+}
+
 /// Check if Docker is available.
 fn docker_available() -> bool {
     Command::new("docker")
@@ -2429,6 +2478,18 @@ fn run_runner_with_cancel(
 /// Build bencher-init for the musl target and the runner CLI with `BENCHER_INIT_PATH`,
 /// then return the path to the runner binary.
 fn ensure_runner_bin() -> Result<Utf8PathBuf> {
+    // The elevated run must not invoke cargo: doing so as root leaves the
+    // target directory and cargo's cache root-owned, which then breaks the
+    // unprivileged steps around it. CI builds first and points here.
+    if let Some(path) = std::env::var_os(RUNNER_BIN_ENV) {
+        let path = Utf8PathBuf::from(path.to_string_lossy().into_owned());
+        if !path.exists() {
+            bail!("{RUNNER_BIN_ENV} is set to {path}, which does not exist");
+        }
+        println!("Using pre-built runner from {RUNNER_BIN_ENV}: {path}");
+        return Ok(path);
+    }
+
     let workspace_root = super::workspace_root();
     let target_triple = super::musl_target_triple()?;
 
@@ -2443,7 +2504,7 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
         bail!("cargo build -p bencher_init --target {target_triple} failed");
     }
 
-    let init_path = workspace_root.join(format!("target/{target_triple}/debug/bencher-init"));
+    let init_path = target_dir().join(format!("{target_triple}/debug/bencher-init"));
     if !init_path.exists() {
         bail!("bencher-init binary not found at {init_path} after build");
     }
@@ -2460,7 +2521,7 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
         bail!("cargo build -p bencher_runner_cli failed");
     }
 
-    let runner_bin = workspace_root.join("target/debug/runner");
+    let runner_bin = target_dir().join("debug/runner");
     if !runner_bin.exists() {
         bail!("Runner binary not found at {runner_bin} after build");
     }
@@ -2471,6 +2532,9 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
 // ---------------------------------------------------------------------------
 // Jail confinement
 // ---------------------------------------------------------------------------
+
+/// Environment variable naming a pre-built runner binary.
+const RUNNER_BIN_ENV: &str = "BENCHER_RUNNER_BIN";
 
 /// How long to wait for the jailed VMM to appear before giving up.
 ///
