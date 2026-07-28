@@ -140,6 +140,16 @@ pub enum JailError {
 
     #[cfg(target_os = "linux")]
     #[error(
+        "The kernel narrowed the cgroup cpuset at {path}: asked for cpus {requested}, got {effective}. The benchmark would not have run on the cores it claims."
+    )]
+    CpusetNarrowed {
+        path: Utf8PathBuf,
+        requested: String,
+        effective: String,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error(
         "Failed to remove the stale cgroup {path}: {source}. It still owns the exclusive benchmark CPUs, so no run can be isolated until it is gone."
     )]
     StaleCgroup {
