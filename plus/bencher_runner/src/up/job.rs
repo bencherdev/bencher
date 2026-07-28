@@ -302,10 +302,36 @@ fn build_metric_output(
 /// authenticated image pulls.
 ///
 /// CPU layout from the up config is passed through for core isolation.
+///
+/// The up config is destructured rather than read field by field: every
+/// runner-level setting has to reach the job, and a field that is added but
+/// never passed through is silently ignored at runtime. Destructuring makes
+/// that a build error instead.
 fn build_config_from_job(
     up_config: &UpConfig,
     job: &JsonClaimedJob,
 ) -> Result<crate::Config, crate::error::ConfigError> {
+    let UpConfig {
+        // Protocol and identity settings, which do not describe a run.
+        host: _,
+        key: _,
+        runner: _,
+        poll_timeout_secs: _,
+        tuning: _,
+        no_auto_update: _,
+        update_channel: _,
+        max_download_size: _,
+        allow_no_sandbox: _,
+        // Run settings, every one of which must reach the config below.
+        cpu_layout,
+        max_output_size,
+        max_file_count,
+        max_symlinks,
+        grace_period,
+        sandbox_log_level,
+        state_dir,
+    } = up_config;
+
     let spec = &job.spec;
     let config = &job.config;
 
@@ -342,35 +368,39 @@ fn build_config_from_job(
     // Pass all file paths through for multi-file output extraction
     runner_config = runner_config.with_file_paths_opt(config.file_paths.clone());
 
+    // Pass through the runner's state directory: the jail chroot for the
+    // job is built under it.
+    runner_config = runner_config.with_state_dir(state_dir.clone());
+
     // Pass through CPU layout for core isolation
-    if let Some(cpu_layout) = &up_config.cpu_layout
+    if let Some(cpu_layout) = cpu_layout
         && cpu_layout.has_isolation()
     {
         runner_config = runner_config.with_cpu_layout(cpu_layout.clone());
     }
 
     // Pass through max output size if configured
-    if let Some(max_output_size) = up_config.max_output_size {
+    if let Some(max_output_size) = *max_output_size {
         runner_config = runner_config.with_max_output_size(max_output_size);
     }
 
     // Pass through max file count if configured
-    if let Some(max_file_count) = up_config.max_file_count {
+    if let Some(max_file_count) = *max_file_count {
         runner_config = runner_config.with_max_file_count(max_file_count);
     }
 
     // Pass through max symlinks if configured
-    if let Some(max_symlinks) = up_config.max_symlinks {
+    if let Some(max_symlinks) = *max_symlinks {
         runner_config = runner_config.with_max_symlinks(max_symlinks);
     }
 
     // Pass through grace period if configured
-    if let Some(grace_period) = up_config.grace_period {
+    if let Some(grace_period) = *grace_period {
         runner_config = runner_config.with_grace_period(grace_period);
     }
 
     // Pass through sandbox log level
-    runner_config.sandbox_log_level = up_config.sandbox_log_level;
+    runner_config.sandbox_log_level = *sandbox_log_level;
 
     // Pass through sandbox mode from the job spec
     runner_config = runner_config.with_sandbox(spec.sandbox);
@@ -782,6 +812,33 @@ mod tests {
             result.file_paths.as_deref(),
             Some([Utf8PathBuf::from("/output/bench.txt")].as_slice())
         );
+    }
+
+    #[test]
+    fn state_dir_passed_through() {
+        // The daemon prepares and sweeps the state directory it was given, so
+        // a job that builds its jail somewhere else leaks a chroot on every
+        // unclean exit and creates the real tree outside the swept location.
+        let mut up_config = test_up_config();
+        up_config.state_dir = Utf8PathBuf::from("/mnt/fast/runner-state");
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
+
+        let result = build_config_from_job(&up_config, &job).unwrap();
+
+        assert_eq!(
+            result.state_dir,
+            Utf8PathBuf::from("/mnt/fast/runner-state")
+        );
+    }
+
+    #[test]
+    fn state_dir_defaults_when_the_daemon_uses_the_default() {
+        let up_config = test_up_config();
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
+
+        let result = build_config_from_job(&up_config, &job).unwrap();
+
+        assert_eq!(result.state_dir, crate::jail::DEFAULT_STATE_DIR);
     }
 
     #[test]
