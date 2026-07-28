@@ -195,43 +195,53 @@ impl CgroupManager {
             return classify_cpuset_error(mems_path, e);
         }
 
-        self.verify_cpuset(&cpuset)
+        self.verify_cpuset(&cpuset, &mems)
     }
 
     /// Confirm the kernel actually gave the cgroup the cores that were asked
     /// for.
     ///
-    /// A successful write proves nothing here. Under cgroup v2 a `cpuset.cpus`
-    /// that overlaps a sibling's exclusive set, or reaches past the parent's
-    /// effective set, is accepted and then silently narrowed, possibly to
-    /// nothing at all, in which case the VMM simply inherits the parent's
-    /// CPUs. The whole point of separating applied from half-applied is lost
-    /// if the applied case is taken on trust, so the effective set is read
-    /// back and has to match exactly. Every other fidelity mechanism here
-    /// already reads back: the partition mode does, and so does cgroup
-    /// placement.
-    fn verify_cpuset(&self, requested: &str) -> Result<Cpuset, RunnerError> {
-        let path = self.cgroup_path.join("cpuset.cpus.effective");
-        let effective = match fs::read_to_string(&path) {
-            Ok(effective) => effective,
-            // Nothing to read back means nothing was delegated, the same
-            // conclusion the write path draws.
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                return Ok(Cpuset::Unavailable(UNDELEGATED));
-            },
-            Err(e) => return Err(JailError::ReadCgroup { path, source: e }.into()),
-        };
+    /// A successful write proves nothing here. Under cgroup v2 the effective
+    /// set is the written set intersected with the parent's effective set, so
+    /// a `cpuset.cpus` that reaches past the parent is accepted and then
+    /// silently narrowed, possibly to nothing at all, in which case the VMM
+    /// simply inherits the parent's CPUs. (An exclusive sibling narrows a set
+    /// the same way, though these cgroups never claim exclusivity.) The whole
+    /// point of separating applied from half-applied is lost if the applied
+    /// case is taken on trust, so both effective sets are read back and have
+    /// to match. Every other fidelity mechanism here already reads back: the
+    /// partition mode does, and so does cgroup placement.
+    fn verify_cpuset(&self, cpus: &str, mems: &str) -> Result<Cpuset, RunnerError> {
+        // Memory nodes as well as cpus. The mems value is derived from the
+        // parent's effective set, so narrowing is unlikely, but it is written
+        // exactly the same way and would otherwise be the last write on this
+        // path still taken on trust.
+        for (file, requested) in [
+            ("cpuset.cpus.effective", cpus),
+            ("cpuset.mems.effective", mems),
+        ] {
+            let path = self.cgroup_path.join(file);
+            let effective = match fs::read_to_string(&path) {
+                Ok(effective) => effective,
+                // Nothing to read back means nothing was delegated, the same
+                // conclusion the write path draws.
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    return Ok(Cpuset::Unavailable(UNDELEGATED));
+                },
+                Err(e) => return Err(JailError::ReadCgroup { path, source: e }.into()),
+            };
 
-        if parse_cpuset(&effective) == parse_cpuset(requested) {
-            Ok(Cpuset::Applied)
-        } else {
-            Err(JailError::CpusetNarrowed {
-                path,
-                requested: requested.to_owned(),
-                effective: effective.trim().to_owned(),
+            if parse_cpuset(&effective) != parse_cpuset(requested) {
+                return Err(JailError::CpusetNarrowed {
+                    path,
+                    requested: requested.to_owned(),
+                    effective: effective.trim().to_owned(),
+                }
+                .into());
             }
-            .into())
         }
+
+        Ok(Cpuset::Applied)
     }
 
     /// Apply I/O bandwidth limits.
@@ -470,8 +480,9 @@ const REMOVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50
 ///
 /// Must run after the VMM in it has been reaped: `rmdir` on a cgroup that
 /// still holds a process fails, which is what forces that ordering. A cgroup
-/// that survives is worth shouting about, because it holds the exclusive
-/// benchmark CPUs and the next job's cpuset will be rejected because of it.
+/// that survives is worth reporting, not because it claims anything (these
+/// cgroups set no exclusive cpuset, so a leftover blocks nothing) but because
+/// the usual reason `rmdir` fails is that something is still running in it.
 pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
     let path = Utf8PathBuf::from(CGROUP_ROOT)
         .join(BENCHER_CGROUP_BASE)
@@ -490,10 +501,9 @@ pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
             // Someone else got there first, which is the outcome either way.
             Err(_) if !path.exists() => return Ok(()),
             Err(e) if std::time::Instant::now() >= deadline => {
-                // Reported rather than warned. The leftover still owns the
-                // exclusive benchmark CPUs, so every later job's cpuset would
-                // be rejected; failing here means the next job sweeps again
-                // instead of inheriting a host that can never isolate.
+                // Reported rather than warned, because failing here means the
+                // next job sweeps again rather than inheriting a host nobody
+                // is looking at.
                 return Err(JailError::StaleCgroup { path, source: e });
             },
             Err(_) => std::thread::sleep(REMOVE_INTERVAL),
@@ -556,11 +566,22 @@ mod tests {
     /// `effective` is what the kernel would report back after the write, which
     /// is the whole point: a real kernel may narrow it silently.
     fn cpuset_tree(effective: &str) -> (tempfile::TempDir, CgroupManager) {
+        // The mems written here derive from a parent with no
+        // `cpuset.mems.effective`, which falls back to node 0.
+        cpuset_tree_with_mems(effective, "0")
+    }
+
+    /// A stand-in tree where the effective memory nodes can also be chosen.
+    fn cpuset_tree_with_mems(
+        effective_cpus: &str,
+        effective_mems: &str,
+    ) -> (tempfile::TempDir, CgroupManager) {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         fs::write(root.join("cpuset.cpus"), "").unwrap();
         fs::write(root.join("cpuset.mems"), "").unwrap();
-        fs::write(root.join("cpuset.cpus.effective"), effective).unwrap();
+        fs::write(root.join("cpuset.cpus.effective"), effective_cpus).unwrap();
+        fs::write(root.join("cpuset.mems.effective"), effective_mems).unwrap();
         (dir, CgroupManager::detached(root))
     }
 
@@ -587,6 +608,31 @@ mod tests {
     }
 
     #[test]
+    fn a_narrowed_memory_node_set_is_an_error() {
+        // The last write on this path that used to be taken on trust.
+        let (_dir, manager) = cpuset_tree_with_mems("2-7\n", "\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        manager.apply_cpuset(&layout).unwrap_err();
+    }
+
+    #[test]
+    fn an_undelegated_memory_node_set_degrades() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        fs::write(root.join("cpuset.cpus"), "").unwrap();
+        fs::write(root.join("cpuset.mems"), "").unwrap();
+        fs::write(root.join("cpuset.cpus.effective"), "2-7\n").unwrap();
+        let manager = CgroupManager::detached(root);
+        let layout = CpuLayout::with_core_count(8);
+
+        assert_eq!(
+            manager.apply_cpuset(&layout).unwrap(),
+            Cpuset::Unavailable(UNDELEGATED)
+        );
+    }
+
+    #[test]
     fn an_undelegated_cpuset_controller_degrades() {
         // A host that does not delegate cpuset creates its cgroup fine and
         // then has no cpuset.cpus to write. That is a declared absence of
@@ -604,8 +650,8 @@ mod tests {
 
     #[test]
     fn a_silently_narrowed_cpuset_is_an_error() {
-        // The kernel accepts a cpuset that overlaps a sibling's exclusive set
-        // and then narrows it. A successful write proves nothing.
+        // The kernel intersects the written set with the parent's effective
+        // set and reports the result. A successful write proves nothing.
         let (_dir, manager) = cpuset_tree("2-3\n");
         let layout = CpuLayout::with_core_count(8);
 
