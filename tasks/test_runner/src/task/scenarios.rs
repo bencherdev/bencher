@@ -58,6 +58,12 @@ struct Scenario {
     sandboxed: bool,
     /// If set, a host-side check run while the runner is executing.
     probe: Option<Probe>,
+    /// Kill the runner once its VMM is up so nothing unwinds, then run the
+    /// image again and report the second run.
+    ///
+    /// SIGKILL is the point: it is the exit that never unwinds, so `Drop`
+    /// cannot reclaim the chroot and only the sweep can.
+    orphan_then_rerun: bool,
     validate: fn(&ScenarioOutput) -> Result<()>,
 }
 
@@ -222,7 +228,12 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     drop(fs::remove_dir_all(&state_dir));
 
     // Prepend --sandbox firecracker for sandboxed scenarios
-    let mut args: Vec<&str> = vec!["--state-dir", state_dir.as_str()];
+    // --no-tuning matters now that the scenarios run as root. Unprivileged,
+    // every tuning knob failed with EPERM and warned; elevated they actually
+    // apply, and offlining SMT siblings on a two-vCPU hosted runner would
+    // change the core count mid-suite. The scenarios exercise job execution,
+    // not tuning, so this costs no coverage.
+    let mut args: Vec<&str> = vec!["--state-dir", state_dir.as_str(), "--no-tuning"];
     if scenario.sandboxed {
         args.extend(["--sandbox", "firecracker"]);
     }
@@ -231,6 +242,8 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     // Run the runner (with optional cancellation or host-side probe)
     let output = if let Some(secs) = scenario.cancel_after_secs {
         run_runner_with_cancel(&image_path, &args, Duration::from_secs(secs), runner_bin)
+    } else if scenario.orphan_then_rerun {
+        run_runner_after_orphan(&image_path, &args, &state_dir, runner_bin)
     } else if let Some(probe) = scenario.probe {
         run_runner_with_probe(&image_path, &args, probe, &state_dir, runner_bin)
     } else {
@@ -264,6 +277,7 @@ fn all_scenarios() -> Vec<Scenario> {
 CMD ["echo", "hello from vm"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -282,6 +296,7 @@ ENV MY_VAR=test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -305,6 +320,7 @@ WORKDIR /myapp
 CMD ["pwd"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -322,6 +338,7 @@ CMD ["pwd"]"#,
 CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.json"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
             validate: |output| {
@@ -339,6 +356,7 @@ CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.
 CMD ["sh", "-c", "exit 42"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -357,6 +375,7 @@ CMD ["sh", "-c", "exit 42"]"#,
 CMD ["sleep", "3600"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
@@ -375,6 +394,7 @@ CMD ["sleep", "3600"]"#,
 CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -395,6 +415,7 @@ CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
 CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -413,6 +434,7 @@ CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
 CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "10", "--vcpus", "4"],
             validate: |output| {
@@ -441,6 +463,7 @@ ENTRYPOINT ["echo"]
 CMD ["hello", "world"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -458,6 +481,7 @@ CMD ["hello", "world"]"#,
 CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -483,6 +507,7 @@ CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
 CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && echo DONE"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "120", "--max-output-size", "10485760"],
             validate: |output| {
@@ -506,6 +531,7 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && e
 CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
@@ -538,6 +564,7 @@ CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]
 CMD ["id"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -565,6 +592,7 @@ CMD ["id"]"#,
 CMD ["echo", "kvm_test_ok"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -588,6 +616,7 @@ CMD ["echo", "kvm_test_ok"]"#,
 CMD ["cat", "/proc/version"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -613,6 +642,7 @@ CMD ["cat", "/proc/version"]"#,
 CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -639,6 +669,7 @@ CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
 CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "10"],
             validate: |output| {
@@ -666,6 +697,7 @@ CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
 CMD ["sleep", "3600"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
@@ -700,6 +732,7 @@ COPY --from=build /test_iopl /test_iopl
 CMD ["/test_iopl"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -730,6 +763,7 @@ CMD ["/test_iopl"]"#,
 CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -759,6 +793,7 @@ CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
 CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -792,6 +827,7 @@ CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
 CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0' ' ')"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -820,6 +856,7 @@ CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0
 CMD ["echo", "metrics_test"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -843,6 +880,7 @@ CMD ["echo", "metrics_test"]"#,
 CMD ["echo", "fast_benchmark"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -881,6 +919,7 @@ CMD ["echo", "fast_benchmark"]"#,
 CMD ["sleep", "3600"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
@@ -920,6 +959,7 @@ CMD ["sleep", "3600"]"#,
 CMD ["echo", "hmac_test_output"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -953,6 +993,7 @@ CMD ["echo", "hmac_test_output"]"#,
 CMD ["echo", "transport_test"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -988,6 +1029,7 @@ CMD ["echo", "transport_test"]"#,
 CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             cancel_after_secs: Some(5),
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
@@ -1015,6 +1057,7 @@ CMD ["sh", "-c", "echo started && sleep 3600"]"#,
 CMD ["sh", "-c", "echo error_output >&2"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1036,6 +1079,7 @@ CMD ["sh", "-c", "echo error_output >&2"]"#,
 CMD ["true"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1059,6 +1103,7 @@ CMD ["true"]"#,
 CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1094,6 +1139,7 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
             dockerfile: "FROM busybox\nCMD echo shell_form_works",
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1118,6 +1164,7 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
 ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1141,6 +1188,7 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
             dockerfile: "FROM busybox\nENTRYPOINT echo shell_entrypoint_works",
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1171,6 +1219,7 @@ ENTRYPOINT echo ep_marker
 CMD ["cmd_arg"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1201,6 +1250,7 @@ CMD ["cmd_arg"]"#,
 RUN echo "no command set""#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "30"],
             validate: |output| {
@@ -1229,6 +1279,7 @@ RUN echo "no command set""#,
 CMD ["mock"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
@@ -1273,6 +1324,7 @@ COPY --from=builder /tmp/hello /usr/bin/hello
 CMD ["/usr/bin/hello"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
@@ -1312,6 +1364,7 @@ CMD ["/usr/bin/hello"]"#,
 CMD ["echo", "rapid_exit_marker"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1346,6 +1399,7 @@ CMD ["echo", "rapid_exit_marker"]"#,
 CMD ["sh", "-c", "exit 137"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1379,6 +1433,7 @@ ENV LARGE_VALUE=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1412,6 +1467,7 @@ CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
 CMD ["echo", "no file written"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/nonexistent/path.json"],
             validate: |output| {
@@ -1431,6 +1487,7 @@ CMD ["echo", "no file written"]"#,
 CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /tmp/output.json && echo done"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
             validate: |output| {
@@ -1448,6 +1505,7 @@ CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /
 CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\":true}' > /tmp/out.json"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/out.json"],
             validate: |output| {
@@ -1471,6 +1529,7 @@ CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\
 CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}' > /tmp/b.json && echo done"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &[
                 "--timeout",
@@ -1501,6 +1560,7 @@ RUN echo "c" > /var/file_c.txt
 CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1526,6 +1586,7 @@ RUN echo "target" > /tmp/target.txt && ln -s /tmp/target.txt /tmp/link.txt
 CMD ["cat", "/tmp/link.txt"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1553,6 +1614,7 @@ CMD ["cat", "/tmp/link.txt"]"#,
 CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1573,6 +1635,7 @@ CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
 CMD ["sleep", "3600"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "1"],
             validate: |output| {
@@ -1590,6 +1653,7 @@ CMD ["sleep", "3600"]"#,
 CMD ["sh", "-c", "dd if=/dev/zero bs=1024 count=50 2>/dev/null | tr '\\0' 'X'"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--max-output-size", "1024"],
             validate: |output| {
@@ -1614,6 +1678,7 @@ ENV SAFE_VAR=safe_value
 CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH SAFE=$SAFE_VAR"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1654,6 +1719,7 @@ CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH S
 CMD ["free", "-m"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--memory", "64", "--timeout", "60"],
             validate: |output| {
@@ -1682,6 +1748,7 @@ CMD ["free", "-m"]"#,
 CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--disk", "64", "--timeout", "60"],
             validate: |output| {
@@ -1710,6 +1777,7 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
 CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--disk", "64", "--timeout", "60"],
             validate: |output| {
@@ -1743,6 +1811,7 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
 CMD ["nproc"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1769,6 +1838,7 @@ CMD ["nproc"]"#,
 CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.txt && echo net_ok || echo net_fail"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "30", "--network"],
             validate: |output| {
@@ -1800,6 +1870,7 @@ RUN mkdir -p /data && echo "content_ok" > /data/file.txt
 CMD ["cat", "/data/file.txt"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1824,6 +1895,7 @@ RUN mkdir -p /data && printf '#!/bin/sh\necho hello' > /data/test.sh && chmod +x
 CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1851,6 +1923,7 @@ RUN mkdir -p /data/restricted && chmod 750 /data/restricted
 CMD ["stat", "-c", "%a", "/data/restricted"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1878,6 +1951,7 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
             dockerfile: "FROM busybox\nENV SPACED=\"hello world\" WITH_EQ=\"key=value\"\nCMD [\"sh\", \"-c\", \"echo SPACED=$SPACED EQ=$WITH_EQ\"]",
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -1908,6 +1982,7 @@ ENTRYPOINT ["echo", "image_ep"]
 CMD ["image_cmd"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--entrypoint", "echo", "cli_ep"],
             validate: |output| {
@@ -1946,6 +2021,7 @@ ENTRYPOINT ["echo"]
 CMD ["image_cmd"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--cmd", "cli_cmd"],
             validate: |output| {
@@ -1977,6 +2053,7 @@ ENTRYPOINT ["echo", "image_ep"]
 CMD ["image_cmd"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &[
                 "--timeout",
@@ -2015,6 +2092,7 @@ ENV MY_VAR=image_value
 CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "MY_VAR=cli_value"],
             validate: |output| {
@@ -2041,6 +2119,7 @@ ENV EXISTING=from_image
 CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "NEW_VAR=from_cli"],
             validate: |output| {
@@ -2070,6 +2149,7 @@ CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
 CMD ["sh", "-c", "echo A=$A B=$B"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "A=one", "--env", "B=two"],
             validate: |output| {
@@ -2093,6 +2173,7 @@ CMD ["sh", "-c", "echo A=$A B=$B"]"#,
 CMD ["hello", "world"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--entrypoint", "echo"],
             validate: |output| {
@@ -2119,6 +2200,7 @@ CMD ["hello", "world"]"#,
 CMD ["echo", "iter_output"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3"],
             validate: |output| {
@@ -2140,6 +2222,7 @@ CMD ["echo", "iter_output"]"#,
 CMD ["echo", "should_not_appear"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "0"],
             validate: |output| {
@@ -2159,6 +2242,7 @@ CMD ["echo", "should_not_appear"]"#,
 CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3"],
             validate: |output| {
@@ -2186,6 +2270,7 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
 CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3", "--allow-failure"],
             validate: |output| {
@@ -2213,6 +2298,10 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
 ///
 /// These test the `local_execute` code path (no Firecracker VM).
 /// The OCI image is unpacked and the command runs directly on the host.
+#[expect(
+    clippy::too_many_lines,
+    reason = "Each scenario needs its configuration"
+)]
 fn nosandbox_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
@@ -2222,6 +2311,7 @@ fn nosandbox_scenarios() -> Vec<Scenario> {
 CMD ["echo", "hello from host"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2244,6 +2334,7 @@ ENV MY_VAR=host_test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2267,6 +2358,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
 CMD ["echo", "local_metrics_test"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2300,6 +2392,7 @@ CMD ["echo", "local_metrics_test"]"#,
 CMD ["sh", "-c", "exit 42"]"#,
             cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: false,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2560,32 +2653,67 @@ fn jail_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
             name: "jail_confinement",
-            description: "VMM runs unprivileged in its cgroup, and its chroot is reclaimed",
+            description: "A jailed job succeeds with the VMM unprivileged and in its cgroup",
+            // The guest sleeps so the VMM is alive long enough to be observed
+            // by a probe that polls every 100ms.
             dockerfile: r#"FROM busybox
-CMD ["echo", "jailed"]"#,
+CMD ["sh", "-c", "echo jailed && sleep 5"]"#,
             cancel_after_secs: None,
             probe: Some(probe_confinement),
+            orphan_then_rerun: false,
             sandboxed: true,
-            extra_args: &["--timeout", "60"],
+            extra_args: &["--timeout", "120"],
             validate: |output| {
-                if !output.stdout.contains("jailed") {
-                    bail!("Expected 'jailed' in output, got: {}", output.stdout);
-                }
+                // The job has to have actually run before anything the probe
+                // saw means anything. Every confinement property the probe
+                // checks is equally true of a VMM that started and then never
+                // booted a guest, so without this the scenario stays green
+                // while the product is broken.
+                assert_job_succeeded(output, "jailed")?;
                 assert_no_chroot_remains(&scenario_state_dir())
             },
         },
         Scenario {
-            name: "jail_teardown_on_cancel",
-            description: "A cancelled job leaves no chroot behind",
+            name: "jail_sweep_reclaims_orphan",
+            description: "A chroot orphaned by a runner that never unwound is swept by the next job",
             dockerfile: r#"FROM busybox
-CMD ["sleep", "300"]"#,
-            cancel_after_secs: Some(20),
+CMD ["sh", "-c", "echo swept && sleep 10"]"#,
+            cancel_after_secs: None,
             probe: None,
+            orphan_then_rerun: true,
             sandboxed: true,
-            extra_args: &["--timeout", "300"],
-            validate: |_output| assert_no_chroot_remains(&scenario_state_dir()),
+            extra_args: &["--timeout", "120"],
+            validate: |output| {
+                assert_job_succeeded(output, "swept")?;
+                assert_no_chroot_remains(&scenario_state_dir())
+            },
         },
     ]
+}
+
+/// Assert the runner actually completed the job.
+///
+/// A confinement scenario that asserts only confinement passes vacuously when
+/// the VM never boots: the VMM process exists, is unprivileged, and is in its
+/// cgroup either way. Success of the job itself is the precondition for any of
+/// that meaning anything.
+fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
+    if output.exit_code != 0 {
+        bail!(
+            "Expected the job to succeed, got exit code {}.\nstdout: {}\nstderr: {}",
+            output.exit_code,
+            output.stdout,
+            output.stderr
+        );
+    }
+    if !output.stdout.contains(marker) {
+        bail!(
+            "Expected '{marker}' in the guest output, so the VM booted and ran.\nstdout: {}\nstderr: {}",
+            output.stdout,
+            output.stderr
+        );
+    }
+    Ok(())
 }
 
 /// Assert every chroot has been reclaimed.
@@ -2624,7 +2752,12 @@ fn probe_confinement(state_dir: &Utf8Path) -> Result<bool> {
         return Ok(false);
     };
 
-    check_unprivileged(pid, &jail_root)?;
+    if !check_unprivileged(pid, &jail_root)? {
+        return Ok(false);
+    }
+    // Placement happens in `pre_exec`, before the jailer itself starts, so
+    // membership already holds the first time the process is observable.
+    // There is no not-ready-yet window for it.
     check_cgroup_membership(&vm_id, pid)?;
 
     Ok(true)
@@ -2674,7 +2807,14 @@ fn find_jailed_vmm(jail_root: &Utf8Path) -> Option<u32> {
 }
 
 /// Check the VMM dropped root and runs as the user the jail was handed to.
-fn check_unprivileged(pid: u32, jail_root: &Utf8Path) -> Result<()> {
+///
+/// Returns `Ok(false)` while the observation is premature rather than wrong.
+/// The jailer `pivot_root`s before it drops privilege, so there is a window in
+/// which the process root already matches the jail while the process is still
+/// root and the jail root is still root-owned. Treating that as a violation
+/// would fail the run for catching the jailer mid-flight; the probe's timeout
+/// is what catches a VMM that genuinely never drops.
+fn check_unprivileged(pid: u32, jail_root: &Utf8Path) -> Result<bool> {
     let status = fs::read_to_string(format!("/proc/{pid}/status"))
         .with_context(|| format!("Failed to read the status of the VMM (pid {pid})"))?;
     let uid_line = status
@@ -2689,31 +2829,31 @@ fn check_unprivileged(pid: u32, jail_root: &Utf8Path) -> Result<()> {
         .context("Unparsable uid in the VMM's /proc status")?;
 
     if vmm_uid == 0 {
-        bail!("The VMM (pid {pid}) is running as root; the jailer did not drop privilege");
+        return Ok(false);
     }
 
     // The jailer chowns the chroot root to the jail uid, so the two must
     // agree: a VMM running as some other unprivileged user would not be
     // confined to the jail it was given.
-    let jail_uid = jail_root_uid(jail_root)?;
+    let Some(jail_uid) = jail_root_uid(jail_root) else {
+        return Ok(false);
+    };
     if vmm_uid != jail_uid {
         bail!("The VMM (pid {pid}) runs as uid {vmm_uid} but its jail is owned by uid {jail_uid}");
     }
 
-    Ok(())
+    Ok(true)
 }
 
-/// The uid the jailer handed the chroot root to.
-fn jail_root_uid(jail_root: &Utf8Path) -> Result<u32> {
+/// The uid the jailer handed the chroot root to, once it has handed it over.
+///
+/// `None` while the root is still owned by root, which is the same
+/// not-ready-yet window `check_unprivileged` documents.
+fn jail_root_uid(jail_root: &Utf8Path) -> Option<u32> {
     use std::os::unix::fs::MetadataExt as _;
 
-    let uid = fs::metadata(jail_root)
-        .with_context(|| format!("Failed to stat the jail root {jail_root}"))?
-        .uid();
-    if uid == 0 {
-        bail!("The jail root {jail_root} is still owned by root");
-    }
-    Ok(uid)
+    let uid = fs::metadata(jail_root).ok()?.uid();
+    (uid != 0).then_some(uid)
 }
 
 /// Check the VMM is in its cgroup.
@@ -2723,14 +2863,107 @@ fn jail_root_uid(jail_root: &Utf8Path) -> Result<u32> {
 fn check_cgroup_membership(vm_id: &str, pid: u32) -> Result<()> {
     let procs_path = format!("/sys/fs/cgroup/bencher/{vm_id}/cgroup.procs");
     // No cgroup means no isolation was possible on this host, which is a
-    // declared limitation rather than a confinement failure.
+    // declared limitation rather than a confinement failure. Say so out loud:
+    // a confinement check that quietly asserts nothing is exactly the kind of
+    // green that must never be invisible.
     let Ok(procs) = fs::read_to_string(&procs_path) else {
+        println!(
+            "  NOTE: {procs_path} is unreadable, so cgroup placement was NOT verified for this run"
+        );
         return Ok(());
     };
     if procs.lines().any(|line| line.trim() == pid.to_string()) {
         Ok(())
     } else {
         bail!("The VMM (pid {pid}) is not in {procs_path}, which holds: {procs:?}")
+    }
+}
+
+/// Orphan a jail by killing the runner, then prove the next job sweeps it.
+///
+/// SIGKILL rather than SIGTERM, because SIGTERM on the one-shot path takes the
+/// default disposition too (signal handlers are installed only by the daemon),
+/// and either way nothing unwinds. That is the point: `Drop` cannot reclaim
+/// the chroot, so if the next job finds a clean tree it can only be because
+/// the sweep reclaimed it.
+fn run_runner_after_orphan(
+    image_path: &Utf8Path,
+    args: &[&str],
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let parent = jail_parent(state_dir);
+
+    let mut child = Command::new(runner_bin.as_str())
+        .arg("run")
+        .arg("--image")
+        .arg(image_path.as_str())
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+
+    // Wait for a real orphan: a chroot with a VMM running in it, not just an
+    // empty directory created microseconds before the kill.
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let orphan = loop {
+        if let Some((vm_id, jail_root)) = find_jail(&parent)
+            && let Some(pid) = find_jailed_vmm(&jail_root)
+        {
+            break Some((vm_id, jail_root, pid));
+        }
+        if child.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
+            break None;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    };
+
+    let Some((vm_id, jail_root, vmm_pid)) = orphan else {
+        let output = child.wait_with_output()?;
+        bail!(
+            "No jailed VMM appeared within {PROBE_TIMEOUT:?}, so nothing was orphaned and the sweep is untested.\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+    };
+
+    kill_pid(child.id(), libc::SIGKILL);
+    drop(child.wait());
+
+    if !jail_root.exists() {
+        bail!(
+            "The chroot {jail_root} was reclaimed despite the runner being killed without unwinding, so the sweep is untested"
+        );
+    }
+
+    // Reap the VMM the killed runner left behind. The sweep reclaims the
+    // chroot but nothing reaps an orphaned VMM or its cgroup, so without this
+    // a stray Firecracker would burn benchmark cores for the rest of the
+    // suite. Compensating for a known gap, not hiding one.
+    kill_pid(vmm_pid, libc::SIGKILL);
+
+    println!("  orphaned jail {vm_id} (VMM pid {vmm_pid}), running a second job...");
+
+    let output = run_runner(image_path, args, runner_bin)?;
+
+    if jail_root.exists() {
+        bail!("The orphaned chroot {jail_root} survived the next job, so it was never swept");
+    }
+
+    Ok(output)
+}
+
+/// Send a signal to a process, ignoring the result.
+fn kill_pid(pid: u32, signal: libc::c_int) {
+    #[expect(
+        unsafe_code,
+        clippy::cast_possible_wrap,
+        reason = "libc::kill requires unsafe; PID fits in i32"
+    )]
+    // SAFETY: `kill` takes plain integers and touches no memory. A signal to a
+    // pid that has already exited fails harmlessly with ESRCH.
+    unsafe {
+        libc::kill(pid as i32, signal);
     }
 }
 
