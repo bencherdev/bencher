@@ -43,6 +43,20 @@ et les prisons laissées par un arrêt brutal en sont supprimées avant l'exécu
 Par défaut, `/var/lib/bencher-runner` est utilisé.
 Peut également être défini avec la variable d'environnement `BENCHER_STATE_DIR`.
 
+### `--jail-uid <JAIL_UID>`
+
+L'identifiant d'utilisateur non privilégié que le processus du bac à sable adopte.
+Par défaut, `61016` est utilisé.
+Un processus de l'hôte possédant cet identifiant peut envoyer des signaux au bac à sable,
+choisissez donc un identifiant que l'hôte n'attribue à rien d'autre.
+Peut également être défini avec la variable d'environnement `BENCHER_JAIL_UID`.
+
+### `--jail-gid <JAIL_GID>`
+
+L'identifiant de groupe non privilégié que le processus du bac à sable adopte.
+Par défaut, `61016` est utilisé.
+Peut également être défini avec la variable d'environnement `BENCHER_JAIL_GID`.
+
 ### `--danger-allow-no-sandbox`
 
 Autorise l'exécution de Jobs sans [Sandbox][sandbox].

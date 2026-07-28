@@ -73,6 +73,8 @@ pub struct RunArgs {
     pub sandbox: Option<bencher_json::Sandbox>,
     /// The runner's persistent state directory.
     pub state_dir: Utf8PathBuf,
+    /// The unprivileged uid and gid the jailed VMM drops to.
+    pub jail_user: crate::jail::JailUser,
 }
 
 /// Build a `Config` from CLI `RunArgs`.
@@ -124,6 +126,7 @@ fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::er
     config.sandbox_log_level = args.sandbox_log_level;
     config = config.with_sandbox(args.sandbox);
     config = config.with_state_dir(args.state_dir.clone());
+    config = config.with_jail_user(args.jail_user);
     Ok(config)
 }
 
@@ -157,7 +160,7 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     // execute on the host without a jail, and that path has no business
     // requiring the runner's state directory.
     if config.sandbox.is_some() {
-        crate::jail::prepare_host(&config.state_dir)?;
+        crate::jail::prepare_host(&config.state_dir, config.jail_user)?;
     }
 
     // Detect the CPU layout after tuning (disabling SMT changes the core

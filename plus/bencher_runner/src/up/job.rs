@@ -330,6 +330,7 @@ fn build_config_from_job(
         grace_period,
         sandbox_log_level,
         state_dir,
+        jail_user,
     } = up_config;
 
     let spec = &job.spec;
@@ -371,6 +372,7 @@ fn build_config_from_job(
     // Pass through the runner's state directory: the jail chroot for the
     // job is built under it.
     runner_config = runner_config.with_state_dir(state_dir.clone());
+    runner_config = runner_config.with_jail_user(*jail_user);
 
     // Pass through CPU layout for core isolation
     if let Some(cpu_layout) = cpu_layout
@@ -574,6 +576,7 @@ mod tests {
             update_channel: bencher_valid::UpdateChannel::default(),
             max_download_size: None,
             state_dir: Utf8PathBuf::from(crate::jail::DEFAULT_STATE_DIR),
+            jail_user: crate::jail::JailUser::default(),
         }
     }
 
@@ -839,6 +842,24 @@ mod tests {
         let result = build_config_from_job(&up_config, &job).unwrap();
 
         assert_eq!(result.state_dir, crate::jail::DEFAULT_STATE_DIR);
+    }
+
+    #[test]
+    fn jail_user_passed_through() {
+        // A host that allocates ids in the default range needs the override to
+        // reach the job, or the VMM shares a uid with a local account that can
+        // signal it.
+        let mut up_config = test_up_config();
+        up_config.jail_user = crate::jail::JailUser {
+            uid: 4242,
+            gid: 4243,
+        };
+        let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
+
+        let result = build_config_from_job(&up_config, &job).unwrap();
+
+        assert_eq!(result.jail_user.uid, 4242);
+        assert_eq!(result.jail_user.gid, 4243);
     }
 
     #[test]

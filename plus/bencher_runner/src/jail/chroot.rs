@@ -14,7 +14,7 @@ use std::os::unix::fs::{PermissionsExt as _, chown};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::JailError;
-use crate::jail::{JAIL_GID, JAIL_UID, StateDir};
+use crate::jail::{JailUser, StateDir};
 
 /// A job's chroot tree, removed when this value is dropped.
 ///
@@ -76,8 +76,9 @@ impl Drop for JailDir {
 /// they were created with, which is root. Every artifact Firecracker touches
 /// has to be handed over explicitly, and getting it wrong produces an opaque
 /// boot failure, so each one is checked.
-pub fn chown_to_jail(path: &Utf8Path) -> Result<(), JailError> {
-    chown(path, Some(JAIL_UID), Some(JAIL_GID)).map_err(|e| JailError::ChownJail {
+pub fn chown_to_jail(path: &Utf8Path, jail_user: JailUser) -> Result<(), JailError> {
+    let JailUser { uid, gid } = jail_user;
+    chown(path, Some(uid), Some(gid)).map_err(|e| JailError::ChownJail {
         path: path.to_owned(),
         source: e,
     })

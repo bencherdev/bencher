@@ -37,21 +37,51 @@ use serde::{Deserialize, Serialize};
 /// Default location of the runner's persistent state directory.
 pub const DEFAULT_STATE_DIR: &str = "/var/lib/bencher-runner";
 
-/// The unprivileged uid the jailed Firecracker VMM runs as.
+/// Default unprivileged uid the jailed Firecracker VMM runs as.
 ///
 /// One dedicated id, not one per job: jobs run serially and each gets a fresh
 /// chroot that is swept, so a per-job allocator adds a scheme without closing
-/// a live vector. The value sits in the gap between the ids `systemd-homed`
-/// claims and the `DynamicUser` range (61184-65519), and well clear of both
-/// the regular user range and `nobody` (65534), so it is unlikely to collide
-/// with an account that owns anything on the host. No passwd entry is needed:
-/// the jailer sets the numeric id directly.
-pub const JAIL_UID: u32 = 60613;
-
-/// The unprivileged gid the jailed Firecracker VMM runs as.
+/// a live vector.
 ///
-/// See [`JAIL_UID`].
-pub const JAIL_GID: u32 = 60613;
+/// The number is Bencher's historic default self-hosted API server port,
+/// retired in favor of the IANA-registered 6610, so it reads as a project
+/// convention rather than an arbitrary pick. It also lands in the unallocated
+/// gap between the ids `systemd-homed` claims (60001-60513) and the
+/// `DynamicUser` range (61184-65519), clear of both the regular user range and
+/// `nobody` (65534). No passwd entry is needed: the jailer sets the numeric id
+/// directly.
+///
+/// This is a default rather than a fixed constant because self-hosted runners
+/// land on hardware whose id allocation Bencher does not control. See
+/// `--jail-uid`.
+pub const DEFAULT_JAIL_UID: u32 = 61016;
+
+/// Default unprivileged gid the jailed Firecracker VMM runs as.
+///
+/// See [`DEFAULT_JAIL_UID`].
+pub const DEFAULT_JAIL_GID: u32 = 61016;
+
+/// The uid and gid the jailed Firecracker VMM drops to.
+///
+/// A host process owning this uid can signal the VMM and, depending on the
+/// `ptrace` scope, trace it, so it must not be an id the host allocates to
+/// anything else.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct JailUser {
+    /// The uid the VMM drops to.
+    pub uid: u32,
+    /// The gid the VMM drops to.
+    pub gid: u32,
+}
+
+impl Default for JailUser {
+    fn default() -> Self {
+        Self {
+            uid: DEFAULT_JAIL_UID,
+            gid: DEFAULT_JAIL_GID,
+        }
+    }
+}
 
 /// Prepare the host for jailed execution.
 ///
@@ -69,9 +99,14 @@ pub const JAIL_GID: u32 = 60613;
 /// it. Holding the lock makes serialization a constraint rather than an
 /// assumption.
 #[cfg(target_os = "linux")]
-pub fn prepare_host(state_dir: &camino::Utf8Path) -> Result<(), crate::error::JailError> {
+pub fn prepare_host(
+    state_dir: &camino::Utf8Path,
+    jail_user: JailUser,
+) -> Result<(), crate::error::JailError> {
     let state = StateDir::new(state_dir.to_owned());
     state.create()?;
+
+    warn_on_named_account(jail_user);
 
     let _lock = JailLock::acquire(state.path())?;
     state::sweep_jails(&state.jail_parent());
@@ -79,11 +114,74 @@ pub fn prepare_host(state_dir: &camino::Utf8Path) -> Result<(), crate::error::Ja
     Ok(())
 }
 
+/// Warn when the jail uid or gid belongs to a named account.
+///
+/// The jailer needs no passwd entry, so a name resolving here is the cheap
+/// signal that the host allocates ids in this range: whatever owns that
+/// account can signal the VMM and may be able to trace it. A warning rather
+/// than a refusal, because an operator who deliberately created the account is
+/// a legitimate setup and only they can tell the two apart.
+#[cfg(target_os = "linux")]
+#[expect(clippy::print_stderr, reason = "host preparation prints diagnostics")]
+fn warn_on_named_account(jail_user: JailUser) {
+    let JailUser { uid, gid } = jail_user;
+    if let Some(name) = passwd_name(uid) {
+        eprintln!(
+            "Warning: jail uid {uid} belongs to the existing account '{name}'. That account can signal the jailed VMM; pass --jail-uid to pick an unallocated id."
+        );
+    }
+    if let Some(name) = group_name(gid) {
+        eprintln!(
+            "Warning: jail gid {gid} belongs to the existing group '{name}'. Pass --jail-gid to pick an unallocated id."
+        );
+    }
+}
+
+/// The account name for a uid, read from `/etc/passwd`.
+///
+/// Deliberately not a `getpwuid` call: the runner ships as a self-contained
+/// binary and pulling in NSS would make it depend on the host's resolver
+/// configuration. A local account is what matters here, and that is the file.
+#[cfg(target_os = "linux")]
+fn passwd_name(uid: u32) -> Option<String> {
+    lookup_name("/etc/passwd", uid)
+}
+
+/// The group name for a gid, read from `/etc/group`.
+#[cfg(target_os = "linux")]
+fn group_name(gid: u32) -> Option<String> {
+    lookup_name("/etc/group", gid)
+}
+
+/// Find the name whose record carries `id` in a colon-separated database.
+///
+/// Both `/etc/passwd` and `/etc/group` put the name first and the numeric id
+/// third.
+#[cfg(target_os = "linux")]
+fn lookup_name(path: &str, id: u32) -> Option<String> {
+    let database = std::fs::read_to_string(path).ok()?;
+    lookup_name_in(&database, id)
+}
+
+/// Find the name whose record carries `id`, given the database contents.
+#[cfg(target_os = "linux")]
+fn lookup_name_in(database: &str, id: u32) -> Option<String> {
+    database.lines().find_map(|line| {
+        let mut fields = line.split(':');
+        let name = fields.next()?;
+        let _password = fields.next()?;
+        (fields.next()?.parse::<u32>().ok()? == id).then(|| name.to_owned())
+    })
+}
+
 /// Prepare the host for jailed execution.
 ///
 /// The jail is Linux-only, as is the VM executor it protects.
 #[cfg(not(target_os = "linux"))]
-pub fn prepare_host(_state_dir: &camino::Utf8Path) -> Result<(), crate::error::JailError> {
+pub fn prepare_host(
+    _state_dir: &camino::Utf8Path,
+    _jail_user: JailUser,
+) -> Result<(), crate::error::JailError> {
     Ok(())
 }
 
@@ -182,6 +280,45 @@ impl ResourceLimits {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn the_default_jail_user_is_outside_the_allocated_ranges() {
+        // systemd-homed takes 60001-60513 and DynamicUser takes 61184-65519.
+        // An id inside either would collide with something the host allocates.
+        for id in [DEFAULT_JAIL_UID, DEFAULT_JAIL_GID] {
+            assert_eq!(id, 61016, "the jail id is a project convention");
+            assert!(id > 60513, "{id} must clear the systemd-homed range");
+            assert!(id < 61184, "{id} must clear the DynamicUser range");
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_named_account_is_found_by_id() {
+        let passwd = "root:x:0:0:root:/root:/bin/bash\nbuild:x:61016:61016:CI build user:/home/build:/bin/sh\n";
+
+        assert_eq!(lookup_name_in(passwd, 61016).as_deref(), Some("build"));
+        assert_eq!(lookup_name_in(passwd, 0).as_deref(), Some("root"));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn an_unallocated_id_has_no_name() {
+        let passwd =
+            "root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\n";
+
+        assert_eq!(lookup_name_in(passwd, 61016), None);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn malformed_records_are_skipped() {
+        let passwd = "\nnot-a-record\nshort:x\nbuild:x:61016:61016::/home/build:/bin/sh\n";
+
+        assert_eq!(lookup_name_in(passwd, 61016).as_deref(), Some("build"));
+        assert_eq!(lookup_name_in("", 61016), None);
+    }
 
     #[test]
     fn resource_limits_defaults() {

@@ -43,6 +43,20 @@ and jails left behind by an unclean exit are swept from it before a Job runs.
 By default, `/var/lib/bencher-runner` is used.
 Can also be set with the `BENCHER_STATE_DIR` environment variable.
 
+### `--jail-uid <JAIL_UID>`
+
+The unprivileged user ID the sandbox process drops to.
+By default, `61016` is used.
+A process on the host that owns this user ID can signal the sandbox,
+so set it to an ID the host does not allocate to anything else.
+Can also be set with the `BENCHER_JAIL_UID` environment variable.
+
+### `--jail-gid <JAIL_GID>`
+
+The unprivileged group ID the sandbox process drops to.
+By default, `61016` is used.
+Can also be set with the `BENCHER_JAIL_GID` environment variable.
+
 ### `--danger-allow-no-sandbox`
 
 Allow executing Jobs without a [Sandbox][sandbox].

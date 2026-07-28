@@ -40,6 +40,20 @@ und Jails, die durch eine unsaubere Beendigung zurückgeblieben sind, werden vor
 Standardmäßig wird `/var/lib/bencher-runner` verwendet.
 Kann auch mit der Umgebungsvariable `BENCHER_STATE_DIR` gesetzt werden.
 
+### `--jail-uid <JAIL_UID>`
+
+Die unprivilegierte Benutzer-ID, auf die der Sandbox-Prozess wechselt.
+Standardmäßig wird `61016` verwendet.
+Ein Prozess auf dem Host, dem diese Benutzer-ID gehört, kann Signale an die Sandbox senden,
+setzen Sie sie also auf eine ID, die der Host nichts anderem zuweist.
+Kann auch mit der Umgebungsvariable `BENCHER_JAIL_UID` gesetzt werden.
+
+### `--jail-gid <JAIL_GID>`
+
+Die unprivilegierte Gruppen-ID, auf die der Sandbox-Prozess wechselt.
+Standardmäßig wird `61016` verwendet.
+Kann auch mit der Umgebungsvariable `BENCHER_JAIL_GID` gesetzt werden.
+
 ### `--iter <ITER>`
 
 Die Anzahl der auszuführenden Benchmark-Iterationen.

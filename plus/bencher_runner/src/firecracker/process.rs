@@ -11,7 +11,7 @@ use camino::Utf8Path;
 use crate::firecracker::client::FirecrackerClient;
 use crate::firecracker::config::{Action, ActionType};
 use crate::firecracker::error::FirecrackerError;
-use crate::jail::{HostPath, JAIL_GID, JAIL_UID, JailFile};
+use crate::jail::{HostPath, JailFile, JailUser};
 
 /// Everything needed to spawn the VMM under the jailer.
 #[derive(Debug)]
@@ -27,6 +27,8 @@ pub struct JailedSpawn<'a> {
     pub exec_file: &'a Utf8Path,
     /// The jailer `--id`, which is also the chroot name and the cgroup name.
     pub vm_id: &'a str,
+    /// The unprivileged uid and gid the VMM drops to.
+    pub jail_user: JailUser,
     /// The jailer `--chroot-base-dir`.
     pub chroot_base_dir: &'a Utf8Path,
     /// Handle of the empty network namespace the VMM joins.
@@ -75,6 +77,7 @@ impl FirecrackerProcess {
             jailer_bin,
             exec_file: _,
             vm_id: _,
+            jail_user: _,
             chroot_base_dir: _,
             netns: _,
             api_socket,
@@ -224,9 +227,9 @@ fn jailer_args(spawn: &JailedSpawn<'_>) -> Vec<String> {
         "--exec-file".to_owned(),
         spawn.exec_file.to_string(),
         "--uid".to_owned(),
-        JAIL_UID.to_string(),
+        spawn.jail_user.uid.to_string(),
         "--gid".to_owned(),
-        JAIL_GID.to_string(),
+        spawn.jail_user.gid.to_string(),
         "--chroot-base-dir".to_owned(),
         spawn.chroot_base_dir.to_string(),
         "--netns".to_owned(),
@@ -270,6 +273,7 @@ mod tests {
             jailer_bin: Utf8Path::new("/tmp/work/jailer"),
             exec_file: Utf8Path::new("/tmp/work/firecracker"),
             vm_id: "vm-1",
+            jail_user: JailUser::default(),
             chroot_base_dir: Utf8Path::new("/var/lib/bencher-runner/jail"),
             netns: Utf8Path::new("/run/netns/bencher-jail"),
             api_socket: jail.api_socket(),
@@ -299,8 +303,8 @@ mod tests {
             value_of(&args, "--exec-file"),
             Some("/tmp/work/firecracker")
         );
-        assert_eq!(value_of(&args, "--uid"), Some("60613"));
-        assert_eq!(value_of(&args, "--gid"), Some("60613"));
+        assert_eq!(value_of(&args, "--uid"), Some("61016"));
+        assert_eq!(value_of(&args, "--gid"), Some("61016"));
         assert_eq!(
             value_of(&args, "--chroot-base-dir"),
             Some("/var/lib/bencher-runner/jail")

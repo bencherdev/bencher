@@ -40,6 +40,20 @@ Runner 的持久状态目录。
 默认使用 `/var/lib/bencher-runner`。
 也可以通过 `BENCHER_STATE_DIR` 环境变量设置。
 
+### `--jail-uid <JAIL_UID>`
+
+沙箱进程切换到的非特权用户 ID。
+默认使用 `61016`。
+宿主机上拥有该用户 ID 的进程可以向沙箱发送信号，
+因此请设置为宿主机未分配给其他用途的 ID。
+也可以通过 `BENCHER_JAIL_UID` 环境变量设置。
+
+### `--jail-gid <JAIL_GID>`
+
+沙箱进程切换到的非特权组 ID。
+默认使用 `61016`。
+也可以通过 `BENCHER_JAIL_GID` 环境变量设置。
+
 ### `--iter <ITER>`
 
 要执行的基准测试迭代次数。

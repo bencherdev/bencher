@@ -55,6 +55,10 @@ impl TryFrom<CliRun> for Run {
                 sandbox_log_level: task.sandbox_log_level,
                 sandbox: task.sandbox,
                 state_dir: task.state_dir,
+                jail_user: bencher_runner::JailUser {
+                    uid: task.jail_uid,
+                    gid: task.jail_gid,
+                },
             },
         })
     }

@@ -20,8 +20,8 @@ use camino::Utf8Path;
 use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 
 use crate::firecracker::error::FirecrackerError;
-use crate::jail::HostPath;
 use crate::jail::chroot::chown_to_jail;
+use crate::jail::{HostPath, JailUser};
 
 /// Poll timeout for vsock listeners (50ms).
 ///
@@ -282,9 +282,9 @@ impl VsockListener {
     /// the only directory it traverses is `/`, which the jailer chowns itself,
     /// so the inodes are all that is left to hand over. Must run after bind
     /// and before `InstanceStart`.
-    pub fn chown_to_jail(&self) -> Result<(), crate::error::JailError> {
+    pub fn chown_to_jail(&self, jail_user: JailUser) -> Result<(), crate::error::JailError> {
         for port in ports::ALL {
-            chown_to_jail(Utf8Path::new(&self.socket_path(port)))?;
+            chown_to_jail(Utf8Path::new(&self.socket_path(port)), jail_user)?;
         }
         Ok(())
     }
