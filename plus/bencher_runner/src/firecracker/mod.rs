@@ -156,9 +156,9 @@ pub fn run_firecracker(
                             }
                             Some(cg)
                         },
-                        Cpuset::ControllerUnavailable => {
+                        Cpuset::Unavailable(reason) => {
                             eprintln!(
-                                "Warning: the cpuset controller is not delegated to this cgroup, so this run has no CPU isolation and its numbers carry more variance"
+                                "Warning: this run has no CPU isolation ({reason}), so its numbers carry more variance"
                             );
                             None
                         },

@@ -166,18 +166,18 @@ impl CgroupManager {
     /// isolation, which the caller degrades on rather than failing.
     pub fn apply_cpuset(&self, layout: &CpuLayout) -> Result<Cpuset, RunnerError> {
         if !layout.has_isolation() {
-            // No meaningful isolation possible (single core or overlapping sets)
-            return Ok(Cpuset::Applied);
+            // Single core, or overlapping sets: there is nothing to confine to.
+            return Ok(Cpuset::Unavailable("the CPU layout offers no isolation"));
         }
 
         let cpuset = layout.benchmark_cpuset();
         if cpuset.is_empty() {
-            return Ok(Cpuset::Applied);
+            return Ok(Cpuset::Unavailable("the benchmark core set is empty"));
         }
 
         let path = self.cgroup_path.join("cpuset.cpus");
         if !path.exists() {
-            return Ok(Cpuset::ControllerUnavailable);
+            return Ok(Cpuset::Unavailable(UNDELEGATED));
         }
         if let Err(e) = fs::write(&path, &cpuset) {
             return classify_cpuset_error(path, e);
@@ -195,7 +195,43 @@ impl CgroupManager {
             return classify_cpuset_error(mems_path, e);
         }
 
-        Ok(Cpuset::Applied)
+        self.verify_cpuset(&cpuset)
+    }
+
+    /// Confirm the kernel actually gave the cgroup the cores that were asked
+    /// for.
+    ///
+    /// A successful write proves nothing here. Under cgroup v2 a `cpuset.cpus`
+    /// that overlaps a sibling's exclusive set, or reaches past the parent's
+    /// effective set, is accepted and then silently narrowed, possibly to
+    /// nothing at all, in which case the VMM simply inherits the parent's
+    /// CPUs. The whole point of separating applied from half-applied is lost
+    /// if the applied case is taken on trust, so the effective set is read
+    /// back and has to match exactly. Every other fidelity mechanism here
+    /// already reads back: the partition mode does, and so does cgroup
+    /// placement.
+    fn verify_cpuset(&self, requested: &str) -> Result<Cpuset, RunnerError> {
+        let path = self.cgroup_path.join("cpuset.cpus.effective");
+        let effective = match fs::read_to_string(&path) {
+            Ok(effective) => effective,
+            // Nothing to read back means nothing was delegated, the same
+            // conclusion the write path draws.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(Cpuset::Unavailable(UNDELEGATED));
+            },
+            Err(e) => return Err(JailError::ReadCgroup { path, source: e }.into()),
+        };
+
+        if parse_cpuset(&effective) == parse_cpuset(requested) {
+            Ok(Cpuset::Applied)
+        } else {
+            Err(JailError::CpusetNarrowed {
+                path,
+                requested: requested.to_owned(),
+                effective: effective.trim().to_owned(),
+            }
+            .into())
+        }
     }
 
     /// Apply I/O bandwidth limits.
@@ -361,14 +397,20 @@ pub(crate) fn effective_mems(cgroup: &Utf8Path) -> String {
     }
 }
 
+/// Why a run has no CPU isolation, when it has none.
+const UNDELEGATED: &str = "the cpuset controller is not delegated to this cgroup";
+
 /// Whether the cpuset actually confined the VMM to the benchmark cores.
+///
+/// Every variant that is not [`Self::Applied`] carries the reason, so no
+/// variant can claim confinement without a verified write behind it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Cpuset {
-    /// The cgroup confines the VMM to the benchmark cores.
+    /// The cgroup confines the VMM to the benchmark cores, read back and
+    /// confirmed.
     Applied,
-    /// The host does not delegate the cpuset controller, so there is nothing
-    /// to write and no CPU isolation to be had.
-    ControllerUnavailable,
+    /// There is no CPU isolation to be had, for the reason given.
+    Unavailable(&'static str),
 }
 
 /// Decide whether a failed cpuset write is an absent controller or a refusal.
@@ -379,7 +421,7 @@ pub enum Cpuset {
 /// have.
 fn classify_cpuset_error(path: Utf8PathBuf, error: std::io::Error) -> Result<Cpuset, RunnerError> {
     if error.kind() == std::io::ErrorKind::NotFound {
-        Ok(Cpuset::ControllerUnavailable)
+        Ok(Cpuset::Unavailable(UNDELEGATED))
     } else {
         Err(JailError::WriteCgroup {
             path,
@@ -387,6 +429,29 @@ fn classify_cpuset_error(path: Utf8PathBuf, error: std::io::Error) -> Result<Cpu
         }
         .into())
     }
+}
+
+/// Parse a kernel cpu list (`0-3,5,7-9`) into the set of cpus it names.
+///
+/// Compared as sets rather than as strings, because the kernel is free to
+/// render the same set differently from the way it was written.
+fn parse_cpuset(cpuset: &str) -> std::collections::BTreeSet<usize> {
+    let mut cpus = std::collections::BTreeSet::new();
+    for group in cpuset.trim().split(',').filter(|group| !group.is_empty()) {
+        match group.split_once('-') {
+            Some((start, end)) => {
+                if let (Ok(start), Ok(end)) = (start.trim().parse(), end.trim().parse::<usize>()) {
+                    cpus.extend(start..=end);
+                }
+            },
+            None => {
+                if let Ok(cpu) = group.trim().parse() {
+                    cpus.insert(cpu);
+                }
+            },
+        }
+    }
+    cpus
 }
 
 /// How long to keep trying to remove a stale cgroup.
@@ -484,6 +549,103 @@ mod tests {
             Some("cpu")
         );
         assert_eq!(missing_required_controller("cpu memory"), Some("pids"));
+    }
+
+    /// A stand-in cgroup tree with the cpuset controller delegated.
+    ///
+    /// `effective` is what the kernel would report back after the write, which
+    /// is the whole point: a real kernel may narrow it silently.
+    fn cpuset_tree(effective: &str) -> (tempfile::TempDir, CgroupManager) {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        fs::write(root.join("cpuset.cpus"), "").unwrap();
+        fs::write(root.join("cpuset.mems"), "").unwrap();
+        fs::write(root.join("cpuset.cpus.effective"), effective).unwrap();
+        (dir, CgroupManager::detached(root))
+    }
+
+    #[test]
+    fn a_delegated_cpuset_that_the_kernel_honors_is_applied() {
+        let (_dir, manager) = cpuset_tree("2-7\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        assert_eq!(manager.apply_cpuset(&layout).unwrap(), Cpuset::Applied);
+        assert_eq!(
+            fs::read_to_string(manager.path().join("cpuset.cpus")).unwrap(),
+            "2-7"
+        );
+    }
+
+    #[test]
+    fn an_equivalent_rendering_still_counts_as_applied() {
+        // The kernel is free to render the same set differently from the way
+        // it was written, so the comparison is over sets and not strings.
+        let (_dir, manager) = cpuset_tree("2,3,4,5,6,7\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        assert_eq!(manager.apply_cpuset(&layout).unwrap(), Cpuset::Applied);
+    }
+
+    #[test]
+    fn an_undelegated_cpuset_controller_degrades() {
+        // A host that does not delegate cpuset creates its cgroup fine and
+        // then has no cpuset.cpus to write. That is a declared absence of
+        // isolation, not a failure, and no CI runner reaches it.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let manager = CgroupManager::detached(root);
+        let layout = CpuLayout::with_core_count(8);
+
+        assert_eq!(
+            manager.apply_cpuset(&layout).unwrap(),
+            Cpuset::Unavailable(UNDELEGATED)
+        );
+    }
+
+    #[test]
+    fn a_silently_narrowed_cpuset_is_an_error() {
+        // The kernel accepts a cpuset that overlaps a sibling's exclusive set
+        // and then narrows it. A successful write proves nothing.
+        let (_dir, manager) = cpuset_tree("2-3\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        let err = manager.apply_cpuset(&layout).unwrap_err().to_string();
+
+        assert!(err.contains("2-7"), "names what was asked for: {err}");
+        assert!(err.contains("2-3"), "names what was granted: {err}");
+    }
+
+    #[test]
+    fn an_emptied_cpuset_is_an_error() {
+        // The worst case: narrowed to nothing, so the VMM inherits the
+        // parent's CPUs and the run silently measures the whole machine.
+        let (_dir, manager) = cpuset_tree("\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        manager.apply_cpuset(&layout).unwrap_err();
+    }
+
+    #[test]
+    fn a_layout_with_no_isolation_claims_nothing() {
+        // Every variant that is not Applied has to carry a reason, so no
+        // path can report confinement without a verified write behind it.
+        let (_dir, manager) = cpuset_tree("0\n");
+        let layout = CpuLayout::with_core_count(1);
+
+        assert!(matches!(
+            manager.apply_cpuset(&layout).unwrap(),
+            Cpuset::Unavailable(_)
+        ));
+    }
+
+    #[test]
+    fn parse_cpuset_reads_kernel_cpu_lists() {
+        assert_eq!(parse_cpuset("2-7"), (2..=7).collect());
+        assert_eq!(parse_cpuset("2,3,4,5,6,7\n"), (2..=7).collect());
+        assert_eq!(parse_cpuset("0-1,4,6-7"), [0, 1, 4, 6, 7].into());
+        assert_eq!(parse_cpuset("3"), [3].into());
+        assert!(parse_cpuset("").is_empty());
+        assert!(parse_cpuset("\n").is_empty());
     }
 
     #[test]
