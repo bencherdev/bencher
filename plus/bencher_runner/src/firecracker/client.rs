@@ -74,8 +74,9 @@ impl FirecrackerClient {
 
     /// Configure the machine (vCPUs, memory).
     pub fn put_machine_config(&self, config: &MachineConfig) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(config).map_err(|e| {
-            FirecrackerError::ProcessStart(format!("serialize machine config: {e}"))
+        let body = serde_json::to_string(config).map_err(|e| FirecrackerError::ApiEncoding {
+            context: "serialize machine config",
+            source: e,
         })?;
         let (status, response_body) = self.http_put("/machine-config", &body)?;
         if status >= 300 {
@@ -89,8 +90,10 @@ impl FirecrackerClient {
 
     /// Configure the boot source (kernel and boot args).
     pub fn put_boot_source(&self, config: &BootSource) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(config)
-            .map_err(|e| FirecrackerError::ProcessStart(format!("serialize boot source: {e}")))?;
+        let body = serde_json::to_string(config).map_err(|e| FirecrackerError::ApiEncoding {
+            context: "serialize boot source",
+            source: e,
+        })?;
         let (status, response_body) = self.http_put("/boot-source", &body)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
@@ -103,8 +106,10 @@ impl FirecrackerClient {
 
     /// Configure a block device (drive).
     pub fn put_drive(&self, config: &Drive) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(config)
-            .map_err(|e| FirecrackerError::ProcessStart(format!("serialize drive: {e}")))?;
+        let body = serde_json::to_string(config).map_err(|e| FirecrackerError::ApiEncoding {
+            context: "serialize drive",
+            source: e,
+        })?;
         let path = format!("/drives/{}", config.drive_id);
         let (status, response_body) = self.http_put(&path, &body)?;
         if status >= 300 {
@@ -118,8 +123,10 @@ impl FirecrackerClient {
 
     /// Configure the vsock device.
     pub fn put_vsock(&self, config: &VsockConfig) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(config)
-            .map_err(|e| FirecrackerError::ProcessStart(format!("serialize vsock: {e}")))?;
+        let body = serde_json::to_string(config).map_err(|e| FirecrackerError::ApiEncoding {
+            context: "serialize vsock",
+            source: e,
+        })?;
         let (status, response_body) = self.http_put("/vsock", &body)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
@@ -132,8 +139,10 @@ impl FirecrackerClient {
 
     /// Perform a VM action (start, shutdown, etc.).
     pub fn put_action(&self, action: &Action) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(action)
-            .map_err(|e| FirecrackerError::ProcessStart(format!("serialize action: {e}")))?;
+        let body = serde_json::to_string(action).map_err(|e| FirecrackerError::ApiEncoding {
+            context: "serialize action",
+            source: e,
+        })?;
         let (status, response_body) = self.http_put("/actions", &body)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
@@ -269,7 +278,7 @@ fn parse_http_response(data: &[u8]) -> Result<(u16, String), FirecrackerError> {
     let status_line = response
         .lines()
         .next()
-        .ok_or_else(|| FirecrackerError::ProcessStart("empty HTTP response".to_owned()))?;
+        .ok_or(FirecrackerError::MalformedResponse("empty HTTP response"))?;
 
     let status_code: u16 = status_line
         .split_whitespace()

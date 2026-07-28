@@ -72,6 +72,15 @@ pub fn handle_path() -> Utf8PathBuf {
 /// so this takes its own lock: two runners started with different
 /// `--state-dir` values hold different jail locks and would otherwise clear
 /// and rebind the same handle concurrently.
+///
+/// The lock covers the rebuild, not the use. The jailer opens the handle
+/// itself, after this returns and after the lock is released, so a second
+/// runner rebuilding the handle in that window can make the first runner's
+/// jailer see `ENOENT` between the unlink and the bind. That is narrow, it
+/// requires two runners on one host, and it fails the job loudly rather than
+/// silently leaving the VMM on the host network, which is the failure that
+/// would matter. Holding the lock until the VMM has started would close it,
+/// at the cost of serializing every job on a process-global lock.
 pub fn ensure() -> Result<Utf8PathBuf, JailError> {
     let handle = handle_path();
 
