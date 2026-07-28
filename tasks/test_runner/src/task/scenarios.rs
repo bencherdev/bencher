@@ -47,6 +47,10 @@ fn extract_json_substr(line: &str) -> &str {
 type Probe = fn(&Utf8Path) -> Result<bool>;
 
 /// Test scenario definition.
+///
+/// Build one with `..Scenario::default()` so a scenario names only what it
+/// actually varies, and so adding a field does not have to be written out
+/// across every scenario in this file.
 struct Scenario {
     name: &'static str,
     description: &'static str,
@@ -65,6 +69,25 @@ struct Scenario {
     /// cannot reclaim the chroot and only the sweep can.
     orphan_then_rerun: bool,
     validate: fn(&ScenarioOutput) -> Result<()>,
+}
+
+impl Default for Scenario {
+    fn default() -> Self {
+        Self {
+            name: "",
+            description: "",
+            dockerfile: "",
+            extra_args: &[],
+            cancel_after_secs: None,
+            probe: None,
+            orphan_then_rerun: false,
+            // Sandboxed is the interesting case and the overwhelming majority,
+            // so the handful of non-sandboxed scenarios opt out rather than
+            // every other scenario opting in.
+            sandboxed: true,
+            validate: |_output| Ok(()),
+        }
+    }
 }
 
 /// Output from running a scenario.
@@ -275,10 +298,6 @@ fn all_scenarios() -> Vec<Scenario> {
             description: "Simple echo command",
             dockerfile: r#"FROM busybox
 CMD ["echo", "hello from vm"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("hello from vm") {
@@ -287,6 +306,7 @@ CMD ["echo", "hello from vm"]"#,
                     bail!("Expected 'hello from vm' in output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "environment_variables",
@@ -294,10 +314,6 @@ CMD ["echo", "hello from vm"]"#,
             dockerfile: r#"FROM busybox
 ENV MY_VAR=test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("test_value") {
@@ -311,6 +327,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "working_directory",
@@ -318,10 +335,6 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
             dockerfile: r#"FROM busybox
 WORKDIR /myapp
 CMD ["pwd"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("/myapp") {
@@ -330,16 +343,13 @@ CMD ["pwd"]"#,
                     bail!("Expected '/myapp' in output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "file_output",
             description: "Output file collection via vsock",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.json"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
             validate: |output| {
                 if output.stdout.contains("\"result\"") || output.stdout.contains("42") {
@@ -348,16 +358,13 @@ CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.
                     bail!("Expected JSON output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "exit_code",
             description: "Non-zero exit codes captured",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "exit 42"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -367,16 +374,13 @@ CMD ["sh", "-c", "exit 42"]"#,
                     bail!("Expected exit code 42 in output")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "timeout_handling",
             description: "VM killed after timeout",
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr).to_lowercase();
@@ -386,16 +390,13 @@ CMD ["sleep", "3600"]"#,
                     bail!("Expected timeout error")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "writable_filesystem",
             description: "Guest can write to ext4 rootfs",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("test") {
@@ -407,16 +408,13 @@ CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "stderr_capture",
             description: "Stderr captured separately",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -426,16 +424,13 @@ CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
                     bail!("Expected 'stdout' in output")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "multi_cpu",
             description: "Multiple vCPUs work (expected: timeout, SMP boot unsupported)",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "10", "--vcpus", "4"],
             validate: |output| {
                 // SMP boot is not yet supported (requires LAPIC/APIC emulation).
@@ -454,6 +449,7 @@ CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "entrypoint_with_args",
@@ -461,10 +457,6 @@ CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo"]
 CMD ["hello", "world"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("hello world") {
@@ -473,16 +465,13 @@ CMD ["hello", "world"]"#,
                     bail!("Expected 'hello world' in output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "no_network_access",
             description: "Guest has no network",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -495,6 +484,7 @@ CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
                     bail!("Expected network failure, got: {combined}")
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Security hardening scenarios
@@ -505,10 +495,6 @@ CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
             // Generate ~20MB of output - should be truncated to the 10MB limit
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && echo DONE"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "120", "--max-output-size", "10485760"],
             validate: |output| {
                 // The key test: the runner completes without OOM and output is bounded.
@@ -522,6 +508,7 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && e
                 // Runner completed (didn't hang or OOM) - that's a pass
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "timeout_enforced",
@@ -529,10 +516,6 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && e
             // This process ignores signals and runs forever
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 // The VM should be killed after 5 seconds due to timeout
@@ -548,6 +531,7 @@ CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Error regression scenarios
@@ -562,10 +546,6 @@ CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]
             // causing uid_map writes to fail with EPERM.
             dockerfile: r#"FROM busybox
 CMD ["id"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The runner should not fail with uid_map errors.
@@ -581,6 +561,7 @@ CMD ["id"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "dev_kvm_available",
@@ -590,10 +571,6 @@ CMD ["id"]"#,
             // the bind-mounted /dev/kvm.
             dockerfile: r#"FROM busybox
 CMD ["echo", "kvm_test_ok"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -605,6 +582,7 @@ CMD ["echo", "kvm_test_ok"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "proc_mount_works",
@@ -614,10 +592,6 @@ CMD ["echo", "kvm_test_ok"]"#,
             // which we fixed by bind-mounting the host's /proc instead.
             dockerfile: r#"FROM busybox
 CMD ["cat", "/proc/version"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -631,6 +605,7 @@ CMD ["cat", "/proc/version"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "rootfs_writable",
@@ -640,10 +615,6 @@ CMD ["cat", "/proc/version"]"#,
             // when trying to write to the filesystem.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("write_ok") {
@@ -658,6 +629,7 @@ CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
                     bail!("Expected 'write_ok' in output, got: {combined}")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "timeout_includes_partial_output",
@@ -667,10 +639,6 @@ CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
             // short-circuited before serial output extraction.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "10"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -685,6 +653,7 @@ CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
                     bail!("Expected timeout error in output, got: {combined}")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "no_seccomp_sigsys",
@@ -695,10 +664,6 @@ CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
             // This scenario exercises the timeout path which requires kill().
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 // SIGSYS from seccomp violation produces exit code 159 (128 + 31)
@@ -716,6 +681,7 @@ CMD ["sleep", "3600"]"#,
                     bail!("Expected timeout exit, got exit_code={}", output.exit_code)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "iopl_dropped_before_exec",
@@ -730,10 +696,6 @@ RUN printf '#include <stdio.h>\n#include <signal.h>\n#include <setjmp.h>\nstatic
 FROM busybox
 COPY --from=build /test_iopl /test_iopl
 CMD ["/test_iopl"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("IOPL_DROPPED") {
@@ -752,6 +714,7 @@ CMD ["/test_iopl"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "unique_output_validation",
@@ -761,10 +724,6 @@ CMD ["/test_iopl"]"#,
             // never appear in runner logs.
             dockerfile: r#"FROM busybox
 CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // This unique string should only appear if the VM actually ran
@@ -780,6 +739,7 @@ CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // PID namespace isolation scenarios (Item 9)
@@ -791,10 +751,6 @@ CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
             // The init process should be PID 1, and there should be very few processes.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The guest should see a small number of PIDs (1-5), not hundreds
@@ -816,6 +772,7 @@ CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
                     Ok(())
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "pid_namespace_procfs",
@@ -825,10 +782,6 @@ CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
             // should be accessible and /proc/1/cmdline should show the init process.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0' ' ')"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -844,6 +797,7 @@ CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Telemetry/Metrics scenarios (Item 10)
@@ -854,10 +808,6 @@ CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0
             // Verifies the runner outputs ---BENCHER_METRICS:{json}--- on stderr.
             dockerfile: r#"FROM busybox
 CMD ["echo", "metrics_test"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stderr.contains("---BENCHER_METRICS:") && output.stderr.contains("---") {
@@ -870,6 +820,7 @@ CMD ["echo", "metrics_test"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "metrics_wall_clock_reasonable",
@@ -878,10 +829,6 @@ CMD ["echo", "metrics_test"]"#,
             // This catches cases where timing is broken (e.g., always 0 or absurdly large).
             dockerfile: r#"FROM busybox
 CMD ["echo", "fast_benchmark"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // Parse metrics from stderr
@@ -910,6 +857,7 @@ CMD ["echo", "fast_benchmark"]"#,
                 }
                 bail!("Could not parse wall_clock_ms from metrics: {json_str}")
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "metrics_timeout_flag",
@@ -917,10 +865,6 @@ CMD ["echo", "fast_benchmark"]"#,
             // When a VM times out, the metrics should include timed_out: true.
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 // The stderr should contain metrics with timed_out: true
@@ -946,6 +890,7 @@ CMD ["sleep", "3600"]"#,
                 }
                 bail!("Expected timed_out: true in metrics: {json_str}")
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // HMAC Result Integrity scenarios (Item 11)
@@ -957,10 +902,6 @@ CMD ["sleep", "3600"]"#,
             // The vmm child process should log [HMAC] status on stderr.
             dockerfile: r#"FROM busybox
 CMD ["echo", "hmac_test_output"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -984,6 +925,7 @@ CMD ["echo", "hmac_test_output"]"#,
                     }
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "metrics_transport_type",
@@ -991,10 +933,6 @@ CMD ["echo", "hmac_test_output"]"#,
             // Verifies the metrics include the transport type (vsock or serial).
             dockerfile: r#"FROM busybox
 CMD ["echo", "transport_test"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let metrics_line = output
@@ -1016,6 +954,7 @@ CMD ["echo", "transport_test"]"#,
                 }
                 bail!("Could not find transport in metrics: {json_str}")
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Cancellation scenarios
@@ -1028,9 +967,6 @@ CMD ["echo", "transport_test"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             cancel_after_secs: Some(5),
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
                 // The runner should exit with a non-zero code (killed by signal)
@@ -1046,6 +982,7 @@ CMD ["sh", "-c", "echo started && sleep 3600"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Output edge-case scenarios
@@ -1055,10 +992,6 @@ CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             description: "Stderr captured when stdout is empty",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo error_output >&2"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stderr.contains("error_output") {
@@ -1071,16 +1004,13 @@ CMD ["sh", "-c", "echo error_output >&2"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "empty_output",
             description: "Process exits 0 with no output",
             dockerfile: r#"FROM busybox
 CMD ["true"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1093,6 +1023,7 @@ CMD ["true"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "binary_output",
@@ -1101,10 +1032,6 @@ CMD ["true"]"#,
             // The runner should not panic — it should lossy-convert or pass through.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The runner must not crash. Exit code 0 and "done" somewhere
@@ -1126,6 +1053,7 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // OCI config parsing scenarios
@@ -1137,10 +1065,6 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
             // OCI config stores this as ["/bin/sh", "-c", "echo shell_form_works"]
             // which differs from exec form ["echo", "shell_form_works"].
             dockerfile: "FROM busybox\nCMD echo shell_form_works",
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("shell_form_works") {
@@ -1154,6 +1078,7 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "entrypoint_only",
@@ -1162,10 +1087,6 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
             // CMD args appended. The runner must not fail when Cmd is null/empty.
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("entrypoint_only_works") {
@@ -1179,6 +1100,7 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "shell_form_entrypoint",
@@ -1186,10 +1108,6 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
             // Shell form ENTRYPOINT: stored as ["/bin/sh", "-c", "echo ..."]
             // in OCI config. CMD is ignored when ENTRYPOINT uses shell form.
             dockerfile: "FROM busybox\nENTRYPOINT echo shell_entrypoint_works",
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("shell_entrypoint_works") {
@@ -1203,6 +1121,7 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "entrypoint_shell_with_cmd",
@@ -1217,10 +1136,6 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT echo ep_marker
 CMD ["cmd_arg"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1240,6 +1155,7 @@ CMD ["cmd_arg"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "no_cmd_no_entrypoint",
@@ -1248,10 +1164,6 @@ CMD ["cmd_arg"]"#,
             // to fail with a clear error, not crash or hang.
             dockerfile: r#"FROM busybox
 RUN echo "no command set""#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "30"],
             validate: |output| {
                 // The runner should fail (non-zero exit) since there's nothing to run.
@@ -1266,6 +1178,7 @@ RUN echo "no command set""#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "bencher_cli_mock",
@@ -1277,10 +1190,6 @@ RUN echo "no command set""#,
             // shared libraries, and ld.so.cache from multi-layer images.
             dockerfile: r#"FROM ghcr.io/bencherdev/bencher:latest
 CMD ["mock"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
                 if output.exit_code == 127 {
@@ -1306,6 +1215,7 @@ CMD ["mock"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "distroless_glibc_image",
@@ -1322,10 +1232,6 @@ RUN echo '#include <stdio.h>\nint main(){printf("distroless_glibc_ok\\n");return
 FROM gcr.io/distroless/cc-debian12
 COPY --from=builder /tmp/hello /usr/bin/hello
 CMD ["/usr/bin/hello"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
                 if output.exit_code == 127 {
@@ -1350,6 +1256,7 @@ CMD ["/usr/bin/hello"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Race condition scenarios
@@ -1362,10 +1269,6 @@ CMD ["/usr/bin/hello"]"#,
             // results are collected even for very short-lived processes.
             dockerfile: r#"FROM busybox
 CMD ["echo", "rapid_exit_marker"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1386,6 +1289,7 @@ CMD ["echo", "rapid_exit_marker"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Exit code scenarios
@@ -1397,10 +1301,6 @@ CMD ["echo", "rapid_exit_marker"]"#,
             // The runner should capture and report this exit code.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "exit 137"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The runner should report exit code 137 somewhere in its output,
@@ -1417,6 +1317,7 @@ CMD ["sh", "-c", "exit 137"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Environment scenarios
@@ -1431,10 +1332,6 @@ ENV A1=val1 A2=val2 A3=val3 A4=val4 A5=val5 A6=val6 A7=val7 A8=val8 A9=val9 A10=
 ENV B1=val11 B2=val12 B3=val13 B4=val14 B5=val15 B6=val16 B7=val17 B8=val18 B9=val19 B10=val20
 ENV LARGE_VALUE=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1454,6 +1351,7 @@ CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // File output edge cases
@@ -1465,10 +1363,6 @@ CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
             // The runner should still succeed (exit 0) without crashing.
             dockerfile: r#"FROM busybox
 CMD ["echo", "no file written"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/nonexistent/path.json"],
             validate: |output| {
                 // Runner should not crash, regardless of exit code.
@@ -1479,16 +1373,13 @@ CMD ["echo", "no file written"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "large_file_output",
             description: "Large output file (~2 MB) transferred via vsock",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /tmp/output.json && echo done"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1497,16 +1388,13 @@ CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "completed_with_all_fields",
             description: "Stdout + stderr + output file simultaneously",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\":true}' > /tmp/out.json"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/out.json"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1521,16 +1409,13 @@ CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "multi_file_output",
             description: "Multiple output files collected via vsock",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}' > /tmp/b.json && echo done"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &[
                 "--timeout",
                 "60",
@@ -1546,6 +1431,7 @@ CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}'
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // OCI image variations
@@ -1558,10 +1444,6 @@ RUN echo "a" > /tmp/file_a.txt
 RUN mkdir -p /opt && echo "b" > /opt/file_b.txt
 RUN echo "c" > /var/file_c.txt
 CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1577,6 +1459,7 @@ CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
                     bail!("Expected 'a', 'b', 'c' in output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "image_with_symlinks",
@@ -1584,10 +1467,6 @@ CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
             dockerfile: r#"FROM busybox
 RUN echo "target" > /tmp/target.txt && ln -s /tmp/target.txt /tmp/link.txt
 CMD ["cat", "/tmp/link.txt"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1603,6 +1482,7 @@ CMD ["cat", "/tmp/link.txt"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Error / edge case scenarios
@@ -1612,10 +1492,6 @@ CMD ["cat", "/tmp/link.txt"]"#,
             description: "Writes stdout+stderr then exits non-zero",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The runner may succeed (exit 0) even when the guest exits non-zero.
@@ -1627,16 +1503,13 @@ CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
                     bail!("Expected partial output to be captured, got: {combined}")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "minimum_timeout",
             description: "1-second timeout kills long-running process",
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "1"],
             validate: |output| {
                 if output.exit_code == 0 {
@@ -1644,6 +1517,7 @@ CMD ["sleep", "3600"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "max_output_size_truncation",
@@ -1651,10 +1525,6 @@ CMD ["sleep", "3600"]"#,
             // Generate ~50 KB of output, but limit to 1024 bytes.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1024 count=50 2>/dev/null | tr '\\0' 'X'"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--max-output-size", "1024"],
             validate: |output| {
                 // Output should be bounded — not the full ~50KB
@@ -1667,6 +1537,7 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1024 count=50 2>/dev/null | tr '\\0' 'X'"]"
                 // Runner didn't OOM or crash — that's a pass
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "env_var_passthrough",
@@ -1676,10 +1547,6 @@ ENV LD_PRELOAD=/test.so
 ENV LD_LIBRARY_PATH=/testlib
 ENV SAFE_VAR=safe_value
 CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH SAFE=$SAFE_VAR"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1706,6 +1573,7 @@ CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH S
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Resource constraint enforcement
@@ -1717,10 +1585,6 @@ CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH S
             // `free -m` reports total memory; we check it's in the right ballpark.
             dockerfile: r#"FROM busybox
 CMD ["free", "-m"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--memory", "64", "--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1736,6 +1600,7 @@ CMD ["free", "-m"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "disk_size_override",
@@ -1746,10 +1611,6 @@ CMD ["free", "-m"]"#,
             // the block device level. This test validates the config path.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--disk", "64", "--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1766,6 +1627,7 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "disk_limit_enforced",
@@ -1775,10 +1637,6 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
             // approximately 64 MiB total (minus overhead), not more.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--disk", "64", "--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1803,16 +1661,13 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
                     output.stdout
                 )
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cpu_count_visible",
             description: "Guest sees 1 CPU with default vCPU count",
             dockerfile: r#"FROM busybox
 CMD ["nproc"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1825,6 +1680,7 @@ CMD ["nproc"]"#,
                     bail!("Expected '1' CPU from nproc, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Network enabled
@@ -1836,10 +1692,6 @@ CMD ["nproc"]"#,
             // Use wget to a well-known URL as a connectivity test.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.txt && echo net_ok || echo net_fail"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "30", "--network"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -1856,6 +1708,7 @@ CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.t
                     Ok(())
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // File permissions
@@ -1868,10 +1721,6 @@ CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.t
             dockerfile: r#"FROM busybox
 RUN mkdir -p /data && echo "content_ok" > /data/file.txt
 CMD ["cat", "/data/file.txt"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1884,6 +1733,7 @@ CMD ["cat", "/data/file.txt"]"#,
                     bail!("Expected 'content_ok' in output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "file_permissions_preserved",
@@ -1893,10 +1743,6 @@ CMD ["cat", "/data/file.txt"]"#,
             dockerfile: r#"FROM busybox
 RUN mkdir -p /data && printf '#!/bin/sh\necho hello' > /data/test.sh && chmod +x /data/test.sh
 CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1912,6 +1758,7 @@ CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "directory_permissions_preserved",
@@ -1921,10 +1768,6 @@ CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
             dockerfile: r#"FROM busybox
 RUN mkdir -p /data/restricted && chmod 750 /data/restricted
 CMD ["stat", "-c", "%a", "/data/restricted"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1940,6 +1783,7 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Special characters in environment variables
@@ -1949,10 +1793,6 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
             description: "Env vars with spaces, equals, and quotes work",
             // Use Docker's multi-line ENV syntax with quotes for values with spaces.
             dockerfile: "FROM busybox\nENV SPACED=\"hello world\" WITH_EQ=\"key=value\"\nCMD [\"sh\", \"-c\", \"echo SPACED=$SPACED EQ=$WITH_EQ\"]",
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1970,6 +1810,7 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // CLI override scenarios (--entrypoint, --cmd, --env)
@@ -1980,10 +1821,6 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo", "image_ep"]
 CMD ["image_cmd"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--entrypoint", "echo", "cli_ep"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2012,6 +1849,7 @@ CMD ["image_cmd"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_cmd_override",
@@ -2019,10 +1857,6 @@ CMD ["image_cmd"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo"]
 CMD ["image_cmd"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--cmd", "cli_cmd"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2044,6 +1878,7 @@ CMD ["image_cmd"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_entrypoint_and_cmd_override",
@@ -2051,10 +1886,6 @@ CMD ["image_cmd"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo", "image_ep"]
 CMD ["image_cmd"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &[
                 "--timeout",
                 "60",
@@ -2083,6 +1914,7 @@ CMD ["image_cmd"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_env_override",
@@ -2090,10 +1922,6 @@ CMD ["image_cmd"]"#,
             dockerfile: r#"FROM busybox
 ENV MY_VAR=image_value
 CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "MY_VAR=cli_value"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2110,6 +1938,7 @@ CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_env_add",
@@ -2117,10 +1946,6 @@ CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
             dockerfile: r#"FROM busybox
 ENV EXISTING=from_image
 CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "NEW_VAR=from_cli"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2141,16 +1966,13 @@ CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_env_multiple",
             description: "Multiple --env flags",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo A=$A B=$B"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "A=one", "--env", "B=two"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2165,16 +1987,13 @@ CMD ["sh", "-c", "echo A=$A B=$B"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_entrypoint_no_image_entrypoint",
             description: "Add entrypoint when image only has CMD",
             dockerfile: r#"FROM busybox
 CMD ["hello", "world"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--entrypoint", "echo"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2192,16 +2011,13 @@ CMD ["hello", "world"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "multiple_iterations",
             description: "Multiple iterations execute sequentially",
             dockerfile: r#"FROM busybox
 CMD ["echo", "iter_output"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2214,16 +2030,13 @@ CMD ["echo", "iter_output"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "zero_iterations",
             description: "Zero iterations executes no benchmarks",
             dockerfile: r#"FROM busybox
 CMD ["echo", "should_not_appear"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "0"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2234,16 +2047,13 @@ CMD ["echo", "should_not_appear"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "allow_failure_false_aborts",
             description: "Non-zero exit code aborts iteration without --allow-failure",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3"],
             validate: |output| {
                 if output.exit_code == 0 {
@@ -2262,16 +2072,13 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "allow_failure_true_continues",
             description: "Non-zero exit code continues with --allow-failure",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3", "--allow-failure"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2290,6 +2097,7 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
     ]
 }
@@ -2298,10 +2106,6 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
 ///
 /// These test the `local_execute` code path (no Firecracker VM).
 /// The OCI image is unpacked and the command runs directly on the host.
-#[expect(
-    clippy::too_many_lines,
-    reason = "Each scenario needs its configuration"
-)]
 fn nosandbox_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
@@ -2309,9 +2113,6 @@ fn nosandbox_scenarios() -> Vec<Scenario> {
             description: "Non-sandboxed: simple echo",
             dockerfile: r#"FROM busybox:musl
 CMD ["echo", "hello from host"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2325,6 +2126,7 @@ CMD ["echo", "hello from host"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "nosandbox_env",
@@ -2332,9 +2134,6 @@ CMD ["echo", "hello from host"]"#,
             dockerfile: r#"FROM busybox:musl
 ENV MY_VAR=host_test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2348,6 +2147,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "nosandbox_metrics",
@@ -2356,9 +2156,6 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
             // transport "local" (it previously emitted no metrics at all).
             dockerfile: r#"FROM busybox:musl
 CMD ["echo", "local_metrics_test"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2384,15 +2181,13 @@ CMD ["echo", "local_metrics_test"]"#,
                 }
                 bail!("Could not find transport in metrics: {json_str}")
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "nosandbox_exit_code",
             description: "Non-sandboxed: non-zero exit code propagation",
             dockerfile: r#"FROM busybox:musl
 CMD ["sh", "-c", "exit 42"]"#,
-            cancel_after_secs: None,
-            probe: None,
-            orphan_then_rerun: false,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2409,6 +2204,7 @@ CMD ["sh", "-c", "exit 42"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
     ]
 }
@@ -2666,7 +2462,6 @@ CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
             cancel_after_secs: None,
             probe: Some(probe_confinement),
             orphan_then_rerun: false,
-            sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
                 // The job has to have actually run before anything the probe
@@ -2677,6 +2472,7 @@ CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
                 assert_job_succeeded(output, "JAIL_CONFINEMENT_a7f3b2c9")?;
                 assert_no_chroot_remains(&scenario_state_dir())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "jail_sweep_reclaims_orphan",
@@ -2688,12 +2484,12 @@ CMD ["sh", "-c", "echo JAIL_SWEEP_a7f3b2c9 && sleep 10"]"#,
             cancel_after_secs: None,
             probe: None,
             orphan_then_rerun: true,
-            sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
                 assert_job_succeeded(output, "JAIL_SWEEP_a7f3b2c9")?;
                 assert_no_chroot_remains(&scenario_state_dir())
             },
+            ..Scenario::default()
         },
     ]
 }
