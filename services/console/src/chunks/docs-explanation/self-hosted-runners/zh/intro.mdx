@@ -14,7 +14,10 @@ Self-Hosted Runner 是一个由你自己运行和管理的 [Bare Metal Runner][b
 关于 Runner、Spec、Sandbox 和 Job 如何协同工作的概念性概述，
 请参阅 [Bare Metal 概述][bare metal]。
 
-> 🐰 Firecracker 沙箱需要启用了 [KVM][kvm] 的 Linux。
+> 🐰 Firecracker 沙箱需要启用了 [KVM][kvm] 的 Linux，
+> 并且 Runner 必须以 `root` 身份运行。
+> 每个沙箱 Job 都会以非特权用户的身份被限制在 chroot 中，
+> 而构建这种限制所需的权限，仅仅启用 KVM 是无法获得的。
 > 仅服务于非沙箱化 Spec 的 Runner 可以在任何受支持的主机上运行。
 
 [bare metal]: /zh/docs/explanation/bare-metal/
