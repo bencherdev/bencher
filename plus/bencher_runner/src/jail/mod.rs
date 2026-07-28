@@ -22,9 +22,9 @@ pub mod reap;
 pub mod state;
 
 #[cfg(target_os = "linux")]
-pub use cgroup::CgroupManager;
-#[cfg(target_os = "linux")]
 pub(crate) use cgroup::{BENCHER_CGROUP_BASE, effective_mems};
+#[cfg(target_os = "linux")]
+pub use cgroup::{CgroupManager, Cpuset};
 #[cfg(target_os = "linux")]
 pub use chroot::JailDir;
 #[cfg(target_os = "linux")]
@@ -33,9 +33,6 @@ pub use lock::JailLock;
 pub use paths::{ChrootPath, HostPath, JailFile, JailPaths, SocketPath};
 #[cfg(target_os = "linux")]
 pub use state::StateDir;
-
-#[cfg(target_os = "linux")]
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::{Deserialize, Serialize};
 
@@ -117,35 +114,112 @@ impl Default for JailUser {
     }
 }
 
-/// Set once the host has been prepared, so it happens at most once per
-/// runner process.
-#[cfg(target_os = "linux")]
-static HOST_PREPARED: AtomicBool = AtomicBool::new(false);
+/// The identity of one microVM.
+///
+/// The same string is the jailer's `--id`, the name of the chroot directory,
+/// and the name of the cgroup, by construction. Naming it once keeps the three
+/// from drifting, and keeps a bare directory name read off the filesystem from
+/// being mistaken for an identity that was minted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VmId(String);
 
-/// Prepare the host for jailed execution, once per runner process.
-///
-/// Called on demand, immediately before the first job builds a jail, never at
-/// startup. The daemon learns which Specs it serves from the server, so at
-/// startup it cannot know whether it will ever need a jail, and a Runner that
-/// serves only non-sandboxed Specs is a supported configuration that must come
-/// up on a host where the runner is not root. Preparing eagerly would make
-/// `runner up` require root just to start.
-///
-/// Failure is fatal. Untrusted code never runs with silently degraded
-/// confinement, so a host that cannot be prepared does not execute a job. A
-/// failure is not remembered, so a transient permission problem is retried by
-/// the next job rather than requiring a restart.
-#[cfg(target_os = "linux")]
-pub fn prepare_host_once(
-    state_dir: &camino::Utf8Path,
-    jail_user: JailUser,
-) -> Result<(), crate::error::JailError> {
-    if HOST_PREPARED.load(Ordering::SeqCst) {
-        return Ok(());
+impl VmId {
+    /// Mint a fresh identity for a job.
+    #[must_use]
+    pub fn new() -> Self {
+        Self(uuid::Uuid::new_v4().to_string())
     }
-    prepare_host(state_dir, jail_user)?;
-    HOST_PREPARED.store(true, Ordering::SeqCst);
-    Ok(())
+
+    /// Recover the identity of a jail from its chroot directory name.
+    ///
+    /// The sweep works backwards from the filesystem, and the directory name
+    /// is the identity that created it.
+    #[must_use]
+    pub fn from_chroot_name(name: String) -> Self {
+        Self(name)
+    }
+
+    /// The identity as a string.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Default for VmId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Display for VmId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+/// Tracks whether this runner process has prepared the host.
+///
+/// Owned and threaded through the callers rather than kept in a global,
+/// so that the latch belongs to one runner and cannot be observed, or reset,
+/// by anything else. Tests get their own.
+#[derive(Debug, Default)]
+pub struct HostPreparation {
+    /// Only the jail reads this, and the jail is Linux-only.
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(dead_code, reason = "host preparation is Linux-only")
+    )]
+    prepared: bool,
+}
+
+impl HostPreparation {
+    /// A runner process that has not prepared the host yet.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Prepare the host for jailed execution, at most once.
+    ///
+    /// Called on demand, immediately before the first job builds a jail, never
+    /// at startup. The daemon learns which Specs it serves from the server, so
+    /// at startup it cannot know whether it will ever need a jail, and a
+    /// Runner that serves only non-sandboxed Specs is a supported
+    /// configuration that must come up on a host where the runner is not root.
+    /// Preparing eagerly would make `runner up` require root just to start.
+    ///
+    /// Failure is fatal. Untrusted code never runs with silently degraded
+    /// confinement, so a host that cannot be prepared does not execute a job.
+    /// A failure is not remembered, so the next job retries rather than
+    /// needing a restart. That matters most for a sweep that could not reclaim
+    /// a stale cgroup: the orphan may simply not have exited yet, and a
+    /// latched failure would leave every later job failing with no retry.
+    #[cfg(target_os = "linux")]
+    pub fn ensure(
+        &mut self,
+        state_dir: &camino::Utf8Path,
+        jail_user: JailUser,
+    ) -> Result<(), crate::error::JailError> {
+        if self.prepared {
+            return Ok(());
+        }
+        prepare_host(state_dir, jail_user)?;
+        self.prepared = true;
+        Ok(())
+    }
+
+    /// Prepare the host for jailed execution, at most once.
+    ///
+    /// The jail is Linux-only, as is the VM executor it protects.
+    #[cfg(not(target_os = "linux"))]
+    pub fn ensure(
+        &mut self,
+        _state_dir: &camino::Utf8Path,
+        _jail_user: JailUser,
+    ) -> Result<(), crate::error::JailError> {
+        Ok(())
+    }
 }
 
 /// Create the state directory and reclaim what a previous runner left behind.
@@ -170,7 +244,7 @@ fn prepare_host(
     warn_on_named_account(jail_user);
 
     let _lock = JailLock::acquire(state.path())?;
-    let swept = state::sweep_jails(&state.jail_parent());
+    let swept = state::sweep_jails(&state.jail_parent())?;
     if swept > 0 {
         // Each one held a copy of the VMM binary and a full guest rootfs
         // image, so an operator should hear about it.
@@ -373,14 +447,24 @@ mod tests {
         let state_dir = root.join("state");
         assert!(!state_dir.exists(), "startup has not prepared anything");
 
-        prepare_host_once(&state_dir, JailUser::default()).unwrap();
+        let mut host = HostPreparation::new();
+        host.ensure(&state_dir, JailUser::default()).unwrap();
         assert!(state_dir.join("jail").is_dir(), "the first job prepares");
 
         // A second job must not redo it: proven by removing the tree and
-        // seeing that it is not rebuilt.
+        // seeing that it is not rebuilt. Owning the token is what makes this
+        // independent of every other test in the process.
         std::fs::remove_dir_all(&state_dir).unwrap();
-        prepare_host_once(&state_dir, JailUser::default()).unwrap();
+        host.ensure(&state_dir, JailUser::default()).unwrap();
         assert!(!state_dir.exists(), "preparation happens at most once");
+
+        // A different runner prepares its own host.
+        let mut other = HostPreparation::new();
+        other.ensure(&state_dir, JailUser::default()).unwrap();
+        assert!(
+            state_dir.join("jail").is_dir(),
+            "a fresh token prepares again"
+        );
     }
 
     #[cfg(target_os = "linux")]

@@ -8,12 +8,15 @@ use std::sync::atomic::AtomicBool;
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
-use crate::jail::{JailDir, JailLock, JailPaths, StateDir, chroot, netns, state};
+use crate::jail::{
+    HostPreparation, JailDir, JailLock, JailPaths, StateDir, VmId, chroot, netns, state,
+};
 use crate::run::{RunOutput, prepare_oci_workspace};
 
 /// Execute a single benchmark run in a jailed Firecracker microVM.
 pub fn vm_execute(
     config: &crate::Config,
+    host: &mut HostPreparation,
     cancel_flag: Option<&Arc<AtomicBool>>,
 ) -> Result<RunOutput, RunnerError> {
     use crate::firecracker::run_firecracker;
@@ -33,7 +36,7 @@ pub fn vm_execute(
     // Prepare the host on demand, before the first jail this process builds.
     // Must come before the lock is taken: preparation takes the same lock, and
     // `flock` is per open file description, so nesting would block on itself.
-    crate::jail::prepare_host_once(state_dir.path(), config.jail_user)?;
+    host.ensure(state_dir.path(), config.jail_user)?;
 
     // Held for the whole job. Another runner's sweep removes every chroot it
     // finds, so it must not run while this one is live. Declared before the
@@ -48,7 +51,7 @@ pub fn vm_execute(
     // built inside it rather than copied in afterwards, so the id is minted
     // before any of them exist. Dropping this guard removes the chroot tree,
     // which is what the workspace temp directory used to cover.
-    let vm_id = uuid::Uuid::new_v4().to_string();
+    let vm_id = VmId::new();
     let jail_dir = JailDir::create(&state_dir, &vm_id)?;
     let jail = JailPaths::new(jail_dir.root())?;
     println!("  Jail: {}", jail.root());
@@ -63,12 +66,14 @@ pub fn vm_execute(
     // job, or found on the host.
     let kernel_dest = jail.kernel().host().as_path();
     if let Some(kernel) = &config.kernel {
-        copy_into_jail(kernel, kernel_dest)?;
+        println!("  Copying the job's kernel into the jail...");
+        copy_file(kernel, kernel_dest)?;
     } else if crate::kernel::KERNEL_BUNDLED {
         crate::kernel::write_kernel_to_file(kernel_dest)?;
-        println!("  Extracted bundled kernel to {kernel_dest}");
+        println!("  Extracted bundled kernel into the jail at {kernel_dest}");
     } else {
-        copy_into_jail(&find_kernel()?, kernel_dest)?;
+        println!("  Copying the host's kernel into the jail...");
+        copy_file(&find_kernel()?, kernel_dest)?;
     }
 
     let command = oci_config.command;
@@ -116,7 +121,7 @@ pub fn vm_execute(
 fn build_firecracker_config(
     config: &crate::Config,
     work_dir: &Utf8Path,
-    vm_id: String,
+    vm_id: VmId,
     state_dir: &StateDir,
     jail: JailPaths,
     netns: Utf8PathBuf,
@@ -179,17 +184,18 @@ fn build_firecracker_config(
     })
 }
 
-/// Copy a file the jailed VMM has to read into the jail root.
+/// Copy a file the job needs to a path the runner controls.
 ///
-/// The rule is uniform: a path that resolves outside the chroot is
-/// unreachable once Firecracker is confined, whatever produced it.
-fn copy_into_jail(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
+/// Used both for artifacts placed inside the chroot and for binaries staged
+/// outside it, so the message says where the copy landed rather than claiming
+/// a destination it does not know about.
+fn copy_file(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
     std::fs::copy(src, dest).map_err(|e| crate::error::ConfigError::CopyFile {
         src: src.to_owned(),
         dest: dest.to_owned(),
         source: e,
     })?;
-    println!("  Copied {src} into the jail at {dest}");
+    println!("  Copied {src} to {dest}");
     Ok(())
 }
 
@@ -197,7 +203,7 @@ fn copy_into_jail(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
 fn copy_binary(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
     use std::os::unix::fs::PermissionsExt as _;
 
-    copy_into_jail(src, dest)?;
+    copy_file(src, dest)?;
     let mut perms = std::fs::metadata(dest)?.permissions();
     perms.set_mode(0o755);
     std::fs::set_permissions(dest, perms)?;

@@ -184,6 +184,9 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
     {
         println!("  Update channel: {channel}");
     }
+    // Owned by the daemon loop. The latch belongs to this runner process, and
+    // a failure is deliberately not remembered so the next job retries.
+    let mut host = crate::jail::HostPreparation::new();
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
     let mut effects: VecDeque<Effect> =
         ChannelStateMachine::initial_effects().into_iter().collect();
@@ -197,7 +200,7 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
             continue;
         }
 
-        match execute_effect(effect, config, channel_url, key, &mut ws) {
+        match execute_effect(effect, config, channel_url, key, &mut ws, &mut host) {
             EffectResult::Continue => {},
             EffectResult::Input(input) => {
                 effects.clear();
@@ -236,6 +239,7 @@ fn execute_effect(
     channel_url: &Url,
     key: &str,
     ws: &mut Option<Arc<Mutex<JobChannel>>>,
+    host: &mut crate::jail::HostPreparation,
 ) -> EffectResult {
     match effect {
         Effect::Connect => match JobChannel::connect(channel_url, key) {
@@ -264,7 +268,7 @@ fn execute_effect(
                 eprintln!("Error: WS not connected during job execution");
                 return EffectResult::Input(Input::ConnectionFailed);
             };
-            let result = execute_job(config, &job, ws_ref);
+            let result = execute_job(config, &job, ws_ref, host);
             EffectResult::Input(Input::JobFinished(result))
         },
         Effect::SleepBeforeReconnect(reason) => {
