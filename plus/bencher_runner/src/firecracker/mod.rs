@@ -225,7 +225,7 @@ pub fn run_firecracker(
 
     // Step 3: Create vsock listeners (must be before boot)
     println!("Setting up vsock listeners...");
-    let vsock_listener = VsockListener::new(jail.vsock().host())?;
+    let vsock_listener = VsockListener::new(jail.vsock().socket())?;
     // Firecracker connects out to these as the unprivileged jail user, so it
     // needs write access to the inodes. After bind and before InstanceStart.
     vsock_listener

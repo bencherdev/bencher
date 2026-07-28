@@ -9,11 +9,9 @@ use std::io::{Read as _, Write as _};
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
 
-use camino::Utf8Path;
-
 use crate::firecracker::config::{Action, BootSource, Drive, MachineConfig, VsockConfig};
 use crate::firecracker::error::FirecrackerError;
-use crate::jail::HostPath;
+use crate::jail::SocketPath;
 
 /// Client for the Firecracker REST API.
 pub struct FirecrackerClient {
@@ -24,22 +22,29 @@ impl FirecrackerClient {
     /// Create a new client for the API socket.
     ///
     /// The runner reaches the socket from outside the chroot, so this is the
-    /// host view; the jailed VMM binds the chroot view of the same file.
-    pub fn new(socket_path: &HostPath) -> Self {
+    /// socket view; the jailed VMM binds the chroot view of the same file.
+    pub fn new(socket_path: &SocketPath) -> Self {
         Self {
             socket_path: socket_path.as_str().to_owned(),
         }
     }
 
     /// Wait for the Firecracker API socket to become ready.
+    ///
+    /// Only failures that a not-yet-listening VMM actually produces are
+    /// retried. Anything else fails immediately: an unusable path is not going
+    /// to become usable, and retrying it for the whole timeout turns a precise
+    /// error into a timeout that points at Firecracker instead of at the
+    /// cause. An over-long socket path is rejected by the standard library
+    /// before any syscall, which is exactly the case this distinction exists
+    /// to surface.
     pub fn wait_for_ready(&self, timeout: Duration) -> Result<(), FirecrackerError> {
         let start = std::time::Instant::now();
         let poll_interval = Duration::from_millis(50);
 
         while start.elapsed() < timeout {
-            if Utf8Path::new(&self.socket_path).exists() {
-                // Try to connect
-                if let Ok(mut stream) = UnixStream::connect(&self.socket_path) {
+            match UnixStream::connect(&self.socket_path) {
+                Ok(mut stream) => {
                     drop(stream.set_read_timeout(Some(Duration::from_secs(1))));
                     drop(stream.set_write_timeout(Some(Duration::from_secs(1))));
 
@@ -52,7 +57,14 @@ impl FirecrackerClient {
                             return Ok(());
                         }
                     }
-                }
+                },
+                Err(e) if is_not_listening_yet(&e) => {},
+                Err(e) => {
+                    return Err(FirecrackerError::SocketUnusable {
+                        path: self.socket_path.clone(),
+                        source: e,
+                    });
+                },
             }
             std::thread::sleep(poll_interval);
         }
@@ -202,6 +214,21 @@ impl FirecrackerClient {
 
         Ok((status, response_body))
     }
+}
+
+/// Whether an error means the VMM has simply not started listening yet.
+///
+/// The socket file not existing, or existing with nothing accepting on it, is
+/// the normal state during boot. Every other error describes the address
+/// itself and will not change by waiting.
+fn is_not_listening_yet(error: &std::io::Error) -> bool {
+    matches!(
+        error.kind(),
+        std::io::ErrorKind::NotFound
+            | std::io::ErrorKind::ConnectionRefused
+            | std::io::ErrorKind::WouldBlock
+            | std::io::ErrorKind::Interrupted
+    )
 }
 
 /// Check if we have received a complete HTTP response.
