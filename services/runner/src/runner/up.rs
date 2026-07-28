@@ -32,6 +32,10 @@ impl TryFrom<CliUp> for Up {
                 update_channel: task.update_channel,
                 max_download_size: task.max_download_size,
                 state_dir: task.state_dir,
+                jail_user: bencher_runner::JailUser {
+                    uid: task.jail_uid,
+                    gid: task.jail_gid,
+                },
             },
         })
     }

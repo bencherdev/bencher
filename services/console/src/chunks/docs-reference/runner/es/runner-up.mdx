@@ -43,6 +43,20 @@ y las jaulas que quedaron tras una salida no limpia se eliminan de él antes de 
 Por defecto, se usa `/var/lib/bencher-runner`.
 También se puede establecer con la variable de entorno `BENCHER_STATE_DIR`.
 
+### `--jail-uid <JAIL_UID>`
+
+El ID de usuario sin privilegios al que cambia el proceso del sandbox.
+Por defecto, se usa `61016`.
+Un proceso del host que sea propietario de ese ID de usuario puede enviar señales al sandbox,
+así que asígnele un ID que el host no destine a ninguna otra cosa.
+También se puede establecer con la variable de entorno `BENCHER_JAIL_UID`.
+
+### `--jail-gid <JAIL_GID>`
+
+El ID de grupo sin privilegios al que cambia el proceso del sandbox.
+Por defecto, se usa `61016`.
+También se puede establecer con la variable de entorno `BENCHER_JAIL_GID`.
+
 ### `--danger-allow-no-sandbox`
 
 Permite ejecutar Jobs sin un [Sandbox][sandbox].

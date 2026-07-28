@@ -69,6 +69,8 @@ pub struct UpConfig {
     pub max_download_size: Option<u64>,
     /// The runner's persistent state directory.
     pub state_dir: camino::Utf8PathBuf,
+    /// The unprivileged uid and gid the jailed VMM drops to.
+    pub jail_user: crate::jail::JailUser,
 }
 
 pub struct Up {
@@ -110,7 +112,8 @@ impl Up {
         // that exited without unwinding, and ensure the empty network
         // namespace. The daemon claims sandboxed jobs, so this is required
         // before the first one arrives, not on demand.
-        crate::jail::prepare_host(&self.config.state_dir).map_err(crate::RunnerError::from)?;
+        crate::jail::prepare_host(&self.config.state_dir, self.config.jail_user)
+            .map_err(crate::RunnerError::from)?;
         println!("  State directory: {}", self.config.state_dir);
 
         // Serialize host-global tuning across runner processes. Declared

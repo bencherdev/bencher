@@ -158,6 +158,12 @@ pub struct Config {
     /// This field is not serialized.
     #[serde(skip, default = "default_state_dir")]
     pub state_dir: Utf8PathBuf,
+
+    /// The unprivileged uid and gid the jailed VMM drops to.
+    ///
+    /// This field is not serialized.
+    #[serde(skip)]
+    pub jail_user: crate::jail::JailUser,
 }
 
 fn default_vcpus() -> Cpu {
@@ -267,6 +273,7 @@ impl Config {
             sandbox_log_level: SandboxLogLevel::default(),
             sandbox: None,
             state_dir: default_state_dir(),
+            jail_user: crate::jail::JailUser::default(),
         }
     }
 
@@ -461,6 +468,13 @@ impl Config {
     #[must_use]
     pub fn with_state_dir(mut self, state_dir: Utf8PathBuf) -> Self {
         self.state_dir = state_dir;
+        self
+    }
+
+    /// Set the unprivileged uid and gid the jailed VMM drops to.
+    #[must_use]
+    pub fn with_jail_user(mut self, jail_user: crate::jail::JailUser) -> Self {
+        self.jail_user = jail_user;
         self
     }
 
