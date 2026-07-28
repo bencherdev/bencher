@@ -31,13 +31,33 @@ const REAP_TIMEOUT: Duration = Duration::from_secs(5);
 /// How often to check whether it has.
 const REAP_INTERVAL: Duration = Duration::from_millis(20);
 
+/// Whether a jail still has a VMM running in it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reaped {
+    /// Nothing is running in the jail: either nothing was, or it has exited.
+    Clear,
+    /// A VMM is still running in the jail and could not be reaped.
+    ///
+    /// The caller must not remove the chroot: doing so would pull the rootfs
+    /// out from under a live process, and would destroy the only handle for
+    /// identifying that process on a later sweep.
+    StillRunning {
+        /// The VMM that is still running.
+        pid: u32,
+    },
+}
+
 /// Kill the VMM confined to `jail_root`, if one is still running.
 ///
-/// Returns the pid that was reaped. Best effort: a VMM that cannot be
-/// identified or killed is reported and left alone, because the alternative
-/// to leaving an unidentified process alone is killing the wrong one.
-pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Option<u32> {
-    let pid = find_jailed_vmm(jail_root)?;
+/// Best effort about *which* process it touches: a VMM that cannot be
+/// identified is left alone, because the alternative to leaving an
+/// unidentified process alone is killing the wrong one. Never best effort
+/// about what it reports, because the caller decides whether to delete a
+/// directory based on the answer.
+pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Reaped {
+    let Some(pid) = find_jailed_vmm(jail_root) else {
+        return Reaped::Clear;
+    };
 
     // Pin the pid before signalling it. A pid found by scanning `/proc` can
     // exit and have its number recycled before the signal lands, and this runs
@@ -48,7 +68,7 @@ pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Option<u32> {
     let pidfd = match pidfd_open(pid) {
         Ok(Some(pidfd)) => pidfd,
         // Already gone, which is the common case and not a failure.
-        Ok(None) => return None,
+        Ok(None) => return Reaped::Clear,
         Err(e) => {
             // Silence here is what wedges a runner: the orphan keeps the
             // benchmark CPUs, the cgroup cannot be removed, and nothing says
@@ -56,29 +76,30 @@ pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Option<u32> {
             eprintln!(
                 "Warning: cannot pin orphaned VMM (pid {pid}) in {jail_root} to reap it: {e}. It is still running and still holds the benchmark CPUs."
             );
-            return None;
+            return Reaped::StillRunning { pid };
         },
     };
 
-    // Re-check now that the pid cannot change underneath us.
+    // Re-check now that the pid cannot change underneath us. If it is no
+    // longer the jail's VMM, the jail is clear whatever else is true.
     if !is_jailed_vmm(pid, jail_root) {
-        return None;
+        return Reaped::Clear;
     }
 
     if let Err(e) = pidfd_kill(&pidfd) {
         eprintln!("Warning: failed to kill orphaned VMM (pid {pid}) in {jail_root}: {e}");
-        return None;
+        return Reaped::StillRunning { pid };
     }
 
     if wait_for_exit(pid) {
         eprintln!("Warning: reaped orphaned VMM (pid {pid}) left behind in {jail_root}");
-        Some(pid)
+        Reaped::Clear
     } else {
         eprintln!(
             "Warning: orphaned VMM (pid {pid}) in {jail_root} did not exit within {} seconds",
             REAP_TIMEOUT.as_secs()
         );
-        None
+        Reaped::StillRunning { pid }
     }
 }
 
@@ -305,10 +326,22 @@ mod tests {
     }
 
     #[test]
-    fn reaping_an_unjailed_directory_kills_nothing() {
+    fn reaping_an_unjailed_directory_kills_nothing_and_reports_clear() {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
-        assert_eq!(reap_jailed_vmm(&root), None);
+        assert_eq!(reap_jailed_vmm(&root), Reaped::Clear);
+    }
+
+    #[test]
+    fn a_still_running_vmm_carries_its_pid() {
+        // The caller keys the decision not to delete a directory off this, so
+        // the variant has to name the process it is refusing to abandon.
+        let still = Reaped::StillRunning { pid: 4242 };
+        assert_ne!(still, Reaped::Clear);
+        match still {
+            Reaped::StillRunning { pid } => assert_eq!(pid, 4242),
+            Reaped::Clear => panic!("expected StillRunning"),
+        }
     }
 }
