@@ -3,6 +3,8 @@ use std::process::Command;
 use assert_cmd::cargo::CommandCargoExt as _;
 use bencher_json::{JsonProjectKeyCreated, JsonUserKeyCreated, Jwt, Url};
 use pretty_assertions::assert_eq;
+#[cfg(unix)]
+use std::os::unix::process::CommandExt as _;
 
 use crate::parser::TaskRunner;
 use crate::task::test::seed_test::{
@@ -174,11 +176,29 @@ impl RunnerTest {
             anyhow::ensure!(build_status.success(), "Failed to build bencher CLI");
         }
 
-        // Start the Firecracker runner daemon only when KVM is available
+        // Start the Firecracker runner daemon only when KVM is available.
+        //
+        // Elevated, because a sandboxed Job is a jailed Job: the jailer creates
+        // the chroot's device nodes with mknod, chowns the tree to the jail
+        // user, pivot_roots, and joins a network namespace. Only this one
+        // process is elevated. Everything else in this test, cargo included,
+        // stays as the invoking user, and the no-sandbox runner below stays
+        // unprivileged, which proves the coupling holds in both directions in
+        // the same run.
         let runner_child_and_handle = if has_kvm {
-            println!("Starting runner daemon...");
-            let mut runner_child = Command::cargo_bin("runner")?;
-            let mut runner_child = runner_child
+            println!("Starting runner daemon (elevated)...");
+            ensure_passwordless_sudo()?;
+
+            // Resolve the already-built binary and run it under sudo directly,
+            // so cargo is never invoked as root and cannot leave root-owned
+            // artifacts in the target directory.
+            let runner_cmd = Command::cargo_bin("runner")?;
+            let runner_bin = runner_cmd.get_program().to_owned();
+
+            let mut runner_child = Command::new("sudo");
+            let runner_child = runner_child
+                .args(["-n", "--"])
+                .arg(&runner_bin)
                 .args([
                     "up",
                     HOST_ARG,
@@ -189,8 +209,13 @@ impl RunnerTest {
                     "test-runner",
                 ])
                 .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::inherit())
-                .spawn()?;
+                .stderr(std::process::Stdio::inherit());
+            // Its own process group, so teardown can signal the runner even
+            // though the child handle is sudo, which may exec the runner in
+            // place or fork it depending on version and configuration.
+            #[cfg(unix)]
+            runner_child.process_group(0);
+            let mut runner_child = runner_child.spawn()?;
 
             let reader_handle = wait_for_stdout_ready(
                 &mut runner_child,
@@ -288,8 +313,7 @@ impl RunnerTest {
 
         // Always kill runner daemons, even if the test failed
         if let Some((mut runner_child, reader_handle)) = runner_child_and_handle {
-            let _kill = runner_child.kill();
-            let _wait = runner_child.wait();
+            kill_elevated_runner(&mut runner_child);
             let _join = reader_handle.join();
         }
         let _kill = no_sandbox_child.kill();
@@ -307,6 +331,46 @@ impl RunnerTest {
         println!("=== Runner Daemon Test Passed ===");
         Ok(())
     }
+}
+
+/// Fail early when the sandboxed runner cannot be elevated.
+///
+/// Without this the runner would start, fail to build its first jail, and the
+/// readiness wait would time out after thirty seconds with nothing pointing at
+/// the cause.
+fn ensure_passwordless_sudo() -> anyhow::Result<()> {
+    let status = Command::new("sudo")
+        .args(["-n", "true"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()?;
+    anyhow::ensure!(
+        status.success(),
+        "A Runner executing sandboxed Jobs must run as root, and passwordless sudo is not available. \
+         The jailer creates the chroot's device nodes with mknod, chowns the tree to the jail user, \
+         pivot_roots into it, and joins a network namespace, none of which an unprivileged process can do."
+    );
+    Ok(())
+}
+
+/// Stop the elevated runner daemon and anything it spawned.
+///
+/// The runner runs as root, so the unprivileged test process cannot signal it,
+/// and the handle is sudo rather than the runner itself. Signalling the whole
+/// process group covers both cases; the group exists because the spawn put the
+/// child in its own. Killing sudo alone would leave a root runner daemon
+/// holding the jail lock for the rest of the run.
+fn kill_elevated_runner(child: &mut std::process::Child) {
+    let pid = child.id();
+    let _status = Command::new("sudo")
+        .args(["-n", "sh", "-c"])
+        .arg(format!(
+            "kill -KILL -{pid} 2>/dev/null || kill -KILL {pid} 2>/dev/null || true"
+        ))
+        .status();
+    // Reap the handle whatever the signal did.
+    let _kill = child.kill();
+    let _wait = child.wait();
 }
 
 /// Check whether Docker is available.
