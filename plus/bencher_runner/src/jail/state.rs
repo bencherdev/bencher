@@ -194,7 +194,21 @@ where
         if !entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
             continue;
         }
-        let vm_id = VmId::from_chroot_name(entry.file_name().to_string_lossy().into_owned());
+        // Skipped rather than lossily converted. A lossy name rebuilds into a
+        // path naming a different file, and everything downstream then works
+        // on the wrong one: the reap stats a path that does not exist and
+        // reports the jail clear, so a live VMM is neither reaped nor
+        // mentioned, and the cgroup removal targets a name nobody created.
+        // The runner only ever creates UTF-8 names here, so anything else is
+        // not ours to touch.
+        let file_name = entry.file_name();
+        let Some(name) = file_name.to_str() else {
+            eprintln!(
+                "Warning: skipping an entry with a non-UTF-8 name under {jail_parent}; the runner did not create it"
+            );
+            continue;
+        };
+        let vm_id = VmId::from_chroot_name(name.to_owned());
         let jail_dir = jail_parent.join(vm_id.as_str());
 
         // Reap before removing, and only remove once the jail is clear.
