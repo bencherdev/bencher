@@ -2386,6 +2386,19 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
         return Ok(path);
     }
 
+    // Falling through to cargo as root is the exact outcome the
+    // build-then-elevate split exists to prevent: it leaves the target
+    // directory and the cargo cache owned by root, and it does so silently.
+    // Sudo does pass the variable through on both runner images, so this is
+    // belt and braces, but a loud failure beats a root-owned cache.
+    anyhow::ensure!(
+        !is_root(),
+        "Running as root without {RUNNER_BIN_ENV} set. Building here would run cargo as root and \
+         leave the target directory and cargo cache root-owned. Build unprivileged first:\n\
+         \x20 cargo test-runner scenarios --build-only\n\
+         \x20 sudo {RUNNER_BIN_ENV}=./target/debug/runner ./target/debug/test_runner scenarios"
+    );
+
     let workspace_root = super::workspace_root();
     let target_triple = super::musl_target_triple()?;
 
@@ -2792,6 +2805,13 @@ fn run_runner_after_orphan(
         .stderr(std::process::Stdio::piped())
         .spawn()?;
 
+    // Drain both pipes for the same reason the probe path does. This polls for
+    // up to three minutes while the runner pulls an image, unpacks it, and
+    // builds an ext4, which is more than enough output to fill a 64 KiB pipe
+    // and block the runner. It would surface as "No jailed VMM appeared",
+    // which points at the sweep rather than at the pipe.
+    let readers = drain_output(&mut child);
+
     // Wait for a real orphan: a chroot with a VMM running in it, not just an
     // empty directory created microseconds before the kill.
     let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
@@ -2808,16 +2828,16 @@ fn run_runner_after_orphan(
     };
 
     let Some((vm_id, jail_root, vmm_pid)) = orphan else {
-        let output = child.wait_with_output()?;
+        drop(child.wait());
+        let (stdout, stderr) = readers.join();
         bail!(
-            "No jailed VMM appeared within {PROBE_TIMEOUT:?}, so nothing was orphaned and the sweep is untested.\nstdout: {}\nstderr: {}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr),
+            "No jailed VMM appeared within {PROBE_TIMEOUT:?}, so nothing was orphaned and the sweep is untested.\nstdout: {stdout}\nstderr: {stderr}"
         );
     };
 
     kill_pid(child.id(), libc::SIGKILL);
     drop(child.wait());
+    drop(readers.join());
 
     if !jail_root.exists() {
         bail!(
