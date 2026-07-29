@@ -87,6 +87,21 @@ impl std::fmt::Display for ChrootPath {
 
 /// A path the runner may hand to `bind` or `connect`.
 ///
+/// The value names a descriptor held open by the [`JailPaths`] it came from,
+/// and it is only valid while that value is alive. That invariant is upheld by
+/// ordering rather than by the compiler: `SocketPath` could borrow, which would
+/// make a use-after-drop impossible, but the lifetime would ripple through
+/// [`JailFile`], the Firecracker job config, the jailer spawn, and everything
+/// that owns them. It is deliberately not enforced, not overlooked, and it is
+/// a reasonable follow-up.
+///
+/// Two things hold the line in the meantime. Only `bind` and `connect` take
+/// this view, because they are the only callers subject to the length limit;
+/// everything else, unlinking above all, takes the host view, which cannot go
+/// stale. And a test drops the paths, claims the released descriptor number
+/// with another directory, and asserts the same string no longer names the
+/// jail, so the hazard is at least pinned.
+///
 /// The type makes the length limit unforgeable: every value has been checked
 /// against `sun_path`, so a path that would not fit is reported when the jail
 /// is built, naming the limit and the offending string, rather than surfacing
