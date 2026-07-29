@@ -52,6 +52,18 @@ pub enum FirecrackerError {
     #[error("Firecracker API socket not ready after {0:?}")]
     SocketNotReady(std::time::Duration),
 
+    /// The jailer exited before Firecracker started serving its API.
+    ///
+    /// Distinct from a timeout: the process is gone, so waiting cannot help,
+    /// and the reason is on stderr under the `[firecracker]` prefix.
+    #[error(
+        "The jailer exited ({status}) before the Firecracker API socket appeared; its diagnostics are above, prefixed [firecracker]"
+    )]
+    JailerExited {
+        /// How the jailer exited.
+        status: String,
+    },
+
     /// The API socket address itself cannot be used.
     ///
     /// Distinct from [`Self::SocketNotReady`]: waiting will not help, so the
