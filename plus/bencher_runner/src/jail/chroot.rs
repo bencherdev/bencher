@@ -73,9 +73,24 @@ impl Drop for JailDir {
 ///
 /// The jailer chowns the chroot root and the device nodes it makes, but that
 /// chown is not recursive: files the runner placed inside keep the ownership
-/// they were created with, which is root. Every artifact Firecracker touches
+/// they were created with, which is root. Every artifact Firecracker *writes*
 /// has to be handed over explicitly, and getting it wrong produces an opaque
-/// boot failure, so each one is checked.
+/// boot failure, so each one is checked. Anything it only reads gets
+/// [`grant_jail_read`] instead.
+/// Let the jailed VMM read a file without giving it away.
+///
+/// Firecracker only ever reads the kernel image, so it gets read permission
+/// and nothing more: the file stays owned by root, which means the VMM cannot
+/// write it and cannot chmod it into something it can write. The mode is set
+/// explicitly rather than inherited, because a bundled write or a copy from
+/// the host can land at 0600 and leave the VMM unable to read its own kernel.
+pub fn grant_jail_read(path: &Utf8Path) -> Result<(), JailError> {
+    fs::set_permissions(path, fs::Permissions::from_mode(0o644)).map_err(|e| JailError::ChownJail {
+        path: path.to_owned(),
+        source: e,
+    })
+}
+
 pub fn chown_to_jail(path: &Utf8Path, jail_user: JailUser) -> Result<(), JailError> {
     chown(path, Some(jail_user.uid()), Some(jail_user.gid())).map_err(|e| JailError::ChownJail {
         path: path.to_owned(),
