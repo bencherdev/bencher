@@ -13,6 +13,19 @@ use crate::firecracker::config::{Action, ActionType};
 use crate::firecracker::error::FirecrackerError;
 use crate::jail::{JailFile, JailUser, VmId};
 
+/// How long to wait for the Firecracker API socket to appear.
+///
+/// This budget used to cover Firecracker starting up on its own. It now also
+/// has to cover the jailer building a chroot, copying a multi-megabyte exec
+/// file into it, creating device nodes, chowning, `pivot_root`, and `setns`,
+/// on a host that may be busy running someone else's benchmark. Five seconds
+/// left no margin for that.
+///
+/// Widening costs nothing on the failure path: a jailer that dies is detected
+/// the moment it exits rather than at the deadline, so the only thing this
+/// affects is how patient the runner is with a slow host.
+const API_SOCKET_TIMEOUT: Duration = Duration::from_secs(30);
+
 /// Everything needed to spawn the VMM under the jailer.
 #[derive(Debug)]
 pub struct JailedSpawn<'a> {
@@ -146,7 +159,7 @@ impl FirecrackerProcess {
             stderr_thread: Some(stderr_thread),
         };
 
-        process.wait_for_ready(Duration::from_secs(5))?;
+        process.wait_for_ready(API_SOCKET_TIMEOUT)?;
 
         Ok(process)
     }
