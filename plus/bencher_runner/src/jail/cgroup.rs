@@ -44,17 +44,24 @@ impl CgroupManager {
         // the tuning cpuset partition at startup.
         Self::enable_controllers(&parent)?;
 
-        // Create this run's cgroup
-        if !cgroup_path.exists() {
+        // Create this run's cgroup, and remember whether we are the ones who
+        // made it. `Drop` removes what this created, so claiming ownership of
+        // a cgroup that was already there would have it rmdir something
+        // belonging to whoever did create it. Fresh ids make that unlikely,
+        // but this branch exists precisely for when the id is not fresh.
+        let created = if cgroup_path.exists() {
+            false
+        } else {
             fs::create_dir_all(&cgroup_path).map_err(|e| JailError::CreateCgroup {
                 path: cgroup_path.clone(),
                 source: e,
             })?;
-        }
+            true
+        };
 
         Ok(Self {
             cgroup_path,
-            created: true,
+            created,
         })
     }
 
@@ -692,6 +699,32 @@ mod tests {
         assert_eq!(parse_cpuset("3"), [3].into());
         assert!(parse_cpuset("").is_empty());
         assert!(parse_cpuset("\n").is_empty());
+    }
+
+    #[test]
+    fn a_cgroup_that_already_existed_is_not_ours_to_remove() {
+        // Drop removes what this created. Claiming a cgroup that was already
+        // there would have it rmdir something belonging to whoever did.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        let ours = CgroupManager {
+            cgroup_path: root.join("ours"),
+            created: true,
+        };
+        let theirs = CgroupManager {
+            cgroup_path: root.join("theirs"),
+            created: false,
+        };
+        fs::create_dir_all(ours.path()).unwrap();
+        fs::create_dir_all(theirs.path()).unwrap();
+        let theirs_path = theirs.path().to_owned();
+
+        drop(ours);
+        drop(theirs);
+
+        assert!(!root.join("ours").exists(), "we remove what we created");
+        assert!(theirs_path.exists(), "we leave what we did not create");
     }
 
     #[test]
