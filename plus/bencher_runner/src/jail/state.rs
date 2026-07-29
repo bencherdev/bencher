@@ -153,18 +153,32 @@ const RUNNER_ENTRIES: [&str; 2] = [CHROOT_BASE, LOCK_FILE];
 /// Non-directory entries are left alone: the jailer only ever creates
 /// directories here, so anything else was put there by someone else.
 pub fn sweep_jails(jail_parent: &Utf8Path) -> Result<usize, JailError> {
-    sweep_jails_with(jail_parent, super::reap::reap_jailed_vmm)
+    sweep_jails_with(
+        jail_parent,
+        super::reap::reap_jailed_vmm,
+        super::cgroup::remove_stale_cgroup,
+    )
 }
 
-/// The sweep, with the reap injectable.
+/// The sweep, with the reap and the cgroup removal injectable.
 ///
 /// The branch that refuses to remove a directory is the one preventing a
 /// destructive action, and it only runs when a real VMM survives a real kill.
 /// Manufacturing that would be testing fault injection rather than this code,
 /// so the reap is a parameter and the tests supply the answer.
-fn sweep_jails_with<R>(jail_parent: &Utf8Path, reap: R) -> Result<usize, JailError>
+///
+/// The cgroup removal is a parameter for a different reason: it reaches into
+/// `/sys/fs/cgroup` on the machine running the tests, and a unit test that
+/// passes only because a given id happens not to exist on a dev box is
+/// reading host state, not this code.
+fn sweep_jails_with<R, C>(
+    jail_parent: &Utf8Path,
+    reap: R,
+    remove_cgroup: C,
+) -> Result<usize, JailError>
 where
     R: Fn(&Utf8Path) -> Reaped,
+    C: Fn(&VmId) -> Result<(), JailError>,
 {
     let Ok(entries) = fs::read_dir(jail_parent) else {
         return Ok(0);
@@ -222,7 +236,7 @@ where
         // set no exclusive cpuset, but they accumulate under the parent and a
         // removal that fails usually means something is still running in one.
         // Reported rather than swallowed for that reason.
-        if let Err(e) = super::cgroup::remove_stale_cgroup(&vm_id)
+        if let Err(e) = remove_cgroup(&vm_id)
             && failure.is_none()
         {
             failure = Some(e);
@@ -357,7 +371,10 @@ mod tests {
         .unwrap();
         fs::create_dir_all(state.jail_dir(&VmId::from_chroot_name("two".to_owned()))).unwrap();
 
-        assert_eq!(sweep_jails(&state.jail_parent()).unwrap(), 2);
+        assert_eq!(
+            sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(())).unwrap(),
+            2
+        );
         assert!(
             !state
                 .jail_dir(&VmId::from_chroot_name("one".to_owned()))
@@ -381,7 +398,10 @@ mod tests {
         fs::write(&note, b"not a jail").unwrap();
         fs::create_dir_all(state.jail_dir(&VmId::from_chroot_name("stale".to_owned()))).unwrap();
 
-        assert_eq!(sweep_jails(&state.jail_parent()).unwrap(), 1);
+        assert_eq!(
+            sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(())).unwrap(),
+            1
+        );
         assert!(
             !state
                 .jail_dir(&VmId::from_chroot_name("stale".to_owned()))
@@ -402,13 +422,17 @@ mod tests {
         fs::create_dir_all(state.jail_root(&live)).unwrap();
         fs::create_dir_all(state.jail_root(&dead)).unwrap();
 
-        let err = sweep_jails_with(&state.jail_parent(), |jail_root| {
-            if jail_root.as_str().contains("live") {
-                Reaped::StillRunning { pid: 4242 }
-            } else {
-                Reaped::Clear
-            }
-        })
+        let err = sweep_jails_with(
+            &state.jail_parent(),
+            |jail_root| {
+                if jail_root.as_str().contains("live") {
+                    Reaped::StillRunning { pid: 4242 }
+                } else {
+                    Reaped::Clear
+                }
+            },
+            |_vm_id| Ok(()),
+        )
         .unwrap_err();
 
         assert!(
@@ -437,7 +461,7 @@ mod tests {
 
         let stuck = |_jail_root: &Utf8Path| Reaped::StillRunning { pid: 7 };
         for attempt in 1..=3 {
-            let err = sweep_jails_with(&state.jail_parent(), stuck).unwrap_err();
+            let err = sweep_jails_with(&state.jail_parent(), stuck, |_vm_id| Ok(())).unwrap_err();
             assert!(
                 err.to_string().contains('7'),
                 "attempt {attempt} must report the pid"
@@ -453,7 +477,12 @@ mod tests {
         state.create().unwrap();
         fs::create_dir_all(state.jail_root(&VmId::from_chroot_name("one".to_owned()))).unwrap();
 
-        let swept = sweep_jails_with(&state.jail_parent(), |_jail_root| Reaped::Clear).unwrap();
+        let swept = sweep_jails_with(
+            &state.jail_parent(),
+            |_jail_root| Reaped::Clear,
+            |_vm_id| Ok(()),
+        )
+        .unwrap();
 
         assert_eq!(swept, 1);
     }
@@ -461,6 +490,9 @@ mod tests {
     #[test]
     fn sweep_missing_parent_is_zero() {
         let (_dir, root) = temp_root();
-        assert_eq!(sweep_jails(&root.join("nope")).unwrap(), 0);
+        assert_eq!(
+            sweep_jails_with(&root.join("nope"), |_j| Reaped::Clear, |_v| Ok(())).unwrap(),
+            0
+        );
     }
 }
