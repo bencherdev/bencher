@@ -75,9 +75,10 @@ pub struct VsockListener {
 impl VsockListener {
     /// Create vsock listeners for all expected ports.
     ///
-    /// Creates Unix listeners at `{vsock_uds_path}_{port}` for each port,
-    /// using the host view of the path: the runner binds them from outside
-    /// the chroot. These must be created before the VM boots.
+    /// Creates Unix listeners at `{vsock}_{port}` for each port. Binding uses
+    /// the socket view, which is the only view short enough for `sun_path`;
+    /// unlinking and ownership use the host view, which does not depend on a
+    /// descriptor staying open. These must be created before the VM boots.
     pub fn new(vsock: &JailFile) -> Result<Self, FirecrackerError> {
         let socket = vsock.socket();
         let stdout_path = socket.with_suffix(&format!("_{}", ports::STDOUT));

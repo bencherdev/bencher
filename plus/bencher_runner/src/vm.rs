@@ -84,7 +84,7 @@ pub fn vm_execute(
     // before any of them exist. Dropping this guard removes the chroot tree,
     // which is what the workspace temp directory used to cover.
     let vm_id = VmId::new();
-    let jail_dir = JailDir::create(&state_dir, &vm_id)?;
+    let jail_dir = JailDir::create(&state_dir, &vm_id, host.reclaim_signal())?;
     let jail = JailPaths::new(jail_dir.root())?;
     println!("  Jail: {}", jail.root());
 

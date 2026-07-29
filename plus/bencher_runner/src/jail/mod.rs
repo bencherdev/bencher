@@ -34,6 +34,9 @@ pub use paths::{ChrootPath, HostPath, JailFile, JailPaths, SocketPath};
 #[cfg(target_os = "linux")]
 pub use state::StateDir;
 
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use serde::{Deserialize, Serialize};
 
 /// Default location of the runner's persistent state directory.
@@ -171,6 +174,36 @@ pub struct HostPreparation {
         expect(dead_code, reason = "host preparation is Linux-only")
     )]
     prepared: bool,
+    /// Set when a job's teardown could not reclaim its chroot.
+    reclaim_failed: ReclaimFailed,
+}
+
+/// Shared signal that a jail could not be reclaimed.
+///
+/// `Drop` has nowhere to report a failure, and a chroot that outlives its job
+/// holds a copy of the VMM binary and a full guest rootfs. Because the sweep
+/// otherwise runs once per process, a long-lived daemon would carry that leak
+/// until a restart. Setting this makes the next job sweep again, which is the
+/// mechanism that already exists for exactly this.
+///
+/// Owned by the runner's [`HostPreparation`] and cloned into each jail, never
+/// global.
+#[derive(Debug, Clone, Default)]
+pub struct ReclaimFailed(Arc<AtomicBool>);
+
+impl ReclaimFailed {
+    /// Record that a jail could not be reclaimed.
+    pub fn set(&self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+
+    /// Consume the signal, reporting whether it was set.
+    ///
+    /// Only the jail reads it, and the jail is Linux-only.
+    #[cfg(target_os = "linux")]
+    fn take(&self) -> bool {
+        self.0.swap(false, Ordering::SeqCst)
+    }
 }
 
 impl HostPreparation {
@@ -178,6 +211,12 @@ impl HostPreparation {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// A handle each jail uses to report that it could not be reclaimed.
+    #[must_use]
+    pub fn reclaim_signal(&self) -> ReclaimFailed {
+        self.reclaim_failed.clone()
     }
 
     /// Prepare the host for jailed execution, at most once.
@@ -201,7 +240,9 @@ impl HostPreparation {
         state_dir: &camino::Utf8Path,
         jail_user: JailUser,
     ) -> Result<(), crate::error::JailError> {
-        if self.prepared {
+        // A jail that could not be reclaimed earns another sweep, whatever
+        // this process has already done.
+        if self.prepared && !self.reclaim_failed.take() {
             return Ok(());
         }
         prepare_host(state_dir, jail_user)?;
@@ -480,6 +521,39 @@ mod tests {
         std::fs::remove_dir(state_dir.join("someone-elses-data")).unwrap();
         host.ensure(&state_dir, JailUser::default()).unwrap();
         assert!(state_dir.join("jail").is_dir());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_jail_that_could_not_be_reclaimed_earns_another_sweep() {
+        // The sweep otherwise runs once per process, so a teardown that failed
+        // in a long-lived daemon would leak a chroot holding a VMM copy and a
+        // full guest rootfs until a restart. Drop has nowhere to report, so it
+        // raises this instead.
+        let dir = tempfile::tempdir().unwrap();
+        let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let state_dir = root.join("state");
+
+        let mut host = HostPreparation::new();
+        host.ensure(&state_dir, JailUser::default()).unwrap();
+
+        // Already prepared: a second job does not redo the work.
+        std::fs::remove_dir_all(&state_dir).unwrap();
+        host.ensure(&state_dir, JailUser::default()).unwrap();
+        assert!(!state_dir.exists(), "preparation happens at most once");
+
+        // A jail that could not be reclaimed changes that.
+        host.reclaim_signal().set();
+        host.ensure(&state_dir, JailUser::default()).unwrap();
+        assert!(
+            state_dir.join("jail").is_dir(),
+            "a failed teardown must earn another sweep"
+        );
+
+        // And the signal is consumed, not sticky.
+        std::fs::remove_dir_all(&state_dir).unwrap();
+        host.ensure(&state_dir, JailUser::default()).unwrap();
+        assert!(!state_dir.exists(), "the signal is consumed once");
     }
 
     #[cfg(target_os = "linux")]

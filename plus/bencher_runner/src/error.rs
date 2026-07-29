@@ -188,6 +188,13 @@ pub enum JailError {
     },
 
     #[cfg(target_os = "linux")]
+    #[error("Failed to make {path} readable by the jailed VMM: {source}")]
+    ChmodJail {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
     #[error("Failed to hand {path} to the jail uid and gid: {source}")]
     ChownJail {
         path: Utf8PathBuf,

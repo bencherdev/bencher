@@ -14,7 +14,7 @@ use std::os::unix::fs::{PermissionsExt as _, chown};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::JailError;
-use crate::jail::{JailUser, StateDir, VmId};
+use crate::jail::{JailUser, ReclaimFailed, StateDir, VmId};
 
 /// A job's chroot tree, removed when this value is dropped.
 ///
@@ -25,11 +25,16 @@ use crate::jail::{JailUser, StateDir, VmId};
 pub struct JailDir {
     dir: Utf8PathBuf,
     root: Utf8PathBuf,
+    reclaim_failed: ReclaimFailed,
 }
 
 impl JailDir {
     /// Create the chroot tree for `vm_id` at mode 0700.
-    pub fn create(state: &StateDir, vm_id: &VmId) -> Result<Self, JailError> {
+    pub fn create(
+        state: &StateDir,
+        vm_id: &VmId,
+        reclaim_failed: ReclaimFailed,
+    ) -> Result<Self, JailError> {
         let dir = state.jail_dir(vm_id);
         let root = state.jail_root(vm_id);
 
@@ -49,7 +54,11 @@ impl JailDir {
             })?;
         }
 
-        Ok(Self { dir, root })
+        Ok(Self {
+            dir,
+            root,
+            reclaim_failed,
+        })
     }
 
     /// The chroot root, which becomes `/` inside the jail.
@@ -64,9 +73,30 @@ impl Drop for JailDir {
         if let Err(e) = fs::remove_dir_all(&self.dir)
             && e.kind() != std::io::ErrorKind::NotFound
         {
-            eprintln!("Warning: failed to remove jail {}: {e}", self.dir);
+            eprintln!(
+                "Warning: failed to remove jail {}: {e}. It holds a VMM binary and a full guest rootfs; the next job will sweep it.",
+                self.dir
+            );
+            self.reclaim_failed.set();
         }
     }
+}
+
+/// Let the jailed VMM read a file without giving it away.
+///
+/// Firecracker only ever reads the kernel image, so it gets read permission
+/// and nothing more: the file stays owned by root, which means the VMM cannot
+/// write it and cannot chmod it into something it can write. The mode is set
+/// explicitly rather than inherited, because a bundled write or a copy from
+/// the host can land at 0600 and leave the VMM unable to read its own kernel.
+pub fn grant_jail_read(path: &Utf8Path) -> Result<(), JailError> {
+    // Reported as a mode failure, not an ownership one. This function
+    // deliberately leaves the file owned by root, so an operator sent looking
+    // at ownership would be chasing the opposite of what went wrong.
+    fs::set_permissions(path, fs::Permissions::from_mode(0o644)).map_err(|e| JailError::ChmodJail {
+        path: path.to_owned(),
+        source: e,
+    })
 }
 
 /// Hand a file the runner placed inside the chroot to the jail uid and gid.
@@ -77,20 +107,6 @@ impl Drop for JailDir {
 /// has to be handed over explicitly, and getting it wrong produces an opaque
 /// boot failure, so each one is checked. Anything it only reads gets
 /// [`grant_jail_read`] instead.
-/// Let the jailed VMM read a file without giving it away.
-///
-/// Firecracker only ever reads the kernel image, so it gets read permission
-/// and nothing more: the file stays owned by root, which means the VMM cannot
-/// write it and cannot chmod it into something it can write. The mode is set
-/// explicitly rather than inherited, because a bundled write or a copy from
-/// the host can land at 0600 and leave the VMM unable to read its own kernel.
-pub fn grant_jail_read(path: &Utf8Path) -> Result<(), JailError> {
-    fs::set_permissions(path, fs::Permissions::from_mode(0o644)).map_err(|e| JailError::ChownJail {
-        path: path.to_owned(),
-        source: e,
-    })
-}
-
 pub fn chown_to_jail(path: &Utf8Path, jail_user: JailUser) -> Result<(), JailError> {
     chown(path, Some(jail_user.uid()), Some(jail_user.gid())).map_err(|e| JailError::ChownJail {
         path: path.to_owned(),
@@ -119,7 +135,7 @@ mod tests {
     fn create_builds_a_private_chroot_tree() {
         let (_dir, state) = state_in_tmpdir();
 
-        let jail = JailDir::create(&state, &vm_id()).unwrap();
+        let jail = JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap();
 
         assert_eq!(jail.root(), state.jail_root(&vm_id()));
         assert!(jail.root().is_dir());
@@ -134,7 +150,7 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
         fs::create_dir_all(state.jail_root(&vm_id())).unwrap();
 
-        JailDir::create(&state, &vm_id()).unwrap();
+        JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap();
     }
 
     #[test]
@@ -142,7 +158,7 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
 
         {
-            let jail = JailDir::create(&state, &vm_id()).unwrap();
+            let jail = JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap();
             fs::write(jail.root().join("rootfs.ext4"), b"guest").unwrap();
             fs::create_dir_all(jail.root().join("dev")).unwrap();
         }
@@ -163,13 +179,13 @@ mod tests {
         // impossible to create.
         fs::write(state.jail_dir(&vm_id()), b"in the way").unwrap();
 
-        JailDir::create(&state, &vm_id()).unwrap_err();
+        JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap_err();
     }
 
     #[test]
     fn drop_tolerates_an_already_removed_tree() {
         let (_dir, state) = state_in_tmpdir();
-        let jail = JailDir::create(&state, &vm_id()).unwrap();
+        let jail = JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap();
         fs::remove_dir_all(state.jail_dir(&vm_id())).unwrap();
         drop(jail);
     }
