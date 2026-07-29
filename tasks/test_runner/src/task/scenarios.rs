@@ -2477,6 +2477,7 @@ CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
                 // booted a guest, so without this the scenario stays green
                 // while the product is broken.
                 assert_job_succeeded(output, "JAIL_CONFINEMENT_a7f3b2c9")?;
+                assert_cpu_isolation_applied(output)?;
                 assert_no_chroot_remains(&scenario_state_dir())
             },
             ..Scenario::default()
@@ -2509,6 +2510,25 @@ CMD ["sh", "-c", "echo JAIL_SWEEP_a7f3b2c9 && sleep 10"]"#,
             ..Scenario::default()
         },
     ]
+}
+
+/// Assert the runner reported that it confined the VMM to the benchmark cores.
+///
+/// The runner prints this only after creating the cgroup, writing the cpuset,
+/// and reading the effective set back, so it is the runner's own statement
+/// that a cgroup exists for the probe to have checked membership against.
+/// Without it the probe could pass on a host where no cgroup was ever made.
+fn assert_cpu_isolation_applied(output: &ScenarioOutput) -> Result<()> {
+    const PINNED: &str = "CPU isolation: Firecracker pinned to cores";
+    if output.stdout.contains(PINNED) {
+        return Ok(());
+    }
+    bail!(
+        "The runner never reported pinning the VMM to benchmark cores, so no cgroup was created \
+         and cgroup placement went unexercised by this run. Expected {PINNED:?}.\nstdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    )
 }
 
 /// Stack extra bind mounts on the network namespace handle.
@@ -2723,20 +2743,28 @@ fn jail_root_uid(jail_root: &Utf8Path) -> Option<u32> {
 /// first time the process is observable.
 fn check_cgroup_membership(vm_id: &str, pid: u32) -> Result<()> {
     let procs_path = format!("/sys/fs/cgroup/bencher/{vm_id}/cgroup.procs");
-    // No cgroup means no isolation was possible on this host, which is a
-    // declared limitation rather than a confinement failure. Say so out loud:
-    // a confinement check that quietly asserts nothing is exactly the kind of
-    // green that must never be invisible.
-    let Ok(procs) = fs::read_to_string(&procs_path) else {
-        println!(
-            "  NOTE: {procs_path} is unreadable, so cgroup placement was NOT verified for this run"
-        );
-        return Ok(());
-    };
+
+    // A missing cgroup is a failure, not a note. Placement before exec is the
+    // centrepiece of the jail: it is what fixed the cpuset being applied after
+    // the VMM was already running. Letting its absence pass quietly is how a
+    // scenario named for confinement ends up asserting only the uid half of
+    // it, which is a green that means less than it looks like.
+    let procs = fs::read_to_string(&procs_path).with_context(|| {
+        format!(
+            "No cgroup at {procs_path}, so cgroup placement was not exercised at all. \
+             The runner creates one whenever its CPU layout offers isolation, which needs \
+             two or more online CPUs and the cpuset controller delegated to this cgroup tree."
+        )
+    })?;
+
     if procs.lines().any(|line| line.trim() == pid.to_string()) {
         Ok(())
     } else {
-        bail!("The VMM (pid {pid}) is not in {procs_path}, which holds: {procs:?}")
+        bail!(
+            "The VMM (pid {pid}) is not in {procs_path}, which holds: {procs:?}. \
+             Placement happens in pre_exec, before the jailer starts, so membership must \
+             already hold the first time the process is visible."
+        )
     }
 }
 
