@@ -60,6 +60,8 @@ struct Scenario {
     cancel_after_secs: Option<u64>,
     /// Whether to use `--sandbox firecracker` (default: true).
     sandboxed: bool,
+    /// If set, run before the runner starts, to put the host in some state.
+    setup: Option<fn() -> Result<()>>,
     /// If set, a host-side check run while the runner is executing.
     probe: Option<Probe>,
     /// Kill the runner once its VMM is up so nothing unwinds, then run the
@@ -79,6 +81,7 @@ impl Default for Scenario {
             dockerfile: "",
             extra_args: &[],
             cancel_after_secs: None,
+            setup: None,
             probe: None,
             orphan_then_rerun: false,
             // Sandboxed is the interesting case and the overwhelming majority,
@@ -244,6 +247,10 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     // Build the Docker image
     let image_path = build_test_image(scenario.name, scenario.dockerfile)
         .with_context(|| format!("Failed to build image for {}", scenario.name))?;
+
+    if let Some(setup) = scenario.setup {
+        setup().with_context(|| format!("Setup failed for {}", scenario.name))?;
+    }
 
     // Every scenario gets its own state directory, so jail assertions are
     // scoped to the scenario and never touch a real runner's state.
@@ -2475,6 +2482,16 @@ CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
             ..Scenario::default()
         },
         Scenario {
+            name: "jail_netns_recovers_from_stacked_mounts",
+            description: "A job succeeds against a network namespace handle carrying stacked mounts",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "JAIL_NETNS_a7f3b2c9"]"#,
+            setup: Some(stack_netns_mounts),
+            extra_args: &["--timeout", "120"],
+            validate: |output| assert_job_succeeded(output, "JAIL_NETNS_a7f3b2c9"),
+            ..Scenario::default()
+        },
+        Scenario {
             name: "jail_sweep_reclaims_orphan",
             description: "A chroot orphaned by a runner that never unwound is swept by the next job",
             // Likewise a token the runner cannot print: "swept" sits one
@@ -2492,6 +2509,43 @@ CMD ["sh", "-c", "echo JAIL_SWEEP_a7f3b2c9 && sleep 10"]"#,
             ..Scenario::default()
         },
     ]
+}
+
+/// Stack extra bind mounts on the network namespace handle.
+///
+/// Recreating the handle bind mounts over it, and a bind mount over a file
+/// reports no error, so mounts stack. Against a stacked handle a single
+/// detach leaves one behind, the unlink then fails with EBUSY, and creating
+/// the placeholder fails with EPERM even as root: every sandboxed job on the
+/// host fails until an operator loops `umount` by hand. The unwind loop exists
+/// for exactly this, and nothing else exercises it.
+fn stack_netns_mounts() -> Result<()> {
+    let handle = "/run/netns/bencher-jail";
+    fs::create_dir_all("/run/netns").context("Failed to create the netns directory")?;
+    if !Utf8Path::new(handle).exists() {
+        fs::File::create(handle).context("Failed to create the netns handle")?;
+    }
+
+    for _ in 0..2 {
+        let status = Command::new("unshare")
+            .args(["--net", "sh", "-c"])
+            .arg(format!("mount --bind /proc/self/ns/net {handle}"))
+            .status()
+            .context("Failed to run unshare to stack a netns mount")?;
+        anyhow::ensure!(status.success(), "Failed to stack a netns mount");
+    }
+
+    let stacked = fs::read_to_string("/proc/self/mountinfo")
+        .context("Failed to read mountinfo")?
+        .lines()
+        .filter(|line| line.contains(&format!(" {handle} ")))
+        .count();
+    anyhow::ensure!(
+        stacked >= 2,
+        "Expected at least two stacked mounts on {handle}, found {stacked}"
+    );
+    println!("  stacked {stacked} mounts on {handle}");
+    Ok(())
 }
 
 /// Assert the runner actually completed the job.
@@ -2790,6 +2844,41 @@ fn is_firecracker(pid: u32) -> bool {
     fs::read_to_string(format!("/proc/{pid}/comm")).is_ok_and(|comm| comm.trim() == "firecracker")
 }
 
+/// Reader threads draining a child's piped output.
+struct DrainedOutput {
+    stdout: std::thread::JoinHandle<String>,
+    stderr: std::thread::JoinHandle<String>,
+}
+
+impl DrainedOutput {
+    /// Wait for both readers and return what they collected.
+    fn join(self) -> (String, String) {
+        let stdout = self.stdout.join().unwrap_or_default();
+        let stderr = self.stderr.join().unwrap_or_default();
+        (stdout, stderr)
+    }
+}
+
+/// Start reading a child's stdout and stderr so neither pipe can fill.
+fn drain_output(child: &mut std::process::Child) -> DrainedOutput {
+    fn reader<R: std::io::Read + Send + 'static>(
+        stream: Option<R>,
+    ) -> std::thread::JoinHandle<String> {
+        std::thread::spawn(move || {
+            let mut buffer = String::new();
+            if let Some(mut stream) = stream {
+                drop(stream.read_to_string(&mut buffer));
+            }
+            buffer
+        })
+    }
+
+    DrainedOutput {
+        stdout: reader(child.stdout.take()),
+        stderr: reader(child.stderr.take()),
+    }
+}
+
 /// Send a signal to a process, ignoring the result.
 fn kill_pid(pid: u32, signal: libc::c_int) {
     #[expect(
@@ -2821,6 +2910,11 @@ fn run_runner_with_probe(
         .stderr(std::process::Stdio::piped())
         .spawn()?;
 
+    // Drain both pipes while the probe runs. Nothing reads them during the
+    // loop otherwise, so a runner chatty enough to fill the 64 KiB pipe buffer
+    // blocks on its own output until the probe times out.
+    let readers = drain_output(&mut child);
+
     let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
     let mut observed = None;
     loop {
@@ -2843,15 +2937,14 @@ fn run_runner_with_probe(
         std::thread::sleep(PROBE_INTERVAL);
     }
 
-    let output = child.wait_with_output()?;
-    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    let status = child.wait()?;
+    let (stdout, stderr) = readers.join();
 
     match observed {
         Some(Ok(())) => Ok(ScenarioOutput {
             stdout,
             stderr,
-            exit_code: output.status.code().unwrap_or(-1),
+            exit_code: status.code().unwrap_or(-1),
         }),
         Some(Err(e)) => Err(e).with_context(|| format!("stdout: {stdout}\nstderr: {stderr}")),
         None => bail!(
