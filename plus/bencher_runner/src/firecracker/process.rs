@@ -140,16 +140,42 @@ impl FirecrackerProcess {
             }
         });
 
-        let process = Self {
+        let mut process = Self {
             child,
             api_socket: api_socket.clone(),
             stderr_thread: Some(stderr_thread),
         };
 
-        // Wait for the API socket to become ready
-        process.client().wait_for_ready(Duration::from_secs(5))?;
+        process.wait_for_ready(Duration::from_secs(5))?;
 
         Ok(process)
+    }
+
+    /// Wait for the API socket, giving up the moment the jailer dies.
+    ///
+    /// Watching the child is what keeps a jailer that failed outright from
+    /// presenting as a socket timeout. A bad `--netns`, an unwritable
+    /// `--chroot-base-dir`, or a refused `mknod` makes it exit immediately,
+    /// and polling for a socket that will never appear would report
+    /// `SocketNotReady` and point at Firecracker instead of at the jailer's
+    /// own diagnostics, which are already on stderr.
+    fn wait_for_ready(&mut self, timeout: Duration) -> Result<(), FirecrackerError> {
+        let start = std::time::Instant::now();
+        let poll_interval = Duration::from_millis(50);
+
+        while start.elapsed() < timeout {
+            if self.client().try_ready()? {
+                return Ok(());
+            }
+            if let Ok(Some(status)) = self.child.try_wait() {
+                return Err(FirecrackerError::JailerExited {
+                    status: status.to_string(),
+                });
+            }
+            std::thread::sleep(poll_interval);
+        }
+
+        Err(FirecrackerError::SocketNotReady(timeout))
     }
 
     /// Get a client for the Firecracker REST API.

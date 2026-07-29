@@ -29,47 +29,38 @@ impl FirecrackerClient {
         }
     }
 
-    /// Wait for the Firecracker API socket to become ready.
+    /// Try the API socket once.
     ///
-    /// Only failures that a not-yet-listening VMM actually produces are
-    /// retried. Anything else fails immediately: an unusable path is not going
-    /// to become usable, and retrying it for the whole timeout turns a precise
-    /// error into a timeout that points at Firecracker instead of at the
-    /// cause. An over-long socket path is rejected by the standard library
-    /// before any syscall, which is exactly the case this distinction exists
-    /// to surface.
-    pub fn wait_for_ready(&self, timeout: Duration) -> Result<(), FirecrackerError> {
-        let start = std::time::Instant::now();
-        let poll_interval = Duration::from_millis(50);
+    /// `Ok(true)` once Firecracker is answering, `Ok(false)` while it is not
+    /// listening yet, and an error when the address itself cannot be used.
+    /// Only failures a not-yet-listening VMM actually produces are worth
+    /// retrying: an unusable path never becomes usable, and retrying it for a
+    /// whole timeout turns a precise error into one that points at Firecracker
+    /// instead of at the cause. An over-long socket path is rejected by the
+    /// standard library before any syscall, which is exactly that case.
+    pub fn try_ready(&self) -> Result<bool, FirecrackerError> {
+        match UnixStream::connect(&self.socket_path) {
+            Ok(mut stream) => {
+                drop(stream.set_read_timeout(Some(Duration::from_secs(1))));
+                drop(stream.set_write_timeout(Some(Duration::from_secs(1))));
 
-        while start.elapsed() < timeout {
-            match UnixStream::connect(&self.socket_path) {
-                Ok(mut stream) => {
-                    drop(stream.set_read_timeout(Some(Duration::from_secs(1))));
-                    drop(stream.set_write_timeout(Some(Duration::from_secs(1))));
-
-                    let request = "GET / HTTP/1.1\r\nHost: localhost\r\nAccept: */*\r\n\r\n";
-                    if stream.write_all(request.as_bytes()).is_ok() {
-                        let mut buf = [0u8; 256];
-                        if let Ok(n) = stream.read(&mut buf)
-                            && n > 0
-                        {
-                            return Ok(());
-                        }
+                let request = "GET / HTTP/1.1\r\nHost: localhost\r\nAccept: */*\r\n\r\n";
+                if stream.write_all(request.as_bytes()).is_ok() {
+                    let mut buf = [0u8; 256];
+                    if let Ok(n) = stream.read(&mut buf)
+                        && n > 0
+                    {
+                        return Ok(true);
                     }
-                },
-                Err(e) if is_not_listening_yet(&e) => {},
-                Err(e) => {
-                    return Err(FirecrackerError::SocketUnusable {
-                        path: self.socket_path.clone(),
-                        source: e,
-                    });
-                },
-            }
-            std::thread::sleep(poll_interval);
+                }
+                Ok(false)
+            },
+            Err(e) if is_not_listening_yet(&e) => Ok(false),
+            Err(e) => Err(FirecrackerError::SocketUnusable {
+                path: self.socket_path.clone(),
+                source: e,
+            }),
         }
-
-        Err(FirecrackerError::SocketNotReady(timeout))
     }
 
     /// Configure the machine (vCPUs, memory).
