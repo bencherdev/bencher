@@ -34,47 +34,21 @@ pub fn vm_execute(
     let state_dir = StateDir::new(config.state_dir.clone());
 
     // Prepare the host on demand, before the first jail this process builds.
-    // Must come before the lock is taken: preparation takes the same lock, and
-    // `flock` is per open file description, so nesting would block on itself.
+    // Must come before the job lock is taken: preparation takes the same lock,
+    // and `flock` is per open file description, so nesting would block on
+    // itself. It is also the cheap check, so a host that cannot jail at all
+    // fails here rather than after pulling an image.
     host.ensure(state_dir.path(), config.jail_user)?;
 
-    // Held for the whole job. Another runner's sweep removes every chroot it
-    // finds, so it must not run while this one is live. Declared before the
-    // jail guard so the lock outlives the teardown it protects.
-    let _lock = JailLock::acquire(state_dir.path())?;
-
-    // Rebuilt per job rather than once per daemon lifetime: the handle lives
-    // on a tmpfs and is operator visible, so it has to be self-healing.
-    let netns = netns::ensure()?;
-
-    // The jail root is a function of the VM id, and the job's artifacts are
-    // built inside it rather than copied in afterwards, so the id is minted
-    // before any of them exist. Dropping this guard removes the chroot tree,
-    // which is what the workspace temp directory used to cover.
-    let vm_id = VmId::new();
-    let jail_dir = JailDir::create(&state_dir, &vm_id)?;
-    let jail = JailPaths::new(jail_dir.root())?;
-    println!("  Jail: {}", jail.root());
-
+    // Everything that does not touch the jail happens before the lock. The
+    // image pull and unpack are the slow part of a job and need nothing from
+    // the chroot, so holding an exclusive per-state-directory lock across them
+    // would serialize concurrent `runner run` invocations on the download
+    // rather than on the jail.
     let workspace = prepare_oci_workspace(config)?;
     let work_dir = &workspace.work_dir;
     let unpack_dir = &workspace.unpack_dir;
     let oci_config = workspace.oci_config;
-
-    // Everything Firecracker reads has to be inside the chroot, so the kernel
-    // lands in the jail root whatever its source: bundled, supplied by the
-    // job, or found on the host.
-    let kernel_dest = jail.kernel().host().as_path();
-    if let Some(kernel) = &config.kernel {
-        println!("  Copying the job's kernel into the jail...");
-        copy_file(kernel, kernel_dest)?;
-    } else if crate::kernel::KERNEL_BUNDLED {
-        crate::kernel::write_kernel_to_file(kernel_dest)?;
-        println!("  Extracted bundled kernel into the jail at {kernel_dest}");
-    } else {
-        println!("  Copying the host's kernel into the jail...");
-        copy_file(&find_kernel()?, kernel_dest)?;
-    }
 
     let command = oci_config.command;
     let working_dir = &oci_config.working_dir;
@@ -95,6 +69,40 @@ pub fn vm_execute(
     println!("Installing init binary...");
     install_init_binary(unpack_dir)?;
 
+    // Held from here to the end of the job. Another runner's sweep removes
+    // every chroot it finds, so it must not run while this one is live.
+    // Declared before the jail guard so the lock outlives the teardown it
+    // protects.
+    let _lock = JailLock::acquire(state_dir.path())?;
+
+    // Rebuilt per job rather than once per daemon lifetime: the handle lives
+    // on a tmpfs and is operator visible, so it has to be self-healing.
+    let netns = netns::ensure()?;
+
+    // The jail root is a function of the VM id, and the job's artifacts are
+    // built inside it rather than copied in afterwards, so the id is minted
+    // before any of them exist. Dropping this guard removes the chroot tree,
+    // which is what the workspace temp directory used to cover.
+    let vm_id = VmId::new();
+    let jail_dir = JailDir::create(&state_dir, &vm_id)?;
+    let jail = JailPaths::new(jail_dir.root())?;
+    println!("  Jail: {}", jail.root());
+
+    // Everything Firecracker reads has to be inside the chroot, so the kernel
+    // lands in the jail root whatever its source: bundled, supplied by the
+    // job, or found on the host.
+    let kernel_dest = jail.kernel().host().as_path();
+    if let Some(kernel) = &config.kernel {
+        println!("  Copying the job's kernel into the jail...");
+        copy_file(kernel, kernel_dest)?;
+    } else if crate::kernel::KERNEL_BUNDLED {
+        crate::kernel::write_kernel_to_file(kernel_dest)?;
+        println!("  Extracted bundled kernel into the jail at {kernel_dest}");
+    } else {
+        println!("  Copying the host's kernel into the jail...");
+        copy_file(&find_kernel()?, kernel_dest)?;
+    }
+
     // Step 6: Create the ext4 rootfs directly in the jail root
     let rootfs_dest = jail.rootfs().host().as_path();
     println!(
@@ -104,10 +112,12 @@ pub fn vm_execute(
     bencher_rootfs::create_ext4_with_size(unpack_dir, rootfs_dest, config.disk.to_mib())?;
 
     // The jailer chowns the chroot root and the device nodes it creates, but
-    // not what the runner placed inside, so hand over each artifact
-    // explicitly: Firecracker writes the rootfs and reads the kernel.
+    // not what the runner placed inside, so each artifact is handed over
+    // explicitly. The rootfs is written by Firecracker and is given away; the
+    // kernel is only read, so it stays owned by root and merely becomes
+    // readable.
     chroot::chown_to_jail(rootfs_dest, config.jail_user)?;
-    chroot::chown_to_jail(kernel_dest, config.jail_user)?;
+    chroot::grant_jail_read(kernel_dest)?;
 
     // Step 7-8: Build Firecracker config and run the microVM
     let fc_config = build_firecracker_config(config, work_dir, vm_id, &state_dir, jail, netns)?;
