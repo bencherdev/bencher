@@ -33,6 +33,12 @@ use std::time::{Duration, Instant};
 
 use camino::Utf8Path;
 
+/// How many processes to reap from one jail before giving up.
+///
+/// A jail holds one VMM, so this is a bound on a loop that should run once,
+/// not an expectation.
+const MAX_JAILED_PROCESSES: usize = 64;
+
 /// How long to wait for a killed VMM to disappear.
 const REAP_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -63,10 +69,30 @@ pub enum Reaped {
 /// about what it reports, because the caller decides whether to delete a
 /// directory based on the answer.
 pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Reaped {
-    let Some(pid) = find_jailed_vmm(jail_root) else {
-        return Reaped::Clear;
-    };
+    // Rescan after each reap rather than assuming one process per jail. That
+    // assumption holds today, since neither `--daemonize` nor `--new-pid-ns`
+    // is passed and the jailer execs in place as a single process, but the
+    // caller deletes a directory tree based on this answer. An invariant that
+    // load-bearing is worth enforcing rather than trusting, and a survivor
+    // would otherwise have the tree removed out from under it.
+    for _ in 0..MAX_JAILED_PROCESSES {
+        let Some(pid) = find_jailed_vmm(jail_root) else {
+            return Reaped::Clear;
+        };
+        if let Reaped::StillRunning { pid } = reap_one(pid, jail_root) {
+            return Reaped::StillRunning { pid };
+        }
+    }
 
+    // Something keeps appearing in this jail. Report it rather than looping.
+    match find_jailed_vmm(jail_root) {
+        Some(pid) => Reaped::StillRunning { pid },
+        None => Reaped::Clear,
+    }
+}
+
+/// Kill one process known to be confined to `jail_root`.
+fn reap_one(pid: u32, jail_root: &Utf8Path) -> Reaped {
     // Pin the pid before signalling it. A pid found by scanning `/proc` can
     // exit and have its number recycled before the signal lands, and this runs
     // as root, so the signal would go to whatever inherited the number. A
@@ -100,7 +126,7 @@ pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Reaped {
     }
 
     if wait_for_exit(pid) {
-        eprintln!("Warning: reaped orphaned VMM (pid {pid}) left behind in {jail_root}");
+        eprintln!("Reaped orphaned VMM (pid {pid}) left behind in {jail_root}");
         Reaped::Clear
     } else {
         eprintln!(
