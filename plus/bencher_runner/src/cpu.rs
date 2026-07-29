@@ -490,6 +490,26 @@ mod tests {
     }
 
     #[test]
+    fn two_cores_is_enough_for_isolation() {
+        // The scenario suite runs on two-vCPU hosted runners, and the runner
+        // only builds a cgroup when the layout offers isolation. If this ever
+        // stopped holding, cgroup placement would silently go unexercised in
+        // CI, which is the whole reason the scenario asserts it.
+        let layout = CpuLayout::with_cpu_ids(vec![0, 1]);
+
+        assert!(layout.has_isolation());
+        assert_eq!(layout.housekeeping, vec![0]);
+        assert_eq!(layout.benchmark, vec![1]);
+    }
+
+    #[test]
+    fn one_core_offers_no_isolation() {
+        let layout = CpuLayout::with_cpu_ids(vec![0]);
+
+        assert!(!layout.has_isolation());
+    }
+
+    #[test]
     fn benchmark_cpuset_string() {
         let layout = CpuLayout::with_core_count(8);
         assert_eq!(layout.benchmark_cpuset(), "2-7");
