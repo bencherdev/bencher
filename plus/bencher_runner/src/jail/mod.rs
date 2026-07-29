@@ -317,17 +317,6 @@ fn lookup_name_in(database: &str, id: u32) -> Option<String> {
     })
 }
 
-/// Prepare the host for jailed execution.
-///
-/// The jail is Linux-only, as is the VM executor it protects.
-#[cfg(not(target_os = "linux"))]
-pub fn prepare_host_once(
-    _state_dir: &camino::Utf8Path,
-    _jail_user: JailUser,
-) -> Result<(), crate::error::JailError> {
-    Ok(())
-}
-
 /// Resource limits for the Firecracker microVM process.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceLimits {
