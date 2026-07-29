@@ -157,8 +157,15 @@ pub fn run_firecracker(
                             Some(cg)
                         },
                         Cpuset::Unavailable(reason) => {
+                            // Precise about what is lost. The vCPU threads are
+                            // still pinned to the benchmark cores further
+                            // down, which is gated on the layout and not on
+                            // the cgroup, so what goes is the cgroup's hard
+                            // confinement (nothing stops other work being
+                            // scheduled onto those cores) along with its
+                            // metrics and swap control.
                             eprintln!(
-                                "Warning: this run has no CPU isolation ({reason}), so its numbers carry more variance"
+                                "Warning: this run has no cgroup cpuset ({reason}), so nothing keeps other work off the benchmark cores and its numbers carry more variance; vCPU threads are still pinned to them"
                             );
                             None
                         },
