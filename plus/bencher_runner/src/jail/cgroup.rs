@@ -495,7 +495,7 @@ pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
     loop {
         match fs::remove_dir(&path) {
             Ok(()) => {
-                eprintln!("Warning: removed stale cgroup {path} left by a previous runner");
+                eprintln!("Removed stale cgroup {path} left by a previous runner");
                 return Ok(());
             },
             // Someone else got there first, which is the outcome either way.
