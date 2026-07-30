@@ -52,15 +52,20 @@ pub enum FirecrackerError {
     #[error("Firecracker API socket not ready after {0:?}")]
     SocketNotReady(std::time::Duration),
 
-    /// The jailer exited before Firecracker started serving its API.
+    /// The jailed process exited before Firecracker started serving its API.
+    ///
+    /// Named for what the runner actually knows. The jailer `exec`s Firecracker
+    /// in place, so this one pid is the jailer up to that moment and Firecracker
+    /// afterwards, and the runner cannot tell from the outside which of the two
+    /// died. Blaming the jailer by name was right about half the time.
     ///
     /// Distinct from a timeout: the process is gone, so waiting cannot help,
     /// and the reason is on stderr under the `[firecracker]` prefix.
     #[error(
-        "The jailer exited ({status}) before the Firecracker API socket appeared; its diagnostics are above, prefixed [firecracker]"
+        "The jailed process exited ({status}) before the Firecracker API socket appeared. The jailer execs Firecracker in place, so this is the jailer or the VMM it became; its diagnostics are above, prefixed [firecracker]"
     )]
-    JailerExited {
-        /// How the jailer exited.
+    JailedProcessExited {
+        /// How it exited.
         status: std::process::ExitStatus,
     },
 

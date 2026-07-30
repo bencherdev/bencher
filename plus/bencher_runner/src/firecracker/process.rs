@@ -181,9 +181,18 @@ impl FirecrackerProcess {
                 return Ok(());
             }
             if let Ok(Some(status)) = self.child.try_wait() {
-                return Err(FirecrackerError::JailerExited { status });
+                return Err(FirecrackerError::JailedProcessExited { status });
             }
             std::thread::sleep(poll_interval);
+        }
+
+        // Once more before giving up. The loop sleeps between polls, so a
+        // process that exits during the last sleep would otherwise be reported
+        // as a socket that never became ready, which points at Firecracker
+        // taking too long when the truth is that it is gone. That confusion is
+        // the entire reason this error exists.
+        if let Ok(Some(status)) = self.child.try_wait() {
+            return Err(FirecrackerError::JailedProcessExited { status });
         }
 
         Err(FirecrackerError::SocketNotReady(timeout))
