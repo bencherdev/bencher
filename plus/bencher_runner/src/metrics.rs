@@ -47,15 +47,23 @@ pub struct CgroupMetrics {
 /// Read cgroup metrics from the given cgroup path.
 ///
 /// Reads `cpu.stat` and `memory.peak` from the cgroup directory.
-/// Returns `None` if the path doesn't exist.
+/// Returns `None` when there is no cgroup to read.
 ///
 /// Every field is optional, and a field that could not be read stays absent
 /// rather than becoming a number. These are reported to an operator as measured
 /// values, so a zero standing in for a failed read is the plainest form of the
 /// one thing measurement is never allowed to do. Absence is already how this
 /// reports "no cgroup at all", so it costs nothing to be honest per field.
+///
+/// That is also why the stat below is the one gating read in this crate that may
+/// stay: it can only withhold a reading, never invent one. Nothing here can
+/// answer with a number it did not read, so a failure reaches the operator as a
+/// field that is not there. A stat that fails does not suppress the reads either,
+/// which is the one thing worth tightening: only a stat that succeeded and said
+/// absent means there is nothing to read, and anything else goes on to ask the
+/// files themselves, since they report what they can and nothing more.
 pub fn read_cgroup_metrics(cgroup_path: &Utf8Path) -> Option<CgroupMetrics> {
-    if !cgroup_path.exists() {
+    if cgroup_path.try_exists().is_ok_and(|exists| !exists) {
         return None;
     }
 
@@ -266,6 +274,22 @@ mod tests {
     #[test]
     fn read_cgroup_metrics_nonexistent_path() {
         assert!(read_cgroup_metrics(Utf8Path::new("/nonexistent")).is_none());
+    }
+
+    #[test]
+    fn a_cgroup_whose_files_cannot_be_read_reports_no_numbers() {
+        // The property that makes this module's gating stat harmless: every
+        // failure here withholds a field, and none of them invents one. An empty
+        // reading is honest; a zero would not be.
+        let dir = tempfile::tempdir().unwrap();
+        let path = tempdir_utf8(&dir);
+
+        let metrics = read_cgroup_metrics(path).unwrap();
+
+        assert_eq!(metrics.cpu_usage_us, None);
+        assert_eq!(metrics.cpu_user_us, None);
+        assert_eq!(metrics.cpu_system_us, None);
+        assert_eq!(metrics.memory_peak_bytes, None);
     }
 
     // --- format_metrics ---
