@@ -99,10 +99,18 @@ where
     // would otherwise have the tree removed out from under it.
     for _ in 0..MAX_JAILED_PROCESSES {
         match find(jail_root) {
-            Ok(Some(pid)) => {
-                if let Reaped::StillRunning { pid } = reap(pid, jail_root) {
-                    return Reaped::StillRunning { pid };
-                }
+            Ok(Some(pid)) => match reap(pid, jail_root) {
+                // Killed, or already gone: look again, because a jail is not
+                // clear until a scan finds nothing in it.
+                Reaped::Clear => {},
+                Reaped::StillRunning { pid } => return Reaped::StillRunning { pid },
+                // `reap_one` cannot return this today, and it is matched
+                // exhaustively so that a third outcome arriving here is a
+                // compile error rather than a silent fall-through into another
+                // pass of the loop. This module's whole argument is that a state
+                // nobody could examine must not read as a cleared one, and an
+                // `if let` is the construct that lets exactly that happen.
+                Reaped::Unexaminable => return Reaped::Unexaminable,
             },
             Ok(None) => return Reaped::Clear,
             // A scan that could not run has not found the jail empty, it has
