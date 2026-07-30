@@ -282,6 +282,14 @@ impl std::fmt::Display for VmId {
 /// by anything else. Tests get their own.
 #[derive(Debug, Default)]
 pub struct HostPreparation {
+    /// Whether the jail user warning has already been given.
+    ///
+    /// Advisory and unchanging, so it is worth saying once and not once a job.
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(dead_code, reason = "host preparation is Linux-only")
+    )]
+    warned_jail_user: bool,
     /// Only the jail reads this, and the jail is Linux-only.
     #[cfg_attr(
         not(target_os = "linux"),
@@ -492,7 +500,8 @@ impl HostPreparation {
         if self.prepared && !self.reclaim_failed.is_set() {
             return Ok(());
         }
-        let swept = prepare_host(euid, state_dir, jail_user)?;
+        let swept = prepare_host(euid, state_dir, jail_user, !self.warned_jail_user)?;
+        self.warned_jail_user = true;
         // Spent only on a sweep that finished, and armed by one that did not.
         // Spending it any earlier disarms the mechanism precisely when it is
         // needed: the signal would be gone, this process would still count as
@@ -538,6 +547,7 @@ fn prepare_host(
     euid: u32,
     state_dir: &camino::Utf8Path,
     jail_user: JailUser,
+    announce_jail_user: bool,
 ) -> Result<state::Swept, crate::error::JailError> {
     // Checked first, and by name. Without it the most likely upgrade failure
     // surfaces as a permission error on a directory, or a bare EPERM out of
@@ -547,7 +557,13 @@ fn prepare_host(
     let state = StateDir::new(state_dir.to_owned())?;
     state.create()?;
 
-    warn_on_named_account(jail_user);
+    // Once per runner, not once per job. Preparation runs again whenever a
+    // sweep is owed, and a host that keeps failing to reclaim a jail would
+    // otherwise repeat this warning on every job until an operator stopped
+    // reading any of them.
+    if announce_jail_user {
+        warn_on_named_account(jail_user);
+    }
 
     let _lock = JailLock::acquire(state.path())?;
     let swept = state::sweep_jails(&state.jail_parent())?;
