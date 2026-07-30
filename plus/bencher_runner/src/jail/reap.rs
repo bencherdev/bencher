@@ -59,6 +59,15 @@ pub enum Reaped {
         /// The VMM that is still running.
         pid: u32,
     },
+    /// The jail could not be examined, so what is in it is unknown.
+    ///
+    /// Distinct from [`Self::Clear`], which is the whole reason this variant
+    /// exists: a jail root that cannot be stat'ed, or a `/proc` that cannot be
+    /// listed, says nothing about the jail, and reporting nothing as "empty" is
+    /// what would have the caller delete a tree with a live VMM in it. The
+    /// caller treats it exactly like [`Self::StillRunning`], with no pid to
+    /// name.
+    Unexaminable,
 }
 
 /// Kill the VMM confined to `jail_root`, if one is still running.
@@ -79,7 +88,7 @@ pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Reaped {
 /// manufacturing sixty-four jailed processes.
 fn reap_jailed_vmm_with<F, R>(jail_root: &Utf8Path, find: F, reap: R) -> Reaped
 where
-    F: Fn(&Utf8Path) -> Option<u32>,
+    F: Fn(&Utf8Path) -> std::io::Result<Option<u32>>,
     R: Fn(u32, &Utf8Path) -> Reaped,
 {
     // Rescan after each reap rather than assuming one process per jail. That
@@ -89,11 +98,21 @@ where
     // load-bearing is worth enforcing rather than trusting, and a survivor
     // would otherwise have the tree removed out from under it.
     for _ in 0..MAX_JAILED_PROCESSES {
-        let Some(pid) = find(jail_root) else {
-            return Reaped::Clear;
-        };
-        if let Reaped::StillRunning { pid } = reap(pid, jail_root) {
-            return Reaped::StillRunning { pid };
+        match find(jail_root) {
+            Ok(Some(pid)) => {
+                if let Reaped::StillRunning { pid } = reap(pid, jail_root) {
+                    return Reaped::StillRunning { pid };
+                }
+            },
+            Ok(None) => return Reaped::Clear,
+            // A scan that could not run has not found the jail empty, it has
+            // found out nothing. The caller deletes a tree on this answer.
+            Err(e) => {
+                eprintln!(
+                    "Warning: cannot examine {jail_root} to see whether a VMM is still in it: {e}. It is left in place."
+                );
+                return Reaped::Unexaminable;
+            },
         }
     }
 
@@ -111,13 +130,19 @@ where
     // sweeps again; measuring through a jail that is still occupied is not, and
     // that is the one outcome this module exists to prevent.
     match find(jail_root) {
-        Some(pid) => {
+        Ok(Some(pid)) => {
             eprintln!(
                 "Warning: gave up scanning {jail_root} after {MAX_JAILED_PROCESSES} passes; pid {pid} still matches it while every reap reported the jail clear."
             );
             Reaped::StillRunning { pid }
         },
-        None => Reaped::Clear,
+        Ok(None) => Reaped::Clear,
+        Err(e) => {
+            eprintln!(
+                "Warning: cannot examine {jail_root} to see whether a VMM is still in it: {e}. It is left in place."
+            );
+            Reaped::Unexaminable
+        },
     }
 }
 
@@ -173,25 +198,46 @@ fn reap_one(pid: u32, jail_root: &Utf8Path) -> Reaped {
 /// chroot. Comparing device and inode rather than the path is what makes this
 /// exact: the jailer pivots into a private mount namespace, so the path reads
 /// back as `/`, while the identity is preserved.
-fn find_jailed_vmm(jail_root: &Utf8Path) -> Option<u32> {
-    let jail = fs::metadata(jail_root).ok()?;
-    for entry in fs::read_dir("/proc").ok()?.flatten() {
+///
+/// `Ok(None)` is "nothing is confined here", which a jail root that is not there
+/// at all also means: nothing can be chrooted into a directory that does not
+/// exist. Every other failure is an error rather than an absence, because the
+/// caller deletes a directory tree on the strength of this answer and a scan
+/// that could not run has established nothing.
+fn find_jailed_vmm(jail_root: &Utf8Path) -> std::io::Result<Option<u32>> {
+    let jail = match fs::metadata(jail_root) {
+        Ok(jail) => jail,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e),
+    };
+    for entry in fs::read_dir("/proc")? {
+        let entry = entry?;
         let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
             continue;
         };
         if matches_jail(pid, &jail) {
-            return Some(pid);
+            return Ok(Some(pid));
         }
     }
-    None
+    Ok(None)
 }
 
 /// Whether a process's root directory is `jail_root`.
+///
+/// A jail root that cannot be stat'ed reads as "not this jail's VMM", which
+/// keeps the kill from landing on a process this function cannot vouch for. The
+/// caller's next scan turns the same failure into [`Reaped::Unexaminable`], so
+/// nothing downstream mistakes it for an empty jail.
 fn is_jailed_vmm(pid: u32, jail_root: &Utf8Path) -> bool {
     fs::metadata(jail_root).is_ok_and(|jail| matches_jail(pid, &jail))
 }
 
 /// Whether a process's root directory is the same inode as `jail`.
+///
+/// A `/proc/<pid>/root` that cannot be read means the process is gone or is not
+/// one this runner may inspect, and either way it is not the jail's VMM. That is
+/// the one failure here that is genuinely nothing: processes come and go under a
+/// scan of `/proc` constantly.
 fn matches_jail(pid: u32, jail: &fs::Metadata) -> bool {
     // Following this magic symlink crosses into the process's own mount
     // namespace, which a privileged reader is allowed to do.
@@ -317,7 +363,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
-        assert_eq!(find_jailed_vmm(&root), None);
+        assert_eq!(find_jailed_vmm(&root).unwrap(), None);
     }
 
     #[test]
@@ -325,7 +371,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
-        assert_eq!(find_jailed_vmm(&root.join("absent")), None);
+        assert_eq!(find_jailed_vmm(&root.join("absent")).unwrap(), None);
         assert!(!is_jailed_vmm(std::process::id(), &root.join("absent")));
     }
 
@@ -410,7 +456,7 @@ mod tests {
             &root,
             |_jail_root| {
                 scans.set(scans.get() + 1);
-                Some(99)
+                Ok(Some(99))
             },
             |pid, _jail_root| Reaped::StillRunning { pid },
         );
@@ -433,7 +479,7 @@ mod tests {
 
         let reaped = reap_jailed_vmm_with(
             &root,
-            |_jail_root| Some(7),
+            |_jail_root| Ok(Some(7)),
             |_pid, _jail_root| {
                 reaps.set(reaps.get() + 1);
                 Reaped::Clear
@@ -460,7 +506,7 @@ mod tests {
             &root,
             |_jail_root| {
                 scans.set(scans.get() + 1);
-                (scans.get() <= MAX_JAILED_PROCESSES).then_some(7)
+                Ok((scans.get() <= MAX_JAILED_PROCESSES).then_some(7))
             },
             |_pid, _jail_root| Reaped::Clear,
         );
@@ -474,6 +520,48 @@ mod tests {
     }
 
     #[test]
+    fn a_jail_that_cannot_be_examined_is_not_reported_clear() {
+        // The caller deletes a directory tree on this answer, so a scan that
+        // could not run must not read as an empty jail. A jail root that is
+        // simply absent is a different thing and stays clear: nothing can be
+        // chrooted into a directory that is not there.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        let reaped = reap_jailed_vmm_with(
+            &root,
+            |_jail_root| Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied)),
+            |_pid, _jail_root| Reaped::Clear,
+        );
+
+        assert_eq!(reaped, Reaped::Unexaminable);
+        assert_eq!(reap_jailed_vmm(&root.join("absent")), Reaped::Clear);
+    }
+
+    #[test]
+    fn a_scan_that_fails_after_the_bound_is_not_reported_clear() {
+        // The same rule on the way out of the loop as on the way in.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let scans = std::cell::Cell::new(0);
+
+        let reaped = reap_jailed_vmm_with(
+            &root,
+            |_jail_root| {
+                scans.set(scans.get() + 1);
+                if scans.get() > MAX_JAILED_PROCESSES {
+                    Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied))
+                } else {
+                    Ok(Some(7))
+                }
+            },
+            |_pid, _jail_root| Reaped::Clear,
+        );
+
+        assert_eq!(reaped, Reaped::Unexaminable);
+    }
+
+    #[test]
     fn a_still_running_vmm_carries_its_pid() {
         // The caller keys the decision not to delete a directory off this, so
         // the variant has to name the process it is refusing to abandon.
@@ -481,7 +569,7 @@ mod tests {
         assert_ne!(still, Reaped::Clear);
         match still {
             Reaped::StillRunning { pid } => assert_eq!(pid, 4242),
-            Reaped::Clear => panic!("expected StillRunning"),
+            Reaped::Clear | Reaped::Unexaminable => panic!("expected StillRunning"),
         }
     }
 }
