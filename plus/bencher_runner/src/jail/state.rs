@@ -392,6 +392,14 @@ where
                 pid,
             });
         },
+        Reaped::Unexaminable => {
+            eprintln!(
+                "Warning: leaving stale jail {jail_dir} in place because whether a VMM is still running in it could not be determined."
+            );
+            return Reclamation::Failed(JailError::JailUnexaminable {
+                path: jail_dir.to_owned(),
+            });
+        },
     }
 
     // The cgroup goes first, and the chroot only once the cgroup is gone. The
@@ -774,6 +782,34 @@ mod tests {
         assert!(
             !swept.is_complete(),
             "a sweep that left a chroot behind still owes one"
+        );
+    }
+
+    #[test]
+    fn a_jail_that_could_not_be_examined_is_left_in_place() {
+        // The reap could not establish whether a VMM is in there. Removing the
+        // tree on that would be the same destructive step as removing it under a
+        // VMM known to be alive, so it gets the same answer.
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state"));
+        state.create().unwrap();
+        let unknown = VmId::from_chroot_name("unknown".to_owned());
+        fs::create_dir_all(state.jail_root(&unknown)).unwrap();
+
+        let err = sweep_jails_with(
+            &state.jail_parent(),
+            |_jail_root| Reaped::Unexaminable,
+            |_vm_id| Ok(()),
+        )
+        .unwrap_err();
+
+        assert!(
+            state.jail_dir(&unknown).exists(),
+            "not ours to delete blind"
+        );
+        assert!(
+            matches!(err, JailError::JailUnexaminable { .. }),
+            "a jail that could not be checked fails the job: {err}"
         );
     }
 
