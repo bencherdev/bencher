@@ -13,7 +13,6 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::JailError;
 use crate::jail::VmId;
-use crate::jail::lock::LOCK_FILE;
 use crate::jail::reap::Reaped;
 
 /// Subdirectory of the state directory used as the jailer's chroot base.
@@ -76,7 +75,26 @@ impl StateDir {
     /// What the filesystem itself put there is not somebody else's data. See
     /// [`BENIGN_ENTRIES`].
     ///
+    /// Ownership is proven by the tree, never by a name. An entry called `jail`
+    /// proves nothing: `/var/lib` on a host running this runner has one, and so
+    /// does any directory somebody happened to name that way, and matching on
+    /// the name alone let a populated system directory pass this guard and be
+    /// chmodded 0700, which is the whole hazard it exists for.
+    /// `jail/firecracker` is a path only this runner builds, and it builds the
+    /// tree in one step, so there is no window where a shallower half stands for
+    /// the whole.
     fn check_root_is_ours(&self) -> Result<(), JailError> {
+        match self.jail_parent().try_exists() {
+            Ok(true) => return Ok(()),
+            Ok(false) => {},
+            Err(e) => {
+                return Err(JailError::ReadStateDir {
+                    path: self.jail_parent(),
+                    source: e,
+                });
+            },
+        }
+
         let entries = match fs::read_dir(&self.root) {
             Ok(entries) => entries,
             // Missing: creating it is the next step.
@@ -95,9 +113,6 @@ impl StateDir {
                 source: e,
             })?;
             let name = entry.file_name();
-            if RUNNER_ENTRIES.iter().any(|ours| name == *ours) {
-                return Ok(());
-            }
             if BENIGN_ENTRIES.iter().any(|benign| name == *benign) {
                 continue;
             }
@@ -161,12 +176,6 @@ impl StateDir {
         Ok(())
     }
 }
-
-/// Entries the runner creates directly in its state directory.
-///
-/// Their presence is what distinguishes a directory the runner has used from
-/// one that belongs to the host.
-const RUNNER_ENTRIES: [&str; 2] = [CHROOT_BASE, LOCK_FILE];
 
 /// Entries that do not make a directory somebody else's.
 ///
@@ -594,13 +603,40 @@ mod tests {
     }
 
     #[test]
-    fn a_directory_holding_only_the_lock_is_ours() {
+    fn a_directory_named_like_ours_is_not_ours() {
+        // The hazard this guard exists for, and what a name match let through:
+        // `/var/lib` on a host running this runner holds a directory called
+        // `jail`, and so does anything anyone happened to name that way. Only
+        // the tree the runner builds proves the directory is the runner's.
+        let (_dir, root) = temp_root();
+        let foreign = root.join("var-lib");
+        fs::create_dir_all(foreign.join("jail")).unwrap();
+        fs::create_dir_all(foreign.join("dpkg")).unwrap();
+        fs::write(foreign.join(".lock"), b"").unwrap();
+
+        StateDir::new(foreign.clone())
+            .unwrap()
+            .create()
+            .unwrap_err();
+
+        let mode = fs::metadata(&foreign).unwrap().permissions().mode();
+        assert_ne!(mode & 0o777, 0o700, "a refused root must not be chmodded");
+    }
+
+    #[test]
+    fn the_tree_is_what_proves_the_directory_is_ours() {
+        // A state directory the runner has used carries `jail/firecracker`,
+        // which it creates in one step, so a shallower half never stands for the
+        // whole. Anything the operator put there afterwards does not disown it.
         let (_dir, root) = temp_root();
         let state = root.join("state");
-        fs::create_dir_all(&state).unwrap();
-        fs::write(state.join(".lock"), b"").unwrap();
+        fs::create_dir_all(state.join("jail").join("firecracker")).unwrap();
+        fs::write(state.join("notes.txt"), b"operator note").unwrap();
 
-        StateDir::new(state).unwrap().create().unwrap();
+        StateDir::new(state.clone()).unwrap().create().unwrap();
+
+        let mode = fs::metadata(&state).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o700);
     }
 
     #[test]
