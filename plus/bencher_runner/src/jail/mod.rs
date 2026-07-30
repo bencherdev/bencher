@@ -6,25 +6,36 @@
 //! network namespace the VMM joins, and the cgroup that both places it on the
 //! benchmark cores and bounds its resources.
 //!
-//! # What a failing teardown step does
+//! # What a failing step does
 //!
-//! Reclamation is where this module is easiest to get wrong, because every step
-//! of it runs after the thing it is cleaning up already happened, so a failure
-//! has no obvious caller to tell. Three separate defects here were the same
-//! mistake: a fallible step whose failure never reached the mechanism built to
-//! retry it. So every fallible step does exactly one of three things, and adding
-//! a step means choosing which, rather than reaching for `eprintln!`:
+//! Teardown is where this module is easiest to get wrong, because every step of
+//! it runs after the thing it is cleaning up already happened, so a failure has
+//! no obvious caller to tell. Measurement is easiest to get wrong for the
+//! mirror-image reason: a read that fails still leaves a value in hand, and a
+//! plausible one. Several separate defects here were the same mistake in those
+//! two dresses, a fallible step whose failure either never reached the mechanism
+//! built to retry it or was reported as a state that had been observed. So every
+//! fallible step does exactly one of three things, and adding a step means
+//! choosing which, rather than reaching for `eprintln!` or a fallback value:
 //!
 //! - **Fails the job.** The host cannot be trusted to measure. Used wherever
-//!   something may still be running on the benchmark cores, including wherever
-//!   the runner could not establish that nothing is. Recoverable by
-//!   construction: nothing latches, so the next job tries the whole thing again.
-//! - **Arms the retry.** [`ReclaimFailed`], read by
-//!   [`HostPreparation::ensure`]. Used where the cost is disk rather than a
-//!   contended benchmark, and where the code has no caller to report to at all,
-//!   which is every step reached from a `Drop`.
+//!   something may still be running on the benchmark cores, wherever the runner
+//!   could not establish that nothing is, and wherever a confinement it applied
+//!   could not be read back. Recoverable by construction: nothing latches, so
+//!   the next job tries the whole thing again.
+//! - **Arms the retry, or declares the absence.** For teardown that is
+//!   [`ReclaimFailed`], read by [`HostPreparation::ensure`], used where the cost
+//!   is disk rather than a contended benchmark and where the code has no caller
+//!   to report to at all, which is every step reached from a `Drop`. For
+//!   measurement it is `Cpuset::Unavailable` or an absent metric: isolation the
+//!   host cannot offer is reported as isolation this run did not have, loudly,
+//!   and never as a number.
 //! - **Ignored.** Only where the failure is itself the answer, or where a later
 //!   step is guaranteed to catch it. Each one below says which.
+//!
+//! What no step does is answer a question it could not ask. An unreadable file is
+//! not an empty one, an unstattable path is not an absent one, and a field that
+//! was never read is not zero.
 //!
 //! | Step | On failure |
 //! |---|---|
@@ -34,28 +45,48 @@
 //! | [`HostPreparation::ensure`]: taking the jail lock | fails the job |
 //! | [`HostPreparation::ensure`]: a sweep that returns an error | fails the job |
 //! | [`HostPreparation::ensure`]: a sweep that leaves a chroot behind | arms the retry |
-//! | [`state::sweep_jails`]: the jail parent is absent | nothing to sweep |
-//! | [`state::sweep_jails`]: the jail parent cannot be read | fails the job |
-//! | [`state::sweep_jails`]: an entry cannot be read | fails the job |
-//! | [`state::sweep_jails`]: an entry's kind cannot be read | fails the job: it may be a jail |
-//! | [`state::sweep_jails`]: a name that is not UTF-8 | ignored: every name here is a UUID this runner minted, so it is not ours |
-//! | [`state::sweep_jails`]: the reap reports a live VMM | fails the job |
-//! | [`state::sweep_jails`]: the reap could not examine the jail | fails the job |
-//! | [`state::sweep_jails`]: removing the cgroup | fails the job, and the chroot is kept because its name is the cgroup's only handle |
-//! | [`state::sweep_jails`]: removing the chroot | arms the retry |
-//! | [`reap::reap_jailed_vmm`]: the jail root is absent | clear: nothing can be chrooted into a directory that is not there |
-//! | [`reap::reap_jailed_vmm`]: the jail root cannot be stat'ed | reported unexaminable, which fails the job |
-//! | [`reap::reap_jailed_vmm`]: `/proc` cannot be listed | reported unexaminable |
-//! | [`reap::reap_jailed_vmm`]: a `/proc/<pid>/root` cannot be read | ignored: that process is gone or is not this jail's |
-//! | [`reap::reap_jailed_vmm`]: pinning or signalling the VMM | reported still running, which fails the job |
-//! | [`reap::reap_jailed_vmm`]: a VMM that will not exit | reported still running |
-//! | [`reap::reap_jailed_vmm`]: the rescan bound runs out | reported still running |
-//! | [`reap::reap_jailed_vmm`]: a `/proc/<pid>/status` that cannot be read | ignored: the process is gone, which is what was being asked |
-//! | [`JailDir`] teardown: the chroot is already gone | ignored: that is the goal state |
-//! | [`JailDir`] teardown: removing the chroot | arms the retry |
-//! | [`JailDir`] teardown: the retry is already armed | keeps the chroot, since its name is the cgroup's only handle |
-//! | [`CgroupManager`] teardown: `rmdir` of the cgroup | arms the retry |
-//! | [`CgroupManager`] teardown: killing the cgroup's survivors | ignored: whatever survives is what makes the `rmdir` above fail, which arms the retry |
+//! | `sweep_jails`: the jail parent is absent | nothing to sweep |
+//! | `sweep_jails`: the jail parent cannot be read | fails the job |
+//! | `sweep_jails`: an entry cannot be read | fails the job |
+//! | `sweep_jails`: an entry's kind cannot be read | fails the job: it may be a jail |
+//! | `sweep_jails`: a name that is not UTF-8 | ignored: every name here is a UUID this runner minted, so it is not ours |
+//! | `sweep_jails`: the reap reports a live VMM | fails the job |
+//! | `sweep_jails`: the reap could not examine the jail | fails the job |
+//! | `sweep_jails`: removing the cgroup | fails the job, and the chroot is kept because its name is the cgroup's only handle |
+//! | `sweep_jails`: removing the chroot | arms the retry |
+//! | `reap_jailed_vmm`: the jail root is absent | clear: nothing can be chrooted into a directory that is not there |
+//! | `reap_jailed_vmm`: the jail root cannot be stat'ed | reported unexaminable, which fails the job |
+//! | `reap_jailed_vmm`: `/proc` cannot be listed | reported unexaminable |
+//! | `reap_jailed_vmm`: a `/proc/<pid>/root` cannot be read | ignored: that process is gone or is not this jail's |
+//! | `reap_jailed_vmm`: pinning or signalling the VMM | reported still running, which fails the job |
+//! | `reap_jailed_vmm`: a VMM that will not exit | reported still running |
+//! | `reap_jailed_vmm`: the rescan bound runs out | reported still running |
+//! | `reap_jailed_vmm`: a `/proc/<pid>/status` that cannot be read | ignored: the process is gone, which is what was being asked |
+//! | `JailDir` teardown: the chroot is already gone | ignored: that is the goal state |
+//! | `JailDir` teardown: removing the chroot | arms the retry |
+//! | `JailDir` teardown: the retry is already armed | keeps the chroot, since its name is the cgroup's only handle |
+//! | `CgroupManager` teardown: `rmdir` of the cgroup | arms the retry, this job's and the runner's both |
+//! | `CgroupManager` teardown: killing the cgroup's survivors | ignored: whatever survives is what makes the `rmdir` above fail, which arms the retry |
+//!
+//! And the same three columns for the reads that decide what a run measured:
+//!
+//! | Step | On failure |
+//! |---|---|
+//! | `apply_cpuset`: no isolation in the layout, or an empty core set | declares the absence |
+//! | `apply_cpuset`: `cpuset.cpus` is absent | declares the absence: the controller is not delegated |
+//! | `apply_cpuset`: `cpuset.cpus` cannot be stat'ed | fails the job: an error is not an absence |
+//! | `apply_cpuset`: the kernel rejects a cpuset write | fails the job: half-applied confinement |
+//! | `apply_cpuset`: the parent's node set is absent | node 0, which is what an undelegated controller means |
+//! | `apply_cpuset`: the parent's node set cannot be read | fails the job: this value is written, so a guess confines the guest's memory |
+//! | `apply_cpuset`: the effective set cannot be read back | fails the job: the read back *is* the mechanism, and the write already proved the controller delegated |
+//! | `apply_cpuset`: the kernel narrowed the set | fails the job |
+//! | `enable_controllers`: `cgroup.subtree_control` cannot be read | fails the job: an unreadable list is not an empty one |
+//! | `BencherPartition::apply`: any read or write in the partition path | declares the absence: the level achieved is reported, down to `member` |
+//! | `CpuLayout::detect`: the online CPU list cannot be read or parsed | declares the absence: the counted layout is announced as a guess |
+//! | `CpuLayout::detect`: the core count cannot be read | one core, which reports as a layout with no isolation |
+//! | `metrics`: a cgroup that is not there | no metrics, reported as absent |
+//! | `metrics`: a field that cannot be read or parsed | absent, never zero |
+//! | `tuning::preflight`: any check that cannot be performed | ignored: advisory only, and nothing reads it to decide whether the host can measure. A quiet preflight is not evidence of a quiet host |
 
 #[cfg(target_os = "linux")]
 mod cgroup;
