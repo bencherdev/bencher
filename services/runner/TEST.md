@@ -1,6 +1,15 @@
 # Runner Integration Tests
 
-The runner integration tests (`cargo test-runner scenarios`) require Linux with KVM. They cannot run on macOS directly. A GCP VM is available for running these tests remotely.
+The runner integration tests require Linux with KVM **and root**. They cannot run on macOS directly. A GCP VM is available for running these tests remotely.
+
+`cargo test-runner scenarios` on its own always fails now: the sandbox is built by dropping privilege rather than by starting without it, so the scenarios refuse to run unelevated. Build unprivileged, then run elevated:
+
+```bash
+cargo test-runner scenarios --build-only
+sudo BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios
+```
+
+Keeping the build out of the elevated half is what stops `cargo` leaving root-owned artifacts in the target directory, which is why `BENCHER_RUNNER_BIN` points the elevated binary at the one already built.
 
 ## Prerequisites
 
@@ -55,18 +64,24 @@ All `cargo test-runner` commands must be run on the VM (they require Linux + KVM
 
 ### Run all scenarios
 
+Two commands, because only the second may be elevated:
+
 ```bash
 gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-411313 \
-  --command="export PATH=\$HOME/.cargo/bin:\$PATH && cd bencher && cargo test-runner scenarios 2>&1"
+  --command="export PATH=\$HOME/.cargo/bin:\$PATH && cd bencher && cargo test-runner scenarios --build-only 2>&1"
+gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-411313 \
+  --command="cd bencher && sudo BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios 2>&1"
 ```
 
-This builds `bencher-init` (musl, statically linked) and the runner CLI, then runs all ~58 integration scenarios. Each scenario builds a Docker image, converts it to OCI format, and runs it inside a Firecracker microVM. Expect this to take several minutes.
+The first builds `bencher-init` (musl, statically linked) and the runner CLI; the second runs all integration scenarios as root. Each scenario builds a Docker image, converts it to OCI format, and runs it inside a Firecracker microVM. Expect this to take several minutes.
 
 ### Run a single scenario
 
 ```bash
 gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-411313 \
-  --command="export PATH=\$HOME/.cargo/bin:\$PATH && cd bencher && cargo test-runner scenarios --scenario basic_execution 2>&1"
+  --command="export PATH=\$HOME/.cargo/bin:\$PATH && cd bencher && cargo test-runner scenarios --build-only 2>&1"
+gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-411313 \
+  --command="cd bencher && sudo BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios --scenario basic_execution 2>&1"
 ```
 
 ### List all scenarios
@@ -111,4 +126,5 @@ gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-41131
 - **Compilation errors about private imports**: The `plus` feature gates most code. Check `pub use` re-exports if a type is accessible within a crate but not from outside its module.
 - **"KVM is not available"**: The scenarios require `/dev/kvm` on the host. This is why they must run on the GCP VM, not macOS.
 - **Timeout scenarios take wall-clock time**: Scenarios like `timeout_handling`, `timeout_enforced`, and `minimum_timeout` intentionally wait for the VM to time out (1-10 seconds each). This is expected.
-- **Tuning permission errors in stderr**: Messages like `Tuning: ASLR — skipped (write failed: Permission denied)` are expected when not running as root. They do not cause test failures.
+- **"The scenarios must run as root"**: `cargo test-runner scenarios` was run directly. Use the two-step invocation at the top of this file; the message itself repeats it.
+- **No tuning output at all**: expected. The scenarios pass `--no-tuning`, because they run as root now and would otherwise apply real host tuning to the machine running them, including offlining SMT siblings mid-suite. They exercise job execution, not tuning.
