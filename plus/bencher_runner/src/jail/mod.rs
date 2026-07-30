@@ -5,6 +5,57 @@
 //! the persistent state directory the chroots are built under, the empty
 //! network namespace the VMM joins, and the cgroup that both places it on the
 //! benchmark cores and bounds its resources.
+//!
+//! # What a failing teardown step does
+//!
+//! Reclamation is where this module is easiest to get wrong, because every step
+//! of it runs after the thing it is cleaning up already happened, so a failure
+//! has no obvious caller to tell. Three separate defects here were the same
+//! mistake: a fallible step whose failure never reached the mechanism built to
+//! retry it. So every fallible step does exactly one of three things, and adding
+//! a step means choosing which, rather than reaching for `eprintln!`:
+//!
+//! - **Fails the job.** The host cannot be trusted to measure. Used wherever
+//!   something may still be running on the benchmark cores, including wherever
+//!   the runner could not establish that nothing is. Recoverable by
+//!   construction: nothing latches, so the next job tries the whole thing again.
+//! - **Arms the retry.** [`ReclaimFailed`], read by
+//!   [`HostPreparation::ensure`]. Used where the cost is disk rather than a
+//!   contended benchmark, and where the code has no caller to report to at all,
+//!   which is every step reached from a `Drop`.
+//! - **Ignored.** Only where the failure is itself the answer, or where a later
+//!   step is guaranteed to catch it. Each one below says which.
+//!
+//! | Step | On failure |
+//! |---|---|
+//! | [`HostPreparation::ensure`]: the root check | fails the job |
+//! | [`HostPreparation::ensure`]: creating the state directory | fails the job |
+//! | [`HostPreparation::ensure`]: reading `/etc/passwd`, `/etc/group` | ignored: the check is advisory and cannot see a directory service anyway |
+//! | [`HostPreparation::ensure`]: taking the jail lock | fails the job |
+//! | [`HostPreparation::ensure`]: a sweep that returns an error | fails the job |
+//! | [`HostPreparation::ensure`]: a sweep that leaves a chroot behind | arms the retry |
+//! | [`state::sweep_jails`]: the jail parent is absent | nothing to sweep |
+//! | [`state::sweep_jails`]: the jail parent cannot be read | fails the job |
+//! | [`state::sweep_jails`]: an entry cannot be read | fails the job |
+//! | [`state::sweep_jails`]: an entry's kind cannot be read | fails the job: it may be a jail |
+//! | [`state::sweep_jails`]: a name that is not UTF-8 | ignored: every name here is a UUID this runner minted, so it is not ours |
+//! | [`state::sweep_jails`]: the reap reports a live VMM | fails the job |
+//! | [`state::sweep_jails`]: the reap could not examine the jail | fails the job |
+//! | [`state::sweep_jails`]: removing the cgroup | fails the job, and the chroot is kept because its name is the cgroup's only handle |
+//! | [`state::sweep_jails`]: removing the chroot | arms the retry |
+//! | [`reap::reap_jailed_vmm`]: the jail root is absent | clear: nothing can be chrooted into a directory that is not there |
+//! | [`reap::reap_jailed_vmm`]: the jail root cannot be stat'ed | reported unexaminable, which fails the job |
+//! | [`reap::reap_jailed_vmm`]: `/proc` cannot be listed | reported unexaminable |
+//! | [`reap::reap_jailed_vmm`]: a `/proc/<pid>/root` cannot be read | ignored: that process is gone or is not this jail's |
+//! | [`reap::reap_jailed_vmm`]: pinning or signalling the VMM | reported still running, which fails the job |
+//! | [`reap::reap_jailed_vmm`]: a VMM that will not exit | reported still running |
+//! | [`reap::reap_jailed_vmm`]: the rescan bound runs out | reported still running |
+//! | [`reap::reap_jailed_vmm`]: a `/proc/<pid>/status` that cannot be read | ignored: the process is gone, which is what was being asked |
+//! | [`JailDir`] teardown: the chroot is already gone | ignored: that is the goal state |
+//! | [`JailDir`] teardown: removing the chroot | arms the retry |
+//! | [`JailDir`] teardown: the retry is already armed | keeps the chroot, since its name is the cgroup's only handle |
+//! | [`CgroupManager`] teardown: `rmdir` of the cgroup | arms the retry |
+//! | [`CgroupManager`] teardown: killing the cgroup's survivors | ignored: whatever survives is what makes the `rmdir` above fail, which arms the retry |
 
 #[cfg(target_os = "linux")]
 mod cgroup;

@@ -283,6 +283,10 @@ impl CgroupManager {
     /// that survive a direct-child kill, e.g. on timeout or cancellation,
     /// so no stray work lingers on benchmark cores and the cgroup can be
     /// removed.
+    ///
+    /// Best effort is sound here only because something else catches it:
+    /// whatever this fails to kill is exactly what makes [`Self::cleanup`]'s
+    /// `rmdir` fail, and that arms the reclaim signal. See [`crate::jail`].
     pub fn kill_all(&self) {
         if let Err(e) = self.write_file("cgroup.kill", "1") {
             eprintln!("Warning: failed to kill cgroup subtree: {e}");
