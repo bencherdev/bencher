@@ -35,6 +35,7 @@ Firecracker microVM には `firecracker` を使用します (Linux のみ)。
 ### `--state-dir <STATE_DIR>`
 
 Runner の永続的な状態ディレクトリ。
+絶対パスである必要があります。
 サンドボックスを閉じ込める jail はこのディレクトリの下に作成され、
 異常終了で残った jail は、最初のサンドボックス Job の実行前にここから一掃されます。
 デフォルトでは `/var/lib/bencher-runner` が使用されます。
