@@ -75,6 +75,14 @@ pub enum JailError {
         source: std::io::Error,
     },
 
+    #[error(
+        "Failed to read the runner state directory {path}: {source}. The runner cannot tell whether this directory is its own, and it will not tighten the permissions of one that might not be."
+    )]
+    ReadStateDir {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
     #[cfg(target_os = "linux")]
     #[error("Failed to create network namespace directory {path}: {source}")]
     NetnsDir {
