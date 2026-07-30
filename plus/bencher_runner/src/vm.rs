@@ -294,85 +294,61 @@ fn install_init_binary(rootfs: &Utf8Path) -> Result<(), RunnerError> {
     Ok(())
 }
 
-/// Find the bencher-init binary on disk (fallback when not bundled).
-fn find_init_binary() -> Result<Utf8PathBuf, RunnerError> {
-    // Look in these locations in order
-    let candidates = [
-        // Next to the current executable
+/// Where a bundled binary is looked for when it was not bundled in.
+///
+/// Beside the runner first, so a self-contained install finds its own copy
+/// before anything the host happens to have.
+fn binary_candidates(name: &str) -> impl Iterator<Item = Utf8PathBuf> {
+    [
         std::env::current_exe()
             .ok()
-            .and_then(|p| p.parent().map(|d| d.join("bencher-init")))
-            .and_then(|p| Utf8PathBuf::try_from(p).ok()),
-        // Common installation paths
-        Some(Utf8PathBuf::from("/usr/local/bin/bencher-init")),
-        Some(Utf8PathBuf::from("/usr/bin/bencher-init")),
-    ];
+            .and_then(|exe| exe.parent().map(|dir| dir.join(name)))
+            .and_then(|path| Utf8PathBuf::try_from(path).ok()),
+        Some(Utf8PathBuf::from(format!("/usr/local/bin/{name}"))),
+        Some(Utf8PathBuf::from(format!("/usr/bin/{name}"))),
+    ]
+    .into_iter()
+    .flatten()
+}
 
-    for candidate in candidates.into_iter().flatten() {
-        if candidate.exists() {
-            return Ok(candidate);
-        }
-    }
+/// Find a binary on disk, for when it was not bundled into the runner.
+///
+/// One function for all three, because three copies of the same search differing
+/// only in a name and a hint is three places for the search to drift.
+///
+/// A candidate that cannot be stat'ed is passed over rather than reported, and
+/// that is the whole of the failure handling this needs: the search is a list of
+/// guesses, and the one thing it can conclude, that nothing was found, is
+/// reported by name with what to do about it.
+fn find_binary(name: &str, hint: &str) -> Result<Utf8PathBuf, RunnerError> {
+    binary_candidates(name)
+        .find(|candidate| candidate.exists())
+        .ok_or_else(|| {
+            crate::error::ConfigError::BinaryNotFound {
+                name: name.to_owned(),
+                hint: hint.to_owned(),
+            }
+            .into()
+        })
+}
 
-    Err(crate::error::ConfigError::BinaryNotFound {
-        name: "bencher-init".to_owned(),
-        hint: "Build with: cargo build -p bencher_init".to_owned(),
-    }
-    .into())
+/// Where to get Firecracker and its jailer, which ship together.
+const FIRECRACKER_RELEASES: &str =
+    "Install from: https://github.com/firecracker-microvm/firecracker/releases";
+
+/// Find the bencher-init binary on disk (fallback when not bundled).
+fn find_init_binary() -> Result<Utf8PathBuf, RunnerError> {
+    find_binary("bencher-init", "Build with: cargo build -p bencher_init")
 }
 
 /// Find the Firecracker binary on the system.
 fn find_firecracker_binary() -> Result<Utf8PathBuf, RunnerError> {
-    let candidates = [
-        // Next to the current executable
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.join("firecracker")))
-            .and_then(|p| Utf8PathBuf::try_from(p).ok()),
-        // Common installation paths
-        Some(Utf8PathBuf::from("/usr/local/bin/firecracker")),
-        Some(Utf8PathBuf::from("/usr/bin/firecracker")),
-    ];
-
-    for candidate in candidates.into_iter().flatten() {
-        if candidate.exists() {
-            return Ok(candidate);
-        }
-    }
-
-    Err(crate::error::ConfigError::BinaryNotFound {
-        name: "firecracker".to_owned(),
-        hint: "Install from: https://github.com/firecracker-microvm/firecracker/releases"
-            .to_owned(),
-    }
-    .into())
+    find_binary("firecracker", FIRECRACKER_RELEASES)
 }
 
 /// Find the jailer binary on the system (fallback when not bundled).
 fn find_jailer_binary() -> Result<Utf8PathBuf, RunnerError> {
-    let candidates = [
-        // Next to the current executable
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.join("jailer")))
-            .and_then(|p| Utf8PathBuf::try_from(p).ok()),
-        // Common installation paths
-        Some(Utf8PathBuf::from("/usr/local/bin/jailer")),
-        Some(Utf8PathBuf::from("/usr/bin/jailer")),
-    ];
-
-    for candidate in candidates.into_iter().flatten() {
-        if candidate.exists() {
-            return Ok(candidate);
-        }
-    }
-
-    Err(crate::error::ConfigError::BinaryNotFound {
-        name: "jailer".to_owned(),
-        hint: "Install from: https://github.com/firecracker-microvm/firecracker/releases"
-            .to_owned(),
-    }
-    .into())
+    find_binary("jailer", FIRECRACKER_RELEASES)
 }
 
 /// Find the kernel image on the system.
