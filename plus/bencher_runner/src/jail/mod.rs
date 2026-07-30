@@ -257,9 +257,27 @@ impl HostPreparation {
     /// needing a restart. That matters most for a sweep that could not reclaim
     /// a stale cgroup: the orphan may simply not have exited yet, and a
     /// latched failure would leave every later job failing with no retry.
+    ///
+    /// Requires root, and says so by name rather than letting the operator
+    /// infer it from a permission error several layers down.
     #[cfg(target_os = "linux")]
     pub fn ensure(
         &mut self,
+        state_dir: &camino::Utf8Path,
+        jail_user: JailUser,
+    ) -> Result<(), crate::error::JailError> {
+        self.ensure_as(current_euid(), state_dir, jail_user)
+    }
+
+    /// Prepare the host, with the effective uid supplied.
+    ///
+    /// The uid is a parameter for the same reason the sweep's reap is one: the
+    /// check refuses every uid but root, so a test that had to be root to reach
+    /// anything past it would be exercising the harness rather than this.
+    #[cfg(target_os = "linux")]
+    fn ensure_as(
+        &mut self,
+        euid: u32,
         state_dir: &camino::Utf8Path,
         jail_user: JailUser,
     ) -> Result<(), crate::error::JailError> {
@@ -268,7 +286,7 @@ impl HostPreparation {
         if self.prepared && !self.reclaim_failed.take() {
             return Ok(());
         }
-        prepare_host(state_dir, jail_user)?;
+        prepare_host(euid, state_dir, jail_user)?;
         self.prepared = true;
         Ok(())
     }
@@ -299,9 +317,15 @@ impl HostPreparation {
 #[cfg(target_os = "linux")]
 #[expect(clippy::print_stdout, reason = "host preparation reports what it did")]
 fn prepare_host(
+    euid: u32,
     state_dir: &camino::Utf8Path,
     jail_user: JailUser,
 ) -> Result<(), crate::error::JailError> {
+    // Checked first, and by name. Without it the most likely upgrade failure
+    // surfaces as a permission error on a directory, or a bare EPERM out of
+    // `unshare`, neither of which mentions root or the flag that avoids it.
+    check_root(euid)?;
+
     let state = StateDir::new(state_dir.to_owned());
     state.create()?;
 
@@ -315,6 +339,32 @@ fn prepare_host(
         println!("  Reclaimed {swept} stale jail(s) from {state_dir}");
     }
     Ok(())
+}
+
+/// Refuse to build a jail without the privileges building one needs.
+///
+/// The failure an operator actually hits on upgrade is this one, so it says
+/// what the release notes say rather than leaving them to infer it from a
+/// permission error several layers down.
+#[cfg(target_os = "linux")]
+fn check_root(euid: u32) -> Result<(), crate::error::JailError> {
+    if euid == 0 {
+        Ok(())
+    } else {
+        Err(crate::error::JailError::NotRoot { euid })
+    }
+}
+
+/// The effective uid of this process.
+#[cfg(target_os = "linux")]
+#[expect(
+    unsafe_code,
+    reason = "geteuid has no std wrapper and cannot fail or touch memory"
+)]
+fn current_euid() -> u32 {
+    // SAFETY: `geteuid` takes no arguments, returns a plain integer, and is
+    // documented as always succeeding.
+    unsafe { libc::geteuid() }
 }
 
 /// Warn when the jail uid or gid belongs to a named account.
@@ -473,11 +523,54 @@ impl ResourceLimits {
     }
 }
 
-#[cfg(test)]
+// Everything the jail prepares is Linux-only, and so is every test of it.
+#[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::*;
 
-    #[cfg(target_os = "linux")]
+    /// The only uid that can build a jail.
+    ///
+    /// Supplied rather than inherited from the test process, which is usually
+    /// not root and would otherwise never reach the preparation being tested.
+    const ROOT_EUID: u32 = 0;
+
+    #[test]
+    fn a_runner_that_is_not_root_is_refused_by_name() {
+        // The upgrade failure an operator actually hits. Without this it
+        // surfaces as a permission error on a directory, or a bare EPERM out of
+        // `unshare`, neither of which mentions root or the flag that avoids it.
+        let dir = tempfile::tempdir().unwrap();
+        let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let state_dir = root.join("state");
+
+        let mut host = HostPreparation::new();
+        // Nothing latches, so every job says it again rather than only the
+        // first one.
+        for attempt in 1..=3 {
+            let err = host
+                .ensure_as(1000, &state_dir, JailUser::default())
+                .unwrap_err();
+            let message = err.to_string();
+            assert!(
+                message.contains("1000"),
+                "attempt {attempt} must name the uid: {message}"
+            );
+            assert!(
+                message.contains("root"),
+                "attempt {attempt} must name root: {message}"
+            );
+            assert!(
+                message.contains("--danger-allow-no-sandbox"),
+                "attempt {attempt} must name the escape hatch: {message}"
+            );
+        }
+
+        assert!(
+            !state_dir.exists(),
+            "a refused runner must not have touched the state directory"
+        );
+    }
+
     #[test]
     fn the_default_jail_user_is_outside_the_allocated_ranges() {
         // systemd-homed takes 60001-60513 and DynamicUser takes 61184-65519.
@@ -489,7 +582,6 @@ mod tests {
         }
     }
 
-    #[cfg(target_os = "linux")]
     #[test]
     fn preparation_is_lazy_and_happens_at_most_once() {
         // A daemon that prepared at startup would need root just to come up,
@@ -501,26 +593,29 @@ mod tests {
         assert!(!state_dir.exists(), "startup has not prepared anything");
 
         let mut host = HostPreparation::new();
-        host.ensure(&state_dir, JailUser::default()).unwrap();
+        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
         assert!(state_dir.join("jail").is_dir(), "the first job prepares");
 
         // A second job must not redo it: proven by removing the tree and
         // seeing that it is not rebuilt. Owning the token is what makes this
         // independent of every other test in the process.
         std::fs::remove_dir_all(&state_dir).unwrap();
-        host.ensure(&state_dir, JailUser::default()).unwrap();
+        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
         assert!(!state_dir.exists(), "preparation happens at most once");
 
         // A different runner prepares its own host.
         let mut other = HostPreparation::new();
-        other.ensure(&state_dir, JailUser::default()).unwrap();
+        other
+            .ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
         assert!(
             state_dir.join("jail").is_dir(),
             "a fresh token prepares again"
         );
     }
 
-    #[cfg(target_os = "linux")]
     #[test]
     fn a_failure_is_not_latched_and_self_heals() {
         // Fatal to the job, not to the runner. A host that cannot be prepared
@@ -535,18 +630,19 @@ mod tests {
         let mut host = HostPreparation::new();
         for attempt in 1..=3 {
             assert!(
-                host.ensure(&state_dir, JailUser::default()).is_err(),
+                host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+                    .is_err(),
                 "attempt {attempt} must fail"
             );
         }
 
         // Remove the cause and the very next job succeeds, with no restart.
         std::fs::remove_dir(state_dir.join("someone-elses-data")).unwrap();
-        host.ensure(&state_dir, JailUser::default()).unwrap();
+        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
         assert!(state_dir.join("jail").is_dir());
     }
 
-    #[cfg(target_os = "linux")]
     #[test]
     fn a_jail_that_could_not_be_reclaimed_earns_another_sweep() {
         // The sweep otherwise runs once per process, so a teardown that failed
@@ -558,16 +654,19 @@ mod tests {
         let state_dir = root.join("state");
 
         let mut host = HostPreparation::new();
-        host.ensure(&state_dir, JailUser::default()).unwrap();
+        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
 
         // Already prepared: a second job does not redo the work.
         std::fs::remove_dir_all(&state_dir).unwrap();
-        host.ensure(&state_dir, JailUser::default()).unwrap();
+        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
         assert!(!state_dir.exists(), "preparation happens at most once");
 
         // A jail that could not be reclaimed changes that.
         host.reclaim_signal().set();
-        host.ensure(&state_dir, JailUser::default()).unwrap();
+        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
         assert!(
             state_dir.join("jail").is_dir(),
             "a failed teardown must earn another sweep"
@@ -575,11 +674,11 @@ mod tests {
 
         // And the signal is consumed, not sticky.
         std::fs::remove_dir_all(&state_dir).unwrap();
-        host.ensure(&state_dir, JailUser::default()).unwrap();
+        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
         assert!(!state_dir.exists(), "the signal is consumed once");
     }
 
-    #[cfg(target_os = "linux")]
     #[test]
     fn the_jail_user_rejects_root() {
         // Untrusted code against a root VMM is the one thing the confinement
@@ -593,7 +692,6 @@ mod tests {
         assert_eq!(user.gid(), 5678);
     }
 
-    #[cfg(target_os = "linux")]
     #[test]
     fn the_default_jail_user_is_unprivileged() {
         let default = JailUser::default();
@@ -602,7 +700,6 @@ mod tests {
         JailUser::new(default.uid(), default.gid()).unwrap();
     }
 
-    #[cfg(target_os = "linux")]
     #[test]
     fn a_named_account_is_found_by_id() {
         let passwd = "root:x:0:0:root:/root:/bin/bash\nbuild:x:61016:61016:CI build user:/home/build:/bin/sh\n";
@@ -611,7 +708,6 @@ mod tests {
         assert_eq!(lookup_name_in(passwd, 0).as_deref(), Some("root"));
     }
 
-    #[cfg(target_os = "linux")]
     #[test]
     fn an_unallocated_id_has_no_name() {
         let passwd =
@@ -620,7 +716,6 @@ mod tests {
         assert_eq!(lookup_name_in(passwd, 61016), None);
     }
 
-    #[cfg(target_os = "linux")]
     #[test]
     fn malformed_records_are_skipped() {
         let passwd = "\nnot-a-record\nshort:x\nbuild:x:61016:61016::/home/build:/bin/sh\n";
