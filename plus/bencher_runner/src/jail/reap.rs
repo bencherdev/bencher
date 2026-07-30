@@ -335,14 +335,32 @@ fn pidfd_kill(pidfd: &OwnedFd) -> std::io::Result<()> {
 /// then stall the full timeout on every sweep and warn about a process that is
 /// already dead.
 fn wait_for_exit(pid: u32) -> bool {
-    let deadline = Instant::now() + REAP_TIMEOUT;
+    wait_for_exit_until(Instant::now() + REAP_TIMEOUT, || is_running(pid))
+}
+
+/// The wait, with the deadline and the liveness check supplied.
+///
+/// Parameters for the same reason the scan and the kill are: the case worth
+/// testing is a process that exits in the last interval of the budget, and
+/// reproducing that against a real process means racing a sleep.
+fn wait_for_exit_until<R>(deadline: Instant, running: R) -> bool
+where
+    R: Fn() -> bool,
+{
     while Instant::now() < deadline {
-        if !is_running(pid) {
+        if !running() {
             return true;
         }
         std::thread::sleep(REAP_INTERVAL);
     }
-    false
+
+    // Once more before the verdict. The loop sleeps between checks, so a process
+    // that exits during the last of them was never looked at again, and a bare
+    // `false` here becomes `JailError::JailStillRunning`: a job failed on a host
+    // that is clean, with an error confidently naming a pid that is already
+    // gone. The same shape as the readiness wait in the VMM process, where it
+    // cost a misleading message rather than a spurious failure.
+    !running()
 }
 
 /// Whether a process still exists and is not a zombie.
@@ -427,6 +445,27 @@ mod tests {
                 "ESRCH must be reported as gone, not as an error"
             ),
         }
+    }
+
+    #[test]
+    fn a_process_that_exits_in_the_last_interval_counts_as_exited() {
+        // A deadline already spent, so the loop never runs and the check after
+        // it is the whole verdict. Without that check the caller fails the job
+        // on a host that is clean, naming a pid that no longer exists.
+        let checks = std::cell::Cell::new(0);
+
+        let exited = wait_for_exit_until(Instant::now(), || {
+            checks.set(checks.get() + 1);
+            false
+        });
+
+        assert!(exited, "the process is gone, whatever the budget did");
+        assert_eq!(checks.get(), 1, "the check after the loop is the verdict");
+    }
+
+    #[test]
+    fn a_process_that_outlives_the_budget_is_still_running() {
+        assert!(!wait_for_exit_until(Instant::now(), || true));
     }
 
     #[test]
