@@ -69,6 +69,19 @@ pub enum Reaped {
 /// about what it reports, because the caller decides whether to delete a
 /// directory based on the answer.
 pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Reaped {
+    reap_jailed_vmm_with(jail_root, find_jailed_vmm, reap_one)
+}
+
+/// The reap, with the scan and the kill injectable.
+///
+/// Both reach into `/proc` and signal processes on the machine running the
+/// tests, so the exhaustion path is exercised through parameters rather than by
+/// manufacturing sixty-four jailed processes.
+fn reap_jailed_vmm_with<F, R>(jail_root: &Utf8Path, find: F, reap: R) -> Reaped
+where
+    F: Fn(&Utf8Path) -> Option<u32>,
+    R: Fn(u32, &Utf8Path) -> Reaped,
+{
     // Rescan after each reap rather than assuming one process per jail. That
     // assumption holds today, since neither `--daemonize` nor `--new-pid-ns`
     // is passed and the jailer execs in place as a single process, but the
@@ -76,17 +89,34 @@ pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Reaped {
     // load-bearing is worth enforcing rather than trusting, and a survivor
     // would otherwise have the tree removed out from under it.
     for _ in 0..MAX_JAILED_PROCESSES {
-        let Some(pid) = find_jailed_vmm(jail_root) else {
+        let Some(pid) = find(jail_root) else {
             return Reaped::Clear;
         };
-        if let Reaped::StillRunning { pid } = reap_one(pid, jail_root) {
+        if let Reaped::StillRunning { pid } = reap(pid, jail_root) {
             return Reaped::StillRunning { pid };
         }
     }
 
-    // Something keeps appearing in this jail. Report it rather than looping.
-    match find_jailed_vmm(jail_root) {
-        Some(pid) => Reaped::StillRunning { pid },
+    // Exhausting the bound is anomalous by construction: Firecracker does not
+    // fork, the jailer execs in place, and a healthy jail therefore holds
+    // exactly one process. Reaching here means either the scan and the kill
+    // disagree, which is a bug and the likelier of the two, or something is
+    // spawning into this jail, which is precisely when the sweep must refuse.
+    // Neither says the jail is clear, so it is not reported clear.
+    //
+    // Nothing else would catch it. The cgroup removal that follows in the sweep
+    // refuses while anything is still in the cgroup, but a run with no CPU
+    // layout, or one whose host does not delegate cpuset, has no cgroup at all.
+    // Failing the job is recoverable, because nothing latches and the next job
+    // sweeps again; measuring through a jail that is still occupied is not, and
+    // that is the one outcome this module exists to prevent.
+    match find(jail_root) {
+        Some(pid) => {
+            eprintln!(
+                "Warning: gave up scanning {jail_root} after {MAX_JAILED_PROCESSES} passes; pid {pid} still matches it while every reap reported the jail clear."
+            );
+            Reaped::StillRunning { pid }
+        },
         None => Reaped::Clear,
     }
 }
@@ -365,6 +395,82 @@ mod tests {
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
         assert_eq!(reap_jailed_vmm(&root), Reaped::Clear);
+    }
+
+    #[test]
+    fn a_survivor_is_reported_without_exhausting_the_scan() {
+        // A process the reap could not kill is the answer immediately: the
+        // caller must not delete the tree under it, and there is nothing to be
+        // gained by rescanning.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let scans = std::cell::Cell::new(0);
+
+        let reaped = reap_jailed_vmm_with(
+            &root,
+            |_jail_root| {
+                scans.set(scans.get() + 1);
+                Some(99)
+            },
+            |pid, _jail_root| Reaped::StillRunning { pid },
+        );
+
+        assert_eq!(reaped, Reaped::StillRunning { pid: 99 });
+        assert_eq!(scans.get(), 1, "a survivor is the answer on the first pass");
+    }
+
+    #[test]
+    fn a_jail_that_keeps_producing_processes_is_never_called_clear() {
+        // A healthy jail holds one process, so exhausting the bound is either
+        // the scan disagreeing with the kill or something spawning into the
+        // jail. Neither is evidence the jail is clear, and reporting it clear
+        // would have the sweep delete the tree and the next job measure through
+        // whatever is left. The cgroup removal cannot be leaned on here: a run
+        // with no CPU layout has no cgroup to refuse.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let reaps = std::cell::Cell::new(0);
+
+        let reaped = reap_jailed_vmm_with(
+            &root,
+            |_jail_root| Some(7),
+            |_pid, _jail_root| {
+                reaps.set(reaps.get() + 1);
+                Reaped::Clear
+            },
+        );
+
+        assert_eq!(reaped, Reaped::StillRunning { pid: 7 });
+        assert_eq!(
+            reaps.get(),
+            MAX_JAILED_PROCESSES,
+            "the loop is bounded rather than endless"
+        );
+    }
+
+    #[test]
+    fn a_jail_that_empties_on_the_last_pass_is_clear() {
+        // The bound is a guard, not a verdict: a jail that no longer matches
+        // anything is clear however many passes it took to get there.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let scans = std::cell::Cell::new(0);
+
+        let reaped = reap_jailed_vmm_with(
+            &root,
+            |_jail_root| {
+                scans.set(scans.get() + 1);
+                (scans.get() <= MAX_JAILED_PROCESSES).then_some(7)
+            },
+            |_pid, _jail_root| Reaped::Clear,
+        );
+
+        assert_eq!(reaped, Reaped::Clear);
+        assert_eq!(
+            scans.get(),
+            MAX_JAILED_PROCESSES + 1,
+            "the scan after the loop is what decides"
+        );
     }
 
     #[test]
