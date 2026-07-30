@@ -27,11 +27,12 @@ use crate::error::JailError;
 /// only removes directories under `<state_dir>/jail/firecracker`) can never
 /// reach it.
 ///
-/// Defined once and shared with the state directory, which counts it among the
-/// entries that mark a directory as the runner's own. Two spellings of the same
-/// name would leave a directory holding only this file unrecognized, and the
-/// runner would refuse a state directory it created itself.
-pub(super) const LOCK_FILE: &str = ".lock";
+/// Private again, and only spelled here. The state directory used to count this
+/// name among the marks of a directory it owns, until proving ownership by a
+/// name turned out to be the way a populated system directory could pass that
+/// guard. Ownership is proven by the chroot tree now, so nothing outside this
+/// module needs the name.
+const LOCK_FILE: &str = ".lock";
 
 /// Holds the jail lock for as long as it is alive.
 ///
