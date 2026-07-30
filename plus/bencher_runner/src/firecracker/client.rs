@@ -15,7 +15,11 @@ use crate::jail::SocketPath;
 
 /// Client for the Firecracker REST API.
 pub struct FirecrackerClient {
-    socket_path: String,
+    /// Held as a [`SocketPath`], not a string. The type is the proof that this
+    /// path fits `sun_path`, and this is the one place the limit is actually
+    /// enforced by the kernel, so downgrading it here would discard the
+    /// guarantee exactly where it is worth having.
+    socket_path: SocketPath,
 }
 
 impl FirecrackerClient {
@@ -25,7 +29,7 @@ impl FirecrackerClient {
     /// socket view; the jailed VMM binds the chroot view of the same file.
     pub fn new(socket_path: &SocketPath) -> Self {
         Self {
-            socket_path: socket_path.as_str().to_owned(),
+            socket_path: socket_path.clone(),
         }
     }
 
@@ -39,7 +43,7 @@ impl FirecrackerClient {
     /// instead of at the cause. An over-long socket path is rejected by the
     /// standard library before any syscall, which is exactly that case.
     pub fn try_ready(&self) -> Result<bool, FirecrackerError> {
-        match UnixStream::connect(&self.socket_path) {
+        match UnixStream::connect(self.socket_path.as_str()) {
             Ok(mut stream) => {
                 drop(stream.set_read_timeout(Some(Duration::from_secs(1))));
                 drop(stream.set_write_timeout(Some(Duration::from_secs(1))));
@@ -148,7 +152,7 @@ impl FirecrackerClient {
     ///
     /// Returns the HTTP status code and response body.
     fn http_put(&self, path: &str, json_body: &str) -> Result<(u16, String), FirecrackerError> {
-        let mut stream = UnixStream::connect(&self.socket_path)?;
+        let mut stream = UnixStream::connect(self.socket_path.as_str())?;
         stream.set_read_timeout(Some(Duration::from_secs(5)))?;
         stream.set_write_timeout(Some(Duration::from_secs(5)))?;
 
