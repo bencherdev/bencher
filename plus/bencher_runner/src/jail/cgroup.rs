@@ -473,7 +473,7 @@ pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
         .join(vm_id.as_str());
     // The caller deletes the chroot that names this cgroup once this returns
     // `Ok`, and that chroot is the only handle any later sweep has for finding
-    // the cgroup again. A stat error read as "already gone" would stranded the
+    // the cgroup again. A stat error read as "already gone" would strand the
     // cgroup permanently and delete the one thing that could have found it,
     // which is exactly what the caller's ordering exists to prevent.
     match path.try_exists() {
