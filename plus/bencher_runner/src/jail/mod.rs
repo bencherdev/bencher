@@ -37,6 +37,16 @@
 //! not an empty one, an unstattable path is not an absent one, and a field that
 //! was never read is not zero.
 //!
+//! That covers reads which produce a value. It covers reads which gate an action
+//! just as strictly, and those are the easier ones to miss: an `exists` before a
+//! destructive step is a read whose failure authorizes destruction, and it does
+//! not look like a measurement at all. A stat that fails before a `remove_dir`
+//! is the same defect as a metric that fabricates a zero, and costs more.
+//!
+//! The rows below were found by grepping this crate for every idiom that can
+//! turn a failure into an answer, rather than by reasoning about which functions
+//! looked relevant. Reasoning missed instances three times running.
+//!
 //! | Step | On failure |
 //! |---|---|
 //! | [`HostPreparation::ensure`]: the root check | fails the job |
@@ -65,8 +75,11 @@
 //! | `JailDir` teardown: the chroot is already gone | ignored: that is the goal state |
 //! | `JailDir` teardown: removing the chroot | arms the retry |
 //! | `JailDir` teardown: the retry is already armed | keeps the chroot, since its name is the cgroup's only handle |
+//! | `CgroupManager` teardown: the cgroup cannot be stat'ed | arms the retry: it is treated as still there |
 //! | `CgroupManager` teardown: `rmdir` of the cgroup | arms the retry, this job's and the runner's both |
-//! | `CgroupManager` teardown: killing the cgroup's survivors | ignored: whatever survives is what makes the `rmdir` above fail, which arms the retry |
+//! | `CgroupManager` creation: the cgroup cannot be stat'ed | fails the job: this decides whether `Drop` may remove it |
+//! | `remove_stale_cgroup`: the cgroup cannot be stat'ed | fails the job: the caller deletes the chroot on an `Ok` here |
+//! | `StateDir::create`: the chroot tree cannot be stat'ed | fails the job: the 0700 chmod follows |
 //!
 //! And the same three columns for the reads that decide what a run measured:
 //!
@@ -87,6 +100,18 @@
 //! | `metrics`: a cgroup that is not there | no metrics, reported as absent |
 //! | `metrics`: a field that cannot be read or parsed | absent, never zero |
 //! | `tuning::preflight`: any check that cannot be performed | ignored: advisory only, and nothing reads it to decide whether the host can measure. A quiet preflight is not evidence of a quiet host |
+//! | `pin_vcpu_threads`: a thread list that cannot be read | declares the absence: it reports how many of the vCPUs it pinned |
+//! | `FirecrackerClient`: a status line that cannot be parsed | fails the request: no status is invented for a response Firecracker did not send |
+//! | `find_binary`: a candidate path that cannot be stat'ed | ignored: the search is a list of guesses, and finding nothing is reported by name |
+//!
+//! `CgroupManager::kill_all` is deliberately not in either table.
+//! Nothing on the jailed path calls it: the VMM is killed with a grace period
+//! before its cgroup is torn down, and anything that somehow survives is caught
+//! by the `rmdir` above, which arms the retry. The non-sandboxed path calls it
+//! explicitly on timeout or cancellation, where a failure is warned and then
+//! caught the same way. A row saying teardown kills survivors described a step
+//! that does not exist, which is worse than no row at all: this table is read as
+//! a specification.
 
 #[cfg(target_os = "linux")]
 mod cgroup;
