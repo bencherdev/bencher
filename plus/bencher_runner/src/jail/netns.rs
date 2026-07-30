@@ -14,7 +14,7 @@ use nix::mount::{MntFlags, MsFlags, mount, umount2};
 use nix::sched::{CloneFlags, unshare};
 
 use crate::error::JailError;
-use crate::jail::lock::flock_exclusive;
+use crate::jail::lock::{flock_exclusive, flock_nonblocking};
 
 /// Directory holding named network namespace handles.
 ///
@@ -160,6 +160,14 @@ struct NetnsLock {
 
 impl NetnsLock {
     /// Take the lock, waiting for whichever runner holds it.
+    ///
+    /// Announces the wait, as the jail lock does. This handle is global to the
+    /// host, so two runners with unrelated state directories contend here, and a
+    /// runner that sat silently on it would look hung rather than queued.
+    #[expect(
+        clippy::print_stdout,
+        reason = "prints why the runner is waiting, as the jail lock does"
+    )]
     fn acquire() -> Result<Self, JailError> {
         let path = Utf8Path::new(NETNS_LOCK_PATH);
         let file = fs::OpenOptions::new()
@@ -171,6 +179,14 @@ impl NetnsLock {
                 path: path.to_owned(),
                 source: e,
             })?;
+
+        // Try once without blocking, so the wait can be announced rather than
+        // looking like a hang.
+        if flock_nonblocking(&file).is_ok() {
+            return Ok(Self { _file: file });
+        }
+        println!("  Waiting for another bencher runner to release {path}...");
+
         flock_exclusive(&file).map_err(|e| JailError::NetnsLock {
             path: path.to_owned(),
             source: e,
