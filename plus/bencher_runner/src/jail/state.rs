@@ -233,22 +233,30 @@ where
             continue;
         }
 
+        // The cgroup goes first, and the chroot only once the cgroup is gone.
+        // The two are named by the same id, and the directory is the only
+        // handle a later sweep has for finding the cgroup again, so removing
+        // the directory while the cgroup survives strands that cgroup for
+        // good: the next sweep never sees the id, never retries the removal,
+        // and something may still be running on the benchmark cores under it.
+        // A leftover cgroup claims nothing, since these cgroups set no
+        // exclusive cpuset, but a removal that fails usually means something is
+        // still in it, which is why it is reported rather than swallowed.
+        if let Err(e) = remove_cgroup(&vm_id) {
+            eprintln!(
+                "Warning: leaving stale jail {jail_dir} in place because its cgroup could not be removed: {e}"
+            );
+            if failure.is_none() {
+                failure = Some(e);
+            }
+            continue;
+        }
+
         // A chroot that will not go away costs disk. Worth a warning, not
         // worth refusing to run.
         match fs::remove_dir_all(&jail_dir) {
             Ok(()) => swept += 1,
             Err(e) => eprintln!("Warning: failed to sweep stale jail {jail_dir}: {e}"),
-        }
-
-        // The cgroup shares the chroot's name by construction, so it is
-        // removed alongside it. A leftover claims nothing, since these cgroups
-        // set no exclusive cpuset, but they accumulate under the parent and a
-        // removal that fails usually means something is still running in one.
-        // Reported rather than swallowed for that reason.
-        if let Err(e) = remove_cgroup(&vm_id)
-            && failure.is_none()
-        {
-            failure = Some(e);
         }
     }
 
@@ -477,6 +485,47 @@ mod tests {
             );
             assert!(state.jail_dir(&live).exists());
         }
+    }
+
+    #[test]
+    fn a_jail_whose_cgroup_survives_keeps_the_chroot_that_names_it() {
+        // The chroot name is the only handle a later sweep has for finding the
+        // cgroup, so a directory removed while its cgroup survives strands
+        // that cgroup for good: nothing ever sees the id again. One stuck
+        // cgroup must still not abandon the rest of the sweep.
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state"));
+        state.create().unwrap();
+        let stuck = VmId::from_chroot_name("stuck".to_owned());
+        let clear = VmId::from_chroot_name("clear".to_owned());
+        fs::create_dir_all(state.jail_root(&stuck)).unwrap();
+        fs::create_dir_all(state.jail_root(&clear)).unwrap();
+
+        let err = sweep_jails_with(
+            &state.jail_parent(),
+            |_jail_root| Reaped::Clear,
+            |vm_id| {
+                if vm_id.as_str() == "stuck" {
+                    Err(JailError::StaleCgroup {
+                        path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/stuck"),
+                        source: std::io::Error::from(std::io::ErrorKind::DirectoryNotEmpty),
+                    })
+                } else {
+                    Ok(())
+                }
+            },
+        )
+        .unwrap_err();
+
+        assert!(
+            state.jail_dir(&stuck).exists(),
+            "the chroot names the cgroup that has to be retried"
+        );
+        assert!(
+            !state.jail_dir(&clear).exists(),
+            "one stuck cgroup must not abandon the rest of the sweep"
+        );
+        assert!(err.to_string().contains("stuck"), "names the cgroup: {err}");
     }
 
     #[test]
