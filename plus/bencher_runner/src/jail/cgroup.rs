@@ -102,8 +102,14 @@ impl CgroupManager {
             .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids +io"))
             .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids"));
 
-        // Verify that required controllers are enabled
-        let enabled = fs::read_to_string(&subtree_control).unwrap_or_default();
+        // Verify that required controllers are enabled. A read that failed is
+        // not an empty list: reporting one would blame the host for a
+        // controller it may well have enabled, on the strength of a question
+        // nobody answered.
+        let enabled = fs::read_to_string(&subtree_control).map_err(|e| JailError::ReadCgroup {
+            path: subtree_control.clone(),
+            source: e,
+        })?;
         if let Some(missing) = missing_required_controller(&enabled) {
             return Err(match write_result {
                 Err(e) => JailError::EnableControllers {
@@ -158,9 +164,16 @@ impl CgroupManager {
             return Ok(Cpuset::Unavailable("the benchmark core set is empty"));
         }
 
+        // `try_exists`, not `exists`: the latter reports an error as an absent
+        // file, so a cgroup directory the runner cannot stat would be declared
+        // an undelegated controller. That is a claim about the host made from a
+        // question that failed, and it is the difference between a host with no
+        // isolation to offer and a host nobody could ask.
         let path = self.cgroup_path.join("cpuset.cpus");
-        if !path.exists() {
-            return Ok(Cpuset::Unavailable(UNDELEGATED));
+        match path.try_exists() {
+            Ok(true) => {},
+            Ok(false) => return Ok(Cpuset::Unavailable(UNDELEGATED)),
+            Err(e) => return Err(JailError::ReadCgroup { path, source: e }.into()),
         }
         if let Err(e) = fs::write(&path, &cpuset) {
             return classify_cpuset_error(path, e);
@@ -169,10 +182,13 @@ impl CgroupManager {
         // Also need to set cpuset.mems for cpuset to work. Use the parent's
         // effective memory nodes so multi-node NUMA hosts are not forced onto
         // node 0. Applied cpus without mems is the half-applied case.
-        let mems = self
-            .cgroup_path
-            .parent()
-            .map_or_else(|| "0".to_owned(), effective_mems);
+        let mems = match self.cgroup_path.parent() {
+            Some(parent) => effective_mems(parent).map_err(|e| JailError::ReadCgroup {
+                path: parent.join(MEMS_EFFECTIVE),
+                source: e,
+            })?,
+            None => NODE_ZERO.to_owned(),
+        };
         let mems_path = self.cgroup_path.join("cpuset.mems");
         if let Err(e) = fs::write(&mems_path, &mems) {
             return classify_cpuset_error(mems_path, e);
@@ -204,15 +220,17 @@ impl CgroupManager {
             ("cpuset.mems.effective", mems),
         ] {
             let path = self.cgroup_path.join(file);
-            let effective = match fs::read_to_string(&path) {
-                Ok(effective) => effective,
-                // Nothing to read back means nothing was delegated, the same
-                // conclusion the write path draws.
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                    return Ok(Cpuset::Unavailable(UNDELEGATED));
-                },
-                Err(e) => return Err(JailError::ReadCgroup { path, source: e }.into()),
-            };
+            // Every failure, absence included. Reaching this function means the
+            // write to `cpuset.cpus` succeeded, which is proof the controller is
+            // delegated, so a missing effective file here cannot mean it is not:
+            // reporting an undelegated controller would tell the operator
+            // something this code just observed to be false, while the run went
+            // ahead on a cpuset that was never verified. The read is the whole
+            // mechanism, so a read that did not happen is a failure of it.
+            let effective = fs::read_to_string(&path).map_err(|e| JailError::ReadCgroup {
+                path: path.clone(),
+                source: e,
+            })?;
 
             if parse_cpuset(&effective) != parse_cpuset(requested) {
                 return Err(JailError::CpusetNarrowed {
@@ -324,16 +342,31 @@ impl Drop for CgroupManager {
     }
 }
 
+/// The `cpuset.mems.effective` file, read to mirror a parent's memory nodes.
+pub(crate) const MEMS_EFFECTIVE: &str = "cpuset.mems.effective";
+
+/// The single memory node a host without a readable node set is assumed to have.
+const NODE_ZERO: &str = "0";
+
 /// Read a cgroup's effective memory nodes (`cpuset.mems.effective`).
 ///
-/// Falls back to node `0` when the file is missing or empty (e.g., the
-/// cpuset controller is not enabled). Using effective mems instead of a
-/// hardcoded node keeps multi-node NUMA hosts from forcing all benchmark
+/// Falls back to node `0` when the file is missing or empty, which is what the
+/// cpuset controller not being enabled looks like. Using effective mems instead
+/// of a hardcoded node keeps multi-node NUMA hosts from forcing all benchmark
 /// memory onto node 0.
-pub(crate) fn effective_mems(cgroup: &Utf8Path) -> String {
-    match fs::read_to_string(cgroup.join("cpuset.mems.effective")) {
-        Ok(mems) if !mems.trim().is_empty() => mems.trim().to_owned(),
-        _ => "0".to_owned(),
+///
+/// Which is exactly why any other failure is an error rather than the fallback.
+/// This value is written to `cpuset.mems`, so answering node 0 to a read that
+/// did not happen confines the guest's memory to one node on a host that may
+/// have several, and the run then reports a number measured under a constraint
+/// nobody chose. An absent file says the host has nothing to tell; a failed read
+/// says nobody asked it.
+pub(crate) fn effective_mems(cgroup: &Utf8Path) -> Result<String, std::io::Error> {
+    match fs::read_to_string(cgroup.join(MEMS_EFFECTIVE)) {
+        Ok(mems) if !mems.trim().is_empty() => Ok(mems.trim().to_owned()),
+        Ok(_) => Ok(NODE_ZERO.to_owned()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(NODE_ZERO.to_owned()),
+        Err(e) => Err(e),
     }
 }
 
@@ -547,7 +580,12 @@ mod tests {
     }
 
     #[test]
-    fn an_undelegated_memory_node_set_degrades() {
+    fn a_memory_node_set_that_cannot_be_read_back_fails_the_job() {
+        // This asserted a degrade until the rule was written down. The cpus were
+        // applied and verified, so the controller is demonstrably delegated;
+        // reporting it undelegated because the mems could not be read back would
+        // tell the operator something this function just disproved, and the run
+        // would go ahead on a memory binding nobody confirmed.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         fs::write(root.join("cpuset.cpus"), "").unwrap();
@@ -556,9 +594,11 @@ mod tests {
         let manager = CgroupManager::detached(root);
         let layout = CpuLayout::with_core_count(8);
 
-        assert_eq!(
-            manager.apply_cpuset(&layout).unwrap(),
-            Cpuset::Unavailable(UNDELEGATED)
+        let err = manager.apply_cpuset(&layout).unwrap_err().to_string();
+
+        assert!(
+            err.contains("cpuset.mems.effective"),
+            "names the read that did not happen: {err}"
         );
     }
 
@@ -731,12 +771,43 @@ mod tests {
     }
 
     #[test]
+    fn an_unreadable_node_set_is_not_node_zero() {
+        // The value is written to `cpuset.mems`, so answering node 0 to a read
+        // that failed would confine the guest to one node on a host that may
+        // have several, and the run would report a number measured under a
+        // constraint nobody chose. A file in place of the cgroup directory reads
+        // back `ENOTDIR`, the same way an unlistable one reads back `EACCES`.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let not_a_dir = root.join("cgroup");
+        fs::write(&not_a_dir, b"in the way").unwrap();
+
+        effective_mems(&not_a_dir).unwrap_err();
+    }
+
+    #[test]
+    fn a_cpuset_that_cannot_be_verified_is_not_a_degrade() {
+        // The write proves the controller is delegated, so a missing effective
+        // file cannot mean it is not. Degrading here would tell the operator the
+        // controller was never delegated while the run went ahead on a cpuset
+        // nobody read back.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        fs::write(root.join("cpuset.cpus"), "").unwrap();
+        fs::write(root.join("cpuset.mems"), "").unwrap();
+        let manager = CgroupManager::detached(root);
+        let layout = CpuLayout::with_core_count(8);
+
+        manager.apply_cpuset(&layout).unwrap_err();
+    }
+
+    #[test]
     fn effective_mems_reads_file() {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         fs::write(root.join("cpuset.mems.effective"), "0-1\n").unwrap();
 
-        assert_eq!(effective_mems(&root), "0-1");
+        assert_eq!(effective_mems(&root).unwrap(), "0-1");
     }
 
     #[test]
@@ -744,7 +815,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
-        assert_eq!(effective_mems(&root), "0");
+        assert_eq!(effective_mems(&root).unwrap(), "0");
     }
 
     #[test]
@@ -753,6 +824,6 @@ mod tests {
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         fs::write(root.join("cpuset.mems.effective"), "\n").unwrap();
 
-        assert_eq!(effective_mems(&root), "0");
+        assert_eq!(effective_mems(&root).unwrap(), "0");
     }
 }

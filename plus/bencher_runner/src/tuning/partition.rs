@@ -89,10 +89,23 @@ impl BencherPartition {
         ) {
             return PartitionLevel::Member;
         }
+        // A node set that could not be read is not node 0. Degrading to member
+        // is the declared, loud absence of isolation; writing a guessed node set
+        // would confine the benchmark's memory on the strength of a read that
+        // did not happen.
+        let mems = match effective_mems(&self.root) {
+            Ok(mems) => mems,
+            Err(e) => {
+                eprintln!(
+                    "Warning: failed to read the cgroup root's effective memory nodes ({e}); no cpuset partition"
+                );
+                return PartitionLevel::Member;
+            },
+        };
         if !save_and_write(
             guard,
             &self.path.join("cpuset.mems"),
-            &effective_mems(&self.root),
+            &mems,
             "bencher cpuset.mems",
         ) {
             return PartitionLevel::Member;
