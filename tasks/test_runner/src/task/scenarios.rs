@@ -2658,18 +2658,33 @@ fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
 /// a full guest rootfs image.
 fn assert_no_chroot_remains(state_dir: &Utf8Path) -> Result<()> {
     let parent = jail_parent(state_dir);
-    let leftovers: Vec<String> = match fs::read_dir(&parent) {
-        Ok(entries) => entries
-            .flatten()
-            .map(|entry| entry.file_name().to_string_lossy().into_owned())
-            .collect(),
-        Err(_) => Vec::new(),
+    // A read that failed is not an empty directory. An assertion that could not
+    // look has not passed, it has not run, and a vacuous pass here would hide the
+    // exact leak it exists to catch. Absence is the one reading that does mean
+    // nothing was left behind: the runner creates this tree on demand.
+    let entries = match fs::read_dir(&parent) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => {
+            return Err(e).with_context(|| {
+                format!("Failed to read {parent}, so whether a chroot was left behind is unknown")
+            });
+        },
     };
-    if leftovers.is_empty() {
-        Ok(())
-    } else {
-        bail!("Chroots left behind under {parent}: {leftovers:?}")
+
+    let mut leftovers = Vec::new();
+    for entry in entries {
+        let entry = entry.with_context(|| {
+            format!("Failed to read an entry under {parent}, so whether a chroot was left behind is unknown")
+        })?;
+        leftovers.push(entry.file_name().to_string_lossy().into_owned());
     }
+
+    anyhow::ensure!(
+        leftovers.is_empty(),
+        "Chroots left behind under {parent}: {leftovers:?}"
+    );
+    Ok(())
 }
 
 /// Check that the jailed VMM is unprivileged and already in its cgroup.
@@ -2680,10 +2695,10 @@ fn assert_no_chroot_remains(state_dir: &Utf8Path) -> Result<()> {
 /// not after the VM is running.
 fn probe_confinement(state_dir: &Utf8Path) -> Result<bool> {
     let parent = jail_parent(state_dir);
-    let Some((vm_id, jail_root)) = find_jail(&parent) else {
+    let Some((vm_id, jail_root)) = find_jail(&parent)? else {
         return Ok(false);
     };
-    let Some(pid) = find_jailed_vmm(&jail_root) else {
+    let Some(pid) = find_jailed_vmm(&jail_root)? else {
         return Ok(false);
     };
 
@@ -2699,18 +2714,33 @@ fn probe_confinement(state_dir: &Utf8Path) -> Result<bool> {
 }
 
 /// Find the single chroot under the jail parent, if one exists yet.
-fn find_jail(parent: &Utf8Path) -> Option<(String, Utf8PathBuf)> {
-    for entry in fs::read_dir(parent).ok()?.flatten() {
-        if !entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
+///
+/// `Ok(None)` is "not yet", which the parent not existing also means: the runner
+/// creates it on demand. Every other failure is an error, because this drives a
+/// poll loop whose only other outcome is a timeout, and a timeout would report
+/// that no VMM ever appeared when the truth is that nobody could look.
+fn find_jail(parent: &Utf8Path) -> Result<Option<(String, Utf8PathBuf)>> {
+    let entries = match fs::read_dir(parent) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e).with_context(|| format!("Failed to read {parent}")),
+    };
+
+    for entry in entries {
+        let entry = entry.with_context(|| format!("Failed to read an entry under {parent}"))?;
+        let file_type = entry
+            .file_type()
+            .with_context(|| format!("Failed to read the kind of an entry under {parent}"))?;
+        if !file_type.is_dir() {
             continue;
         }
         let vm_id = entry.file_name().to_string_lossy().into_owned();
         let jail_root = parent.join(&vm_id).join("root");
         if jail_root.is_dir() {
-            return Some((vm_id, jail_root));
+            return Ok(Some((vm_id, jail_root)));
         }
     }
-    None
+    Ok(None)
 }
 
 /// Find the pid of the VMM confined to `jail_root`, if it is running yet.
@@ -2721,24 +2751,36 @@ fn find_jail(parent: &Utf8Path) -> Option<(String, Utf8PathBuf)> {
 /// device and inode of the chroot directory, so stat'ing through
 /// `/proc/<pid>/root` and stat'ing the jail root agree for exactly the VMM
 /// confined to this jail and for no other process on the host.
-fn find_jailed_vmm(jail_root: &Utf8Path) -> Option<u32> {
+///
+/// `Ok(None)` is "not running yet", which a jail root that does not exist also
+/// means. A jail root that cannot be stat'ed, or a `/proc` that cannot be listed,
+/// is neither: it would surface as a probe timeout blaming the runner for
+/// something the harness could not see.
+fn find_jailed_vmm(jail_root: &Utf8Path) -> Result<Option<u32>> {
     use std::os::unix::fs::MetadataExt as _;
 
-    let jail = fs::metadata(jail_root).ok()?;
-    for entry in fs::read_dir("/proc").ok()?.flatten() {
+    let jail = match fs::metadata(jail_root) {
+        Ok(jail) => jail,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e).with_context(|| format!("Failed to stat {jail_root}")),
+    };
+    for entry in fs::read_dir("/proc").context("Failed to read /proc")? {
+        let entry = entry.context("Failed to read a /proc entry")?;
         let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
             continue;
         };
         // Following the magic symlink crosses into the process's own mount
-        // namespace, which a privileged reader is allowed to do.
+        // namespace, which a privileged reader is allowed to do. A read that
+        // fails is a process that has exited or is not this jail's, which is the
+        // one failure here that is genuinely an answer.
         let Ok(root) = fs::metadata(format!("/proc/{pid}/root")) else {
             continue;
         };
         if root.dev() == jail.dev() && root.ino() == jail.ino() {
-            return Some(pid);
+            return Ok(Some(pid));
         }
     }
-    None
+    Ok(None)
 }
 
 /// Check the VMM dropped root and runs as the user the jail was handed to.
@@ -2857,8 +2899,8 @@ fn run_runner_after_orphan(
     // empty directory created microseconds before the kill.
     let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
     let orphan = loop {
-        if let Some((vm_id, jail_root)) = find_jail(&parent)
-            && let Some(pid) = find_jailed_vmm(&jail_root)
+        if let Some((vm_id, jail_root)) = find_jail(&parent)?
+            && let Some(pid) = find_jailed_vmm(&jail_root)?
         {
             break Some((vm_id, jail_root, pid));
         }
@@ -2889,7 +2931,10 @@ fn run_runner_after_orphan(
     drop(child.wait());
     drop(readers.join());
 
-    if !jail_root.exists() {
+    if !jail_root
+        .try_exists()
+        .with_context(|| format!("Failed to check whether {jail_root} was left behind"))?
+    {
         bail!(
             "The chroot {jail_root} was reclaimed despite the runner being killed without unwinding, so the sweep is untested"
         );
@@ -2902,17 +2947,24 @@ fn run_runner_after_orphan(
     // that a hand-reap guards against is exactly what the sweep now exists to
     // prevent, so if the sweep fails this scenario has to go red.
     let cgroup = stale_cgroup(&vm_id);
-    let cgroup_existed = cgroup.exists();
+    let cgroup_existed = cgroup
+        .try_exists()
+        .with_context(|| format!("Failed to check whether {cgroup} was created"))?;
     println!(
         "  orphaned jail {vm_id} (VMM pid {vmm_pid}, cgroup present: {cgroup_existed}), running a second job..."
     );
 
     let output = run_runner(image_path, args, runner_bin)?;
 
-    if jail_root.exists() {
+    // `try_exists`, not `exists`: the latter reports false for an error as well
+    // as for absence, which would pass this assertion for the wrong reason.
+    if jail_root
+        .try_exists()
+        .with_context(|| format!("Failed to check whether {jail_root} survived"))?
+    {
         bail!("The orphaned chroot {jail_root} survived the next job, so it was never swept");
     }
-    if is_firecracker(vmm_pid) {
+    if is_firecracker(vmm_pid)? {
         bail!(
             "The orphaned VMM (pid {vmm_pid}) is still running after the next job, so the sweep never reaped it. It still holds the benchmark cores."
         );
@@ -2920,7 +2972,11 @@ fn run_runner_after_orphan(
     // Only meaningful where a cgroup was created at all: a host with no CPU
     // isolation never makes one, and asserting its absence would pass for the
     // wrong reason.
-    if cgroup_existed && cgroup.exists() {
+    if cgroup_existed
+        && cgroup
+            .try_exists()
+            .with_context(|| format!("Failed to check whether {cgroup} survived"))?
+    {
         bail!(
             "The orphaned cgroup {cgroup} survived the next job, so the sweep never removed it. Stale cgroups accumulate, and one that will not go away usually means its VMM is still running."
         );
@@ -2938,8 +2994,21 @@ fn stale_cgroup(vm_id: &str) -> Utf8PathBuf {
 ///
 /// Checking the command as well as the pid keeps a recycled pid from reading
 /// as a VMM that was never reaped.
-fn is_firecracker(pid: u32) -> bool {
-    fs::read_to_string(format!("/proc/{pid}/comm")).is_ok_and(|comm| comm.trim() == "firecracker")
+///
+/// A process that is gone has no `comm` to read, and that is the answer the
+/// caller wants. Any other read failure is not: the assertion that uses this
+/// passes when it returns false, so swallowing an error would pass it for the
+/// wrong reason.
+fn is_firecracker(pid: u32) -> Result<bool> {
+    match fs::read_to_string(format!("/proc/{pid}/comm")) {
+        Ok(comm) => Ok(comm.trim() == "firecracker"),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e).with_context(|| {
+            format!(
+                "Failed to read the command of pid {pid}, so whether the VMM was reaped is unknown"
+            )
+        }),
+    }
 }
 
 /// Reader threads draining a child's piped output.
@@ -3035,6 +3104,15 @@ fn run_runner_with_probe(
         std::thread::sleep(PROBE_INTERVAL);
     }
 
+    // A probe that ended without observing the VMM leaves the runner going, and
+    // waiting on it would sit there until the runner's own timeout expired,
+    // reporting the failure minutes late. Only a run that observed what it came
+    // for is allowed to finish, since its output is the result being collected.
+    // Guarded on the reap, because `try_wait` above reaps and signalling a reaped
+    // pid can reach whatever inherited the number.
+    if !matches!(observed, Some(Ok(()))) && child.try_wait()?.is_none() {
+        kill_pid(child.id(), libc::SIGKILL);
+    }
     let status = child.wait()?;
     let (stdout, stderr) = readers.join();
 
