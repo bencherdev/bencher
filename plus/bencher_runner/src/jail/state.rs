@@ -40,9 +40,15 @@ pub struct StateDir {
 
 impl StateDir {
     /// Create a handle for the state directory rooted at `root`.
-    #[must_use]
-    pub fn new(root: Utf8PathBuf) -> Self {
-        Self { root }
+    ///
+    /// Absolute, checked here so the type carries the invariant: a relative root
+    /// reaches the jailer as a `--chroot-base-dir` it resolves against its own
+    /// working directory, and every path this type hands out would then name a
+    /// different file for the runner than for the jailer. See
+    /// [`crate::jail::check_absolute_state_dir`].
+    pub fn new(root: Utf8PathBuf) -> Result<Self, JailError> {
+        crate::jail::check_absolute_state_dir(&root)?;
+        Ok(Self { root })
     }
 
     /// The state directory itself.
@@ -69,6 +75,7 @@ impl StateDir {
     ///
     /// What the filesystem itself put there is not somebody else's data. See
     /// [`BENIGN_ENTRIES`].
+    ///
     fn check_root_is_ours(&self) -> Result<(), JailError> {
         let entries = match fs::read_dir(&self.root) {
             Ok(entries) => entries,
@@ -447,7 +454,7 @@ mod tests {
 
     #[test]
     fn jail_layout_matches_jailer_template() {
-        let state = StateDir::new(Utf8PathBuf::from("/var/lib/bencher-runner"));
+        let state = StateDir::new(Utf8PathBuf::from("/var/lib/bencher-runner")).unwrap();
         assert_eq!(state.chroot_base(), "/var/lib/bencher-runner/jail");
         assert_eq!(
             state.jail_parent(),
@@ -471,7 +478,7 @@ mod tests {
     #[test]
     fn create_is_idempotent_and_private() {
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
 
         state.create().unwrap();
         state.create().unwrap();
@@ -485,7 +492,7 @@ mod tests {
     #[test]
     fn create_tightens_a_lax_directory() {
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         fs::create_dir_all(state.path()).unwrap();
         fs::set_permissions(state.path(), fs::Permissions::from_mode(0o755)).unwrap();
 
@@ -504,7 +511,10 @@ mod tests {
         fs::create_dir_all(foreign.join("dpkg")).unwrap();
         fs::create_dir_all(foreign.join("systemd")).unwrap();
 
-        StateDir::new(foreign.clone()).create().unwrap_err();
+        StateDir::new(foreign.clone())
+            .unwrap()
+            .create()
+            .unwrap_err();
 
         let mode = fs::metadata(&foreign).unwrap().permissions().mode();
         assert_ne!(mode & 0o777, 0o700, "a refused root must not be chmodded");
@@ -520,7 +530,7 @@ mod tests {
         let not_a_dir = root.join("state");
         fs::write(&not_a_dir, b"operator note").unwrap();
 
-        let err = StateDir::new(not_a_dir).create().unwrap_err();
+        let err = StateDir::new(not_a_dir).unwrap().create().unwrap_err();
 
         assert!(
             matches!(err, JailError::ReadStateDir { .. }),
@@ -538,7 +548,7 @@ mod tests {
         let volume = root.join("volume");
         fs::create_dir_all(volume.join("lost+found")).unwrap();
 
-        StateDir::new(volume.clone()).create().unwrap();
+        StateDir::new(volume.clone()).unwrap().create().unwrap();
 
         let mode = fs::metadata(&volume).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o700);
@@ -554,7 +564,10 @@ mod tests {
         fs::create_dir_all(foreign.join("lost+found")).unwrap();
         fs::create_dir_all(foreign.join("dpkg")).unwrap();
 
-        StateDir::new(foreign.clone()).create().unwrap_err();
+        StateDir::new(foreign.clone())
+            .unwrap()
+            .create()
+            .unwrap_err();
 
         let mode = fs::metadata(&foreign).unwrap().permissions().mode();
         assert_ne!(mode & 0o777, 0o700, "a refused root must not be chmodded");
@@ -566,13 +579,13 @@ mod tests {
         let empty = root.join("empty");
         fs::create_dir_all(&empty).unwrap();
 
-        StateDir::new(empty).create().unwrap();
+        StateDir::new(empty).unwrap().create().unwrap();
     }
 
     #[test]
     fn a_directory_the_runner_already_used_is_ours() {
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
         // Something the host put there afterwards does not disown it.
         fs::write(state.path().join("notes.txt"), b"operator note").unwrap();
@@ -587,13 +600,23 @@ mod tests {
         fs::create_dir_all(&state).unwrap();
         fs::write(state.join(".lock"), b"").unwrap();
 
-        StateDir::new(state).create().unwrap();
+        StateDir::new(state).unwrap().create().unwrap();
+    }
+
+    #[test]
+    fn a_relative_state_directory_is_refused() {
+        // The invariant lives on the type: the jailer resolves the path it is
+        // handed against its own working directory, so a relative one names a
+        // different place for the jailer than for the runner.
+        StateDir::new(Utf8PathBuf::from("bencher-runner")).unwrap_err();
+        StateDir::new(Utf8PathBuf::from("./bencher-runner")).unwrap_err();
+        StateDir::new(Utf8PathBuf::from("/var/lib/bencher-runner")).unwrap();
     }
 
     #[test]
     fn sweep_removes_stale_jails() {
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
 
         // Two stale jails, one with a nested chroot tree.
@@ -629,7 +652,7 @@ mod tests {
     #[test]
     fn sweep_leaves_unrelated_entries_alone() {
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
 
         let note = state.jail_parent().join("NOTES.txt");
@@ -655,7 +678,7 @@ mod tests {
         // Removing the tree would not stop the VMM, and it would destroy the
         // only handle for identifying that process on a later sweep.
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
         let live = VmId::from_chroot_name("live".to_owned());
         let dead = VmId::from_chroot_name("dead".to_owned());
@@ -694,7 +717,7 @@ mod tests {
         // job, not once. Nothing latches, so the sweep is re-attempted and
         // reports again.
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
         let live = VmId::from_chroot_name("live".to_owned());
         fs::create_dir_all(state.jail_root(&live)).unwrap();
@@ -717,7 +740,7 @@ mod tests {
         // that cgroup for good: nothing ever sees the id again. One stuck
         // cgroup must still not abandon the rest of the sweep.
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
         let stuck = VmId::from_chroot_name("stuck".to_owned());
         let clear = VmId::from_chroot_name("clear".to_owned());
@@ -759,7 +782,7 @@ mod tests {
         // Warning alone would have the caller spend the reclaim signal and the
         // leak would outlive every later job.
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
         let stuck = VmId::from_chroot_name("stuck".to_owned());
         fs::create_dir_all(state.jail_root(&stuck)).unwrap();
@@ -791,7 +814,7 @@ mod tests {
         // tree on that would be the same destructive step as removing it under a
         // VMM known to be alive, so it gets the same answer.
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
         let unknown = VmId::from_chroot_name("unknown".to_owned());
         fs::create_dir_all(state.jail_root(&unknown)).unwrap();
@@ -816,7 +839,7 @@ mod tests {
     #[test]
     fn a_cleared_jail_is_still_swept() {
         let (_dir, root) = temp_root();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
         fs::create_dir_all(state.jail_root(&VmId::from_chroot_name("one".to_owned()))).unwrap();
 

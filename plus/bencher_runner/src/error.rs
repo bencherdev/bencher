@@ -65,6 +65,11 @@ pub enum JailError {
     PrivilegedJailUser { field: &'static str },
 
     #[error(
+        "The state directory {path} must be an absolute path. It reaches the jailer as --chroot-base-dir, which the jailer resolves against its own working directory rather than the runner's, so a relative path builds the chroot somewhere the runner does not look."
+    )]
+    RelativeStateDir { path: Utf8PathBuf },
+
+    #[error(
         "The state directory {path} already exists, is not empty, and was not created by the runner. Point --state-dir at a directory the runner owns, or at a subdirectory of this one."
     )]
     ForeignStateDir { path: Utf8PathBuf },

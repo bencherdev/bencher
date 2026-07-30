@@ -141,7 +141,7 @@ mod tests {
     fn state_in_tmpdir() -> (tempfile::TempDir, StateDir) {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let state = StateDir::new(root.join("state"));
+        let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
         (dir, state)
     }

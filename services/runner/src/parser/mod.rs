@@ -148,22 +148,17 @@ pub struct CliRun {
     pub sandbox_log_level: bencher_runner::SandboxLogLevel,
 }
 
-/// Require an absolute state directory.
+/// Require an absolute state directory, before the runner starts.
 ///
-/// The path reaches the jailer as `--chroot-base-dir`, which the jailer resolves
-/// against its own working directory rather than the runner's, so a relative
-/// value builds the chroot somewhere the runner does not look and the sweep
-/// never reaches.
+/// The rule itself lives in the library, on the type that holds the path, since
+/// every caller that hands it a state directory is exposed to the same thing.
+/// This is the same check run early, so an operator hears about it at the
+/// command line rather than when the first sandboxed Job builds its jail.
 #[cfg(feature = "plus")]
 fn absolute_state_dir(arg: &str) -> Result<Utf8PathBuf, String> {
     let path = Utf8PathBuf::from(arg);
-    if path.is_absolute() {
-        Ok(path)
-    } else {
-        Err(format!(
-            "the state directory must be an absolute path, and `{path}` is relative"
-        ))
-    }
+    bencher_runner::check_absolute_state_dir(&path).map_err(|e| e.to_string())?;
+    Ok(path)
 }
 
 #[cfg(all(test, feature = "plus"))]
