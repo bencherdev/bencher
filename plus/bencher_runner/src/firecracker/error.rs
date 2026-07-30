@@ -61,7 +61,7 @@ pub enum FirecrackerError {
     )]
     JailerExited {
         /// How the jailer exited.
-        status: String,
+        status: std::process::ExitStatus,
     },
 
     /// The API socket address itself cannot be used.

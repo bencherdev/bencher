@@ -181,9 +181,7 @@ impl FirecrackerProcess {
                 return Ok(());
             }
             if let Ok(Some(status)) = self.child.try_wait() {
-                return Err(FirecrackerError::JailerExited {
-                    status: status.to_string(),
-                });
+                return Err(FirecrackerError::JailerExited { status });
             }
             std::thread::sleep(poll_interval);
         }
