@@ -61,8 +61,8 @@ impl LocalIsolation {
 
         // No chroot names this cgroup, and no sweep walks it, so a teardown it
         // cannot finish has nothing to hand the work to.
-        let reclaim_failed = crate::jail::ReclaimFailed::unwatched();
-        let cgroup = match crate::jail::CgroupManager::new(&run_id, reclaim_failed) {
+        let signals = crate::jail::JailSignals::unwatched();
+        let cgroup = match crate::jail::CgroupManager::new(&run_id, signals) {
             Ok(cgroup) => {
                 // Best effort here, unlike the sandboxed path: a local run
                 // makes no confinement claim to begin with, so losing the

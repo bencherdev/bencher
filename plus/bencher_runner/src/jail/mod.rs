@@ -253,18 +253,6 @@ pub struct HostPreparation {
 pub struct ReclaimFailed(Arc<AtomicBool>);
 
 impl ReclaimFailed {
-    /// A signal nothing reads, for a cgroup no sweep can find again.
-    ///
-    /// A non-sandboxed run has no chroot, and its cgroup is not named by any
-    /// directory the sweep walks, so there is no handle for a later sweep to
-    /// work from and nothing a raised signal could change. Named rather than
-    /// defaulted so the call site says which of the two it is.
-    #[cfg(target_os = "linux")]
-    #[must_use]
-    pub fn unwatched() -> Self {
-        Self::default()
-    }
-
     /// Record that a jail could not be reclaimed.
     pub fn set(&self) {
         self.0.store(true, Ordering::SeqCst);
@@ -293,6 +281,104 @@ impl ReclaimFailed {
     #[must_use]
     pub(crate) fn is_set(&self) -> bool {
         self.0.load(Ordering::SeqCst)
+    }
+}
+
+/// Whether this job's own cgroup outlived its teardown.
+///
+/// Job-scoped, where [`ReclaimFailed`] is runner-scoped, and that distinction is
+/// the point. The chroot has to be kept when *this* job's cgroup could not be
+/// removed, because the directory name is the only handle a later sweep has for
+/// finding that cgroup. A runner-wide signal cannot say that: it is also raised
+/// by an unrelated stale jail the sweep could not reclaim, and reading it made
+/// the current job hold a chroot whose own cgroup came down cleanly. Two
+/// questions on one flag is also what made the earlier ordering bugs easy to
+/// write.
+#[derive(Debug, Clone, Default)]
+pub struct CgroupSurvived(Arc<AtomicBool>);
+
+impl CgroupSurvived {
+    /// Record that this job's cgroup could not be removed.
+    pub fn set(&self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+
+    /// Whether this job's cgroup is still there.
+    ///
+    /// Only the chroot teardown reads it, and the jail is Linux-only.
+    #[cfg(target_os = "linux")]
+    fn is_set(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+}
+
+/// The signals one job's teardown raises.
+///
+/// Carried together because every teardown step needs both: a cgroup that will
+/// not go away has to hold this job's chroot *and* earn the next job a sweep.
+/// Keeping them in one value with two names is what stops the two being confused
+/// for each other again.
+#[derive(Debug, Clone)]
+pub struct JailSignals {
+    /// Runner-wide: a later job owes another sweep.
+    ///
+    /// Only the jail raises and reads these, and the jail is Linux-only.
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(dead_code, reason = "the jail is Linux-only")
+    )]
+    reclaim_failed: ReclaimFailed,
+    /// This job only: its cgroup outlived its teardown.
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(dead_code, reason = "the jail is Linux-only")
+    )]
+    cgroup_survived: CgroupSurvived,
+}
+
+impl JailSignals {
+    /// The signals for one job, sharing the runner's reclaim signal.
+    #[must_use]
+    pub fn for_job(reclaim_failed: ReclaimFailed) -> Self {
+        Self {
+            reclaim_failed,
+            cgroup_survived: CgroupSurvived::default(),
+        }
+    }
+
+    /// Signals nothing reads, for a cgroup no sweep can find again.
+    ///
+    /// A non-sandboxed run has no chroot to hold and no directory the sweep
+    /// walks, so there is no handle for a later sweep to work from and nothing a
+    /// raised signal could change. Named rather than defaulted so the call site
+    /// says which of the two it is.
+    #[cfg(target_os = "linux")]
+    #[must_use]
+    pub fn unwatched() -> Self {
+        Self::for_job(ReclaimFailed::default())
+    }
+
+    /// Record that this job's cgroup could not be removed.
+    ///
+    /// Both signals, because both are true: the chroot that names this cgroup
+    /// has to stay, and the next job has to sweep for it.
+    #[cfg(target_os = "linux")]
+    pub fn cgroup_survived(&self) {
+        self.cgroup_survived.set();
+        self.reclaim_failed.set();
+    }
+
+    /// Record that this job's chroot could not be removed.
+    #[cfg(target_os = "linux")]
+    pub fn chroot_survived(&self) {
+        self.reclaim_failed.set();
+    }
+
+    /// Whether this job's cgroup is still there, so its chroot must stay.
+    #[cfg(target_os = "linux")]
+    #[must_use]
+    pub(crate) fn must_keep_chroot(&self) -> bool {
+        self.cgroup_survived.is_set()
     }
 }
 

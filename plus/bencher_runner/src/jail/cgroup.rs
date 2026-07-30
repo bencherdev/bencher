@@ -9,7 +9,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::RunnerError;
 use crate::cpu::CpuLayout;
 use crate::error::JailError;
-use crate::jail::{ReclaimFailed, VmId};
+use crate::jail::{JailSignals, VmId};
 
 /// Default cgroup v2 mount point.
 const CGROUP_ROOT: &str = "/sys/fs/cgroup";
@@ -21,9 +21,9 @@ pub(crate) const BENCHER_CGROUP_BASE: &str = "bencher";
 pub struct CgroupManager {
     cgroup_path: Utf8PathBuf,
     created: bool,
-    /// Raised when this cgroup could not be removed, so a later sweep retries
-    /// it and the chroot that names it is held until then.
-    reclaim_failed: ReclaimFailed,
+    /// Raised when this cgroup could not be removed, which holds the chroot that
+    /// names it and earns a later job another sweep.
+    signals: JailSignals,
 }
 
 impl CgroupManager {
@@ -33,7 +33,7 @@ impl CgroupManager {
     /// cannot be removed has to keep that directory alive, because the
     /// directory name is the only handle a later sweep has for finding this
     /// cgroup again.
-    pub fn new(vm_id: &VmId, reclaim_failed: ReclaimFailed) -> Result<Self, RunnerError> {
+    pub fn new(vm_id: &VmId, signals: JailSignals) -> Result<Self, RunnerError> {
         let cgroup_path = Utf8PathBuf::from(CGROUP_ROOT)
             .join(BENCHER_CGROUP_BASE)
             .join(vm_id.as_str());
@@ -70,7 +70,7 @@ impl CgroupManager {
         Ok(Self {
             cgroup_path,
             created,
-            reclaim_failed,
+            signals,
         })
     }
 
@@ -84,7 +84,7 @@ impl CgroupManager {
         Self {
             cgroup_path,
             created: false,
-            reclaim_failed: ReclaimFailed::unwatched(),
+            signals: JailSignals::unwatched(),
         }
     }
 
@@ -328,7 +328,7 @@ impl CgroupManager {
                     "Warning: failed to remove cgroup {}: {e}. Something is still in it, so the next job sweeps it along with the jail that names it.",
                     self.cgroup_path
                 );
-                self.reclaim_failed.set();
+                self.signals.cgroup_survived();
             } else {
                 self.created = false;
             }
@@ -674,12 +674,12 @@ mod tests {
         let ours = CgroupManager {
             cgroup_path: root.join("ours"),
             created: true,
-            reclaim_failed: ReclaimFailed::unwatched(),
+            signals: JailSignals::unwatched(),
         };
         let theirs = CgroupManager {
             cgroup_path: root.join("theirs"),
             created: false,
-            reclaim_failed: ReclaimFailed::unwatched(),
+            signals: JailSignals::unwatched(),
         };
         fs::create_dir_all(ours.path()).unwrap();
         fs::create_dir_all(theirs.path()).unwrap();
@@ -710,11 +710,11 @@ mod tests {
         // nothing for a later sweep to find it by.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let reclaim_failed = ReclaimFailed::default();
+        let signals = JailSignals::unwatched();
         let mut manager = CgroupManager {
             cgroup_path: root.join("stuck"),
             created: true,
-            reclaim_failed: reclaim_failed.clone(),
+            signals: signals.clone(),
         };
         fs::create_dir_all(manager.path()).unwrap();
         fs::write(manager.path().join("cgroup.procs"), "42\n").unwrap();
@@ -722,8 +722,8 @@ mod tests {
         manager.cleanup();
 
         assert!(
-            reclaim_failed.is_set(),
-            "a cgroup that outlives its job has to earn another sweep"
+            signals.must_keep_chroot(),
+            "a cgroup that outlives its job holds the chroot that names it"
         );
         assert!(manager.path().exists());
     }
@@ -732,11 +732,11 @@ mod tests {
     fn a_removed_cgroup_leaves_the_signal_alone() {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let reclaim_failed = ReclaimFailed::default();
+        let signals = JailSignals::unwatched();
         let mut manager = CgroupManager {
             cgroup_path: root.join("gone"),
             created: true,
-            reclaim_failed: reclaim_failed.clone(),
+            signals: signals.clone(),
         };
         fs::create_dir_all(manager.path()).unwrap();
 
@@ -744,7 +744,7 @@ mod tests {
 
         assert!(!manager.path().exists());
         assert!(
-            !reclaim_failed.is_set(),
+            !signals.must_keep_chroot(),
             "a clean teardown must not hold the chroot back"
         );
     }
