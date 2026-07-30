@@ -23,8 +23,13 @@ pub struct CliUp {
     #[arg(long, default_value = "55", value_parser = clap::value_parser!(u32).range(1..=900))]
     pub poll_timeout: u32,
 
-    /// Persistent state directory for the runner.
-    #[arg(long, env = "BENCHER_STATE_DIR", default_value = bencher_runner::DEFAULT_STATE_DIR)]
+    /// Persistent state directory for the runner (absolute path).
+    #[arg(
+        long,
+        env = "BENCHER_STATE_DIR",
+        default_value = bencher_runner::DEFAULT_STATE_DIR,
+        value_parser = super::absolute_state_dir,
+    )]
     pub state_dir: Utf8PathBuf,
 
     /// Unprivileged uid the jailed sandbox process drops to.

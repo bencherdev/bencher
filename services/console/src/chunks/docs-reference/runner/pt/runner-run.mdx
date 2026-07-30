@@ -35,6 +35,7 @@ Por padrão, `300` é usado.
 ### `--state-dir <STATE_DIR>`
 
 O diretório de estado persistente do Runner.
+Deve ser um caminho absoluto.
 A jail que confina o sandbox é criada sob este diretório,
 e as jails deixadas por um encerramento não limpo são removidas dele antes do primeiro Job com sandbox.
 Por padrão, `/var/lib/bencher-runner` é usado.
