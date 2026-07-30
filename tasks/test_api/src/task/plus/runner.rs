@@ -195,6 +195,15 @@ impl RunnerTest {
             let runner_cmd = Command::cargo_bin("runner")?;
             let runner_bin = runner_cmd.get_program().to_owned();
 
+            // Never the default state directory. This runner is root, and
+            // preparing `/var/lib/bencher-runner` chmods it to 0700, sweeps
+            // every jail in it, and leaves it root-owned on the machine of
+            // whoever ran this harness, which on a developer's box is a real
+            // directory a real runner may own. The scenarios harness keeps its
+            // state under the target directory for the same reason.
+            let state_dir = elevated_state_dir(&runner_bin);
+            println!("  Runner state directory: {}", state_dir.display());
+
             let mut runner_child = Command::new("sudo");
             let runner_child = runner_child
                 .args(["-n", "--"])
@@ -208,6 +217,8 @@ impl RunnerTest {
                     "--runner",
                     "test-runner",
                 ])
+                .arg("--state-dir")
+                .arg(&state_dir)
                 .stdout(std::process::Stdio::piped())
                 .stderr(std::process::Stdio::inherit());
             // Its own process group, so teardown can signal the runner even
@@ -223,7 +234,7 @@ impl RunnerTest {
                 "runner",
                 std::time::Duration::from_secs(30),
             );
-            Some((runner_child, reader_handle))
+            Some((runner_child, reader_handle, state_dir))
         } else {
             println!("Skipping Firecracker runner daemon (no KVM)");
             None
@@ -312,9 +323,10 @@ impl RunnerTest {
         };
 
         // Always kill runner daemons, even if the test failed
-        if let Some((mut runner_child, reader_handle)) = runner_child_and_handle {
+        if let Some((mut runner_child, reader_handle, state_dir)) = runner_child_and_handle {
             kill_elevated_runner(&mut runner_child);
             let _join = reader_handle.join();
+            remove_elevated_state_dir(&state_dir);
         }
         let _kill = no_sandbox_child.kill();
         let _wait = no_sandbox_child.wait();
@@ -351,6 +363,42 @@ fn ensure_passwordless_sudo() -> anyhow::Result<()> {
          pivot_roots into it, and joins a network namespace, none of which an unprivileged process can do."
     );
     Ok(())
+}
+
+/// The state directory the elevated runner is pointed at.
+///
+/// Beside the runner binary, so it lands in the target directory the harness
+/// already owns and is thrown away with it.
+fn elevated_state_dir(runner_bin: &std::ffi::OsStr) -> std::path::PathBuf {
+    std::path::Path::new(runner_bin)
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("test-api-runner-state")
+}
+
+/// Remove the state directory the elevated runner left behind.
+///
+/// Root-owned, because the runner that created it was, so the unprivileged
+/// harness cannot remove it itself. Passwordless sudo was already established
+/// before the daemon started. A failure here is not a test failure, but it is
+/// said out loud with the command that finishes the job, because what is left is
+/// a root-owned directory inside the developer's own tree.
+fn remove_elevated_state_dir(state_dir: &std::path::Path) {
+    if !state_dir.exists() {
+        return;
+    }
+    let removed = Command::new("sudo")
+        .args(["-n", "rm", "-rf"])
+        .arg(state_dir)
+        .status()
+        .is_ok_and(|status| status.success());
+    if !removed {
+        println!(
+            "Note: {} is left owned by root. Remove it with: sudo rm -rf {}",
+            state_dir.display(),
+            state_dir.display()
+        );
+    }
 }
 
 /// Stop the elevated runner daemon and anything it spawned.
