@@ -227,7 +227,12 @@ impl FirecrackerProcess {
             std::thread::sleep(poll_interval);
         }
 
-        // Force kill if still running
+        // Force kill if still running. Unlike the readiness wait above, a child
+        // that exits during the final sleep is not a missed case here: nothing
+        // was reaped, so the pid is still reserved by the child and cannot have
+        // been recycled, `kill` sends a signal that a zombie simply ignores, and
+        // `kill` then reaps it and joins the reader. That is precisely what the
+        // loop would have done, so there is no verdict to get wrong.
         self.kill();
     }
 
