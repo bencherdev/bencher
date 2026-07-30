@@ -20,10 +20,10 @@
 //!
 //! # Environment Variable Overrides
 //!
-//! - `BENCHER_INIT_PATH` — path to a pre-built bencher-init binary
-//! - `BENCHER_FIRECRACKER_PATH` — path to a pre-built firecracker binary
+//! - `BENCHER_INIT_PATH`: path to a pre-built bencher-init binary
+//! - `BENCHER_FIRECRACKER_PATH`: path to a pre-built firecracker binary
 //! - `BENCHER_JAILER_PATH`: path to a pre-built jailer binary
-//! - `BENCHER_KERNEL_PATH` — path to a pre-built vmlinux kernel
+//! - `BENCHER_KERNEL_PATH`: path to a pre-built vmlinux kernel
 
 #![expect(
     clippy::expect_used,
