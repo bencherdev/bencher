@@ -175,8 +175,36 @@ const RUNNER_ENTRIES: [&str; 2] = [CHROOT_BASE, LOCK_FILE];
 /// another program put there is what the guard is for.
 const BENIGN_ENTRIES: [&str; 1] = ["lost+found"];
 
-/// Remove every jail directory under `jail_parent`, returning how many were
-/// reclaimed.
+/// What one sweep did.
+///
+/// Separating "reclaimed" from "left behind" is what lets the caller decide
+/// about the reclaim signal. A jail whose chroot would not go away is disk, not
+/// a contended benchmark, so it does not fail the job; but the sweep is the
+/// mechanism that reclaims it, so a sweep that left one behind has to leave the
+/// signal armed rather than spend it. See [`crate::jail`].
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Swept {
+    /// Jails whose chroot is gone.
+    reclaimed: usize,
+    /// Jails still on disk that a later sweep owes another attempt.
+    left_behind: usize,
+}
+
+impl Swept {
+    /// Jails whose chroot is gone.
+    #[must_use]
+    pub fn reclaimed(self) -> usize {
+        self.reclaimed
+    }
+
+    /// Whether the sweep owes nothing further.
+    #[must_use]
+    pub fn is_complete(self) -> bool {
+        self.left_behind == 0
+    }
+}
+
+/// Remove every jail directory under `jail_parent`, reporting what it did.
 ///
 /// Jobs run serially, so anything found here is stale by construction. The
 /// runner disappears without unwinding in several ordinary ways, including
@@ -186,7 +214,7 @@ const BENIGN_ENTRIES: [&str; 1] = ["lost+found"];
 ///
 /// Non-directory entries are left alone: the jailer only ever creates
 /// directories here, so anything else was put there by someone else.
-pub fn sweep_jails(jail_parent: &Utf8Path) -> Result<usize, JailError> {
+pub fn sweep_jails(jail_parent: &Utf8Path) -> Result<Swept, JailError> {
     sweep_jails_with(
         jail_parent,
         super::reap::reap_jailed_vmm,
@@ -209,7 +237,7 @@ fn sweep_jails_with<R, C>(
     jail_parent: &Utf8Path,
     reap: R,
     remove_cgroup: C,
-) -> Result<usize, JailError>
+) -> Result<Swept, JailError>
 where
     R: Fn(&Utf8Path) -> Reaped,
     C: Fn(&VmId) -> Result<(), JailError>,
@@ -222,7 +250,7 @@ where
     // left behind. The rule `check_root_is_ours` follows, one level up.
     let entries = match fs::read_dir(jail_parent) {
         Ok(entries) => entries,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Swept::default()),
         Err(e) => {
             return Err(JailError::ReadJailParent {
                 path: jail_parent.to_owned(),
@@ -231,15 +259,25 @@ where
         },
     };
 
-    let mut swept = 0;
+    let mut swept = Swept::default();
     // The first failure is remembered but does not abandon the rest: one jail
     // whose cgroup will not go away must not leave every other stale jail
     // unreaped, with its chroot and cgroup still in place.
     let mut failure = None;
 
     for entry in entries {
-        let entry = match entry {
-            Ok(entry) => entry,
+        let outcome = match entry {
+            Ok(entry) => match jail_id(jail_parent, &entry) {
+                Ok(Some(vm_id)) => reclaim_one(
+                    &jail_parent.join(vm_id.as_str()),
+                    &vm_id,
+                    &reap,
+                    &remove_cgroup,
+                ),
+                // Not a jail, or not ours: nothing owed either way.
+                Ok(None) => continue,
+                Err(e) => Reclamation::Failed(e),
+            },
             // A listing that breaks off partway leaves jails unexamined, so it
             // is remembered like any other failure rather than passing for a
             // sweep that found nothing. What the listing did yield is still
@@ -248,92 +286,144 @@ where
                 eprintln!(
                     "Warning: failed to read an entry under {jail_parent}: {e}. Jails there may not have been examined."
                 );
-                if failure.is_none() {
-                    failure = Some(JailError::ReadJailParent {
-                        path: jail_parent.to_owned(),
-                        source: e,
-                    });
-                }
-                continue;
+                Reclamation::Failed(JailError::ReadJailParent {
+                    path: jail_parent.to_owned(),
+                    source: e,
+                })
             },
         };
-        if !entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
-            continue;
-        }
-        // Skipped rather than lossily converted. A lossy name rebuilds into a
-        // path naming a different file, and everything downstream then works
-        // on the wrong one: the reap stats a path that does not exist and
-        // reports the jail clear, so a live VMM is neither reaped nor
-        // mentioned, and the cgroup removal targets a name nobody created.
-        // The runner only ever creates UTF-8 names here, so anything else is
-        // not ours to touch.
-        let file_name = entry.file_name();
-        let Some(name) = file_name.to_str() else {
-            eprintln!(
-                "Warning: skipping an entry with a non-UTF-8 name under {jail_parent}; the runner did not create it"
-            );
-            continue;
-        };
-        let vm_id = VmId::from_chroot_name(name.to_owned());
-        let jail_dir = jail_parent.join(vm_id.as_str());
 
-        // Reap before removing, and only remove once the jail is clear.
-        // Deleting the tree under a live VMM would not stop it, and it would
-        // destroy the only handle for identifying that process later: without
-        // the directory the next sweep never sees this id, never removes its
-        // cgroup, and the cgroup leaks for good.
-        if let Reaped::StillRunning { pid } = reap(&jail_dir.join(JAIL_ROOT)) {
-            // Fatal to the job, not to the runner. A stray VMM runs untrusted
-            // guest code on the benchmark cores, and nothing downstream
-            // catches it: these cgroups claim no exclusive cpuset, so the next
-            // job's cpuset applies and verifies cleanly while being contended
-            // the whole time. Refusing to measure is the only honest answer.
-            //
-            // Every surviving jail is reported and the first becomes the
-            // error, so an operator sees each one on every attempt rather than
-            // once.
-            eprintln!(
-                "Warning: leaving stale jail {jail_dir} in place because VMM pid {pid} is still running on the benchmark cores."
-            );
-            if failure.is_none() {
-                failure = Some(JailError::JailStillRunning {
-                    path: jail_dir.clone(),
-                    pid,
-                });
-            }
-            continue;
-        }
-
-        // The cgroup goes first, and the chroot only once the cgroup is gone.
-        // The two are named by the same id, and the directory is the only
-        // handle a later sweep has for finding the cgroup again, so removing
-        // the directory while the cgroup survives strands that cgroup for
-        // good: the next sweep never sees the id, never retries the removal,
-        // and something may still be running on the benchmark cores under it.
-        // A leftover cgroup claims nothing, since these cgroups set no
-        // exclusive cpuset, but a removal that fails usually means something is
-        // still in it, which is why it is reported rather than swallowed.
-        if let Err(e) = remove_cgroup(&vm_id) {
-            eprintln!(
-                "Warning: leaving stale jail {jail_dir} in place because its cgroup could not be removed: {e}"
-            );
-            if failure.is_none() {
-                failure = Some(e);
-            }
-            continue;
-        }
-
-        // A chroot that will not go away costs disk. Worth a warning, not
-        // worth refusing to run.
-        match fs::remove_dir_all(&jail_dir) {
-            Ok(()) => swept += 1,
-            Err(e) => eprintln!("Warning: failed to sweep stale jail {jail_dir}: {e}"),
+        match outcome {
+            Reclamation::Reclaimed => swept.reclaimed += 1,
+            Reclamation::LeftBehind => swept.left_behind += 1,
+            Reclamation::Failed(e) => {
+                if failure.is_none() {
+                    failure = Some(e);
+                }
+            },
         }
     }
 
     match failure {
         Some(e) => Err(e),
         None => Ok(swept),
+    }
+}
+
+/// What became of one stale jail.
+///
+/// The three variants are the three columns of the table in [`crate::jail`], so
+/// a step added to [`reclaim_one`] has to pick one.
+enum Reclamation {
+    /// The cgroup and the chroot are both gone.
+    Reclaimed,
+    /// Still on disk. Costs disk rather than fidelity, so the job may run, but
+    /// the sweep is what reclaims it and this one did not, so another is owed.
+    LeftBehind,
+    /// The host cannot be trusted to measure until this is resolved.
+    Failed(JailError),
+}
+
+/// The identity of the jail an entry names, if it is one of ours.
+///
+/// `Ok(None)` is an entry that is not a jail. An entry whose kind cannot be read
+/// is not one of those: it may be a jail, so skipping it silently would leave a
+/// live VMM unexamined while still reporting a sweep that found nothing wrong.
+fn jail_id(jail_parent: &Utf8Path, entry: &fs::DirEntry) -> Result<Option<VmId>, JailError> {
+    match entry.file_type() {
+        Ok(file_type) if file_type.is_dir() => {},
+        Ok(_) => return Ok(None),
+        Err(e) => {
+            eprintln!(
+                "Warning: cannot tell what {} under {jail_parent} is: {e}. If it is a jail, it was not examined.",
+                entry.file_name().display()
+            );
+            return Err(JailError::ReadJailParent {
+                path: jail_parent.to_owned(),
+                source: e,
+            });
+        },
+    }
+
+    // Skipped rather than lossily converted. A lossy name rebuilds into a
+    // path naming a different file, and everything downstream then works
+    // on the wrong one: the reap stats a path that does not exist and
+    // reports the jail clear, so a live VMM is neither reaped nor
+    // mentioned, and the cgroup removal targets a name nobody created.
+    // The runner only ever creates UTF-8 names here, so anything else is
+    // not ours to touch.
+    let file_name = entry.file_name();
+    let Some(name) = file_name.to_str() else {
+        eprintln!(
+            "Warning: skipping an entry with a non-UTF-8 name under {jail_parent}; the runner did not create it"
+        );
+        return Ok(None);
+    };
+    Ok(Some(VmId::from_chroot_name(name.to_owned())))
+}
+
+/// Reap, then unwind one stale jail: its cgroup first, then its chroot.
+fn reclaim_one<R, C>(jail_dir: &Utf8Path, vm_id: &VmId, reap: &R, remove_cgroup: &C) -> Reclamation
+where
+    R: Fn(&Utf8Path) -> Reaped,
+    C: Fn(&VmId) -> Result<(), JailError>,
+{
+    // Reap before removing, and only remove once the jail is clear. Deleting the
+    // tree under a live VMM would not stop it, and it would destroy the only
+    // handle for identifying that process later: without the directory the next
+    // sweep never sees this id, never removes its cgroup, and the cgroup leaks
+    // for good.
+    //
+    // Fatal to the job, not to the runner, whether the VMM was found alive or
+    // could not be looked for at all. A stray VMM runs untrusted guest code on
+    // the benchmark cores, and nothing downstream catches it: these cgroups
+    // claim no exclusive cpuset, so the next job's cpuset applies and verifies
+    // cleanly while being contended the whole time. Refusing to measure is the
+    // only honest answer, and a jail that could not be examined has not earned a
+    // better one.
+    match reap(&jail_dir.join(JAIL_ROOT)) {
+        Reaped::Clear => {},
+        Reaped::StillRunning { pid } => {
+            eprintln!(
+                "Warning: leaving stale jail {jail_dir} in place because VMM pid {pid} is still running on the benchmark cores."
+            );
+            return Reclamation::Failed(JailError::JailStillRunning {
+                path: jail_dir.to_owned(),
+                pid,
+            });
+        },
+    }
+
+    // The cgroup goes first, and the chroot only once the cgroup is gone. The
+    // two are named by the same id, and the directory is the only handle a later
+    // sweep has for finding the cgroup again, so removing the directory while the
+    // cgroup survives strands that cgroup for good: the next sweep never sees the
+    // id, never retries the removal, and something may still be running on the
+    // benchmark cores under it. A leftover cgroup claims nothing, since these
+    // cgroups set no exclusive cpuset, but a removal that fails usually means
+    // something is still in it, which is why it is reported rather than
+    // swallowed.
+    if let Err(e) = remove_cgroup(vm_id) {
+        eprintln!(
+            "Warning: leaving stale jail {jail_dir} in place because its cgroup could not be removed: {e}"
+        );
+        return Reclamation::Failed(e);
+    }
+
+    // A chroot that will not go away costs disk, not fidelity: the VMM is gone
+    // and the cgroup with it, so the job may run. But the sweep is the only thing
+    // that reclaims it, and this one just failed to, so it is counted as still
+    // owed. Warning alone would have the caller spend the reclaim signal on a
+    // sweep that did not finish, and the leak would then survive until the daemon
+    // restarted.
+    match fs::remove_dir_all(jail_dir) {
+        Ok(()) => Reclamation::Reclaimed,
+        Err(e) => {
+            eprintln!(
+                "Warning: failed to sweep stale jail {jail_dir}: {e}. It holds a VMM binary and a full guest rootfs; the next job will try again."
+            );
+            Reclamation::LeftBehind
+        },
     }
 }
 
@@ -510,7 +600,9 @@ mod tests {
         fs::create_dir_all(state.jail_dir(&VmId::from_chroot_name("two".to_owned()))).unwrap();
 
         assert_eq!(
-            sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(())).unwrap(),
+            sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(()))
+                .unwrap()
+                .reclaimed(),
             2
         );
         assert!(
@@ -537,7 +629,9 @@ mod tests {
         fs::create_dir_all(state.jail_dir(&VmId::from_chroot_name("stale".to_owned()))).unwrap();
 
         assert_eq!(
-            sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(())).unwrap(),
+            sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(()))
+                .unwrap()
+                .reclaimed(),
             1
         );
         assert!(
@@ -650,6 +744,40 @@ mod tests {
     }
 
     #[test]
+    fn a_chroot_that_will_not_go_away_is_owed_another_sweep() {
+        // Disk, not fidelity: the VMM is gone and the cgroup with it, so the job
+        // runs. But the sweep is the only thing that reclaims the tree, and this
+        // sweep did not, so it reports the debt rather than passing for complete.
+        // Warning alone would have the caller spend the reclaim signal and the
+        // leak would outlive every later job.
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state"));
+        state.create().unwrap();
+        let stuck = VmId::from_chroot_name("stuck".to_owned());
+        fs::create_dir_all(state.jail_root(&stuck)).unwrap();
+        // A jail directory that `remove_dir_all` cannot finish: the tree is
+        // unsearchable, so the walk inside it fails.
+        fs::set_permissions(state.jail_dir(&stuck), fs::Permissions::from_mode(0o000)).unwrap();
+
+        let swept = sweep_jails_with(
+            &state.jail_parent(),
+            |_jail_root| Reaped::Clear,
+            |_vm_id| Ok(()),
+        )
+        .unwrap();
+
+        // Restored before the assertions so the temp directory can be cleaned
+        // up whichever way they go.
+        fs::set_permissions(state.jail_dir(&stuck), fs::Permissions::from_mode(0o700)).unwrap();
+
+        assert_eq!(swept.reclaimed(), 0);
+        assert!(
+            !swept.is_complete(),
+            "a sweep that left a chroot behind still owes one"
+        );
+    }
+
+    #[test]
     fn a_cleared_jail_is_still_swept() {
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state"));
@@ -663,7 +791,8 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(swept, 1);
+        assert_eq!(swept.reclaimed(), 1);
+        assert!(swept.is_complete());
     }
 
     #[test]
@@ -688,7 +817,9 @@ mod tests {
     fn sweep_missing_parent_is_zero() {
         let (_dir, root) = temp_root();
         assert_eq!(
-            sweep_jails_with(&root.join("nope"), |_j| Reaped::Clear, |_v| Ok(())).unwrap(),
+            sweep_jails_with(&root.join("nope"), |_j| Reaped::Clear, |_v| Ok(()))
+                .unwrap()
+                .reclaimed(),
             0
         );
     }

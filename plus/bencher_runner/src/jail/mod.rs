@@ -290,13 +290,19 @@ impl HostPreparation {
         if self.prepared && !self.reclaim_failed.is_set() {
             return Ok(());
         }
-        prepare_host(euid, state_dir, jail_user)?;
-        // Spent only now that a sweep has run to completion. Spending it before
-        // the sweep would disarm the mechanism precisely when it is needed: the
-        // signal would be gone, this process would still count as prepared, and
-        // every later job would return early while the jail that could not be
-        // reclaimed sat there holding the benchmark cores.
-        self.reclaim_failed.clear();
+        let swept = prepare_host(euid, state_dir, jail_user)?;
+        // Spent only on a sweep that finished, and armed by one that did not.
+        // Spending it any earlier disarms the mechanism precisely when it is
+        // needed: the signal would be gone, this process would still count as
+        // prepared, and every later job would return early while the jail nobody
+        // could reclaim sat there. That is true of a sweep that failed outright,
+        // which never reaches here, and equally of one that returned `Ok` having
+        // left a chroot on disk.
+        if swept.is_complete() {
+            self.reclaim_failed.clear();
+        } else {
+            self.reclaim_failed.set();
+        }
         self.prepared = true;
         Ok(())
     }
@@ -330,7 +336,7 @@ fn prepare_host(
     euid: u32,
     state_dir: &camino::Utf8Path,
     jail_user: JailUser,
-) -> Result<(), crate::error::JailError> {
+) -> Result<state::Swept, crate::error::JailError> {
     // Checked first, and by name. Without it the most likely upgrade failure
     // surfaces as a permission error on a directory, or a bare EPERM out of
     // `unshare`, neither of which mentions root or the flag that avoids it.
@@ -343,12 +349,15 @@ fn prepare_host(
 
     let _lock = JailLock::acquire(state.path())?;
     let swept = state::sweep_jails(&state.jail_parent())?;
-    if swept > 0 {
+    if swept.reclaimed() > 0 {
         // Each one held a copy of the VMM binary and a full guest rootfs
         // image, so an operator should hear about it.
-        println!("  Reclaimed {swept} stale jail(s) from {state_dir}");
+        println!(
+            "  Reclaimed {} stale jail(s) from {state_dir}",
+            swept.reclaimed()
+        );
     }
-    Ok(())
+    Ok(swept)
 }
 
 /// Refuse to build a jail without the privileges building one needs.
