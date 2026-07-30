@@ -47,6 +47,12 @@
 //! turn a failure into an answer, rather than by reasoning about which functions
 //! looked relevant. Reasoning missed instances three times running.
 //!
+//! Nothing enforces this table, deliberately. It is a specification a person
+//! reads, and its value is that adding a step means picking a column and writing
+//! the reason down next to the others. A checker that proved the code matched it
+//! would be worth having, and is not worth building here: the gap is a decision,
+//! not an oversight.
+//!
 //! | Step | On failure |
 //! |---|---|
 //! | [`HostPreparation::ensure`]: the root check | fails the job |
@@ -310,6 +316,8 @@ pub struct HostPreparation {
     /// Whether the jail user warning has already been given.
     ///
     /// Advisory and unchanging, so it is worth saying once and not once a job.
+    /// Set where the warning is printed, so a preparation that fails afterwards
+    /// does not earn the operator the same advice again.
     #[cfg_attr(
         not(target_os = "linux"),
         expect(dead_code, reason = "host preparation is Linux-only")
@@ -525,8 +533,11 @@ impl HostPreparation {
         if self.prepared && !self.reclaim_failed.is_set() {
             return Ok(());
         }
-        let swept = prepare_host(euid, state_dir, jail_user, !self.warned_jail_user)?;
-        self.warned_jail_user = true;
+        // The flag is passed in rather than set after, because preparation can
+        // fail at a step past the warning: recording it here would repeat the
+        // advice on every job of a host whose sweep keeps failing, and recording
+        // it only on success would do the same.
+        let swept = prepare_host(euid, state_dir, jail_user, &mut self.warned_jail_user)?;
         // Spent only on a sweep that finished, and armed by one that did not.
         // Spending it any earlier disarms the mechanism precisely when it is
         // needed: the signal would be gone, this process would still count as
@@ -572,7 +583,7 @@ fn prepare_host(
     euid: u32,
     state_dir: &camino::Utf8Path,
     jail_user: JailUser,
-    announce_jail_user: bool,
+    jail_user_announced: &mut bool,
 ) -> Result<state::Swept, crate::error::JailError> {
     // Checked first, and by name. Without it the most likely upgrade failure
     // surfaces as a permission error on a directory, or a bare EPERM out of
@@ -582,12 +593,14 @@ fn prepare_host(
     let state = StateDir::new(state_dir.to_owned())?;
     state.create()?;
 
-    // Once per runner, not once per job. Preparation runs again whenever a
-    // sweep is owed, and a host that keeps failing to reclaim a jail would
-    // otherwise repeat this warning on every job until an operator stopped
-    // reading any of them.
-    if announce_jail_user {
+    // Once per runner, not once per job, and recorded at the moment it is given
+    // rather than at the end of a preparation that may not reach one. This runs
+    // again whenever a sweep is owed, and a host that keeps failing to reclaim a
+    // jail would otherwise repeat the advice until an operator stopped reading
+    // any of it.
+    if !*jail_user_announced {
         warn_on_named_account(jail_user);
+        *jail_user_announced = true;
     }
 
     let _lock = JailLock::acquire(state.path())?;
