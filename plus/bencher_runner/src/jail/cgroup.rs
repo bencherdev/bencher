@@ -38,14 +38,16 @@ impl CgroupManager {
             .join(BENCHER_CGROUP_BASE)
             .join(vm_id.as_str());
 
-        // Ensure parent bencher cgroup exists
+        // Unconditional, because `create_dir_all` on a directory that is
+        // already there is a success. The `exists` check this replaces was a
+        // read that could only mislead: an error from it would have been read as
+        // an absent parent, and it gated nothing the create does not gate
+        // itself.
         let parent = Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE);
-        if !parent.exists() {
-            fs::create_dir_all(&parent).map_err(|e| JailError::CreateCgroup {
-                path: parent.clone(),
-                source: e,
-            })?;
-        }
+        fs::create_dir_all(&parent).map_err(|e| JailError::CreateCgroup {
+            path: parent.clone(),
+            source: e,
+        })?;
 
         // Enable controllers in the parent. Always attempted (idempotent):
         // the parent may have been created without controllers, e.g. by
@@ -57,14 +59,26 @@ impl CgroupManager {
         // a cgroup that was already there would have it rmdir something
         // belonging to whoever did create it. Fresh ids make that unlikely,
         // but this branch exists precisely for when the id is not fresh.
-        let created = if cgroup_path.exists() {
-            false
-        } else {
-            fs::create_dir_all(&cgroup_path).map_err(|e| JailError::CreateCgroup {
-                path: cgroup_path.clone(),
-                source: e,
-            })?;
-            true
+        // `try_exists`, because this decides whether `Drop` may remove the
+        // directory. An error read as "not there" would have this claim a cgroup
+        // somebody else owns and then delete it on the way out, which is the one
+        // outcome the branch exists to prevent.
+        let created = match cgroup_path.try_exists() {
+            Ok(true) => false,
+            Ok(false) => {
+                fs::create_dir_all(&cgroup_path).map_err(|e| JailError::CreateCgroup {
+                    path: cgroup_path.clone(),
+                    source: e,
+                })?;
+                true
+            },
+            Err(e) => {
+                return Err(JailError::ReadCgroup {
+                    path: cgroup_path,
+                    source: e,
+                }
+                .into());
+            },
         };
 
         Ok(Self {
@@ -175,8 +189,13 @@ impl CgroupManager {
             Ok(false) => return Ok(Cpuset::Unavailable(UNDELEGATED)),
             Err(e) => return Err(JailError::ReadCgroup { path, source: e }.into()),
         }
+        // Every failure, absence included. Delegation was settled by the check
+        // above, so a `cpuset.cpus` that has gone missing between that stat and
+        // this write is a cgroup disappearing underneath the runner, not a host
+        // that never had the controller. `verify_cpuset` reasons the same way
+        // about the same question one step later; the two used to disagree.
         if let Err(e) = fs::write(&path, &cpuset) {
-            return classify_cpuset_error(path, e);
+            return Err(JailError::WriteCgroup { path, source: e }.into());
         }
 
         // Also need to set cpuset.mems for cpuset to work. Use the parent's
@@ -191,7 +210,11 @@ impl CgroupManager {
         };
         let mems_path = self.cgroup_path.join("cpuset.mems");
         if let Err(e) = fs::write(&mems_path, &mems) {
-            return classify_cpuset_error(mems_path, e);
+            return Err(JailError::WriteCgroup {
+                path: mems_path,
+                source: e,
+            }
+            .into());
         }
 
         self.verify_cpuset(&cpuset, &mems)
@@ -322,16 +345,32 @@ impl CgroupManager {
     /// here would be a channel with nothing in it that every caller, `Drop`
     /// included, would have to discard.
     pub fn cleanup(&mut self) {
-        if self.created && self.cgroup_path.exists() {
-            if let Err(e) = fs::remove_dir(&self.cgroup_path) {
+        if !self.created {
+            return;
+        }
+        // A stat that failed is not a cgroup that is gone. Reading it as one
+        // would skip both the removal and the signal, so nothing would be armed
+        // and nothing would ever come back for it.
+        match self.cgroup_path.try_exists() {
+            Ok(false) => self.created = false,
+            Ok(true) => {
+                if let Err(e) = fs::remove_dir(&self.cgroup_path) {
+                    eprintln!(
+                        "Warning: failed to remove cgroup {}: {e}. Something is still in it, so the next job sweeps it along with the jail that names it.",
+                        self.cgroup_path
+                    );
+                    self.signals.cgroup_survived();
+                } else {
+                    self.created = false;
+                }
+            },
+            Err(e) => {
                 eprintln!(
-                    "Warning: failed to remove cgroup {}: {e}. Something is still in it, so the next job sweeps it along with the jail that names it.",
+                    "Warning: cannot tell whether cgroup {} is still there: {e}. It is treated as still there, so the next job sweeps it along with the jail that names it.",
                     self.cgroup_path
                 );
                 self.signals.cgroup_survived();
-            } else {
-                self.created = false;
-            }
+            },
         }
     }
 }
@@ -386,24 +425,6 @@ pub enum Cpuset {
     Unavailable(&'static str),
 }
 
-/// Decide whether a failed cpuset write is an absent controller or a refusal.
-///
-/// A file that is not there is the controller not being delegated, which is a
-/// limitation. Anything else is the kernel refusing a cpuset it does
-/// understand, which would leave the cgroup claiming an isolation it does not
-/// have.
-fn classify_cpuset_error(path: Utf8PathBuf, error: std::io::Error) -> Result<Cpuset, RunnerError> {
-    if error.kind() == std::io::ErrorKind::NotFound {
-        Ok(Cpuset::Unavailable(UNDELEGATED))
-    } else {
-        Err(JailError::WriteCgroup {
-            path,
-            source: error,
-        }
-        .into())
-    }
-}
-
 /// Parse a kernel cpu list (`0-3,5,7-9`) into the set of cpus it names.
 ///
 /// Compared as sets rather than as strings, because the kernel is free to
@@ -450,8 +471,15 @@ pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
     let path = Utf8PathBuf::from(CGROUP_ROOT)
         .join(BENCHER_CGROUP_BASE)
         .join(vm_id.as_str());
-    if !path.exists() {
-        return Ok(());
+    // The caller deletes the chroot that names this cgroup once this returns
+    // `Ok`, and that chroot is the only handle any later sweep has for finding
+    // the cgroup again. A stat error read as "already gone" would stranded the
+    // cgroup permanently and delete the one thing that could have found it,
+    // which is exactly what the caller's ordering exists to prevent.
+    match path.try_exists() {
+        Ok(false) => return Ok(()),
+        Ok(true) => {},
+        Err(e) => return Err(JailError::StaleCgroup { path, source: e }),
     }
 
     let deadline = std::time::Instant::now() + REMOVE_TIMEOUT;
@@ -462,7 +490,9 @@ pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
                 return Ok(());
             },
             // Someone else got there first, which is the outcome either way.
-            Err(_) if !path.exists() => return Ok(()),
+            // Only a stat that succeeded and said absent counts: anything else
+            // falls through to the retry and, in the end, to the error.
+            Err(_) if path.try_exists().is_ok_and(|exists| !exists) => return Ok(()),
             Err(e) if std::time::Instant::now() >= deadline => {
                 // Reported rather than warned, because failing here means the
                 // next job sweeps again rather than inheriting a host nobody
@@ -491,15 +521,6 @@ fn missing_required_controller(enabled: &str) -> Option<&'static str> {
     ["cpu", "memory", "pids"]
         .into_iter()
         .find(|required| !enabled.split_whitespace().any(|token| token == *required))
-}
-
-/// Check if cgroup v2 is available.
-#[expect(dead_code, reason = "utility for future cgroup v2 feature detection")]
-#[must_use]
-pub fn is_cgroup_v2_available() -> bool {
-    Utf8Path::new(CGROUP_ROOT)
-        .join("cgroup.controllers")
-        .exists()
 }
 
 #[cfg(test)]
