@@ -174,6 +174,12 @@ pub enum JailError {
 
     #[cfg(target_os = "linux")]
     #[error(
+        "A stale jail at {path} could not be examined, so whether a VMM is still running in it is unknown. It is left in place, and a jail that cannot be checked is not a jail that has been cleared."
+    )]
+    JailUnexaminable { path: Utf8PathBuf },
+
+    #[cfg(target_os = "linux")]
+    #[error(
         "The kernel narrowed the cgroup cpuset at {path}: asked for cpus {requested}, got {effective}. The benchmark would not have run on the cores it claims."
     )]
     CpusetNarrowed {
