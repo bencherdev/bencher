@@ -99,15 +99,20 @@ pub fn ensure() -> Result<Utf8PathBuf, JailError> {
         source: e,
     })?;
 
+    // Unwound through `clear`, never a bare unlink. Reaching the second arm
+    // means the bind mount is definitely there, since that is what makes the
+    // namespace live, and unlinking a mounted path fails with `EBUSY`: the
+    // handle would stay mounted, which is the state that makes every later
+    // `ensure` fail on a stacked mount. `clear` is the only way it is removed.
     if let Err(e) = create(&handle) {
-        drop(fs::remove_file(&handle));
+        drop(clear(&handle));
         return Err(e);
     }
 
     // The namespace has to be a real one and not the runner's own, or the VMM
     // would keep host network reach. Cheap, and the whole point of the module.
     if !is_live_netns(&handle) {
-        drop(fs::remove_file(&handle));
+        drop(clear(&handle));
         return Err(JailError::NetnsNotDistinct {
             path: handle.clone(),
         });
