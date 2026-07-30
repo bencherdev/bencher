@@ -69,7 +69,7 @@ impl JailLock {
 
         // Try once without blocking, so waiting can be announced rather than
         // looking like a hang.
-        if flock(&file, libc::LOCK_EX | libc::LOCK_NB).is_ok() {
+        if flock_nonblocking(&file).is_ok() {
             return Ok(Self { _file: file });
         }
         println!("  Waiting for another bencher runner to release {path}...");
@@ -86,6 +86,14 @@ impl JailLock {
 /// Take an exclusive `flock`, waiting for whichever holder has it.
 pub(super) fn flock_exclusive(file: &File) -> std::io::Result<()> {
     flock(file, libc::LOCK_EX)
+}
+
+/// Try for an exclusive `flock` without waiting.
+///
+/// Shared with the network namespace lock so both locks announce a wait the same
+/// way: an unexplained pause is the worst thing either of them can do.
+pub(super) fn flock_nonblocking(file: &File) -> std::io::Result<()> {
+    flock(file, libc::LOCK_EX | libc::LOCK_NB)
 }
 
 /// Apply `flock` to a file, retrying if a signal interrupts the wait.
