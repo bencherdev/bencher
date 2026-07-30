@@ -252,8 +252,9 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
         setup().with_context(|| format!("Setup failed for {}", scenario.name))?;
     }
 
-    // Every scenario gets its own state directory, so jail assertions are
-    // scoped to the scenario and never touch a real runner's state.
+    // One state directory for the suite, wiped before each scenario, so jail
+    // assertions see only this scenario's jails and never touch a real runner's
+    // state.
     let state_dir = scenario_state_dir();
     drop(fs::remove_dir_all(&state_dir));
 
