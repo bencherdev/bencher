@@ -38,6 +38,7 @@ By default, `55` is used.
 ### `--state-dir <STATE_DIR>`
 
 The persistent state directory for the Runner.
+It must be an absolute path.
 The jail that confines the sandbox is built under this directory,
 and jails left behind by an unclean exit are swept from it before the first sandboxed Job runs.
 By default, `/var/lib/bencher-runner` is used.

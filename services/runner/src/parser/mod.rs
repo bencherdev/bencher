@@ -62,8 +62,13 @@ pub struct CliRun {
     #[arg(long, default_value = "300")]
     pub timeout: u64,
 
-    /// Persistent state directory for the runner.
-    #[arg(long, env = "BENCHER_STATE_DIR", default_value = bencher_runner::DEFAULT_STATE_DIR)]
+    /// Persistent state directory for the runner (absolute path).
+    #[arg(
+        long,
+        env = "BENCHER_STATE_DIR",
+        default_value = bencher_runner::DEFAULT_STATE_DIR,
+        value_parser = absolute_state_dir,
+    )]
     pub state_dir: Utf8PathBuf,
 
     /// Unprivileged uid the jailed sandbox process drops to.
@@ -141,4 +146,40 @@ pub struct CliRun {
     /// Sandbox process log level; requires --sandbox (default: warning).
     #[arg(long, default_value = "warning", requires = "sandbox")]
     pub sandbox_log_level: bencher_runner::SandboxLogLevel,
+}
+
+/// Require an absolute state directory.
+///
+/// The path reaches the jailer as `--chroot-base-dir`, which the jailer resolves
+/// against its own working directory rather than the runner's, so a relative
+/// value builds the chroot somewhere the runner does not look and the sweep
+/// never reaches.
+#[cfg(feature = "plus")]
+fn absolute_state_dir(arg: &str) -> Result<Utf8PathBuf, String> {
+    let path = Utf8PathBuf::from(arg);
+    if path.is_absolute() {
+        Ok(path)
+    } else {
+        Err(format!(
+            "the state directory must be an absolute path, and `{path}` is relative"
+        ))
+    }
+}
+
+#[cfg(all(test, feature = "plus"))]
+mod tests {
+    use super::absolute_state_dir;
+
+    #[test]
+    fn a_relative_state_dir_is_refused() {
+        // A relative path resolves against the jailer's working directory, not
+        // the runner's, so it has to be caught before it can be handed over.
+        assert_eq!(
+            absolute_state_dir("/var/lib/bencher-runner").unwrap(),
+            "/var/lib/bencher-runner"
+        );
+        absolute_state_dir("bencher-runner").unwrap_err();
+        absolute_state_dir("./bencher-runner").unwrap_err();
+        absolute_state_dir("").unwrap_err();
+    }
 }

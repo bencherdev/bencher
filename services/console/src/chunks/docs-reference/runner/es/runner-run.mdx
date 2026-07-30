@@ -35,6 +35,7 @@ Por defecto, se usa `300`.
 ### `--state-dir <STATE_DIR>`
 
 El directorio de estado persistente del Runner.
+Debe ser una ruta absoluta.
 La jaula que confina el sandbox se crea dentro de este directorio,
 y las jaulas que quedaron tras una salida no limpia se eliminan de él antes del primer Job con sandbox.
 Por defecto, se usa `/var/lib/bencher-runner`.
