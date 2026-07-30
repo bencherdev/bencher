@@ -26,7 +26,12 @@ use crate::error::JailError;
 /// It lives beside the chroot base rather than inside it, so the sweep (which
 /// only removes directories under `<state_dir>/jail/firecracker`) can never
 /// reach it.
-const LOCK_FILE: &str = ".lock";
+///
+/// Defined once and shared with the state directory, which counts it among the
+/// entries that mark a directory as the runner's own. Two spellings of the same
+/// name would leave a directory holding only this file unrecognized, and the
+/// runner would refuse a state directory it created itself.
+pub(super) const LOCK_FILE: &str = ".lock";
 
 /// Holds the jail lock for as long as it is alive.
 ///
