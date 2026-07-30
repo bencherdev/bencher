@@ -57,11 +57,24 @@ impl StateDir {
     /// populated one is only ours if it already carries something the runner
     /// put there. Without this, `--state-dir /var/lib` would be chmodded to
     /// 0700 and take the host down with it.
+    ///
+    /// A read that fails for any reason other than absence is refused rather
+    /// than treated as an empty directory. It is not evidence that the
+    /// directory is empty, and the chmod that follows is the thing this guard
+    /// exists to keep off a directory that is not the runner's: a path that is
+    /// really a file, or one whose contents cannot be listed, would otherwise
+    /// be taken on the strength of a failed check.
     fn check_root_is_ours(&self) -> Result<(), JailError> {
-        let Ok(entries) = fs::read_dir(&self.root) else {
-            // Missing, or unreadable: creating it is the next step and will
-            // report the real error.
-            return Ok(());
+        let entries = match fs::read_dir(&self.root) {
+            Ok(entries) => entries,
+            // Missing: creating it is the next step.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(e) => {
+                return Err(JailError::ReadStateDir {
+                    path: self.root.clone(),
+                    source: e,
+                });
+            },
         };
         let mut populated = false;
         for entry in entries.flatten() {
@@ -339,6 +352,24 @@ mod tests {
 
         let mode = fs::metadata(&foreign).unwrap().permissions().mode();
         assert_ne!(mode & 0o777, 0o700, "a refused root must not be chmodded");
+    }
+
+    #[test]
+    fn a_root_that_cannot_be_read_is_not_assumed_to_be_ours() {
+        // A failed read is not an empty directory. A file where the state
+        // directory should be reads back `ENOTDIR`, the same way an unlistable
+        // directory reads back `EACCES`, and neither says the path is the
+        // runner's to chmod.
+        let (_dir, root) = temp_root();
+        let not_a_dir = root.join("state");
+        fs::write(&not_a_dir, b"operator note").unwrap();
+
+        let err = StateDir::new(not_a_dir).create().unwrap_err();
+
+        assert!(
+            matches!(err, JailError::ReadStateDir { .. }),
+            "a read that failed is reported, not swallowed: {err}"
+        );
     }
 
     #[test]
