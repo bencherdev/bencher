@@ -48,18 +48,24 @@ pub struct CgroupMetrics {
 ///
 /// Reads `cpu.stat` and `memory.peak` from the cgroup directory.
 /// Returns `None` if the path doesn't exist.
+///
+/// Every field is optional, and a field that could not be read stays absent
+/// rather than becoming a number. These are reported to an operator as measured
+/// values, so a zero standing in for a failed read is the plainest form of the
+/// one thing measurement is never allowed to do. Absence is already how this
+/// reports "no cgroup at all", so it costs nothing to be honest per field.
 pub fn read_cgroup_metrics(cgroup_path: &Utf8Path) -> Option<CgroupMetrics> {
     if !cgroup_path.exists() {
         return None;
     }
 
-    let cpu_stat = read_cpu_stat(cgroup_path);
+    let cpu_stat = read_cpu_stat(cgroup_path).unwrap_or_default();
     let memory_peak = read_file_u64(&cgroup_path.join("memory.peak"));
 
     Some(CgroupMetrics {
-        cpu_usage_us: cpu_stat.as_ref().map(|s| s.usage_usec),
-        cpu_user_us: cpu_stat.as_ref().map(|s| s.user_usec),
-        cpu_system_us: cpu_stat.as_ref().map(|s| s.system_usec),
+        cpu_usage_us: cpu_stat.usage_usec,
+        cpu_user_us: cpu_stat.user_usec,
+        cpu_system_us: cpu_stat.system_usec,
         memory_peak_bytes: memory_peak,
     })
 }
@@ -72,37 +78,37 @@ pub fn format_metrics(metrics: &RunMetrics) -> Option<String> {
     Some(format!("---BENCHER_METRICS:{json}---"))
 }
 
+/// The three fields of `cpu.stat` this runner reports.
+///
+/// Each one is what the file said, or nothing. A field the file did not carry, or
+/// carried unparseably, is not zero usage: zero is a measurement, and this never
+/// measured it.
+#[derive(Default)]
 #[expect(
     clippy::struct_field_names,
     reason = "matches cgroup cpu.stat field names"
 )]
 struct CpuStat {
-    usage_usec: u64,
-    user_usec: u64,
-    system_usec: u64,
+    usage_usec: Option<u64>,
+    user_usec: Option<u64>,
+    system_usec: Option<u64>,
 }
 
 fn read_cpu_stat(cgroup_path: &Utf8Path) -> Option<CpuStat> {
     let content = std::fs::read_to_string(cgroup_path.join("cpu.stat")).ok()?;
-    let mut usage = None;
-    let mut user = None;
-    let mut system = None;
+    let mut stat = CpuStat::default();
 
     for line in content.lines() {
         let mut parts = line.split_whitespace();
         match (parts.next(), parts.next()) {
-            (Some("usage_usec"), Some(v)) => usage = v.parse().ok(),
-            (Some("user_usec"), Some(v)) => user = v.parse().ok(),
-            (Some("system_usec"), Some(v)) => system = v.parse().ok(),
+            (Some("usage_usec"), Some(v)) => stat.usage_usec = v.parse().ok(),
+            (Some("user_usec"), Some(v)) => stat.user_usec = v.parse().ok(),
+            (Some("system_usec"), Some(v)) => stat.system_usec = v.parse().ok(),
             _ => {},
         }
     }
 
-    Some(CpuStat {
-        usage_usec: usage.unwrap_or(0),
-        user_usec: user.unwrap_or(0),
-        system_usec: system.unwrap_or(0),
-    })
+    Some(stat)
 }
 
 fn read_file_u64(path: &Utf8Path) -> Option<u64> {
@@ -129,21 +135,23 @@ mod tests {
         fs::write(path.join("cpu.stat"), content).unwrap();
 
         let stat = read_cpu_stat(path).unwrap();
-        assert_eq!(stat.usage_usec, 12345);
-        assert_eq!(stat.user_usec, 6000);
-        assert_eq!(stat.system_usec, 6345);
+        assert_eq!(stat.usage_usec, Some(12345));
+        assert_eq!(stat.user_usec, Some(6000));
+        assert_eq!(stat.system_usec, Some(6345));
     }
 
     #[test]
-    fn read_cpu_stat_missing_fields_default_to_zero() {
+    fn a_field_the_file_did_not_carry_is_absent_not_zero() {
+        // Zero is a measurement. A field that was never read has to reach the
+        // operator as missing, which is what the reported type already allows.
         let dir = tempfile::tempdir().unwrap();
         let path = tempdir_utf8(&dir);
         fs::write(path.join("cpu.stat"), "usage_usec 100\n").unwrap();
 
         let stat = read_cpu_stat(path).unwrap();
-        assert_eq!(stat.usage_usec, 100);
-        assert_eq!(stat.user_usec, 0);
-        assert_eq!(stat.system_usec, 0);
+        assert_eq!(stat.usage_usec, Some(100));
+        assert_eq!(stat.user_usec, None);
+        assert_eq!(stat.system_usec, None);
     }
 
     #[test]
@@ -157,9 +165,9 @@ mod tests {
         .unwrap();
 
         let stat = read_cpu_stat(path).unwrap();
-        assert_eq!(stat.usage_usec, 0); // parse fails -> unwrap_or(0)
-        assert_eq!(stat.user_usec, 100);
-        assert_eq!(stat.system_usec, 0); // no value at all
+        assert_eq!(stat.usage_usec, None, "a value that would not parse");
+        assert_eq!(stat.user_usec, Some(100));
+        assert_eq!(stat.system_usec, None, "no value at all");
     }
 
     #[test]
@@ -169,9 +177,9 @@ mod tests {
         fs::write(path.join("cpu.stat"), "").unwrap();
 
         let stat = read_cpu_stat(path).unwrap();
-        assert_eq!(stat.usage_usec, 0);
-        assert_eq!(stat.user_usec, 0);
-        assert_eq!(stat.system_usec, 0);
+        assert_eq!(stat.usage_usec, None);
+        assert_eq!(stat.user_usec, None);
+        assert_eq!(stat.system_usec, None);
     }
 
     #[test]
