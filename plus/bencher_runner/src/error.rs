@@ -105,6 +105,17 @@ pub enum JailError {
     NetnsThread,
 
     #[cfg(target_os = "linux")]
+    #[error(
+        "A Runner executing sandboxed Jobs must run as root, but this one is running as uid {euid}. \
+         Building the sandbox needs privileges that enabling KVM does not grant: mknod for the chroot's /dev/kvm, \
+         chown to hand the guest images to the sandbox user, pivot_root, and setns to join a network namespace. \
+         A world-readable /dev/kvm is enough to use KVM unprivileged but not to build the sandbox around it. \
+         Start the Runner as root, or start it with --danger-allow-no-sandbox and assign it only Specs with no Sandbox, \
+         which gives up the microVM itself and not just its confinement."
+    )]
+    NotRoot { euid: u32 },
+
+    #[cfg(target_os = "linux")]
     #[error("Failed to open the jail lock {path}: {source}")]
     OpenJailLock {
         path: Utf8PathBuf,
