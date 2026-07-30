@@ -62,8 +62,13 @@ impl StateDir {
     /// than treated as an empty directory. It is not evidence that the
     /// directory is empty, and the chmod that follows is the thing this guard
     /// exists to keep off a directory that is not the runner's: a path that is
-    /// really a file, or one whose contents cannot be listed, would otherwise
-    /// be taken on the strength of a failed check.
+    /// really a file, one whose contents cannot be listed, or a listing that
+    /// breaks off partway would otherwise be taken on the strength of a failed
+    /// check. A listing that ends early is the same failure as one that never
+    /// started, so it is reported rather than dropped.
+    ///
+    /// What the filesystem itself put there is not somebody else's data. See
+    /// [`BENIGN_ENTRIES`].
     fn check_root_is_ours(&self) -> Result<(), JailError> {
         let entries = match fs::read_dir(&self.root) {
             Ok(entries) => entries,
@@ -77,12 +82,19 @@ impl StateDir {
             },
         };
         let mut populated = false;
-        for entry in entries.flatten() {
-            populated = true;
+        for entry in entries {
+            let entry = entry.map_err(|e| JailError::ReadStateDir {
+                path: self.root.clone(),
+                source: e,
+            })?;
             let name = entry.file_name();
             if RUNNER_ENTRIES.iter().any(|ours| name == *ours) {
                 return Ok(());
             }
+            if BENIGN_ENTRIES.iter().any(|benign| name == *benign) {
+                continue;
+            }
+            populated = true;
         }
         if populated {
             return Err(JailError::ForeignStateDir {
@@ -148,6 +160,20 @@ impl StateDir {
 /// Their presence is what distinguishes a directory the runner has used from
 /// one that belongs to the host.
 const RUNNER_ENTRIES: [&str; 2] = [CHROOT_BASE, LOCK_FILE];
+
+/// Entries that do not make a directory somebody else's.
+///
+/// A dedicated filesystem is the natural home for the chroots, since each holds
+/// a copy of the VMM binary and a full guest rootfs, and moving that traffic
+/// off the system disk is the recommended answer to its effect on a run. A
+/// freshly created ext4 volume already contains `lost+found` at its mount
+/// point, so counting that as somebody else's data would refuse the exact setup
+/// the state directory exists to support, and would do it with an error saying
+/// the directory was not created by the runner.
+///
+/// Only what the filesystem itself creates belongs here. Anything a person or
+/// another program put there is what the guard is for.
+const BENIGN_ENTRIES: [&str; 1] = ["lost+found"];
 
 /// Remove every jail directory under `jail_parent`, returning how many were
 /// reclaimed.
@@ -370,6 +396,38 @@ mod tests {
             matches!(err, JailError::ReadStateDir { .. }),
             "a read that failed is reported, not swallowed: {err}"
         );
+    }
+
+    #[test]
+    fn a_dedicated_filesystem_is_ours_to_take() {
+        // A freshly created ext4 volume mounted at the state directory holds
+        // `lost+found`, which the filesystem made, not an operator. Refusing it
+        // would block the recommended setup with an error blaming the operator
+        // for a directory they did not populate.
+        let (_dir, root) = temp_root();
+        let volume = root.join("volume");
+        fs::create_dir_all(volume.join("lost+found")).unwrap();
+
+        StateDir::new(volume.clone()).create().unwrap();
+
+        let mode = fs::metadata(&volume).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o700);
+        assert!(volume.join("lost+found").exists(), "left where it was");
+    }
+
+    #[test]
+    fn a_benign_entry_does_not_launder_a_populated_directory() {
+        // The exemption covers what a filesystem creates, not the directory it
+        // happens to sit in.
+        let (_dir, root) = temp_root();
+        let foreign = root.join("var-lib");
+        fs::create_dir_all(foreign.join("lost+found")).unwrap();
+        fs::create_dir_all(foreign.join("dpkg")).unwrap();
+
+        StateDir::new(foreign.clone()).create().unwrap_err();
+
+        let mode = fs::metadata(&foreign).unwrap().permissions().mode();
+        assert_ne!(mode & 0o777, 0o700, "a refused root must not be chmodded");
     }
 
     #[test]

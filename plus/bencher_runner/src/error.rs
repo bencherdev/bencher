@@ -65,7 +65,7 @@ pub enum JailError {
     PrivilegedJailUser { field: &'static str },
 
     #[error(
-        "The state directory {path} already exists, is not empty, and was not created by the runner. Point --state-dir at a directory the runner owns."
+        "The state directory {path} already exists, is not empty, and was not created by the runner. Point --state-dir at a directory the runner owns, or at a subdirectory of this one."
     )]
     ForeignStateDir { path: Utf8PathBuf },
 
