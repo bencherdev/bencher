@@ -275,11 +275,16 @@ fn parse_http_response(data: &[u8]) -> Result<(u16, String), FirecrackerError> {
         .next()
         .ok_or(FirecrackerError::MalformedResponse("empty HTTP response"))?;
 
+    // No invented status. A status line the runner could not parse is a
+    // malformed response, and reporting 500 would attribute a server error to
+    // Firecracker that Firecracker never sent.
     let status_code: u16 = status_line
         .split_whitespace()
         .nth(1)
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(500);
+        .and_then(|code| code.parse().ok())
+        .ok_or(FirecrackerError::MalformedResponse(
+            "HTTP status line carries no status code",
+        ))?;
 
     // Extract body (after \r\n\r\n)
     let body = response
@@ -383,18 +388,31 @@ mod tests {
     }
 
     #[test]
-    fn parse_http_malformed_status_defaults_to_500() {
-        // No status code in the status line
+    fn a_status_line_without_a_status_is_malformed_not_a_500() {
+        // These two asserted a default of 500 until the rule was written down.
+        // A response the runner could not parse is a malformed response; calling
+        // it a 500 attributes a server error to Firecracker that Firecracker
+        // never sent, and sends whoever reads the log looking at the VMM.
         let data = b"HTTP/1.1\r\n\r\n";
-        let (status, _) = parse_http_response(data).unwrap();
-        assert_eq!(status, 500);
+
+        let err = parse_http_response(data).unwrap_err();
+
+        assert!(
+            matches!(err, FirecrackerError::MalformedResponse(_)),
+            "a response that could not be parsed is not a status: {err}"
+        );
     }
 
     #[test]
-    fn parse_http_non_numeric_status_defaults_to_500() {
+    fn a_status_that_is_not_a_number_is_malformed_not_a_500() {
         let data = b"HTTP/1.1 abc OK\r\n\r\n";
-        let (status, _) = parse_http_response(data).unwrap();
-        assert_eq!(status, 500);
+
+        let err = parse_http_response(data).unwrap_err();
+
+        assert!(
+            matches!(err, FirecrackerError::MalformedResponse(_)),
+            "{err}"
+        );
     }
 
     #[test]
