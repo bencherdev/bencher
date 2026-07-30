@@ -9,7 +9,8 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
 use crate::jail::{
-    HostPreparation, JailDir, JailLock, JailPaths, StateDir, VmId, chroot, netns, state,
+    HostPreparation, JailDir, JailLock, JailPaths, ReclaimFailed, StateDir, VmId, chroot, netns,
+    state,
 };
 use crate::run::{RunOutput, prepare_oci_workspace};
 
@@ -120,7 +121,15 @@ pub fn vm_execute(
     chroot::grant_jail_read(kernel_dest)?;
 
     // Step 7-8: Build Firecracker config and run the microVM
-    let fc_config = build_firecracker_config(config, work_dir, vm_id, &state_dir, jail, netns)?;
+    let fc_config = build_firecracker_config(
+        config,
+        work_dir,
+        vm_id,
+        &state_dir,
+        jail,
+        netns,
+        host.reclaim_signal(),
+    )?;
 
     let run_output = run_firecracker(&fc_config, cancel_flag)?;
 
@@ -135,6 +144,7 @@ fn build_firecracker_config(
     state_dir: &StateDir,
     jail: JailPaths,
     netns: Utf8PathBuf,
+    reclaim_failed: ReclaimFailed,
 ) -> Result<crate::firecracker::FirecrackerJobConfig, RunnerError> {
     // The jailer copies `--exec-file` into the chroot itself and rejects a
     // multiply linked file, so Firecracker is staged outside the jail and is
@@ -181,6 +191,7 @@ fn build_firecracker_config(
         jail_user: config.jail_user,
         chroot_base_dir: state_dir.chroot_base(),
         netns,
+        reclaim_failed,
         vcpus,
         memory_mib,
         boot_args: config.kernel_cmdline.clone(),

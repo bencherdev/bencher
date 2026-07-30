@@ -32,7 +32,7 @@ use std::time::{Duration, Instant};
 use camino::Utf8PathBuf;
 
 use crate::cpu::CpuLayout;
-use crate::jail::{CgroupManager, Cpuset, JailPaths, JailUser, VmId};
+use crate::jail::{CgroupManager, Cpuset, JailPaths, JailUser, ReclaimFailed, VmId};
 use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
@@ -73,6 +73,10 @@ pub struct FirecrackerJobConfig {
     pub chroot_base_dir: Utf8PathBuf,
     /// Handle of the empty network namespace the VMM joins.
     pub netns: Utf8PathBuf,
+    /// Shared with the chroot guard of the same id: a cgroup this job cannot
+    /// remove has to hold that chroot, which is the only handle a later sweep
+    /// has for finding the cgroup again.
+    pub reclaim_failed: ReclaimFailed,
     /// Number of vCPUs.
     pub vcpus: u8,
     /// Memory size in MiB.
@@ -131,7 +135,7 @@ pub fn run_firecracker(
     // Step 0: Create cgroup with cpuset if CPU layout is provided
     let cgroup = if let Some(layout) = &config.cpu_layout {
         if layout.has_isolation() {
-            match CgroupManager::new(vm_id) {
+            match CgroupManager::new(vm_id, config.reclaim_failed.clone()) {
                 Ok(cg) => {
                     // A cgroup that exists but does not confine the VMM to the
                     // benchmark cores would report a number measured somewhere

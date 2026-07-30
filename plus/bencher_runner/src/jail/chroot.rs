@@ -21,6 +21,10 @@ use crate::jail::{JailUser, ReclaimFailed, StateDir, VmId};
 /// The jailer cleans up nothing by design, so teardown is the runner's job.
 /// `Drop` covers completion, timeout, cancellation, and every error return;
 /// the sweep in `prepare_host` covers the exits that never unwind.
+///
+/// The cgroup's teardown runs first, which is what makes the reclaim signal
+/// meaningful here: `run_firecracker` owns the cgroup and returns before this
+/// guard is dropped.
 #[derive(Debug)]
 pub struct JailDir {
     dir: Utf8PathBuf,
@@ -70,6 +74,20 @@ impl JailDir {
 
 impl Drop for JailDir {
     fn drop(&mut self) {
+        // A cgroup this job could not remove keeps the chroot alive. The two
+        // are named by the same id, and this directory is the only handle a
+        // later sweep has for finding that cgroup again, so removing it here
+        // would strand the cgroup for good with whatever is still in it. The
+        // same signal already earns the next job a sweep, which reclaims both
+        // in the right order.
+        if self.reclaim_failed.is_set() {
+            eprintln!(
+                "Warning: leaving jail {} in place because its cgroup could not be removed. The directory names that cgroup, so the next job sweeps both.",
+                self.dir
+            );
+            return;
+        }
+
         if let Err(e) = fs::remove_dir_all(&self.dir)
             && e.kind() != std::io::ErrorKind::NotFound
         {
@@ -180,6 +198,25 @@ mod tests {
         fs::write(state.jail_dir(&vm_id()), b"in the way").unwrap();
 
         JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap_err();
+    }
+
+    #[test]
+    fn a_surviving_cgroup_holds_the_chroot_that_names_it() {
+        // The cgroup is torn down first, and a removal it could not finish
+        // raises this. Removing the chroot anyway would leave nothing for a
+        // later sweep to find the cgroup by.
+        let (_dir, state) = state_in_tmpdir();
+        let reclaim_failed = ReclaimFailed::default();
+        let jail = JailDir::create(&state, &vm_id(), reclaim_failed.clone()).unwrap();
+        fs::write(jail.root().join("rootfs.ext4"), b"guest").unwrap();
+
+        reclaim_failed.set();
+        drop(jail);
+
+        assert!(
+            state.jail_dir(&vm_id()).exists(),
+            "the chroot names the cgroup that still has to be removed"
+        );
     }
 
     #[test]
