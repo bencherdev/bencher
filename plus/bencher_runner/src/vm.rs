@@ -32,7 +32,7 @@ pub fn vm_execute(
     println!("  Memory: {} MiB", config.memory.to_mib());
     println!("  Timeout: {} seconds", config.timeout_secs);
 
-    let state_dir = StateDir::new(config.state_dir.clone());
+    let state_dir = StateDir::new(config.state_dir.clone())?;
 
     // Prepare the host on demand, before the first jail this process builds.
     // Must come before the job lock is taken: preparation takes the same lock,
