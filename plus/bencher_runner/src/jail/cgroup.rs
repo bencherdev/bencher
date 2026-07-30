@@ -295,7 +295,11 @@ impl CgroupManager {
     /// logged: it means something is still in this cgroup, and the only way to
     /// get to it later is through the chroot of the same id, so the signal both
     /// holds that directory and earns the next job a sweep.
-    pub fn cleanup(&mut self) -> Result<(), RunnerError> {
+    ///
+    /// Returns nothing, because the signal is where a failure goes. A `Result`
+    /// here would be a channel with nothing in it that every caller, `Drop`
+    /// included, would have to discard.
+    pub fn cleanup(&mut self) {
         if self.created && self.cgroup_path.exists() {
             if let Err(e) = fs::remove_dir(&self.cgroup_path) {
                 eprintln!(
@@ -307,13 +311,12 @@ impl CgroupManager {
                 self.created = false;
             }
         }
-        Ok(())
     }
 }
 
 impl Drop for CgroupManager {
     fn drop(&mut self) {
-        drop(self.cleanup());
+        self.cleanup();
     }
 }
 
@@ -672,7 +675,7 @@ mod tests {
         fs::create_dir_all(manager.path()).unwrap();
         fs::write(manager.path().join("cgroup.procs"), "42\n").unwrap();
 
-        manager.cleanup().unwrap();
+        manager.cleanup();
 
         assert!(
             reclaim_failed.is_set(),
@@ -693,7 +696,7 @@ mod tests {
         };
         fs::create_dir_all(manager.path()).unwrap();
 
-        manager.cleanup().unwrap();
+        manager.cleanup();
 
         assert!(!manager.path().exists());
         assert!(
