@@ -421,7 +421,13 @@ fn download_and_extract_tgz(
     let gz = flate2::read::GzDecoder::new(archive_bytes.as_slice());
     let mut archive = tar::Archive::new(gz);
 
-    let mut remaining = wanted.len();
+    // The names still to be found, not a count of them. A tar archive may
+    // legally carry the same path more than once, and counting extractions down
+    // gets that wrong in both directions: a third match against two wanted
+    // entries underflows and panics with a message that says nothing about the
+    // archive, and two matches on the same entry reach zero and report success
+    // while the other is still missing.
+    let mut outstanding: Vec<&str> = wanted.iter().map(|(name, _)| name.as_str()).collect();
     for entry in archive
         .entries()
         .map_err(|e| format!("Failed to read tar entries: {e}"))?
@@ -443,8 +449,8 @@ fn download_and_extract_tgz(
         fs::write(dest, &bytes)
             .map_err(|e| format!("Failed to write to {}: {e}", dest.display()))?;
         eprintln!("Extracted '{path}' to: {}", dest.display());
-        remaining -= 1;
-        if remaining == 0 {
+        outstanding.retain(|name| *name != path);
+        if outstanding.is_empty() {
             return Ok(());
         }
     }
