@@ -83,6 +83,14 @@ pub enum JailError {
         source: std::io::Error,
     },
 
+    #[error(
+        "Failed to read the jail directory {path}: {source}. The sweep cannot tell what a previous runner left behind, and a directory it could not read is not an empty one."
+    )]
+    ReadJailParent {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
     #[cfg(target_os = "linux")]
     #[error("Failed to create network namespace directory {path}: {source}")]
     NetnsDir {

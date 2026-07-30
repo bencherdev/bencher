@@ -214,8 +214,21 @@ where
     R: Fn(&Utf8Path) -> Reaped,
     C: Fn(&VmId) -> Result<(), JailError>,
 {
-    let Ok(entries) = fs::read_dir(jail_parent) else {
-        return Ok(0);
+    // Absence is the only reading that means there is nothing to sweep, and it
+    // is the ordinary one: this runs before any jail exists in this process, so
+    // a parent that is not there yet is a first run. Every other failure is
+    // reported, because "could not look" must not reach the caller as "nothing
+    // was there" in the one function whose job is finding what a previous runner
+    // left behind. The rule `check_root_is_ours` follows, one level up.
+    let entries = match fs::read_dir(jail_parent) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+        Err(e) => {
+            return Err(JailError::ReadJailParent {
+                path: jail_parent.to_owned(),
+                source: e,
+            });
+        },
     };
 
     let mut swept = 0;
@@ -224,7 +237,26 @@ where
     // unreaped, with its chroot and cgroup still in place.
     let mut failure = None;
 
-    for entry in entries.flatten() {
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            // A listing that breaks off partway leaves jails unexamined, so it
+            // is remembered like any other failure rather than passing for a
+            // sweep that found nothing. What the listing did yield is still
+            // worth reaping.
+            Err(e) => {
+                eprintln!(
+                    "Warning: failed to read an entry under {jail_parent}: {e}. Jails there may not have been examined."
+                );
+                if failure.is_none() {
+                    failure = Some(JailError::ReadJailParent {
+                        path: jail_parent.to_owned(),
+                        source: e,
+                    });
+                }
+                continue;
+            },
+        };
         if !entry.file_type().is_ok_and(|file_type| file_type.is_dir()) {
             continue;
         }
@@ -632,6 +664,24 @@ mod tests {
         .unwrap();
 
         assert_eq!(swept, 1);
+    }
+
+    #[test]
+    fn a_jail_parent_that_cannot_be_read_is_not_an_empty_one() {
+        // The sweep exists to find what a previous runner left behind, so a
+        // read it could not perform must not reach the caller as a clean host.
+        // A file where the jail parent should be reads back `ENOTDIR`, the same
+        // way an unlistable directory reads back `EACCES`.
+        let (_dir, root) = temp_root();
+        let not_a_dir = root.join("firecracker");
+        fs::write(&not_a_dir, b"in the way").unwrap();
+
+        let err = sweep_jails_with(&not_a_dir, |_j| Reaped::Clear, |_v| Ok(())).unwrap_err();
+
+        assert!(
+            matches!(err, JailError::ReadJailParent { .. }),
+            "a read that failed is reported, not counted as zero jails: {err}"
+        );
     }
 
     #[test]
