@@ -62,7 +62,10 @@ pub use config::Config;
 #[cfg(feature = "plus")]
 pub use error::{ConfigError, ExecutionError, JailError, RunnerError};
 #[cfg(feature = "plus")]
-pub use jail::{DEFAULT_JAIL_GID, DEFAULT_JAIL_UID, DEFAULT_STATE_DIR, HostPreparation, JailUser};
+pub use jail::{
+    DEFAULT_JAIL_GID, DEFAULT_JAIL_UID, DEFAULT_STATE_DIR, HostPreparation, JailUser,
+    check_absolute_state_dir,
+};
 #[cfg(feature = "plus")]
 pub use log_level::SandboxLogLevel;
 #[cfg(feature = "plus")]

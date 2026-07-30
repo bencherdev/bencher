@@ -209,6 +209,28 @@ impl Default for JailUser {
     }
 }
 
+/// Require an absolute state directory.
+///
+/// The invariant belongs to the library, not to one command line. The path
+/// reaches the jailer as `--chroot-base-dir`, which the jailer resolves against
+/// its own working directory rather than the runner's, so a relative value
+/// builds the chroot somewhere the runner does not look: the sweep never reaches
+/// it and the lock does not protect it. Every caller that hands this crate a
+/// state directory is exposed to that, and the CLI is only one of them.
+///
+/// Shared with the argument parser rather than restated there, so the rule has
+/// one implementation and the operator still hears about it before the runner
+/// starts.
+pub fn check_absolute_state_dir(path: &camino::Utf8Path) -> Result<(), crate::error::JailError> {
+    if path.is_absolute() {
+        Ok(())
+    } else {
+        Err(crate::error::JailError::RelativeStateDir {
+            path: path.to_owned(),
+        })
+    }
+}
+
 /// The identity of one microVM.
 ///
 /// The same string is the jailer's `--id`, the name of the chroot directory,
@@ -522,7 +544,7 @@ fn prepare_host(
     // `unshare`, neither of which mentions root or the flag that avoids it.
     check_root(euid)?;
 
-    let state = StateDir::new(state_dir.to_owned());
+    let state = StateDir::new(state_dir.to_owned())?;
     state.create()?;
 
     warn_on_named_account(jail_user);
