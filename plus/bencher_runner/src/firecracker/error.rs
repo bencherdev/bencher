@@ -71,7 +71,11 @@ pub enum FirecrackerError {
     #[error("Firecracker API socket {path} is unusable: {source}")]
     SocketUnusable {
         /// The socket path the runner tried to reach.
-        path: String,
+        ///
+        /// The checked type, not a string: every value has been measured
+        /// against `sun_path`, which is the limit this error is most often
+        /// about.
+        path: crate::jail::SocketPath,
         /// Why it could not be reached.
         source: std::io::Error,
     },
