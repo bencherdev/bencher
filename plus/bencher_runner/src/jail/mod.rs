@@ -192,6 +192,18 @@ pub struct HostPreparation {
 pub struct ReclaimFailed(Arc<AtomicBool>);
 
 impl ReclaimFailed {
+    /// A signal nothing reads, for a cgroup no sweep can find again.
+    ///
+    /// A non-sandboxed run has no chroot, and its cgroup is not named by any
+    /// directory the sweep walks, so there is no handle for a later sweep to
+    /// work from and nothing a raised signal could change. Named rather than
+    /// defaulted so the call site says which of the two it is.
+    #[cfg(target_os = "linux")]
+    #[must_use]
+    pub fn unwatched() -> Self {
+        Self::default()
+    }
+
     /// Record that a jail could not be reclaimed.
     pub fn set(&self) {
         self.0.store(true, Ordering::SeqCst);
@@ -203,6 +215,17 @@ impl ReclaimFailed {
     #[cfg(target_os = "linux")]
     fn take(&self) -> bool {
         self.0.swap(false, Ordering::SeqCst)
+    }
+
+    /// Whether the signal is set, without consuming it.
+    ///
+    /// Read by the chroot teardown, which must not remove a directory whose
+    /// cgroup is still there: the directory name is the only handle a later
+    /// sweep has for finding that cgroup again.
+    #[cfg(target_os = "linux")]
+    #[must_use]
+    pub(crate) fn is_set(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
     }
 }
 
