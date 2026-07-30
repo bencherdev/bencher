@@ -118,8 +118,9 @@ pub enum JailError {
          Building the sandbox needs privileges that enabling KVM does not grant: mknod for the chroot's /dev/kvm, \
          chown to hand the guest images to the sandbox user, pivot_root, and setns to join a network namespace. \
          A world-readable /dev/kvm is enough to use KVM unprivileged but not to build the sandbox around it. \
-         Start the Runner as root, or start it with --danger-allow-no-sandbox and assign it only Specs with no Sandbox, \
-         which gives up the microVM itself and not just its confinement."
+         Run as root, or give up the sandbox: start `runner up` with --danger-allow-no-sandbox and assign it \
+         only Specs with no Sandbox, or invoke `runner run` without --sandbox. Either way what is given up is \
+         the microVM itself and not just its confinement, so the Job executes directly on the host."
     )]
     NotRoot { euid: u32 },
 
