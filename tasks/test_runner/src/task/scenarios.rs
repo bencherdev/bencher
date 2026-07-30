@@ -175,19 +175,59 @@ impl Scenarios {
         scenarios.extend(jail_scenarios());
         scenarios.extend(nosandbox_scenarios());
 
-        if let Some(name) = &self.scenario {
+        let result = if let Some(name) = &self.scenario {
             // Run a single scenario
-            let scenario = scenarios
+            scenarios
                 .iter()
                 .find(|s| s.name == name)
-                .with_context(|| format!("Unknown scenario: {name}"))?;
-
-            run_scenario(scenario, &runner_bin)
+                .with_context(|| format!("Unknown scenario: {name}"))
+                .and_then(|scenario| run_scenario(scenario, &runner_bin))
         } else {
             // Run all scenarios
             run_all_scenarios(&scenarios, &runner_bin)
-        }
+        };
+
+        // Whatever the outcome. The state directory is only root-owned because
+        // the scenarios had to be, and it sits inside the repo tree.
+        return_state_dir_to_invoker();
+
+        result
     }
+}
+
+/// Hand the state directory back to whoever invoked `sudo`.
+///
+/// The scenarios must run as root, and the runner creates its state directory at
+/// 0700 owned by root under the repo's target tree. CI throws that tree away, so
+/// it costs nothing there, but on a developer's machine the next unprivileged
+/// `cargo` invocation trips over a directory it can neither read nor remove.
+/// `SUDO_UID` names who to give it back to; with no one to give it back to, or a
+/// `chown` that will not run, the path is printed with the command that clears
+/// it rather than left to be discovered.
+fn return_state_dir_to_invoker() {
+    let state_dir = scenario_state_dir();
+    if !state_dir.exists() {
+        return;
+    }
+
+    if let Some((uid, gid)) = invoking_user()
+        && Command::new("chown")
+            .args(["-R", &format!("{uid}:{gid}"), state_dir.as_str()])
+            .status()
+            .is_ok_and(|status| status.success())
+    {
+        println!("Returned {state_dir} to uid {uid}");
+        return;
+    }
+
+    println!("Note: {state_dir} is left owned by root. Remove it with: sudo rm -rf {state_dir}");
+}
+
+/// The uid and gid that invoked `sudo`, when one did.
+fn invoking_user() -> Option<(u32, u32)> {
+    let uid = std::env::var("SUDO_UID").ok()?.parse().ok()?;
+    let gid = std::env::var("SUDO_GID").ok()?.parse().ok()?;
+    Some((uid, gid))
 }
 
 /// List all available scenarios.
