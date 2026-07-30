@@ -13,6 +13,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::JailError;
 use crate::jail::VmId;
+use crate::jail::lock::LOCK_FILE;
 use crate::jail::reap::Reaped;
 
 /// Subdirectory of the state directory used as the jailer's chroot base.
@@ -20,12 +21,6 @@ const CHROOT_BASE: &str = "jail";
 
 /// The chroot directory inside a jail, which the jailer makes `/`.
 const JAIL_ROOT: &str = "root";
-
-/// The jail lock file, which lives beside the chroot base.
-///
-/// Named here as well as in the lock module so the state directory knows
-/// which of its entries it created.
-const LOCK_FILE: &str = ".lock";
 
 /// The `--exec-file` base name the jailer derives the chroot layout from.
 ///
