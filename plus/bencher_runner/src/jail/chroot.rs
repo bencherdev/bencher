@@ -14,7 +14,7 @@ use std::os::unix::fs::{PermissionsExt as _, chown};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::JailError;
-use crate::jail::{JailUser, ReclaimFailed, StateDir, VmId};
+use crate::jail::{JailSignals, JailUser, StateDir, VmId};
 
 /// A job's chroot tree, removed when this value is dropped.
 ///
@@ -22,23 +22,20 @@ use crate::jail::{JailUser, ReclaimFailed, StateDir, VmId};
 /// `Drop` covers completion, timeout, cancellation, and every error return;
 /// the sweep in `prepare_host` covers the exits that never unwind.
 ///
-/// The cgroup's teardown runs first, which is what makes the reclaim signal
-/// meaningful here: `run_firecracker` owns the cgroup and returns before this
-/// guard is dropped.
+/// The cgroup's teardown runs first, which is what makes its signal meaningful
+/// here: `run_firecracker` owns this job's cgroup and returns before this guard
+/// is dropped. The signal read is this job's own, not the runner-wide one a
+/// stale jail elsewhere can raise.
 #[derive(Debug)]
 pub struct JailDir {
     dir: Utf8PathBuf,
     root: Utf8PathBuf,
-    reclaim_failed: ReclaimFailed,
+    signals: JailSignals,
 }
 
 impl JailDir {
     /// Create the chroot tree for `vm_id` at mode 0700.
-    pub fn create(
-        state: &StateDir,
-        vm_id: &VmId,
-        reclaim_failed: ReclaimFailed,
-    ) -> Result<Self, JailError> {
+    pub fn create(state: &StateDir, vm_id: &VmId, signals: JailSignals) -> Result<Self, JailError> {
         let dir = state.jail_dir(vm_id);
         let root = state.jail_root(vm_id);
 
@@ -58,11 +55,7 @@ impl JailDir {
             })?;
         }
 
-        Ok(Self {
-            dir,
-            root,
-            reclaim_failed,
-        })
+        Ok(Self { dir, root, signals })
     }
 
     /// The chroot root, which becomes `/` inside the jail.
@@ -74,13 +67,17 @@ impl JailDir {
 
 impl Drop for JailDir {
     fn drop(&mut self) {
-        // A cgroup this job could not remove keeps the chroot alive. The two
+        // A cgroup *this job* could not remove keeps the chroot alive. The two
         // are named by the same id, and this directory is the only handle a
         // later sweep has for finding that cgroup again, so removing it here
         // would strand the cgroup for good with whatever is still in it. The
-        // same signal already earns the next job a sweep, which reclaims both
+        // same failure already earned the next job a sweep, which reclaims both
         // in the right order.
-        if self.reclaim_failed.is_set() {
+        //
+        // This job's cgroup, and nothing else: the runner-wide reclaim signal is
+        // also raised by a stale jail some sweep could not reclaim, which is no
+        // reason to keep a chroot whose own cgroup came down cleanly.
+        if self.signals.must_keep_chroot() {
             eprintln!(
                 "Warning: leaving jail {} in place because its cgroup could not be removed. The directory names that cgroup, so the next job sweeps both.",
                 self.dir
@@ -95,7 +92,7 @@ impl Drop for JailDir {
                 "Warning: failed to remove jail {}: {e}. It holds a VMM binary and a full guest rootfs; the next job will sweep it.",
                 self.dir
             );
-            self.reclaim_failed.set();
+            self.signals.chroot_survived();
         }
     }
 }
@@ -153,7 +150,7 @@ mod tests {
     fn create_builds_a_private_chroot_tree() {
         let (_dir, state) = state_in_tmpdir();
 
-        let jail = JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap();
+        let jail = JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap();
 
         assert_eq!(jail.root(), state.jail_root(&vm_id()));
         assert!(jail.root().is_dir());
@@ -168,7 +165,7 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
         fs::create_dir_all(state.jail_root(&vm_id())).unwrap();
 
-        JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap();
+        JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap();
     }
 
     #[test]
@@ -176,7 +173,7 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
 
         {
-            let jail = JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap();
+            let jail = JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap();
             fs::write(jail.root().join("rootfs.ext4"), b"guest").unwrap();
             fs::create_dir_all(jail.root().join("dev")).unwrap();
         }
@@ -197,7 +194,7 @@ mod tests {
         // impossible to create.
         fs::write(state.jail_dir(&vm_id()), b"in the way").unwrap();
 
-        JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap_err();
+        JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap_err();
     }
 
     #[test]
@@ -206,11 +203,11 @@ mod tests {
         // raises this. Removing the chroot anyway would leave nothing for a
         // later sweep to find the cgroup by.
         let (_dir, state) = state_in_tmpdir();
-        let reclaim_failed = ReclaimFailed::default();
-        let jail = JailDir::create(&state, &vm_id(), reclaim_failed.clone()).unwrap();
+        let signals = JailSignals::unwatched();
+        let jail = JailDir::create(&state, &vm_id(), signals.clone()).unwrap();
         fs::write(jail.root().join("rootfs.ext4"), b"guest").unwrap();
 
-        reclaim_failed.set();
+        signals.cgroup_survived();
         drop(jail);
 
         assert!(
@@ -222,7 +219,7 @@ mod tests {
     #[test]
     fn drop_tolerates_an_already_removed_tree() {
         let (_dir, state) = state_in_tmpdir();
-        let jail = JailDir::create(&state, &vm_id(), ReclaimFailed::default()).unwrap();
+        let jail = JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap();
         fs::remove_dir_all(state.jail_dir(&vm_id())).unwrap();
         drop(jail);
     }
