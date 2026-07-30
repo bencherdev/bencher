@@ -41,6 +41,11 @@ Das persistente Zustandsverzeichnis für den Runner.
 Es muss ein absoluter Pfad sein.
 Das Jail, das die Sandbox einschließt, wird unter diesem Verzeichnis erstellt,
 und Jails, die durch eine unsaubere Beendigung zurückgeblieben sind, werden vor dem ersten Sandbox-Job daraus entfernt.
+Jedes Jail enthält ein vollständiges Gast-Root-Dateisystem und eine Kopie der microVM-Binärdatei,
+daher braucht dieses Verzeichnis echte Kapazität für jeden gleichzeitig laufenden Job.
+Ein eigenes Dateisystem oder ein `tmpfs`-Mount wird unterstützt und empfohlen:
+es hält diese Schreiblast von der Systemplatte fern,
+und ein neu erstelltes Dateisystem wird akzeptiert, auch wenn es ein `lost+found`-Verzeichnis mitbringt.
 Standardmäßig wird `/var/lib/bencher-runner` verwendet.
 Kann auch mit der Umgebungsvariable `BENCHER_STATE_DIR` gesetzt werden.
 

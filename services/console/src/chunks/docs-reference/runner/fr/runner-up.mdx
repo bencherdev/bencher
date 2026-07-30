@@ -41,6 +41,11 @@ Le répertoire d'état persistant du Runner.
 Il doit s'agir d'un chemin absolu.
 La prison qui confine le bac à sable est créée dans ce répertoire,
 et les prisons laissées par un arrêt brutal en sont supprimées avant le premier Job avec bac à sable.
+Chaque prison contient un système de fichiers racine invité complet et une copie du binaire de la microVM,
+ce répertoire a donc besoin d'une capacité réelle pour chaque Job exécuté simultanément.
+Un système de fichiers dédié ou un montage `tmpfs` est pris en charge et recommandé :
+il maintient cette charge d'écriture hors du disque système,
+et un système de fichiers fraîchement créé est accepté même s'il arrive avec un répertoire `lost+found`.
 Par défaut, `/var/lib/bencher-runner` est utilisé.
 Peut également être défini avec la variable d'environnement `BENCHER_STATE_DIR`.
 

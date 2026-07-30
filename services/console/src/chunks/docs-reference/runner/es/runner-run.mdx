@@ -38,6 +38,11 @@ El directorio de estado persistente del Runner.
 Debe ser una ruta absoluta.
 La jaula que confina el sandbox se crea dentro de este directorio,
 y las jaulas que quedaron tras una salida no limpia se eliminan de él antes del primer Job con sandbox.
+Cada jaula contiene un sistema de archivos raíz completo del huésped y una copia del binario de la microVM,
+por lo que este directorio necesita capacidad real para cada Job que se ejecute a la vez.
+Se admite y se recomienda un sistema de archivos dedicado o un montaje `tmpfs`:
+mantiene esa carga de escritura fuera del disco del sistema,
+y se acepta un sistema de archivos recién creado aunque llegue con un directorio `lost+found`.
 Por defecto, se usa `/var/lib/bencher-runner`.
 También se puede establecer con la variable de entorno `BENCHER_STATE_DIR`.
 

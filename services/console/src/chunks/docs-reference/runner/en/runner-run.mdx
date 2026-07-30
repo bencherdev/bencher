@@ -38,6 +38,11 @@ The persistent state directory for the Runner.
 It must be an absolute path.
 The jail that confines the sandbox is built under this directory,
 and jails left behind by an unclean exit are swept from it before the first sandboxed Job runs.
+Each jail holds a full guest root filesystem and a copy of the microVM binary,
+so this directory needs real capacity for every Job that runs at once.
+A dedicated filesystem or a `tmpfs` mount is supported and recommended:
+it keeps that write traffic off the system disk,
+and a freshly created filesystem is accepted even though it arrives with a `lost+found` directory.
 By default, `/var/lib/bencher-runner` is used.
 Can also be set with the `BENCHER_STATE_DIR` environment variable.
 
