@@ -477,9 +477,18 @@ mod tests {
                 message.contains("root"),
                 "attempt {attempt} must name root: {message}"
             );
+            // Both escapes, because both subcommands reach this error and each
+            // has only one of them: `--danger-allow-no-sandbox` exists on
+            // `runner up`, and a one-shot `runner run` gives up the sandbox by
+            // omitting `--sandbox`. Naming only the daemon's flag sends a
+            // `runner run` operator to an argument it does not accept.
             assert!(
                 message.contains("--danger-allow-no-sandbox"),
-                "attempt {attempt} must name the escape hatch: {message}"
+                "attempt {attempt} must name the daemon's escape hatch: {message}"
+            );
+            assert!(
+                message.contains("without --sandbox"),
+                "attempt {attempt} must name the one-shot escape hatch: {message}"
             );
         }
 
