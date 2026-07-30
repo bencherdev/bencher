@@ -9,7 +9,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
 use crate::jail::{
-    HostPreparation, JailDir, JailLock, JailPaths, ReclaimFailed, StateDir, VmId, chroot, netns,
+    HostPreparation, JailDir, JailLock, JailPaths, JailSignals, StateDir, VmId, chroot, netns,
     state,
 };
 use crate::run::{RunOutput, prepare_oci_workspace};
@@ -85,7 +85,11 @@ pub fn vm_execute(
     // before any of them exist. Dropping this guard removes the chroot tree,
     // which is what the workspace temp directory used to cover.
     let vm_id = VmId::new();
-    let jail_dir = JailDir::create(&state_dir, &vm_id, host.reclaim_signal())?;
+    // Minted per job, beside the id: the cgroup and the chroot of one job share
+    // these, and a stale jail some other sweep could not reclaim is not this
+    // job's business.
+    let signals = JailSignals::for_job(host.reclaim_signal());
+    let jail_dir = JailDir::create(&state_dir, &vm_id, signals.clone())?;
     let jail = JailPaths::new(jail_dir.root())?;
     println!("  Jail: {}", jail.root());
 
@@ -121,15 +125,8 @@ pub fn vm_execute(
     chroot::grant_jail_read(kernel_dest)?;
 
     // Step 7-8: Build Firecracker config and run the microVM
-    let fc_config = build_firecracker_config(
-        config,
-        work_dir,
-        vm_id,
-        &state_dir,
-        jail,
-        netns,
-        host.reclaim_signal(),
-    )?;
+    let fc_config =
+        build_firecracker_config(config, work_dir, vm_id, &state_dir, jail, netns, signals)?;
 
     let run_output = run_firecracker(&fc_config, cancel_flag)?;
 
@@ -144,7 +141,7 @@ fn build_firecracker_config(
     state_dir: &StateDir,
     jail: JailPaths,
     netns: Utf8PathBuf,
-    reclaim_failed: ReclaimFailed,
+    signals: JailSignals,
 ) -> Result<crate::firecracker::FirecrackerJobConfig, RunnerError> {
     // The jailer copies `--exec-file` into the chroot itself and rejects a
     // multiply linked file, so Firecracker is staged outside the jail and is
@@ -191,7 +188,7 @@ fn build_firecracker_config(
         jail_user: config.jail_user,
         chroot_base_dir: state_dir.chroot_base(),
         netns,
-        reclaim_failed,
+        signals,
         vcpus,
         memory_mib,
         boot_args: config.kernel_cmdline.clone(),
