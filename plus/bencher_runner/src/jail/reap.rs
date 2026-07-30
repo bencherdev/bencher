@@ -264,8 +264,17 @@ fn pidfd_open(pid: u32) -> std::io::Result<Option<OwnedFd>> {
     )]
     // SAFETY: `pidfd_open` takes a pid and a flag word and touches no memory.
     // It returns a new descriptor or -1, and the descriptor is handed straight
-    // to `OwnedFd` so it is closed exactly once.
-    let raw = unsafe { libc::syscall(libc::SYS_pidfd_open, pid, 0) };
+    // to `OwnedFd` so it is closed exactly once. Every argument is widened to
+    // `c_long` explicitly: `syscall` is variadic, so the width each value is
+    // passed at is the width written here rather than anything the signature
+    // enforces.
+    let raw = unsafe {
+        libc::syscall(
+            libc::SYS_pidfd_open,
+            libc::c_long::from(pid),
+            libc::c_long::from(0i32),
+        )
+    };
 
     if raw < 0 {
         let error = std::io::Error::last_os_error();
@@ -299,14 +308,16 @@ fn pidfd_kill(pidfd: &OwnedFd) -> std::io::Result<()> {
     )]
     // SAFETY: `pidfd` is an open, owned descriptor for the duration of the
     // call. A null `siginfo` pointer is the documented way to ask the kernel
-    // to synthesize one, and the final argument is a reserved flag word.
+    // to synthesize one, and the final argument is a reserved flag word. The
+    // integers are widened to `c_long` explicitly, since a variadic call passes
+    // each value at the width it is written at.
     let ret = unsafe {
         libc::syscall(
             libc::SYS_pidfd_send_signal,
-            pidfd.as_raw_fd(),
-            libc::SIGKILL,
+            libc::c_long::from(pidfd.as_raw_fd()),
+            libc::c_long::from(libc::SIGKILL),
             std::ptr::null::<libc::siginfo_t>(),
-            0,
+            libc::c_long::from(0i32),
         )
     };
     if ret == 0 {
