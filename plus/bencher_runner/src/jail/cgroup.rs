@@ -9,7 +9,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::RunnerError;
 use crate::cpu::CpuLayout;
 use crate::error::JailError;
-use crate::jail::{ResourceLimits, VmId};
+use crate::jail::{ReclaimFailed, ResourceLimits, VmId};
 
 /// Default cgroup v2 mount point.
 const CGROUP_ROOT: &str = "/sys/fs/cgroup";
@@ -21,11 +21,19 @@ pub(crate) const BENCHER_CGROUP_BASE: &str = "bencher";
 pub struct CgroupManager {
     cgroup_path: Utf8PathBuf,
     created: bool,
+    /// Raised when this cgroup could not be removed, so a later sweep retries
+    /// it and the chroot that names it is held until then.
+    reclaim_failed: ReclaimFailed,
 }
 
 impl CgroupManager {
     /// Create a new cgroup for the given microVM.
-    pub fn new(vm_id: &VmId) -> Result<Self, RunnerError> {
+    ///
+    /// The signal is shared with the chroot of the same id: a cgroup that
+    /// cannot be removed has to keep that directory alive, because the
+    /// directory name is the only handle a later sweep has for finding this
+    /// cgroup again.
+    pub fn new(vm_id: &VmId, reclaim_failed: ReclaimFailed) -> Result<Self, RunnerError> {
         let cgroup_path = Utf8PathBuf::from(CGROUP_ROOT)
             .join(BENCHER_CGROUP_BASE)
             .join(vm_id.as_str());
@@ -62,6 +70,7 @@ impl CgroupManager {
         Ok(Self {
             cgroup_path,
             created,
+            reclaim_failed,
         })
     }
 
@@ -75,6 +84,7 @@ impl CgroupManager {
         Self {
             cgroup_path,
             created: false,
+            reclaim_failed: ReclaimFailed::unwatched(),
         }
     }
 
@@ -382,11 +392,19 @@ impl CgroupManager {
     }
 
     /// Clean up the cgroup.
+    ///
+    /// A `rmdir` the kernel refuses is raised on the reclaim signal, not just
+    /// logged: it means something is still in this cgroup, and the only way to
+    /// get to it later is through the chroot of the same id, so the signal both
+    /// holds that directory and earns the next job a sweep.
     pub fn cleanup(&mut self) -> Result<(), RunnerError> {
         if self.created && self.cgroup_path.exists() {
             if let Err(e) = fs::remove_dir(&self.cgroup_path) {
-                // Log but don't fail - cgroup might still have processes
-                eprintln!("Warning: failed to remove cgroup {}: {e}", self.cgroup_path);
+                eprintln!(
+                    "Warning: failed to remove cgroup {}: {e}. Something is still in it, so the next job sweeps it along with the jail that names it.",
+                    self.cgroup_path
+                );
+                self.reclaim_failed.set();
             } else {
                 self.created = false;
             }
@@ -711,10 +729,12 @@ mod tests {
         let ours = CgroupManager {
             cgroup_path: root.join("ours"),
             created: true,
+            reclaim_failed: ReclaimFailed::unwatched(),
         };
         let theirs = CgroupManager {
             cgroup_path: root.join("theirs"),
             created: false,
+            reclaim_failed: ReclaimFailed::unwatched(),
         };
         fs::create_dir_all(ours.path()).unwrap();
         fs::create_dir_all(theirs.path()).unwrap();
@@ -738,13 +758,57 @@ mod tests {
     }
 
     #[test]
+    fn a_cgroup_that_will_not_go_away_raises_the_reclaim_signal() {
+        // The kernel refuses `rmdir` while a cgroup still holds a process, and
+        // a non-empty ordinary directory refuses it the same way. Warning alone
+        // would let the chroot that names this cgroup be removed, leaving
+        // nothing for a later sweep to find it by.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let reclaim_failed = ReclaimFailed::default();
+        let mut manager = CgroupManager {
+            cgroup_path: root.join("stuck"),
+            created: true,
+            reclaim_failed: reclaim_failed.clone(),
+        };
+        fs::create_dir_all(manager.path()).unwrap();
+        fs::write(manager.path().join("cgroup.procs"), "42\n").unwrap();
+
+        manager.cleanup().unwrap();
+
+        assert!(
+            reclaim_failed.is_set(),
+            "a cgroup that outlives its job has to earn another sweep"
+        );
+        assert!(manager.path().exists());
+    }
+
+    #[test]
+    fn a_removed_cgroup_leaves_the_signal_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let reclaim_failed = ReclaimFailed::default();
+        let mut manager = CgroupManager {
+            cgroup_path: root.join("gone"),
+            created: true,
+            reclaim_failed: reclaim_failed.clone(),
+        };
+        fs::create_dir_all(manager.path()).unwrap();
+
+        manager.cleanup().unwrap();
+
+        assert!(!manager.path().exists());
+        assert!(
+            !reclaim_failed.is_set(),
+            "a clean teardown must not hold the chroot back"
+        );
+    }
+
+    #[test]
     fn open_procs_reports_a_missing_cgroup() {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let manager = CgroupManager {
-            cgroup_path: root.join("absent"),
-            created: false,
-        };
+        let manager = CgroupManager::detached(root.join("absent"));
 
         manager.open_procs().unwrap_err();
         manager.contains_pid(1).unwrap_err();
@@ -755,10 +819,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         fs::write(root.join("cgroup.procs"), "123\n456\n").unwrap();
-        let manager = CgroupManager {
-            cgroup_path: root,
-            created: false,
-        };
+        let manager = CgroupManager::detached(root);
 
         assert!(manager.contains_pid(456).unwrap());
         assert!(!manager.contains_pid(789).unwrap());

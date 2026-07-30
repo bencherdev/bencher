@@ -59,7 +59,10 @@ impl LocalIsolation {
         let benchmark = layout.benchmark.clone();
         let run_id = crate::jail::VmId::from_chroot_name(format!("local-{}", uuid::Uuid::new_v4()));
 
-        let cgroup = match crate::jail::CgroupManager::new(&run_id) {
+        // No chroot names this cgroup, and no sweep walks it, so a teardown it
+        // cannot finish has nothing to hand the work to.
+        let reclaim_failed = crate::jail::ReclaimFailed::unwatched();
+        let cgroup = match crate::jail::CgroupManager::new(&run_id, reclaim_failed) {
             Ok(cgroup) => {
                 // Best effort here, unlike the sandboxed path: a local run
                 // makes no confinement claim to begin with, so losing the
