@@ -97,6 +97,18 @@ pub const DEFAULT_STATE_DIR: &str = "/var/lib/bencher-runner";
 /// chroot that is swept, so a per-job allocator adds a scheme without closing
 /// a live vector.
 ///
+/// Serially per runner, which is what the jail lock enforces. Two runners with
+/// different `--state-dir` values hold different locks and can therefore have
+/// jobs in flight at the same time, as the same uid, and that is a supported
+/// configuration: the network namespace module is built around it. Two VMMs
+/// sharing a uid can signal each other and, where `ptrace_scope` permits, trace
+/// each other, which is the hazard [`JailUser`] describes. A per-runner id would
+/// close it, and is not attempted here: the ids would have to be allocated
+/// without coordination between runners that by construction do not know about
+/// each other, which trades a known hazard for an unknown one. An operator
+/// running two runners on one host should give them different `--jail-uid`
+/// values, which is what that flag is for.
+///
 /// The number is Bencher's historic default self-hosted API server port,
 /// retired in favor of the IANA-registered 6610, so it reads as a project
 /// convention rather than an arbitrary pick. It also lands in the unallocated
