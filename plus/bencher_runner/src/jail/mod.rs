@@ -207,12 +207,18 @@ impl ReclaimFailed {
         self.0.store(true, Ordering::SeqCst);
     }
 
-    /// Consume the signal, reporting whether it was set.
+    /// Consume the signal.
+    ///
+    /// Deliberately not one swap together with [`Self::is_set`]. The signal asks
+    /// for a sweep, so it is spent only once a sweep has actually finished:
+    /// spending it up front would let a sweep that failed clear the one thing
+    /// that makes a later job try again. Jobs are serial, so nothing can raise
+    /// it between the sweep finishing and this call.
     ///
     /// Only the jail reads it, and the jail is Linux-only.
     #[cfg(target_os = "linux")]
-    fn take(&self) -> bool {
-        self.0.swap(false, Ordering::SeqCst)
+    fn clear(&self) {
+        self.0.store(false, Ordering::SeqCst);
     }
 
     /// Whether the signal is set, without consuming it.
@@ -281,10 +287,16 @@ impl HostPreparation {
     ) -> Result<(), crate::error::JailError> {
         // A jail that could not be reclaimed earns another sweep, whatever
         // this process has already done.
-        if self.prepared && !self.reclaim_failed.take() {
+        if self.prepared && !self.reclaim_failed.is_set() {
             return Ok(());
         }
         prepare_host(euid, state_dir, jail_user)?;
+        // Spent only now that a sweep has run to completion. Spending it before
+        // the sweep would disarm the mechanism precisely when it is needed: the
+        // signal would be gone, this process would still count as prepared, and
+        // every later job would return early while the jail that could not be
+        // reclaimed sat there holding the benchmark cores.
+        self.reclaim_failed.clear();
         self.prepared = true;
         Ok(())
     }
@@ -583,6 +595,57 @@ mod tests {
         host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
             .unwrap();
         assert!(!state_dir.exists(), "the signal is consumed once");
+    }
+
+    #[test]
+    fn a_sweep_that_failed_does_not_disarm_the_next_one() {
+        // The signal is spent on a sweep that finished, never on one that was
+        // merely attempted. Consuming it up front costs nothing on the first
+        // failure and everything on the second: this process still counts as
+        // prepared, so with the signal gone every later job returns early and
+        // the jail that could not be reclaimed is never swept again for the
+        // lifetime of the daemon. If the reason it could not be reclaimed is a
+        // VMM still in its cgroup, that orphan holds the benchmark cores while
+        // every later job measures through it and reports clean.
+        let dir = tempfile::tempdir().unwrap();
+        let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let state_dir = root.join("state");
+
+        let mut host = HostPreparation::new();
+        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
+
+        // A teardown that could not reclaim its jail asks for another sweep.
+        host.reclaim_signal().set();
+
+        // Preparation now fails, twice, with the signal still outstanding.
+        std::fs::remove_dir_all(&state_dir).unwrap();
+        std::fs::create_dir_all(state_dir.join("someone-elses-data")).unwrap();
+        for attempt in 1..=2 {
+            host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+                .unwrap_err();
+            assert!(
+                host.reclaim_signal().is_set(),
+                "attempt {attempt} failed, so the sweep it asked for is still owed"
+            );
+        }
+
+        // Remove the cause: the next job must still sweep rather than return
+        // early on the strength of a signal an earlier failure ate.
+        std::fs::remove_dir_all(&state_dir).unwrap();
+        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
+        assert!(
+            state_dir.join("jail").is_dir(),
+            "the owed sweep must survive every failed attempt at it"
+        );
+
+        // And it is spent now that one has finished.
+        assert!(!host.reclaim_signal().is_set());
+        std::fs::remove_dir_all(&state_dir).unwrap();
+        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+            .unwrap();
+        assert!(!state_dir.exists(), "a finished sweep spends the signal");
     }
 
     #[test]
