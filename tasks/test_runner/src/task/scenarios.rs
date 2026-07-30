@@ -2829,6 +2829,15 @@ fn run_runner_after_orphan(
     };
 
     let Some((vm_id, jail_root, vmm_pid)) = orphan else {
+        // Killed before the wait. A probe that timed out leaves the runner still
+        // going, so waiting on it first would sit there until the runner's own
+        // timeout expired and report the failure minutes late, which is exactly
+        // when somebody is watching. Only if it has not already been reaped:
+        // `try_wait` in the loop above reaps it, and signalling a reaped pid can
+        // reach whatever inherited the number.
+        if child.try_wait()?.is_none() {
+            kill_pid(child.id(), libc::SIGKILL);
+        }
         drop(child.wait());
         let (stdout, stderr) = readers.join();
         bail!(
