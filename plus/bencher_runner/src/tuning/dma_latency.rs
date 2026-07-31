@@ -59,6 +59,7 @@ mod tests {
         TuningGuard {
             saved: Vec::new(),
             held_fds: Vec::new(),
+            remove_if_empty: Vec::new(),
         }
     }
 
