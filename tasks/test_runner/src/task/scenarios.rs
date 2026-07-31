@@ -305,8 +305,11 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
 
     // One state directory for the suite, wiped before each scenario, so jail
     // assertions see only this scenario's jails and never touch a real runner's
-    // state.
+    // state. Reclaimed before the wipe, because the wipe is the one thing the
+    // runner's own sweep refuses to do.
     let state_dir = scenario_state_dir();
+    reclaim_stranded_jails(&state_dir)
+        .with_context(|| format!("Failed to reclaim jails stranded before {}", scenario.name))?;
     drop(fs::remove_dir_all(&state_dir));
 
     // Prepend --sandbox firecracker for sandboxed scenarios.
@@ -3357,6 +3360,73 @@ fn partition_state() -> Vec<(Utf8PathBuf, String)> {
         .collect()
 }
 
+/// Reap anything a previous scenario left running, before the wipe strands it.
+///
+/// A cancelled scenario SIGTERMs `runner run`, which installs no handler for it,
+/// so the process dies without unwinding: its VMM stays alive in its cgroup and
+/// its chroot stays on disk. That is the case the runner's sweep exists for, and
+/// the sweep finds the VMM by the chroot, comparing device and inode against
+/// `/proc/<pid>/root`. Wiping the state directory destroys that handle, so the
+/// next runner sweeps a directory that no longer names anything, reports the
+/// host clean, and the orphan runs on through every scenario that follows.
+///
+/// The product refuses to remove a chroot whose VMM is alive for exactly this
+/// reason. The harness has been doing it once per scenario, so it does the
+/// reclaiming the sweep would have done rather than leaving a live VMM with
+/// nothing pointing at it.
+fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<()> {
+    let parent = jail_parent(state_dir);
+    let entries = match fs::read_dir(&parent) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e).with_context(|| format!("Failed to read {parent}")),
+    };
+
+    for entry in entries {
+        let entry = entry.with_context(|| format!("Failed to read an entry under {parent}"))?;
+        if !entry
+            .file_type()
+            .with_context(|| format!("Failed to read the kind of an entry under {parent}"))?
+            .is_dir()
+        {
+            continue;
+        }
+        let vm_id = entry.file_name().to_string_lossy().into_owned();
+        let jail_root = parent.join(&vm_id).join("root");
+
+        if let Some(pid) = find_jailed_vmm(&jail_root)? {
+            println!("  reclaiming VMM (pid {pid}) stranded in {vm_id}");
+            kill_pid(pid, libc::SIGKILL);
+            let deadline = std::time::Instant::now() + Duration::from_secs(5);
+            while is_firecracker(pid)? && std::time::Instant::now() < deadline {
+                std::thread::sleep(PROBE_INTERVAL);
+            }
+            anyhow::ensure!(
+                !is_firecracker(pid)?,
+                "A VMM stranded in {vm_id} (pid {pid}) would not die, so it would run on through every scenario that follows"
+            );
+        }
+
+        // The cgroup shares the jail's name, and nothing else will come looking
+        // for it once the directory below is gone.
+        let cgroup = stale_cgroup(&vm_id);
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while cgroup.exists() {
+            if fs::remove_dir(&cgroup).is_ok() {
+                println!("  reclaimed the cgroup {cgroup}");
+                break;
+            }
+            anyhow::ensure!(
+                std::time::Instant::now() < deadline,
+                "The cgroup {cgroup} could not be removed, so it would block the cpuset restore of every run that follows"
+            );
+            std::thread::sleep(PROBE_INTERVAL);
+        }
+    }
+
+    Ok(())
+}
+
 /// What the `bencher` cgroup looks like, for when the partition assertion fails.
 ///
 /// Clearing a parent's `cpuset.cpus` is refused with `EIO` while any task remains
@@ -3382,10 +3452,17 @@ fn partition_diagnosis() -> String {
         .map(|child| {
             let tasks =
                 fs::read_to_string(root.join(child).join("cgroup.procs")).unwrap_or_default();
-            format!(
-                "{child} holds [{}]",
-                tasks.split_whitespace().collect::<Vec<_>>().join(" ")
-            )
+            // Named, not numbered. A bare pid costs a round trip to identify,
+            // and what the process is decides whose bug it is.
+            let named: Vec<String> = tasks
+                .split_whitespace()
+                .map(|pid| {
+                    let comm = fs::read_to_string(format!("/proc/{pid}/comm"))
+                        .map_or_else(|_| "gone".to_owned(), |comm| comm.trim().to_owned());
+                    format!("{pid} ({comm})")
+                })
+                .collect();
+            format!("{child} holds [{}]", named.join(" "))
         })
         .collect();
     format!(
