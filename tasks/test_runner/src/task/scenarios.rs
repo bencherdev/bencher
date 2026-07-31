@@ -64,6 +64,11 @@ struct Scenario {
     setup: Option<fn() -> Result<()>>,
     /// If set, a host-side check run while the runner is executing.
     probe: Option<Probe>,
+    /// Run with host tuning enabled and assert it applies and is restored.
+    ///
+    /// Every other scenario passes `--no-tuning`, so this is the only one that
+    /// can leave the machine changed, and the harness undoes it itself.
+    tuning: bool,
     /// Kill the runner once its VMM is up so nothing unwinds, then run the
     /// image again and report the second run.
     ///
@@ -83,6 +88,7 @@ impl Default for Scenario {
             cancel_after_secs: None,
             setup: None,
             probe: None,
+            tuning: false,
             orphan_then_rerun: false,
             // Sandboxed is the interesting case and the overwhelming majority,
             // so the handful of non-sandboxed scenarios opt out rather than
@@ -174,6 +180,10 @@ impl Scenarios {
         let mut scenarios = all_scenarios();
         scenarios.extend(jail_scenarios());
         scenarios.extend(nosandbox_scenarios());
+        // Last, always. It is the only scenario that tunes the machine, so
+        // nothing it leaves behind can reach the others, and if the suite is
+        // killed part way through it is the least likely to have started.
+        scenarios.extend(tuning_scenarios());
 
         let result = if let Some(name) = &self.scenario {
             // Run a single scenario
@@ -235,6 +245,7 @@ fn list_scenarios() {
     let mut scenarios = all_scenarios();
     scenarios.extend(jail_scenarios());
     scenarios.extend(nosandbox_scenarios());
+    scenarios.extend(tuning_scenarios());
     println!("Available scenarios:");
     println!();
     for scenario in &scenarios {
@@ -298,13 +309,27 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     let state_dir = scenario_state_dir();
     drop(fs::remove_dir_all(&state_dir));
 
-    // Prepend --sandbox firecracker for sandboxed scenarios
-    // --no-tuning matters now that the scenarios run as root. Unprivileged,
-    // every tuning knob failed with EPERM and warned; elevated they actually
-    // apply, and offlining SMT siblings on a two-vCPU hosted runner would
-    // change the core count mid-suite. The scenarios exercise job execution,
-    // not tuning, so this costs no coverage.
-    let mut args: Vec<&str> = vec!["--state-dir", state_dir.as_str(), "--no-tuning"];
+    // Prepend --sandbox firecracker for sandboxed scenarios.
+    //
+    // `--no-tuning` everywhere except the one scenario that exists to test
+    // tuning. Elevated, the knobs really apply, and a suite that tuned the
+    // machine twenty-five times would offline SMT siblings on a two-vCPU hosted
+    // runner, changing the core count under itself. The tuning scenario turns
+    // them back on for one job, keeps SMT and IRQ steering out of it, and the
+    // harness undoes everything itself afterwards.
+    let mut args: Vec<&str> = vec!["--state-dir", state_dir.as_str()];
+    if scenario.tuning {
+        // The two knobs this scenario deliberately does not exercise. `--smt`
+        // keeps hyper-threading on: offlining a sibling changes `nproc` for
+        // everything that follows in the CI job, and the harness cannot put a
+        // CPU back if the runner is killed before its guard runs. IRQ steering
+        // is skipped because a hand-restore of it is unavoidably partial, since
+        // an unmovable IRQ rejects the write with EIO, and the rule for this
+        // scenario is that the harness can undo anything it turned on.
+        args.extend(["--smt", "--no-irq-steering"]);
+    } else {
+        args.push("--no-tuning");
+    }
     if scenario.sandboxed {
         args.extend(["--sandbox", "firecracker"]);
     }
@@ -317,6 +342,8 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
         run_runner_after_orphan(&image_path, &args, &state_dir, runner_bin)
     } else if let Some(probe) = scenario.probe {
         run_runner_with_probe(&image_path, &args, probe, &state_dir, runner_bin)
+    } else if scenario.tuning {
+        run_runner_with_tuning(&image_path, &args, runner_bin)
     } else {
         run_runner(&image_path, &args, runner_bin)
     }
@@ -3060,6 +3087,437 @@ fn kill_pid(pid: u32, signal: libc::c_int) {
     }
 }
 
+/// The host settings the tuning scenario watches, and what the runner sets them
+/// to.
+///
+/// Only settings whose whole value the runner rewrites. The bracketed sysfs
+/// files (`transparent_hugepage/*`) and the cpuset partition are handled
+/// separately below, and the knobs this scenario deliberately leaves alone are
+/// listed with the arguments that switch them off.
+const TUNED_SETTINGS: &[(&str, &str)] = &[
+    ("/proc/sys/kernel/randomize_va_space", "0"),
+    ("/proc/sys/kernel/nmi_watchdog", "0"),
+    ("/proc/sys/vm/swappiness", "10"),
+    ("/proc/sys/kernel/perf_event_paranoid", "-1"),
+    ("/proc/sys/kernel/numa_balancing", "0"),
+    ("/proc/sys/kernel/timer_migration", "0"),
+    ("/proc/sys/kernel/soft_watchdog", "0"),
+    ("/sys/kernel/mm/ksm/run", "0"),
+];
+
+/// The transparent hugepage settings, whose files list every mode and bracket
+/// the selected one.
+const TUNED_THP: &[&str] = &[
+    "/sys/kernel/mm/transparent_hugepage/enabled",
+    "/sys/kernel/mm/transparent_hugepage/defrag",
+];
+
+/// What the runner sets the transparent hugepage mode to.
+const THP_TARGET: &str = "never";
+
+/// The cpuset partition files, which the tuning writes and the guard restores.
+const TUNED_PARTITION: &[&str] = &[
+    "/sys/fs/cgroup/bencher/cpuset.cpus",
+    "/sys/fs/cgroup/bencher/cpuset.mems",
+    "/sys/fs/cgroup/bencher/cpuset.cpus.partition",
+];
+
+/// One host setting the scenario expects the runner to change.
+#[derive(Debug, Clone)]
+struct TunedSetting {
+    path: Utf8PathBuf,
+    /// What it held before the runner started, and what it must hold after.
+    original: String,
+    /// What the runner should set it to while the Job runs, when this host
+    /// lets it. `None` for a setting that is present and writable but already
+    /// holds the target, which the runner leaves alone and reports as such.
+    expected: Option<String>,
+    /// Whether the value is the bracketed kind (`always [madvise] never`).
+    bracketed: bool,
+}
+
+/// Every host setting the tuning scenario touches, as it stood before it ran.
+///
+/// The harness restores from this itself rather than trusting the mechanism it
+/// is testing. A test of a restore path has to be safe when the restore path is
+/// broken, which is the whole reason this scenario can be allowed to run in CI
+/// at all.
+#[derive(Debug)]
+struct TuningSnapshot {
+    settings: Vec<TunedSetting>,
+}
+
+impl TuningSnapshot {
+    /// Read every setting, and work out which of them this host will let the
+    /// runner change.
+    ///
+    /// Writability is established by writing the current value back, which
+    /// changes nothing and is the only honest way to know: a file that exists
+    /// may still be read-only, and a scenario that waited for a change the
+    /// kernel was never going to make would fail for the host's reasons rather
+    /// than the runner's.
+    fn take() -> Self {
+        let mut settings = Vec::new();
+
+        for (path, target) in TUNED_SETTINGS {
+            let path = Utf8PathBuf::from(*path);
+            let Some(original) = readable_setting(&path) else {
+                println!("  tuning: {path} is not present on this host");
+                continue;
+            };
+            let expected = if !writable_setting(&path, &original) {
+                println!("  tuning: {path} is present but not writable");
+                None
+            } else if original == *target {
+                println!("  tuning: {path} already holds {target}");
+                None
+            } else {
+                Some((*target).to_owned())
+            };
+            settings.push(TunedSetting {
+                path,
+                original,
+                expected,
+                bracketed: false,
+            });
+        }
+
+        for path in TUNED_THP {
+            let path = Utf8PathBuf::from(*path);
+            let Some(original) = readable_setting(&path) else {
+                println!("  tuning: {path} is not present on this host");
+                continue;
+            };
+            // Probed with the mode the file already selects, never with a
+            // fallback: writing `never` to a file whose selection could not be
+            // parsed would change the very setting this is only supposed to
+            // measure.
+            let Some(selected) = bracketed_value(&original) else {
+                println!("  tuning: {path} does not read as a mode listing: '{original}'");
+                continue;
+            };
+            let expected = if !writable_setting(&path, selected) {
+                println!("  tuning: {path} is present but not writable");
+                None
+            } else if selected == THP_TARGET {
+                println!("  tuning: {path} already selects {THP_TARGET}");
+                None
+            } else {
+                Some(THP_TARGET.to_owned())
+            };
+            settings.push(TunedSetting {
+                path,
+                original,
+                expected,
+                bracketed: true,
+            });
+        }
+
+        Self { settings }
+    }
+
+    /// The settings this host should show changed while the Job runs.
+    fn expected(&self) -> impl Iterator<Item = &TunedSetting> {
+        self.settings
+            .iter()
+            .filter(|setting| setting.expected.is_some())
+    }
+
+    /// Whether every expected setting currently holds its tuned value.
+    fn all_applied(&self) -> bool {
+        self.expected().all(|setting| {
+            let Some(current) = readable_setting(&setting.path) else {
+                return false;
+            };
+            let Some(target) = setting.expected.as_deref() else {
+                return true;
+            };
+            if setting.bracketed {
+                bracketed_value(&current) == Some(target)
+            } else {
+                current == target
+            }
+        })
+    }
+
+    /// Which expected settings are not showing their tuned value.
+    fn missing(&self) -> Vec<String> {
+        self.expected()
+            .filter(|setting| {
+                let Some(current) = readable_setting(&setting.path) else {
+                    return true;
+                };
+                let target = setting.expected.as_deref().unwrap_or_default();
+                if setting.bracketed {
+                    bracketed_value(&current) != Some(target)
+                } else {
+                    current != target
+                }
+            })
+            .map(|setting| {
+                let current = readable_setting(&setting.path).unwrap_or_else(|| "?".to_owned());
+                format!(
+                    "{} is '{current}', expected '{}'",
+                    setting.path,
+                    setting.expected.as_deref().unwrap_or_default()
+                )
+            })
+            .collect()
+    }
+
+    /// Which settings are not back to what they were.
+    fn unrestored(&self) -> Vec<String> {
+        self.settings
+            .iter()
+            .filter_map(|setting| {
+                let current = readable_setting(&setting.path)?;
+                (current != setting.original).then(|| {
+                    format!(
+                        "{} is '{current}', was '{}'",
+                        setting.path, setting.original
+                    )
+                })
+            })
+            .collect()
+    }
+
+    /// Put everything back, whatever the runner did or failed to do.
+    ///
+    /// Reports what it had to undo: anything here means the guard under test did
+    /// not do its job, and the scenario has already failed for that reason, but
+    /// the machine still has to be left as it was found.
+    fn restore(&self) {
+        for setting in &self.settings {
+            let Some(current) = readable_setting(&setting.path) else {
+                continue;
+            };
+            if current == setting.original {
+                continue;
+            }
+            // The bracketed files take the mode alone, never the whole listing.
+            let value = if setting.bracketed {
+                bracketed_value(&setting.original)
+                    .unwrap_or(THP_TARGET)
+                    .to_owned()
+            } else {
+                setting.original.clone()
+            };
+            match fs::write(&setting.path, &value) {
+                Ok(()) => println!("  tuning: harness restored {} to '{value}'", setting.path),
+                Err(e) => println!(
+                    "  tuning: harness could NOT restore {} to '{value}': {e}",
+                    setting.path
+                ),
+            }
+        }
+    }
+}
+
+/// Restores the host tuning when it goes out of scope.
+///
+/// A guard rather than a call at the end, so a panic or an early return in the
+/// scenario cannot leave the machine tuned. Nothing survives the harness itself
+/// being killed, which is why the scenario runs last.
+struct RestoreTuning(TuningSnapshot);
+
+impl Drop for RestoreTuning {
+    fn drop(&mut self) {
+        self.0.restore();
+    }
+}
+
+/// Read a host setting, trimmed, if it is there at all.
+fn readable_setting(path: &Utf8Path) -> Option<String> {
+    fs::read_to_string(path).ok().map(|v| v.trim().to_owned())
+}
+
+/// Whether a setting can be written, established by writing back what it holds.
+fn writable_setting(path: &Utf8Path, current: &str) -> bool {
+    fs::write(path, current).is_ok()
+}
+
+/// The selected mode in a bracketed sysfs listing (`always [madvise] never`).
+fn bracketed_value(listing: &str) -> Option<&str> {
+    let (_, selected) = listing.split_once('[')?;
+    let (selected, _) = selected.split_once(']')?;
+    Some(selected)
+}
+
+/// The cpuset partition files that exist, with what they hold.
+///
+/// Read separately from the rest because the partition is created by the tuning
+/// itself: the files do not exist before the first tuned run on a fresh host, so
+/// there is nothing to snapshot and their absence afterwards is the restored
+/// state.
+fn partition_state() -> Vec<(Utf8PathBuf, String)> {
+    TUNED_PARTITION
+        .iter()
+        .map(Utf8PathBuf::from)
+        .filter_map(|path| readable_setting(&path).map(|value| (path, value)))
+        .collect()
+}
+
+/// Run the runner with host tuning on, and assert it both applies and unwinds.
+///
+/// The assertion that matters is the pair. Applying is what the runner is for;
+/// restoring is what keeps a benchmark host from drifting a knob at a time
+/// across every Job it ever runs, and `TuningGuard` restoring on `Drop` had
+/// never once executed in CI before this scenario existed.
+fn run_runner_with_tuning(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let snapshot = TuningSnapshot::take();
+    let expected: Vec<String> = snapshot
+        .expected()
+        .map(|setting| {
+            format!(
+                "{} -> {}",
+                setting.path,
+                setting.expected.as_deref().unwrap_or_default()
+            )
+        })
+        .collect();
+
+    // A scenario that finds nothing to change would pass without testing
+    // anything, which is the failure this suite has spent the most effort
+    // removing. If a host really offers none of these, that is a fact worth a
+    // red build rather than a green one.
+    anyhow::ensure!(
+        !expected.is_empty(),
+        "No tuning knob on this host can be exercised, so the scenario would pass vacuously. Settings considered: {:?}",
+        snapshot
+            .settings
+            .iter()
+            .map(|s| s.path.as_str())
+            .collect::<Vec<_>>()
+    );
+    println!(
+        "  tuning: expecting {} setting(s) to change: {}",
+        expected.len(),
+        expected.join(", ")
+    );
+
+    let partition_before = partition_state();
+
+    // Taken before the runner starts, so the machine is put back even if the
+    // scenario panics, the assertions fail, or the runner dies without
+    // unwinding. The point of the scenario is that the guard under test might
+    // not work.
+    let restore = RestoreTuning(snapshot);
+
+    let mut child = Command::new(runner_bin.as_str())
+        .arg("run")
+        .arg("--image")
+        .arg(image_path.as_str())
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+    let readers = drain_output(&mut child);
+
+    // Watch for the tuning to land while the Job runs. The runner applies it
+    // before it pulls the image, so this is looking at a window that lasts the
+    // whole run.
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let mut applied = false;
+    loop {
+        if restore.0.all_applied() {
+            applied = true;
+            break;
+        }
+        if child.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
+            break;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    }
+    let partition_during = partition_state();
+
+    if !applied && child.try_wait()?.is_none() {
+        kill_pid(child.id(), libc::SIGKILL);
+    }
+    let status = child.wait()?;
+    let (stdout, stderr) = readers.join();
+
+    if !applied {
+        bail!(
+            "Host tuning never applied within {PROBE_TIMEOUT:?}: {:?}.\nstdout: {stdout}\nstderr: {stderr}",
+            restore.0.missing()
+        );
+    }
+
+    // The Job has to have succeeded as well. A scenario that only watched the
+    // knobs would pass on a runner that tuned the host and then failed to run
+    // anything, which is the vacuous half of a confinement assertion in another
+    // dress.
+    if status.code() != Some(0) {
+        bail!(
+            "Tuning applied but the Job failed with exit code {:?}.\nstdout: {stdout}\nstderr: {stderr}",
+            status.code()
+        );
+    }
+
+    // And it has to be gone now that the runner has exited.
+    let unrestored = restore.0.unrestored();
+    if !unrestored.is_empty() {
+        bail!(
+            "Host tuning was not restored when the runner exited: {unrestored:?}.\nstdout: {stdout}\nstderr: {stderr}"
+        );
+    }
+
+    // Only the files that were there to change. The partition creates its own
+    // cgroup, so a file that did not exist before the run has no previous value
+    // to be restored to, and asserting on its appearance would fail the scenario
+    // for the tuning having worked.
+    let partition_after = partition_state();
+    let partition_unrestored: Vec<String> = partition_before
+        .iter()
+        .filter_map(|(path, before)| {
+            let after = partition_after
+                .iter()
+                .find_map(|(p, v)| (p == path).then_some(v.as_str()))?;
+            (after != before).then(|| format!("{path} is '{after}', was '{before}'"))
+        })
+        .collect();
+    if !partition_unrestored.is_empty() {
+        bail!(
+            "The cpuset partition was not restored: {partition_unrestored:?}.\nstdout: {stdout}\nstderr: {stderr}"
+        );
+    }
+    if partition_during.is_empty() {
+        println!("  tuning: no cpuset partition files on this host, so none were asserted");
+    }
+
+    println!(
+        "  tuning: {} setting(s) applied and restored, {} partition file(s) checked",
+        expected.len(),
+        partition_before.len()
+    );
+
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.code().unwrap_or(-1),
+    })
+}
+
+/// Scenarios covering host tuning, which every other scenario switches off.
+fn tuning_scenarios() -> Vec<Scenario> {
+    vec![Scenario {
+        name: "host_tuning",
+        description: "Host tuning applies while a Job runs and is restored after",
+        dockerfile: r#"FROM busybox
+CMD ["echo", "tuned run complete"]"#,
+        extra_args: &["--timeout", "60"],
+        tuning: true,
+        // The Job's own output as well as the knobs. A run that tuned the host
+        // and then never booted a VM would otherwise satisfy this scenario.
+        validate: |output| assert_job_succeeded(output, "tuned run complete"),
+        ..Scenario::default()
+    }]
+}
+
 /// Run the runner while checking a host-side invariant.
 fn run_runner_with_probe(
     image_path: &Utf8Path,
@@ -3147,4 +3605,85 @@ fn run_runner(
         stderr: String::from_utf8_lossy(&output.stderr).to_string(),
         exit_code: output.status.code().unwrap_or(-1),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_selected_mode_is_the_bracketed_one() {
+        // What the kernel prints for a transparent hugepage setting: every mode
+        // it offers, with the live one in brackets. Comparing the whole line
+        // against "never" would never match, and asserting on a substring would
+        // match a mode that is merely offered.
+        assert_eq!(
+            bracketed_value("always [madvise] never"),
+            Some("madvise"),
+            "the enabled listing"
+        );
+        assert_eq!(
+            bracketed_value("always defer defer+madvise [madvise] never"),
+            Some("madvise"),
+            "the defrag listing, which offers more modes"
+        );
+        assert_eq!(bracketed_value("[always] madvise never"), Some("always"));
+        assert_eq!(bracketed_value("always madvise [never]"), Some("never"));
+    }
+
+    #[test]
+    fn a_listing_with_no_selection_has_no_value() {
+        // A plain sysctl is not a listing, and a truncated read is not a mode.
+        assert_eq!(bracketed_value("never"), None);
+        assert_eq!(bracketed_value(""), None);
+        assert_eq!(bracketed_value("always [madvise"), None);
+    }
+
+    #[test]
+    fn a_setting_that_is_not_there_reads_as_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+
+        assert_eq!(readable_setting(&root.join("absent")), None);
+    }
+
+    #[test]
+    fn a_setting_reads_back_trimmed() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let path = root.join("swappiness");
+        fs::write(&path, "60\n").unwrap();
+
+        assert_eq!(readable_setting(&path).as_deref(), Some("60"));
+    }
+
+    #[test]
+    fn writability_is_established_by_writing_what_is_already_there() {
+        // The probe that decides whether a knob can be exercised on this host.
+        // A file that exists may still refuse writes, which is not something a
+        // stat can answer: `/proc/sys/kernel/nmi_watchdog` is exactly that on a
+        // kernel without a hardware watchdog, and waiting for it to change would
+        // fail the scenario for the host's reasons rather than the runner's.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let path = root.join("knob");
+        fs::write(&path, "1\n").unwrap();
+
+        assert!(writable_setting(&path, "1"));
+        assert_eq!(
+            readable_setting(&path).as_deref(),
+            Some("1"),
+            "the probe writes back what was there, so it changes nothing"
+        );
+
+        // Root ignores the permission bits, and the scenarios run as root, so
+        // this half only means anything unprivileged.
+        if !is_root() {
+            let mut perms = fs::metadata(&path).unwrap().permissions();
+            perms.set_readonly(true);
+            fs::set_permissions(&path, perms).unwrap();
+
+            assert!(!writable_setting(&path, "1"));
+        }
+    }
 }

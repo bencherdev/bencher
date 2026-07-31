@@ -8264,6 +8264,7 @@ dependencies = [
  "clap",
  "libc",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]
