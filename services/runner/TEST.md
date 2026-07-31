@@ -75,6 +75,10 @@ gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-41131
 
 The first builds `bencher-init` (musl, statically linked) and the runner CLI; the second runs all integration scenarios as root. Each scenario builds a Docker image, converts it to OCI format, and runs it inside a Firecracker microVM. Expect this to take several minutes.
 
+### The tuning scenario
+
+`host_tuning` is the only scenario that runs with host tuning enabled, and it runs last. It asserts that each setting the host lets the runner change is changed while the Job runs and restored when it exits. It excludes two knobs deliberately: SMT stays on, because offlining a sibling changes the core count for everything that follows and no harness can put a CPU back, and IRQ steering is skipped, because an unmovable IRQ rejects the restoring write with `EIO` so the harness cannot promise to undo it. Governor, turbo, and deep C-states are not asserted either: the first two have no sysfs to write inside a VM, and the third is a held file descriptor rather than a value anything can read back.
+
 ### Run a single scenario
 
 ```bash
@@ -127,4 +131,6 @@ gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-41131
 - **"KVM is not available"**: The scenarios require `/dev/kvm` on the host. This is why they must run on the GCP VM, not macOS.
 - **Timeout scenarios take wall-clock time**: Scenarios like `timeout_handling`, `timeout_enforced`, and `minimum_timeout` intentionally wait for the VM to time out (1-10 seconds each). This is expected.
 - **"The scenarios must run as root"**: `cargo test-runner scenarios` was run directly. Use the two-step invocation at the top of this file; the message itself repeats it.
-- **No tuning output at all**: expected. The scenarios pass `--no-tuning`, because they run as root now and would otherwise apply real host tuning to the machine running them, including offlining SMT siblings mid-suite. They exercise job execution, not tuning.
+- **No tuning output at all**: expected for every scenario except `host_tuning`. The rest pass `--no-tuning`, because they run as root and would otherwise apply real host tuning to the machine running them, including offlining SMT siblings mid-suite.
+- **`host_tuning` fails with "No tuning knob on this host can be exercised"**: the host offers nothing the runner can change, so the scenario refuses to pass vacuously. The line above it lists what it considered and why each was skipped: absent, already at the target, or not writable.
+- **`host_tuning` left the machine tuned**: it should not be possible. The harness snapshots every setting before the runner starts and restores from its own copy afterwards, independently of the runner's guard, and prints `harness restored ...` for anything it had to put back. Anything it reports there is a real failure of `TuningGuard`, not of the scenario.
