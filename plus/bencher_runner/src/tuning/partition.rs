@@ -71,12 +71,20 @@ impl BencherPartition {
             return PartitionLevel::Member;
         }
 
-        if !self.path.exists()
-            && let Err(e) = fs::create_dir_all(&self.path)
-        {
+        if let Err(e) = fs::create_dir_all(&self.path) {
             eprintln!("Warning: failed to create cgroup {}: {e}", self.path);
             return PartitionLevel::Member;
         }
+
+        // Removed on the way out, once the values have been restored. An empty
+        // `bencher` cgroup left carrying this run's cpuset is residue: nothing
+        // else reads that cgroup, the next job recreates it on demand, and
+        // clearing `cpuset.cpus` back to inherit-everything is refused with
+        // `EIO` while any task remains in a descendant, so the restore alone
+        // cannot always undo what this does. Registered whoever created the
+        // directory, because the residue is the same either way and `rmdir`
+        // refuses while anything is still inside.
+        guard.remove_when_empty(self.path.clone());
 
         // A partition needs explicit cpus and mems. Mems mirror the
         // root's effective nodes so multi-node NUMA hosts are not forced
