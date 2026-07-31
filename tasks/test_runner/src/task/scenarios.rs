@@ -3357,17 +3357,54 @@ fn partition_state() -> Vec<(Utf8PathBuf, String)> {
         .collect()
 }
 
+/// What the `bencher` cgroup looks like, for when the partition assertion fails.
+///
+/// Clearing a parent's `cpuset.cpus` is refused with `EIO` while any task remains
+/// in a descendant, so the useful question after a failed restore is what is
+/// still in there. Without this the answer costs a CI round.
+fn partition_diagnosis() -> String {
+    let root = Utf8Path::new("/sys/fs/cgroup/bencher");
+    if !root.exists() {
+        return "the bencher cgroup is gone".to_owned();
+    }
+    let procs = fs::read_to_string(root.join("cgroup.procs")).unwrap_or_default();
+    let children: Vec<String> = fs::read_dir(root)
+        .map(|entries| {
+            entries
+                .flatten()
+                .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .collect()
+        })
+        .unwrap_or_default();
+    let child_procs: Vec<String> = children
+        .iter()
+        .map(|child| {
+            let tasks =
+                fs::read_to_string(root.join(child).join("cgroup.procs")).unwrap_or_default();
+            format!(
+                "{child} holds [{}]",
+                tasks.split_whitespace().collect::<Vec<_>>().join(" ")
+            )
+        })
+        .collect();
+    format!(
+        "the bencher cgroup is still there, holding tasks [{}] and children {child_procs:?}",
+        procs.split_whitespace().collect::<Vec<_>>().join(" ")
+    )
+}
+
 /// Run the runner with host tuning on, and assert it both applies and unwinds.
 ///
 /// The assertion that matters is the pair. Applying is what the runner is for;
 /// restoring is what keeps a benchmark host from drifting a knob at a time
 /// across every Job it ever runs, and `TuningGuard` restoring on `Drop` had
 /// never once executed in CI before this scenario existed.
-fn run_runner_with_tuning(
-    image_path: &Utf8Path,
-    args: &[&str],
-    runner_bin: &Utf8Path,
-) -> Result<ScenarioOutput> {
+/// Read the host, and work out what this run should change.
+///
+/// Separated so the scenario itself stays readable: everything here happens
+/// before the runner starts and decides whether there is anything to test.
+fn plan_tuning() -> Result<(TuningSnapshot, Vec<String>)> {
     let snapshot = TuningSnapshot::take();
     let expected: Vec<String> = snapshot
         .expected()
@@ -3398,7 +3435,15 @@ fn run_runner_with_tuning(
         expected.len(),
         expected.join(", ")
     );
+    Ok((snapshot, expected))
+}
 
+fn run_runner_with_tuning(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let (snapshot, expected) = plan_tuning()?;
     let partition_before = partition_state();
 
     // Taken before the runner starts, so the machine is put back even if the
@@ -3482,7 +3527,8 @@ fn run_runner_with_tuning(
         .collect();
     if !partition_unrestored.is_empty() {
         bail!(
-            "The cpuset partition was not restored: {partition_unrestored:?}.\nstdout: {stdout}\nstderr: {stderr}"
+            "The cpuset partition was not restored: {partition_unrestored:?}. Now {}.\nstdout: {stdout}\nstderr: {stderr}",
+            partition_diagnosis()
         );
     }
     if partition_during.is_empty() {
