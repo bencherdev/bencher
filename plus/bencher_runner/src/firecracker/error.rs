@@ -131,6 +131,17 @@ pub enum FirecrackerError {
     #[error("Cgroup placement failed: {0}")]
     CgroupPlacement(#[source] crate::error::JailError),
 
+    /// A cgroup this run could not be given, for a reason nobody established.
+    ///
+    /// Distinct from a host that does not delegate the controllers, which the
+    /// job degrades on: that absence was declared, and a declared absence of
+    /// isolation is a limitation an operator can read. A cgroup that could not
+    /// be read establishes nothing, so degrading on it would produce benchmark
+    /// numbers with no core confinement and report a host limitation nobody
+    /// observed. See the failure policy table in [`crate::jail`].
+    #[error("The cgroup for CPU isolation could not be read: {0}")]
+    CgroupUnreadable(#[source] crate::error::JailError),
+
     /// The cgroup exists but the VMM is not in it.
     ///
     /// Fatal: a cgroup that does not contain the VMM is a silent lie about
