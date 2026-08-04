@@ -80,7 +80,7 @@
 //! | `reap_jailed_vmm`: a `/proc/<pid>/status` that cannot be read | ignored: the process is gone, which is what was being asked |
 //! | `JailDir` teardown: the chroot is already gone | ignored: that is the goal state |
 //! | `JailDir` teardown: removing the chroot | arms the retry |
-//! | `JailDir` teardown: the retry is already armed | keeps the chroot, since its name is the cgroup's only handle |
+//! | `JailDir` teardown: this job's own cgroup survived | keeps the chroot, since its name is the cgroup's only handle |
 //! | `CgroupManager` teardown: the cgroup cannot be stat'ed | arms the retry: it is treated as still there |
 //! | `CgroupManager` teardown: `rmdir` of the cgroup | arms the retry, this job's and the runner's both |
 //! | `CgroupManager` creation: the cgroup cannot be stat'ed | fails the job: this decides whether `Drop` may remove it |
