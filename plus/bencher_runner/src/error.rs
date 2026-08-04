@@ -74,6 +74,11 @@ pub enum JailError {
     )]
     ForeignStateDir { path: Utf8PathBuf },
 
+    #[error(
+        "The state directory component {path} is a symbolic link. The runner tightens every directory of this tree to 0700 and sweeps what is under it, so following the link would apply both to a directory somebody else chose. Replace it with a real directory, or point --state-dir at a tree the runner owns."
+    )]
+    SymlinkedStateDir { path: Utf8PathBuf },
+
     #[error("Failed to create runner state directory {path}: {source}")]
     CreateStateDir {
         path: Utf8PathBuf,
