@@ -185,56 +185,11 @@ impl RunnerTest {
         // stays as the invoking user, and the no-sandbox runner below stays
         // unprivileged, which proves the coupling holds in both directions in
         // the same run.
-        let runner_child_and_handle = if has_kvm {
-            println!("Starting runner daemon (elevated)...");
-            ensure_passwordless_sudo()?;
-
-            // Resolve the already-built binary and run it under sudo directly,
-            // so cargo is never invoked as root and cannot leave root-owned
-            // artifacts in the target directory.
-            let runner_cmd = Command::cargo_bin("runner")?;
-            let runner_bin = runner_cmd.get_program().to_owned();
-
-            // Never the default state directory. This runner is root, and
-            // preparing `/var/lib/bencher-runner` chmods it to 0700, sweeps
-            // every jail in it, and leaves it root-owned on the machine of
-            // whoever ran this harness, which on a developer's box is a real
-            // directory a real runner may own. The scenarios harness keeps its
-            // state under the target directory for the same reason.
-            let state_dir = elevated_state_dir(&runner_bin);
-            println!("  Runner state directory: {}", state_dir.display());
-
-            let mut runner_child = Command::new("sudo");
-            let runner_child = runner_child
-                .args(["-n", "--"])
-                .arg(&runner_bin)
-                .args([
-                    "up",
-                    HOST_ARG,
-                    host,
-                    "--key",
-                    runner_key.key.as_ref(),
-                    "--runner",
-                    "test-runner",
-                ])
-                .arg("--state-dir")
-                .arg(&state_dir)
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::inherit());
-            // Its own process group, so teardown can signal the runner even
-            // though the child handle is sudo, which may exec the runner in
-            // place or fork it depending on version and configuration.
-            #[cfg(unix)]
-            runner_child.process_group(0);
-            let mut runner_child = runner_child.spawn()?;
-
-            let reader_handle = wait_for_stdout_ready(
-                &mut runner_child,
-                "Polling for jobs",
-                "runner",
-                std::time::Duration::from_secs(30),
-            );
-            Some((runner_child, reader_handle, state_dir))
+        //
+        // Held to the end of the test, and stopped by its own `Drop`, so every
+        // way out of what follows takes it with it.
+        let _elevated_runner = if has_kvm {
+            Some(ElevatedRunner::start(host, runner_key.key.as_ref())?)
         } else {
             println!("Skipping Firecracker runner daemon (no KVM)");
             None
@@ -322,15 +277,9 @@ impl RunnerTest {
             Ok(())
         };
 
-        // Always kill runner daemons, even if the test failed
-        if let Some((mut runner_child, reader_handle, state_dir)) = runner_child_and_handle {
-            kill_elevated_runner(&mut runner_child);
-            let _join = reader_handle.join();
-            // The cgroups first: they are named by the jail directories in the
-            // state directory, which is removed next.
-            remove_elevated_cgroups(&state_dir);
-            remove_elevated_state_dir(&state_dir);
-        }
+        // Always kill the runner daemons, even if the test failed. The elevated
+        // one is stopped by `_elevated_runner` going out of scope, which happens
+        // however this function ends.
         let _kill = no_sandbox_child.kill();
         let _wait = no_sandbox_child.wait();
         let _join = no_sandbox_reader_handle.join();
@@ -345,6 +294,106 @@ impl RunnerTest {
         image_only_result?;
         println!("=== Runner Daemon Test Passed ===");
         Ok(())
+    }
+}
+
+/// The elevated runner daemon, stopped and cleaned up by its own `Drop`.
+///
+/// A guard rather than a sequence at the end of the test, because almost
+/// nothing between the two gets there: the readiness wait panics on a timeout,
+/// and every step after it returns early with `?` on the first failure. What
+/// that leaves behind is a root daemon polling the API for the rest of the
+/// session, a root-owned state directory inside the developer's own tree, and
+/// the cgroup of whatever job was in flight.
+///
+/// A signal that terminates the harness outright still strands all three, since
+/// nothing unwinds then, and this runner is in a process group of its own so
+/// Ctrl-C does not reach it either.
+struct ElevatedRunner {
+    child: std::process::Child,
+    /// `None` until the daemon has been waited on, which is the window the
+    /// guard exists to cover.
+    reader: Option<std::thread::JoinHandle<()>>,
+    state_dir: std::path::PathBuf,
+}
+
+impl ElevatedRunner {
+    /// Start the daemon under `sudo` and wait for it to poll for jobs.
+    ///
+    /// The guard is built around the child the moment it exists, before the
+    /// readiness wait, since that wait is the step most likely to fail and the
+    /// one that used to leave a root daemon behind when it did.
+    fn start(host: &str, key: &str) -> anyhow::Result<Self> {
+        println!("Starting runner daemon (elevated)...");
+        ensure_passwordless_sudo()?;
+
+        // Resolve the already-built binary and run it under sudo directly,
+        // so cargo is never invoked as root and cannot leave root-owned
+        // artifacts in the target directory.
+        let runner_cmd = Command::cargo_bin("runner")?;
+        let runner_bin = runner_cmd.get_program().to_owned();
+
+        // Never the default state directory. This runner is root, and
+        // preparing `/var/lib/bencher-runner` chmods it to 0700, sweeps
+        // every jail in it, and leaves it root-owned on the machine of
+        // whoever ran this harness, which on a developer's box is a real
+        // directory a real runner may own. The scenarios harness keeps its
+        // state under the target directory for the same reason.
+        let state_dir = elevated_state_dir(&runner_bin);
+        println!("  Runner state directory: {}", state_dir.display());
+
+        let mut runner_child = Command::new("sudo");
+        let runner_child = runner_child
+            .args(["-n", "--"])
+            .arg(&runner_bin)
+            .args([
+                "up",
+                HOST_ARG,
+                host,
+                "--key",
+                key,
+                "--runner",
+                "test-runner",
+            ])
+            .arg("--state-dir")
+            .arg(&state_dir)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit());
+        // Its own process group, so teardown can signal the runner even
+        // though the child handle is sudo, which may exec the runner in
+        // place or fork it depending on version and configuration.
+        #[cfg(unix)]
+        runner_child.process_group(0);
+        // Armed before the wait, not after it: the wait panics on a timeout,
+        // and a daemon spawned but not yet owned by a guard is one nothing
+        // stops.
+        let mut runner = Self {
+            child: runner_child.spawn()?,
+            reader: None,
+            state_dir,
+        };
+        runner.reader = Some(wait_for_stdout_ready(
+            &mut runner.child,
+            "Polling for jobs",
+            "runner",
+            std::time::Duration::from_secs(30),
+        ));
+        Ok(runner)
+    }
+}
+
+impl Drop for ElevatedRunner {
+    fn drop(&mut self) {
+        kill_elevated_runner(&mut self.child);
+        // The reader ends on its own once the daemon's stdout closes, which is
+        // what the kill above brings about.
+        if let Some(reader) = self.reader.take() {
+            let _join = reader.join();
+        }
+        // The cgroups first: they are named by the jail directories in the
+        // state directory, which is removed next.
+        remove_elevated_cgroups(&self.state_dir);
+        remove_elevated_state_dir(&self.state_dir);
     }
 }
 
@@ -422,6 +471,7 @@ fn cgroup_cleanup_script(jail_parent: &std::path::Path, cgroup_root: &str) -> St
         jail_parent.display()
     )
 }
+
 /// Remove the state directory the elevated runner left behind.
 ///
 /// Root-owned, because the runner that created it was, so the unprivileged
