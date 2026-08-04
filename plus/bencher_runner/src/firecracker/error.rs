@@ -2,14 +2,48 @@
 
 use thiserror::Error;
 
+/// What the runner asks the forked child to do before it execs the jailer.
+///
+/// Carried by [`FirecrackerError::Spawn`] and printed as part of it: a step
+/// that fails between the fork and the exec is reported as a failed spawn of
+/// the binary that never ran, and this is the only thing the runner still knows
+/// about the real cause.
+#[derive(Debug, Clone, Copy)]
+pub enum PreExec {
+    /// Nothing. The child execs the moment it is forked.
+    Nothing,
+    /// The child writes itself into the VMM's cgroup.
+    CgroupPlacement,
+}
+
+impl std::fmt::Display for PreExec {
+    /// Appended to a spawn failure, so the empty case has to print nothing.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Nothing => Ok(()),
+            Self::CgroupPlacement => f.write_str(
+                ". Cgroup placement runs in the forked child before the exec and reports only its errno, so this may be the write to cgroup.procs rather than the binary",
+            ),
+        }
+    }
+}
+
 /// Errors from the Firecracker integration.
 #[derive(Debug, Error)]
 pub enum FirecrackerError {
     /// Failed to spawn the jailer that starts the Firecracker process.
-    #[error("Failed to spawn {path}: {source}")]
+    ///
+    /// Everything the runner asks the forked child to do before it execs fails
+    /// as a failed spawn too, and only the errno crosses back over the CLOEXEC
+    /// pipe, so the runner cannot tell those apart from a binary that could not
+    /// be executed. The error names what ran instead of leaving the operator to
+    /// debug the only thing it mentions.
+    #[error("Failed to spawn {path}: {source}{pre_exec}")]
     Spawn {
         /// The binary that could not be spawned.
         path: camino::Utf8PathBuf,
+        /// What ran in the forked child first, and may be the real cause.
+        pre_exec: PreExec,
         /// Why it could not be spawned.
         source: std::io::Error,
     },
@@ -119,4 +153,50 @@ pub enum FirecrackerError {
     /// A jail artifact could not be handed to the jail uid and gid.
     #[error("Jail ownership failed: {0}")]
     Chown(#[source] crate::error::JailError),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// What a `cgroup.procs` write refused by a partition constraint returns.
+    const EBUSY: i32 = 16;
+
+    /// The jailer path an operator would read in the message.
+    const JAILER: &str = "/var/lib/bencher-runner/work/jailer";
+
+    fn spawn_failure(pre_exec: PreExec) -> FirecrackerError {
+        FirecrackerError::Spawn {
+            path: camino::Utf8PathBuf::from(JAILER),
+            pre_exec,
+            source: std::io::Error::from_raw_os_error(EBUSY),
+        }
+    }
+
+    #[test]
+    fn a_spawn_that_placed_the_vmm_first_says_so() {
+        // The failure this prevents: the `pre_exec` write to `cgroup.procs` is
+        // refused, only the errno crosses the CLOEXEC pipe, and the operator
+        // reads "Failed to spawn .../jailer: Device or resource busy" and goes
+        // looking at the binary. The misattribution is inherent; saying which
+        // step ran is not.
+        let message = spawn_failure(PreExec::CgroupPlacement).to_string();
+
+        assert!(message.contains(JAILER), "{message}");
+        assert!(
+            message.contains("cgroup.procs"),
+            "a spawn that ran cgroup placement must name it: {message}"
+        );
+    }
+
+    #[test]
+    fn a_spawn_with_nothing_before_the_exec_blames_only_the_binary() {
+        // The other half: with no cgroup there is no placement to run, so
+        // pointing at one would send the operator after a step that never
+        // happened.
+        let message = spawn_failure(PreExec::Nothing).to_string();
+
+        assert!(message.contains(JAILER), "{message}");
+        assert!(!message.contains("cgroup"), "{message}");
+    }
 }
