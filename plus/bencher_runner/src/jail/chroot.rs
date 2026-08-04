@@ -119,6 +119,13 @@ impl Drop for JailDir {
 }
 
 /// Tighten one directory of the chroot tree to 0700.
+///
+/// The path form, which resolves symlinks, is safe here where
+/// [`crate::jail::state`]'s namesake uses an `O_NOFOLLOW` descriptor: these
+/// paths sit under a state tree the guard has already proven free of symlinked
+/// components and chmodded 0700, so only root could swap one for a link, and the
+/// state directory itself is the boundary that keeps an untrusted party from
+/// being that root.
 fn make_private(path: &Utf8Path) -> Result<(), JailError> {
     fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(|e| {
         JailError::CreateJail {
