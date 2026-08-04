@@ -59,9 +59,10 @@ impl StateDir {
     /// Refuse a state directory that belongs to the host rather than to us.
     ///
     /// A path that does not exist, or exists and is empty, is ours to take. A
-    /// populated one is only ours if everything in it is something the runner
-    /// put there. Without this, `--state-dir /var/lib` would be chmodded to
-    /// 0700 and take the host down with it.
+    /// populated one is ours on either of two showings: it carries
+    /// `jail/firecracker`, which is a path only this runner builds, or nothing
+    /// in it is somebody else's. Without this, `--state-dir /var/lib` would be
+    /// chmodded to 0700 and take the host down with it.
     ///
     /// A read that fails for any reason other than absence is refused rather
     /// than treated as an empty directory. It is not evidence that the
