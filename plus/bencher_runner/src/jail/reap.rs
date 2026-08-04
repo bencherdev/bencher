@@ -29,7 +29,7 @@
 //! The cgroup is a second handle rather than a redundant one, because for a
 //! moment it is the only handle there is: the jailer joins the cgroup in the
 //! `pre_exec` of the runner's fork and `chroot`s much later, inside itself, just
-//! before it execs Firecracker. See [`find_cgrouped_vmm`], which also says what
+//! before it execs Firecracker. See `find_cgrouped_vmm`, which also says what
 //! neither handle covers.
 
 #![expect(clippy::print_stderr, reason = "reaping prints diagnostics")]

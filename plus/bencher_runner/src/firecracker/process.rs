@@ -81,7 +81,7 @@ impl FirecrackerProcess {
     /// A background thread reads stderr and prints lines prefixed with
     /// `[firecracker]`. The jailer inherits that stdio and its own diagnostics
     /// appear under the same prefix. It inherits no environment: see
-    /// [`jailer_command`].
+    /// `jailer_command`.
     pub fn start(spawn: JailedSpawn<'_>) -> Result<Self, FirecrackerError> {
         let args = jailer_args(&spawn);
 
