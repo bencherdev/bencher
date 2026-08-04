@@ -197,40 +197,46 @@ impl Scenarios {
             run_all_scenarios(&scenarios, &runner_bin)
         };
 
-        // Whatever the outcome. The state directory is only root-owned because
-        // the scenarios had to be, and it sits inside the repo tree.
-        return_state_dir_to_invoker();
+        // Whatever the outcome. Everything the run wrote is only root-owned
+        // because the scenarios had to be, and it sits inside the repo tree.
+        return_work_dir_to_invoker();
 
         result
     }
 }
 
-/// Hand the state directory back to whoever invoked `sudo`.
+/// Hand everything the elevated run wrote back to whoever invoked `sudo`.
 ///
-/// The scenarios must run as root, and the runner creates its state directory at
-/// 0700 owned by root under the repo's target tree. CI throws that tree away, so
-/// it costs nothing there, but on a developer's machine the next unprivileged
-/// `cargo` invocation trips over a directory it can neither read nor remove.
-/// `SUDO_UID` names who to give it back to; with no one to give it back to, or a
-/// `chown` that will not run, the path is printed with the command that clears
-/// it rather than left to be discovered.
-fn return_state_dir_to_invoker() {
-    let state_dir = scenario_state_dir();
-    if !state_dir.exists() {
+/// The scenarios must run as root, so the whole tree under the crate's target
+/// directory comes out root-owned: the runner's state directory at 0700, the
+/// docker build contexts, and the unpacked OCI layouts, whose per-scenario
+/// cleanup a scenario that returns early never reaches. CI throws that tree
+/// away, so it costs nothing there, but on a developer's machine one red
+/// scenario leaves directories the next unprivileged `cargo`, `rm -rf` or
+/// `git clean` can neither read nor remove. `SUDO_UID` names who to give it back
+/// to; with no one to give it back to, or a `chown` that will not run, the path
+/// is printed with the command that clears it rather than left to be discovered.
+fn return_work_dir_to_invoker() {
+    // The crate's target directory rather than the work directory inside it.
+    // This run creates both, and a root-owned parent is one the invoker cannot
+    // remove the work directory from, however the tree below it is owned.
+    let work_dir = super::work_dir();
+    let returned = work_dir.parent().unwrap_or(&work_dir).to_owned();
+    if !returned.exists() {
         return;
     }
 
     if let Some((uid, gid)) = invoking_user()
         && Command::new("chown")
-            .args(["-R", &format!("{uid}:{gid}"), state_dir.as_str()])
+            .args(["-R", &format!("{uid}:{gid}"), returned.as_str()])
             .status()
             .is_ok_and(|status| status.success())
     {
-        println!("Returned {state_dir} to uid {uid}");
+        println!("Returned {returned} to uid {uid}");
         return;
     }
 
-    println!("Note: {state_dir} is left owned by root. Remove it with: sudo rm -rf {state_dir}");
+    println!("Note: {returned} is left owned by root. Remove it with: sudo rm -rf {returned}");
 }
 
 /// The uid and gid that invoked `sudo`, when one did.
@@ -3815,6 +3821,23 @@ mod tests {
             Utf8Path::new("/workspace"),
         )
         .unwrap_err();
+    }
+
+    #[test]
+    fn the_run_writes_nothing_outside_the_tree_it_hands_back() {
+        // The chown has to reach the docker build contexts and the unpacked OCI
+        // layouts as well as the state directory. Their per-scenario cleanup is
+        // skipped by any early return, so on a red run they are left behind
+        // root-owned, and a tree that is handed back short of them is one the
+        // invoker still cannot remove.
+        let work_dir = crate::task::work_dir();
+        let returned = work_dir.parent().expect("the work directory has a parent");
+
+        assert!(
+            scenario_state_dir().starts_with(returned),
+            "the state directory"
+        );
+        assert!(temp_dir().starts_with(returned), "the image trees");
     }
 
     #[test]
