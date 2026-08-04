@@ -193,7 +193,7 @@ fn reap_one(pid: u32, jail_root: &Utf8Path) -> Reaped {
         return Reaped::StillRunning { pid };
     }
 
-    if wait_for_exit(pid) {
+    if wait_for_exit(&pidfd) {
         eprintln!("Reaped orphaned VMM (pid {pid}) left behind in {jail_root}");
         Reaped::Clear
     } else {
@@ -342,13 +342,21 @@ fn pidfd_kill(pidfd: &OwnedFd) -> std::io::Result<()> {
 
 /// Wait for a killed process to stop running.
 ///
-/// A zombie counts as exited. The orphan reparents to whatever is PID 1, and
+/// Waits on the descriptor rather than on the number, because the number is the
+/// part that goes stale. The VMM can exit, be reaped by init, and have its pid
+/// handed to something unrelated well inside this budget, and a wait watching
+/// `/proc/<pid>` would then run the budget out against a stranger and report the
+/// VMM still running: a job failed on a clean host, with an error confidently
+/// naming a pid that is already gone. The descriptor is the identity, so it
+/// cannot be answered by whatever inherited the number.
+///
+/// A zombie counts as exited, which the descriptor gives for free: it becomes
+/// readable when its process terminates, whether or not anything ever reaps it.
+/// That case is not hypothetical. The orphan reparents to whatever is PID 1, and
 /// if the runner is itself PID 1 (a container with no init) nothing ever reaps
-/// it, so `/proc/<pid>` persists forever. Waiting on the directory alone would
-/// then stall the full timeout on every sweep and warn about a process that is
-/// already dead.
-fn wait_for_exit(pid: u32) -> bool {
-    wait_for_exit_until(Instant::now() + REAP_TIMEOUT, || is_running(pid))
+/// it, so it stays a zombie forever.
+fn wait_for_exit(pidfd: &OwnedFd) -> bool {
+    wait_for_exit_until(Instant::now() + REAP_TIMEOUT, || is_running(pidfd))
 }
 
 /// The wait, with the deadline and the liveness check supplied.
@@ -376,20 +384,35 @@ where
     !running()
 }
 
-/// Whether a process still exists and is not a zombie.
-fn is_running(pid: u32) -> bool {
-    let Ok(status) = fs::read_to_string(format!("/proc/{pid}/status")) else {
-        return false;
+/// Whether the process a descriptor is pinned to has yet to terminate.
+///
+/// A pidfd becomes readable exactly when its process terminates, so a `poll`
+/// that reports nothing readable is a process still running. The timeout is
+/// zero because the budget belongs to [`wait_for_exit_until`]; this answers the
+/// question as it stands right now.
+///
+/// A `poll` that fails, or reports something other than readable, has answered
+/// nothing, and is reported as still running. That direction is deliberate: the
+/// caller turns it into `JailStillRunning` and fails a job on a host that may
+/// well be clean, while the other direction reads a question that failed as an
+/// exit and has the sweep delete a tree with a live VMM under it.
+fn is_running(pidfd: &OwnedFd) -> bool {
+    let mut poll_fd = libc::pollfd {
+        fd: pidfd.as_raw_fd(),
+        events: libc::POLLIN,
+        revents: 0,
     };
-    !is_zombie(&status)
-}
 
-/// Whether a `/proc/<pid>/status` listing describes a zombie.
-fn is_zombie(status: &str) -> bool {
-    status
-        .lines()
-        .find_map(|line| line.strip_prefix("State:"))
-        .is_some_and(|state| state.trim_start().starts_with('Z'))
+    #[expect(
+        unsafe_code,
+        reason = "poll has no std wrapper; the fd is owned and valid"
+    )]
+    // SAFETY: `poll` reads and writes exactly the `nfds` entries the pointer
+    // names, and one entry is passed for the one that is declared. `pidfd` is an
+    // open, owned descriptor for the duration of the call.
+    let ready = unsafe { libc::poll(&raw mut poll_fd, 1, 0) };
+
+    ready <= 0 || (poll_fd.revents & libc::POLLIN) == 0
 }
 
 #[cfg(test)]
@@ -482,20 +505,49 @@ mod tests {
     }
 
     #[test]
-    fn a_zombie_counts_as_exited() {
-        // Without this the reap stalls its full timeout whenever the runner is
-        // PID 1 and never reaps what reparents to it.
-        let zombie = "Name:\tfirecracker\nUmask:\t0022\nState:\tZ (zombie)\nTgid:\t42\n";
-        let running = "Name:\tfirecracker\nUmask:\t0022\nState:\tS (sleeping)\nTgid:\t42\n";
+    fn a_pinned_live_process_reads_as_running() {
+        let pidfd = pidfd_open(std::process::id())
+            .expect("pidfd_open is available")
+            .expect("this process is alive");
 
-        assert!(is_zombie(zombie));
-        assert!(!is_zombie(running));
-        assert!(!is_zombie(""));
+        assert!(is_running(&pidfd));
     }
 
     #[test]
-    fn this_process_is_running() {
-        assert!(is_running(std::process::id()));
+    fn a_zombie_nobody_reaps_counts_as_exited() {
+        // A child that has exited and has not been waited on still holds its
+        // number and still has a `/proc/<pid>`, and nothing ever clears either
+        // when the runner is PID 1 in a container with no init. The wait has to
+        // call that exited, or every sweep on such a host spends the whole
+        // budget and then warns about a process that is already dead.
+        let mut child = std::process::Command::new("/bin/sh")
+            .args(["-c", "exit 0"])
+            .spawn()
+            .unwrap();
+        let pidfd = pidfd_open(child.id()).unwrap().unwrap();
+
+        // Deliberately before the `wait`: reaping it first would leave nothing
+        // to distinguish a zombie from a process that is fully gone.
+        assert!(wait_for_exit(&pidfd));
+
+        child.wait().unwrap();
+    }
+
+    #[test]
+    fn a_reaped_process_is_waited_on_by_identity_not_by_number() {
+        // The failure this prevents: the VMM exits, init reaps it, and its
+        // number is handed to something else inside the budget. A wait watching
+        // `/proc/<pid>` would spend the whole budget on a stranger and then fail
+        // the job naming a pid that is not the VMM. The descriptor answers for
+        // the process it was opened on, and that one is gone.
+        let mut child = std::process::Command::new("/bin/sh")
+            .args(["-c", "exit 0"])
+            .spawn()
+            .unwrap();
+        let pidfd = pidfd_open(child.id()).unwrap().unwrap();
+        child.wait().unwrap();
+
+        assert!(wait_for_exit(&pidfd));
     }
 
     #[test]
