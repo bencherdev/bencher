@@ -80,7 +80,8 @@ impl FirecrackerProcess {
     ///
     /// A background thread reads stderr and prints lines prefixed with
     /// `[firecracker]`. The jailer inherits that stdio and its own diagnostics
-    /// appear under the same prefix.
+    /// appear under the same prefix. It inherits no environment: see
+    /// [`jailer_command`].
     pub fn start(spawn: JailedSpawn<'_>) -> Result<Self, FirecrackerError> {
         let args = jailer_args(&spawn);
 
@@ -99,12 +100,7 @@ impl FirecrackerProcess {
             cgroup_procs,
         } = spawn;
 
-        let mut command = Command::new(jailer_bin);
-        command
-            .args(&args)
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::piped());
+        let mut command = jailer_command(jailer_bin, &args);
 
         if let Some(procs) = cgroup_procs {
             // Cgroup membership is inherited across `fork` and survives
@@ -308,6 +304,32 @@ fn jailer_args(spawn: &JailedSpawn<'_>) -> Vec<String> {
     ]
 }
 
+/// Build the jailer invocation, with the environment the VMM is entitled to.
+///
+/// Which is none of it. Everything either binary needs arrives as an argument:
+/// the exec file, the chroot base, the netns handle, the uid and gid, the API
+/// socket, and the log level. Neither reads `PATH` (the jailer is named by a
+/// path here, and it execs `--exec-file` by path inside the chroot), a locale,
+/// `TMPDIR`, or `RUST_LOG`, so an empty environment costs nothing.
+///
+/// What it buys is that the runner's own environment stops at this line. The
+/// runner takes its API key from `BENCHER_RUNNER_KEY`, and the VMM writes to
+/// vsock channels the guest reads, so a Firecracker that inherited the
+/// environment would hold a credential inside the sandbox with a way back out.
+/// The bundled jailer scrubs the environment itself, but the runner falls back
+/// to whatever `jailer` the host has installed and checks no version, so
+/// confinement cannot depend on which binary was found.
+fn jailer_command(jailer_bin: &Utf8Path, args: &[String]) -> Command {
+    let mut command = Command::new(jailer_bin);
+    command
+        .args(args)
+        .env_clear()
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::piped());
+    command
+}
+
 /// Join the calling task to the cgroup behind a pre-opened `cgroup.procs`.
 ///
 /// The kernel reads `0` as the calling task, which is why no pid has to be
@@ -431,6 +453,37 @@ mod tests {
         assert!(
             !args.iter().any(|arg| arg.contains(jail_root)),
             "no host-side jail path may reach the jailed process: {args:?}"
+        );
+    }
+
+    #[test]
+    fn the_jailed_process_inherits_no_environment() {
+        // The failure this prevents: the runner takes its API key from
+        // `BENCHER_RUNNER_KEY`, so an inherited environment puts that key in
+        // Firecracker's own `environ`, and a compromised VMM writes it out over
+        // the vsock channels it is supposed to write results to. The bundled
+        // jailer scrubs the environment itself; a jailer found on the host is
+        // taken without a version check, so this cannot rely on it.
+        //
+        // `/usr/bin/env` stands in for the jailer: it prints the environment it
+        // was given, and its own run with the environment left alone is the
+        // control that keeps this from passing on a binary that prints nothing.
+        let env_bin = Utf8Path::new("/usr/bin/env");
+        let inherited = Command::new(env_bin).output().unwrap();
+        assert!(
+            !inherited.stdout.is_empty(),
+            "the test process has no environment to inherit, so nothing here is proven"
+        );
+
+        let cleared = jailer_command(env_bin, &[])
+            .stdout(std::process::Stdio::piped())
+            .output()
+            .unwrap();
+
+        assert!(
+            cleared.stdout.is_empty(),
+            "the jailed process must inherit nothing, got: {}",
+            String::from_utf8_lossy(&cleared.stdout)
         );
     }
 
