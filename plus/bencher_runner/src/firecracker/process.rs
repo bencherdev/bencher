@@ -10,7 +10,7 @@ use camino::Utf8Path;
 
 use crate::firecracker::client::FirecrackerClient;
 use crate::firecracker::config::{Action, ActionType};
-use crate::firecracker::error::FirecrackerError;
+use crate::firecracker::error::{FirecrackerError, PreExec};
 use crate::jail::{JailFile, JailUser, VmId};
 
 /// How long to wait for the Firecracker API socket to appear.
@@ -102,6 +102,16 @@ impl FirecrackerProcess {
 
         let mut command = jailer_command(jailer_bin, &args);
 
+        // Remembered before the descriptor is moved into the closure, because
+        // a spawn that failed cannot say whether it was the exec or the write
+        // that ran first, and this is what tells the operator to look at the
+        // cgroup at all.
+        let pre_exec = if cgroup_procs.is_some() {
+            PreExec::CgroupPlacement
+        } else {
+            PreExec::Nothing
+        };
+
         if let Some(procs) = cgroup_procs {
             // Cgroup membership is inherited across `fork` and survives
             // `execve`, so writing to the pre-opened descriptor here places
@@ -126,6 +136,7 @@ impl FirecrackerProcess {
 
         let mut child = command.spawn().map_err(|e| FirecrackerError::Spawn {
             path: jailer_bin.to_owned(),
+            pre_exec,
             source: e,
         })?;
 
