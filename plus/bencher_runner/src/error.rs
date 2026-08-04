@@ -70,9 +70,9 @@ pub enum JailError {
     RelativeStateDir { path: Utf8PathBuf },
 
     #[error(
-        "The state directory {path} already exists, is not empty, and was not created by the runner. Point --state-dir at a directory the runner owns, or at a subdirectory of this one."
+        "The state directory {path} already exists and holds '{entry}', which the runner did not put there. Point --state-dir at a directory the runner owns, or at a subdirectory of this one."
     )]
-    ForeignStateDir { path: Utf8PathBuf },
+    ForeignStateDir { path: Utf8PathBuf, entry: String },
 
     #[error(
         "The state directory component {path} is a symbolic link. The runner tightens every directory of this tree to 0700 and sweeps what is under it, so following the link would apply both to a directory somebody else chose. Replace it with a real directory, or point --state-dir at a tree the runner owns."
