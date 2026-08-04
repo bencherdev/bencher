@@ -90,6 +90,9 @@
 //! | `CgroupManager` creation: the cgroup cannot be stat'ed | fails the job: this decides whether `Drop` may remove it |
 //! | `remove_stale_cgroup`: the cgroup cannot be stat'ed | fails the job: the caller deletes the chroot on an `Ok` here |
 //! | `StateDir::create`: the chroot tree cannot be stat'ed | fails the job: the 0700 chmod follows |
+//! | `StateDir::new`: the root is a symlink proven the operator's own choice (parent root-only-writable, single hop to an absolute canonical target, that target's whole ancestry root-only-writable) | followed: no unprivileged user influenced or can race it, and the populated check still runs on the target |
+//! | `StateDir::new`: the root is a symlink failing any of those showings | left as given, so `real_dir` refuses it as a symlink at create time |
+//! | `StateDir::create`: an interior component of the tree is a symlink | fails the job: the 0700 chmod and the sweep would land on a directory somebody else chose |
 //!
 //! And the same three columns for the reads that decide what a run measured:
 //!
