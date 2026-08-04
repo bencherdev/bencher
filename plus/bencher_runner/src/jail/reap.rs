@@ -156,12 +156,17 @@ where
 
 /// Kill one process known to be confined to `jail_root`.
 fn reap_one(pid: u32, jail_root: &Utf8Path) -> Reaped {
-    // Pin the pid before signalling it. A pid found by scanning `/proc` can
+    // Pin the process before signalling it. A pid found by scanning `/proc` can
     // exit and have its number recycled before the signal lands, and this runs
-    // as root, so the signal would go to whatever inherited the number. A
-    // pidfd refers to one process for as long as it is open and keeps the
-    // number from being reused, which turns the check below into a guarantee
-    // rather than a narrow window.
+    // as root, so a `kill` on the number would go to whatever inherited it.
+    //
+    // A pidfd does not hold the number back: a pid is freed the moment the
+    // process is reaped, open descriptors notwithstanding. What it holds is the
+    // identity. `pidfd_send_signal` can only ever reach the process the
+    // descriptor was opened on, and reaches nothing at all once that process is
+    // gone, so a number recycled between the check below and the kill cannot
+    // carry the signal to a stranger. That is what turns the check into a
+    // guarantee rather than a narrow window.
     let pidfd = match pidfd_open(pid) {
         Ok(Some(pidfd)) => pidfd,
         // Already gone, which is the common case and not a failure.
