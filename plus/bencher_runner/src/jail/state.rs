@@ -7,7 +7,7 @@
 #![expect(clippy::print_stderr, reason = "host preparation prints diagnostics")]
 
 use std::fs;
-use std::os::unix::fs::PermissionsExt as _;
+use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -83,7 +83,14 @@ impl StateDir {
     /// `jail/firecracker` is a path only this runner builds, and it builds the
     /// tree in one step, so there is no window where a shallower half stands for
     /// the whole.
+    ///
+    /// Every component is examined without following symlinks, and one that is
+    /// a link is refused rather than resolved. See [`check_real_dir`].
     fn check_root_is_ours(&self) -> Result<(), JailError> {
+        for component in [&self.root, &self.chroot_base(), &self.jail_parent()] {
+            check_real_dir(component)?;
+        }
+
         match self.jail_parent().try_exists() {
             Ok(true) => return Ok(()),
             Ok(false) => {},
@@ -166,15 +173,67 @@ impl StateDir {
                 path: dir.clone(),
                 source: e,
             })?;
-            fs::set_permissions(dir, fs::Permissions::from_mode(0o700)).map_err(|e| {
-                JailError::CreateStateDir {
-                    path: dir.clone(),
-                    source: e,
-                }
-            })?;
+            make_private(dir)?;
         }
         Ok(())
     }
+}
+
+/// Refuse a component of the tree that is not a directory of its own.
+///
+/// `symlink_metadata`, so a link is seen as a link rather than as whatever it
+/// points at, and a link is refused rather than resolved. Everything the guard
+/// authorizes follows a path: the 0700 chmod, and the sweep that
+/// `remove_dir_all`s what is under it. With a state directory under a parent an
+/// unprivileged user can write to, planting `jail` or `jail/firecracker` as a
+/// link to a directory of the host's would have the guard answer for one
+/// directory and root act on another. The runner cannot tell which of the two
+/// the operator meant, so it takes neither.
+///
+/// A component that exists and is not a directory is refused the same way a
+/// path that cannot be read is: the tree the runner builds is directories the
+/// whole way down, and something else in the way is not evidence that this is
+/// the runner's own.
+fn check_real_dir(path: &Utf8Path) -> Result<(), JailError> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_symlink() => Err(JailError::SymlinkedStateDir {
+            path: path.to_owned(),
+        }),
+        Ok(metadata) if metadata.is_dir() => Ok(()),
+        Ok(_) => Err(JailError::ReadStateDir {
+            path: path.to_owned(),
+            source: std::io::Error::from(std::io::ErrorKind::NotADirectory),
+        }),
+        // Missing: creating it is the next step.
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(JailError::ReadStateDir {
+            path: path.to_owned(),
+            source: e,
+        }),
+    }
+}
+
+/// Tighten one directory of the tree to 0700, without following a link.
+///
+/// `fchmod` on a descriptor opened `O_NOFOLLOW`, rather than a chmod of the
+/// path: the path form resolves a link, so a component swapped for one between
+/// the guard and this call would have root tighten a directory of somebody
+/// else's choosing. The open fails instead.
+fn make_private(dir: &Utf8Path) -> Result<(), JailError> {
+    let opened = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_DIRECTORY | libc::O_NOFOLLOW)
+        .open(dir)
+        .map_err(|e| JailError::CreateStateDir {
+            path: dir.to_owned(),
+            source: e,
+        })?;
+    opened
+        .set_permissions(fs::Permissions::from_mode(0o700))
+        .map_err(|e| JailError::CreateStateDir {
+            path: dir.to_owned(),
+            source: e,
+        })
 }
 
 /// Entries that do not make a directory somebody else's.
@@ -453,6 +512,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::os::unix::fs::symlink;
+
     use super::*;
 
     fn temp_root() -> (tempfile::TempDir, Utf8PathBuf) {
@@ -637,6 +698,49 @@ mod tests {
 
         let mode = fs::metadata(&state).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o700);
+    }
+
+    #[test]
+    fn a_symlinked_component_is_refused() {
+        // Under a state directory whose parent an unprivileged user can write
+        // to, a component planted as a link has the guard answer for one
+        // directory and root act on another: the 0700 chmod lands on the
+        // target, and the sweep `remove_dir_all`s what is under it. Every
+        // component is checked, since a link at any of them resolves the ones
+        // below it too.
+        for component in ["state", "state/jail", "state/jail/firecracker"] {
+            let (_dir, root) = temp_root();
+            let victim = root.join("victim");
+            fs::create_dir_all(victim.join("someone-elses-data")).unwrap();
+
+            let planted = root.join(component);
+            fs::create_dir_all(planted.parent().unwrap()).unwrap();
+            symlink(&victim, &planted).unwrap();
+
+            let err = StateDir::new(root.join("state"))
+                .unwrap()
+                .create()
+                .unwrap_err();
+
+            assert!(
+                matches!(err, JailError::SymlinkedStateDir { .. }),
+                "{component}: a link is refused, not resolved: {err}"
+            );
+            assert!(
+                err.to_string().contains(planted.as_str()),
+                "{component}: the refusal names the component: {err}"
+            );
+            let mode = fs::metadata(&victim).unwrap().permissions().mode();
+            assert_ne!(
+                mode & 0o777,
+                0o700,
+                "{component}: the target of a link must not be chmodded"
+            );
+            assert!(
+                victim.join("someone-elses-data").is_dir(),
+                "{component}: the target of a link must not be swept"
+            );
+        }
     }
 
     #[test]
