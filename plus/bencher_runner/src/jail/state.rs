@@ -7,7 +7,7 @@
 #![expect(clippy::print_stderr, reason = "host preparation prints diagnostics")]
 
 use std::fs;
-use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _};
+use std::os::unix::fs::{MetadataExt as _, OpenOptionsExt as _, PermissionsExt as _};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -46,8 +46,16 @@ impl StateDir {
     /// working directory, and every path this type hands out would then name a
     /// different file for the runner than for the jailer. See
     /// [`crate::jail::check_absolute_state_dir`].
+    ///
+    /// A root that is an operator-controlled symlink is resolved here, so the
+    /// concrete target becomes the root every later step names. Doing it in the
+    /// constructor is what keeps two handles built from the same `--state-dir`
+    /// agreeing: the job path builds a [`StateDir`] without calling
+    /// [`Self::create`], host preparation builds a separate one that does, and
+    /// this is their only common point. See [`resolve_symlinked_root`].
     pub fn new(root: Utf8PathBuf) -> Result<Self, JailError> {
         crate::jail::check_absolute_state_dir(&root)?;
+        let root = resolve_symlinked_root(root)?;
         Ok(Self { root })
     }
 
@@ -98,8 +106,15 @@ impl StateDir {
     /// else's data under either name is still refused, which is the direction
     /// the guard is for.
     ///
-    /// Every component is examined without following symlinks, and one that is
-    /// a link is refused rather than resolved. See [`real_dir`].
+    /// Every interior component is examined without following symlinks, and one
+    /// that is a link is refused rather than resolved. See [`real_dir`]. The root
+    /// itself is handled a step earlier, in [`StateDir::new`]: a link there is
+    /// followed only when three showings prove it the operator's own choice (its
+    /// parent root-only-writable, a single hop to an absolute canonical target,
+    /// and that target's whole ancestry root-only-writable), and refused
+    /// otherwise, so what this sees at the root is either the resolved target or a
+    /// link that gets refused here the same as any other. See
+    /// [`resolve_symlinked_root`].
     fn check_root_is_ours(&self) -> Result<(), JailError> {
         let chroot_base = self.chroot_base();
         let jail_parent = self.jail_parent();
@@ -193,6 +208,16 @@ impl StateDir {
 /// directory and root act on another. The runner cannot tell which of the two
 /// the operator meant, so it takes neither.
 ///
+/// The root is the one component this may be handed already resolved: a symlinked
+/// root is followed in [`StateDir::new`] only when it proves the operator's own
+/// choice, and then what reaches here is the real target rather than the link.
+/// That proof is three showings, not one, since `canonicalize` collapses a whole
+/// chain: the link's parent is writable by nobody but root, the link is a single
+/// hop to an absolute canonical target, and that target's whole ancestry is
+/// writable by nobody but root. A link still at the root here is one that failed
+/// any of those, or one planted after [`StateDir::new`] ran, and it is refused
+/// the same as any interior link. See [`resolve_symlinked_root`].
+///
 /// A component that exists and is not a directory is refused the same way a
 /// path that cannot be read is: the tree the runner builds is directories the
 /// whole way down, and something else in the way is not evidence that this is
@@ -214,6 +239,144 @@ fn real_dir(path: &Utf8Path) -> Result<bool, JailError> {
             source: e,
         }),
     }
+}
+
+/// Resolve a symlinked root the operator is proven to have chosen, or leave it.
+///
+/// A dedicated filesystem for the chroots is the recommended setup, since each
+/// chroot holds a copy of the VMM binary and a full guest rootfs, and one
+/// accepted way to point at one is a root-owned symlink,
+/// `/var/lib/bencher-runner -> /mnt/disk/runner`. Following a symlink blindly is
+/// the hazard the guard exists for, and following it partway is worse than not
+/// following it: `canonicalize` collapses a whole chain, so a single check on the
+/// link's own parent would still walk a second hop an attacker planted in a loose
+/// intermediate directory it never looked at. The link is followed only when all
+/// three of these hold, and on any doubt it is left exactly as given so
+/// [`real_dir`] refuses it with [`JailError::SymlinkedStateDir`] at create time,
+/// unchanged from a root that was never a symlink:
+///
+/// 1. The directory that holds the link is writable by nobody but root, so only
+///    the operator could have created the link itself. See
+///    [`parent_is_operator_controlled`]. Without it, an attacker who owns a
+///    world-writable directory plants a link there pointing at another service's
+///    directory and redirects root into clobbering it.
+/// 2. The link is a single hop to an absolute, already-canonical target: the path
+///    stored in the link is the same path `canonicalize` resolves it to. A second
+///    symlink further down the chain, a symlink component in the target's own
+///    path, or a relative or `..`-laden target all make the two differ, so a hop
+///    through a directory this never vetted cannot smuggle a redirection past
+///    here. This is what refuses `/var/lib/rs -> /mnt/x/runner` when
+///    `/mnt/x/runner` is itself a link an attacker planted in a world-writable
+///    `/mnt/x`.
+/// 3. The resolved target lives in a subtree writable by nobody but root, top to
+///    bottom: the target and every ancestor up to `/`. See
+///    [`ancestry_is_operator_controlled`]. `canonicalize` returned a path with no
+///    symlink components, so these are real directories; a group- or
+///    other-writable one anywhere on the way to `/` is a place an unprivileged
+///    user could have arranged what the path resolves to, and vetting the whole
+///    ancestry also closes the window between resolving and the 0700 chmod, since
+///    nobody but root can then swap the target either.
+///
+/// Together these make following the link no different from passing the resolved
+/// target as `--state-dir` directly: exactly one link, made by root, leads to an
+/// absolute canonical directory reachable only through root-controlled
+/// directories, so no unprivileged user influenced the result or can race it. The
+/// populated-directory check in [`StateDir::check_root_is_ours`] is the remaining
+/// layer: it runs on the resolved target, so a root-made link pointing at a
+/// populated system directory like `/etc` is still refused for the foreign
+/// entries it holds.
+///
+/// A real-directory root is returned verbatim, never canonicalized: the runner
+/// and the jailer share the one string, and its ancestor symlinks are the
+/// operator's system layout the guard already trusts. A root that is not there
+/// yet is created later, and any read failure, including a dangling link, is left
+/// for [`real_dir`] to turn into an error at create time, so it has one home. Only
+/// a symlink at the root itself is a candidate for resolution here. The resolved
+/// target is stored as the root, so every later step names the concrete path this
+/// resolved rather than re-walking the link.
+fn resolve_symlinked_root(root: Utf8PathBuf) -> Result<Utf8PathBuf, JailError> {
+    let Ok(metadata) = root.symlink_metadata() else {
+        return Ok(root);
+    };
+    if !metadata.file_type().is_symlink() {
+        return Ok(root);
+    }
+    // (1) Only root could have created the link itself.
+    if !parent_is_operator_controlled(&root)? {
+        return Ok(root);
+    }
+    // (2) A single hop to an absolute, already-canonical target. An unreadable
+    // link, or a dangling or otherwise unresolvable target, lands here too and is
+    // refused rather than followed.
+    let (Ok(target), Ok(resolved)) = (root.read_link_utf8(), root.canonicalize_utf8()) else {
+        return Ok(root);
+    };
+    if target != resolved {
+        return Ok(root);
+    }
+    // (3) The resolved target and its whole ancestry are writable by nobody but
+    // root.
+    if !ancestry_is_operator_controlled(&resolved)? {
+        return Ok(root);
+    }
+    Ok(resolved)
+}
+
+/// Whether the directory that holds `root` proves the operator made a link there.
+///
+/// The parent's own path is resolved through any symlinks it contains: those
+/// ancestors are the operator's system layout, trusted the same way a
+/// real-directory root's ancestors already are. What decides this is who can
+/// write the one directory the entry lives in. See [`owner_only_writable`]. The
+/// resolved target's own ancestry is vetted separately, in
+/// [`ancestry_is_operator_controlled`].
+fn parent_is_operator_controlled(root: &Utf8Path) -> Result<bool, JailError> {
+    let Some(parent) = root.parent() else {
+        // Unreachable in practice: the root is absolute, so only `/` has no
+        // parent, and `/` is never a symlink. Refuse rather than assume.
+        return Ok(false);
+    };
+    let metadata = parent
+        .metadata()
+        .map_err(|source| JailError::ReadStateDir {
+            path: parent.to_owned(),
+            source,
+        })?;
+    Ok(owner_only_writable(metadata.uid(), metadata.mode()))
+}
+
+/// Whether `dir` and every ancestor up to `/` is writable by nobody but root.
+///
+/// `dir` is a canonicalized path, so every component is a real directory and the
+/// walk stats real directories rather than following any link. A single group- or
+/// other-writable directory anywhere on the way to `/` is a place an unprivileged
+/// user could have arranged what the path resolves to, so the whole resolved root
+/// is refused. See [`owner_only_writable`].
+fn ancestry_is_operator_controlled(dir: &Utf8Path) -> Result<bool, JailError> {
+    for ancestor in dir.ancestors() {
+        let metadata = ancestor
+            .metadata()
+            .map_err(|source| JailError::ReadStateDir {
+                path: ancestor.to_owned(),
+                source,
+            })?;
+        if !owner_only_writable(metadata.uid(), metadata.mode()) {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// Whether a directory with this owner and mode is writable by nobody but root.
+///
+/// uid 0 and neither the group nor the other write bit set. No unprivileged user
+/// can then create, rename, or delete an entry in it, so any symlink found there
+/// was placed by root. The sticky bit is deliberately not consulted: it stops
+/// one user removing another's entries but not their creating their own, so it
+/// does not make an other-writable directory safe, and `/tmp` at 0o1777 is
+/// exactly the other-writable parent this must reject.
+fn owner_only_writable(uid: u32, mode: u32) -> bool {
+    uid == 0 && mode & 0o022 == 0
 }
 
 /// The first entry in `dir` that neither the runner nor the filesystem made.
@@ -602,6 +765,36 @@ mod tests {
         (dir, root)
     }
 
+    /// A throwaway directory with a root-only-writable ancestry all the way to
+    /// `/`, removed on drop.
+    ///
+    /// The accept-path tests need a resolved target whose every ancestor is
+    /// owned by root and not group- or other-writable, which rules out anything
+    /// under `/tmp` (0o1777). The only place that holds without special mounts is
+    /// directly under `/`, which is root-owned. Creating there needs root, so the
+    /// tests that use this are gated on euid and skipped on an unprivileged box.
+    struct RootOnlyBase(Utf8PathBuf);
+
+    impl Drop for RootOnlyBase {
+        fn drop(&mut self) {
+            drop(fs::remove_dir_all(&self.0));
+        }
+    }
+
+    fn root_only_base() -> RootOnlyBase {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        static COUNTER: AtomicU32 = AtomicU32::new(0);
+        let unique = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let base = Utf8PathBuf::from(format!(
+            "/bencher-runner-test-{}-{unique}",
+            std::process::id()
+        ));
+        drop(fs::remove_dir_all(&base));
+        fs::create_dir(&base).unwrap();
+        fs::set_permissions(&base, fs::Permissions::from_mode(0o755)).unwrap();
+        RootOnlyBase(base)
+    }
+
     #[test]
     fn jail_layout_matches_jailer_template() {
         let state = StateDir::new(Utf8PathBuf::from("/var/lib/bencher-runner")).unwrap();
@@ -862,6 +1055,12 @@ mod tests {
         // below it too.
         for component in ["state", "state/jail", "state/jail/firecracker"] {
             let (_dir, root) = temp_root();
+            // Make the base world-writable so the refusal holds whatever the
+            // euid: a link at `state` then has a parent none of the three
+            // showings in `resolve_symlinked_root` can pass, whether the tests
+            // run as root or not, rather than resolving to a `ForeignStateDir`
+            // when root happens to own the tempdir.
+            fs::set_permissions(&root, fs::Permissions::from_mode(0o777)).unwrap();
             let victim = root.join("victim");
             fs::create_dir_all(victim.join("someone-elses-data")).unwrap();
 
@@ -893,6 +1092,236 @@ mod tests {
                 "{component}: the target of a link must not be swept"
             );
         }
+    }
+
+    #[test]
+    fn owner_only_writable_gates_on_uid_and_write_bits() {
+        // Root-owned and closed to everyone else is the one accepted shape:
+        // nobody but root can then have planted a link in such a directory.
+        assert!(owner_only_writable(0, 0o755));
+        assert!(owner_only_writable(0, 0o700));
+        assert!(owner_only_writable(0, 0o711));
+        // The file-type bits `metadata.mode()` also carries are ignored: only
+        // the owner and the write bits decide.
+        assert!(owner_only_writable(0, 0o040_755));
+        // Group- or other-writable, even owned by root, is not accepted:
+        // somebody else could have planted the link.
+        assert!(!owner_only_writable(0, 0o775), "group-writable");
+        assert!(!owner_only_writable(0, 0o757), "other-writable");
+        assert!(!owner_only_writable(0, 0o777), "group- and other-writable");
+        assert!(
+            !owner_only_writable(0, 0o1777),
+            "sticky does not launder /tmp"
+        );
+        // Not owned by root is never accepted, however tight the mode.
+        assert!(!owner_only_writable(1000, 0o755));
+        assert!(!owner_only_writable(1000, 0o700));
+    }
+
+    #[test]
+    fn ancestry_is_operator_controlled_walks_the_whole_path() {
+        // `/` is root-owned and not group- or other-writable, so the walk
+        // accepts it. Reading its metadata needs no privilege, so this exercises
+        // the accept branch even on an unprivileged box.
+        assert!(ancestry_is_operator_controlled(Utf8Path::new("/")).unwrap());
+        // A directory anyone can write anywhere on the path fails the walk. Under
+        // an unprivileged box the leaf itself is not root-owned, and either way
+        // the point is that a loose directory on the way to `/` is refused, which
+        // is what catches an attacker-writable intermediate.
+        let (_dir, root) = temp_root();
+        let open = root.join("open");
+        fs::create_dir(&open).unwrap();
+        fs::set_permissions(&open, fs::Permissions::from_mode(0o777)).unwrap();
+        let leaf = open.join("leaf");
+        fs::create_dir(&leaf).unwrap();
+        assert!(
+            !ancestry_is_operator_controlled(&leaf).unwrap(),
+            "a writable directory on the path is refused"
+        );
+    }
+
+    #[test]
+    fn a_real_directory_root_is_used_verbatim() {
+        // A real-directory root is never canonicalized: the runner and the
+        // jailer share the one string, and its ancestors are the operator's own
+        // system layout the guard already trusts.
+        let (_dir, root) = temp_root();
+        let real = root.join("real");
+        fs::create_dir(&real).unwrap();
+
+        let state = StateDir::new(real.clone()).unwrap();
+        assert_eq!(state.path(), real, "a real directory root is left as given");
+    }
+
+    #[test]
+    fn a_nonexistent_root_is_left_as_given() {
+        // A path not there yet is the first-run case: nothing to resolve, and
+        // `create` makes it. It must come back exactly as handed in.
+        let (_dir, root) = temp_root();
+        let missing = root.join("not-here-yet");
+
+        let state = StateDir::new(missing.clone()).unwrap();
+        assert_eq!(state.path(), missing);
+        state.create().unwrap();
+        assert!(missing.join("jail").join("firecracker").is_dir());
+    }
+
+    #[test]
+    fn a_symlinked_root_under_a_writable_parent_is_refused() {
+        // The relaxation for a symlinked root reaches only a parent none but
+        // root can write. A parent anyone else can write, even with the sticky
+        // bit `/tmp` carries, leaves the link unfollowed and `real_dir` refuses
+        // it, so the target is neither chmodded nor swept.
+        let (_dir, root) = temp_root();
+        let parent = root.join("open");
+        fs::create_dir(&parent).unwrap();
+        fs::set_permissions(&parent, fs::Permissions::from_mode(0o1777)).unwrap();
+        let victim = root.join("victim");
+        fs::create_dir_all(victim.join("someone-elses-data")).unwrap();
+        let link = parent.join("state");
+        symlink(&victim, &link).unwrap();
+
+        let err = StateDir::new(link.clone()).unwrap().create().unwrap_err();
+
+        assert!(
+            matches!(err, JailError::SymlinkedStateDir { .. }),
+            "a link under a writable parent is refused, not resolved: {err}"
+        );
+        assert!(
+            err.to_string().contains(link.as_str()),
+            "the refusal names the link: {err}"
+        );
+        let mode = fs::metadata(&victim).unwrap().permissions().mode();
+        assert_ne!(mode & 0o777, 0o700, "the link target must not be chmodded");
+        assert!(
+            victim.join("someone-elses-data").is_dir(),
+            "the link target must not be swept"
+        );
+    }
+
+    #[test]
+    fn a_symlink_resolving_through_a_writable_ancestor_is_refused() {
+        // The widening the guard must not have: `--state-dir /var/lib/rs` where
+        // `/var/lib/rs -> /mnt/x/runner`, `/var/lib` is root-only-writable, but
+        // `/mnt/x` is world-writable and an attacker has planted
+        // `/mnt/x/runner -> /victim`. `canonicalize` would collapse the whole
+        // chain to the victim, so a check on only the link's own parent would
+        // follow a hop through a directory it never vetted. It must be refused,
+        // and the victim neither chmodded nor swept.
+        //
+        // Refused whatever the euid: unprivileged, the first link's parent is not
+        // root-owned; as root, the second hop makes the link's stored target
+        // differ from what it canonicalizes to, and the intermediate under
+        // `/tmp` fails the ancestry walk besides.
+        let (_dir, root) = temp_root();
+        // The world-writable intermediate, standing in for `/mnt/x`.
+        let intermediate = root.join("intermediate");
+        fs::create_dir(&intermediate).unwrap();
+        fs::set_permissions(&intermediate, fs::Permissions::from_mode(0o777)).unwrap();
+        // The directory the attacker redirects the chain at.
+        let victim = root.join("victim");
+        fs::create_dir_all(victim.join("someone-elses-data")).unwrap();
+        // The second hop, the one an attacker plants in the writable intermediate.
+        let second = intermediate.join("runner");
+        symlink(&victim, &second).unwrap();
+        // The first hop, the state directory the operator names, pointing through
+        // the intermediate.
+        let link = root.join("state");
+        symlink(&second, &link).unwrap();
+
+        let err = StateDir::new(link).unwrap().create().unwrap_err();
+
+        assert!(
+            matches!(err, JailError::SymlinkedStateDir { .. }),
+            "a chain through a writable ancestor is refused, not followed: {err}"
+        );
+        let mode = fs::metadata(&victim).unwrap().permissions().mode();
+        assert_ne!(mode & 0o777, 0o700, "the victim must not be chmodded");
+        assert!(
+            victim.join("someone-elses-data").is_dir(),
+            "the victim must not be swept"
+        );
+    }
+
+    #[test]
+    fn an_operator_controlled_symlinked_root_is_resolved() {
+        // The accept path needs a resolved target whose whole ancestry is
+        // root-only-writable, which only root can arrange, so it runs in the
+        // elevated environment and is skipped on an unprivileged box, where such
+        // a tree cannot be created and the link would instead be refused. Written
+        // so an elevated run exercises the resolution rather than only compiling
+        // it. This is the recommended setup: a root-owned symlink to a root-owned
+        // dedicated directory.
+        if crate::jail::current_euid() != 0 {
+            return;
+        }
+        let base = root_only_base();
+        let base = &base.0;
+        // A parent only root can write, holding the operator's link.
+        let parent = base.join("operator");
+        fs::create_dir(&parent).unwrap();
+        fs::set_permissions(&parent, fs::Permissions::from_mode(0o755)).unwrap();
+        // The real dedicated directory the operator points the link at, reached
+        // through root-only-writable directories all the way to `/`.
+        let target = base.join("target");
+        fs::create_dir(&target).unwrap();
+
+        let link = parent.join("state");
+        symlink(&target, &link).unwrap();
+
+        let state = StateDir::new(link).unwrap();
+        // The resolved target, not the link, is the effective root every later
+        // step names.
+        let resolved = target.canonicalize_utf8().unwrap();
+        assert_eq!(state.path(), resolved, "the target becomes the root");
+
+        state.create().unwrap();
+        let mode = fs::metadata(&resolved).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o700, "the resolved target is tightened");
+        assert!(
+            resolved.join("jail").join("firecracker").is_dir(),
+            "the tree is built under the resolved target"
+        );
+    }
+
+    #[test]
+    fn an_interior_symlink_is_refused_even_under_a_resolved_root() {
+        // A resolved root does not lower the bar for what sits inside it: an
+        // interior component planted as a link is still refused, so the chmod and
+        // the sweep never follow it. Needs a root-only-writable tree to reach the
+        // resolution in the first place, so it is gated like the accept-path test
+        // above.
+        if crate::jail::current_euid() != 0 {
+            return;
+        }
+        let base = root_only_base();
+        let base = &base.0;
+        let parent = base.join("operator");
+        fs::create_dir(&parent).unwrap();
+        fs::set_permissions(&parent, fs::Permissions::from_mode(0o755)).unwrap();
+        let target = base.join("target");
+        fs::create_dir(&target).unwrap();
+
+        // `jail` inside the resolved target planted as a link to somebody's data.
+        let victim = base.join("victim");
+        fs::create_dir_all(victim.join("someone-elses-data")).unwrap();
+        symlink(&victim, target.join("jail")).unwrap();
+
+        let link = parent.join("state");
+        symlink(&target, &link).unwrap();
+
+        let err = StateDir::new(link).unwrap().create().unwrap_err();
+
+        assert!(
+            matches!(err, JailError::SymlinkedStateDir { .. }),
+            "an interior link is refused even under a resolved root: {err}"
+        );
+        let mode = fs::metadata(&victim).unwrap().permissions().mode();
+        assert_ne!(mode & 0o777, 0o700, "the link target must not be chmodded");
+        assert!(
+            victim.join("someone-elses-data").is_dir(),
+            "the link target must not be swept"
+        );
     }
 
     #[test]
