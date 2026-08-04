@@ -2733,8 +2733,9 @@ CMD ["echo", "JAIL_REFUSED_a7f3b2c9"]"#,
             validate: |output| {
                 // Failing the job is the invariant, and the runner is free to
                 // reword why: nothing here reads the message. That no VMM was
-                // launched is asserted against the host's own processes, in
-                // `run_runner_without_unjailed_vmm`.
+                // left running is asserted against the host's own processes, in
+                // `run_runner_without_unjailed_vmm`; that none ran at all is the
+                // marker check below.
                 if output.exit_code == 0 {
                     bail!(
                         "Expected the job to fail when the jail could not be built, got exit code 0.\nstdout: {}\nstderr: {}",
@@ -2859,12 +2860,17 @@ fn plant_unusable_state_dir(root: &Utf8Path) -> Result<Utf8PathBuf> {
     Ok(planted)
 }
 
-/// Run the runner and prove it launched no VMM at all.
+/// Run the runner and prove it left no VMM running.
 ///
 /// The pair is the invariant: a runner that cannot build the jail has to fail
 /// the job rather than fall back to an unjailed VMM. Asserted against the
 /// processes on the host, never against what the runner printed, so a reworded
 /// error stays green and a guest running outside a jail does not.
+///
+/// Left running is all the comparison can establish. The snapshots bracket the
+/// runner's lifetime, so a VMM that launched and exited inside it leaves the
+/// difference empty. That case is the scenario's own marker assertion, which
+/// fails on a guest that got far enough to print anything at all.
 ///
 /// A set difference rather than a count, since the machine is shared: what
 /// matters is whether this run added a Firecracker, not what was already there.
