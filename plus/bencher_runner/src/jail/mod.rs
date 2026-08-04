@@ -79,6 +79,7 @@
 //! | `reap_jailed_vmm`: a VMM that will not exit | reported still running |
 //! | `reap_jailed_vmm`: the rescan bound runs out | reported still running |
 //! | `reap_jailed_vmm`: a `/proc/<pid>/status` that cannot be read | ignored: the process is gone, which is what was being asked |
+//! | `JailDir::create`: a step that fails once the tree exists | fails the job, and the guard that already took the tree reclaims it |
 //! | `JailDir` teardown: the chroot is already gone | ignored: that is the goal state |
 //! | `JailDir` teardown: removing the chroot | arms the retry |
 //! | `JailDir` teardown: this job's own cgroup survived | keeps the chroot, since its name is the cgroup's only handle |
