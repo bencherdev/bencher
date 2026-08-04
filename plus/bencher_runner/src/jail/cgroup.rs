@@ -191,7 +191,7 @@ impl CgroupManager {
     /// then has no `cpuset.cpus` to write. That is a declared absence of
     /// isolation, which the caller degrades on rather than failing. What the
     /// absence is declared to be depends on what the enable attempt found out:
-    /// see [`Self::no_cpuset`].
+    /// see `Self::no_cpuset`.
     pub fn apply_cpuset(&self, layout: &CpuLayout) -> Result<Cpuset, RunnerError> {
         if !layout.has_isolation() {
             // Single core, or overlapping sets: there is nothing to confine to.
