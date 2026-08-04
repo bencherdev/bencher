@@ -148,13 +148,35 @@ impl FirecrackerClient {
         Ok(())
     }
 
+    /// The address itself could not be used.
+    ///
+    /// The same treatment the readiness path gives it, for the same reason. The
+    /// socket lives at a `/proc/self/fd/N` view of a chroot the operator cannot
+    /// guess, so a bare `No such file or directory` names nothing to go and
+    /// look at, and reaching this after readiness means the address stopped
+    /// working mid-job rather than never having worked.
+    fn unusable(&self, source: std::io::Error) -> FirecrackerError {
+        FirecrackerError::SocketUnusable {
+            path: self.socket_path.clone(),
+            source,
+        }
+    }
+
     /// Send an HTTP PUT request over the Unix socket.
     ///
     /// Returns the HTTP status code and response body.
     fn http_put(&self, path: &str, json_body: &str) -> Result<(u16, String), FirecrackerError> {
-        let mut stream = UnixStream::connect(self.socket_path.as_str())?;
-        stream.set_read_timeout(Some(Duration::from_secs(5)))?;
-        stream.set_write_timeout(Some(Duration::from_secs(5)))?;
+        // Connecting and the timeouts are about the socket, so they carry it.
+        // What happens after, on a stream that was established, is about the
+        // conversation and stays a plain I/O error.
+        let mut stream =
+            UnixStream::connect(self.socket_path.as_str()).map_err(|e| self.unusable(e))?;
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .map_err(|e| self.unusable(e))?;
+        stream
+            .set_write_timeout(Some(Duration::from_secs(5)))
+            .map_err(|e| self.unusable(e))?;
 
         let request = format!(
             "PUT {path} HTTP/1.1\r\n\
@@ -297,7 +319,42 @@ fn parse_http_response(data: &[u8]) -> Result<(u16, String), FirecrackerError> {
 
 #[cfg(test)]
 mod tests {
+    use camino::Utf8Path;
+
     use super::*;
+    use crate::firecracker::config::ActionType;
+    use crate::jail::JailPaths;
+
+    // --- an unusable address is named, whenever it is reached ---
+
+    #[test]
+    fn an_api_call_that_cannot_reach_the_socket_names_it() {
+        // The failure this prevents: the VMM is gone by the time the runner
+        // sends the next request, and the operator reads "IO error: No such
+        // file or directory" with no path in it. The socket is a
+        // `/proc/self/fd/N` view of a chroot nobody can guess, and the
+        // readiness path already reports it by name; a call one step later is
+        // the same question about the same address.
+        let dir = tempfile::tempdir().unwrap();
+        let jail = JailPaths::new(Utf8Path::from_path(dir.path()).unwrap()).unwrap();
+        let client = FirecrackerClient::new(jail.api_socket().socket());
+
+        let Err(err) = client.put_action(&Action {
+            action_type: ActionType::SendCtrlAltDel,
+        }) else {
+            panic!("nothing is listening on this path");
+        };
+
+        assert!(
+            matches!(err, FirecrackerError::SocketUnusable { .. }),
+            "an address that cannot be reached is not a bare I/O error: {err}"
+        );
+        assert!(
+            err.to_string()
+                .contains(jail.api_socket().socket().as_str()),
+            "the error must name the socket: {err}"
+        );
+    }
 
     // --- find_header_end ---
 
