@@ -79,22 +79,19 @@ impl VsockListener {
     /// the socket view, which is the only view short enough for `sun_path`;
     /// unlinking and ownership use the host view, which does not depend on a
     /// descriptor staying open. These must be created before the VM boots.
+    ///
+    /// Nothing is unlinked first. Every job binds inside a chroot named by an
+    /// id this runner just minted, so there is no stale socket of ours to
+    /// clear, and a bind that finds one anyway is a surprise worth reporting
+    /// rather than a file to delete. The removal that used to run here named
+    /// the socket view, which is the one view that can go stale, so it was also
+    /// the one step that contradicted the rule above.
     pub fn new(vsock: &JailFile) -> Result<Self, FirecrackerError> {
         let socket = vsock.socket();
         let stdout_path = socket.with_port(ports::STDOUT);
         let stderr_path = socket.with_port(ports::STDERR);
         let exit_code_path = socket.with_port(ports::EXIT_CODE);
         let output_files_path = socket.with_port(ports::OUTPUT_FILES);
-
-        // Remove stale socket files
-        for path in [
-            &stdout_path,
-            &stderr_path,
-            &exit_code_path,
-            &output_files_path,
-        ] {
-            drop(std::fs::remove_file(path));
-        }
 
         let stdout_listener = UnixListener::bind(&stdout_path)
             .map_err(|e| FirecrackerError::VsockCollection(format!("bind stdout: {e}")))?;
@@ -410,6 +407,34 @@ mod tests {
                 "socket file for port {port} should exist"
             );
         }
+    }
+
+    #[test]
+    fn a_path_already_taken_is_reported_not_deleted() {
+        // The failure this prevents: `new` used to unlink each socket path
+        // before binding it, and it did so through the socket view, which names
+        // an open descriptor by number. Every other unlink in this crate takes
+        // the host view precisely because a stale number deletes whatever
+        // inherited it, and that deletion looks like success. Nothing at these
+        // paths is ever ours to remove anyway: the chroot is named by a freshly
+        // minted id.
+        let (_dir, jail) = jail_in_tmpdir();
+        let occupied = format!("{}_{}", jail.vsock().host(), ports::STDOUT);
+        std::fs::write(&occupied, b"not ours").unwrap();
+
+        let Err(err) = VsockListener::new(jail.vsock()) else {
+            panic!("binding over a path that is already taken must fail");
+        };
+
+        assert!(
+            err.to_string().contains("bind stdout"),
+            "a taken path is a bind failure, got: {err}"
+        );
+        assert_eq!(
+            std::fs::read(&occupied).unwrap(),
+            b"not ours",
+            "the file that was there must still be there"
+        );
     }
 
     #[test]
