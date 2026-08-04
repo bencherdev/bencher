@@ -438,19 +438,35 @@ fn elevated_state_dir(runner_bin: &std::ffi::OsStr) -> std::path::PathBuf {
 /// sweep names cgroups by the jail directories in the state directory, and that
 /// is removed next.
 ///
-/// Best effort, and quiet. A cgroup that is still busy belongs to something the
-/// kill did not reach, which `remove_elevated_state_dir` is the one that has to
-/// say so, and a machine with no such cgroups has nothing to report.
+/// Best effort, and quiet when it works. A cgroup that outlasts the wait is
+/// named out loud with the command that finishes the job, because it is nobody
+/// else's to report: the jail directories that name it are removed on the very
+/// next line, so nothing ever looks for it again. A machine with no such
+/// cgroups has nothing to say.
 fn remove_elevated_cgroups(state_dir: &std::path::Path) {
     let jail_parent = state_dir.join("jail").join("firecracker");
     let _status = Command::new("sudo")
         .args(["-n", "sh", "-c"])
-        .arg(cgroup_cleanup_script(&jail_parent, CGROUP_ROOT))
+        .arg(cgroup_cleanup_script(
+            &jail_parent,
+            CGROUP_ROOT,
+            CGROUP_REMOVE_ATTEMPTS,
+        ))
         .status();
 }
 
 /// Where the runner puts the cgroup of a jailed VMM, named by the jail's id.
 const CGROUP_ROOT: &str = "/sys/fs/cgroup/bencher";
+
+/// How long to keep trying to remove one cgroup.
+///
+/// `rmdir` refuses while the cgroup still holds a process, and the SIGKILL sent
+/// moments earlier needs a moment to be reaped. The runner's own removal answers
+/// the same refusal with the same bounded wait.
+const CGROUP_REMOVE_ATTEMPTS: u32 = 100;
+
+/// How long to wait between attempts, in seconds, as the shell spells it.
+const CGROUP_REMOVE_INTERVAL: &str = "0.05";
 
 /// The shell that removes one cgroup per jail directory.
 ///
@@ -460,15 +476,33 @@ const CGROUP_ROOT: &str = "/sys/fs/cgroup/bencher";
 ///
 /// A jail parent that is not there yet leaves the glob unexpanded, which the
 /// directory test then skips, so a run that never got as far as a job removes
-/// nothing and says nothing.
-fn cgroup_cleanup_script(jail_parent: &std::path::Path, cgroup_root: &str) -> String {
+/// nothing and says nothing. A cgroup that is already gone is skipped before the
+/// wait, so the budget is only ever spent on a cgroup that is really there and
+/// really refusing.
+///
+/// The attempt count is a parameter because the retry is the part worth testing
+/// and a test has no five seconds to spend proving a cgroup stayed.
+fn cgroup_cleanup_script(
+    jail_parent: &std::path::Path,
+    cgroup_root: &str,
+    attempts: u32,
+) -> String {
+    let jail_parent = jail_parent.display();
     format!(
-        "for jail in \"{}\"/*; do \
+        "for jail in \"{jail_parent}\"/*; do \
            [ -d \"$jail\" ] || continue; \
-           rmdir \"{cgroup_root}/$(basename \"$jail\")\" 2>/dev/null; \
+           cgroup=\"{cgroup_root}/$(basename \"$jail\")\"; \
+           [ -d \"$cgroup\" ] || continue; \
+           attempt=0; \
+           while [ \"$attempt\" -lt {attempts} ] && ! rmdir \"$cgroup\" 2>/dev/null; do \
+             [ -d \"$cgroup\" ] || break; \
+             sleep {CGROUP_REMOVE_INTERVAL}; \
+             attempt=$((attempt + 1)); \
+           done; \
+           [ -d \"$cgroup\" ] && \
+             echo \"Note: $cgroup is left owned by root. Remove it with: sudo rmdir $cgroup\"; \
          done; \
-         true",
-        jail_parent.display()
+         true"
     )
 }
 
@@ -1646,20 +1680,26 @@ mod tests {
     }
 
     /// Run the cleanup the way `remove_elevated_cgroups` does, minus the sudo
-    /// this test has no business asking for.
-    fn run_cleanup(jail_parent: &std::path::Path, cgroup_root: &std::path::Path) {
-        let status = Command::new("sh")
+    /// this test has no business asking for, and hand back what it said.
+    fn run_cleanup(
+        jail_parent: &std::path::Path,
+        cgroup_root: &std::path::Path,
+        attempts: u32,
+    ) -> String {
+        let output = Command::new("sh")
             .arg("-c")
             .arg(cgroup_cleanup_script(
                 jail_parent,
                 &cgroup_root.display().to_string(),
+                attempts,
             ))
-            .status()
+            .output()
             .unwrap();
         assert!(
-            status.success(),
+            output.status.success(),
             "the cleanup reports nothing to complain about"
         );
+        String::from_utf8(output.stdout).unwrap()
     }
 
     #[test]
@@ -1679,7 +1719,7 @@ mod tests {
         std::fs::write(jail_parent.join("notes.txt"), b"not a jail").unwrap();
         std::fs::create_dir_all(cgroup_root.join("someone-elses")).unwrap();
 
-        run_cleanup(&jail_parent, &cgroup_root);
+        let said = run_cleanup(&jail_parent, &cgroup_root, CGROUP_REMOVE_ATTEMPTS);
 
         assert!(!cgroup_root.join("job-one").exists());
         assert!(!cgroup_root.join("job-two").exists());
@@ -1687,6 +1727,7 @@ mod tests {
             cgroup_root.join("someone-elses").exists(),
             "only the cgroups this run's jails name are its to remove"
         );
+        assert!(said.is_empty(), "a cleanup that worked has nothing to say");
 
         drop(std::fs::remove_dir_all(&root));
     }
@@ -1698,7 +1739,68 @@ mod tests {
         // has to pass quietly.
         let root = scratch("no-jobs");
 
-        run_cleanup(&root.join("state/jail/firecracker"), &root.join("cgroup"));
+        let said = run_cleanup(
+            &root.join("state/jail/firecracker"),
+            &root.join("cgroup"),
+            CGROUP_REMOVE_ATTEMPTS,
+        );
+
+        assert!(said.is_empty(), "a run with no jails has nothing to report");
+
+        drop(std::fs::remove_dir_all(&root));
+    }
+
+    #[test]
+    fn the_cleanup_waits_for_a_cgroup_the_kill_has_not_emptied_yet() {
+        // `rmdir` refuses a cgroup that still holds a process, and the SIGKILL
+        // the teardown sends lands before the reap does. A single attempt would
+        // lose that race, and losing it strands the cgroup for good: the jail
+        // directory that names it is removed moments later.
+        let root = scratch("cgroup-busy");
+        let jail_parent = root.join("state/jail/firecracker");
+        let cgroup_root = root.join("cgroup/bencher");
+        std::fs::create_dir_all(jail_parent.join("job-one")).unwrap();
+        std::fs::create_dir_all(cgroup_root.join("job-one")).unwrap();
+        // A directory `rmdir` refuses, standing in for a cgroup that is still
+        // holding the process the kill has not been reaped for.
+        let occupant = cgroup_root.join("job-one").join("occupant");
+        std::fs::write(&occupant, b"still here").unwrap();
+        let clearing = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            std::fs::remove_file(&occupant).unwrap();
+        });
+
+        let said = run_cleanup(&jail_parent, &cgroup_root, CGROUP_REMOVE_ATTEMPTS);
+
+        clearing.join().unwrap();
+        assert!(
+            !cgroup_root.join("job-one").exists(),
+            "the cleanup waits out a refusal rather than taking it as final"
+        );
+        assert!(said.is_empty(), "a cleanup that worked has nothing to say");
+
+        drop(std::fs::remove_dir_all(&root));
+    }
+
+    #[test]
+    fn the_cleanup_names_the_cgroup_it_could_not_remove() {
+        // The wait is bounded, and what outlasts it is nobody else's to report:
+        // the jail directory that names this cgroup is removed on the next line,
+        // so a silent give-up is a root-owned directory nothing will ever find
+        // again.
+        let root = scratch("cgroup-stuck");
+        let jail_parent = root.join("state/jail/firecracker");
+        let cgroup_root = root.join("cgroup/bencher");
+        std::fs::create_dir_all(jail_parent.join("job-one")).unwrap();
+        std::fs::create_dir_all(cgroup_root.join("job-one").join("occupant")).unwrap();
+
+        let said = run_cleanup(&jail_parent, &cgroup_root, 1);
+
+        let stuck = cgroup_root.join("job-one");
+        assert!(
+            said.contains(&stuck.display().to_string()),
+            "the cgroup that stayed is named: {said}"
+        );
 
         drop(std::fs::remove_dir_all(&root));
     }
