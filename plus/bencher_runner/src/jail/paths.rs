@@ -33,11 +33,16 @@ const SUN_PATH_LEN: usize = 108;
 /// anything that does not leave room for the terminator.
 const MAX_SOCKET_PATH: usize = SUN_PATH_LEN - 1;
 
-/// Room reserved after the vsock base path for its `_<port>` suffix.
+/// Room reserved after every socket path for a `_<port>` suffix.
 ///
 /// Sized for the widest port a `u32` can print rather than for the ports in
-/// use, so adding a port can never silently eat the margin.
-const VSOCK_SUFFIX_RESERVE: usize = "_4294967295".len();
+/// use, so adding a port can never silently eat the margin. Reserved on every
+/// socket path rather than on the vsock base alone, because that is what makes
+/// [`SocketPath::with_port`] infallible: the widest suffix it can produce is
+/// the one every base was already checked with room for. The socket views name
+/// a descriptor rather than the operator's state directory, so the eleven bytes
+/// come out of a margin nothing is ever close to spending.
+const PORT_SUFFIX_RESERVE: usize = "_4294967295".len();
 
 /// A path as the runner sees it: the host filesystem, outside the chroot.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -103,19 +108,22 @@ impl std::fmt::Display for ChrootPath {
 /// jail, so the hazard is at least pinned.
 ///
 /// The type makes the length limit unforgeable: every value has been checked
-/// against `sun_path`, so a path that would not fit is reported when the jail
-/// is built, naming the limit and the offending string, rather than surfacing
-/// later as a socket that never becomes ready.
+/// against `sun_path` with room for the port it may later take, so a path that
+/// would not fit is reported when the jail is built, naming the limit and the
+/// offending string, rather than surfacing later as a socket that never becomes
+/// ready. Growing one is [`Self::with_port`], which cannot spend more than was
+/// reserved, so the check holds for every string this type hands out.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SocketPath(String);
 
 impl SocketPath {
     /// Check a path against the `sun_path` limit.
     ///
-    /// `reserve` is the longest suffix that will later be appended, so a base
-    /// that fits only without its suffix is still rejected.
-    fn new(path: String, reserve: usize) -> Result<Self, JailError> {
-        let length = path.len() + reserve;
+    /// Checked with [`PORT_SUFFIX_RESERVE`] in hand, so a base that fits only
+    /// while it is bare is rejected rather than admitted and then grown past
+    /// the limit by [`Self::with_port`].
+    fn new(path: String) -> Result<Self, JailError> {
+        let length = path.len() + PORT_SUFFIX_RESERVE;
         if length > MAX_SOCKET_PATH {
             return Err(JailError::SocketPathTooLong {
                 path,
@@ -132,13 +140,19 @@ impl SocketPath {
         &self.0
     }
 
-    /// This path with a suffix appended.
+    /// This path with a vsock port appended.
     ///
-    /// The suffix was reserved when the base was checked, so the result is
-    /// within the limit by construction.
+    /// The runner binds `{base}_{port}` for each vsock port. A port is the only
+    /// thing this type will append, and every base was checked with room for
+    /// the widest one a `u32` can print, so the result is within the limit by
+    /// construction rather than by a promise the caller has to keep. A free
+    /// `&str` suffix could make no such claim: nothing held it to the reserve,
+    /// so an over-long one would fit under a shallow state directory and fail
+    /// at `bind` under a deep one, which is a defect that shows up on some
+    /// hosts only.
     #[must_use]
-    pub fn with_suffix(&self, suffix: &str) -> String {
-        format!("{}{suffix}", self.0)
+    pub fn with_port(&self, port: u32) -> String {
+        format!("{}_{port}", self.0)
     }
 }
 
@@ -210,22 +224,20 @@ impl JailPaths {
         // directory's identity for the whole job.
         let dir_path = format!("/proc/self/fd/{}", dir.as_raw_fd());
 
-        let file = |name: &str, reserve: usize| -> Result<JailFile, JailError> {
+        let file = |name: &str| -> Result<JailFile, JailError> {
             Ok(JailFile {
                 host: HostPath(jail_root.join(name)),
                 chroot: ChrootPath(Utf8Path::new("/").join(name)),
-                socket: SocketPath::new(format!("{dir_path}/{name}"), reserve)?,
+                socket: SocketPath::new(format!("{dir_path}/{name}"))?,
             })
         };
 
         Ok(Self {
             root: jail_root.to_owned(),
-            api_socket: file("api.sock", 0)?,
-            kernel: file("vmlinux", 0)?,
-            rootfs: file("rootfs.ext4", 0)?,
-            // The runner binds `{base}_{port}` for each vsock port, so the
-            // base has to leave room for the longest of those suffixes.
-            vsock: file("v.sock", VSOCK_SUFFIX_RESERVE)?,
+            api_socket: file("api.sock")?,
+            kernel: file("vmlinux")?,
+            rootfs: file("rootfs.ext4")?,
+            vsock: file("v.sock")?,
             _dir: dir,
         })
     }
@@ -362,18 +374,26 @@ mod tests {
     }
 
     #[test]
-    fn every_socket_view_fits_the_sun_path_limit() {
+    fn every_socket_view_fits_the_sun_path_limit_with_its_widest_port() {
+        // The reserve is what makes `with_port` infallible, and it is kept on
+        // every socket path rather than only the one that grows today: a base
+        // admitted without it would take a port and fit under a shallow state
+        // directory while failing at `bind` under a deep one.
         let (_dir, paths) = jail_in_tmpdir();
-        for file in [paths.api_socket(), paths.vsock()] {
+        for file in [
+            paths.api_socket(),
+            paths.kernel(),
+            paths.rootfs(),
+            paths.vsock(),
+        ] {
             assert!(
                 file.socket().as_str().len() <= MAX_SOCKET_PATH,
                 "{} must fit sun_path",
                 file.socket()
             );
+            let widest = file.socket().with_port(u32::MAX);
+            assert!(widest.len() <= MAX_SOCKET_PATH, "{widest} must fit");
         }
-        // And the longest name the vsock base ever grows into still fits.
-        let longest = paths.vsock().socket().with_suffix("_4294967295");
-        assert!(longest.len() <= MAX_SOCKET_PATH, "{longest} must fit");
     }
 
     #[test]
@@ -398,20 +418,25 @@ mod tests {
 
     #[test]
     fn an_oversized_socket_path_names_the_limit_and_the_length() {
-        let err = SocketPath::new("/x".repeat(80), 0).unwrap_err();
+        let err = SocketPath::new("/x".repeat(80)).unwrap_err();
         let message = err.to_string();
 
         assert!(message.contains("107"), "the limit is named: {message}");
-        assert!(message.contains("160"), "the length is named: {message}");
+        assert!(message.contains("171"), "the length is named: {message}");
     }
 
     #[test]
-    fn a_reserved_suffix_counts_against_the_limit() {
-        let base = "/a".repeat(52);
-        assert_eq!(base.len(), 104);
+    fn a_base_that_fits_only_while_it_is_bare_is_refused() {
+        // The port suffix counts against the limit at construction, because
+        // that is the only place a caller is left with anywhere to go. Admitted
+        // bare, the same path would be over the limit the moment it took the
+        // port it exists to take.
+        let widest = MAX_SOCKET_PATH - PORT_SUFFIX_RESERVE;
+        let fits = "/a".repeat(48);
+        assert_eq!(fits.len(), widest);
 
-        SocketPath::new(base.clone(), 0).unwrap();
-        SocketPath::new(base, 8).unwrap_err();
+        SocketPath::new(fits).unwrap();
+        SocketPath::new(format!("{}b", "/a".repeat(48))).unwrap_err();
     }
 
     #[test]
