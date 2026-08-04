@@ -116,7 +116,7 @@ pub struct FirecrackerJobConfig {
 /// no isolation, or a cgroup that cannot be created means the job proceeds with
 /// a warning. The absence has to be declared to count, though: a cgroup this
 /// runner could not read is a question that failed rather than a host with no
-/// isolation to give, and it fails the job. See [`cgroup_for_run`].
+/// isolation to give, and it fails the job. See `cgroup_for_run`.
 ///
 /// Placement and verification are conditional on the cgroup existing, but when
 /// it does they are hard requirements: a host that cannot isolate is a declared
