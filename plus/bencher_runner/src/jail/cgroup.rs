@@ -38,9 +38,7 @@ impl CgroupManager {
     /// directory name is the only handle a later sweep has for finding this
     /// cgroup again.
     pub fn new(vm_id: &VmId, signals: JailSignals) -> Result<Self, RunnerError> {
-        let cgroup_path = Utf8PathBuf::from(CGROUP_ROOT)
-            .join(BENCHER_CGROUP_BASE)
-            .join(vm_id.as_str());
+        let cgroup_path = vm_cgroup(vm_id.as_str());
 
         // Unconditional, because `create_dir_all` on a directory that is
         // already there is a success. The `exists` check this replaces was a
@@ -556,11 +554,17 @@ const REMOVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50
 /// cgroups set no exclusive cpuset, so a leftover blocks nothing) but because
 /// the usual reason `rmdir` fails is that something is still running in it.
 pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
-    remove_stale_cgroup_at(
-        Utf8PathBuf::from(CGROUP_ROOT)
-            .join(BENCHER_CGROUP_BASE)
-            .join(vm_id.as_str()),
-    )
+    remove_stale_cgroup_at(vm_cgroup(vm_id.as_str()))
+}
+
+/// The cgroup a VM id names.
+///
+/// The cgroup and the chroot are named by the same id by construction, so
+/// whichever of the two a sweep has in hand names the other.
+pub(crate) fn vm_cgroup(vm_id: &str) -> Utf8PathBuf {
+    Utf8PathBuf::from(CGROUP_ROOT)
+        .join(BENCHER_CGROUP_BASE)
+        .join(vm_id)
 }
 
 /// The removal, against the directory it is given.
@@ -621,7 +625,7 @@ fn is_contended(e: &std::io::Error) -> bool {
 /// Whether a `cgroup.procs` listing contains `pid`.
 ///
 /// Matches whole lines: pid `7` must not be satisfied by pid `70`.
-fn procs_contains_pid(procs: &str, pid: u32) -> bool {
+pub(crate) fn procs_contains_pid(procs: &str, pid: u32) -> bool {
     procs
         .lines()
         .any(|line| line.trim().parse::<u32>() == Ok(pid))
