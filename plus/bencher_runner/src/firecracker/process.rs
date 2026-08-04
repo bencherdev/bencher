@@ -187,7 +187,7 @@ impl FirecrackerProcess {
             if self.client().try_ready()? {
                 return Ok(());
             }
-            if let Ok(Some(status)) = self.child.try_wait() {
+            if let Some(status) = self.exited() {
                 return Err(FirecrackerError::JailedProcessExited { status });
             }
             std::thread::sleep(poll_interval);
@@ -198,11 +198,27 @@ impl FirecrackerProcess {
         // as a socket that never became ready, which points at Firecracker
         // taking too long when the truth is that it is gone. That confusion is
         // the entire reason this error exists.
-        if let Ok(Some(status)) = self.child.try_wait() {
+        if let Some(status) = self.exited() {
             return Err(FirecrackerError::JailedProcessExited { status });
         }
 
         Err(FirecrackerError::SocketNotReady(timeout))
+    }
+
+    /// The status of the jailed process, if it has already exited.
+    ///
+    /// `try_wait` can fail in its own right, and that failure is dropped on
+    /// purpose. The question is only whether the process is already gone, and a
+    /// question that could not be answered is not a death: reporting
+    /// [`FirecrackerError::JailedProcessExited`] would name a status nobody
+    /// read, and reporting the `try_wait` error itself would replace a verdict
+    /// about the VMM with one about the runner's own bookkeeping. Treating an
+    /// unpollable child as still running costs nothing, because every caller
+    /// asks inside a bounded loop that ends in its own error.
+    fn exited(&mut self) -> Option<std::process::ExitStatus> {
+        // No status, rather than no answer: the distinction is the doc comment
+        // above, and it is a decision rather than a discarded `Result`.
+        self.child.try_wait().unwrap_or(None)
     }
 
     /// Get a client for the Firecracker REST API.
@@ -391,6 +407,18 @@ mod tests {
         (dir, jail)
     }
 
+    /// A process around a plain child, for the readiness verdict.
+    ///
+    /// The jail is what the socket view names, so it has to outlive the process
+    /// this returns.
+    fn process_around(child: Child, jail: &JailPaths) -> FirecrackerProcess {
+        FirecrackerProcess {
+            child,
+            api_socket: jail.api_socket().clone(),
+            stderr_thread: None,
+        }
+    }
+
     /// The value following `flag`, if the flag is present.
     fn value_of<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
         let index = args.iter().position(|arg| arg == flag)?;
@@ -465,6 +493,37 @@ mod tests {
             !args.iter().any(|arg| arg.contains(jail_root)),
             "no host-side jail path may reach the jailed process: {args:?}"
         );
+    }
+
+    #[test]
+    fn a_child_that_is_still_running_is_not_reported_exited() {
+        // The readiness wait gives up the moment this says the process is gone,
+        // so an inverted verdict turns every slow boot into
+        // `JailedProcessExited`.
+        let (_dir, jail) = jail_in_tmpdir();
+        let child = Command::new("/bin/sh")
+            .args(["-c", "sleep 30"])
+            .spawn()
+            .unwrap();
+
+        let mut process = process_around(child, &jail);
+
+        assert!(process.exited().is_none());
+        // `Drop` kills and reaps the child.
+    }
+
+    #[test]
+    fn a_child_that_exited_is_reported_exited() {
+        let (_dir, jail) = jail_in_tmpdir();
+        let mut child = Command::new("/bin/sh")
+            .args(["-c", "exit 3"])
+            .spawn()
+            .unwrap();
+        child.wait().unwrap();
+
+        let mut process = process_around(child, &jail);
+
+        assert_eq!(process.exited().and_then(|status| status.code()), Some(3));
     }
 
     #[test]
