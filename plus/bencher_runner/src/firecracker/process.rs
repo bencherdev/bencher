@@ -347,7 +347,7 @@ mod tests {
 
     /// A stand-in identity for tests.
     fn vm_id() -> VmId {
-        VmId::from_chroot_name("vm-1".to_owned())
+        VmId::from_chroot_name("vm-1".to_owned()).unwrap()
     }
 
     /// The jail root has to exist: the paths hold a descriptor on it.

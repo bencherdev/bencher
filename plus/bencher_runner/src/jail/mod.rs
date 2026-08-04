@@ -66,6 +66,7 @@
 //! | `sweep_jails`: an entry cannot be read | fails the job |
 //! | `sweep_jails`: an entry's kind cannot be read | fails the job: it may be a jail |
 //! | `sweep_jails`: a name that is not UTF-8 | ignored: every name here is a UUID this runner minted, so it is not ours |
+//! | `sweep_jails`: a name this runner could not have minted | ignored: same reason, and the id is joined into a chroot path and a cgroup path |
 //! | `sweep_jails`: the reap reports a live VMM | fails the job |
 //! | `sweep_jails`: the reap could not examine the jail | fails the job |
 //! | `sweep_jails`: removing the cgroup | fails the job, and the chroot is kept because its name is the cgroup's only handle |
@@ -297,9 +298,26 @@ impl VmId {
     ///
     /// The sweep works backwards from the filesystem, and the directory name
     /// is the identity that created it.
+    ///
+    /// `None` for a name this runner could not have minted, which is what keeps
+    /// the type's purpose true in code rather than only in this comment. Every
+    /// id it makes is a UUID, or a UUID behind a fixed prefix, while what comes
+    /// back off the filesystem is whatever is sitting there: an empty name, one
+    /// carrying a `/` or a `..`, or one starting with a dot is not a jail of
+    /// ours, and the id is joined into both a chroot path and a
+    /// `/sys/fs/cgroup` path by callers that have no way to tell. Nothing
+    /// reaches this with such a name today. The check is so that nothing can.
+    ///
+    /// In-crate, because the sweep is the only thing that works backwards from
+    /// a directory name and it lives here. The jail is Linux-only, and so is it.
+    #[cfg(target_os = "linux")]
     #[must_use]
-    pub fn from_chroot_name(name: String) -> Self {
-        Self(name)
+    pub(crate) fn from_chroot_name(name: String) -> Option<Self> {
+        let minted = !name.is_empty()
+            && !name.starts_with('.')
+            && !name.contains('/')
+            && !name.contains("..");
+        minted.then_some(Self(name))
     }
 
     /// The identity as a string.
@@ -956,6 +974,35 @@ mod tests {
         assert_eq!(default.uid(), DEFAULT_JAIL_UID);
         assert_eq!(default.gid(), DEFAULT_JAIL_GID);
         JailUser::new(default.uid(), default.gid()).unwrap();
+    }
+
+    #[test]
+    fn a_name_that_could_not_have_been_minted_is_not_an_identity() {
+        // The id is joined into the jail's chroot path and into its cgroup's
+        // path by callers that cannot tell a directory name read off the
+        // filesystem from one this runner made, so a name that walks out of
+        // either is refused where it is recovered rather than everywhere it is
+        // used.
+        for name in ["", ".", "..", "../../etc", "jail/../..", "a/b", ".hidden"] {
+            assert!(
+                VmId::from_chroot_name(name.to_owned()).is_none(),
+                "'{name}' is not a name this runner could have minted"
+            );
+        }
+
+        // What a sweep actually finds is still recovered, whichever kind of run
+        // left it there.
+        let jail = VmId::new();
+        assert_eq!(
+            VmId::from_chroot_name(jail.as_str().to_owned()),
+            Some(jail),
+            "a minted id has to survive the round trip the sweep makes"
+        );
+        let local = VmId::for_local_run();
+        assert_eq!(
+            VmId::from_chroot_name(local.as_str().to_owned()),
+            Some(local)
+        );
     }
 
     #[test]
