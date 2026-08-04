@@ -19,10 +19,18 @@
 //! emit a number it has reason to distrust.
 //!
 //! Killing a process the runner does not own is a destructive capability, so
-//! the target is identified as narrowly as possible: only a process whose root
-//! directory *is* the chroot being swept, compared by device and inode. A
-//! process merely owned by the jail uid is not a target, because on a shared
-//! host that uid may legitimately own something else.
+//! the target is identified as narrowly as possible: a process whose root
+//! directory *is* the chroot being swept, compared by device and inode, or a
+//! member of the cgroup that chroot is named after, which is a UUID this runner
+//! minted and nothing else on the host is in. A process merely owned by the jail
+//! uid is not a target, because on a shared host that uid may legitimately own
+//! something else.
+//!
+//! The cgroup is a second handle rather than a redundant one, because for a
+//! moment it is the only handle there is: the jailer joins the cgroup in the
+//! `pre_exec` of the runner's fork and `chroot`s much later, inside itself, just
+//! before it execs Firecracker. See [`find_cgrouped_vmm`], which also says what
+//! neither handle covers.
 
 #![expect(clippy::print_stderr, reason = "reaping prints diagnostics")]
 
@@ -31,7 +39,7 @@ use std::os::fd::{AsRawFd as _, FromRawFd as _, OwnedFd};
 use std::os::unix::fs::MetadataExt as _;
 use std::time::{Duration, Instant};
 
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 
 /// How many processes to reap from one jail before giving up.
 ///
@@ -70,7 +78,7 @@ pub enum Reaped {
     Unexaminable,
 }
 
-/// Kill the VMM confined to `jail_root`, if one is still running.
+/// Kill the VMM the jail at `jail_root` still holds, if one is still running.
 ///
 /// Best effort about *which* process it touches: a VMM that cannot be
 /// identified is left alone, because the alternative to leaving an
@@ -154,7 +162,7 @@ where
     }
 }
 
-/// Kill one process known to be confined to `jail_root`.
+/// Kill one process known to belong to the jail at `jail_root`.
 fn reap_one(pid: u32, jail_root: &Utf8Path) -> Reaped {
     // Pin the process before signalling it. A pid found by scanning `/proc` can
     // exit and have its number recycled before the signal lands, and this runs
@@ -205,6 +213,17 @@ fn reap_one(pid: u32, jail_root: &Utf8Path) -> Reaped {
     }
 }
 
+/// Find the pid of a process the jail at `jail_root` still holds.
+///
+/// Both handles, narrowest first: a process chrooted into the jail, and failing
+/// that a process in the jail's cgroup.
+fn find_jailed_vmm(jail_root: &Utf8Path) -> std::io::Result<Option<u32>> {
+    match find_chrooted_vmm(jail_root)? {
+        Some(pid) => Ok(Some(pid)),
+        None => find_cgrouped_vmm(jail_root),
+    }
+}
+
 /// Find the pid of the VMM whose root directory is `jail_root`.
 ///
 /// The jailer `chroot`s before exec, so the confined process's root *is* the
@@ -217,7 +236,7 @@ fn reap_one(pid: u32, jail_root: &Utf8Path) -> Reaped {
 /// exist. Every other failure is an error rather than an absence, because the
 /// caller deletes a directory tree on the strength of this answer and a scan
 /// that could not run has established nothing.
-fn find_jailed_vmm(jail_root: &Utf8Path) -> std::io::Result<Option<u32>> {
+fn find_chrooted_vmm(jail_root: &Utf8Path) -> std::io::Result<Option<u32>> {
     let jail = match fs::metadata(jail_root) {
         Ok(jail) => jail,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -235,14 +254,87 @@ fn find_jailed_vmm(jail_root: &Utf8Path) -> std::io::Result<Option<u32>> {
     Ok(None)
 }
 
-/// Whether a process's root directory is `jail_root`.
+/// Find the pid of a process in the cgroup of the jail at `jail_root`.
 ///
-/// A jail root that cannot be stat'ed reads as "not this jail's VMM", which
-/// keeps the kill from landing on a process this function cannot vouch for. The
-/// caller's next scan turns the same failure into [`Reaped::Unexaminable`], so
-/// nothing downstream mistakes it for an empty jail.
+/// The chroot is not the jail's only handle on its VMM, and for a moment it is
+/// not a handle at all. Cgroup placement happens in the `pre_exec` of the
+/// runner's fork, before the jailer runs; the `chroot` happens inside the jailer
+/// much later, just before it execs Firecracker. A runner `SIGKILL`ed in between
+/// orphans a jailer that is already a member of this jail's cgroup and is still
+/// rooted at `/`, which the scan above cannot see. The sweep would then call the
+/// jail clear and delete the chroot out from under it, and a jailer that went on
+/// to finish its `exec` would leave a Firecracker rooted at a deleted directory
+/// that no later scan could ever match: a stray on the benchmark cores with
+/// nothing left to find it by.
+///
+/// Membership identifies the target as narrowly as the root inode does, because
+/// the cgroup is named by the same id as the chroot and that id is a UUID this
+/// runner minted.
+///
+/// What neither handle covers: a run with no CPU layout, and a host that does
+/// not delegate cpuset, have no cgroup at all, so a jailer orphaned before its
+/// `chroot` on one of those is invisible to the sweep. Saying so is better than
+/// leaving the sweep looking complete.
+fn find_cgrouped_vmm(jail_root: &Utf8Path) -> std::io::Result<Option<u32>> {
+    match jail_cgroup_procs(jail_root) {
+        Some(procs) => first_cgroup_member(&procs),
+        None => Ok(None),
+    }
+}
+
+/// The first process listed in a `cgroup.procs`, if there is one.
+///
+/// A listing that is not there is a cgroup that is not there, and nothing can be
+/// in a cgroup that does not exist. Every other failure is an error rather than
+/// an absence, for the same reason as in the scan above: the caller deletes a
+/// directory tree on this answer.
+///
+/// The runner's own pid is skipped. It is never in a jail's cgroup, and what one
+/// comparison against a pid that cannot be there buys is that a future path
+/// which does put it there cannot have the sweep `SIGKILL` the runner itself.
+fn first_cgroup_member(procs: &Utf8Path) -> std::io::Result<Option<u32>> {
+    let listing = match fs::read_to_string(procs) {
+        Ok(listing) => listing,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e),
+    };
+    Ok(listing
+        .lines()
+        .filter_map(|line| line.trim().parse::<u32>().ok())
+        .find(|&pid| pid != std::process::id()))
+}
+
+/// The `cgroup.procs` of the cgroup belonging to the jail at `jail_root`.
+///
+/// The chroot and the cgroup are named by the same VM id by construction, and
+/// the jail root sits one directory under that id, so the id is the name of
+/// `jail_root`'s parent. The same pairing the sweep uses in the other direction
+/// to remove the cgroup of a jail it found on disk.
+///
+/// `None` is a path with no parent to read an id from, which is not a jail this
+/// runner built.
+fn jail_cgroup_procs(jail_root: &Utf8Path) -> Option<Utf8PathBuf> {
+    let vm_id = jail_root.parent()?.file_name()?;
+    Some(super::cgroup::vm_cgroup(vm_id).join("cgroup.procs"))
+}
+
+/// Whether a process is one the jail at `jail_root` still holds.
+///
+/// Either handle: rooted at the chroot, or a member of the jail's cgroup.
+///
+/// A jail root that cannot be stat'ed, or a listing that cannot be read, reads
+/// as "not this jail's VMM", which keeps the kill from landing on a process this
+/// function cannot vouch for. The caller's next scan turns the same failure into
+/// [`Reaped::Unexaminable`], so nothing downstream mistakes it for an empty
+/// jail.
 fn is_jailed_vmm(pid: u32, jail_root: &Utf8Path) -> bool {
     fs::metadata(jail_root).is_ok_and(|jail| matches_jail(pid, &jail))
+        || jail_cgroup_procs(jail_root).is_some_and(|procs| is_cgroup_member(&procs, pid))
+}
+
+/// Whether a `cgroup.procs` lists `pid`.
+fn is_cgroup_member(procs: &Utf8Path, pid: u32) -> bool {
+    fs::read_to_string(procs).is_ok_and(|listing| super::cgroup::procs_contains_pid(&listing, pid))
 }
 
 /// Whether a process's root directory is the same inode as `jail`.
@@ -458,6 +550,66 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let other = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         assert!(!is_jailed_vmm(std::process::id(), &other));
+    }
+
+    #[test]
+    fn a_jails_cgroup_is_the_one_its_chroot_is_named_after() {
+        // The pairing the sweep already relies on to remove the cgroup of a jail
+        // it found on disk, read the other way round. The id is the directory
+        // over the jail root, not the jail root itself.
+        let procs = jail_cgroup_procs(Utf8Path::new("/srv/runner/jail/vm-1/root")).unwrap();
+
+        assert_eq!(
+            procs,
+            Utf8Path::new("/sys/fs/cgroup/bencher/vm-1/cgroup.procs")
+        );
+        assert_eq!(jail_cgroup_procs(Utf8Path::new("/")), None);
+    }
+
+    #[test]
+    fn a_jailer_orphaned_before_its_chroot_is_found_by_its_cgroup() {
+        // Cgroup placement happens in the fork's `pre_exec` and the `chroot`
+        // only inside the jailer, so a runner killed in between leaves a jailer
+        // that is in the cgroup and still rooted at `/`. Nothing else finds it,
+        // and calling the jail clear would delete the chroot out from under a
+        // process about to `exec` into it.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let procs = root.join("cgroup.procs");
+        fs::write(&procs, "4242\n").unwrap();
+
+        assert_eq!(first_cgroup_member(&procs).unwrap(), Some(4242));
+        assert!(is_cgroup_member(&procs, 4242));
+        assert!(!is_cgroup_member(&procs, 42));
+    }
+
+    #[test]
+    fn the_runner_is_never_a_process_the_sweep_reaps() {
+        // The runner does not put itself in a jail's cgroup. This costs one
+        // comparison and makes sure a path that someday does cannot have the
+        // sweep SIGKILL the runner.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let procs = root.join("cgroup.procs");
+        fs::write(&procs, format!("{}\n", std::process::id())).unwrap();
+
+        assert_eq!(first_cgroup_member(&procs).unwrap(), None);
+    }
+
+    #[test]
+    fn a_cgroup_listing_that_cannot_be_read_is_not_an_empty_cgroup() {
+        // A jail with no cgroup is ordinary: a run with no CPU layout never
+        // creates one. A listing that is there and could not be read is not
+        // that, and the caller deletes a directory tree on the difference.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let absent = root.join("cgroup.procs");
+        let unreadable = root.join("unreadable");
+        fs::create_dir_all(unreadable.join("cgroup.procs")).unwrap();
+
+        assert_eq!(first_cgroup_member(&absent).unwrap(), None);
+        first_cgroup_member(&unreadable.join("cgroup.procs")).unwrap_err();
+        assert!(!is_cgroup_member(&absent, 4242));
     }
 
     #[test]
