@@ -51,6 +51,10 @@ type Probe = fn(&Utf8Path) -> Result<bool>;
 /// Build one with `..Scenario::default()` so a scenario names only what it
 /// actually varies, and so adding a field does not have to be written out
 /// across every scenario in this file.
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each flag switches one independent property of a run on"
+)]
 struct Scenario {
     name: &'static str,
     description: &'static str,
@@ -82,6 +86,9 @@ struct Scenario {
     /// SIGKILL is the point: it is the exit that never unwinds, so `Drop`
     /// cannot reclaim the chroot and only the sweep can.
     orphan_then_rerun: bool,
+    /// Point the runner at a state directory it has to refuse, and assert it
+    /// failed the job rather than running the VMM outside a jail.
+    unusable_state_dir: bool,
     validate: fn(&ScenarioOutput) -> Result<()>,
 }
 
@@ -98,6 +105,7 @@ impl Default for Scenario {
             probe: None,
             tuning: false,
             orphan_then_rerun: false,
+            unusable_state_dir: false,
             // Sandboxed is the interesting case and the overwhelming majority,
             // so the handful of non-sandboxed scenarios opt out rather than
             // every other scenario opting in.
@@ -330,6 +338,20 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
         .with_context(|| format!("Failed to reclaim jails stranded before {}", scenario.name))?;
     drop(fs::remove_dir_all(&state_dir));
 
+    // The one scenario that sabotages the jail is pointed somewhere else
+    // entirely: a path the runner has to refuse, planted beside the suite's own
+    // state directory so nothing outside the harness's tree is ever named.
+    let state_arg = if scenario.unusable_state_dir {
+        unusable_state_dir().with_context(|| {
+            format!(
+                "Failed to plant a state directory the runner must refuse for {}",
+                scenario.name
+            )
+        })?
+    } else {
+        state_dir.clone()
+    };
+
     // Prepend --sandbox firecracker for sandboxed scenarios.
     //
     // `--no-tuning` everywhere except the one scenario that exists to test
@@ -338,7 +360,7 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     // runner, changing the core count under itself. The tuning scenario turns
     // them back on for one job, keeps SMT and IRQ steering out of it, and the
     // harness undoes everything itself afterwards.
-    let mut args: Vec<&str> = vec!["--state-dir", state_dir.as_str()];
+    let mut args: Vec<&str> = vec!["--state-dir", state_arg.as_str()];
     if scenario.tuning {
         // The two knobs this scenario deliberately does not exercise. `--smt`
         // keeps hyper-threading on: offlining a sibling changes `nproc` for
@@ -357,7 +379,9 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     args.extend(scenario.extra_args);
 
     // Run the runner (with optional cancellation or host-side probe)
-    let output = if let Some(secs) = scenario.cancel_after_secs {
+    let output = if scenario.unusable_state_dir {
+        run_runner_without_unjailed_vmm(&image_path, &args, runner_bin)
+    } else if let Some(secs) = scenario.cancel_after_secs {
         run_runner_with_cancel(&image_path, &args, Duration::from_secs(secs), runner_bin)
     } else if scenario.orphan_then_rerun {
         run_runner_after_orphan(&image_path, &args, &state_dir, runner_bin)
@@ -2698,6 +2722,38 @@ CMD ["echo", "JAIL_NETNS_a7f3b2c9"]"#,
             ..Scenario::default()
         },
         Scenario {
+            name: "jail_refused_fails_the_job",
+            description: "A state directory the runner must refuse fails the job rather than running the VMM unjailed",
+            // Nothing in here should ever run, and the marker is how that is
+            // known: the guest prints it and the runner cannot.
+            dockerfile: r#"FROM busybox
+CMD ["echo", "JAIL_REFUSED_a7f3b2c9"]"#,
+            unusable_state_dir: true,
+            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            validate: |output| {
+                // Failing the job is the invariant, and the runner is free to
+                // reword why: nothing here reads the message. That no VMM was
+                // launched is asserted against the host's own processes, in
+                // `run_runner_without_unjailed_vmm`.
+                if output.exit_code == 0 {
+                    bail!(
+                        "Expected the job to fail when the jail could not be built, got exit code 0.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                if output.stdout.contains("JAIL_REFUSED_a7f3b2c9") {
+                    bail!(
+                        "The guest ran even though the runner could not build a jail to run it in.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
             name: "jail_sweep_reclaims_orphan",
             description: "A chroot orphaned by a runner that never unwound is swept by the next job",
             // Likewise a token the runner cannot print: "swept" sits one
@@ -2767,6 +2823,85 @@ fn stack_netns_mounts() -> Result<()> {
     );
     println!("  stacked {stacked} mounts on {handle}");
     Ok(())
+}
+
+/// The state directory the sabotage scenario points the runner at.
+fn unusable_state_dir() -> Result<Utf8PathBuf> {
+    plant_unusable_state_dir(&super::work_dir())
+}
+
+/// Plant a state directory the runner has to refuse, under `root`.
+///
+/// A symlinked component, because that is refused rather than resolved: under a
+/// state directory whose parent an unprivileged user can write to, following a
+/// link would have root chmod and sweep a directory of somebody else's choosing.
+/// It is the cheapest sabotage that is certainly fatal and never names anything
+/// outside the harness's own tree. An unwritable directory would not do, since
+/// these scenarios run as root and root writes anyway.
+///
+/// The link points at a directory of the harness's own, so a runner that
+/// resolved it instead of refusing it would be caught by the scenario rather
+/// than by an operator noticing a system directory at 0700.
+fn plant_unusable_state_dir(root: &Utf8Path) -> Result<Utf8PathBuf> {
+    use std::os::unix::fs::symlink;
+
+    let target = root.join("refused-state-target");
+    let planted = root.join("refused-state");
+
+    fs::create_dir_all(&target)
+        .with_context(|| format!("Failed to create {target} for the refused state directory"))?;
+    // Whichever it is after a previous run: the link itself, or a directory a
+    // runner that resolved it went on to build a tree in.
+    drop(fs::remove_file(&planted));
+    drop(fs::remove_dir_all(&planted));
+    symlink(&target, &planted).with_context(|| format!("Failed to link {planted} at {target}"))?;
+
+    Ok(planted)
+}
+
+/// Run the runner and prove it launched no VMM at all.
+///
+/// The pair is the invariant: a runner that cannot build the jail has to fail
+/// the job rather than fall back to an unjailed VMM. Asserted against the
+/// processes on the host, never against what the runner printed, so a reworded
+/// error stays green and a guest running outside a jail does not.
+///
+/// A set difference rather than a count, since the machine is shared: what
+/// matters is whether this run added a Firecracker, not what was already there.
+fn run_runner_without_unjailed_vmm(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let before = firecracker_pids()?;
+    let output = run_runner(image_path, args, runner_bin)?;
+    let after = firecracker_pids()?;
+
+    let launched: Vec<u32> = after.difference(&before).copied().collect();
+    anyhow::ensure!(
+        launched.is_empty(),
+        "The runner could not build a jail, and a VMM is running anyway (pid(s) {launched:?}). \
+         A confinement that cannot be built has to fail the job, not run the guest without it.\nstdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    );
+
+    Ok(output)
+}
+
+/// Every Firecracker running on the host right now, by pid.
+fn firecracker_pids() -> Result<std::collections::BTreeSet<u32>> {
+    let mut pids = std::collections::BTreeSet::new();
+    for entry in fs::read_dir("/proc").context("Failed to read /proc")? {
+        let entry = entry.context("Failed to read a /proc entry")?;
+        let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
+            continue;
+        };
+        if is_firecracker(pid)? {
+            pids.insert(pid);
+        }
+    }
+    Ok(pids)
 }
 
 /// Take the stacked mounts back off the network namespace handle.
@@ -4056,6 +4191,34 @@ mod tests {
             Utf8Path::new("/workspace"),
         )
         .unwrap_err();
+    }
+
+    #[test]
+    fn the_sabotaged_state_directory_is_one_the_runner_refuses() {
+        // The scenario only means something while the planted path is one the
+        // runner cannot take: a plain empty directory would be accepted, the
+        // job would run, and the scenario would assert a failure that never
+        // came. A link is refused rather than resolved, and it is refused at
+        // the first thing the runner does with a state directory.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+
+        let planted = plant_unusable_state_dir(root).unwrap();
+
+        assert!(
+            fs::symlink_metadata(&planted)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "the runner refuses a symlinked component"
+        );
+        assert!(
+            planted.is_absolute(),
+            "a relative state directory is refused for another reason entirely"
+        );
+
+        // Planting it twice is what a second run of the suite does.
+        plant_unusable_state_dir(root).unwrap();
     }
 
     #[test]
