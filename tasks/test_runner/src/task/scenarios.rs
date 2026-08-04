@@ -2579,6 +2579,17 @@ const SCENARIO_JAIL_UID: u32 = 61017;
 /// the two from drifting apart.
 const SCENARIO_JAIL_UID_ARG: &str = "61017";
 
+/// The network namespace handle the runner builds for the jailed VMM.
+///
+/// Global to the host and named by the `ip netns` convention, which is the
+/// product's own reasoning: an operator has to be able to see it. Spelled here
+/// rather than read from the runner, since the harness deliberately depends on
+/// nothing the product could redefine underneath it.
+const NETNS_HANDLE: &str = "/run/netns/bencher-jail";
+
+/// The harness's own network namespace, which is the host's.
+const HARNESS_NETNS: &str = "/proc/self/ns/net";
+
 /// The state directory scenarios run against.
 fn scenario_state_dir() -> Utf8PathBuf {
     super::work_dir().join("state")
@@ -2594,7 +2605,7 @@ fn jail_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
             name: "jail_confinement",
-            description: "A jailed job succeeds with the VMM unprivileged and in its cgroup",
+            description: "A jailed job succeeds with the VMM unprivileged, off the host network, and in its cgroup",
             // The guest sleeps so the VMM is alive long enough to be observed
             // by a probe that polls every 100ms.
             //
@@ -2678,7 +2689,7 @@ fn assert_cpu_isolation_applied(output: &ScenarioOutput) -> Result<()> {
 /// host fails until an operator loops `umount` by hand. The unwind loop exists
 /// for exactly this, and nothing else exercises it.
 fn stack_netns_mounts() -> Result<()> {
-    let handle = "/run/netns/bencher-jail";
+    let handle = NETNS_HANDLE;
     fs::create_dir_all("/run/netns").context("Failed to create the netns directory")?;
     if !Utf8Path::new(handle).exists() {
         fs::File::create(handle).context("Failed to create the netns handle")?;
@@ -2687,23 +2698,38 @@ fn stack_netns_mounts() -> Result<()> {
     for _ in 0..2 {
         let status = Command::new("unshare")
             .args(["--net", "sh", "-c"])
-            .arg(format!("mount --bind /proc/self/ns/net {handle}"))
+            .arg(format!("mount --bind {HARNESS_NETNS} {handle}"))
             .status()
             .context("Failed to run unshare to stack a netns mount")?;
         anyhow::ensure!(status.success(), "Failed to stack a netns mount");
     }
 
-    let stacked = fs::read_to_string("/proc/self/mountinfo")
-        .context("Failed to read mountinfo")?
-        .lines()
-        .filter(|line| line.contains(&format!(" {handle} ")))
-        .count();
+    let stacked = stacked_netns_mounts()?;
     anyhow::ensure!(
         stacked >= 2,
         "Expected at least two stacked mounts on {handle}, found {stacked}"
     );
     println!("  stacked {stacked} mounts on {handle}");
     Ok(())
+}
+
+/// How many mounts are stacked on the network namespace handle right now.
+fn stacked_netns_mounts() -> Result<usize> {
+    let mountinfo =
+        fs::read_to_string("/proc/self/mountinfo").context("Failed to read mountinfo")?;
+    Ok(mounts_on(&mountinfo, NETNS_HANDLE))
+}
+
+/// How many mounts `mountinfo` shows at exactly `mount_point`.
+///
+/// The whole field, delimited by the spaces around it, never a substring: the
+/// mount point sits in the middle of the line, and a plain `contains` counts a
+/// mount on any path this one is a prefix of.
+fn mounts_on(mountinfo: &str, mount_point: &str) -> usize {
+    mountinfo
+        .lines()
+        .filter(|line| line.contains(&format!(" {mount_point} ")))
+        .count()
 }
 
 /// Assert the runner actually completed the job.
@@ -2771,12 +2797,16 @@ fn assert_no_chroot_remains(state_dir: &Utf8Path) -> Result<()> {
     Ok(())
 }
 
-/// Check that the jailed VMM is unprivileged and already in its cgroup.
+/// Check that the jailed VMM is unprivileged, off the host network, and
+/// already in its cgroup.
 ///
-/// Both invariants disappear with the process, so they cannot be recovered
-/// from the runner's output. Cgroup membership in particular must already
-/// hold the first time the VMM is seen: it is established before the exec,
-/// not after the VM is running.
+/// Every one of these disappears with the process, so none can be recovered
+/// from the runner's output. The network namespace is the one with nothing else
+/// watching it: the guest has no NIC either way, so a VMM launched without
+/// `--netns` still runs a guest with no network and still satisfies every other
+/// scenario in this suite. Cgroup membership in particular must already hold the
+/// first time the VMM is seen: it is established before the exec, not after the
+/// VM is running.
 fn probe_confinement(state_dir: &Utf8Path) -> Result<bool> {
     let parent = jail_parent(state_dir);
     let Some((vm_id, jail_root)) = find_jail(&parent)? else {
@@ -2787,6 +2817,9 @@ fn probe_confinement(state_dir: &Utf8Path) -> Result<bool> {
     };
 
     if !check_unprivileged(pid, &jail_root, SCENARIO_JAIL_UID)? {
+        return Ok(false);
+    }
+    if !check_netns(pid)? {
         return Ok(false);
     }
     // Placement happens in `pre_exec`, before the jailer itself starts, so
@@ -2841,8 +2874,6 @@ fn find_jail(parent: &Utf8Path) -> Result<Option<(String, Utf8PathBuf)>> {
 /// is neither: it would surface as a probe timeout blaming the runner for
 /// something the harness could not see.
 fn find_jailed_vmm(jail_root: &Utf8Path) -> Result<Option<u32>> {
-    use std::os::unix::fs::MetadataExt as _;
-
     let jail = match fs::metadata(jail_root) {
         Ok(jail) => jail,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -2860,7 +2891,7 @@ fn find_jailed_vmm(jail_root: &Utf8Path) -> Result<Option<u32>> {
         let Ok(root) = fs::metadata(format!("/proc/{pid}/root")) else {
             continue;
         };
-        if root.dev() == jail.dev() && root.ino() == jail.ino() {
+        if same_object(&root, &jail) {
             return Ok(Some(pid));
         }
     }
@@ -2928,6 +2959,78 @@ fn jail_root_uid(jail_root: &Utf8Path) -> Option<u32> {
 
     let uid = fs::metadata(jail_root).ok()?.uid();
     (uid != 0).then_some(uid)
+}
+
+/// Check the VMM joined the jail's network namespace.
+///
+/// Nothing else in the suite can see this. The guest has no network device in
+/// either case, so a VMM launched without `--netns` leaves every other scenario
+/// green while the VMM process itself keeps the host network reach the empty
+/// namespace exists to remove.
+///
+/// Compared by identity rather than by path, the same way the chroot is: every
+/// namespace inode lives on the single kernel `nsfs`, and `/proc/<pid>/ns/net`
+/// names the namespace a process is in, so device and inode agree for exactly
+/// the processes in one namespace. Two readings are needed, because either one
+/// alone can be satisfied by an accident: matching the handle without differing
+/// from the harness would hold if the handle were the host's own namespace, and
+/// differing from the harness without matching the handle would hold for any
+/// namespace at all.
+///
+/// There is no not-ready-yet window. The handle lives at an absolute path
+/// outside the chroot, so the jailer has to join before it chroots, and the
+/// probe sees the process only once its root is the jail. `Ok(false)` is only
+/// for a process that has gone, which is the probe's own race and not a
+/// violation.
+fn check_netns(pid: u32) -> Result<bool> {
+    let handle = Utf8Path::new(NETNS_HANDLE);
+    let expected = fs::metadata(handle).with_context(|| {
+        format!(
+            "Failed to stat {handle}, which the runner builds before it launches the VMM, so which namespace the VMM joined is unknown"
+        )
+    })?;
+    let own = fs::metadata(HARNESS_NETNS)
+        .context("Failed to stat the harness's own network namespace")?;
+    // A read that fails is a VMM that has exited, which is the one failure here
+    // that is an answer rather than a blind spot: the pid came from a listing
+    // taken moments ago.
+    let Ok(joined) = fs::metadata(format!("/proc/{pid}/ns/net")) else {
+        return Ok(false);
+    };
+
+    if same_object(&joined, &own) {
+        bail!(
+            "The VMM (pid {pid}) is in the harness's own network namespace, so it was launched without --netns and keeps the host's network reach"
+        );
+    }
+    if !same_object(&joined, &expected) {
+        bail!(
+            "The VMM (pid {pid}) is in network namespace {}, not the {handle} the runner built ({})",
+            namespace_id(&joined),
+            namespace_id(&expected)
+        );
+    }
+
+    Ok(true)
+}
+
+/// How a namespace is named when the comparison fails.
+fn namespace_id(metadata: &fs::Metadata) -> String {
+    use std::os::unix::fs::MetadataExt as _;
+
+    format!("{}:{}", metadata.dev(), metadata.ino())
+}
+
+/// Whether two readings name the same file, namespace, or directory.
+///
+/// Device and inode, which is the only identity that survives the jail: the
+/// jailer pivots into a private mount namespace, so paths read back as
+/// something else on both sides of it, and namespaces have no path of their own
+/// at all.
+fn same_object(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt as _;
+
+    left.dev() == right.dev() && left.ino() == right.ino()
 }
 
 /// Check the VMM is in its cgroup.
@@ -3849,6 +3952,56 @@ mod tests {
             Utf8Path::new("/workspace"),
         )
         .unwrap_err();
+    }
+
+    #[test]
+    fn one_object_read_twice_is_the_same_object() {
+        // The identity the netns and chroot checks are built on. Two readings
+        // of one path agree, and that is what makes a differing reading mean
+        // the VMM is somewhere else rather than that the reading is noisy.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let path = root.join("ns");
+        fs::write(&path, "").unwrap();
+
+        let left = fs::metadata(&path).unwrap();
+        let right = fs::metadata(&path).unwrap();
+
+        assert!(same_object(&left, &right));
+    }
+
+    #[test]
+    fn two_objects_are_not_one() {
+        // Neighbors on one filesystem, so the device matches and only the inode
+        // separates them: a comparison that dropped the inode would call the
+        // VMM's namespace the jail's.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        fs::write(root.join("host"), "").unwrap();
+        fs::write(root.join("jail"), "").unwrap();
+
+        let host = fs::metadata(root.join("host")).unwrap();
+        let jail = fs::metadata(root.join("jail")).unwrap();
+
+        assert!(!same_object(&host, &jail));
+    }
+
+    #[test]
+    fn a_stacked_handle_is_counted_by_its_own_mount_point() {
+        // The mount point is a field in the middle of the line, so counting
+        // lines that merely contain the path counts mounts on every path it is
+        // a prefix of. Both readings matter: the setup asserts it stacked what
+        // it meant to, and the teardown asserts it unwound all of it.
+        let mountinfo = "\
+25 1 0:23 / /run rw,nosuid,nodev shared:2 - tmpfs tmpfs rw
+71 25 0:4 net:[4026532290] /run/netns/bencher-jail rw shared:3 - nsfs nsfs rw
+72 25 0:4 net:[4026532351] /run/netns/bencher-jail rw shared:4 - nsfs nsfs rw
+73 25 0:4 net:[4026532999] /run/netns/bencher-jail-other rw shared:5 - nsfs nsfs rw
+";
+
+        assert_eq!(mounts_on(mountinfo, "/run/netns/bencher-jail"), 2);
+        assert_eq!(mounts_on(mountinfo, "/run/netns/bencher-jail-other"), 1);
+        assert_eq!(mounts_on(mountinfo, "/run/netns/absent"), 0);
     }
 
     #[test]
