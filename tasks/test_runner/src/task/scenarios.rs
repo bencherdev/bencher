@@ -2309,11 +2309,44 @@ fn kvm_available() -> bool {
 /// redirects it would otherwise have the binaries built in one place and
 /// looked for in another, and the harness would report a missing binary
 /// immediately after reporting a successful build.
-fn target_dir() -> Utf8PathBuf {
-    std::env::var_os("CARGO_TARGET_DIR").map_or_else(
-        || super::workspace_root().join("target"),
-        |dir| Utf8PathBuf::from(dir.to_string_lossy().into_owned()),
+fn target_dir() -> Result<Utf8PathBuf> {
+    resolve_target_dir(
+        std::env::var_os("CARGO_TARGET_DIR").as_deref(),
+        &super::workspace_root(),
     )
+}
+
+/// Where a build run from `workspace_root` puts its output.
+///
+/// A relative `CARGO_TARGET_DIR` is resolved against the workspace root rather
+/// than carried through as it stands. Cargo resolves it against the working
+/// directory of the build, which is the workspace root the builds above hand to
+/// `current_dir`, so a harness invoked from anywhere else would look for the
+/// binaries under its own working directory instead. That is the same missing
+/// binary immediately after a successful build that honoring the variable at all
+/// exists to prevent.
+///
+/// A value that is not UTF-8 is refused rather than converted lossily: the
+/// replacement characters would name a different directory again, and would do
+/// it while reporting a path that looks like the one that was asked for.
+fn resolve_target_dir(
+    dir: Option<&std::ffi::OsStr>,
+    workspace_root: &Utf8Path,
+) -> Result<Utf8PathBuf> {
+    let Some(dir) = dir else {
+        return Ok(workspace_root.join("target"));
+    };
+    let dir = Utf8PathBuf::from_path_buf(std::path::PathBuf::from(dir)).map_err(|dir| {
+        anyhow::anyhow!(
+            "CARGO_TARGET_DIR is not valid UTF-8: {}",
+            dir.as_os_str().display()
+        )
+    })?;
+    Ok(if dir.is_absolute() {
+        dir
+    } else {
+        workspace_root.join(dir)
+    })
 }
 
 /// Whether this process is running as root.
@@ -2484,7 +2517,7 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
         bail!("cargo build -p bencher_init --target {target_triple} failed");
     }
 
-    let init_path = target_dir().join(format!("{target_triple}/debug/bencher-init"));
+    let init_path = target_dir()?.join(format!("{target_triple}/debug/bencher-init"));
     if !init_path.exists() {
         bail!("bencher-init binary not found at {init_path} after build");
     }
@@ -2501,7 +2534,7 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
         bail!("cargo build -p bencher_runner_cli failed");
     }
 
-    let runner_bin = target_dir().join("debug/runner");
+    let runner_bin = target_dir()?.join("debug/runner");
     if !runner_bin.exists() {
         bail!("Runner binary not found at {runner_bin} after build");
     }
@@ -3732,7 +3765,57 @@ fn run_runner(
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::OsStr;
+
     use super::*;
+
+    #[test]
+    fn a_relative_target_dir_is_resolved_against_the_workspace_root() {
+        // Cargo resolves a relative value against the working directory of the
+        // build, which is the workspace root the builds are handed. Carrying it
+        // through as it stands would have the harness look under its own
+        // working directory and report a missing binary immediately after
+        // building it there.
+        assert_eq!(
+            resolve_target_dir(Some(OsStr::new("build-alt")), Utf8Path::new("/workspace")).unwrap(),
+            "/workspace/build-alt"
+        );
+    }
+
+    #[test]
+    fn an_absolute_target_dir_is_where_it_says() {
+        assert_eq!(
+            resolve_target_dir(
+                Some(OsStr::new("/elsewhere/target")),
+                Utf8Path::new("/workspace")
+            )
+            .unwrap(),
+            "/elsewhere/target"
+        );
+    }
+
+    #[test]
+    fn no_target_dir_is_the_workspace_target() {
+        assert_eq!(
+            resolve_target_dir(None, Utf8Path::new("/workspace")).unwrap(),
+            "/workspace/target"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_target_dir_that_is_not_utf8_is_refused() {
+        // Converting it lossily would name a directory nobody asked for, which
+        // is the missing binary this resolution exists to prevent, reported
+        // against a path that reads like the one that was given.
+        use std::os::unix::ffi::OsStrExt as _;
+
+        resolve_target_dir(
+            Some(OsStr::from_bytes(b"/tmp/target-\xff")),
+            Utf8Path::new("/workspace"),
+        )
+        .unwrap_err();
+    }
 
     #[test]
     fn the_selected_mode_is_the_bracketed_one() {
