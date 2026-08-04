@@ -2914,10 +2914,10 @@ fn firecracker_pids() -> Result<std::collections::BTreeSet<u32>> {
 ///
 /// One detach at a time, exactly as the runner's own unwind does, since a bind
 /// mount over a file stacks rather than reporting `EBUSY` and a single `umount`
-/// leaves the rest. The handle is then removed rather than left as the one mount
-/// the runner's last job put there: absent is what the next `ensure` expects to
-/// find least often and handles first, and it is the state a host that never ran
-/// this scenario is in.
+/// leaves the rest. The handle itself goes too, rather than being left as the
+/// single mount a successful run finishes with: an absent handle is what a host
+/// that never ran this scenario looks like, and the runner clears and rebinds
+/// the handle at the start of every job either way.
 fn unstack_netns_mounts() -> Result<()> {
     let handle = Utf8Path::new(NETNS_HANDLE);
     for _ in 0..MAX_NETNS_UNWIND {
