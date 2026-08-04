@@ -166,7 +166,7 @@ mod tests {
 
     /// A stand-in identity for tests.
     fn vm_id() -> VmId {
-        VmId::from_chroot_name("vm-1".to_owned())
+        VmId::from_chroot_name("vm-1".to_owned()).unwrap()
     }
 
     fn state_in_tmpdir() -> (tempfile::TempDir, StateDir) {
