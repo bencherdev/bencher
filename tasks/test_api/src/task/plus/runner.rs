@@ -326,6 +326,9 @@ impl RunnerTest {
         if let Some((mut runner_child, reader_handle, state_dir)) = runner_child_and_handle {
             kill_elevated_runner(&mut runner_child);
             let _join = reader_handle.join();
+            // The cgroups first: they are named by the jail directories in the
+            // state directory, which is removed next.
+            remove_elevated_cgroups(&state_dir);
             remove_elevated_state_dir(&state_dir);
         }
         let _kill = no_sandbox_child.kill();
@@ -376,6 +379,49 @@ fn elevated_state_dir(runner_bin: &std::ffi::OsStr) -> std::path::PathBuf {
         .join("test-api-runner-state")
 }
 
+/// Remove the cgroups of any job the elevated runner had in flight.
+///
+/// The runner puts each jailed VMM in `/sys/fs/cgroup/bencher/<vm id>`, and
+/// nothing removes that when the daemon is killed rather than asked to stop. The
+/// group kill takes the VMM with it, so what is left is residue rather than a
+/// stranded VMM, but it is root-owned residue that accumulates one directory per
+/// interrupted run and that the runner's own sweep can never find again: the
+/// sweep names cgroups by the jail directories in the state directory, and that
+/// is removed next.
+///
+/// Best effort, and quiet. A cgroup that is still busy belongs to something the
+/// kill did not reach, which `remove_elevated_state_dir` is the one that has to
+/// say so, and a machine with no such cgroups has nothing to report.
+fn remove_elevated_cgroups(state_dir: &std::path::Path) {
+    let jail_parent = state_dir.join("jail").join("firecracker");
+    let _status = Command::new("sudo")
+        .args(["-n", "sh", "-c"])
+        .arg(cgroup_cleanup_script(&jail_parent, CGROUP_ROOT))
+        .status();
+}
+
+/// Where the runner puts the cgroup of a jailed VMM, named by the jail's id.
+const CGROUP_ROOT: &str = "/sys/fs/cgroup/bencher";
+
+/// The shell that removes one cgroup per jail directory.
+///
+/// A shell rather than Rust because every step of it is privileged: the state
+/// directory is 0700 owned by root, so listing the jails needs root as much as
+/// removing the cgroups does, and `sudo` is how this harness borrows it.
+///
+/// A jail parent that is not there yet leaves the glob unexpanded, which the
+/// directory test then skips, so a run that never got as far as a job removes
+/// nothing and says nothing.
+fn cgroup_cleanup_script(jail_parent: &std::path::Path, cgroup_root: &str) -> String {
+    format!(
+        "for jail in \"{}\"/*; do \
+           [ -d \"$jail\" ] || continue; \
+           rmdir \"{cgroup_root}/$(basename \"$jail\")\" 2>/dev/null; \
+         done; \
+         true",
+        jail_parent.display()
+    )
+}
 /// Remove the state directory the elevated runner left behind.
 ///
 /// Root-owned, because the runner that created it was, so the unprivileged
@@ -1533,4 +1579,77 @@ fn wait_for_stdout_ready(
     }
 
     handle
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    /// A directory of this test's own, under the temp directory the rest of
+    /// this file already writes to.
+    fn scratch(name: &str) -> std::path::PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("bencher-runner-test-{name}-{}", std::process::id()));
+        drop(std::fs::remove_dir_all(&dir));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// Run the cleanup the way `remove_elevated_cgroups` does, minus the sudo
+    /// this test has no business asking for.
+    fn run_cleanup(jail_parent: &std::path::Path, cgroup_root: &std::path::Path) {
+        let status = Command::new("sh")
+            .arg("-c")
+            .arg(cgroup_cleanup_script(
+                jail_parent,
+                &cgroup_root.display().to_string(),
+            ))
+            .status()
+            .unwrap();
+        assert!(
+            status.success(),
+            "the cleanup reports nothing to complain about"
+        );
+    }
+
+    #[test]
+    fn the_cleanup_removes_the_cgroup_of_every_jail() {
+        // One cgroup per jail, named by the jail. Killing the daemon's process
+        // group takes its VMM with it but leaves these behind, and the runner
+        // finds stale cgroups by these same jail directories, which are removed
+        // moments later: what is not taken here is never found again.
+        let root = scratch("cgroups");
+        let jail_parent = root.join("state/jail/firecracker");
+        let cgroup_root = root.join("cgroup/bencher");
+        for vm_id in ["job-one", "job-two"] {
+            std::fs::create_dir_all(jail_parent.join(vm_id).join("root")).unwrap();
+            std::fs::create_dir_all(cgroup_root.join(vm_id)).unwrap();
+        }
+        // Not a jail, so not a cgroup either.
+        std::fs::write(jail_parent.join("notes.txt"), b"not a jail").unwrap();
+        std::fs::create_dir_all(cgroup_root.join("someone-elses")).unwrap();
+
+        run_cleanup(&jail_parent, &cgroup_root);
+
+        assert!(!cgroup_root.join("job-one").exists());
+        assert!(!cgroup_root.join("job-two").exists());
+        assert!(
+            cgroup_root.join("someone-elses").exists(),
+            "only the cgroups this run's jails name are its to remove"
+        );
+
+        drop(std::fs::remove_dir_all(&root));
+    }
+
+    #[test]
+    fn the_cleanup_says_nothing_about_a_run_that_never_had_a_job() {
+        // The daemon is stopped on every path out of the test, including the
+        // ones it never got a job on, so an absent jail parent is ordinary and
+        // has to pass quietly.
+        let root = scratch("no-jobs");
+
+        run_cleanup(&root.join("state/jail/firecracker"), &root.join("cgroup"));
+
+        drop(std::fs::remove_dir_all(&root));
+    }
 }
