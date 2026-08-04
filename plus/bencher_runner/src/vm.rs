@@ -217,7 +217,11 @@ fn copy_file(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
     Ok(())
 }
 
-/// Stage an executable found on the host, preserving its executable bit.
+/// Stage an executable found on the host, as mode 0755.
+///
+/// The mode is set rather than preserved: `fs::copy` already carries the
+/// source's over, and what is staged has to be executable however the host
+/// happened to permission the copy this found.
 fn copy_binary(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
     use std::os::unix::fs::PermissionsExt as _;
 
