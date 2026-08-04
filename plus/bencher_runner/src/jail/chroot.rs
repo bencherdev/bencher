@@ -36,6 +36,26 @@ pub struct JailDir {
 impl JailDir {
     /// Create the chroot tree for `vm_id` at mode 0700.
     pub fn create(state: &StateDir, vm_id: &VmId, signals: JailSignals) -> Result<Self, JailError> {
+        Self::create_with(state, vm_id, signals, make_private)
+    }
+
+    /// The creation, with the mode tightening supplied.
+    ///
+    /// The step is a parameter for the same reason the sweep's reap is one: it
+    /// is the one that fails with the tree already on disk, and a chmod of a
+    /// directory the test process itself just created does not fail on a host
+    /// worth testing on. What has to be proven is that such a failure is torn
+    /// down rather than left behind, and manufacturing it any other way would
+    /// be exercising the harness.
+    fn create_with<P>(
+        state: &StateDir,
+        vm_id: &VmId,
+        signals: JailSignals,
+        make_private: P,
+    ) -> Result<Self, JailError>
+    where
+        P: Fn(&Utf8Path) -> Result<(), JailError>,
+    {
         let dir = state.jail_dir(vm_id);
         let root = state.jail_root(vm_id);
 
@@ -43,19 +63,20 @@ impl JailDir {
             path: root.clone(),
             source: e,
         })?;
+        // The guard takes the tree the moment the tree exists, so every step
+        // below it is covered by this type's own teardown. Returning an error
+        // before constructing it left the chroot on disk with nothing armed to
+        // reclaim it: `Drop` never ran, the signals were dropped unused, and the
+        // next job returned early from a host this process had already prepared,
+        // so the orphan sat there until a restart.
+        let jail = Self { dir, root, signals };
         // The jailer eventually sets the chroot root to 0700 owned by the jail
         // user, but only once it runs. The runner builds the guest rootfs in
         // here before that, so the tree is private from the moment it exists.
-        for path in [&dir, &root] {
-            fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(|e| {
-                JailError::CreateJail {
-                    path: path.clone(),
-                    source: e,
-                }
-            })?;
-        }
+        make_private(&jail.dir)?;
+        make_private(&jail.root)?;
 
-        Ok(Self { dir, root, signals })
+        Ok(jail)
     }
 
     /// The chroot root, which becomes `/` inside the jail.
@@ -95,6 +116,16 @@ impl Drop for JailDir {
             self.signals.chroot_survived();
         }
     }
+}
+
+/// Tighten one directory of the chroot tree to 0700.
+fn make_private(path: &Utf8Path) -> Result<(), JailError> {
+    fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(|e| {
+        JailError::CreateJail {
+            path: path.to_owned(),
+            source: e,
+        }
+    })
 }
 
 /// Let the jailed VMM read a file without giving it away.
@@ -195,6 +226,32 @@ mod tests {
         fs::write(state.jail_dir(&vm_id()), b"in the way").unwrap();
 
         JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap_err();
+    }
+
+    #[test]
+    fn a_chroot_that_could_not_be_finished_is_not_left_behind() {
+        // Every step after `create_dir_all` runs with the tree already on disk,
+        // so a failure there has to hand the tree to the same teardown a
+        // finished job gets. Returning the error before the guard was built
+        // leaked a chroot holding a VMM binary and a full guest rootfs with
+        // nothing armed to reclaim it: `Drop` never ran, the signals were
+        // dropped unused, and the next job returned early from a host this
+        // process had already prepared.
+        let (_dir, state) = state_in_tmpdir();
+
+        JailDir::create_with(&state, &vm_id(), JailSignals::unwatched(), |path| {
+            Err(JailError::CreateJail {
+                path: path.to_owned(),
+                source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+            })
+        })
+        .unwrap_err();
+
+        assert!(
+            !state.jail_dir(&vm_id()).exists(),
+            "a chroot that could not be finished is reclaimed, not leaked"
+        );
+        assert!(state.jail_parent().exists(), "only this jail comes away");
     }
 
     #[test]
