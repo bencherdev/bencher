@@ -443,7 +443,22 @@ where
     }
 
     match failure {
-        Some(e) => Err(e),
+        // The reclamations happened whether or not the sweep finished, and only
+        // a sweep that returns `Ok` reaches the caller that reports them, so a
+        // failure would otherwise swallow the news that a VMM binary and a full
+        // guest rootfs went away for each of them. Said here rather than by
+        // handing the counts back beside the error: the error is what the
+        // caller acts on, so a failed sweep still fails the job and still
+        // leaves the reclaim signal armed for the next one.
+        Some(e) => {
+            if swept.reclaimed > 0 {
+                eprintln!(
+                    "Reclaimed {} stale jail(s) from {jail_parent} before the sweep failed.",
+                    swept.reclaimed
+                );
+            }
+            Err(e)
+        },
         None => Ok(swept),
     }
 }
