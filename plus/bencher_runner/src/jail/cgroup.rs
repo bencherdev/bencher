@@ -468,9 +468,19 @@ const REMOVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50
 /// cgroups set no exclusive cpuset, so a leftover blocks nothing) but because
 /// the usual reason `rmdir` fails is that something is still running in it.
 pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
-    let path = Utf8PathBuf::from(CGROUP_ROOT)
-        .join(BENCHER_CGROUP_BASE)
-        .join(vm_id.as_str());
+    remove_stale_cgroup_at(
+        Utf8PathBuf::from(CGROUP_ROOT)
+            .join(BENCHER_CGROUP_BASE)
+            .join(vm_id.as_str()),
+    )
+}
+
+/// The removal, against the directory it is given.
+///
+/// A parameter because the retry policy is the part worth testing, and the path
+/// the caller builds reaches into `/sys/fs/cgroup` on the machine running the
+/// tests.
+fn remove_stale_cgroup_at(path: Utf8PathBuf) -> Result<(), JailError> {
     // The caller deletes the chroot that names this cgroup once this returns
     // `Ok`, and that chroot is the only handle any later sweep has for finding
     // the cgroup again. A stat error read as "already gone" would strand the
@@ -493,7 +503,14 @@ pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
             // Only a stat that succeeded and said absent counts: anything else
             // falls through to the retry and, in the end, to the error.
             Err(_) if path.try_exists().is_ok_and(|exists| !exists) => return Ok(()),
-            Err(e) if std::time::Instant::now() >= deadline => {
+            // Waiting only helps what waiting is for. `EBUSY` is the kernel
+            // saying the cgroup still holds a process, which is exactly what a
+            // reap that has just landed is about to clear. Every other refusal
+            // is settled before the first retry and stays settled, and spending
+            // the budget on it costs the full five seconds on every job rather
+            // than once: a failure here keeps the chroot, which re-arms the
+            // sweep, which fails here again.
+            Err(e) if !is_contended(&e) || std::time::Instant::now() >= deadline => {
                 // Reported rather than warned, because failing here means the
                 // next job sweeps again rather than inheriting a host nobody
                 // is looking at.
@@ -502,6 +519,15 @@ pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
             Err(_) => std::thread::sleep(REMOVE_INTERVAL),
         }
     }
+}
+
+/// Whether a failed `rmdir` is the kernel saying the cgroup is still occupied.
+///
+/// `EBUSY` is what a cgroup that still holds a process or a live child cgroup
+/// refuses with, and it is the only one of these failures that a moment's
+/// waiting can change.
+fn is_contended(e: &std::io::Error) -> bool {
+    e.raw_os_error() == Some(libc::EBUSY)
 }
 
 /// Whether a `cgroup.procs` listing contains `pid`.
@@ -711,6 +737,61 @@ mod tests {
 
         assert!(!root.join("ours").exists(), "we remove what we created");
         assert!(theirs_path.exists(), "we leave what we did not create");
+    }
+
+    #[test]
+    fn only_a_contended_cgroup_is_worth_waiting_out() {
+        let errno = std::io::Error::from_raw_os_error;
+
+        assert!(is_contended(&errno(libc::EBUSY)));
+        assert!(!is_contended(&errno(libc::EPERM)));
+        assert!(!is_contended(&errno(libc::EROFS)));
+        assert!(!is_contended(&errno(libc::ENOTEMPTY)));
+        assert!(!is_contended(&std::io::Error::other("no errno at all")));
+    }
+
+    #[test]
+    fn a_removal_that_will_never_succeed_does_not_spend_the_budget() {
+        // A `rmdir` refused for anything but contention is refused the same way
+        // five seconds later, and the failure keeps the chroot that names the
+        // cgroup, which earns the next job another sweep that fails the same
+        // way. Retrying every error kind costs the whole budget per job on a
+        // host where nothing is going to change. A non-empty ordinary directory
+        // refuses with `ENOTEMPTY`, the way a read-only or unwritable parent
+        // refuses with `EROFS` or `EPERM`.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let stuck = root.join("stuck");
+        fs::create_dir_all(stuck.join("occupant")).unwrap();
+
+        let start = std::time::Instant::now();
+        remove_stale_cgroup_at(stuck.clone()).unwrap_err();
+
+        assert!(
+            start.elapsed() < REMOVE_TIMEOUT,
+            "a refusal that will not change is not waited out"
+        );
+        assert!(stuck.exists(), "and the cgroup is left for the next sweep");
+    }
+
+    #[test]
+    fn a_stale_cgroup_that_is_already_gone_is_nothing_to_remove() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        remove_stale_cgroup_at(root.join("absent")).unwrap();
+    }
+
+    #[test]
+    fn an_empty_stale_cgroup_is_removed() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let stale = root.join("stale");
+        fs::create_dir_all(&stale).unwrap();
+
+        remove_stale_cgroup_at(stale.clone()).unwrap();
+
+        assert!(!stale.exists());
     }
 
     #[test]
