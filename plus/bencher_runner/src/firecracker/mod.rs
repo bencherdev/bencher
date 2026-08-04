@@ -32,6 +32,7 @@ use std::time::{Duration, Instant};
 use camino::Utf8PathBuf;
 
 use crate::cpu::CpuLayout;
+use crate::error::JailError;
 use crate::jail::{CgroupManager, Cpuset, JailPaths, JailSignals, JailUser, VmId};
 use crate::metrics::{self, RunMetrics};
 
@@ -113,10 +114,14 @@ pub struct FirecrackerJobConfig {
 ///
 /// The cgroup is a fidelity mechanism, so its absence degrades: no CPU layout,
 /// no isolation, or a cgroup that cannot be created means the job proceeds with
-/// a warning. Placement and verification are conditional on the cgroup
-/// existing, but when it does they are hard requirements: a host that cannot
-/// isolate is a declared limitation, while a cgroup that exists but does not
-/// contain the VMM is a silent lie about where the benchmark ran.
+/// a warning. The absence has to be declared to count, though: a cgroup this
+/// runner could not read is a question that failed rather than a host with no
+/// isolation to give, and it fails the job. See [`cgroup_for_run`].
+///
+/// Placement and verification are conditional on the cgroup existing, but when
+/// it does they are hard requirements: a host that cannot isolate is a declared
+/// limitation, while a cgroup that exists but does not contain the VMM is a
+/// silent lie about where the benchmark ran.
 ///
 /// Returns the benchmark output including exit code and stdout.
 #[expect(
@@ -135,8 +140,8 @@ pub fn run_firecracker(
     // Step 0: Create cgroup with cpuset if CPU layout is provided
     let cgroup = if let Some(layout) = &config.cpu_layout {
         if layout.has_isolation() {
-            match CgroupManager::new(vm_id, config.signals.clone()) {
-                Ok(cg) => {
+            match cgroup_for_run(CgroupManager::new(vm_id, config.signals.clone()))? {
+                Some(cg) => {
                     // A cgroup that exists but does not confine the VMM to the
                     // benchmark cores would report a number measured somewhere
                     // other than where it claims, so a rejected cpuset is
@@ -175,10 +180,7 @@ pub fn run_firecracker(
                         },
                     }
                 },
-                Err(e) => {
-                    eprintln!("Warning: failed to create cgroup for CPU isolation: {e}");
-                    None
-                },
+                None => None,
             }
         } else {
             None
@@ -351,6 +353,36 @@ pub fn run_firecracker(
     })
 }
 
+/// The cgroup this run gets, or the reason it gets none.
+///
+/// `Ok(None)` is a declared absence. The host does not delegate the controllers,
+/// or the cgroup could not be created at all: either way the host has answered,
+/// there is no isolation to be had, and the job runs without a cgroup exactly as
+/// on a host with no CPU layout.
+///
+/// An error is a question that failed, and the two are not the same claim about
+/// the host. [`CgroupManager::new`] reads twice, and a read that failed decides
+/// nothing: `cgroup.subtree_control` that cannot be read is not an empty
+/// controller list, and this run's cgroup that cannot be stat'ed is what decides
+/// whether `Drop` may remove it. Degrading on either would run the benchmark
+/// with nothing keeping other work off its cores and report a host limitation
+/// nobody observed, which is the worst of the outcomes available here. See the
+/// failure policy table in [`crate::jail`].
+fn cgroup_for_run(
+    cgroup: Result<CgroupManager, crate::RunnerError>,
+) -> Result<Option<CgroupManager>, FirecrackerError> {
+    match cgroup {
+        Ok(cgroup) => Ok(Some(cgroup)),
+        Err(crate::RunnerError::Jail(unreadable @ JailError::ReadCgroup { .. })) => {
+            Err(FirecrackerError::CgroupUnreadable(unreadable))
+        },
+        Err(e) => {
+            eprintln!("Warning: failed to create cgroup for CPU isolation: {e}");
+            Ok(None)
+        },
+    }
+}
+
 /// Open the descriptor the VMM will be placed through, if there is a cgroup.
 ///
 /// Placement is conditional on the cgroup existing, not unconditional: a host
@@ -409,6 +441,63 @@ fn parse_exit_code(s: &str) -> i32 {
 #[expect(clippy::get_unwrap, reason = "test assertions")]
 mod tests {
     use super::*;
+
+    // --- only a declared absence degrades ---
+
+    #[test]
+    fn a_host_that_delegates_no_controllers_degrades() {
+        // There is no isolation to be had and the host said so, which is a
+        // limitation an operator can read. The job runs without a cgroup.
+        let degraded = cgroup_for_run(Err(JailError::MissingController {
+            controller: "cpuset".to_owned(),
+            path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/cgroup.subtree_control"),
+            enabled: "cpu memory pids".to_owned(),
+        }
+        .into()))
+        .unwrap();
+
+        assert!(
+            degraded.is_none(),
+            "a declared absence of isolation is not a failure"
+        );
+    }
+
+    #[test]
+    fn a_cgroup_that_could_not_be_read_fails_the_job() {
+        // The failure this prevents: the stat that decides whether `Drop` may
+        // remove this cgroup errors, the job shrugs and runs with no cgroup at
+        // all, and the benchmark reports numbers taken with nothing keeping
+        // other work off its cores, under a warning that blames the host for a
+        // limitation nobody observed.
+        let read_failed = Err(JailError::ReadCgroup {
+            path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/vm-1"),
+            source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+        }
+        .into());
+
+        let Err(err) = cgroup_for_run(read_failed) else {
+            panic!("an errored question is not a declared absence");
+        };
+
+        assert!(
+            matches!(err, FirecrackerError::CgroupUnreadable(_)),
+            "the job must fail naming the read, got: {err}"
+        );
+    }
+
+    #[test]
+    fn a_cgroup_that_was_created_is_the_one_the_run_uses() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        let cgroup = cgroup_for_run(Ok(CgroupManager::detached(root.clone()))).unwrap();
+
+        assert_eq!(
+            cgroup.map(|cg| cg.path().to_owned()),
+            Some(root),
+            "a cgroup that was created is kept"
+        );
+    }
 
     // --- placement is conditional on the cgroup existing ---
 
