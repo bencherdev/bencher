@@ -75,10 +75,12 @@
 //! | `reap_jailed_vmm`: the jail root cannot be stat'ed | reported unexaminable, which fails the job |
 //! | `reap_jailed_vmm`: `/proc` cannot be listed | reported unexaminable |
 //! | `reap_jailed_vmm`: a `/proc/<pid>/root` cannot be read | ignored: that process is gone or is not this jail's |
+//! | `reap_jailed_vmm`: a jail's `cgroup.procs` cannot be read while scanning | reported unexaminable, which fails the job |
+//! | `reap_jailed_vmm`: a jail's `cgroup.procs` cannot be read while re-checking a pid | ignored: that process is gone or is not this jail's |
 //! | `reap_jailed_vmm`: pinning or signalling the VMM | reported still running, which fails the job |
 //! | `reap_jailed_vmm`: a VMM that will not exit | reported still running |
 //! | `reap_jailed_vmm`: the rescan bound runs out | reported still running |
-//! | `reap_jailed_vmm`: a `/proc/<pid>/status` that cannot be read | ignored: the process is gone, which is what was being asked |
+//! | `reap_jailed_vmm`: a `poll` of the pidfd that fails or answers nothing | reported still running, which fails the job |
 //! | `JailDir::create`: a step that fails once the tree exists | fails the job, and the guard that already took the tree reclaims it |
 //! | `JailDir` teardown: the chroot is already gone | ignored: that is the goal state |
 //! | `JailDir` teardown: removing the chroot | arms the retry |
@@ -102,6 +104,7 @@
 //! | `apply_cpuset`: the effective set cannot be read back | fails the job: the read back *is* the mechanism, and the write already proved the controller delegated |
 //! | `apply_cpuset`: the kernel narrowed the set | fails the job |
 //! | `enable_controllers`: `cgroup.subtree_control` cannot be read | fails the job: an unreadable list is not an empty one |
+//! | `enable_controllers`: the kernel refuses the `+cpuset` write | declares the absence: this run has no cpuset, and whether the host delegates it is unknown |
 //! | `BencherPartition::apply`: any read or write in the partition path | declares the absence: the level achieved is reported, down to `member` |
 //! | `CpuLayout::detect`: the online CPU list cannot be read or parsed | declares the absence: the counted layout is announced as a guess |
 //! | `CpuLayout::detect`: the core count cannot be read | one core, which reports as a layout with no isolation |
