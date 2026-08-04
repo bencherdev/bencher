@@ -13,6 +13,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::JailError;
 use crate::jail::VmId;
+use crate::jail::lock::LOCK_FILE;
 use crate::jail::reap::Reaped;
 
 /// Subdirectory of the state directory used as the jailer's chroot base.
@@ -291,17 +292,14 @@ fn make_private(dir: &Utf8Path) -> Result<(), JailError> {
 /// another program put there is what the guard is for.
 const BENIGN_ENTRIES: [&str; 1] = ["lost+found"];
 
-/// The lock file the runner takes in the state directory root.
-///
-/// Spelled in [`crate::jail::lock`] too, which is the module that creates it.
-/// The two are pinned together by a test that takes the real lock and then
-/// asks the guard about the root it landed in, so a rename cannot drift past
-/// this quietly.
-const LOCK_FILE: &str = ".lock";
-
 /// Entries in the state directory root that the runner makes itself.
 ///
-/// The chroot base, and the lock file taken beside it.
+/// The chroot base, and the lock file taken beside it. [`LOCK_FILE`] is the
+/// constant [`crate::jail::lock`] creates the lock from, reused here rather than
+/// respelled, so the guard that tolerates the name and the module that writes it
+/// cannot drift apart. A test still takes the real lock and asks the guard about
+/// the root it landed in, so a move that broke the pairing would fail rather
+/// than pass quietly.
 ///
 /// Not proof of ownership, which is the distinction that matters: matching a
 /// name is how a populated system directory once passed this guard, and a root

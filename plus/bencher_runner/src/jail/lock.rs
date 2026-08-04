@@ -36,12 +36,14 @@ use crate::error::JailError;
 /// only removes directories under `<state_dir>/jail/firecracker`) can never
 /// reach it.
 ///
-/// Private again, and only spelled here. The state directory used to count this
-/// name among the marks of a directory it owns, until proving ownership by a
-/// name turned out to be the way a populated system directory could pass that
-/// guard. Ownership is proven by the chroot tree now, so nothing outside this
-/// module needs the name.
-const LOCK_FILE: &str = ".lock";
+/// Spelled here, where the lock is created, and read by the state directory
+/// guard through this constant rather than a literal of its own. The guard
+/// tolerates this name in a root that holds nothing else, so that the runner's
+/// own lock cannot disown the runner's own directory, but it never treats the
+/// name as proof of ownership: that is what once let a populated system
+/// directory pass the guard, and the tree is what proves ownership now. See
+/// [`crate::jail::state`].
+pub(super) const LOCK_FILE: &str = ".lock";
 
 /// How often a wait for the jail lock repeats itself.
 ///
