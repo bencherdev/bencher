@@ -59,7 +59,7 @@ impl StateDir {
     /// Refuse a state directory that belongs to the host rather than to us.
     ///
     /// A path that does not exist, or exists and is empty, is ours to take. A
-    /// populated one is only ours if it already carries something the runner
+    /// populated one is only ours if everything in it is something the runner
     /// put there. Without this, `--state-dir /var/lib` would be chmodded to
     /// 0700 and take the host down with it.
     ///
@@ -73,61 +73,57 @@ impl StateDir {
     /// started, so it is reported rather than dropped.
     ///
     /// What the filesystem itself put there is not somebody else's data. See
-    /// [`BENIGN_ENTRIES`].
+    /// [`BENIGN_ENTRIES`]. Neither is what the runner put there itself. See
+    /// [`OUR_ROOT_ENTRIES`].
     ///
     /// Ownership is proven by the tree, never by a name. An entry called `jail`
     /// proves nothing: `/var/lib` on a host running this runner has one, and so
     /// does any directory somebody happened to name that way, and matching on
     /// the name alone let a populated system directory pass this guard and be
     /// chmodded 0700, which is the whole hazard it exists for.
-    /// `jail/firecracker` is a path only this runner builds, and it builds the
-    /// tree in one step, so there is no window where a shallower half stands for
-    /// the whole.
+    /// `jail/firecracker` is a path only this runner builds, so a directory
+    /// there settles it on its own.
+    ///
+    /// Short of that, the tree is read as far as it got. [`Self::create`] makes
+    /// the three directories one at a time, so a runner killed partway leaves
+    /// `jail` without `jail/firecracker`, and an operator who runs
+    /// `rm -rf <state_dir>/jail` to reclaim disk leaves neither, keeping only
+    /// the lock file beside them. Refusing either would latch: a state
+    /// directory the runner has been using for months would be declared
+    /// somebody else's, on every job, until a person deleted it by hand. So a
+    /// root holding nothing but the runner's own entries is the runner's, and a
+    /// `jail` holding nothing but `firecracker` is the runner's. Somebody
+    /// else's data under either name is still refused, which is the direction
+    /// the guard is for.
     ///
     /// Every component is examined without following symlinks, and one that is
-    /// a link is refused rather than resolved. See [`check_real_dir`].
+    /// a link is refused rather than resolved. See [`real_dir`].
     fn check_root_is_ours(&self) -> Result<(), JailError> {
-        for component in [&self.root, &self.chroot_base(), &self.jail_parent()] {
-            check_real_dir(component)?;
+        let chroot_base = self.chroot_base();
+        let jail_parent = self.jail_parent();
+
+        let root_exists = real_dir(&self.root)?;
+        let base_exists = real_dir(&chroot_base)?;
+        // The one thing that settles it: only this runner builds this path.
+        if real_dir(&jail_parent)? {
+            return Ok(());
         }
 
-        match self.jail_parent().try_exists() {
-            Ok(true) => return Ok(()),
-            Ok(false) => {},
-            Err(e) => {
-                return Err(JailError::ReadStateDir {
-                    path: self.jail_parent(),
-                    source: e,
-                });
-            },
-        }
-
-        let entries = match fs::read_dir(&self.root) {
-            Ok(entries) => entries,
-            // Missing: creating it is the next step.
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
-            Err(e) => {
-                return Err(JailError::ReadStateDir {
-                    path: self.root.clone(),
-                    source: e,
-                });
-            },
-        };
-        let mut populated = false;
-        for entry in entries {
-            let entry = entry.map_err(|e| JailError::ReadStateDir {
-                path: self.root.clone(),
-                source: e,
-            })?;
-            let name = entry.file_name();
-            if BENIGN_ENTRIES.iter().any(|benign| name == *benign) {
-                continue;
-            }
-            populated = true;
-        }
-        if populated {
+        if root_exists && let Some(entry) = first_foreign_entry(&self.root, &OUR_ROOT_ENTRIES)? {
             return Err(JailError::ForeignStateDir {
                 path: self.root.clone(),
+                entry,
+            });
+        }
+        // Reached only with `jail/firecracker` absent, so a `jail` of ours is
+        // empty by the time this runs. Written as the rule the tree has to
+        // satisfy rather than as that consequence, since the rule is what holds
+        // and the consequence is only what the order of these checks makes of
+        // it today.
+        if base_exists && let Some(entry) = first_foreign_entry(&chroot_base, &[EXEC_FILE_NAME])? {
+            return Err(JailError::ForeignStateDir {
+                path: self.root.clone(),
+                entry: format!("{CHROOT_BASE}/{entry}"),
             });
         }
         Ok(())
@@ -166,6 +162,11 @@ impl StateDir {
     /// tightening is why the root has to be one the runner owns: pointed at a
     /// populated system directory it would otherwise chmod that directory to
     /// 0700 and break the host.
+    ///
+    /// One directory at a time, and the guard is written to expect that: a
+    /// runner killed between two of these calls leaves a tree that is half
+    /// built, which is the runner's own and has to be finishable on the next
+    /// job. See [`Self::check_root_is_ours`].
     pub fn create(&self) -> Result<(), JailError> {
         self.check_root_is_ours()?;
         for dir in [&self.root, &self.chroot_base(), &self.jail_parent()] {
@@ -179,10 +180,10 @@ impl StateDir {
     }
 }
 
-/// Refuse a component of the tree that is not a directory of its own.
+/// Whether one component of the tree is there, as a directory of its own.
 ///
 /// `symlink_metadata`, so a link is seen as a link rather than as whatever it
-/// points at, and a link is refused rather than resolved. Everything the guard
+/// points at, and a link is refused rather than resolved. Everything this guard
 /// authorizes follows a path: the 0700 chmod, and the sweep that
 /// `remove_dir_all`s what is under it. With a state directory under a parent an
 /// unprivileged user can write to, planting `jail` or `jail/firecracker` as a
@@ -194,23 +195,62 @@ impl StateDir {
 /// path that cannot be read is: the tree the runner builds is directories the
 /// whole way down, and something else in the way is not evidence that this is
 /// the runner's own.
-fn check_real_dir(path: &Utf8Path) -> Result<(), JailError> {
+fn real_dir(path: &Utf8Path) -> Result<bool, JailError> {
     match fs::symlink_metadata(path) {
         Ok(metadata) if metadata.file_type().is_symlink() => Err(JailError::SymlinkedStateDir {
             path: path.to_owned(),
         }),
-        Ok(metadata) if metadata.is_dir() => Ok(()),
+        Ok(metadata) if metadata.is_dir() => Ok(true),
         Ok(_) => Err(JailError::ReadStateDir {
             path: path.to_owned(),
             source: std::io::Error::from(std::io::ErrorKind::NotADirectory),
         }),
         // Missing: creating it is the next step.
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
         Err(e) => Err(JailError::ReadStateDir {
             path: path.to_owned(),
             source: e,
         }),
     }
+}
+
+/// The first entry in `dir` that neither the runner nor the filesystem made.
+///
+/// Stops there. The answer is already decided, and what the operator needs is
+/// the name of something that tripped the guard rather than every name that
+/// would have.
+fn first_foreign_entry(dir: &Utf8Path, ours: &[&str]) -> Result<Option<String>, JailError> {
+    let entries = match fs::read_dir(dir) {
+        Ok(entries) => entries,
+        // Missing: creating it is the next step.
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => {
+            return Err(JailError::ReadStateDir {
+                path: dir.to_owned(),
+                source: e,
+            });
+        },
+    };
+
+    for entry in entries {
+        let entry = entry.map_err(|e| JailError::ReadStateDir {
+            path: dir.to_owned(),
+            source: e,
+        })?;
+        let name = entry.file_name();
+        if ours
+            .iter()
+            .chain(&BENIGN_ENTRIES)
+            .any(|known| name == **known)
+        {
+            continue;
+        }
+        // Lossy, and only ever shown to a person: this name is the operator's
+        // handle on what tripped the guard, and nothing rebuilds a path from
+        // it. The sweep, which does rebuild paths, skips such a name instead.
+        return Ok(Some(name.to_string_lossy().into_owned()));
+    }
+    Ok(None)
 }
 
 /// Tighten one directory of the tree to 0700, without following a link.
@@ -249,6 +289,29 @@ fn make_private(dir: &Utf8Path) -> Result<(), JailError> {
 /// Only what the filesystem itself creates belongs here. Anything a person or
 /// another program put there is what the guard is for.
 const BENIGN_ENTRIES: [&str; 1] = ["lost+found"];
+
+/// The lock file the runner takes in the state directory root.
+///
+/// Spelled in [`crate::jail::lock`] too, which is the module that creates it.
+/// The two are pinned together by a test that takes the real lock and then
+/// asks the guard about the root it landed in, so a rename cannot drift past
+/// this quietly.
+const LOCK_FILE: &str = ".lock";
+
+/// Entries in the state directory root that the runner makes itself.
+///
+/// The chroot base, and the lock file taken beside it.
+///
+/// Not proof of ownership, which is the distinction that matters: matching a
+/// name is how a populated system directory once passed this guard, and a root
+/// carrying one of these alongside anything else is refused exactly as it was.
+/// What these buy is the other direction, that the runner's own leftovers
+/// cannot disown the runner's own directory. An operator who runs
+/// `rm -rf <state_dir>/jail` to reclaim disk leaves the lock file behind, and a
+/// root that counted that as somebody else's data would refuse to rebuild the
+/// tree it had just lost, with an error telling the operator their state
+/// directory was not created by the runner.
+const OUR_ROOT_ENTRIES: [&str; 2] = [CHROOT_BASE, LOCK_FILE];
 
 /// What one sweep did.
 ///
@@ -667,28 +730,61 @@ mod tests {
     fn a_directory_named_like_ours_is_not_ours() {
         // The hazard this guard exists for, and what a name match let through:
         // `/var/lib` on a host running this runner holds a directory called
-        // `jail`, and so does anything anyone happened to name that way. Only
-        // the tree the runner builds proves the directory is the runner's.
+        // `jail`, and so does anything anyone happened to name that way, and
+        // the lock file's name is worth no more. The names the runner uses are
+        // tolerated in a root that holds nothing else; they never stand in for
+        // the tree.
         let (_dir, root) = temp_root();
         let foreign = root.join("var-lib");
         fs::create_dir_all(foreign.join("jail")).unwrap();
         fs::create_dir_all(foreign.join("dpkg")).unwrap();
         fs::write(foreign.join(".lock"), b"").unwrap();
 
-        StateDir::new(foreign.clone())
+        let err = StateDir::new(foreign.clone())
             .unwrap()
             .create()
             .unwrap_err();
 
+        assert!(
+            err.to_string().contains("dpkg"),
+            "an operator refused over one entry has to be told which: {err}"
+        );
         let mode = fs::metadata(&foreign).unwrap().permissions().mode();
         assert_ne!(mode & 0o777, 0o700, "a refused root must not be chmodded");
     }
 
     #[test]
+    fn a_foreign_jail_directory_is_not_our_tree() {
+        // A root whose only entry is `jail` is tolerated only while that `jail`
+        // is one of ours: empty, or holding the chroots. Somebody else's jails
+        // under that name are exactly what the guard is for, and the tree they
+        // sit in must come away untouched.
+        let (_dir, root) = temp_root();
+        let foreign = root.join("var-lib");
+        fs::create_dir_all(foreign.join("jail").join("mail-server")).unwrap();
+
+        let err = StateDir::new(foreign.clone())
+            .unwrap()
+            .create()
+            .unwrap_err();
+
+        assert!(
+            err.to_string().contains("mail-server"),
+            "the refusal names what tripped it: {err}"
+        );
+        let mode = fs::metadata(foreign.join("jail"))
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_ne!(mode & 0o777, 0o700, "a refused tree must not be chmodded");
+        assert!(foreign.join("jail").join("mail-server").is_dir());
+    }
+
+    #[test]
     fn the_tree_is_what_proves_the_directory_is_ours() {
         // A state directory the runner has used carries `jail/firecracker`,
-        // which it creates in one step, so a shallower half never stands for the
-        // whole. Anything the operator put there afterwards does not disown it.
+        // which is a path only this runner builds. Anything the operator put
+        // there afterwards does not disown it.
         let (_dir, root) = temp_root();
         let state = root.join("state");
         fs::create_dir_all(state.join("jail").join("firecracker")).unwrap();
@@ -698,6 +794,45 @@ mod tests {
 
         let mode = fs::metadata(&state).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o700);
+    }
+
+    #[test]
+    fn a_half_built_tree_is_ours() {
+        // The tree is made one directory at a time, so a runner killed between
+        // two of them leaves `jail` there and `jail/firecracker` not. Refusing
+        // that latches: the state directory would be declared somebody else's
+        // on every job from then on, and only a person deleting it by hand
+        // would clear it.
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state")).unwrap();
+        fs::create_dir_all(state.chroot_base()).unwrap();
+
+        state.create().unwrap();
+
+        for dir in [state.path(), &state.chroot_base(), &state.jail_parent()] {
+            let mode = fs::metadata(dir).unwrap().permissions().mode();
+            assert_eq!(mode & 0o777, 0o700, "{dir} should be private");
+        }
+    }
+
+    #[test]
+    fn a_root_holding_only_the_lock_is_ours() {
+        // The realistic way a half-built tree happens is not a crash: an
+        // operator reclaiming disk with `rm -rf <state_dir>/jail` leaves the
+        // lock file and nothing else, and a root that read that as somebody
+        // else's data would refuse to rebuild the tree it had just lost.
+        //
+        // The real lock is taken here rather than a file named like it, so the
+        // guard and the lock module cannot drift apart without this failing.
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state")).unwrap();
+        state.create().unwrap();
+        drop(crate::jail::JailLock::acquire(state.path()).unwrap());
+        fs::remove_dir_all(state.chroot_base()).unwrap();
+
+        state.create().unwrap();
+
+        assert!(state.jail_parent().is_dir(), "the tree is rebuilt");
     }
 
     #[test]
