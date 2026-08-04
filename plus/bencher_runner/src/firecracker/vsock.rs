@@ -81,10 +81,10 @@ impl VsockListener {
     /// descriptor staying open. These must be created before the VM boots.
     pub fn new(vsock: &JailFile) -> Result<Self, FirecrackerError> {
         let socket = vsock.socket();
-        let stdout_path = socket.with_suffix(&format!("_{}", ports::STDOUT));
-        let stderr_path = socket.with_suffix(&format!("_{}", ports::STDERR));
-        let exit_code_path = socket.with_suffix(&format!("_{}", ports::EXIT_CODE));
-        let output_files_path = socket.with_suffix(&format!("_{}", ports::OUTPUT_FILES));
+        let stdout_path = socket.with_port(ports::STDOUT);
+        let stderr_path = socket.with_port(ports::STDERR);
+        let exit_code_path = socket.with_port(ports::EXIT_CODE);
+        let output_files_path = socket.with_port(ports::OUTPUT_FILES);
 
         // Remove stale socket files
         for path in [
