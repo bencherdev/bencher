@@ -278,6 +278,21 @@ impl VmId {
         Self(uuid::Uuid::new_v4().to_string())
     }
 
+    /// Mint an identity for a non-sandboxed run.
+    ///
+    /// There is no microVM and no chroot here, only the cgroup a local run is
+    /// placed in, and this names it. Minted rather than recovered, because
+    /// nothing on this path writes the name to the filesystem for anything to
+    /// read back: the prefix is what tells an operator looking at the cgroup
+    /// base which of the two kinds of run put it there.
+    ///
+    /// Only the local path mints one, and that path is Linux-only.
+    #[cfg(target_os = "linux")]
+    #[must_use]
+    pub(crate) fn for_local_run() -> Self {
+        Self(format!("local-{}", uuid::Uuid::new_v4()))
+    }
+
     /// Recover the identity of a jail from its chroot directory name.
     ///
     /// The sweep works backwards from the filesystem, and the directory name
@@ -941,6 +956,21 @@ mod tests {
         assert_eq!(default.uid(), DEFAULT_JAIL_UID);
         assert_eq!(default.gid(), DEFAULT_JAIL_GID);
         JailUser::new(default.uid(), default.gid()).unwrap();
+    }
+
+    #[test]
+    fn a_local_run_mints_an_id_rather_than_recovering_one() {
+        // Nothing on this path has a chroot to recover a name from, and the
+        // cgroups two local runs make are siblings under one base, so the ids
+        // have to be unique on their own.
+        let one = VmId::for_local_run();
+        let two = VmId::for_local_run();
+
+        assert!(
+            one.as_str().starts_with("local-"),
+            "a local run says so in the name: {one}"
+        );
+        assert_ne!(one, two, "two local runs must not name one cgroup");
     }
 
     #[test]

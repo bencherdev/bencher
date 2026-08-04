@@ -57,7 +57,7 @@ impl LocalIsolation {
         };
 
         let benchmark = layout.benchmark.clone();
-        let run_id = crate::jail::VmId::from_chroot_name(format!("local-{}", uuid::Uuid::new_v4()));
+        let run_id = crate::jail::VmId::for_local_run();
 
         // No chroot names this cgroup, and no sweep walks it, so a teardown it
         // cannot finish has nothing to hand the work to.
