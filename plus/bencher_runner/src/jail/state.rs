@@ -513,7 +513,10 @@ fn jail_id(jail_parent: &Utf8Path, entry: &fs::DirEntry) -> Result<Option<VmId>,
         );
         return Ok(None);
     };
-    Ok(Some(VmId::from_chroot_name(name.to_owned())))
+    // And skipped for the same reason if it is a name this runner could not
+    // have minted: the id is joined into a chroot path and into a cgroup path,
+    // so one that walks out of either was not created here either.
+    Ok(VmId::from_chroot_name(name.to_owned()))
 }
 
 /// Reap, then unwind one stale jail: its cgroup first, then its chroot.
@@ -610,12 +613,12 @@ mod tests {
             "/var/lib/bencher-runner/jail/firecracker"
         );
         assert_eq!(
-            state.jail_dir(&VmId::from_chroot_name("abc".to_owned())),
+            state.jail_dir(&VmId::from_chroot_name("abc".to_owned()).unwrap()),
             "/var/lib/bencher-runner/jail/firecracker/abc"
         );
         // <chroot_base>/<exec_file_name>/<id>/root
         assert_eq!(
-            state.jail_root(&VmId::from_chroot_name("abc".to_owned())),
+            state.jail_root(&VmId::from_chroot_name("abc".to_owned()).unwrap()),
             state
                 .chroot_base()
                 .join(EXEC_FILE_NAME)
@@ -911,15 +914,17 @@ mod tests {
         state.create().unwrap();
 
         // Two stale jails, one with a nested chroot tree.
-        fs::create_dir_all(state.jail_root(&VmId::from_chroot_name("one".to_owned()))).unwrap();
+        fs::create_dir_all(state.jail_root(&VmId::from_chroot_name("one".to_owned()).unwrap()))
+            .unwrap();
         fs::write(
             state
-                .jail_root(&VmId::from_chroot_name("one".to_owned()))
+                .jail_root(&VmId::from_chroot_name("one".to_owned()).unwrap())
                 .join("rootfs.ext4"),
             b"stale",
         )
         .unwrap();
-        fs::create_dir_all(state.jail_dir(&VmId::from_chroot_name("two".to_owned()))).unwrap();
+        fs::create_dir_all(state.jail_dir(&VmId::from_chroot_name("two".to_owned()).unwrap()))
+            .unwrap();
 
         assert_eq!(
             sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(()))
@@ -929,12 +934,12 @@ mod tests {
         );
         assert!(
             !state
-                .jail_dir(&VmId::from_chroot_name("one".to_owned()))
+                .jail_dir(&VmId::from_chroot_name("one".to_owned()).unwrap())
                 .exists()
         );
         assert!(
             !state
-                .jail_dir(&VmId::from_chroot_name("two".to_owned()))
+                .jail_dir(&VmId::from_chroot_name("two".to_owned()).unwrap())
                 .exists()
         );
         assert!(state.jail_parent().exists());
@@ -948,7 +953,8 @@ mod tests {
 
         let note = state.jail_parent().join("NOTES.txt");
         fs::write(&note, b"not a jail").unwrap();
-        fs::create_dir_all(state.jail_dir(&VmId::from_chroot_name("stale".to_owned()))).unwrap();
+        fs::create_dir_all(state.jail_dir(&VmId::from_chroot_name("stale".to_owned()).unwrap()))
+            .unwrap();
 
         assert_eq!(
             sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(()))
@@ -958,7 +964,7 @@ mod tests {
         );
         assert!(
             !state
-                .jail_dir(&VmId::from_chroot_name("stale".to_owned()))
+                .jail_dir(&VmId::from_chroot_name("stale".to_owned()).unwrap())
                 .exists()
         );
         assert!(note.exists(), "non-directory entries are not the sweep's");
@@ -971,8 +977,8 @@ mod tests {
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
-        let live = VmId::from_chroot_name("live".to_owned());
-        let dead = VmId::from_chroot_name("dead".to_owned());
+        let live = VmId::from_chroot_name("live".to_owned()).unwrap();
+        let dead = VmId::from_chroot_name("dead".to_owned()).unwrap();
         fs::create_dir_all(state.jail_root(&live)).unwrap();
         fs::create_dir_all(state.jail_root(&dead)).unwrap();
 
@@ -1010,7 +1016,7 @@ mod tests {
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
-        let live = VmId::from_chroot_name("live".to_owned());
+        let live = VmId::from_chroot_name("live".to_owned()).unwrap();
         fs::create_dir_all(state.jail_root(&live)).unwrap();
 
         let stuck = |_jail_root: &Utf8Path| Reaped::StillRunning { pid: 7 };
@@ -1033,8 +1039,8 @@ mod tests {
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
-        let stuck = VmId::from_chroot_name("stuck".to_owned());
-        let clear = VmId::from_chroot_name("clear".to_owned());
+        let stuck = VmId::from_chroot_name("stuck".to_owned()).unwrap();
+        let clear = VmId::from_chroot_name("clear".to_owned()).unwrap();
         fs::create_dir_all(state.jail_root(&stuck)).unwrap();
         fs::create_dir_all(state.jail_root(&clear)).unwrap();
 
@@ -1075,7 +1081,7 @@ mod tests {
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
-        let stuck = VmId::from_chroot_name("stuck".to_owned());
+        let stuck = VmId::from_chroot_name("stuck".to_owned()).unwrap();
         fs::create_dir_all(state.jail_root(&stuck)).unwrap();
         // A jail directory that `remove_dir_all` cannot finish: the tree is
         // unsearchable, so the walk inside it fails.
@@ -1107,7 +1113,7 @@ mod tests {
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
-        let unknown = VmId::from_chroot_name("unknown".to_owned());
+        let unknown = VmId::from_chroot_name("unknown".to_owned()).unwrap();
         fs::create_dir_all(state.jail_root(&unknown)).unwrap();
 
         let err = sweep_jails_with(
@@ -1132,7 +1138,8 @@ mod tests {
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
-        fs::create_dir_all(state.jail_root(&VmId::from_chroot_name("one".to_owned()))).unwrap();
+        fs::create_dir_all(state.jail_root(&VmId::from_chroot_name("one".to_owned()).unwrap()))
+            .unwrap();
 
         let swept = sweep_jails_with(
             &state.jail_parent(),
