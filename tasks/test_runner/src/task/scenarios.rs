@@ -62,6 +62,13 @@ struct Scenario {
     sandboxed: bool,
     /// If set, run before the runner starts, to put the host in some state.
     setup: Option<fn() -> Result<()>>,
+    /// If set, run once the scenario is over, to take that state back off.
+    ///
+    /// Whatever the outcome, and whatever a `setup` managed to do before
+    /// failing. What a setup touches is global to the machine, so anything left
+    /// behind reaches every scenario that follows and any real runner on the
+    /// box.
+    teardown: Option<fn() -> Result<()>>,
     /// If set, a host-side check run while the runner is executing.
     probe: Option<Probe>,
     /// Run with host tuning enabled and assert it applies and is restored.
@@ -87,6 +94,7 @@ impl Default for Scenario {
             extra_args: &[],
             cancel_after_secs: None,
             setup: None,
+            teardown: None,
             probe: None,
             tuning: false,
             orphan_then_rerun: false,
@@ -305,6 +313,10 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     let image_path = build_test_image(scenario.name, scenario.dockerfile)
         .with_context(|| format!("Failed to build image for {}", scenario.name))?;
 
+    // Armed before the setup runs, so a setup that fails part way through is
+    // unwound too, and held to the end of the scenario, so nothing the
+    // assertions do with `?` can skip it.
+    let _teardown = ScenarioTeardown::armed(scenario);
     if let Some(setup) = scenario.setup {
         setup().with_context(|| format!("Setup failed for {}", scenario.name))?;
     }
@@ -368,6 +380,42 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     ));
 
     Ok(())
+}
+
+/// Runs a scenario's teardown when it goes out of scope.
+///
+/// A guard rather than a call at the end, for the same reason `RestoreTuning` is
+/// one: everything between the setup and the end of the scenario reports failure
+/// with `?`, and a scenario that goes red is exactly when the host state a setup
+/// put in place has to come away.
+struct ScenarioTeardown {
+    name: &'static str,
+    teardown: Option<fn() -> Result<()>>,
+}
+
+impl ScenarioTeardown {
+    /// Arm the teardown a scenario declared, if it declared one.
+    fn armed(scenario: &Scenario) -> Self {
+        Self {
+            name: scenario.name,
+            teardown: scenario.teardown,
+        }
+    }
+}
+
+impl Drop for ScenarioTeardown {
+    fn drop(&mut self) {
+        let Some(teardown) = self.teardown else {
+            return;
+        };
+        // Said out loud rather than swallowed. The scenario has already
+        // reported its own outcome by the time this runs, but what a teardown
+        // could not undo is on the machine, not in this run, so the next person
+        // to touch the host needs to hear about it.
+        if let Err(e) = teardown() {
+            println!("  teardown of {} did not finish: {e:#}", self.name);
+        }
+    }
 }
 
 /// Get all test scenarios.
@@ -2590,6 +2638,13 @@ const NETNS_HANDLE: &str = "/run/netns/bencher-jail";
 /// The harness's own network namespace, which is the host's.
 const HARNESS_NETNS: &str = "/proc/self/ns/net";
 
+/// How many stacked mounts the teardown unwinds before giving up.
+///
+/// Bounded, and bounded at the same number the runner's own unwind uses: a path
+/// that keeps reporting a successful unmount forever is a kernel fault, and the
+/// count taken afterwards reports the real state either way.
+const MAX_NETNS_UNWIND: usize = 32;
+
 /// The state directory scenarios run against.
 fn scenario_state_dir() -> Utf8PathBuf {
     super::work_dir().join("state")
@@ -2637,6 +2692,7 @@ CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "JAIL_NETNS_a7f3b2c9"]"#,
             setup: Some(stack_netns_mounts),
+            teardown: Some(unstack_netns_mounts),
             extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
             validate: |output| assert_job_succeeded(output, "JAIL_NETNS_a7f3b2c9"),
             ..Scenario::default()
@@ -2710,6 +2766,54 @@ fn stack_netns_mounts() -> Result<()> {
         "Expected at least two stacked mounts on {handle}, found {stacked}"
     );
     println!("  stacked {stacked} mounts on {handle}");
+    Ok(())
+}
+
+/// Take the stacked mounts back off the network namespace handle.
+///
+/// Nothing else will. The handle is global to the host and shared with any real
+/// runner on it, and the runner only unwinds it while it is building a jail of
+/// its own, so a scenario that fails before it gets that far would leave the
+/// stack on the host: the wedged state this scenario exists to prove the runner
+/// recovers from, inflicted on everything that comes after it.
+///
+/// One detach at a time, exactly as the runner's own unwind does, since a bind
+/// mount over a file stacks rather than reporting `EBUSY` and a single `umount`
+/// leaves the rest. The handle is then removed rather than left as the one mount
+/// the runner's last job put there: absent is what the next `ensure` expects to
+/// find least often and handles first, and it is the state a host that never ran
+/// this scenario is in.
+fn unstack_netns_mounts() -> Result<()> {
+    let handle = Utf8Path::new(NETNS_HANDLE);
+    for _ in 0..MAX_NETNS_UNWIND {
+        let status = Command::new("umount")
+            .args(["--lazy", handle.as_str()])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .context("Failed to run umount to unwind a netns mount")?;
+        // Nothing left mounted there, which is where this is going anyway.
+        if !status.success() {
+            break;
+        }
+    }
+
+    match fs::remove_file(handle) {
+        Ok(()) => {},
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {},
+        Err(e) => {
+            return Err(e).with_context(|| {
+                format!("Failed to remove {handle}, so its mounts are still stacked on the host")
+            });
+        },
+    }
+
+    let stacked = stacked_netns_mounts()?;
+    anyhow::ensure!(
+        stacked == 0,
+        "{stacked} mount(s) are still stacked on {handle}, which every sandboxed job on this host now trips over"
+    );
+    println!("  unwound the stacked mounts on {handle}");
     Ok(())
 }
 
