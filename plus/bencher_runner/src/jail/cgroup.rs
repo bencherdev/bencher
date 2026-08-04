@@ -24,6 +24,10 @@ pub struct CgroupManager {
     /// Raised when this cgroup could not be removed, which holds the chroot that
     /// names it and earns a later job another sweep.
     signals: JailSignals,
+    /// What asking the parent to delegate `cpuset` established, which is what
+    /// separates an absent `cpuset.cpus` this runner may report as a host
+    /// limitation from one it may not.
+    cpuset_control: CpusetControl,
 }
 
 impl CgroupManager {
@@ -52,7 +56,7 @@ impl CgroupManager {
         // Enable controllers in the parent. Always attempted (idempotent):
         // the parent may have been created without controllers, e.g. by
         // the tuning cpuset partition at startup.
-        Self::enable_controllers(&parent)?;
+        let cpuset_control = Self::enable_controllers(&parent)?;
 
         // Create this run's cgroup, and remember whether we are the ones who
         // made it. `Drop` removes what this created, so claiming ownership of
@@ -85,6 +89,7 @@ impl CgroupManager {
             cgroup_path,
             created,
             signals,
+            cpuset_control,
         })
     }
 
@@ -92,6 +97,10 @@ impl CgroupManager {
     ///
     /// For tests that exercise the placement logic against a stand-in tree
     /// rather than the real cgroup filesystem.
+    ///
+    /// Nothing was asked about `cpuset`, and that counts as answered: a
+    /// stand-in tree holds exactly the files its test wrote, so a missing
+    /// `cpuset.cpus` there is the deliberate absence the test means it to be.
     #[cfg(test)]
     #[must_use]
     pub fn detached(cgroup_path: Utf8PathBuf) -> Self {
@@ -99,6 +108,7 @@ impl CgroupManager {
             cgroup_path,
             created: false,
             signals: JailSignals::unwatched(),
+            cpuset_control: CpusetControl::Answered,
         }
     }
 
@@ -108,13 +118,28 @@ impl CgroupManager {
     /// (optional, for I/O throttling and CPU pinning). The verification read is the
     /// real gate: write failures are tolerated when the required controllers are
     /// already enabled (e.g., pre-configured by an admin for an unprivileged runner).
-    fn enable_controllers(path: &Utf8Path) -> Result<(), RunnerError> {
+    ///
+    /// Reports what the widest write established about `cpuset`, because the
+    /// runner has no other chance to find out and [`Self::apply_cpuset`] would
+    /// otherwise read a write that failed as a host with nothing to delegate.
+    fn enable_controllers(path: &Utf8Path) -> Result<CpusetControl, RunnerError> {
         let subtree_control = path.join("cgroup.subtree_control");
 
-        // Try to enable all controllers at once, falling back to smaller sets
-        let write_result = fs::write(&subtree_control, "+cpu +memory +pids +io +cpuset")
-            .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids +io"))
-            .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids"));
+        // Try to enable all controllers at once, falling back to smaller sets.
+        // The kernel takes each write as a unit, so the widest one is the only
+        // one that says anything about `cpuset`, and what it says is kept rather
+        // than discarded with the fallback: reaching a narrower write means the
+        // controller was not enabled here, and only the refusal separates a host
+        // that has none to give from a write that simply failed.
+        let (cpuset_control, write_result) =
+            match fs::write(&subtree_control, "+cpu +memory +pids +io +cpuset") {
+                Ok(()) => (CpusetControl::Answered, Ok(())),
+                Err(e) => (
+                    CpusetControl::from_refusal(e),
+                    fs::write(&subtree_control, "+cpu +memory +pids +io")
+                        .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids")),
+                ),
+            };
 
         // Verify that required controllers are enabled. A read that failed is
         // not an empty list: reporting one would blame the host for a
@@ -140,7 +165,7 @@ impl CgroupManager {
             });
         }
 
-        Ok(())
+        Ok(cpuset_control)
     }
 
     /// Apply CPU pinning via cpuset controller.
@@ -166,7 +191,9 @@ impl CgroupManager {
     /// delegate `cpuset` (a containerized runner, or a cgroup namespace
     /// without it in `subtree_control`) creates its cgroup successfully and
     /// then has no `cpuset.cpus` to write. That is a declared absence of
-    /// isolation, which the caller degrades on rather than failing.
+    /// isolation, which the caller degrades on rather than failing. What the
+    /// absence is declared to be depends on what the enable attempt found out:
+    /// see [`Self::no_cpuset`].
     pub fn apply_cpuset(&self, layout: &CpuLayout) -> Result<Cpuset, RunnerError> {
         if !layout.has_isolation() {
             // Single core, or overlapping sets: there is nothing to confine to.
@@ -186,7 +213,7 @@ impl CgroupManager {
         let path = self.cgroup_path.join("cpuset.cpus");
         match path.try_exists() {
             Ok(true) => {},
-            Ok(false) => return Ok(Cpuset::Unavailable(UNDELEGATED)),
+            Ok(false) => return Ok(self.no_cpuset()),
             Err(e) => return Err(JailError::ReadCgroup { path, source: e }.into()),
         }
         // Every failure, absence included. Delegation was settled by the check
@@ -218,6 +245,29 @@ impl CgroupManager {
         }
 
         self.verify_cpuset(&cpuset, &mems)
+    }
+
+    /// Why this run has no cpuset, when the cgroup has no `cpuset.cpus`.
+    ///
+    /// The file is missing because the controller was not delegated to this
+    /// cgroup, and the question left is whether anything established that the
+    /// host is the reason. When the write that would have enabled it was
+    /// refused for its own reasons, that refusal is said out loud rather than
+    /// reported as a host with no `cpuset` to give: this is the one place the
+    /// difference is visible, and it is the difference between an operator
+    /// fixing their runner and an operator believing their kernel cannot do
+    /// this.
+    fn no_cpuset(&self) -> Cpuset {
+        match &self.cpuset_control {
+            CpusetControl::Answered => Cpuset::Unavailable(UNDELEGATED),
+            CpusetControl::Unanswered(e) => {
+                eprintln!(
+                    "Warning: the cpuset controller could not be enabled on the parent of {}: {e}. Whether this host delegates it was never established.",
+                    self.cgroup_path
+                );
+                Cpuset::Unavailable(UNENABLED)
+            },
+        }
     }
 
     /// Confirm the kernel actually gave the cgroup the cores that were asked
@@ -411,6 +461,44 @@ pub(crate) fn effective_mems(cgroup: &Utf8Path) -> Result<String, std::io::Error
 
 /// Why a run has no CPU isolation, when it has none.
 const UNDELEGATED: &str = "the cpuset controller is not delegated to this cgroup";
+
+/// The same missing controller, when nothing established that the host is why.
+const UNENABLED: &str = "the cpuset controller could not be enabled on the parent cgroup, so this run has none and whether this host delegates it is unknown";
+
+/// What asking the kernel to delegate `cpuset` established.
+///
+/// An absent `cpuset.cpus` means one of two things, and they are not the same
+/// thing at all. A host with no `cpuset` to give is an absence the runner
+/// observed and reports as one. A write that failed for any other reason
+/// answered nothing, and reporting that as an absence blames the host for a
+/// limitation nobody established, which is the rule this module keeps
+/// everywhere else.
+enum CpusetControl {
+    /// The kernel answered: it either enabled the controller for this cgroup's
+    /// children, or said it has none to enable here. An absent `cpuset.cpus`
+    /// under this is a fact about the host.
+    Answered,
+    /// The write was refused for a reason that is not an answer about the
+    /// controller, so whether this host delegates `cpuset` is unknown.
+    Unanswered(std::io::Error),
+}
+
+impl CpusetControl {
+    /// Read a refused `cgroup.subtree_control` write.
+    ///
+    /// `ENOENT` is how a controller the parent does not offer refuses, and
+    /// `EINVAL` is a name the kernel was not built with. Both are the kernel
+    /// answering that there is no `cpuset` to enable here. Anything else (a
+    /// write this runner is not allowed to make, a read-only mount, a parent
+    /// holding processes of its own) is the question failing rather than an
+    /// answer to it.
+    fn from_refusal(e: std::io::Error) -> Self {
+        match e.raw_os_error() {
+            Some(libc::ENOENT | libc::EINVAL) => Self::Answered,
+            _ => Self::Unanswered(e),
+        }
+    }
+}
 
 /// Whether the cpuset actually confined the VMM to the benchmark cores.
 ///
@@ -666,6 +754,56 @@ mod tests {
     }
 
     #[test]
+    fn a_cpuset_nobody_could_ask_about_is_not_an_undelegated_one() {
+        // The same tree as the test above, and a different answer, because the
+        // write that would have enabled the controller failed for a reason of
+        // its own. Reporting that as a host with no cpuset to give tells the
+        // operator their kernel cannot do this, on the strength of a question
+        // that never got an answer, and sends them looking in the wrong place.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let manager = CgroupManager {
+            cgroup_path: root,
+            created: false,
+            signals: JailSignals::unwatched(),
+            cpuset_control: CpusetControl::Unanswered(std::io::Error::from_raw_os_error(
+                libc::EROFS,
+            )),
+        };
+        let layout = CpuLayout::with_core_count(8);
+
+        assert_eq!(
+            manager.apply_cpuset(&layout).unwrap(),
+            Cpuset::Unavailable(UNENABLED)
+        );
+    }
+
+    #[test]
+    fn only_the_kernel_saying_it_has_no_cpuset_counts_as_an_answer() {
+        // `ENOENT` is a controller the parent does not offer, and `EINVAL` a
+        // name this kernel was not built with. Every other refusal is the
+        // question failing.
+        let errno = std::io::Error::from_raw_os_error;
+
+        assert!(matches!(
+            CpusetControl::from_refusal(errno(libc::ENOENT)),
+            CpusetControl::Answered
+        ));
+        assert!(matches!(
+            CpusetControl::from_refusal(errno(libc::EINVAL)),
+            CpusetControl::Answered
+        ));
+        assert!(matches!(
+            CpusetControl::from_refusal(errno(libc::EPERM)),
+            CpusetControl::Unanswered(_)
+        ));
+        assert!(matches!(
+            CpusetControl::from_refusal(errno(libc::EBUSY)),
+            CpusetControl::Unanswered(_)
+        ));
+    }
+
+    #[test]
     fn a_silently_narrowed_cpuset_is_an_error() {
         // The kernel intersects the written set with the parent's effective
         // set and reports the result. A successful write proves nothing.
@@ -722,11 +860,13 @@ mod tests {
             cgroup_path: root.join("ours"),
             created: true,
             signals: JailSignals::unwatched(),
+            cpuset_control: CpusetControl::Answered,
         };
         let theirs = CgroupManager {
             cgroup_path: root.join("theirs"),
             created: false,
             signals: JailSignals::unwatched(),
+            cpuset_control: CpusetControl::Answered,
         };
         fs::create_dir_all(ours.path()).unwrap();
         fs::create_dir_all(theirs.path()).unwrap();
@@ -817,6 +957,7 @@ mod tests {
             cgroup_path: root.join("stuck"),
             created: true,
             signals: signals.clone(),
+            cpuset_control: CpusetControl::Answered,
         };
         fs::create_dir_all(manager.path()).unwrap();
         fs::write(manager.path().join("cgroup.procs"), "42\n").unwrap();
@@ -839,6 +980,7 @@ mod tests {
             cgroup_path: root.join("gone"),
             created: true,
             signals: signals.clone(),
+            cpuset_control: CpusetControl::Answered,
         };
         fs::create_dir_all(manager.path()).unwrap();
 
