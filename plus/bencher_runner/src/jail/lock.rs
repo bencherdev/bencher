@@ -45,13 +45,14 @@ use crate::error::JailError;
 /// [`crate::jail::state`].
 pub(super) const LOCK_FILE: &str = ".lock";
 
-/// How often a wait for the jail lock repeats itself.
+/// How often an announced wait repeats itself.
 ///
 /// Long enough that a job handing the lock to the next runner prints nothing
 /// beyond the first line, short enough that an operator watching a runner that
 /// has said nothing else knows within half a minute whether it is waiting or
-/// wedged.
-const ANNOUNCE_EVERY: Duration = Duration::from_secs(30);
+/// wedged. The sweep announces a long reclamation on the same cadence, for the
+/// same reason: it runs under this lock, so its silence reads the same way.
+pub(super) const ANNOUNCE_EVERY: Duration = Duration::from_secs(30);
 
 /// Holds the jail lock for as long as it is alive.
 ///
@@ -112,12 +113,14 @@ impl JailLock {
 
 /// Run `wait`, calling `announce` every `interval` until it returns.
 ///
-/// The wait itself blocks in the kernel, so the repetition is a companion
-/// thread rather than a poll: polling for the lock would hand it over up to an
-/// interval late, and the point of holding the jail serially is that the next
-/// job starts as soon as the last one is done with it. The thread is scoped, so
-/// it is joined before this returns and cannot outlive the wait it describes.
-fn while_waiting<T, A: Fn() + Sync, W: FnOnce() -> T>(
+/// The repetition is a companion thread rather than a poll, because a poll
+/// cannot see inside the wait: the lock blocks in the kernel, and the sweep's
+/// reclamation of one jail is a single long call. Polling for the lock would
+/// also hand it over up to an interval late, and the point of holding the jail
+/// serially is that the next job starts as soon as the last one is done with
+/// it. The thread is scoped, so it is joined before this returns and cannot
+/// outlive the wait it describes.
+pub(super) fn while_waiting<T, A: Fn() + Sync, W: FnOnce() -> T>(
     interval: Duration,
     announce: A,
     wait: W,
