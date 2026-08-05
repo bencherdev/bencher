@@ -5,6 +5,10 @@
 //! reclaims chroots left behind by a runner that exited without unwinding.
 
 #![expect(clippy::print_stderr, reason = "host preparation prints diagnostics")]
+#![expect(
+    clippy::print_stdout,
+    reason = "the sweep announces a reclamation that outlives the interval"
+)]
 
 use std::fs;
 use std::os::unix::fs::{MetadataExt as _, OpenOptionsExt as _, PermissionsExt as _, fchown};
@@ -660,12 +664,21 @@ where
     for entry in entries {
         let outcome = match entry {
             Ok(entry) => match jail_id(jail_parent, &entry) {
-                Ok(Some(vm_id)) => reclaim_one(
-                    &jail_parent.join(vm_id.as_str()),
-                    &vm_id,
-                    &reap,
-                    &remove_cgroup,
-                ),
+                // One jail's reclamation can legitimately run for minutes, all
+                // of it under the jail lock: the reap is a bounded rescan with
+                // a kill timeout per pass, and the cgroup removal waits out its
+                // own timeout besides. Silence for that long is
+                // indistinguishable from a wedge, so it gets the same
+                // treatment as waiting on the lock itself: a line on a
+                // schedule, changing nothing about the work it describes.
+                Ok(Some(vm_id)) => {
+                    let jail_dir = jail_parent.join(vm_id.as_str());
+                    super::lock::while_waiting(
+                        super::lock::ANNOUNCE_EVERY,
+                        || println!("  Still reclaiming stale jail {jail_dir}..."),
+                        || reclaim_one(&jail_dir, &vm_id, &reap, &remove_cgroup),
+                    )
+                },
                 // Not a jail, or not ours: nothing owed either way.
                 Ok(None) => continue,
                 Err(e) => Reclamation::Failed(e),
@@ -865,6 +878,13 @@ mod tests {
     /// under `/tmp` (0o1777). The only place that holds without special mounts is
     /// directly under `/`, which is root-owned. Creating there needs root, so the
     /// tests that use this are gated on euid and skipped on an unprivileged box.
+    ///
+    /// Which means a test run with the privilege, and `cargo nextest` as root
+    /// inside a container is a common one, deliberately creates and removes
+    /// entries in the filesystem root. That is the point, not an accident:
+    /// nothing under a tempdir can provide the ancestry the accept path
+    /// demands. The names are pid- and counter-scoped so concurrent and
+    /// repeated runs cannot collide, and the drop takes the directory with it.
     struct RootOnlyBase(Utf8PathBuf);
 
     impl Drop for RootOnlyBase {
