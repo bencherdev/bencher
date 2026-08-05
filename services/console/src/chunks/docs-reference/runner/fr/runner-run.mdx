@@ -39,10 +39,17 @@ Il doit s'agir d'un chemin absolu.
 La prison qui confine le bac à sable est créée dans ce répertoire,
 et les prisons laissées par un arrêt brutal en sont supprimées avant le premier Job avec bac à sable.
 Chaque prison contient un système de fichiers racine invité complet et une copie du binaire de la microVM,
-ce répertoire a donc besoin d'une capacité réelle pour chaque Job exécuté simultanément.
+et les Jobs qui partagent un répertoire d'état s'exécutent un par un,
+ce répertoire a donc besoin d'une capacité réelle pour une prison.
 Un système de fichiers dédié ou un montage `tmpfs` est pris en charge et recommandé :
 il maintient cette charge d'écriture hors du disque système,
 et un système de fichiers fraîchement créé est accepté même s'il arrive avec un répertoire `lost+found`.
+Le répertoire d'état lui-même peut être un lien symbolique créé par root vers un tel système de fichiers,
+comme `/var/lib/bencher-runner` pointant vers un disque dédié.
+Le lien n'est suivi que lorsque le répertoire qui le contient n'est inscriptible que par root,
+qu'il pointe directement vers sa cible finale,
+et que cette cible existe déjà sur un chemin inscriptible uniquement par root ;
+un lien dont la cible n'existe pas encore est refusé, créez donc d'abord la cible.
 Par défaut, `/var/lib/bencher-runner` est utilisé.
 Peut également être défini avec la variable d'environnement `BENCHER_STATE_DIR`.
 
