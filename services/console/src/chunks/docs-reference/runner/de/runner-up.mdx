@@ -42,10 +42,17 @@ Es muss ein absoluter Pfad sein.
 Das Jail, das die Sandbox einschließt, wird unter diesem Verzeichnis erstellt,
 und Jails, die durch eine unsaubere Beendigung zurückgeblieben sind, werden vor dem ersten Sandbox-Job daraus entfernt.
 Jedes Jail enthält ein vollständiges Gast-Root-Dateisystem und eine Kopie der microVM-Binärdatei,
-daher braucht dieses Verzeichnis echte Kapazität für jeden gleichzeitig laufenden Job.
+und Jobs, die sich ein Zustandsverzeichnis teilen, laufen nacheinander,
+daher braucht dieses Verzeichnis echte Kapazität für ein Jail.
 Ein eigenes Dateisystem oder ein `tmpfs`-Mount wird unterstützt und empfohlen:
 es hält diese Schreiblast von der Systemplatte fern,
 und ein neu erstelltes Dateisystem wird akzeptiert, auch wenn es ein `lost+found`-Verzeichnis mitbringt.
+Das Zustandsverzeichnis selbst darf ein von root angelegter symbolischer Link auf ein solches Dateisystem sein,
+etwa `/var/lib/bencher-runner` auf eine eigene Platte.
+Dem Link wird nur gefolgt, wenn das Verzeichnis, das ihn enthält, nur von root beschreibbar ist,
+er direkt auf sein endgültiges Ziel zeigt
+und dieses Ziel bereits auf einem nur von root beschreibbaren Pfad existiert;
+ein Link, dessen Ziel noch nicht existiert, wird abgelehnt, also zuerst das Ziel anlegen.
 Standardmäßig wird `/var/lib/bencher-runner` verwendet.
 Kann auch mit der Umgebungsvariable `BENCHER_STATE_DIR` gesetzt werden.
 
