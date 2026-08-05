@@ -482,12 +482,11 @@ fn download_and_extract_tgz(
         }
     }
 
-    let missing = wanted
-        .iter()
-        .filter(|(_, dest)| !dest.exists())
-        .map(|(name, _)| name.as_str())
-        .collect::<Vec<_>>()
-        .join(", ");
+    // Named from what the archive walk itself failed to find. A destination
+    // left by an earlier partial run in the same OUT_DIR still exists on disk,
+    // so consulting `dest.exists()` here would report an empty missing list
+    // for an archive that no longer carries the entry.
+    let missing = outstanding.join(", ");
     Err(format!("Entries not found in archive: {missing}"))
 }
 
