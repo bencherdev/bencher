@@ -42,10 +42,17 @@ Deve ser um caminho absoluto.
 A jail que confina o sandbox é criada sob este diretório,
 e as jails deixadas por um encerramento não limpo são removidas dele antes do primeiro Job com sandbox.
 Cada jail contém um sistema de arquivos raiz completo do convidado e uma cópia do binário da microVM,
-portanto este diretório precisa de capacidade real para cada Job executado ao mesmo tempo.
+e os Jobs que compartilham um diretório de estado são executados um de cada vez,
+portanto este diretório precisa de capacidade real para uma jail.
 Um sistema de arquivos dedicado ou uma montagem `tmpfs` é suportado e recomendado:
 mantém essa carga de escrita fora do disco do sistema,
 e um sistema de arquivos recém-criado é aceito mesmo que venha com um diretório `lost+found`.
+O próprio diretório de estado pode ser um link simbólico criado pelo root para um sistema de arquivos assim,
+como `/var/lib/bencher-runner` apontando para um disco dedicado.
+O link só é seguido quando o diretório que o contém só pode ser escrito pelo root,
+ele aponta diretamente para o seu destino final,
+e esse destino já existe em um caminho gravável apenas pelo root;
+um link cujo destino ainda não existe é recusado, então crie o destino primeiro.
 Por padrão, `/var/lib/bencher-runner` é usado.
 Também pode ser definido com a variável de ambiente `BENCHER_STATE_DIR`.
 
