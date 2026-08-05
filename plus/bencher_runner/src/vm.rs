@@ -226,9 +226,13 @@ fn copy_binary(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
     use std::os::unix::fs::PermissionsExt as _;
 
     copy_file(src, dest)?;
-    let mut perms = std::fs::metadata(dest)?.permissions();
+    let chmod = |source| crate::error::ConfigError::ChmodBinary {
+        path: dest.to_owned(),
+        source,
+    };
+    let mut perms = std::fs::metadata(dest).map_err(chmod)?.permissions();
     perms.set_mode(0o755);
-    std::fs::set_permissions(dest, perms)?;
+    std::fs::set_permissions(dest, perms).map_err(chmod)?;
     Ok(())
 }
 
