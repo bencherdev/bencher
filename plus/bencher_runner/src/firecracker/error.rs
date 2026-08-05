@@ -119,9 +119,48 @@ pub enum FirecrackerError {
         source: std::io::Error,
     },
 
-    /// Failed to collect results via vsock.
-    #[error("Vsock result collection failed: {0}")]
-    VsockCollection(String),
+    /// A vsock listener socket could not be bound.
+    ///
+    /// Nothing is unlinked before the bind, so a path already taken lands
+    /// here. The stream name is what an operator recognizes; the port is what
+    /// the guest side and the socket file on disk are named by.
+    #[error("Failed to bind the vsock {stream} listener (port {port}): {source}")]
+    BindVsock {
+        /// The stream the listener carries.
+        stream: &'static str,
+        /// The vsock port the guest connects to.
+        port: u32,
+        /// Why it could not be bound.
+        source: std::io::Error,
+    },
+
+    /// A vsock listener could not be made non-blocking.
+    ///
+    /// The collection loop polls all four listeners at once, so a listener
+    /// left blocking would stall it on whichever port the guest writes last.
+    #[error("Failed to set the vsock {stream} listener (port {port}) non-blocking: {source}")]
+    VsockNonblocking {
+        /// The stream the listener carries.
+        stream: &'static str,
+        /// The vsock port the guest connects to.
+        port: u32,
+        /// Why it could not be set.
+        source: std::io::Error,
+    },
+
+    /// The poll across the vsock listeners failed.
+    #[error("Failed to poll the vsock listeners: {source}")]
+    PollVsock {
+        /// Why the poll failed.
+        source: nix::errno::Errno,
+    },
+
+    /// The output files the guest sent could not be decoded.
+    #[error("Failed to decode the output files the guest sent: {source}")]
+    DecodeOutputFiles {
+        /// Why the decoding failed.
+        source: bencher_output_protocol::DecodeError,
+    },
 
     /// Job was cancelled.
     #[error("Job cancelled")]

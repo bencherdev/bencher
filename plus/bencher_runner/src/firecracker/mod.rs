@@ -428,7 +428,7 @@ fn decode_output_files(
     max_content_size: u64,
 ) -> Result<HashMap<Utf8PathBuf, Vec<u8>>, FirecrackerError> {
     let files = bencher_output_protocol::decode(data, max_file_count, max_content_size)
-        .map_err(|e| FirecrackerError::VsockCollection(format!("output files: {e}")))?;
+        .map_err(|source| FirecrackerError::DecodeOutputFiles { source })?;
     Ok(files.into_iter().collect())
 }
 

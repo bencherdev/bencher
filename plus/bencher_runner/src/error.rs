@@ -75,7 +75,7 @@ pub enum JailError {
     ForeignStateDir { path: Utf8PathBuf, entry: String },
 
     #[error(
-        "The state directory component {path} is a symbolic link. The runner tightens every directory of this tree to 0700 and sweeps what is under it, so following the link would apply both to a directory somebody else chose. Replace it with a real directory, or point --state-dir at a tree the runner owns."
+        "The state directory component {path} is a symbolic link. The runner tightens every directory of this tree to 0700 and sweeps what is under it, so following the link would apply both to a directory somebody else chose. A link is followed only at the state directory root, and only when the directory holding it is writable by nobody but root, it points directly at its final target, and that target already exists with every directory on the way to / writable by nobody but root: an extra symlink hop, a group- or other-writable directory in the target's path, or a target that does not exist yet all fail that proof. Replace the link with a real directory, or repair it to meet those conditions."
     )]
     SymlinkedStateDir { path: Utf8PathBuf },
 
@@ -193,6 +193,16 @@ pub enum JailError {
         "The kernel narrowed the cgroup cpuset at {path}: asked for cpus {requested}, got {effective}. The benchmark would not have run on the cores it claims."
     )]
     CpusetNarrowed {
+        path: Utf8PathBuf,
+        requested: String,
+        effective: String,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error(
+        "The cgroup cpuset at {path} could not be read as a cpu list: asked for '{requested}', read back '{effective}'. A set the runner cannot parse cannot be verified against the one it wrote, so whether the kernel honored the request is unknown."
+    )]
+    CpusetUnparseable {
         path: Utf8PathBuf,
         requested: String,
         effective: String,
