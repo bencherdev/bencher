@@ -488,6 +488,15 @@ where
 /// caller turns it into `JailStillRunning` and fails a job on a host that may
 /// well be clean, while the other direction reads a question that failed as an
 /// exit and has the sweep delete a tree with a live VMM under it.
+///
+/// One failure is retried instead of read either way: a `poll` a signal
+/// interrupted. `EINTR` reports an arrival in this process and says nothing
+/// about the one being watched, and the check after the loop in
+/// [`wait_for_exit_until`] is a verdict, so an interruption landing there would
+/// become `JailStillRunning` outright: a job failed on a clean host, naming a
+/// pid that already exited, which is the exact misdiagnosis that final check
+/// exists to prevent. The same rule the lock module applies to an interrupted
+/// `flock`.
 fn is_running(pidfd: &OwnedFd) -> bool {
     let mut poll_fd = libc::pollfd {
         fd: pidfd.as_raw_fd(),
@@ -495,14 +504,20 @@ fn is_running(pidfd: &OwnedFd) -> bool {
         revents: 0,
     };
 
-    #[expect(
-        unsafe_code,
-        reason = "poll has no std wrapper; the fd is owned and valid"
-    )]
-    // SAFETY: `poll` reads and writes exactly the `nfds` entries the pointer
-    // names, and one entry is passed for the one that is declared. `pidfd` is an
-    // open, owned descriptor for the duration of the call.
-    let ready = unsafe { libc::poll(&raw mut poll_fd, 1, 0) };
+    let ready = loop {
+        #[expect(
+            unsafe_code,
+            reason = "poll has no std wrapper; the fd is owned and valid"
+        )]
+        // SAFETY: `poll` reads and writes exactly the `nfds` entries the pointer
+        // names, and one entry is passed for the one that is declared. `pidfd` is an
+        // open, owned descriptor for the duration of the call.
+        let ready = unsafe { libc::poll(&raw mut poll_fd, 1, 0) };
+        if ready < 0 && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
+            continue;
+        }
+        break ready;
+    };
 
     ready <= 0 || (poll_fd.revents & libc::POLLIN) == 0
 }
