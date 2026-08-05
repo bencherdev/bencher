@@ -303,7 +303,22 @@ impl CgroupManager {
                 source: e,
             })?;
 
-            if parse_cpuset(&effective) != parse_cpuset(requested) {
+            // Either side failing to parse fails the verification, not just the
+            // kernel's: the requested set is one this runner rendered itself,
+            // so a side that cannot be read leaves the comparison with a value
+            // nobody has, and two unparseable strings must not verify each
+            // other as equal.
+            let (Some(requested_set), Some(effective_set)) =
+                (parse_cpuset(requested), parse_cpuset(&effective))
+            else {
+                return Err(JailError::CpusetUnparseable {
+                    path,
+                    requested: requested.to_owned(),
+                    effective: effective.trim().to_owned(),
+                }
+                .into());
+            };
+            if effective_set != requested_set {
                 return Err(JailError::CpusetNarrowed {
                     path,
                     requested: requested.to_owned(),
@@ -515,23 +530,27 @@ pub enum Cpuset {
 ///
 /// Compared as sets rather than as strings, because the kernel is free to
 /// render the same set differently from the way it was written.
-fn parse_cpuset(cpuset: &str) -> std::collections::BTreeSet<usize> {
+///
+/// `None` for a component this cannot read, never the cpus around it. Dropping
+/// what would not parse turns an unparseable value into a partial or empty set,
+/// which is a value nobody read: it errs safe today only because the caller
+/// fails on a mismatch, and this module's rule is that a question that could
+/// not be asked is not answered at all.
+fn parse_cpuset(cpuset: &str) -> Option<std::collections::BTreeSet<usize>> {
     let mut cpus = std::collections::BTreeSet::new();
     for group in cpuset.trim().split(',').filter(|group| !group.is_empty()) {
         match group.split_once('-') {
             Some((start, end)) => {
-                if let (Ok(start), Ok(end)) = (start.trim().parse(), end.trim().parse::<usize>()) {
-                    cpus.extend(start..=end);
-                }
+                let start = start.trim().parse().ok()?;
+                let end = end.trim().parse::<usize>().ok()?;
+                cpus.extend(start..=end);
             },
             None => {
-                if let Ok(cpu) = group.trim().parse() {
-                    cpus.insert(cpu);
-                }
+                cpus.insert(group.trim().parse().ok()?);
             },
         }
     }
-    cpus
+    Some(cpus)
 }
 
 /// How long to keep trying to remove a stale cgroup.
@@ -845,12 +864,39 @@ mod tests {
 
     #[test]
     fn parse_cpuset_reads_kernel_cpu_lists() {
-        assert_eq!(parse_cpuset("2-7"), (2..=7).collect());
-        assert_eq!(parse_cpuset("2,3,4,5,6,7\n"), (2..=7).collect());
-        assert_eq!(parse_cpuset("0-1,4,6-7"), [0, 1, 4, 6, 7].into());
-        assert_eq!(parse_cpuset("3"), [3].into());
-        assert!(parse_cpuset("").is_empty());
-        assert!(parse_cpuset("\n").is_empty());
+        assert_eq!(parse_cpuset("2-7"), Some((2..=7).collect()));
+        assert_eq!(parse_cpuset("2,3,4,5,6,7\n"), Some((2..=7).collect()));
+        assert_eq!(parse_cpuset("0-1,4,6-7"), Some([0, 1, 4, 6, 7].into()));
+        assert_eq!(parse_cpuset("3"), Some([3].into()));
+        // An empty list is a real answer: a cpuset narrowed to nothing.
+        assert_eq!(parse_cpuset(""), Some([].into()));
+        assert_eq!(parse_cpuset("\n"), Some([].into()));
+    }
+
+    #[test]
+    fn parse_cpuset_does_not_turn_garbage_into_a_set() {
+        // A component that will not parse fails the whole read rather than
+        // being dropped: dropping it hands the caller a partial or empty set,
+        // which is an answer to a question that could not be asked.
+        for garbage in ["x", "2-x", "x-7", "2-", "-7", "1,x,3", "0xff"] {
+            assert_eq!(parse_cpuset(garbage), None, "'{garbage}' is not a set");
+        }
+    }
+
+    #[test]
+    fn an_effective_set_that_cannot_be_parsed_fails_the_job() {
+        // Two unparseable strings must not verify each other, and an effective
+        // value in a format this runner cannot read is not evidence the kernel
+        // honored the request.
+        let (_dir, manager) = cpuset_tree("not-a-cpu-list\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        let err = manager.apply_cpuset(&layout).unwrap_err().to_string();
+
+        assert!(
+            err.contains("not-a-cpu-list"),
+            "names what could not be read: {err}"
+        );
     }
 
     #[test]
