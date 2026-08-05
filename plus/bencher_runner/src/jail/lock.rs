@@ -122,6 +122,26 @@ fn while_waiting<T, A: Fn() + Sync, W: FnOnce() -> T>(
     announce: A,
     wait: W,
 ) -> T {
+    /// Flips the predicate and wakes the announcer, on unwind as well as on
+    /// return.
+    ///
+    /// The scope joins the announcer on the way out of either, and its loop
+    /// runs until the predicate flips, so flipping it only after `wait`
+    /// returns would turn a panic in the wait into a join that never
+    /// finishes: the process hangs in place of propagating the panic.
+    struct Done<'scope> {
+        /// The announcer's predicate.
+        done: &'scope Mutex<bool>,
+        /// What the announcer sleeps on.
+        woken: &'scope Condvar,
+    }
+    impl Drop for Done<'_> {
+        fn drop(&mut self) {
+            *self.done.lock().unwrap_or_else(PoisonError::into_inner) = true;
+            self.woken.notify_all();
+        }
+    }
+
     #[expect(
         clippy::mutex_atomic,
         reason = "the condvar's predicate has to be read under the condvar's mutex"
@@ -146,10 +166,11 @@ fn while_waiting<T, A: Fn() + Sync, W: FnOnce() -> T>(
             }
         });
 
-        let result = wait();
-        *done.lock().unwrap_or_else(PoisonError::into_inner) = true;
-        woken.notify_all();
-        result
+        let _flip = Done {
+            done: &done,
+            woken: &woken,
+        };
+        wait()
     })
 }
 
@@ -283,6 +304,21 @@ mod tests {
             0,
             "a wait that ended within the interval has nothing to add"
         );
+    }
+
+    #[test]
+    fn a_wait_that_panics_still_propagates_the_panic() {
+        // The scope joins the announcer before the panic leaves it, and the
+        // announcer runs until the predicate flips. A predicate flipped only
+        // after `wait` returns never flips on the unwind path, so the join
+        // blocks forever and the process hangs instead of panicking. Nothing
+        // waited on can panic today; the function is generic over the wait,
+        // so the guarantee belongs to it rather than to today's caller.
+        let unwound = std::panic::catch_unwind(|| {
+            while_waiting(Duration::from_secs(30), || {}, || panic!("wait failed"));
+        });
+
+        unwound.unwrap_err();
     }
 
     #[test]
