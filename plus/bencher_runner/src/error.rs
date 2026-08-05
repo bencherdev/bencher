@@ -294,6 +294,12 @@ pub enum ConfigError {
         source: std::io::Error,
     },
 
+    #[error("Failed to make the staged binary {path} executable: {source}")]
+    ChmodBinary {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
     #[error("Failed to copy init binary from {src} to {dest}: {source}")]
     CopyInit {
         src: Utf8PathBuf,
