@@ -134,14 +134,26 @@ impl FirecrackerProcess {
             }
         }
 
-        let mut child = command.spawn().map_err(|e| FirecrackerError::Spawn {
+        let child = command.spawn().map_err(|e| FirecrackerError::Spawn {
             path: jailer_bin.to_owned(),
             pre_exec,
             source: e,
         })?;
 
+        // The guard takes the child the moment the child exists, so every
+        // fallible step below is covered by this type's own `Drop`, which
+        // kills and reaps. `Child::drop` does neither, so an error returned
+        // between the spawn and this construction would leave the jailer, or
+        // the VMM it has become, running with nothing armed to reap it, while
+        // the jail teardown removes the chroot out from under it.
+        let mut process = Self {
+            child,
+            api_socket: api_socket.clone(),
+            stderr_thread: None,
+        };
+
         // Spawn a thread to read stderr line-by-line
-        let stderr = child.stderr.take().ok_or(FirecrackerError::Stdio(
+        let stderr = process.child.stderr.take().ok_or(FirecrackerError::Stdio(
             "stderr was piped but not available",
         ))?;
         let stderr_thread = std::thread::spawn(move || {
@@ -159,12 +171,7 @@ impl FirecrackerProcess {
                 }
             }
         });
-
-        let mut process = Self {
-            child,
-            api_socket: api_socket.clone(),
-            stderr_thread: Some(stderr_thread),
-        };
+        process.stderr_thread = Some(stderr_thread);
 
         process.wait_for_ready(API_SOCKET_TIMEOUT)?;
 
