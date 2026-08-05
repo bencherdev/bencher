@@ -81,6 +81,8 @@
 //! | `reap_jailed_vmm`: a VMM that will not exit | reported still running |
 //! | `reap_jailed_vmm`: the rescan bound runs out | reported still running |
 //! | `reap_jailed_vmm`: a `poll` of the pidfd that fails or answers nothing | reported still running, which fails the job |
+//! | `reap_jailed_vmm`: a `poll` of the pidfd a signal interrupts | retried: the signal reports an arrival in this process and says nothing about the one being watched |
+//! | `JailDir::create`: the state tree fails its re-check at job time | fails the job: the chroot would otherwise be built through a component swapped since preparation |
 //! | `JailDir::create`: a step that fails once the tree exists | fails the job, and the guard that already took the tree reclaims it |
 //! | `JailDir` teardown: the chroot is already gone | ignored: that is the goal state |
 //! | `JailDir` teardown: removing the chroot | arms the retry |
@@ -90,6 +92,7 @@
 //! | `CgroupManager` creation: the cgroup cannot be stat'ed | fails the job: this decides whether `Drop` may remove it |
 //! | `remove_stale_cgroup`: the cgroup cannot be stat'ed | fails the job: the caller deletes the chroot on an `Ok` here |
 //! | `StateDir::create`: the chroot tree cannot be stat'ed | fails the job: the 0700 chmod follows |
+//! | `StateDir::create`: taking a directory of the tree for root (the chown to 0:0) | fails the job; `EPERM` alone is ignored: it refuses exactly a process that never builds a jail, since root is checked by name before any of this runs |
 //! | `StateDir::new`: the root is a symlink proven the operator's own choice (parent root-only-writable, single hop to an absolute canonical target, that target's whole ancestry root-only-writable) | followed: no unprivileged user influenced or can race it, and the populated check still runs on the target |
 //! | `StateDir::new`: the root is a symlink failing any of those showings | left as given, so `real_dir` refuses it as a symlink at create time |
 //! | `StateDir::create`: an interior component of the tree is a symlink | fails the job: the 0700 chmod and the sweep would land on a directory somebody else chose |
@@ -106,6 +109,7 @@
 //! | `apply_cpuset`: the parent's node set cannot be read | fails the job: this value is written, so a guess confines the guest's memory |
 //! | `apply_cpuset`: the effective set cannot be read back | fails the job: the read back *is* the mechanism, and the write already proved the controller delegated |
 //! | `apply_cpuset`: the kernel narrowed the set | fails the job |
+//! | `apply_cpuset`: either side of the verification cannot be parsed as a cpu list | fails the job: dropping what would not parse would compare partial sets nobody read |
 //! | `enable_controllers`: `cgroup.subtree_control` cannot be read | fails the job: an unreadable list is not an empty one |
 //! | `enable_controllers`: the kernel refuses the `+cpuset` write | declares the absence: this run has no cpuset, and whether the host delegates it is unknown |
 //! | `BencherPartition::apply`: any read or write in the partition path | declares the absence: the level achieved is reported, down to `member` |
