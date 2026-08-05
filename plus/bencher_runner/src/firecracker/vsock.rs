@@ -42,6 +42,20 @@ mod ports {
 
     /// Every port the runner listens on.
     pub const ALL: [u32; 4] = [STDOUT, STDERR, EXIT_CODE, OUTPUT_FILES];
+
+    /// The stream a port carries, for errors that name what failed.
+    ///
+    /// A port number alone sends an operator to this table; the stream name is
+    /// the handle they already have.
+    pub const fn stream(port: u32) -> &'static str {
+        match port {
+            STDOUT => "stdout",
+            STDERR => "stderr",
+            EXIT_CODE => "exit_code",
+            OUTPUT_FILES => "output_files",
+            _ => "unknown",
+        }
+    }
 }
 
 /// Results collected from the guest via vsock.
@@ -87,34 +101,10 @@ impl VsockListener {
     /// the socket view, which is the one view that can go stale, so it was also
     /// the one step that contradicted the rule above.
     pub fn new(vsock: &JailFile) -> Result<Self, FirecrackerError> {
-        let socket = vsock.socket();
-        let stdout_path = socket.with_port(ports::STDOUT);
-        let stderr_path = socket.with_port(ports::STDERR);
-        let exit_code_path = socket.with_port(ports::EXIT_CODE);
-        let output_files_path = socket.with_port(ports::OUTPUT_FILES);
-
-        let stdout_listener = UnixListener::bind(&stdout_path)
-            .map_err(|e| FirecrackerError::VsockCollection(format!("bind stdout: {e}")))?;
-        let stderr_listener = UnixListener::bind(&stderr_path)
-            .map_err(|e| FirecrackerError::VsockCollection(format!("bind stderr: {e}")))?;
-        let exit_code_listener = UnixListener::bind(&exit_code_path)
-            .map_err(|e| FirecrackerError::VsockCollection(format!("bind exit_code: {e}")))?;
-        let output_files_listener = UnixListener::bind(&output_files_path)
-            .map_err(|e| FirecrackerError::VsockCollection(format!("bind output_files: {e}")))?;
-
-        // Set non-blocking so we can poll
-        stdout_listener.set_nonblocking(true).map_err(|e| {
-            FirecrackerError::VsockCollection(format!("set_nonblocking stdout: {e}"))
-        })?;
-        stderr_listener.set_nonblocking(true).map_err(|e| {
-            FirecrackerError::VsockCollection(format!("set_nonblocking stderr: {e}"))
-        })?;
-        exit_code_listener.set_nonblocking(true).map_err(|e| {
-            FirecrackerError::VsockCollection(format!("set_nonblocking exit_code: {e}"))
-        })?;
-        output_files_listener.set_nonblocking(true).map_err(|e| {
-            FirecrackerError::VsockCollection(format!("set_nonblocking output_files: {e}"))
-        })?;
+        let stdout_listener = bind_nonblocking(vsock, ports::STDOUT)?;
+        let stderr_listener = bind_nonblocking(vsock, ports::STDERR)?;
+        let exit_code_listener = bind_nonblocking(vsock, ports::EXIT_CODE)?;
+        let output_files_listener = bind_nonblocking(vsock, ports::OUTPUT_FILES)?;
 
         Ok(Self {
             vsock: vsock.clone(),
@@ -203,8 +193,8 @@ impl VsockListener {
             match poll(&mut fds, poll_timeout) {
                 Ok(_) => {},
                 Err(nix::errno::Errno::EINTR) => continue,
-                Err(e) => {
-                    return Err(FirecrackerError::VsockCollection(format!("poll: {e}")));
+                Err(source) => {
+                    return Err(FirecrackerError::PollVsock { source });
                 },
             }
 
@@ -314,6 +304,29 @@ impl Drop for VsockListener {
     fn drop(&mut self) {
         self.cleanup();
     }
+}
+
+/// Bind one port's listener at the socket view and make it non-blocking.
+///
+/// The socket view is the only view short enough for `sun_path`; see
+/// [`VsockListener::new`]. Non-blocking is set here rather than in a second
+/// pass, so no listener ever exists in a state the collection loop cannot
+/// poll.
+fn bind_nonblocking(vsock: &JailFile, port: u32) -> Result<UnixListener, FirecrackerError> {
+    let path = vsock.socket().with_port(port);
+    let listener = UnixListener::bind(&path).map_err(|source| FirecrackerError::BindVsock {
+        stream: ports::stream(port),
+        port,
+        source,
+    })?;
+    listener
+        .set_nonblocking(true)
+        .map_err(|source| FirecrackerError::VsockNonblocking {
+            stream: ports::stream(port),
+            port,
+            source,
+        })?;
+    Ok(listener)
 }
 
 /// Try to accept a connection on a non-blocking listener and read all data.
@@ -427,8 +440,14 @@ mod tests {
         };
 
         assert!(
-            err.to_string().contains("bind stdout"),
-            "a taken path is a bind failure, got: {err}"
+            matches!(
+                err,
+                FirecrackerError::BindVsock {
+                    stream: "stdout",
+                    ..
+                }
+            ),
+            "a taken path is a bind failure that names the stream, got: {err}"
         );
         assert_eq!(
             std::fs::read(&occupied).unwrap(),
