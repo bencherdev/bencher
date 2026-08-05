@@ -7,7 +7,7 @@
 #![expect(clippy::print_stderr, reason = "host preparation prints diagnostics")]
 
 use std::fs;
-use std::os::unix::fs::{MetadataExt as _, OpenOptionsExt as _, PermissionsExt as _};
+use std::os::unix::fs::{MetadataExt as _, OpenOptionsExt as _, PermissionsExt as _, fchown};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -115,7 +115,13 @@ impl StateDir {
     /// otherwise, so what this sees at the root is either the resolved target or a
     /// link that gets refused here the same as any other. See
     /// [`resolve_symlinked_root`].
-    fn check_root_is_ours(&self) -> Result<(), JailError> {
+    ///
+    /// Run per job by [`crate::jail::JailDir::create`], not only at host
+    /// preparation, which runs once per process. On an intact tree it is the
+    /// fast path above: three `lstat`s and out. What the per-job run buys is
+    /// that a component swapped for a link after preparation is refused before
+    /// the job's `create_dir_all` would follow it. See [`crate::jail::JailDir`].
+    pub(crate) fn check_root_is_ours(&self) -> Result<(), JailError> {
         let chroot_base = self.chroot_base();
         let jail_parent = self.jail_parent();
 
@@ -172,18 +178,29 @@ impl StateDir {
         self.jail_dir(vm_id).join(JAIL_ROOT)
     }
 
-    /// Create the state directory tree at mode 0700.
+    /// Create the state directory tree, root-owned at mode 0700.
     ///
-    /// Idempotent. The mode is applied on every call so a directory created
-    /// with a laxer mode by an older runner is tightened on upgrade. That
-    /// tightening is why the root has to be one the runner owns: pointed at a
-    /// populated system directory it would otherwise chmod that directory to
-    /// 0700 and break the host.
+    /// Idempotent. The owner and the mode are applied on every call so a
+    /// directory created laxer, or left owned by whoever made it before the
+    /// runner was pointed at it, is taken on upgrade. That taking is why the
+    /// root has to be one the runner owns: pointed at a populated system
+    /// directory it would otherwise chown and chmod that directory and break
+    /// the host.
     ///
     /// One directory at a time, and the guard is written to expect that: a
     /// runner killed between two of these calls leaves a tree that is half
     /// built, which is the runner's own and has to be finishable on the next
     /// job. See [`Self::check_root_is_ours`].
+    ///
+    /// The order closes the loop's own window. `create_dir_all` resolves its
+    /// path, so a component swapped for a link underneath it is followed, and
+    /// what keeps that from mattering is that each level is taken before the
+    /// next is created: once [`make_private`] has run on a level, nobody but
+    /// root can plant anything in it for the next iteration to follow. The one
+    /// unowned moment is the root itself before its own take, under a parent
+    /// the operator chose, and a link planted there fails the `O_NOFOLLOW` open
+    /// in [`make_private`]: the worst a race can extract is a directory created
+    /// and a job failed, never an owner or a mode applied through a link.
     pub fn create(&self) -> Result<(), JailError> {
         self.check_root_is_ours()?;
         for dir in [&self.root, &self.chroot_base(), &self.jail_parent()] {
@@ -418,12 +435,31 @@ fn first_foreign_entry(dir: &Utf8Path, ours: &[&str]) -> Result<Option<String>, 
     Ok(None)
 }
 
-/// Tighten one directory of the tree to 0700, without following a link.
+/// Take one directory of the tree for root: owner 0:0, mode 0700, no link
+/// followed.
 ///
-/// `fchmod` on a descriptor opened `O_NOFOLLOW`, rather than a chmod of the
-/// path: the path form resolves a link, so a component swapped for one between
-/// the guard and this call would have root tighten a directory of somebody
-/// else's choosing. The open fails instead.
+/// `fchown` and `fchmod` on a descriptor opened `O_NOFOLLOW`, rather than the
+/// path forms: those resolve a link, so a component swapped for one between the
+/// guard and this call would have root claim a directory of somebody else's
+/// choosing. The open fails instead.
+///
+/// Ownership is taken, not assumed. The guard proves the tree is the runner's
+/// to use, but a directory that already existed keeps the owner it came with,
+/// and mode alone does not shut that owner out: 0700 is a setting the owner can
+/// change back. A root handed over at `--state-dir /home/op/state` would stay
+/// op's to reopen and to plant links in, between jobs, under everything the
+/// runner then builds inside. Chowned before the chmod, so there is never a
+/// tightened directory whose owner can still loosen it.
+///
+/// An `EPERM` from the chown is tolerated, and only that: it refuses exactly a
+/// process without the privilege, and no jail is ever built by one, since the
+/// jailed path checks for root by name before any of this runs (see
+/// [`crate::jail::HostPreparation::ensure`]). What does run unprivileged is the
+/// unit tests, which build state trees in directories they already own. The
+/// other place root itself can draw `EPERM` is a filesystem that maps root
+/// away, and tolerating it there leaves the tree exactly as tight as the chmod
+/// alone made it, which is what every setup had before ownership was taken at
+/// all.
 fn make_private(dir: &Utf8Path) -> Result<(), JailError> {
     let opened = fs::OpenOptions::new()
         .read(true)
@@ -433,6 +469,16 @@ fn make_private(dir: &Utf8Path) -> Result<(), JailError> {
             path: dir.to_owned(),
             source: e,
         })?;
+    match fchown(&opened, Some(0), Some(0)) {
+        Ok(()) => {},
+        Err(e) if e.raw_os_error() == Some(libc::EPERM) => {},
+        Err(e) => {
+            return Err(JailError::CreateStateDir {
+                path: dir.to_owned(),
+                source: e,
+            });
+        },
+    }
     opened
         .set_permissions(fs::Permissions::from_mode(0o700))
         .map_err(|e| JailError::CreateStateDir {
@@ -558,6 +604,15 @@ where
             });
         },
     };
+
+    // The whole listing is read before anything is removed. `reclaim_one`
+    // deletes the entry the iterator just yielded, and directory offsets are
+    // not stable under mutation, so a `read_dir` walked live across the
+    // removals can skip a neighbor. The miss would not merely wait: the sweep
+    // would come back complete, the caller would spend the reclaim signal on
+    // it, and the jail nobody saw would sit there until a restart, which is the
+    // one latch this module promises not to have.
+    let entries: Vec<_> = entries.collect();
 
     let mut swept = Swept::default();
     // The first failure is remembered but does not abandon the rest: one jail
@@ -843,6 +898,36 @@ mod tests {
 
         let mode = fs::metadata(state.path()).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o700);
+    }
+
+    #[test]
+    fn create_takes_ownership_of_a_directory_it_was_handed() {
+        // A pre-existing directory keeps the owner it came with, and mode alone
+        // does not shut that owner out: 0700 is a setting the owner can change
+        // back, and would leave that owner able to plant links under everything
+        // the runner builds inside. Chown needs the privilege, so this runs in
+        // the elevated environment and is skipped on an unprivileged box, where
+        // `create` tolerates the `EPERM` and leaves the owner alone, which
+        // every other test in this module already exercises.
+        use std::os::unix::fs::chown;
+        if crate::jail::current_euid() != 0 {
+            return;
+        }
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state")).unwrap();
+        fs::create_dir_all(state.jail_parent()).unwrap();
+        for dir in [state.path(), &state.chroot_base(), &state.jail_parent()] {
+            chown(dir, Some(1000), Some(1000)).unwrap();
+        }
+
+        state.create().unwrap();
+
+        for dir in [state.path(), &state.chroot_base(), &state.jail_parent()] {
+            let metadata = fs::metadata(dir).unwrap();
+            assert_eq!(metadata.uid(), 0, "{dir} must be taken for root");
+            assert_eq!(metadata.gid(), 0, "{dir} must be taken for root");
+            assert_eq!(metadata.permissions().mode() & 0o777, 0o700);
+        }
     }
 
     #[test]
@@ -1370,6 +1455,36 @@ mod tests {
                 .exists()
         );
         assert!(state.jail_parent().exists());
+    }
+
+    #[test]
+    fn one_sweep_reclaims_every_jail_however_many_there_are() {
+        // Removing an entry mutates the directory, and directory offsets are
+        // not stable under mutation, so a listing walked live across the
+        // removals can skip a neighbor. A skipped jail is not a jail that
+        // waits: the sweep reports complete, the caller spends the reclaim
+        // signal, and nothing comes back for it until a restart. Enough jails
+        // that the listing cannot fit one kernel batch, so a walk that mutated
+        // under itself would have something to skip.
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state")).unwrap();
+        state.create().unwrap();
+        let ids: Vec<VmId> = std::iter::repeat_with(VmId::new).take(1000).collect();
+        for id in &ids {
+            fs::create_dir_all(state.jail_root(id)).unwrap();
+        }
+
+        let swept =
+            sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(())).unwrap();
+
+        assert_eq!(swept.reclaimed(), ids.len());
+        assert!(swept.is_complete(), "no jail may be left for a later sweep");
+        for id in &ids {
+            assert!(
+                !state.jail_dir(id).exists(),
+                "{id} must be reclaimed by the same sweep that listed it"
+            );
+        }
     }
 
     #[test]

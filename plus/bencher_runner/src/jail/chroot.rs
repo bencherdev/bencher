@@ -9,7 +9,7 @@
 #![expect(clippy::print_stderr, reason = "chroot teardown prints diagnostics")]
 
 use std::fs;
-use std::os::unix::fs::{PermissionsExt as _, chown};
+use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _, chown};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -56,6 +56,17 @@ impl JailDir {
     where
         P: Fn(&Utf8Path) -> Result<(), JailError>,
     {
+        // Re-proven at job time, not only at host preparation, which runs once
+        // per process. This is the path every later job takes, and the
+        // `create_dir_all` below resolves an existing component that is a
+        // link, so a `jail` or `jail/firecracker` swapped for one after
+        // preparation would aim this job's chroot, its guest rootfs, and every
+        // chown that follows at a directory somebody else chose. The check
+        // refuses a symlinked component outright, and the state tree is
+        // root-owned 0700 from preparation on, so between this check and the
+        // create nobody but root can swap one in.
+        state.check_root_is_ours()?;
+
         let dir = state.jail_dir(vm_id);
         let root = state.jail_root(vm_id);
 
@@ -118,21 +129,31 @@ impl Drop for JailDir {
     }
 }
 
-/// Tighten one directory of the chroot tree to 0700.
+/// Tighten one directory of the chroot tree to 0700, without following a link.
 ///
-/// The path form, which resolves symlinks, is safe here where
-/// [`crate::jail::state`]'s namesake uses an `O_NOFOLLOW` descriptor: these
-/// paths sit under a state tree the guard has already proven free of symlinked
-/// components and chmodded 0700, so only root could swap one for a link, and the
-/// state directory itself is the boundary that keeps an untrusted party from
-/// being that root.
+/// `fchmod` on a descriptor opened `O_NOFOLLOW`, the same form as
+/// [`crate::jail::state`]'s namesake and for the same reason: the path form
+/// resolves a link, so a component swapped for one between the creation above
+/// and this call would have root tighten a directory of somebody else's
+/// choosing. These paths sit under a state tree the guard re-checks at job time
+/// and holds root-owned at 0700, so only root could swap one in; not following
+/// it here is what keeps that from being an invariant this function has to
+/// trust rather than a second fence behind its own.
 fn make_private(path: &Utf8Path) -> Result<(), JailError> {
-    fs::set_permissions(path, fs::Permissions::from_mode(0o700)).map_err(|e| {
-        JailError::CreateJail {
+    let opened = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_DIRECTORY | libc::O_NOFOLLOW)
+        .open(path)
+        .map_err(|e| JailError::CreateJail {
             path: path.to_owned(),
             source: e,
-        }
-    })
+        })?;
+    opened
+        .set_permissions(fs::Permissions::from_mode(0o700))
+        .map_err(|e| JailError::CreateJail {
+            path: path.to_owned(),
+            source: e,
+        })
 }
 
 /// Let the jailed VMM read a file without giving it away.
@@ -221,6 +242,36 @@ mod tests {
             "the chroot is the runner's to reclaim, not the jailer's"
         );
         assert!(state.jail_parent().exists());
+    }
+
+    #[test]
+    fn a_component_swapped_for_a_link_after_preparation_is_refused() {
+        // Host preparation proves the tree once per process, and every job
+        // after it comes through here. A `jail/firecracker` swapped for a link
+        // in between would otherwise be followed by the chroot creation,
+        // aiming this job's guest rootfs and every chown that follows at the
+        // link's target.
+        use std::os::unix::fs::symlink;
+        let (_dir, state) = state_in_tmpdir();
+        let victim = state.path().parent().unwrap().join("victim");
+        fs::create_dir_all(victim.join("someone-elses-data")).unwrap();
+        fs::remove_dir_all(state.jail_parent()).unwrap();
+        symlink(&victim, state.jail_parent()).unwrap();
+
+        let err = JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap_err();
+
+        assert!(
+            matches!(err, JailError::SymlinkedStateDir { .. }),
+            "a swapped component is refused, not followed: {err}"
+        );
+        assert!(
+            victim.join("someone-elses-data").is_dir(),
+            "the link's target must come away untouched"
+        );
+        assert!(
+            !victim.join(vm_id().as_str()).exists(),
+            "no chroot may be built through the link"
+        );
     }
 
     #[test]
