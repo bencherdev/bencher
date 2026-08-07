@@ -1,0 +1,24 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+rust_gungraun::some_group::no_id
+  Instructions:                1734|N/A             (*********)
+rust_gungraun::some_group::no_id_but_description_0 :some description
+  Instructions:                1734|N/A             (*********)
+rust_gungraun::some_group::no_id_but_description_1 () -> echo
+  Instructions:                1734|N/A             (*********)
+rust_gungraun::some_group::no_id_multiline_description :multiline
+description
+  Instructions:                1734|N/A             (*********)
+rust_gungraun::some_group::just_id id
+  Instructions:                1734|N/A             (*********)
+rust_gungraun::some_group::id_with_alnum id_123_xyz
+  Instructions:                1734|N/A             (*********)
+rust_gungraun::some_group::id_with_empty_description id_0:
+  Instructions:                1734|N/A             (*********)
+rust_gungraun::some_group::id_with_description id_with_description:some description
+  Instructions:                1734|N/A             (*********)
+rust_gungraun::some_group::id_with_description id_space_after_color: some description
+  Instructions:                1734|N/A             (*********)
