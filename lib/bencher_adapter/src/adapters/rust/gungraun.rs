@@ -214,12 +214,17 @@ fn dhat_tool_measures<'a>()
                 .map(|(metric_name, json)| match metric_name.as_str() {
                     gungraun::TotalBytes::NAME_STR => GungraunMeasure::TotalBytes(json),
                     gungraun::TotalBlocks::NAME_STR => GungraunMeasure::TotalBlocks(json),
+                    gungraun::TotalUnits::NAME_STR => GungraunMeasure::TotalUnits(json),
+                    gungraun::TotalEvents::NAME_STR => GungraunMeasure::TotalEvents(json),
+                    gungraun::TotalLifetimes::NAME_STR => GungraunMeasure::TotalLifetimes(json),
                     gungraun::AtTGmaxBytes::NAME_STR => GungraunMeasure::AtTGmaxBytes(json),
                     gungraun::AtTGmaxBlocks::NAME_STR => GungraunMeasure::AtTGmaxBlocks(json),
                     gungraun::AtTEndBytes::NAME_STR => GungraunMeasure::AtTEndBytes(json),
                     gungraun::AtTEndBlocks::NAME_STR => GungraunMeasure::AtTEndBlocks(json),
                     gungraun::ReadsBytes::NAME_STR => GungraunMeasure::ReadsBytes(json),
                     gungraun::WritesBytes::NAME_STR => GungraunMeasure::WritesBytes(json),
+                    gungraun::MaximumBytes::NAME_STR => GungraunMeasure::MaximumBytes(json),
+                    gungraun::MaximumBlocks::NAME_STR => GungraunMeasure::MaximumBlocks(json),
                     _ => GungraunMeasure::Unknown,
                 })
                 .collect()
