@@ -7,7 +7,7 @@ edition = "2021"
 publish = false
 
 [dev-dependencies]
-gungraun = "0.18.0"
+gungraun = "0.19.4"
 
 [[bench]]
 name = "play_game"
