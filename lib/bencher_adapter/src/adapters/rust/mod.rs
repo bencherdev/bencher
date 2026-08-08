@@ -29,7 +29,7 @@ mod test_rust {
     use crate::adapters::{
         rust::{
             bench::test_rust_bench, criterion::test_rust_criterion, gungraun::test_rust_gungraun,
-            iai::test_rust_iai,
+            gungraun_json::test_rust_gungraun_json, iai::test_rust_iai,
         },
         test_util::convert_file_path,
     };
@@ -62,5 +62,16 @@ mod test_rust {
             &results,
             &test_rust_gungraun::OptionalMetrics::default(),
         );
+    }
+
+    #[test]
+    fn adapter_rust_gungraun_json() {
+        let results = convert_file_path::<AdapterRust>(
+            "./tool_output/rust/gungraun/json_one_callgrind_diff.txt",
+        );
+
+        dbg!(&results);
+
+        test_rust_gungraun_json::validate_adapter_rust_gungraun_json(&results);
     }
 }

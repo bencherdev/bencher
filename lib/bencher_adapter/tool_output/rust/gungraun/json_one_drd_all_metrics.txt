@@ -1,0 +1,19 @@
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+{"baselines":[null,null],"benchmark_exe":"/bencher/examples/rust/gungraun/target/release/deps/play_game-4a31ce0553c3b8ad","benchmark_file":"/bencher/examples/rust/gungraun/benches/play_game.rs","details":null,"function_name":"bench_play_game_100","id":"some_id","kind":"LibraryBenchmark","module_path":"play_game::bench_play_game_group::bench_play_game_100","package_dir":"/bencher/examples/rust/gungraun","profiles":[{"flamegraphs":[],"log_paths":["/drd.bench_play_game_100.log"],"out_paths":["/drd.bench_play_game_100.out"],"summaries":{"parts":[{"details":{"Left":{"command":"/bencher/examples/rust/gungraun/target/release/deps/play_game-4a31ce0553c3b8ad --gungraun-run 00000 00000 00000","details":null,"parent_pid":12345,"part":null,"path":"/drd.bench_play_game_100.log","pid":23456,"thread":null}},"metrics_summary":{"ErrorTool":{"Contexts":{"diffs":null,"metrics":{"Left":{"Int":0}}},"Errors":{"diffs":null,"metrics":{"Left":{"Int":1}}},"SuppressedContexts":{"diffs":null,"metrics":{"Left":{"Int":2}}},"SuppressedErrors":{"diffs":null,"metrics":{"Left":{"Int":3}}}}}}],"total":{"regressions":[],"summary":{"ErrorTool":{"Contexts":{"diffs":null,"metrics":{"Left":{"Int":0}}},"Errors":{"diffs":null,"metrics":{"Left":{"Int":1}}},"SuppressedContexts":{"diffs":null,"metrics":{"Left":{"Int":2}}},"SuppressedErrors":{"diffs":null,"metrics":{"Left":{"Int":3}}}}}}},"tool":"DRD"}],"project_root":"/bencher/examples/rust/gungraun","summary_output":null,"version":"6"}
+
+
+
+
+
+
+
+
+.... Some trailing text that should be ignored ...
+
+
+.... Some trailing text that should be ignored ...
+.... Some trailing text that should be ignored ...

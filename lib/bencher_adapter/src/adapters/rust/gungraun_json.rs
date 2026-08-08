@@ -262,3 +262,371 @@ fn diff_to_json(diff: &MetricsDiff) -> Option<JsonNewMetric> {
         upper_value: None,
     })
 }
+
+#[cfg(test)]
+pub(crate) mod test_rust_gungraun_json {
+    use crate::{
+        AdapterResults, Settings,
+        adapters::test_util::{convert_file_path, opt_convert_file_path},
+    };
+    use bencher_json::project::measure::built_in::{BuiltInMeasure as _, gungraun::*};
+    use ordered_float::OrderedFloat;
+    use pretty_assertions::assert_eq;
+
+    use super::AdapterRustGungraunJson;
+    use std::collections::HashMap;
+
+    #[test]
+    fn not_v6() {
+        let results = opt_convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_not_v6.txt",
+            Settings::default(),
+        );
+
+        assert!(results.is_none());
+    }
+
+    #[test]
+    fn no_id_no_details() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_no_id_no_details.txt",
+        );
+
+        let expected = HashMap::from([(D1MissRate::SLUG_STR, 0.1), (D1mr::SLUG_STR, 6.0)]);
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            &results,
+            "play_game::bench_play_game_group::bench_play_game_100",
+        );
+    }
+
+    #[test]
+    fn one_callgrind_diff() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_one_callgrind_diff.txt",
+        );
+
+        validate_adapter_rust_gungraun_json(&results);
+    }
+
+    #[test]
+    fn one_callgrind_no_diff_new() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_one_callgrind_no_diff_new.txt",
+        );
+
+        validate_adapter_rust_gungraun_json(&results);
+    }
+
+    #[test]
+    fn one_callgrind_no_diff_old() {
+        let expected = HashMap::new();
+
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_one_callgrind_no_diff_old.txt",
+        );
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            &results,
+            "play_game::bench_play_game_group::bench_play_game_100::some_id",
+        );
+    }
+
+    #[test]
+    fn one_callgrind_all_metrics() {
+        let expected = HashMap::from([
+            (AcCost1::SLUG_STR, 0.0),
+            (AcCost2::SLUG_STR, 100.0),
+            (Bc::SLUG_STR, 200.0),
+            (Bcm::SLUG_STR, 300.0),
+            (Bi::SLUG_STR, 400.0),
+            (Bim::SLUG_STR, 500.0),
+            (D1MissRate::SLUG_STR, 0.0),
+            (D1mr::SLUG_STR, 600.0),
+            (D1mw::SLUG_STR, 700.0),
+            (DLdmr::SLUG_STR, 800.0),
+            (DLdmw::SLUG_STR, 900.0),
+            (DLmr::SLUG_STR, 1000.0),
+            (DLmw::SLUG_STR, 1100.0),
+            (Dr::SLUG_STR, 1200.0),
+            (Dw::SLUG_STR, 1300.0),
+            (EstimatedCycles::SLUG_STR, 1400.0),
+            (GlobalBusEvents::SLUG_STR, 1500.0),
+            (I1MissRate::SLUG_STR, 0.1),
+            (I1mr::SLUG_STR, 1600.0),
+            (ILdmr::SLUG_STR, 1700.0),
+            (ILmr::SLUG_STR, 1800.0),
+            (Instructions::SLUG_STR, 1900.0),
+            (L1HitRate::SLUG_STR, 0.2),
+            (L1Hits::SLUG_STR, 2000.0),
+            (LLHitRate::SLUG_STR, 0.3),
+            (LLMissRate::SLUG_STR, 0.4),
+            (LLdMissRate::SLUG_STR, 0.5),
+            (LLHits::SLUG_STR, 2100.0),
+            (LLiMissRate::SLUG_STR, 0.6),
+            (RamHitRate::SLUG_STR, 0.7),
+            (RamHits::SLUG_STR, 2200.0),
+            (SpLoss1::SLUG_STR, 2300.0),
+            (SpLoss2::SLUG_STR, 2400.0),
+            (SysCount::SLUG_STR, 2500.0),
+            (SysCpuTime::SLUG_STR, 2600.0),
+            (SysTime::SLUG_STR, 2700.0),
+            (TotalReadWrite::SLUG_STR, 2800.0),
+        ]);
+
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_one_callgrind_all_metrics.txt",
+        );
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            &results,
+            "play_game::bench_play_game_group::bench_play_game_100::some_id",
+        );
+    }
+
+    #[test]
+    fn one_cachegrind_all_metrics() {
+        let expected = HashMap::from([
+            (Bc::SLUG_STR, 0.0),
+            (Bcm::SLUG_STR, 100.0),
+            (Bi::SLUG_STR, 200.0),
+            (Bim::SLUG_STR, 300.0),
+            (D1MissRate::SLUG_STR, 0.0),
+            (D1mr::SLUG_STR, 400.0),
+            (D1mw::SLUG_STR, 500.0),
+            (DLmr::SLUG_STR, 600.0),
+            (DLmw::SLUG_STR, 700.0),
+            (Dr::SLUG_STR, 800.0),
+            (Dw::SLUG_STR, 900.0),
+            (EstimatedCycles::SLUG_STR, 1000.0),
+            (I1MissRate::SLUG_STR, 0.1),
+            (I1mr::SLUG_STR, 1100.0),
+            (ILmr::SLUG_STR, 1200.0),
+            (Instructions::SLUG_STR, 1300.0),
+            (L1HitRate::SLUG_STR, 0.2),
+            (L1Hits::SLUG_STR, 1400.0),
+            (LLHitRate::SLUG_STR, 0.3),
+            (LLMissRate::SLUG_STR, 0.4),
+            (LLdMissRate::SLUG_STR, 0.5),
+            (LLHits::SLUG_STR, 1500.0),
+            (LLiMissRate::SLUG_STR, 0.6),
+            (RamHitRate::SLUG_STR, 0.7),
+            (RamHits::SLUG_STR, 1600.0),
+            (TotalReadWrite::SLUG_STR, 1700.0),
+        ]);
+
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_one_cachegrind_all_metrics.txt",
+        );
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            &results,
+            "play_game::bench_play_game_group::bench_play_game_100::some_id",
+        );
+    }
+
+    #[test]
+    fn one_dhat_all_metrics() {
+        let expected = HashMap::from([
+            (AtTEndBlocks::SLUG_STR, 0.0),
+            (AtTEndBytes::SLUG_STR, 1.0),
+            (AtTGmaxBlocks::SLUG_STR, 2.0),
+            (AtTGmaxBytes::SLUG_STR, 3.0),
+            (MaximumBlocks::SLUG_STR, 4.0),
+            (MaximumBytes::SLUG_STR, 5.0),
+            (ReadsBytes::SLUG_STR, 6.0),
+            (TotalBlocks::SLUG_STR, 7.0),
+            (TotalBytes::SLUG_STR, 8.0),
+            (TotalEvents::SLUG_STR, 9.0),
+            (TotalLifetimes::SLUG_STR, 10.0),
+            (TotalUnits::SLUG_STR, 11.0),
+            (WritesBytes::SLUG_STR, 12.0),
+        ]);
+
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_one_dhat_all_metrics.txt",
+        );
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            &results,
+            "play_game::bench_play_game_group::bench_play_game_100::some_id",
+        );
+    }
+
+    #[test]
+    fn one_memcheck_all_metrics() {
+        let expected = HashMap::from([
+            (MemcheckContexts::SLUG_STR, 0.0),
+            (MemcheckErrors::SLUG_STR, 1.0),
+            (MemcheckSuppressedContexts::SLUG_STR, 2.0),
+            (MemcheckSuppressedErrors::SLUG_STR, 3.0),
+        ]);
+
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_one_memcheck_all_metrics.txt",
+        );
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            &results,
+            "play_game::bench_play_game_group::bench_play_game_100::some_id",
+        );
+    }
+
+    #[test]
+    fn one_helgrind_all_metrics() {
+        let expected = HashMap::from([
+            (HelgrindContexts::SLUG_STR, 0.0),
+            (HelgrindErrors::SLUG_STR, 1.0),
+            (HelgrindSuppressedContexts::SLUG_STR, 2.0),
+            (HelgrindSuppressedErrors::SLUG_STR, 3.0),
+        ]);
+
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_one_helgrind_all_metrics.txt",
+        );
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            &results,
+            "play_game::bench_play_game_group::bench_play_game_100::some_id",
+        );
+    }
+
+    #[test]
+    fn one_drd_all_metrics() {
+        let expected = HashMap::from([
+            (DrdContexts::SLUG_STR, 0.0),
+            (DrdErrors::SLUG_STR, 1.0),
+            (DrdSuppressedContexts::SLUG_STR, 2.0),
+            (DrdSuppressedErrors::SLUG_STR, 3.0),
+        ]);
+
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_one_drd_all_metrics.txt",
+        );
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            &results,
+            "play_game::bench_play_game_group::bench_play_game_100::some_id",
+        );
+    }
+
+    #[test]
+    fn one_tool_without_metrics() {
+        let expected = HashMap::new();
+
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_one_tool_without_metrics.txt",
+        );
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            &results,
+            "play_game::bench_play_game_group::bench_play_game_100::some_id",
+        );
+    }
+
+    #[test]
+    fn multiple_tools() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_multiple_tools.txt",
+        );
+
+        let expected = HashMap::from([
+            // Callgrid
+            (D1MissRate::SLUG_STR, 0.1),
+            (D1mr::SLUG_STR, 6.0),
+            // DHAT
+            (AtTEndBlocks::SLUG_STR, 1.0),
+        ]);
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            &results,
+            "play_game::bench_play_game_group::bench_play_game_100::some_id",
+        );
+    }
+
+    #[test]
+    fn multiple_benchmarks() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_multiple_benchmarks.txt",
+        );
+
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let expected = HashMap::from([
+                // Callgrid
+                (D1MissRate::SLUG_STR, 0.1),
+                (D1mr::SLUG_STR, 6.0),
+                // DHAT
+                (AtTEndBlocks::SLUG_STR, 1.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "play_game::bench_play_game_group::bench_play_game_100::first_id",
+            );
+        }
+        {
+            let expected = HashMap::from([
+                (MemcheckContexts::SLUG_STR, 0.0),
+                (MemcheckErrors::SLUG_STR, 1.0),
+                (MemcheckSuppressedContexts::SLUG_STR, 2.0),
+                (MemcheckSuppressedErrors::SLUG_STR, 3.0),
+            ]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "play_game::bench_play_game_group::bench_play_game_100::second_id",
+            );
+        }
+    }
+
+    pub fn validate_adapter_rust_gungraun_json(results: &AdapterResults) {
+        let expected = HashMap::from([(D1MissRate::SLUG_STR, 0.1), (D1mr::SLUG_STR, 6.0)]);
+
+        assert_eq!(results.inner.len(), 1);
+        compare_benchmark(
+            &expected,
+            results,
+            "play_game::bench_play_game_group::bench_play_game_100::some_id",
+        );
+    }
+
+    fn compare_benchmark(
+        expected: &HashMap<&str, f64>,
+        results: &AdapterResults,
+        benchmark_name: &str,
+    ) {
+        let actual = results.get(benchmark_name).unwrap();
+        assert_eq!(actual.inner.len(), expected.len());
+
+        for (key, value) in expected {
+            let metric = actual.get(key).unwrap();
+            assert_eq!(metric.value, OrderedFloat::from(*value));
+            assert_eq!(metric.lower_value, None);
+            assert_eq!(metric.upper_value, None);
+        }
+    }
+}
