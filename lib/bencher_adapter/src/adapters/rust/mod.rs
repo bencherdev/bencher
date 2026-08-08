@@ -1,9 +1,13 @@
 pub mod bench;
 pub mod criterion;
 pub mod gungraun;
+pub mod gungraun_json;
 pub mod iai;
 
-use self::{criterion::AdapterRustCriterion, gungraun::AdapterRustGungraun, iai::AdapterRustIai};
+use self::{
+    criterion::AdapterRustCriterion, gungraun::AdapterRustGungraun,
+    gungraun_json::AdapterRustGungraunJson, iai::AdapterRustIai,
+};
 use crate::{Adaptable, AdapterResults, Settings};
 use bench::AdapterRustBench;
 
@@ -15,6 +19,7 @@ impl Adaptable for AdapterRust {
             .or_else(|| AdapterRustCriterion::parse(input, settings))
             .or_else(|| AdapterRustIai::parse(input, settings))
             .or_else(|| AdapterRustGungraun::parse(input, settings))
+            .or_else(|| AdapterRustGungraunJson::parse(input, settings))
     }
 }
 

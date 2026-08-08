@@ -113,6 +113,7 @@ futures-util = "0.3"
 gix = { version = "0.83", default-features = false }
 gix-hash = { version = "0.25", features = ["sha1"] }
 git-validate = "0.7"
+gungraun-summary = { version = "6" }
 hex = "0.4"
 http = "1.4"
 http-body-util = "0.1"
