@@ -1047,6 +1047,7 @@ export enum Adapter {
 	RustCriterion = "rust_criterion",
 	RustIai = "rust_iai",
 	RustGungraun = "rust_gungraun",
+	RustGungraunJson = "rust_gungraun_json",
 	Cpp = "cpp",
 	CppGoogle = "cpp_google",
 	CppCatch2 = "cpp_catch2",
