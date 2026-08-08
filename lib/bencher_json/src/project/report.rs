@@ -90,6 +90,7 @@ const RUST_BENCH_INT: i32 = 21;
 const RUST_CRITERION_INT: i32 = 22;
 const RUST_IAI_INT: i32 = 23;
 const RUST_GUNGRAUN_INT: i32 = 24;
+const RUST_GUNGRAUN_JSON_INT: i32 = 25;
 const CPP_INT: i32 = 30;
 const CPP_GOOGLE_INT: i32 = 31;
 const CPP_CATCH2_INT: i32 = 32;
@@ -132,6 +133,7 @@ pub enum Adapter {
     // https://github.com/bencherdev/bencher/issues/619
     #[serde(alias = "rust_iai_callgrind")]
     RustGungraun = RUST_GUNGRAUN_INT,
+    RustGungraunJson = RUST_GUNGRAUN_JSON_INT,
     Cpp = CPP_INT,
     CppGoogle = CPP_GOOGLE_INT,
     CppCatch2 = CPP_CATCH2_INT,
@@ -179,6 +181,7 @@ impl Adapter {
             | Self::RustCriterion
             | Self::RustIai
             | Self::RustGungraun
+            | Self::RustGungraunJson
             | Self::CppGoogle
             | Self::CppCatch2
             | Self::GoBench
@@ -206,6 +209,7 @@ impl fmt::Display for Adapter {
             Self::RustCriterion => write!(f, "rust_criterion"),
             Self::RustIai => write!(f, "rust_iai"),
             Self::RustGungraun => write!(f, "rust_gungraun"),
+            Self::RustGungraunJson => write!(f, "rust_gungraun_json"),
             Self::Cpp => write!(f, "cpp"),
             Self::CppGoogle => write!(f, "cpp_google"),
             Self::CppCatch2 => write!(f, "cpp_catch2"),
@@ -239,8 +243,8 @@ mod adapter {
         DART_BENCHMARK_HARNESS_INT, DART_INT, GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
         JS_BENCHMARK_INT, JS_INT, JS_TIME_INT, JS_VITEST_INT, JSON_INT, MAGIC_INT, PYTHON_ASV_INT,
         PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT, RUST_BENCH_INT,
-        RUST_CRITERION_INT, RUST_GUNGRAUN_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
-        SHELL_INT,
+        RUST_CRITERION_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT, RUST_IAI_INT, RUST_INT,
+        SHELL_HYPERFINE_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -266,6 +270,7 @@ mod adapter {
                 Self::RustCriterion => RUST_CRITERION_INT.to_sql(out),
                 Self::RustIai => RUST_IAI_INT.to_sql(out),
                 Self::RustGungraun => RUST_GUNGRAUN_INT.to_sql(out),
+                Self::RustGungraunJson => RUST_GUNGRAUN_JSON_INT.to_sql(out),
                 Self::Cpp => CPP_INT.to_sql(out),
                 Self::CppGoogle => CPP_GOOGLE_INT.to_sql(out),
                 Self::CppCatch2 => CPP_CATCH2_INT.to_sql(out),

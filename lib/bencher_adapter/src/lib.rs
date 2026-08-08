@@ -18,7 +18,7 @@ use adapters::{
     ruby::{AdapterRuby, benchmark::AdapterRubyBenchmark},
     rust::{
         AdapterRust, bench::AdapterRustBench, criterion::AdapterRustCriterion,
-        gungraun::AdapterRustGungraun, iai::AdapterRustIai,
+        gungraun::AdapterRustGungraun, gungraun_json::AdapterRustGungraunJson, iai::AdapterRustIai,
     },
     shell::{AdapterShell, hyperfine::AdapterShellHyperfine},
 };
@@ -65,6 +65,7 @@ impl Adaptable for Adapter {
             Adapter::RustCriterion => AdapterRustCriterion::parse(input, settings),
             Adapter::RustIai => AdapterRustIai::parse(input, settings),
             Adapter::RustGungraun => AdapterRustGungraun::parse(input, settings),
+            Adapter::RustGungraunJson => AdapterRustGungraunJson::parse(input, settings),
             Adapter::Shell => AdapterShell::parse(input, settings),
             Adapter::ShellHyperfine => AdapterShellHyperfine::parse(input, settings),
         }
