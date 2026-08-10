@@ -18,7 +18,8 @@ use adapters::{
     ruby::{AdapterRuby, benchmark::AdapterRubyBenchmark},
     rust::{
         AdapterRust, bench::AdapterRustBench, criterion::AdapterRustCriterion,
-        gungraun::AdapterRustGungraun, gungraun_json::AdapterRustGungraunJson, iai::AdapterRustIai,
+        gungraun_json::AdapterRustGungraunJson, gungraun_stdout::AdapterRustGungraunStdout,
+        iai::AdapterRustIai,
     },
     shell::{AdapterShell, hyperfine::AdapterShellHyperfine},
 };
@@ -26,6 +27,8 @@ use bencher_json::project::report::{Adapter, JsonAverage};
 pub use bencher_json::{BenchmarkName, JsonNewMetric};
 pub use error::AdapterError;
 pub use results::{AdapterResultsArray, adapter_results::AdapterResults};
+
+use crate::adapters::rust::gungraun::AdapterRustGungraun;
 
 pub trait Adaptable {
     fn convert(&self, input: &str, settings: Settings) -> Option<AdapterResults> {
@@ -66,6 +69,7 @@ impl Adaptable for Adapter {
             Adapter::RustIai => AdapterRustIai::parse(input, settings),
             Adapter::RustGungraun => AdapterRustGungraun::parse(input, settings),
             Adapter::RustGungraunJson => AdapterRustGungraunJson::parse(input, settings),
+            Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse(input, settings),
             Adapter::Shell => AdapterShell::parse(input, settings),
             Adapter::ShellHyperfine => AdapterShellHyperfine::parse(input, settings),
         }

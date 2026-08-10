@@ -11846,6 +11846,7 @@
           "rust_iai",
           "rust_gungraun",
           "rust_gungraun_json",
+          "rust_gungraun_stdout",
           "cpp",
           "cpp_google",
           "cpp_catch2",
