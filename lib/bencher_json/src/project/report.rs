@@ -311,6 +311,7 @@ mod adapter {
                 RUST_CRITERION_INT => Ok(Self::RustCriterion),
                 RUST_IAI_INT => Ok(Self::RustIai),
                 RUST_GUNGRAUN_INT => Ok(Self::RustGungraun),
+                RUST_GUNGRAUN_JSON_INT => Ok(Self::RustGungraunJson),
                 CPP_INT => Ok(Self::Cpp),
                 CPP_GOOGLE_INT => Ok(Self::CppGoogle),
                 CPP_CATCH2_INT => Ok(Self::CppCatch2),
