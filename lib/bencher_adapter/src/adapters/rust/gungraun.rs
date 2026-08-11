@@ -25,11 +25,21 @@ pub(crate) mod test_rust_gungraun {
 
     #[test]
     fn json() {
-        let results = convert_file_path::<AdapterRustGungraunJson>(
-            "./tool_output/rust/gungraun/json_one_callgrind_diff.txt",
-        );
+        {
+            let results = convert_file_path::<AdapterRustGungraunJson>(
+                "./tool_output/rust/gungraun/json_one_callgrind_diff.txt",
+            );
 
-        validate_adapter_rust_gungraun_json(&results);
+            validate_adapter_rust_gungraun_json(&results);
+        }
+
+        {
+            let results = convert_file_path::<AdapterRustGungraunJson>(
+                "./tool_output/rust/gungraun/json_pretty_one_callgrind.txt",
+            );
+
+            validate_adapter_rust_gungraun_json(&results);
+        }
     }
 
     #[test]

@@ -54,6 +54,14 @@ mod test_rust {
     fn adapter_rust_gungraun() {
         {
             let results = convert_file_path::<AdapterRust>(
+                "./tool_output/rust/gungraun/json_pretty_one_callgrind.txt",
+            );
+
+            test_rust_gungraun_json::validate_adapter_rust_gungraun_json(&results);
+        }
+
+        {
+            let results = convert_file_path::<AdapterRust>(
                 "./tool_output/rust/gungraun/json_one_callgrind_diff.txt",
             );
 

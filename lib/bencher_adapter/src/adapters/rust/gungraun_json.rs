@@ -4,10 +4,12 @@ use gungraun_summary::{
     either_or_both::EitherOrBoth,
     util::SummaryByVersion,
     v6::{
-        CachegrindMetric, DhatMetric, ErrorMetric, EventKind, Metric, MetricsDiff, MetricsSummary,
-        ToolMetricSummary, ValgrindTool,
+        BenchmarkSummary, CachegrindMetric, DhatMetric, ErrorMetric, EventKind, Metric,
+        MetricsDiff, MetricsSummary, ToolMetricSummary, ValgrindTool,
     },
 };
+use std::fmt::Write as _;
+use std::str::Lines;
 
 use crate::{Adaptable, AdapterResults, Settings, results::adapter_results::GungraunMeasure};
 
@@ -29,30 +31,53 @@ impl Adaptable for AdapterRustGungraunJson {
     }
 }
 
+/// Parse json output in pretty and ndjson format
+///
+/// Although it is currently not a possibility with gungraun cli/env options, this parser handles
+/// mixed pretty and ndjson format making bencher future proof in that regard. The parser also
+/// ignores intermixed json output from other tools or cargo itself, for example `cargo bench
+/// --message-format=json`.
 fn parse_multiple(input: &str) -> Option<Vec<(BenchmarkName, Vec<GungraunMeasure>)>> {
-    let parsed = input.lines().filter_map(parse_line).collect::<Vec<_>>();
+    let mut lines = input.lines();
+
+    let mut parsed = vec![];
+    while let Some(line) = lines.next() {
+        let trimmed = line.trim();
+        if trimmed == "{" {
+            let indent = line.len() - line.trim_start().len();
+            if let Some(one) = parse_benchmark_pretty(&mut lines, indent) {
+                parsed.push(one);
+            }
+        } else if trimmed.starts_with('{')
+            && trimmed.ends_with('}')
+            && let Some(one) = parse_benchmark(line)
+        {
+            parsed.push(one);
+        }
+    }
 
     (!parsed.is_empty()).then_some(parsed)
 }
 
-fn parse_line(input: &str) -> Option<(BenchmarkName, Vec<GungraunMeasure>)> {
-    // Using the version aware gungraun_summary parsing method to simplify adapting gungraun summary
-    // version updates. At the moment there's just v6
-    let summary = match gungraun_summary::util::parse_slice(input.as_bytes()) {
-        Ok(summary_by_version) => match summary_by_version {
-            SummaryByVersion::V6(benchmark_summary) => benchmark_summary,
-            _ => return None,
-        },
-        Err(_) => return None,
-    };
+fn parse_benchmark_pretty(
+    lines: &mut Lines<'_>,
+    indent: usize,
+) -> Option<(BenchmarkName, Vec<GungraunMeasure>)> {
+    let mut payload = "{".to_owned();
+    for line in lines {
+        writeln!(payload, "{line}").ok()?;
 
-    let name: BenchmarkName = if let Some(id) = &summary.id {
-        format!("{}::{id}", summary.module_path)
-    } else {
-        summary.module_path
+        let trimmed = line.trim();
+        if trimmed == "}" && line.len() - line.trim_start().len() == indent {
+            break;
+        }
     }
-    .parse()
-    .ok()?;
+
+    parse_benchmark(payload.as_str())
+}
+
+fn parse_benchmark(input: &str) -> Option<(BenchmarkName, Vec<GungraunMeasure>)> {
+    let (name, summary) = parse_json(input.as_bytes())?;
 
     let measures = summary
         .profiles
@@ -83,6 +108,28 @@ fn parse_line(input: &str) -> Option<(BenchmarkName, Vec<GungraunMeasure>)> {
         .collect();
 
     Some((name, measures))
+}
+
+fn parse_json(input: &[u8]) -> Option<(BenchmarkName, BenchmarkSummary)> {
+    // Using the version aware gungraun_summary parsing method to simplify adapting gungraun summary
+    // version updates. At the moment there's just v6
+    let summary = match gungraun_summary::util::parse_slice(input) {
+        Ok(summary_by_version) => match summary_by_version {
+            SummaryByVersion::V6(benchmark_summary) => benchmark_summary,
+            _ => return None,
+        },
+        Err(_) => return None,
+    };
+
+    let name: BenchmarkName = if let Some(id) = &summary.id {
+        format!("{}::{id}", summary.module_path)
+    } else {
+        summary.module_path.clone()
+    }
+    .parse()
+    .ok()?;
+
+    Some((name, summary))
 }
 
 fn parse_drd_metrics_summary(metrics_summary: MetricsSummary<ErrorMetric>) -> Vec<GungraunMeasure> {
@@ -601,6 +648,100 @@ pub(crate) mod test_rust_gungraun_json {
                 "play_game::bench_play_game_group::bench_play_game_100::second_id",
             );
         }
+    }
+
+    #[test]
+    fn pretty_one_callgrind() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_pretty_one_callgrind.txt",
+        );
+
+        validate_adapter_rust_gungraun_json(&results);
+    }
+
+    #[test]
+    fn pretty_two_callgrind() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_pretty_two_callgrind.txt",
+        );
+
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let expected = HashMap::from([(D1MissRate::SLUG_STR, 0.1), (D1mr::SLUG_STR, 6.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "play_game::bench_play_game_group::bench_play_game_100::first",
+            );
+        }
+
+        {
+            let expected = HashMap::from([(D1MissRate::SLUG_STR, 0.2), (D1mr::SLUG_STR, 7.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "play_game::bench_play_game_group::bench_play_game_100::second",
+            );
+        }
+    }
+
+    #[test]
+    fn pretty_mixed_ndjson_two_callgrind() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_pretty_mixed_ndjson_two_callgrind.txt",
+        );
+
+        assert_eq!(results.inner.len(), 2);
+
+        {
+            let expected = HashMap::from([(D1MissRate::SLUG_STR, 0.1), (D1mr::SLUG_STR, 6.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "play_game::bench_play_game_group::bench_play_game_100::first",
+            );
+        }
+
+        {
+            let expected = HashMap::from([(D1MissRate::SLUG_STR, 0.2), (D1mr::SLUG_STR, 7.0)]);
+
+            compare_benchmark(
+                &expected,
+                &results,
+                "play_game::bench_play_game_group::bench_play_game_100::second",
+            );
+        }
+    }
+
+    #[test]
+    fn pretty_mixed_with_foreign_ndjson() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_pretty_mixed_foreign_ndjson.txt",
+        );
+
+        validate_adapter_rust_gungraun_json(&results);
+    }
+
+    #[test]
+    fn pretty_mixed_with_foreign_pretty_and_ndjson() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_pretty_mixed_foreign_pretty_and_ndjson.txt",
+        );
+
+        validate_adapter_rust_gungraun_json(&results);
+    }
+
+    #[test]
+    fn pretty_one_callgrind_indented() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_pretty_one_callgrind_indented.txt",
+        );
+
+        validate_adapter_rust_gungraun_json(&results);
     }
 
     pub fn validate_adapter_rust_gungraun_json(results: &AdapterResults) {
