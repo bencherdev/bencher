@@ -68,8 +68,8 @@ impl Adaptable for Adapter {
             Adapter::RustCriterion => AdapterRustCriterion::parse(input, settings),
             Adapter::RustIai => AdapterRustIai::parse(input, settings),
             Adapter::RustGungraun => AdapterRustGungraun::parse(input, settings),
-            Adapter::RustGungraunJson => AdapterRustGungraunJson::parse(input, settings),
             Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse(input, settings),
+            Adapter::RustGungraunJson => AdapterRustGungraunJson::parse(input, settings),
             Adapter::Shell => AdapterShell::parse(input, settings),
             Adapter::ShellHyperfine => AdapterShellHyperfine::parse(input, settings),
         }

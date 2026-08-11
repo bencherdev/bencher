@@ -463,8 +463,8 @@ const AdapterCard = (props: Props) => {
 					case Adapter.RustIai:
 						return "-rust-iai";
 					case Adapter.RustGungraun:
-					case Adapter.RustGungraunJson:
 					case Adapter.RustGungraunStdout:
+					case Adapter.RustGungraunJson:
 						return "-rust-gungraun";
 					case Adapter.ShellHyperfine:
 						return "_%EF%B8%8F-shell-hyperfine";
@@ -514,8 +514,8 @@ const AdapterCard = (props: Props) => {
 						case Adapter.RustIai:
 							return "Rust Iai";
 						case Adapter.RustGungraun:
-						case Adapter.RustGungraunJson:
 						case Adapter.RustGungraunStdout:
+						case Adapter.RustGungraunJson:
 							return "Rust Gungraun";
 						case Adapter.ShellHyperfine:
 							return "Shell Hyperfine";
