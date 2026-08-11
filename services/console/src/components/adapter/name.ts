@@ -12,8 +12,10 @@ export const adapterName = (adapter: Adapter): string => {
 			return "Criterion";
 		case Adapter.RustIai:
 			return "Iai";
-		case Adapter.RustIaiCallgrind:
-			return "Iai-Callgrind";
+		case Adapter.RustGungraun:
+		case Adapter.RustGungraunJson:
+		case Adapter.RustGungraunStdout:
+			return "Gungraun";
 		case Adapter.CppGoogle:
 			return "Google Benchmark";
 		case Adapter.CppCatch2:
@@ -51,7 +53,9 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} "cargo +nightly bench"`;
 		case Adapter.RustCriterion:
 		case Adapter.RustIai:
-		case Adapter.RustIaiCallgrind:
+		case Adapter.RustGungraun:
+		case Adapter.RustGungraunJson:
+		case Adapter.RustGungraunStdout:
 			return `bencher run${host} "cargo bench"`;
 		case Adapter.CppGoogle:
 			return `bencher run${host} "make benchmarks --benchmark_format=json"`;
