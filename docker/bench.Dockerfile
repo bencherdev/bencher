@@ -72,7 +72,7 @@ RUN cargo init --bin gen_pkg
 RUN cargo init --bin gen_notes
 RUN cargo init --bin gen_types
 RUN cargo init --bin test_api
-RUN cargo init --bin test_netlify
+RUN cargo init --bin test_console
 RUN cargo init --bin test_runner
 RUN cargo init --bin runner_ops
 RUN cargo init --bin update_sandbox

@@ -151,10 +151,10 @@ jobs:
       - uses: rui314/setup-mold@9c9c13bf4c3f1adef0cc596abc155580bcb04444 # v1
         with:
           mold-version: ${{ inputs.mold-version }}
-      - name: Run Netlify Dev Test
+      - name: Run Console Dev Test
         env:
           RUST_BACKTRACE: full
-        run: cargo test-netlify dev devel
+        run: cargo test-console dev devel
 
   deploy_api_fly_test:
     name: Deploy API to Fly.io Test
@@ -265,4 +265,4 @@ jobs:
       - name: Run Netlify Test
         env:
           RUST_BACKTRACE: full
-        run: cargo test-netlify prod --user-agent "${{ secrets.BENCHER_USER_AGENT }}" cloud
+        run: cargo test-console prod --user-agent "${{ secrets.BENCHER_USER_AGENT }}" cloud

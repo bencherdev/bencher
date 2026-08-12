@@ -1,28 +1,26 @@
-use std::{fs::File, thread, time::Duration};
+use std::{thread, time::Duration};
 
-use bencher_json::PROD_BENCHER_URL_STR;
-use camino::Utf8PathBuf;
+use bencher_json::{DEVEL_BENCHER_URL_STR, PROD_BENCHER_URL_STR};
 use serde::Serialize;
 
-use crate::{API_VERSION, parser::TaskTestNetlify};
+use crate::{API_VERSION, parser::TaskTestConsole};
 
-const DEPLOY_ID_KEY: &str = "deploy_id";
 const NTFY_URL: &str = "https://ntfy.sh";
 const NTFY_TOPIC: &str = "bencherdev";
 
 #[derive(Debug)]
-pub struct TestNetlify {
+pub struct TestConsole {
     pub dev: bool,
     pub ref_name: String,
     pub user_agent: Option<String>,
 }
 
-impl TestNetlify {
-    pub fn dev(test_netlify: TaskTestNetlify) -> Self {
-        let TaskTestNetlify {
+impl TestConsole {
+    pub fn dev(test_console: TaskTestConsole) -> Self {
+        let TaskTestConsole {
             ref_name,
             user_agent,
-        } = test_netlify;
+        } = test_console;
         Self {
             dev: true,
             ref_name,
@@ -30,11 +28,11 @@ impl TestNetlify {
         }
     }
 
-    pub fn prod(test_netlify: TaskTestNetlify) -> Self {
-        let TaskTestNetlify {
+    pub fn prod(test_console: TaskTestConsole) -> Self {
+        let TaskTestConsole {
             ref_name,
             user_agent,
-        } = test_netlify;
+        } = test_console;
         Self {
             dev: false,
             ref_name,
@@ -43,11 +41,10 @@ impl TestNetlify {
     }
 
     pub async fn exec(&self) -> anyhow::Result<()> {
-        let deploy_id = netlify_deploy_id("netlify.json")?;
         let console_url = if self.dev {
-            format!("https://{deploy_id}--bencher.netlify.app")
+            DEVEL_BENCHER_URL_STR
         } else {
-            PROD_BENCHER_URL_STR.to_owned()
+            PROD_BENCHER_URL_STR
         };
 
         // TODO replace this with some actual e2e tests
@@ -59,46 +56,26 @@ impl TestNetlify {
         };
         for i in 0..5 {
             if let Err(e) = test_ui_project(
-                &console_url,
+                console_url,
                 project_slug,
                 self.user_agent.as_deref(),
                 find_str,
             )
             .await
             {
-                println!("Netlify deploy not ready yet: {e}");
+                println!("Console deploy not ready yet: {e}");
                 thread::sleep(Duration::from_secs(i));
             } else {
                 break;
             }
         }
-        test_ui_version(&console_url, self.user_agent.as_deref()).await?;
+        test_ui_version(console_url, self.user_agent.as_deref()).await?;
 
-        let notify = Notify::new(&self.ref_name, &console_url);
+        let notify = Notify::new(&self.ref_name, console_url);
         notify.send().await?;
 
         Ok(())
     }
-}
-
-fn netlify_deploy_id(path: &str) -> anyhow::Result<String> {
-    let netlify_path = Utf8PathBuf::from(path);
-    let netlify_file = File::open(netlify_path)?;
-    let netlify_output_json: serde_json::Value = serde_json::from_reader(netlify_file)?;
-
-    let Some(deploy_id) = netlify_output_json.get(DEPLOY_ID_KEY) else {
-        return Err(anyhow::anyhow!(
-            "Netlify output did not contain {DEPLOY_ID_KEY} key: {netlify_output_json}"
-        ));
-    };
-    let Some(deploy_id_str) = deploy_id.as_str() else {
-        return Err(anyhow::anyhow!(
-            "Netlify Deploy ID {deploy_id} is not a string"
-        ));
-    };
-
-    println!("Netlify Deploy ID: {deploy_id_str}");
-    Ok(deploy_id_str.to_owned())
 }
 
 async fn test_ui_project(
