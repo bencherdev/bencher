@@ -1,0 +1,28 @@
+{
+	// Cloudflare Workers configuration for the console.
+	// Build the site first with `npm run cloudflare`, then run it with `npx wrangler dev`.
+	// Deploys are wired up separately, so there is no account, route, or environment here.
+	// https://developers.cloudflare.com/workers/wrangler/configuration/
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "bencher-console",
+	// The Astro Cloudflare adapter writes the server bundle here.
+	// https://docs.astro.build/en/guides/integrations-guide/cloudflare/
+	"main": "./dist/_worker.js/index.js",
+	"compatibility_date": "2026-08-11",
+	// Node.js APIs are used by the server bundle.
+	// https://developers.cloudflare.com/workers/runtime-apis/nodejs/
+	"compatibility_flags": ["nodejs_compat"],
+	// The prerendered pages and client assets are served from the same directory.
+	// https://developers.cloudflare.com/workers/static-assets/
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./dist",
+		// Serve the prerendered pages with a trailing slash, matching their canonical URLs.
+		// https://developers.cloudflare.com/workers/static-assets/routing/advanced/html-handling/
+		"html_handling": "force-trailing-slash"
+	},
+	// https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+	"observability": {
+		"enabled": true
+	}
+}
