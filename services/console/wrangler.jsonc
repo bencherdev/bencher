@@ -1,7 +1,7 @@
 {
 	// Cloudflare Workers configuration for the console.
 	// Build the site first with `npm run cloudflare`, then run it with `npx wrangler dev`.
-	// Deploys are wired up separately, so there is no account, route, or environment here.
+	// The `dev` environment deploys with `npx wrangler deploy --env dev`.
 	// https://developers.cloudflare.com/workers/wrangler/configuration/
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "bencher-console",
@@ -12,6 +12,11 @@
 	// Node.js APIs are used by the server bundle.
 	// https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 	"compatibility_flags": ["nodejs_compat"],
+	// The custom domain of each environment is its only front door,
+	// so neither the `workers.dev` subdomain nor preview URLs are served.
+	// https://developers.cloudflare.com/workers/configuration/previews/
+	"workers_dev": false,
+	"preview_urls": false,
 	// The prerendered pages and client assets are served from the same directory.
 	// https://developers.cloudflare.com/workers/static-assets/
 	"assets": {
@@ -24,5 +29,29 @@
 	// https://developers.cloudflare.com/workers/observability/logs/workers-logs/
 	"observability": {
 		"enabled": true
+	},
+	// Every key above is inheritable, so each environment only sets what differs.
+	// Environment variables are not inheritable and must be set for each environment.
+	// https://developers.cloudflare.com/workers/wrangler/environments/
+	"env": {
+		"dev": {
+			"name": "dev-console",
+			"workers_dev": false,
+			"preview_urls": false,
+			// Wrangler creates the DNS record for a custom domain when it deploys.
+			// https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
+			"routes": [
+				{
+					"pattern": "dev.bencher.dev",
+					"custom_domain": true
+				}
+			],
+			// The OAuth settings are feature flags, not credentials.
+			"vars": {
+				"BENCHER_API_URL": "https://dev.api.bencher.dev",
+				"OAUTH_GITHUB": "true",
+				"OAUTH_GOOGLE": "true"
+			}
+		}
 	}
 }

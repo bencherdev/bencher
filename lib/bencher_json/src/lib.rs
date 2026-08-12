@@ -139,7 +139,7 @@ pub use auth::{AUTHORIZATION, bearer_header, strip_bearer_token};
 
 pub const BENCHER_CONSOLE_PORT: u16 = 3000;
 pub const LOCALHOST_BENCHER_URL_STR: &str = "http://localhost:3000";
-pub const DEVEL_BENCHER_URL_STR: &str = "https://devel--bencher.netlify.app";
+pub const DEVEL_BENCHER_URL_STR: &str = "https://dev.bencher.dev";
 pub const PROD_BENCHER_URL_STR: &str = "https://bencher.dev";
 
 #[cfg(debug_assertions)]

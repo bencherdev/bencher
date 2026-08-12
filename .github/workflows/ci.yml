@@ -257,6 +257,7 @@ jobs:
       mold-version: "2.34.1"
       go-version: "1.25"
       netlify-cli-version: "18.0.4"
+      wrangler-version: "4.122.0"
       deploy-dev: ${{ github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))  }}
       deploy-test: ${{ github.ref == 'refs/heads/devel'  ||  github.ref == 'refs/heads/cloud' }}
       deploy-prod: ${{ github.ref == 'refs/heads/cloud' }}
@@ -265,6 +266,8 @@ jobs:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       BENCHER_USER_AGENT: ${{ secrets.BENCHER_USER_AGENT }}
 
   release:
