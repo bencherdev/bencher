@@ -37,7 +37,7 @@ switch (adapter) {
 			`adapter: cloudflare({ imageService: "compile" }),`,
 		);
 		// The Sentry server SDK only supports Node runtimes,
-		// and its client SDK throws when it is initialized on Cloudflare Workers.
+		// so only the client SDK is enabled on Cloudflare Workers.
 		// https://docs.sentry.io/platforms/javascript/guides/astro/
 		file = file.replace(
 			"enabled: undefined,",
