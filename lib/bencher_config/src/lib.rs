@@ -6,7 +6,7 @@ use std::{
 };
 
 use bencher_json::{
-    BENCHER_API_PORT, JsonConfig, sanitize_json,
+    BENCHER_API_PORT, JsonConfig, Sanitize as _, sanitize_json,
     system::config::{
         JsonConsole, JsonDatabase, JsonLogging, JsonSecurity, JsonServer, LogLevel, ServerLog,
     },
@@ -208,6 +208,19 @@ impl Config {
     pub fn into_inner(self) -> JsonConfig {
         self.0
     }
+
+    /// Consume the config and return it with every secret masked.
+    ///
+    /// Used by the `GET /v0/server/config` endpoint so an admin can inspect the
+    /// server configuration without exposing plaintext secrets (security,
+    /// database, SMTP, OAuth, replica, and Litestream credentials). Unlike
+    /// [`sanitize_json`], this masks unconditionally in both debug and release
+    /// builds.
+    pub fn sanitized(self) -> JsonConfig {
+        let mut json = self.0;
+        json.sanitize();
+        json
+    }
 }
 
 impl Default for Config {
@@ -255,5 +268,145 @@ impl Deref for Config {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::{
+        Sanitize as _, Secret,
+        system::config::{DataStore, JsonSmtp},
+    };
+
+    use super::Config;
+
+    // Mirror `bencher_valid::secret::SANITIZED_SECRET` (not publicly re-exported)
+    // by deriving the mask at runtime, so this test tracks the crate's mask
+    // instead of duplicating the literal.
+    fn mask() -> String {
+        let mut secret = secret("placeholder");
+        secret.sanitize();
+        String::from(secret)
+    }
+
+    fn secret(value: &str) -> Secret {
+        value.parse().expect("valid secret")
+    }
+
+    // `GET /v0/server/config` must never leak plaintext secrets. Sanitizing the
+    // base (non-plus) config masks the security, database, and SMTP secrets.
+    #[test]
+    fn sanitized_masks_base_secrets() {
+        let mut config = Config::default();
+        config.0.security.secret_key = secret("PLAINTEXT_SECURITY");
+        config.0.database.data_store = Some(DataStore::AwsS3 {
+            access_key_id: "access-key-id".to_owned(),
+            secret_access_key: secret("PLAINTEXT_DB"),
+            access_point: "access-point".to_owned(),
+        });
+        config.0.smtp = Some(JsonSmtp {
+            hostname: "smtp.example.com".parse().unwrap(),
+            port: None,
+            insecure_host: None,
+            starttls: None,
+            username: "smtp-user".parse().unwrap(),
+            secret: secret("PLAINTEXT_SMTP"),
+            from_name: "Bencher".parse().unwrap(),
+            from_email: "bencher@example.com".parse().unwrap(),
+        });
+
+        let json = config.sanitized();
+        let serialized = serde_json::to_string(&json).unwrap();
+
+        for plaintext in ["PLAINTEXT_SECURITY", "PLAINTEXT_DB", "PLAINTEXT_SMTP"] {
+            assert!(
+                !serialized.contains(plaintext),
+                "leaked {plaintext}: {serialized}"
+            );
+        }
+        assert!(
+            serialized.contains(&mask()),
+            "no mask present: {serialized}"
+        );
+    }
+
+    // The plus config carries the OAuth, Litestream, and replica secrets flagged
+    // in the review. Sanitizing must mask every one of them.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn sanitized_masks_plus_secrets() {
+        use bencher_json::system::config::{
+            JsonGitHub, JsonGoogle, JsonLitestream, JsonPlus, JsonReplica, JsonReplication,
+            ReplicationTarget,
+        };
+
+        let mut config = Config::default();
+        config.0.plus = Some(JsonPlus {
+            rate_limiting: None,
+            github: Some(JsonGitHub {
+                client_id: "github-client-id".parse().unwrap(),
+                client_secret: secret("PLAINTEXT_GITHUB"),
+            }),
+            google: Some(JsonGoogle {
+                client_id: "google-client-id".parse().unwrap(),
+                client_secret: secret("PLAINTEXT_GOOGLE"),
+            }),
+            litestream: Some(JsonLitestream {
+                replica: JsonReplica::S3 {
+                    bucket: "litestream-bucket".to_owned(),
+                    path: None,
+                    endpoint: None,
+                    region: None,
+                    access_key_id: "access-key-id".to_owned(),
+                    secret_access_key: secret("PLAINTEXT_LITESTREAM"),
+                    sync_interval: None,
+                },
+                snapshot: None,
+                validation: None,
+                checkpoint: None,
+                metrics_port: None,
+            }),
+            replica: Some(JsonReplication {
+                target: ReplicationTarget::S3 {
+                    bucket: "replica-bucket".to_owned(),
+                    path: None,
+                    endpoint: None,
+                    region: None,
+                    access_key_id: "access-key-id".to_owned(),
+                    secret_access_key: secret("PLAINTEXT_REPLICA"),
+                },
+                sync_interval_secs: None,
+                checkpoint_interval_secs: None,
+                min_checkpoint_pages: None,
+                snapshot_interval_secs: None,
+                snapshot_throttle_mib: None,
+                retention_generations: None,
+                verification_interval_secs: None,
+                shutdown_sync_timeout_secs: None,
+            }),
+            stats: None,
+            cloud: None,
+            registry: None,
+            runners: None,
+        });
+
+        let json = config.sanitized();
+        let serialized = serde_json::to_string(&json).unwrap();
+
+        for plaintext in [
+            "PLAINTEXT_GITHUB",
+            "PLAINTEXT_GOOGLE",
+            "PLAINTEXT_LITESTREAM",
+            "PLAINTEXT_REPLICA",
+        ] {
+            assert!(
+                !serialized.contains(plaintext),
+                "leaked {plaintext}: {serialized}"
+            );
+        }
+        assert!(
+            serialized.contains(&mask()),
+            "no mask present: {serialized}"
+        );
     }
 }

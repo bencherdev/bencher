@@ -4,7 +4,11 @@ use rustls::crypto::aws_lc_rs;
 
 use bencher_config::DEFAULT_MAX_BODY_SIZE;
 use bencher_endpoint::Registrar as _;
+#[cfg(feature = "plus")]
+use bencher_json::system::config::JsonReplication;
 use bencher_rbac::init_rbac;
+#[cfg(feature = "plus")]
+use bencher_replica::{ReplicaConfig, ReplicaDb, SyncEngine};
 use bencher_schema::{
     ApiContext,
     context::{Database, DbConnection, Messenger},
@@ -44,13 +48,13 @@ pub struct TestServer {
 impl TestServer {
     /// Create a new test server with default settings.
     pub async fn new() -> Self {
-        Self::build(None, None, None, None).await
+        Self::build(None, None, None, None, false).await
     }
 
     /// Create a new test server with custom upload timeout and max body size.
     #[cfg(feature = "plus")]
     pub async fn new_with_limits(upload_timeout: u64, max_body_size: u64) -> Self {
-        Self::build(Some(upload_timeout), Some(max_body_size), None, None).await
+        Self::build(Some(upload_timeout), Some(max_body_size), None, None, false).await
     }
 
     /// Create a new test server with custom upload timeout, max body size, and injectable clock.
@@ -60,13 +64,52 @@ impl TestServer {
         max_body_size: u64,
         clock: bencher_json::Clock,
     ) -> Self {
-        Self::build(Some(upload_timeout), Some(max_body_size), Some(clock), None).await
+        Self::build(
+            Some(upload_timeout),
+            Some(max_body_size),
+            Some(clock),
+            None,
+            false,
+        )
+        .await
     }
 
     /// Create a new test server with a custom runner self-update base URL.
     #[cfg(feature = "plus")]
     pub async fn new_with_runner_update_base_url(base_url: url::Url) -> Self {
-        Self::build(None, None, None, Some(base_url)).await
+        Self::build(None, None, None, Some(base_url), false).await
+    }
+
+    /// Create a test server whose database replicates to the given target,
+    /// returning the step-driven replication engine alongside it (tests
+    /// drive `sync_once` and friends deterministically instead of racing a
+    /// background tick task). The database runs in WAL mode with
+    /// `wal_autocheckpoint = 0`, matching production replication (I2).
+    #[cfg(feature = "plus")]
+    #[expect(clippy::expect_used, reason = "test server setup with fallible init")]
+    pub async fn new_with_replica(
+        replica: JsonReplication,
+        clock: Option<bencher_json::Clock>,
+        shadow: bool,
+    ) -> (Self, SyncEngine<DbConnection>) {
+        let server = Self::build(None, None, clock, None, true).await;
+        let config = ReplicaConfig::try_from(replica).expect("invalid replica config");
+        let context = server.context();
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+        let engine = SyncEngine::new(
+            log,
+            config,
+            ReplicaDb {
+                db_path: camino::Utf8PathBuf::from(server.db_path.clone()),
+                writer: context.database.connection.clone(),
+                busy_timeout_ms: context.database.busy_timeout,
+            },
+            context.clock.clone(),
+            shadow,
+        )
+        .await
+        .expect("failed to build replication engine");
+        (server, engine)
     }
 
     #[cfg(feature = "plus")]
@@ -80,6 +123,7 @@ impl TestServer {
         max_body_size: Option<u64>,
         clock: Option<bencher_json::Clock>,
         runner_update_base_url: Option<url::Url>,
+        replicated: bool,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
@@ -96,6 +140,20 @@ impl TestServer {
         // Establish connection and run migrations
         let mut conn =
             DbConnection::establish(&db_path).expect("Failed to establish database connection");
+        if replicated {
+            // Match the production replication PRAGMAs (invariant I2: the
+            // replicator is the sole checkpointer). journal_mode is persistent
+            // in the database header; the rest route through the shared
+            // standalone-connection configurator so tests exercise the same
+            // PRAGMAs as production.
+            diesel::connection::SimpleConnection::batch_execute(
+                &mut conn,
+                "PRAGMA journal_mode = WAL",
+            )
+            .expect("Failed to set WAL journal mode");
+            bencher_schema::context::configure_standalone_connection(&mut conn, 5_000, true)
+                .expect("Failed to set replication PRAGMAs");
+        }
         run_migrations(&mut conn).expect("Failed to run migrations");
 
         // Create connection pools
@@ -115,6 +173,7 @@ impl TestServer {
         let database = Database {
             path: PathBuf::from(&db_path),
             busy_timeout: 5_000,
+            replicated,
             public_pool,
             auth_pool,
             connection: Arc::new(Mutex::new(conn)),
@@ -173,6 +232,7 @@ impl TestServer {
         max_body_size: Option<u64>,
         _clock: Option<()>,
         _runner_update_base_url: Option<url::Url>,
+        _replicated: bool,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
@@ -208,6 +268,7 @@ impl TestServer {
         let database = Database {
             path: PathBuf::from(&db_path),
             busy_timeout: 5_000,
+            replicated: false,
             public_pool,
             auth_pool,
             connection: Arc::new(Mutex::new(conn)),

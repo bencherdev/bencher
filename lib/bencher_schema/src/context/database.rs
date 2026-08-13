@@ -6,6 +6,7 @@ use std::{
 
 use bencher_json::{Secret, system::config::DataStore as DataStoreConfig};
 use camino::Utf8PathBuf;
+use diesel::connection::SimpleConnection as _;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use dropshot::HttpError;
 
@@ -13,9 +14,48 @@ use crate::error::issue_error;
 
 pub type DbConnection = diesel::SqliteConnection;
 
+/// Configure a standalone (non-pool) `SQLite` connection with the essential
+/// PRAGMAs.
+///
+/// `busy_timeout` (per connection) prevents immediate `SQLITE_BUSY` failures
+/// under lock contention. `synchronous = NORMAL` is safe with WAL mode and
+/// reduces fsync overhead. `extended_result_codes` surfaces `SQLITE_BUSY_SNAPSHOT`
+/// (517) etc. distinctly from plain `SQLITE_BUSY` (5) in error messages.
+///
+/// When `replicated` is true, a replication system (Litestream or the
+/// in-process replica) owns checkpointing, so `wal_autocheckpoint = 0` must be
+/// set on EVERY connection that can write: an auto-checkpoint from any writer
+/// can restart the WAL behind the replicator's back, overwriting frames it has
+/// not yet shipped.
+///
+/// This is the single source of truth for shared connection PRAGMAs: the
+/// primary writer setup and the connection-pool customizer in
+/// `bencher_config::config_tx`, the stats sweep in `crate::model::server`,
+/// the server-stats endpoint in `api_server::stats`, and the
+/// `bencher_api_tests` replication harness all route through this. It
+/// intentionally does NOT set `journal_mode` (persistent in the database
+/// header) or `cache_size`; the writer sets those two inline on top.
+pub fn configure_standalone_connection(
+    conn: &mut DbConnection,
+    busy_timeout: u32,
+    replicated: bool,
+) -> diesel::QueryResult<()> {
+    conn.batch_execute(&format!("PRAGMA busy_timeout = {busy_timeout}"))?;
+    conn.batch_execute("PRAGMA synchronous = NORMAL")?;
+    conn.batch_execute("PRAGMA extended_result_codes = ON")?;
+    if replicated {
+        conn.batch_execute("PRAGMA wal_autocheckpoint = 0")?;
+    }
+    Ok(())
+}
+
 pub struct Database {
     pub path: PathBuf,
     pub busy_timeout: u32,
+    /// True when a replication system (Litestream or the in-process replica)
+    /// owns WAL checkpointing: every writing connection must run with
+    /// `wal_autocheckpoint = 0`.
+    pub replicated: bool,
     /// The public database connection pool.
     /// Unauthenticated requests should only use this pool.
     pub public_pool: Pool<ConnectionManager<DbConnection>>,
@@ -279,9 +319,67 @@ impl S3Arn {
 
 #[cfg(test)]
 mod tests {
+    use diesel::{Connection as _, RunQueryDsl as _};
+
     use super::*;
 
     const TEST_BUCKET: &str = "arn:aws:s3:some-region-1:123456789:accesspoint/my-bucket";
+
+    #[derive(diesel::QueryableByName)]
+    struct WalAutocheckpoint {
+        #[diesel(sql_type = diesel::sql_types::Integer)]
+        wal_autocheckpoint: i32,
+    }
+
+    fn wal_autocheckpoint(conn: &mut DbConnection) -> i32 {
+        diesel::sql_query("PRAGMA wal_autocheckpoint")
+            .get_result::<WalAutocheckpoint>(conn)
+            .expect("read wal_autocheckpoint")
+            .wal_autocheckpoint
+    }
+
+    // A temp-file database (not `:memory:`) so WAL mode and its
+    // autocheckpoint setting are meaningful.
+    fn wal_db(dir: &tempfile::TempDir) -> DbConnection {
+        let db_path = dir.path().join("test.db");
+        let mut conn = DbConnection::establish(db_path.to_str().expect("utf8 db path"))
+            .expect("establish db connection");
+        conn.batch_execute("PRAGMA journal_mode = WAL")
+            .expect("set WAL journal mode");
+        conn
+    }
+
+    // When replication owns checkpointing, the standalone connection must have
+    // auto-checkpoints disabled.
+    #[test]
+    fn configure_standalone_connection_disables_autocheckpoint_when_replicated() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut conn = wal_db(&dir);
+        assert_ne!(
+            wal_autocheckpoint(&mut conn),
+            0,
+            "sanity: a fresh WAL db has autocheckpoint enabled"
+        );
+        configure_standalone_connection(&mut conn, 7_000, true).expect("configure replicated");
+        assert_eq!(
+            wal_autocheckpoint(&mut conn),
+            0,
+            "replication must disable autocheckpoint on the standalone connection"
+        );
+    }
+
+    // Without replication the connection keeps SQLite's default autocheckpoint.
+    #[test]
+    fn configure_standalone_connection_keeps_autocheckpoint_when_not_replicated() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut conn = wal_db(&dir);
+        configure_standalone_connection(&mut conn, 3_000, false).expect("configure non-replicated");
+        assert_ne!(
+            wal_autocheckpoint(&mut conn),
+            0,
+            "non-replicated connections keep the default autocheckpoint"
+        );
+    }
 
     #[test]
     fn s3_arn_from_str_no_path() {
