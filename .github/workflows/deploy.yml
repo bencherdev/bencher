@@ -156,7 +156,7 @@ jobs:
       - name: Run Console Dev Test
         env:
           RUST_BACKTRACE: full
-        run: cargo test-console dev devel
+        run: cargo test-console dev --user-agent "${{ secrets.BENCHER_USER_AGENT }}" devel
 
   deploy_api_fly_test:
     name: Deploy API to Fly.io Test

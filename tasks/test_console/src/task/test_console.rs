@@ -54,8 +54,9 @@ impl TestConsole {
         } else {
             "<title>Bencher | Bencher - Continuous Benchmarking</title>"
         };
+        let mut result = Ok(());
         for i in 0..5 {
-            if let Err(e) = test_ui_project(
+            match test_ui_project(
                 console_url,
                 project_slug,
                 self.user_agent.as_deref(),
@@ -63,12 +64,18 @@ impl TestConsole {
             )
             .await
             {
-                println!("Console deploy not ready yet: {e}");
-                thread::sleep(Duration::from_secs(i));
-            } else {
-                break;
+                Ok(()) => {
+                    result = Ok(());
+                    break;
+                },
+                Err(e) => {
+                    println!("Console deploy not ready yet: {e}");
+                    result = Err(e);
+                    thread::sleep(Duration::from_secs(i));
+                },
             }
         }
+        result?;
         test_ui_version(console_url, self.user_agent.as_deref()).await?;
 
         let notify = Notify::new(&self.ref_name, console_url);
