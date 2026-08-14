@@ -1490,22 +1490,34 @@ CMD ["sleep", "3600"]"#,
         },
         Scenario {
             name: "max_output_size_truncation",
-            description: "Output truncated when --max-output-size is small",
-            // Generate ~50 KB of output, but limit to 1024 bytes.
+            description: "Guest payload capped at exactly --max-output-size bytes",
+            // Generate ~50 KB of `X` bytes, but limit the payload to 1024 bytes.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1024 count=50 2>/dev/null | tr '\\0' 'X'"]"#,
             cancel_after_secs: None,
             sandboxed: true,
             extra_args: &["--timeout", "60", "--max-output-size", "1024"],
             validate: |output| {
-                // Output should be bounded — not the full ~50KB
-                if output.stdout.len() > 4096 {
+                // The runner prints its progress logs and the guest payload to the
+                // same stdout, so measure the payload itself (the `X` bytes) rather
+                // than the total length of the CLI output.
+                //
+                // A little slack is allowed because the progress logs can contain
+                // stray `X` characters: the CLI echoes the OCI command line (which
+                // ends in `tr '\0' 'X'`) and prints temporary paths whose random
+                // alphanumeric components may include an `X`.
+                const SLACK: usize = 16;
+
+                let payload = output.stdout.bytes().filter(|&b| b == b'X').count();
+                if payload > 1024 + SLACK {
                     bail!(
-                        "Output too large ({} bytes), --max-output-size not enforced",
-                        output.stdout.len()
+                        "Payload too large ({payload} bytes for a 1024 byte cap), --max-output-size not enforced"
                     )
                 }
-                // Runner didn't OOM or crash — that's a pass
+                // The source emits ~50 KB, so the full 1024 byte cap must arrive.
+                if payload < 1024 {
+                    bail!("Payload not fully delivered ({payload} bytes, expected 1024)")
+                }
                 Ok(())
             },
         },
