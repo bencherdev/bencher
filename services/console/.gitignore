@@ -5,6 +5,10 @@ dist/
 .astro/
 .netlify/
 
+# local Cloudflare Workers state and secrets
+.wrangler/
+.dev.vars
+
 # dependencies
 node_modules/
 

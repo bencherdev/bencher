@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 
 const adapter = process.argv[2];
 
-if (!adapter || !["node", "netlify"].includes(adapter)) {
+if (!adapter || !["node", "netlify", "cloudflare"].includes(adapter)) {
 	console.error("Invalid adapter", adapter);
 	process.exit(1);
 }
@@ -26,6 +26,23 @@ switch (adapter) {
 			'import netlify from "@astrojs/netlify";',
 		);
 		file = file.replace("adapter: undefined,", "adapter: netlify(),");
+		break;
+	case "cloudflare":
+		file = file.replace(
+			'// import cloudflare from "@astrojs/cloudflare";',
+			'import cloudflare from "@astrojs/cloudflare";',
+		);
+		file = file.replace(
+			"adapter: undefined,",
+			`adapter: cloudflare({ imageService: "compile" }),`,
+		);
+		// The Sentry server SDK only supports Node runtimes,
+		// so only the client SDK is enabled on Cloudflare Workers.
+		// https://docs.sentry.io/platforms/javascript/guides/astro/
+		file = file.replace(
+			"enabled: undefined,",
+			"enabled: { client: true, server: false },",
+		);
 		break;
 }
 
