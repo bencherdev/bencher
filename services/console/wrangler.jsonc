@@ -1,10 +1,11 @@
 {
 	// Cloudflare Workers configuration for the console.
 	// Build the site first with `npm run cloudflare`, then run it with `npx wrangler dev`.
+	// The top level deploys with `npx wrangler deploy`.
 	// The `dev` environment deploys with `npx wrangler deploy --env dev`.
 	// https://developers.cloudflare.com/workers/wrangler/configuration/
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "bencher-console",
+	"name": "console",
 	// The Astro Cloudflare adapter writes the server bundle here.
 	// https://docs.astro.build/en/guides/integrations-guide/cloudflare/
 	"main": "./dist/_worker.js/index.js",
@@ -12,11 +13,16 @@
 	// Node.js APIs are used by the server bundle.
 	// https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 	"compatibility_flags": ["nodejs_compat"],
-	// The custom domain of each environment is its only front door,
+	// A custom domain is the only front door for any environment that has one,
 	// so neither the `workers.dev` subdomain nor preview URLs are served.
 	// https://developers.cloudflare.com/workers/configuration/previews/
 	"workers_dev": false,
 	"preview_urls": false,
+	// The top level declares no route and no custom domain, so it deploys
+	// without being served. Wrangler cannot attach `bencher.dev` while another
+	// DNS record still holds it, so the domain is attached by hand at cutover
+	// and declared here in a follow-up change.
+
 	// The prerendered pages and client assets are served from the same directory.
 	// https://developers.cloudflare.com/workers/static-assets/
 	"assets": {
@@ -33,6 +39,12 @@
 	// Every key above is inheritable, so each environment only sets what differs.
 	// Environment variables are not inheritable and must be set for each environment.
 	// https://developers.cloudflare.com/workers/wrangler/environments/
+	// The OAuth settings are feature flags, not credentials.
+	"vars": {
+		"BENCHER_API_URL": "https://api.bencher.dev",
+		"OAUTH_GITHUB": "true",
+		"OAUTH_GOOGLE": "true"
+	},
 	"env": {
 		"dev": {
 			"name": "dev-console",
