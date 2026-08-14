@@ -1,5 +1,6 @@
 // import node from "@astrojs/node";
 // import netlify from "@astrojs/netlify";
+// import cloudflare from "@astrojs/cloudflare";
 import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
 import solidJs from "@astrojs/solid-js";
@@ -193,6 +194,11 @@ export default defineConfig({
 		// Note that these environment variables cannot be set with `env.schema`:
 		// https://docs.astro.build/en/guides/environment-variables/#limitations
 		sentry({
+			// The Sentry server SDK only supports Node runtimes,
+			// so `adapter.js` turns it off for runtimes that are not Node.
+			// https://docs.sentry.io/platforms/javascript/guides/astro/
+			// DO NOT REMOVE OR MODIFY: This line is used by adapter.js
+			enabled: undefined,
 			dsn: process.env.PUBLIC_SENTRY_DSN,
 			sourceMapsUploadOptions: {
 				enabled: process.env.SENTRY_UPLOAD === "true",
