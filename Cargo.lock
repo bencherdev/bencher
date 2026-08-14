@@ -8241,12 +8241,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "test_netlify"
+name = "test_console"
 version = "0.6.11"
 dependencies = [
  "anyhow",
  "bencher_json",
- "camino",
  "clap",
  "reqwest",
  "rustls",

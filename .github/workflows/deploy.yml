@@ -12,6 +12,9 @@ on:
       netlify-cli-version:
         type: string
         required: true
+      wrangler-version:
+        type: string
+        required: true
       deploy-dev:
         type: boolean
         required: true
@@ -29,6 +32,10 @@ on:
       NETLIFY_SITE_ID:
         required: true
       NETLIFY_AUTH_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+      CLOUDFLARE_API_TOKEN:
         required: true
       BENCHER_USER_AGENT:
         required: true
@@ -112,8 +119,8 @@ jobs:
         if: steps.smoke-test.outcome == 'failure'
         run: exit 1
 
-  deploy_console_netlify_dev:
-    name: Deploy Console UI to Netlify Dev
+  deploy_console_cloudflare_dev:
+    name: Deploy Console UI to Cloudflare Dev
     if: ${{ inputs.deploy-dev }}
     needs: deploy_api_fly_dev
     runs-on: ubuntu-22.04
@@ -131,30 +138,25 @@ jobs:
         env:
           SENTRY_UPLOAD: true
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: npm run netlify
-      - name: Install Netlify CLI
+        run: npm run cloudflare
+      - name: Install Wrangler
+        working-directory: ./services/console
         env:
-          INPUTS_NETLIFY_CLI_VERSION: ${{ inputs.netlify-cli-version }}
-        run: npm install --save-dev "netlify-cli@$INPUTS_NETLIFY_CLI_VERSION"
-      - name: Deploy Console UI to Netlify Dev
+          INPUTS_WRANGLER_VERSION: ${{ inputs.wrangler-version }}
+        run: npm install --save-dev "wrangler@$INPUTS_WRANGLER_VERSION"
+      - name: Deploy Console UI to Cloudflare Dev
+        working-directory: ./services/console
         env:
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          DEPLOY_MESSAGE: "Deploy from devel"
-        run: |
-          npx netlify-cli \
-          deploy \
-          --alias devel \
-          --message "$DEPLOY_MESSAGE" \
-          --json \
-          | tee netlify.json
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npx wrangler deploy --env dev
       - uses: rui314/setup-mold@9c9c13bf4c3f1adef0cc596abc155580bcb04444 # v1
         with:
           mold-version: ${{ inputs.mold-version }}
-      - name: Run Netlify Dev Test
+      - name: Run Console Dev Test
         env:
           RUST_BACKTRACE: full
-        run: cargo test-netlify dev devel
+        run: cargo test-console dev --user-agent "${{ secrets.BENCHER_USER_AGENT }}" devel
 
   deploy_api_fly_test:
     name: Deploy API to Fly.io Test
@@ -265,4 +267,4 @@ jobs:
       - name: Run Netlify Test
         env:
           RUST_BACKTRACE: full
-        run: cargo test-netlify prod --user-agent "${{ secrets.BENCHER_USER_AGENT }}" cloud
+        run: cargo test-console prod --user-agent "${{ secrets.BENCHER_USER_AGENT }}" cloud

@@ -2,9 +2,9 @@ use clap::Parser as _;
 
 use crate::parser::{TaskSub, TaskTask};
 
-mod test_netlify;
+mod test_console;
 
-use test_netlify::TestNetlify;
+use test_console::TestConsole;
 
 #[derive(Debug)]
 pub struct Task {
@@ -13,8 +13,8 @@ pub struct Task {
 
 #[derive(Debug)]
 pub enum Sub {
-    Dev(TestNetlify),
-    Prod(TestNetlify),
+    Dev(TestConsole),
+    Prod(TestConsole),
 }
 
 impl TryFrom<TaskTask> for Task {
@@ -32,8 +32,8 @@ impl TryFrom<TaskSub> for Sub {
 
     fn try_from(sub: TaskSub) -> Result<Self, Self::Error> {
         Ok(match sub {
-            TaskSub::Dev(test_netlify) => Self::Dev(TestNetlify::dev(test_netlify)),
-            TaskSub::Prod(test_netlify) => Self::Prod(TestNetlify::prod(test_netlify)),
+            TaskSub::Dev(test_console) => Self::Dev(TestConsole::dev(test_console)),
+            TaskSub::Prod(test_console) => Self::Prod(TestConsole::prod(test_console)),
         })
     }
 }
@@ -51,7 +51,7 @@ impl Task {
 impl Sub {
     pub async fn exec(&self) -> anyhow::Result<()> {
         match self {
-            Self::Dev(test_netlify) | Self::Prod(test_netlify) => test_netlify.exec().await,
+            Self::Dev(test_console) | Self::Prod(test_console) => test_console.exec().await,
         }
     }
 }

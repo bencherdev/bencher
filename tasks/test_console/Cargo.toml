@@ -1,5 +1,5 @@
 [package]
-name = "test_netlify"
+name = "test_console"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
@@ -9,7 +9,6 @@ publish = false
 [dependencies]
 bencher_json = { workspace = true, features = ["client"] }
 anyhow.workspace = true
-camino.workspace = true
 clap.workspace = true
 reqwest = { workspace = true, features = ["rustls-no-provider"] }
 rustls.workspace = true

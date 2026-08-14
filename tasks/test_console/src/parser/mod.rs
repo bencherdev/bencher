@@ -8,12 +8,12 @@ pub struct TaskTask {
 
 #[derive(Subcommand, Debug)]
 pub enum TaskSub {
-    Dev(TaskTestNetlify),
-    Prod(TaskTestNetlify),
+    Dev(TaskTestConsole),
+    Prod(TaskTestConsole),
 }
 
 #[derive(Parser, Debug)]
-pub struct TaskTestNetlify {
+pub struct TaskTestConsole {
     pub ref_name: String,
 
     #[clap(long)]
