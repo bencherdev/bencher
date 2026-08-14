@@ -7,36 +7,39 @@ use crate::{API_VERSION, parser::TaskTestConsole};
 
 const NTFY_URL: &str = "https://ntfy.sh";
 const NTFY_TOPIC: &str = "bencherdev";
+const USER_AGENT: &str = "bencher-test-console";
+// Identifies the deploy smoke test to the console's bot challenge exemption
+const AGENT_HEADER: &str = "x-bencher-agent";
 
 #[derive(Debug)]
 pub struct TestConsole {
     pub dev: bool,
     pub ref_name: String,
-    pub user_agent: Option<String>,
+    pub agent_key: Option<String>,
 }
 
 impl TestConsole {
     pub fn dev(test_console: TaskTestConsole) -> Self {
         let TaskTestConsole {
             ref_name,
-            user_agent,
+            agent_key,
         } = test_console;
         Self {
             dev: true,
             ref_name,
-            user_agent,
+            agent_key,
         }
     }
 
     pub fn prod(test_console: TaskTestConsole) -> Self {
         let TaskTestConsole {
             ref_name,
-            user_agent,
+            agent_key,
         } = test_console;
         Self {
             dev: false,
             ref_name,
-            user_agent,
+            agent_key,
         }
     }
 
@@ -59,7 +62,7 @@ impl TestConsole {
             match test_ui_project(
                 console_url,
                 project_slug,
-                self.user_agent.as_deref(),
+                self.agent_key.as_deref(),
                 find_str,
             )
             .await
@@ -76,7 +79,7 @@ impl TestConsole {
             }
         }
         result?;
-        test_ui_version(console_url, self.user_agent.as_deref()).await?;
+        test_ui_version(console_url, self.agent_key.as_deref()).await?;
 
         let notify = Notify::new(&self.ref_name, console_url);
         notify.send().await?;
@@ -88,35 +91,33 @@ impl TestConsole {
 async fn test_ui_project(
     console_url: &str,
     project_slug: &str,
-    user_agent: Option<&str>,
+    agent_key: Option<&str>,
     find_str: &str,
 ) -> anyhow::Result<()> {
     let url = format!("{console_url}/perf/{project_slug}");
     println!("Testing UI project {project_slug} at {url}");
 
-    fetch_and_check(&url, user_agent, find_str).await
+    fetch_and_check(&url, agent_key, find_str).await
 }
 
-async fn test_ui_version(console_url: &str, user_agent: Option<&str>) -> anyhow::Result<()> {
+async fn test_ui_version(console_url: &str, agent_key: Option<&str>) -> anyhow::Result<()> {
     let url = format!("{console_url}/download");
     println!("Testing UI deploy is version {API_VERSION} at {url}");
 
     let version = format!("Latest Version: <code>v{API_VERSION}</code>");
 
-    fetch_and_check(&url, user_agent, &version).await
+    fetch_and_check(&url, agent_key, &version).await
 }
 
-async fn fetch_and_check(
-    url: &str,
-    user_agent: Option<&str>,
-    find_str: &str,
-) -> anyhow::Result<()> {
-    let client = if let Some(user_agent) = user_agent {
-        reqwest::Client::builder().user_agent(user_agent).build()?
+async fn fetch_and_check(url: &str, agent_key: Option<&str>, find_str: &str) -> anyhow::Result<()> {
+    let client = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
+    let request = client.get(url);
+    let request = if let Some(agent_key) = agent_key {
+        request.header(AGENT_HEADER, agent_key)
     } else {
-        reqwest::Client::new()
+        request
     };
-    let html = client.get(url).send().await?.text().await?;
+    let html = request.send().await?.text().await?;
     if !html.contains(find_str) {
         return Err(anyhow::anyhow!(
             "Failed to find `{find_str}` in HTML from {url}"

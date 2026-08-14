@@ -156,7 +156,8 @@ jobs:
       - name: Run Console Dev Test
         env:
           RUST_BACKTRACE: full
-        run: cargo test-console dev --user-agent "${{ secrets.BENCHER_USER_AGENT }}" devel
+          BENCHER_USER_AGENT: ${{ secrets.BENCHER_USER_AGENT }} # the secret name predates the x-bencher-agent header it now carries
+        run: cargo test-console dev --agent-key "$BENCHER_USER_AGENT" devel
 
   deploy_api_fly_test:
     name: Deploy API to Fly.io Test
@@ -267,4 +268,5 @@ jobs:
       - name: Run Netlify Test
         env:
           RUST_BACKTRACE: full
-        run: cargo test-console prod --user-agent "${{ secrets.BENCHER_USER_AGENT }}" cloud
+          BENCHER_USER_AGENT: ${{ secrets.BENCHER_USER_AGENT }} # the secret name predates the x-bencher-agent header it now carries
+        run: cargo test-console prod --agent-key "$BENCHER_USER_AGENT" cloud
