@@ -17,5 +17,5 @@ pub struct TaskTestConsole {
     pub ref_name: String,
 
     #[clap(long)]
-    pub user_agent: Option<String>,
+    pub agent_key: Option<String>,
 }
