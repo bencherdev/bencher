@@ -208,7 +208,7 @@ jobs:
     with:
       mold-version: "2.34.1"
       wasm-pack-version: "0.12.1"
-      litestream-version: "0.5.13"
+      litestream-version: "0.5.16"
       cargo-chef-version: "0.1.77"
       sccache-version: "0.16.0"
       is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
@@ -228,7 +228,7 @@ jobs:
     uses: ./.github/workflows/docker.yml
     with:
       mold-version: "2.34.1"
-      litestream-version: "0.5.13"
+      litestream-version: "0.5.16"
       cargo-chef-version: "0.1.77"
       sccache-version: "0.16.0"
       is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
