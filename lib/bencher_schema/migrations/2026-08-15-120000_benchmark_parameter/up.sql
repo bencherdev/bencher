@@ -46,6 +46,10 @@ CREATE TABLE up_report_benchmark (
     FOREIGN KEY (parameter_id) REFERENCES parameter (id),
     UNIQUE(report_id, iteration, benchmark_id, parameter_id)
 );
+-- The join is a `LEFT JOIN` so that a `report_benchmark` row whose benchmark has
+-- no empty parameter set trips the `NOT NULL` on `parameter_id` and fails the
+-- migration. Every benchmark is backfilled above, so this cannot fire on valid
+-- data; an `INNER JOIN` would drop such a row silently instead.
 INSERT INTO up_report_benchmark(
         id,
         uuid,
@@ -61,7 +65,7 @@ SELECT report_benchmark.id,
     report_benchmark.benchmark_id,
     parameter.id
 FROM report_benchmark
-    INNER JOIN parameter ON (
+    LEFT JOIN parameter ON (
         parameter.benchmark_id = report_benchmark.benchmark_id
         AND parameter.parameters = '{}'
     );
@@ -69,4 +73,9 @@ DROP TABLE report_benchmark;
 ALTER TABLE up_report_benchmark
     RENAME TO report_benchmark;
 CREATE INDEX index_report_benchmark_benchmark_report ON report_benchmark(benchmark_id, report_id);
+-- `benchmark` cascades to `parameter`, so deleting a benchmark (or a project)
+-- deletes parameter sets, and SQLite then verifies that no `report_benchmark`
+-- row still references them. Without this index that check is a full table scan
+-- of `report_benchmark` per deleted parameter set.
+CREATE INDEX index_report_benchmark_parameter ON report_benchmark(parameter_id);
 PRAGMA foreign_keys = on;
