@@ -641,6 +641,24 @@ mod tests {
         .expect("Failed to seed legacy rows");
     }
 
+    /// Revert every migration down to and including the parameter migration.
+    ///
+    /// The parameter migration is not the last one any more, so reverting only the
+    /// last one would revert someone else's. Each layer above it is reverted first,
+    /// and `run_pending_migrations` puts them all back.
+    fn revert_to_parameter_migration(conn: &mut SqliteConnection) {
+        const PARAMETER_MIGRATION: &str = "20260815120000";
+
+        loop {
+            let version = conn
+                .revert_last_migration(crate::MIGRATIONS)
+                .expect("Failed to revert a migration");
+            if version.to_string() == PARAMETER_MIGRATION {
+                break;
+            }
+        }
+    }
+
     #[test]
     fn migration_backfills_empty_parameter_sets() {
         let mut conn = setup_test_db();
@@ -649,8 +667,7 @@ mod tests {
         // migration in one, so they are disabled around the revert and re-apply.
         conn.batch_execute("PRAGMA foreign_keys = OFF")
             .expect("Failed to disable foreign keys");
-        conn.revert_last_migration(crate::MIGRATIONS)
-            .expect("Failed to revert the parameter migration");
+        revert_to_parameter_migration(&mut conn);
 
         seed_legacy_rows(&mut conn);
 
@@ -720,8 +737,7 @@ mod tests {
 
         conn.batch_execute("PRAGMA foreign_keys = OFF")
             .expect("Failed to disable foreign keys");
-        conn.revert_last_migration(crate::MIGRATIONS)
-            .expect("Failed to revert the parameter migration");
+        revert_to_parameter_migration(&mut conn);
         conn.run_pending_migrations(crate::MIGRATIONS)
             .expect("Failed to re-apply the parameter migration");
         conn.batch_execute("PRAGMA foreign_keys = ON")
