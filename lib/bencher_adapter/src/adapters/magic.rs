@@ -36,7 +36,8 @@ mod test_magic {
         python::{asv::test_python_asv, pytest::test_python_pytest},
         ruby::benchmark::test_ruby_benchmark,
         rust::{
-            bench::test_rust_bench, criterion::test_rust_criterion, gungraun::test_rust_gungraun,
+            bench::test_rust_bench, criterion::test_rust_criterion,
+            gungraun_json::test_rust_gungraun_json, gungraun_stdout::test_rust_gungraun_stdout,
             iai::test_rust_iai,
         },
         shell::hyperfine::test_shell_hyperfine,
@@ -147,15 +148,34 @@ mod test_magic {
     }
 
     #[test]
-    fn adapter_magic_rust_gungraun() {
+    fn adapter_magic_rust_gungraun_stdout() {
         let results = convert_file_path::<AdapterMagic>(
             "./tool_output/rust/gungraun/without-optional-metrics.txt",
         );
 
-        test_rust_gungraun::validate_adapter_rust_gungraun(
+        test_rust_gungraun_stdout::validate_adapter_rust_gungraun_stdout(
             &results,
-            &test_rust_gungraun::OptionalMetrics::default(),
+            &test_rust_gungraun_stdout::OptionalMetrics::default(),
         );
+    }
+
+    #[test]
+    fn adapter_magic_rust_gungraun_json() {
+        {
+            let results = convert_file_path::<AdapterMagic>(
+                "./tool_output/rust/gungraun/json_pretty_one_callgrind.txt",
+            );
+
+            test_rust_gungraun_json::validate_adapter_rust_gungraun_json(&results);
+        }
+
+        {
+            let results = convert_file_path::<AdapterMagic>(
+                "./tool_output/rust/gungraun/json_one_callgrind_diff.txt",
+            );
+
+            test_rust_gungraun_json::validate_adapter_rust_gungraun_json(&results);
+        }
     }
 
     #[test]

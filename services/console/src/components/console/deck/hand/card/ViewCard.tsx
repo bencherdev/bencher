@@ -462,8 +462,10 @@ const AdapterCard = (props: Props) => {
 						return "-rust-criterion";
 					case Adapter.RustIai:
 						return "-rust-iai";
-					case Adapter.RustIaiCallgrind:
-						return "-rust-iai-callgrind";
+					case Adapter.RustGungraun:
+					case Adapter.RustGungraunStdout:
+					case Adapter.RustGungraunJson:
+						return "-rust-gungraun";
 					case Adapter.ShellHyperfine:
 						return "_%EF%B8%8F-shell-hyperfine";
 					default:
@@ -511,8 +513,10 @@ const AdapterCard = (props: Props) => {
 							return "Rust Criterion";
 						case Adapter.RustIai:
 							return "Rust Iai";
-						case Adapter.RustIaiCallgrind:
-							return "Rust Iai-Callgrind";
+						case Adapter.RustGungraun:
+						case Adapter.RustGungraunStdout:
+						case Adapter.RustGungraunJson:
+							return "Rust Gungraun";
 						case Adapter.ShellHyperfine:
 							return "Shell Hyperfine";
 						default:

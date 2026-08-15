@@ -1,6 +1,8 @@
 pub mod bench;
 pub mod criterion;
 pub mod gungraun;
+pub mod gungraun_json;
+pub mod gungraun_stdout;
 pub mod iai;
 
 use self::{criterion::AdapterRustCriterion, gungraun::AdapterRustGungraun, iai::AdapterRustIai};
@@ -23,7 +25,8 @@ mod test_rust {
     use super::AdapterRust;
     use crate::adapters::{
         rust::{
-            bench::test_rust_bench, criterion::test_rust_criterion, gungraun::test_rust_gungraun,
+            bench::test_rust_bench, criterion::test_rust_criterion,
+            gungraun_json::test_rust_gungraun_json, gungraun_stdout::test_rust_gungraun_stdout,
             iai::test_rust_iai,
         },
         test_util::convert_file_path,
@@ -49,13 +52,31 @@ mod test_rust {
 
     #[test]
     fn adapter_rust_gungraun() {
-        let results = convert_file_path::<AdapterRust>(
-            "./tool_output/rust/gungraun/without-optional-metrics.txt",
-        );
+        {
+            let results = convert_file_path::<AdapterRust>(
+                "./tool_output/rust/gungraun/json_pretty_one_callgrind.txt",
+            );
 
-        test_rust_gungraun::validate_adapter_rust_gungraun(
-            &results,
-            &test_rust_gungraun::OptionalMetrics::default(),
-        );
+            test_rust_gungraun_json::validate_adapter_rust_gungraun_json(&results);
+        }
+
+        {
+            let results = convert_file_path::<AdapterRust>(
+                "./tool_output/rust/gungraun/json_one_callgrind_diff.txt",
+            );
+
+            test_rust_gungraun_json::validate_adapter_rust_gungraun_json(&results);
+        }
+
+        {
+            let results = convert_file_path::<AdapterRust>(
+                "./tool_output/rust/gungraun/without-optional-metrics.txt",
+            );
+
+            test_rust_gungraun_stdout::validate_adapter_rust_gungraun_stdout(
+                &results,
+                &test_rust_gungraun_stdout::OptionalMetrics::default(),
+            );
+        }
     }
 }

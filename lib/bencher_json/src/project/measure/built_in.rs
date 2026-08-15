@@ -185,6 +185,16 @@ pub mod gungraun {
     create_measure!(TotalBytes, "Total bytes", "total-bytes", BYTES);
     create_measure!(TotalBlocks, "Total blocks", "total-blocks", "blocks");
     create_measure!(AtTGmaxBytes, "At t-gmax bytes", "at-t-gmax-bytes", BYTES);
+
+    create_measure!(TotalUnits, "Total units", "total-units", "units");
+    create_measure!(TotalEvents, "Total events", "total-events", "events");
+    create_measure!(
+        TotalLifetimes,
+        "Total lifetimes",
+        "total-lifetimes",
+        "lifetimes"
+    );
+
     create_measure!(
         AtTGmaxBlocks,
         "At t-gmax blocks",
@@ -195,6 +205,8 @@ pub mod gungraun {
     create_measure!(AtTEndBlocks, "At t-end blocks", "at-t-end-blocks", "blocks");
     create_measure!(ReadsBytes, "Reads bytes", "reads-bytes", BYTES);
     create_measure!(WritesBytes, "Writes bytes", "writes-bytes", BYTES);
+    create_measure!(MaximumBytes, "Maximum bytes", "maximum-bytes", BYTES);
+    create_measure!(MaximumBlocks, "Maximum blocks", "maximum-blocks", "blocks");
 
     // Memcheck
     create_measure!(

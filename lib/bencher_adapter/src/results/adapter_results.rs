@@ -100,12 +100,17 @@ pub enum GungraunMeasure {
      */
     TotalBytes(JsonNewMetric),
     TotalBlocks(JsonNewMetric),
+    TotalUnits(JsonNewMetric),
+    TotalEvents(JsonNewMetric),
+    TotalLifetimes(JsonNewMetric),
     AtTGmaxBytes(JsonNewMetric),
     AtTGmaxBlocks(JsonNewMetric),
     AtTEndBytes(JsonNewMetric),
     AtTEndBlocks(JsonNewMetric),
     ReadsBytes(JsonNewMetric),
     WritesBytes(JsonNewMetric),
+    MaximumBytes(JsonNewMetric),
+    MaximumBlocks(JsonNewMetric),
 
     /*
      * Memcheck tool:
@@ -430,6 +435,15 @@ impl AdapterResults {
                     GungraunMeasure::TotalBlocks(json_metric) => {
                         (built_in::gungraun::TotalBlocks::name_id(), json_metric)
                     },
+                    GungraunMeasure::TotalUnits(json_metric) => {
+                        (built_in::gungraun::TotalUnits::name_id(), json_metric)
+                    },
+                    GungraunMeasure::TotalEvents(json_metric) => {
+                        (built_in::gungraun::TotalEvents::name_id(), json_metric)
+                    },
+                    GungraunMeasure::TotalLifetimes(json_metric) => {
+                        (built_in::gungraun::TotalLifetimes::name_id(), json_metric)
+                    },
                     GungraunMeasure::AtTGmaxBytes(json_metric) => {
                         (built_in::gungraun::AtTGmaxBytes::name_id(), json_metric)
                     },
@@ -447,6 +461,12 @@ impl AdapterResults {
                     },
                     GungraunMeasure::WritesBytes(json_metric) => {
                         (built_in::gungraun::WritesBytes::name_id(), json_metric)
+                    },
+                    GungraunMeasure::MaximumBytes(json_metric) => {
+                        (built_in::gungraun::MaximumBytes::name_id(), json_metric)
+                    },
+                    GungraunMeasure::MaximumBlocks(json_metric) => {
+                        (built_in::gungraun::MaximumBlocks::name_id(), json_metric)
                     },
                     // Memcheck
                     GungraunMeasure::MemcheckErrors(json_metric) => {

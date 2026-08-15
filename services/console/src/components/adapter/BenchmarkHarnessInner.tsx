@@ -56,8 +56,8 @@ const BenchmarkHarnessInner = () => (
 				adapters={[
 					Adapter.RustBench,
 					Adapter.RustCriterion,
+					Adapter.RustGungraun,
 					Adapter.RustIai,
-					Adapter.RustIaiCallgrind,
 				]}
 			/>
 			<LanguageBox
