@@ -29,6 +29,7 @@ use crate::{
         branch::{BranchId, head::HeadId},
         measure::{MeasureId, QueryMeasure},
         metric::InsertMetric,
+        parameter::{ParameterId, QueryParameter},
         report::report_benchmark::{InsertReportBenchmark, ReportBenchmarkId},
         testbed::TestbedId,
     },
@@ -55,6 +56,7 @@ pub struct ReportResults {
     #[cfg(feature = "plus")]
     pub series_cache: SeriesCacheContext,
     pub benchmark_cache: HashMap<BenchmarkNameId, BenchmarkId>,
+    pub parameter_cache: HashMap<BenchmarkId, ParameterId>,
     pub measure_cache: HashMap<MeasureNameId, MeasureId>,
     pub detector_cache: HashMap<MeasureId, Option<Detector>>,
 }
@@ -90,6 +92,7 @@ impl ReportResults {
             #[cfg(feature = "plus")]
             series_cache,
             benchmark_cache: HashMap::new(),
+            parameter_cache: HashMap::new(),
             measure_cache: HashMap::new(),
             detector_cache: HashMap::new(),
         }
@@ -284,9 +287,12 @@ impl ReportResults {
         // If benchmark name is ignored then strip the special suffix before querying
         let (benchmark, ignore_benchmark) = strip_ignore_suffix(benchmark);
         let benchmark_id = self.benchmark_id(context, benchmark).await?;
+        // Every result in this layer rides its benchmark's empty parameter set.
+        // Resolved here in Phase 1 so the Phase 2 write transaction stays read free.
+        let parameter_id = self.parameter_id(context, benchmark_id).await?;
 
         let insert_report_benchmark =
-            InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id);
+            InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id, parameter_id);
 
         let mut prepared_metrics = Vec::with_capacity(metrics.inner.len());
         for (measure_key, metric) in metrics.inner {
@@ -330,6 +336,20 @@ impl ReportResults {
                 QueryBenchmark::get_or_create(context, self.project_id, &benchmark).await?;
             self.benchmark_cache.insert(benchmark, benchmark_id);
             benchmark_id
+        })
+    }
+
+    async fn parameter_id(
+        &mut self,
+        context: &ApiContext,
+        benchmark_id: BenchmarkId,
+    ) -> Result<ParameterId, HttpError> {
+        Ok(if let Some(id) = self.parameter_cache.get(&benchmark_id) {
+            *id
+        } else {
+            let parameter_id = QueryParameter::get_empty_set_id(auth_conn!(context), benchmark_id)?;
+            self.parameter_cache.insert(benchmark_id, parameter_id);
+            parameter_id
         })
     }
 

@@ -11,7 +11,7 @@
 
 use bencher_api_tests::{
     TestServer,
-    helpers::{base_timestamp, get_project_id},
+    helpers::{base_timestamp, create_empty_parameter, get_project_id},
 };
 use bencher_json::{
     AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, HeadUuid, JobStatus, JobUuid, JsonPerf,
@@ -44,6 +44,7 @@ struct PerfTestData {
     head_id: i32,
     testbed_id: i32,
     benchmark_id: i32,
+    parameter_id: i32,
     measure_id: i32,
     report_id: i32,
     report_benchmark_id: i32,
@@ -232,6 +233,7 @@ fn create_perf_data_with_options(
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("get benchmark id");
+    let parameter_id = create_empty_parameter(&mut conn, benchmark_id);
 
     // Measure
     let measure_uuid = MeasureUuid::new();
@@ -261,6 +263,7 @@ fn create_perf_data_with_options(
             schema::report_benchmark::report_id.eq(report_id),
             schema::report_benchmark::iteration.eq(opts.iteration),
             schema::report_benchmark::benchmark_id.eq(benchmark_id),
+            schema::report_benchmark::parameter_id.eq(parameter_id),
         ))
         .execute(&mut conn)
         .expect("insert report_benchmark");
@@ -312,6 +315,7 @@ fn create_perf_data_with_options(
         head_id,
         testbed_id,
         benchmark_id,
+        parameter_id,
         measure_id,
         report_id,
         report_benchmark_id,
@@ -744,6 +748,7 @@ async fn perf_get_multiple_metrics_same_permutation() {
             schema::report_benchmark::report_id.eq(report2_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(data.benchmark_id),
+            schema::report_benchmark::parameter_id.eq(data.parameter_id),
         ))
         .execute(&mut conn)
         .expect("insert rb2");
@@ -1134,6 +1139,7 @@ async fn perf_multi_benchmark_query() {
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("get benchmark2 id");
+    let parameter2_id = create_empty_parameter(&mut conn, benchmark2_id);
 
     let report_benchmark2_uuid = ReportBenchmarkUuid::new();
     diesel::insert_into(schema::report_benchmark::table)
@@ -1142,6 +1148,7 @@ async fn perf_multi_benchmark_query() {
             schema::report_benchmark::report_id.eq(data.report_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(benchmark2_id),
+            schema::report_benchmark::parameter_id.eq(parameter2_id),
         ))
         .execute(&mut conn)
         .expect("insert report_benchmark2");
@@ -1921,6 +1928,7 @@ async fn perf_ordered_by_version_number() {
             schema::report_benchmark::report_id.eq(report_v1_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(data_v2.benchmark_id),
+            schema::report_benchmark::parameter_id.eq(data_v2.parameter_id),
         ))
         .execute(&mut conn)
         .expect("insert rb v1");
@@ -2052,6 +2060,7 @@ async fn perf_ordered_by_start_time_within_version() {
             schema::report_benchmark::report_id.eq(r_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(data.benchmark_id),
+            schema::report_benchmark::parameter_id.eq(data.parameter_id),
         ))
         .execute(&mut conn)
         .expect("insert rb");
@@ -2540,6 +2549,7 @@ async fn perf_multiple_iterations() {
             schema::report_benchmark::report_id.eq(data.report_id),
             schema::report_benchmark::iteration.eq(1),
             schema::report_benchmark::benchmark_id.eq(data.benchmark_id),
+            schema::report_benchmark::parameter_id.eq(data.parameter_id),
         ))
         .execute(&mut conn)
         .expect("insert rb iter1");
@@ -2861,6 +2871,7 @@ async fn perf_spec_filters_results() {
             schema::report_benchmark::report_id.eq(report2_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(data1.benchmark_id),
+            schema::report_benchmark::parameter_id.eq(data1.parameter_id),
         ))
         .execute(&mut conn)
         .expect("insert rb2");
