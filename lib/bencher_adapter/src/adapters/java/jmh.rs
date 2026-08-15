@@ -245,7 +245,7 @@ pub(crate) mod test_java_jmh {
             .unwrap();
         validate_throughput(
             metrics,
-            113_640_916.672_629_92,
+            113_640_916.672_629_9,
             Some(105_176_321.973_520_52),
             Some(122_105_511.371_739_3),
         );
