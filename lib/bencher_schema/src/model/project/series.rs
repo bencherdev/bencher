@@ -245,7 +245,7 @@ pub(crate) fn oracle_count(
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, project::Visibility};
+    use bencher_json::{DateTime, MetricName, project::Visibility};
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use super::{count_active, count_active_private, oracle_count, upsert_series_last_seen};
@@ -431,6 +431,7 @@ mod tests {
                 schema::metric::uuid.eq(&metric_uuid),
                 schema::metric::report_benchmark_id.eq(report_benchmark),
                 schema::metric::measure_id.eq(measure),
+                schema::metric::name.eq(MetricName::value()),
                 schema::metric::value.eq(1.0f64),
             ))
             .execute(conn)

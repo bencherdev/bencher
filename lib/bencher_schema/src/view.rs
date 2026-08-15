@@ -22,6 +22,10 @@ diesel::table! {
     }
 }
 
+// A boundary is attached to the `value` row, which is the row the view is keyed
+// on, so an alert can reach its metric through the view rather than the table and
+// get the pivoted metric triple with it.
+diesel::joinable!(boundary -> metric_boundary (metric_id));
 diesel::joinable!(metric_boundary -> measure (measure_id));
 diesel::joinable!(metric_boundary -> report_benchmark (report_benchmark_id));
 diesel::joinable!(metric_boundary -> model (model_id));

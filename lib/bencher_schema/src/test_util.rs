@@ -10,7 +10,7 @@
 //! so no concurrent INSERT can interleave between the INSERT and the `last_insert_rowid()` call.
 
 use bencher_json::{
-    DateTime, JsonParameters, ParameterUuid,
+    DateTime, JsonParameters, MetricName, ParameterUuid,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
@@ -623,6 +623,7 @@ pub fn create_metric(
             schema::metric::uuid.eq(metric_uuid),
             schema::metric::report_benchmark_id.eq(report_benchmark_id),
             schema::metric::measure_id.eq(measure_id),
+            schema::metric::name.eq(MetricName::value()),
             schema::metric::value.eq(value),
         ))
         .execute(conn)
