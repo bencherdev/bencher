@@ -18,11 +18,14 @@
 	// https://developers.cloudflare.com/workers/configuration/previews/
 	"workers_dev": false,
 	"preview_urls": false,
-	// The top level declares no route and no custom domain, so it deploys
-	// without being served. Wrangler cannot attach `bencher.dev` while another
-	// DNS record still holds it, so the domain is attached by hand at cutover
-	// and declared here in a follow-up change.
-
+	// Wrangler creates the DNS record for a custom domain when it deploys.
+	// https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
+	"routes": [
+		{
+			"pattern": "bencher.dev",
+			"custom_domain": true
+		}
+	],
 	// The prerendered pages and client assets are served from the same directory.
 	// https://developers.cloudflare.com/workers/static-assets/
 	"assets": {

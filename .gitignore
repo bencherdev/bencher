@@ -23,7 +23,6 @@ deb/
 out*.txt
 out*.json
 out*.html
-netlify.json
 lychee.md
 out/
 
@@ -38,7 +37,6 @@ release-notes.md
 
 # Node.js
 node_modules/
-.netlify
 ./package.json
 ./package-lock.json
 

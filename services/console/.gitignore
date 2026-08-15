@@ -3,7 +3,6 @@ dist/
 
 # generated types
 .astro/
-.netlify/
 
 # local Cloudflare Workers state and secrets
 .wrangler/

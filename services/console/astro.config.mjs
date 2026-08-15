@@ -1,5 +1,4 @@
 // import node from "@astrojs/node";
-// import netlify from "@astrojs/netlify";
 // import cloudflare from "@astrojs/cloudflare";
 import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
@@ -100,8 +99,8 @@ export default defineConfig({
 		"/docs/how-to/branch-selection": "/docs/explanation/branches",
 		"/docs/explanation/branch-selection": "/docs/explanation/branches",
 		// `[lang]` wildcard in redirect destinations does not resolve when the
-		// destination is served by a dynamic `[slug]` route in Astro's Netlify
-		// adapter, so enumerate locales explicitly for these renames.
+		// destination is served by a dynamic `[slug]` route, so enumerate
+		// locales explicitly for these renames.
 		"/de/docs/explanation/branch-selection": "/de/docs/explanation/branches",
 		"/es/docs/explanation/branch-selection": "/es/docs/explanation/branches",
 		"/fr/docs/explanation/branch-selection": "/fr/docs/explanation/branches",

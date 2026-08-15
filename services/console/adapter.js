@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 
 const adapter = process.argv[2];
 
-if (!adapter || !["node", "netlify", "cloudflare"].includes(adapter)) {
+if (!adapter || !["node", "cloudflare"].includes(adapter)) {
 	console.error("Invalid adapter", adapter);
 	process.exit(1);
 }
@@ -19,13 +19,6 @@ switch (adapter) {
 			"adapter: undefined,",
 			`adapter: node({ mode: "standalone" }),`,
 		);
-		break;
-	case "netlify":
-		file = file.replace(
-			'// import netlify from "@astrojs/netlify";',
-			'import netlify from "@astrojs/netlify";',
-		);
-		file = file.replace("adapter: undefined,", "adapter: netlify(),");
 		break;
 	case "cloudflare":
 		file = file.replace(
