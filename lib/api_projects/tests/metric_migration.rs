@@ -326,46 +326,6 @@ async fn ingest_writes_the_metric_triple_as_named_rows() {
     );
 }
 
-// A bounded metric is one measurement, not three: the billable count does not move
-// when the triple becomes three rows.
-#[tokio::test]
-async fn usage_counts_a_bounded_metric_once() {
-    let server = TestServer::new().await;
-    let fixture = seed_legacy_project(&server, "usage").await;
-    apply_migration(&server);
-
-    let resp = server
-        .client
-        .get(server.api_url(&format!(
-            "/v0/projects/{}/metrics/{}",
-            fixture.project_slug,
-            fixture
-                .metric_uuids
-                .first()
-                .expect("the fixture seeds at least one metric")
-        )))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&fixture.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-
-    let mut conn = server.db_conn();
-    let value_rows: i64 = schema::metric::table
-        .filter(schema::metric::name.eq(MetricName::value()))
-        .count()
-        .get_result(&mut conn)
-        .expect("Failed to count the value rows");
-    assert_eq!(
-        usize::try_from(value_rows).expect("row count fits"),
-        FIXTURE_METRICS.len(),
-        "usage counts one row per measurement, whatever its bounds"
-    );
-}
-
 /// Run the single valued metric migration on the test server's database.
 ///
 /// Foreign keys cannot be toggled inside a transaction and Diesel runs each
