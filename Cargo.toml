@@ -155,13 +155,18 @@ rmcp = { version = "2.2", default-features = false }
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs"] }
 rusqlite = "0.38"
 rust_decimal = "1.40"
+# ECMAScript `Number::toString` formatting, which is what RFC 8785 (JCS) requires
+ryu-js = "1.0"
 schemars = { version = "0.8", features = ["uuid1"] }
 sentry = { version = "0.48", default-features = false, features = [
     "reqwest",
     "rustls-no-provider",
 ] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+# float_roundtrip: correctly rounded float parsing. Without it parsing can be a
+# unit in the last place off, which makes an RFC 8785 canonical form unstable
+# across a parse and re-serialize round trip.
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
 serde_urlencoded = "0.7"
 serde_yaml = "0.9"
 sha2 = "0.11"

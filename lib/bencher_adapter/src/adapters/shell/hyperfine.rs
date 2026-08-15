@@ -162,7 +162,7 @@ pub(crate) mod test_shell_hyperfine {
         let metrics = results.get("sleep 0.1").unwrap();
         validate_latency(
             metrics,
-            106_525_351.72,
+            106_525_351.720_000_01,
             Some(102_474_685.72),
             Some(115_336_892.72),
         );
@@ -170,9 +170,9 @@ pub(crate) mod test_shell_hyperfine {
         let metrics = results.get("sleep 0.2").unwrap();
         validate_latency(
             metrics,
-            208_661_518.72,
-            Some(201_824_142.72),
-            Some(214_128_684.72),
+            208_661_518.720_000_03,
+            Some(201_824_142.720_000_03),
+            Some(214_128_684.720_000_03),
         );
     }
 
@@ -184,9 +184,9 @@ pub(crate) mod test_shell_hyperfine {
         let metrics = results.get("sleep 0.01").unwrap();
         validate_latency(
             metrics,
-            13_317_239.025_420_565,
-            Some(12_317_546.734_914_13),
-            Some(14_316_931.315_926_999),
+            13_317_239.025_420_563,
+            Some(12_317_546.734_914_128),
+            Some(14_316_931.315_926_997),
         );
     }
 
@@ -200,7 +200,7 @@ pub(crate) mod test_shell_hyperfine {
             metrics,
             13_251_329.96,
             Some(10_165_892.459_999_999),
-            Some(21_347_058.459_999_997),
+            Some(21_347_058.46),
         );
     }
 }
