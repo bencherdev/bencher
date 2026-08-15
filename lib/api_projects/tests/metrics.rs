@@ -13,7 +13,9 @@ use bencher_api_tests::{
     TestServer,
     helpers::{base_timestamp, create_empty_parameter, create_test_report, get_project_id},
 };
-use bencher_json::{BenchmarkUuid, JsonOneMetric, MeasureUuid, MetricUuid, ReportBenchmarkUuid};
+use bencher_json::{
+    BenchmarkUuid, JsonOneMetric, MeasureUuid, MetricName, MetricUuid, ReportBenchmarkUuid,
+};
 use bencher_schema::{
     model::project::report::{ReportId, upsert_metric_count},
     schema,
@@ -93,6 +95,7 @@ fn create_test_metric(server: &TestServer, project_id: i32, report_id: i32) -> M
             schema::metric::uuid.eq(&metric_uuid),
             schema::metric::report_benchmark_id.eq(report_benchmark_id),
             schema::metric::measure_id.eq(measure_id),
+            schema::metric::name.eq(MetricName::value()),
             schema::metric::value.eq(42.0),
         ))
         .execute(&mut conn)

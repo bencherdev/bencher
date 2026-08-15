@@ -120,9 +120,8 @@ diesel::table! {
         uuid -> Text,
         report_benchmark_id -> Integer,
         measure_id -> Integer,
+        name -> Text,
         value -> Double,
-        lower_value -> Nullable<Double>,
-        upper_value -> Nullable<Double>,
     }
 }
 

@@ -89,7 +89,6 @@ impl NewRunJob {
 
 use super::{
     branch::{BranchId, QueryBranch, head::HeadId, version::VersionId},
-    metric::QueryMetric,
     metric_boundary::QueryMetricBoundary,
     threshold::{InsertThreshold, boundary::QueryBoundary},
 };
@@ -747,10 +746,10 @@ fn into_report_results_json(
             }
         }
 
-        let (query_metric, query_boundary) = query_metric_boundary.split();
+        let (json_metric, query_boundary) = query_metric_boundary.split();
         let report_measure = JsonReportMeasure {
             measure: query_measure.into_json_for_project(project),
-            metric: query_metric.into_json(),
+            metric: json_metric,
             threshold: threshold_model.map(|(threshold, model)| {
                 threshold.into_threshold_model_json_for_project(project, model)
             }),
@@ -899,7 +898,7 @@ fn get_report_alerts(
     let alerts = schema::alert::table
         .inner_join(
             schema::boundary::table.inner_join(
-                schema::metric::table.inner_join(
+                view::metric_boundary::table.inner_join(
                     schema::report_benchmark::table
                         .inner_join(schema::report::table)
                         .inner_join(schema::benchmark::table),
@@ -914,7 +913,7 @@ fn get_report_alerts(
             schema::report_benchmark::iteration,
             QueryAlert::as_select(),
             QueryBenchmark::as_select(),
-            QueryMetric::as_select(),
+            QueryMetricBoundary::as_select(),
             QueryBoundary::as_select(),
         ))
         .load::<(
@@ -923,7 +922,7 @@ fn get_report_alerts(
             Iteration,
             QueryAlert,
             QueryBenchmark,
-            QueryMetric,
+            QueryMetricBoundary,
             QueryBoundary,
         )>(conn)
         .map_err(resource_not_found_err!(Alert, report_id))?;
@@ -935,7 +934,7 @@ fn get_report_alerts(
         iteration,
         query_alert,
         query_benchmark,
-        query_metric,
+        query_metric_boundary,
         query_boundary,
     ) in alerts
     {
@@ -949,7 +948,7 @@ fn get_report_alerts(
             spec_id,
             iteration,
             query_benchmark,
-            query_metric,
+            query_metric_boundary,
             query_boundary,
         )?;
         report_alerts.push(json_alert);

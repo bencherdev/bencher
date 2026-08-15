@@ -513,7 +513,6 @@ fn new_perf_metric(
 
     let (threshold, alert) = threshold_model_alert(project, tma);
     let (metric, boundary) = QueryMetricBoundary::split(query_metric_boundary);
-    let metric = metric.into_json();
     let boundary = boundary.map(QueryBoundary::into_json);
 
     JsonPerfMetric {

@@ -254,6 +254,7 @@ dependencies = [
  "bencher_rbac",
  "bencher_schema",
  "diesel",
+ "diesel_migrations",
  "dropshot",
  "futures",
  "http 1.4.1",
@@ -263,6 +264,7 @@ dependencies = [
  "serde_json",
  "slog",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

@@ -222,7 +222,6 @@ fn metric_query_json(
     let (threshold, alert) = threshold_model_alert(project, tma);
     let (metric, boundary) = QueryMetricBoundary::split(query_metric_boundary);
     let metric_uuid = metric.uuid;
-    let metric = metric.into_json();
     let boundary = boundary.map(QueryBoundary::into_json);
 
     Ok(JsonOneMetric {
