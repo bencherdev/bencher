@@ -108,13 +108,27 @@ impl InsertMetric {
 
     /// The bounds, which a metric has zero, one, or two of.
     ///
-    /// STUB: the metric triple does not yet explode into its named rows.
+    /// `lower_value` and `upper_value` are ordinary named rows: the metric triple
+    /// is a convention over three names, not a shape the table knows about.
     pub fn bounds(
-        _report_benchmark_id: ReportBenchmarkId,
-        _measure_id: MeasureId,
-        _metric: JsonNewMetric,
+        report_benchmark_id: ReportBenchmarkId,
+        measure_id: MeasureId,
+        metric: JsonNewMetric,
     ) -> Vec<Self> {
-        Vec::new()
+        let JsonNewMetric {
+            value: _,
+            lower_value,
+            upper_value,
+        } = metric;
+        [
+            (MetricName::lower_value(), lower_value),
+            (MetricName::upper_value(), upper_value),
+        ]
+        .into_iter()
+        .filter_map(|(name, bound)| {
+            bound.map(|bound| Self::new(report_benchmark_id, measure_id, name, bound.into()))
+        })
+        .collect()
     }
 
     fn new(
