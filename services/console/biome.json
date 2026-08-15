@@ -1,13 +1,7 @@
 {
 	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
 	"files": {
-		"ignore": [
-			"./.astro/",
-			"./.wrangler/",
-			"./netlify/",
-			"./dist/",
-			"./src/types/bencher.ts"
-		]
+		"ignore": ["./.astro/", "./.wrangler/", "./dist/", "./src/types/bencher.ts"]
 	},
 	"linter": {
 		"enabled": true,

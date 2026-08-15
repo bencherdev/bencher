@@ -1,6 +1,6 @@
 ---
 // Inline SVG source at build time so the component works in both dev and
-// production builds (Netlify output bundles the compiled component to a
+// production builds (production output bundles the compiled component to a
 // different directory than the source, so `readFileSync` at runtime fails).
 const logoModules = import.meta.glob("./logos/*.svg", {
 	query: "?raw",
