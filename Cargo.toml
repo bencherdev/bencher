@@ -101,7 +101,7 @@ criterion = "0.8"
 css-inline = { version = "0.20", default-features = false }
 dashmap = "6.1"
 derive_more = { version = "2.1", features = ["display"] }
-diesel = { version = "2.3", default-features = false, features = ["r2d2", "with-deprecated"] }
+diesel = { version = "2.3", default-features = false, features = ["r2d2", "serde_json", "with-deprecated"] }
 diesel_migrations = "2.3"
 dotenvy = "0.15"
 email_address = "0.2"

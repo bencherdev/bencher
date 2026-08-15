@@ -22,6 +22,7 @@ pub mod key;
 pub mod measure;
 pub mod metric;
 pub mod model;
+pub mod parameter;
 pub mod perf;
 pub mod plot;
 pub mod report;
