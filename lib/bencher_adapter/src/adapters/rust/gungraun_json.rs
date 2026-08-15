@@ -95,7 +95,7 @@ fn parse_benchmark(input: &str) -> Option<(BenchmarkName, Vec<GungraunMeasure>)>
             ToolMetricSummary::Dhat(metrics_summary) => parse_dhat_metrics_summary(metrics_summary),
             ToolMetricSummary::ErrorTool(metrics_summary) => match profile.tool {
                 ValgrindTool::Memcheck => parse_memcheck_metrics_summary(metrics_summary),
-                ValgrindTool::Helgrind => parse_helgind_metrics_summary(metrics_summary),
+                ValgrindTool::Helgrind => parse_helgrind_metrics_summary(metrics_summary),
                 ValgrindTool::DRD => parse_drd_metrics_summary(metrics_summary),
                 // These other tools are no error tools and are already covered
                 ValgrindTool::Callgrind
@@ -148,7 +148,7 @@ fn parse_drd_metrics_summary(metrics_summary: MetricsSummary<ErrorMetric>) -> Ve
         .collect()
 }
 
-fn parse_helgind_metrics_summary(
+fn parse_helgrind_metrics_summary(
     metrics_summary: MetricsSummary<ErrorMetric>,
 ) -> Vec<GungraunMeasure> {
     metrics_summary
