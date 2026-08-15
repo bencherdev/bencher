@@ -1,5 +1,6 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 
+use crate::{Adaptable, AdapterResults, Settings, results::adapter_results::GungraunMeasure};
 use gungraun_summary::{
     either_or_both::EitherOrBoth,
     util::SummaryByVersion,
@@ -8,10 +9,6 @@ use gungraun_summary::{
         MetricsDiff, MetricsSummary, ToolMetricSummary, ValgrindTool,
     },
 };
-use std::fmt::Write as _;
-use std::str::Lines;
-
-use crate::{Adaptable, AdapterResults, Settings, results::adapter_results::GungraunMeasure};
 
 pub struct AdapterRustGungraunJson;
 
@@ -38,15 +35,22 @@ impl Adaptable for AdapterRustGungraunJson {
 /// ignores intermixed json output from other tools or cargo itself, for example `cargo bench
 /// --message-format=json`.
 fn parse_multiple(input: &str) -> Option<Vec<(BenchmarkName, Vec<GungraunMeasure>)>> {
-    let mut lines = input.lines();
+    let lines = input.lines().collect::<Vec<_>>();
 
     let mut parsed = vec![];
-    while let Some(line) = lines.next() {
+    let mut index = 0;
+    while let Some(line) = lines.get(index) {
         let trimmed = line.trim();
         if trimmed == "{" {
             let indent = line.len() - line.trim_start().len();
-            if let Some(one) = parse_benchmark_pretty(&mut lines, indent) {
-                parsed.push(one);
+            // A block that is never closed is not a benchmark, so resume on the line after the
+            // opening brace instead of consuming the rest of the input.
+            if let Some((end, block)) = pretty_block(&lines, index, indent) {
+                if let Some(one) = parse_benchmark(&block) {
+                    parsed.push(one);
+                }
+                index = end.saturating_add(1);
+                continue;
             }
         } else if trimmed.starts_with('{')
             && trimmed.ends_with('}')
@@ -54,26 +58,24 @@ fn parse_multiple(input: &str) -> Option<Vec<(BenchmarkName, Vec<GungraunMeasure
         {
             parsed.push(one);
         }
+        index = index.saturating_add(1);
     }
 
     (!parsed.is_empty()).then_some(parsed)
 }
 
-fn parse_benchmark_pretty(
-    lines: &mut Lines<'_>,
-    indent: usize,
-) -> Option<(BenchmarkName, Vec<GungraunMeasure>)> {
-    let mut payload = "{".to_owned();
-    for line in lines {
-        writeln!(payload, "{line}").ok()?;
+/// Find the pretty printed block opened at `start`, returning the index of its closing line and
+/// the block itself. Returns `None` if the block is never closed at the opening indent.
+fn pretty_block(lines: &[&str], start: usize, indent: usize) -> Option<(usize, String)> {
+    let end = lines
+        .iter()
+        .enumerate()
+        .skip(start.saturating_add(1))
+        .find_map(|(index, line)| {
+            (line.trim() == "}" && line.len() - line.trim_start().len() == indent).then_some(index)
+        })?;
 
-        let trimmed = line.trim();
-        if trimmed == "}" && line.len() - line.trim_start().len() == indent {
-            break;
-        }
-    }
-
-    parse_benchmark(payload.as_str())
+    Some((end, lines.get(start..=end)?.join("\n")))
 }
 
 fn parse_benchmark(input: &str) -> Option<(BenchmarkName, Vec<GungraunMeasure>)> {
@@ -730,6 +732,15 @@ pub(crate) mod test_rust_gungraun_json {
     fn pretty_mixed_with_foreign_pretty_and_ndjson() {
         let results = convert_file_path::<AdapterRustGungraunJson>(
             "./tool_output/rust/gungraun/json_pretty_mixed_foreign_pretty_and_ndjson.txt",
+        );
+
+        validate_adapter_rust_gungraun_json(&results);
+    }
+
+    #[test]
+    fn truncated_pretty_then_ndjson() {
+        let results = convert_file_path::<AdapterRustGungraunJson>(
+            "./tool_output/rust/gungraun/json_truncated_pretty_then_ndjson.txt",
         );
 
         validate_adapter_rust_gungraun_json(&results);
