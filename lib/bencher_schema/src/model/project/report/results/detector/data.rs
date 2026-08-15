@@ -1,4 +1,5 @@
 use bencher_boundary::MetricsData;
+use bencher_json::MetricName;
 use chrono::offset::Utc;
 use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -35,6 +36,11 @@ pub fn metrics_data(
         .filter(schema::testbed::id.eq(detector.testbed_id))
         .filter(schema::benchmark::id.eq(benchmark_id))
         .filter(schema::metric::measure_id.eq(detector.measure_id))
+        // Detection has only ever gated the `value` scalar, and the sample it is
+        // gated against is the point estimates alone. A measure's bounds are named
+        // rows beside it now, so without this the sample would be a mixture of
+        // measurements and the limits previously computed from them.
+        .filter(schema::metric::name.eq(MetricName::value()))
         .into_boxed();
 
     if let Some(spec_id) = detector.spec_id {
