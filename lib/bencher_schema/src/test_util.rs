@@ -10,7 +10,7 @@
 //! so no concurrent INSERT can interleave between the INSERT and the `last_insert_rowid()` call.
 
 use bencher_json::{
-    DateTime,
+    DateTime, JsonParameters, ParameterUuid,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
@@ -31,6 +31,7 @@ use crate::{
             branch::{BranchId, head::HeadId, head_version::HeadVersionId, version::VersionId},
             measure::MeasureId,
             metric::MetricId,
+            parameter::ParameterId,
             plot::PlotId,
             report::{ReportId, report_benchmark::ReportBenchmarkId},
             testbed::TestbedId,
@@ -504,7 +505,7 @@ pub fn create_report(
         .expect("Failed to get report id")
 }
 
-/// Create a benchmark for testing.
+/// Create a benchmark for testing, with the empty parameter set every benchmark is born with.
 pub fn create_benchmark(
     conn: &mut SqliteConnection,
     project_id: ProjectId,
@@ -524,12 +525,48 @@ pub fn create_benchmark(
         .execute(conn)
         .expect("Failed to insert benchmark");
 
-    diesel::select(last_insert_rowid())
+    let benchmark_id: BenchmarkId = diesel::select(last_insert_rowid())
         .get_result(conn)
-        .expect("Failed to get benchmark id")
+        .expect("Failed to get benchmark id");
+
+    create_parameter(conn, benchmark_id, &JsonParameters::default());
+
+    benchmark_id
 }
 
-/// Create a report benchmark for testing.
+/// Create a parameter set for a benchmark.
+pub fn create_parameter(
+    conn: &mut SqliteConnection,
+    benchmark_id: BenchmarkId,
+    parameters: &JsonParameters,
+) -> ParameterId {
+    diesel::insert_into(schema::parameter::table)
+        .values((
+            schema::parameter::uuid.eq(ParameterUuid::new()),
+            schema::parameter::benchmark_id.eq(benchmark_id),
+            schema::parameter::parameters.eq(parameters),
+            schema::parameter::created.eq(DateTime::TEST),
+            schema::parameter::modified.eq(DateTime::TEST),
+        ))
+        .execute(conn)
+        .expect("Failed to insert parameter");
+
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get parameter id")
+}
+
+/// Get a benchmark's empty parameter set.
+pub fn get_empty_parameter(conn: &mut SqliteConnection, benchmark_id: BenchmarkId) -> ParameterId {
+    schema::parameter::table
+        .filter(schema::parameter::benchmark_id.eq(benchmark_id))
+        .filter(schema::parameter::parameters.eq(JsonParameters::default()))
+        .select(schema::parameter::id)
+        .first(conn)
+        .expect("Failed to get empty parameter set")
+}
+
+/// Create a report benchmark for testing, on the benchmark's empty parameter set.
 pub fn create_report_benchmark(
     conn: &mut SqliteConnection,
     report_benchmark_uuid: &str,
@@ -537,12 +574,33 @@ pub fn create_report_benchmark(
     iteration: i32,
     benchmark_id: BenchmarkId,
 ) -> ReportBenchmarkId {
+    let parameter_id = get_empty_parameter(conn, benchmark_id);
+    create_report_benchmark_for_parameter(
+        conn,
+        report_benchmark_uuid,
+        report_id,
+        iteration,
+        benchmark_id,
+        parameter_id,
+    )
+}
+
+/// Create a report benchmark for testing, on an explicit parameter set.
+pub fn create_report_benchmark_for_parameter(
+    conn: &mut SqliteConnection,
+    report_benchmark_uuid: &str,
+    report_id: ReportId,
+    iteration: i32,
+    benchmark_id: BenchmarkId,
+    parameter_id: ParameterId,
+) -> ReportBenchmarkId {
     diesel::insert_into(schema::report_benchmark::table)
         .values((
             schema::report_benchmark::uuid.eq(report_benchmark_uuid),
             schema::report_benchmark::report_id.eq(report_id),
             schema::report_benchmark::iteration.eq(iteration),
             schema::report_benchmark::benchmark_id.eq(benchmark_id),
+            schema::report_benchmark::parameter_id.eq(parameter_id),
         ))
         .execute(conn)
         .expect("Failed to insert report_benchmark");

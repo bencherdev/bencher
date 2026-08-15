@@ -11,7 +11,7 @@
 
 use bencher_api_tests::{
     TestServer,
-    helpers::{base_timestamp, create_test_report, get_project_id},
+    helpers::{base_timestamp, create_empty_parameter, create_test_report, get_project_id},
 };
 use bencher_json::{BenchmarkUuid, JsonOneMetric, MeasureUuid, MetricUuid, ReportBenchmarkUuid};
 use bencher_schema::{
@@ -46,6 +46,7 @@ fn create_test_metric(server: &TestServer, project_id: i32, report_id: i32) -> M
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("Failed to get benchmark ID");
+    let parameter_id = create_empty_parameter(&mut conn, benchmark_id);
 
     // Measure
     let measure_uuid = MeasureUuid::new();
@@ -75,6 +76,7 @@ fn create_test_metric(server: &TestServer, project_id: i32, report_id: i32) -> M
             schema::report_benchmark::report_id.eq(report_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(benchmark_id),
+            schema::report_benchmark::parameter_id.eq(parameter_id),
         ))
         .execute(&mut conn)
         .expect("Failed to insert report_benchmark");
