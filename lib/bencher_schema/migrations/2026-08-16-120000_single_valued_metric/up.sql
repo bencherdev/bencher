@@ -36,11 +36,22 @@ SELECT id,
     'value',
     value
 FROM metric;
+-- The 48 bit millisecond prefix that every minted uuid shares, computed once for
+-- the whole migration rather than per row, so that all of the new rows append to
+-- one point on the right edge of the uuid index instead of scattering across every
+-- page of it. That is worth the temporary table at this volume.
+-- `julianday` rather than `unixepoch('now', 'subsec')`, which is newer than the
+-- oldest SQLite that can otherwise run this migration.
+CREATE TEMP TABLE metric_uuid_prefix AS
+SELECT printf(
+        '%012x',
+        CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)
+    ) AS prefix;
 -- Each stored bound becomes its own row under its conventional name. The id is
 -- assigned rather than kept, because it is a new row.
--- Pure SQL has no UUIDv7 function, so the UUID is a v4 minted from `randomblob`:
--- 16 random bytes with the version nibble set to 4 and the variant nibble drawn
--- from `89ab`. `random() & 3` is used rather than `abs(random()) % 4` because
+-- The uuid is v7 shaped: the shared millisecond prefix, the version nibble 7, and
+-- `randomblob` for the rest. The variant nibble is drawn from `89ab` by
+-- `random() & 3` rather than `abs(random()) % 4`, because
 -- `abs(-9223372036854775808)` is an integer overflow error in SQLite.
 INSERT INTO up_metric(
         uuid,
@@ -50,14 +61,15 @@ INSERT INTO up_metric(
         value
     )
 SELECT lower(
-        hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', (random() & 3) + 1, 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))
+        substr(metric_uuid_prefix.prefix, 1, 8) || '-' || substr(metric_uuid_prefix.prefix, 9, 4) || '-7' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', (random() & 3) + 1, 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))
     ),
-    report_benchmark_id,
-    measure_id,
+    metric.report_benchmark_id,
+    metric.measure_id,
     'lower_value',
-    lower_value
-FROM metric
-WHERE lower_value IS NOT NULL;
+    metric.lower_value
+FROM metric,
+    metric_uuid_prefix
+WHERE metric.lower_value IS NOT NULL;
 INSERT INTO up_metric(
         uuid,
         report_benchmark_id,
@@ -66,14 +78,16 @@ INSERT INTO up_metric(
         value
     )
 SELECT lower(
-        hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', (random() & 3) + 1, 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))
+        substr(metric_uuid_prefix.prefix, 1, 8) || '-' || substr(metric_uuid_prefix.prefix, 9, 4) || '-7' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', (random() & 3) + 1, 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))
     ),
-    report_benchmark_id,
-    measure_id,
+    metric.report_benchmark_id,
+    metric.measure_id,
     'upper_value',
-    upper_value
-FROM metric
-WHERE upper_value IS NOT NULL;
+    metric.upper_value
+FROM metric,
+    metric_uuid_prefix
+WHERE metric.upper_value IS NOT NULL;
+DROP TABLE temp.metric_uuid_prefix;
 DROP TABLE metric;
 ALTER TABLE up_metric
     RENAME TO metric;
