@@ -3,8 +3,8 @@
 //! These helpers are used by both `api_projects` and `api_runners` integration tests.
 
 use bencher_json::{
-    BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, JsonParameters, Jwt, ParameterUuid,
-    ReportUuid, ResourceName, TestbedUuid, TokenUuid, VersionUuid,
+    BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, JsonParameters, Jwt, MetricName,
+    MetricUuid, ParameterUuid, ReportUuid, ResourceName, TestbedUuid, TokenUuid, VersionUuid,
 };
 use bencher_schema::{context::DbConnection, model::user::UserId, schema};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -209,6 +209,53 @@ pub fn seed_token(server: &TestServer, user: &TestUser, name: &str) -> TestToken
         .expect("Failed to insert token");
 
     TestToken { uuid, token: jwt }
+}
+
+/// Insert a metric as its named rows.
+///
+/// The point estimate carries `metric_uuid` and the name `value`; each bound that
+/// is present becomes its own row under its conventional name. This is the shape
+/// the metric triple takes in storage, so tests seeding metrics by hand write it
+/// the way ingest does.
+#[expect(clippy::expect_used, reason = "test helper inserting metric rows")]
+pub fn create_metric(
+    conn: &mut DbConnection,
+    metric_uuid: &MetricUuid,
+    report_benchmark_id: i32,
+    measure_id: i32,
+    value: f64,
+    lower_value: Option<f64>,
+    upper_value: Option<f64>,
+) {
+    diesel::insert_into(schema::metric::table)
+        .values((
+            schema::metric::uuid.eq(metric_uuid),
+            schema::metric::report_benchmark_id.eq(report_benchmark_id),
+            schema::metric::measure_id.eq(measure_id),
+            schema::metric::name.eq(MetricName::value()),
+            schema::metric::value.eq(value),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert metric value");
+
+    for (name, bound) in [
+        (MetricName::lower_value(), lower_value),
+        (MetricName::upper_value(), upper_value),
+    ] {
+        let Some(bound) = bound else {
+            continue;
+        };
+        diesel::insert_into(schema::metric::table)
+            .values((
+                schema::metric::uuid.eq(MetricUuid::new()),
+                schema::metric::report_benchmark_id.eq(report_benchmark_id),
+                schema::metric::measure_id.eq(measure_id),
+                schema::metric::name.eq(name),
+                schema::metric::value.eq(bound),
+            ))
+            .execute(&mut *conn)
+            .expect("Failed to insert metric bound");
+    }
 }
 
 /// Set job status directly in the database.

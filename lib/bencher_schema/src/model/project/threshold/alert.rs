@@ -22,11 +22,12 @@ use crate::{
             ProjectId, QueryProject,
             benchmark::QueryBenchmark,
             branch::{head::HeadId, version::VersionId},
-            metric::QueryMetric,
+            metric_boundary::QueryMetricBoundary,
         },
         spec::SpecId,
     },
     schema::{self, alert as alert_table},
+    view,
 };
 
 crate::macros::typed_id::typed_id!(AlertId);
@@ -100,13 +101,13 @@ impl QueryAlert {
             spec_id,
             iteration,
             query_benchmark,
-            query_metric,
+            query_metric_boundary,
             query_boundary,
         ) = schema::alert::table
             .filter(schema::alert::id.eq(self.id))
             .inner_join(
                 schema::boundary::table.inner_join(
-                    schema::metric::table.inner_join(
+                    view::metric_boundary::table.inner_join(
                         schema::report_benchmark::table
                             .inner_join(schema::report::table)
                             .inner_join(schema::benchmark::table),
@@ -121,7 +122,7 @@ impl QueryAlert {
                 schema::report::spec_id,
                 schema::report_benchmark::iteration,
                 QueryBenchmark::as_select(),
-                QueryMetric::as_select(),
+                QueryMetricBoundary::as_select(),
                 QueryBoundary::as_select(),
             ))
             .first::<(
@@ -132,7 +133,7 @@ impl QueryAlert {
                 Option<SpecId>,
                 Iteration,
                 QueryBenchmark,
-                QueryMetric,
+                QueryMetricBoundary,
                 QueryBoundary,
             )>(conn)
             .map_err(resource_not_found_err!(Alert, self))?;
@@ -147,7 +148,7 @@ impl QueryAlert {
             spec_id,
             iteration,
             query_benchmark,
-            query_metric,
+            query_metric_boundary,
             query_boundary,
         )
     }
@@ -167,7 +168,7 @@ impl QueryAlert {
         spec_id: Option<SpecId>,
         iteration: Iteration,
         query_benchmark: QueryBenchmark,
-        query_metric: QueryMetric,
+        query_metric_boundary: QueryMetricBoundary,
         query_boundary: QueryBoundary,
     ) -> Result<JsonAlert, HttpError> {
         let Self {
@@ -190,7 +191,7 @@ impl QueryAlert {
             report: report_uuid,
             iteration,
             benchmark: query_benchmark.into_json_for_project(project),
-            metric: query_metric.into_json(),
+            metric: query_metric_boundary.into_json_metric(),
             threshold,
             boundary: query_boundary.into_json(),
             limit: boundary_limit,

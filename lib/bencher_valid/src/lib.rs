@@ -14,6 +14,7 @@ mod image_digest;
 mod index;
 mod jwt;
 pub mod keys;
+mod metric_name;
 mod model;
 mod name_id;
 mod non_empty;
@@ -43,6 +44,7 @@ pub use error::ValidError;
 pub use index::Index;
 pub use jwt::Jwt;
 pub use keys::{BencherKey, ProjectKey, ProjectKeyHash, UserKey, UserKeyHash};
+pub use metric_name::MetricName;
 pub use model::{
     Model,
     boundary::{Boundary, CdfBoundary, IqrBoundary, PercentageBoundary},

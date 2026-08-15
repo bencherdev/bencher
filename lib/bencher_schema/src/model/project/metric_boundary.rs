@@ -1,10 +1,9 @@
-use bencher_json::{BoundaryUuid, MetricUuid};
+use bencher_json::{BoundaryUuid, JsonMetric, MetricUuid};
 
 use crate::{model::project::metric::MetricId, view::metric_boundary as metric_boundary_table};
 
 use super::{
     measure::{MeasureId, QueryMeasure},
-    metric::QueryMetric,
     report::report_benchmark::{QueryReportBenchmark, ReportBenchmarkId},
     threshold::{
         ThresholdId,
@@ -40,12 +39,18 @@ pub struct QueryMetricBoundary {
 }
 
 impl QueryMetricBoundary {
-    pub fn split(self) -> (QueryMetric, Option<QueryBoundary>) {
+    /// The view pivots the named rows back into the metric triple, so the JSON it
+    /// yields is the same JSON the row-per-measure table yielded.
+    pub fn into_json_metric(self) -> JsonMetric {
+        self.split().0
+    }
+
+    pub fn split(self) -> (JsonMetric, Option<QueryBoundary>) {
         let Self {
             metric_id,
             metric_uuid,
-            report_benchmark_id,
-            measure_id,
+            report_benchmark_id: _,
+            measure_id: _,
             value,
             lower_value,
             upper_value,
@@ -57,14 +62,11 @@ impl QueryMetricBoundary {
             lower_limit,
             upper_limit,
         } = self;
-        let query_metric = QueryMetric {
-            id: metric_id,
+        let json_metric = JsonMetric {
             uuid: metric_uuid,
-            report_benchmark_id,
-            measure_id,
-            value,
-            lower_value,
-            upper_value,
+            value: value.into(),
+            lower_value: lower_value.map(Into::into),
+            upper_value: upper_value.map(Into::into),
         };
         let query_boundary = if let (Some(id), Some(uuid), Some(threshold_id), Some(model_id)) =
             (boundary_id, boundary_uuid, threshold_id, model_id)
@@ -82,6 +84,6 @@ impl QueryMetricBoundary {
         } else {
             None
         };
-        (query_metric, query_boundary)
+        (json_metric, query_boundary)
     }
 }

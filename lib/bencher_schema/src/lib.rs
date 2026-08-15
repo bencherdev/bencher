@@ -20,7 +20,12 @@ pub use context::ApiContext;
 #[cfg(feature = "plus")]
 pub use context::{HeaderMap, RateLimiting};
 
-const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
+/// The migrations this binary carries.
+///
+/// Public so that tests can drive them with `MigrationHarness` directly: putting a
+/// database back into the shape a migration found it in, and reading it with the
+/// same binary, is how a migration's claim to leave responses unchanged is checked.
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 // TODO Custom max TTL
 pub const INVITE_TOKEN_TTL: u32 = u32::MAX;
