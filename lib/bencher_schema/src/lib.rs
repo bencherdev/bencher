@@ -4,6 +4,8 @@ use diesel::{RunQueryDsl as _, connection::SimpleConnection as _};
 use diesel_migrations::{
     EmbeddedMigrations, HarnessWithOutput, MigrationHarness as _, embed_migrations,
 };
+// Linked for the bundled SQLite amalgamation, which the migrations need for `jsonb()`.
+use libsqlite3_sys as _;
 
 pub mod context;
 pub mod error;
