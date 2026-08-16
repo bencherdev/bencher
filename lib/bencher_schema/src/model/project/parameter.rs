@@ -256,6 +256,24 @@ mod tests {
             .value
     }
 
+    /// A scalar SQL expression over a blob bound directly, for encoded bytes that
+    /// never reach the column.
+    fn blob_text(conn: &mut SqliteConnection, sql: &str, blob: Vec<u8>) -> String {
+        diesel::sql_query(format!("SELECT {sql} AS value"))
+            .bind::<diesel::sql_types::Binary, _>(blob)
+            .get_result::<SqlText>(conn)
+            .expect("Failed to read the encoded parameter set")
+            .value
+    }
+
+    fn blob_integer(conn: &mut SqliteConnection, sql: &str, blob: Vec<u8>) -> i32 {
+        diesel::sql_query(format!("SELECT {sql} AS value"))
+            .bind::<diesel::sql_types::Binary, _>(blob)
+            .get_result::<SqlInteger>(conn)
+            .expect("Failed to read the encoded parameter set")
+            .value
+    }
+
     /// Mint a parameter set with `SQLite`'s `jsonb()`, the migration's write path.
     fn mint_parameter(
         conn: &mut SqliteConnection,
@@ -351,6 +369,10 @@ mod tests {
                 Encode::Encoder => {
                     // `{"x":null}`. Scalar only validation rejects a null value, so
                     // this one set is encoded directly rather than through the column.
+                    // The column write, the unique collision and the `FromSql` round
+                    // trip are the only assertions that need the column, so the bytes
+                    // are bound directly and still checked against `jsonb()`,
+                    // `json_valid()` and `json()`.
                     let mut object = jsonb::Object::default();
                     object
                         .insert_null("x")
@@ -360,6 +382,16 @@ mod tests {
                         hex(&blob),
                         minted,
                         "{name}: the encoded bytes must be the bytes jsonb() mints"
+                    );
+                    assert_eq!(
+                        blob_integer(&mut conn, "json_valid(?, 8)", blob.clone()),
+                        1,
+                        "{name}: SQLite's JSON functions must accept the encoded bytes"
+                    );
+                    assert_eq!(
+                        blob_text(&mut conn, "json(?)", blob),
+                        *canonical,
+                        "{name}: the canonical text must survive the encoder unchanged"
                     );
                 },
             }
