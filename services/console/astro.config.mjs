@@ -218,8 +218,11 @@ export default defineConfig({
 	// https://docs.astro.build/en/guides/markdown-content/
 	markdown: {
 		processor: satteri({
+			// Passed as factories, not instances: Sätteri calls each one per document,
+			// so the heading slugger starts fresh instead of carrying its
+			// deduplication counter across every page on the site.
 			// Heading ids must be assigned before the autolink can point at them.
-			hastPlugins: [satteriHeadingIdsPlugin(), headingAutolink()],
+			hastPlugins: [satteriHeadingIdsPlugin, headingAutolink],
 		}),
 	},
 });
