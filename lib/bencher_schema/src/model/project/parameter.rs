@@ -131,14 +131,342 @@ mod tests {
     };
     use diesel_migrations::MigrationHarness as _;
 
+    use bencher_json::project::parameter::jsonb;
+
     use crate::{
         model::project::benchmark::BenchmarkId,
         schema,
-        test_util::{create_base_entities, create_benchmark, setup_test_db},
+        test_util::{
+            create_base_entities, create_benchmark, create_parameter, get_empty_parameter,
+            setup_test_db,
+        },
     };
+
+    /// Where the blob under test comes from.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum Encode {
+        /// Written through the `parameter.parameters` column: the production path.
+        Column,
+        /// Encoded directly. Parameter values are scalar only, so a null value
+        /// never reaches the column, but the encoder still has to agree with SQLite.
+        Encoder,
+    }
+
+    /// Every parameter set that has to encode to the same bytes as SQLite's `jsonb()`.
+    ///
+    /// Each entry is already in its RFC 8785 (JCS) canonical form. The set covers
+    /// the shapes a parameter value can take: strings that need JSON escapes and
+    /// strings that do not, exponent form floats, integers above `i64`, control and
+    /// supplementary plane characters, and key orders where the UTF-16 sort differs
+    /// from the UTF-8 one.
+    const CONFORMANCE: &[(&str, &str, Encode)] = &[
+        ("empty", "{}", Encode::Column),
+        (
+            "realistic",
+            r#"{"label":"say \"hi\"","path":"C:\\bench\\x","tolerance":1e-7}"#,
+            Encode::Column,
+        ),
+        (
+            "scalars",
+            r#"{"debug":true,"os":"linux","threads":4}"#,
+            Encode::Column,
+        ),
+        ("null", r#"{"x":null}"#, Encode::Encoder),
+        ("float-simple", r#"{"a":0.1,"z":16.5}"#, Encode::Column),
+        ("float-tiny", r#"{"b":1e-7}"#, Encode::Column),
+        ("float-huge", r#"{"c":1e+21}"#, Encode::Column),
+        ("float-min-sub", r#"{"d":5e-324}"#, Encode::Column),
+        (
+            "float-max",
+            r#"{"e":1.7976931348623157e+308}"#,
+            Encode::Column,
+        ),
+        ("big-int", r#"{"n":10000000000000000000}"#, Encode::Column),
+        ("int-2p53", r#"{"n":9007199254740992}"#, Encode::Column),
+        ("neg", r#"{"n":-1}"#, Encode::Column),
+        ("str-quote", r#"{"q":"say \"hi\""}"#, Encode::Column),
+        ("str-backslash", r#"{"s":"a\\b"}"#, Encode::Column),
+        ("str-newline", r#"{"s":"x\ny"}"#, Encode::Column),
+        ("str-tab", r#"{"s":"a\tb"}"#, Encode::Column),
+        ("str-del", "{\"s\":\"a\u{7f}b\"}", Encode::Column),
+        ("str-unicode", r#"{"s":"héllo"}"#, Encode::Column),
+        (
+            "nonbmp-keys",
+            "{\"\u{1f600}\":1,\"\u{fb33}\":2}",
+            Encode::Column,
+        ),
+    ];
+
+    #[derive(diesel::QueryableByName)]
+    struct SqlText {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        value: String,
+    }
+
+    #[derive(diesel::QueryableByName)]
+    struct SqlInteger {
+        #[diesel(sql_type = diesel::sql_types::Integer)]
+        value: i32,
+    }
 
     fn parameters(parameters: &str) -> JsonParameters {
         parameters.parse().expect("Failed to parse parameters")
+    }
+
+    fn hex(blob: &[u8]) -> String {
+        blob.iter().map(|byte| format!("{byte:02X}")).collect()
+    }
+
+    /// The bytes SQLite's own `jsonb()` produces for a canonical text.
+    fn sqlite_jsonb(conn: &mut SqliteConnection, canonical: &str) -> String {
+        diesel::sql_query("SELECT hex(jsonb(?)) AS value")
+            .bind::<diesel::sql_types::Text, _>(canonical)
+            .get_result::<SqlText>(conn)
+            .expect("Failed to mint a JSONB blob")
+            .value
+    }
+
+    /// A scalar SQL expression over one stored parameter set.
+    fn parameter_text(
+        conn: &mut SqliteConnection,
+        parameter_id: super::ParameterId,
+        sql: &str,
+    ) -> String {
+        diesel::sql_query(format!("SELECT {sql} AS value FROM parameter WHERE id = ?"))
+            .bind::<diesel::sql_types::Integer, _>(parameter_id)
+            .get_result::<SqlText>(conn)
+            .expect("Failed to read the parameter set")
+            .value
+    }
+
+    fn parameter_integer(
+        conn: &mut SqliteConnection,
+        parameter_id: super::ParameterId,
+        sql: &str,
+    ) -> i32 {
+        diesel::sql_query(format!("SELECT {sql} AS value FROM parameter WHERE id = ?"))
+            .bind::<diesel::sql_types::Integer, _>(parameter_id)
+            .get_result::<SqlInteger>(conn)
+            .expect("Failed to read the parameter set")
+            .value
+    }
+
+    /// Mint a parameter set with SQLite's `jsonb()`, the migration's write path.
+    fn mint_parameter(
+        conn: &mut SqliteConnection,
+        benchmark_id: BenchmarkId,
+        canonical: &str,
+    ) -> QueryResult<usize> {
+        diesel::sql_query(
+            "INSERT INTO parameter(uuid, benchmark_id, parameters, created, modified)
+             VALUES (?, ?, jsonb(?), 0, 0)",
+        )
+        .bind::<diesel::sql_types::Text, _>(ParameterUuid::new().to_string())
+        .bind::<diesel::sql_types::Integer, _>(benchmark_id)
+        .bind::<diesel::sql_types::Text, _>(canonical)
+        .execute(conn)
+    }
+
+    fn is_unique_violation(result: &QueryResult<usize>) -> bool {
+        matches!(
+            result,
+            Err(diesel::result::Error::DatabaseError(
+                diesel::result::DatabaseErrorKind::UniqueViolation,
+                _
+            ))
+        )
+    }
+
+    /// Whether a write either landed or collided on the unique constraint,
+    /// as opposed to failing for some other reason.
+    fn landed_or_collided(result: &QueryResult<usize>) -> bool {
+        match result {
+            Ok(_) => true,
+            Err(_) => is_unique_violation(result),
+        }
+    }
+
+    /// The parameter set a benchmark was born with, or a freshly written one.
+    fn write_parameter(
+        conn: &mut SqliteConnection,
+        benchmark_id: BenchmarkId,
+        parameters: &JsonParameters,
+    ) -> super::ParameterId {
+        if parameters.is_empty() {
+            get_empty_parameter(conn, benchmark_id)
+        } else {
+            create_parameter(conn, benchmark_id, parameters)
+        }
+    }
+
+    // The encoder has to be byte identical to SQLite's `jsonb()` over the same
+    // canonical text, because `UNIQUE(benchmark_id, parameters)` compares bytes and
+    // both writers reach that column: the migration mints the empty set with
+    // `jsonb('{}')` and everything after that is written through Diesel.
+    #[test]
+    fn byte_agreement_with_sqlite_jsonb() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let benchmark_id = create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "bench1",
+            "bench1",
+        );
+
+        for (name, canonical, encode) in CONFORMANCE {
+            let minted = sqlite_jsonb(&mut conn, canonical);
+            match encode {
+                Encode::Column => {
+                    let parameters = parameters(canonical);
+                    assert_eq!(
+                        parameters.canonical(),
+                        *canonical,
+                        "{name}: the conformance text is already canonical"
+                    );
+
+                    let parameter_id = write_parameter(&mut conn, benchmark_id, &parameters);
+                    assert_eq!(
+                        parameter_text(&mut conn, parameter_id, "hex(parameters)"),
+                        minted,
+                        "{name}: the written bytes must be the bytes jsonb() mints"
+                    );
+                    assert_eq!(
+                        parameter_integer(&mut conn, parameter_id, "json_valid(parameters, 8)"),
+                        1,
+                        "{name}: SQLite's JSON functions must accept the written bytes"
+                    );
+                    assert_eq!(
+                        parameter_text(&mut conn, parameter_id, "json(parameters)"),
+                        *canonical,
+                        "{name}: the canonical text must survive the column unchanged"
+                    );
+                },
+                Encode::Encoder => {
+                    // `{"x":null}`. Scalar only validation rejects a null value, so
+                    // this one set is encoded directly rather than through the column.
+                    let mut object = jsonb::Object::default();
+                    object
+                        .insert_null("x")
+                        .expect("Failed to encode a null member");
+                    let blob = object.into_blob().expect("Failed to encode the object");
+                    assert_eq!(
+                        hex(&blob),
+                        minted,
+                        "{name}: the encoded bytes must be the bytes jsonb() mints"
+                    );
+                },
+            }
+        }
+    }
+
+    // A parameter set read back out of the column has to be the set that was
+    // written, whichever writer wrote it, and re-canonicalizing it has to land on
+    // the same text or the unique constraint stops holding.
+    #[test]
+    fn parameters_read_back_from_both_writers() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let written = create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "bench1",
+            "bench1",
+        );
+        let minted = create_benchmark(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000011",
+            "bench2",
+            "bench2",
+        );
+        // SQLite mints every set under this benchmark, the empty one included, so
+        // the Diesel written set it was born with is cleared out of the way first.
+        diesel::delete(schema::parameter::table.filter(schema::parameter::benchmark_id.eq(minted)))
+            .execute(&mut conn)
+            .expect("Failed to clear the minted benchmark's parameter sets");
+
+        for (name, canonical, encode) in CONFORMANCE {
+            if *encode != Encode::Column {
+                continue;
+            }
+            let parameters = parameters(canonical);
+
+            let parameter_id = write_parameter(&mut conn, written, &parameters);
+            let read: JsonParameters = schema::parameter::table
+                .filter(schema::parameter::id.eq(parameter_id))
+                .select(schema::parameter::parameters)
+                .first(&mut conn)
+                .expect("Failed to read back a written parameter set");
+            assert_eq!(read, parameters, "{name}: written and read back");
+            assert_eq!(
+                read.canonical(),
+                *canonical,
+                "{name}: written stays canonical"
+            );
+
+            mint_parameter(&mut conn, minted, canonical).expect("Failed to mint a parameter set");
+            let read: JsonParameters = schema::parameter::table
+                .filter(schema::parameter::benchmark_id.eq(minted))
+                .order(schema::parameter::id.desc())
+                .select(schema::parameter::parameters)
+                .first(&mut conn)
+                .expect("Failed to read back a minted parameter set");
+            assert_eq!(read, parameters, "{name}: minted and read back");
+            assert_eq!(
+                read.canonical(),
+                *canonical,
+                "{name}: minted stays canonical"
+            );
+        }
+    }
+
+    // The unique constraint is the enforcement point, so a set written through
+    // Diesel and the same set minted by `jsonb()` have to collide on it.
+    #[test]
+    fn write_paths_collide_on_unique() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+
+        for (index, (name, canonical, encode)) in CONFORMANCE.iter().enumerate() {
+            if *encode != Encode::Column {
+                continue;
+            }
+            let benchmark_id = create_benchmark(
+                &mut conn,
+                base.project_id,
+                &format!("00000000-0000-0000-0000-{index:012}"),
+                &format!("bench{index}"),
+                &format!("bench{index}"),
+            );
+
+            // The empty set is already there, written through Diesel when the
+            // benchmark was born, so for that one set the mint is what collides.
+            let minted = mint_parameter(&mut conn, benchmark_id, canonical);
+            let written = insert_parameter(&mut conn, benchmark_id, &parameters(canonical));
+
+            assert!(
+                is_unique_violation(&minted) || is_unique_violation(&written),
+                "{name}: the two writers must collide on UNIQUE(benchmark_id, parameters)"
+            );
+            assert!(
+                landed_or_collided(&minted),
+                "{name}: the mint must either land or collide"
+            );
+            assert!(
+                landed_or_collided(&written),
+                "{name}: the write must either land or collide"
+            );
+
+            let expected = if *canonical == "{}" { 1 } else { 2 };
+            assert_eq!(
+                count_parameters(&mut conn, benchmark_id),
+                expected,
+                "{name}: one row per distinct parameter set"
+            );
+        }
     }
 
     fn insert_parameter(

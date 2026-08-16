@@ -5,6 +5,9 @@ use ordered_float::OrderedFloat;
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser::SerializeMap as _};
 
+#[cfg(feature = "db")]
+pub mod jsonb;
+
 crate::typed_uuid::typed_uuid!(ParameterUuid);
 
 /// A benchmark parameter set: the permutation of inputs that a benchmark ran with.
