@@ -1042,6 +1042,8 @@ export interface JsonPubUser {
 export enum Adapter {
 	Magic = "magic",
 	Json = "json",
+	JsonV0 = "json_v0",
+	JsonV1 = "json_v1",
 	Rust = "rust",
 	RustBench = "rust_bench",
 	RustCriterion = "rust_criterion",

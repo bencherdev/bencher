@@ -1,0 +1,28 @@
+{
+    "tests::canonical": [
+        {
+            "parameters": { "size_mb": 16, "op": "read" },
+            "measures": {
+                "latency": {
+                    "value": 1.0
+                }
+            }
+        },
+        {
+            "parameters": { "op": "read", "size_mb": 16.0 },
+            "measures": {
+                "latency": {
+                    "value": 2.0
+                }
+            }
+        },
+        {
+            "parameters": { "size_mb": 1.6e1, "op": "read" },
+            "measures": {
+                "latency": {
+                    "value": 3.0
+                }
+            }
+        }
+    ]
+}

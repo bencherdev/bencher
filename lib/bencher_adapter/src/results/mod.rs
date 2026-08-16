@@ -1,18 +1,14 @@
-use std::collections::HashMap;
-
-use bencher_json::project::{
-    metric::Mean as _,
-    report::{Adapter, JsonFold},
-};
+use bencher_json::project::report::Adapter;
 
 use crate::{Adaptable as _, AdapterError, Settings};
 
 pub mod adapter_metrics;
 pub mod adapter_results;
+pub mod foldable;
 pub mod results_reducer;
 
-use adapter_results::{AdapterResults, ResultsMap};
-use results_reducer::ResultsReducer;
+use adapter_results::AdapterResults;
+use foldable::FoldableResultsArray;
 
 #[derive(Debug, Clone)]
 pub struct AdapterResultsArray {
@@ -43,47 +39,28 @@ impl AdapterResultsArray {
         Ok(parsed_results_array.into())
     }
 
-    pub fn min(self) -> AdapterResults {
-        self.ord(OrdKind::Min)
+    /// How many named values the per measure cap dropped across every payload.
+    pub fn dropped_names(&self) -> usize {
+        self.inner.iter().map(|results| results.dropped_names).sum()
     }
 
-    pub fn max(self) -> AdapterResults {
-        self.ord(OrdKind::Max)
-    }
-
-    fn ord(self, ord_kind: OrdKind) -> AdapterResults {
-        self.inner.into_iter().fold(
-            HashMap::new().into(),
-            |results: AdapterResults, other_results| {
-                results.combined(other_results, CombinedKind::Ord(ord_kind))
-            },
-        )
-    }
-
-    pub fn mean(self) -> AdapterResults {
-        AdapterResults::mean(self.inner).unwrap_or_default()
-    }
-
-    pub fn median(self) -> AdapterResults {
-        ResultsReducer::from(self)
-            .inner
-            .into_iter()
-            .map(|(benchmark, results)| (benchmark, results.median()))
-            .collect::<ResultsMap>()
-            .into()
-    }
-
-    pub fn fold(self, fold: JsonFold) -> AdapterResults {
-        if self.inner.is_empty() {
-            return AdapterResults::default();
+    /// Every result as a foldable BMF v0 payload, or the array back untouched if
+    /// any member is BMF v1.
+    ///
+    /// Fold is not supported for BMF v1, so a caller handed its array back
+    /// ingests unfolded, one iteration per payload.
+    pub fn foldable(self) -> Result<FoldableResultsArray, Self> {
+        if !self.inner.iter().all(AdapterResults::is_foldable) {
+            return Err(self);
         }
 
-        match fold {
-            JsonFold::Min => self.min(),
-            JsonFold::Max => self.max(),
-            JsonFold::Mean => self.mean(),
-            JsonFold::Median => self.median(),
-        }
+        Ok(FoldableResultsArray {
+            inner: self
+                .inner
+                .into_iter()
+                .map(AdapterResults::into_foldable)
+                .collect(),
+        })
     }
 }
 

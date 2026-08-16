@@ -20,6 +20,8 @@ const SHELL_ICON = "devicon-bash-plain";
 export const adapterIcon = (adapter: Adapter) => {
 	switch (adapter) {
 		case Adapter.Json:
+		case Adapter.JsonV0:
+		case Adapter.JsonV1:
 			return JSON_ICON;
 		case Adapter.RustBench:
 		case Adapter.RustCriterion:
@@ -95,6 +97,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
 		case Adapter.Json:
+		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
+		case Adapter.JsonV0:
+		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
+		case Adapter.JsonV1:
 		default:
 			return `bencher run${host} "bencher mock"`;
 	}

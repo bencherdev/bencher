@@ -13,7 +13,6 @@ plus = ["bencher_json/plus"]
 [dependencies]
 bencher_json = { workspace = true, features = ["server"] }
 gungraun-summary.workspace = true
-literally.workspace = true
 nom.workspace = true
 ordered-float.workspace = true
 rust_decimal = { workspace = true, features = ["serde-with-float"] }

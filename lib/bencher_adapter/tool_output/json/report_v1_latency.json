@@ -1,0 +1,24 @@
+{
+    "tests::benchmark_a": [
+        {
+            "parameters": { "size_mb": 16, "op": "read" },
+            "measures": {
+                "latency": {
+                    "value": 42.0,
+                    "p99": 97.0,
+                    "p50": 40.5
+                }
+            }
+        },
+        {
+            "parameters": { "size_mb": 32, "op": "read" },
+            "measures": {
+                "latency": {
+                    "value": 55.1,
+                    "p99": 120.3,
+                    "p50": 51.9
+                }
+            }
+        }
+    ]
+}
