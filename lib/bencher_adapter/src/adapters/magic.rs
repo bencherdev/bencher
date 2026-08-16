@@ -25,6 +25,7 @@ impl Adaptable for AdapterMagic {
 #[cfg(test)]
 mod test_magic {
     use super::AdapterMagic;
+    use crate::Settings;
     use crate::adapters::{
         c_sharp::{AdapterCSharp, dot_net::test_c_sharp_dot_net},
         cpp::{catch2::test_cpp_catch2, google::test_cpp_google},
@@ -32,7 +33,7 @@ mod test_magic {
         go::bench::test_go_bench,
         java::jmh::test_java_jmh,
         js::{benchmark::test_js_benchmark, time::test_js_time, vitest::test_js_vitest},
-        json::test_json,
+        json::{test_json, v0::test_json_v0, v1::test_json_v1},
         python::{asv::test_python_asv, pytest::test_python_pytest},
         ruby::benchmark::test_ruby_benchmark,
         rust::{
@@ -41,7 +42,7 @@ mod test_magic {
             iai::test_rust_iai,
         },
         shell::hyperfine::test_shell_hyperfine,
-        test_util::convert_file_path,
+        test_util::{convert_file_path, opt_convert_file_path},
     };
 
     #[test]
@@ -54,6 +55,52 @@ mod test_magic {
     fn adapter_magic_json_dhat() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/json/report_dhat.json");
         test_json::validate_adapter_json_dhat(&results);
+    }
+
+    #[test]
+    fn adapter_magic_json_bmf_mixed() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/json/report_bmf_mixed.json");
+        test_json_v0::validate_adapter_json_bmf_mixed(&results);
+    }
+
+    #[test]
+    fn adapter_magic_json_v1_latency() {
+        let results =
+            convert_file_path::<AdapterMagic>("./tool_output/json/report_v1_latency.json");
+        test_json_v1::validate_adapter_json_v1_latency(&results);
+    }
+
+    #[test]
+    fn adapter_magic_json_v1_parameters() {
+        let results =
+            convert_file_path::<AdapterMagic>("./tool_output/json/report_v1_parameters.json");
+        test_json_v1::validate_adapter_json_v1_parameters(&results);
+    }
+
+    #[test]
+    fn adapter_magic_json_v1_named() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/json/report_v1_named.json");
+        test_json_v1::validate_adapter_json_v1_named(&results);
+    }
+
+    #[test]
+    fn adapter_magic_json_v1_cap() {
+        let results = convert_file_path::<AdapterMagic>("./tool_output/json/report_v1_cap.json");
+        test_json_v1::validate_adapter_json_v1_cap(&results);
+    }
+
+    /// A payload that mixes the two BMF shapes fails the json node,
+    /// and no other adapter claims it either.
+    #[test]
+    fn adapter_magic_json_mixed_versions_fails() {
+        assert!(
+            opt_convert_file_path::<AdapterMagic>(
+                "./tool_output/json/report_mixed_versions.json",
+                Settings::default()
+            )
+            .is_none(),
+            "expected a mixed version payload to fail magic"
+        );
     }
 
     #[test]

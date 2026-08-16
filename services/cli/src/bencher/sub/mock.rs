@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use bencher_adapter::{AdapterResults, results::adapter_metrics::AdapterMetrics};
+use bencher_adapter::{JsonV0Measures, JsonV0Results};
 use bencher_json::{JsonNewMetric, MeasureNameId};
 use rand::{
     RngExt as _, SeedableRng as _,
@@ -87,18 +85,20 @@ impl Mock {
         clippy::cast_precision_loss,
         reason = "count index to f64 is fine for mock data"
     )]
-    fn generate_results(&self) -> Result<AdapterResults, MockError> {
+    /// `bencher mock` emits BMF v0, so it builds the v0 wire type directly
+    /// rather than serializing the adapters' internal results.
+    fn generate_results(&self) -> Result<JsonV0Results, MockError> {
         let count = self.count.unwrap_or(DEFAULT_COUNT);
         let pow = self.pow.unwrap_or(1);
         let ten_pow = 10.0f64.powi(pow);
-        let mut results = HashMap::with_capacity(count);
+        let mut results = JsonV0Results::with_capacity(count);
         let mut std_rng = if let Some(seed) = self.seed {
             StdRng::seed_from_u64(seed)
         } else {
             rand::make_rng()
         };
         for c in 0..count {
-            let mut measures_map = HashMap::with_capacity(self.measures.len());
+            let mut measures_map = JsonV0Measures::with_capacity(self.measures.len());
             for measure in self.measures.clone() {
                 let low = ten_pow * c as f64;
                 let high = ten_pow * (c + 1) as f64;
@@ -117,12 +117,10 @@ impl Mock {
                     .as_str()
                     .parse()
                     .map_err(MockError::ParseBenchmarkName)?,
-                AdapterMetrics {
-                    inner: measures_map,
-                },
+                measures_map,
             );
         }
 
-        Ok(AdapterResults::from(results))
+        Ok(results)
     }
 }

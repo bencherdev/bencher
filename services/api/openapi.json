@@ -11840,6 +11840,8 @@
         "enum": [
           "magic",
           "json",
+          "json_v0",
+          "json_v1",
           "rust",
           "rust_bench",
           "rust_criterion",

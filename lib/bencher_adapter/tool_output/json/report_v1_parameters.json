@@ -1,0 +1,28 @@
+{
+    "tests::absent": [
+        {
+            "measures": {
+                "latency": {
+                    "value": 7.0
+                }
+            }
+        }
+    ],
+    "tests::merged": [
+        {
+            "measures": {
+                "latency": {
+                    "value": 1.0
+                }
+            }
+        },
+        {
+            "parameters": {},
+            "measures": {
+                "throughput": {
+                    "value": 2.0
+                }
+            }
+        }
+    ]
+}

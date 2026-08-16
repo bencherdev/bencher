@@ -1,29 +1,68 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, JsonNewMetric,
-    project::{
-        measure::built_in::{self, BuiltInMeasure as _},
-        metric::Mean,
-    },
+    BenchmarkName, BenchmarkNameId, JsonNewMetric, JsonParameters,
+    project::measure::built_in::{self, BuiltInMeasure as _},
 };
-use literally::hmap;
-use serde::{Deserialize, Serialize};
 
-use super::{CombinedKind, adapter_metrics::AdapterMetrics};
+use super::{
+    adapter_metrics::AdapterMetrics,
+    foldable::{FoldableMap, FoldableResults},
+};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+/// Everything one results payload reported.
+///
+/// A benchmark name maps to its grid points rather than straight to its
+/// measures, because BMF v1 lets one benchmark report several parameter sets.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AdapterResults {
-    #[serde(flatten)]
     pub inner: ResultsMap,
+    /// The BMF version these results were parsed from.
+    /// Fold is a v0 only operation, so this is what gates it.
+    pub version: BmfVersion,
+    /// How many named values the per measure cap dropped.
+    /// The log line and the counter belong to ingest, where the providers are in scope.
+    pub dropped_names: usize,
 }
 
-pub type ResultsMap = HashMap<BenchmarkNameId, AdapterMetrics>;
+pub type ResultsMap = HashMap<BenchmarkNameId, BenchmarkEntries>;
+
+/// Every grid point one benchmark reported, keyed by its canonical parameter set.
+///
+/// The empty parameter set is the key every BMF v0 adapter uses, since a v0
+/// payload only ever reports one grid point per benchmark.
+pub type BenchmarkEntries = BTreeMap<JsonParameters, AdapterMetrics>;
+
+/// The Bencher Metric Format version a results payload was parsed from.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum BmfVersion {
+    /// A benchmark name maps to its measures.
+    #[default]
+    V0,
+    /// A benchmark name maps to an array of parameter set entries.
+    V1,
+}
 
 impl From<ResultsMap> for AdapterResults {
     fn from(inner: ResultsMap) -> Self {
-        Self { inner }
+        Self {
+            inner,
+            version: BmfVersion::V0,
+            dropped_names: 0,
+        }
     }
+}
+
+/// The metrics of a benchmark's empty parameter set, created if absent.
+///
+/// Every adapter but `json_v1` reports one grid point per benchmark and does not
+/// need to know that parameter sets exist.
+fn empty_set(results_map: &mut ResultsMap, benchmark_name: BenchmarkName) -> &mut AdapterMetrics {
+    results_map
+        .entry(BenchmarkNameId::new_name(benchmark_name))
+        .or_default()
+        .entry(JsonParameters::default())
+        .or_default()
 }
 
 #[derive(Debug, Clone)]
@@ -148,23 +187,19 @@ impl AdapterResults {
             return None;
         }
 
-        let mut results_map = HashMap::new();
+        let mut results_map = ResultsMap::new();
         for (benchmark_name, measure) in benchmark_metrics {
-            let adapter_metrics = AdapterMetrics {
-                inner: match measure {
-                    AdapterMeasure::Latency(json_metric) => {
-                        hmap! {
-                            built_in::default::Latency::name_id() => json_metric
-                        }
-                    },
-                    AdapterMeasure::Throughput(json_metric) => {
-                        hmap! {
-                            built_in::default::Throughput::name_id() => json_metric
-                        }
-                    },
+            let (resource_id, json_metric) = match measure {
+                AdapterMeasure::Latency(json_metric) => {
+                    (built_in::default::Latency::name_id(), json_metric)
+                },
+                AdapterMeasure::Throughput(json_metric) => {
+                    (built_in::default::Throughput::name_id(), json_metric)
                 },
             };
-            results_map.insert(BenchmarkNameId::new_name(benchmark_name), adapter_metrics);
+            empty_set(&mut results_map, benchmark_name)
+                .inner
+                .insert(resource_id, json_metric.into());
         }
 
         Some(results_map.into())
@@ -201,11 +236,9 @@ impl AdapterResults {
             return None;
         }
 
-        let mut results_map = HashMap::new();
+        let mut results_map = ResultsMap::new();
         for (benchmark_name, measures) in benchmark_metrics {
-            let metrics_value = results_map
-                .entry(BenchmarkNameId::new_name(benchmark_name))
-                .or_insert_with(AdapterMetrics::default);
+            let metrics_value = empty_set(&mut results_map, benchmark_name);
             for measure in measures {
                 let (resource_id, metric) = match measure {
                     AdapterMeasure::Latency(json_metric) => {
@@ -215,7 +248,7 @@ impl AdapterResults {
                         (built_in::default::Throughput::name_id(), json_metric)
                     },
                 };
-                metrics_value.inner.insert(resource_id, metric);
+                metrics_value.inner.insert(resource_id, metric.into());
             }
         }
 
@@ -227,11 +260,9 @@ impl AdapterResults {
             return None;
         }
 
-        let mut results_map = HashMap::new();
+        let mut results_map = ResultsMap::new();
         for (benchmark_name, metrics) in benchmark_metrics {
-            let metrics_value = results_map
-                .entry(BenchmarkNameId::new_name(benchmark_name))
-                .or_insert_with(AdapterMetrics::default);
+            let metrics_value = empty_set(&mut results_map, benchmark_name);
             for metric in metrics {
                 let (resource_id, metric) = match metric {
                     IaiMeasure::Instructions(json_metric) => {
@@ -250,7 +281,7 @@ impl AdapterResults {
                         (built_in::iai::EstimatedCycles::name_id(), json_metric)
                     },
                 };
-                metrics_value.inner.insert(resource_id, metric);
+                metrics_value.inner.insert(resource_id, metric.into());
             }
         }
 
@@ -262,11 +293,9 @@ impl AdapterResults {
             return None;
         }
 
-        let mut results_map = HashMap::new();
+        let mut results_map = ResultsMap::new();
         for (benchmark_name, measure) in benchmark_metrics {
-            let metrics_value = results_map
-                .entry(BenchmarkNameId::new_name(benchmark_name))
-                .or_insert_with(AdapterMetrics::default);
+            let metrics_value = empty_set(&mut results_map, benchmark_name);
             for metric in measure {
                 let (resource_id, metric) = match metric {
                     DotNetMeasure::Latency(json_metric) => {
@@ -288,7 +317,7 @@ impl AdapterResults {
                         (built_in::dotnet::TotalOperations::name_id(), json_metric)
                     },
                 };
-                metrics_value.inner.insert(resource_id, metric);
+                metrics_value.inner.insert(resource_id, metric.into());
             }
         }
 
@@ -306,11 +335,9 @@ impl AdapterResults {
             return None;
         }
 
-        let mut results_map = HashMap::new();
+        let mut results_map = ResultsMap::new();
         for (benchmark_name, metrics) in benchmark_metrics {
-            let metrics_value = results_map
-                .entry(BenchmarkNameId::new_name(benchmark_name))
-                .or_insert_with(AdapterMetrics::default);
+            let metrics_value = empty_set(&mut results_map, benchmark_name);
             for metric in metrics {
                 let (resource_id, metric) = match metric {
                     // Callgrind/Cachgrind
@@ -518,72 +545,51 @@ impl AdapterResults {
                         continue;
                     },
                 };
-                metrics_value.inner.insert(resource_id, metric);
+                metrics_value.inner.insert(resource_id, metric.into());
             }
         }
 
         Some(results_map.into())
     }
 
-    pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
-        let mut results_map = HashMap::new();
-        for (benchmark_name, metrics) in self.inner {
-            let other_metrics = other.inner.remove(&benchmark_name);
-            let combined_metrics = if let Some(other_metrics) = other_metrics {
-                metrics.combined(other_metrics, kind)
-            } else {
-                metrics
-            };
-            results_map.insert(benchmark_name, combined_metrics);
-        }
-        results_map.extend(other.inner);
-        results_map.into()
-    }
-
     #[cfg(test)]
     pub fn get(&self, key: &str) -> Option<&AdapterMetrics> {
         use std::str::FromStr as _;
 
-        self.inner.get(&BenchmarkNameId::new_name(
+        self.entry(&BenchmarkNameId::new_name(
             BenchmarkName::from_str(key).ok()?,
         ))
+    }
+
+    /// The metrics a benchmark reported on the empty parameter set.
+    #[cfg(test)]
+    pub fn entry(&self, benchmark: &BenchmarkNameId) -> Option<&AdapterMetrics> {
+        self.inner.get(benchmark)?.get(&JsonParameters::default())
     }
 
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
-}
 
-impl std::ops::Add for AdapterResults {
-    type Output = Self;
+    /// Whether these results are a BMF v0 payload, which is what fold operates on.
+    pub(crate) fn is_foldable(&self) -> bool {
+        self.version == BmfVersion::V0
+    }
 
-    fn add(self, rhs: Self) -> Self {
-        self.combined(rhs, CombinedKind::Add)
+    /// The BMF v0 view of these results, only ever taken once [`Self::is_foldable`] holds.
+    pub(crate) fn into_foldable(self) -> FoldableResults {
+        let mut fold_map = FoldableMap::with_capacity(self.inner.len());
+        for (benchmark, mut entries) in self.inner {
+            let Some(metrics) = entries.remove(&JsonParameters::default()) else {
+                continue;
+            };
+            let metrics = metrics
+                .inner
+                .into_iter()
+                .filter_map(|(measure, metric)| Some((measure, metric.triple()?)))
+                .collect();
+            fold_map.insert(benchmark, metrics);
+        }
+        fold_map.into()
     }
 }
-
-impl std::iter::Sum for AdapterResults {
-    fn sum<I>(iter: I) -> Self
-    where
-        I: Iterator<Item = Self>,
-    {
-        iter.into_iter().fold(
-            HashMap::new().into(),
-            |results: AdapterResults, other_results| results + other_results,
-        )
-    }
-}
-
-impl std::ops::Div<usize> for AdapterResults {
-    type Output = Self;
-
-    fn div(self, rhs: usize) -> Self::Output {
-        self.inner
-            .into_iter()
-            .map(|(benchmark_name, metrics)| (benchmark_name, metrics / rhs))
-            .collect::<ResultsMap>()
-            .into()
-    }
-}
-
-impl Mean for AdapterResults {}
