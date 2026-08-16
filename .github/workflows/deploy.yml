@@ -9,9 +9,6 @@ on:
       go-version:
         type: string
         required: true
-      wrangler-version:
-        type: string
-        required: true
       deploy-dev:
         type: boolean
         required: true
@@ -133,14 +130,12 @@ jobs:
       - name: Build Console UI
         working-directory: ./services/console
         env:
+          # The Cloudflare adapter bakes the Wrangler environment into the build,
+          # so this, not `--env` on the deploy, is what selects it.
+          CLOUDFLARE_ENV: dev
           SENTRY_UPLOAD: true
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run cloudflare
-      - name: Install Wrangler
-        working-directory: ./services/console
-        env:
-          INPUTS_WRANGLER_VERSION: ${{ inputs.wrangler-version }}
-        run: npm install --save-dev "wrangler@$INPUTS_WRANGLER_VERSION"
       - name: Deploy Console UI to Cloudflare Dev
         working-directory: ./services/console
         env:
@@ -247,11 +242,6 @@ jobs:
           SENTRY_UPLOAD: true
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run cloudflare
-      - name: Install Wrangler
-        working-directory: ./services/console
-        env:
-          INPUTS_WRANGLER_VERSION: ${{ inputs.wrangler-version }}
-        run: npm install --save-dev "wrangler@$INPUTS_WRANGLER_VERSION"
       - name: Deploy Console UI to Cloudflare Prod
         working-directory: ./services/console
         env:

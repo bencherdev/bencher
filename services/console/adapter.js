@@ -25,9 +25,11 @@ switch (adapter) {
 			'// import cloudflare from "@astrojs/cloudflare";',
 			'import cloudflare from "@astrojs/cloudflare";',
 		);
+		// Static pages are prerendered with Node rather than `workerd`.
+		// https://docs.astro.build/en/guides/integrations-guide/cloudflare/
 		file = file.replace(
 			"adapter: undefined,",
-			`adapter: cloudflare({ imageService: "compile" }),`,
+			`adapter: cloudflare({ imageService: "compile", prerenderEnvironment: "node" }),`,
 		);
 		// The Sentry server SDK only supports Node runtimes,
 		// so only the client SDK is enabled on Cloudflare Workers.
