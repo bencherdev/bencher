@@ -77,7 +77,7 @@ RUN chmod +x build_wasm.sh
 RUN ./build_wasm.sh
 
 # https://hub.docker.com/_/node
-FROM node:20.11.0-bookworm@sha256:7bf4a586b423aac858176b3f683e35f08575c84500fbcfd1d433ad8568972ec6 AS builder
+FROM node:24.19.0-bookworm@sha256:934240a162082fd8b8a2f90cd5114446443f1eba1c5378f6687167ca405e6584 AS builder
 COPY services/api/openapi.json /usr/src/bencher/services/api/openapi.json
 COPY services/cli/templates/output /usr/src/bencher/services/cli/templates/output
 COPY services/runner/templates/output /usr/src/bencher/services/runner/templates/output
@@ -94,6 +94,7 @@ COPY services/console/public public
 COPY services/console/src src
 COPY services/console/astro.config.mjs astro.config.mjs
 COPY services/console/adapter.js adapter.js
+COPY services/console/markdown.js markdown.js
 COPY services/console/site.js site.js
 COPY services/console/tsconfig.json tsconfig.json
 COPY services/console/.env.runtime .env.runtime
@@ -101,7 +102,7 @@ COPY services/console/.env.runtime .env.runtime
 RUN npm run node
 
 # https://hub.docker.com/_/node
-FROM node:20.11.0-bookworm@sha256:7bf4a586b423aac858176b3f683e35f08575c84500fbcfd1d433ad8568972ec6 AS packager
+FROM node:24.19.0-bookworm@sha256:934240a162082fd8b8a2f90cd5114446443f1eba1c5378f6687167ca405e6584 AS packager
 COPY --from=builder /usr/src/bencher/services/console/dist /usr/src/bencher/services/console/dist
 COPY --from=builder /usr/src/bencher/services/console/package-lock.json /usr/src/bencher/services/console/package-lock.json
 COPY --from=builder /usr/src/bencher/services/console/package.json /usr/src/bencher/services/console/package.json
@@ -112,7 +113,7 @@ WORKDIR /usr/src/bencher/services/console
 RUN npm ci --omit=dev
 
 # https://github.com/GoogleContainerTools/distroless/tree/main/nodejs
-FROM gcr.io/distroless/nodejs20-debian12@sha256:7fff8fb4a6463da2765532290c958f7e6fc01d54d7539f0d2bda1e93c7636d7c
+FROM gcr.io/distroless/nodejs24-debian12@sha256:61f4f4341db81820c24ce771b83d202eb6452076f58628cd536cc7d94a10978b
 COPY --from=packager /usr/src/bencher/services/console /usr/src/bencher
 
 ENV HOST=0.0.0.0

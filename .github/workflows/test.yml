@@ -254,6 +254,10 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
       - name: Install `wasm-pack`
         run: cargo install wasm-pack --version ${{ env.WASM_PACK_VERSION }} --locked --force
       - name: Build WASM
