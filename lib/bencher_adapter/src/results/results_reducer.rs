@@ -2,17 +2,15 @@ use std::collections::HashMap;
 
 use bencher_json::{BenchmarkNameId, JsonNewMetric, MeasureNameId, project::metric::Median as _};
 
-use super::{
-    AdapterResultsArray, adapter_metrics::AdapterMetrics, adapter_results::AdapterResults,
-};
+use super::foldable::{FoldableMetrics, FoldableResults, FoldableResultsArray};
 
 #[derive(Debug, Clone, Default)]
 pub struct ResultsReducer {
     pub inner: HashMap<BenchmarkNameId, MeasuresMap>,
 }
 
-impl From<AdapterResultsArray> for ResultsReducer {
-    fn from(results_array: AdapterResultsArray) -> Self {
+impl From<FoldableResultsArray> for ResultsReducer {
+    fn from(results_array: FoldableResultsArray) -> Self {
         let mut results_reducer = Self::default();
         for results in results_array.inner {
             results_reducer.reduce(results);
@@ -22,10 +20,10 @@ impl From<AdapterResultsArray> for ResultsReducer {
 }
 
 impl ResultsReducer {
-    fn reduce(&mut self, results: AdapterResults) {
+    fn reduce(&mut self, results: FoldableResults) {
         for (benchmark, metrics) in results.inner {
             if let Some(measures_map) = self.inner.get_mut(&benchmark) {
-                for (measure, metric) in metrics.inner {
+                for (measure, metric) in metrics {
                     if let Some(list) = measures_map.inner.get_mut(&measure) {
                         list.push(metric);
                     } else {
@@ -34,7 +32,7 @@ impl ResultsReducer {
                 }
             } else {
                 let mut measures_map = HashMap::new();
-                for (measure, metric) in metrics.inner {
+                for (measure, metric) in metrics {
                     measures_map.insert(measure, vec![metric]);
                 }
                 self.inner.insert(
@@ -54,13 +52,13 @@ pub struct MeasuresMap {
 }
 
 impl MeasuresMap {
-    pub(crate) fn median(self) -> AdapterMetrics {
-        let mut metric_map = HashMap::new();
+    pub(crate) fn median(self) -> FoldableMetrics {
+        let mut metric_map = FoldableMetrics::new();
         for (measure, metric) in self.inner {
             if let Some(median) = JsonNewMetric::median(metric) {
                 metric_map.insert(measure, median);
             }
         }
-        metric_map.into()
+        metric_map
     }
 }

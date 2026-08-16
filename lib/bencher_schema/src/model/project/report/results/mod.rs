@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use bencher_adapter::{
-    AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
-    results::adapter_metrics::AdapterMetrics,
+    AdapterResultsArray, FoldableResults, Settings as AdapterSettings,
+    results::foldable::FoldableMetrics,
 };
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, JsonNewMetric, MeasureNameId, Slug,
@@ -125,29 +125,31 @@ impl ReportResults {
                 ))
             })?;
 
-        if let Some(fold) = settings.fold {
-            let results = results_array.fold(fold);
+        // BMF v1 parses but does not yet reach the database, so it is refused
+        // here rather than silently ingested as if it had no parameter sets.
+        // The parameter aware ingest path replaces this in a following release.
+        let results_array = results_array.foldable().map_err(|_unfoldable| {
+            bad_request_error(
+                "Benchmark parameters and named metric values are not yet supported on ingest.",
+            )
+        })?;
+
+        let results_array = if let Some(fold) = settings.fold {
+            vec![results_array.fold(fold)]
+        } else {
+            results_array.inner
+        };
+
+        for (iteration, results) in results_array.into_iter().enumerate() {
             self.results(
                 log,
                 context,
-                Iteration::default(),
+                iteration.into(),
                 results,
                 #[cfg(feature = "plus")]
                 usage,
             )
             .await?;
-        } else {
-            for (iteration, results) in results_array.inner.into_iter().enumerate() {
-                self.results(
-                    log,
-                    context,
-                    iteration.into(),
-                    results,
-                    #[cfg(feature = "plus")]
-                    usage,
-                )
-                .await?;
-            }
         }
 
         #[cfg(feature = "otel")]
@@ -167,7 +169,7 @@ impl ReportResults {
         log: &Logger,
         context: &ApiContext,
         iteration: Iteration,
-        results: AdapterResults,
+        results: FoldableResults,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         // Phase 1: Pre-compute all data using read connections.
@@ -296,7 +298,7 @@ impl ReportResults {
         context: &ApiContext,
         iteration: Iteration,
         benchmark: BenchmarkNameId,
-        metrics: AdapterMetrics,
+        metrics: FoldableMetrics,
     ) -> Result<PreparedBenchmark, HttpError> {
         // If benchmark name is ignored then strip the special suffix before querying
         let (benchmark, ignore_benchmark) = strip_ignore_suffix(benchmark);
@@ -308,8 +310,8 @@ impl ReportResults {
         let insert_report_benchmark =
             InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id, parameter_id);
 
-        let mut prepared_metrics = Vec::with_capacity(metrics.inner.len());
-        for (measure_key, metric) in metrics.inner {
+        let mut prepared_metrics = Vec::with_capacity(metrics.len());
+        for (measure_key, metric) in metrics {
             let measure_id = self.measure_id(context, measure_key).await?;
 
             // Pre-compute detection if a detector exists for this measure

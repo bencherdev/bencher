@@ -85,6 +85,8 @@ pub struct JsonReportSettings {
 
 const MAGIC_INT: i32 = 0;
 const JSON_INT: i32 = 10;
+const JSON_V0_INT: i32 = 11;
+const JSON_V1_INT: i32 = 12;
 const RUST_INT: i32 = 20;
 const RUST_BENCH_INT: i32 = 21;
 const RUST_CRITERION_INT: i32 = 22;
@@ -126,6 +128,8 @@ pub enum Adapter {
     #[default]
     Magic = MAGIC_INT,
     Json = JSON_INT,
+    JsonV0 = JSON_V0_INT,
+    JsonV1 = JSON_V1_INT,
     Rust = RUST_INT,
     RustBench = RUST_BENCH_INT,
     RustCriterion = RUST_CRITERION_INT,
@@ -179,6 +183,8 @@ impl Adapter {
             | Self::Dart => Self::Magic,
             Self::Magic
             | Self::Json
+            | Self::JsonV0
+            | Self::JsonV1
             | Self::RustBench
             | Self::RustCriterion
             | Self::RustIai
@@ -207,6 +213,8 @@ impl fmt::Display for Adapter {
         match self {
             Self::Magic => write!(f, "magic"),
             Self::Json => write!(f, "json"),
+            Self::JsonV0 => write!(f, "json_v0"),
+            Self::JsonV1 => write!(f, "json_v1"),
             Self::Rust => write!(f, "rust"),
             Self::RustBench => write!(f, "rust_bench"),
             Self::RustCriterion => write!(f, "rust_criterion"),
@@ -245,10 +253,10 @@ mod adapter {
     use super::{
         Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_GOOGLE_INT, CPP_INT,
         DART_BENCHMARK_HARNESS_INT, DART_INT, GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
-        JS_BENCHMARK_INT, JS_INT, JS_TIME_INT, JS_VITEST_INT, JSON_INT, MAGIC_INT, PYTHON_ASV_INT,
-        PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT, RUST_BENCH_INT,
-        RUST_CRITERION_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT,
-        RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT, SHELL_INT,
+        JS_BENCHMARK_INT, JS_INT, JS_TIME_INT, JS_VITEST_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT,
+        MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT,
+        RUST_BENCH_INT, RUST_CRITERION_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT,
+        RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -269,6 +277,8 @@ mod adapter {
             match self {
                 Self::Magic => MAGIC_INT.to_sql(out),
                 Self::Json => JSON_INT.to_sql(out),
+                Self::JsonV0 => JSON_V0_INT.to_sql(out),
+                Self::JsonV1 => JSON_V1_INT.to_sql(out),
                 Self::Rust => RUST_INT.to_sql(out),
                 Self::RustBench => RUST_BENCH_INT.to_sql(out),
                 Self::RustCriterion => RUST_CRITERION_INT.to_sql(out),
@@ -311,6 +321,8 @@ mod adapter {
             match i32::from_sql(bytes)? {
                 MAGIC_INT => Ok(Self::Magic),
                 JSON_INT => Ok(Self::Json),
+                JSON_V0_INT => Ok(Self::JsonV0),
+                JSON_V1_INT => Ok(Self::JsonV1),
                 RUST_INT => Ok(Self::Rust),
                 RUST_BENCH_INT => Ok(Self::RustBench),
                 RUST_CRITERION_INT => Ok(Self::RustCriterion),
