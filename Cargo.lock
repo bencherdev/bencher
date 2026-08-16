@@ -1650,6 +1650,7 @@ dependencies = [
  "diesel_migrations",
  "dropshot",
  "http 1.4.1",
+ "libsqlite3-sys",
  "mail-send",
  "oso",
  "pretty_assertions",
