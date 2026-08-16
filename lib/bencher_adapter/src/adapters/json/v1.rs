@@ -4,8 +4,11 @@ use bencher_json::{BenchmarkNameId, JsonParameters, MeasureNameId};
 use serde::Deserialize;
 
 use crate::{
-    Adaptable, Settings, results::adapter_metrics::NamedMap,
-    results::adapter_results::AdapterResults,
+    Adaptable, Settings,
+    results::{
+        adapter_metrics::{AdapterMetric, AdapterMetrics, NamedMap},
+        adapter_results::{AdapterResults, BenchmarkEntries, BmfVersion, ResultsMap},
+    },
 };
 
 /// The BMF v1 wire shape: a benchmark name maps to an array of entries,
@@ -33,8 +36,42 @@ pub type JsonV1Measure = NamedMap;
 pub struct AdapterJsonV1;
 
 impl Adaptable for AdapterJsonV1 {
-    fn parse(_input: &str, _settings: Settings) -> Option<AdapterResults> {
-        None
+    fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
+        let results: JsonV1Results = serde_json::from_str(input).ok()?;
+        Some(from_wire(results))
+    }
+}
+
+fn from_wire(results: JsonV1Results) -> AdapterResults {
+    let mut dropped_names = 0;
+    let mut results_map = ResultsMap::with_capacity(results.len());
+    for (benchmark, entries) in results {
+        let mut benchmark_entries = BenchmarkEntries::new();
+        for JsonV1Entry {
+            parameters,
+            measures,
+        } in entries
+        {
+            // Two entries that canonicalize to the same parameter set are one
+            // grid point, so their measures merge rather than fork a series.
+            let metrics: &mut AdapterMetrics = benchmark_entries.entry(parameters).or_default();
+            for (measure, named) in measures {
+                metrics.inner.insert(measure, AdapterMetric::from(named));
+            }
+        }
+        // The cap applies to the merged grid point, so a name is counted once.
+        for metrics in benchmark_entries.values_mut() {
+            for metric in metrics.inner.values_mut() {
+                dropped_names += metric.truncate();
+            }
+        }
+        results_map.insert(benchmark, benchmark_entries);
+    }
+
+    AdapterResults {
+        inner: results_map,
+        version: BmfVersion::V1,
+        dropped_names,
     }
 }
 
