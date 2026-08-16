@@ -61,6 +61,10 @@ diesel = { workspace = true, features = ["chrono", "sqlite", "32-column-tables"]
 diesel_migrations.workspace = true
 dropshot.workspace = true
 http = { workspace = true, optional = true }
+# The migrations mint JSONB with SQLite's own `jsonb()`, which needs SQLite 3.45
+# or later, so the crate that owns them pins the bundled amalgamation rather than
+# linking whatever the host happens to ship.
+libsqlite3-sys.workspace = true
 mail-send.workspace = true
 regex.workspace = true
 rusqlite = { workspace = true, features = ["backup"] }
