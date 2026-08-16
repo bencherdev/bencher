@@ -22,7 +22,7 @@ crate::typed_uuid::typed_uuid!(ParameterUuid);
 /// [jcs]: https://www.rfc-editor.org/rfc/rfc8785
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
-#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Json))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Jsonb))]
 pub struct JsonParameters(BTreeMap<ParameterKey, ParameterValue>);
 
 impl JsonParameters {
@@ -52,6 +52,27 @@ impl JsonParameters {
     /// Whether this is the empty parameter set.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    /// The `SQLite` JSONB encoding of the canonical form.
+    ///
+    /// Byte identical to what `SQLite`'s own `jsonb()` produces over
+    /// [`Self::canonical`], which is what lets a set written here collide with a
+    /// set minted in SQL on `UNIQUE(benchmark_id, parameters)`.
+    #[cfg(feature = "db")]
+    pub fn to_jsonb(&self) -> Result<Vec<u8>, jsonb::JsonbError> {
+        let mut object = jsonb::Object::default();
+        for (key, value) in &self.0 {
+            match value {
+                ParameterValue::Bool(boolean) => object.insert_bool(key.as_ref(), *boolean)?,
+                ParameterValue::Number(number) => object.insert_number(
+                    key.as_ref(),
+                    ryu_js::Buffer::new().format(number.into_inner()),
+                )?,
+                ParameterValue::String(string) => object.insert_string(key.as_ref(), string)?,
+            }
+        }
+        object.into_blob()
     }
 }
 
@@ -260,6 +281,12 @@ impl de::Visitor<'_> for ParameterValueVisitor {
 /// lowercase hex for the remaining control characters, and everything else literal.
 fn write_json_string(string: &str, canonical: &mut String) {
     canonical.push('"');
+    write_json_string_body(string, canonical);
+    canonical.push('"');
+}
+
+/// Append the body of an RFC 8785 escaped JSON string, without its quotes.
+fn write_json_string_body(string: &str, canonical: &mut String) {
     for character in string.chars() {
         match character {
             '"' => canonical.push_str("\\\""),
@@ -278,7 +305,6 @@ fn write_json_string(string: &str, canonical: &mut String) {
             character => canonical.push(character),
         }
     }
-    canonical.push('"');
 }
 
 fn hex_digit(nibble: u32) -> char {
@@ -538,32 +564,31 @@ mod tests {
     }
 }
 
+/// The JSONB encoding is `SQLite`'s, so these impls are too.
+///
+/// Every other backend spells `Jsonb` differently, and a generic impl would be
+/// claiming an encoding it does not have.
 #[cfg(feature = "db")]
 mod db {
-    use super::JsonParameters;
+    use super::{JsonParameters, jsonb};
 
-    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Json, DB> for JsonParameters
-    where
-        DB: diesel::backend::Backend,
-        for<'a> String: diesel::serialize::ToSql<diesel::sql_types::Text, DB>
-            + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
-    {
+    impl diesel::serialize::ToSql<diesel::sql_types::Jsonb, diesel::sqlite::Sqlite> for JsonParameters {
         fn to_sql<'b>(
             &'b self,
-            out: &mut diesel::serialize::Output<'b, '_, DB>,
+            out: &mut diesel::serialize::Output<'b, '_, diesel::sqlite::Sqlite>,
         ) -> diesel::serialize::Result {
-            out.set_value(self.canonical());
+            out.set_value(self.to_jsonb()?);
             Ok(diesel::serialize::IsNull::No)
         }
     }
 
-    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Json, DB> for JsonParameters
-    where
-        DB: diesel::backend::Backend,
-        String: diesel::deserialize::FromSql<diesel::sql_types::Text, DB>,
+    impl diesel::deserialize::FromSql<diesel::sql_types::Jsonb, diesel::sqlite::Sqlite>
+        for JsonParameters
     {
-        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
-            Ok(String::from_sql(bytes)?.parse()?)
+        fn from_sql(
+            mut bytes: diesel::sqlite::SqliteValue<'_, '_, '_>,
+        ) -> diesel::deserialize::Result<Self> {
+            Ok(jsonb::to_json(bytes.read_blob())?.parse()?)
         }
     }
 }

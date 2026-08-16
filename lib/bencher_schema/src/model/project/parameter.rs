@@ -148,11 +148,11 @@ mod tests {
         /// Written through the `parameter.parameters` column: the production path.
         Column,
         /// Encoded directly. Parameter values are scalar only, so a null value
-        /// never reaches the column, but the encoder still has to agree with SQLite.
+        /// never reaches the column, but the encoder still has to agree with `SQLite`.
         Encoder,
     }
 
-    /// Every parameter set that has to encode to the same bytes as SQLite's `jsonb()`.
+    /// Every parameter set that has to encode to the same bytes as `SQLite`'s `jsonb()`.
     ///
     /// Each entry is already in its RFC 8785 (JCS) canonical form. The set covers
     /// the shapes a parameter value can take: strings that need JSON escapes and
@@ -214,10 +214,15 @@ mod tests {
     }
 
     fn hex(blob: &[u8]) -> String {
-        blob.iter().map(|byte| format!("{byte:02X}")).collect()
+        use std::fmt::Write as _;
+
+        blob.iter().fold(String::new(), |mut hex, byte| {
+            write!(hex, "{byte:02X}").expect("Failed to format a byte");
+            hex
+        })
     }
 
-    /// The bytes SQLite's own `jsonb()` produces for a canonical text.
+    /// The bytes `SQLite`'s own `jsonb()` produces for a canonical text.
     fn sqlite_jsonb(conn: &mut SqliteConnection, canonical: &str) -> String {
         diesel::sql_query("SELECT hex(jsonb(?)) AS value")
             .bind::<diesel::sql_types::Text, _>(canonical)
@@ -251,7 +256,7 @@ mod tests {
             .value
     }
 
-    /// Mint a parameter set with SQLite's `jsonb()`, the migration's write path.
+    /// Mint a parameter set with `SQLite`'s `jsonb()`, the migration's write path.
     fn mint_parameter(
         conn: &mut SqliteConnection,
         benchmark_id: BenchmarkId,
