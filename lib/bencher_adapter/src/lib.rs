@@ -5,6 +5,7 @@ pub mod results;
 #[cfg(test)]
 use criterion as _;
 
+pub use adapters::json::v0::{JsonV0Measures, JsonV0Results};
 use adapters::{
     c_sharp::{AdapterCSharp, dot_net::AdapterCSharpDotNet},
     cpp::{AdapterCpp, catch2::AdapterCppCatch2, google::AdapterCppGoogle},
@@ -12,7 +13,7 @@ use adapters::{
     go::{AdapterGo, bench::AdapterGoBench},
     java::{AdapterJava, jmh::AdapterJavaJmh},
     js::{AdapterJs, benchmark::AdapterJsBenchmark, time::AdapterJsTime, vitest::AdapterJsVitest},
-    json::AdapterJson,
+    json::{AdapterJson, v0::AdapterJsonV0, v1::AdapterJsonV1},
     magic::AdapterMagic,
     python::{AdapterPython, asv::AdapterPythonAsv, pytest::AdapterPythonPytest},
     ruby::{AdapterRuby, benchmark::AdapterRubyBenchmark},
@@ -26,7 +27,11 @@ use adapters::{
 use bencher_json::project::report::{Adapter, JsonAverage};
 pub use bencher_json::{BenchmarkName, JsonNewMetric};
 pub use error::AdapterError;
-pub use results::{AdapterResultsArray, adapter_results::AdapterResults};
+pub use results::{
+    AdapterResultsArray,
+    adapter_results::AdapterResults,
+    foldable::{FoldableResults, FoldableResultsArray},
+};
 
 use crate::adapters::rust::gungraun::AdapterRustGungraun;
 
@@ -43,6 +48,8 @@ impl Adaptable for Adapter {
         match self {
             Adapter::Magic => AdapterMagic::parse(input, settings),
             Adapter::Json => AdapterJson::parse(input, settings),
+            Adapter::JsonV0 => AdapterJsonV0::parse(input, settings),
+            Adapter::JsonV1 => AdapterJsonV1::parse(input, settings),
             Adapter::CSharp => AdapterCSharp::parse(input, settings),
             Adapter::CSharpDotNet => AdapterCSharpDotNet::parse(input, settings),
             Adapter::Cpp => AdapterCpp::parse(input, settings),

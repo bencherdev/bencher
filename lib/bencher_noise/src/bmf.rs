@@ -1,19 +1,17 @@
-use std::collections::HashMap;
-
-use bencher_adapter::{AdapterResults, results::adapter_metrics::AdapterMetrics};
+use bencher_adapter::{JsonV0Measures, JsonV0Results};
 use bencher_json::{BenchmarkNameId, JsonNewMetric, MeasureNameId};
 
 use super::{NoiseError, benchmark::BenchmarkResult, platform::PlatformMetrics};
 
-/// Build BMF JSON output from noise measurement results.
+/// Build BMF v0 JSON output from noise measurement results.
 pub fn build_bmf(
     compute: &BenchmarkResult,
     cache: &BenchmarkResult,
     io: &BenchmarkResult,
     platform: &PlatformMetrics,
     noise_score: f64,
-) -> Result<AdapterResults, NoiseError> {
-    let mut results = HashMap::new();
+) -> Result<JsonV0Results, NoiseError> {
+    let mut results = JsonV0Results::new();
 
     // Compute jitter: CoV as value, min/max as bounds
     insert_measure(
@@ -46,9 +44,9 @@ pub fn build_bmf(
         let benchmark_id: BenchmarkNameId = "bencher::noise::cpu_steal"
             .parse()
             .map_err(NoiseError::ParseBenchmarkName)?;
-        let mut measures = HashMap::new();
+        let mut measures = JsonV0Measures::new();
         measures.insert(measure_id, metric);
-        results.insert(benchmark_id, AdapterMetrics { inner: measures });
+        results.insert(benchmark_id, measures);
     }
 
     // Composite noise score
@@ -64,16 +62,16 @@ pub fn build_bmf(
         let benchmark_id: BenchmarkNameId = "bencher::noise::composite"
             .parse()
             .map_err(NoiseError::ParseBenchmarkName)?;
-        let mut measures = HashMap::new();
+        let mut measures = JsonV0Measures::new();
         measures.insert(measure_id, metric);
-        results.insert(benchmark_id, AdapterMetrics { inner: measures });
+        results.insert(benchmark_id, measures);
     }
 
-    Ok(AdapterResults::from(results))
+    Ok(results)
 }
 
 fn insert_measure(
-    results: &mut HashMap<BenchmarkNameId, AdapterMetrics>,
+    results: &mut JsonV0Results,
     benchmark_name: &str,
     measure_slug: &str,
     bench_result: &BenchmarkResult,
@@ -87,9 +85,9 @@ fn insert_measure(
     let benchmark_id: BenchmarkNameId = benchmark_name
         .parse()
         .map_err(NoiseError::ParseBenchmarkName)?;
-    let mut measures = HashMap::new();
+    let mut measures = JsonV0Measures::new();
     measures.insert(measure_id, metric);
-    results.insert(benchmark_id, AdapterMetrics { inner: measures });
+    results.insert(benchmark_id, measures);
     Ok(())
 }
 

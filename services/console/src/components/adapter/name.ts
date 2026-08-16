@@ -5,6 +5,8 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.Magic:
 			return "Magic";
 		case Adapter.Json:
+		case Adapter.JsonV0:
+		case Adapter.JsonV1:
 			return "JSON";
 		case Adapter.RustBench:
 			return "libtest bench";
@@ -84,6 +86,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
 		case Adapter.Json:
+		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
+		case Adapter.JsonV0:
+		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
+		case Adapter.JsonV1:
 		default:
 			return `bencher run${host} "bencher mock"`;
 	}

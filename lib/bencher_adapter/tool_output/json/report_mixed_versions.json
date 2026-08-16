@@ -1,0 +1,19 @@
+{
+    "tests::benchmark_a": {
+        "latency": {
+            "value": 3247.0,
+            "lower_value": 1044.0,
+            "upper_value": 1044.0
+        }
+    },
+    "tests::benchmark_b": [
+        {
+            "parameters": { "size_mb": 16 },
+            "measures": {
+                "latency": {
+                    "value": 42.0
+                }
+            }
+        }
+    ]
+}

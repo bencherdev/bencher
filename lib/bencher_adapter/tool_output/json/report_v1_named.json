@@ -1,0 +1,11 @@
+{
+    "tests::percentiles": [
+        {
+            "measures": {
+                "latency": {
+                    "p99": 97.0
+                }
+            }
+        }
+    ]
+}
