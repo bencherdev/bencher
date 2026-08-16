@@ -164,7 +164,7 @@ jobs:
         working-directory: ./services/console
         run: |
           npm install --include=dev
-          npx biome ci --linter-enabled false --organize-imports-enabled false .
+          npx biome ci --linter-enabled false .
 
   biome_lint:
     name: Biome Lint
@@ -186,4 +186,4 @@ jobs:
         working-directory: ./services/console
         run: |
           npm install --include=dev
-          npx biome ci --formatter-enabled false --organize-imports-enabled false .
+          npx biome ci --formatter-enabled false .
