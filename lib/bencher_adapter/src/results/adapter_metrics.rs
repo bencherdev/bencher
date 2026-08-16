@@ -88,4 +88,41 @@ impl AdapterMetric {
             upper_value: self.inner.get(&MetricName::upper_value()).copied(),
         })
     }
+
+    /// Drop named values beyond [`MAX_METRIC_NAMES`], returning how many were dropped.
+    ///
+    /// Survival is deterministic because hash map iteration order is not an
+    /// acceptable tiebreak: the three conventional names are never dropped, and
+    /// the remainder is kept in lexicographic order up to the cap.
+    pub(crate) fn truncate(&mut self) -> usize {
+        if self.inner.len() <= MAX_METRIC_NAMES {
+            return 0;
+        }
+
+        let conventional = [
+            MetricName::value(),
+            MetricName::lower_value(),
+            MetricName::upper_value(),
+        ];
+        let mut budget = MAX_METRIC_NAMES.saturating_sub(
+            conventional
+                .iter()
+                .filter(|name| self.inner.contains_key(name))
+                .count(),
+        );
+
+        let mut dropped = 0;
+        self.inner.retain(|name, _| {
+            if conventional.contains(name) {
+                true
+            } else if budget > 0 {
+                budget -= 1;
+                true
+            } else {
+                dropped += 1;
+                false
+            }
+        });
+        dropped
+    }
 }
