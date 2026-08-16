@@ -178,7 +178,7 @@ diesel::table! {
         id -> Integer,
         uuid -> Text,
         benchmark_id -> Integer,
-        parameters -> Json,
+        parameters -> Jsonb,
         created -> BigInt,
         modified -> BigInt,
         archived -> Nullable<BigInt>,

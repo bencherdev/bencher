@@ -1,14 +1,15 @@
 PRAGMA foreign_keys = off;
 -- parameter
--- `parameters` holds the RFC 8785 (JCS) canonical form of the parameter set,
--- so `UNIQUE(benchmark_id, parameters)` is the enforcement point for canonical
--- equality. It is declared `TEXT` to match the SQLite representation of Diesel's
--- `Json` SQL type; SQLite's JSON functions read canonical JSON text directly.
+-- `parameters` holds the SQLite JSONB encoding of the RFC 8785 (JCS) canonical
+-- form of the parameter set, so `UNIQUE(benchmark_id, parameters)` is the
+-- enforcement point for canonical equality. It is declared `BLOB` to match the
+-- SQLite representation of the `Jsonb` SQL type, and SQLite's JSON functions
+-- read it without a parse step.
 CREATE TABLE parameter (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
     benchmark_id INTEGER NOT NULL,
-    parameters TEXT NOT NULL,
+    parameters BLOB NOT NULL,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
     archived BIGINT,
@@ -22,12 +23,14 @@ CREATE INDEX index_parameter_benchmark ON parameter(benchmark_id);
 -- 16 random bytes with the version nibble set to 4 and the variant nibble drawn
 -- from `89ab`. `random() & 3` is used rather than `abs(random()) % 4` because
 -- `abs(-9223372036854775808)` is an integer overflow error in SQLite.
+-- The empty set is minted with `jsonb()` so that SQLite itself defines the bytes
+-- the encoder in `bencher_json` has to reproduce.
 INSERT INTO parameter(uuid, benchmark_id, parameters, created, modified)
 SELECT lower(
         hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)), 2) || '-' || substr('89ab', (random() & 3) + 1, 1) || substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6))
     ),
     id,
-    '{}',
+    jsonb('{}'),
     created,
     modified
 FROM benchmark;
@@ -67,7 +70,7 @@ SELECT report_benchmark.id,
 FROM report_benchmark
     LEFT JOIN parameter ON (
         parameter.benchmark_id = report_benchmark.benchmark_id
-        AND parameter.parameters = '{}'
+        AND parameter.parameters = jsonb('{}')
     );
 DROP TABLE report_benchmark;
 ALTER TABLE up_report_benchmark
