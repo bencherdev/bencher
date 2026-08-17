@@ -259,6 +259,7 @@ mod tests {
                 benchmark::BenchmarkId,
                 branch::{head::HeadId, version::VersionId},
                 measure::MeasureId,
+                parameter::ParameterId,
                 report::ReportId,
                 testbed::TestbedId,
             },
@@ -266,8 +267,9 @@ mod tests {
         schema,
         test_util::{
             archive_benchmark, archive_measure, archive_testbed, create_benchmark,
-            create_branch_with_head, create_measure, create_report_benchmark, create_testbed,
-            create_version, setup_test_db,
+            create_branch_with_head, create_measure, create_parameter, create_report_benchmark,
+            create_report_benchmark_for_parameter, create_testbed, create_version,
+            get_empty_parameter, setup_test_db,
         },
     };
 
@@ -446,6 +448,210 @@ mod tests {
             end_time,
         )
         .expect("upsert series");
+    }
+
+    /// Ingest one report for a single grid point, writing every `named` scalar as
+    /// its own metric row.
+    ///
+    /// A grid point is its own series and a named value is not, so this is the
+    /// helper the parameter and named value billing tests reach for.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "test helper threads the full series key"
+    )]
+    fn ingest_grid_point(
+        conn: &mut DbConnection,
+        uuids: &mut Uuids,
+        proj: Proj,
+        testbed: TestbedId,
+        benchmark: BenchmarkId,
+        parameter: ParameterId,
+        measure: MeasureId,
+        named: &[MetricName],
+        end_time: DateTime,
+    ) {
+        let report_uuid = uuids.next();
+        diesel::insert_into(schema::report::table)
+            .values((
+                schema::report::uuid.eq(&report_uuid),
+                schema::report::project_id.eq(proj.project),
+                schema::report::head_id.eq(proj.head),
+                schema::report::version_id.eq(proj.version),
+                schema::report::testbed_id.eq(testbed),
+                schema::report::adapter.eq(0),
+                schema::report::start_time.eq(end_time),
+                schema::report::end_time.eq(end_time),
+                schema::report::created.eq(end_time),
+            ))
+            .execute(conn)
+            .expect("insert report");
+        let report: ReportId = diesel::select(last_insert_rowid())
+            .get_result(conn)
+            .expect("report id");
+        let rb_uuid = uuids.next();
+        let report_benchmark =
+            create_report_benchmark_for_parameter(conn, &rb_uuid, report, 0, benchmark, parameter);
+        for name in named {
+            let metric_uuid = uuids.next();
+            diesel::insert_into(schema::metric::table)
+                .values((
+                    schema::metric::uuid.eq(&metric_uuid),
+                    schema::metric::report_benchmark_id.eq(report_benchmark),
+                    schema::metric::measure_id.eq(measure),
+                    schema::metric::name.eq(name),
+                    schema::metric::value.eq(1.0f64),
+                ))
+                .execute(conn)
+                .expect("insert metric");
+        }
+        upsert_series_last_seen(
+            conn,
+            proj.org,
+            proj.project,
+            testbed,
+            benchmark,
+            measure,
+            end_time,
+        )
+        .expect("upsert series");
+    }
+
+    /// A non-empty parameter set under `benchmark`.
+    fn make_parameter(
+        conn: &mut DbConnection,
+        benchmark: BenchmarkId,
+        canonical: &str,
+    ) -> ParameterId {
+        create_parameter(
+            conn,
+            benchmark,
+            &canonical.parse().expect("Failed to parse the parameters"),
+        )
+    }
+
+    // Each grid point bills as its own series, which is exactly today's economics:
+    // a project whose grid points are currently flat benchmarks bills the same after
+    // migrating to parameters.
+    #[test]
+    fn grid_points_count_as_distinct_series() {
+        let mut conn = setup_test_db();
+        let mut uuids = Uuids(1);
+        let org = make_org(&mut conn, &mut uuids);
+        let proj = make_proj(&mut conn, &mut uuids, org, Visibility::Public);
+        let testbed = make_testbed(&mut conn, &mut uuids, proj.project);
+        let benchmark = make_benchmark(&mut conn, &mut uuids, proj.project);
+        let measure = make_measure(&mut conn, &mut uuids, proj.project);
+
+        let empty_set = get_empty_parameter(&mut conn, benchmark);
+        let sixteen = make_parameter(&mut conn, benchmark, r#"{"size_mb": 16}"#);
+        let thirty_two = make_parameter(&mut conn, benchmark, r#"{"size_mb": 32}"#);
+
+        for parameter in [empty_set, sixteen, thirty_two] {
+            ingest_grid_point(
+                &mut conn,
+                &mut uuids,
+                proj,
+                testbed,
+                benchmark,
+                parameter,
+                measure,
+                &[MetricName::value()],
+                at(0),
+            );
+        }
+
+        let (start, end) = always();
+        assert_eq!(count_active(&mut conn, org, start, end).unwrap(), 3);
+        assert_eq!(oracle_count(&mut conn, org, start, end, None), 3);
+    }
+
+    // Named values collapse into their measure's series. Names are not billed; the
+    // cap of eight is the guardrail on that.
+    #[test]
+    fn named_values_collapse_into_their_measure_series() {
+        let mut conn = setup_test_db();
+        let mut uuids = Uuids(1);
+        let org = make_org(&mut conn, &mut uuids);
+        let proj = make_proj(&mut conn, &mut uuids, org, Visibility::Public);
+        let testbed = make_testbed(&mut conn, &mut uuids, proj.project);
+        let benchmark = make_benchmark(&mut conn, &mut uuids, proj.project);
+        let measure = make_measure(&mut conn, &mut uuids, proj.project);
+
+        let empty_set = get_empty_parameter(&mut conn, benchmark);
+        let sixteen = make_parameter(&mut conn, benchmark, r#"{"size_mb": 16}"#);
+        let named = [
+            MetricName::value(),
+            MetricName::lower_value(),
+            MetricName::upper_value(),
+            "p99".parse().expect("Failed to parse the metric name"),
+        ];
+
+        for parameter in [empty_set, sixteen] {
+            ingest_grid_point(
+                &mut conn,
+                &mut uuids,
+                proj,
+                testbed,
+                benchmark,
+                parameter,
+                measure,
+                &named,
+                at(0),
+            );
+        }
+
+        let (start, end) = always();
+        // Two grid points, four names each: two series, not eight.
+        assert_eq!(count_active(&mut conn, org, start, end).unwrap(), 2);
+        assert_eq!(oracle_count(&mut conn, org, start, end, None), 2);
+    }
+
+    // The migration's backfill maps every existing series row to its benchmark's
+    // empty parameter set, which is the set every legacy `report_benchmark` row was
+    // itself backfilled to.
+    #[test]
+    fn backfill_maps_existing_rows_to_the_empty_parameter_set() {
+        use diesel::sql_query;
+
+        #[derive(diesel::QueryableByName)]
+        struct SqlCount {
+            #[diesel(sql_type = diesel::sql_types::BigInt)]
+            count: i64,
+        }
+
+        let mut conn = setup_test_db();
+        let mut uuids = Uuids(1);
+        let org = make_org(&mut conn, &mut uuids);
+        let proj = make_proj(&mut conn, &mut uuids, org, Visibility::Public);
+        let testbed = make_testbed(&mut conn, &mut uuids, proj.project);
+        let benchmark = make_benchmark(&mut conn, &mut uuids, proj.project);
+        let measure = make_measure(&mut conn, &mut uuids, proj.project);
+        ingest(
+            &mut conn,
+            &mut uuids,
+            proj,
+            testbed,
+            benchmark,
+            measure,
+            at(0),
+        );
+
+        // Every cache row names a parameter set, and it is the benchmark's empty one.
+        let mismatched = sql_query(
+            "SELECT COUNT(*) AS count
+             FROM series_last_seen s
+             LEFT JOIN parameter p ON p.id = s.parameter_id
+             WHERE p.id IS NULL
+                OR p.benchmark_id != s.benchmark_id
+                OR p.parameters != jsonb('{}')",
+        )
+        .get_result::<SqlCount>(&mut conn)
+        .expect("Failed to check the backfilled parameter sets")
+        .count;
+        assert_eq!(
+            mismatched, 0,
+            "every series row names its benchmark's empty parameter set"
+        );
     }
 
     /// Ingest on the project's primary head.
