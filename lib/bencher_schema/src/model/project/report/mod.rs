@@ -1195,8 +1195,8 @@ mod tests {
         test_util::{
             BranchIds, create_alert, create_base_entities, create_benchmark, create_boundary,
             create_branch_with_head, create_head_version, create_measure, create_metric,
-            create_model, create_report, create_report_benchmark, create_testbed, create_threshold,
-            create_version, setup_test_db,
+            create_model, create_named_metric, create_report, create_report_benchmark,
+            create_testbed, create_threshold, create_version, setup_test_db,
         },
     };
 
@@ -1642,6 +1642,88 @@ mod tests {
                 total: 1,
                 active: 1,
             }
+        );
+    }
+
+    /// A measure that named no `value` is left out of the report results, because the
+    /// deprecated metric triple it would carry cannot be reconstructed. The counts
+    /// have to leave it out too, or the same report is one measure from the endpoint
+    /// that loads its results and two from the endpoint that counts them.
+    #[test]
+    fn full_and_collapsed_counts_agree_for_a_value_less_measure() {
+        let mut conn = setup_test_db();
+        let fixture = create_report_fixture(&mut conn);
+
+        let latency = create_measure(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000060",
+            "Latency",
+            "latency",
+        );
+        let throughput = create_measure(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000061",
+            "Throughput",
+            "throughput",
+        );
+        let benchmark_id = create_benchmark(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000070",
+            "bench",
+            "bench",
+        );
+        let report_benchmark = create_report_benchmark(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000080",
+            fixture.report_id,
+            0,
+            benchmark_id,
+        );
+
+        // One measure with a point estimate, one measure with only a percentile.
+        create_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000090",
+            report_benchmark,
+            latency,
+            1.0,
+        );
+        create_named_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000091",
+            report_benchmark,
+            throughput,
+            &"p99".parse().expect("Failed to parse the metric name"),
+            2.0,
+        );
+
+        let log = test_logger();
+        let load_report = |conn: &mut DbConnection| -> QueryReport {
+            schema::report::table
+                .filter(schema::report::id.eq(fixture.report_id))
+                .select(QueryReport::as_select())
+                .first(conn)
+                .expect("Failed to load report")
+        };
+
+        let full = load_report(&mut conn)
+            .into_json(&log, &mut conn, ReportMode::Full)
+            .expect("Failed to convert full report");
+        let collapsed = load_report(&mut conn)
+            .into_json(&log, &mut conn, ReportMode::Collapsed)
+            .expect("Failed to convert collapsed report");
+
+        assert_eq!(full.counts, collapsed.counts);
+        assert_eq!(
+            full.counts.results,
+            vec![JsonReportIterationCounts {
+                benchmarks: 1,
+                measures: 1,
+            }],
+            "the measure that named no point estimate is counted by neither"
         );
     }
 
