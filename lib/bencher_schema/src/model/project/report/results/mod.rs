@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use bencher_adapter::{
-    AdapterResultsArray, FoldableResults, Settings as AdapterSettings,
-    results::foldable::FoldableMetrics,
+    AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
+    results::adapter_metrics::{AdapterMetrics, NamedMap},
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, JsonNewMetric, MeasureNameId, Slug,
+    BenchmarkName, BenchmarkNameId, JsonParameters, MeasureNameId, MetricName, Slug,
     project::report::{Adapter, Iteration, JsonReportSettings},
 };
 use diesel::RunQueryDsl as _;
@@ -18,7 +18,10 @@ use bencher_json::DateTime;
 use crate::macros::sql::last_insert_rowid;
 use crate::model::spec::SpecId;
 #[cfg(feature = "plus")]
-use crate::model::{organization::OrganizationId, project::series::upsert_series_last_seen};
+use crate::model::{
+    organization::OrganizationId,
+    project::series::{SeriesKey, upsert_series_last_seen},
+};
 use crate::{
     auth_conn,
     context::ApiContext,
@@ -56,7 +59,7 @@ pub struct ReportResults {
     #[cfg(feature = "plus")]
     pub series_cache: SeriesCacheContext,
     pub benchmark_cache: HashMap<BenchmarkNameId, BenchmarkId>,
-    pub parameter_cache: HashMap<BenchmarkId, ParameterId>,
+    pub parameter_cache: HashMap<(BenchmarkId, JsonParameters), ParameterId>,
     pub measure_cache: HashMap<MeasureNameId, MeasureId>,
     pub detector_cache: HashMap<MeasureId, Option<Detector>>,
 }
@@ -125,17 +128,39 @@ impl ReportResults {
                 ))
             })?;
 
-        // BMF v1 parses but does not yet reach the database, so it is refused
-        // here rather than silently ingested as if it had no parameter sets.
-        // The parameter aware ingest path replaces this in a following release.
-        let results_array = results_array.foldable().map_err(|_unfoldable| {
-            bad_request_error(
-                "Benchmark parameters and named metric values are not yet supported on ingest.",
-            )
-        })?;
+        // The per measure cap has already truncated, so this is the report of it and
+        // never an ingest error: a harness that names more statistics than the cap
+        // allows still gets its report. The adapter counts; the log line and the
+        // counter are here because this is where the providers are in scope.
+        let dropped_names = results_array.dropped_names();
+        let report_id = self.report_id;
+        if dropped_names > 0 {
+            slog::warn!(
+                log,
+                "Dropped {dropped_names} named metric value(s) over the per measure cap for report ({report_id})"
+            );
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment_by(
+                bencher_otel::ApiCounter::MetricNamesDropped,
+                u64::try_from(dropped_names).unwrap_or(u64::MAX),
+            );
+        }
 
+        // Fold is a BMF v0 operation and nothing else: the mean of per iteration
+        // `p99` values is not the `p99` of the pooled sample. A v1 payload with fold
+        // requested warns and ingests unfolded, one `report_benchmark` row per
+        // iteration, because a harness upgrade must never turn a pipeline red.
         let results_array = if let Some(fold) = settings.fold {
-            vec![results_array.fold(fold)]
+            match results_array.foldable() {
+                Ok(foldable) => vec![foldable.fold(fold).into()],
+                Err(unfoldable) => {
+                    slog::warn!(
+                        log,
+                        "Ignoring the requested fold ({fold:?}) for report ({report_id}): fold is not supported for benchmark parameters or named metric values"
+                    );
+                    unfoldable.inner
+                },
+            }
         } else {
             results_array.inner
         };
@@ -169,24 +194,50 @@ impl ReportResults {
         log: &Logger,
         context: &ApiContext,
         iteration: Iteration,
-        results: FoldableResults,
+        results: AdapterResults,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         // Phase 1: Pre-compute all data using read connections.
         // Resolve IDs (get_or_create), fetch historical data, compute boundaries.
-        let mut prepared_benchmarks = Vec::with_capacity(results.inner.len());
+        let mut prepared_grid_points = Vec::with_capacity(results.inner.len());
 
-        for (benchmark, metrics) in results.inner {
-            let prepared = self
-                .prepare_benchmark(log, context, iteration, benchmark, metrics)
-                .await?;
-            prepared_benchmarks.push(prepared);
+        for (benchmark, entries) in results.inner {
+            // If benchmark name is ignored then strip the special suffix before querying
+            let (benchmark, ignore_benchmark) = strip_ignore_suffix(benchmark);
+            let benchmark_id = self.benchmark_id(context, benchmark).await?;
+            // A benchmark reports as many grid points as it has parameter sets, and
+            // each is its own `report_benchmark` row with its own series history.
+            for (parameters, metrics) in entries {
+                let prepared = self
+                    .prepare_grid_point(
+                        log,
+                        context,
+                        iteration,
+                        benchmark_id,
+                        ignore_benchmark,
+                        parameters,
+                        metrics,
+                    )
+                    .await?;
+                prepared_grid_points.push(prepared);
+            }
         }
 
-        // Compute metric count once before acquiring write lock
-        let iteration_metric_count: i32 = prepared_benchmarks
+        // Compute metric count once before acquiring write lock. Named values collapse
+        // into their measure's point estimate, so this counts exactly the rows
+        // `QueryMetric::usage` reads back: one per measure that named a `value`.
+        let iteration_metric_count: i32 = prepared_grid_points
             .iter()
-            .map(|p| i32::try_from(p.metrics.len()).unwrap_or(i32::MAX))
+            .map(|grid_point| {
+                i32::try_from(
+                    grid_point
+                        .measures
+                        .iter()
+                        .filter(|measure| measure.named.contains_key(&MetricName::value()))
+                        .count(),
+                )
+                .unwrap_or(i32::MAX)
+            })
             .fold(0i32, i32::saturating_add);
 
         // Phase 2: Write all data in a single transaction.
@@ -194,71 +245,33 @@ impl ReportResults {
         let write_start = context.clock.now();
 
         write_transaction!(context, |conn| {
-            // Series (testbed x benchmark x measure) seen in this iteration, upserted
-            // into the active-series cache in this same transaction so the cache cannot
-            // drift from the metrics it bills.
+            // Series (testbed x benchmark x parameter x measure) seen in this iteration,
+            // upserted into the active-series cache in this same transaction so the
+            // cache cannot drift from the metrics it bills.
             #[cfg(feature = "plus")]
-            let mut series_keys: Vec<(BenchmarkId, MeasureId)> = Vec::new();
-            for prepared in prepared_benchmarks {
-                // Insert report_benchmark
-                diesel::insert_into(schema::report_benchmark::table)
-                    .values(&prepared.insert_report_benchmark)
-                    .execute(conn)?;
-                let report_benchmark_id: ReportBenchmarkId =
-                    diesel::select(last_insert_rowid()).get_result(conn)?;
+            let mut series_keys: Vec<SeriesKey> = Vec::new();
+            for prepared in prepared_grid_points {
+                // The series this grid point touches, taken before it is written out.
                 #[cfg(feature = "plus")]
-                let benchmark_id = prepared.insert_report_benchmark.benchmark_id;
-
-                // Insert all metrics for this benchmark
-                for prepared_metric in prepared.metrics {
-                    #[cfg(feature = "plus")]
-                    series_keys.push((benchmark_id, prepared_metric.measure_id));
-                    // The point estimate goes in first so that `last_insert_rowid`
-                    // still names the row a boundary attaches to. Detection has only
-                    // ever gated the `value` scalar.
-                    let insert_metric = InsertMetric::value(
-                        report_benchmark_id,
-                        prepared_metric.measure_id,
-                        prepared_metric.metric,
-                    );
-                    diesel::insert_into(schema::metric::table)
-                        .values(&insert_metric)
-                        .execute(conn)?;
-
-                    // If there's a prepared detection, write boundary + optional alert
-                    if let Some(prepared_detection) = prepared_metric.detection {
-                        let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
-                        prepared_detection.write(conn, metric_id)?;
-                    }
-
-                    let insert_bounds = InsertMetric::bounds(
-                        report_benchmark_id,
-                        prepared_metric.measure_id,
-                        prepared_metric.metric,
-                    );
-                    if !insert_bounds.is_empty() {
-                        diesel::insert_into(schema::metric::table)
-                            .values(&insert_bounds)
-                            .execute(conn)?;
-                    }
-                }
+                let grid_point_series = prepared.series_keys(self.testbed_id);
+                write_grid_point(conn, prepared)?;
+                #[cfg(feature = "plus")]
+                series_keys.extend(grid_point_series);
             }
 
             // Upsert metric count summary (count computed before acquiring write lock)
             super::upsert_metric_count(conn, self.report_id, iteration_metric_count)?;
 
             // Refresh each seen series' last_seen to this report's creation time, in the
-            // same transaction as the metric inserts above. The (benchmark, measure) pairs
-            // are distinct within an iteration; repeats across iterations are idempotent.
+            // same transaction as the metric inserts above. The series keys are distinct
+            // within an iteration; repeats across iterations are idempotent.
             #[cfg(feature = "plus")]
-            for (benchmark_id, measure_id) in series_keys {
+            for series in series_keys {
                 upsert_series_last_seen(
                     conn,
                     self.series_cache.organization_id,
                     self.project_id,
-                    self.testbed_id,
-                    benchmark_id,
-                    measure_id,
+                    series,
                     self.series_cache.report_created,
                 )?;
             }
@@ -291,52 +304,61 @@ impl ReportResults {
         Ok(())
     }
 
-    /// Phase 1: Prepare all data for a single benchmark (reads + compute only).
-    async fn prepare_benchmark(
+    /// Phase 1: Prepare all data for a single grid point (reads + compute only).
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "a grid point is a benchmark, its parameter set, and its metrics"
+    )]
+    async fn prepare_grid_point(
         &mut self,
         log: &Logger,
         context: &ApiContext,
         iteration: Iteration,
-        benchmark: BenchmarkNameId,
-        metrics: FoldableMetrics,
-    ) -> Result<PreparedBenchmark, HttpError> {
-        // If benchmark name is ignored then strip the special suffix before querying
-        let (benchmark, ignore_benchmark) = strip_ignore_suffix(benchmark);
-        let benchmark_id = self.benchmark_id(context, benchmark).await?;
-        // Every result in this layer rides its benchmark's empty parameter set.
-        // Resolved here in Phase 1 so the Phase 2 write transaction stays read free.
-        let parameter_id = self.parameter_id(context, benchmark_id).await?;
+        benchmark_id: BenchmarkId,
+        ignore_benchmark: bool,
+        parameters: JsonParameters,
+        metrics: AdapterMetrics,
+    ) -> Result<PreparedGridPoint, HttpError> {
+        // Resolved here in Phase 1, alongside the benchmark and the measures, so the
+        // Phase 2 write transaction stays read free and never nests a transaction.
+        let parameter_id = self.parameter_id(context, benchmark_id, parameters).await?;
 
         let insert_report_benchmark =
             InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id, parameter_id);
 
-        let mut prepared_metrics = Vec::with_capacity(metrics.len());
-        for (measure_key, metric) in metrics {
+        let mut prepared_measures = Vec::with_capacity(metrics.inner.len());
+        for (measure_key, metric) in metrics.inner {
             let measure_id = self.measure_id(context, measure_key).await?;
+            let named = metric.inner;
 
-            // Pre-compute detection if a detector exists for this measure
-            let detection = if let Some(detector) = self.detector(context, measure_id).await? {
-                Some(detector.prepare_detection(
+            // A bare threshold gates the conventional `value` series, of every
+            // parameter set under its measure, and nothing else. That is exactly what
+            // a measure level threshold over flat benchmarks has always done, so no
+            // project's alert volume moves.
+            let value = named.get(&MetricName::value()).copied();
+            let detector = self.detector(context, measure_id).await?;
+            let detection = match (value, detector) {
+                (Some(value), Some(detector)) => Some(detector.prepare_detection(
                     log,
                     auth_conn!(context),
                     benchmark_id,
-                    metric.value.into(),
+                    parameter_id,
+                    value.into_inner(),
                     ignore_benchmark,
-                )?)
-            } else {
-                None
+                )?),
+                _ => None,
             };
 
-            prepared_metrics.push(PreparedMetric {
+            prepared_measures.push(PreparedMeasure {
                 measure_id,
-                metric,
+                named,
                 detection,
             });
         }
 
-        Ok(PreparedBenchmark {
+        Ok(PreparedGridPoint {
             insert_report_benchmark,
-            metrics: prepared_metrics,
+            measures: prepared_measures,
         })
     }
 
@@ -355,16 +377,20 @@ impl ReportResults {
         })
     }
 
+    /// The parameter set's row, keyed on both the benchmark and the set itself:
+    /// one benchmark has as many grid points as it has parameter sets.
     async fn parameter_id(
         &mut self,
         context: &ApiContext,
         benchmark_id: BenchmarkId,
+        parameters: JsonParameters,
     ) -> Result<ParameterId, HttpError> {
-        Ok(if let Some(id) = self.parameter_cache.get(&benchmark_id) {
+        let key = (benchmark_id, parameters);
+        Ok(if let Some(id) = self.parameter_cache.get(&key) {
             *id
         } else {
-            let parameter_id = QueryParameter::get_empty_set_id(auth_conn!(context), benchmark_id)?;
-            self.parameter_cache.insert(benchmark_id, parameter_id);
+            let parameter_id = QueryParameter::get_or_create(context, benchmark_id, &key.1).await?;
+            self.parameter_cache.insert(key, parameter_id);
             parameter_id
         })
     }
@@ -408,16 +434,100 @@ impl ReportResults {
     }
 }
 
-/// Pre-computed data for a single benchmark within a report iteration.
-struct PreparedBenchmark {
+/// Pre-computed data for a single grid point within a report iteration.
+struct PreparedGridPoint {
     insert_report_benchmark: InsertReportBenchmark,
-    metrics: Vec<PreparedMetric>,
+    measures: Vec<PreparedMeasure>,
 }
 
-/// Pre-computed data for a single metric within a benchmark.
-struct PreparedMetric {
+impl PreparedGridPoint {
+    /// The series this grid point bills: one per measure, however many names the
+    /// measure carried.
+    #[cfg(feature = "plus")]
+    fn series_keys(&self, testbed_id: TestbedId) -> Vec<SeriesKey> {
+        self.measures
+            .iter()
+            .map(|prepared_measure| SeriesKey {
+                testbed_id,
+                benchmark_id: self.insert_report_benchmark.benchmark_id,
+                parameter_id: self.insert_report_benchmark.parameter_id,
+                measure_id: prepared_measure.measure_id,
+            })
+            .collect()
+    }
+}
+
+/// Phase 2: write one grid point's `report_benchmark` row, every named metric row
+/// under it, and the boundary and alert its point estimate earned.
+///
+/// Runs inside the ingest write transaction and opens none of its own.
+fn write_grid_point(
+    conn: &mut crate::context::DbConnection,
+    prepared: PreparedGridPoint,
+) -> diesel::QueryResult<()> {
+    let PreparedGridPoint {
+        insert_report_benchmark,
+        measures,
+    } = prepared;
+
+    diesel::insert_into(schema::report_benchmark::table)
+        .values(&insert_report_benchmark)
+        .execute(conn)?;
+    let report_benchmark_id: ReportBenchmarkId =
+        diesel::select(last_insert_rowid()).get_result(conn)?;
+
+    for prepared_measure in measures {
+        let PreparedMeasure {
+            measure_id,
+            mut named,
+            detection,
+        } = prepared_measure;
+
+        // The point estimate goes in first so that `last_insert_rowid` still names
+        // the row a boundary attaches to. Detection has only ever gated the `value`
+        // scalar. A BMF v1 measure may name no `value` at all, in which case there
+        // is nothing to gate.
+        if let Some(value) = named.remove(&MetricName::value()) {
+            let insert_metric = InsertMetric::named(
+                report_benchmark_id,
+                measure_id,
+                MetricName::value(),
+                value.into_inner(),
+            );
+            diesel::insert_into(schema::metric::table)
+                .values(&insert_metric)
+                .execute(conn)?;
+
+            // If there's a prepared detection, write boundary + optional alert
+            if let Some(prepared_detection) = detection {
+                let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
+                prepared_detection.write(conn, metric_id)?;
+            }
+        }
+
+        let insert_named = named
+            .into_iter()
+            .map(|(name, value)| {
+                InsertMetric::named(report_benchmark_id, measure_id, name, value.into_inner())
+            })
+            .collect::<Vec<_>>();
+        if !insert_named.is_empty() {
+            diesel::insert_into(schema::metric::table)
+                .values(&insert_named)
+                .execute(conn)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Pre-computed data for a single measure at one grid point.
+struct PreparedMeasure {
     measure_id: MeasureId,
-    metric: JsonNewMetric,
+    /// Every named scalar the measure reported, in lexicographic order.
+    named: NamedMap,
+    /// The detection prepared for the `value` scalar. `None` when no threshold
+    /// covers the measure, or when the measure named no point estimate.
     detection: Option<PreparedDetection>,
 }
 

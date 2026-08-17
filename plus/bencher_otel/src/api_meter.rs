@@ -86,6 +86,7 @@ pub enum ApiCounter {
     ReportDelete,
 
     MetricsCreate(Priority),
+    MetricNamesDropped,
     MetricsBilled,
     MetricsBilledFailed,
     ActiveSeriesBilled,
@@ -178,7 +179,10 @@ impl ApiCounter {
 
             Self::ReportCreate | Self::ReportDelete | Self::SelfHostedServerStats(_) => "{report}",
 
-            Self::MetricsCreate(_) | Self::MetricsBilled | Self::MetricsBilledFailed => "{metric}",
+            Self::MetricsCreate(_)
+            | Self::MetricNamesDropped
+            | Self::MetricsBilled
+            | Self::MetricsBilledFailed => "{metric}",
 
             Self::ActiveSeriesBilled | Self::ActiveSeriesBilledFailed => "{series}",
 
@@ -244,6 +248,7 @@ impl ApiCounter {
             Self::ReportDelete => "report.delete",
 
             Self::MetricsCreate(_) => "metrics.create",
+            Self::MetricNamesDropped => "metrics.names.dropped",
             Self::MetricsBilled => "metrics.billed",
             Self::MetricsBilledFailed => "metrics.billed.failed",
             Self::ActiveSeriesBilled => "active_series.billed",
@@ -323,6 +328,10 @@ impl ApiCounter {
         }
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "exhaustive match over every counter variant"
+    )]
     fn description(&self) -> &'static str {
         match self {
             Self::ServerStartup => "Counts the number of server startups",
@@ -342,6 +351,9 @@ impl ApiCounter {
             Self::ReportDelete => "Counts the number of report deletions",
 
             Self::MetricsCreate(_) => "Counts the number of metrics created",
+            Self::MetricNamesDropped => {
+                "Counts the named metric values dropped over the per measure cap"
+            },
             Self::MetricsBilled => "Counts the number of metrics successfully billed",
             Self::MetricsBilledFailed => "Counts the number of metrics billing failures",
             Self::ActiveSeriesBilled => "Counts the number of active series successfully billed",
@@ -475,6 +487,7 @@ impl ApiCounter {
             | Self::UserKeyUpdateBlocked
             | Self::UserKeyRevoke
             | Self::UserKeyRevokeBlocked
+            | Self::MetricNamesDropped
             | Self::MetricsBilled
             | Self::MetricsBilledFailed
             | Self::ActiveSeriesBilled

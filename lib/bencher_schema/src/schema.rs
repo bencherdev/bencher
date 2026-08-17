@@ -339,11 +339,12 @@ diesel::table! {
 }
 
 diesel::table! {
-    series_last_seen (testbed_id, benchmark_id, measure_id) {
+    series_last_seen (testbed_id, benchmark_id, parameter_id, measure_id) {
         organization_id -> Integer,
         project_id -> Integer,
         testbed_id -> Integer,
         benchmark_id -> Integer,
+        parameter_id -> Integer,
         measure_id -> Integer,
         last_seen -> BigInt,
     }
@@ -512,6 +513,7 @@ diesel::joinable!(runner_spec -> spec (spec_id));
 diesel::joinable!(series_last_seen -> benchmark (benchmark_id));
 diesel::joinable!(series_last_seen -> measure (measure_id));
 diesel::joinable!(series_last_seen -> organization (organization_id));
+diesel::joinable!(series_last_seen -> parameter (parameter_id));
 diesel::joinable!(series_last_seen -> project (project_id));
 diesel::joinable!(series_last_seen -> testbed (testbed_id));
 diesel::joinable!(sso -> organization (organization_id));

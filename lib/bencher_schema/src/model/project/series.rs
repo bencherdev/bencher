@@ -2,17 +2,19 @@
 
 //! Cache of each monitored series' most recent activity.
 //!
-//! A *series* is a distinct `(testbed, benchmark, measure)` an organization reports
-//! to. `series_last_seen` stores, per series, the greatest `report.created` (the
-//! server-side ingestion time, not the user-supplied `end_time`) ever recorded for it
-//! (`last_seen`). The cache is written on ingest in the same transaction as the metric
+//! A *series* is a distinct `(testbed, benchmark, parameter, measure)` an organization
+//! reports to: each grid point of a benchmark has its own history and bills as its own
+//! series, and named metric values collapse into their measure's series rather than
+//! multiplying it. `series_last_seen` stores, per series, the greatest `report.created`
+//! (the server-side ingestion time, not the user-supplied `end_time`) ever recorded for
+//! it (`last_seen`). The cache is written on ingest in the same transaction as the metric
 //! inserts and backfilled from existing metrics by the migration. `last_seen` only ever
 //! rises (`MAX`): reprocessing an older report cannot lower it, and deleting a report
 //! does NOT lower it either; a series that reported during a period was active that
 //! period and stays billed for it. The one way a series leaves the count early is
-//! hard-deleting its testbed, benchmark, or measure, which cascades its rows away and
-//! can lower the current period's count. Accepted: entity deletion requires first
-//! deleting all of that entity's reports (destroying the org's own history), and an
+//! hard-deleting its testbed, benchmark, parameter set, or measure, which cascades its
+//! rows away and can lower the current period's count. Accepted: entity deletion requires
+//! first deleting all of that entity's reports (destroying the org's own history), and an
 //! inactive series stops billing next period anyway.
 //!
 //! The cache exists so that billing on monthly-active series (and the matching telemetry
@@ -29,16 +31,31 @@ use crate::{
     error::issue_error,
     model::{
         organization::OrganizationId,
-        project::{ProjectId, benchmark::BenchmarkId, measure::MeasureId, testbed::TestbedId},
+        project::{
+            ProjectId, benchmark::BenchmarkId, measure::MeasureId, parameter::ParameterId,
+            testbed::TestbedId,
+        },
     },
     schema::{self, series_last_seen as series_table},
 };
 
+/// One billable series: a grid point's measure on a testbed.
+///
+/// The four columns travel together because they are one identity, and because
+/// they are what the primary key is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SeriesKey {
+    pub testbed_id: TestbedId,
+    pub benchmark_id: BenchmarkId,
+    pub parameter_id: ParameterId,
+    pub measure_id: MeasureId,
+}
+
 /// Record that a series produced a metric at `last_seen`, keeping the stored value
 /// the greater of its current and new value.
 ///
-/// Called once per distinct `(testbed, benchmark, measure)` in an ingested report,
-/// inside the same write transaction as that report's metric inserts. `last_seen` is the
+/// Called once per distinct [`SeriesKey`] in an ingested report, inside the same
+/// write transaction as that report's metric inserts. `last_seen` is the
 /// report's server-side creation time. `MAX` keeps it monotonic: reprocessing an older
 /// report cannot lower a series' recorded activity, and a repeat within the same report
 /// (across iterations) is an idempotent no-op.
@@ -50,12 +67,17 @@ pub fn upsert_series_last_seen(
     conn: &mut DbConnection,
     organization_id: OrganizationId,
     project_id: ProjectId,
-    testbed_id: TestbedId,
-    benchmark_id: BenchmarkId,
-    measure_id: MeasureId,
+    series: SeriesKey,
     last_seen: DateTime,
 ) -> diesel::QueryResult<()> {
     use crate::macros::sql::max;
+
+    let SeriesKey {
+        testbed_id,
+        benchmark_id,
+        parameter_id,
+        measure_id,
+    } = series;
 
     diesel::insert_into(series_table::table)
         .values((
@@ -63,12 +85,14 @@ pub fn upsert_series_last_seen(
             series_table::project_id.eq(project_id),
             series_table::testbed_id.eq(testbed_id),
             series_table::benchmark_id.eq(benchmark_id),
+            series_table::parameter_id.eq(parameter_id),
             series_table::measure_id.eq(measure_id),
             series_table::last_seen.eq(last_seen),
         ))
         .on_conflict((
             series_table::testbed_id,
             series_table::benchmark_id,
+            series_table::parameter_id,
             series_table::measure_id,
         ))
         .do_update()
@@ -166,7 +190,8 @@ fn count_inner(
 /// Test-only oracle: the distinct-series count the cache must equal, computed from
 /// scratch over the raw metric rows in plain Rust (independent of the cache's SQL).
 ///
-/// Counts distinct `(testbed, benchmark, measure)` whose latest `report.created`
+/// Counts distinct `(testbed, benchmark, parameter, measure)` whose latest
+/// `report.created`
 /// falls in `[start_time, end_time]`, excluding soft-deleted projects, optionally
 /// restricted to a `visibility`. Never run at runtime; [`count_inner`] is the
 /// runtime source and this pins it in tests (shared with the ingest tests).
@@ -180,14 +205,19 @@ pub(crate) fn oracle_count(
 ) -> u32 {
     use std::collections::HashMap;
 
-    let rows: Vec<(
+    /// One metric row, reduced to the series it belongs to, when its report was
+    /// created, and the project filters the cache read applies.
+    type OracleRow = (
         TestbedId,
         BenchmarkId,
+        ParameterId,
         MeasureId,
         DateTime,
         Visibility,
         Option<DateTime>,
-    )> = schema::metric::table
+    );
+
+    let rows: Vec<OracleRow> = schema::metric::table
         .inner_join(
             schema::report_benchmark::table
                 .inner_join(schema::benchmark::table.inner_join(schema::project::table))
@@ -198,6 +228,7 @@ pub(crate) fn oracle_count(
         .select((
             schema::report::testbed_id,
             schema::report_benchmark::benchmark_id,
+            schema::report_benchmark::parameter_id,
             schema::metric::measure_id,
             schema::report::created,
             schema::project::visibility,
@@ -208,8 +239,17 @@ pub(crate) fn oracle_count(
 
     // Reduce to the latest creation time per series, applying the same project filters
     // the cache read applies.
-    let mut last_by_series: HashMap<(TestbedId, BenchmarkId, MeasureId), DateTime> = HashMap::new();
-    for (testbed_id, benchmark_id, measure_id, created_row, project_visibility, deleted) in rows {
+    let mut last_by_series: HashMap<SeriesKey, DateTime> = HashMap::new();
+    for (
+        testbed_id,
+        benchmark_id,
+        parameter_id,
+        measure_id,
+        created_row,
+        project_visibility,
+        deleted,
+    ) in rows
+    {
         if deleted.is_some() {
             continue;
         }
@@ -222,7 +262,12 @@ pub(crate) fn oracle_count(
         // `DateTime` has no `Ord`; compare by timestamp (whole seconds, exactly what
         // SQL stores and compares).
         last_by_series
-            .entry((testbed_id, benchmark_id, measure_id))
+            .entry(SeriesKey {
+                testbed_id,
+                benchmark_id,
+                parameter_id,
+                measure_id,
+            })
             .and_modify(|latest| {
                 if created_row.timestamp() > latest.timestamp() {
                     *latest = created_row;
@@ -248,7 +293,9 @@ mod tests {
     use bencher_json::{DateTime, MetricName, project::Visibility};
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
-    use super::{count_active, count_active_private, oracle_count, upsert_series_last_seen};
+    use super::{
+        SeriesKey, count_active, count_active_private, oracle_count, upsert_series_last_seen,
+    };
     use crate::{
         context::DbConnection,
         macros::sql::last_insert_rowid,
@@ -438,13 +485,17 @@ mod tests {
             ))
             .execute(conn)
             .expect("insert metric");
+        let parameter = get_empty_parameter(conn, benchmark);
         upsert_series_last_seen(
             conn,
             proj.org,
             proj.project,
-            testbed,
-            benchmark,
-            measure,
+            SeriesKey {
+                testbed_id: testbed,
+                benchmark_id: benchmark,
+                parameter_id: parameter,
+                measure_id: measure,
+            },
             end_time,
         )
         .expect("upsert series");
@@ -508,9 +559,12 @@ mod tests {
             conn,
             proj.org,
             proj.project,
-            testbed,
-            benchmark,
-            measure,
+            SeriesKey {
+                testbed_id: testbed,
+                benchmark_id: benchmark,
+                parameter_id: parameter,
+                measure_id: measure,
+            },
             end_time,
         )
         .expect("upsert series");
@@ -1075,28 +1129,17 @@ mod tests {
             make_benchmark(&mut conn, &mut uuids, proj.project),
             make_measure(&mut conn, &mut uuids, proj.project),
         );
+        let parameter = get_empty_parameter(&mut conn, benchmark);
+        let series = SeriesKey {
+            testbed_id: testbed,
+            benchmark_id: benchmark,
+            parameter_id: parameter,
+            measure_id: measure,
+        };
         // Two bare upserts of the same series key converge to one row, last_seen = MAX,
         // with no duplicate-key error.
-        upsert_series_last_seen(
-            &mut conn,
-            org,
-            proj.project,
-            testbed,
-            benchmark,
-            measure,
-            at(5),
-        )
-        .unwrap();
-        upsert_series_last_seen(
-            &mut conn,
-            org,
-            proj.project,
-            testbed,
-            benchmark,
-            measure,
-            at(3),
-        )
-        .unwrap();
+        upsert_series_last_seen(&mut conn, org, proj.project, series, at(5)).unwrap();
+        upsert_series_last_seen(&mut conn, org, proj.project, series, at(3)).unwrap();
         let (start, end) = always();
         assert_eq!(count_active(&mut conn, org, start, end).unwrap(), 1);
         // last_seen stayed at the max (5), so the [4, 10] window still counts it.
@@ -1186,16 +1229,20 @@ mod tests {
     fn backfill_equals_oracle() {
         use diesel::sql_query;
 
-        // Mirrors the backfill in migration 2026-06-24-120000_series_last_seen/up.sql.
+        // What the two backfills compose to: 2026-06-24-120000_series_last_seen fills
+        // the cache from the metrics, and 2026-08-17-120000_series_last_seen_parameter
+        // gives every row a parameter set, which for a legacy row is its benchmark's
+        // empty set, which is the set the parameter migration gave every legacy
+        // `report_benchmark` row.
         const BACKFILL: &str = "\
-INSERT INTO series_last_seen (organization_id, project_id, testbed_id, benchmark_id, measure_id, last_seen)
-SELECT p.organization_id, p.id, r.testbed_id, rb.benchmark_id, m.measure_id, MAX(r.created)
+INSERT INTO series_last_seen (organization_id, project_id, testbed_id, benchmark_id, parameter_id, measure_id, last_seen)
+SELECT p.organization_id, p.id, r.testbed_id, rb.benchmark_id, rb.parameter_id, m.measure_id, MAX(r.created)
 FROM metric m
 INNER JOIN report_benchmark rb ON m.report_benchmark_id = rb.id
 INNER JOIN report r ON rb.report_id = r.id
 INNER JOIN benchmark b ON rb.benchmark_id = b.id
 INNER JOIN project p ON b.project_id = p.id
-GROUP BY r.testbed_id, rb.benchmark_id, m.measure_id";
+GROUP BY r.testbed_id, rb.benchmark_id, rb.parameter_id, m.measure_id";
 
         let mut conn = setup_test_db();
         let mut uuids = Uuids(1);

@@ -1,4 +1,4 @@
-use bencher_json::{JsonNewMetric, MetricName, MetricUuid};
+use bencher_json::{MetricName, MetricUuid};
 #[cfg(feature = "plus")]
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -92,46 +92,12 @@ pub struct InsertMetric {
 }
 
 impl InsertMetric {
-    /// The point estimate, which every metric has.
-    pub fn value(
-        report_benchmark_id: ReportBenchmarkId,
-        measure_id: MeasureId,
-        metric: JsonNewMetric,
-    ) -> Self {
-        Self::new(
-            report_benchmark_id,
-            measure_id,
-            MetricName::value(),
-            metric.value.into(),
-        )
-    }
-
-    /// The bounds, which a metric has zero, one, or two of.
+    /// One named scalar.
     ///
-    /// `lower_value` and `upper_value` are ordinary named rows: the metric triple
-    /// is a convention over three names, not a shape the table knows about.
-    pub fn bounds(
-        report_benchmark_id: ReportBenchmarkId,
-        measure_id: MeasureId,
-        metric: JsonNewMetric,
-    ) -> Vec<Self> {
-        let JsonNewMetric {
-            value: _,
-            lower_value,
-            upper_value,
-        } = metric;
-        [
-            (MetricName::lower_value(), lower_value),
-            (MetricName::upper_value(), upper_value),
-        ]
-        .into_iter()
-        .filter_map(|(name, bound)| {
-            bound.map(|bound| Self::new(report_benchmark_id, measure_id, name, bound.into()))
-        })
-        .collect()
-    }
-
-    fn new(
+    /// `value`, `lower_value`, and `upper_value` are ordinary named rows: the
+    /// metric triple is a convention over three names, not a shape the table
+    /// knows about.
+    pub fn named(
         report_benchmark_id: ReportBenchmarkId,
         measure_id: MeasureId,
         name: MetricName,
