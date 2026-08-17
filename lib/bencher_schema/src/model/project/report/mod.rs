@@ -3,14 +3,14 @@ use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
 use std::collections::HashSet;
 
 use bencher_json::{
-    DateTime, JsonMetric, JsonNewReport, JsonReport, JsonReportAlertsCounts, JsonReportCounts,
-    JsonReportIterationCounts, MetricName, ReportUuid,
+    DateTime, JsonBenchmark, JsonMeasure, JsonMetric, JsonNewReport, JsonReport,
+    JsonReportAlertsCounts, JsonReportCounts, JsonReportIterationCounts, MetricName, ReportUuid,
     project::{
         alert::AlertStatus,
         report::{
             Adapter, Iteration, JsonReportAlerts, JsonReportBoundary, JsonReportMeasure,
-            JsonReportMetric, JsonReportResult, JsonReportResults, JsonReportSettings,
-            ReportIdempotencyKey,
+            JsonReportMetric, JsonReportParameter, JsonReportResult, JsonReportResults,
+            JsonReportSettings, ReportIdempotencyKey,
         },
     },
 };
@@ -736,8 +736,8 @@ fn into_report_results_json(
     project: &QueryProject,
     results: Vec<ResultsQuery>,
 ) -> JsonReportResults {
-    let mut report_results: JsonReportResults = Vec::new();
-    let mut report_iteration: Vec<JsonReportResult> = Vec::new();
+    let mut report_results: Vec<Vec<PendingResult>> = Vec::new();
+    let mut report_iteration: Vec<PendingResult> = Vec::new();
     let mut prev_iteration: Option<Iteration> = None;
 
     for (iteration, query_benchmark, query_parameter, query_measure, query_metric, gate) in results
@@ -760,7 +760,7 @@ fn into_report_results_json(
         if report_iteration.last().is_none_or(|result| {
             result.benchmark.uuid != benchmark_uuid || result.parameter.uuid != parameter_uuid
         }) {
-            report_iteration.push(JsonReportResult {
+            report_iteration.push(PendingResult {
                 iteration,
                 benchmark: query_benchmark.into_json_for_project(project),
                 parameter: query_parameter.into_report_json(),
@@ -778,12 +778,9 @@ fn into_report_results_json(
             .last()
             .is_none_or(|report_measure| report_measure.measure.uuid != measure_uuid)
         {
-            report_result.measures.push(JsonReportMeasure {
+            report_result.measures.push(PendingMeasure {
                 measure: query_measure.into_json_for_project(project),
                 metrics: Vec::new(),
-                metric: None,
-                threshold: None,
-                boundary: None,
             });
         }
         let Some(report_measure) = report_result.measures.last_mut() else {
@@ -831,44 +828,97 @@ fn into_report_results_json(
         report_results.push(report_iteration);
     }
 
-    for report_result in report_results.iter_mut().flatten() {
-        for report_measure in &mut report_result.measures {
-            set_deprecated(report_measure);
-        }
-    }
+    let report_results: JsonReportResults = report_results
+        .into_iter()
+        .map(|report_iteration| {
+            report_iteration
+                .into_iter()
+                .map(PendingResult::into_json)
+                .collect()
+        })
+        .collect();
 
     slog::trace!(log, "Report results: {report_results:#?}");
 
     report_results
 }
 
-/// Fill in the deprecated `metric`, `threshold`, and `boundary` fields.
+/// One report result under construction.
 ///
-/// The metric triple is the `value` row and its `lower_value`/`upper_value`
-/// siblings, and the threshold and boundary are the ones that gated the `value` row.
-/// A measure that named no `value` has none of them, which is a shape only a BMF v1
-/// payload can produce.
-fn set_deprecated(report_measure: &mut JsonReportMeasure) {
-    let named = |name: &MetricName| -> Option<&JsonReportMetric> {
-        report_measure
-            .metrics
-            .iter()
-            .find(|report_metric| report_metric.name == *name)
-    };
+/// The deprecated metric triple is reconstructed from a measure's `value` row and its
+/// siblings, which are only all in hand once the last row of that measure has been
+/// read, so the results are built in this shape and finished at the end.
+struct PendingResult {
+    iteration: Iteration,
+    benchmark: JsonBenchmark,
+    parameter: JsonReportParameter,
+    measures: Vec<PendingMeasure>,
+}
 
-    let Some(value) = named(&MetricName::value()) else {
-        return;
-    };
-    report_measure.metric = Some(JsonMetric {
-        uuid: value.uuid,
-        value: value.value,
-        lower_value: named(&MetricName::lower_value()).map(|metric| metric.value),
-        upper_value: named(&MetricName::upper_value()).map(|metric| metric.value),
-    });
+/// One measure of a report result under construction.
+struct PendingMeasure {
+    measure: JsonMeasure,
+    metrics: Vec<JsonReportMetric>,
+}
 
-    if let Some(gate) = value.boundaries.first() {
-        report_measure.threshold = Some(gate.threshold.clone());
-        report_measure.boundary = Some(gate.boundary);
+impl PendingResult {
+    fn into_json(self) -> JsonReportResult {
+        let Self {
+            iteration,
+            benchmark,
+            parameter,
+            measures,
+        } = self;
+        JsonReportResult {
+            iteration,
+            benchmark,
+            parameter,
+            measures: measures
+                .into_iter()
+                .filter_map(PendingMeasure::into_json)
+                .collect(),
+        }
+    }
+}
+
+impl PendingMeasure {
+    /// Fill in the deprecated `metric`, `threshold`, and `boundary` fields.
+    ///
+    /// The metric triple is the `value` row and its `lower_value`/`upper_value`
+    /// siblings, and the threshold and boundary are the ones that gated the `value`
+    /// row.
+    ///
+    /// A measure that named no `value` at all has no triple to reconstruct, and the
+    /// deprecated `metric` is a required field that an older client's generated
+    /// deserializer insists on, so such a measure is left out of the results rather
+    /// than sent without it. Only a BMF v1 payload can report that shape, and its
+    /// named values are stored either way.
+    fn into_json(self) -> Option<JsonReportMeasure> {
+        let Self { measure, metrics } = self;
+
+        let named = |name: &MetricName| -> Option<&JsonReportMetric> {
+            metrics
+                .iter()
+                .find(|report_metric| report_metric.name == *name)
+        };
+        let value = named(&MetricName::value())?;
+        let metric = JsonMetric {
+            uuid: value.uuid,
+            value: value.value,
+            lower_value: named(&MetricName::lower_value()).map(|metric| metric.value),
+            upper_value: named(&MetricName::upper_value()).map(|metric| metric.value),
+        };
+        let (threshold, boundary) = value.boundaries.first().map_or((None, None), |gate| {
+            (Some(gate.threshold.clone()), Some(gate.boundary))
+        });
+
+        Some(JsonReportMeasure {
+            measure,
+            metrics,
+            metric,
+            threshold,
+            boundary,
+        })
     }
 }
 

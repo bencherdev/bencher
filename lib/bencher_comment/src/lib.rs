@@ -518,9 +518,6 @@ impl ReportComment {
                     .measures
                     .iter()
                     .find(|m| m.measure.slug == measure.slug);
-                // The point estimate. A measure that named no `value` has nothing for
-                // this table to draw, so its cells stay empty.
-                let point_estimate = report_measure.and_then(|m| m.metric.as_ref());
                 let alert = self.find_alert(result, measure);
 
                 if let Some(report_measure) = report_measure {
@@ -534,10 +531,10 @@ impl ReportComment {
                 } else {
                     html.push_str(EMPTY_CELL);
                 }
-                if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
+                if let Some(report_measure) = report_measure {
                     value_cell(
                         html,
-                        metric.value,
+                        report_measure.metric.value,
                         report_measure.boundary.and_then(|b| b.baseline),
                         factor,
                         &units_symbol,
@@ -547,10 +544,10 @@ impl ReportComment {
                     html.push_str(EMPTY_CELL);
                 }
                 if boundary_limits.lower {
-                    if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
+                    if let Some(report_measure) = report_measure {
                         lower_limit_cell(
                             html,
-                            metric.value,
+                            report_measure.metric.value,
                             report_measure.boundary.and_then(|b| b.lower_limit),
                             factor,
                             &units_symbol,
@@ -561,10 +558,10 @@ impl ReportComment {
                     }
                 }
                 if boundary_limits.upper {
-                    if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
+                    if let Some(report_measure) = report_measure {
                         upper_limit_cell(
                             html,
-                            metric.value,
+                            report_measure.metric.value,
                             report_measure.boundary.and_then(|b| b.upper_limit),
                             factor,
                             &units_symbol,
@@ -1122,13 +1119,9 @@ fn boundary_limits_map(
     let mut map = BTreeMap::new();
     for result in iteration {
         for report_measure in &result.measures {
-            // A measure that named no point estimate has no row in this table.
-            let Some(metric) = report_measure.metric.as_ref() else {
-                continue;
-            };
             let measure = Measure::from(report_measure.measure.clone());
             let min = {
-                let mut min = metric.value;
+                let mut min = report_measure.metric.value;
                 if let Some(lower_limit) = report_measure.boundary.and_then(|b| b.lower_limit) {
                     min = min.min(lower_limit);
                 }

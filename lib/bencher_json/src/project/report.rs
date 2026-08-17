@@ -454,10 +454,9 @@ pub struct JsonReportMeasure {
 
     /// Deprecated. Reconstructed from the `value` row and its
     /// `lower_value`/`upper_value` siblings. Retained for compatibility with older
-    /// clients and removed in a future release. Absent only when the measure named
-    /// no `value` at all, which nothing before named metric values could produce.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metric: Option<JsonMetric>,
+    /// clients and removed in a future release. A measure that named no `value` at
+    /// all has nothing to reconstruct it from, so it is left out of the results.
+    pub metric: JsonMetric,
     /// Deprecated. The threshold that gated the `value` row, if any.
     pub threshold: Option<JsonThresholdModel>,
     /// Deprecated. The boundary computed for the `value` row, if any.
