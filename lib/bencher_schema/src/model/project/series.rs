@@ -708,6 +708,106 @@ mod tests {
         );
     }
 
+    /// Revert every migration down to and including the series migration.
+    ///
+    /// Mirrors the parameter migration's own test: the series migration is the last
+    /// one today, but reverting by version rather than by count keeps the test correct
+    /// when it stops being last.
+    fn revert_to_series_migration(conn: &mut DbConnection) {
+        use diesel_migrations::MigrationHarness as _;
+
+        const SERIES_MIGRATION: &str = "20260817120000";
+
+        loop {
+            let version = conn
+                .revert_last_migration(crate::MIGRATIONS)
+                .expect("Failed to revert a migration");
+            if version.to_string() == SERIES_MIGRATION {
+                break;
+            }
+        }
+    }
+
+    // Upgrading carries every existing cache row over. The rows are seeded in the
+    // shape the old schema had, keyed on `(testbed, benchmark, measure)` with no
+    // parameter at all, and the empty parameter sets they have to land on are the ones
+    // Diesel minted rather than ones spelled with `jsonb('{}')` in SQL. That is the
+    // point of seeding this way: the backfill joins the two encodings together, so
+    // this is where they have to agree.
+    //
+    // A dropped row is not a visible failure in production. It silently zeroes an
+    // organization's active-series count for the current period until every series
+    // reports again, which is a billing read, not an error.
+    #[test]
+    fn migration_backfill_preserves_every_series_row() {
+        use diesel::connection::SimpleConnection as _;
+        use diesel_migrations::MigrationHarness as _;
+
+        let mut conn = setup_test_db();
+        let mut uuids = Uuids(1);
+        let org = make_org(&mut conn, &mut uuids);
+        let proj = make_proj(&mut conn, &mut uuids, org, Visibility::Public);
+        let testbed = make_testbed(&mut conn, &mut uuids, proj.project);
+        let first = make_benchmark(&mut conn, &mut uuids, proj.project);
+        let second = make_benchmark(&mut conn, &mut uuids, proj.project);
+        let measure = make_measure(&mut conn, &mut uuids, proj.project);
+
+        // Distinct `last_seen` values on two benchmarks, so neither a dropped row nor
+        // rows collapsing into one another can pass by accident.
+        let legacy = [(first, 1_000i64), (second, 2_000i64)];
+
+        // Foreign keys cannot be toggled inside a transaction, and Diesel runs each
+        // migration in one, so they are disabled around the revert and re-apply.
+        conn.batch_execute("PRAGMA foreign_keys = OFF")
+            .expect("Failed to disable foreign keys");
+        revert_to_series_migration(&mut conn);
+
+        for (benchmark, last_seen) in legacy {
+            conn.batch_execute(&format!(
+                "INSERT INTO series_last_seen (
+                    organization_id, project_id, testbed_id, benchmark_id, measure_id, last_seen
+                 ) VALUES ({org}, {project}, {testbed}, {benchmark}, {measure}, {last_seen});",
+                project = proj.project,
+            ))
+            .expect("Failed to seed a legacy series row");
+        }
+
+        conn.run_pending_migrations(crate::MIGRATIONS)
+            .expect("Failed to re-apply the series migration");
+        conn.batch_execute("PRAGMA foreign_keys = ON")
+            .expect("Failed to enable foreign keys");
+
+        let carried: Vec<(TestbedId, BenchmarkId, ParameterId, MeasureId, i64)> =
+            schema::series_last_seen::table
+                .order(schema::series_last_seen::benchmark_id.asc())
+                .select((
+                    schema::series_last_seen::testbed_id,
+                    schema::series_last_seen::benchmark_id,
+                    schema::series_last_seen::parameter_id,
+                    schema::series_last_seen::measure_id,
+                    schema::series_last_seen::last_seen,
+                ))
+                .load(&mut conn)
+                .expect("Failed to load the carried over series rows");
+
+        let expected: Vec<_> = legacy
+            .into_iter()
+            .map(|(benchmark, last_seen)| {
+                (
+                    testbed,
+                    benchmark,
+                    get_empty_parameter(&mut conn, benchmark),
+                    measure,
+                    last_seen,
+                )
+            })
+            .collect();
+        assert_eq!(
+            carried, expected,
+            "every legacy series row is carried onto its benchmark's empty parameter set, untouched"
+        );
+    }
+
     /// Ingest on the project's primary head.
     fn ingest(
         conn: &mut DbConnection,
