@@ -53,7 +53,7 @@ async fn fixture(server: &TestServer, label: &str) -> Fixture {
         .await;
     Fixture {
         project_slug: project.slug.to_string(),
-        token: user.token.to_string(),
+        token: user.token.clone(),
     }
 }
 
@@ -70,19 +70,17 @@ async fn report(
     thresholds: Option<serde_json::Value>,
     fold: Option<&str>,
 ) -> serde_json::Value {
-    let mut body = serde_json::json!({
+    // Both optional fields are omitted by sending `null`, which is what an absent
+    // `Option` deserializes from.
+    let body = serde_json::json!({
         "branch": "main",
         "testbed": "localhost",
         "start_time": format!("2024-01-{day:02}T00:00:00Z"),
         "end_time": format!("2024-01-{day:02}T00:01:00Z"),
         "results": results,
+        "thresholds": thresholds,
+        "settings": fold.map(|fold| serde_json::json!({ "fold": fold })),
     });
-    if let Some(thresholds) = thresholds {
-        body["thresholds"] = thresholds;
-    }
-    if let Some(fold) = fold {
-        body["settings"] = serde_json::json!({ "fold": fold });
-    }
 
     let resp = server
         .client
@@ -102,12 +100,12 @@ async fn report(
 }
 
 /// One BMF v1 payload for a single benchmark's grid points.
-fn v1(benchmark: &str, entries: Vec<serde_json::Value>) -> String {
+fn v1(benchmark: &str, entries: &[serde_json::Value]) -> String {
     serde_json::to_string(&serde_json::json!({ benchmark: entries }))
         .expect("the results serialize")
 }
 
-fn entry(parameters: serde_json::Value, measures: serde_json::Value) -> serde_json::Value {
+fn entry(parameters: &serde_json::Value, measures: &serde_json::Value) -> serde_json::Value {
     serde_json::json!({ "parameters": parameters, "measures": measures })
 }
 
@@ -212,14 +210,14 @@ async fn v1_report_lands_grid_points_and_named_values() {
         1,
         vec![v1(
             "bench",
-            vec![
+            &[
                 entry(
-                    serde_json::json!({ "size_mb": 16 }),
-                    serde_json::json!({ "latency": { "value": 42.0, "p99": 97.0 } }),
+                    &serde_json::json!({ "size_mb": 16 }),
+                    &serde_json::json!({ "latency": { "value": 42.0, "p99": 97.0 } }),
                 ),
                 entry(
-                    serde_json::json!({ "size_mb": 32 }),
-                    serde_json::json!({ "latency": { "value": 55.0 } }),
+                    &serde_json::json!({ "size_mb": 32 }),
+                    &serde_json::json!({ "latency": { "value": 55.0 } }),
                 ),
             ],
         )],
@@ -300,14 +298,14 @@ async fn ingest_grid(server: &TestServer) -> (Fixture, i32) {
             day + 1,
             vec![v1(
                 "bench",
-                vec![
+                &[
                     entry(
-                        serde_json::json!({ "size_mb": 16 }),
-                        serde_json::json!({ "latency": { "value": small } }),
+                        &serde_json::json!({ "size_mb": 16 }),
+                        &serde_json::json!({ "latency": { "value": small } }),
                     ),
                     entry(
-                        serde_json::json!({ "size_mb": 32 }),
-                        serde_json::json!({ "latency": { "value": large } }),
+                        &serde_json::json!({ "size_mb": 32 }),
+                        &serde_json::json!({ "latency": { "value": large } }),
                     ),
                 ],
             )],
@@ -383,9 +381,9 @@ async fn bare_threshold_gates_only_the_value_name() {
             day + 1,
             vec![v1(
                 "bench",
-                vec![entry(
-                    serde_json::json!({}),
-                    serde_json::json!({
+                &[entry(
+                    &serde_json::json!({}),
+                    &serde_json::json!({
                         "latency": { "value": value, "p50": value - 1.0, "p99": value + 1.0 }
                     }),
                 )],
@@ -458,9 +456,9 @@ async fn archived_parameter_set_is_unarchived_on_report() {
 
     let grid_point = v1(
         "bench",
-        vec![entry(
-            serde_json::json!({ "size_mb": 16 }),
-            serde_json::json!({ "latency": { "value": 1.0 } }),
+        &[entry(
+            &serde_json::json!({ "size_mb": 16 }),
+            &serde_json::json!({ "latency": { "value": 1.0 } }),
         )],
     );
     report(&server, &fixture, 1, vec![grid_point.clone()], None, None).await;
@@ -505,16 +503,16 @@ async fn fold_with_v1_warns_and_lands_every_iteration() {
         vec![
             v1(
                 "bench",
-                vec![entry(
-                    serde_json::json!({}),
-                    serde_json::json!({ "latency": { "value": 10.0 } }),
+                &[entry(
+                    &serde_json::json!({}),
+                    &serde_json::json!({ "latency": { "value": 10.0 } }),
                 )],
             ),
             v1(
                 "bench",
-                vec![entry(
-                    serde_json::json!({}),
-                    serde_json::json!({ "latency": { "value": 20.0 } }),
+                &[entry(
+                    &serde_json::json!({}),
+                    &serde_json::json!({ "latency": { "value": 20.0 } }),
                 )],
             ),
         ],
@@ -563,9 +561,9 @@ async fn named_value_cap_does_not_fail_the_report() {
         1,
         vec![v1(
             "bench",
-            vec![entry(
-                serde_json::json!({}),
-                serde_json::json!({ "latency": measures }),
+            &[entry(
+                &serde_json::json!({}),
+                &serde_json::json!({ "latency": measures }),
             )],
         )],
         None,
@@ -581,6 +579,66 @@ async fn named_value_cap_does_not_fail_the_report() {
         names.iter().any(|(_, name, _)| name == "value"),
         "the point estimate is never dropped, got {names:?}"
     );
+}
+
+// What the legacy metric-count meter counts once named metric values exist.
+//
+// `QueryMetric::usage` counts `value` rows, so a measure carrying several names
+// still counts once: named values do not inflate a metric count. The other half is
+// the open question this test records rather than settles: a measure that names no
+// `value` at all, which only BMF v1 can produce, counts zero.
+#[tokio::test]
+async fn named_values_do_not_change_the_metric_count() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "meter").await;
+
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({}),
+                &serde_json::json!({
+                    // Four names, one measurement.
+                    "latency": { "value": 1.0, "lower_value": 0.5, "upper_value": 1.5, "p99": 2.0 },
+                    // No point estimate at all.
+                    "throughput": { "p99": 3.0 },
+                }),
+            )],
+        )],
+        None,
+        None,
+    )
+    .await;
+
+    let project_id = get_project_id(&server, &fixture.project_slug);
+    let mut conn = server.db_conn();
+
+    let rows = named_values(&mut conn, project_id);
+    assert_eq!(rows.len(), 5, "five named rows landed, got {rows:?}");
+
+    let billable: i64 = schema::metric::table
+        .inner_join(schema::report_benchmark::table.inner_join(schema::benchmark::table))
+        .filter(schema::benchmark::project_id.eq(project_id))
+        .filter(schema::metric::name.eq(MetricName::value()))
+        .count()
+        .get_result(&mut conn)
+        .expect("Failed to count the billable metric rows");
+    assert_eq!(
+        billable, 1,
+        "the four named latency values bill as one metric, and the throughput measure \
+         that named no point estimate bills as none"
+    );
+
+    // The in-request count the plan check and the telemetry counter see agrees with
+    // what the billing read counts back, so the two meters cannot drift.
+    let counted: i32 = schema::metric_count_by_report::table
+        .select(schema::metric_count_by_report::metric_count)
+        .first(&mut conn)
+        .expect("Failed to read the report's metric count");
+    assert_eq!(i64::from(counted), billable);
 }
 
 // The report response echoes every named value, keeps the deprecated metric,
@@ -599,14 +657,14 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
             day + 1,
             vec![v1(
                 "bench",
-                vec![
+                &[
                     entry(
-                        serde_json::json!({ "size_mb": 16 }),
-                        serde_json::json!({ "latency": { "value": value } }),
+                        &serde_json::json!({ "size_mb": 16 }),
+                        &serde_json::json!({ "latency": { "value": value } }),
                     ),
                     entry(
-                        serde_json::json!({ "size_mb": 32 }),
-                        serde_json::json!({ "latency": { "value": value * 10.0 } }),
+                        &serde_json::json!({ "size_mb": 32 }),
+                        &serde_json::json!({ "latency": { "value": value * 10.0 } }),
                     ),
                 ],
             )],
@@ -622,16 +680,16 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
         SMALL.len() + 1,
         vec![v1(
             "bench",
-            vec![
+            &[
                 entry(
-                    serde_json::json!({ "size_mb": 16 }),
-                    serde_json::json!({
+                    &serde_json::json!({ "size_mb": 16 }),
+                    &serde_json::json!({
                         "latency": { "value": 12.0, "lower_value": 11.0, "upper_value": 13.0, "p99": 20.0 }
                     }),
                 ),
                 entry(
-                    serde_json::json!({ "size_mb": 32 }),
-                    serde_json::json!({ "latency": { "value": 120.0 } }),
+                    &serde_json::json!({ "size_mb": 32 }),
+                    &serde_json::json!({ "latency": { "value": 120.0 } }),
                 ),
             ],
         )],

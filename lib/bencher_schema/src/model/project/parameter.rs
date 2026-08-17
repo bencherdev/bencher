@@ -1,12 +1,20 @@
-use bencher_json::{DateTime, JsonParameters, ParameterUuid};
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use bencher_json::{DateTime, JsonParameters, ParameterUuid, project::report::JsonReportParameter};
+use diesel::{
+    ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _,
+};
 use dropshot::HttpError;
 
 use crate::{
-    context::DbConnection,
-    error::issue_error,
-    macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
+    auth_conn,
+    context::{ApiContext, DbConnection},
+    error::{issue_error, resource_conflict_err},
+    macros::{
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
+        sql::last_insert_rowid,
+    },
     schema::{self, parameter as parameter_table},
+    write_conn, write_transaction,
 };
 
 use super::benchmark::{BenchmarkId, QueryBenchmark};
@@ -64,6 +72,121 @@ impl QueryParameter {
                 issue_error(&message, &message, e)
             })
     }
+
+    /// Resolve a reported parameter set to its row, creating it if it is new.
+    ///
+    /// The empty parameter set is never created here: every benchmark is born with
+    /// one, so its absence is data corruption rather than a row to mint. Every
+    /// other set is created on first sight by its canonical form, and
+    /// `UNIQUE (benchmark_id, parameters)` is what makes that idempotent under
+    /// concurrent reports.
+    ///
+    /// Mirrors [`QueryBenchmark::get_or_create`]: a resolved set that is archived is
+    /// unarchived, because a grid point that reports again is a live grid point.
+    ///
+    /// Called from report ingest's read phase, so the write transaction it opens
+    /// never nests inside the ingest write transaction.
+    pub async fn get_or_create(
+        context: &ApiContext,
+        benchmark_id: BenchmarkId,
+        parameters: &JsonParameters,
+    ) -> Result<ParameterId, HttpError> {
+        let query_parameter = Self::get_or_create_inner(context, benchmark_id, parameters).await?;
+
+        if query_parameter.archived.is_some() {
+            let update_parameter = UpdateParameter::unarchive();
+            diesel::update(
+                schema::parameter::table.filter(schema::parameter::id.eq(query_parameter.id)),
+            )
+            .set(&update_parameter)
+            .execute(write_conn!(context))
+            .map_err(resource_conflict_err!(Parameter, &query_parameter))?;
+        }
+
+        Ok(query_parameter.id)
+    }
+
+    async fn get_or_create_inner(
+        context: &ApiContext,
+        benchmark_id: BenchmarkId,
+        parameters: &JsonParameters,
+    ) -> Result<Self, HttpError> {
+        if let Some(query_parameter) =
+            Self::from_parameters(auth_conn!(context), benchmark_id, parameters)?
+        {
+            return Ok(query_parameter);
+        }
+
+        if parameters.is_empty() {
+            let message =
+                format!("Benchmark ({benchmark_id}) has no empty parameter set to report to");
+            return Err(issue_error(
+                "Failed to find the empty parameter set",
+                &message,
+                diesel::result::Error::NotFound,
+            ));
+        }
+
+        match Self::create(context, benchmark_id, parameters).await {
+            Ok(query_parameter) => Ok(query_parameter),
+            Err(e) if crate::error::is_conflict(&e) => {
+                // Another concurrent report created this parameter set.
+                Self::from_parameters(auth_conn!(context), benchmark_id, parameters)?.ok_or(e)
+            },
+            Err(e) => Err(e),
+        }
+    }
+
+    async fn create(
+        context: &ApiContext,
+        benchmark_id: BenchmarkId,
+        parameters: &JsonParameters,
+    ) -> Result<Self, HttpError> {
+        let insert_parameter =
+            InsertParameter::new(benchmark_id, parameters.clone(), DateTime::now());
+
+        write_transaction!(context, |conn| {
+            diesel::insert_into(schema::parameter::table)
+                .values(&insert_parameter)
+                .execute(conn)?;
+            diesel::select(last_insert_rowid()).get_result::<ParameterId>(conn)
+        })
+        .map_err(resource_conflict_err!(Parameter, &insert_parameter))
+        .map(|id| insert_parameter.into_query(id))
+    }
+
+    fn from_parameters(
+        conn: &mut DbConnection,
+        benchmark_id: BenchmarkId,
+        parameters: &JsonParameters,
+    ) -> Result<Option<Self>, HttpError> {
+        schema::parameter::table
+            .filter(schema::parameter::benchmark_id.eq(benchmark_id))
+            .filter(schema::parameter::parameters.eq(parameters))
+            .select(Self::as_select())
+            .first(conn)
+            .optional()
+            .map_err(|e| {
+                let message = format!(
+                    "Failed to query parameter set ({parameters}) for benchmark ({benchmark_id})"
+                );
+                issue_error(&message, &message, e)
+            })
+    }
+
+    /// The parameter set as a report result names it.
+    pub fn into_report_json(self) -> JsonReportParameter {
+        let Self {
+            id: _,
+            uuid,
+            benchmark_id: _,
+            parameters,
+            created: _,
+            modified: _,
+            archived: _,
+        } = self;
+        JsonReportParameter { uuid, parameters }
+    }
 }
 
 #[derive(Debug, diesel::Insertable)]
@@ -83,10 +206,15 @@ impl InsertParameter {
     /// The timestamp is the benchmark's own creation timestamp:
     /// the parameter set is created in the same transaction as its benchmark.
     pub fn empty_set(benchmark_id: BenchmarkId, timestamp: DateTime) -> Self {
+        Self::new(benchmark_id, JsonParameters::default(), timestamp)
+    }
+
+    /// A parameter set as a report first named it, already canonical.
+    pub fn new(benchmark_id: BenchmarkId, parameters: JsonParameters, timestamp: DateTime) -> Self {
         Self {
             uuid: ParameterUuid::new(),
             benchmark_id,
-            parameters: JsonParameters::default(),
+            parameters,
             created: timestamp,
             modified: timestamp,
             archived: None,
@@ -120,6 +248,17 @@ pub struct UpdateParameter {
     pub parameters: Option<JsonParameters>,
     pub modified: DateTime,
     pub archived: Option<Option<DateTime>>,
+}
+
+impl UpdateParameter {
+    /// A grid point that reports again is a live grid point.
+    fn unarchive() -> Self {
+        Self {
+            parameters: None,
+            modified: DateTime::now(),
+            archived: Some(None),
+        }
+    }
 }
 
 #[cfg(test)]

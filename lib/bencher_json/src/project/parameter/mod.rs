@@ -112,6 +112,43 @@ impl<'de> Deserialize<'de> for JsonParameters {
     }
 }
 
+/// An object whose every value is a JSON scalar: string, number, or bool.
+///
+/// Written out by hand because the serialized form is a map with a custom key
+/// order and a hand written value enum, neither of which derives.
+#[cfg(feature = "schema")]
+impl JsonSchema for JsonParameters {
+    fn schema_name() -> String {
+        "JsonParameters".to_owned()
+    }
+
+    fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        use schemars::schema::{InstanceType, ObjectValidation, SchemaObject, SubschemaValidation};
+
+        let scalar = SchemaObject {
+            subschemas: Some(Box::new(SubschemaValidation {
+                any_of: Some(vec![
+                    String::json_schema(generator),
+                    f64::json_schema(generator),
+                    bool::json_schema(generator),
+                ]),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+
+        SchemaObject {
+            instance_type: Some(InstanceType::Object.into()),
+            object: Some(Box::new(ObjectValidation {
+                additional_properties: Some(Box::new(scalar.into())),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+        .into()
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ParametersError {
     #[error("Failed to parse benchmark parameters: {0}")]

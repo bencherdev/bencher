@@ -52,12 +52,14 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
             measures,
         } in entries
         {
-            // Two entries that canonicalize to the same parameter set are one
-            // grid point, so their measures merge rather than fork a series.
+            // Two entries that canonicalize to the same parameter set are one grid
+            // point, so their named values merge rather than fork a series. A name
+            // that genuinely repeats takes the later entry, which is deterministic
+            // because entries are an ordered array in wire order. Nothing is
+            // dropped, so nothing is counted: a harness that emits one entry per
+            // statistic is a plausible shape, not an error.
             let metrics: &mut AdapterMetrics = benchmark_entries.entry(parameters).or_default();
             for (measure, named) in measures {
-                // A measure in more than one entry unions its names, the later
-                // entry winning per name, exactly JSON object key semantics.
                 metrics
                     .inner
                     .entry(measure)
