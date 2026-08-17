@@ -44,13 +44,13 @@ pub struct TestServer {
 impl TestServer {
     /// Create a new test server with default settings.
     pub async fn new() -> Self {
-        Self::build(None, None, None, None).await
+        Self::build(None, None, None, None, None).await
     }
 
     /// Create a new test server with custom upload timeout and max body size.
     #[cfg(feature = "plus")]
     pub async fn new_with_limits(upload_timeout: u64, max_body_size: u64) -> Self {
-        Self::build(Some(upload_timeout), Some(max_body_size), None, None).await
+        Self::build(Some(upload_timeout), Some(max_body_size), None, None, None).await
     }
 
     /// Create a new test server with custom upload timeout, max body size, and injectable clock.
@@ -60,13 +60,34 @@ impl TestServer {
         max_body_size: u64,
         clock: bencher_json::Clock,
     ) -> Self {
-        Self::build(Some(upload_timeout), Some(max_body_size), Some(clock), None).await
+        Self::build(
+            Some(upload_timeout),
+            Some(max_body_size),
+            Some(clock),
+            None,
+            None,
+        )
+        .await
     }
 
     /// Create a new test server with a custom runner self-update base URL.
     #[cfg(feature = "plus")]
     pub async fn new_with_runner_update_base_url(base_url: url::Url) -> Self {
-        Self::build(None, None, None, Some(base_url)).await
+        Self::build(None, None, None, Some(base_url), None).await
+    }
+
+    /// Create a new test server with custom creation rate limits.
+    ///
+    /// Only the database-backed creation ceilings move: the in-memory request
+    /// limiters stay wide open, so a test reaches the ceiling it is testing rather
+    /// than a throttle on the requests that get it there.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_creation_limits(unclaimed_limit: u32, claimed_limit: u32) -> Self {
+        let rate_limiting = bencher_schema::context::RateLimiting::max_with_creation_limits(
+            unclaimed_limit,
+            claimed_limit,
+        );
+        Self::build(None, None, None, None, Some(rate_limiting)).await
     }
 
     #[cfg(feature = "plus")]
@@ -80,6 +101,7 @@ impl TestServer {
         max_body_size: Option<u64>,
         clock: Option<bencher_json::Clock>,
         runner_update_base_url: Option<url::Url>,
+        rate_limiting: Option<bencher_schema::context::RateLimiting>,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
@@ -131,7 +153,9 @@ impl TestServer {
             rbac,
             messenger: Messenger::default(),
             database,
-            rate_limiting: Arc::new(bencher_schema::context::RateLimiting::max()),
+            rate_limiting: Arc::new(
+                rate_limiting.unwrap_or_else(bencher_schema::context::RateLimiting::max),
+            ),
             github_client: None,
             google_client: None,
             indexer: None,
@@ -173,6 +197,7 @@ impl TestServer {
         max_body_size: Option<u64>,
         _clock: Option<()>,
         _runner_update_base_url: Option<url::Url>,
+        _rate_limiting: Option<()>,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log_config = ConfigLogging::StderrTerminal {
