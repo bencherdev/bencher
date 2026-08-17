@@ -1011,6 +1011,13 @@ async fn value_less_measure_is_stored_but_not_echoed() {
         Some(&serde_json::json!(1.0)),
         "the measure that named one is whole"
     );
+
+    // Not counted either, so the endpoint that loads a report's results and the one
+    // that counts them without loading say the same thing about the same report.
+    assert_eq!(
+        response.pointer("/counts/results/0"),
+        Some(&serde_json::json!({ "benchmarks": 1, "measures": 1 })),
+    );
 }
 
 // `--fold` is deprecated, not deleted: a BMF v0 report folds exactly as it always
