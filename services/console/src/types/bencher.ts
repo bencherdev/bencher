@@ -1119,7 +1119,10 @@ export enum Adapter {
 
 /** Counts for a single iteration of a report. */
 export interface JsonReportIterationCounts {
-	/** The number of benchmarks in this iteration. */
+	/**
+	 * The number of results in this iteration: one per grid point, so one per
+	 * benchmark for a benchmark that reports a single parameter set.
+	 */
 	benchmarks: number;
 	/** The number of distinct measures in this iteration. */
 	measures: number;
