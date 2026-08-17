@@ -20,6 +20,7 @@
 "SpecUuid" = "Uuid"
 "RunnerUuid" = "Uuid"
 "JobUuid" = "Uuid"
+"ParameterUuid" = "Uuid"
 # Typed Slugs
 "Slug" = "string"
 "OrganizationSlug" = "Slug"
@@ -40,6 +41,8 @@
 "ImageReference" = "string"
 "Utf8PathBuf" = "string"
 "OrderedFloat" = "number"
+"MetricName" = "string"
+"JsonParameters" = "Record<string, string | number | boolean>"
 "BigInt" = "number"
 "TimestampMillis" = "number"
 "Cpu" = "number"

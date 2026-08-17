@@ -3,13 +3,14 @@ use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
 use std::collections::HashSet;
 
 use bencher_json::{
-    DateTime, JsonNewReport, JsonReport, JsonReportAlertsCounts, JsonReportCounts,
-    JsonReportIterationCounts, ReportUuid,
+    DateTime, JsonMetric, JsonNewReport, JsonReport, JsonReportAlertsCounts, JsonReportCounts,
+    JsonReportIterationCounts, MetricName, ReportUuid,
     project::{
         alert::AlertStatus,
         report::{
-            Adapter, Iteration, JsonReportAlerts, JsonReportMeasure, JsonReportResult,
-            JsonReportResults, JsonReportSettings, ReportIdempotencyKey,
+            Adapter, Iteration, JsonReportAlerts, JsonReportBoundary, JsonReportMeasure,
+            JsonReportMetric, JsonReportResult, JsonReportResults, JsonReportSettings,
+            ReportIdempotencyKey,
         },
     },
 };
@@ -46,6 +47,8 @@ use crate::{
             benchmark::QueryBenchmark,
             branch::version::{InsertVersion, QueryVersion},
             measure::QueryMeasure,
+            metric::QueryMetric,
+            parameter::QueryParameter,
             testbed::{QueryTestbed, ResolvedTestbed, TestbedId},
             threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
         },
@@ -640,12 +643,15 @@ pub enum ReportMode {
     Collapsed,
 }
 
+/// One row of the results query: one named scalar of one measure at one grid point,
+/// with the threshold and boundary that gated it, if any.
 type ResultsQuery = (
     Iteration,
     QueryBenchmark,
+    QueryParameter,
     QueryMeasure,
-    QueryMetricBoundary,
-    Option<(QueryThreshold, QueryModel)>,
+    QueryMetric,
+    Option<(QueryThreshold, QueryModel, QueryBoundary)>,
 );
 
 fn get_report_results(
@@ -657,20 +663,32 @@ fn get_report_results(
     schema::report_benchmark::table
     .filter(schema::report_benchmark::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
-    .inner_join(view::metric_boundary::table
+    .inner_join(schema::parameter::table)
+    .inner_join(schema::metric::table
         .inner_join(schema::measure::table)
-        // There may or may not be a boundary for any given metric
-        .left_join(schema::threshold::table)
-        .left_join(schema::model::table)
+        // There may or may not be a boundary for any given named value
+        .left_join(schema::boundary::table
+            .inner_join(schema::threshold::table)
+            .inner_join(schema::model::table)
+        )
     )
-    // It is important to order by the iteration first in order to make sure they are grouped together below
-    // Then ordering by benchmark and finally measure name makes sure that the benchmarks are in the same order for each iteration
-    .order((schema::report_benchmark::iteration, schema::benchmark::name, schema::measure::name))
+    // It is important to order by the iteration first in order to make sure they are grouped together below.
+    // The parameter set comes between the benchmark and the measure because a grid point is what a result is:
+    // two parameter sets of one benchmark are two results, not one result with the measures interleaved.
+    // Finally the metric name orders a measure's named values, so the response order is stable.
+    .order((
+        schema::report_benchmark::iteration,
+        schema::benchmark::name,
+        schema::parameter::id,
+        schema::measure::name,
+        schema::metric::name,
+    ))
     .select((
         schema::report_benchmark::iteration,
         QueryBenchmark::as_select(),
+        QueryParameter::as_select(),
         QueryMeasure::as_select(),
-        QueryMetricBoundary::as_select(),
+        QueryMetric::as_select(),
         (
             (
                 schema::threshold::id,
@@ -695,7 +713,17 @@ fn get_report_results(
                 schema::model::upper_boundary,
                 schema::model::created,
                 schema::model::replaced,
-            )
+            ),
+            (
+                schema::boundary::id,
+                schema::boundary::uuid,
+                schema::boundary::metric_id,
+                schema::boundary::threshold_id,
+                schema::boundary::model_id,
+                schema::boundary::baseline,
+                schema::boundary::lower_limit,
+                schema::boundary::upper_limit,
+            ),
         ).nullable(),
     ))
     .load::<ResultsQuery>(conn)
@@ -708,77 +736,140 @@ fn into_report_results_json(
     project: &QueryProject,
     results: Vec<ResultsQuery>,
 ) -> JsonReportResults {
-    let mut report_results = Vec::new();
-    let mut report_iteration = Vec::new();
-    let mut prev_iteration = None;
-    let mut report_result: Option<JsonReportResult> = None;
-    for (iteration, query_benchmark, query_measure, query_metric_boundary, threshold_model) in
-        results
+    let mut report_results: JsonReportResults = Vec::new();
+    let mut report_iteration: Vec<JsonReportResult> = Vec::new();
+    let mut prev_iteration: Option<Iteration> = None;
+
+    for (iteration, query_benchmark, query_parameter, query_measure, query_metric, gate) in results
     {
-        // If onto a new iteration, then add the result to the report iteration list.
-        // Then add the report iteration list to the report results list.
+        // If onto a new iteration, then add the report iteration list to the report results list.
         if let Some(prev_iteration) = prev_iteration.take()
             && iteration != prev_iteration
         {
             slog::trace!(log, "Iteration {prev_iteration} => {iteration}");
-            if let Some(result) = report_result.take() {
-                report_iteration.push(result);
-            }
             if !report_iteration.is_empty() {
                 report_results.push(std::mem::take(&mut report_iteration));
             }
         }
         prev_iteration = Some(iteration);
 
-        // If there is a current report result, make sure that the benchmark is the same.
-        // Otherwise, add it to the report iteration list.
-        if let Some(result) = report_result.take() {
-            if query_benchmark.uuid == result.benchmark.uuid {
-                report_result = Some(result);
-            } else {
-                slog::trace!(
-                    log,
-                    "Benchmark {} => {}",
-                    result.benchmark.uuid,
-                    query_benchmark.uuid,
-                );
-                report_iteration.push(result);
-            }
-        }
-
-        let (json_metric, query_boundary) = query_metric_boundary.split();
-        let report_measure = JsonReportMeasure {
-            measure: query_measure.into_json_for_project(project),
-            metric: json_metric,
-            threshold: threshold_model.map(|(threshold, model)| {
-                threshold.into_threshold_model_json_for_project(project, model)
-            }),
-            boundary: query_boundary.map(QueryBoundary::into_json),
-        };
-
-        // If there is a current report result, add the report measure to it.
-        // Otherwise, create a new report result and add the report measure to it.
-        if let Some(result) = report_result.as_mut() {
-            result.measures.push(report_measure);
-        } else {
-            report_result = Some(JsonReportResult {
+        // A result is one grid point: the same benchmark on a different parameter set
+        // is a different result.
+        let benchmark_uuid = query_benchmark.uuid;
+        let parameter_uuid = query_parameter.uuid;
+        if report_iteration.last().is_none_or(|result| {
+            result.benchmark.uuid != benchmark_uuid || result.parameter.uuid != parameter_uuid
+        }) {
+            report_iteration.push(JsonReportResult {
                 iteration,
                 benchmark: query_benchmark.into_json_for_project(project),
-                measures: vec![report_measure],
+                parameter: query_parameter.into_report_json(),
+                measures: Vec::new(),
+            });
+        }
+        let Some(report_result) = report_iteration.last_mut() else {
+            debug_assert!(false, "the report result was just pushed");
+            continue;
+        };
+
+        let measure_uuid = query_measure.uuid;
+        if report_result
+            .measures
+            .last()
+            .is_none_or(|report_measure| report_measure.measure.uuid != measure_uuid)
+        {
+            report_result.measures.push(JsonReportMeasure {
+                measure: query_measure.into_json_for_project(project),
+                metrics: Vec::new(),
+                metric: None,
+                threshold: None,
+                boundary: None,
+            });
+        }
+        let Some(report_measure) = report_result.measures.last_mut() else {
+            debug_assert!(false, "the report measure was just pushed");
+            continue;
+        };
+
+        // One named value repeats across rows only when several thresholds gated it.
+        let QueryMetric {
+            id: _,
+            uuid,
+            report_benchmark_id: _,
+            measure_id: _,
+            name,
+            value,
+        } = query_metric;
+        if report_measure
+            .metrics
+            .last()
+            .is_none_or(|report_metric| report_metric.uuid != uuid)
+        {
+            report_measure.metrics.push(JsonReportMetric {
+                uuid,
+                name,
+                value: value.into(),
+                boundaries: Vec::new(),
+            });
+        }
+        let Some(report_metric) = report_measure.metrics.last_mut() else {
+            debug_assert!(false, "the report metric was just pushed");
+            continue;
+        };
+
+        if let Some((query_threshold, query_model, query_boundary)) = gate {
+            report_metric.boundaries.push(JsonReportBoundary {
+                threshold: query_threshold
+                    .into_threshold_model_json_for_project(project, query_model),
+                boundary: query_boundary.into_json(),
             });
         }
     }
 
     // Save from the last iteration
-    if let Some(result) = report_result.take() {
-        report_iteration.push(result);
-    }
     if !report_iteration.is_empty() {
         report_results.push(report_iteration);
     }
+
+    for report_result in report_results.iter_mut().flatten() {
+        for report_measure in &mut report_result.measures {
+            set_deprecated(report_measure);
+        }
+    }
+
     slog::trace!(log, "Report results: {report_results:#?}");
 
     report_results
+}
+
+/// Fill in the deprecated `metric`, `threshold`, and `boundary` fields.
+///
+/// The metric triple is the `value` row and its `lower_value`/`upper_value`
+/// siblings, and the threshold and boundary are the ones that gated the `value` row.
+/// A measure that named no `value` has none of them, which is a shape only a BMF v1
+/// payload can produce.
+fn set_deprecated(report_measure: &mut JsonReportMeasure) {
+    let named = |name: &MetricName| -> Option<&JsonReportMetric> {
+        report_measure
+            .metrics
+            .iter()
+            .find(|report_metric| report_metric.name == *name)
+    };
+
+    let Some(value) = named(&MetricName::value()) else {
+        return;
+    };
+    report_measure.metric = Some(JsonMetric {
+        uuid: value.uuid,
+        value: value.value,
+        lower_value: named(&MetricName::lower_value()).map(|metric| metric.value),
+        upper_value: named(&MetricName::upper_value()).map(|metric| metric.value),
+    });
+
+    if let Some(gate) = value.boundaries.first() {
+        report_measure.threshold = Some(gate.threshold.clone());
+        report_measure.boundary = Some(gate.boundary);
+    }
 }
 
 /// Compute the report counts with aggregate queries, without loading the results or alerts.
@@ -795,7 +886,9 @@ fn get_report_counts(
         .order(schema::report_benchmark::iteration.asc())
         .select((
             schema::report_benchmark::iteration,
-            diesel::dsl::count(schema::report_benchmark::benchmark_id).aggregate_distinct(),
+            // A `report_benchmark` row is exactly one grid point, which is exactly one
+            // result, so this agrees with the count taken from the loaded results.
+            diesel::dsl::count(schema::report_benchmark::id).aggregate_distinct(),
             diesel::dsl::count(schema::metric::measure_id).aggregate_distinct(),
         ))
         .load::<(Iteration, i64, i64)>(conn)

@@ -6,7 +6,7 @@ use bencher_json::{
 };
 
 use super::{
-    adapter_metrics::AdapterMetrics,
+    adapter_metrics::{AdapterMetric, AdapterMetrics, MetricsMap},
     foldable::{FoldableMap, FoldableResults},
 };
 
@@ -50,6 +50,32 @@ impl From<ResultsMap> for AdapterResults {
             version: BmfVersion::V0,
             dropped_names: 0,
         }
+    }
+}
+
+/// Folded results are BMF v0 again: one grid point per benchmark, on the empty
+/// parameter set, with each metric triple spelled back out as its conventional names.
+///
+/// The round trip through [`AdapterResults::into_foldable`] and back is lossless
+/// because fold only ever runs on a v0 payload, which is exactly this shape.
+impl From<FoldableResults> for AdapterResults {
+    fn from(results: FoldableResults) -> Self {
+        results
+            .inner
+            .into_iter()
+            .map(|(benchmark, metrics)| {
+                let metrics: AdapterMetrics = metrics
+                    .into_iter()
+                    .map(|(measure, metric)| (measure, AdapterMetric::from(metric)))
+                    .collect::<MetricsMap>()
+                    .into();
+                (
+                    benchmark,
+                    std::iter::once((JsonParameters::default(), metrics)).collect(),
+                )
+            })
+            .collect::<ResultsMap>()
+            .into()
     }
 }
 
