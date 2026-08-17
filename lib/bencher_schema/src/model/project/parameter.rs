@@ -17,7 +17,10 @@ use crate::{
     write_conn, write_transaction,
 };
 
-use super::benchmark::{BenchmarkId, QueryBenchmark};
+use super::{
+    ProjectId, QueryProject,
+    benchmark::{BenchmarkId, QueryBenchmark},
+};
 
 crate::macros::typed_id::typed_id!(ParameterId);
 
@@ -88,10 +91,12 @@ impl QueryParameter {
     /// never nests inside the ingest write transaction.
     pub async fn get_or_create(
         context: &ApiContext,
+        project_id: ProjectId,
         benchmark_id: BenchmarkId,
         parameters: &JsonParameters,
     ) -> Result<ParameterId, HttpError> {
-        let query_parameter = Self::get_or_create_inner(context, benchmark_id, parameters).await?;
+        let query_parameter =
+            Self::get_or_create_inner(context, project_id, benchmark_id, parameters).await?;
 
         if query_parameter.archived.is_some() {
             let update_parameter = UpdateParameter::unarchive();
@@ -108,6 +113,7 @@ impl QueryParameter {
 
     async fn get_or_create_inner(
         context: &ApiContext,
+        project_id: ProjectId,
         benchmark_id: BenchmarkId,
         parameters: &JsonParameters,
     ) -> Result<Self, HttpError> {
@@ -127,7 +133,7 @@ impl QueryParameter {
             ));
         }
 
-        match Self::create(context, benchmark_id, parameters).await {
+        match Self::create(context, project_id, benchmark_id, parameters).await {
             Ok(query_parameter) => Ok(query_parameter),
             Err(e) if crate::error::is_conflict(&e) => {
                 // Another concurrent report created this parameter set.
@@ -139,9 +145,15 @@ impl QueryParameter {
 
     async fn create(
         context: &ApiContext,
+        project_id: ProjectId,
         benchmark_id: BenchmarkId,
         parameters: &JsonParameters,
     ) -> Result<Self, HttpError> {
+        #[cfg(feature = "plus")]
+        InsertParameter::rate_limit(context, project_id).await?;
+        #[cfg(not(feature = "plus"))]
+        let _ = project_id;
+
         let insert_parameter =
             InsertParameter::new(benchmark_id, parameters.clone(), DateTime::now());
 
@@ -201,6 +213,65 @@ pub struct InsertParameter {
 }
 
 impl InsertParameter {
+    /// The per project ceiling on minting parameter sets.
+    ///
+    /// Hand written rather than [`fn_rate_limit`](crate::macros::rate_limit) because
+    /// `parameter` has no `project_id` of its own: a parameter set belongs to its
+    /// benchmark, and the benchmark is what belongs to the project. The window is
+    /// counted through that join instead, with the same limits and the same error as
+    /// every other resource a report mints.
+    ///
+    /// The count includes the empty parameter set each benchmark is born with, which
+    /// makes the ceiling slightly conservative for a project creating benchmarks and
+    /// grid points in the same window. That is the safe direction, and it costs a
+    /// project nothing that the benchmark ceiling was not already going to cost it.
+    #[cfg(feature = "plus")]
+    async fn rate_limit(context: &ApiContext, project_id: ProjectId) -> Result<(), HttpError> {
+        use crate::error::BencherResource;
+
+        let query_project = QueryProject::get(auth_conn!(context), project_id)?;
+        let query_organization = query_project.organization(auth_conn!(context))?;
+        let is_claimed = query_organization.is_claimed(auth_conn!(context))?;
+
+        let (start_time, end_time) = context.rate_limiting.window();
+        let window_usage: u32 = schema::parameter::table
+            .inner_join(schema::benchmark::table)
+            .filter(schema::benchmark::project_id.eq(project_id))
+            .filter(schema::parameter::created.ge(start_time))
+            .filter(schema::parameter::created.le(end_time))
+            .count()
+            .get_result::<i64>(auth_conn!(context))
+            .map_err(crate::error::resource_not_found_err!(
+                Parameter,
+                (project_id, start_time, end_time)
+            ))?
+            .try_into()
+            .map_err(|e| {
+                issue_error(
+                    "Failed to count creation",
+                    &format!(
+                        "Failed to count parameter creation for project ({project_id}) between {start_time} and {end_time}."
+                    ),
+                    e,
+                )
+            })?;
+
+        context.rate_limiting.check_claimable_limit(
+            is_claimed,
+            window_usage,
+            |rate_limit| crate::context::RateLimitingError::UnclaimedProject {
+                project: query_project.clone(),
+                resource: BencherResource::Parameter,
+                rate_limit,
+            },
+            |rate_limit| crate::context::RateLimitingError::ClaimedProject {
+                project: query_project.clone(),
+                resource: BencherResource::Parameter,
+                rate_limit,
+            },
+        )
+    }
+
     /// The empty parameter set that every benchmark is born with.
     ///
     /// The timestamp is the benchmark's own creation timestamp:
