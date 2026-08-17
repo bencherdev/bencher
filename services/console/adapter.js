@@ -25,7 +25,18 @@ switch (adapter) {
 			'// import cloudflare from "@astrojs/cloudflare";',
 			'import cloudflare from "@astrojs/cloudflare";',
 		);
-		// Static pages are prerendered with Node rather than `workerd`.
+		// Static pages are prerendered with Node rather than `workerd`, which is
+		// what this adapter did before it gained a `workerd` prerenderer, and
+		// what the Node adapter still does.
+		// Two things block `workerd` prerendering today:
+		// 1. The `workerd` pinned in `package-lock.json` supports compatibility
+		//    dates only up to 2026-08-08, so it rejects the 2026-08-11 in
+		//    `wrangler.jsonc`. The same lag means local `wrangler dev` is
+		//    currently refused. Deployed Workers are unaffected, since
+		//    Cloudflare runs its own build.
+		// 2. Past that, `workerd` disallows WebAssembly code generation, so
+		//    Shiki cannot load its Oniguruma engine and every page with a code
+		//    block fails to render. That covers most of the docs.
 		// https://docs.astro.build/en/guides/integrations-guide/cloudflare/
 		file = file.replace(
 			"adapter: undefined,",

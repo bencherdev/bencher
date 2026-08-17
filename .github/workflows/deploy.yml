@@ -136,6 +136,9 @@ jobs:
           SENTRY_UPLOAD: true
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run cloudflare
+      - name: Verify Deploy Target
+        working-directory: ./services/console
+        run: npm run deploy-target dev-console
       - name: Deploy Console UI to Cloudflare Dev
         working-directory: ./services/console
         env:
@@ -242,6 +245,9 @@ jobs:
           SENTRY_UPLOAD: true
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run cloudflare
+      - name: Verify Deploy Target
+        working-directory: ./services/console
+        run: npm run deploy-target console
       - name: Deploy Console UI to Cloudflare Prod
         working-directory: ./services/console
         env:

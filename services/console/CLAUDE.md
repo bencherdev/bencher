@@ -88,8 +88,19 @@ Building without `CLOUDFLARE_ENV` and deploying with `--env dev` deploys the
 **production** config.
 
 ```bash
-CLOUDFLARE_ENV=dev npm run cloudflare && npx wrangler deploy --env dev
+CLOUDFLARE_ENV=dev npm run cloudflare && npm run deploy-target dev-console && npx wrangler deploy --env dev
 ```
+
+`npm run deploy-target <worker-name>` asserts that the built
+`dist/server/wrangler.json` really is the Worker you mean to deploy. Both deploy
+jobs run it, and so should any manual deploy: it is the only thing standing
+between a forgotten `CLOUDFLARE_ENV` and a production overwrite.
+
+Local `wrangler dev` currently refuses to start: the pinned `workerd` supports
+compatibility dates only through 2026-08-08 and `wrangler.jsonc` asks for
+2026-08-11. Deployed Workers are unaffected. The same lag, plus `workerd`
+disallowing WebAssembly code generation (which Shiki needs), is why
+`prerenderEnvironment` is `"node"`.
 
 `adapter.js` rewrites `astro.config.mjs` in place by matching four marker lines
 (`// import node ...`, `// import cloudflare ...`, `adapter: undefined,`, and

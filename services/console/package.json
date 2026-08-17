@@ -25,6 +25,7 @@
 		"pagefind:node": "pagefind --site dist/client --output-subdir pagefind",
 		"pagefind:cloudflare": "pagefind --site dist/client --output-subdir pagefind",
 		"adapter": "node adapter.js",
+		"deploy-target": "node deploy_target.js",
 		"node": "npm ci && npm run adapter node && npm run build",
 		"cloudflare": "npm ci && npm run adapter cloudflare && npm run build && npm run pagefind:cloudflare",
 		"preview": "export BENCHER_API_URL=http://127.0.0.1:6610 && export OAUTH_GITHUB=true && OAUTH_GOOGLE=true && astro preview --port 3000",
