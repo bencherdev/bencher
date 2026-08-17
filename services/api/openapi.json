@@ -16183,7 +16183,7 @@
         "type": "object",
         "properties": {
           "benchmarks": {
-            "description": "The number of benchmarks in this iteration.",
+            "description": "The number of results in this iteration: one per grid point, so one per benchmark for a benchmark that reports a single parameter set.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0

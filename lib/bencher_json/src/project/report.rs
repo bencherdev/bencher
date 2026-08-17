@@ -505,7 +505,8 @@ pub struct JsonReportCounts {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportIterationCounts {
-    /// The number of benchmarks in this iteration.
+    /// The number of results in this iteration: one per grid point, so one per
+    /// benchmark for a benchmark that reports a single parameter set.
     pub benchmarks: u32,
     /// The number of distinct measures in this iteration.
     pub measures: u32,
