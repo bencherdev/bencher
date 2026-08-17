@@ -70,6 +70,20 @@ async fn report(
     thresholds: Option<serde_json::Value>,
     fold: Option<&str>,
 ) -> serde_json::Value {
+    let (status, body) = try_report(server, fixture, day, results, thresholds, fold).await;
+    assert_eq!(status, StatusCode::CREATED, "POST report {day}: {body}");
+    serde_json::from_str(&body).expect("Failed to parse the report")
+}
+
+/// Post one report and return its status and body, whatever they are.
+async fn try_report(
+    server: &TestServer,
+    fixture: &Fixture,
+    day: usize,
+    results: Vec<String>,
+    thresholds: Option<serde_json::Value>,
+    fold: Option<&str>,
+) -> (StatusCode, String) {
     // Both optional fields are omitted by sending `null`, which is what an absent
     // `Option` deserializes from.
     let body = serde_json::json!({
@@ -95,8 +109,7 @@ async fn report(
         .expect("Request failed");
     let status = resp.status();
     let body = resp.text().await.expect("Failed to read the response");
-    assert_eq!(status, StatusCode::CREATED, "POST report {day}: {body}");
-    serde_json::from_str(&body).expect("Failed to parse the report")
+    (status, body)
 }
 
 /// One BMF v1 payload for a single benchmark's grid points.
@@ -882,4 +895,53 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
     };
     assert_eq!(boundaries("value"), 1, "the point estimate was gated");
     assert_eq!(boundaries("p99"), 0, "a named value was not gated");
+}
+
+// Parameter sets are minted straight from report content, one row per grid point, so
+// they carry the same per project creation ceiling as every other entity a report
+// mints. Without it a harness that interpolates a commit sha or a timestamp into its
+// parameters mints rows, grid points, and billable series without bound.
+#[tokio::test]
+async fn parameter_creation_is_rate_limited() {
+    // Four creations per project per window. A benchmark is born with its empty
+    // parameter set, which is one of the four, so the fourth new grid point under one
+    // benchmark is the one that is refused.
+    let server = TestServer::new_with_creation_limits(4, 4).await;
+
+    let measures = serde_json::json!({ "latency": { "value": 1.0 } });
+    let grid_points = |count: usize| -> Vec<String> {
+        let entries = (0..count)
+            .map(|n| entry(&serde_json::json!({ "n": n }), &measures))
+            .collect::<Vec<_>>();
+        vec![v1("bench", &entries)]
+    };
+
+    // Under the ceiling: three new grid points on top of the birth empty set.
+    let under = fixture(&server, "under-limit").await;
+    let (status, body) = try_report(&server, &under, 1, grid_points(3), None, None).await;
+    assert_eq!(status, StatusCode::CREATED, "under the ceiling: {body}");
+
+    // Over the ceiling, and in its own project, so what is counted is this project's
+    // own parameter rows rather than every project's.
+    let over = fixture(&server, "over-limit").await;
+    let (status, body) = try_report(&server, &over, 1, grid_points(4), None, None).await;
+    assert_eq!(
+        status,
+        StatusCode::TOO_MANY_REQUESTS,
+        "over the ceiling: {body}"
+    );
+    assert!(
+        body.contains("Parameter"),
+        "the limit that fired is the parameter one: {body}"
+    );
+
+    // Minting stopped at the ceiling: the birth empty set plus three grid points,
+    // with the fourth refused rather than written.
+    let project_id = get_project_id(&server, &over.project_slug);
+    let mut conn = server.db_conn();
+    assert_eq!(
+        parameter_sets(&mut conn, project_id).len(),
+        4,
+        "no parameter set is minted past the ceiling"
+    );
 }

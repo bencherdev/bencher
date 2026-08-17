@@ -232,6 +232,17 @@ impl RateLimiting {
         }
     }
 
+    /// Every in-memory limiter wide open, with the database-backed creation limits
+    /// set. Exercising a creation ceiling otherwise means throttling the requests
+    /// that reach it.
+    pub fn max_with_creation_limits(unclaimed_limit: u32, claimed_limit: u32) -> Self {
+        Self {
+            unclaimed_limit,
+            claimed_limit,
+            ..Self::max()
+        }
+    }
+
     pub fn prune(&self) {
         self.public.prune();
         self.user.prune();
