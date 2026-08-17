@@ -389,7 +389,9 @@ impl ReportResults {
         Ok(if let Some(id) = self.parameter_cache.get(&key) {
             *id
         } else {
-            let parameter_id = QueryParameter::get_or_create(context, benchmark_id, &key.1).await?;
+            let parameter_id =
+                QueryParameter::get_or_create(context, self.project_id, benchmark_id, &key.1)
+                    .await?;
             self.parameter_cache.insert(key, parameter_id);
             parameter_id
         })
