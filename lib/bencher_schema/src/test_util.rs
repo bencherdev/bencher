@@ -610,7 +610,7 @@ pub fn create_report_benchmark_for_parameter(
         .expect("Failed to get report_benchmark id")
 }
 
-/// Create a metric for testing.
+/// Create a metric for testing: the conventional point estimate.
 pub fn create_metric(
     conn: &mut SqliteConnection,
     metric_uuid: &str,
@@ -618,12 +618,31 @@ pub fn create_metric(
     measure_id: MeasureId,
     value: f64,
 ) -> MetricId {
+    create_named_metric(
+        conn,
+        metric_uuid,
+        report_benchmark_id,
+        measure_id,
+        &MetricName::value(),
+        value,
+    )
+}
+
+/// Create a metric for testing under any name.
+pub fn create_named_metric(
+    conn: &mut SqliteConnection,
+    metric_uuid: &str,
+    report_benchmark_id: ReportBenchmarkId,
+    measure_id: MeasureId,
+    name: &MetricName,
+    value: f64,
+) -> MetricId {
     diesel::insert_into(schema::metric::table)
         .values((
             schema::metric::uuid.eq(metric_uuid),
             schema::metric::report_benchmark_id.eq(report_benchmark_id),
             schema::metric::measure_id.eq(measure_id),
-            schema::metric::name.eq(MetricName::value()),
+            schema::metric::name.eq(name),
             schema::metric::value.eq(value),
         ))
         .execute(conn)
