@@ -945,3 +945,136 @@ async fn parameter_creation_is_rate_limited() {
         "no parameter set is minted past the ceiling"
     );
 }
+
+// A BMF v1 measure may name only percentiles and never mention `value` at all, which
+// is the one shape the deprecated `metric` field cannot describe. Its named rows are
+// stored like any other, and the measure is left out of the response rather than
+// echoed without the point estimate an older client requires.
+#[tokio::test]
+async fn value_less_measure_is_stored_but_not_echoed() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "valueless").await;
+
+    let response = report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({}),
+                &serde_json::json!({
+                    "latency": { "value": 1.0 },
+                    "throughput": { "p50": 2.0, "p99": 3.0 },
+                }),
+            )],
+        )],
+        None,
+        None,
+    )
+    .await;
+
+    // Stored. Ingest is best effort, and a measure that names no point estimate is a
+    // legitimate payload rather than an error.
+    let project_id = get_project_id(&server, &fixture.project_slug);
+    let mut conn = server.db_conn();
+    assert_eq!(
+        named_values(&mut conn, project_id),
+        vec![
+            (parameters("{}"), "p50".to_owned(), 2.0),
+            (parameters("{}"), "p99".to_owned(), 3.0),
+            (parameters("{}"), "value".to_owned(), 1.0),
+        ],
+    );
+
+    // Not echoed. The deprecated `metric` is a required field, so the measure that
+    // cannot fill it is omitted rather than sent without it.
+    let measures = response
+        .pointer("/results/0/0/measures")
+        .and_then(serde_json::Value::as_array)
+        .expect("the report echoes its measures");
+    let slugs: Vec<Option<&str>> = measures
+        .iter()
+        .map(|measure| {
+            measure
+                .pointer("/measure/slug")
+                .and_then(serde_json::Value::as_str)
+        })
+        .collect();
+    assert_eq!(
+        slugs,
+        vec![Some("latency")],
+        "the measure that named no point estimate is left out, got {measures:#?}"
+    );
+    assert_eq!(
+        measures[0].pointer("/metric/value"),
+        Some(&serde_json::json!(1.0)),
+        "the measure that named one is whole"
+    );
+}
+
+// `--fold` is deprecated, not deleted: a BMF v0 report folds exactly as it always
+// has. The iterations collapse into one `report_benchmark` row on the benchmark's
+// empty parameter set, carrying the folded triple, and the metric count meter that
+// bills Team, Enterprise, and licences reads exactly what it read before.
+//
+// The whole fold path was rewritten by this layer to speak parameter sets, so this
+// is the test that a pipeline running `bencher run --fold min` today sees no change
+// at all.
+#[tokio::test]
+async fn v0_fold_still_folds() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "v0-fold").await;
+
+    // One BMF v0 payload per iteration, each a whole metric triple.
+    let iteration = |value: f64| {
+        serde_json::to_string(&serde_json::json!({
+            "bench": {
+                "latency": {
+                    "value": value,
+                    "lower_value": value - 1.0,
+                    "upper_value": value + 1.0,
+                }
+            }
+        }))
+        .expect("the results serialize")
+    };
+
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![iteration(10.0), iteration(20.0)],
+        None,
+        Some("min"),
+    )
+    .await;
+
+    let project_id = get_project_id(&server, &fixture.project_slug);
+    let mut conn = server.db_conn();
+
+    // One grid point, one row: the two iterations folded rather than landing apart.
+    assert_eq!(
+        parameter_sets(&mut conn, project_id),
+        vec![(parameters("{}"), 1)],
+        "the folded report is one row on the empty parameter set"
+    );
+
+    assert_eq!(
+        named_values(&mut conn, project_id),
+        vec![
+            (parameters("{}"), "lower_value".to_owned(), 9.0),
+            (parameters("{}"), "upper_value".to_owned(), 11.0),
+            (parameters("{}"), "value".to_owned(), 10.0),
+        ],
+        "the smaller iteration's whole triple survived the fold"
+    );
+
+    // The metric-count meter does not move: folding has always metered one metric
+    // here, and it still does.
+    let counted: i32 = schema::metric_count_by_report::table
+        .select(schema::metric_count_by_report::metric_count)
+        .first(&mut conn)
+        .expect("Failed to read the report's metric count");
+    assert_eq!(counted, 1, "one folded metric, metered once");
+}
