@@ -352,18 +352,64 @@ async fn alert_volume_is_identical_for_flat_benchmarks_and_grid_points() {
     );
 }
 
+/// Two tight histories, decades apart. The regression at the end of `TIGHT_SMALL`
+/// is a large outlier against its own history and sits well inside a history pooled
+/// with `TIGHT_LARGE`, whose spread swamps it.
+///
+/// That gap is the whole point of these numbers. The parity fixture above cannot
+/// tell a per grid point baseline from a pooled one, because a tenfold jump is an
+/// outlier either way; here a pooled baseline raises no alert at all.
+const TIGHT_SMALL: [f64; 5] = [10.0, 11.0, 12.0, 13.0, 14.0];
+const TIGHT_LARGE: [f64; 5] = [1_000.0, 1_001.0, 1_002.0, 1_003.0, 1_004.0];
+const TIGHT_SMALL_FINAL: f64 = 50.0;
+const TIGHT_LARGE_FINAL: f64 = 1_004.0;
+
 // One grid point's regression does not alert against another's baseline, and one
 // grid point's ordinary run is not an outlier against the other's history.
+//
+// The historical query behind detection has to filter on the parameter set as well
+// as the benchmark. Drop that filter and the two grid points pool into one sample
+// whose standard deviation hides the regression, so this test raises no alert.
 #[tokio::test]
 async fn baselines_separate_by_parameter() {
     let server = TestServer::new().await;
-    let (_grid, project_id) = ingest_grid(&server).await;
+    let fixture = fixture(&server, "baseline").await;
 
+    for (day, (small, large)) in TIGHT_SMALL
+        .into_iter()
+        .zip(TIGHT_LARGE)
+        .chain([(TIGHT_SMALL_FINAL, TIGHT_LARGE_FINAL)])
+        .enumerate()
+    {
+        report(
+            &server,
+            &fixture,
+            day + 1,
+            vec![v1(
+                "bench",
+                &[
+                    entry(
+                        &serde_json::json!({ "size_mb": 16 }),
+                        &serde_json::json!({ "latency": { "value": small } }),
+                    ),
+                    entry(
+                        &serde_json::json!({ "size_mb": 32 }),
+                        &serde_json::json!({ "latency": { "value": large } }),
+                    ),
+                ],
+            )],
+            Some(threshold_models()),
+            None,
+        )
+        .await;
+    }
+
+    let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
     assert_eq!(
         alerts(&mut conn, project_id),
         vec![(parameters(r#"{"size_mb": 16}"#), "value".to_owned())],
-        "each grid point is tested against its own history"
+        "each grid point is tested against its own history, and only the small one regressed"
     );
 }
 
@@ -644,6 +690,12 @@ async fn named_values_do_not_change_the_metric_count() {
 // The report response echoes every named value, keeps the deprecated metric,
 // threshold, and boundary fields correct, and separates two grid points into two
 // results rather than merging them into one.
+//
+// Two measures across two parameter sets is the smallest fixture that can see the
+// results query's ordering. Drop the parameter from the `ORDER BY` and the measure
+// name outranks it, so the rows arrive interleaved by grid point and the grouping,
+// which only ever compares against the previous row, emits four results of one
+// measure each instead of two results of two measures each.
 #[tokio::test]
 async fn report_response_echoes_named_values_and_separates_grid_points() {
     let server = TestServer::new().await;
@@ -660,11 +712,17 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
                 &[
                     entry(
                         &serde_json::json!({ "size_mb": 16 }),
-                        &serde_json::json!({ "latency": { "value": value } }),
+                        &serde_json::json!({
+                            "latency": { "value": value },
+                            "throughput": { "value": value * 2.0 },
+                        }),
                     ),
                     entry(
                         &serde_json::json!({ "size_mb": 32 }),
-                        &serde_json::json!({ "latency": { "value": value * 10.0 } }),
+                        &serde_json::json!({
+                            "latency": { "value": value * 10.0 },
+                            "throughput": { "value": value * 20.0 },
+                        }),
                     ),
                 ],
             )],
@@ -684,12 +742,16 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
                 entry(
                     &serde_json::json!({ "size_mb": 16 }),
                     &serde_json::json!({
-                        "latency": { "value": 12.0, "lower_value": 11.0, "upper_value": 13.0, "p99": 20.0 }
+                        "latency": { "value": 12.0, "lower_value": 11.0, "upper_value": 13.0, "p99": 20.0 },
+                        "throughput": { "value": 24.0 },
                     }),
                 ),
                 entry(
                     &serde_json::json!({ "size_mb": 32 }),
-                    &serde_json::json!({ "latency": { "value": 120.0 } }),
+                    &serde_json::json!({
+                        "latency": { "value": 120.0 },
+                        "throughput": { "value": 240.0 },
+                    }),
                 ),
             ],
         )],
@@ -708,11 +770,36 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
         "two grid points are two results, got {results:#?}"
     );
 
+    // Each grid point keeps both of its measures together in one result. Four
+    // results of one measure each is what a benchmark first ordering produces.
+    let measure_names: Vec<Vec<&str>> = results
+        .iter()
+        .map(|result| {
+            result
+                .pointer("/measures")
+                .and_then(serde_json::Value::as_array)
+                .expect("each result echoes its measures")
+                .iter()
+                .map(|measure| {
+                    measure
+                        .pointer("/measure/slug")
+                        .and_then(serde_json::Value::as_str)
+                        .expect("each measure has a slug")
+                })
+                .collect()
+        })
+        .collect();
+    assert_eq!(
+        measure_names,
+        vec![vec!["latency", "throughput"], vec!["latency", "throughput"]],
+        "both measures of a grid point belong to that grid point's one result"
+    );
+
     // The counts are computed two ways, from the loaded results and by aggregate
     // query, and both have to see two grid points rather than one benchmark.
     assert_eq!(
         response.pointer("/counts/results/0"),
-        Some(&serde_json::json!({ "benchmarks": 2, "measures": 1 })),
+        Some(&serde_json::json!({ "benchmarks": 2, "measures": 2 })),
     );
 
     let grid_points: Vec<JsonParameters> = results
