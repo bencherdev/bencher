@@ -939,7 +939,11 @@ fn get_report_counts(
             // A `report_benchmark` row is exactly one grid point, which is exactly one
             // result, so this agrees with the count taken from the loaded results.
             diesel::dsl::count(schema::report_benchmark::id).aggregate_distinct(),
-            diesel::dsl::count(schema::metric::measure_id).aggregate_distinct(),
+            // Only measures that named a `value`, because a measure that named none
+            // is left out of the results and has to be left out of their count too.
+            diesel::dsl::count(schema::metric::measure_id)
+                .aggregate_distinct()
+                .aggregate_filter(schema::metric::name.eq(MetricName::value())),
         ))
         .load::<(Iteration, i64, i64)>(conn)
         .map_err(resource_not_found_err!(ReportBenchmark, report_id))?
