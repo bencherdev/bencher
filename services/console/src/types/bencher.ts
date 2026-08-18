@@ -387,10 +387,12 @@ export interface JsonReportMeasure {
 	/**
 	 * Deprecated. Reconstructed from the `value` row and its
 	 * `lower_value`/`upper_value` siblings. Retained for compatibility with older
-	 * clients and removed in a future release. A measure that named no `value` at
-	 * all has nothing to reconstruct it from, so it is left out of the results.
+	 * clients and removed in a future release.
+	 * 
+	 * Absent when the measure carries no `value` name, which BMF v1 permits. Never
+	 * absent for anything an older client could produce.
 	 */
-	metric: JsonMetric;
+	metric?: JsonMetric;
 	/** Deprecated. The threshold that gated the `value` row, if any. */
 	threshold?: JsonThresholdModel;
 	/** Deprecated. The boundary computed for the `value` row, if any. */

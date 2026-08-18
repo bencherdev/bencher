@@ -875,7 +875,7 @@ impl PendingResult {
             parameter,
             measures: measures
                 .into_iter()
-                .filter_map(PendingMeasure::into_json)
+                .map(PendingMeasure::into_json)
                 .collect(),
         }
     }
@@ -888,12 +888,10 @@ impl PendingMeasure {
     /// siblings, and the threshold and boundary are the ones that gated the `value`
     /// row.
     ///
-    /// A measure that named no `value` at all has no triple to reconstruct, and the
-    /// deprecated `metric` is a required field that an older client's generated
-    /// deserializer insists on, so such a measure is left out of the results rather
-    /// than sent without it. Only a BMF v1 payload can report that shape, and its
-    /// named values are stored either way.
-    fn into_json(self) -> Option<JsonReportMeasure> {
+    /// A measure that named no `value` at all has no triple to reconstruct, so all
+    /// three deprecated fields are absent. Only a BMF v1 payload can report that
+    /// shape, and its named values are stored, billed, and returned like any other.
+    fn into_json(self) -> JsonReportMeasure {
         let Self { measure, metrics } = self;
 
         let named = |name: &MetricName| -> Option<&JsonReportMetric> {
@@ -901,24 +899,26 @@ impl PendingMeasure {
                 .iter()
                 .find(|report_metric| report_metric.name == *name)
         };
-        let value = named(&MetricName::value())?;
-        let metric = JsonMetric {
+        let value = named(&MetricName::value());
+        let metric = value.map(|value| JsonMetric {
             uuid: value.uuid,
             value: value.value,
             lower_value: named(&MetricName::lower_value()).map(|metric| metric.value),
             upper_value: named(&MetricName::upper_value()).map(|metric| metric.value),
-        };
-        let (threshold, boundary) = value.boundaries.first().map_or((None, None), |gate| {
-            (Some(gate.threshold.clone()), Some(gate.boundary))
         });
+        let (threshold, boundary) = value
+            .and_then(|value| value.boundaries.first())
+            .map_or((None, None), |gate| {
+                (Some(gate.threshold.clone()), Some(gate.boundary))
+            });
 
-        Some(JsonReportMeasure {
+        JsonReportMeasure {
             measure,
             metrics,
             metric,
             threshold,
             boundary,
-        })
+        }
     }
 }
 
@@ -939,11 +939,9 @@ fn get_report_counts(
             // A `report_benchmark` row is exactly one grid point, which is exactly one
             // result, so this agrees with the count taken from the loaded results.
             diesel::dsl::count(schema::report_benchmark::id).aggregate_distinct(),
-            // Only measures that named a `value`, because a measure that named none
-            // is left out of the results and has to be left out of their count too.
-            diesel::dsl::count(schema::metric::measure_id)
-                .aggregate_distinct()
-                .aggregate_filter(schema::metric::name.eq(MetricName::value())),
+            // Every measure with a metric row, whatever it named, because that is
+            // exactly the set the loaded results carry.
+            diesel::dsl::count(schema::metric::measure_id).aggregate_distinct(),
         ))
         .load::<(Iteration, i64, i64)>(conn)
         .map_err(resource_not_found_err!(ReportBenchmark, report_id))?
