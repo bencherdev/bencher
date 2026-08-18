@@ -96,6 +96,13 @@ pub(crate) mod test_json_v1 {
         convert_file_path::<AdapterJsonV1>(&file_path)
     }
 
+    /// A payload a test spells out inline, because the merge it pins is a
+    /// property of the payload rather than of any tool's output.
+    fn parse_json_v1(input: &str) -> AdapterResults {
+        AdapterJsonV1::parse(input, Settings::default())
+            .unwrap_or_else(|| panic!("Failed to parse {input}"))
+    }
+
     /// The metrics of one benchmark's grid point.
     pub fn grid_point<'r>(
         results: &'r AdapterResults,
@@ -219,7 +226,7 @@ pub(crate) mod test_json_v1 {
     }
 
     /// Two entries whose parameters differ only in key order or number spelling
-    /// are the same grid point.
+    /// are the same grid point, and the measures of all three union by name.
     #[test]
     fn adapter_json_v1_canonical_parameters() {
         let results = convert_json_v1("v1_canonical");
@@ -233,7 +240,102 @@ pub(crate) mod test_json_v1 {
             "tests::canonical",
             r#"{"op":"read","size_mb":16}"#,
         );
+        // Every entry's names survive and the last entry wins the one they share.
+        assert_eq!(
+            names(metrics, "latency"),
+            vec![
+                "p50".parse::<MetricName>().unwrap(),
+                "p90".parse().unwrap(),
+                "p99".parse().unwrap(),
+                "value".parse().unwrap(),
+            ]
+        );
+        assert_eq!(named(metrics, "latency", "p50"), Some(10.0.into()));
+        assert_eq!(named(metrics, "latency", "p90"), Some(20.0.into()));
+        assert_eq!(named(metrics, "latency", "p99"), Some(30.0.into()));
         assert_eq!(named(metrics, "latency", "value"), Some(3.0.into()));
+        assert_eq!(named(metrics, "throughput", "value"), Some(100.0.into()));
+        assert_eq!(results.dropped_names, 0);
+    }
+
+    /// Two entries of one canonical parameter set union the names of the
+    /// measure they share, rather than the later entry replacing the earlier.
+    #[test]
+    fn adapter_json_v1_duplicate_entries_union_names() {
+        let results = parse_json_v1(
+            r#"{"tests::disjoint": [
+                {"measures": {"latency": {"value": 1}}},
+                {"measures": {"latency": {"p99": 2}}}
+            ]}"#,
+        );
+
+        let metrics = grid_point(&results, "tests::disjoint", "{}");
+        assert_eq!(named(metrics, "latency", "value"), Some(1.0.into()));
+        assert_eq!(named(metrics, "latency", "p99"), Some(2.0.into()));
+        assert_eq!(results.dropped_names, 0);
+    }
+
+    /// A name written by more than one entry takes the last entry's value,
+    /// exactly JSON object key semantics, and its neighbors are untouched.
+    #[test]
+    fn adapter_json_v1_duplicate_entries_later_name_wins() {
+        let results = parse_json_v1(
+            r#"{"tests::overlap": [
+                {"measures": {"latency": {"value": 1, "p99": 2}}},
+                {"measures": {"latency": {"p99": 3}}}
+            ]}"#,
+        );
+
+        let metrics = grid_point(&results, "tests::overlap", "{}");
+        assert_eq!(named(metrics, "latency", "p99"), Some(3.0.into()));
+        assert_eq!(named(metrics, "latency", "value"), Some(1.0.into()));
+        assert_eq!(results.dropped_names, 0);
+    }
+
+    /// The cap applies to the union rather than to either entry alone,
+    /// keeping the conventional trio and the rest lexicographically.
+    #[test]
+    fn adapter_json_v1_cap_applies_to_the_union() {
+        let results = parse_json_v1(
+            r#"{"tests::capped": [
+                {"measures": {"latency": {"a1": 1, "a2": 2, "a3": 3, "a4": 4, "a5": 5}}},
+                {"measures": {"latency": {"a6": 6, "a7": 7, "value": 8, "lower_value": 9, "upper_value": 10}}}
+            ]}"#,
+        );
+
+        let metrics = grid_point(&results, "tests::capped", "{}");
+        assert_eq!(
+            names(metrics, "latency"),
+            vec![
+                "a1".parse::<MetricName>().unwrap(),
+                "a2".parse().unwrap(),
+                "a3".parse().unwrap(),
+                "a4".parse().unwrap(),
+                "a5".parse().unwrap(),
+                "lower_value".parse().unwrap(),
+                "upper_value".parse().unwrap(),
+                "value".parse().unwrap(),
+            ]
+        );
+        assert_eq!(results.dropped_names, 2);
+    }
+
+    /// A name written by two entries is one name, never a drop: nine named
+    /// values across two entries are eight names and nothing is counted.
+    #[test]
+    fn adapter_json_v1_overwrite_is_not_a_drop() {
+        let results = parse_json_v1(
+            r#"{"tests::overwritten": [
+                {"measures": {"latency": {"a1": 1, "a2": 2, "a3": 3, "a4": 4, "a5": 5, "value": 8}}},
+                {"measures": {"latency": {"value": 9, "lower_value": 10, "upper_value": 11}}}
+            ]}"#,
+        );
+
+        let metrics = grid_point(&results, "tests::overwritten", "{}");
+        assert_eq!(names(metrics, "latency").len(), MAX_METRIC_NAMES);
+        assert_eq!(named(metrics, "latency", "a1"), Some(1.0.into()));
+        assert_eq!(named(metrics, "latency", "value"), Some(9.0.into()));
+        assert_eq!(results.dropped_names, 0);
     }
 
     /// The cap keeps the three conventional names regardless of where they sort,
