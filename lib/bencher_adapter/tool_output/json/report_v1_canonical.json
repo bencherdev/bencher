@@ -4,7 +4,8 @@
             "parameters": { "size_mb": 16, "op": "read" },
             "measures": {
                 "latency": {
-                    "value": 1.0
+                    "value": 1.0,
+                    "p50": 10.0
                 }
             }
         },
@@ -12,7 +13,11 @@
             "parameters": { "op": "read", "size_mb": 16.0 },
             "measures": {
                 "latency": {
-                    "value": 2.0
+                    "value": 2.0,
+                    "p90": 20.0
+                },
+                "throughput": {
+                    "value": 100.0
                 }
             }
         },
@@ -20,7 +25,8 @@
             "parameters": { "size_mb": 1.6e1, "op": "read" },
             "measures": {
                 "latency": {
-                    "value": 3.0
+                    "value": 3.0,
+                    "p99": 30.0
                 }
             }
         }
