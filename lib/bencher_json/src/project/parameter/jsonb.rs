@@ -150,12 +150,12 @@ fn push_element(blob: &mut Vec<u8>, element: u8, payload: &[u8]) -> Result<(), J
 }
 
 /// A payload size small enough to ride in the header's high nibble.
-#[expect(
-    clippy::cast_possible_truncation,
-    reason = "the size is at most the inline maximum"
-)]
+///
+/// The caller only reaches this with a size at most the inline maximum, so the
+/// mask takes the whole of it. Masking first is what puts the shift in the `u8`
+/// domain, where a nibble cannot outgrow the byte it moves into.
 const fn size_nibble(size: u32) -> u8 {
-    ((size & 0x0f) << 4) as u8
+    ((size & 0x0f) as u8) << 4
 }
 
 /// One byte of a big endian payload size.
