@@ -1039,9 +1039,7 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
 
     // The deprecated `metric` is absent rather than null, because there is no `value`
     // row to reconstruct it from and nothing else may stand in for one.
-    let value_less = measures[1]
-        .as_object()
-        .expect("the measure is an object");
+    let value_less = measures[1].as_object().expect("the measure is an object");
     assert!(
         !value_less.contains_key("metric"),
         "the deprecated metric is absent, got {value_less:#?}"
@@ -1123,8 +1121,9 @@ async fn v0_measure_response_is_unchanged() {
         .as_array_mut()
         .expect("the measure echoes its named values")
     {
-        *metric.pointer_mut("/uuid").expect("the named value carries a uuid") =
-            serde_json::json!("<uuid>");
+        *metric
+            .pointer_mut("/uuid")
+            .expect("the named value carries a uuid") = serde_json::json!("<uuid>");
     }
 
     assert_eq!(
