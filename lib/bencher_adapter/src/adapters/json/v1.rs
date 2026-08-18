@@ -6,7 +6,7 @@ use serde::Deserialize;
 use crate::{
     Adaptable, Settings,
     results::{
-        adapter_metrics::{AdapterMetric, AdapterMetrics, NamedMap},
+        adapter_metrics::{AdapterMetrics, NamedMap},
         adapter_results::{AdapterResults, BenchmarkEntries, BmfVersion, ResultsMap},
     },
 };
@@ -56,7 +56,14 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
             // grid point, so their measures merge rather than fork a series.
             let metrics: &mut AdapterMetrics = benchmark_entries.entry(parameters).or_default();
             for (measure, named) in measures {
-                metrics.inner.insert(measure, AdapterMetric::from(named));
+                // A measure in more than one entry unions its names, the later
+                // entry winning per name, exactly JSON object key semantics.
+                metrics
+                    .inner
+                    .entry(measure)
+                    .or_default()
+                    .inner
+                    .extend(named);
             }
         }
         // The cap applies to the merged grid point, so a name is counted once.
