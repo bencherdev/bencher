@@ -1061,6 +1061,18 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
         vec![(Some("p50"), Some(2.0)), (Some("p99"), Some(3.0))],
         "the named values are the whole of what was reported"
     );
+    // The other two deprecated fields are null, as they are for any ungated measure:
+    // a bare threshold gates the `value` name, so this measure has no boundary.
+    assert_eq!(
+        value_less.get("threshold"),
+        Some(&serde_json::Value::Null),
+        "the deprecated threshold is null"
+    );
+    assert_eq!(
+        value_less.get("boundary"),
+        Some(&serde_json::Value::Null),
+        "the deprecated boundary is null"
+    );
 
     // Counted, because it is returned: the endpoint that loads a report's results and
     // the one that counts them without loading say the same thing about the same
