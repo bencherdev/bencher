@@ -1649,10 +1649,10 @@ mod tests {
         );
     }
 
-    /// A measure that named no `value` is left out of the report results, because the
-    /// deprecated metric triple it would carry cannot be reconstructed. The counts
-    /// have to leave it out too, or the same report is one measure from the endpoint
-    /// that loads its results and two from the endpoint that counts them.
+    /// A measure that named no `value` is returned like any other, carrying its named
+    /// values and no deprecated metric triple. The counts have to count it too, or the
+    /// same report is two measures from the endpoint that loads its results and one
+    /// from the endpoint that counts them.
     #[test]
     fn full_and_collapsed_counts_agree_for_a_value_less_measure() {
         let mut conn = setup_test_db();
@@ -1720,14 +1720,23 @@ mod tests {
             .into_json(&log, &mut conn, ReportMode::Collapsed)
             .expect("Failed to convert collapsed report");
 
+        let returned = full
+            .results
+            .as_ref()
+            .and_then(|results| results.first())
+            .and_then(|iteration| iteration.first())
+            .map(|result| result.measures.len())
+            .expect("the full report carries its results");
+        assert_eq!(returned, 2, "both measures are returned");
+
         assert_eq!(full.counts, collapsed.counts);
         assert_eq!(
             full.counts.results,
             vec![JsonReportIterationCounts {
                 benchmarks: 1,
-                measures: 1,
+                measures: 2,
             }],
-            "the measure that named no point estimate is counted by neither"
+            "the measure that named no point estimate is counted by both"
         );
     }
 

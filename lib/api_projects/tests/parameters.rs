@@ -14,7 +14,7 @@
 //! old shape not moving when it does.
 
 use bencher_api_tests::{TestServer, helpers::get_project_id};
-use bencher_json::{JsonParameters, MetricName};
+use bencher_json::{JsonParameters, MetricName, Slug};
 use bencher_schema::{context::DbConnection, schema};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
@@ -203,6 +203,23 @@ fn boundary_names(conn: &mut DbConnection, project_id: i32) -> Vec<String> {
         .expect("Failed to load the boundaries")
         .into_iter()
         .map(|name| name.to_string())
+        .collect()
+}
+
+/// The measure of every billable series a project has, in slug order.
+///
+/// A series is `(testbed, benchmark, parameter, measure)`, so this is the measure
+/// side of what the active series cache bills.
+fn series_measures(conn: &mut DbConnection, project_id: i32) -> Vec<String> {
+    schema::series_last_seen::table
+        .inner_join(schema::measure::table)
+        .filter(schema::series_last_seen::project_id.eq(project_id))
+        .order(schema::measure::slug.asc())
+        .select(schema::measure::slug)
+        .load::<Slug>(&mut *conn)
+        .expect("Failed to load the billable series")
+        .into_iter()
+        .map(|slug| slug.to_string())
         .collect()
 }
 
@@ -948,10 +965,11 @@ async fn parameter_creation_is_rate_limited() {
 
 // A BMF v1 measure may name only percentiles and never mention `value` at all, which
 // is the one shape the deprecated `metric` field cannot describe. Its named rows are
-// stored like any other, and the measure is left out of the response rather than
-// echoed without the point estimate an older client requires.
+// stored like any other and its series is billed like any other, so the report that
+// created them says so: the measure comes back with its named values, and the
+// deprecated `metric` is simply absent.
 #[tokio::test]
-async fn value_less_measure_is_stored_but_not_echoed() {
+async fn value_less_measure_is_stored_billed_and_echoed() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "valueless").await;
 
@@ -987,8 +1005,15 @@ async fn value_less_measure_is_stored_but_not_echoed() {
         ],
     );
 
-    // Not echoed. The deprecated `metric` is a required field, so the measure that
-    // cannot fill it is omitted rather than sent without it.
+    // Billed. Every measure of a grid point is its own active series, the one that
+    // named no point estimate included.
+    assert_eq!(
+        series_measures(&mut conn, project_id),
+        vec!["latency".to_owned(), "throughput".to_owned()],
+    );
+
+    // Echoed. What is stored and billed is visible in the report that created it, so
+    // both measures come back.
     let measures = response
         .pointer("/results/0/0/measures")
         .and_then(serde_json::Value::as_array)
@@ -1003,20 +1028,123 @@ async fn value_less_measure_is_stored_but_not_echoed() {
         .collect();
     assert_eq!(
         slugs,
-        vec![Some("latency")],
-        "the measure that named no point estimate is left out, got {measures:#?}"
+        vec![Some("latency"), Some("throughput")],
+        "the measure that named no point estimate is echoed too, got {measures:#?}"
     );
     assert_eq!(
         measures[0].pointer("/metric/value"),
         Some(&serde_json::json!(1.0)),
-        "the measure that named one is whole"
+        "the measure that named a point estimate keeps its deprecated triple"
     );
 
-    // Not counted either, so the endpoint that loads a report's results and the one
-    // that counts them without loading say the same thing about the same report.
+    // The deprecated `metric` is absent rather than null, because there is no `value`
+    // row to reconstruct it from and nothing else may stand in for one.
+    let value_less = measures[1]
+        .as_object()
+        .expect("the measure is an object");
+    assert!(
+        !value_less.contains_key("metric"),
+        "the deprecated metric is absent, got {value_less:#?}"
+    );
+    let named: Vec<(Option<&str>, Option<f64>)> = value_less
+        .get("metrics")
+        .and_then(serde_json::Value::as_array)
+        .expect("the measure echoes its named values")
+        .iter()
+        .map(|metric| {
+            (
+                metric.pointer("/name").and_then(serde_json::Value::as_str),
+                metric.pointer("/value").and_then(serde_json::Value::as_f64),
+            )
+        })
+        .collect();
+    assert_eq!(
+        named,
+        vec![(Some("p50"), Some(2.0)), (Some("p99"), Some(3.0))],
+        "the named values are the whole of what was reported"
+    );
+
+    // Counted, because it is returned: the endpoint that loads a report's results and
+    // the one that counts them without loading say the same thing about the same
+    // report.
     assert_eq!(
         response.pointer("/counts/results/0"),
-        Some(&serde_json::json!({ "benchmarks": 1, "measures": 1 })),
+        Some(&serde_json::json!({ "benchmarks": 1, "measures": 2 })),
+    );
+
+    // The legacy metric-count meter is a separate question that
+    // `named_values_do_not_change_the_metric_count` records rather than settles: it
+    // counts `value` rows, so this report meters one. Pinned here so a change to
+    // either view cannot pass unnoticed.
+    let counted: i32 = schema::metric_count_by_report::table
+        .select(schema::metric_count_by_report::metric_count)
+        .first(&mut conn)
+        .expect("Failed to read the report's metric count");
+    assert_eq!(counted, 1);
+}
+
+// The compatibility claim behind an optional `metric`: nothing an older client can
+// produce loses the field. BMF v0 is that shape, and its response is exactly what it
+// always was, the deprecated triple included and no field turned null.
+#[tokio::test]
+async fn v0_measure_response_is_unchanged() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "v0-shape").await;
+
+    let response = report(
+        &server,
+        &fixture,
+        1,
+        vec![
+            serde_json::to_string(&serde_json::json!({
+                "bench": {
+                    "latency": { "value": 10.0, "lower_value": 9.0, "upper_value": 11.0 }
+                }
+            }))
+            .expect("the results serialize"),
+        ],
+        None,
+        None,
+    )
+    .await;
+
+    let mut measure = response
+        .pointer("/results/0/0/measures/0")
+        .expect("the report echoes its measure")
+        .clone();
+    // The measure entity and every UUID are minted per run; everything else is pinned.
+    *measure
+        .pointer_mut("/measure")
+        .expect("the measure carries its entity") = serde_json::json!("<measure>");
+    *measure
+        .pointer_mut("/metric/uuid")
+        .expect("the deprecated metric carries a uuid") = serde_json::json!("<uuid>");
+    for metric in measure["metrics"]
+        .as_array_mut()
+        .expect("the measure echoes its named values")
+    {
+        *metric.pointer_mut("/uuid").expect("the named value carries a uuid") =
+            serde_json::json!("<uuid>");
+    }
+
+    assert_eq!(
+        measure,
+        serde_json::json!({
+            "measure": "<measure>",
+            "metrics": [
+                { "uuid": "<uuid>", "name": "lower_value", "value": 9.0, "boundaries": [] },
+                { "uuid": "<uuid>", "name": "upper_value", "value": 11.0, "boundaries": [] },
+                { "uuid": "<uuid>", "name": "value", "value": 10.0, "boundaries": [] },
+            ],
+            "metric": {
+                "uuid": "<uuid>",
+                "value": 10.0,
+                "lower_value": 9.0,
+                "upper_value": 11.0,
+            },
+            "threshold": null,
+            "boundary": null,
+        }),
     );
 }
 
