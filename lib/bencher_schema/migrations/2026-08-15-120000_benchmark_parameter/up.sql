@@ -16,7 +16,6 @@ CREATE TABLE parameter (
     FOREIGN KEY (benchmark_id) REFERENCES benchmark (id) ON DELETE CASCADE,
     UNIQUE(benchmark_id, parameters)
 );
-CREATE INDEX index_parameter_benchmark ON parameter(benchmark_id);
 -- Every benchmark is born with its empty parameter set, so every benchmark that
 -- predates this migration is backfilled with one.
 -- Pure SQL has no UUIDv7 function, so the UUID is a v4 minted from `randomblob`:
