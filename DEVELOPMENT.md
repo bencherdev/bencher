@@ -61,6 +61,25 @@ Once the application is running, you can access it by visiting
 1. Sign up for an account by entering your name and email address.
 2. Click on the "Confirm Email" link that is provided in the API logs.
 
+### Running the Console Against the Dev API
+
+The steps above run the Console against an API on your own machine, which is
+what you want when you are changing the API or need the "Confirm Email" link
+from its logs.
+
+To work on the Console alone, you can skip running the API and point the
+Console at the deployed dev API instead:
+
+```shell
+cd services/console
+npm run dev:dev-api
+```
+
+The Console is still served from
+[http://localhost:3000](http://localhost:3000), but every request goes to
+`https://dev.api.bencher.dev`, so you need an account on
+[dev.bencher.dev](https://dev.bencher.dev) to log in.
+
 ### Accessing the API
 
 The API is accessible at [http://localhost:6610](http://localhost:6610).

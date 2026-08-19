@@ -14,6 +14,7 @@
 		"setup": "npm run typeshare && npm run wasm && npm run copy",
 		"dev": "npm run setup && export BENCHER_API_URL=http://127.0.0.1:6610 && export OAUTH_GITHUB=true && export OAUTH_GOOGLE=true && astro dev --port 3000",
 		"dev:not-plus": "IS_BENCHER_PLUS=false npm run dev",
+		"dev:dev-api": "npm run setup && export BENCHER_API_URL=https://dev.api.bencher.dev && export OAUTH_GITHUB=true && export OAUTH_GOOGLE=true && astro dev --port 3000",
 		"start": "astro dev --port 3000",
 		"test": "npm run setup && vitest",
 		"build": "export $(cat .env.runtime) && npm run copy && astro build",
