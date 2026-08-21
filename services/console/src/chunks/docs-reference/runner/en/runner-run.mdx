@@ -32,6 +32,41 @@ Omit for non-sandboxed host execution.
 The execution timeout in seconds.
 By default, `300` is used.
 
+### `--state-dir <STATE_DIR>`
+
+The persistent state directory for the Runner.
+It must be an absolute path.
+The jail that confines the sandbox is built under this directory,
+and jails left behind by an unclean exit are swept from it before the first sandboxed Job runs.
+Each jail holds a full guest root filesystem and a copy of the microVM binary,
+and Jobs sharing one state directory run one at a time,
+so this directory needs real capacity for one jail.
+A dedicated filesystem or a `tmpfs` mount is supported and recommended:
+it keeps that write traffic off the system disk,
+and a freshly created filesystem is accepted even though it arrives with a `lost+found` directory.
+The state directory itself may be a root-owned symbolic link to such a filesystem,
+such as `/var/lib/bencher-runner` pointing at a dedicated disk.
+The link is followed only when the directory holding it is writable only by root,
+it points directly at its final target,
+and that target already exists on a path writable only by root;
+a link whose target does not exist yet is refused, so create the target first.
+By default, `/var/lib/bencher-runner` is used.
+Can also be set with the `BENCHER_STATE_DIR` environment variable.
+
+### `--jail-uid <JAIL_UID>`
+
+The unprivileged user ID the sandbox process drops to.
+By default, `61016` is used.
+A process on the host that owns this user ID can signal the sandbox,
+so set it to an ID the host does not allocate to anything else.
+Can also be set with the `BENCHER_JAIL_UID` environment variable.
+
+### `--jail-gid <JAIL_GID>`
+
+The unprivileged group ID the sandbox process drops to.
+By default, `61016` is used.
+Can also be set with the `BENCHER_JAIL_GID` environment variable.
+
 ### `--iter <ITER>`
 
 The number of benchmark iterations to execute.

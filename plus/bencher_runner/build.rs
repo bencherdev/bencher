@@ -1,7 +1,7 @@
 //! Build script for `bencher_runner`.
 //!
-//! Bundles the `bencher-init`, `firecracker`, and `vmlinux` binaries
-//! for distribution as a single binary.
+//! Bundles the `bencher-init`, `firecracker`, `jailer`, and `vmlinux`
+//! binaries for distribution as a single binary.
 //!
 //! In release builds, binaries are embedded via `include_bytes!`.
 //! In debug builds, they are downloaded/cached locally and loaded from disk at runtime.
@@ -20,9 +20,10 @@
 //!
 //! # Environment Variable Overrides
 //!
-//! - `BENCHER_INIT_PATH` — path to a pre-built bencher-init binary
-//! - `BENCHER_FIRECRACKER_PATH` — path to a pre-built firecracker binary
-//! - `BENCHER_KERNEL_PATH` — path to a pre-built vmlinux kernel
+//! - `BENCHER_INIT_PATH`: path to a pre-built bencher-init binary
+//! - `BENCHER_FIRECRACKER_PATH`: path to a pre-built firecracker binary
+//! - `BENCHER_JAILER_PATH`: path to a pre-built jailer binary
+//! - `BENCHER_KERNEL_PATH`: path to a pre-built vmlinux kernel
 
 #![expect(
     clippy::expect_used,
@@ -103,16 +104,26 @@ fn main() {
         generate_stub_module("init", &out_dir);
     }
 
-    // --- firecracker ---
-    let firecracker_path = find_or_download_firecracker(&out_dir);
-    if is_release {
-        let firecracker_path = firecracker_path.unwrap_or_else(|| panic!("firecracker binary not found. Set BENCHER_FIRECRACKER_PATH or ensure download succeeds."));
-        generate_binary_module("firecracker", &firecracker_path, is_release, &out_dir);
-    } else if let Some(firecracker_path) = firecracker_path {
-        generate_binary_module("firecracker", &firecracker_path, is_release, &out_dir);
-    } else {
-        eprintln!("WARNING: firecracker not found, generating stub module for debug build");
-        generate_stub_module("firecracker", &out_dir);
+    // --- firecracker and jailer ---
+    // Both ship in the same release archive, so a single download under a
+    // single hash check yields both. Bundling them together also keeps the
+    // VMM and its jailer at the same version across a runner self-update.
+    let (firecracker_path, jailer_path) = find_or_download_firecracker_release(&out_dir);
+    for (name, path) in [("firecracker", firecracker_path), ("jailer", jailer_path)] {
+        if is_release {
+            let path = path.unwrap_or_else(|| {
+                panic!(
+                    "{name} binary not found. Set BENCHER_{}_PATH or ensure download succeeds.",
+                    name.to_uppercase()
+                )
+            });
+            generate_binary_module(name, &path, is_release, &out_dir);
+        } else if let Some(path) = path {
+            generate_binary_module(name, &path, is_release, &out_dir);
+        } else {
+            eprintln!("WARNING: {name} not found, generating stub module for debug build");
+            generate_stub_module(name, &out_dir);
+        }
     }
 
     // --- kernel (vmlinux) ---
@@ -132,6 +143,7 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=BENCHER_INIT_PATH");
     println!("cargo:rerun-if-env-changed=BENCHER_FIRECRACKER_PATH");
+    println!("cargo:rerun-if-env-changed=BENCHER_JAILER_PATH");
     println!("cargo:rerun-if-env-changed=BENCHER_KERNEL_PATH");
     println!("cargo:rerun-if-env-changed=PROFILE");
 }
@@ -200,70 +212,112 @@ fn find_init_binary() -> Option<PathBuf> {
     None
 }
 
-/// Find or download the Firecracker binary.
+/// Find or download the `firecracker` and `jailer` binaries.
 ///
-/// Checks `BENCHER_FIRECRACKER_PATH` env var first, then tries to download
-/// the `.tgz` release archive from GitHub and extract the binary to `OUT_DIR`.
-fn find_or_download_firecracker(out_dir: &Path) -> Option<PathBuf> {
-    // 1. Check explicit env var
-    if let Ok(path) = env::var("BENCHER_FIRECRACKER_PATH") {
-        let path = PathBuf::from(path);
-        if path.exists() {
-            eprintln!(
-                "Using firecracker from BENCHER_FIRECRACKER_PATH: {}",
-                path.display()
-            );
-            return Some(path);
-        }
-        eprintln!(
-            "WARNING: BENCHER_FIRECRACKER_PATH set but file not found: {}",
-            path.display()
-        );
-    }
+/// Checks the `BENCHER_FIRECRACKER_PATH` and `BENCHER_JAILER_PATH` env vars
+/// first, then downloads the `.tgz` release archive from GitHub once and
+/// extracts every binary that is not overridden into `OUT_DIR`.
+///
+/// The cache is all or nothing across the two, because Firecracker and its
+/// jailer are a matched pair: whenever either is missing, both come out of the
+/// one archive that was just hash checked, rather than one being filled in
+/// beside whatever the build directory already held.
+///
+/// Returns `(firecracker, jailer)`.
+fn find_or_download_firecracker_release(out_dir: &Path) -> (Option<PathBuf>, Option<PathBuf>) {
+    let firecracker_override = binary_path_override("firecracker", "BENCHER_FIRECRACKER_PATH");
+    let jailer_override = binary_path_override("jailer", "BENCHER_JAILER_PATH");
 
-    // 2. Download from GitHub releases
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_default();
     let arch = match target_arch.as_str() {
         "x86_64" => "x86_64",
         "aarch64" => "aarch64",
         _ => {
-            eprintln!("Unsupported architecture for firecracker: {target_arch}");
-            return None;
+            eprintln!("Unsupported architecture for the Firecracker release: {target_arch}");
+            return (firecracker_override, jailer_override);
         },
     };
-
-    let dest = out_dir.join("firecracker");
-    if dest.exists() {
-        eprintln!("Using cached firecracker at: {}", dest.display());
-        return Some(dest);
-    }
-
-    let url = format!(
-        "https://github.com/firecracker-microvm/firecracker/releases/download/{DEFAULT_FIRECRACKER_VERSION}/firecracker-{DEFAULT_FIRECRACKER_VERSION}-{arch}.tgz",
-    );
-
-    // The binary inside the tgz is at:
-    // release-{version}-{arch}/firecracker-{version}-{arch}
-    let entry_name = format!(
-        "release-{DEFAULT_FIRECRACKER_VERSION}-{arch}/firecracker-{DEFAULT_FIRECRACKER_VERSION}-{arch}",
-    );
-
     let expected_hash = match arch {
         "x86_64" => FIRECRACKER_TGZ_SHA256_X86_64,
         "aarch64" => FIRECRACKER_TGZ_SHA256_AARCH64,
         _ => unreachable!(),
     };
 
-    eprintln!("Downloading firecracker from: {url}");
-    match download_and_extract_tgz(&url, &entry_name, &dest, Some(expected_hash)) {
-        Ok(()) => {
-            eprintln!("Extracted firecracker to: {}", dest.display());
-            Some(dest)
-        },
-        Err(e) => {
-            eprintln!("WARNING: Failed to download/extract firecracker: {e}");
-            None
-        },
+    // The binaries inside the tgz are at:
+    // release-{version}-{arch}/{name}-{version}-{arch}
+    let wanted: Vec<(String, PathBuf)> = ["firecracker", "jailer"]
+        .into_iter()
+        .zip([&firecracker_override, &jailer_override])
+        .filter(|&(_, overridden)| overridden.is_none())
+        .map(|(name, _)| {
+            (
+                format!(
+                    "release-{DEFAULT_FIRECRACKER_VERSION}-{arch}/{name}-{DEFAULT_FIRECRACKER_VERSION}-{arch}",
+                ),
+                cached_binary(out_dir, name, arch, expected_hash),
+            )
+        })
+        .collect();
+
+    if wanted.iter().all(|(_, dest)| dest.exists()) {
+        for (_, dest) in &wanted {
+            eprintln!("Using cached binary at: {}", dest.display());
+        }
+    } else {
+        let url = format!(
+            "https://github.com/firecracker-microvm/firecracker/releases/download/{DEFAULT_FIRECRACKER_VERSION}/firecracker-{DEFAULT_FIRECRACKER_VERSION}-{arch}.tgz",
+        );
+
+        eprintln!("Downloading the Firecracker release from: {url}");
+        if let Err(e) = download_and_extract_tgz(&url, &wanted, Some(expected_hash)) {
+            eprintln!("WARNING: Failed to download/extract the Firecracker release: {e}");
+        }
+    }
+
+    let resolved = |overridden: Option<PathBuf>, name: &str| {
+        overridden.or_else(|| {
+            let dest = cached_binary(out_dir, name, arch, expected_hash);
+            dest.exists().then_some(dest)
+        })
+    };
+
+    (
+        resolved(firecracker_override, "firecracker"),
+        resolved(jailer_override, "jailer"),
+    )
+}
+
+/// Where an extracted release binary is cached inside `OUT_DIR`.
+///
+/// The name carries the release it came out of: the pinned version and the head
+/// of the pinned archive hash. `OUT_DIR` outlives an edit to either, so a fixed
+/// name is a cache that cannot be invalidated, and bumping
+/// `DEFAULT_FIRECRACKER_VERSION` in an incremental build directory shipped the
+/// binaries of the previous pin without a word. Keying the name to the pin makes
+/// a version or hash change a cache miss by construction, rather than by a
+/// freshness check someone has to remember to write.
+fn cached_binary(out_dir: &Path, name: &str, arch: &str, archive_sha256: &str) -> PathBuf {
+    let key = hash_key(archive_sha256);
+    out_dir.join(format!("{name}-{DEFAULT_FIRECRACKER_VERSION}-{arch}-{key}"))
+}
+
+/// The part of a pinned SHA256 that goes in a cache name.
+///
+/// Enough of it to distinguish the pins this repository will ever hold, and
+/// short enough to leave the name readable.
+fn hash_key(sha256: &str) -> &str {
+    sha256.get(..16).unwrap_or(sha256)
+}
+
+/// Resolve a build-time binary path override from an env var.
+fn binary_path_override(name: &str, var: &str) -> Option<PathBuf> {
+    let path = PathBuf::from(env::var(var).ok()?);
+    if path.exists() {
+        eprintln!("Using {name} from {var}: {}", path.display());
+        Some(path)
+    } else {
+        eprintln!("WARNING: {var} set but file not found: {}", path.display());
+        None
     }
 }
 
@@ -296,17 +350,20 @@ fn find_or_download_kernel(out_dir: &Path) -> Option<PathBuf> {
         },
     };
 
-    let dest = out_dir.join("vmlinux");
-    if dest.exists() {
-        eprintln!("Using cached vmlinux at: {}", dest.display());
-        return Some(dest);
-    }
-
     let expected_hash = match target_arch.as_str() {
         "x86_64" => KERNEL_SHA256_X86_64,
         "aarch64" => KERNEL_SHA256_AARCH64,
         _ => unreachable!(),
     };
+
+    // Keyed to the kernel it holds, for the reason [`cached_binary`] gives: a
+    // new `DEFAULT_KERNEL_URL_*` has to miss the cache rather than hand back
+    // whatever the last one downloaded.
+    let dest = out_dir.join(format!("vmlinux-{}", hash_key(expected_hash)));
+    if dest.exists() {
+        eprintln!("Using cached vmlinux at: {}", dest.display());
+        return Some(dest);
+    }
 
     eprintln!("Downloading vmlinux kernel from: {kernel_url}");
     match download_file(kernel_url, &dest, Some(expected_hash)) {
@@ -351,18 +408,17 @@ fn download_file(url: &str, dest: &Path, expected_sha256: Option<&str>) -> Resul
     Ok(())
 }
 
-/// Download a `.tgz` archive and extract a single file from it.
+/// Download a `.tgz` archive and extract the requested files from it.
 ///
 /// # Arguments
 ///
 /// * `url` - URL of the `.tgz` archive
-/// * `entry_name` - Path of the entry to extract (e.g., `release-v1.15.1-x86_64/firecracker-v1.15.1-x86_64`)
-/// * `dest` - Destination path for the extracted file
+/// * `wanted` - `(entry_name, dest)` pairs, where `entry_name` is the path of
+///   the entry inside the archive (e.g., `release-v1.15.1-x86_64/firecracker-v1.15.1-x86_64`)
 /// * `expected_sha256` - If `Some`, verify the archive's SHA256 before extracting
 fn download_and_extract_tgz(
     url: &str,
-    entry_name: &str,
-    dest: &Path,
+    wanted: &[(String, PathBuf)],
     expected_sha256: Option<&str>,
 ) -> Result<(), String> {
     let response = ureq::get(url)
@@ -392,6 +448,13 @@ fn download_and_extract_tgz(
     let gz = flate2::read::GzDecoder::new(archive_bytes.as_slice());
     let mut archive = tar::Archive::new(gz);
 
+    // The names still to be found, not a count of them. A tar archive may
+    // legally carry the same path more than once, and counting extractions down
+    // gets that wrong in both directions: a third match against two wanted
+    // entries underflows and panics with a message that says nothing about the
+    // archive, and two matches on the same entry reach zero and report success
+    // while the other is still missing.
+    let mut outstanding: Vec<&str> = wanted.iter().map(|(name, _)| name.as_str()).collect();
     for entry in archive
         .entries()
         .map_err(|e| format!("Failed to read tar entries: {e}"))?
@@ -400,19 +463,31 @@ fn download_and_extract_tgz(
         let path = entry
             .path()
             .map_err(|e| format!("Failed to read entry path: {e}"))?;
+        let path = path.to_string_lossy().into_owned();
 
-        if path.to_string_lossy() == entry_name {
-            let mut bytes = Vec::new();
-            entry
-                .read_to_end(&mut bytes)
-                .map_err(|e| format!("Failed to read entry data: {e}"))?;
-            fs::write(dest, &bytes)
-                .map_err(|e| format!("Failed to write to {}: {e}", dest.display()))?;
+        let Some((_, dest)) = wanted.iter().find(|(name, _)| *name == path) else {
+            continue;
+        };
+
+        let mut bytes = Vec::new();
+        entry
+            .read_to_end(&mut bytes)
+            .map_err(|e| format!("Failed to read entry data: {e}"))?;
+        fs::write(dest, &bytes)
+            .map_err(|e| format!("Failed to write to {}: {e}", dest.display()))?;
+        eprintln!("Extracted '{path}' to: {}", dest.display());
+        outstanding.retain(|name| *name != path);
+        if outstanding.is_empty() {
             return Ok(());
         }
     }
 
-    Err(format!("Entry '{entry_name}' not found in archive"))
+    // Named from what the archive walk itself failed to find. A destination
+    // left by an earlier partial run in the same OUT_DIR still exists on disk,
+    // so consulting `dest.exists()` here would report an empty missing list
+    // for an archive that no longer carries the entry.
+    let missing = outstanding.join(", ");
+    Err(format!("Entries not found in archive: {missing}"))
 }
 
 // ---------------------------------------------------------------------------
@@ -489,7 +564,7 @@ pub const {name_upper}_BUNDLED: bool = true;
 fn generate_stub_modules() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR not set"));
 
-    for name in &["init", "firecracker", "kernel"] {
+    for name in &["init", "firecracker", "jailer", "kernel"] {
         generate_stub_module(name, &out_dir);
     }
 }

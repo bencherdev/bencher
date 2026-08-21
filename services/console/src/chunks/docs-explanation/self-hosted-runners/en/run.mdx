@@ -29,6 +29,10 @@ By default the Runner follows the `stable` [update channel][update channel],
 updating only to versioned releases.
 The `canary` channel instead tracks the rolling canary build deployed to Bencher Cloud.
 
+A Runner that executes sandboxed Jobs must run as `root`,
+so the commands above are shown as they would be run by the `root` user
+or under a service manager that starts the Runner as `root`.
+
 By default a Runner rejects any Job whose Spec has no [Sandbox][sandbox].
 To let a Runner execute non-sandboxed Jobs directly on the host,
 start it with [the `--danger-allow-no-sandbox` flag][danger allow no sandbox].

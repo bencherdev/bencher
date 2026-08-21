@@ -71,12 +71,20 @@ impl BencherPartition {
             return PartitionLevel::Member;
         }
 
-        if !self.path.exists()
-            && let Err(e) = fs::create_dir_all(&self.path)
-        {
+        if let Err(e) = fs::create_dir_all(&self.path) {
             eprintln!("Warning: failed to create cgroup {}: {e}", self.path);
             return PartitionLevel::Member;
         }
+
+        // Removed on the way out, once the values have been restored. An empty
+        // `bencher` cgroup left carrying this run's cpuset is residue: nothing
+        // else reads that cgroup, the next job recreates it on demand, and
+        // clearing `cpuset.cpus` back to inherit-everything is refused with
+        // `EIO` while any task remains in a descendant, so the restore alone
+        // cannot always undo what this does. Registered whoever created the
+        // directory, because the residue is the same either way and `rmdir`
+        // refuses while anything is still inside.
+        guard.remove_when_empty(self.path.clone());
 
         // A partition needs explicit cpus and mems. Mems mirror the
         // root's effective nodes so multi-node NUMA hosts are not forced
@@ -89,10 +97,23 @@ impl BencherPartition {
         ) {
             return PartitionLevel::Member;
         }
+        // A node set that could not be read is not node 0. Degrading to member
+        // is the declared, loud absence of isolation; writing a guessed node set
+        // would confine the benchmark's memory on the strength of a read that
+        // did not happen.
+        let mems = match effective_mems(&self.root) {
+            Ok(mems) => mems,
+            Err(e) => {
+                eprintln!(
+                    "Warning: failed to read the cgroup root's effective memory nodes ({e}); no cpuset partition"
+                );
+                return PartitionLevel::Member;
+            },
+        };
         if !save_and_write(
             guard,
             &self.path.join("cpuset.mems"),
-            &effective_mems(&self.root),
+            &mems,
             "bencher cpuset.mems",
         ) {
             return PartitionLevel::Member;

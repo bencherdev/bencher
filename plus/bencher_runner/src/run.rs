@@ -71,6 +71,10 @@ pub struct RunArgs {
     pub sandbox_log_level: crate::SandboxLogLevel,
     /// Sandbox mode for benchmark execution.
     pub sandbox: Option<bencher_json::Sandbox>,
+    /// The runner's persistent state directory.
+    pub state_dir: Utf8PathBuf,
+    /// The unprivileged uid and gid the jailed VMM drops to.
+    pub jail_user: crate::jail::JailUser,
 }
 
 /// Build a `Config` from CLI `RunArgs`.
@@ -121,6 +125,8 @@ fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::er
     config = config.with_grace_period(args.grace_period);
     config.sandbox_log_level = args.sandbox_log_level;
     config = config.with_sandbox(args.sandbox);
+    config = config.with_state_dir(args.state_dir.clone());
+    config = config.with_jail_user(args.jail_user);
     Ok(config)
 }
 
@@ -171,9 +177,13 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         }
     }
 
+    // Owned by this invocation rather than shared: the latch belongs to one
+    // runner process and nothing else can observe or reset it.
+    let mut host = crate::jail::HostPreparation::new();
+
     let iter_count = args.iter.as_usize();
     for iteration in 0..iter_count {
-        match execute(&config, None) {
+        match execute(&config, &mut host, None) {
             Ok(output) => {
                 println!("{}", output.stdout);
                 if !output.stderr.is_empty() {
@@ -396,15 +406,23 @@ pub fn resolve_oci_config(
 /// # Returns
 ///
 /// The benchmark output including exit code and stdout.
+#[cfg_attr(
+    not(target_os = "linux"),
+    expect(
+        unused_variables,
+        reason = "host preparation is Linux-only, as is the VM executor it prepares for"
+    )
+)]
 pub fn execute(
     config: &crate::Config,
+    host: &mut crate::jail::HostPreparation,
     cancel_flag: Option<&Arc<AtomicBool>>,
 ) -> Result<RunOutput, RunnerError> {
     match config.sandbox {
         Some(bencher_json::Sandbox::Firecracker) => {
             #[cfg(target_os = "linux")]
             {
-                crate::vm::vm_execute(config, cancel_flag)
+                crate::vm::vm_execute(config, host, cancel_flag)
             }
             #[cfg(not(target_os = "linux"))]
             {

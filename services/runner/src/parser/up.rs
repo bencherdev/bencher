@@ -1,4 +1,5 @@
 use bencher_json::RunnerResourceId;
+use camino::Utf8PathBuf;
 use clap::Parser;
 
 use super::CliTuning;
@@ -21,6 +22,33 @@ pub struct CliUp {
     /// Long-poll timeout in seconds (1-900).
     #[arg(long, default_value = "55", value_parser = clap::value_parser!(u32).range(1..=900))]
     pub poll_timeout: u32,
+
+    /// Persistent state directory for the runner (absolute path).
+    #[arg(
+        long,
+        env = "BENCHER_STATE_DIR",
+        default_value = bencher_runner::DEFAULT_STATE_DIR,
+        value_parser = super::absolute_state_dir,
+    )]
+    pub state_dir: Utf8PathBuf,
+
+    /// Unprivileged uid the jailed sandbox process drops to.
+    #[arg(
+        long,
+        env = "BENCHER_JAIL_UID",
+        default_value_t = bencher_runner::DEFAULT_JAIL_UID,
+        value_parser = super::unprivileged_jail_uid,
+    )]
+    pub jail_uid: u32,
+
+    /// Unprivileged gid the jailed sandbox process drops to.
+    #[arg(
+        long,
+        env = "BENCHER_JAIL_GID",
+        default_value_t = bencher_runner::DEFAULT_JAIL_GID,
+        value_parser = super::unprivileged_jail_gid,
+    )]
+    pub jail_gid: u32,
 
     #[command(flatten)]
     pub tuning: CliTuning,
@@ -110,5 +138,28 @@ mod tests {
     #[test]
     fn update_channel_conflicts_with_no_auto_update() {
         parse(&["--update-channel", "canary", "--no-auto-update"]).unwrap_err();
+    }
+
+    #[test]
+    fn the_jail_user_defaults_to_the_library_default() {
+        let up = parse(&[]).unwrap();
+        assert_eq!(up.jail_uid, bencher_runner::DEFAULT_JAIL_UID);
+        assert_eq!(up.jail_gid, bencher_runner::DEFAULT_JAIL_GID);
+
+        let up = parse(&["--jail-uid", "4242", "--jail-gid", "4243"]).unwrap();
+        assert_eq!(up.jail_uid, 4242);
+        assert_eq!(up.jail_gid, 4243);
+    }
+
+    #[test]
+    fn a_root_jail_user_is_refused_at_the_command_line() {
+        // The flag is where an operator meets this, so the flag is where the
+        // reason has to surface, rather than a clap range message that says
+        // nothing about why root is not an option.
+        let uid = parse(&["--jail-uid", "0"]).unwrap_err().to_string();
+        assert!(uid.contains("no jail at all"), "{uid}");
+
+        let gid = parse(&["--jail-gid", "0"]).unwrap_err().to_string();
+        assert!(gid.contains("no jail at all"), "{gid}");
     }
 }

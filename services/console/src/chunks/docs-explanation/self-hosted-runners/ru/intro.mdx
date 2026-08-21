@@ -14,7 +14,10 @@ Self-Hosted Runner — это [Bare Metal Runner][bare metal], который в
 Концептуальный обзор того, как Runner, Spec, Sandbox и Job сочетаются друг с другом,
 смотрите в [обзоре Bare Metal][bare metal].
 
-> 🐰 Изоляция через Firecracker требует Linux с включённым [KVM][kvm].
+> 🐰 Изоляция через Firecracker требует Linux с включённым [KVM][kvm],
+> а сам Runner должен работать от имени `root`.
+> Каждый Job в песочнице запирается в chroot от имени непривилегированного пользователя,
+> и построение этой изоляции требует прав, которых одно только включение KVM не даёт.
 > Runner, обслуживающий только не изолированные Spec, может работать на любом поддерживаемом хосте.
 
 [bare metal]: /ru/docs/explanation/bare-metal/

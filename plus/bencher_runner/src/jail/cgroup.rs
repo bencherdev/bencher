@@ -9,7 +9,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::RunnerError;
 use crate::cpu::CpuLayout;
 use crate::error::JailError;
-use crate::jail::ResourceLimits;
+use crate::jail::{JailSignals, VmId};
 
 /// Default cgroup v2 mount point.
 const CGROUP_ROOT: &str = "/sys/fs/cgroup";
@@ -21,41 +21,93 @@ pub(crate) const BENCHER_CGROUP_BASE: &str = "bencher";
 pub struct CgroupManager {
     cgroup_path: Utf8PathBuf,
     created: bool,
+    /// Raised when this cgroup could not be removed, which holds the chroot that
+    /// names it and earns a later job another sweep.
+    signals: JailSignals,
+    /// What asking the parent to delegate `cpuset` established, which is what
+    /// separates an absent `cpuset.cpus` this runner may report as a host
+    /// limitation from one it may not.
+    cpuset_control: CpusetControl,
 }
 
 impl CgroupManager {
-    /// Create a new cgroup for the given run ID.
-    pub fn new(run_id: &str) -> Result<Self, RunnerError> {
-        let cgroup_path = Utf8PathBuf::from(CGROUP_ROOT)
-            .join(BENCHER_CGROUP_BASE)
-            .join(run_id);
+    /// Create a new cgroup for the given microVM.
+    ///
+    /// The signal is shared with the chroot of the same id: a cgroup that
+    /// cannot be removed has to keep that directory alive, because the
+    /// directory name is the only handle a later sweep has for finding this
+    /// cgroup again.
+    pub fn new(vm_id: &VmId, signals: JailSignals) -> Result<Self, RunnerError> {
+        let cgroup_path = vm_cgroup(vm_id.as_str());
 
-        // Ensure parent bencher cgroup exists
+        // Unconditional, because `create_dir_all` on a directory that is
+        // already there is a success. The `exists` check this replaces was a
+        // read that could only mislead: an error from it would have been read as
+        // an absent parent, and it gated nothing the create does not gate
+        // itself.
         let parent = Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE);
-        if !parent.exists() {
-            fs::create_dir_all(&parent).map_err(|e| JailError::CreateCgroup {
-                path: parent.clone(),
-                source: e,
-            })?;
-        }
+        fs::create_dir_all(&parent).map_err(|e| JailError::CreateCgroup {
+            path: parent.clone(),
+            source: e,
+        })?;
 
         // Enable controllers in the parent. Always attempted (idempotent):
         // the parent may have been created without controllers, e.g. by
         // the tuning cpuset partition at startup.
-        Self::enable_controllers(&parent)?;
+        let cpuset_control = Self::enable_controllers(&parent)?;
 
-        // Create this run's cgroup
-        if !cgroup_path.exists() {
-            fs::create_dir_all(&cgroup_path).map_err(|e| JailError::CreateCgroup {
-                path: cgroup_path.clone(),
-                source: e,
-            })?;
-        }
+        // Create this run's cgroup, and remember whether we are the ones who
+        // made it. `Drop` removes what this created, so claiming ownership of
+        // a cgroup that was already there would have it rmdir something
+        // belonging to whoever did create it. Fresh ids make that unlikely,
+        // but this branch exists precisely for when the id is not fresh.
+        // `try_exists`, because this decides whether `Drop` may remove the
+        // directory. An error read as "not there" would have this claim a cgroup
+        // somebody else owns and then delete it on the way out, which is the one
+        // outcome the branch exists to prevent.
+        let created = match cgroup_path.try_exists() {
+            Ok(true) => false,
+            Ok(false) => {
+                fs::create_dir_all(&cgroup_path).map_err(|e| JailError::CreateCgroup {
+                    path: cgroup_path.clone(),
+                    source: e,
+                })?;
+                true
+            },
+            Err(e) => {
+                return Err(JailError::ReadCgroup {
+                    path: cgroup_path,
+                    source: e,
+                }
+                .into());
+            },
+        };
 
         Ok(Self {
             cgroup_path,
-            created: true,
+            created,
+            signals,
+            cpuset_control,
         })
+    }
+
+    /// Wrap an existing cgroup directory without creating or removing it.
+    ///
+    /// For tests that exercise the placement logic against a stand-in tree
+    /// rather than the real cgroup filesystem.
+    ///
+    /// Nothing was asked about `cpuset`, and that counts as answered: a
+    /// stand-in tree holds exactly the files its test wrote, so a missing
+    /// `cpuset.cpus` there is the deliberate absence the test means it to be.
+    #[cfg(test)]
+    #[must_use]
+    pub fn detached(cgroup_path: Utf8PathBuf) -> Self {
+        Self {
+            cgroup_path,
+            created: false,
+            signals: JailSignals::unwatched(),
+            cpuset_control: CpusetControl::Answered,
+        }
     }
 
     /// Enable controllers in a cgroup.
@@ -64,16 +116,37 @@ impl CgroupManager {
     /// (optional, for I/O throttling and CPU pinning). The verification read is the
     /// real gate: write failures are tolerated when the required controllers are
     /// already enabled (e.g., pre-configured by an admin for an unprivileged runner).
-    fn enable_controllers(path: &Utf8Path) -> Result<(), RunnerError> {
+    ///
+    /// Reports what the widest write established about `cpuset`, because the
+    /// runner has no other chance to find out and [`Self::apply_cpuset`] would
+    /// otherwise read a write that failed as a host with nothing to delegate.
+    fn enable_controllers(path: &Utf8Path) -> Result<CpusetControl, RunnerError> {
         let subtree_control = path.join("cgroup.subtree_control");
 
-        // Try to enable all controllers at once, falling back to smaller sets
-        let write_result = fs::write(&subtree_control, "+cpu +memory +pids +io +cpuset")
-            .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids +io"))
-            .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids"));
+        // Try to enable all controllers at once, falling back to smaller sets.
+        // The kernel takes each write as a unit, so the widest one is the only
+        // one that says anything about `cpuset`, and what it says is kept rather
+        // than discarded with the fallback: reaching a narrower write means the
+        // controller was not enabled here, and only the refusal separates a host
+        // that has none to give from a write that simply failed.
+        let (cpuset_control, write_result) =
+            match fs::write(&subtree_control, "+cpu +memory +pids +io +cpuset") {
+                Ok(()) => (CpusetControl::Answered, Ok(())),
+                Err(e) => (
+                    CpusetControl::from_refusal(e),
+                    fs::write(&subtree_control, "+cpu +memory +pids +io")
+                        .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids")),
+                ),
+            };
 
-        // Verify that required controllers are enabled
-        let enabled = fs::read_to_string(&subtree_control).unwrap_or_default();
+        // Verify that required controllers are enabled. A read that failed is
+        // not an empty list: reporting one would blame the host for a
+        // controller it may well have enabled, on the strength of a question
+        // nobody answered.
+        let enabled = fs::read_to_string(&subtree_control).map_err(|e| JailError::ReadCgroup {
+            path: subtree_control.clone(),
+            source: e,
+        })?;
         if let Some(missing) = missing_required_controller(&enabled) {
             return Err(match write_result {
                 Err(e) => JailError::EnableControllers {
@@ -90,41 +163,7 @@ impl CgroupManager {
             });
         }
 
-        Ok(())
-    }
-
-    /// Apply resource limits to this cgroup.
-    pub fn apply_limits(&self, limits: &ResourceLimits) -> Result<(), RunnerError> {
-        // CPU limit
-        if let Some(quota) = limits.cpu_quota_us {
-            let cpu_max = format!("{quota} {}", limits.cpu_period_us);
-            self.write_file("cpu.max", &cpu_max)?;
-        }
-
-        // Memory limit
-        if let Some(bytes) = limits.memory_bytes {
-            self.write_file("memory.max", &bytes.to_string())?;
-
-            // Disable swap to ensure benchmark memory measurements are accurate
-            // and to prevent swap thrashing from affecting benchmark results.
-            drop(self.disable_swap());
-        }
-
-        // OOM group kill: when the cgroup hits its memory limit, kill ALL processes
-        // in the group together. This prevents partial kills that leave orphan processes.
-        drop(self.write_file("memory.oom.group", "1"));
-
-        // PIDs limit
-        self.write_file("pids.max", &limits.max_procs.to_string())?;
-
-        // I/O limits - applied to all block devices
-        // Note: This requires knowing the device major:minor. We attempt to
-        // discover common devices, but this may not work in all configuration.
-        if limits.io_read_bps.is_some() || limits.io_write_bps.is_some() {
-            self.apply_io_limits(limits);
-        }
-
-        Ok(())
+        Ok(cpuset_control)
     }
 
     /// Apply CPU pinning via cpuset controller.
@@ -139,103 +178,157 @@ impl CgroupManager {
     ///
     /// # Errors
     ///
-    /// Returns Ok even if cpuset is not available (logs a warning).
-    /// CPU pinning is best-effort for isolation but not required for correctness.
-    pub fn apply_cpuset(&self, layout: &CpuLayout) -> Result<(), RunnerError> {
+    /// Returns an error when the cpuset controller is present but rejects the
+    /// write. That is a half-applied fidelity mechanism: the cgroup would
+    /// exist without confining the VMM to the benchmark cores, so the run
+    /// would report a number measured somewhere other than where it claims.
+    ///
+    /// A controller that is not there at all is a different thing and is not
+    /// an error. `enable_controllers` falls back as far as `+cpu +memory
+    /// +pids`, and only those three are required, so a host that does not
+    /// delegate `cpuset` (a containerized runner, or a cgroup namespace
+    /// without it in `subtree_control`) creates its cgroup successfully and
+    /// then has no `cpuset.cpus` to write. That is a declared absence of
+    /// isolation, which the caller degrades on rather than failing. What the
+    /// absence is declared to be depends on what the enable attempt found out:
+    /// see `Self::no_cpuset`.
+    pub fn apply_cpuset(&self, layout: &CpuLayout) -> Result<Cpuset, RunnerError> {
         if !layout.has_isolation() {
-            // No meaningful isolation possible (single core or overlapping sets)
-            return Ok(());
+            // Single core, or overlapping sets: there is nothing to confine to.
+            return Ok(Cpuset::Unavailable("the CPU layout offers no isolation"));
         }
 
         let cpuset = layout.benchmark_cpuset();
         if cpuset.is_empty() {
-            return Ok(());
+            return Ok(Cpuset::Unavailable("the benchmark core set is empty"));
         }
 
-        // Try to write cpuset.cpus - may fail if cpuset controller is not available
+        // `try_exists`, not `exists`: the latter reports an error as an absent
+        // file, so a cgroup directory the runner cannot stat would be declared
+        // an undelegated controller. That is a claim about the host made from a
+        // question that failed, and it is the difference between a host with no
+        // isolation to offer and a host nobody could ask.
         let path = self.cgroup_path.join("cpuset.cpus");
+        match path.try_exists() {
+            Ok(true) => {},
+            Ok(false) => return Ok(self.no_cpuset()),
+            Err(e) => return Err(JailError::ReadCgroup { path, source: e }.into()),
+        }
+        // Every failure, absence included. Delegation was settled by the check
+        // above, so a `cpuset.cpus` that has gone missing between that stat and
+        // this write is a cgroup disappearing underneath the runner, not a host
+        // that never had the controller. `verify_cpuset` reasons the same way
+        // about the same question one step later; the two used to disagree.
         if let Err(e) = fs::write(&path, &cpuset) {
-            // Log warning but don't fail - cpuset is optional for isolation
-            eprintln!(
-                "Warning: failed to set cpuset.cpus to '{cpuset}' (cpuset controller may not be available): {e}"
-            );
-        } else {
-            // Also need to set cpuset.mems for cpuset to work. Use the
-            // parent's effective memory nodes so multi-node NUMA hosts
-            // are not forced onto node 0.
-            let mems = self
-                .cgroup_path
-                .parent()
-                .map_or_else(|| "0".to_owned(), effective_mems);
-            let mems_path = self.cgroup_path.join("cpuset.mems");
-            if let Err(e) = fs::write(&mems_path, &mems) {
-                eprintln!("Warning: failed to set cpuset.mems: {e}");
+            return Err(JailError::WriteCgroup { path, source: e }.into());
+        }
+
+        // Also need to set cpuset.mems for cpuset to work. Use the parent's
+        // effective memory nodes so multi-node NUMA hosts are not forced onto
+        // node 0. Applied cpus without mems is the half-applied case.
+        let mems = match self.cgroup_path.parent() {
+            Some(parent) => effective_mems(parent).map_err(|e| JailError::ReadCgroup {
+                path: parent.join(MEMS_EFFECTIVE),
+                source: e,
+            })?,
+            None => NODE_ZERO.to_owned(),
+        };
+        let mems_path = self.cgroup_path.join("cpuset.mems");
+        if let Err(e) = fs::write(&mems_path, &mems) {
+            return Err(JailError::WriteCgroup {
+                path: mems_path,
+                source: e,
             }
+            .into());
         }
 
-        Ok(())
+        self.verify_cpuset(&cpuset, &mems)
     }
 
-    /// Apply I/O bandwidth limits.
+    /// Why this run has no cpuset, when the cgroup has no `cpuset.cpus`.
     ///
-    /// Attempts to apply io.max limits to discovered block devices.
-    /// The io.max format is: "MAJ:MIN rbps=BYTES wbps=BYTES"
-    fn apply_io_limits(&self, limits: &ResourceLimits) {
-        use std::fmt::Write as _;
-
-        // Try to find block devices to apply limits to
-        let devices = Self::discover_block_devices();
-
-        if devices.is_empty() {
-            // No devices found, skip I/O limits silently
-            return;
-        }
-
-        let read_limit = limits
-            .io_read_bps
-            .map_or("max".to_owned(), |v| v.to_string());
-        let write_limit = limits
-            .io_write_bps
-            .map_or("max".to_owned(), |v| v.to_string());
-
-        let mut io_max_content = String::new();
-        for (major, minor) in devices {
-            // Format: "MAJ:MIN rbps=BYTES wbps=BYTES"
-            let _unused = writeln!(
-                io_max_content,
-                "{major}:{minor} rbps={read_limit} wbps={write_limit}"
-            );
-        }
-
-        // Try to write io.max - may fail if io controller is not available
-        let path = self.cgroup_path.join("io.max");
-        if let Err(e) = fs::write(&path, &io_max_content) {
-            // Log warning but don't fail - io controller may not be available
-            eprintln!("Warning: failed to set io.max (io controller may not be available): {e}");
+    /// The file is missing because the controller was not delegated to this
+    /// cgroup, and the question left is whether anything established that the
+    /// host is the reason. When the write that would have enabled it was
+    /// refused for its own reasons, that refusal is said out loud rather than
+    /// reported as a host with no `cpuset` to give: this is the one place the
+    /// difference is visible, and it is the difference between an operator
+    /// fixing their runner and an operator believing their kernel cannot do
+    /// this.
+    fn no_cpuset(&self) -> Cpuset {
+        match &self.cpuset_control {
+            CpusetControl::Answered => Cpuset::Unavailable(UNDELEGATED),
+            CpusetControl::Unanswered(e) => {
+                eprintln!(
+                    "Warning: the cpuset controller could not be enabled on the parent of {}: {e}. Whether this host delegates it was never established.",
+                    self.cgroup_path
+                );
+                Cpuset::Unavailable(UNENABLED)
+            },
         }
     }
 
-    /// Discover block devices on the system.
+    /// Confirm the kernel actually gave the cgroup the cores that were asked
+    /// for.
     ///
-    /// Returns a list of (major, minor) device numbers for block devices.
-    fn discover_block_devices() -> Vec<(u32, u32)> {
-        let mut devices = Vec::new();
+    /// A successful write proves nothing here. Under cgroup v2 the effective
+    /// set is the written set intersected with the parent's effective set, so
+    /// a `cpuset.cpus` that reaches past the parent is accepted and then
+    /// silently narrowed, possibly to nothing at all, in which case the VMM
+    /// simply inherits the parent's CPUs. (An exclusive sibling narrows a set
+    /// the same way, though these cgroups never claim exclusivity.) The whole
+    /// point of separating applied from half-applied is lost if the applied
+    /// case is taken on trust, so both effective sets are read back and have
+    /// to match. Every other fidelity mechanism here already reads back: the
+    /// partition mode does, and so does cgroup placement.
+    fn verify_cpuset(&self, cpus: &str, mems: &str) -> Result<Cpuset, RunnerError> {
+        // Memory nodes as well as cpus. The mems value is derived from the
+        // parent's effective set, so narrowing is unlikely, but it is written
+        // exactly the same way and would otherwise be the last write on this
+        // path still taken on trust.
+        for (file, requested) in [
+            ("cpuset.cpus.effective", cpus),
+            ("cpuset.mems.effective", mems),
+        ] {
+            let path = self.cgroup_path.join(file);
+            // Every failure, absence included. Reaching this function means the
+            // write to `cpuset.cpus` succeeded, which is proof the controller is
+            // delegated, so a missing effective file here cannot mean it is not:
+            // reporting an undelegated controller would tell the operator
+            // something this code just observed to be false, while the run went
+            // ahead on a cpuset that was never verified. The read is the whole
+            // mechanism, so a read that did not happen is a failure of it.
+            let effective = fs::read_to_string(&path).map_err(|e| JailError::ReadCgroup {
+                path: path.clone(),
+                source: e,
+            })?;
 
-        // Try to read /sys/block to find block devices
-        if let Ok(entries) = fs::read_dir("/sys/block") {
-            for entry in entries.flatten() {
-                let dev_path = entry.path().join("dev");
-                if let Ok(content) = fs::read_to_string(&dev_path)
-                    && let Some((major_str, minor_str)) = content.trim().split_once(':')
-                    && let (Ok(major), Ok(minor)) =
-                        (major_str.parse::<u32>(), minor_str.parse::<u32>())
-                {
-                    devices.push((major, minor));
+            // Either side failing to parse fails the verification, not just the
+            // kernel's: the requested set is one this runner rendered itself,
+            // so a side that cannot be read leaves the comparison with a value
+            // nobody has, and two unparseable strings must not verify each
+            // other as equal.
+            let (Some(requested_set), Some(effective_set)) =
+                (parse_cpuset(requested), parse_cpuset(&effective))
+            else {
+                return Err(JailError::CpusetUnparseable {
+                    path,
+                    requested: requested.to_owned(),
+                    effective: effective.trim().to_owned(),
                 }
+                .into());
+            };
+            if effective_set != requested_set {
+                return Err(JailError::CpusetNarrowed {
+                    path,
+                    requested: requested.to_owned(),
+                    effective: effective.trim().to_owned(),
+                }
+                .into());
             }
         }
 
-        devices
+        Ok(Cpuset::Applied)
     }
 
     /// Disable swap for this cgroup.
@@ -246,15 +339,33 @@ impl CgroupManager {
         self.write_file("memory.swap.max", "0")
     }
 
-    /// Add the current process to this cgroup.
-    pub fn add_self(&self) -> Result<(), RunnerError> {
-        let pid = std::process::id();
-        self.write_file("cgroup.procs", &pid.to_string())
+    /// Open this cgroup's `cgroup.procs` for writing.
+    ///
+    /// The descriptor is opened before the fork so the `pre_exec` closure that
+    /// joins the cgroup performs only a `write` of a fixed byte on an existing
+    /// descriptor: no allocation, no path resolution, nothing that is not
+    /// async-signal-safe.
+    pub fn open_procs(&self) -> Result<fs::File, JailError> {
+        let path = self.cgroup_path.join("cgroup.procs");
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&path)
+            .map_err(|e| JailError::OpenCgroupProcs { path, source: e })
     }
 
-    /// Add a process by PID to this cgroup.
-    pub fn add_pid(&self, pid: u32) -> Result<(), RunnerError> {
-        self.write_file("cgroup.procs", &pid.to_string())
+    /// Whether `pid` is a member of this cgroup.
+    ///
+    /// A failed `pre_exec` write already surfaces as a failed spawn; this is
+    /// for the different case of a write that succeeded against the wrong
+    /// destination. A cgroup that exists but does not contain the VMM is a
+    /// silent lie about where the benchmark ran.
+    pub fn contains_pid(&self, pid: u32) -> Result<bool, JailError> {
+        let path = self.cgroup_path.join("cgroup.procs");
+        let procs = fs::read_to_string(&path).map_err(|e| JailError::ReadCgroup {
+            path: path.clone(),
+            source: e,
+        })?;
+        Ok(procs_contains_pid(&procs, pid))
     }
 
     /// Write to a cgroup file.
@@ -276,6 +387,10 @@ impl CgroupManager {
     /// that survive a direct-child kill, e.g. on timeout or cancellation,
     /// so no stray work lingers on benchmark cores and the cgroup can be
     /// removed.
+    ///
+    /// Best effort is sound here only because something else catches it:
+    /// whatever this fails to kill is exactly what makes [`Self::cleanup`]'s
+    /// `rmdir` fail, and that arms the reclaim signal. See [`crate::jail`].
     pub fn kill_all(&self) {
         if let Err(e) = self.write_file("cgroup.kill", "1") {
             eprintln!("Warning: failed to kill cgroup subtree: {e}");
@@ -283,36 +398,256 @@ impl CgroupManager {
     }
 
     /// Clean up the cgroup.
-    pub fn cleanup(&mut self) -> Result<(), RunnerError> {
-        if self.created && self.cgroup_path.exists() {
-            if let Err(e) = fs::remove_dir(&self.cgroup_path) {
-                // Log but don't fail - cgroup might still have processes
-                eprintln!("Warning: failed to remove cgroup {}: {e}", self.cgroup_path);
-            } else {
-                self.created = false;
-            }
+    ///
+    /// A `rmdir` the kernel refuses is raised on the reclaim signal, not just
+    /// logged: it means something is still in this cgroup, and the only way to
+    /// get to it later is through the chroot of the same id, so the signal both
+    /// holds that directory and earns the next job a sweep.
+    ///
+    /// Returns nothing, because the signal is where a failure goes. A `Result`
+    /// here would be a channel with nothing in it that every caller, `Drop`
+    /// included, would have to discard.
+    pub fn cleanup(&mut self) {
+        if !self.created {
+            return;
         }
-        Ok(())
+        // A stat that failed is not a cgroup that is gone. Reading it as one
+        // would skip both the removal and the signal, so nothing would be armed
+        // and nothing would ever come back for it.
+        match self.cgroup_path.try_exists() {
+            Ok(false) => self.created = false,
+            Ok(true) => {
+                if let Err(e) = fs::remove_dir(&self.cgroup_path) {
+                    eprintln!(
+                        "Warning: failed to remove cgroup {}: {e}. Something is still in it, so the next job sweeps it along with the jail that names it.",
+                        self.cgroup_path
+                    );
+                    self.signals.cgroup_survived();
+                } else {
+                    self.created = false;
+                }
+            },
+            Err(e) => {
+                eprintln!(
+                    "Warning: cannot tell whether cgroup {} is still there: {e}. It is treated as still there, so the next job sweeps it along with the jail that names it.",
+                    self.cgroup_path
+                );
+                self.signals.cgroup_survived();
+            },
+        }
     }
 }
 
 impl Drop for CgroupManager {
     fn drop(&mut self) {
-        drop(self.cleanup());
+        self.cleanup();
     }
 }
 
+/// The `cpuset.mems.effective` file, read to mirror a parent's memory nodes.
+pub(crate) const MEMS_EFFECTIVE: &str = "cpuset.mems.effective";
+
+/// The single memory node a host without a readable node set is assumed to have.
+const NODE_ZERO: &str = "0";
+
 /// Read a cgroup's effective memory nodes (`cpuset.mems.effective`).
 ///
-/// Falls back to node `0` when the file is missing or empty (e.g., the
-/// cpuset controller is not enabled). Using effective mems instead of a
-/// hardcoded node keeps multi-node NUMA hosts from forcing all benchmark
+/// Falls back to node `0` when the file is missing or empty, which is what the
+/// cpuset controller not being enabled looks like. Using effective mems instead
+/// of a hardcoded node keeps multi-node NUMA hosts from forcing all benchmark
 /// memory onto node 0.
-pub(crate) fn effective_mems(cgroup: &Utf8Path) -> String {
-    match fs::read_to_string(cgroup.join("cpuset.mems.effective")) {
-        Ok(mems) if !mems.trim().is_empty() => mems.trim().to_owned(),
-        _ => "0".to_owned(),
+///
+/// Which is exactly why any other failure is an error rather than the fallback.
+/// This value is written to `cpuset.mems`, so answering node 0 to a read that
+/// did not happen confines the guest's memory to one node on a host that may
+/// have several, and the run then reports a number measured under a constraint
+/// nobody chose. An absent file says the host has nothing to tell; a failed read
+/// says nobody asked it.
+pub(crate) fn effective_mems(cgroup: &Utf8Path) -> Result<String, std::io::Error> {
+    match fs::read_to_string(cgroup.join(MEMS_EFFECTIVE)) {
+        Ok(mems) if !mems.trim().is_empty() => Ok(mems.trim().to_owned()),
+        Ok(_) => Ok(NODE_ZERO.to_owned()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(NODE_ZERO.to_owned()),
+        Err(e) => Err(e),
     }
+}
+
+/// Why a run has no CPU isolation, when it has none.
+const UNDELEGATED: &str = "the cpuset controller is not delegated to this cgroup";
+
+/// The same missing controller, when nothing established that the host is why.
+const UNENABLED: &str = "the cpuset controller could not be enabled on the parent cgroup, so this run has none and whether this host delegates it is unknown";
+
+/// What asking the kernel to delegate `cpuset` established.
+///
+/// An absent `cpuset.cpus` means one of two things, and they are not the same
+/// thing at all. A host with no `cpuset` to give is an absence the runner
+/// observed and reports as one. A write that failed for any other reason
+/// answered nothing, and reporting that as an absence blames the host for a
+/// limitation nobody established, which is the rule this module keeps
+/// everywhere else.
+enum CpusetControl {
+    /// The kernel answered: it either enabled the controller for this cgroup's
+    /// children, or said it has none to enable here. An absent `cpuset.cpus`
+    /// under this is a fact about the host.
+    Answered,
+    /// The write was refused for a reason that is not an answer about the
+    /// controller, so whether this host delegates `cpuset` is unknown.
+    Unanswered(std::io::Error),
+}
+
+impl CpusetControl {
+    /// Read a refused `cgroup.subtree_control` write.
+    ///
+    /// `ENOENT` is how a controller the parent does not offer refuses, and
+    /// `EINVAL` is a name the kernel was not built with. Both are the kernel
+    /// answering that there is no `cpuset` to enable here. Anything else (a
+    /// write this runner is not allowed to make, a read-only mount, a parent
+    /// holding processes of its own) is the question failing rather than an
+    /// answer to it.
+    fn from_refusal(e: std::io::Error) -> Self {
+        match e.raw_os_error() {
+            Some(libc::ENOENT | libc::EINVAL) => Self::Answered,
+            _ => Self::Unanswered(e),
+        }
+    }
+}
+
+/// Whether the cpuset actually confined the VMM to the benchmark cores.
+///
+/// Every variant that is not [`Self::Applied`] carries the reason, so no
+/// variant can claim confinement without a verified write behind it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Cpuset {
+    /// The cgroup confines the VMM to the benchmark cores, read back and
+    /// confirmed.
+    Applied,
+    /// There is no CPU isolation to be had, for the reason given.
+    Unavailable(&'static str),
+}
+
+/// Parse a kernel cpu list (`0-3,5,7-9`) into the set of cpus it names.
+///
+/// Compared as sets rather than as strings, because the kernel is free to
+/// render the same set differently from the way it was written.
+///
+/// `None` for a component this cannot read, never the cpus around it. Dropping
+/// what would not parse turns an unparseable value into a partial or empty set,
+/// which is a value nobody read: it errs safe today only because the caller
+/// fails on a mismatch, and this module's rule is that a question that could
+/// not be asked is not answered at all.
+fn parse_cpuset(cpuset: &str) -> Option<std::collections::BTreeSet<usize>> {
+    let mut cpus = std::collections::BTreeSet::new();
+    for group in cpuset.trim().split(',').filter(|group| !group.is_empty()) {
+        match group.split_once('-') {
+            Some((start, end)) => {
+                let start = start.trim().parse().ok()?;
+                let end = end.trim().parse::<usize>().ok()?;
+                cpus.extend(start..=end);
+            },
+            None => {
+                cpus.insert(group.trim().parse().ok()?);
+            },
+        }
+    }
+    Some(cpus)
+}
+
+/// How long to keep trying to remove a stale cgroup.
+///
+/// `rmdir` fails while the cgroup still holds a process, and the reap that
+/// precedes it may need a moment to land.
+const REMOVE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// How often to retry.
+const REMOVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50);
+
+/// Remove the cgroup a swept jail left behind.
+///
+/// The cgroup and the chroot are named by the same VM id by construction, so
+/// the id read off the chroot directory names the cgroup exactly.
+///
+/// Must run after the VMM in it has been reaped: `rmdir` on a cgroup that
+/// still holds a process fails, which is what forces that ordering. A cgroup
+/// that survives is worth reporting, not because it claims anything (these
+/// cgroups set no exclusive cpuset, so a leftover blocks nothing) but because
+/// the usual reason `rmdir` fails is that something is still running in it.
+pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
+    remove_stale_cgroup_at(vm_cgroup(vm_id.as_str()))
+}
+
+/// The cgroup a VM id names.
+///
+/// The cgroup and the chroot are named by the same id by construction, so
+/// whichever of the two a sweep has in hand names the other.
+pub(crate) fn vm_cgroup(vm_id: &str) -> Utf8PathBuf {
+    Utf8PathBuf::from(CGROUP_ROOT)
+        .join(BENCHER_CGROUP_BASE)
+        .join(vm_id)
+}
+
+/// The removal, against the directory it is given.
+///
+/// A parameter because the retry policy is the part worth testing, and the path
+/// the caller builds reaches into `/sys/fs/cgroup` on the machine running the
+/// tests.
+fn remove_stale_cgroup_at(path: Utf8PathBuf) -> Result<(), JailError> {
+    // The caller deletes the chroot that names this cgroup once this returns
+    // `Ok`, and that chroot is the only handle any later sweep has for finding
+    // the cgroup again. A stat error read as "already gone" would strand the
+    // cgroup permanently and delete the one thing that could have found it,
+    // which is exactly what the caller's ordering exists to prevent.
+    match path.try_exists() {
+        Ok(false) => return Ok(()),
+        Ok(true) => {},
+        Err(e) => return Err(JailError::StaleCgroup { path, source: e }),
+    }
+
+    let deadline = std::time::Instant::now() + REMOVE_TIMEOUT;
+    loop {
+        match fs::remove_dir(&path) {
+            Ok(()) => {
+                eprintln!("Removed stale cgroup {path} left by a previous runner");
+                return Ok(());
+            },
+            // Someone else got there first, which is the outcome either way.
+            // Only a stat that succeeded and said absent counts: anything else
+            // falls through to the retry and, in the end, to the error.
+            Err(_) if path.try_exists().is_ok_and(|exists| !exists) => return Ok(()),
+            // Waiting only helps what waiting is for. `EBUSY` is the kernel
+            // saying the cgroup still holds a process, which is exactly what a
+            // reap that has just landed is about to clear. Every other refusal
+            // is settled before the first retry and stays settled, and spending
+            // the budget on it costs the full five seconds on every job rather
+            // than once: a failure here keeps the chroot, which re-arms the
+            // sweep, which fails here again.
+            Err(e) if !is_contended(&e) || std::time::Instant::now() >= deadline => {
+                // Reported rather than warned, because failing here means the
+                // next job sweeps again rather than inheriting a host nobody
+                // is looking at.
+                return Err(JailError::StaleCgroup { path, source: e });
+            },
+            Err(_) => std::thread::sleep(REMOVE_INTERVAL),
+        }
+    }
+}
+
+/// Whether a failed `rmdir` is the kernel saying the cgroup is still occupied.
+///
+/// `EBUSY` is what a cgroup that still holds a process or a live child cgroup
+/// refuses with, and it is the only one of these failures that a moment's
+/// waiting can change.
+fn is_contended(e: &std::io::Error) -> bool {
+    e.raw_os_error() == Some(libc::EBUSY)
+}
+
+/// Whether a `cgroup.procs` listing contains `pid`.
+///
+/// Matches whole lines: pid `7` must not be satisfied by pid `70`.
+pub(crate) fn procs_contains_pid(procs: &str, pid: u32) -> bool {
+    procs
+        .lines()
+        .any(|line| line.trim().parse::<u32>() == Ok(pid))
 }
 
 /// Return the first required controller missing from a
@@ -323,15 +658,6 @@ fn missing_required_controller(enabled: &str) -> Option<&'static str> {
     ["cpu", "memory", "pids"]
         .into_iter()
         .find(|required| !enabled.split_whitespace().any(|token| token == *required))
-}
-
-/// Check if cgroup v2 is available.
-#[expect(dead_code, reason = "utility for future cgroup v2 feature detection")]
-#[must_use]
-pub fn is_cgroup_v2_available() -> bool {
-    Utf8Path::new(CGROUP_ROOT)
-        .join("cgroup.controllers")
-        .exists()
 }
 
 #[cfg(test)]
@@ -356,13 +682,426 @@ mod tests {
         assert_eq!(missing_required_controller("cpu memory"), Some("pids"));
     }
 
+    /// A stand-in cgroup tree with the cpuset controller delegated.
+    ///
+    /// `effective` is what the kernel would report back after the write, which
+    /// is the whole point: a real kernel may narrow it silently.
+    fn cpuset_tree(effective: &str) -> (tempfile::TempDir, CgroupManager) {
+        // The mems written here derive from a parent with no
+        // `cpuset.mems.effective`, which falls back to node 0.
+        cpuset_tree_with_mems(effective, "0")
+    }
+
+    /// A stand-in tree where the effective memory nodes can also be chosen.
+    fn cpuset_tree_with_mems(
+        effective_cpus: &str,
+        effective_mems: &str,
+    ) -> (tempfile::TempDir, CgroupManager) {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        fs::write(root.join("cpuset.cpus"), "").unwrap();
+        fs::write(root.join("cpuset.mems"), "").unwrap();
+        fs::write(root.join("cpuset.cpus.effective"), effective_cpus).unwrap();
+        fs::write(root.join("cpuset.mems.effective"), effective_mems).unwrap();
+        (dir, CgroupManager::detached(root))
+    }
+
+    #[test]
+    fn a_delegated_cpuset_that_the_kernel_honors_is_applied() {
+        let (_dir, manager) = cpuset_tree("2-7\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        assert_eq!(manager.apply_cpuset(&layout).unwrap(), Cpuset::Applied);
+        assert_eq!(
+            fs::read_to_string(manager.path().join("cpuset.cpus")).unwrap(),
+            "2-7"
+        );
+    }
+
+    #[test]
+    fn an_equivalent_rendering_still_counts_as_applied() {
+        // The kernel is free to render the same set differently from the way
+        // it was written, so the comparison is over sets and not strings.
+        let (_dir, manager) = cpuset_tree("2,3,4,5,6,7\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        assert_eq!(manager.apply_cpuset(&layout).unwrap(), Cpuset::Applied);
+    }
+
+    #[test]
+    fn a_narrowed_memory_node_set_is_an_error() {
+        // The last write on this path that used to be taken on trust.
+        let (_dir, manager) = cpuset_tree_with_mems("2-7\n", "\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        manager.apply_cpuset(&layout).unwrap_err();
+    }
+
+    #[test]
+    fn a_memory_node_set_that_cannot_be_read_back_fails_the_job() {
+        // This asserted a degrade until the rule was written down. The cpus were
+        // applied and verified, so the controller is demonstrably delegated;
+        // reporting it undelegated because the mems could not be read back would
+        // tell the operator something this function just disproved, and the run
+        // would go ahead on a memory binding nobody confirmed.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        fs::write(root.join("cpuset.cpus"), "").unwrap();
+        fs::write(root.join("cpuset.mems"), "").unwrap();
+        fs::write(root.join("cpuset.cpus.effective"), "2-7\n").unwrap();
+        let manager = CgroupManager::detached(root);
+        let layout = CpuLayout::with_core_count(8);
+
+        let err = manager.apply_cpuset(&layout).unwrap_err().to_string();
+
+        assert!(
+            err.contains("cpuset.mems.effective"),
+            "names the read that did not happen: {err}"
+        );
+    }
+
+    #[test]
+    fn an_undelegated_cpuset_controller_degrades() {
+        // A host that does not delegate cpuset creates its cgroup fine and
+        // then has no cpuset.cpus to write. That is a declared absence of
+        // isolation, not a failure, and no CI runner reaches it.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let manager = CgroupManager::detached(root);
+        let layout = CpuLayout::with_core_count(8);
+
+        assert_eq!(
+            manager.apply_cpuset(&layout).unwrap(),
+            Cpuset::Unavailable(UNDELEGATED)
+        );
+    }
+
+    #[test]
+    fn a_cpuset_nobody_could_ask_about_is_not_an_undelegated_one() {
+        // The same tree as the test above, and a different answer, because the
+        // write that would have enabled the controller failed for a reason of
+        // its own. Reporting that as a host with no cpuset to give tells the
+        // operator their kernel cannot do this, on the strength of a question
+        // that never got an answer, and sends them looking in the wrong place.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let manager = CgroupManager {
+            cgroup_path: root,
+            created: false,
+            signals: JailSignals::unwatched(),
+            cpuset_control: CpusetControl::Unanswered(std::io::Error::from_raw_os_error(
+                libc::EROFS,
+            )),
+        };
+        let layout = CpuLayout::with_core_count(8);
+
+        assert_eq!(
+            manager.apply_cpuset(&layout).unwrap(),
+            Cpuset::Unavailable(UNENABLED)
+        );
+    }
+
+    #[test]
+    fn only_the_kernel_saying_it_has_no_cpuset_counts_as_an_answer() {
+        // `ENOENT` is a controller the parent does not offer, and `EINVAL` a
+        // name this kernel was not built with. Every other refusal is the
+        // question failing.
+        let errno = std::io::Error::from_raw_os_error;
+
+        assert!(matches!(
+            CpusetControl::from_refusal(errno(libc::ENOENT)),
+            CpusetControl::Answered
+        ));
+        assert!(matches!(
+            CpusetControl::from_refusal(errno(libc::EINVAL)),
+            CpusetControl::Answered
+        ));
+        assert!(matches!(
+            CpusetControl::from_refusal(errno(libc::EPERM)),
+            CpusetControl::Unanswered(_)
+        ));
+        assert!(matches!(
+            CpusetControl::from_refusal(errno(libc::EBUSY)),
+            CpusetControl::Unanswered(_)
+        ));
+    }
+
+    #[test]
+    fn a_silently_narrowed_cpuset_is_an_error() {
+        // The kernel intersects the written set with the parent's effective
+        // set and reports the result. A successful write proves nothing.
+        let (_dir, manager) = cpuset_tree("2-3\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        let err = manager.apply_cpuset(&layout).unwrap_err().to_string();
+
+        assert!(err.contains("2-7"), "names what was asked for: {err}");
+        assert!(err.contains("2-3"), "names what was granted: {err}");
+    }
+
+    #[test]
+    fn an_emptied_cpuset_is_an_error() {
+        // The worst case: narrowed to nothing, so the VMM inherits the
+        // parent's CPUs and the run silently measures the whole machine.
+        let (_dir, manager) = cpuset_tree("\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        manager.apply_cpuset(&layout).unwrap_err();
+    }
+
+    #[test]
+    fn a_layout_with_no_isolation_claims_nothing() {
+        // Every variant that is not Applied has to carry a reason, so no
+        // path can report confinement without a verified write behind it.
+        let (_dir, manager) = cpuset_tree("0\n");
+        let layout = CpuLayout::with_core_count(1);
+
+        assert!(matches!(
+            manager.apply_cpuset(&layout).unwrap(),
+            Cpuset::Unavailable(_)
+        ));
+    }
+
+    #[test]
+    fn parse_cpuset_reads_kernel_cpu_lists() {
+        assert_eq!(parse_cpuset("2-7"), Some((2..=7).collect()));
+        assert_eq!(parse_cpuset("2,3,4,5,6,7\n"), Some((2..=7).collect()));
+        assert_eq!(parse_cpuset("0-1,4,6-7"), Some([0, 1, 4, 6, 7].into()));
+        assert_eq!(parse_cpuset("3"), Some([3].into()));
+        // An empty list is a real answer: a cpuset narrowed to nothing.
+        assert_eq!(parse_cpuset(""), Some([].into()));
+        assert_eq!(parse_cpuset("\n"), Some([].into()));
+    }
+
+    #[test]
+    fn parse_cpuset_does_not_turn_garbage_into_a_set() {
+        // A component that will not parse fails the whole read rather than
+        // being dropped: dropping it hands the caller a partial or empty set,
+        // which is an answer to a question that could not be asked.
+        for garbage in ["x", "2-x", "x-7", "2-", "-7", "1,x,3", "0xff"] {
+            assert_eq!(parse_cpuset(garbage), None, "'{garbage}' is not a set");
+        }
+    }
+
+    #[test]
+    fn an_effective_set_that_cannot_be_parsed_fails_the_job() {
+        // Two unparseable strings must not verify each other, and an effective
+        // value in a format this runner cannot read is not evidence the kernel
+        // honored the request.
+        let (_dir, manager) = cpuset_tree("not-a-cpu-list\n");
+        let layout = CpuLayout::with_core_count(8);
+
+        let err = manager.apply_cpuset(&layout).unwrap_err().to_string();
+
+        assert!(
+            err.contains("not-a-cpu-list"),
+            "names what could not be read: {err}"
+        );
+    }
+
+    #[test]
+    fn a_cgroup_that_already_existed_is_not_ours_to_remove() {
+        // Drop removes what this created. Claiming a cgroup that was already
+        // there would have it rmdir something belonging to whoever did.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        let ours = CgroupManager {
+            cgroup_path: root.join("ours"),
+            created: true,
+            signals: JailSignals::unwatched(),
+            cpuset_control: CpusetControl::Answered,
+        };
+        let theirs = CgroupManager {
+            cgroup_path: root.join("theirs"),
+            created: false,
+            signals: JailSignals::unwatched(),
+            cpuset_control: CpusetControl::Answered,
+        };
+        fs::create_dir_all(ours.path()).unwrap();
+        fs::create_dir_all(theirs.path()).unwrap();
+        let theirs_path = theirs.path().to_owned();
+
+        drop(ours);
+        drop(theirs);
+
+        assert!(!root.join("ours").exists(), "we remove what we created");
+        assert!(theirs_path.exists(), "we leave what we did not create");
+    }
+
+    #[test]
+    fn only_a_contended_cgroup_is_worth_waiting_out() {
+        let errno = std::io::Error::from_raw_os_error;
+
+        assert!(is_contended(&errno(libc::EBUSY)));
+        assert!(!is_contended(&errno(libc::EPERM)));
+        assert!(!is_contended(&errno(libc::EROFS)));
+        assert!(!is_contended(&errno(libc::ENOTEMPTY)));
+        assert!(!is_contended(&std::io::Error::other("no errno at all")));
+    }
+
+    #[test]
+    fn a_removal_that_will_never_succeed_does_not_spend_the_budget() {
+        // A `rmdir` refused for anything but contention is refused the same way
+        // five seconds later, and the failure keeps the chroot that names the
+        // cgroup, which earns the next job another sweep that fails the same
+        // way. Retrying every error kind costs the whole budget per job on a
+        // host where nothing is going to change. A non-empty ordinary directory
+        // refuses with `ENOTEMPTY`, the way a read-only or unwritable parent
+        // refuses with `EROFS` or `EPERM`.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let stuck = root.join("stuck");
+        fs::create_dir_all(stuck.join("occupant")).unwrap();
+
+        let start = std::time::Instant::now();
+        remove_stale_cgroup_at(stuck.clone()).unwrap_err();
+
+        assert!(
+            start.elapsed() < REMOVE_TIMEOUT,
+            "a refusal that will not change is not waited out"
+        );
+        assert!(stuck.exists(), "and the cgroup is left for the next sweep");
+    }
+
+    #[test]
+    fn a_stale_cgroup_that_is_already_gone_is_nothing_to_remove() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        remove_stale_cgroup_at(root.join("absent")).unwrap();
+    }
+
+    #[test]
+    fn an_empty_stale_cgroup_is_removed() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let stale = root.join("stale");
+        fs::create_dir_all(&stale).unwrap();
+
+        remove_stale_cgroup_at(stale.clone()).unwrap();
+
+        assert!(!stale.exists());
+    }
+
+    #[test]
+    fn procs_contains_pid_matches_whole_lines() {
+        assert!(procs_contains_pid("7\n70\n701\n", 7));
+        assert!(procs_contains_pid("7\n70\n701\n", 701));
+        // A prefix match must not count: pid 7 is not pid 70.
+        assert!(!procs_contains_pid("70\n701\n", 7));
+        assert!(!procs_contains_pid("", 7));
+        assert!(!procs_contains_pid("\n", 7));
+    }
+
+    #[test]
+    fn a_cgroup_that_will_not_go_away_raises_the_reclaim_signal() {
+        // The kernel refuses `rmdir` while a cgroup still holds a process, and
+        // a non-empty ordinary directory refuses it the same way. Warning alone
+        // would let the chroot that names this cgroup be removed, leaving
+        // nothing for a later sweep to find it by.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let signals = JailSignals::unwatched();
+        let mut manager = CgroupManager {
+            cgroup_path: root.join("stuck"),
+            created: true,
+            signals: signals.clone(),
+            cpuset_control: CpusetControl::Answered,
+        };
+        fs::create_dir_all(manager.path()).unwrap();
+        fs::write(manager.path().join("cgroup.procs"), "42\n").unwrap();
+
+        manager.cleanup();
+
+        assert!(
+            signals.must_keep_chroot(),
+            "a cgroup that outlives its job holds the chroot that names it"
+        );
+        assert!(manager.path().exists());
+    }
+
+    #[test]
+    fn a_removed_cgroup_leaves_the_signal_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let signals = JailSignals::unwatched();
+        let mut manager = CgroupManager {
+            cgroup_path: root.join("gone"),
+            created: true,
+            signals: signals.clone(),
+            cpuset_control: CpusetControl::Answered,
+        };
+        fs::create_dir_all(manager.path()).unwrap();
+
+        manager.cleanup();
+
+        assert!(!manager.path().exists());
+        assert!(
+            !signals.must_keep_chroot(),
+            "a clean teardown must not hold the chroot back"
+        );
+    }
+
+    #[test]
+    fn open_procs_reports_a_missing_cgroup() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let manager = CgroupManager::detached(root.join("absent"));
+
+        manager.open_procs().unwrap_err();
+        manager.contains_pid(1).unwrap_err();
+    }
+
+    #[test]
+    fn contains_pid_reads_the_listing() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        fs::write(root.join("cgroup.procs"), "123\n456\n").unwrap();
+        let manager = CgroupManager::detached(root);
+
+        assert!(manager.contains_pid(456).unwrap());
+        assert!(!manager.contains_pid(789).unwrap());
+    }
+
+    #[test]
+    fn an_unreadable_node_set_is_not_node_zero() {
+        // The value is written to `cpuset.mems`, so answering node 0 to a read
+        // that failed would confine the guest to one node on a host that may
+        // have several, and the run would report a number measured under a
+        // constraint nobody chose. A file in place of the cgroup directory reads
+        // back `ENOTDIR`, the same way an unlistable one reads back `EACCES`.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let not_a_dir = root.join("cgroup");
+        fs::write(&not_a_dir, b"in the way").unwrap();
+
+        effective_mems(&not_a_dir).unwrap_err();
+    }
+
+    #[test]
+    fn a_cpuset_that_cannot_be_verified_is_not_a_degrade() {
+        // The write proves the controller is delegated, so a missing effective
+        // file cannot mean it is not. Degrading here would tell the operator the
+        // controller was never delegated while the run went ahead on a cpuset
+        // nobody read back.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        fs::write(root.join("cpuset.cpus"), "").unwrap();
+        fs::write(root.join("cpuset.mems"), "").unwrap();
+        let manager = CgroupManager::detached(root);
+        let layout = CpuLayout::with_core_count(8);
+
+        manager.apply_cpuset(&layout).unwrap_err();
+    }
+
     #[test]
     fn effective_mems_reads_file() {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         fs::write(root.join("cpuset.mems.effective"), "0-1\n").unwrap();
 
-        assert_eq!(effective_mems(&root), "0-1");
+        assert_eq!(effective_mems(&root).unwrap(), "0-1");
     }
 
     #[test]
@@ -370,7 +1109,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
-        assert_eq!(effective_mems(&root), "0");
+        assert_eq!(effective_mems(&root).unwrap(), "0");
     }
 
     #[test]
@@ -379,6 +1118,6 @@ mod tests {
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         fs::write(root.join("cpuset.mems.effective"), "\n").unwrap();
 
-        assert_eq!(effective_mems(&root), "0");
+        assert_eq!(effective_mems(&root).unwrap(), "0");
     }
 }

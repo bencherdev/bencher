@@ -14,7 +14,10 @@ la vinculación de ambos, y el inicio del binario `runner`.
 Para una visión general conceptual de cómo encajan Runners, Specs, Sandboxes y Jobs,
 consulta la [Visión General de Bare Metal][bare metal].
 
-> 🐰 El sandboxing con Firecracker requiere Linux con [KVM][kvm] habilitado.
+> 🐰 El sandboxing con Firecracker requiere Linux con [KVM][kvm] habilitado,
+> y el Runner debe ejecutarse como `root`.
+> Cada Job con sandbox queda confinado en un chroot como usuario sin privilegios,
+> y construir ese confinamiento necesita permisos que habilitar KVM por sí solo no concede.
 > Un Runner que solo sirve Specs sin sandbox puede ejecutarse en cualquier host compatible.
 
 [bare metal]: /es/docs/explanation/bare-metal/

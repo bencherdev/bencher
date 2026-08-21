@@ -35,6 +35,41 @@ También se puede establecer con la variable de entorno `BENCHER_RUNNER_KEY`.
 El tiempo de espera del long-poll en segundos mientras se espera un Job, entre `1` y `900`.
 Por defecto, se usa `55`.
 
+### `--state-dir <STATE_DIR>`
+
+El directorio de estado persistente del Runner.
+Debe ser una ruta absoluta.
+La jaula que confina el sandbox se crea dentro de este directorio,
+y las jaulas que quedaron tras una salida no limpia se eliminan de él antes del primer Job con sandbox.
+Cada jaula contiene un sistema de archivos raíz completo del huésped y una copia del binario de la microVM,
+y los Jobs que comparten un directorio de estado se ejecutan de uno en uno,
+por lo que este directorio necesita capacidad real para una jaula.
+Se admite y se recomienda un sistema de archivos dedicado o un montaje `tmpfs`:
+mantiene esa carga de escritura fuera del disco del sistema,
+y se acepta un sistema de archivos recién creado aunque llegue con un directorio `lost+found`.
+El propio directorio de estado puede ser un enlace simbólico creado por root hacia un sistema de archivos así,
+como `/var/lib/bencher-runner` apuntando a un disco dedicado.
+El enlace solo se sigue cuando el directorio que lo contiene solo puede ser escrito por root,
+apunta directamente a su destino final,
+y ese destino ya existe en una ruta que solo root puede escribir;
+un enlace cuyo destino aún no existe se rechaza, así que cree primero el destino.
+Por defecto, se usa `/var/lib/bencher-runner`.
+También se puede establecer con la variable de entorno `BENCHER_STATE_DIR`.
+
+### `--jail-uid <JAIL_UID>`
+
+El ID de usuario sin privilegios al que cambia el proceso del sandbox.
+Por defecto, se usa `61016`.
+Un proceso del host que sea propietario de ese ID de usuario puede enviar señales al sandbox,
+así que asígnele un ID que el host no destine a ninguna otra cosa.
+También se puede establecer con la variable de entorno `BENCHER_JAIL_UID`.
+
+### `--jail-gid <JAIL_GID>`
+
+El ID de grupo sin privilegios al que cambia el proceso del sandbox.
+Por defecto, se usa `61016`.
+También se puede establecer con la variable de entorno `BENCHER_JAIL_GID`.
+
 ### `--danger-allow-no-sandbox`
 
 Permite ejecutar Jobs sin un [Sandbox][sandbox].
