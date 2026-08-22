@@ -1,11 +1,6 @@
 import * as Sentry from "@sentry/astro";
 import { Show, createMemo, createResource } from "solid-js";
-import type {
-	JsonAccept,
-	JsonAuthAck,
-	JsonAuthUser,
-	JsonOrganization,
-} from "../../types/bencher";
+import type { JsonAccept, JsonAuthUser } from "../../types/bencher";
 import { authUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
@@ -57,7 +52,11 @@ const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 				);
 			});
 	};
-	const [_jsonAuth] = createResource<JsonAuthAck>(acceptFetcher, acceptInvite);
+	const [_jsonAuth] = createResource<
+		// biome-ignore lint/suspicious/noConfusingVoidType: acceptInvite navigates and returns nothing
+		void | null,
+		ReturnType<typeof acceptFetcher>
+	>(acceptFetcher, acceptInvite);
 
 	const claimFetcher = createMemo(() => {
 		return {
@@ -97,10 +96,11 @@ const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 				);
 			});
 	};
-	const [_jsonOrganization] = createResource<JsonOrganization>(
-		claimFetcher,
-		claimProject,
-	);
+	const [_jsonOrganization] = createResource<
+		// biome-ignore lint/suspicious/noConfusingVoidType: claimProject navigates and returns nothing
+		void | null,
+		ReturnType<typeof claimFetcher>
+	>(claimFetcher, claimProject);
 
 	return (
 		<Show

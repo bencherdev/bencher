@@ -79,7 +79,10 @@ const Pinned = (props: {
 				return fetcher.plot;
 			});
 	};
-	const [plot] = createResource<JsonPlot>(plotFetcher, getPlot);
+	const [plot] = createResource<JsonPlot, ReturnType<typeof plotFetcher>>(
+		plotFetcher,
+		getPlot,
+	);
 
 	return (
 		<PinnedFrame
@@ -189,7 +192,10 @@ const PinnedButtons = (props: {
 				return;
 			});
 	};
-	const [_rank] = createResource<JsonPlot>(rankFetcher, patchRank);
+	const [_rank] = createResource<JsonPlot, ReturnType<typeof rankFetcher>>(
+		rankFetcher,
+		patchRank,
+	);
 
 	return (
 		<nav class="level is-mobile">
@@ -359,7 +365,10 @@ const PinnedRank = (props: {
 				return;
 			});
 	};
-	const [_rank] = createResource<JsonPlot>(rankFetcher, patchRank);
+	const [_rank] = createResource<JsonPlot, ReturnType<typeof rankFetcher>>(
+		rankFetcher,
+		patchRank,
+	);
 
 	return (
 		<form

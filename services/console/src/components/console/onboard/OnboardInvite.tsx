@@ -87,10 +87,10 @@ const OnboardInvite = (props: Props) => {
 				return;
 			});
 	};
-	const [organizations] = createResource<undefined | JsonOrganization[]>(
-		orgsFetcher,
-		getOrganizations,
-	);
+	const [organizations] = createResource<
+		undefined | JsonOrganization[],
+		ReturnType<typeof orgsFetcher>
+	>(orgsFetcher, getOrganizations);
 
 	const organization = createMemo(() => {
 		const orgs = organizations();
@@ -178,10 +178,10 @@ const OnboardInvite = (props: Props) => {
 				return null;
 			});
 	};
-	const [_invite] = createResource<undefined | JsonAuthAck>(
-		inviteFetcher,
-		postInvite,
-	);
+	const [_invite] = createResource<
+		undefined | JsonAuthAck,
+		ReturnType<typeof inviteFetcher>
+	>(inviteFetcher, postInvite);
 
 	return (
 		<>

@@ -73,10 +73,10 @@ const OnboardPlan = (props: Props) => {
 				return;
 			});
 	};
-	const [organizations] = createResource<undefined | JsonOrganization[]>(
-		orgsFetcher,
-		getOrganizations,
-	);
+	const [organizations] = createResource<
+		undefined | JsonOrganization[],
+		ReturnType<typeof orgsFetcher>
+	>(orgsFetcher, getOrganizations);
 
 	const organization = createMemo(() => {
 		const orgs = organizations();

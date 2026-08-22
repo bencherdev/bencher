@@ -86,10 +86,10 @@ const OnboardProject = (props: Props) => {
 				return;
 			});
 	};
-	const [organizations] = createResource<undefined | JsonOrganization[]>(
-		orgsFetcher,
-		getOrganizations,
-	);
+	const [organizations] = createResource<
+		undefined | JsonOrganization[],
+		ReturnType<typeof orgsFetcher>
+	>(orgsFetcher, getOrganizations);
 
 	const organization = createMemo(() => {
 		const orgs = organizations();
@@ -133,7 +133,8 @@ const OnboardProject = (props: Props) => {
 			});
 	};
 	const [projects, { refetch: refetchProjects }] = createResource<
-		undefined | JsonProject[]
+		undefined | JsonProject[],
+		ReturnType<typeof projectsFetcher>
 	>(projectsFetcher, getProjects);
 
 	const organizationProject = createMemo(() => {
@@ -186,10 +187,10 @@ const OnboardProject = (props: Props) => {
 				return;
 			});
 	};
-	const [project] = createResource<undefined | JsonProject>(
-		projectFetcher,
-		getProject,
-	);
+	const [project] = createResource<
+		undefined | JsonProject,
+		ReturnType<typeof projectFetcher>
+	>(projectFetcher, getProject);
 
 	const [renameProject, setRenameProject] = createSignal<null | string>(null);
 	const [renameValid, setRenameValid] = createSignal<null | boolean>(null);
@@ -255,10 +256,10 @@ const OnboardProject = (props: Props) => {
 				return;
 			});
 	};
-	const [_updatedProject] = createResource<undefined | JsonProject>(
-		updateProjectFetcher,
-		updateProject,
-	);
+	const [_updatedProject] = createResource<
+		undefined | JsonProject,
+		ReturnType<typeof updateProjectFetcher>
+	>(updateProjectFetcher, updateProject);
 
 	return (
 		<>

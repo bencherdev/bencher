@@ -74,25 +74,25 @@ const UpdateModal = (props: Props) => {
 			token: props.user?.token,
 		};
 	});
-	const [plots_list] = createResource<JsonPlot[]>(
-		plotsFetcher,
-		async (fetcher) => {
-			if (!fetcher.project || !fetcher.plot) {
+	const [plots_list] = createResource<
+		JsonPlot[],
+		ReturnType<typeof plotsFetcher>
+	>(plotsFetcher, async (fetcher) => {
+		if (!fetcher.project || !fetcher.plot) {
+			return [];
+		}
+		return await httpGet(
+			props.apiUrl,
+			`/v0/projects/${fetcher.project}/plots?per_page=${MAX_PLOTS}`,
+			fetcher.token,
+		)
+			.then((resp) => resp?.data as JsonPlot[])
+			.catch((error) => {
+				console.error(error);
+				Sentry.captureException(error);
 				return [];
-			}
-			return await httpGet(
-				props.apiUrl,
-				`/v0/projects/${fetcher.project}/plots?per_page=${MAX_PLOTS}`,
-				fetcher.token,
-			)
-				.then((resp) => resp?.data as JsonPlot[])
-				.catch((error) => {
-					console.error(error);
-					Sentry.captureException(error);
-					return [];
-				});
-		},
-	);
+			});
+	});
 	const position = createMemo(() => {
 		const index = (plots_list() ?? []).findIndex(
 			(list_plot) => list_plot.uuid === props.plot(),

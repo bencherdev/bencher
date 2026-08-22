@@ -746,29 +746,29 @@ const PerfPanel = (props: Props) => {
 			token: user?.token,
 		};
 	});
-	const [plot_selected] = createResource<JsonPlot[]>(
-		selectedPlotFetcher,
-		async (fetcher) => {
-			if (
-				!fetcher.bencher_valid ||
-				!fetcher.plot ||
-				!fetcher.project_slug ||
-				fetcher.project_slug === "undefined" ||
-				(props.isConsole && !validJwt(fetcher.token)) ||
-				props.isEmbed === true
-			) {
+	const [plot_selected] = createResource<
+		JsonPlot[],
+		ReturnType<typeof selectedPlotFetcher>
+	>(selectedPlotFetcher, async (fetcher) => {
+		if (
+			!fetcher.bencher_valid ||
+			!fetcher.plot ||
+			!fetcher.project_slug ||
+			fetcher.project_slug === "undefined" ||
+			(props.isConsole && !validJwt(fetcher.token)) ||
+			props.isEmbed === true
+		) {
+			return [];
+		}
+		const path = `/v0/projects/${fetcher.project_slug}/plots/${fetcher.plot}`;
+		return await httpGet(props.apiUrl, path, fetcher.token)
+			.then((resp) => [resp?.data as JsonPlot])
+			.catch((error) => {
+				console.error(error);
+				Sentry.captureException(error);
 				return [];
-			}
-			const path = `/v0/projects/${fetcher.project_slug}/plots/${fetcher.plot}`;
-			return await httpGet(props.apiUrl, path, fetcher.token)
-				.then((resp) => [resp?.data as JsonPlot])
-				.catch((error) => {
-					console.error(error);
-					Sentry.captureException(error);
-					return [];
-				});
-		},
-	);
+			});
+	});
 	// Drop only the pinned plot association; the rest of the view is untouched.
 	const handlePlotSelected = () => {
 		setSearchParams({
@@ -863,19 +863,19 @@ const PerfPanel = (props: Props) => {
 		}
 		return undefined;
 	});
-	const [first_report_data] = createResource<undefined | JsonReport>(
-		first_report_fetcher,
-		async (uuid) => {
-			const path = `/v0/projects/${project_slug()}/reports/${uuid}`;
-			return await httpGet(props.apiUrl, path, user?.token)
-				.then((resp) => resp?.data)
-				.catch((error) => {
-					console.error(error);
-					Sentry.captureException(error);
-					return undefined;
-				});
-		},
-	);
+	const [first_report_data] = createResource<
+		undefined | JsonReport,
+		ReturnType<typeof first_report_fetcher>
+	>(first_report_fetcher, async (uuid) => {
+		const path = `/v0/projects/${project_slug()}/reports/${uuid}`;
+		return await httpGet(props.apiUrl, path, user?.token)
+			.then((resp) => resp?.data)
+			.catch((error) => {
+				console.error(error);
+				Sentry.captureException(error);
+				return undefined;
+			});
+	});
 	createEffect(() => {
 		const data = reports_data();
 		if (data) {

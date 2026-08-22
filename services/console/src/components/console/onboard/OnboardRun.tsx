@@ -79,10 +79,10 @@ const OnboardRun = (props: Props) => {
 				return null;
 			});
 	};
-	const [organizations] = createResource<null | JsonOrganization[]>(
-		orgsFetcher,
-		getOrganizations,
-	);
+	const [organizations] = createResource<
+		null | JsonOrganization[],
+		ReturnType<typeof orgsFetcher>
+	>(orgsFetcher, getOrganizations);
 
 	const organization = createMemo(() => {
 		const orgs = organizations();
@@ -134,10 +134,10 @@ const OnboardRun = (props: Props) => {
 				return null;
 			});
 	};
-	const [projects] = createResource<null | JsonProject[]>(
-		projectsFetcher,
-		getProjects,
-	);
+	const [projects] = createResource<
+		null | JsonProject[],
+		ReturnType<typeof projectsFetcher>
+	>(projectsFetcher, getProjects);
 
 	const runCode = createMemo(() => {
 		const orgProjects = projects();

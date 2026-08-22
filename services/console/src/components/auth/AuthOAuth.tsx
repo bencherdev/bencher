@@ -81,7 +81,11 @@ const AuthOAuth = (props: Props) => {
 				);
 			});
 	};
-	const [_jsonAuthUser] = createResource<JsonAuthUser>(fetcher, getAuthUser);
+	const [_jsonAuthUser] = createResource<
+		// biome-ignore lint/suspicious/noConfusingVoidType: getAuthUser navigates and returns nothing
+		void | null,
+		ReturnType<typeof fetcher>
+	>(fetcher, getAuthUser);
 
 	return <></>;
 };

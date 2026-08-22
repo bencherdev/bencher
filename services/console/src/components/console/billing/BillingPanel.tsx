@@ -100,10 +100,10 @@ const BillingPanel = (props: Props) => {
 				return null;
 			});
 	};
-	const [usage, { refetch }] = createResource<null | JsonUsage>(
-		fetcher,
-		fetchPlan,
-	);
+	const [usage, { refetch }] = createResource<
+		null | JsonUsage,
+		ReturnType<typeof fetcher>
+	>(fetcher, fetchPlan);
 
 	return (
 		<Show
