@@ -24,6 +24,8 @@ pub enum ValidError {
     BranchName(String),
     #[error("Failed to validate benchmark name: {0}")]
     BenchmarkName(String),
+    #[error("Failed to validate metric name: {0}")]
+    MetricName(String),
     #[error("Failed to validate name ID: {0:?}")]
     NameId(String),
     #[error("Failed to validate non-empty ID: {0}")]

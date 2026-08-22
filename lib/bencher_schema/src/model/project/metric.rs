@@ -1,4 +1,4 @@
-use bencher_json::{JsonMetric, JsonNewMetric, MetricUuid};
+use bencher_json::{JsonNewMetric, MetricName, MetricUuid};
 #[cfg(feature = "plus")]
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -27,9 +27,8 @@ pub struct QueryMetric {
     pub uuid: MetricUuid,
     pub report_benchmark_id: ReportBenchmarkId,
     pub measure_id: MeasureId,
+    pub name: MetricName,
     pub value: f64,
-    pub lower_value: Option<f64>,
-    pub upper_value: Option<f64>,
 }
 
 impl QueryMetric {
@@ -56,6 +55,12 @@ impl QueryMetric {
             .filter(schema::project::organization_id.eq(organization_id))
             .filter(schema::report::end_time.ge(start_time))
             .filter(schema::report::end_time.le(end_time))
+            // Named values collapse into their measure's series, so only the point
+            // estimate is counted: a bounded metric is one measurement, not three.
+            // In this shape every measure has exactly one `value` row, which makes
+            // this exactly the count the row-per-measure table produced. The billing
+            // layer revisits it when a payload can name `p99` and never name `value`.
+            .filter(schema::metric::name.eq(MetricName::value()))
             .select(diesel::dsl::count_star())
             .get_result::<i64>(conn)
             .map_err(|e| {
@@ -74,22 +79,6 @@ impl QueryMetric {
                 )
             })
     }
-
-    pub fn into_json(self) -> JsonMetric {
-        let Self {
-            uuid,
-            value,
-            lower_value,
-            upper_value,
-            ..
-        } = self;
-        JsonMetric {
-            uuid,
-            value: value.into(),
-            lower_value: lower_value.map(Into::into),
-            upper_value: upper_value.map(Into::into),
-        }
-    }
 }
 
 #[derive(Debug, diesel::Insertable)]
@@ -98,29 +87,62 @@ pub struct InsertMetric {
     pub uuid: MetricUuid,
     pub report_benchmark_id: ReportBenchmarkId,
     pub measure_id: MeasureId,
+    pub name: MetricName,
     pub value: f64,
-    pub lower_value: Option<f64>,
-    pub upper_value: Option<f64>,
 }
 
 impl InsertMetric {
-    pub fn from_json(
+    /// The point estimate, which every metric has.
+    pub fn value(
         report_benchmark_id: ReportBenchmarkId,
         measure_id: MeasureId,
         metric: JsonNewMetric,
     ) -> Self {
+        Self::new(
+            report_benchmark_id,
+            measure_id,
+            MetricName::value(),
+            metric.value.into(),
+        )
+    }
+
+    /// The bounds, which a metric has zero, one, or two of.
+    ///
+    /// `lower_value` and `upper_value` are ordinary named rows: the metric triple
+    /// is a convention over three names, not a shape the table knows about.
+    pub fn bounds(
+        report_benchmark_id: ReportBenchmarkId,
+        measure_id: MeasureId,
+        metric: JsonNewMetric,
+    ) -> Vec<Self> {
         let JsonNewMetric {
-            value,
+            value: _,
             lower_value,
             upper_value,
         } = metric;
+        [
+            (MetricName::lower_value(), lower_value),
+            (MetricName::upper_value(), upper_value),
+        ]
+        .into_iter()
+        .filter_map(|(name, bound)| {
+            bound.map(|bound| Self::new(report_benchmark_id, measure_id, name, bound.into()))
+        })
+        .collect()
+    }
+
+    fn new(
+        report_benchmark_id: ReportBenchmarkId,
+        measure_id: MeasureId,
+        name: MetricName,
+        value: f64,
+    ) -> Self {
         Self {
             uuid: MetricUuid::new(),
             report_benchmark_id,
             measure_id,
-            value: value.into(),
-            lower_value: lower_value.map(Into::into),
-            upper_value: upper_value.map(Into::into),
+            name,
+            value,
         }
     }
 }
@@ -129,10 +151,10 @@ impl InsertMetric {
 // with the `plus` feature (as the rest of the test target already does).
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, project::Visibility};
-    use diesel::{ExpressionMethods as _, RunQueryDsl as _};
+    use bencher_json::{DateTime, MetricName, project::Visibility};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
-    use super::QueryMetric;
+    use super::{MeasureId, QueryMetric, ReportBenchmarkId};
     use crate::{
         context::DbConnection,
         macros::sql::last_insert_rowid,
@@ -168,7 +190,11 @@ mod tests {
 
     // Seed one metric under `project_id`. `base` namespaces the entity UUIDs and
     // slugs so multiple projects can be seeded into the same database.
-    fn seed_metric(conn: &mut DbConnection, project_id: ProjectId, base: u8) {
+    fn seed_metric(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        base: u8,
+    ) -> (ReportBenchmarkId, MeasureId) {
         let uuid = |n: u8| format!("00000000-0000-0000-0000-0000000000{:02x}", base + n);
         let branch = create_branch_with_head(
             conn,
@@ -203,6 +229,34 @@ mod tests {
         );
         let report_benchmark = create_report_benchmark(conn, &uuid(7), report, 0, benchmark);
         create_metric(conn, &uuid(8), report_benchmark, measure, 1.0);
+        (report_benchmark, measure)
+    }
+
+    // Give a seeded metric its bound rows, the way an ingested metric triple has them.
+    fn seed_bounds(
+        conn: &mut DbConnection,
+        report_benchmark: ReportBenchmarkId,
+        measure: MeasureId,
+        base: u8,
+    ) {
+        for (offset, name) in [
+            (0x09, MetricName::lower_value()),
+            (0x0a, MetricName::upper_value()),
+        ] {
+            diesel::insert_into(schema::metric::table)
+                .values((
+                    schema::metric::uuid.eq(format!(
+                        "00000000-0000-0000-0000-0000000000{:02x}",
+                        base + offset
+                    )),
+                    schema::metric::report_benchmark_id.eq(report_benchmark),
+                    schema::metric::measure_id.eq(measure),
+                    schema::metric::name.eq(name),
+                    schema::metric::value.eq(1.0),
+                ))
+                .execute(conn)
+                .expect("Failed to insert metric bound");
+        }
     }
 
     #[test]
@@ -223,5 +277,31 @@ mod tests {
         .unwrap();
 
         assert_eq!(all, 2, "usage counts Public and Private Project metrics");
+    }
+
+    // A bounded metric is one measurement, not three. Named values collapse into
+    // their measure's series, so the bound rows must not reach the billable count.
+    #[test]
+    fn usage_does_not_count_the_bound_rows() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let (report_benchmark, measure) = seed_metric(&mut conn, base.project_id, 0x20);
+        seed_bounds(&mut conn, report_benchmark, measure, 0x20);
+
+        let rows: i64 = schema::metric::table
+            .count()
+            .get_result(&mut conn)
+            .expect("Failed to count the metric rows");
+        assert_eq!(rows, 3, "the metric triple is three rows");
+
+        let usage = QueryMetric::usage(
+            &mut conn,
+            base.organization_id,
+            DateTime::TEST,
+            DateTime::TEST,
+        )
+        .unwrap();
+
+        assert_eq!(usage, 1, "the bound rows do not bill");
     }
 }

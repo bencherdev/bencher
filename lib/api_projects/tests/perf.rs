@@ -11,12 +11,12 @@
 
 use bencher_api_tests::{
     TestServer,
-    helpers::{base_timestamp, create_empty_parameter, get_project_id},
+    helpers::{base_timestamp, create_empty_parameter, create_metric, get_project_id},
 };
 use bencher_json::{
     AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, HeadUuid, JobStatus, JobUuid, JsonPerf,
-    MeasureUuid, MetricUuid, Priority, ReportBenchmarkUuid, ReportUuid, SpecUuid, TestbedUuid,
-    VersionUuid,
+    MeasureUuid, MetricName, MetricUuid, Priority, ReportBenchmarkUuid, ReportUuid, SpecUuid,
+    TestbedUuid, VersionUuid,
     project::{alert::AlertStatus, boundary::BoundaryLimit},
 };
 use bencher_schema::{
@@ -275,29 +275,15 @@ fn create_perf_data_with_options(
 
     // Metric
     let metric_uuid = MetricUuid::new();
-    if opts.lower_value.is_some() || opts.upper_value.is_some() {
-        diesel::insert_into(schema::metric::table)
-            .values((
-                schema::metric::uuid.eq(&metric_uuid),
-                schema::metric::report_benchmark_id.eq(report_benchmark_id),
-                schema::metric::measure_id.eq(measure_id),
-                schema::metric::value.eq(opts.metric_value),
-                schema::metric::lower_value.eq(opts.lower_value),
-                schema::metric::upper_value.eq(opts.upper_value),
-            ))
-            .execute(&mut conn)
-            .expect("insert metric with bounds");
-    } else {
-        diesel::insert_into(schema::metric::table)
-            .values((
-                schema::metric::uuid.eq(&metric_uuid),
-                schema::metric::report_benchmark_id.eq(report_benchmark_id),
-                schema::metric::measure_id.eq(measure_id),
-                schema::metric::value.eq(opts.metric_value),
-            ))
-            .execute(&mut conn)
-            .expect("insert metric");
-    }
+    create_metric(
+        &mut conn,
+        &metric_uuid,
+        report_benchmark_id,
+        measure_id,
+        opts.metric_value,
+        opts.lower_value,
+        opts.upper_value,
+    );
 
     // Keep metric_count_by_report in sync (1 metric inserted)
     let report_id_typed = ReportId::try_from_raw(report_id).expect("valid report ID");
@@ -759,15 +745,15 @@ async fn perf_get_multiple_metrics_same_permutation() {
         .expect("get rb2 id");
 
     let metric2_uuid = MetricUuid::new();
-    diesel::insert_into(schema::metric::table)
-        .values((
-            schema::metric::uuid.eq(&metric2_uuid),
-            schema::metric::report_benchmark_id.eq(rb2_id),
-            schema::metric::measure_id.eq(data.measure_id),
-            schema::metric::value.eq(99.0),
-        ))
-        .execute(&mut conn)
-        .expect("insert metric2");
+    create_metric(
+        &mut conn,
+        &metric2_uuid,
+        rb2_id,
+        data.measure_id,
+        99.0,
+        None,
+        None,
+    );
 
     // Query perf
     let url = build_perf_url(
@@ -1070,15 +1056,15 @@ async fn perf_multi_measure_query() {
         .expect("get measure2 id");
 
     let metric2_uuid = MetricUuid::new();
-    diesel::insert_into(schema::metric::table)
-        .values((
-            schema::metric::uuid.eq(&metric2_uuid),
-            schema::metric::report_benchmark_id.eq(data.report_benchmark_id),
-            schema::metric::measure_id.eq(measure2_id),
-            schema::metric::value.eq(1024.0),
-        ))
-        .execute(&mut conn)
-        .expect("insert metric2");
+    create_metric(
+        &mut conn,
+        &metric2_uuid,
+        data.report_benchmark_id,
+        measure2_id,
+        1024.0,
+        None,
+        None,
+    );
 
     // Query with both measures
     let url = build_perf_url(
@@ -1159,15 +1145,15 @@ async fn perf_multi_benchmark_query() {
         .expect("get report_benchmark2 id");
 
     let metric2_uuid = MetricUuid::new();
-    diesel::insert_into(schema::metric::table)
-        .values((
-            schema::metric::uuid.eq(&metric2_uuid),
-            schema::metric::report_benchmark_id.eq(report_benchmark2_id),
-            schema::metric::measure_id.eq(data.measure_id),
-            schema::metric::value.eq(99.0),
-        ))
-        .execute(&mut conn)
-        .expect("insert metric2");
+    create_metric(
+        &mut conn,
+        &metric2_uuid,
+        report_benchmark2_id,
+        data.measure_id,
+        99.0,
+        None,
+        None,
+    );
 
     // Query with both benchmarks
     let url = build_perf_url(
@@ -1604,6 +1590,7 @@ async fn perf_permutation_limit_exact_255() {
                 schema::metric::uuid.eq(&metric_uuid),
                 schema::metric::report_benchmark_id.eq(data.report_benchmark_id),
                 schema::metric::measure_id.eq(m_id),
+                schema::metric::name.eq(MetricName::value()),
                 schema::metric::value.eq(1.0),
             ))
             .execute(&mut conn)
@@ -1677,6 +1664,7 @@ async fn perf_permutation_limit_truncated_256() {
                 schema::metric::uuid.eq(&metric_uuid),
                 schema::metric::report_benchmark_id.eq(data.report_benchmark_id),
                 schema::metric::measure_id.eq(m_id),
+                schema::metric::name.eq(MetricName::value()),
                 schema::metric::value.eq(1.0),
             ))
             .execute(&mut conn)
@@ -1944,6 +1932,7 @@ async fn perf_ordered_by_version_number() {
             schema::metric::uuid.eq(&m_uuid),
             schema::metric::report_benchmark_id.eq(rb_v1_id),
             schema::metric::measure_id.eq(data_v2.measure_id),
+            schema::metric::name.eq(MetricName::value()),
             schema::metric::value.eq(100.0),
         ))
         .execute(&mut conn)
@@ -2076,6 +2065,7 @@ async fn perf_ordered_by_start_time_within_version() {
             schema::metric::uuid.eq(&m_uuid),
             schema::metric::report_benchmark_id.eq(rb_id),
             schema::metric::measure_id.eq(data.measure_id),
+            schema::metric::name.eq(MetricName::value()),
             schema::metric::value.eq(100.0),
         ))
         .execute(&mut conn)
@@ -2565,6 +2555,7 @@ async fn perf_multiple_iterations() {
             schema::metric::uuid.eq(&m2_uuid),
             schema::metric::report_benchmark_id.eq(rb2_id),
             schema::metric::measure_id.eq(data.measure_id),
+            schema::metric::name.eq(MetricName::value()),
             schema::metric::value.eq(20.0),
         ))
         .execute(&mut conn)
@@ -2887,6 +2878,7 @@ async fn perf_spec_filters_results() {
             schema::metric::uuid.eq(&metric2_uuid),
             schema::metric::report_benchmark_id.eq(rb2_id),
             schema::metric::measure_id.eq(data1.measure_id),
+            schema::metric::name.eq(MetricName::value()),
             schema::metric::value.eq(99.0),
         ))
         .execute(&mut conn)

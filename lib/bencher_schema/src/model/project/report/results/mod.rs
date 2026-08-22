@@ -211,7 +211,10 @@ impl ReportResults {
                 for prepared_metric in prepared.metrics {
                     #[cfg(feature = "plus")]
                     series_keys.push((benchmark_id, prepared_metric.measure_id));
-                    let insert_metric = InsertMetric::from_json(
+                    // The point estimate goes in first so that `last_insert_rowid`
+                    // still names the row a boundary attaches to. Detection has only
+                    // ever gated the `value` scalar.
+                    let insert_metric = InsertMetric::value(
                         report_benchmark_id,
                         prepared_metric.measure_id,
                         prepared_metric.metric,
@@ -224,6 +227,17 @@ impl ReportResults {
                     if let Some(prepared_detection) = prepared_metric.detection {
                         let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
                         prepared_detection.write(conn, metric_id)?;
+                    }
+
+                    let insert_bounds = InsertMetric::bounds(
+                        report_benchmark_id,
+                        prepared_metric.measure_id,
+                        prepared_metric.metric,
+                    );
+                    if !insert_bounds.is_empty() {
+                        diesel::insert_into(schema::metric::table)
+                            .values(&insert_bounds)
+                            .execute(conn)?;
                     }
                 }
             }

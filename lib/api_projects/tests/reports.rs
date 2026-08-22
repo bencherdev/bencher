@@ -16,8 +16,8 @@ use bencher_api_tests::{
     },
 };
 use bencher_json::{
-    BenchmarkUuid, BoundaryUuid, JsonParameters, JsonReport, JsonReports, MeasureUuid, MetricUuid,
-    ModelUuid, ReportBenchmarkUuid, ThresholdUuid,
+    BenchmarkUuid, BoundaryUuid, JsonParameters, JsonReport, JsonReports, MeasureUuid, MetricName,
+    MetricUuid, ModelUuid, ReportBenchmarkUuid, ThresholdUuid,
 };
 use bencher_schema::{
     context::DbConnection,
@@ -173,6 +173,7 @@ fn seed_report_results(server: &TestServer, project_id: i32, report_id: i32, cou
                 schema::metric::uuid.eq(MetricUuid::new()),
                 schema::metric::report_benchmark_id.eq(*report_benchmark_id),
                 schema::metric::measure_id.eq(measure_id),
+                schema::metric::name.eq(MetricName::value()),
                 schema::metric::value.eq(42.0),
             )
         })
