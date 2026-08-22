@@ -539,6 +539,130 @@ async fn absent_parameters_land_on_the_empty_set() {
     );
 }
 
+/// The number of benchmarks a project has, so a test can say the benchmark was
+/// still born even though nothing was measured under it.
+fn benchmark_count(conn: &mut DbConnection, project_id: i32) -> i64 {
+    schema::benchmark::table
+        .filter(schema::benchmark::project_id.eq(project_id))
+        .count()
+        .get_result(conn)
+        .expect("Failed to count the benchmarks")
+}
+
+/// Every report's in-request metric count, which is what the plan check bills on.
+fn metric_counts(conn: &mut DbConnection) -> Vec<i32> {
+    schema::metric_count_by_report::table
+        .select(schema::metric_count_by_report::metric_count)
+        .load(conn)
+        .expect("Failed to load the metric counts")
+}
+
+// A BMF v1 entry that names no measure measured nothing, so it costs nothing: no
+// parameter set is minted for it, no `report_benchmark` row is written, and no
+// series is billed. The parameter set is the sharp half. An entry declaring
+// `{"size_mb": 16}` and measuring nothing must not leave a `{"size_mb": 16}` row
+// behind, or a payload of empty entries is a free way to fill the parameter table.
+//
+// The benchmark itself is still born, with the empty parameter set every benchmark
+// is born with, because the name was reported.
+#[tokio::test]
+async fn v1_entry_without_measures_mints_nothing() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "no-measures").await;
+
+    let response = report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[
+                entry(
+                    &serde_json::json!({ "size_mb": 16 }),
+                    &serde_json::json!({}),
+                ),
+                entry(&serde_json::json!({}), &serde_json::json!({})),
+            ],
+        )],
+        None,
+        None,
+    )
+    .await;
+
+    let project_id = get_project_id(&server, &fixture.project_slug);
+    let mut conn = server.db_conn();
+
+    assert_eq!(benchmark_count(&mut conn, project_id), 1);
+    assert_eq!(
+        parameter_sets(&mut conn, project_id),
+        vec![(JsonParameters::default(), 0)],
+        "only the empty set the benchmark was born with, pointed at by nothing"
+    );
+    assert_eq!(named_values(&mut conn, project_id), vec![]);
+    assert_eq!(series_measures(&mut conn, project_id), Vec::<String>::new());
+    assert_eq!(metric_counts(&mut conn), vec![0]);
+    assert_eq!(
+        response.get("results"),
+        Some(&serde_json::json!([])),
+        "a grid point that measured nothing is echoed as nothing"
+    );
+}
+
+// A benchmark that reports zero entries is the same story: the name is born, and
+// nothing else is. This is what BMF v0's `{"bench": {}}` says in v1's shape.
+#[tokio::test]
+async fn v1_benchmark_without_entries_mints_nothing() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "no-entries").await;
+
+    report(&server, &fixture, 1, vec![v1("bench", &[])], None, None).await;
+
+    let project_id = get_project_id(&server, &fixture.project_slug);
+    let mut conn = server.db_conn();
+
+    assert_eq!(benchmark_count(&mut conn, project_id), 1);
+    assert_eq!(
+        parameter_sets(&mut conn, project_id),
+        vec![(JsonParameters::default(), 0)],
+    );
+    assert_eq!(named_values(&mut conn, project_id), vec![]);
+    assert_eq!(series_measures(&mut conn, project_id), Vec::<String>::new());
+    assert_eq!(metric_counts(&mut conn), vec![0]);
+}
+
+// BMF v0 does not move. A v0 benchmark that reports no measures writes the
+// `report_benchmark` row on its empty parameter set exactly as it always has,
+// which is why the skip above is gated on the payload's version rather than
+// applied to every shape that happens to be empty.
+#[tokio::test]
+async fn v0_benchmark_without_measures_is_unchanged() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "v0-no-measures").await;
+
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![serde_json::to_string(&serde_json::json!({ "bench": {} })).expect("it serializes")],
+        None,
+        None,
+    )
+    .await;
+
+    let project_id = get_project_id(&server, &fixture.project_slug);
+    let mut conn = server.db_conn();
+
+    assert_eq!(benchmark_count(&mut conn, project_id), 1);
+    assert_eq!(
+        parameter_sets(&mut conn, project_id),
+        vec![(JsonParameters::default(), 1)],
+        "the v0 row still lands on the empty parameter set"
+    );
+    assert_eq!(named_values(&mut conn, project_id), vec![]);
+    assert_eq!(series_measures(&mut conn, project_id), Vec::<String>::new());
+    assert_eq!(metric_counts(&mut conn), vec![0]);
+}
+
 // An archived parameter set that reports again is unarchived, exactly as an
 // archived benchmark is.
 #[tokio::test]
