@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 use serde::{Deserialize, Serialize};
 
-use crate::ValidError;
+use crate::{ValidError, is_valid_len};
 
 /// The name of a single scalar inside a metric.
 ///
@@ -87,7 +87,7 @@ impl From<MetricName> for String {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_metric_name(metric_name: &str) -> bool {
-    crate::is_valid_non_empty(metric_name)
+    is_valid_len(metric_name)
 }
 
 #[cfg(test)]
