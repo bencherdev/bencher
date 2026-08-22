@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use bencher_adapter::{
     AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
-    results::adapter_metrics::{AdapterMetrics, NamedMap},
+    results::{
+        adapter_metrics::{AdapterMetrics, NamedMap},
+        adapter_results::BmfVersion,
+    },
 };
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, JsonParameters, MeasureNameId, MetricName, Slug,
@@ -201,6 +204,16 @@ impl ReportResults {
         // Resolve IDs (get_or_create), fetch historical data, compute boundaries.
         let mut prepared_grid_points = Vec::with_capacity(results.inner.len());
 
+        // A BMF v1 entry that names no measure measured nothing, so it writes
+        // nothing: its parameter set is never resolved, it writes no
+        // `report_benchmark` row, it touches no series, and it bills nothing.
+        //
+        // Gated on the version because BMF v0 says the same thing with `{"bench": {}}`
+        // and has always written that row on the benchmark's empty parameter set.
+        // Skipping every empty grid point would move a v0 payload, which this whole
+        // layer promises not to do.
+        let skip_empty_grid_points = results.version == BmfVersion::V1;
+
         for (benchmark, entries) in results.inner {
             // If benchmark name is ignored then strip the special suffix before querying
             let (benchmark, ignore_benchmark) = strip_ignore_suffix(benchmark);
@@ -208,6 +221,9 @@ impl ReportResults {
             // A benchmark reports as many grid points as it has parameter sets, and
             // each is its own `report_benchmark` row with its own series history.
             for (parameters, metrics) in entries {
+                if skip_empty_grid_points && metrics.inner.is_empty() {
+                    continue;
+                }
                 let prepared = self
                     .prepare_grid_point(
                         log,
