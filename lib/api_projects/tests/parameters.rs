@@ -13,9 +13,16 @@
 //! [`alert_volume_is_identical_for_flat_benchmarks_and_grid_points`] is about the
 //! old shape not moving when it does.
 
-use bencher_api_tests::{TestServer, helpers::get_project_id};
-use bencher_json::{JsonParameters, MetricName, Slug};
-use bencher_schema::{context::DbConnection, schema};
+use bencher_api_tests::{
+    TestServer,
+    helpers::{base_timestamp, get_project_id},
+};
+use bencher_json::{DateTime, JsonParameters, MetricName, Slug};
+use bencher_schema::{
+    context::DbConnection,
+    model::{organization::OrganizationId, project::metric::QueryMetric},
+    schema,
+};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
@@ -120,6 +127,15 @@ fn v1(benchmark: &str, entries: &[serde_json::Value]) -> String {
 
 fn entry(parameters: &serde_json::Value, measures: &serde_json::Value) -> serde_json::Value {
     serde_json::json!({ "parameters": parameters, "measures": measures })
+}
+
+/// The organization a project bills to, which is what the metric meter is keyed on.
+fn organization_id(conn: &mut DbConnection, project_id: i32) -> OrganizationId {
+    schema::project::table
+        .filter(schema::project::id.eq(project_id))
+        .select(schema::project::organization_id)
+        .first(conn)
+        .expect("Failed to get the organization ID")
 }
 
 /// Every parameter set stored under a project, with the number of `report_benchmark`
@@ -695,13 +711,16 @@ async fn named_values_do_not_change_the_metric_count() {
     let rows = named_values(&mut conn, project_id);
     assert_eq!(rows.len(), 5, "five named rows landed, got {rows:?}");
 
-    let billable: i64 = schema::metric::table
-        .inner_join(schema::report_benchmark::table.inner_join(schema::benchmark::table))
-        .filter(schema::benchmark::project_id.eq(project_id))
-        .filter(schema::metric::name.eq(MetricName::value()))
-        .count()
-        .get_result(&mut conn)
-        .expect("Failed to count the billable metric rows");
+    // The production meter itself, not a copy of its filter: this is the function
+    // the plan check and the billing read call.
+    let organization_id = organization_id(&mut conn, project_id);
+    let billable = QueryMetric::usage(
+        &mut conn,
+        organization_id,
+        base_timestamp(),
+        DateTime::now(),
+    )
+    .expect("Failed to count the billable metrics");
     assert_eq!(
         billable, 1,
         "the four named latency values bill as one metric, and the throughput measure \
@@ -714,7 +733,10 @@ async fn named_values_do_not_change_the_metric_count() {
         .select(schema::metric_count_by_report::metric_count)
         .first(&mut conn)
         .expect("Failed to read the report's metric count");
-    assert_eq!(i64::from(counted), billable);
+    assert_eq!(
+        u32::try_from(counted).expect("a non-negative count"),
+        billable
+    );
 }
 
 // The report response echoes every named value, keeps the deprecated metric,
