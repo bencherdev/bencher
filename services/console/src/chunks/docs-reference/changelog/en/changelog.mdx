@@ -1,3 +1,6 @@
+## `0.6.12`
+- Support Gungraun JSON format (Thank you [gamma0987](https://github.com/gamma0987))
+
 ## `v0.6.11`
 - Fix the percent difference shown in the report table when a metric drops to zero; a value of `0.00` against a positive baseline now shows `-100.00%` instead of `0.00%` in both the Console and the CI comment (Thank you [@OmarTawfik](https://github.com/OmarTawfik))
 - **BREAKING CHANGE** Name the GitHub Check after the Project (ie `Bencher Report (<PROJECT NAME>)`) so runs for different Projects on the same commit no longer overwrite each other; `--ci-id` takes the Project name's place when set, the in-progress Check falls back to `Bencher Report` until the results are posted when `--project` is not set, and the name is truncated to 255 bytes. Update any required status check named `Bencher Report` in branch protection to the new name, and note that renaming a Project changes the Check name too (Thank you [@OmarTawfik](https://github.com/OmarTawfik))
