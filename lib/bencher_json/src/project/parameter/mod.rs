@@ -523,6 +523,20 @@ mod tests {
         );
     }
 
+    // A duplicate key is last wins, which is what parsing into a map does and what
+    // every JSON parser a harness is likely to use already does. That is the decided
+    // behavior, not an accident: it is the least bad of the options, the easiest to
+    // explain, and it just works. A duplicate is never an error.
+    //
+    // Two keys that differ only in case are not duplicates. They are two keys, and
+    // RFC 8785 orders `A` before `a` by UTF-16 code unit.
+    #[test]
+    fn duplicate_keys_are_last_wins() {
+        assert_eq!(canonical(r#"{"a": 1, "a": 2}"#), r#"{"a":2}"#);
+        assert_eq!(canonical(r#"{"a": 1, "a": "two"}"#), r#"{"a":"two"}"#);
+        assert_eq!(canonical(r#"{"A": 1, "a": 2}"#), r#"{"A":1,"a":2}"#);
+    }
+
     #[test]
     fn canonical_round_trips_through_parsing() {
         let parameters = canonical(r#"{"size_mb": 16, "op": "read", "fsync": true}"#);
