@@ -6,7 +6,6 @@ on:
     branches: [devel, cloud]
     tags: [v**]
   pull_request:
-    branches: [main, cloud, devel]
 
 env:
   GITHUB_REGISTRY: ghcr.io
