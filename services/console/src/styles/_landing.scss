@@ -49,6 +49,16 @@
   }
 }
 
+// Cap the marketing sections on wide screens. 1344px total minus the 6rem
+// side padding at >= 1216px leaves an 1152px content column, the same as
+// Bulma's .container at widescreen.
+.landing-section,
+.hero-landing,
+.cta-section {
+  max-width: 1344px;
+  margin-inline: auto;
+}
+
 .landing-eyebrow {
   font-size: 0.85rem;
   font-weight: 600;
