@@ -14791,6 +14791,23 @@
           "protocol"
         ]
       },
+      "JsonParameters": {
+        "type": "object",
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number",
+              "format": "double"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        }
+      },
       "JsonPerf": {
         "type": "object",
         "properties": {
@@ -16120,6 +16137,22 @@
           "total"
         ]
       },
+      "JsonReportBoundary": {
+        "description": "A threshold and the boundary it produced, together.",
+        "type": "object",
+        "properties": {
+          "boundary": {
+            "$ref": "#/components/schemas/JsonBoundary"
+          },
+          "threshold": {
+            "$ref": "#/components/schemas/JsonThresholdModel"
+          }
+        },
+        "required": [
+          "boundary",
+          "threshold"
+        ]
+      },
       "JsonReportCounts": {
         "description": "Counts for a report.",
         "type": "object",
@@ -16150,7 +16183,7 @@
         "type": "object",
         "properties": {
           "benchmarks": {
-            "description": "The number of benchmarks in this iteration.",
+            "description": "The number of results in this iteration: one per grid point, so one per benchmark for a benchmark that reports a single parameter set.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -16172,6 +16205,7 @@
         "properties": {
           "boundary": {
             "nullable": true,
+            "description": "Deprecated. The boundary computed for the `value` row, if any.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonBoundary"
@@ -16182,10 +16216,24 @@
             "$ref": "#/components/schemas/JsonMeasure"
           },
           "metric": {
-            "$ref": "#/components/schemas/JsonMetric"
+            "nullable": true,
+            "description": "Deprecated. Reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nAbsent when the measure carries no `value` name, which BMF v1 permits. Never absent for anything an older client could produce.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonMetric"
+              }
+            ]
+          },
+          "metrics": {
+            "description": "Every named scalar ingested for this measure, in a stable order.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonReportMetric"
+            }
           },
           "threshold": {
             "nullable": true,
+            "description": "Deprecated. The threshold that gated the `value` row, if any.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonThresholdModel"
@@ -16195,10 +16243,56 @@
         },
         "required": [
           "measure",
-          "metric"
+          "metrics"
+        ]
+      },
+      "JsonReportMetric": {
+        "description": "Exactly one `metric` row: one named scalar.",
+        "type": "object",
+        "properties": {
+          "boundaries": {
+            "description": "Every threshold that gated this named scalar, with the boundary it produced. Length 0 or 1 until threshold predicates ship.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonReportBoundary"
+            }
+          },
+          "name": {
+            "$ref": "#/components/schemas/MetricName"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/MetricUuid"
+          },
+          "value": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "boundaries",
+          "name",
+          "uuid",
+          "value"
+        ]
+      },
+      "JsonReportParameter": {
+        "description": "The parameter set a report result ran with.",
+        "type": "object",
+        "properties": {
+          "parameters": {
+            "$ref": "#/components/schemas/JsonParameters"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ParameterUuid"
+          }
+        },
+        "required": [
+          "parameters",
+          "uuid"
         ]
       },
       "JsonReportResult": {
+        "description": "One grid point of one benchmark, in one iteration of a report.\n\nA benchmark reports as many results per iteration as it has parameter sets, so the parameter set is what tells two results of one benchmark apart.",
         "type": "object",
         "properties": {
           "benchmark": {
@@ -16212,12 +16306,21 @@
             "items": {
               "$ref": "#/components/schemas/JsonReportMeasure"
             }
+          },
+          "parameter": {
+            "description": "The parameter set this result ran with.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReportParameter"
+              }
+            ]
           }
         },
         "required": [
           "benchmark",
           "iteration",
-          "measures"
+          "measures",
+          "parameter"
         ]
       },
       "JsonReportSettings": {
@@ -18339,6 +18442,10 @@
         "format": "uint64",
         "minimum": 0
       },
+      "MetricName": {
+        "description": "The name of a single scalar inside a metric.\n\nEvery name is equal on the wire. `value`, `lower_value`, and `upper_value` are conventional, not privileged: they are the names the metric triple maps onto, and the names the console knows well enough to draw a band.",
+        "type": "string"
+      },
       "MetricUuid": {
         "type": "string",
         "format": "uuid"
@@ -18476,6 +18583,10 @@
             ]
           }
         ]
+      },
+      "ParameterUuid": {
+        "type": "string",
+        "format": "uuid"
       },
       "PlanLevel": {
         "type": "string",

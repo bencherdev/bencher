@@ -518,6 +518,9 @@ impl ReportComment {
                     .measures
                     .iter()
                     .find(|m| m.measure.slug == measure.slug);
+                // The point estimate. A measure that named no `value` has nothing for
+                // this table to draw, so its cells stay empty.
+                let point_estimate = report_measure.and_then(|m| m.metric.as_ref());
                 let alert = self.find_alert(result, measure);
 
                 if let Some(report_measure) = report_measure {
@@ -531,10 +534,10 @@ impl ReportComment {
                 } else {
                     html.push_str(EMPTY_CELL);
                 }
-                if let Some(report_measure) = report_measure {
+                if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
                     value_cell(
                         html,
-                        report_measure.metric.value,
+                        metric.value,
                         report_measure.boundary.and_then(|b| b.baseline),
                         factor,
                         &units_symbol,
@@ -544,10 +547,10 @@ impl ReportComment {
                     html.push_str(EMPTY_CELL);
                 }
                 if boundary_limits.lower {
-                    if let Some(report_measure) = report_measure {
+                    if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
                         lower_limit_cell(
                             html,
-                            report_measure.metric.value,
+                            metric.value,
                             report_measure.boundary.and_then(|b| b.lower_limit),
                             factor,
                             &units_symbol,
@@ -558,10 +561,10 @@ impl ReportComment {
                     }
                 }
                 if boundary_limits.upper {
-                    if let Some(report_measure) = report_measure {
+                    if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
                         upper_limit_cell(
                             html,
-                            report_measure.metric.value,
+                            metric.value,
                             report_measure.boundary.and_then(|b| b.upper_limit),
                             factor,
                             &units_symbol,
@@ -1119,9 +1122,13 @@ fn boundary_limits_map(
     let mut map = BTreeMap::new();
     for result in iteration {
         for report_measure in &result.measures {
+            // A measure that named no point estimate has no row in this table.
+            let Some(metric) = report_measure.metric.as_ref() else {
+                continue;
+            };
             let measure = Measure::from(report_measure.measure.clone());
             let min = {
-                let mut min = report_measure.metric.value;
+                let mut min = metric.value;
                 if let Some(lower_limit) = report_measure.boundary.and_then(|b| b.lower_limit) {
                     min = min.min(lower_limit);
                 }
@@ -1160,7 +1167,10 @@ fn boundary_limits_map(
 mod tests {
     use bencher_json::{
         DateTime, JsonBranch, JsonHead, JsonProject, JsonReport, JsonReportCounts, JsonTestbed,
-        project::{Visibility, report::Adapter},
+        project::{
+            Visibility,
+            report::{Adapter, JsonReportResults},
+        },
     };
     use ordered_float::OrderedFloat;
 
@@ -1224,15 +1234,115 @@ mod tests {
     }
 
     fn report_comment(visibility: Visibility) -> ReportComment {
+        report_comment_for(json_report(visibility))
+    }
+
+    fn report_comment_for(report: JsonReport) -> ReportComment {
         ReportComment::new(
             CONSOLE_URL.parse().unwrap(),
-            json_report(visibility),
+            report,
             SubAdapter {
                 build_time: false,
                 file_size: false,
             },
             "cli".to_owned(),
         )
+    }
+
+    /// One iteration with two measures of one benchmark: one that named a point
+    /// estimate and one that named only a percentile.
+    ///
+    /// Built from JSON rather than constructors because the absent deprecated
+    /// `metric` is the wire shape under test.
+    fn value_less_results() -> JsonReportResults {
+        let date = serde_json::to_value(DateTime::TEST).unwrap();
+        let measure = |uuid: &str, name: &str, slug: &str| {
+            serde_json::json!({
+                "uuid": uuid,
+                "project": "11111111-1111-1111-1111-111111111111",
+                "name": name,
+                "slug": slug,
+                "units": "nanoseconds (ns)",
+                "created": date,
+                "modified": date,
+                "archived": null,
+            })
+        };
+        serde_json::from_value(serde_json::json!([[{
+            "iteration": 0,
+            "benchmark": {
+                "uuid": "66666666-6666-6666-6666-666666666666",
+                "project": "11111111-1111-1111-1111-111111111111",
+                "name": "bench",
+                "slug": "bench",
+                "created": date,
+                "modified": date,
+                "archived": null,
+            },
+            "parameter": {
+                "uuid": "77777777-7777-7777-7777-777777777777",
+                "parameters": {},
+            },
+            "measures": [
+                {
+                    "measure": measure("88888888-8888-8888-8888-888888888888", "Latency", "latency"),
+                    "metrics": [{
+                        "uuid": "99999999-9999-9999-9999-999999999999",
+                        "name": "value",
+                        "value": 1.0,
+                        "boundaries": [],
+                    }],
+                    "metric": {
+                        "uuid": "99999999-9999-9999-9999-999999999999",
+                        "value": 1.0,
+                        "lower_value": null,
+                        "upper_value": null,
+                    },
+                    "threshold": null,
+                    "boundary": null,
+                },
+                {
+                    "measure": measure("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Throughput", "throughput"),
+                    "metrics": [{
+                        "uuid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                        "name": "p99",
+                        "value": 2.0,
+                        "boundaries": [],
+                    }],
+                    "threshold": null,
+                    "boundary": null,
+                },
+            ],
+        }]]))
+        .unwrap()
+    }
+
+    // A measure that named no point estimate reaches the comment with the deprecated
+    // `metric` absent. There is nothing for the table to draw, so it has no column,
+    // and rendering neither panics nor invents a zero.
+    #[test]
+    fn report_table_value_less_measure() {
+        let mut report = json_report(Visibility::Public);
+        report.results = Some(value_less_results());
+
+        let html = report_comment_for(report).html(false, None);
+        assert!(
+            html.contains(">Latency</a></th>"),
+            "unexpected table: {html}"
+        );
+        assert!(
+            html.contains("<td>1.00 ns</td>"),
+            "unexpected table: {html}"
+        );
+        assert!(
+            !html.contains(">Throughput</a></th>"),
+            "the measure that named no point estimate has no column: {html}"
+        );
+        // It is still a measure of this report, so the threshold warning names it.
+        assert!(
+            html.contains("/measures/throughput\">Throughput"),
+            "unexpected report: {html}"
+        );
     }
 
     #[test]

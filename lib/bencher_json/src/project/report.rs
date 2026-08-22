@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fmt};
 
-use bencher_valid::{DateTime, DateTimeMillis, GitHash, Model};
+use bencher_valid::{DateTime, DateTimeMillis, GitHash, MetricName, Model};
+use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -9,7 +10,8 @@ use serde::{Deserialize, Serialize};
 use crate::runner::job::JobUuid;
 use crate::{
     BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonMetric,
-    JsonProject, JsonPubUser, JsonTestbed, MeasureNameId, TestbedNameId,
+    JsonParameters, JsonProject, JsonPubUser, JsonTestbed, MeasureNameId, MetricUuid,
+    ParameterUuid, TestbedNameId,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -418,13 +420,28 @@ pub type JsonReportResults = Vec<JsonReportIteration>;
 #[typeshare::typeshare]
 pub type JsonReportIteration = Vec<JsonReportResult>;
 
+/// One grid point of one benchmark, in one iteration of a report.
+///
+/// A benchmark reports as many results per iteration as it has parameter sets, so
+/// the parameter set is what tells two results of one benchmark apart.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
     pub iteration: Iteration,
     pub benchmark: JsonBenchmark,
+    /// The parameter set this result ran with.
+    pub parameter: JsonReportParameter,
     pub measures: Vec<JsonReportMeasure>,
+}
+
+/// The parameter set a report result ran with.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportParameter {
+    pub uuid: ParameterUuid,
+    pub parameters: JsonParameters,
 }
 
 #[typeshare::typeshare]
@@ -432,9 +449,43 @@ pub struct JsonReportResult {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportMeasure {
     pub measure: JsonMeasure,
-    pub metric: JsonMetric,
+    /// Every named scalar ingested for this measure, in a stable order.
+    pub metrics: Vec<JsonReportMetric>,
+
+    /// Deprecated. Reconstructed from the `value` row and its
+    /// `lower_value`/`upper_value` siblings. Retained for compatibility with older
+    /// clients and removed in a future release.
+    ///
+    /// Absent when the measure carries no `value` name, which BMF v1 permits. Never
+    /// absent for anything an older client could produce.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<JsonMetric>,
+    /// Deprecated. The threshold that gated the `value` row, if any.
     pub threshold: Option<JsonThresholdModel>,
+    /// Deprecated. The boundary computed for the `value` row, if any.
     pub boundary: Option<JsonBoundary>,
+}
+
+/// Exactly one `metric` row: one named scalar.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportMetric {
+    pub uuid: MetricUuid,
+    pub name: MetricName,
+    pub value: OrderedFloat<f64>,
+    /// Every threshold that gated this named scalar, with the boundary it produced.
+    /// Length 0 or 1 until threshold predicates ship.
+    pub boundaries: Vec<JsonReportBoundary>,
+}
+
+/// A threshold and the boundary it produced, together.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportBoundary {
+    pub threshold: JsonThresholdModel,
+    pub boundary: JsonBoundary,
 }
 
 #[typeshare::typeshare]
@@ -456,7 +507,8 @@ pub struct JsonReportCounts {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportIterationCounts {
-    /// The number of benchmarks in this iteration.
+    /// The number of results in this iteration: one per grid point, so one per
+    /// benchmark for a benchmark that reports a single parameter set.
     pub benchmarks: u32,
     /// The number of distinct measures in this iteration.
     pub measures: u32,

@@ -52,12 +52,14 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
             measures,
         } in entries
         {
-            // Two entries that canonicalize to the same parameter set are one
-            // grid point, so their measures merge rather than fork a series.
+            // Two entries that canonicalize to the same parameter set are one grid
+            // point, so their named values merge rather than fork a series. A name
+            // that genuinely repeats takes the later entry, which is deterministic
+            // because entries are an ordered array in wire order. Nothing is
+            // dropped, so nothing is counted: a harness that emits one entry per
+            // statistic is a plausible shape, not an error.
             let metrics: &mut AdapterMetrics = benchmark_entries.entry(parameters).or_default();
             for (measure, named) in measures {
-                // A measure in more than one entry unions its names, the later
-                // entry winning per name, exactly JSON object key semantics.
                 metrics
                     .inner
                     .entry(measure)
@@ -233,6 +235,54 @@ pub(crate) mod test_json_v1 {
         assert_eq!(names(metrics, "latency"), vec!["p99".parse().unwrap()]);
         assert_eq!(named(metrics, "latency", "p99"), Some(97.0.into()));
         assert_eq!(named(metrics, "latency", "value"), None);
+    }
+
+    /// Two entries that resolve to the same grid point union their named values.
+    /// Nothing is dropped, so nothing is counted, and a name that genuinely repeats
+    /// takes the later entry's value, deterministically, because entries are an
+    /// ordered array in wire order.
+    #[test]
+    fn adapter_json_v1_duplicate_grid_points_union_names() {
+        let input = r#"{"bench": [
+            {"measures": {"latency": {"p50": 1.0, "value": 3.0}}},
+            {"measures": {"latency": {"p99": 2.0, "value": 4.0}}}
+        ]}"#;
+        let results = AdapterJsonV1::parse(input, Settings::default())
+            .expect("Failed to parse the duplicate grid points");
+
+        let metrics = grid_point(&results, "bench", "{}");
+        assert_eq!(
+            names(metrics, "latency"),
+            vec![
+                "p50".parse::<MetricName>().unwrap(),
+                "p99".parse().unwrap(),
+                "value".parse().unwrap(),
+            ],
+            "both entries' names survive"
+        );
+        assert_eq!(named(metrics, "latency", "p50"), Some(1.0.into()));
+        assert_eq!(named(metrics, "latency", "p99"), Some(2.0.into()));
+        assert_eq!(
+            named(metrics, "latency", "value"),
+            Some(4.0.into()),
+            "a repeated name takes the later entry"
+        );
+        assert_eq!(results.dropped_names, 0, "nothing was dropped");
+    }
+
+    /// The union is per measure: a measure only one entry mentions is untouched.
+    #[test]
+    fn adapter_json_v1_duplicate_grid_points_union_measures() {
+        let input = r#"{"bench": [
+            {"measures": {"latency": {"value": 1.0}}},
+            {"measures": {"throughput": {"value": 2.0}}}
+        ]}"#;
+        let results = AdapterJsonV1::parse(input, Settings::default())
+            .expect("Failed to parse the duplicate grid points");
+
+        let metrics = grid_point(&results, "bench", "{}");
+        assert_eq!(named(metrics, "latency", "value"), Some(1.0.into()));
+        assert_eq!(named(metrics, "throughput", "value"), Some(2.0.into()));
     }
 
     /// Two entries whose parameters differ only in key order or number spelling

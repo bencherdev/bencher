@@ -349,6 +349,12 @@ export interface JsonAlert {
 
 export type JsonReportAlerts = JsonAlert[];
 
+/** The parameter set a report result ran with. */
+export interface JsonReportParameter {
+	uuid: Uuid;
+	parameters: Record<string, string | number | boolean>;
+}
+
 export interface JsonThresholdModel {
 	uuid: Uuid;
 	project: Uuid;
@@ -356,16 +362,54 @@ export interface JsonThresholdModel {
 	created: string;
 }
 
+/** A threshold and the boundary it produced, together. */
+export interface JsonReportBoundary {
+	threshold: JsonThresholdModel;
+	boundary: JsonBoundary;
+}
+
+/** Exactly one `metric` row: one named scalar. */
+export interface JsonReportMetric {
+	uuid: Uuid;
+	name: string;
+	value: number;
+	/**
+	 * Every threshold that gated this named scalar, with the boundary it produced.
+	 * Length 0 or 1 until threshold predicates ship.
+	 */
+	boundaries: JsonReportBoundary[];
+}
+
 export interface JsonReportMeasure {
 	measure: JsonMeasure;
-	metric: JsonMetric;
+	/** Every named scalar ingested for this measure, in a stable order. */
+	metrics: JsonReportMetric[];
+	/**
+	 * Deprecated. Reconstructed from the `value` row and its
+	 * `lower_value`/`upper_value` siblings. Retained for compatibility with older
+	 * clients and removed in a future release.
+	 * 
+	 * Absent when the measure carries no `value` name, which BMF v1 permits. Never
+	 * absent for anything an older client could produce.
+	 */
+	metric?: JsonMetric;
+	/** Deprecated. The threshold that gated the `value` row, if any. */
 	threshold?: JsonThresholdModel;
+	/** Deprecated. The boundary computed for the `value` row, if any. */
 	boundary?: JsonBoundary;
 }
 
+/**
+ * One grid point of one benchmark, in one iteration of a report.
+ * 
+ * A benchmark reports as many results per iteration as it has parameter sets, so
+ * the parameter set is what tells two results of one benchmark apart.
+ */
 export interface JsonReportResult {
 	iteration: Iteration;
 	benchmark: JsonBenchmark;
+	/** The parameter set this result ran with. */
+	parameter: JsonReportParameter;
 	measures: JsonReportMeasure[];
 }
 
@@ -1077,7 +1121,10 @@ export enum Adapter {
 
 /** Counts for a single iteration of a report. */
 export interface JsonReportIterationCounts {
-	/** The number of benchmarks in this iteration. */
+	/**
+	 * The number of results in this iteration: one per grid point, so one per
+	 * benchmark for a benchmark that reports a single parameter set.
+	 */
 	benchmarks: number;
 	/** The number of distinct measures in this iteration. */
 	measures: number;
