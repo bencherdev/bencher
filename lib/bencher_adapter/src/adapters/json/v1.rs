@@ -84,7 +84,7 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
 
 #[cfg(test)]
 pub(crate) mod test_json_v1 {
-    use bencher_json::{BenchmarkNameId, JsonParameters, MetricName};
+    use bencher_json::{BenchmarkNameId, JsonParameters, MAX_PARAMETER_KEYS, MetricName};
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -454,6 +454,60 @@ pub(crate) mod test_json_v1 {
         let metrics = grid_point(&results, "tests::none", r#"{"size_mb":16}"#);
         assert!(metrics.inner.is_empty());
         assert_eq!(results.dropped_names, 0);
+    }
+
+    /// A parameter set is bounded: at most `MAX_PARAMETER_KEYS` keys, and a key
+    /// or a string value that is non-empty, trimmed, and within `MAX_LEN` bytes.
+    ///
+    /// A payload that breaks a bound is not a v1 payload. The whole report fails
+    /// to parse, so the run is rejected rather than quietly losing the grid point
+    /// that carried the offending set.
+    #[test]
+    fn adapter_json_v1_rejects_out_of_bounds_parameters() {
+        fn entry(parameters: &str) -> String {
+            format!(
+                r#"{{"bench": [{{"parameters": {parameters}, "measures": {{"latency": {{"value": 1}}}}}}]}}"#
+            )
+        }
+        fn keys(count: usize) -> String {
+            format!(
+                "{{{}}}",
+                (0..count)
+                    .map(|index| format!(r#""k{index}": {index}"#))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            )
+        }
+
+        let at_max_len = "0".repeat(64);
+        let over_max_len = "0".repeat(65);
+
+        for parameters in [
+            keys(MAX_PARAMETER_KEYS + 1),
+            format!(r#"{{"{over_max_len}": 1}}"#),
+            format!(r#"{{"a": "{over_max_len}"}}"#),
+            r#"{"": 1}"#.to_owned(),
+            r#"{" a": 1}"#.to_owned(),
+            r#"{"a": " b"}"#.to_owned(),
+            r#"{"a": ""}"#.to_owned(),
+        ] {
+            assert!(
+                AdapterJsonV1::parse(&entry(&parameters), Settings::default()).is_none(),
+                "expected {parameters} to be rejected"
+            );
+        }
+
+        // Every bound is inclusive, so a set sitting on each limit still parses.
+        for parameters in [
+            keys(MAX_PARAMETER_KEYS),
+            format!(r#"{{"{at_max_len}": 1}}"#),
+            format!(r#"{{"a": "{at_max_len}"}}"#),
+        ] {
+            assert!(
+                AdapterJsonV1::parse(&entry(&parameters), Settings::default()).is_some(),
+                "expected {parameters} to be accepted"
+            );
+        }
     }
 
     /// Parameter values are JSON scalars only.

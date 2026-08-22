@@ -66,6 +66,30 @@ pub(crate) mod test_json {
         test_json_v0::validate_adapter_json_bmf_mixed(&results);
     }
 
+    /// A v1 payload whose parameter set breaks a bound is claimed by no leaf.
+    ///
+    /// Observed for this fixture, whose set carries one key over the cap: the v0
+    /// leaf returns `None`, the v1 leaf returns `None`, and so does this node.
+    /// The v0 fallback is not a soft landing. It never sees a shape it
+    /// recognizes, so the report fails to parse and the run is rejected rather
+    /// than degrading to v0 and silently dropping the parameters.
+    #[test]
+    fn adapter_json_out_of_bounds_parameters_fails_every_leaf() {
+        let file_path = "./tool_output/json/report_v1_bad_parameters.json";
+        assert!(
+            opt_convert_file_path::<AdapterJsonV0>(file_path, Settings::default()).is_none(),
+            "expected the v0 leaf to reject an out of bounds parameter set"
+        );
+        assert!(
+            opt_convert_file_path::<AdapterJsonV1>(file_path, Settings::default()).is_none(),
+            "expected the v1 leaf to reject an out of bounds parameter set"
+        );
+        assert!(
+            opt_convert_file_path::<AdapterJson>(file_path, Settings::default()).is_none(),
+            "expected the json node to reject an out of bounds parameter set"
+        );
+    }
+
     /// Every v0 fixture parses identically through the node and through the leaf.
     #[test]
     fn adapter_json_v0_through_the_node() {
