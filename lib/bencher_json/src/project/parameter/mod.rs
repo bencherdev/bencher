@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, collections::BTreeMap, fmt, str::FromStr};
 
+use bencher_valid::{ParameterKey as ValidParameterKey, ParameterValue};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -9,6 +10,13 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser::Serialize
 pub mod jsonb;
 
 crate::typed_uuid::typed_uuid!(ParameterUuid);
+
+/// The most keys one parameter set may carry, anchored to the number of named
+/// values one measure may carry.
+///
+/// Deliberately low: raising the cap is a release note and lowering it is a
+/// breaking change, so the asymmetry runs one way.
+pub const MAX_PARAMETER_KEYS: usize = 8;
 
 /// A benchmark parameter set: the permutation of inputs that a benchmark ran with.
 ///
@@ -23,7 +31,7 @@ crate::typed_uuid::typed_uuid!(ParameterUuid);
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Jsonb))]
-pub struct JsonParameters(BTreeMap<ParameterKey, ParameterValue>);
+pub struct JsonParameters(BTreeMap<ParameterKey, ParameterScalar>);
 
 impl JsonParameters {
     /// The RFC 8785 (JCS) canonical serialization of this parameter set.
@@ -36,13 +44,15 @@ impl JsonParameters {
             write_json_string(key.as_ref(), &mut canonical);
             canonical.push(':');
             match value {
-                ParameterValue::Bool(boolean) => {
+                ParameterScalar::Bool(boolean) => {
                     canonical.push_str(if *boolean { "true" } else { "false" });
                 },
-                ParameterValue::Number(number) => {
+                ParameterScalar::Number(number) => {
                     canonical.push_str(ryu_js::Buffer::new().format(number.into_inner()));
                 },
-                ParameterValue::String(string) => write_json_string(string, &mut canonical),
+                ParameterScalar::String(string) => {
+                    write_json_string(string.as_ref(), &mut canonical);
+                },
             }
         }
         canonical.push('}');
@@ -64,12 +74,14 @@ impl JsonParameters {
         let mut object = jsonb::Object::default();
         for (key, value) in &self.0 {
             match value {
-                ParameterValue::Bool(boolean) => object.insert_bool(key.as_ref(), *boolean)?,
-                ParameterValue::Number(number) => object.insert_number(
+                ParameterScalar::Bool(boolean) => object.insert_bool(key.as_ref(), *boolean)?,
+                ParameterScalar::Number(number) => object.insert_number(
                     key.as_ref(),
                     ryu_js::Buffer::new().format(number.into_inner()),
                 )?,
-                ParameterValue::String(string) => object.insert_string(key.as_ref(), string)?,
+                ParameterScalar::String(string) => {
+                    object.insert_string(key.as_ref(), string.as_ref())?;
+                },
             }
         }
         object.into_blob()
@@ -108,7 +120,16 @@ impl<'de> Deserialize<'de> for JsonParameters {
     where
         D: Deserializer<'de>,
     {
-        BTreeMap::deserialize(deserializer).map(Self)
+        // The map has already collapsed duplicate keys by the time it is counted,
+        // so the cap bounds distinct keys and a key spelled twice still counts once.
+        let parameters = BTreeMap::deserialize(deserializer)?;
+        if parameters.len() > MAX_PARAMETER_KEYS {
+            return Err(de::Error::custom(format!(
+                "Parameter set has {} keys, more than the {MAX_PARAMETER_KEYS} allowed",
+                parameters.len()
+            )));
+        }
+        Ok(Self(parameters))
     }
 }
 
@@ -124,17 +145,19 @@ pub enum ParametersError {
 /// (U+10000 and above) leads with a surrogate in U+D800..U+DBFF, so it sorts
 /// before every character in U+E000..U+FFFF.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct ParameterKey(String);
+struct ParameterKey(ValidParameterKey);
 
 impl AsRef<str> for ParameterKey {
     fn as_ref(&self) -> &str {
-        &self.0
+        self.0.as_ref()
     }
 }
 
 impl Ord for ParameterKey {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.0.encode_utf16().cmp(other.0.encode_utf16())
+        self.as_ref()
+            .encode_utf16()
+            .cmp(other.as_ref().encode_utf16())
     }
 }
 
@@ -149,7 +172,7 @@ impl Serialize for ParameterKey {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&self.0)
+        serializer.serialize_str(self.as_ref())
     }
 }
 
@@ -158,7 +181,7 @@ impl<'de> Deserialize<'de> for ParameterKey {
     where
         D: Deserializer<'de>,
     {
-        String::deserialize(deserializer).map(Self)
+        ValidParameterKey::deserialize(deserializer).map(Self)
     }
 }
 
@@ -166,14 +189,17 @@ impl<'de> Deserialize<'de> for ParameterKey {
 ///
 /// Null, arrays, and objects are rejected. Numbers are ECMAScript doubles,
 /// so `16`, `16.0`, and `1.6e1` are one value with one canonical spelling.
+///
+/// Only the string arm carries a bound. A number and a boolean each have one
+/// canonical spelling that is inherently short.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-enum ParameterValue {
+enum ParameterScalar {
     Bool(bool),
     Number(OrderedFloat<f64>),
-    String(String),
+    String(ParameterValue),
 }
 
-impl Serialize for ParameterValue {
+impl Serialize for ParameterScalar {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -188,24 +214,24 @@ impl Serialize for ParameterValue {
                     .map_err(serde::ser::Error::custom)?
                     .serialize(serializer)
             },
-            Self::String(string) => serializer.serialize_str(string),
+            Self::String(string) => serializer.serialize_str(string.as_ref()),
         }
     }
 }
 
-impl<'de> Deserialize<'de> for ParameterValue {
+impl<'de> Deserialize<'de> for ParameterScalar {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        deserializer.deserialize_any(ParameterValueVisitor)
+        deserializer.deserialize_any(ParameterScalarVisitor)
     }
 }
 
-struct ParameterValueVisitor;
+struct ParameterScalarVisitor;
 
-impl ParameterValueVisitor {
-    fn number<E>(number: &serde_json::Number) -> Result<ParameterValue, E>
+impl ParameterScalarVisitor {
+    fn number<E>(number: &serde_json::Number) -> Result<ParameterScalar, E>
     where
         E: de::Error,
     {
@@ -214,13 +240,13 @@ impl ParameterValueVisitor {
         number
             .as_f64()
             .filter(|number| number.is_finite())
-            .map(|number| ParameterValue::Number(OrderedFloat(number)))
+            .map(|number| ParameterScalar::Number(OrderedFloat(number)))
             .ok_or_else(|| E::custom(format!("Parameter value ({number}) is not a finite number")))
     }
 }
 
-impl de::Visitor<'_> for ParameterValueVisitor {
-    type Value = ParameterValue;
+impl de::Visitor<'_> for ParameterScalarVisitor {
+    type Value = ParameterScalar;
 
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("a JSON scalar parameter value (string, number, or boolean)")
@@ -230,7 +256,7 @@ impl de::Visitor<'_> for ParameterValueVisitor {
     where
         E: de::Error,
     {
-        Ok(ParameterValue::Bool(v))
+        Ok(ParameterScalar::Bool(v))
     }
 
     fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
@@ -265,14 +291,16 @@ impl de::Visitor<'_> for ParameterValueVisitor {
     where
         E: de::Error,
     {
-        Ok(ParameterValue::String(v.to_owned()))
+        self.visit_string(v.to_owned())
     }
 
     fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
     where
         E: de::Error,
     {
-        Ok(ParameterValue::String(v))
+        ParameterValue::try_from(v)
+            .map(ParameterScalar::String)
+            .map_err(E::custom)
     }
 }
 
@@ -315,7 +343,7 @@ fn hex_digit(nibble: u32) -> char {
 mod tests {
     use ordered_float::OrderedFloat;
 
-    use super::{JsonParameters, ParameterKey, ParameterValue};
+    use super::{JsonParameters, ParameterKey, ParameterScalar};
 
     fn canonical(parameters: &str) -> String {
         parameters
@@ -329,8 +357,8 @@ mod tests {
     fn number(value: f64) -> JsonParameters {
         JsonParameters(
             [(
-                ParameterKey("n".to_owned()),
-                ParameterValue::Number(OrderedFloat(value)),
+                ParameterKey("n".parse().expect("Failed to parse parameter key")),
+                ParameterScalar::Number(OrderedFloat(value)),
             )]
             .into_iter()
             .collect(),
@@ -356,10 +384,15 @@ mod tests {
         // RFC 8785 section 3.2.3. The emoji is U+1F600, which sorts *before*
         // U+FB33 by UTF-16 code unit (its lead surrogate is U+D83D) and *after*
         // it by code point. A UTF-8 or code point sort silently gets this wrong.
+        //
+        // The low end of the range is U+0001 rather than a carriage return: a key
+        // is trimmed and non-empty, so a key that is only whitespace is rejected.
+        // U+0001 is a control character that is not whitespace, so it still pins
+        // both the ordering floor and the `\u00xx` escape.
         let parameters = canonical(
             r#"{
                 "\u20ac": "Euro Sign",
-                "\r": "Carriage Return",
+                "\u0001": "Start Of Heading",
                 "\ufb33": "Hebrew Letter Dalet With Dagesh",
                 "1": "One",
                 "\ud83d\ude00": "Emoji: Grinning Face",
@@ -370,7 +403,7 @@ mod tests {
         assert_eq!(
             parameters,
             concat!(
-                r#"{"\r":"Carriage Return","1":"One","#,
+                r#"{"\u0001":"Start Of Heading","1":"One","#,
                 "\"\u{80}\":\"Control\",",
                 "\"\u{f6}\":\"Latin Small Letter O With Diaeresis\",",
                 "\"\u{20ac}\":\"Euro Sign\",",
@@ -567,6 +600,127 @@ mod tests {
                 "expected {parameters} to be rejected"
             );
         }
+    }
+
+    /// A 64 byte key or string value, the longest either may be.
+    const LEN_64_STR: &str = "0123456789012345678901234567890123456789012345678901234567890123";
+    /// One byte past the longest.
+    const LEN_65_STR: &str = "01234567890123456789012345678901234567890123456789012345678901234";
+
+    /// A parameter set literal with `count` distinct keys.
+    fn keys(count: usize) -> String {
+        let entries = (0..count)
+            .map(|index| format!(r#""k{index}": {index}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        format!("{{{entries}}}")
+    }
+
+    // The cap is deliberately low, so raising it stays easy and lowering it never
+    // has to happen. Eight is where the named value cap starts too.
+    #[test]
+    fn rejects_more_than_the_key_cap() {
+        keys(8)
+            .parse::<JsonParameters>()
+            .expect("Failed to parse a parameter set at the cap");
+        assert!(
+            keys(9).parse::<JsonParameters>().is_err(),
+            "expected a ninth key to be rejected"
+        );
+    }
+
+    // The cap counts keys, not entries. Duplicates collapse to last wins before the
+    // count, so a key spelled nine times is one key and never trips the cap.
+    #[test]
+    fn duplicate_keys_do_not_count_against_the_cap() {
+        let nine_spellings = format!(
+            "{{{}}}",
+            (0..9)
+                .map(|index| format!(r#""a": {index}"#))
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+        assert_eq!(canonical(&nine_spellings), r#"{"a":8}"#);
+
+        // Eight distinct keys stay eight distinct keys however often they repeat.
+        let doubled = format!(
+            "{{{}}}",
+            (0..2)
+                .flat_map(|_| (0..8).map(|index| format!(r#""k{index}": {index}"#)))
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+        doubled
+            .parse::<JsonParameters>()
+            .expect("Failed to parse duplicated keys at the cap");
+    }
+
+    // Keys that differ only in case are two keys, so they count as two.
+    #[test]
+    fn case_distinct_keys_count_separately() {
+        assert_eq!(canonical(r#"{"A": 1, "a": 2}"#), r#"{"A":1,"a":2}"#);
+    }
+
+    #[test]
+    fn rejects_long_keys() {
+        format!(r#"{{"{LEN_64_STR}": 1}}"#)
+            .parse::<JsonParameters>()
+            .expect("Failed to parse a 64 byte key");
+        assert!(
+            format!(r#"{{"{LEN_65_STR}": 1}}"#)
+                .parse::<JsonParameters>()
+                .is_err(),
+            "expected a 65 byte key to be rejected"
+        );
+    }
+
+    #[test]
+    fn rejects_long_string_values() {
+        format!(r#"{{"a": "{LEN_64_STR}"}}"#)
+            .parse::<JsonParameters>()
+            .expect("Failed to parse a 64 byte string value");
+        assert!(
+            format!(r#"{{"a": "{LEN_65_STR}"}}"#)
+                .parse::<JsonParameters>()
+                .is_err(),
+            "expected a 65 byte string value to be rejected"
+        );
+    }
+
+    #[test]
+    fn rejects_empty_or_untrimmed_keys() {
+        for key in ["", " ", "\\r", "\\n", "\\t", " a", "a "] {
+            let parameters = format!(r#"{{"{key}": 1}}"#);
+            assert!(
+                parameters.parse::<JsonParameters>().is_err(),
+                "expected {parameters} to be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_empty_or_untrimmed_string_values() {
+        for value in ["", " ", "\\r", "\\n", "\\t", " a", "a "] {
+            let parameters = format!(r#"{{"a": "{value}"}}"#);
+            assert!(
+                parameters.parse::<JsonParameters>().is_err(),
+                "expected {parameters} to be rejected"
+            );
+        }
+    }
+
+    // Numbers and booleans are untouched: their canonical spellings are inherently
+    // short, so a length rule would only ever be a rule about nothing.
+    #[test]
+    fn numbers_and_booleans_are_not_length_bound() {
+        assert_eq!(
+            canonical(r#"{"a": 1.7976931348623157e308}"#),
+            r#"{"a":1.7976931348623157e+308}"#
+        );
+        assert_eq!(
+            canonical(r#"{"a": true, "b": false}"#),
+            r#"{"a":true,"b":false}"#
+        );
     }
 
     #[test]
