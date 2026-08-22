@@ -97,7 +97,10 @@ const PublicProjects = (props: Props) => {
 				return EMPTY_ARRAY;
 			});
 	};
-	const [projects] = createResource<JsonProject[]>(fetcher, fetchProjects);
+	const [projects] = createResource<JsonProject[], ReturnType<typeof fetcher>>(
+		fetcher,
+		fetchProjects,
+	);
 	const projectsLength = createMemo(() => projects()?.length);
 
 	const handlePage = (page: number) => {

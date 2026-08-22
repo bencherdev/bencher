@@ -83,10 +83,10 @@ const OnboardKey = (props: Props) => {
 				return;
 			});
 	};
-	const [organizations] = createResource<undefined | JsonOrganization[]>(
-		orgsFetcher,
-		getOrganizations,
-	);
+	const [organizations] = createResource<
+		undefined | JsonOrganization[],
+		ReturnType<typeof orgsFetcher>
+	>(orgsFetcher, getOrganizations);
 
 	const organization = createMemo(() => {
 		const orgs = organizations();
@@ -129,10 +129,10 @@ const OnboardKey = (props: Props) => {
 				return;
 			});
 	};
-	const [projects] = createResource<undefined | JsonProject[]>(
-		projectsFetcher,
-		getProjects,
-	);
+	const [projects] = createResource<
+		undefined | JsonProject[],
+		ReturnType<typeof projectsFetcher>
+	>(projectsFetcher, getProjects);
 
 	const project = createMemo(() => {
 		const orgProjects = projects();
@@ -174,10 +174,10 @@ const OnboardKey = (props: Props) => {
 				return;
 			});
 	};
-	const [apiKeys] = createResource<undefined | JsonProjectKey[]>(
-		keysFetcher,
-		getKeys,
-	);
+	const [apiKeys] = createResource<
+		undefined | JsonProjectKey[],
+		ReturnType<typeof keysFetcher>
+	>(keysFetcher, getKeys);
 
 	const keyFetcher = createMemo(() => {
 		return {
