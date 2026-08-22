@@ -225,7 +225,9 @@ const OnboardKey = (props: Props) => {
 			});
 	};
 	const [apiKey] = createResource<
-		undefined | JsonProjectKey | JsonProjectKeyCreated
+		// biome-ignore lint/suspicious/noConfusingVoidType: getKey returns early without a value
+		void | JsonProjectKey | JsonProjectKeyCreated,
+		ReturnType<typeof keyFetcher>
 	>(keyFetcher, getKey);
 
 	const keyValue = createMemo(() => {
