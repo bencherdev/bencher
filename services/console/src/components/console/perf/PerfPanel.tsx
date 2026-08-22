@@ -28,7 +28,6 @@ import {
 	addToArray,
 	arrayFromString,
 	arrayToString,
-	dateTimeMillis,
 	dateToTime,
 	isBoolParam,
 	removeFromArray,
@@ -50,6 +49,12 @@ import PerfFrame from "./PerfFrame";
 import PerfHeader from "./header/PerfHeader";
 import type { TabList } from "./plot/tab/PlotTab";
 import PlotTab from "./plot/tab/PlotTab";
+import {
+	CLEAR_PARAM,
+	PLOT_PARAM,
+	REPORT_PARAM,
+	firstReportParams,
+} from "./util";
 
 // Perf query params
 const BRANCHES_PARAM = PerfQueryKey.Branches;
@@ -62,9 +67,6 @@ const START_TIME_PARAM = PerfQueryKey.StartTime;
 const END_TIME_PARAM = PerfQueryKey.EndTime;
 
 // Console UI state query params
-const REPORT_PARAM = "report";
-const PLOT_PARAM = "plot";
-
 const REPORTS_PER_PAGE_PARAM = "reports_per_page";
 const BRANCHES_PER_PAGE_PARAM = "branches_per_page";
 const TESTBEDS_PER_PAGE_PARAM = "testbeds_per_page";
@@ -94,7 +96,6 @@ const X_AXIS_PARAM = PlotKey.XAxis;
 const Y_AXIS_PARAM = PlotKey.YAxis;
 // TODO remove in due time
 const RANGE_PARAM = "range";
-const CLEAR_PARAM = "clear";
 
 // These are currently for internal use only
 // TODO add a way to set these in the Share modal
@@ -177,9 +178,6 @@ const DEFAULT_EMBED_KEY = true;
 export const DEFAULT_PER_PAGE = 8;
 export const REPORTS_PER_PAGE = 4;
 export const DEFAULT_PAGE = 1;
-
-// 30 days
-const DEFAULT_REPORT_HISTORY = 30 * 24 * 60 * 60 * 1000;
 
 export interface Props {
 	apiUrl: string;
@@ -881,7 +879,6 @@ const PerfPanel = (props: Props) => {
 		if (data) {
 			setReportsTab(resourcesToCheckable(data, [report()]));
 		}
-		const first = 0;
 		const first_report = first_report_data();
 		if (
 			!clear() &&
@@ -892,37 +889,7 @@ const PerfPanel = (props: Props) => {
 			measuresIsEmpty() &&
 			tab() === DEFAULT_PERF_TAB
 		) {
-			const benchmarks = first_report?.results?.[first]
-				?.map((iteration) => iteration?.benchmark?.uuid)
-				.slice(0, 10);
-			const first_measure =
-				first_report?.results?.[first]?.[first]?.measures?.[first]?.measure
-					?.uuid;
-			const start_time = dateTimeMillis(first_report?.start_time);
-			setSearchParams(
-				{
-					[REPORT_PARAM]: first_report?.uuid,
-					[BRANCHES_PARAM]: first_report?.branch?.uuid,
-					[HEADS_PARAM]: first_report?.branch?.head?.uuid,
-					[TESTBEDS_PARAM]: first_report?.testbed?.uuid,
-					[SPECS_PARAM]: first_report?.testbed?.spec?.uuid,
-					[BENCHMARKS_PARAM]: arrayToString(benchmarks ?? []),
-					[MEASURES_PARAM]: first_measure,
-					[PLOT_PARAM]: null,
-					[START_TIME_PARAM]: start_time
-						? start_time - DEFAULT_REPORT_HISTORY
-						: null,
-					[END_TIME_PARAM]: dateTimeMillis(first_report?.end_time),
-					[LOWER_VALUE_PARAM]: null,
-					[UPPER_VALUE_PARAM]: null,
-					[LOWER_BOUNDARY_PARAM]:
-						typeof first_measure?.boundary?.lower_limit === "number",
-					[UPPER_BOUNDARY_PARAM]:
-						typeof first_measure?.boundary?.upper_limit === "number",
-					[CLEAR_PARAM]: true,
-				},
-				{ replace: true },
-			);
+			setSearchParams(firstReportParams(first_report), { replace: true });
 		}
 	});
 
