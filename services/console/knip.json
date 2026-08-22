@@ -1,13 +1,9 @@
 {
-	"entry": [
-		"{index,cli,main}.{js,cjs,mjs,jsx,ts,cts,mts,tsx}",
-		"src/{index,cli,main}.{js,cjs,mjs,jsx,ts,cts,mts,tsx}"
-	],
-	"project": ["**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}!"],
+	"project": ["**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx,astro,mdx,sass,scss}!"],
+	"ignoreDependencies": ["@sentry/cloudflare", "wrangler"],
 	"astro": {
 		"entry": [
 			"astro.config.{js,cjs,mjs,ts}",
-			"src/content/config.ts",
 			"src/content.config.ts",
 			"src/pages/**/*.{astro,mdx,js,ts}",
 			"src/content/**/*.mdx",

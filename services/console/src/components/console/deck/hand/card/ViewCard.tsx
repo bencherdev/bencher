@@ -472,8 +472,8 @@ const AdapterCard = (props: Props) => {
 						return "";
 				}
 			})()}`}
-			// biome-ignore lint/a11y/noBlankTarget: docs link
 			target="_blank"
+			rel="noreferrer"
 			class="icon-text has-text-link"
 		>
 			<span>
@@ -537,8 +537,8 @@ const ModelTestCard = (props: Props) => {
 			href={`https://bencher.dev/docs/explanation/thresholds/#${testFragment(
 				props.value as ModelTest,
 			)}`}
-			// biome-ignore lint/a11y/noBlankTarget: docs link
 			target="_blank"
+			rel="noreferrer"
 			class="icon-text has-text-link"
 		>
 			<span>{fmtModelTest(props.value as ModelTest)}</span>

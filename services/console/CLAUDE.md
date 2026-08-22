@@ -66,9 +66,46 @@ npx biome format --write .
 npx biome lint .
 ```
 
-Do **NOT** use `npx biome check .` to validate the codebase: `check` additionally
-enforces `organizeImports`, which is not part of CI and fails on many existing files.
-Use `lint` and `format` (as above) like CI does.
+Import organization is an assist in Biome 2, and `biome.jsonc` turns assists off
+because the console does not enforce it. `npx biome ci .` therefore runs exactly
+what CI runs.
+
+Biome config lives in `biome.jsonc`, not `biome.json`. A `biome.json` containing
+comments makes Biome fall back to its built-in defaults **without reporting an
+error**, which silently widens the check to every file in `dist/`.
+
+Biome 2 only parses the frontmatter of an `.astro` file, so anything imported or
+bound for use in the template below it looks unused. The unused-symbol rules are
+turned off for `.astro` files to keep that noise out of the report.
+
+## Cloudflare Deploy
+
+The Cloudflare adapter resolves `wrangler.jsonc` **at build time** and writes the
+deployable config to `dist/server/wrangler.json`, pointed at by
+`.wrangler/deploy/config.json`. So the Wrangler environment is chosen by
+`CLOUDFLARE_ENV` during the build, and `--env` on `wrangler deploy` is ignored.
+Building without `CLOUDFLARE_ENV` and deploying with `--env dev` deploys the
+**production** config.
+
+```bash
+CLOUDFLARE_ENV=dev npm run cloudflare && npm run deploy-target dev-console && npx wrangler deploy --env dev
+```
+
+`npm run deploy-target <worker-name>` asserts that the built
+`dist/server/wrangler.json` really is the Worker you mean to deploy. Both deploy
+jobs run it, and so should any manual deploy: it is the only thing standing
+between a forgotten `CLOUDFLARE_ENV` and a production overwrite.
+
+Local `wrangler dev` currently refuses to start: the pinned `workerd` supports
+compatibility dates only through 2026-08-08 and `wrangler.jsonc` asks for
+2026-08-11. Deployed Workers are unaffected. The same lag, plus `workerd`
+disallowing WebAssembly code generation (which Shiki needs), is why
+`prerenderEnvironment` is `"node"`.
+
+`adapter.js` rewrites `astro.config.mjs` in place by matching four marker lines
+(`// import node ...`, `// import cloudflare ...`, `adapter: undefined,`, and
+`enabled: undefined,`). Keep those lines intact, and restore `astro.config.mjs`
+after any local build: it is easy to commit the mutated file by accident.
 
 ## Console Setup
 

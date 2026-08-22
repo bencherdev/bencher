@@ -9,9 +9,6 @@ on:
       go-version:
         type: string
         required: true
-      wrangler-version:
-        type: string
-        required: true
       deploy-dev:
         type: boolean
         required: true
@@ -121,6 +118,10 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
       - name: Download `bencher_valid` Artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -129,14 +130,15 @@ jobs:
       - name: Build Console UI
         working-directory: ./services/console
         env:
+          # The Cloudflare adapter bakes the Wrangler environment into the build,
+          # so this, not `--env` on the deploy, is what selects it.
+          CLOUDFLARE_ENV: dev
           SENTRY_UPLOAD: true
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run cloudflare
-      - name: Install Wrangler
+      - name: Verify Deploy Target
         working-directory: ./services/console
-        env:
-          INPUTS_WRANGLER_VERSION: ${{ inputs.wrangler-version }}
-        run: npm install --save-dev "wrangler@$INPUTS_WRANGLER_VERSION"
+        run: npm run deploy-target dev-console
       - name: Deploy Console UI to Cloudflare Dev
         working-directory: ./services/console
         env:
@@ -228,6 +230,10 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
       - name: Download `bencher_valid` Artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -239,11 +245,9 @@ jobs:
           SENTRY_UPLOAD: true
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run cloudflare
-      - name: Install Wrangler
+      - name: Verify Deploy Target
         working-directory: ./services/console
-        env:
-          INPUTS_WRANGLER_VERSION: ${{ inputs.wrangler-version }}
-        run: npm install --save-dev "wrangler@$INPUTS_WRANGLER_VERSION"
+        run: npm run deploy-target console
       - name: Deploy Console UI to Cloudflare Prod
         working-directory: ./services/console
         env:

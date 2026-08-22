@@ -47,10 +47,7 @@ const DeckButton = (props: Props) => {
 			params: props.params,
 		};
 	});
-	const getAllowed = async (fetcher: {
-		apiUrl: string;
-		params: Params;
-	}) => {
+	const getAllowed = async (fetcher: { apiUrl: string; params: Params }) => {
 		if (!props.config?.is_allowed) {
 			return true;
 		}

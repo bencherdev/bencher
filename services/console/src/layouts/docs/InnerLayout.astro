@@ -104,7 +104,7 @@ const headingParts = heading?.split("`") ?? [];
                 <br />
                 <hr />
                 <p>Published: {fmtDateTime(published)}
-                {modified && modified !== published && <>| Last Updated: {fmtDateTime(modified)}</>}
+                {modified && modified !== published && <>{" "}| Last Updated: {fmtDateTime(modified)}</>}
                 </p>
               </div>
             }

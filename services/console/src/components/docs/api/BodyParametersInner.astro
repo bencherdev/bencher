@@ -51,6 +51,7 @@ const getTypes = (propertyKey, propertyValue) => {
 					.filter((v) => v)
 					.flat();
 			}
+			return undefined;
 		});
 
 		const variants = propertyValue.allOf
@@ -65,6 +66,7 @@ const getTypes = (propertyKey, propertyValue) => {
 						.filter((v) => v)
 						.flat();
 				}
+				return undefined;
 			})
 			.filter((v) => v)
 			.flat();

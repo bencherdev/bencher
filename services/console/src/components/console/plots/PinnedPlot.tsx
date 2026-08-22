@@ -29,9 +29,7 @@ const PinnedPlot = (props: Props) => {
 			token: user?.token,
 		};
 	});
-	const getPlot = async (fetcher: {
-		token: string;
-	}) => {
+	const getPlot = async (fetcher: { token: string }) => {
 		const EMPTY_OBJECT = {};
 		// Fire in parallel with WASM init; the server validates the token regardless.
 		if (jwtOptionalInvalid(bencher_valid(), fetcher.token)) {
