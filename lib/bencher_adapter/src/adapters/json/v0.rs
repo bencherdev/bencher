@@ -176,6 +176,28 @@ pub(crate) mod test_json_v0 {
         }
     }
 
+    /// A benchmark that reports no measures is a benchmark that measured nothing.
+    /// It is accepted, it is not an error, and it parses to one grid point on the
+    /// empty parameter set with no metric under it. BMF v1 mirrors this shape with
+    /// an entry whose `measures` is empty.
+    #[test]
+    fn adapter_json_v0_empty_measures() {
+        let results = AdapterJsonV0::parse(r#"{"tests::none": {}}"#, Settings::default())
+            .expect("Failed to parse the payload");
+
+        assert_eq!(results.version, BmfVersion::V0);
+        let benchmark = "tests::none".parse::<BenchmarkNameId>().unwrap();
+        let entries = &results.inner[&benchmark];
+        assert_eq!(entries.len(), 1);
+        assert!(
+            results
+                .entry(&benchmark)
+                .expect("Missing the empty parameter set")
+                .inner
+                .is_empty()
+        );
+    }
+
     /// An empty payload is a well formed v0 payload with nothing in it.
     #[test]
     fn adapter_json_v0_empty() {

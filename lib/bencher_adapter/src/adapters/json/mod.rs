@@ -102,10 +102,22 @@ pub(crate) mod test_json {
         test_json_v1::validate_adapter_json_v1_cap(&results);
     }
 
+    #[test]
+    fn adapter_json_v1_canonical() {
+        let results = convert_json("v1_canonical");
+        test_json_v1::validate_adapter_json_v1_canonical(&results);
+    }
+
     /// Every v1 fixture parses identically through the node and through the leaf.
     #[test]
     fn adapter_json_v1_through_the_node() {
-        for suffix in ["v1_latency", "v1_parameters", "v1_named", "v1_cap"] {
+        for suffix in [
+            "v1_latency",
+            "v1_parameters",
+            "v1_named",
+            "v1_cap",
+            "v1_canonical",
+        ] {
             let file_path = format!("./tool_output/json/report_{suffix}.json");
             assert_eq!(
                 convert_file_path::<AdapterJson>(&file_path),
