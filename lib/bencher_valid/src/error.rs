@@ -26,6 +26,10 @@ pub enum ValidError {
     BenchmarkName(String),
     #[error("Failed to validate name ID: {0:?}")]
     NameId(String),
+    #[error("Failed to validate benchmark parameter key: {0}")]
+    ParameterKey(String),
+    #[error("Failed to validate benchmark parameter value: {0}")]
+    ParameterValue(String),
     #[error("Failed to validate non-empty ID: {0}")]
     NonEmpty(String),
     #[error("Failed to validate resource name string: {0}")]

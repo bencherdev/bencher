@@ -17,6 +17,7 @@ pub mod keys;
 mod model;
 mod name_id;
 mod non_empty;
+mod parameter;
 mod plus;
 mod resource_id;
 mod resource_name;
@@ -51,6 +52,7 @@ pub use model::{
 };
 pub use name_id::NameId;
 pub use non_empty::NonEmpty;
+pub use parameter::{ParameterKey, ParameterValue};
 #[cfg(feature = "plus")]
 pub use plus::{
     Architecture, CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth,
