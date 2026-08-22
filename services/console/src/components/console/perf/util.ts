@@ -18,8 +18,9 @@ export const firstReportParams = (first_report: JsonReport): SetParams => {
 	const benchmarks = first_report?.results?.[first]
 		?.map((iteration) => iteration?.benchmark?.uuid)
 		.slice(0, DEFAULT_REPORT_BENCHMARKS);
-	const first_measure =
-		first_report?.results?.[first]?.[first]?.measures?.[first]?.measure?.uuid;
+	// The boundary limits live on the report measure, not on the measure itself.
+	const first_report_measure =
+		first_report?.results?.[first]?.[first]?.measures?.[first];
 	const start_time = dateTimeMillis(first_report?.start_time);
 	return {
 		[REPORT_PARAM]: first_report?.uuid,
@@ -28,7 +29,7 @@ export const firstReportParams = (first_report: JsonReport): SetParams => {
 		[PerfQueryKey.Testbeds]: first_report?.testbed?.uuid,
 		[PerfQueryKey.Specs]: first_report?.testbed?.spec?.uuid,
 		[PerfQueryKey.Benchmarks]: arrayToString(benchmarks ?? []),
-		[PerfQueryKey.Measures]: first_measure,
+		[PerfQueryKey.Measures]: first_report_measure?.measure?.uuid,
 		[PLOT_PARAM]: null,
 		[PerfQueryKey.StartTime]: start_time
 			? start_time - DEFAULT_REPORT_HISTORY
@@ -37,9 +38,9 @@ export const firstReportParams = (first_report: JsonReport): SetParams => {
 		[PlotKey.LowerValue]: null,
 		[PlotKey.UpperValue]: null,
 		[PlotKey.LowerBoundary]:
-			typeof first_measure?.boundary?.lower_limit === "number",
+			typeof first_report_measure?.boundary?.lower_limit === "number",
 		[PlotKey.UpperBoundary]:
-			typeof first_measure?.boundary?.upper_limit === "number",
+			typeof first_report_measure?.boundary?.upper_limit === "number",
 		[CLEAR_PARAM]: true,
 	};
 };
