@@ -110,6 +110,20 @@ mod test_magic {
         );
     }
 
+    /// An out of bounds parameter set fails magic outright: the json node rejects
+    /// it and no other adapter claims it either.
+    #[test]
+    fn adapter_magic_json_out_of_bounds_parameters_fails() {
+        assert!(
+            opt_convert_file_path::<AdapterMagic>(
+                "./tool_output/json/report_v1_bad_parameters.json",
+                Settings::default()
+            )
+            .is_none(),
+            "expected an out of bounds parameter set to fail magic"
+        );
+    }
+
     #[test]
     fn adapter_magic_c_sharp_dot_net() {
         let results = convert_file_path::<AdapterCSharp>("./tool_output/c_sharp/dot_net/two.json");
