@@ -106,7 +106,6 @@ mod tests {
             "p99",
             "p50",
             LEN_64_STR,
-            LEN_65_STR,
         ] {
             assert_eq!(true, is_valid_metric_name(value), "{value}");
         }
@@ -114,7 +113,9 @@ mod tests {
 
     #[test]
     fn is_valid_metric_name_false() {
-        assert_eq!(false, is_valid_metric_name(LEN_0_STR));
+        for value in [LEN_0_STR, LEN_65_STR] {
+            assert_eq!(false, is_valid_metric_name(value), "{value}");
+        }
     }
 
     #[test]
