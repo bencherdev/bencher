@@ -1,17 +1,18 @@
-use std::{collections::HashMap, str::FromStr as _};
+use std::{
+    collections::{BTreeMap, HashMap},
+    str::FromStr as _,
+};
 
-use bencher_json::{JsonNewMetric, MeasureNameId};
-use serde::{Deserialize, Serialize};
+use bencher_json::{JsonNewMetric, MeasureNameId, MetricName};
+use ordered_float::OrderedFloat;
 
-use super::{CombinedKind, OrdKind};
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+/// Every measure a benchmark reported at one grid point.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AdapterMetrics {
-    #[serde(flatten)]
     pub inner: MetricsMap,
 }
 
-pub type MetricsMap = HashMap<MeasureNameId, JsonNewMetric>;
+pub type MetricsMap = HashMap<MeasureNameId, AdapterMetric>;
 
 impl From<MetricsMap> for AdapterMetrics {
     fn from(inner: MetricsMap) -> Self {
@@ -20,40 +21,108 @@ impl From<MetricsMap> for AdapterMetrics {
 }
 
 impl AdapterMetrics {
-    pub(crate) fn combined(self, mut other: Self, kind: CombinedKind) -> Self {
-        let mut metric_map = HashMap::new();
-        for (measure, metric) in self.inner {
-            let other_metric = other.inner.remove(&measure);
-            let combined_metric = if let Some(other_metric) = other_metric {
-                match kind {
-                    CombinedKind::Ord(ord_kind) => match ord_kind {
-                        OrdKind::Min => metric.min(other_metric),
-                        OrdKind::Max => metric.max(other_metric),
-                    },
-                    CombinedKind::Add => metric + other_metric,
-                }
-            } else {
-                metric
-            };
-            metric_map.insert(measure, combined_metric);
-        }
-        metric_map.extend(other.inner);
-        metric_map.into()
-    }
-
-    pub fn get(&self, key: &str) -> Option<&JsonNewMetric> {
-        self.inner.get(&MeasureNameId::from_str(key).ok()?)
+    /// The metric triple a measure's conventional names spell out,
+    /// or `None` if the measure never named a point estimate.
+    pub fn get(&self, key: &str) -> Option<JsonNewMetric> {
+        self.inner
+            .get(&MeasureNameId::from_str(key).ok()?)?
+            .triple()
     }
 }
 
-impl std::ops::Div<usize> for AdapterMetrics {
-    type Output = Self;
+/// One measure's named scalars.
+///
+/// Every name is equal here. `value`, `lower_value`, and `upper_value` are
+/// conventional, not privileged: they are the names a BMF v0 metric triple maps
+/// onto, and the names the console knows well enough to draw a band. A BMF v1
+/// measure may carry only `p99` and never mention `value` at all.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct AdapterMetric {
+    pub inner: NamedMap,
+}
 
-    fn div(self, rhs: usize) -> Self::Output {
-        let mut metric_map = HashMap::new();
-        for (measure, metric) in self.inner {
-            metric_map.insert(measure, metric / rhs);
+/// Named scalars in lexicographic order, which is the order the cap keeps.
+pub type NamedMap = BTreeMap<MetricName, OrderedFloat<f64>>;
+
+/// The most named values one measure may carry, anchored to the number of
+/// statistics k6's `summary_trend_stats` reports by default.
+///
+/// Deliberately low: raising the cap is a release note and lowering it is a
+/// breaking change, so the asymmetry runs one way.
+pub const MAX_METRIC_NAMES: usize = 8;
+
+impl From<NamedMap> for AdapterMetric {
+    fn from(inner: NamedMap) -> Self {
+        Self { inner }
+    }
+}
+
+/// A metric triple becomes exactly the three conventional names,
+/// and a metric without bounds becomes exactly one.
+impl From<JsonNewMetric> for AdapterMetric {
+    fn from(metric: JsonNewMetric) -> Self {
+        let JsonNewMetric {
+            value,
+            lower_value,
+            upper_value,
+        } = metric;
+        let mut inner = NamedMap::new();
+        inner.insert(MetricName::value(), value);
+        if let Some(lower_value) = lower_value {
+            inner.insert(MetricName::lower_value(), lower_value);
         }
-        metric_map.into()
+        if let Some(upper_value) = upper_value {
+            inner.insert(MetricName::upper_value(), upper_value);
+        }
+        Self { inner }
+    }
+}
+
+impl AdapterMetric {
+    /// The metric triple these names spell out,
+    /// or `None` if there is no `value` name to be the point estimate.
+    pub fn triple(&self) -> Option<JsonNewMetric> {
+        Some(JsonNewMetric {
+            value: *self.inner.get(&MetricName::value())?,
+            lower_value: self.inner.get(&MetricName::lower_value()).copied(),
+            upper_value: self.inner.get(&MetricName::upper_value()).copied(),
+        })
+    }
+
+    /// Drop named values beyond [`MAX_METRIC_NAMES`], returning how many were dropped.
+    ///
+    /// Survival is deterministic because hash map iteration order is not an
+    /// acceptable tiebreak: the three conventional names are never dropped, and
+    /// the remainder is kept in lexicographic order up to the cap.
+    pub(crate) fn truncate(&mut self) -> usize {
+        if self.inner.len() <= MAX_METRIC_NAMES {
+            return 0;
+        }
+
+        let conventional = [
+            MetricName::value(),
+            MetricName::lower_value(),
+            MetricName::upper_value(),
+        ];
+        let mut budget = MAX_METRIC_NAMES.saturating_sub(
+            conventional
+                .iter()
+                .filter(|name| self.inner.contains_key(name))
+                .count(),
+        );
+
+        let mut dropped = 0;
+        self.inner.retain(|name, _| {
+            if conventional.contains(name) {
+                true
+            } else if budget > 0 {
+                budget -= 1;
+                true
+            } else {
+                dropped += 1;
+                false
+            }
+        });
+        dropped
     }
 }

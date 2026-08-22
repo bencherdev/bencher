@@ -431,6 +431,8 @@ const AdapterCard = (props: Props) => {
 					case Adapter.Magic:
 						return "-magic-default";
 					case Adapter.Json:
+					case Adapter.JsonV0:
+					case Adapter.JsonV1:
 						return "-json";
 					case Adapter.CSharpDotNet:
 						return "%EF%B8%8F⃣-c-dotnet";
@@ -482,6 +484,8 @@ const AdapterCard = (props: Props) => {
 						case Adapter.Magic:
 							return "Magic";
 						case Adapter.Json:
+						case Adapter.JsonV0:
+						case Adapter.JsonV1:
 							return "JSON";
 						case Adapter.CSharpDotNet:
 							return "C# BenchmarkDotNet";
