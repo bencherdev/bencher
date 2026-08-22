@@ -12,7 +12,9 @@ client = ["bencher_context/client", "bencher_valid/client"]
 table = ["dep:tabled"]
 server = ["bencher_context/server", "bencher_valid/server"]
 schema = ["dep:schemars", "bencher_context/schema", "ordered-float/schemars"]
-db = ["dep:diesel", "dep:serde_yaml", "bencher_valid/db"]
+# `diesel/sqlite`: the parameter set encoder is SQLite's JSONB format,
+# so its `ToSql` and `FromSql` are written against the SQLite backend.
+db = ["dep:diesel", "diesel/sqlite", "dep:serde_yaml", "bencher_valid/db"]
 plus = ["dep:camino", "bencher_valid/plus"]
 test-clock = ["bencher_valid/test-clock"]
 
@@ -24,6 +26,7 @@ derive_more.workspace = true
 diesel = { workspace = true, optional = true }
 ordered-float = { workspace = true, features = ["serde"] }
 percent-encoding.workspace = true
+ryu-js.workspace = true
 schemars = { workspace = true, optional = true, features = ["chrono", "url"] }
 serde.workspace = true
 serde_json.workspace = true

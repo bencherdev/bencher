@@ -10,11 +10,14 @@
 
 use bencher_api_tests::{
     TestServer,
-    helpers::{base_timestamp, create_test_report, get_project_id},
+    helpers::{
+        base_timestamp, create_empty_parameter, create_test_report, get_empty_parameter,
+        get_project_id,
+    },
 };
 use bencher_json::{
-    BenchmarkUuid, BoundaryUuid, JsonReport, JsonReports, MeasureUuid, MetricUuid, ModelUuid,
-    ReportBenchmarkUuid, ThresholdUuid,
+    BenchmarkUuid, BoundaryUuid, JsonParameters, JsonReport, JsonReports, MeasureUuid, MetricUuid,
+    ModelUuid, ReportBenchmarkUuid, ThresholdUuid,
 };
 use bencher_schema::{
     context::DbConnection,
@@ -52,6 +55,7 @@ fn seed_result_infra(
         .select(schema::benchmark::id)
         .first(&mut *conn)
         .expect("Failed to get benchmark ID");
+    create_empty_parameter(conn, benchmark_id);
 
     let measure_uuid = MeasureUuid::new();
     diesel::insert_into(schema::measure::table)
@@ -137,6 +141,7 @@ fn seed_report_results(server: &TestServer, project_id: i32, report_id: i32, cou
 
     let (benchmark_id, measure_id, threshold_id, model_id) =
         seed_result_infra(&mut conn, project_id, branch_id, testbed_id);
+    let parameter_id = get_empty_parameter(&mut conn, benchmark_id);
 
     let report_benchmarks = (0..count)
         .map(|iteration| {
@@ -145,6 +150,7 @@ fn seed_report_results(server: &TestServer, project_id: i32, report_id: i32, cou
                 schema::report_benchmark::report_id.eq(report_id),
                 schema::report_benchmark::iteration.eq(iteration),
                 schema::report_benchmark::benchmark_id.eq(benchmark_id),
+                schema::report_benchmark::parameter_id.eq(parameter_id),
             )
         })
         .collect::<Vec<_>>();
@@ -588,4 +594,66 @@ async fn reports_delete_not_found() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// POST /v0/projects/{project}/reports - ingest creates each benchmark with its
+// empty parameter set and rides every result on it
+#[tokio::test]
+async fn reports_ingest_empty_parameter_sets() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "reportparameter@example.com")
+        .await;
+    let org = server.create_org(&user, "Report Parameter Org").await;
+    let project = server
+        .create_project(&user, &org, "Report Parameter Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let report = post_report(&server, &user.token, project_slug).await;
+    assert_eq!(
+        report.results.as_ref().map(Vec::len),
+        Some(2),
+        "two iterations were ingested"
+    );
+
+    let mut conn = server.db_conn();
+    let benchmark_ids: Vec<i32> = schema::benchmark::table
+        .select(schema::benchmark::id)
+        .load(&mut conn)
+        .expect("Failed to load benchmarks");
+    assert_eq!(benchmark_ids.len(), 2, "two benchmarks were ingested");
+
+    for benchmark_id in benchmark_ids {
+        let parameters: Vec<JsonParameters> = schema::parameter::table
+            .filter(schema::parameter::benchmark_id.eq(benchmark_id))
+            .select(schema::parameter::parameters)
+            .load(&mut conn)
+            .expect("Failed to load parameters");
+        assert_eq!(
+            parameters,
+            vec![JsonParameters::default()],
+            "benchmark {benchmark_id} must have exactly one empty parameter set"
+        );
+    }
+
+    let report_benchmarks: Vec<(i32, i32)> = schema::report_benchmark::table
+        .select((
+            schema::report_benchmark::benchmark_id,
+            schema::report_benchmark::parameter_id,
+        ))
+        .load(&mut conn)
+        .expect("Failed to load report benchmarks");
+    assert_eq!(
+        report_benchmarks.len(),
+        4,
+        "two iterations of two benchmarks"
+    );
+    for (benchmark_id, parameter_id) in report_benchmarks {
+        assert_eq!(
+            parameter_id,
+            get_empty_parameter(&mut conn, benchmark_id),
+            "every report benchmark rides its own benchmark's empty parameter set"
+        );
+    }
 }

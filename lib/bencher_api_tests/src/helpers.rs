@@ -3,10 +3,10 @@
 //! These helpers are used by both `api_projects` and `api_runners` integration tests.
 
 use bencher_json::{
-    BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, ReportUuid, ResourceName, TestbedUuid,
-    TokenUuid, VersionUuid,
+    BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, JsonParameters, Jwt, ParameterUuid,
+    ReportUuid, ResourceName, TestbedUuid, TokenUuid, VersionUuid,
 };
-use bencher_schema::{model::user::UserId, schema};
+use bencher_schema::{context::DbConnection, model::user::UserId, schema};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
 use crate::{TestServer, seed::TestUser};
@@ -27,6 +27,44 @@ pub fn get_project_id(server: &TestServer, project_slug: &str) -> i32 {
         .select(schema::project::id)
         .first(&mut conn)
         .expect("Failed to get project ID")
+}
+
+/// Create the empty parameter set that every benchmark is born with.
+///
+/// Benchmarks inserted directly into the database bypass `QueryBenchmark::create`,
+/// so they need the birth invariant applied by hand.
+#[expect(clippy::expect_used, reason = "test helper inserting a parameter set")]
+pub fn create_empty_parameter(conn: &mut DbConnection, benchmark_id: i32) -> i32 {
+    let now = base_timestamp();
+
+    let parameter_uuid = ParameterUuid::new();
+    diesel::insert_into(schema::parameter::table)
+        .values((
+            schema::parameter::uuid.eq(&parameter_uuid),
+            schema::parameter::benchmark_id.eq(benchmark_id),
+            schema::parameter::parameters.eq(JsonParameters::default()),
+            schema::parameter::created.eq(&now),
+            schema::parameter::modified.eq(&now),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert parameter");
+
+    schema::parameter::table
+        .filter(schema::parameter::uuid.eq(&parameter_uuid))
+        .select(schema::parameter::id)
+        .first(&mut *conn)
+        .expect("Failed to get parameter ID")
+}
+
+/// Get a benchmark's empty parameter set.
+#[expect(clippy::expect_used, reason = "test helper querying a parameter set")]
+pub fn get_empty_parameter(conn: &mut DbConnection, benchmark_id: i32) -> i32 {
+    schema::parameter::table
+        .filter(schema::parameter::benchmark_id.eq(benchmark_id))
+        .filter(schema::parameter::parameters.eq(JsonParameters::default()))
+        .select(schema::parameter::id)
+        .first(&mut *conn)
+        .expect("Failed to get empty parameter set")
 }
 
 /// Create minimal test infrastructure (testbed, version, branch, head, report).
