@@ -91,7 +91,10 @@ pub(crate) mod test_json_v1 {
     use super::AdapterJsonV1;
     use crate::{
         Adaptable as _, Settings,
-        adapters::test_util::{convert_file_path, opt_convert_file_path},
+        adapters::{
+            json::v0::AdapterJsonV0,
+            test_util::{convert_file_path, opt_convert_file_path},
+        },
         results::{
             adapter_metrics::{AdapterMetrics, MAX_METRIC_NAMES},
             adapter_results::{AdapterResults, BmfVersion},
@@ -237,16 +240,15 @@ pub(crate) mod test_json_v1 {
     #[test]
     fn adapter_json_v1_canonical_parameters() {
         let results = convert_json_v1("v1_canonical");
+        validate_adapter_json_v1_canonical(&results);
+    }
 
+    pub fn validate_adapter_json_v1_canonical(results: &AdapterResults) {
         let benchmark = "tests::canonical".parse::<BenchmarkNameId>().unwrap();
         let entries = &results.inner[&benchmark];
         assert_eq!(entries.len(), 1);
 
-        let metrics = grid_point(
-            &results,
-            "tests::canonical",
-            r#"{"op":"read","size_mb":16}"#,
-        );
+        let metrics = grid_point(results, "tests::canonical", r#"{"op":"read","size_mb":16}"#);
         // Every entry's names survive and the last entry wins the one they share.
         assert_eq!(
             names(metrics, "latency"),
@@ -410,6 +412,48 @@ pub(crate) mod test_json_v1 {
         let results = AdapterJsonV1::parse("{}", Settings::default()).unwrap();
         assert!(results.is_empty());
         assert_eq!(results.version, BmfVersion::V1);
+    }
+
+    /// A benchmark that reports zero entries is a well formed v1 benchmark that
+    /// measured nothing. It is accepted, it is not an error, and it yields no
+    /// grid point and therefore no metric.
+    #[test]
+    fn adapter_json_v1_empty_entries() {
+        let results = parse_json_v1(r#"{"tests::none": []}"#);
+
+        let benchmark = "tests::none".parse::<BenchmarkNameId>().unwrap();
+        assert!(results.inner[&benchmark].is_empty());
+        assert_eq!(results.dropped_names, 0);
+    }
+
+    /// An entry that names no measure is a grid point that measured nothing. It is
+    /// accepted, it is not an error, and it yields no metric. This is exactly the
+    /// v0 shape `{"bench": {}}`, which has always parsed to one grid point on the
+    /// empty parameter set with no measures under it.
+    #[test]
+    fn adapter_json_v1_empty_measures() {
+        let results = parse_json_v1(r#"{"tests::none": [{"measures": {}}]}"#);
+
+        let metrics = grid_point(&results, "tests::none", "{}");
+        assert!(metrics.inner.is_empty());
+        assert_eq!(results.dropped_names, 0);
+
+        // The v0 analog, byte for byte the same grid point.
+        let v0 = AdapterJsonV0::parse(r#"{"tests::none": {}}"#, Settings::default())
+            .expect("Failed to parse the v0 payload");
+        assert_eq!(results.inner, v0.inner);
+    }
+
+    /// An entry that names a parameter set but no measure still resolves that
+    /// parameter set: the grid point exists, it just measured nothing.
+    #[test]
+    fn adapter_json_v1_empty_measures_keeps_the_parameter_set() {
+        let results =
+            parse_json_v1(r#"{"tests::none": [{"parameters": {"size_mb": 16}, "measures": {}}]}"#);
+
+        let metrics = grid_point(&results, "tests::none", r#"{"size_mb":16}"#);
+        assert!(metrics.inner.is_empty());
+        assert_eq!(results.dropped_names, 0);
     }
 
     /// Parameter values are JSON scalars only.

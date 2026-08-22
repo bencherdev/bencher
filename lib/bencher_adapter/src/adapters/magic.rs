@@ -89,6 +89,13 @@ mod test_magic {
         test_json_v1::validate_adapter_json_v1_cap(&results);
     }
 
+    #[test]
+    fn adapter_magic_json_v1_canonical() {
+        let results =
+            convert_file_path::<AdapterMagic>("./tool_output/json/report_v1_canonical.json");
+        test_json_v1::validate_adapter_json_v1_canonical(&results);
+    }
+
     /// A payload that mixes the two BMF shapes fails the json node,
     /// and no other adapter claims it either.
     #[test]
