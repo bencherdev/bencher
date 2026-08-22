@@ -54,7 +54,7 @@ jobs:
     if: ${{ inputs.build-action && !inputs.deploy-only }}
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: Install Dependencies
@@ -73,7 +73,7 @@ jobs:
     env:
       WASM_PACK_BUILD: "wasm-pack build --target web --no-default-features --features wasm,plus"
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-rust
@@ -105,7 +105,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build_wasm
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-rust
@@ -122,7 +122,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build_wasm
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: Download `bencher_valid` Artifact
@@ -142,7 +142,7 @@ jobs:
     needs: build_wasm
     if: ${{ !startsWith(github.ref, 'refs/tags/') && !inputs.deploy-only }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: Download `bencher_valid` Artifact
@@ -163,7 +163,7 @@ jobs:
     environment: Cloudflare
     if: ${{ inputs.build-docker }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: Setup Docker buildx
