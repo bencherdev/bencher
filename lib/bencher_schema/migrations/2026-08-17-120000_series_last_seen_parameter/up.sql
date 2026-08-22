@@ -25,10 +25,14 @@ CREATE TABLE up_series_last_seen (
     FOREIGN KEY (measure_id) REFERENCES measure (id) ON DELETE CASCADE
 );
 -- Every existing row is a series over flat benchmarks, so it maps to its
--- benchmark's empty parameter set. The join is inner because every benchmark has
--- one: it is born with it, and the parameter migration backfilled every benchmark
--- that predates the birth invariant. `last_seen` carries over untouched, so no
+-- benchmark's empty parameter set. `last_seen` carries over untouched, so no
 -- series is resurrected and none is lost.
+--
+-- The join is a `LEFT JOIN` so that a `series_last_seen` row whose benchmark has
+-- no empty parameter set trips the `NOT NULL` on `parameter_id` and fails the
+-- migration. Every benchmark is born with one, and the parameter migration
+-- backfilled every benchmark that predates that invariant, so this cannot fire on
+-- valid data; an `INNER JOIN` would drop such a row silently instead.
 INSERT INTO up_series_last_seen (
         organization_id,
         project_id,
@@ -46,7 +50,7 @@ SELECT s.organization_id,
     s.measure_id,
     s.last_seen
 FROM series_last_seen s
-    INNER JOIN parameter p ON (
+    LEFT JOIN parameter p ON (
         p.benchmark_id = s.benchmark_id
         AND p.parameters = jsonb('{}')
     );
