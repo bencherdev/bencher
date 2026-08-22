@@ -104,9 +104,7 @@ export interface AddButtonConfig {
 	text: string;
 }
 
-const AddButton = (props: {
-	config: AddButtonConfig;
-}) => {
+const AddButton = (props: { config: AddButtonConfig }) => {
 	return (
 		<>
 			<div class="content has-text-centered">{props.config?.prefix}</div>

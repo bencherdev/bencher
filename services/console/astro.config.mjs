@@ -1,15 +1,15 @@
 // import node from "@astrojs/node";
 // import cloudflare from "@astrojs/cloudflare";
+import { satteri, satteriHeadingIdsPlugin } from "@astrojs/markdown-satteri";
 import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
 import solidJs from "@astrojs/solid-js";
 import sentry from "@sentry/astro";
 import expressiveCode from "astro-expressive-code";
 import { defineConfig, envField } from "astro/config";
-import { fromHtmlIsomorphic } from "hast-util-from-html-isomorphic";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import rehypeSlug from "rehype-slug";
 import wasmPack from "vite-plugin-wasm-pack";
+
+import { headingAutolink } from "./markdown.js";
 
 const CLIENT = "client";
 const SERVER = "server";
@@ -26,6 +26,10 @@ export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
 	site: "https://bencher.dev",
 	output: "static",
+	// Nothing reads or writes a session, so skip the session runtime entirely.
+	// Adapters wire up a default session driver unless this is turned off.
+	// https://docs.astro.build/en/guides/sessions/
+	session: false,
 	// This is needed for WASM
 	// https://docs.astro.build/en/reference/configuration-reference/#buildassets
 	// https://github.com/withastro/astro/issues/5745
@@ -211,26 +215,14 @@ export default defineConfig({
 		assetsInclude: ["**/*.sh", "**/*.ps1"],
 		plugins: [wasmPack("../../lib/bencher_valid")],
 	},
+	// https://docs.astro.build/en/guides/markdown-content/
 	markdown: {
-		rehypePlugins: [
-			rehypeSlug,
-			[
-				rehypeAutolinkHeadings,
-				{
-					behavior: "append",
-					properties: {
-						style: "padding-left: 0.3em; color: #fdb07e;",
-						"aria-label": "Link to section",
-						"data-pagefind-ignore": "",
-					},
-					content: fromHtmlIsomorphic(
-						'<small><i class="fas fa-link" /></small>',
-						{
-							fragment: true,
-						},
-					),
-				},
-			],
-		],
+		processor: satteri({
+			// Passed as factories, not instances: Sätteri calls each one per document,
+			// so the heading slugger starts fresh instead of carrying its
+			// deduplication counter across every page on the site.
+			// Heading ids must be assigned before the autolink can point at them.
+			hastPlugins: [satteriHeadingIdsPlugin, headingAutolink],
+		}),
 	},
 });

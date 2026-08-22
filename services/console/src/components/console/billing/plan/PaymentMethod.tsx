@@ -16,9 +16,7 @@ const PaymentMethod = (props: { usage: Resource<null | JsonUsage> }) => {
 	);
 };
 
-const CreditCard = (props: {
-	brand: undefined | CardBrand;
-}) => {
+const CreditCard = (props: { brand: undefined | CardBrand }) => {
 	switch (props.brand) {
 		case CardBrand.Amex: {
 			return (
@@ -66,10 +64,7 @@ const CreditCard = (props: {
 	}
 };
 
-const CreditCardBrand = (props: {
-	brand: string;
-	name?: string;
-}) => {
+const CreditCardBrand = (props: { brand: string; name?: string }) => {
 	return (
 		<h4 class="subtitle is-4">
 			<span class="icon-text">

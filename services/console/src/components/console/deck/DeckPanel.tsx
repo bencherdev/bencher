@@ -49,9 +49,7 @@ const DeckPanel = (props: Props) => {
 		};
 	});
 
-	const getData = async (fetcher: {
-		token: string;
-	}) => {
+	const getData = async (fetcher: { token: string }) => {
 		const EMPTY_OBJECT = {};
 		// Fire in parallel with WASM init; the server validates the token regardless.
 		if (jwtRequiredInvalid(bencher_valid(), fetcher.token)) {

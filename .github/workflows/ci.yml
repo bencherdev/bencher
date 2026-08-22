@@ -256,7 +256,6 @@ jobs:
     with:
       mold-version: "2.34.1"
       go-version: "1.25"
-      wrangler-version: "4.122.0"
       deploy-dev: ${{ github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))  }}
       deploy-test: ${{ github.ref == 'refs/heads/devel'  ||  github.ref == 'refs/heads/cloud' }}
       deploy-prod: ${{ github.ref == 'refs/heads/cloud' }}

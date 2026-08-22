@@ -186,8 +186,8 @@ const testSelectConfig = (modelTest: ModelTest) => {
 						href={`https://bencher.dev/docs/explanation/thresholds/#${testFragment(
 							modelTest,
 						)}`}
-						// biome-ignore lint/a11y/noBlankTarget: docs link
 						target="_blank"
+						rel="noreferrer"
 						title="Open documentation in new tab"
 					>
 						<span class="icon">
