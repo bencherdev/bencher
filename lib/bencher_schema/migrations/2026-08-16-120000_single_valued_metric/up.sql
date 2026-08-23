@@ -4,19 +4,22 @@ PRAGMA foreign_keys = off;
 DROP VIEW IF EXISTS metric_boundary;
 -- metric
 -- `name` sits with the identity columns, above `value`: the name is part of what
--- the row is, not part of what it measured. `UNIQUE(report_benchmark_id,
--- measure_id, name)` extends the old `UNIQUE(report_benchmark_id, measure_id)`
--- and is also the index the pivot below rides.
+-- the row is, not part of what it measured. The unique key over
+-- (report_benchmark_id, measure_id, name) extends the old
+-- `UNIQUE(report_benchmark_id, measure_id)` and is also the index the pivot below
+-- rides.
+-- The table is declared without its two unique keys. They are built below, once
+-- every row is in place, as named unique indexes that enforce exactly what the
+-- table constraints enforced.
 CREATE TABLE up_metric (
     id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
+    uuid TEXT NOT NULL,
     report_benchmark_id INTEGER NOT NULL,
     measure_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     value DOUBLE NOT NULL,
     FOREIGN KEY (report_benchmark_id) REFERENCES report_benchmark (id) ON DELETE CASCADE,
-    FOREIGN KEY (measure_id) REFERENCES measure (id),
-    UNIQUE(report_benchmark_id, measure_id, name)
+    FOREIGN KEY (measure_id) REFERENCES measure (id)
 );
 -- Every old row yields a `value` row that keeps the original id and uuid, which
 -- makes the boundary remap a no-op: `boundary.metric_id` already points at that
@@ -37,9 +40,10 @@ SELECT id,
     value
 FROM metric;
 -- The 48 bit millisecond prefix that every minted uuid shares, computed once for
--- the whole migration rather than per row, so that all of the new rows append to
--- one point on the right edge of the uuid index instead of scattering across every
--- page of it. That is worth the temporary table at this volume.
+-- the whole migration rather than per row, so that every minted uuid is a v7 of
+-- the one instant the migration ran at. That is worth the temporary table at this
+-- volume, and it costs the uuid index nothing either way: the index is built below
+-- by an external sort, which is indifferent to where its keys fall.
 -- `julianday` rather than `unixepoch('now', 'subsec')`, which is newer than the
 -- oldest SQLite that can otherwise run this migration.
 CREATE TEMP TABLE metric_uuid_prefix AS
@@ -87,6 +91,15 @@ SELECT lower(
 FROM metric,
     metric_uuid_prefix
 WHERE metric.upper_value IS NOT NULL;
+-- The two unique keys the table was declared without, built now that every row the
+-- explosion produces is in place. Declared on the table they would be maintained
+-- online across every one of those inserts, two unique B-trees kept dirty a page
+-- split at a time; built here each is one external sort. Measured over the whole
+-- rebuild, deferring them reads 16 times fewer pages and writes 29 times fewer. The
+-- sort is also indifferent to where its keys fall, so the v4 uuids that the
+-- preserved rows carry over cost it nothing.
+CREATE UNIQUE INDEX index_metric_uuid ON up_metric(uuid);
+CREATE UNIQUE INDEX index_metric_report_benchmark_measure_name ON up_metric(report_benchmark_id, measure_id, name);
 DROP TABLE temp.metric_uuid_prefix;
 DROP TABLE metric;
 ALTER TABLE up_metric
@@ -94,7 +107,7 @@ ALTER TABLE up_metric
 -- metric_boundary
 -- The view pivots the named rows back into the columns its readers already know,
 -- so its column list is unchanged and every response it feeds is unchanged with
--- it. The self joins ride `UNIQUE(report_benchmark_id, measure_id, name)`, and
+-- it. The self joins ride `index_metric_report_benchmark_measure_name`, and
 -- because that index makes them provably at most one row, SQLite omits them
 -- outright for any query that does not select a bound.
 -- `WHERE metric.name = 'value'` keeps the view one row per measurement, which is

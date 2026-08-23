@@ -277,9 +277,8 @@ async fn migration_explodes_the_metric_triple_into_named_rows() {
     }
 
     // The minted uuids are v7 shaped: a millisecond prefix taken once for the whole
-    // migration, random thereafter. At production volume that is what keeps the new
-    // rows appending to the right edge of the uuid index instead of scattering across
-    // every page of it.
+    // migration, random thereafter, so every row minted by one run of the migration
+    // carries the instant that run happened at.
     let minted: Vec<String> = schema::metric::table
         .filter(schema::metric::name.ne(MetricName::value()))
         .select(schema::metric::uuid)
@@ -362,8 +361,8 @@ async fn migration_down_and_up_round_trips_the_metric_triple() {
     assert_eq!(
         sql_names(&mut conn, METRIC_INDEXES_SQL),
         vec![
-            "sqlite_autoindex_metric_1".to_owned(),
-            "sqlite_autoindex_metric_2".to_owned()
+            "index_metric_report_benchmark_measure_name".to_owned(),
+            "index_metric_uuid".to_owned()
         ],
         "the metric table's unique indexes are back"
     );
@@ -714,7 +713,8 @@ const VIEW_COLUMNS: [&str; 14] = [
     "upper_limit",
 ];
 
-/// The indexes on `metric`. Both are implicit, minted by its unique constraints.
+/// The indexes on `metric`. Both are named, built by the migration once its rows
+/// are in place rather than declared as constraints on the table.
 const METRIC_INDEXES_SQL: &str =
     "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'metric' ORDER BY name";
 /// The rebuilt view's columns, in declaration order.
