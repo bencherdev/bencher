@@ -16,8 +16,9 @@ use bencher_json::{
 };
 use diesel::OptionalExtension as _;
 use diesel::{
-    AggregateExpressionMethods as _, ExpressionMethods as _, NullableExpressionMethods as _,
-    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    AggregateExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
+    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    query_builder::QueryFragment, query_dsl::LoadQuery, sqlite::Sqlite,
 };
 
 use dropshot::HttpError;
@@ -660,18 +661,29 @@ fn get_report_results(
     project: &QueryProject,
     report_id: ReportId,
 ) -> Result<JsonReportResults, HttpError> {
+    report_results_query(report_id)
+        .load::<ResultsQuery>(conn)
+        .map(|results| into_report_results_json(log, project, results))
+        .map_err(resource_not_found_err!(ReportBenchmark, project))
+}
+
+/// The results query for one report, one row per named scalar.
+fn report_results_query(
+    report_id: ReportId,
+) -> impl LoadQuery<'static, DbConnection, ResultsQuery> + QueryFragment<Sqlite> {
     schema::report_benchmark::table
     .filter(schema::report_benchmark::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
     .inner_join(schema::parameter::table)
-    .inner_join(schema::metric::table
-        .inner_join(schema::measure::table)
-        // There may or may not be a boundary for any given named value
-        .left_join(schema::boundary::table
-            .inner_join(schema::threshold::table)
-            .inner_join(schema::model::table)
-        )
-    )
+    .inner_join(schema::metric::table.inner_join(schema::measure::table))
+    // There may or may not be a boundary for any given named value.
+    // Keep these three joins flat with explicit `ON` clauses instead of nesting the
+    // threshold and the model inside the boundary join. SQLite cannot flatten a
+    // compound right operand of an outer join, so the nested form makes it scan the
+    // whole boundary table once per request, no matter how small the report is.
+    .left_join(schema::boundary::table.on(schema::boundary::metric_id.eq(schema::metric::id)))
+    .left_join(schema::threshold::table.on(schema::threshold::id.eq(schema::boundary::threshold_id)))
+    .left_join(schema::model::table.on(schema::model::id.eq(schema::boundary::model_id)))
     // It is important to order by the iteration first in order to make sure they are grouped together below.
     // The parameter set comes between the benchmark and the measure because a grid point is what a result is:
     // two parameter sets of one benchmark are two results, not one result with the measures interleaved.
@@ -726,9 +738,6 @@ fn get_report_results(
             ),
         ).nullable(),
     ))
-    .load::<ResultsQuery>(conn)
-    .map(|results| into_report_results_json(log, project, results))
-    .map_err(resource_not_found_err!(ReportBenchmark, project))
 }
 
 fn into_report_results_json(
@@ -1202,9 +1211,17 @@ mod tests {
         },
     };
 
-    use super::{QueryReport, ReportId, ReportMode, get_report_counts, report_counts};
+    use super::{
+        QueryReport, ReportId, ReportMode, ResultsQuery, Sqlite, get_report_counts, report_counts,
+        report_results_query,
+    };
     use crate::macros::sql::last_insert_rowid;
-    use crate::model::project::{ProjectId, testbed::TestbedId};
+    use crate::model::project::{
+        ProjectId,
+        measure::MeasureId,
+        testbed::TestbedId,
+        threshold::{ThresholdId, model::ModelId},
+    };
 
     fn test_logger() -> slog::Logger {
         slog::Logger::root(slog::Discard, slog::o!())
@@ -1952,5 +1969,176 @@ mod tests {
             .expect("Failed to read metric count after overflow attempt");
         // Should be clamped at i32::MAX, not wrapped/truncated
         assert_eq!(count, i32::MAX);
+    }
+
+    /// The results query joins each named value to its boundary, and that boundary to
+    /// its own threshold and model, as a flat chain of left joins.
+    ///
+    /// Nesting the threshold and the model inside the boundary join renders the group in
+    /// parentheses, and `SQLite` cannot flatten a compound right operand of an outer join:
+    /// it materializes the whole subjoin, scanning the entire boundary table once per
+    /// request, however small the report is. Pin the rendered shape so that the nesting
+    /// cannot come back unnoticed.
+    #[test]
+    fn report_results_query_joins_the_boundary_flat() {
+        let sql = diesel::debug_query::<Sqlite, _>(&report_results_query(ReportId::default()))
+            .to_string();
+
+        assert!(
+            sql.contains("LEFT OUTER JOIN `boundary` ON (`boundary`.`metric_id` = `metric`.`id`)"),
+            "{sql}"
+        );
+        assert!(
+            sql.contains(
+                "LEFT OUTER JOIN `threshold` ON (`threshold`.`id` = `boundary`.`threshold_id`)"
+            ),
+            "{sql}"
+        );
+        assert!(
+            sql.contains("LEFT OUTER JOIN `model` ON (`model`.`id` = `boundary`.`model_id`)"),
+            "{sql}"
+        );
+        assert!(!sql.contains("LEFT OUTER JOIN (("), "{sql}");
+    }
+
+    /// Every named value carries the boundary that gated it, with that boundary's own
+    /// threshold and model, and a named value without a boundary carries nothing.
+    ///
+    /// The thresholds are both created before either model, so a threshold identifier
+    /// never equals its own model identifier. Following the wrong foreign key therefore
+    /// returns the other row rather than no row at all.
+    #[test]
+    #[expect(clippy::too_many_lines, reason = "test data setup")]
+    fn report_results_gate_follows_the_boundary() {
+        let mut conn = setup_test_db();
+        let fixture = create_report_fixture(&mut conn);
+
+        // A branch, a testbed, and a measure carry one threshold at most, so two
+        // thresholds need two measures.
+        let measure_one = create_measure(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000060",
+            "Latency",
+            "latency",
+        );
+        let measure_two = create_measure(
+            &mut conn,
+            fixture.project_id,
+            "00000000-0000-0000-0000-000000000061",
+            "Throughput",
+            "throughput",
+        );
+
+        let threshold_one = create_threshold(
+            &mut conn,
+            fixture.project_id,
+            fixture.branch.branch_id,
+            fixture.testbed_id,
+            measure_one,
+            "00000000-0000-0000-0000-0000000000a0",
+        );
+        let threshold_two = create_threshold(
+            &mut conn,
+            fixture.project_id,
+            fixture.branch.branch_id,
+            fixture.testbed_id,
+            measure_two,
+            "00000000-0000-0000-0000-0000000000a1",
+        );
+        // Create the models in the opposite order, so that neither threshold shares an
+        // identifier with its own model.
+        let model_two = create_model(
+            &mut conn,
+            threshold_two,
+            "00000000-0000-0000-0000-0000000000b1",
+            0,
+        );
+        let model_one = create_model(
+            &mut conn,
+            threshold_one,
+            "00000000-0000-0000-0000-0000000000b0",
+            0,
+        );
+
+        let mut add_result =
+            |benchmark_index: u8, measure_id: MeasureId, gate: Option<(ThresholdId, ModelId)>| {
+                let benchmark_id = create_benchmark(
+                    &mut conn,
+                    fixture.project_id,
+                    &format!("00000000-0000-0000-0000-00000000007{benchmark_index}"),
+                    &format!("bench_{benchmark_index}"),
+                    &format!("bench-{benchmark_index}"),
+                );
+                let report_benchmark = create_report_benchmark(
+                    &mut conn,
+                    &format!("00000000-0000-0000-0000-00000000008{benchmark_index}"),
+                    fixture.report_id,
+                    0,
+                    benchmark_id,
+                );
+                let metric_id = create_metric(
+                    &mut conn,
+                    &format!("00000000-0000-0000-0000-00000000009{benchmark_index}"),
+                    report_benchmark,
+                    measure_id,
+                    1.0,
+                );
+                if let Some((threshold_id, model_id)) = gate {
+                    create_boundary(
+                        &mut conn,
+                        &format!("00000000-0000-0000-0000-0000000000c{benchmark_index}"),
+                        metric_id,
+                        threshold_id,
+                        model_id,
+                    );
+                }
+            };
+        add_result(0, measure_one, Some((threshold_one, model_one)));
+        add_result(1, measure_two, Some((threshold_two, model_two)));
+        add_result(2, measure_one, None);
+
+        let results: Vec<ResultsQuery> = report_results_query(fixture.report_id)
+            .load(&mut conn)
+            .expect("Failed to load report results");
+
+        let gates = results
+            .iter()
+            .map(|(_, benchmark, _, _, _, gate)| {
+                (
+                    benchmark.name.to_string(),
+                    gate.as_ref().map(|(threshold, model, boundary)| {
+                        (
+                            threshold.uuid.to_string(),
+                            model.uuid.to_string(),
+                            boundary.uuid.to_string(),
+                        )
+                    }),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            gates,
+            vec![
+                (
+                    "bench_0".to_owned(),
+                    Some((
+                        "00000000-0000-0000-0000-0000000000a0".to_owned(),
+                        "00000000-0000-0000-0000-0000000000b0".to_owned(),
+                        "00000000-0000-0000-0000-0000000000c0".to_owned(),
+                    ))
+                ),
+                (
+                    "bench_1".to_owned(),
+                    Some((
+                        "00000000-0000-0000-0000-0000000000a1".to_owned(),
+                        "00000000-0000-0000-0000-0000000000b1".to_owned(),
+                        "00000000-0000-0000-0000-0000000000c1".to_owned(),
+                    ))
+                ),
+                ("bench_2".to_owned(), None),
+            ]
+        );
     }
 }
