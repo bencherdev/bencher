@@ -43,7 +43,7 @@ pub use indexer::{IndexError, Indexer};
 pub use messenger::ServerStatsBody;
 pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
 #[cfg(feature = "plus")]
-pub use rate_limiting::{HeaderMap, RateLimiting, RateLimitingError};
+pub use rate_limiting::{HeaderMap, RateLimiting, RateLimitingError, RateLimitingPruneTask};
 pub use rbac::{Rbac, RbacError};
 #[cfg(feature = "plus")]
 pub use runner_update::RunnerUpdate;
@@ -61,6 +61,10 @@ pub struct ApiContext {
     pub database: Database,
     #[cfg(feature = "plus")]
     pub rate_limiting: Arc<RateLimiting>,
+    /// Join handle for the periodic rate limiting prune, so shutdown can wait for an in-flight save
+    /// to finish before writing the final snapshot.
+    #[cfg(feature = "plus")]
+    pub rate_limiting_prune: RateLimitingPruneTask,
     #[cfg(feature = "plus")]
     pub github_client: Option<GitHubClient>,
     #[cfg(feature = "plus")]

@@ -2,7 +2,7 @@ use std::{
     io::Write as _,
     net::IpAddr,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, Mutex},
     time::Duration,
 };
 
@@ -18,6 +18,7 @@ use bencher_otel::AuthorizationKind;
 use dropshot::HttpError;
 pub use http::HeaderMap;
 use slog::Logger;
+use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -468,12 +469,15 @@ impl RateLimiting {
     ///
     /// Without it, a long-lived server only ever compacts at a clean shutdown, so its limiter maps
     /// grow for as long as the process lives, and an abrupt termination loses all limiter state.
+    ///
+    /// The returned handle lets shutdown wait for an in-flight save to finish before it writes the
+    /// final snapshot, so the two never race over the same partial file.
     pub fn spawn_prune(
         rate_limiting: Arc<Self>,
         db_path: PathBuf,
         log: Logger,
         shutdown: CancellationToken,
-    ) {
+    ) -> JoinHandle<()> {
         tokio::spawn(async move {
             // The first tick of an `interval` fires immediately. Start a full period out instead:
             // the snapshot was just loaded, so there is nothing to compact or persist at startup.
@@ -487,14 +491,17 @@ impl RateLimiting {
             {
                 rate_limiting.prune_and_save(&db_path, &log);
             }
-        });
+        })
     }
 
     /// Compact the in-memory limiter maps and persist the resulting snapshot.
     ///
-    /// Returns the number of evicted entries. A failed save is logged and swallowed so that a
-    /// transient write error cannot kill the periodic task.
-    fn prune_and_save(&self, db_path: &Path, log: &Logger) -> usize {
+    /// Shared by the periodic task and the shutdown path, which are serialized against each other:
+    /// shutdown awaits the periodic task before it runs its own final pass.
+    ///
+    /// Returns the number of evicted entries. Both the count and a failed save are logged here, and
+    /// the failure is swallowed so that a transient write error cannot kill the periodic task.
+    pub fn prune_and_save(&self, db_path: &Path, log: &Logger) -> usize {
         let evicted = self.prune();
         if evicted > 0 {
             slog::info!(log, "Pruned {evicted} stale rate limiting entries");
@@ -528,6 +535,26 @@ pub enum RateLimitingPersistError {
     Deserialize(serde_json::Error),
 }
 
+/// Holds the periodic prune task's join handle so that shutdown can wait for it.
+///
+/// Shutdown only ever has a shared reference to the API context, hence the interior mutability.
+#[derive(Default)]
+pub struct RateLimitingPruneTask(Mutex<Option<JoinHandle<()>>>);
+
+impl RateLimitingPruneTask {
+    pub fn new(handle: JoinHandle<()>) -> Self {
+        Self(Mutex::new(Some(handle)))
+    }
+
+    /// Take the join handle, leaving the slot empty.
+    ///
+    /// Returns `None` if the handle was already taken or the lock was poisoned. Neither is worth
+    /// failing shutdown over: the task stops on its own once the shutdown signal is tripped.
+    pub fn take(&self) -> Option<JoinHandle<()>> {
+        self.0.lock().ok().and_then(|mut handle| handle.take())
+    }
+}
+
 #[cfg(feature = "otel")]
 fn interval_kind(interval: bencher_rate_limiter::Interval) -> bencher_otel::IntervalKind {
     match interval {
@@ -541,7 +568,9 @@ fn interval_kind(interval: bencher_rate_limiter::Interval) -> bencher_otel::Inte
 mod tests {
     use std::net::IpAddr;
 
-    use super::{Logger, RateLimiting, RateLimitingSnapshot};
+    use super::{
+        Arc, CancellationToken, Logger, RateLimiting, RateLimitingPruneTask, RateLimitingSnapshot,
+    };
 
     fn test_log() -> Logger {
         Logger::root(slog::Discard, slog::o!())
@@ -570,6 +599,33 @@ mod tests {
         let json = std::fs::read_to_string(&snapshot_path).unwrap();
         let snapshot: RateLimitingSnapshot = serde_json::from_str(&json).unwrap();
         assert!(snapshot.public.requests.minute.events.contains_key(&ip));
+    }
+
+    #[tokio::test]
+    async fn spawn_prune_stops_on_the_shutdown_signal() {
+        let dir = tempfile::tempdir().unwrap();
+        let shutdown = CancellationToken::new();
+        let handle = RateLimiting::spawn_prune(
+            Arc::new(RateLimiting::default()),
+            dir.path().join("bencher.db"),
+            test_log(),
+            shutdown.clone(),
+        );
+
+        // The first tick is a full period out, so the task is still waiting on it.
+        assert!(!handle.is_finished());
+
+        shutdown.cancel();
+        handle.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn prune_task_slot_yields_the_handle_once() {
+        let handle = tokio::spawn(async {});
+        let slot = RateLimitingPruneTask::new(handle);
+
+        slot.take().unwrap().await.unwrap();
+        assert!(slot.take().is_none());
     }
 
     #[test]

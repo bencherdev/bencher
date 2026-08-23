@@ -143,27 +143,36 @@ async fn run(
 }
 
 async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
+    // Everything shutdown needs out of the context, taken before `server.close()` consumes the
+    // server.
     #[cfg(feature = "plus")]
-    let save_rate_limiting = {
+    let (rate_limiting, database_path, prune_task) = {
         let ctx = server.app_private();
-        // Signal long-lived handlers (the runner WebSocket channel) to wind down so the in-flight
-        // connection drain in `server.close()` can complete instead of hanging until the platform
-        // escalates to SIGKILL (which would skip the rate limiting save below entirely).
+        // Signal long-lived handlers (the runner WebSocket channel) and the periodic rate limiting
+        // prune to wind down, so the in-flight connection drain in `server.close()` can complete
+        // instead of hanging until the platform escalates to SIGKILL (which would skip the rate
+        // limiting save below entirely).
         ctx.shutdown.cancel();
-        let rate_limiting = ctx.rate_limiting.clone();
-        let database_path = ctx.database.path.clone();
-        let evicted = rate_limiting.prune();
-        if evicted > 0 {
-            info!(log, "Pruned {evicted} stale rate limiting entries");
-        }
-        move || rate_limiting.save(&database_path, log)
+        (
+            ctx.rate_limiting.clone(),
+            ctx.database.path.clone(),
+            ctx.rate_limiting_prune.take(),
+        )
     };
     if let Err(e) = server.close().await {
         error!(log, "Server close error: {e}");
     }
     #[cfg(feature = "plus")]
-    if let Err(e) = save_rate_limiting() {
-        error!(log, "Failed to save rate limiting state: {e}");
+    {
+        // Let the periodic task finish any save already in flight, so it cannot race the final one
+        // over the shared partial file. It stops promptly: the shutdown signal above ends its wait
+        // for the next tick, and a save in progress is a few milliseconds of synchronous work.
+        if let Some(prune_task) = prune_task
+            && let Err(e) = prune_task.await
+        {
+            error!(log, "Rate limiting prune task failed to join: {e}");
+        }
+        rate_limiting.prune_and_save(&database_path, log);
     }
 }
 

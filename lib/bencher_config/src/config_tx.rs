@@ -338,12 +338,13 @@ async fn into_context(
     let shutdown = bencher_schema::context::CancellationToken::new();
 
     #[cfg(feature = "plus")]
-    RateLimiting::spawn_prune(
-        Arc::clone(&rate_limiting),
-        database.path.clone(),
-        log.clone(),
-        shutdown.clone(),
-    );
+    let rate_limiting_prune =
+        bencher_schema::context::RateLimitingPruneTask::new(RateLimiting::spawn_prune(
+            Arc::clone(&rate_limiting),
+            database.path.clone(),
+            log.clone(),
+            shutdown.clone(),
+        ));
 
     debug!(log, "Creating API context");
     Ok(ApiContext {
@@ -355,6 +356,8 @@ async fn into_context(
         database,
         #[cfg(feature = "plus")]
         rate_limiting,
+        #[cfg(feature = "plus")]
+        rate_limiting_prune,
         #[cfg(feature = "plus")]
         github_client,
         #[cfg(feature = "plus")]
