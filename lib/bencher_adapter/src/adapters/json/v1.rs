@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::{BenchmarkNameId, JsonParameters, MeasureNameId};
+use bencher_json::{BenchmarkNameId, MeasureNameId, ParameterSet};
 use serde::Deserialize;
 
 use crate::{
@@ -21,7 +21,7 @@ pub struct JsonV1Entry {
     /// Optional. An entry without it resolves to the benchmark's empty parameter set,
     /// which is exactly what an explicit `{}` resolves to.
     #[serde(default)]
-    pub parameters: JsonParameters,
+    pub parameters: ParameterSet,
     pub measures: HashMap<MeasureNameId, JsonV1Measure>,
 }
 
@@ -86,7 +86,7 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
 
 #[cfg(test)]
 pub(crate) mod test_json_v1 {
-    use bencher_json::{BenchmarkNameId, JsonParameters, MAX_PARAMETER_KEYS, MetricName};
+    use bencher_json::{BenchmarkNameId, MAX_PARAMETER_KEYS, MetricName, ParameterSet};
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -125,7 +125,7 @@ pub(crate) mod test_json_v1 {
             .parse::<BenchmarkNameId>()
             .expect("Failed to parse benchmark name");
         let parameters = parameters
-            .parse::<JsonParameters>()
+            .parse::<ParameterSet>()
             .expect("Failed to parse parameters");
         results
             .inner
@@ -217,7 +217,7 @@ pub(crate) mod test_json_v1 {
         let merged = "tests::merged".parse::<BenchmarkNameId>().unwrap();
         let entries = &results.inner[&merged];
         assert_eq!(entries.len(), 1);
-        let metrics = &entries[&JsonParameters::default()];
+        let metrics = &entries[&ParameterSet::default()];
         assert_eq!(named(metrics, "latency", "value"), Some(1.0.into()));
         assert_eq!(named(metrics, "throughput", "value"), Some(2.0.into()));
     }

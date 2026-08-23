@@ -3,7 +3,7 @@ use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
 use std::collections::HashSet;
 
 use bencher_json::{
-    DateTime, JsonBenchmark, JsonMeasure, JsonMetric, JsonNewReport, JsonReport,
+    DateTime, JsonBenchmark, JsonMeasure, JsonMetricTriple, JsonNewReport, JsonReport,
     JsonReportAlertsCounts, JsonReportCounts, JsonReportIterationCounts, MetricName, ReportUuid,
     project::{
         alert::AlertStatus,
@@ -909,7 +909,7 @@ impl PendingMeasure {
                 .find(|report_metric| report_metric.name == *name)
         };
         let value = named(&MetricName::value());
-        let metric = value.map(|value| JsonMetric {
+        let metric = value.map(|value| JsonMetricTriple {
             uuid: value.uuid,
             value: value.value,
             lower_value: named(&MetricName::lower_value()).map(|metric| metric.value),

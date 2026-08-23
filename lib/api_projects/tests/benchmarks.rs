@@ -7,7 +7,7 @@
 //! Integration tests for project benchmark endpoints.
 
 use bencher_api_tests::{TestServer, helpers::create_empty_parameter};
-use bencher_json::{JsonBenchmark, JsonBenchmarks, JsonParameters};
+use bencher_json::{JsonBenchmark, JsonBenchmarks, ParameterSet};
 use bencher_schema::schema;
 use diesel::{
     ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, connection::SimpleConnection as _,
@@ -149,14 +149,14 @@ fn assert_benchmark_birth_invariant(server: &TestServer) {
     );
 
     for benchmark_id in benchmark_ids {
-        let parameters: Vec<JsonParameters> = schema::parameter::table
+        let parameters: Vec<ParameterSet> = schema::parameter::table
             .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-            .select(schema::parameter::parameters)
+            .select(schema::parameter::set)
             .load(&mut conn)
             .expect("Failed to load parameters");
         assert_eq!(
             parameters,
-            vec![JsonParameters::default()],
+            vec![ParameterSet::default()],
             "benchmark {benchmark_id} must have exactly one empty parameter set"
         );
     }
@@ -196,12 +196,12 @@ async fn benchmarks_create_empty_parameter_set() {
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("Failed to get benchmark ID");
-    let parameters: Vec<JsonParameters> = schema::parameter::table
+    let parameters: Vec<ParameterSet> = schema::parameter::table
         .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-        .select(schema::parameter::parameters)
+        .select(schema::parameter::set)
         .load(&mut conn)
         .expect("Failed to load parameters");
-    assert_eq!(parameters, vec![JsonParameters::default()]);
+    assert_eq!(parameters, vec![ParameterSet::default()]);
 
     assert_benchmark_birth_invariant(&server);
 }
@@ -221,7 +221,7 @@ async fn benchmarks_create_rolls_back_with_parameter_set() {
 
     // Poison the empty parameter set that the next benchmark will be born with.
     // SQLite hands an `INTEGER PRIMARY KEY` the next rowid after the largest in
-    // use, so the row below collides on `UNIQUE(benchmark_id, parameters)` with
+    // use, so the row below collides on `UNIQUE(benchmark_id, "set")` with
     // the set created inside the benchmark's own transaction. Foreign keys are
     // off on this connection, so it may point at a benchmark that does not exist yet.
     let mut conn = server.db_conn();

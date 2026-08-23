@@ -18,7 +18,7 @@ use crate::{
 use super::alert::JsonPerfAlert;
 use super::boundary::JsonBoundary;
 use super::head::JsonVersion;
-use super::metric::JsonMetric;
+use super::metric::JsonMetricTriple;
 use super::report::Iteration;
 use super::threshold::JsonThresholdModel;
 
@@ -376,7 +376,7 @@ pub struct JsonPerfMetric {
     pub start_time: DateTime,
     pub end_time: DateTime,
     pub version: JsonVersion,
-    pub metric: JsonMetric,
+    pub metric: JsonMetricTriple,
     // The threshold model is necessary for each metric as it may change over time
     pub threshold: Option<JsonThresholdModel>,
     pub boundary: Option<JsonBoundary>,
@@ -392,7 +392,7 @@ pub mod table {
     use tabled::{Table, Tabled};
 
     use crate::{
-        DateTime, JsonBenchmark, JsonBranch, JsonMeasure, JsonMetric, JsonPerf, JsonProject,
+        DateTime, JsonBenchmark, JsonBranch, JsonMeasure, JsonMetricTriple, JsonPerf, JsonProject,
         JsonTestbed,
         project::{head::VersionNumber, report::Iteration},
     };
@@ -461,7 +461,7 @@ pub mod table {
         #[tabled(rename = "Version Hash")]
         pub version_hash: DisplayOption<GitHash>,
         #[tabled(rename = "Metric Value")]
-        pub metric: JsonMetric,
+        pub metric: JsonMetricTriple,
         #[tabled(rename = "Boundary Baseline")]
         pub baseline: DisplayOption<OrderedFloat<f64>>,
         #[tabled(rename = "Lower Boundary Limit")]

@@ -160,14 +160,14 @@ impl Median for JsonNewMetric {}
 #[typeshare::typeshare]
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonMetric {
+pub struct JsonMetricTriple {
     pub uuid: MetricUuid,
     pub value: OrderedFloat<f64>,
     pub lower_value: Option<OrderedFloat<f64>>,
     pub upper_value: Option<OrderedFloat<f64>>,
 }
 
-impl fmt::Display for JsonMetric {
+impl fmt::Display for JsonMetricTriple {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.value)
     }
@@ -186,7 +186,7 @@ pub struct JsonOneMetric {
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
     pub measure: JsonMeasure,
-    pub metric: JsonMetric,
+    pub metric: JsonMetricTriple,
     pub threshold: Option<JsonThresholdModel>,
     pub boundary: Option<JsonBoundary>,
     pub alert: Option<JsonPerfAlert>,

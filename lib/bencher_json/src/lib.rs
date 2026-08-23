@@ -83,10 +83,10 @@ pub use project::{
         MeasureUuid,
     },
     metric::{
-        JsonMetric, JsonMetricsMap, JsonNewMetric, JsonOneMetric, JsonResultsMap, MetricUuid,
+        JsonMetricTriple, JsonMetricsMap, JsonNewMetric, JsonOneMetric, JsonResultsMap, MetricUuid,
     },
     model::{JsonModel, ModelUuid},
-    parameter::{JsonParameters, MAX_PARAMETER_KEYS, ParameterUuid},
+    parameter::{MAX_PARAMETER_KEYS, ParameterSet, ParameterUuid},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
     report::{

@@ -24,16 +24,16 @@ pub const MAX_PARAMETER_KEYS: usize = 8;
 /// object keys sorted by UTF-16 code unit, ECMAScript number formatting,
 /// and no insignificant whitespace.
 /// Canonicalization happens here, before the write,
-/// so the database's `UNIQUE(benchmark_id, parameters)` constraint
+/// so the database's `UNIQUE(benchmark_id, "set")` constraint
 /// is the enforcement point for canonical equality.
 ///
 /// [jcs]: https://www.rfc-editor.org/rfc/rfc8785
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Jsonb))]
-pub struct JsonParameters(BTreeMap<ParameterKey, ParameterScalar>);
+pub struct ParameterSet(BTreeMap<ParameterKey, ParameterScalar>);
 
-impl JsonParameters {
+impl ParameterSet {
     /// The RFC 8785 (JCS) canonical serialization of this parameter set.
     pub fn canonical(&self) -> String {
         let mut canonical = String::from("{");
@@ -68,7 +68,7 @@ impl JsonParameters {
     ///
     /// Byte identical to what `SQLite`'s own `jsonb()` produces over
     /// [`Self::canonical`], which is what lets a set written here collide with a
-    /// set minted in SQL on `UNIQUE(benchmark_id, parameters)`.
+    /// set minted in SQL on `UNIQUE(benchmark_id, "set")`.
     #[cfg(feature = "db")]
     pub fn to_jsonb(&self) -> Result<Vec<u8>, jsonb::JsonbError> {
         let mut object = jsonb::Object::default();
@@ -88,13 +88,13 @@ impl JsonParameters {
     }
 }
 
-impl fmt::Display for JsonParameters {
+impl fmt::Display for ParameterSet {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.canonical())
     }
 }
 
-impl FromStr for JsonParameters {
+impl FromStr for ParameterSet {
     type Err = ParametersError;
 
     fn from_str(parameters: &str) -> Result<Self, Self::Err> {
@@ -102,7 +102,7 @@ impl FromStr for JsonParameters {
     }
 }
 
-impl Serialize for JsonParameters {
+impl Serialize for ParameterSet {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -115,7 +115,7 @@ impl Serialize for JsonParameters {
     }
 }
 
-impl<'de> Deserialize<'de> for JsonParameters {
+impl<'de> Deserialize<'de> for ParameterSet {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -138,9 +138,9 @@ impl<'de> Deserialize<'de> for JsonParameters {
 /// Written out by hand because the serialized form is a map with a custom key
 /// order and a hand written value enum, neither of which derives.
 #[cfg(feature = "schema")]
-impl JsonSchema for JsonParameters {
+impl JsonSchema for ParameterSet {
     fn schema_name() -> String {
-        "JsonParameters".to_owned()
+        "ParameterSet".to_owned()
     }
 
     fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
@@ -380,19 +380,19 @@ fn hex_digit(nibble: u32) -> char {
 mod tests {
     use ordered_float::OrderedFloat;
 
-    use super::{JsonParameters, ParameterKey, ParameterScalar};
+    use super::{ParameterKey, ParameterScalar, ParameterSet};
 
     fn canonical(parameters: &str) -> String {
         parameters
-            .parse::<JsonParameters>()
+            .parse::<ParameterSet>()
             .expect("Failed to parse parameters")
             .canonical()
     }
 
     /// A one key parameter set holding an exact `f64`, built without a parsing
     /// step so a bit pattern reaches the canonicalizer unchanged.
-    fn number(value: f64) -> JsonParameters {
-        JsonParameters(
+    fn number(value: f64) -> ParameterSet {
+        ParameterSet(
             [(
                 ParameterKey("n".parse().expect("Failed to parse parameter key")),
                 ParameterScalar::Number(OrderedFloat(value)),
@@ -405,7 +405,7 @@ mod tests {
     #[test]
     fn canonical_empty_set() {
         assert_eq!(canonical("{}"), "{}");
-        assert_eq!(JsonParameters::default().canonical(), "{}");
+        assert_eq!(ParameterSet::default().canonical(), "{}");
     }
 
     #[test]
@@ -554,7 +554,7 @@ mod tests {
 
     // The canonical form has to survive a write and a read: a parameter set read
     // back out of the database is parsed, and re-canonicalizing it must land on
-    // the same bytes or `UNIQUE(benchmark_id, parameters)` stops holding.
+    // the same bytes or `UNIQUE(benchmark_id, "set")` stops holding.
     #[test]
     fn canonical_survives_a_round_trip() {
         // Deterministic xorshift64, so the sample never varies between runs.
@@ -570,7 +570,7 @@ mod tests {
 
             let once = number(value).canonical();
             let twice = once
-                .parse::<JsonParameters>()
+                .parse::<ParameterSet>()
                 .expect("Failed to parse canonical parameters")
                 .canonical();
             assert_eq!(once, twice, "for {bits:016x}");
@@ -623,7 +623,7 @@ mod tests {
             r#"{"a": {"b": 1}}"#,
         ] {
             assert!(
-                parameters.parse::<JsonParameters>().is_err(),
+                parameters.parse::<ParameterSet>().is_err(),
                 "expected {parameters} to be rejected"
             );
         }
@@ -633,7 +633,7 @@ mod tests {
     fn rejects_non_object_payloads() {
         for parameters in ["null", "[]", "1", r#""a""#, "true"] {
             assert!(
-                parameters.parse::<JsonParameters>().is_err(),
+                parameters.parse::<ParameterSet>().is_err(),
                 "expected {parameters} to be rejected"
             );
         }
@@ -658,10 +658,10 @@ mod tests {
     #[test]
     fn rejects_more_than_the_key_cap() {
         keys(8)
-            .parse::<JsonParameters>()
+            .parse::<ParameterSet>()
             .expect("Failed to parse a parameter set at the cap");
         assert!(
-            keys(9).parse::<JsonParameters>().is_err(),
+            keys(9).parse::<ParameterSet>().is_err(),
             "expected a ninth key to be rejected"
         );
     }
@@ -688,7 +688,7 @@ mod tests {
                 .join(",")
         );
         doubled
-            .parse::<JsonParameters>()
+            .parse::<ParameterSet>()
             .expect("Failed to parse duplicated keys at the cap");
     }
 
@@ -701,11 +701,11 @@ mod tests {
     #[test]
     fn rejects_long_keys() {
         format!(r#"{{"{LEN_64_STR}": 1}}"#)
-            .parse::<JsonParameters>()
+            .parse::<ParameterSet>()
             .expect("Failed to parse a 64 byte key");
         assert!(
             format!(r#"{{"{LEN_65_STR}": 1}}"#)
-                .parse::<JsonParameters>()
+                .parse::<ParameterSet>()
                 .is_err(),
             "expected a 65 byte key to be rejected"
         );
@@ -714,11 +714,11 @@ mod tests {
     #[test]
     fn rejects_long_string_values() {
         format!(r#"{{"a": "{LEN_64_STR}"}}"#)
-            .parse::<JsonParameters>()
+            .parse::<ParameterSet>()
             .expect("Failed to parse a 64 byte string value");
         assert!(
             format!(r#"{{"a": "{LEN_65_STR}"}}"#)
-                .parse::<JsonParameters>()
+                .parse::<ParameterSet>()
                 .is_err(),
             "expected a 65 byte string value to be rejected"
         );
@@ -729,7 +729,7 @@ mod tests {
         for key in ["", " ", "\\r", "\\n", "\\t", " a", "a "] {
             let parameters = format!(r#"{{"{key}": 1}}"#);
             assert!(
-                parameters.parse::<JsonParameters>().is_err(),
+                parameters.parse::<ParameterSet>().is_err(),
                 "expected {parameters} to be rejected"
             );
         }
@@ -740,7 +740,7 @@ mod tests {
         for value in ["", " ", "\\r", "\\n", "\\t", " a", "a "] {
             let parameters = format!(r#"{{"a": "{value}"}}"#);
             assert!(
-                parameters.parse::<JsonParameters>().is_err(),
+                parameters.parse::<ParameterSet>().is_err(),
                 "expected {parameters} to be rejected"
             );
         }
@@ -763,7 +763,7 @@ mod tests {
     #[test]
     fn accepts_scalar_values() {
         let parameters = r#"{"s": "a", "n": 1, "b": true}"#
-            .parse::<JsonParameters>()
+            .parse::<ParameterSet>()
             .expect("Failed to parse parameters");
         assert!(!parameters.is_empty());
     }
@@ -775,9 +775,9 @@ mod tests {
 /// claiming an encoding it does not have.
 #[cfg(feature = "db")]
 mod db {
-    use super::{JsonParameters, jsonb};
+    use super::{ParameterSet, jsonb};
 
-    impl diesel::serialize::ToSql<diesel::sql_types::Jsonb, diesel::sqlite::Sqlite> for JsonParameters {
+    impl diesel::serialize::ToSql<diesel::sql_types::Jsonb, diesel::sqlite::Sqlite> for ParameterSet {
         fn to_sql<'b>(
             &'b self,
             out: &mut diesel::serialize::Output<'b, '_, diesel::sqlite::Sqlite>,
@@ -788,7 +788,7 @@ mod db {
     }
 
     impl diesel::deserialize::FromSql<diesel::sql_types::Jsonb, diesel::sqlite::Sqlite>
-        for JsonParameters
+        for ParameterSet
     {
         fn from_sql(
             mut bytes: diesel::sqlite::SqliteValue<'_, '_, '_>,

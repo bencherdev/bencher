@@ -692,12 +692,12 @@ mod tests {
 
         // Every cache row names a parameter set, and it is the benchmark's empty one.
         let mismatched = sql_query(
-            "SELECT COUNT(*) AS count
-             FROM series_last_seen s
-             LEFT JOIN parameter p ON p.id = s.parameter_id
-             WHERE p.id IS NULL
-                OR p.benchmark_id != s.benchmark_id
-                OR p.parameters != jsonb('{}')",
+            r#"SELECT COUNT(*) AS count
+               FROM series_last_seen s
+               LEFT JOIN parameter p ON p.id = s.parameter_id
+               WHERE p.id IS NULL
+                  OR p.benchmark_id != s.benchmark_id
+                  OR p."set" != jsonb('{}')"#,
         )
         .get_result::<SqlCount>(&mut conn)
         .expect("Failed to check the backfilled parameter sets")

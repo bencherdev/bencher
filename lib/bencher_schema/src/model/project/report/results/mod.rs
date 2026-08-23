@@ -8,7 +8,7 @@ use bencher_adapter::{
     },
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, JsonParameters, MeasureNameId, MetricName, Slug,
+    BenchmarkName, BenchmarkNameId, MeasureNameId, MetricName, ParameterSet, Slug,
     project::report::{Adapter, Iteration, JsonReportSettings},
 };
 use diesel::RunQueryDsl as _;
@@ -62,7 +62,7 @@ pub struct ReportResults {
     #[cfg(feature = "plus")]
     pub series_cache: SeriesCacheContext,
     pub benchmark_cache: HashMap<BenchmarkNameId, BenchmarkId>,
-    pub parameter_cache: HashMap<(BenchmarkId, JsonParameters), ParameterId>,
+    pub parameter_cache: HashMap<(BenchmarkId, ParameterSet), ParameterId>,
     pub measure_cache: HashMap<MeasureNameId, MeasureId>,
     pub detector_cache: HashMap<MeasureId, Option<Detector>>,
 }
@@ -332,7 +332,7 @@ impl ReportResults {
         iteration: Iteration,
         benchmark_id: BenchmarkId,
         ignore_benchmark: bool,
-        parameters: JsonParameters,
+        parameters: ParameterSet,
         metrics: AdapterMetrics,
     ) -> Result<PreparedGridPoint, HttpError> {
         // Resolved here in Phase 1, alongside the benchmark and the measures, so the
@@ -399,7 +399,7 @@ impl ReportResults {
         &mut self,
         context: &ApiContext,
         benchmark_id: BenchmarkId,
-        parameters: JsonParameters,
+        parameters: ParameterSet,
     ) -> Result<ParameterId, HttpError> {
         let key = (benchmark_id, parameters);
         Ok(if let Some(id) = self.parameter_cache.get(&key) {

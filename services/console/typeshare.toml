@@ -42,7 +42,7 @@
 "Utf8PathBuf" = "string"
 "OrderedFloat" = "number"
 "MetricName" = "string"
-"JsonParameters" = "Record<string, string | number | boolean>"
+"ParameterSet" = "Record<string, string | number | boolean>"
 "BigInt" = "number"
 "TimestampMillis" = "number"
 "Cpu" = "number"

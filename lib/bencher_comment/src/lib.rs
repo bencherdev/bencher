@@ -1281,7 +1281,7 @@ mod tests {
             },
             "parameter": {
                 "uuid": "77777777-7777-7777-7777-777777777777",
-                "parameters": {},
+                "set": {},
             },
             "measures": [
                 {

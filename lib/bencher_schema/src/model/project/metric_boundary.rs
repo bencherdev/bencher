@@ -1,4 +1,4 @@
-use bencher_json::{BoundaryUuid, JsonMetric, MetricUuid};
+use bencher_json::{BoundaryUuid, JsonMetricTriple, MetricUuid};
 
 use crate::{model::project::metric::MetricId, view::metric_boundary as metric_boundary_table};
 
@@ -42,7 +42,7 @@ impl QueryMetricBoundary {
     /// The view pivots the named rows back into the metric triple, so the JSON it
     /// yields is the same JSON the row-per-measure table yielded, and the boundary
     /// beside it is the one the view already carries.
-    pub fn split(self) -> (JsonMetric, Option<QueryBoundary>) {
+    pub fn split(self) -> (JsonMetricTriple, Option<QueryBoundary>) {
         let Self {
             metric_id,
             metric_uuid,
@@ -59,7 +59,7 @@ impl QueryMetricBoundary {
             lower_limit,
             upper_limit,
         } = self;
-        let json_metric = JsonMetric {
+        let json_metric = JsonMetricTriple {
             uuid: metric_uuid,
             value: value.into(),
             lower_value: lower_value.map(Into::into),

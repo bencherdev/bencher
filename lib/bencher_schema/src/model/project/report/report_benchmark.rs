@@ -57,7 +57,7 @@ impl InsertReportBenchmark {
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, JsonParameters, ParameterUuid, ReportBenchmarkUuid};
+    use bencher_json::{DateTime, ParameterSet, ParameterUuid, ReportBenchmarkUuid};
     use diesel::{
         ExpressionMethods as _, QueryDsl as _, QueryResult, RunQueryDsl as _, SqliteConnection,
     };
@@ -120,13 +120,13 @@ mod tests {
         );
         let empty_set_id = get_empty_parameter(conn, benchmark_id);
 
-        let grid_point: JsonParameters =
+        let grid_point: ParameterSet =
             r#"{"size_mb": 16}"#.parse().expect("Failed to parse parameters");
         diesel::insert_into(schema::parameter::table)
             .values((
                 schema::parameter::uuid.eq(ParameterUuid::new()),
                 schema::parameter::benchmark_id.eq(benchmark_id),
-                schema::parameter::parameters.eq(&grid_point),
+                schema::parameter::set.eq(&grid_point),
                 schema::parameter::created.eq(DateTime::TEST),
                 schema::parameter::modified.eq(DateTime::TEST),
             ))

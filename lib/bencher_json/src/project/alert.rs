@@ -2,7 +2,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{DateTime, JsonBenchmark, JsonBoundary, JsonMetric, JsonThreshold};
+use crate::{DateTime, JsonBenchmark, JsonBoundary, JsonMetricTriple, JsonThreshold};
 
 use super::{boundary::BoundaryLimit, report::Iteration, report::ReportUuid};
 
@@ -22,7 +22,7 @@ pub struct JsonAlert {
     pub report: ReportUuid,
     pub iteration: Iteration,
     pub benchmark: JsonBenchmark,
-    pub metric: JsonMetric,
+    pub metric: JsonMetricTriple,
     pub threshold: JsonThreshold,
     pub boundary: JsonBoundary,
     pub limit: BoundaryLimit,
