@@ -67,3 +67,15 @@ CREATE INDEX index_series_last_seen_benchmark ON series_last_seen (benchmark_id)
 CREATE INDEX index_series_last_seen_parameter ON series_last_seen (parameter_id);
 CREATE INDEX index_series_last_seen_measure ON series_last_seen (measure_id);
 PRAGMA foreign_keys = on;
+-- Statistics
+-- This stack rebuilds the largest tables in the database, and a rebuilt table has no
+-- statistics. Without them the query planner falls back on its join order heuristics,
+-- and on a branch filtered perf query those heuristics run the metric pivot before the
+-- selective filters, so the query does far more work than the rows it returns call for.
+-- `ANALYZE` hands the planner real row counts instead of guesses.
+--
+-- The analysis limit caps how many rows of each index are sampled, so the cost of this
+-- statement is bounded rather than proportional to the size of the tables, while the
+-- samples are still ample to order the joins correctly.
+PRAGMA analysis_limit = 1000;
+ANALYZE;
