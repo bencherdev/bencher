@@ -29,10 +29,11 @@ pub const CLAIM_TOKEN_TTL: u32 = 60;
 ///
 /// A migration that rebuilds a table walks it through this cache, and the cache
 /// the connection serves from is sized for serving. Measured on the
-/// `report_benchmark` rebuild over 4 million synthetic rows, against production's
-/// 8.8 million, 64 MiB costs 3,022,663 page reads and writes and 41.7s where
-/// 256 MiB costs 385,721 and 18.2s. The window is attended and nothing else is
-/// running, so the memory is there to spend and it is given back below.
+/// `report_benchmark` rebuild over 4 million synthetic rows, 64 MiB costs
+/// 3,022,663 page reads and writes and 41.7s where 256 MiB costs 385,721 and
+/// 18.2s. The ratio of cache to table only worsens as a table grows, so the
+/// measured gap is a floor. The window is attended and nothing else is running,
+/// so the memory is there to spend and it is given back below.
 const MIGRATION_CACHE_SIZE: i64 = -256 * 1024;
 
 #[derive(Debug, thiserror::Error)]
