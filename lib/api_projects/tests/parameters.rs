@@ -1370,3 +1370,121 @@ async fn v0_fold_still_folds() {
         .expect("Failed to read the report's metric count");
     assert_eq!(counted, 1, "one folded metric, metered once");
 }
+
+// An alert's JSON carries the boundary the metric broke through, with the values the
+// detector computed rather than whatever the shapes of the query happen to line up.
+//
+// Both endpoints that render an alert read the boundary out of the `metric_boundary`
+// view. The rest of the suite counts alerts and never reads one, so a transposed
+// baseline and limit, or a boundary belonging to another metric, would pass it. This
+// asserts the values, and asserts the two endpoints agree on them.
+#[tokio::test]
+async fn alert_json_carries_the_boundary_the_metric_exceeded() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "alertjson").await;
+
+    // A tight history, then one value an order of magnitude above it.
+    //
+    // Every report also names a `p99`, which lands a second metric row and no
+    // boundary. That is what makes this fixture able to see the join: metric
+    // identifiers then outrun boundary identifiers, so an alert that reached its
+    // boundary by the wrong column lands on another metric's row instead of
+    // coincidentally landing on its own.
+    let mut last = serde_json::Value::Null;
+    for (day, value) in SMALL.into_iter().chain([SMALL_FINAL]).enumerate() {
+        last = report(
+            &server,
+            &fixture,
+            day + 1,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({ "size_mb": 16 }),
+                    &serde_json::json!({ "latency": { "value": value, "p99": value * 2.0 } }),
+                )],
+            )],
+            Some(threshold_models()),
+            None,
+        )
+        .await;
+    }
+
+    // The report response renders its alerts through `get_report_alerts`.
+    let report_alerts = last
+        .get("alerts")
+        .and_then(serde_json::Value::as_array)
+        .expect("the report carries its alerts");
+    assert_eq!(
+        report_alerts.len(),
+        1,
+        "the regression raises exactly one alert: {report_alerts:?}"
+    );
+    let from_report = &report_alerts[0];
+
+    let value = from_report
+        .pointer("/metric/value")
+        .and_then(serde_json::Value::as_f64)
+        .expect("the alert carries its metric value");
+    let baseline = from_report
+        .pointer("/boundary/baseline")
+        .and_then(serde_json::Value::as_f64)
+        .expect("the alert carries its boundary baseline");
+    let lower_limit = from_report
+        .pointer("/boundary/lower_limit")
+        .and_then(serde_json::Value::as_f64)
+        .expect("a two sided model computes a lower limit");
+    let upper_limit = from_report
+        .pointer("/boundary/upper_limit")
+        .and_then(serde_json::Value::as_f64)
+        .expect("a two sided model computes an upper limit");
+
+    assert!(
+        (value - SMALL_FINAL).abs() < f64::EPSILON,
+        "the alert is on the metric that regressed, got {value}"
+    );
+    // The baseline sits between the limits, and the metric broke through the upper
+    // one. Transposing any two of the three breaks this.
+    assert!(
+        lower_limit < baseline && baseline < upper_limit,
+        "the baseline sits between its limits, got {lower_limit} / {baseline} / {upper_limit}"
+    );
+    assert!(
+        value > upper_limit,
+        "the metric broke through the upper limit, got {value} against {upper_limit}"
+    );
+    assert!(
+        baseline < SMALL_FINAL && baseline > SMALL[0],
+        "the baseline is the mean of the history, not the outlier, got {baseline}"
+    );
+    assert_eq!(
+        from_report.get("limit").and_then(serde_json::Value::as_str),
+        Some("upper"),
+        "the alert names the limit it broke through"
+    );
+
+    // The alert endpoint renders the same alert through `QueryAlert::into_json`.
+    let alert_uuid = from_report
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the alert carries its uuid");
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/alerts/{alert_uuid}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let from_endpoint: serde_json::Value = resp.json().await.expect("Failed to parse the alert");
+
+    assert_eq!(
+        &from_endpoint, from_report,
+        "the two endpoints that render an alert render the same alert"
+    );
+}

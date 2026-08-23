@@ -1050,14 +1050,16 @@ fn get_report_alerts(
     spec_id: Option<SpecId>,
 ) -> Result<JsonReportAlerts, HttpError> {
     let alerts = schema::alert::table
+        // The view already carries the boundary the alert points at, so the alert
+        // joins straight onto it rather than through the boundary table.
         .inner_join(
-            schema::boundary::table.inner_join(
-                view::metric_boundary::table.inner_join(
+            view::metric_boundary::table
+                .inner_join(
                     schema::report_benchmark::table
                         .inner_join(schema::report::table)
                         .inner_join(schema::benchmark::table),
-                ),
-            ),
+                )
+                .on(view::metric_boundary::boundary_id.eq(schema::alert::boundary_id.nullable())),
         )
         .filter(schema::report::id.eq(report_id))
         .order((schema::report_benchmark::iteration, schema::benchmark::name))
@@ -1068,7 +1070,6 @@ fn get_report_alerts(
             QueryAlert::as_select(),
             QueryBenchmark::as_select(),
             QueryMetricBoundary::as_select(),
-            QueryBoundary::as_select(),
         ))
         .load::<(
             ReportUuid,
@@ -1077,20 +1078,12 @@ fn get_report_alerts(
             QueryAlert,
             QueryBenchmark,
             QueryMetricBoundary,
-            QueryBoundary,
         )>(conn)
         .map_err(resource_not_found_err!(Alert, report_id))?;
 
     let mut report_alerts = Vec::new();
-    for (
-        report_uuid,
-        created,
-        iteration,
-        query_alert,
-        query_benchmark,
-        query_metric_boundary,
-        query_boundary,
-    ) in alerts
+    for (report_uuid, created, iteration, query_alert, query_benchmark, query_metric_boundary) in
+        alerts
     {
         let json_alert = query_alert.into_json_for_report(
             conn,
@@ -1103,7 +1096,6 @@ fn get_report_alerts(
             iteration,
             query_benchmark,
             query_metric_boundary,
-            query_boundary,
         )?;
         report_alerts.push(json_alert);
     }

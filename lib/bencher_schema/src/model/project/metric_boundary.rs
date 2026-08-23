@@ -40,11 +40,8 @@ pub struct QueryMetricBoundary {
 
 impl QueryMetricBoundary {
     /// The view pivots the named rows back into the metric triple, so the JSON it
-    /// yields is the same JSON the row-per-measure table yielded.
-    pub fn into_json_metric(self) -> JsonMetric {
-        self.split().0
-    }
-
+    /// yields is the same JSON the row-per-measure table yielded, and the boundary
+    /// beside it is the one the view already carries.
     pub fn split(self) -> (JsonMetric, Option<QueryBoundary>) {
         let Self {
             metric_id,
