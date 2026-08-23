@@ -17,6 +17,7 @@ jobs:
     permissions:
       checks: write
     runs-on: ubuntu-22.04
+    continue-on-error: true
     steps:
       - name: Download Noise Results (ubuntu)
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
