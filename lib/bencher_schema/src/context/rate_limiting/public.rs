@@ -119,10 +119,8 @@ impl PublicRateLimiter {
         Self::new(max, max, max)
     }
 
-    pub fn prune(&self) {
-        self.requests.prune();
-        self.attempts.prune();
-        self.runs.prune();
+    pub fn prune(&self) -> usize {
+        self.requests.prune() + self.attempts.prune() + self.runs.prune()
     }
 
     pub fn snapshot(&self) -> PublicRateLimiterSnapshot {

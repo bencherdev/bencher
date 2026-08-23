@@ -67,8 +67,8 @@ impl BandwidthRateLimiter {
         self.limiter.restore(snapshot);
     }
 
-    pub fn prune(&self) {
-        self.limiter.prune();
+    pub fn prune(&self) -> usize {
+        self.limiter.prune()
     }
 
     fn limit_for_priority(&self, priority: Priority) -> u64 {

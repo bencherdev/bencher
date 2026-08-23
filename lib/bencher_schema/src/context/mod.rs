@@ -92,7 +92,8 @@ pub struct ApiContext {
     #[cfg(feature = "plus")]
     pub runner_update: RunnerUpdate,
     /// Cancellation signal tripped on graceful shutdown so long-lived handlers (the runner WebSocket
-    /// channel) can wind down and let `server.close()` complete.
+    /// channel) can wind down and let `server.close()` complete. It also stops the periodic rate
+    /// limiting prune.
     #[cfg(feature = "plus")]
     pub shutdown: CancellationToken,
 }

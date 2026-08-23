@@ -1,4 +1,10 @@
-use std::{io::Write as _, net::IpAddr, path::Path, time::Duration};
+use std::{
+    io::Write as _,
+    net::IpAddr,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -12,6 +18,7 @@ use bencher_otel::AuthorizationKind;
 use dropshot::HttpError;
 pub use http::HeaderMap;
 use slog::Logger;
+use tokio_util::sync::CancellationToken;
 
 use crate::{
     error::{BencherResource, too_many_requests},
@@ -37,6 +44,11 @@ use snapshot::RateLimitingSnapshot;
 use user::UserRateLimiter;
 
 use super::DbConnection;
+
+/// How often the periodic task compacts the in-memory limiter maps and persists the snapshot.
+///
+/// This is also the upper bound on how much limiter state an abrupt termination can lose.
+const PRUNE_PERIOD: Duration = Duration::from_hours(1);
 
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
@@ -232,12 +244,15 @@ impl RateLimiting {
         }
     }
 
-    pub fn prune(&self) {
-        self.public.prune();
-        self.user.prune();
-        self.project.prune();
-        self.runner.prune();
-        self.bandwidth.prune();
+    /// Compact every in-memory limiter map, dropping the keys whose events have all aged out.
+    ///
+    /// Returns the total number of evicted entries.
+    pub fn prune(&self) -> usize {
+        self.public.prune()
+            + self.user.prune()
+            + self.project.prune()
+            + self.runner.prune()
+            + self.bandwidth.prune()
     }
 
     pub fn window(&self) -> (DateTime, DateTime) {
@@ -449,6 +464,47 @@ impl RateLimiting {
         Ok(())
     }
 
+    /// Spawn the periodic task that compacts the in-memory limiter maps and persists the snapshot.
+    ///
+    /// Without it, a long-lived server only ever compacts at a clean shutdown, so its limiter maps
+    /// grow for as long as the process lives, and an abrupt termination loses all limiter state.
+    pub fn spawn_prune(
+        rate_limiting: Arc<Self>,
+        db_path: PathBuf,
+        log: Logger,
+        shutdown: CancellationToken,
+    ) {
+        tokio::spawn(async move {
+            // The first tick of an `interval` fires immediately. Start a full period out instead:
+            // the snapshot was just loaded, so there is nothing to compact or persist at startup.
+            let mut interval =
+                tokio::time::interval_at(tokio::time::Instant::now() + PRUNE_PERIOD, PRUNE_PERIOD);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            while shutdown
+                .run_until_cancelled(interval.tick())
+                .await
+                .is_some()
+            {
+                rate_limiting.prune_and_save(&db_path, &log);
+            }
+        });
+    }
+
+    /// Compact the in-memory limiter maps and persist the resulting snapshot.
+    ///
+    /// Returns the number of evicted entries. A failed save is logged and swallowed so that a
+    /// transient write error cannot kill the periodic task.
+    fn prune_and_save(&self, db_path: &Path, log: &Logger) -> usize {
+        let evicted = self.prune();
+        if evicted > 0 {
+            slog::info!(log, "Pruned {evicted} stale rate limiting entries");
+        }
+        if let Err(e) = self.save(db_path, log) {
+            slog::error!(log, "Failed to save rate limiting state: {e}");
+        }
+        evicted
+    }
+
     fn snapshot_path(db_path: &Path) -> Result<Utf8PathBuf, RateLimitingPersistError> {
         let db_path = Utf8Path::from_path(db_path).ok_or(RateLimitingPersistError::NonUtf8Path)?;
         let parent = db_path.parent().unwrap_or(Utf8Path::new("."));
@@ -478,5 +534,54 @@ fn interval_kind(interval: bencher_rate_limiter::Interval) -> bencher_otel::Inte
         bencher_rate_limiter::Interval::Minute => bencher_otel::IntervalKind::Minute,
         bencher_rate_limiter::Interval::Hour => bencher_otel::IntervalKind::Hour,
         bencher_rate_limiter::Interval::Day => bencher_otel::IntervalKind::Day,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::net::IpAddr;
+
+    use super::{Logger, RateLimiting, RateLimitingSnapshot};
+
+    fn test_log() -> Logger {
+        Logger::root(slog::Discard, slog::o!())
+    }
+
+    #[test]
+    fn prune_and_save_persists_live_entries() {
+        let rate_limiting = RateLimiting::default();
+        let ip: IpAddr = "10.0.0.1".parse().unwrap();
+        rate_limiting.public_request(ip).unwrap();
+
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("bencher.db");
+        let log = test_log();
+
+        // Every seeded entry is live, so nothing is evicted.
+        assert_eq!(rate_limiting.prune_and_save(&db_path, &log), 0);
+
+        let snapshot_path = dir.path().join("rate_limiting.json");
+        assert!(snapshot_path.exists());
+
+        let restored = RateLimiting::default();
+        restored.load(&db_path, &log).unwrap();
+        assert_eq!(restored.prune_and_save(&db_path, &log), 0);
+
+        let json = std::fs::read_to_string(&snapshot_path).unwrap();
+        let snapshot: RateLimitingSnapshot = serde_json::from_str(&json).unwrap();
+        assert!(snapshot.public.requests.minute.events.contains_key(&ip));
+    }
+
+    #[test]
+    fn prune_and_save_survives_a_failed_save() {
+        let rate_limiting = RateLimiting::default();
+        let ip: IpAddr = "10.0.0.1".parse().unwrap();
+        rate_limiting.public_request(ip).unwrap();
+
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("missing").join("bencher.db");
+
+        assert_eq!(rate_limiting.prune_and_save(&db_path, &test_log()), 0);
+        assert!(!dir.path().join("missing").exists());
     }
 }

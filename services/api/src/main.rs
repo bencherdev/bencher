@@ -152,7 +152,10 @@ async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
         ctx.shutdown.cancel();
         let rate_limiting = ctx.rate_limiting.clone();
         let database_path = ctx.database.path.clone();
-        rate_limiting.prune();
+        let evicted = rate_limiting.prune();
+        if evicted > 0 {
+            info!(log, "Pruned {evicted} stale rate limiting entries");
+        }
         move || rate_limiting.save(&database_path, log)
     };
     if let Err(e) = server.close().await {
