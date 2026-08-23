@@ -6,16 +6,16 @@ use bencher_json::{
         report::Iteration,
     },
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
+use diesel::{
+    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _,
+};
 use dropshot::HttpError;
 
-use super::{
-    QueryThreshold,
-    boundary::{BoundaryId, QueryBoundary},
-};
+use super::{QueryThreshold, boundary::BoundaryId};
 use crate::{
     context::DbConnection,
-    error::resource_not_found_err,
+    error::{issue_error, resource_not_found_err},
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     model::{
         project::{
@@ -102,17 +102,19 @@ impl QueryAlert {
             iteration,
             query_benchmark,
             query_metric_boundary,
-            query_boundary,
         ) = schema::alert::table
             .filter(schema::alert::id.eq(self.id))
+            // The view already carries the boundary the alert points at, so the alert
+            // joins straight onto it rather than through the boundary table.
             .inner_join(
-                schema::boundary::table.inner_join(
-                    view::metric_boundary::table.inner_join(
+                view::metric_boundary::table
+                    .inner_join(
                         schema::report_benchmark::table
                             .inner_join(schema::report::table)
                             .inner_join(schema::benchmark::table),
-                    ),
-                ),
+                    )
+                    .on(view::metric_boundary::boundary_id
+                        .eq(schema::alert::boundary_id.nullable())),
             )
             .select((
                 schema::report::uuid,
@@ -123,7 +125,6 @@ impl QueryAlert {
                 schema::report_benchmark::iteration,
                 QueryBenchmark::as_select(),
                 QueryMetricBoundary::as_select(),
-                QueryBoundary::as_select(),
             ))
             .first::<(
                 ReportUuid,
@@ -134,7 +135,6 @@ impl QueryAlert {
                 Iteration,
                 QueryBenchmark,
                 QueryMetricBoundary,
-                QueryBoundary,
             )>(conn)
             .map_err(resource_not_found_err!(Alert, self))?;
         let project = QueryProject::get(conn, query_benchmark.project_id)?;
@@ -149,7 +149,6 @@ impl QueryAlert {
             iteration,
             query_benchmark,
             query_metric_boundary,
-            query_boundary,
         )
     }
 
@@ -169,7 +168,6 @@ impl QueryAlert {
         iteration: Iteration,
         query_benchmark: QueryBenchmark,
         query_metric_boundary: QueryMetricBoundary,
-        query_boundary: QueryBoundary,
     ) -> Result<JsonAlert, HttpError> {
         let Self {
             uuid,
@@ -178,6 +176,16 @@ impl QueryAlert {
             modified,
             ..
         } = self;
+        // An alert is only ever created for a boundary, and the view is keyed on the
+        // `value` row that boundary hangs off, so the split always yields one here.
+        let (json_metric, query_boundary) = query_metric_boundary.split();
+        let Some(query_boundary) = query_boundary else {
+            return Err(issue_error(
+                "Failed to find alert boundary",
+                &format!("Failed to find the boundary for alert ({uuid})."),
+                "The alert's metric row carries no boundary",
+            ));
+        };
         let threshold = QueryThreshold::get_alert_json(
             conn,
             query_boundary.threshold_id,
@@ -191,7 +199,7 @@ impl QueryAlert {
             report: report_uuid,
             iteration,
             benchmark: query_benchmark.into_json_for_project(project),
-            metric: query_metric_boundary.into_json_metric(),
+            metric: json_metric,
             threshold,
             boundary: query_boundary.into_json(),
             limit: boundary_limit,
