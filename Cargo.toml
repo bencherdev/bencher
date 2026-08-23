@@ -171,7 +171,7 @@ slug = "0.1"
 statrs = "0.18"
 strip-ansi-escapes = "0.2"
 strum = { version = "0.27", features = ["derive"] }
-syn = "2.0"
+syn = "3.0"
 tabled = "0.20"
 tar = "0.4"
 tempfile = "3"
