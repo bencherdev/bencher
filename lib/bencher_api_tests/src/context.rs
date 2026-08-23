@@ -132,6 +132,8 @@ impl TestServer {
             messenger: Messenger::default(),
             database,
             rate_limiting: Arc::new(bencher_schema::context::RateLimiting::max()),
+            // The test server never spawns the periodic prune, so the slot stays empty.
+            rate_limiting_prune: bencher_schema::context::RateLimitingPruneTask::default(),
             github_client: None,
             google_client: None,
             indexer: None,

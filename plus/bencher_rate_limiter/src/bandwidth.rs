@@ -74,12 +74,18 @@ where
             .record(now_bucket, bytes);
     }
 
-    pub fn prune(&self) {
+    /// Drop every key whose bandwidth has all aged out of the window.
+    ///
+    /// Returns the number of evicted keys. The count is advisory: concurrent traffic can add or
+    /// remove keys while the pass runs, so it is only ever used for reporting.
+    pub fn prune(&self) -> usize {
         let cutoff = self.cutoff_bucket(SystemTime::now());
+        let before = self.event_map.len();
         self.event_map.retain(|_, bw| {
             bw.prune(cutoff);
             bw.total_bytes > 0
         });
+        before.saturating_sub(self.event_map.len())
     }
 
     pub fn snapshot(&self) -> BandwidthSnapshot<K> {
@@ -257,6 +263,45 @@ mod tests {
 
         limiter.prune();
         assert!(!limiter.event_map.contains_key(&1));
+    }
+
+    #[test]
+    fn prune_empty_returns_zero() {
+        let limiter: BandwidthLimiter<u32> = BandwidthLimiter::new(DAY);
+        assert_eq!(limiter.prune(), 0);
+    }
+
+    #[test]
+    fn prune_returns_evicted_count() {
+        let limiter = BandwidthLimiter::new(DAY);
+        let old = test_now() - Duration::from_hours(25);
+        limiter.record_at(1u32, 500, old);
+        limiter.record_at(2u32, 500, old);
+
+        assert_eq!(limiter.prune(), 2);
+        assert!(limiter.event_map.is_empty());
+    }
+
+    #[test]
+    fn prune_does_not_count_live_keys() {
+        let limiter = BandwidthLimiter::new(DAY);
+        let old = test_now() - Duration::from_hours(25);
+        limiter.record_at(1u32, 500, old);
+        limiter.record(2u32, 500);
+
+        assert_eq!(limiter.prune(), 1);
+        assert!(!limiter.event_map.contains_key(&1));
+        assert!(limiter.event_map.contains_key(&2));
+    }
+
+    #[test]
+    fn prune_returns_zero_when_all_keys_live() {
+        let limiter = BandwidthLimiter::new(DAY);
+        limiter.record(1u32, 500);
+        limiter.record(2u32, 500);
+
+        assert_eq!(limiter.prune(), 0);
+        assert_eq!(limiter.event_map.len(), 2);
     }
 
     #[test]

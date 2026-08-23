@@ -89,9 +89,8 @@ impl ProjectRateLimiter {
         Self::new(max, max)
     }
 
-    pub fn prune(&self) {
-        self.requests.prune();
-        self.runs.prune();
+    pub fn prune(&self) -> usize {
+        self.requests.prune() + self.runs.prune()
     }
 
     pub fn snapshot(&self) -> ProjectRateLimiterSnapshot {

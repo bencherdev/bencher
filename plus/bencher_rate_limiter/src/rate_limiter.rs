@@ -73,10 +73,11 @@ where
         }
     }
 
-    pub fn prune(&self) {
-        self.minute.prune();
-        self.hour.prune();
-        self.day.prune();
+    /// Compact all 3 windows, dropping every key whose events have all aged out.
+    ///
+    /// Returns the total number of evicted keys.
+    pub fn prune(&self) -> usize {
+        self.minute.prune() + self.hour.prune() + self.day.prune()
     }
 
     pub fn snapshot(&self) -> RateLimiterSnapshot<K> {
@@ -168,12 +169,18 @@ where
         }
     }
 
-    fn prune(&self) {
+    /// Drop every key whose events have all aged out of the window.
+    ///
+    /// Returns the number of evicted keys. The count is advisory: concurrent traffic can add or
+    /// remove keys while the pass runs, so it is only ever used for reporting.
+    fn prune(&self) -> usize {
         let (_, cutoff) = self.now_and_cutoff();
+        let before = self.event_map.len();
         self.event_map.retain(|_, events| {
             events.prune(cutoff);
             events.total > 0
         });
+        before.saturating_sub(self.event_map.len())
     }
 
     fn check(&self, key: K) -> bool {
@@ -409,6 +416,76 @@ mod tests {
 
         window.prune();
         assert!(!window.event_map.contains_key(&1));
+    }
+
+    fn stale_bucket(bucket_secs: u64) -> u64 {
+        epoch_bucket(
+            test_now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                - 120,
+            bucket_secs,
+        )
+    }
+
+    fn stale_events(bucket_secs: u64) -> BucketedEvents {
+        BucketedEvents {
+            buckets: VecDeque::from([(stale_bucket(bucket_secs), 3)]),
+            total: 3,
+        }
+    }
+
+    #[test]
+    fn prune_empty_returns_zero() {
+        let window: Window<u32> = Window::new(Duration::from_mins(1), 100);
+        assert_eq!(window.prune(), 0);
+    }
+
+    #[test]
+    fn prune_returns_evicted_count() {
+        let window: Window<u32> = Window::new(Duration::from_mins(1), 100);
+        window.event_map.insert(1, stale_events(60));
+        window.event_map.insert(2, stale_events(60));
+
+        assert_eq!(window.prune(), 2);
+        assert!(window.event_map.is_empty());
+    }
+
+    #[test]
+    fn prune_does_not_count_live_keys() {
+        let window: Window<u32> = Window::new(Duration::from_mins(1), 100);
+        window.event_map.insert(1, stale_events(60));
+        assert!(window.check(2));
+
+        assert_eq!(window.prune(), 1);
+        assert!(!window.event_map.contains_key(&1));
+        assert!(window.event_map.contains_key(&2));
+    }
+
+    #[test]
+    fn prune_returns_zero_when_all_keys_live() {
+        let window: Window<u32> = Window::new(Duration::from_mins(1), 100);
+        assert!(window.check(1));
+        assert!(window.check(2));
+
+        assert_eq!(window.prune(), 0);
+        assert_eq!(window.event_map.len(), 2);
+    }
+
+    #[test]
+    fn rate_limiter_prune_sums_windows() {
+        let limiter: RateLimiter<u32> = RateLimiter::new(RateLimits {
+            minute: 100,
+            hour: 1000,
+            day: 10000,
+        });
+        limiter.minute.event_map.insert(1, stale_events(60));
+        limiter.hour.event_map.insert(1, stale_events(3600));
+        limiter.hour.event_map.insert(2, stale_events(3600));
+        limiter.day.event_map.insert(1, stale_events(86400));
+
+        assert_eq!(limiter.prune(), 4);
     }
 
     #[test]

@@ -43,7 +43,7 @@ pub use indexer::{IndexError, Indexer};
 pub use messenger::ServerStatsBody;
 pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
 #[cfg(feature = "plus")]
-pub use rate_limiting::{HeaderMap, RateLimiting, RateLimitingError};
+pub use rate_limiting::{HeaderMap, RateLimiting, RateLimitingError, RateLimitingPruneTask};
 pub use rbac::{Rbac, RbacError};
 #[cfg(feature = "plus")]
 pub use runner_update::RunnerUpdate;
@@ -61,6 +61,10 @@ pub struct ApiContext {
     pub database: Database,
     #[cfg(feature = "plus")]
     pub rate_limiting: Arc<RateLimiting>,
+    /// Join handle for the periodic rate limiting prune, so shutdown can wait for an in-flight save
+    /// to finish before writing the final snapshot.
+    #[cfg(feature = "plus")]
+    pub rate_limiting_prune: RateLimitingPruneTask,
     #[cfg(feature = "plus")]
     pub github_client: Option<GitHubClient>,
     #[cfg(feature = "plus")]
@@ -92,7 +96,8 @@ pub struct ApiContext {
     #[cfg(feature = "plus")]
     pub runner_update: RunnerUpdate,
     /// Cancellation signal tripped on graceful shutdown so long-lived handlers (the runner WebSocket
-    /// channel) can wind down and let `server.close()` complete.
+    /// channel) can wind down and let `server.close()` complete. It also stops the periodic rate
+    /// limiting prune.
     #[cfg(feature = "plus")]
     pub shutdown: CancellationToken,
 }

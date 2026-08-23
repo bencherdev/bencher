@@ -332,6 +332,20 @@ async fn into_context(
         slog::error!(log, "Failed to restore rate limiting state: {e}");
     }
 
+    // Tripped on graceful shutdown, so the long-lived handlers and the periodic rate limiting task
+    // below both wind down instead of running on past the server.
+    #[cfg(feature = "plus")]
+    let shutdown = bencher_schema::context::CancellationToken::new();
+
+    #[cfg(feature = "plus")]
+    let rate_limiting_prune =
+        bencher_schema::context::RateLimitingPruneTask::new(RateLimiting::spawn_prune(
+            Arc::clone(&rate_limiting),
+            database.path.clone(),
+            log.clone(),
+            shutdown.clone(),
+        ));
+
     debug!(log, "Creating API context");
     Ok(ApiContext {
         console_url,
@@ -342,6 +356,8 @@ async fn into_context(
         database,
         #[cfg(feature = "plus")]
         rate_limiting,
+        #[cfg(feature = "plus")]
+        rate_limiting_prune,
         #[cfg(feature = "plus")]
         github_client,
         #[cfg(feature = "plus")]
@@ -372,7 +388,7 @@ async fn into_context(
         #[cfg(feature = "plus")]
         runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
         #[cfg(feature = "plus")]
-        shutdown: bencher_schema::context::CancellationToken::new(),
+        shutdown,
     })
 }
 
