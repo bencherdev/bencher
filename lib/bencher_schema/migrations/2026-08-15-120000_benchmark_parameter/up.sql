@@ -35,18 +35,21 @@ SELECT lower(
 FROM benchmark;
 -- report_benchmark
 -- `parameter_id` is NOT NULL: SQLite unique indexes treat NULLs as distinct, so a
--- nullable dimension would silently void `UNIQUE(report_id, iteration, benchmark_id, parameter_id)`.
+-- nullable dimension would silently void the unique key over
+-- (report_id, iteration, benchmark_id, parameter_id).
+-- The table is declared without its two unique keys. They are built below, once the
+-- backfill has landed, as named unique indexes that enforce exactly what the table
+-- constraints enforced.
 CREATE TABLE up_report_benchmark (
     id INTEGER PRIMARY KEY NOT NULL,
-    uuid TEXT NOT NULL UNIQUE,
+    uuid TEXT NOT NULL,
     report_id INTEGER NOT NULL,
     iteration INTEGER NOT NULL,
     benchmark_id INTEGER NOT NULL,
     parameter_id INTEGER NOT NULL,
     FOREIGN KEY (report_id) REFERENCES report (id) ON DELETE CASCADE,
     FOREIGN KEY (benchmark_id) REFERENCES benchmark (id),
-    FOREIGN KEY (parameter_id) REFERENCES parameter (id),
-    UNIQUE(report_id, iteration, benchmark_id, parameter_id)
+    FOREIGN KEY (parameter_id) REFERENCES parameter (id)
 );
 -- The join is a `LEFT JOIN` so that a `report_benchmark` row whose benchmark has
 -- no empty parameter set trips the `NOT NULL` on `parameter_id` and fails the
@@ -74,6 +77,16 @@ FROM report_benchmark
 DROP TABLE report_benchmark;
 ALTER TABLE up_report_benchmark
     RENAME TO report_benchmark;
+-- The two unique keys the table was declared without, built now that every row is
+-- in place. Declared on the table they would be maintained online, one page split
+-- at a time, across every insert the backfill makes, and the preserved uuids are
+-- v4, so each insert lands on a random page of the uuid index: at the 64 MiB cache
+-- the connection serves from, those random reads and writes rather than the scan
+-- set the pace, and they are the dominant cost of the rebuild. Built here they are
+-- two external sorts, which are indifferent to where the keys fall, so the rebuild
+-- floors at the scan that copies the rows.
+CREATE UNIQUE INDEX index_report_benchmark_uuid ON report_benchmark(uuid);
+CREATE UNIQUE INDEX index_report_benchmark_report_iteration_benchmark_parameter ON report_benchmark(report_id, iteration, benchmark_id, parameter_id);
 CREATE INDEX index_report_benchmark_benchmark_report ON report_benchmark(benchmark_id, report_id);
 -- `benchmark` cascades to `parameter`, so deleting a benchmark (or a project)
 -- deletes parameter sets, and SQLite then verifies that no `report_benchmark`

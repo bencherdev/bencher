@@ -137,8 +137,9 @@ mod tests {
         model::project::benchmark::BenchmarkId,
         schema,
         test_util::{
-            create_base_entities, create_benchmark, create_parameter, get_empty_parameter,
-            setup_test_db,
+            create_base_entities, create_benchmark, create_branch_with_head, create_parameter,
+            create_report, create_report_benchmark, create_testbed, create_version,
+            get_empty_parameter, setup_test_db,
         },
     };
 
@@ -703,6 +704,99 @@ mod tests {
                 "every report benchmark points at its own benchmark's empty set"
             );
         }
+    }
+
+    /// The indexes `report_benchmark` carries, in name order.
+    fn report_benchmark_indexes(conn: &mut SqliteConnection) -> Vec<String> {
+        diesel::sql_query(
+            "SELECT name AS value FROM sqlite_master
+                WHERE type = 'index' AND tbl_name = 'report_benchmark'
+                ORDER BY name",
+        )
+        .load::<SqlText>(conn)
+        .expect("Failed to read the report benchmark indexes")
+        .into_iter()
+        .map(|index| index.value)
+        .collect()
+    }
+
+    /// Re-insert an existing `report_benchmark` row under a new uuid, which collides
+    /// on the unique key over the report, iteration, benchmark, and parameter set.
+    fn duplicate_report_benchmark_key(conn: &mut SqliteConnection) -> QueryResult<usize> {
+        diesel::sql_query(
+            "INSERT INTO report_benchmark (uuid, report_id, iteration, benchmark_id, parameter_id)
+                SELECT '00000000-0000-0000-0000-000000000013',
+                    report_id, iteration, benchmark_id, parameter_id
+                FROM report_benchmark
+                WHERE id = 1",
+        )
+        .execute(conn)
+    }
+
+    /// Re-insert an existing `report_benchmark` row under a new iteration, which
+    /// collides on the unique uuid.
+    fn duplicate_report_benchmark_uuid(conn: &mut SqliteConnection) -> QueryResult<usize> {
+        diesel::sql_query(
+            "INSERT INTO report_benchmark (uuid, report_id, iteration, benchmark_id, parameter_id)
+                SELECT uuid, report_id, 42, benchmark_id, parameter_id
+                FROM report_benchmark
+                WHERE id = 1",
+        )
+        .execute(conn)
+    }
+
+    /// Seed one `report_benchmark` row, so that a second row can be made to
+    /// collide with it.
+    fn seed_report_benchmark(conn: &mut SqliteConnection) {
+        let uuid = |n: u8| format!("00000000-0000-0000-0000-0000000000{n:02x}");
+        let base = create_base_entities(conn);
+        let branch =
+            create_branch_with_head(conn, base.project_id, &uuid(3), "Main", "main", &uuid(4));
+        let version = create_version(conn, base.project_id, &uuid(5), 1, None);
+        let testbed = create_testbed(conn, base.project_id, &uuid(6), "Testbed", "testbed");
+        let report = create_report(
+            conn,
+            &uuid(7),
+            base.project_id,
+            branch.head_id,
+            version,
+            testbed,
+        );
+        let benchmark = create_benchmark(conn, base.project_id, &uuid(8), "Bench", "bench");
+        create_report_benchmark(conn, &uuid(9), report, 0, benchmark);
+    }
+
+    // The migration builds `report_benchmark`'s unique indexes after the backfill
+    // rather than declaring them on the table, so both are named indexes rather than
+    // implicit autoindexes. What they enforce is unchanged, which is the other half
+    // of this: a repeated key and a repeated uuid each still collide.
+    #[test]
+    fn migration_defers_the_report_benchmark_unique_indexes() {
+        let mut conn = setup_test_db();
+
+        seed_report_benchmark(&mut conn);
+
+        assert_eq!(
+            report_benchmark_indexes(&mut conn),
+            vec![
+                "index_report_benchmark_benchmark_report".to_owned(),
+                "index_report_benchmark_parameter".to_owned(),
+                "index_report_benchmark_report_iteration_benchmark_parameter".to_owned(),
+                "index_report_benchmark_uuid".to_owned(),
+            ],
+            "the rebuilt table's indexes are the named ones the migration builds"
+        );
+
+        let repeated_key = duplicate_report_benchmark_key(&mut conn);
+        assert!(
+            is_unique_violation(&repeated_key),
+            "a repeated report, iteration, benchmark, and parameter set collides"
+        );
+        let repeated_uuid = duplicate_report_benchmark_uuid(&mut conn);
+        assert!(
+            is_unique_violation(&repeated_uuid),
+            "a repeated uuid collides"
+        );
     }
 
     #[test]
