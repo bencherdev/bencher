@@ -127,6 +127,7 @@ The clippy script will install the target automatically and warn if no cross-com
 - Database model fields should use strong validated types (e.g., `ProjectId`, `ProjectUuid`, `ProjectName`, `DateTime`, `VersionNumber`) with Diesel `ToSql`/`FromSql` impls rather than raw primitives (`i32`, `i64`, `String`). All conversion happens inside the Diesel impls, not in the model layer.
 - Avoid `select!` macros - use `futures_concurrency::stream::Merge::merge`
 - Prefer stream combinators (`try_fold`, `try_for_each`, `try_collect`, etc.) over manual `while let Some(chunk) = stream.next().await` loops when processing streams
+- Prefer structured concurrency: every spawned task has an owner that holds its `JoinHandle` and awaits it at shutdown. Where cancel-on-drop semantics make sense, use a `JoinSet`, which aborts its tasks when the owner drops. Do **NOT** detach a task by dropping its handle without explicit justification. A detached task is unsupervised, its panics are silent, and shutdown cannot order itself against it
 - All time-based tests should be deterministic and use time manipulation not real wall-clock time
 - Use `bencher_json::Clock::Custom` (behind the `test-clock` feature) to inject a fake clock in tests instead of calling `DateTime::now()` directly. `Clock` is available on `ApiContext`.
 - For unit tests without access to `ApiContext`/`Clock`, use `bencher_json::DateTime::TEST` (a fixed deterministic const). Enable `test-clock` in `bencher_json` dev-dependencies to access it.
