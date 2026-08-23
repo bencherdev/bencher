@@ -204,7 +204,7 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # master
       - name: Deploy API to Fly.io Prod
         working-directory: ./services/api
-        run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 14400
+        run: flyctl deploy --local-only --config fly/fly.toml --wait-timeout 300
       - name: Rebase main on cloud
         run: |
           set -euo pipefail

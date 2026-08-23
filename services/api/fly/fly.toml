@@ -47,10 +47,10 @@ path = "/v0/projects?per_page=0"
 protocol = "http"
 
 [[vm]]
-cpu_kind = "performance"
-cpus = 2
-memory_mb = 8192
+cpu_kind = "shared"
+cpus = 8
+memory_mb = 2048
 
 [[restart]]
-policy = "never"
-retries = 0
+policy = "on-failure"
+retries = 6
