@@ -30,15 +30,31 @@ on:
       deploy-only:
         type: boolean
         required: true
+      # The Cloudflare adapter bakes the Wrangler environment into the console
+      # build, so the environment is chosen here, not on the deploy.
+      # `dev` builds the `dev-console` Worker; empty builds the top-level one.
+      cloudflare-env:
+        type: string
+        required: true
+      sentry-upload:
+        type: boolean
+        required: true
     secrets:
       R2_ACCESS_KEY_ID:
         required: false
       R2_SECRET_ACCESS_KEY:
         required: false
+      # Fork pull requests do not receive secrets, so this is optional.
+      # It is only read when `sentry-upload` is true.
+      SENTRY_AUTH_TOKEN:
+        required: false
     outputs:
       wasm-artifact-name:
         description: "WASM artifact name"
         value: "bencher-valid-pkg"
+      console-artifact-name:
+        description: "Console UI artifact name"
+        value: "bencher-console"
 
 env:
   CARGO_TERM_COLOR: always
@@ -47,6 +63,7 @@ env:
   # Use head_ref for PRs (avoids `/merge` suffix), otherwise use ref_name
   CACHE_NAME: ${{ github.head_ref || github.ref_name }}
   WASM_BENCHER_VALID: bencher-valid-pkg
+  BENCHER_CONSOLE: bencher-console
 
 jobs:
   build_github_action:
@@ -144,7 +161,9 @@ jobs:
     name: Build Console UI
     runs-on: ubuntu-22.04
     needs: build_wasm
-    if: ${{ !startsWith(github.ref, 'refs/tags/') && !inputs.deploy-only }}
+    # Runs even on deploy-only (cloud) runs: the deploy consumes this job's
+    # artifact rather than rebuilding the console itself.
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -160,7 +179,31 @@ jobs:
           path: ./lib/bencher_valid/pkg
       - name: Build Console UI
         working-directory: ./services/console
+        env:
+          # An empty value selects the top level (production) configuration,
+          # exactly as leaving it unset does.
+          CLOUDFLARE_ENV: ${{ inputs.cloudflare-env }}
+          SENTRY_UPLOAD: ${{ inputs.sentry-upload }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npm run cloudflare
+      - name: Verify Deploy Target
+        working-directory: ./services/console
+        env:
+          DEPLOY_TARGET: ${{ inputs.cloudflare-env == 'dev' && 'dev-console' || 'console' }}
+        run: npm run deploy-target "$DEPLOY_TARGET"
+      # The deploy jobs download this instead of rebuilding the console.
+      # `wrangler deploy` finds the built config through `.wrangler/deploy/config.json`,
+      # and `upload-artifact` omits hidden files unless told otherwise, so without
+      # `include-hidden-files` the deploy would fall back to `wrangler.jsonc`.
+      - name: Upload Artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.BENCHER_CONSOLE }}
+          path: |
+            ./services/console/dist
+            ./services/console/.wrangler
+          include-hidden-files: true
+          if-no-files-found: error
 
   build_api_docker:
     name: Build API Docker

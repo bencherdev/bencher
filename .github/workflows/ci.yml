@@ -215,9 +215,17 @@ jobs:
       build-action: ${{ needs.changes.outputs.action == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
       build-docker: ${{ !startsWith(github.ref, 'refs/tags/') && (needs.changes.outputs.docker == 'true' || github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))) }}
       deploy-only: ${{ github.ref == 'refs/heads/cloud' }}
+      # The console build is environment-specific, so it has to match the deploy
+      # this run will perform. Anything that does not deploy dev builds the
+      # top-level (production) configuration.
+      cloudflare-env: ${{ (github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))) && 'dev' || '' }}
+      # Only runs that deploy upload sourcemaps, and only from this repository:
+      # fork pull requests get no secrets, and uploading without a token fails the build.
+      sentry-upload: ${{ github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'deploy')) }}
     secrets:
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
   docker:
     name: Docker
@@ -261,7 +269,6 @@ jobs:
       deploy-prod: ${{ github.ref == 'refs/heads/cloud' }}
     secrets:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       BENCHER_USER_AGENT: ${{ secrets.BENCHER_USER_AGENT }}

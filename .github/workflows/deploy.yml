@@ -21,8 +21,6 @@ on:
     secrets:
       FLY_API_TOKEN:
         required: true
-      SENTRY_AUTH_TOKEN:
-        required: true
       CLOUDFLARE_ACCOUNT_ID:
         required: true
       CLOUDFLARE_API_TOKEN:
@@ -38,7 +36,7 @@ env:
   GITHUB_REGISTRY: ghcr.io
   API_DOCKER_IMAGE: bencher-api
   FLY_REGISTRY: registry.fly.io
-  WASM_BENCHER_VALID: bencher-valid-pkg
+  BENCHER_CONSOLE: bencher-console
 
 jobs:
   deploy_api_fly_dev:
@@ -122,20 +120,16 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "24"
-      - name: Download `bencher_valid` Artifact
+      - name: Download Console UI Artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: ${{ env.WASM_BENCHER_VALID }}
-          path: ./lib/bencher_valid/pkg
-      - name: Build Console UI
+          name: ${{ env.BENCHER_CONSOLE }}
+          path: ./services/console
+      # `wrangler` is a dev dependency of the console. It used to arrive as part
+      # of `npm run cloudflare`, which the build job now runs instead.
+      - name: Install Dependencies
         working-directory: ./services/console
-        env:
-          # The Cloudflare adapter bakes the Wrangler environment into the build,
-          # so this, not `--env` on the deploy, is what selects it.
-          CLOUDFLARE_ENV: dev
-          SENTRY_UPLOAD: true
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: npm run cloudflare
+        run: npm ci
       - name: Verify Deploy Target
         working-directory: ./services/console
         run: npm run deploy-target dev-console
@@ -234,17 +228,16 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "24"
-      - name: Download `bencher_valid` Artifact
+      - name: Download Console UI Artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: ${{ env.WASM_BENCHER_VALID }}
-          path: ./lib/bencher_valid/pkg
-      - name: Build Console UI
+          name: ${{ env.BENCHER_CONSOLE }}
+          path: ./services/console
+      # `wrangler` is a dev dependency of the console. It used to arrive as part
+      # of `npm run cloudflare`, which the build job now runs instead.
+      - name: Install Dependencies
         working-directory: ./services/console
-        env:
-          SENTRY_UPLOAD: true
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: npm run cloudflare
+        run: npm ci
       - name: Verify Deploy Target
         working-directory: ./services/console
         run: npm run deploy-target console

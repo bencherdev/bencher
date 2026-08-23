@@ -92,9 +92,14 @@ CLOUDFLARE_ENV=dev npm run cloudflare && npm run deploy-target dev-console && np
 ```
 
 `npm run deploy-target <worker-name>` asserts that the built
-`dist/server/wrangler.json` really is the Worker you mean to deploy. Both deploy
-jobs run it, and so should any manual deploy: it is the only thing standing
-between a forgotten `CLOUDFLARE_ENV` and a production overwrite.
+`dist/server/wrangler.json` really is the Worker you mean to deploy, and that
+`.wrangler/deploy/config.json` still exists and points at it. The redirect is
+checked because it is hidden, so it is the piece most easily lost in transit:
+artifact uploads skip hidden files unless told otherwise, and without it
+`wrangler deploy` falls back to the source `wrangler.jsonc` and says nothing.
+The build job and both deploy jobs run it, and so should any manual deploy: it
+is the only thing standing between a forgotten `CLOUDFLARE_ENV` and a
+production overwrite.
 
 Local `wrangler dev` currently refuses to start: the pinned `workerd` supports
 compatibility dates only through 2026-08-08 and `wrangler.jsonc` asks for
