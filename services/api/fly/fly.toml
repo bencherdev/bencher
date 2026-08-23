@@ -49,8 +49,8 @@ protocol = "http"
 [[vm]]
 cpu_kind = "shared"
 cpus = 8
-memory_mb = 2048
+memory_mb = 4096
 
 [[restart]]
 policy = "on-failure"
-retries = 6
+retries = 3
