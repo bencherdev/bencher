@@ -16,8 +16,8 @@ use bencher_api_tests::{
     },
 };
 use bencher_json::{
-    BenchmarkUuid, BoundaryUuid, JsonParameters, JsonReport, JsonReports, MeasureUuid, MetricName,
-    MetricUuid, ModelUuid, ReportBenchmarkUuid, ThresholdUuid,
+    BenchmarkUuid, BoundaryUuid, JsonReport, JsonReports, MeasureUuid, MetricName, MetricUuid,
+    ModelUuid, ParameterSet, ReportBenchmarkUuid, ThresholdUuid,
 };
 use bencher_schema::{
     context::DbConnection,
@@ -626,14 +626,14 @@ async fn reports_ingest_empty_parameter_sets() {
     assert_eq!(benchmark_ids.len(), 2, "two benchmarks were ingested");
 
     for benchmark_id in benchmark_ids {
-        let parameters: Vec<JsonParameters> = schema::parameter::table
+        let parameters: Vec<ParameterSet> = schema::parameter::table
             .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-            .select(schema::parameter::parameters)
+            .select(schema::parameter::set)
             .load(&mut conn)
             .expect("Failed to load parameters");
         assert_eq!(
             parameters,
-            vec![JsonParameters::default()],
+            vec![ParameterSet::default()],
             "benchmark {benchmark_id} must have exactly one empty parameter set"
         );
     }

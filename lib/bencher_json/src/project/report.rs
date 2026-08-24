@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "plus")]
 use crate::runner::job::JobUuid;
 use crate::{
-    BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonMetric,
-    JsonParameters, JsonProject, JsonPubUser, JsonTestbed, MeasureNameId, MetricUuid,
-    ParameterUuid, TestbedNameId,
+    BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure,
+    JsonMetricTriple, JsonProject, JsonPubUser, JsonTestbed, MeasureNameId, MetricUuid,
+    ParameterSet, ParameterUuid, TestbedNameId,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -441,7 +441,7 @@ pub struct JsonReportResult {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportParameter {
     pub uuid: ParameterUuid,
-    pub parameters: JsonParameters,
+    pub set: ParameterSet,
 }
 
 #[typeshare::typeshare]
@@ -459,7 +459,7 @@ pub struct JsonReportMeasure {
     /// Absent when the measure carries no `value` name, which BMF v1 permits. Never
     /// absent for anything an older client could produce.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metric: Option<JsonMetric>,
+    pub metric: Option<JsonMetricTriple>,
     /// Deprecated. The threshold that gated the `value` row, if any.
     pub threshold: Option<JsonThresholdModel>,
     /// Deprecated. The boundary computed for the `value` row, if any.

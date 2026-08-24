@@ -215,7 +215,7 @@ export interface JsonBenchmark {
 	archived?: string;
 }
 
-export interface JsonMetric {
+export interface JsonMetricTriple {
 	uuid: Uuid;
 	value: number;
 	lower_value?: number;
@@ -338,7 +338,7 @@ export interface JsonAlert {
 	report: Uuid;
 	iteration: Iteration;
 	benchmark: JsonBenchmark;
-	metric: JsonMetric;
+	metric: JsonMetricTriple;
 	threshold: JsonThreshold;
 	boundary: JsonBoundary;
 	limit: BoundaryLimit;
@@ -352,7 +352,7 @@ export type JsonReportAlerts = JsonAlert[];
 /** The parameter set a report result ran with. */
 export interface JsonReportParameter {
 	uuid: Uuid;
-	parameters: Record<string, string | number | boolean>;
+	set: Record<string, string | number | boolean>;
 }
 
 export interface JsonThresholdModel {
@@ -392,7 +392,7 @@ export interface JsonReportMeasure {
 	 * Absent when the measure carries no `value` name, which BMF v1 permits. Never
 	 * absent for anything an older client could produce.
 	 */
-	metric?: JsonMetric;
+	metric?: JsonMetricTriple;
 	/** Deprecated. The threshold that gated the `value` row, if any. */
 	threshold?: JsonThresholdModel;
 	/** Deprecated. The boundary computed for the `value` row, if any. */
@@ -898,7 +898,7 @@ export interface JsonOneMetric {
 	testbed: JsonTestbed;
 	benchmark: JsonBenchmark;
 	measure: JsonMeasure;
-	metric: JsonMetric;
+	metric: JsonMetricTriple;
 	threshold?: JsonThresholdModel;
 	boundary?: JsonBoundary;
 	alert?: JsonPerfAlert;
@@ -939,7 +939,7 @@ export interface JsonPerfMetric {
 	start_time: string;
 	end_time: string;
 	version: JsonVersion;
-	metric: JsonMetric;
+	metric: JsonMetricTriple;
 	threshold?: JsonThresholdModel;
 	boundary?: JsonBoundary;
 	alert?: JsonPerfAlert;

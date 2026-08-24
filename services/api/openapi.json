@@ -12126,7 +12126,7 @@
             "$ref": "#/components/schemas/BoundaryLimit"
           },
           "metric": {
-            "$ref": "#/components/schemas/JsonMetric"
+            "$ref": "#/components/schemas/JsonMetricTriple"
           },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
@@ -13334,7 +13334,7 @@
           "$ref": "#/components/schemas/JsonMember"
         }
       },
-      "JsonMetric": {
+      "JsonMetricTriple": {
         "type": "object",
         "properties": {
           "lower_value": {
@@ -14604,7 +14604,7 @@
             "$ref": "#/components/schemas/JsonMeasure"
           },
           "metric": {
-            "$ref": "#/components/schemas/JsonMetric"
+            "$ref": "#/components/schemas/JsonMetricTriple"
           },
           "report": {
             "$ref": "#/components/schemas/ReportUuid"
@@ -14791,23 +14791,6 @@
           "protocol"
         ]
       },
-      "JsonParameters": {
-        "type": "object",
-        "additionalProperties": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number",
-              "format": "double"
-            },
-            {
-              "type": "boolean"
-            }
-          ]
-        }
-      },
       "JsonPerf": {
         "type": "object",
         "properties": {
@@ -14891,7 +14874,7 @@
             "$ref": "#/components/schemas/Iteration"
           },
           "metric": {
-            "$ref": "#/components/schemas/JsonMetric"
+            "$ref": "#/components/schemas/JsonMetricTriple"
           },
           "report": {
             "$ref": "#/components/schemas/ReportUuid"
@@ -16220,7 +16203,7 @@
             "description": "Deprecated. Reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nAbsent when the measure carries no `value` name, which BMF v1 permits. Never absent for anything an older client could produce.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonMetric"
+                "$ref": "#/components/schemas/JsonMetricTriple"
               }
             ]
           },
@@ -16279,15 +16262,15 @@
         "description": "The parameter set a report result ran with.",
         "type": "object",
         "properties": {
-          "parameters": {
-            "$ref": "#/components/schemas/JsonParameters"
+          "set": {
+            "$ref": "#/components/schemas/ParameterSet"
           },
           "uuid": {
             "$ref": "#/components/schemas/ParameterUuid"
           }
         },
         "required": [
-          "parameters",
+          "set",
           "uuid"
         ]
       },
@@ -18583,6 +18566,23 @@
             ]
           }
         ]
+      },
+      "ParameterSet": {
+        "type": "object",
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number",
+              "format": "double"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        }
       },
       "ParameterUuid": {
         "type": "string",

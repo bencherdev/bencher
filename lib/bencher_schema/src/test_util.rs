@@ -10,7 +10,7 @@
 //! so no concurrent INSERT can interleave between the INSERT and the `last_insert_rowid()` call.
 
 use bencher_json::{
-    DateTime, JsonParameters, MetricName, ParameterUuid,
+    DateTime, MetricName, ParameterSet, ParameterUuid,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
@@ -529,7 +529,7 @@ pub fn create_benchmark(
         .get_result(conn)
         .expect("Failed to get benchmark id");
 
-    create_parameter(conn, benchmark_id, &JsonParameters::default());
+    create_parameter(conn, benchmark_id, &ParameterSet::default());
 
     benchmark_id
 }
@@ -538,13 +538,13 @@ pub fn create_benchmark(
 pub fn create_parameter(
     conn: &mut SqliteConnection,
     benchmark_id: BenchmarkId,
-    parameters: &JsonParameters,
+    parameters: &ParameterSet,
 ) -> ParameterId {
     diesel::insert_into(schema::parameter::table)
         .values((
             schema::parameter::uuid.eq(ParameterUuid::new()),
             schema::parameter::benchmark_id.eq(benchmark_id),
-            schema::parameter::parameters.eq(parameters),
+            schema::parameter::set.eq(parameters),
             schema::parameter::created.eq(DateTime::TEST),
             schema::parameter::modified.eq(DateTime::TEST),
         ))
@@ -560,7 +560,7 @@ pub fn create_parameter(
 pub fn get_empty_parameter(conn: &mut SqliteConnection, benchmark_id: BenchmarkId) -> ParameterId {
     schema::parameter::table
         .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-        .filter(schema::parameter::parameters.eq(JsonParameters::default()))
+        .filter(schema::parameter::set.eq(ParameterSet::default()))
         .select(schema::parameter::id)
         .first(conn)
         .expect("Failed to get empty parameter set")

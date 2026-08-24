@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, JsonParameters, ParameterUuid, project::report::JsonReportParameter};
+use bencher_json::{DateTime, ParameterSet, ParameterUuid, project::report::JsonReportParameter};
 use diesel::{
     ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
     SelectableHelper as _,
@@ -37,7 +37,7 @@ pub struct QueryParameter {
     pub id: ParameterId,
     pub uuid: ParameterUuid,
     pub benchmark_id: BenchmarkId,
-    pub parameters: JsonParameters,
+    pub set: ParameterSet,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -65,7 +65,7 @@ impl QueryParameter {
     ) -> Result<ParameterId, HttpError> {
         schema::parameter::table
             .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-            .filter(schema::parameter::parameters.eq(JsonParameters::default()))
+            .filter(schema::parameter::set.eq(ParameterSet::default()))
             .select(schema::parameter::id)
             .first(conn)
             .map_err(|e| {
@@ -81,7 +81,7 @@ impl QueryParameter {
     /// The empty parameter set is never created here: every benchmark is born with
     /// one, so its absence is data corruption rather than a row to mint. Every
     /// other set is created on first sight by its canonical form, and
-    /// `UNIQUE (benchmark_id, parameters)` is what makes that idempotent under
+    /// `UNIQUE (benchmark_id, "set")` is what makes that idempotent under
     /// concurrent reports.
     ///
     /// Mirrors [`QueryBenchmark::get_or_create`]: a resolved set that is archived is
@@ -93,7 +93,7 @@ impl QueryParameter {
         context: &ApiContext,
         project_id: ProjectId,
         benchmark_id: BenchmarkId,
-        parameters: &JsonParameters,
+        parameters: &ParameterSet,
     ) -> Result<ParameterId, HttpError> {
         let query_parameter =
             Self::get_or_create_inner(context, project_id, benchmark_id, parameters).await?;
@@ -115,7 +115,7 @@ impl QueryParameter {
         context: &ApiContext,
         project_id: ProjectId,
         benchmark_id: BenchmarkId,
-        parameters: &JsonParameters,
+        parameters: &ParameterSet,
     ) -> Result<Self, HttpError> {
         if let Some(query_parameter) =
             Self::from_parameters(auth_conn!(context), benchmark_id, parameters)?
@@ -147,7 +147,7 @@ impl QueryParameter {
         context: &ApiContext,
         project_id: ProjectId,
         benchmark_id: BenchmarkId,
-        parameters: &JsonParameters,
+        parameters: &ParameterSet,
     ) -> Result<Self, HttpError> {
         #[cfg(feature = "plus")]
         InsertParameter::rate_limit(context, project_id).await?;
@@ -170,11 +170,11 @@ impl QueryParameter {
     fn from_parameters(
         conn: &mut DbConnection,
         benchmark_id: BenchmarkId,
-        parameters: &JsonParameters,
+        parameters: &ParameterSet,
     ) -> Result<Option<Self>, HttpError> {
         schema::parameter::table
             .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-            .filter(schema::parameter::parameters.eq(parameters))
+            .filter(schema::parameter::set.eq(parameters))
             .select(Self::as_select())
             .first(conn)
             .optional()
@@ -192,12 +192,12 @@ impl QueryParameter {
             id: _,
             uuid,
             benchmark_id: _,
-            parameters,
+            set,
             created: _,
             modified: _,
             archived: _,
         } = self;
-        JsonReportParameter { uuid, parameters }
+        JsonReportParameter { uuid, set }
     }
 }
 
@@ -206,7 +206,7 @@ impl QueryParameter {
 pub struct InsertParameter {
     pub uuid: ParameterUuid,
     pub benchmark_id: BenchmarkId,
-    pub parameters: JsonParameters,
+    pub set: ParameterSet,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
@@ -277,15 +277,15 @@ impl InsertParameter {
     /// The timestamp is the benchmark's own creation timestamp:
     /// the parameter set is created in the same transaction as its benchmark.
     pub fn empty_set(benchmark_id: BenchmarkId, timestamp: DateTime) -> Self {
-        Self::new(benchmark_id, JsonParameters::default(), timestamp)
+        Self::new(benchmark_id, ParameterSet::default(), timestamp)
     }
 
     /// A parameter set as a report first named it, already canonical.
-    pub fn new(benchmark_id: BenchmarkId, parameters: JsonParameters, timestamp: DateTime) -> Self {
+    pub fn new(benchmark_id: BenchmarkId, set: ParameterSet, timestamp: DateTime) -> Self {
         Self {
             uuid: ParameterUuid::new(),
             benchmark_id,
-            parameters,
+            set,
             created: timestamp,
             modified: timestamp,
             archived: None,
@@ -296,7 +296,7 @@ impl InsertParameter {
         let Self {
             uuid,
             benchmark_id,
-            parameters,
+            set,
             created,
             modified,
             archived,
@@ -305,7 +305,7 @@ impl InsertParameter {
             id,
             uuid,
             benchmark_id,
-            parameters,
+            set,
             created,
             modified,
             archived,
@@ -316,7 +316,7 @@ impl InsertParameter {
 #[derive(Debug, Clone, diesel::AsChangeset)]
 #[diesel(table_name = parameter_table)]
 pub struct UpdateParameter {
-    pub parameters: Option<JsonParameters>,
+    pub set: Option<ParameterSet>,
     pub modified: DateTime,
     pub archived: Option<Option<DateTime>>,
 }
@@ -325,7 +325,7 @@ impl UpdateParameter {
     /// A grid point that reports again is a live grid point.
     fn unarchive() -> Self {
         Self {
-            parameters: None,
+            set: None,
             modified: DateTime::now(),
             archived: Some(None),
         }
@@ -334,7 +334,7 @@ impl UpdateParameter {
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, JsonParameters, ParameterUuid};
+    use bencher_json::{DateTime, ParameterSet, ParameterUuid};
     use diesel::{
         ExpressionMethods as _, QueryDsl as _, QueryResult, RunQueryDsl as _, SqliteConnection,
         connection::SimpleConnection as _,
@@ -356,7 +356,7 @@ mod tests {
     /// Where the blob under test comes from.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum Encode {
-        /// Written through the `parameter.parameters` column: the production path.
+        /// Written through the `parameter.set` column: the production path.
         Column,
         /// Encoded directly. Parameter values are scalar only, so a null value
         /// never reaches the column, but the encoder still has to agree with `SQLite`.
@@ -420,7 +420,7 @@ mod tests {
         value: i32,
     }
 
-    fn parameters(parameters: &str) -> JsonParameters {
+    fn parameters(parameters: &str) -> ParameterSet {
         parameters.parse().expect("Failed to parse parameters")
     }
 
@@ -492,8 +492,8 @@ mod tests {
         canonical: &str,
     ) -> QueryResult<usize> {
         diesel::sql_query(
-            "INSERT INTO parameter(uuid, benchmark_id, parameters, created, modified)
-             VALUES (?, ?, jsonb(?), 0, 0)",
+            r#"INSERT INTO parameter(uuid, benchmark_id, "set", created, modified)
+               VALUES (?, ?, jsonb(?), 0, 0)"#,
         )
         .bind::<diesel::sql_types::Text, _>(ParameterUuid::new().to_string())
         .bind::<diesel::sql_types::Integer, _>(benchmark_id)
@@ -524,7 +524,7 @@ mod tests {
     fn write_parameter(
         conn: &mut SqliteConnection,
         benchmark_id: BenchmarkId,
-        parameters: &JsonParameters,
+        parameters: &ParameterSet,
     ) -> super::ParameterId {
         if parameters.is_empty() {
             get_empty_parameter(conn, benchmark_id)
@@ -534,7 +534,7 @@ mod tests {
     }
 
     // The encoder has to be byte identical to SQLite's `jsonb()` over the same
-    // canonical text, because `UNIQUE(benchmark_id, parameters)` compares bytes and
+    // canonical text, because `UNIQUE(benchmark_id, "set")` compares bytes and
     // both writers reach that column: the migration mints the empty set with
     // `jsonb('{}')` and everything after that is written through Diesel.
     #[test]
@@ -562,17 +562,17 @@ mod tests {
 
                     let parameter_id = write_parameter(&mut conn, benchmark_id, &parameters);
                     assert_eq!(
-                        parameter_text(&mut conn, parameter_id, "hex(parameters)"),
+                        parameter_text(&mut conn, parameter_id, "hex(\"set\")"),
                         minted,
                         "{name}: the written bytes must be the bytes jsonb() mints"
                     );
                     assert_eq!(
-                        parameter_integer(&mut conn, parameter_id, "json_valid(parameters, 8)"),
+                        parameter_integer(&mut conn, parameter_id, "json_valid(\"set\", 8)"),
                         1,
                         "{name}: SQLite's JSON functions must accept the written bytes"
                     );
                     assert_eq!(
-                        parameter_text(&mut conn, parameter_id, "json(parameters)"),
+                        parameter_text(&mut conn, parameter_id, "json(\"set\")"),
                         *canonical,
                         "{name}: the canonical text must survive the column unchanged"
                     );
@@ -643,9 +643,9 @@ mod tests {
             let parameters = parameters(canonical);
 
             let parameter_id = write_parameter(&mut conn, written, &parameters);
-            let read: JsonParameters = schema::parameter::table
+            let read: ParameterSet = schema::parameter::table
                 .filter(schema::parameter::id.eq(parameter_id))
-                .select(schema::parameter::parameters)
+                .select(schema::parameter::set)
                 .first(&mut conn)
                 .expect("Failed to read back a written parameter set");
             assert_eq!(read, parameters, "{name}: written and read back");
@@ -656,10 +656,10 @@ mod tests {
             );
 
             mint_parameter(&mut conn, minted, canonical).expect("Failed to mint a parameter set");
-            let read: JsonParameters = schema::parameter::table
+            let read: ParameterSet = schema::parameter::table
                 .filter(schema::parameter::benchmark_id.eq(minted))
                 .order(schema::parameter::id.desc())
-                .select(schema::parameter::parameters)
+                .select(schema::parameter::set)
                 .first(&mut conn)
                 .expect("Failed to read back a minted parameter set");
             assert_eq!(read, parameters, "{name}: minted and read back");
@@ -697,7 +697,7 @@ mod tests {
 
             assert!(
                 is_unique_violation(&minted) || is_unique_violation(&written),
-                "{name}: the two writers must collide on UNIQUE(benchmark_id, parameters)"
+                r#"{name}: the two writers must collide on UNIQUE(benchmark_id, "set")"#
             );
             assert!(
                 landed_or_collided(&minted),
@@ -720,13 +720,13 @@ mod tests {
     fn insert_parameter(
         conn: &mut SqliteConnection,
         benchmark_id: BenchmarkId,
-        parameters: &JsonParameters,
+        parameters: &ParameterSet,
     ) -> QueryResult<usize> {
         diesel::insert_into(schema::parameter::table)
             .values((
                 schema::parameter::uuid.eq(ParameterUuid::new()),
                 schema::parameter::benchmark_id.eq(benchmark_id),
-                schema::parameter::parameters.eq(parameters),
+                schema::parameter::set.eq(parameters),
                 schema::parameter::created.eq(DateTime::TEST),
                 schema::parameter::modified.eq(DateTime::TEST),
             ))
@@ -760,7 +760,7 @@ mod tests {
 
         assert!(
             collision.is_err(),
-            "logically equal parameter sets must collide on UNIQUE(benchmark_id, parameters)"
+            r#"logically equal parameter sets must collide on UNIQUE(benchmark_id, "set")"#
         );
         // The empty set the benchmark was born with, plus the one that landed.
         assert_eq!(count_parameters(&mut conn, benchmark_id), 2);
@@ -895,21 +895,21 @@ mod tests {
         assert_eq!(benchmark_ids.len(), 2);
 
         for benchmark_id in benchmark_ids {
-            let backfilled: Vec<JsonParameters> = schema::parameter::table
+            let backfilled: Vec<ParameterSet> = schema::parameter::table
                 .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-                .select(schema::parameter::parameters)
+                .select(schema::parameter::set)
                 .load(&mut conn)
                 .expect("Failed to load parameters");
             assert_eq!(
                 backfilled,
-                vec![JsonParameters::default()],
+                vec![ParameterSet::default()],
                 "every benchmark gets exactly one empty parameter set"
             );
 
             // The migration mints the canonical empty object in SQL, so a set minted
             // in Rust has to be byte identical to it.
             assert!(
-                insert_parameter(&mut conn, benchmark_id, &JsonParameters::default()).is_err(),
+                insert_parameter(&mut conn, benchmark_id, &ParameterSet::default()).is_err(),
                 "the backfilled empty set must collide with a Rust minted one"
             );
         }

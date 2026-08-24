@@ -3,8 +3,8 @@
 //! These helpers are used by both `api_projects` and `api_runners` integration tests.
 
 use bencher_json::{
-    BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, JsonParameters, Jwt, MetricName,
-    MetricUuid, ParameterUuid, ReportUuid, ResourceName, TestbedUuid, TokenUuid, VersionUuid,
+    BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, MetricName, MetricUuid, ParameterSet,
+    ParameterUuid, ReportUuid, ResourceName, TestbedUuid, TokenUuid, VersionUuid,
 };
 use bencher_schema::{context::DbConnection, model::user::UserId, schema};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -42,7 +42,7 @@ pub fn create_empty_parameter(conn: &mut DbConnection, benchmark_id: i32) -> i32
         .values((
             schema::parameter::uuid.eq(&parameter_uuid),
             schema::parameter::benchmark_id.eq(benchmark_id),
-            schema::parameter::parameters.eq(JsonParameters::default()),
+            schema::parameter::set.eq(ParameterSet::default()),
             schema::parameter::created.eq(&now),
             schema::parameter::modified.eq(&now),
         ))
@@ -61,7 +61,7 @@ pub fn create_empty_parameter(conn: &mut DbConnection, benchmark_id: i32) -> i32
 pub fn get_empty_parameter(conn: &mut DbConnection, benchmark_id: i32) -> i32 {
     schema::parameter::table
         .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-        .filter(schema::parameter::parameters.eq(JsonParameters::default()))
+        .filter(schema::parameter::set.eq(ParameterSet::default()))
         .select(schema::parameter::id)
         .first(&mut *conn)
         .expect("Failed to get empty parameter set")

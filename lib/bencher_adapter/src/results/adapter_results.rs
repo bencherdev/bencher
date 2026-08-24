@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, JsonNewMetric, JsonParameters,
+    BenchmarkName, BenchmarkNameId, JsonNewMetric, ParameterSet,
     project::measure::built_in::{self, BuiltInMeasure as _},
 };
 
@@ -31,7 +31,7 @@ pub type ResultsMap = HashMap<BenchmarkNameId, BenchmarkEntries>;
 ///
 /// The empty parameter set is the key every BMF v0 adapter uses, since a v0
 /// payload only ever reports one grid point per benchmark.
-pub type BenchmarkEntries = BTreeMap<JsonParameters, AdapterMetrics>;
+pub type BenchmarkEntries = BTreeMap<ParameterSet, AdapterMetrics>;
 
 /// The Bencher Metric Format version a results payload was parsed from.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -71,7 +71,7 @@ impl From<FoldableResults> for AdapterResults {
                     .into();
                 (
                     benchmark,
-                    std::iter::once((JsonParameters::default(), metrics)).collect(),
+                    std::iter::once((ParameterSet::default(), metrics)).collect(),
                 )
             })
             .collect::<ResultsMap>()
@@ -87,7 +87,7 @@ fn empty_set(results_map: &mut ResultsMap, benchmark_name: BenchmarkName) -> &mu
     results_map
         .entry(BenchmarkNameId::new_name(benchmark_name))
         .or_default()
-        .entry(JsonParameters::default())
+        .entry(ParameterSet::default())
         .or_default()
 }
 
@@ -590,7 +590,7 @@ impl AdapterResults {
     /// The metrics a benchmark reported on the empty parameter set.
     #[cfg(test)]
     pub fn entry(&self, benchmark: &BenchmarkNameId) -> Option<&AdapterMetrics> {
-        self.inner.get(benchmark)?.get(&JsonParameters::default())
+        self.inner.get(benchmark)?.get(&ParameterSet::default())
     }
 
     pub fn is_empty(&self) -> bool {
@@ -606,7 +606,7 @@ impl AdapterResults {
     pub(crate) fn into_foldable(self) -> FoldableResults {
         let mut fold_map = FoldableMap::with_capacity(self.inner.len());
         for (benchmark, mut entries) in self.inner {
-            let Some(metrics) = entries.remove(&JsonParameters::default()) else {
+            let Some(metrics) = entries.remove(&ParameterSet::default()) else {
                 continue;
             };
             let metrics = metrics

@@ -1,8 +1,8 @@
 //! `SQLite`'s [JSONB][jsonb] binary encoding.
 //!
-//! Two writers reach the `parameter.parameters` column: this encoder, and
+//! Two writers reach the `parameter.set` column: this encoder, and
 //! `SQLite`'s own `jsonb()` in the migration that mints the empty parameter set.
-//! `UNIQUE(benchmark_id, parameters)` compares bytes, so the two have to agree
+//! `UNIQUE(benchmark_id, "set")` compares bytes, so the two have to agree
 //! byte for byte, and `SQLite` is the definition of correct. Where the format
 //! admits more than one encoding of the same value, this matches what `jsonb()`
 //! produces over the RFC 8785 (JCS) canonical text of the same parameter set.

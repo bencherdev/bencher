@@ -19,12 +19,12 @@
 
 use bencher_api_tests::{
     TestServer,
-    helpers::{base_timestamp, create_empty_parameter, get_project_id},
+    helpers::{base_timestamp, get_project_id},
 };
 use bencher_json::{
     AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, HeadUuid, MeasureUuid, MetricName,
-    MetricUuid, ModelUuid, ReportBenchmarkUuid, ReportUuid, TestbedUuid, ThresholdUuid,
-    VersionUuid, project::alert::AlertStatus, project::boundary::BoundaryLimit,
+    MetricUuid, ModelUuid, ParameterUuid, ReportBenchmarkUuid, ReportUuid, TestbedUuid,
+    ThresholdUuid, VersionUuid, project::alert::AlertStatus, project::boundary::BoundaryLimit,
 };
 use bencher_schema::{MIGRATIONS, context::DbConnection, schema};
 use diesel::{
@@ -710,6 +710,36 @@ fn revert_migration(conn: &mut DbConnection) {
         .expect("Failed to enable foreign keys");
 }
 
+/// Seed a benchmark's empty parameter set at the reverted schema point.
+///
+/// Benchmarks inserted directly into the database bypass `QueryBenchmark::create`,
+/// so they need the birth invariant applied by hand. The migrations are reverted
+/// when this runs, so the column is still spelled `parameters`: the rename to `set`
+/// is a layer above, and the chain puts it back on the way up. That is why this is
+/// raw SQL rather than `create_empty_parameter`, for the same reason the metric rows
+/// below are.
+fn seed_empty_parameter(conn: &mut DbConnection, benchmark_id: i32) -> i32 {
+    let now = base_timestamp();
+
+    let parameter_uuid = ParameterUuid::new();
+    diesel::sql_query(
+        "INSERT INTO parameter (uuid, benchmark_id, parameters, created, modified)
+         VALUES (?, ?, jsonb('{}'), ?, ?)",
+    )
+    .bind::<Text, _>(parameter_uuid.to_string())
+    .bind::<Integer, _>(benchmark_id)
+    .bind::<BigInt, _>(now)
+    .bind::<BigInt, _>(now)
+    .execute(&mut *conn)
+    .expect("Failed to seed the empty parameter set");
+
+    schema::parameter::table
+        .filter(schema::parameter::uuid.eq(&parameter_uuid))
+        .select(schema::parameter::id)
+        .first(&mut *conn)
+        .expect("Failed to get the parameter id")
+}
+
 /// The `metric_boundary` column list, in the order `view.rs` declares it.
 const VIEW_COLUMNS: [&str; 14] = [
     "metric_id",
@@ -904,7 +934,7 @@ async fn seed_legacy_project(server: &TestServer, label: &str) -> Fixture {
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("Failed to get the benchmark id");
-    let parameter_id = create_empty_parameter(&mut conn, benchmark_id);
+    let parameter_id = seed_empty_parameter(&mut conn, benchmark_id);
 
     // Two measures, so a pivot that joins on the report benchmark alone pulls a
     // bound across measures and fails.

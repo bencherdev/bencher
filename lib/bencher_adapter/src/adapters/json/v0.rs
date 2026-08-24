@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::{BenchmarkNameId, JsonNewMetric, JsonParameters, MeasureNameId};
+use bencher_json::{BenchmarkNameId, JsonNewMetric, MeasureNameId, ParameterSet};
 
 use crate::{
     Adaptable, Settings,
@@ -39,7 +39,7 @@ fn from_wire(results: JsonV0Results) -> AdapterResults {
                 .collect::<HashMap<_, _>>();
             (
                 benchmark,
-                std::iter::once((JsonParameters::default(), metrics.into())).collect(),
+                std::iter::once((ParameterSet::default(), metrics.into())).collect(),
             )
         })
         .collect::<ResultsMap>()

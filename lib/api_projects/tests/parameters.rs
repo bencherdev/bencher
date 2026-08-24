@@ -17,7 +17,7 @@ use bencher_api_tests::{
     TestServer,
     helpers::{base_timestamp, get_project_id},
 };
-use bencher_json::{DateTime, JsonParameters, MetricName, Slug};
+use bencher_json::{DateTime, MetricName, ParameterSet, Slug};
 use bencher_schema::{
     context::DbConnection,
     model::{organization::OrganizationId, project::metric::QueryMetric},
@@ -140,12 +140,12 @@ fn organization_id(conn: &mut DbConnection, project_id: i32) -> OrganizationId {
 
 /// Every parameter set stored under a project, with the number of `report_benchmark`
 /// rows pointing at it.
-fn parameter_sets(conn: &mut DbConnection, project_id: i32) -> Vec<(JsonParameters, i64)> {
-    let parameters: Vec<(i32, JsonParameters)> = schema::parameter::table
+fn parameter_sets(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet, i64)> {
+    let parameters: Vec<(i32, ParameterSet)> = schema::parameter::table
         .inner_join(schema::benchmark::table)
         .filter(schema::benchmark::project_id.eq(project_id))
         .order(schema::parameter::id.asc())
-        .select((schema::parameter::id, schema::parameter::parameters))
+        .select((schema::parameter::id, schema::parameter::set))
         .load(&mut *conn)
         .expect("Failed to load the parameter sets");
 
@@ -163,7 +163,7 @@ fn parameter_sets(conn: &mut DbConnection, project_id: i32) -> Vec<(JsonParamete
 }
 
 /// Every metric name stored for a project, with its value, keyed by parameter set.
-fn named_values(conn: &mut DbConnection, project_id: i32) -> Vec<(JsonParameters, String, f64)> {
+fn named_values(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet, String, f64)> {
     schema::metric::table
         .inner_join(
             schema::report_benchmark::table
@@ -173,11 +173,11 @@ fn named_values(conn: &mut DbConnection, project_id: i32) -> Vec<(JsonParameters
         .filter(schema::benchmark::project_id.eq(project_id))
         .order((schema::parameter::id.asc(), schema::metric::name.asc()))
         .select((
-            schema::parameter::parameters,
+            schema::parameter::set,
             schema::metric::name,
             schema::metric::value,
         ))
-        .load::<(JsonParameters, MetricName, f64)>(&mut *conn)
+        .load::<(ParameterSet, MetricName, f64)>(&mut *conn)
         .expect("Failed to load the metric rows")
         .into_iter()
         .map(|(parameters, name, value)| (parameters, name.to_string(), value))
@@ -185,7 +185,7 @@ fn named_values(conn: &mut DbConnection, project_id: i32) -> Vec<(JsonParameters
 }
 
 /// The parameter set and metric name of every alert in a project.
-fn alerts(conn: &mut DbConnection, project_id: i32) -> Vec<(JsonParameters, String)> {
+fn alerts(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet, String)> {
     schema::alert::table
         .inner_join(
             schema::boundary::table.inner_join(
@@ -198,8 +198,8 @@ fn alerts(conn: &mut DbConnection, project_id: i32) -> Vec<(JsonParameters, Stri
         )
         .filter(schema::benchmark::project_id.eq(project_id))
         .order(schema::alert::id.asc())
-        .select((schema::parameter::parameters, schema::metric::name))
-        .load::<(JsonParameters, MetricName)>(&mut *conn)
+        .select((schema::parameter::set, schema::metric::name))
+        .load::<(ParameterSet, MetricName)>(&mut *conn)
         .expect("Failed to load the alerts")
         .into_iter()
         .map(|(parameters, name)| (parameters, name.to_string()))
@@ -239,7 +239,7 @@ fn series_measures(conn: &mut DbConnection, project_id: i32) -> Vec<String> {
         .collect()
 }
 
-fn parameters(canonical: &str) -> JsonParameters {
+fn parameters(canonical: &str) -> ParameterSet {
     canonical.parse().expect("Failed to parse the parameters")
 }
 
@@ -279,7 +279,7 @@ async fn v1_report_lands_grid_points_and_named_values() {
     assert_eq!(
         parameter_sets(&mut conn, project_id),
         vec![
-            (JsonParameters::default(), 0),
+            (ParameterSet::default(), 0),
             (parameters(r#"{"size_mb": 16}"#), 1),
             (parameters(r#"{"size_mb": 32}"#), 1),
         ],
@@ -499,7 +499,7 @@ async fn bare_threshold_gates_only_the_value_name() {
     let alerts = alerts(&mut conn, project_id);
     assert_eq!(
         alerts,
-        vec![(JsonParameters::default(), "value".to_owned())],
+        vec![(ParameterSet::default(), "value".to_owned())],
         "the alert is on the point estimate"
     );
 }
@@ -534,7 +534,7 @@ async fn absent_parameters_land_on_the_empty_set() {
 
     assert_eq!(
         parameter_sets(&mut conn, project_id),
-        vec![(JsonParameters::default(), 1)],
+        vec![(ParameterSet::default(), 1)],
         "an absent parameter set and an explicit empty one are one grid point"
     );
 }
@@ -595,7 +595,7 @@ async fn v1_entry_without_measures_mints_nothing() {
     assert_eq!(benchmark_count(&mut conn, project_id), 1);
     assert_eq!(
         parameter_sets(&mut conn, project_id),
-        vec![(JsonParameters::default(), 0)],
+        vec![(ParameterSet::default(), 0)],
         "only the empty set the benchmark was born with, pointed at by nothing"
     );
     assert_eq!(named_values(&mut conn, project_id), vec![]);
@@ -623,7 +623,7 @@ async fn v1_benchmark_without_entries_mints_nothing() {
     assert_eq!(benchmark_count(&mut conn, project_id), 1);
     assert_eq!(
         parameter_sets(&mut conn, project_id),
-        vec![(JsonParameters::default(), 0)],
+        vec![(ParameterSet::default(), 0)],
     );
     assert_eq!(named_values(&mut conn, project_id), vec![]);
     assert_eq!(series_measures(&mut conn, project_id), Vec::<String>::new());
@@ -655,7 +655,7 @@ async fn v0_benchmark_without_measures_is_unchanged() {
     assert_eq!(benchmark_count(&mut conn, project_id), 1);
     assert_eq!(
         parameter_sets(&mut conn, project_id),
-        vec![(JsonParameters::default(), 1)],
+        vec![(ParameterSet::default(), 1)],
         "the v0 row still lands on the empty parameter set"
     );
     assert_eq!(named_values(&mut conn, project_id), vec![]);
@@ -684,7 +684,7 @@ async fn archived_parameter_set_is_unarchived_on_report() {
         let mut conn = server.db_conn();
         let updated = diesel::update(
             schema::parameter::table
-                .filter(schema::parameter::parameters.eq(parameters(r#"{"size_mb": 16}"#))),
+                .filter(schema::parameter::set.eq(parameters(r#"{"size_mb": 16}"#))),
         )
         .set(schema::parameter::archived.eq(Some(1_000_000_000i64)))
         .execute(&mut conn)
@@ -698,7 +698,7 @@ async fn archived_parameter_set_is_unarchived_on_report() {
     let archived: Vec<Option<i64>> = schema::parameter::table
         .inner_join(schema::benchmark::table)
         .filter(schema::benchmark::project_id.eq(project_id))
-        .filter(schema::parameter::parameters.eq(parameters(r#"{"size_mb": 16}"#)))
+        .filter(schema::parameter::set.eq(parameters(r#"{"size_mb": 16}"#)))
         .select(schema::parameter::archived)
         .load(&mut conn)
         .expect("Failed to load the parameter set");
@@ -978,12 +978,12 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
         Some(&serde_json::json!({ "benchmarks": 2, "measures": 2 })),
     );
 
-    let grid_points: Vec<JsonParameters> = results
+    let grid_points: Vec<ParameterSet> = results
         .iter()
         .map(|result| {
             serde_json::from_value(
                 result
-                    .pointer("/parameter/parameters")
+                    .pointer("/parameter/set")
                     .expect("each result names its parameter set")
                     .clone(),
             )
