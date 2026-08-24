@@ -4181,6 +4181,517 @@
         }
       }
     },
+    "/v0/projects/{project}/benchmarks/{benchmark}/parameters": {
+      "get": {
+        "tags": [
+          "projects",
+          "parameters"
+        ],
+        "summary": "List parameter sets for a benchmark",
+        "description": "List all parameter sets for a benchmark. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the parameter sets are sorted by creation date time. The HTTP response header `X-Total-Count` contains the total number of parameter sets.",
+        "operationId": "proj_parameters_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "benchmark",
+            "description": "The slug or UUID for a benchmark.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/ProjParametersSort"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "description": "If set to `true`, only returns archived parameter sets. If not set or set to `false`, only returns non-archived parameter sets.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonParameters"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects",
+          "parameters"
+        ],
+        "summary": "Create a parameter set",
+        "description": "Create a parameter set for a benchmark. The user must have `create` permissions for the project, or provide a valid project key for the project. A parameter set that already exists for the benchmark is a conflict, so this endpoint never returns an existing parameter set.",
+        "operationId": "proj_parameter_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "benchmark",
+            "description": "The slug or UUID for a benchmark.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewParameter"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonParameter"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/projects/{project}/benchmarks/{benchmark}/parameters/{parameter}": {
+      "get": {
+        "tags": [
+          "projects",
+          "parameters"
+        ],
+        "summary": "View a parameter set",
+        "description": "View a parameter set for a benchmark. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
+        "operationId": "proj_parameter_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "benchmark",
+            "description": "The slug or UUID for a benchmark.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "parameter",
+            "description": "The UUID for a parameter set.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ParameterUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonParameter"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects",
+          "parameters"
+        ],
+        "summary": "Delete a parameter set",
+        "description": "Delete a parameter set for a benchmark. The user must have `delete` permissions for the project. Every result that ran with this parameter set is deleted with it.\n\nA benchmark's empty parameter set cannot be deleted. The empty set is structural: every benchmark is born with exactly one, and report ingest treats a missing empty set as data corruption rather than a set to mint. Deleting it would manufacture exactly that corruption, so the request is refused. Archiving the empty set stays allowed, because a later report revives it the same way it revives any other archived set.",
+        "operationId": "proj_parameter_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "benchmark",
+            "description": "The slug or UUID for a benchmark.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "parameter",
+            "description": "The UUID for a parameter set.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ParameterUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "projects",
+          "parameters"
+        ],
+        "summary": "Update a parameter set",
+        "description": "Update a parameter set for a benchmark. The user must have `edit` permissions for the project, or provide a valid project key for the project. Archiving a parameter set hides it without losing its history, and a report that names the set again unarchives it.",
+        "operationId": "proj_parameter_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "benchmark",
+            "description": "The slug or UUID for a benchmark.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "parameter",
+            "description": "The UUID for a parameter set.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ParameterUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonUpdateParameter"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonParameter"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/branches": {
       "get": {
         "tags": [
@@ -13622,6 +14133,22 @@
           "name"
         ]
       },
+      "JsonNewParameter": {
+        "type": "object",
+        "properties": {
+          "set": {
+            "description": "The parameter set. Each key maps to a JSON scalar: a string, a number, or a boolean.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterSet"
+              }
+            ]
+          }
+        },
+        "required": [
+          "set"
+        ]
+      },
       "JsonNewPlan": {
         "type": "object",
         "properties": {
@@ -14790,6 +15317,47 @@
           "endpoint",
           "protocol"
         ]
+      },
+      "JsonParameter": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "benchmark": {
+            "$ref": "#/components/schemas/BenchmarkUuid"
+          },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "set": {
+            "$ref": "#/components/schemas/ParameterSet"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ParameterUuid"
+          }
+        },
+        "required": [
+          "benchmark",
+          "created",
+          "modified",
+          "set",
+          "uuid"
+        ]
+      },
+      "JsonParameters": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonParameter"
+        }
       },
       "JsonPerf": {
         "type": "object",
@@ -17857,6 +18425,16 @@
           }
         ]
       },
+      "JsonUpdateParameter": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "nullable": true,
+            "description": "Set whether the parameter set is archived.",
+            "type": "boolean"
+          }
+        }
+      },
       "JsonUpdatePlan": {
         "type": "object",
         "properties": {
@@ -19073,6 +19651,17 @@
           }
         ]
       },
+      "ProjParametersSort": {
+        "oneOf": [
+          {
+            "description": "Sort by parameter set creation date time.",
+            "type": "string",
+            "enum": [
+              "created"
+            ]
+          }
+        ]
+      },
       "ProjBranchesSort": {
         "oneOf": [
           {
@@ -19321,6 +19910,10 @@
     {
       "name": "organizations",
       "description": "Organizations"
+    },
+    {
+      "name": "parameters",
+      "description": "Benchmark Parameters"
     },
     {
       "name": "perf",

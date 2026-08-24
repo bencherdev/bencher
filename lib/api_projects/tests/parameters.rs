@@ -17,7 +17,10 @@ use bencher_api_tests::{
     TestServer,
     helpers::{base_timestamp, get_project_id},
 };
-use bencher_json::{DateTime, MetricName, ParameterSet, Slug};
+use bencher_json::{
+    DateTime, JsonBenchmark, JsonBenchmarks, JsonParameter, JsonParameters, MetricName,
+    ParameterSet, ParameterUuid, Slug,
+};
 use bencher_schema::{
     context::DbConnection,
     model::{organization::OrganizationId, project::metric::QueryMetric},
@@ -1487,4 +1490,801 @@ async fn alert_json_carries_the_boundary_the_metric_exceeded() {
         &from_endpoint, from_report,
         "the two endpoints that render an alert render the same alert"
     );
+}
+
+// The parameter set resource endpoints, nested under their benchmark.
+//
+// A parameter set has neither a name nor a slug, so every one of these routes
+// addresses it by UUID, the way a report or an alert is addressed.
+
+/// Create a benchmark through the API and return the slug the parameter routes
+/// nest under.
+async fn create_benchmark(server: &TestServer, fixture: &Fixture, name: &str) -> String {
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/benchmarks", fixture.project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .json(&serde_json::json!({ "name": name }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "POST benchmark");
+    let benchmark: JsonBenchmark = resp.json().await.expect("Failed to parse the benchmark");
+    benchmark.slug.to_string()
+}
+
+/// The benchmark a report created, taken from the benchmarks endpoint so that the
+/// slug under test is the one the server minted.
+async fn only_benchmark(server: &TestServer, fixture: &Fixture) -> String {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{}/benchmarks", fixture.project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET benchmarks");
+    let benchmarks: JsonBenchmarks = resp.json().await.expect("Failed to parse the benchmarks");
+    assert_eq!(benchmarks.0.len(), 1, "expected exactly one benchmark");
+    benchmarks
+        .0
+        .first()
+        .expect("the only benchmark")
+        .slug
+        .to_string()
+}
+
+async fn post_parameter(
+    server: &TestServer,
+    fixture: &Fixture,
+    benchmark: &str,
+    token: &str,
+    set: &serde_json::Value,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .post(server.api_url(&format!(
+            "/v0/projects/{}/benchmarks/{benchmark}/parameters",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .json(&serde_json::json!({ "set": set }))
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+async fn create_parameter(
+    server: &TestServer,
+    fixture: &Fixture,
+    benchmark: &str,
+    set: &serde_json::Value,
+) -> JsonParameter {
+    let (status, body) = post_parameter(server, fixture, benchmark, &fixture.token, set).await;
+    assert_eq!(status, StatusCode::CREATED, "POST parameter: {body}");
+    serde_json::from_str(&body).expect("Failed to parse the parameter")
+}
+
+/// A parameter list request, with the `X-Total-Count` header it answered with.
+async fn list_parameters(
+    server: &TestServer,
+    fixture: &Fixture,
+    benchmark: &str,
+    token: &str,
+    query: &str,
+) -> (StatusCode, Option<String>, String) {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/benchmarks/{benchmark}/parameters{query}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let total_count = resp
+        .headers()
+        .get("x-total-count")
+        .and_then(|total_count| total_count.to_str().ok())
+        .map(ToOwned::to_owned);
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, total_count, body)
+}
+
+async fn parameter_list(
+    server: &TestServer,
+    fixture: &Fixture,
+    benchmark: &str,
+    query: &str,
+) -> Vec<JsonParameter> {
+    let (status, _, body) =
+        list_parameters(server, fixture, benchmark, &fixture.token, query).await;
+    assert_eq!(status, StatusCode::OK, "GET parameters: {body}");
+    let parameters: JsonParameters =
+        serde_json::from_str(&body).expect("Failed to parse the parameters");
+    parameters.0
+}
+
+async fn get_parameter(
+    server: &TestServer,
+    fixture: &Fixture,
+    benchmark: &str,
+    token: &str,
+    parameter: &ParameterUuid,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/benchmarks/{benchmark}/parameters/{parameter}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+async fn patch_parameter(
+    server: &TestServer,
+    fixture: &Fixture,
+    benchmark: &str,
+    token: &str,
+    parameter: &ParameterUuid,
+    update: &serde_json::Value,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{}/benchmarks/{benchmark}/parameters/{parameter}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .json(update)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+async fn delete_parameter(
+    server: &TestServer,
+    fixture: &Fixture,
+    benchmark: &str,
+    token: &str,
+    parameter: &ParameterUuid,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v0/projects/{}/benchmarks/{benchmark}/parameters/{parameter}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+/// The row id of a parameter set, or `None` once it is deleted.
+fn parameter_row_id(conn: &mut DbConnection, parameter: &ParameterUuid) -> Option<i32> {
+    use diesel::OptionalExtension as _;
+
+    schema::parameter::table
+        .filter(schema::parameter::uuid.eq(parameter))
+        .select(schema::parameter::id)
+        .first(conn)
+        .optional()
+        .expect("Failed to query the parameter set")
+}
+
+fn report_benchmarks_for_parameter(conn: &mut DbConnection, parameter_id: i32) -> i64 {
+    schema::report_benchmark::table
+        .filter(schema::report_benchmark::parameter_id.eq(parameter_id))
+        .count()
+        .get_result(conn)
+        .expect("Failed to count the report benchmarks")
+}
+
+fn series_for_parameter(conn: &mut DbConnection, parameter_id: i32) -> i64 {
+    schema::series_last_seen::table
+        .filter(schema::series_last_seen::parameter_id.eq(parameter_id))
+        .count()
+        .get_result(conn)
+        .expect("Failed to count the billable series")
+}
+
+fn only_report_id(conn: &mut DbConnection, project_id: i32) -> i32 {
+    schema::report::table
+        .filter(schema::report::project_id.eq(project_id))
+        .select(schema::report::id)
+        .first(conn)
+        .expect("Failed to get the report")
+}
+
+fn rollup_metric_count(conn: &mut DbConnection, report_id: i32) -> i32 {
+    schema::metric_count_by_report::table
+        .filter(schema::metric_count_by_report::report_id.eq(report_id))
+        .select(schema::metric_count_by_report::metric_count)
+        .first(conn)
+        .expect("Failed to get the metric count rollup")
+}
+
+fn project_metric_count(conn: &mut DbConnection, project_id: i32) -> i64 {
+    schema::metric::table
+        .inner_join(schema::report_benchmark::table.inner_join(schema::benchmark::table))
+        .filter(schema::benchmark::project_id.eq(project_id))
+        .count()
+        .get_result(conn)
+        .expect("Failed to count the metrics")
+}
+
+// A benchmark is born with exactly one parameter set, the empty one, and it is
+// listed with its total count like every other dimension list.
+#[tokio::test]
+async fn parameter_list_starts_with_the_empty_set() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "list-empty").await;
+    let benchmark = create_benchmark(&server, &fixture, "bench one").await;
+
+    let (status, total_count, body) =
+        list_parameters(&server, &fixture, &benchmark, &fixture.token, "").await;
+    assert_eq!(status, StatusCode::OK, "GET parameters: {body}");
+    assert_eq!(total_count.as_deref(), Some("1"));
+
+    let parameters: JsonParameters =
+        serde_json::from_str(&body).expect("Failed to parse the parameters");
+    assert_eq!(
+        parameters.0.len(),
+        1,
+        "a benchmark is born with exactly one parameter set: {body}"
+    );
+    let parameter = parameters.0.first().expect("the only parameter set");
+    assert_eq!(parameter.set, ParameterSet::default());
+    assert!(
+        parameter.archived.is_none(),
+        "the birth parameter set is not archived"
+    );
+}
+
+// The list is sorted by creation, oldest first, and pages the way every other
+// dimension list pages.
+#[tokio::test]
+async fn parameter_list_paginates_in_creation_order() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "list-page").await;
+    let benchmark = create_benchmark(&server, &fixture, "bench one").await;
+
+    let mut created = Vec::new();
+    for size_mb in [16, 32, 64] {
+        let parameter = create_parameter(
+            &server,
+            &fixture,
+            &benchmark,
+            &serde_json::json!({ "size_mb": size_mb }),
+        )
+        .await;
+        created.push(parameter.uuid);
+    }
+
+    let (status, total_count, body) =
+        list_parameters(&server, &fixture, &benchmark, &fixture.token, "").await;
+    assert_eq!(status, StatusCode::OK, "GET parameters: {body}");
+    assert_eq!(total_count.as_deref(), Some("4"));
+
+    // The empty set the benchmark was born with, then the three grid points in the
+    // order they were created.
+    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(all.len(), 4);
+    assert_eq!(
+        all.first().expect("the first parameter set").set,
+        ParameterSet::default(),
+        "the empty set the benchmark was born with sorts first"
+    );
+    assert_eq!(
+        all.iter().skip(1).map(|p| p.uuid).collect::<Vec<_>>(),
+        created,
+        "the grid points list in creation order"
+    );
+
+    let first_page = parameter_list(&server, &fixture, &benchmark, "?per_page=2&page=1").await;
+    let second_page = parameter_list(&server, &fixture, &benchmark, "?per_page=2&page=2").await;
+    assert_eq!(
+        first_page
+            .iter()
+            .chain(second_page.iter())
+            .map(|p| p.uuid)
+            .collect::<Vec<_>>(),
+        all.iter().map(|p| p.uuid).collect::<Vec<_>>(),
+        "the two pages are the whole list, in order"
+    );
+
+    let descending = parameter_list(&server, &fixture, &benchmark, "?direction=desc").await;
+    assert_eq!(
+        descending.iter().map(|p| p.uuid).collect::<Vec<_>>(),
+        all.iter().rev().map(|p| p.uuid).collect::<Vec<_>>(),
+        "descending is the same list, reversed"
+    );
+}
+
+// The archived filter has the same two states a benchmark's does: archived sets are
+// out of the default list and are the only thing `archived=true` returns.
+#[tokio::test]
+async fn parameter_list_filters_by_archived() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "list-archived").await;
+    let benchmark = create_benchmark(&server, &fixture, "bench one").await;
+    let parameter = create_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &serde_json::json!({ "size_mb": 16 }),
+    )
+    .await;
+
+    let (status, body) = patch_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &parameter.uuid,
+        &serde_json::json!({ "archived": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "PATCH parameter: {body}");
+
+    let default = parameter_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(default.len(), 1, "only the empty set is left unarchived");
+    assert_eq!(
+        default.first().expect("the empty set").set,
+        ParameterSet::default(),
+        "the archived set is out of the default list"
+    );
+
+    let archived = parameter_list(&server, &fixture, &benchmark, "?archived=true").await;
+    assert_eq!(archived.len(), 1);
+    let archived = archived.first().expect("the archived set");
+    assert_eq!(archived.uuid, parameter.uuid);
+    assert!(
+        archived.archived.is_some(),
+        "the archived set carries its timestamp"
+    );
+}
+
+// A created parameter set reads back the same through the one get endpoint.
+#[tokio::test]
+async fn parameter_get_reads_back_the_created_set() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "get-one").await;
+    let benchmark = create_benchmark(&server, &fixture, "bench one").await;
+    let created = create_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &serde_json::json!({ "op": "read", "size_mb": 16 }),
+    )
+    .await;
+
+    let (status, body) =
+        get_parameter(&server, &fixture, &benchmark, &fixture.token, &created.uuid).await;
+    assert_eq!(status, StatusCode::OK, "GET parameter: {body}");
+    let parameter: JsonParameter = serde_json::from_str(&body).expect("Failed to parse");
+    assert_eq!(parameter.uuid, created.uuid);
+    assert_eq!(parameter.set, parameters(r#"{"op":"read","size_mb":16}"#));
+    assert_eq!(parameter.benchmark, created.benchmark);
+}
+
+// A parameter set that already exists under the benchmark is a conflict. This
+// endpoint is create, not get-or-create: the empty set the benchmark was born with
+// conflicts the same way any other repeated set does.
+#[tokio::test]
+async fn parameter_post_duplicate_is_a_conflict() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "post-duplicate").await;
+    let benchmark = create_benchmark(&server, &fixture, "bench one").await;
+
+    let set = serde_json::json!({ "size_mb": 16 });
+    let created = create_parameter(&server, &fixture, &benchmark, &set).await;
+
+    let (status, body) = post_parameter(&server, &fixture, &benchmark, &fixture.token, &set).await;
+    assert_eq!(status, StatusCode::CONFLICT, "POST duplicate: {body}");
+
+    // A set that is logically the same set, spelled differently, is the same set.
+    let (status, body) = post_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &serde_json::json!({ "size_mb": 16.0 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT, "POST respelled: {body}");
+
+    let (status, body) = post_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &serde_json::json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT, "POST the empty set: {body}");
+
+    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(
+        all.len(),
+        2,
+        "the birth empty set and the one created grid point"
+    );
+    assert!(all.iter().any(|parameter| parameter.uuid == created.uuid));
+}
+
+// The endpoint mints parameter sets, so it carries the same per project ceiling the
+// report path does, with the same error.
+#[tokio::test]
+async fn parameter_post_is_rate_limited() {
+    // Four creations per project per window. A benchmark is born with its empty
+    // parameter set, which is one of the four, so the fourth posted grid point is
+    // the one that is refused.
+    let server = TestServer::new_with_creation_limits(4, 4).await;
+    let fixture = fixture(&server, "post-limit").await;
+    let benchmark = create_benchmark(&server, &fixture, "bench one").await;
+
+    for size_mb in [16, 32, 64] {
+        create_parameter(
+            &server,
+            &fixture,
+            &benchmark,
+            &serde_json::json!({ "size_mb": size_mb }),
+        )
+        .await;
+    }
+
+    let (status, body) = post_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &serde_json::json!({ "size_mb": 128 }),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::TOO_MANY_REQUESTS,
+        "over the ceiling: {body}"
+    );
+    assert!(
+        body.contains("Parameter"),
+        "the limit that fired is the parameter one: {body}"
+    );
+
+    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(all.len(), 4, "no parameter set is minted past the ceiling");
+}
+
+// Archiving sets the timestamp and unarchiving clears it, exactly as it does for a
+// benchmark.
+#[tokio::test]
+async fn parameter_patch_archives_and_unarchives() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "patch-archive").await;
+    let benchmark = create_benchmark(&server, &fixture, "bench one").await;
+    let created = create_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &serde_json::json!({ "size_mb": 16 }),
+    )
+    .await;
+    assert!(created.archived.is_none());
+
+    let (status, body) = patch_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &created.uuid,
+        &serde_json::json!({ "archived": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "PATCH archive: {body}");
+    let archived: JsonParameter = serde_json::from_str(&body).expect("Failed to parse");
+    assert!(archived.archived.is_some(), "archiving sets the timestamp");
+    assert_eq!(archived.set, created.set, "archiving does not move the set");
+
+    let (status, body) = patch_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &created.uuid,
+        &serde_json::json!({ "archived": false }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "PATCH unarchive: {body}");
+    let unarchived: JsonParameter = serde_json::from_str(&body).expect("Failed to parse");
+    assert!(
+        unarchived.archived.is_none(),
+        "unarchiving clears the timestamp"
+    );
+}
+
+// Archiving the empty parameter set is allowed, because a later report revives it.
+#[tokio::test]
+async fn parameter_patch_archives_the_empty_set() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "patch-empty").await;
+    let benchmark = create_benchmark(&server, &fixture, "bench one").await;
+    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    let empty_set = all.first().expect("the empty parameter set").uuid;
+
+    let (status, body) = patch_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &empty_set,
+        &serde_json::json!({ "archived": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "PATCH the empty set: {body}");
+
+    let archived = parameter_list(&server, &fixture, &benchmark, "?archived=true").await;
+    assert_eq!(archived.len(), 1);
+    assert_eq!(
+        archived.first().expect("the archived empty set").uuid,
+        empty_set
+    );
+}
+
+// Deleting a parameter set takes every result that ran with it: the
+// `report_benchmark` rows, the metrics that hang off them, and the billable series.
+// The report itself, the benchmark, and the benchmark's other parameter sets stay.
+#[tokio::test]
+async fn parameter_delete_takes_its_results() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "delete-cascade").await;
+
+    let measures = serde_json::json!({ "latency": { "value": 1.0 } });
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[
+                entry(&serde_json::json!({}), &measures),
+                entry(&serde_json::json!({ "size_mb": 16 }), &measures),
+            ],
+        )],
+        None,
+        None,
+    )
+    .await;
+
+    let benchmark = only_benchmark(&server, &fixture).await;
+    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(all.len(), 2);
+    let grid_point = all
+        .iter()
+        .find(|parameter| parameter.set == parameters(r#"{"size_mb":16}"#))
+        .expect("the reported grid point");
+    let empty_set = all
+        .iter()
+        .find(|parameter| parameter.set == ParameterSet::default())
+        .expect("the empty parameter set");
+
+    let project_id = get_project_id(&server, &fixture.project_slug);
+    let mut conn = server.db_conn();
+    let report_id = only_report_id(&mut conn, project_id);
+    let grid_point_id = parameter_row_id(&mut conn, &grid_point.uuid).expect("the grid point row");
+    let empty_set_id = parameter_row_id(&mut conn, &empty_set.uuid).expect("the empty set row");
+
+    assert_eq!(report_benchmarks_for_parameter(&mut conn, grid_point_id), 1);
+    assert_eq!(series_for_parameter(&mut conn, grid_point_id), 1);
+    assert_eq!(project_metric_count(&mut conn, project_id), 2);
+    assert_eq!(rollup_metric_count(&mut conn, report_id), 2);
+    drop(conn);
+
+    let (status, body) = delete_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &grid_point.uuid,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "DELETE parameter: {body}");
+
+    let mut conn = server.db_conn();
+    assert!(
+        parameter_row_id(&mut conn, &grid_point.uuid).is_none(),
+        "the parameter set is gone"
+    );
+    assert_eq!(
+        report_benchmarks_for_parameter(&mut conn, grid_point_id),
+        0,
+        "its report benchmarks go with it"
+    );
+    assert_eq!(
+        series_for_parameter(&mut conn, grid_point_id),
+        0,
+        "its billable series go with it"
+    );
+    assert_eq!(
+        project_metric_count(&mut conn, project_id),
+        1,
+        "its metrics go with it, and the empty set's stay"
+    );
+    assert_eq!(
+        rollup_metric_count(&mut conn, report_id),
+        1,
+        "the report's metric count rollup drops with its metrics"
+    );
+
+    // The report, the benchmark, and the empty parameter set all survive.
+    assert_eq!(only_report_id(&mut conn, project_id), report_id);
+    assert_eq!(report_benchmarks_for_parameter(&mut conn, empty_set_id), 1);
+    assert_eq!(series_for_parameter(&mut conn, empty_set_id), 1);
+    drop(conn);
+
+    let remaining = parameter_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(remaining.len(), 1);
+    assert_eq!(
+        remaining.first().expect("the empty set").uuid,
+        empty_set.uuid
+    );
+}
+
+// The empty parameter set is structural, so this endpoint may not delete it. Every
+// benchmark is born with exactly one, and ingest treats a missing empty set as data
+// corruption rather than a set to mint.
+#[tokio::test]
+async fn parameter_delete_refuses_the_empty_set() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "delete-empty").await;
+    let benchmark = create_benchmark(&server, &fixture, "bench one").await;
+    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    let empty_set = all.first().expect("the empty parameter set").uuid;
+
+    let (status, body) =
+        delete_parameter(&server, &fixture, &benchmark, &fixture.token, &empty_set).await;
+    assert_eq!(status, StatusCode::CONFLICT, "DELETE the empty set: {body}");
+
+    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(all.len(), 1, "the empty set is still there");
+    assert_eq!(all.first().expect("the empty set").uuid, empty_set);
+}
+
+// A parameter set under one benchmark is not addressable through another, and a
+// UUID that does not exist is not found.
+#[tokio::test]
+async fn parameter_get_is_scoped_to_its_benchmark() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "get-scope").await;
+    let first = create_benchmark(&server, &fixture, "bench one").await;
+    let second = create_benchmark(&server, &fixture, "bench two").await;
+    let parameter = create_parameter(
+        &server,
+        &fixture,
+        &first,
+        &serde_json::json!({ "size_mb": 16 }),
+    )
+    .await;
+
+    let (status, _) =
+        get_parameter(&server, &fixture, &second, &fixture.token, &parameter.uuid).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    let (status, _) = get_parameter(
+        &server,
+        &fixture,
+        &first,
+        &fixture.token,
+        &ParameterUuid::new(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+// Permissions are the benchmark endpoints' permissions: a public project's sets are
+// readable by anyone, and writing one takes a role on the project.
+#[tokio::test]
+async fn parameter_writes_require_permission() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "permissions").await;
+    let outsider = server
+        .signup("Outsider", "paramsoutsider@example.com")
+        .await;
+    let benchmark = create_benchmark(&server, &fixture, "bench one").await;
+    let parameter = create_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &serde_json::json!({ "size_mb": 16 }),
+    )
+    .await;
+
+    // The project is public, so the outsider may read.
+    let (status, _, body) =
+        list_parameters(&server, &fixture, &benchmark, &outsider.token, "").await;
+    assert_eq!(status, StatusCode::OK, "GET parameters: {body}");
+    let (status, body) = get_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &outsider.token,
+        &parameter.uuid,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "GET parameter: {body}");
+
+    // Every write is refused.
+    let (status, body) = post_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &outsider.token,
+        &serde_json::json!({ "size_mb": 32 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "POST parameter: {body}");
+
+    let (status, body) = patch_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &outsider.token,
+        &parameter.uuid,
+        &serde_json::json!({ "archived": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "PATCH parameter: {body}");
+
+    let (status, body) = delete_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &outsider.token,
+        &parameter.uuid,
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "DELETE parameter: {body}");
+
+    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(all.len(), 2, "nothing the outsider sent landed");
+    assert!(all.iter().all(|parameter| parameter.archived.is_none()));
 }

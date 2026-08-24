@@ -1,4 +1,7 @@
-use bencher_json::{DateTime, ParameterSet, ParameterUuid, project::report::JsonReportParameter};
+use bencher_json::{
+    DateTime, JsonParameter, ParameterSet, ParameterUuid,
+    project::{parameter::JsonUpdateParameter, report::JsonReportParameter},
+};
 use diesel::{
     ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
     SelectableHelper as _,
@@ -8,7 +11,7 @@ use dropshot::HttpError;
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
-    error::{issue_error, resource_conflict_err},
+    error::{BencherResource, assert_parentage, issue_error, resource_conflict_err},
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         sql::last_insert_rowid,
@@ -143,7 +146,13 @@ impl QueryParameter {
         }
     }
 
-    async fn create(
+    /// Create a parameter set under its benchmark.
+    ///
+    /// A set that already exists under the benchmark collides on
+    /// `UNIQUE (benchmark_id, "set")`, so this is create and not get-or-create.
+    /// The per project ceiling is checked first, exactly as it is for a set a
+    /// report mints.
+    pub async fn create(
         context: &ApiContext,
         project_id: ProjectId,
         benchmark_id: BenchmarkId,
@@ -184,6 +193,33 @@ impl QueryParameter {
                 );
                 issue_error(&message, &message, e)
             })
+    }
+
+    /// The parameter set as its own resource, under its benchmark.
+    pub fn into_json_for_benchmark(self, benchmark: &QueryBenchmark) -> JsonParameter {
+        let Self {
+            id: _,
+            uuid,
+            benchmark_id,
+            set,
+            created,
+            modified,
+            archived,
+        } = self;
+        assert_parentage(
+            BencherResource::Benchmark,
+            benchmark.id,
+            BencherResource::Parameter,
+            benchmark_id,
+        );
+        JsonParameter {
+            uuid,
+            benchmark: benchmark.uuid,
+            set,
+            created,
+            modified,
+            archived,
+        }
     }
 
     /// The parameter set as a report result names it.
@@ -319,6 +355,19 @@ pub struct UpdateParameter {
     pub set: Option<ParameterSet>,
     pub modified: DateTime,
     pub archived: Option<Option<DateTime>>,
+}
+
+impl From<JsonUpdateParameter> for UpdateParameter {
+    fn from(update: JsonUpdateParameter) -> Self {
+        let JsonUpdateParameter { archived } = update;
+        let modified = DateTime::now();
+        let archived = archived.map(|archived| archived.then_some(modified));
+        Self {
+            set: None,
+            modified,
+            archived,
+        }
+    }
 }
 
 impl UpdateParameter {
