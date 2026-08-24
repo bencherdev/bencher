@@ -1,15 +1,56 @@
 use std::{cmp::Ordering, collections::BTreeMap, fmt, str::FromStr};
 
-use bencher_valid::{ParameterKey as ValidParameterKey, ParameterValue};
+use bencher_valid::{DateTime, ParameterKey as ValidParameterKey, ParameterValue};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser::SerializeMap as _};
 
+use crate::BenchmarkUuid;
+
 #[cfg(feature = "db")]
 pub mod jsonb;
 
 crate::typed_uuid::typed_uuid!(ParameterUuid);
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonNewParameter {
+    /// The parameter set.
+    /// Each key maps to a JSON scalar: a string, a number, or a boolean.
+    pub set: ParameterSet,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonParameters(pub Vec<JsonParameter>);
+
+crate::from_vec!(JsonParameters[JsonParameter]);
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonParameter {
+    pub uuid: ParameterUuid,
+    pub benchmark: BenchmarkUuid,
+    pub set: ParameterSet,
+    pub created: DateTime,
+    pub modified: DateTime,
+    pub archived: Option<DateTime>,
+}
+
+impl fmt::Display for JsonParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.set)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateParameter {
+    /// Set whether the parameter set is archived.
+    pub archived: Option<bool>,
+}
 
 /// The most keys one parameter set may carry, anchored to the number of named
 /// values one measure may carry.

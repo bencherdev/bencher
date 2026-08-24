@@ -921,6 +921,15 @@ export interface JsonOrganization {
 	claimed?: string;
 }
 
+export interface JsonParameter {
+	uuid: Uuid;
+	benchmark: Uuid;
+	set: Record<string, string | number | boolean>;
+	created: string;
+	modified: string;
+	archived?: string;
+}
+
 export interface JsonProject {
 	uuid: Uuid;
 	organization: Uuid;
