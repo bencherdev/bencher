@@ -212,6 +212,7 @@ diesel::table! {
         window -> BigInt,
         created -> BigInt,
         modified -> BigInt,
+        parameters -> Nullable<Jsonb>,
     }
 }
 

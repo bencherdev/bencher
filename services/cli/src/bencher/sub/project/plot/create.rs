@@ -120,6 +120,9 @@ impl From<Create> for JsonNewPlot {
             branches: branches.into_iter().map(Into::into).collect(),
             testbeds: testbeds.into_iter().map(Into::into).collect(),
             benchmarks: benchmarks.into_iter().map(Into::into).collect(),
+            // The CLI has no parameters filter of its own yet, so the plot it
+            // creates draws every grid point.
+            parameters: None,
             measures: measures.into_iter().map(Into::into).collect(),
         }
     }

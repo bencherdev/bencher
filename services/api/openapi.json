@@ -14290,6 +14290,15 @@
               "$ref": "#/components/schemas/MeasureUuid"
             }
           },
+          "parameters": {
+            "nullable": true,
+            "description": "The grid points to include in the plot, as a list of parameter sets. A grid point matches when any set in the list is a subset of it. If not set, or set to an empty list, the plot includes every grid point.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterFilter"
+              }
+            ]
+          },
           "testbeds": {
             "description": "The testbeds to include in the plot. At least one testbed must be specified.",
             "type": "array",
@@ -15788,6 +15797,15 @@
           "modified": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "parameters": {
+            "nullable": true,
+            "description": "The grid points this plot draws, in canonical order. Absent when the plot draws every grid point.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterFilter"
+              }
+            ]
+          },
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
           },
@@ -15888,6 +15906,15 @@
               "$ref": "#/components/schemas/MeasureUuid"
             }
           },
+          "parameters": {
+            "nullable": true,
+            "description": "The grid points to include in the plot, as a list of parameter sets. Replaces the current filter for the plot. Set to `null` or to an empty list to include every grid point again.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterFilter"
+              }
+            ]
+          },
           "testbeds": {
             "nullable": true,
             "description": "The testbeds to include in the plot. Replaces the current testbeds for the plot. At least one testbed must be specified.",
@@ -15983,6 +16010,14 @@
             "items": {
               "$ref": "#/components/schemas/MeasureUuid"
             }
+          },
+          "parameters": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterFilter"
+              }
+            ]
           },
           "testbeds": {
             "nullable": true,

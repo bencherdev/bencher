@@ -7,7 +7,7 @@
 //! Integration tests for project CRUD endpoints.
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonNewProject, JsonProject, JsonProjects, ProjectUuid};
+use bencher_json::{JsonNewProject, JsonProject, JsonProjects, ParameterFilter, ProjectUuid};
 use http::StatusCode;
 
 // GET /v0/projects - list all public projects
@@ -1223,4 +1223,250 @@ async fn plot_component_lists_dedupe() {
     });
     let updated = patch_plot(&server, &user, project_slug, created.uuid, &patch).await;
     assert_eq!(updated.branches, vec![dims.branch2]);
+}
+
+// A plot's parameters filter is what the perf query's `parameters` param is: a
+// value predicate over grid points, stored in its canonical form.
+#[tokio::test]
+async fn plot_parameters_round_trip_canonical() {
+    use bencher_api_tests::helpers::get_project_id;
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Plot User Params", "plotparams@example.com")
+        .await;
+    let org = server.create_org(&user, "Plot Org Params").await;
+    let project = server
+        .create_project(&user, &org, "Plot Project Params")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+
+    let dims = seed_plot_dimensions(&server, project_id);
+    // Scrambled order and two spellings of one number go in.
+    let created = post_plot(
+        &server,
+        &user,
+        project_slug,
+        &serde_json::json!({
+            "lower_value": true,
+            "upper_value": true,
+            "lower_boundary": false,
+            "upper_boundary": false,
+            "x_axis": "date_time",
+            "window": 2_592_000,
+            "branches": [dims.branch1.to_string()],
+            "testbeds": [dims.testbed.to_string()],
+            "benchmarks": [dims.benchmark.to_string()],
+            "parameters": [
+                { "size": 2 },
+                { "size": 1.0 },
+                { "size": 1 },
+            ],
+            "measures": [dims.measure.to_string()],
+        }),
+    )
+    .await;
+    // The canonical form comes back: sorted by canonical bytes, deduplicated.
+    let parameters = created.parameters.as_ref().expect("plot has a filter");
+    assert_eq!(parameters.canonical(), r#"[{"size":1},{"size":2}]"#);
+
+    // A read back through GET reports the same canonical filter.
+    let fetched: bencher_json::JsonPlot = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{project_slug}/plots/{}",
+            created.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed")
+        .json()
+        .await
+        .expect("Failed to parse plot");
+    assert_eq!(
+        fetched.parameters.as_ref().map(ParameterFilter::canonical),
+        Some(r#"[{"size":1},{"size":2}]"#.to_owned())
+    );
+
+    // A patch replaces the filter wholesale.
+    let patch = serde_json::json!({ "parameters": [{ "size": 4, "threads": 8 }] });
+    let updated = patch_plot(&server, &user, project_slug, created.uuid, &patch).await;
+    assert_eq!(
+        updated.parameters.as_ref().map(ParameterFilter::canonical),
+        Some(r#"[{"size":4,"threads":8}]"#.to_owned())
+    );
+
+    // A patch that says nothing about the filter leaves it alone.
+    let untouched = patch_plot(
+        &server,
+        &user,
+        project_slug,
+        created.uuid,
+        &serde_json::json!({ "upper_boundary": true }),
+    )
+    .await;
+    assert!(untouched.upper_boundary);
+    assert_eq!(
+        untouched
+            .parameters
+            .as_ref()
+            .map(ParameterFilter::canonical),
+        Some(r#"[{"size":4,"threads":8}]"#.to_owned())
+    );
+}
+
+// A filter that matches every grid point is no filter at all: `null`, the empty
+// list, and the list holding the empty set are one stored state, and so is a plot
+// created without a filter at all.
+#[tokio::test]
+async fn plot_parameters_match_all_is_absent() {
+    use bencher_api_tests::helpers::get_project_id;
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Plot User Match All", "plotmatchall@example.com")
+        .await;
+    let org = server.create_org(&user, "Plot Org Match All").await;
+    let project = server
+        .create_project(&user, &org, "Plot Project Match All")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+
+    let dims = seed_plot_dimensions(&server, project_id);
+    let new_plot = |parameters: Option<serde_json::Value>| {
+        let mut plot = serde_json::json!({
+            "lower_value": true,
+            "upper_value": true,
+            "lower_boundary": false,
+            "upper_boundary": false,
+            "x_axis": "date_time",
+            "window": 2_592_000,
+            "branches": [dims.branch1.to_string()],
+            "testbeds": [dims.testbed.to_string()],
+            "benchmarks": [dims.benchmark.to_string()],
+            "measures": [dims.measure.to_string()],
+        });
+        if let Some(parameters) = parameters {
+            plot["parameters"] = parameters;
+        }
+        plot
+    };
+
+    // Absent, the empty list, and the list holding the empty set all create a plot
+    // with no filter, and the response leaves the field out.
+    for parameters in [
+        None,
+        Some(serde_json::json!([])),
+        Some(serde_json::json!([{}])),
+        Some(serde_json::Value::Null),
+    ] {
+        let created = post_plot(&server, &user, project_slug, &new_plot(parameters)).await;
+        assert!(created.parameters.is_none());
+        let body = serde_json::to_value(&created).expect("Failed to serialize plot");
+        assert!(body.get("parameters").is_none());
+    }
+
+    // A plot that names a filter goes back to every grid point on a `null` patch,
+    // and the same way on an empty list patch.
+    for clear in [serde_json::Value::Null, serde_json::json!([])] {
+        let created = post_plot(
+            &server,
+            &user,
+            project_slug,
+            &new_plot(Some(serde_json::json!([{ "size": 1 }]))),
+        )
+        .await;
+        assert!(created.parameters.is_some());
+        let cleared = patch_plot(
+            &server,
+            &user,
+            project_slug,
+            created.uuid,
+            &serde_json::json!({ "parameters": clear }),
+        )
+        .await;
+        assert!(cleared.parameters.is_none());
+    }
+}
+
+// The filter is capped at eight sets, and the cap bounds what was written, before
+// duplicates collapse.
+#[tokio::test]
+async fn plot_parameters_over_the_cap_rejected() {
+    use bencher_api_tests::helpers::get_project_id;
+
+    let server = TestServer::new().await;
+    let user = server.signup("Plot User Cap", "plotcap@example.com").await;
+    let org = server.create_org(&user, "Plot Org Cap").await;
+    let project = server.create_project(&user, &org, "Plot Project Cap").await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+
+    let dims = seed_plot_dimensions(&server, project_id);
+    let nine_sets = (0..9)
+        .map(|index| serde_json::json!({ "size": index }))
+        .collect::<Vec<_>>();
+    let eight_sets = nine_sets[..8].to_vec();
+
+    let plot_with = |parameters: &Vec<serde_json::Value>| {
+        serde_json::json!({
+            "lower_value": true,
+            "upper_value": true,
+            "lower_boundary": false,
+            "upper_boundary": false,
+            "x_axis": "date_time",
+            "window": 2_592_000,
+            "branches": [dims.branch1.to_string()],
+            "testbeds": [dims.testbed.to_string()],
+            "benchmarks": [dims.benchmark.to_string()],
+            "parameters": parameters,
+            "measures": [dims.measure.to_string()],
+        })
+    };
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/plots")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&plot_with(&nine_sets))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+    // Eight is the cap, so eight is accepted.
+    let created = post_plot(&server, &user, project_slug, &plot_with(&eight_sets)).await;
+    assert_eq!(
+        created
+            .parameters
+            .as_ref()
+            .map(|parameters| parameters.sets().len()),
+        Some(8)
+    );
+
+    // The same cap applies on a patch.
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{project_slug}/plots/{}",
+            created.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "parameters": nine_sets }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }

@@ -772,6 +772,12 @@ export interface JsonNewPlot {
 	 */
 	benchmarks: Uuid[];
 	/**
+	 * The grid points to include in the plot, as a list of parameter sets.
+	 * A grid point matches when any set in the list is a subset of it.
+	 * If not set, or set to an empty list, the plot includes every grid point.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
+	/**
 	 * The measures to include in the plot.
 	 * At least one measure must be specified.
 	 */
@@ -1168,6 +1174,11 @@ export interface JsonPlot {
 	branches: Uuid[];
 	testbeds: Uuid[];
 	benchmarks: Uuid[];
+	/**
+	 * The grid points this plot draws, in canonical order.
+	 * Absent when the plot draws every grid point.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
 	measures: Uuid[];
 	created: string;
 	modified: string;
