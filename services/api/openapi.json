@@ -15136,10 +15136,12 @@
         }
       },
       "JsonOneMetric": {
+        "description": "Exactly one `metric` row: the named scalar the UUID addresses, and everything that named it.\n\nThe response describes the addressed row and nothing else. `value`, `lower_value`, `upper_value`, and every other name are equal here: each is one row, each resolves, and each answers with its own name and its own scalar.",
         "type": "object",
         "properties": {
           "alert": {
             "nullable": true,
+            "description": "The alert raised on the addressed row's boundary, if any.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonPerfAlert"
@@ -15151,6 +15153,7 @@
           },
           "boundary": {
             "nullable": true,
+            "description": "The boundary computed for the addressed row, if any.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonBoundary"
@@ -15170,7 +15173,29 @@
             "$ref": "#/components/schemas/JsonMeasure"
           },
           "metric": {
-            "$ref": "#/components/schemas/JsonMetricTriple"
+            "nullable": true,
+            "description": "Deprecated. Reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nPresent only when the addressed row is the `value` row. Reconstructing the triple around any other row would assert numbers the address does not name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonMetricTriple"
+              }
+            ]
+          },
+          "name": {
+            "description": "The addressed row's name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricName"
+              }
+            ]
+          },
+          "parameter": {
+            "description": "The parameter set this row was measured under.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonParameter"
+              }
+            ]
           },
           "report": {
             "$ref": "#/components/schemas/ReportUuid"
@@ -15183,6 +15208,7 @@
           },
           "threshold": {
             "nullable": true,
+            "description": "The threshold that gated the addressed row, if any.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonThresholdModel"
@@ -15191,6 +15217,11 @@
           },
           "uuid": {
             "$ref": "#/components/schemas/MetricUuid"
+          },
+          "value": {
+            "description": "The addressed row's scalar.",
+            "type": "number",
+            "format": "double"
           }
         },
         "required": [
@@ -15199,11 +15230,13 @@
           "end_time",
           "iteration",
           "measure",
-          "metric",
+          "name",
+          "parameter",
           "report",
           "start_time",
           "testbed",
-          "uuid"
+          "uuid",
+          "value"
         ]
       },
       "JsonOpenApiSpec": {},

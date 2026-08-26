@@ -54,18 +54,21 @@ struct Fixture {
 /// The raw bytes of every response that reads a metric through the
 /// `metric_boundary` view, which is the view this migration holds unchanged.
 ///
-/// The report and perf responses are deliberately absent. Both are built from the
-/// named `metric` rows rather than from the view, and those rows do not exist
-/// before the migration, so neither has a pre-migration form to compare. Neither
-/// is stable across a down and up round trip either, because the migration mints a
-/// fresh uuid for every bound row it recreates and both responses now echo those
-/// uuids. That is not a regression: a server runs its migrations before it serves,
-/// and the `value` row, which every reader of the old shape saw, keeps its
-/// identity. What the perf response owes older clients is pinned where that
-/// response lives, by the byte compatibility test in `perf.rs`.
+/// The report, perf, and metric responses are deliberately absent. All three are
+/// built from the named `metric` rows rather than from the view, and those rows do
+/// not exist before the migration, so none of them has a pre-migration form to
+/// compare. None is stable across a down and up round trip either, because the
+/// migration mints a fresh uuid for every bound row it recreates and all three now
+/// echo those uuids. That is not a regression: a server runs its migrations before
+/// it serves, and the `value` row, which every reader of the old shape saw, keeps
+/// its identity. What the perf response owes older clients is pinned where that
+/// response lives, by the byte compatibility test in `perf.rs`; the metric endpoint
+/// is pinned the same way in `metrics.rs`, and what it owes this migration is that
+/// a down and up round trip leaves it unmoved, which
+/// [`migration_down_and_up_round_trips_the_metric_triple`] asserts against
+/// [`capture_metrics`].
 #[derive(Debug, PartialEq, Eq)]
 struct Captured {
-    metrics: Vec<String>,
     alerts: String,
 }
 
@@ -108,7 +111,8 @@ const FIXTURE_METRICS: [LegacyMetric; 4] = [
 /// table hands back the same numbering either way.
 const FIXTURE_METRIC_IDS: [i32; 4] = [10, 20, 30, 40];
 
-// Every response that reads a metric is byte identical across the migration.
+// Every response that reads a metric through the view is byte identical across the
+// migration.
 #[tokio::test]
 async fn responses_are_byte_identical_across_the_migration() {
     let server = TestServer::new().await;
@@ -123,13 +127,30 @@ async fn responses_are_byte_identical_across_the_migration() {
     let after = capture(&server, &fixture).await;
 
     assert_eq!(
-        before.metrics, after.metrics,
-        "a metric response changed across the migration"
-    );
-    assert_eq!(
         before.alerts, after.alerts,
         "the alerts response changed across the migration"
     );
+
+    // The metric endpoint reads the named rows, so the migration is what gives it a
+    // response at all. Every seeded metric has one afterwards, carrying the triple
+    // the legacy row held.
+    let metrics = capture_metrics(&server, &fixture).await;
+    assert_eq!(metrics.len(), FIXTURE_METRICS.len());
+    for (metric, legacy) in metrics.iter().zip(FIXTURE_METRICS) {
+        let metric: serde_json::Value =
+            serde_json::from_str(metric).expect("Failed to parse the metric");
+        assert_eq!(metric["name"], serde_json::json!("value"));
+        assert_eq!(metric["value"], serde_json::json!(legacy.value));
+        assert_eq!(metric["metric"]["value"], serde_json::json!(legacy.value));
+        assert_eq!(
+            metric["metric"]["lower_value"],
+            serde_json::json!(legacy.lower_value)
+        );
+        assert_eq!(
+            metric["metric"]["upper_value"],
+            serde_json::json!(legacy.upper_value)
+        );
+    }
 }
 
 // The migration explodes each metric into its named rows, keeping the point
@@ -330,6 +351,7 @@ async fn migration_down_and_up_round_trips_the_metric_triple() {
     let before = capture(&server, &fixture).await;
     apply_migration(&server);
     let after_first = capture(&server, &fixture).await;
+    let metrics_first = capture_metrics(&server, &fixture).await;
     assert_eq!(
         before, after_first,
         "applying the migration leaves every response unchanged"
@@ -350,6 +372,16 @@ async fn migration_down_and_up_round_trips_the_metric_triple() {
     assert_eq!(
         before, after_round_trip,
         "a down and up round trip leaves every response unchanged"
+    );
+
+    // The metric endpoint has no response to capture in the legacy shape, so its
+    // anchor is the first migrated capture rather than the pre-migration one. The
+    // bound rows the round trip recreates carry fresh uuids, and the metric endpoint
+    // never echoes a bound row's uuid, so the response is stable across it.
+    assert_eq!(
+        metrics_first,
+        capture_metrics(&server, &fixture).await,
+        "a down and up round trip leaves every metric response unchanged"
     );
 
     // The responses can only be trusted if the schema they were served from is the
@@ -1120,11 +1152,32 @@ fn seed_threshold_and_alert(
         .expect("Failed to insert the alert");
 }
 
-/// Capture the raw bytes of every response that reads a metric.
+/// Capture the raw bytes of every response that reads a metric through the view.
 ///
 /// The bytes are compared, not parsed values: parsing and re-serializing would
 /// hide exactly the float formatting drift this migration has to rule out.
 async fn capture(server: &TestServer, fixture: &Fixture) -> Captured {
+    let Fixture {
+        project_slug,
+        token,
+        metric_uuids: _,
+    } = fixture;
+
+    let alerts = get(
+        server,
+        token,
+        &format!("/v0/projects/{project_slug}/alerts"),
+    )
+    .await;
+
+    Captured { alerts }
+}
+
+/// Capture the raw bytes of the metric endpoint, one response per seeded metric.
+///
+/// Separate from [`capture`] because the metric endpoint reads the named `metric`
+/// rows, so it only has a response to capture once the migration has made them.
+async fn capture_metrics(server: &TestServer, fixture: &Fixture) -> Vec<String> {
     let Fixture {
         project_slug,
         token,
@@ -1142,15 +1195,7 @@ async fn capture(server: &TestServer, fixture: &Fixture) -> Captured {
             .await,
         );
     }
-
-    let alerts = get(
-        server,
-        token,
-        &format!("/v0/projects/{project_slug}/alerts"),
-    )
-    .await;
-
-    Captured { metrics, alerts }
+    metrics
 }
 
 /// GET a path and return its body, asserting that it was served.

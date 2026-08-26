@@ -905,6 +905,23 @@ export interface JsonOAuthUser {
 	plan?: PlanLevel;
 }
 
+export interface JsonParameter {
+	uuid: Uuid;
+	benchmark: Uuid;
+	set: Record<string, string | number | boolean>;
+	created: string;
+	modified: string;
+	archived?: string;
+}
+
+/**
+ * Exactly one `metric` row: the named scalar the UUID addresses, and everything
+ * that named it.
+ * 
+ * The response describes the addressed row and nothing else. `value`,
+ * `lower_value`, `upper_value`, and every other name are equal here: each is one
+ * row, each resolves, and each answers with its own name and its own scalar.
+ */
 export interface JsonOneMetric {
 	uuid: Uuid;
 	report: Uuid;
@@ -914,10 +931,27 @@ export interface JsonOneMetric {
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	benchmark: JsonBenchmark;
+	/** The parameter set this row was measured under. */
+	parameter: JsonParameter;
 	measure: JsonMeasure;
-	metric: JsonMetricTriple;
+	/** The addressed row's name. */
+	name: string;
+	/** The addressed row's scalar. */
+	value: number;
+	/**
+	 * Deprecated. Reconstructed from the `value` row and its
+	 * `lower_value`/`upper_value` siblings. Retained for compatibility with older
+	 * clients and removed in a future release.
+	 * 
+	 * Present only when the addressed row is the `value` row. Reconstructing the
+	 * triple around any other row would assert numbers the address does not name.
+	 */
+	metric?: JsonMetricTriple;
+	/** The threshold that gated the addressed row, if any. */
 	threshold?: JsonThresholdModel;
+	/** The boundary computed for the addressed row, if any. */
 	boundary?: JsonBoundary;
+	/** The alert raised on the addressed row's boundary, if any. */
 	alert?: JsonPerfAlert;
 }
 
@@ -936,15 +970,6 @@ export interface JsonOrganization {
 	created: string;
 	modified: string;
 	claimed?: string;
-}
-
-export interface JsonParameter {
-	uuid: Uuid;
-	benchmark: Uuid;
-	set: Record<string, string | number | boolean>;
-	created: string;
-	modified: string;
-	archived?: string;
 }
 
 export interface JsonProject {
