@@ -14,7 +14,6 @@ pub mod model;
 pub mod schema;
 #[cfg(test)]
 pub mod test_util;
-pub mod view;
 
 pub use context::ApiContext;
 #[cfg(feature = "plus")]

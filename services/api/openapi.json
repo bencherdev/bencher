@@ -12677,6 +12677,14 @@
           },
           "uuid": {
             "$ref": "#/components/schemas/AlertUuid"
+          },
+          "variant": {
+            "description": "The variant the alert fired on.\n\nTwo variants of one benchmark raise two alerts, and this is what tells them apart.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVariant"
+              }
+            ]
           }
         },
         "required": [
@@ -12690,7 +12698,8 @@
           "report",
           "status",
           "threshold",
-          "uuid"
+          "uuid",
+          "variant"
         ]
       },
       "JsonAlerts": {

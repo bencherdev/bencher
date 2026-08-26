@@ -1420,10 +1420,10 @@ async fn v0_fold_still_folds() {
 // An alert's JSON carries the boundary the metric broke through, with the values the
 // detector computed rather than whatever the shapes of the query happen to line up.
 //
-// Both endpoints that render an alert read the boundary out of the `metric_boundary`
-// view. The rest of the suite counts alerts and never reads one, so a transposed
-// baseline and limit, or a boundary belonging to another metric, would pass it. This
-// asserts the values, and asserts the two endpoints agree on them.
+// Both endpoints that render an alert reach the boundary from the alert's own
+// `boundary_id`. The rest of the suite counts alerts and never reads one, so a
+// transposed baseline and limit, or a boundary belonging to another metric, would
+// pass it. This asserts the values, and asserts the two endpoints agree on them.
 #[tokio::test]
 async fn alert_json_carries_the_boundary_the_metric_exceeded() {
     let server = TestServer::new().await;
@@ -1534,6 +1534,574 @@ async fn alert_json_carries_the_boundary_the_metric_exceeded() {
         &from_endpoint, from_report,
         "the two endpoints that render an alert render the same alert"
     );
+}
+
+/// Every alert of a project, from the alerts list endpoint.
+async fn list_alerts(server: &TestServer, fixture: &Fixture) -> Vec<serde_json::Value> {
+    list_alerts_query(server, fixture, "").await
+}
+
+/// Every alert of a project, from the alerts list endpoint, under `query`.
+async fn list_alerts_query(
+    server: &TestServer,
+    fixture: &Fixture,
+    query: &str,
+) -> Vec<serde_json::Value> {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/alerts{query}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET alerts");
+    resp.json().await.expect("Failed to parse the alerts")
+}
+
+/// One report of a project, from the report detail endpoint.
+async fn get_report(server: &TestServer, fixture: &Fixture, report: &str) -> serde_json::Value {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/reports/{report}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET report");
+    resp.json().await.expect("Failed to parse the report")
+}
+
+/// One alert of a project, from the alert detail endpoint.
+async fn get_alert(server: &TestServer, fixture: &Fixture, alert: &str) -> serde_json::Value {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/alerts/{alert}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET alert");
+    resp.json().await.expect("Failed to parse the alert")
+}
+
+/// The alerts a report response embeds.
+fn report_alerts(report: &serde_json::Value) -> Vec<serde_json::Value> {
+    report
+        .get("alerts")
+        .and_then(serde_json::Value::as_array)
+        .expect("the report carries its alerts")
+        .clone()
+}
+
+fn keys(value: &serde_json::Value) -> Vec<String> {
+    let mut keys = value
+        .as_object()
+        .expect("the alert is an object")
+        .keys()
+        .cloned()
+        .collect::<Vec<_>>();
+    keys.sort();
+    keys
+}
+
+fn sorted(keys: &[&str]) -> Vec<String> {
+    let mut keys = keys.iter().map(|key| (*key).to_owned()).collect::<Vec<_>>();
+    keys.sort();
+    keys
+}
+
+/// Every key an alert carried before it named its variant.
+const ALERT_BEFORE_KEYS: [&str; 11] = [
+    "uuid",
+    "report",
+    "iteration",
+    "benchmark",
+    "metric",
+    "threshold",
+    "boundary",
+    "limit",
+    "status",
+    "created",
+    "modified",
+];
+
+/// The one key naming the variant adds.
+const ALERT_ADDED_KEYS: [&str; 1] = ["variant"];
+
+/// Ingest one benchmark's two variants under one threshold, ending on `finals`.
+/// Returns the fixture and the last report's response.
+///
+/// The history is [`SMALL`] and [`LARGE`], the same one [`ingest_variants`] lands,
+/// so the boundary the detector computes here is the one it has always computed.
+async fn ingest_two_variants(
+    server: &TestServer,
+    label: &str,
+    finals: (f64, f64),
+) -> (Fixture, serde_json::Value) {
+    let fixture = fixture(server, label).await;
+    let mut last = serde_json::Value::Null;
+    for (day, (small, large)) in SMALL.into_iter().zip(LARGE).chain([finals]).enumerate() {
+        last = report(
+            server,
+            &fixture,
+            day + 1,
+            vec![v1(
+                "bench",
+                &[
+                    entry(
+                        &serde_json::json!({ "size_mb": 16 }),
+                        &serde_json::json!({ "latency": { "value": small } }),
+                    ),
+                    entry(
+                        &serde_json::json!({ "size_mb": 32 }),
+                        &serde_json::json!({ "latency": { "value": large } }),
+                    ),
+                ],
+            )],
+            Some(threshold_models()),
+            None,
+            Some(1),
+        )
+        .await;
+    }
+    (fixture, last)
+}
+
+// Two variants of one benchmark under one threshold, one of which regresses. The
+// alert names the variant it fired on, on every surface that renders an alert.
+//
+// This is the disambiguation the field exists for: without it the two variants
+// raise alerts that read identically, because they share a benchmark, a measure, and
+// a threshold.
+#[tokio::test]
+async fn alert_names_the_variant_that_regressed() {
+    let server = TestServer::new().await;
+    let (fixture, last) =
+        ingest_two_variants(&server, "variantalert", (SMALL_FINAL, LARGE_FINAL)).await;
+
+    let regressed = serde_json::json!({ "size_mb": 16 });
+
+    // The report response that raised it.
+    let embedded = report_alerts(&last);
+    assert_eq!(
+        embedded.len(),
+        1,
+        "only the variant that regressed alerts: {embedded:?}"
+    );
+    assert_eq!(
+        embedded[0].pointer("/variant/parameters"),
+        Some(&regressed),
+        "the report's embedded alert names the variant that regressed"
+    );
+
+    // The alerts list.
+    let alerts = list_alerts(&server, &fixture).await;
+    assert_eq!(alerts.len(), 1, "one alert: {alerts:?}");
+    let from_list = &alerts[0];
+    assert_eq!(
+        from_list.pointer("/variant/parameters"),
+        Some(&regressed),
+        "the alerts list names the variant that regressed"
+    );
+    assert_eq!(
+        from_list.pointer("/variant/uuid"),
+        Some(&result_variant_uuid(&last, &regressed)),
+        "the alert names the variant the report result of those parameters names"
+    );
+
+    // The alert detail.
+    let alert_uuid = from_list
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the alert carries its uuid");
+    let from_endpoint = get_alert(&server, &fixture, alert_uuid).await;
+    assert_eq!(
+        &from_endpoint, from_list,
+        "the alerts list and the alert endpoint render the same alert"
+    );
+    assert_eq!(
+        &from_endpoint, &embedded[0],
+        "the report response and the alert endpoint render the same alert"
+    );
+}
+
+// An alert answers with everything it answered with before, unchanged, plus the one
+// key naming the variant. This is the compatibility claim stated as a fixture: the
+// key set is pinned, and so is every value the detector computes for this fixture's
+// history, independently derived from a t-test at a 0.98 upper boundary over the
+// four degrees of freedom the history 10 through 14 gives.
+#[tokio::test]
+async fn alert_json_is_unchanged_but_for_the_variant() {
+    let server = TestServer::new().await;
+    let (fixture, last) =
+        ingest_two_variants(&server, "variantpin", (SMALL_FINAL, LARGE_FINAL)).await;
+
+    let alerts = list_alerts(&server, &fixture).await;
+    assert_eq!(alerts.len(), 1, "one alert: {alerts:?}");
+    let alert = &alerts[0];
+
+    assert_eq!(
+        keys(alert),
+        sorted(&[ALERT_BEFORE_KEYS.as_slice(), ALERT_ADDED_KEYS.as_slice()].concat()),
+        "the key set is the old one plus the variant"
+    );
+
+    // Every key that was there before, with the value the detector computes for this
+    // fixture's history.
+    assert_eq!(alert["iteration"], serde_json::json!(0));
+    assert_eq!(alert["limit"], serde_json::json!("upper"));
+    assert_eq!(alert["status"], serde_json::json!("active"));
+    assert_eq!(alert["benchmark"]["name"], serde_json::json!("bench"));
+    assert_eq!(alert["benchmark"]["slug"], serde_json::json!("bench"));
+    assert_eq!(
+        alert["metric"],
+        serde_json::json!({
+            "uuid": alert["metric"]["uuid"],
+            "value": SMALL_FINAL,
+            "lower_value": serde_json::Value::Null,
+            "upper_value": serde_json::Value::Null,
+        }),
+        "the triple is the `value` row the boundary was computed for"
+    );
+    assert_eq!(
+        alert["boundary"],
+        serde_json::json!({
+            "baseline": 12.0,
+            "lower_limit": 6.806_397_375_694_743,
+            "upper_limit": 17.193_602_624_305_257,
+        }),
+        "the boundary is the one the detector computed"
+    );
+    assert_eq!(
+        alert["threshold"]["branch"]["slug"],
+        serde_json::json!("main")
+    );
+    assert_eq!(
+        alert["threshold"]["testbed"]["slug"],
+        serde_json::json!("localhost")
+    );
+    assert_eq!(
+        alert["threshold"]["measure"]["slug"],
+        serde_json::json!("latency")
+    );
+    assert_eq!(
+        alert["threshold"]["model"]["test"],
+        serde_json::json!("t_test")
+    );
+    assert_eq!(
+        alert["threshold"]["model"]["min_sample_size"],
+        serde_json::json!(2)
+    );
+    assert_eq!(
+        alert["threshold"]["model"]["max_sample_size"],
+        serde_json::json!(64)
+    );
+    assert_eq!(
+        alert["threshold"]["branch"]["head"]["version"]["number"],
+        serde_json::json!(5),
+        "the alert is on the version the last report landed"
+    );
+    assert!(
+        alert["report"].is_string(),
+        "the alert names the report it landed in"
+    );
+
+    // The addition: the variant the alert fired on.
+    assert_eq!(
+        alert["variant"]["parameters"],
+        serde_json::json!({ "size_mb": 16 })
+    );
+    assert_eq!(
+        alert["variant"]["uuid"],
+        result_variant_uuid(&last, &serde_json::json!({ "size_mb": 16 })),
+        "the alert names the variant the report result of those parameters names"
+    );
+}
+
+/// The uuid of the variant a report result names for `parameters`.
+fn result_variant_uuid(
+    report: &serde_json::Value,
+    parameters: &serde_json::Value,
+) -> serde_json::Value {
+    report
+        .pointer("/results/0")
+        .and_then(serde_json::Value::as_array)
+        .expect("the report echoes its results")
+        .iter()
+        .find(|result| result.pointer("/variant/parameters") == Some(parameters))
+        .and_then(|result| result.pointer("/variant/uuid"))
+        .expect("the report result names its variant")
+        .clone()
+}
+
+// The report response's embedded alerts are the alerts endpoint's alerts, for the
+// same report: the same uuids, and the same variants.
+//
+// The two are different queries against the same base tables, and this is what
+// keeps them from drifting apart.
+#[tokio::test]
+async fn report_alerts_are_the_alerts_endpoint_alerts() {
+    let server = TestServer::new().await;
+    // Both variants regress on the final report, so the report carries more than
+    // one alert and the two reads have to agree on a set of alerts, not just on one.
+    let (fixture, last) =
+        ingest_two_variants(&server, "variantboth", (SMALL_FINAL, LARGE_FINAL * 10.0)).await;
+
+    let embedded = report_alerts(&last);
+    assert_eq!(embedded.len(), 2, "both variants regressed: {embedded:?}");
+
+    let report_uuid = last
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the report carries its uuid");
+    let mut from_endpoint = list_alerts(&server, &fixture)
+        .await
+        .into_iter()
+        .filter(|alert| alert["report"] == serde_json::json!(report_uuid))
+        .collect::<Vec<_>>();
+
+    // Sorted by uuid, which is unique, so the order is the alerts themselves rather
+    // than anything either read chose.
+    let identity = |alert: &serde_json::Value| alert["uuid"].to_string();
+    let mut embedded = embedded;
+    embedded.sort_by_key(identity);
+    from_endpoint.sort_by_key(identity);
+    assert_eq!(
+        embedded, from_endpoint,
+        "the report's alerts are the alerts endpoint's alerts for that report"
+    );
+
+    // Two alerts, two variants. Sorted by the parameters so the assertion does not
+    // ride on whichever alert was written first.
+    let mut parameters = embedded
+        .iter()
+        .map(|alert| alert["variant"]["parameters"].to_string())
+        .collect::<Vec<_>>();
+    parameters.sort();
+    assert_eq!(
+        parameters,
+        vec![
+            serde_json::json!({ "size_mb": 16 }).to_string(),
+            serde_json::json!({ "size_mb": 32 }).to_string()
+        ],
+        "the two alerts name the two variants, one each"
+    );
+}
+
+// Two variants of one benchmark alerting in one report tie on the iteration, the
+// benchmark name, the report, and the alert status, so nothing below the alert
+// identifier can separate them. Both surfaces put them in creation order, and put
+// them there again on the next read.
+#[tokio::test]
+async fn alerts_of_one_benchmark_are_ordered_by_creation() {
+    let server = TestServer::new().await;
+    // Both variants regress on the final report, so both alerts land in one report
+    // with every other order key equal.
+    let (fixture, last) =
+        ingest_two_variants(&server, "variantorder", (SMALL_FINAL, LARGE_FINAL * 10.0)).await;
+
+    // The order the alert rows were written in, read off the rows themselves.
+    let project_id = get_project_id(&server, &fixture.project_slug);
+    let mut conn = server.db_conn();
+    let created = alerts(&mut conn, project_id)
+        .into_iter()
+        .map(|(parameters, _)| serde_json::json!(parameters))
+        .collect::<Vec<_>>();
+    drop(conn);
+    assert_eq!(created.len(), 2, "both variants alert: {created:?}");
+
+    let report_uuid = last
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the report carries its uuid")
+        .to_owned();
+
+    // The report response, on the read that raised the alerts and on a later one.
+    let embedded = alert_variants(&report_alerts(&last));
+    let reread = alert_variants(&report_alerts(
+        &get_report(&server, &fixture, &report_uuid).await,
+    ));
+    assert_eq!(
+        embedded, reread,
+        "the report embeds its alerts in the same order on every read"
+    );
+    assert_eq!(
+        embedded, created,
+        "the report embeds its alerts in creation order"
+    );
+
+    // The alerts list, sorted by creation, read twice.
+    let query = "?sort=created&direction=asc";
+    let listed = alert_variants(&list_alerts_query(&server, &fixture, query).await);
+    let listed_again = alert_variants(&list_alerts_query(&server, &fixture, query).await);
+    assert_eq!(
+        listed, listed_again,
+        "the alerts list returns its alerts in the same order on every read"
+    );
+    assert_eq!(listed, created, "the alerts list is in creation order");
+}
+
+/// The variant parameters of each alert, in the order the alerts came in.
+fn alert_variants(alerts: &[serde_json::Value]) -> Vec<serde_json::Value> {
+    alerts
+        .iter()
+        .map(|alert| {
+            alert
+                .pointer("/variant/parameters")
+                .expect("the alert names its variant")
+                .clone()
+        })
+        .collect()
+}
+
+/// Ingest one variant's history, regressing at the end, with `measures` deciding
+/// which metrics each report carries. Returns the alert the regression raised, as
+/// the alerts list renders it and as the report response that raised it embeds it.
+async fn alert_for_bounds(
+    label: &str,
+    measures: impl Fn(f64) -> serde_json::Value,
+) -> (serde_json::Value, serde_json::Value) {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, label).await;
+    let mut last = serde_json::Value::Null;
+    for (day, value) in SMALL.into_iter().chain([SMALL_FINAL]).enumerate() {
+        last = report(
+            &server,
+            &fixture,
+            day + 1,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({ "size_mb": 16 }),
+                    &measures(value),
+                )],
+            )],
+            Some(threshold_models()),
+            None,
+            Some(1),
+        )
+        .await;
+    }
+
+    let alerts = list_alerts(&server, &fixture).await;
+    assert_eq!(alerts.len(), 1, "one alert: {alerts:?}");
+    let from_list = alerts.into_iter().next().expect("the only alert");
+    let alert_uuid = from_list
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the alert carries its uuid")
+        .to_owned();
+    let from_endpoint = get_alert(&server, &fixture, &alert_uuid).await;
+    assert_eq!(
+        from_endpoint, from_list,
+        "the alert list and the alert endpoint render the same alert"
+    );
+
+    let mut embedded = report_alerts(&last);
+    assert_eq!(embedded.len(), 1, "one embedded alert: {embedded:?}");
+    let from_report = embedded.pop().expect("the only embedded alert");
+    (from_list, from_report)
+}
+
+// The metric triple an alert carries is assembled from the `value` row the boundary
+// was computed for and that row's bound siblings, so it is the same triple for a row
+// with both bounds, either bound alone, and no bounds at all.
+#[tokio::test]
+async fn alert_metric_triple_carries_every_bound_shape() {
+    let (both, both_embedded) = alert_for_bounds("boundsboth", |value| {
+        serde_json::json!({
+            "latency": { "value": value, "lower_value": value * 0.9, "upper_value": value * 1.1 }
+        })
+    })
+    .await;
+    assert_eq!(
+        both["metric"]["value"],
+        serde_json::json!(SMALL_FINAL),
+        "the triple is built around the row that alerted"
+    );
+    assert_eq!(both["metric"]["lower_value"], serde_json::json!(900.0));
+    assert_eq!(both["metric"]["upper_value"], serde_json::json!(1_100.0));
+
+    let (lower, lower_embedded) = alert_for_bounds(
+        "boundslower",
+        |value| serde_json::json!({ "latency": { "value": value, "lower_value": value * 0.9 } }),
+    )
+    .await;
+    assert_eq!(lower["metric"]["value"], serde_json::json!(SMALL_FINAL));
+    assert_eq!(lower["metric"]["lower_value"], serde_json::json!(900.0));
+    assert_eq!(
+        lower["metric"]["upper_value"],
+        serde_json::Value::Null,
+        "the bound that was never reported stays absent"
+    );
+
+    let (upper, upper_embedded) = alert_for_bounds(
+        "boundsupper",
+        |value| serde_json::json!({ "latency": { "value": value, "upper_value": value * 1.1 } }),
+    )
+    .await;
+    assert_eq!(upper["metric"]["value"], serde_json::json!(SMALL_FINAL));
+    assert_eq!(
+        upper["metric"]["lower_value"],
+        serde_json::Value::Null,
+        "the bound that was never reported stays absent"
+    );
+    assert_eq!(upper["metric"]["upper_value"], serde_json::json!(1_100.0));
+
+    let (none, none_embedded) = alert_for_bounds(
+        "boundsnone",
+        |value| serde_json::json!({ "latency": { "value": value } }),
+    )
+    .await;
+    assert_eq!(none["metric"]["value"], serde_json::json!(SMALL_FINAL));
+    assert_eq!(none["metric"]["lower_value"], serde_json::Value::Null);
+    assert_eq!(none["metric"]["upper_value"], serde_json::Value::Null);
+
+    // The bounds are the only thing that separates the four: the boundary the
+    // detector computed is the same in all four, because the `value` series is the
+    // same in all four. The report response assembles the triple from its own query,
+    // so each shape has to reach that query too, naming its bounds the same way.
+    for (alert, embedded) in [
+        (&both, &both_embedded),
+        (&lower, &lower_embedded),
+        (&upper, &upper_embedded),
+        (&none, &none_embedded),
+    ] {
+        assert_eq!(
+            alert, embedded,
+            "the report's embedded alert is the alert the list renders"
+        );
+        assert_eq!(
+            alert["boundary"],
+            serde_json::json!({
+                "baseline": 12.0,
+                "lower_limit": 6.806_397_375_694_743,
+                "upper_limit": 17.193_602_624_305_257,
+            }),
+        );
+        assert_eq!(
+            alert["variant"]["parameters"],
+            serde_json::json!({ "size_mb": 16 })
+        );
+    }
 }
 
 // The variant resource endpoints, nested under their benchmark.

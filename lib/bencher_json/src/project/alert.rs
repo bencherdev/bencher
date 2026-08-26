@@ -2,7 +2,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{DateTime, JsonBenchmark, JsonBoundary, JsonMetricTriple, JsonThreshold};
+use crate::{DateTime, JsonBenchmark, JsonBoundary, JsonMetricTriple, JsonThreshold, JsonVariant};
 
 use super::{boundary::BoundaryLimit, report::Iteration, report::ReportUuid};
 
@@ -22,6 +22,11 @@ pub struct JsonAlert {
     pub report: ReportUuid,
     pub iteration: Iteration,
     pub benchmark: JsonBenchmark,
+    /// The variant the alert fired on.
+    ///
+    /// Two variants of one benchmark raise two alerts, and this is what tells
+    /// them apart.
+    pub variant: JsonVariant,
     pub metric: JsonMetricTriple,
     pub threshold: JsonThreshold,
     pub boundary: JsonBoundary,
