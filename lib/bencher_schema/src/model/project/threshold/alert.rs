@@ -1,5 +1,5 @@
 use bencher_json::{
-    AlertUuid, DateTime, ReportUuid,
+    AlertUuid, DateTime, MetricName, ReportUuid,
     project::{
         alert::{AlertStatus, JsonAlert, JsonPerfAlert, UpdateAlertStatus},
         boundary::BoundaryLimit,
@@ -7,27 +7,29 @@ use bencher_json::{
     },
 };
 use diesel::{
-    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _,
+    ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::HttpError;
 
-use super::{QueryThreshold, boundary::BoundaryId};
+use super::{
+    QueryThreshold,
+    boundary::{BoundaryId, QueryBoundary},
+};
 use crate::{
     context::DbConnection,
-    error::{issue_error, resource_not_found_err},
+    error::resource_not_found_err,
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     model::{
         project::{
             ProjectId, QueryProject,
             benchmark::QueryBenchmark,
             branch::{head::HeadId, version::VersionId},
-            metric_boundary::QueryMetricBoundary,
+            metric::QueryMetric,
+            parameter::QueryParameter,
         },
         spec::SpecId,
     },
     schema::{self, alert as alert_table},
-    view,
 };
 
 crate::macros::typed_id::typed_id!(AlertId);
@@ -101,20 +103,32 @@ impl QueryAlert {
             spec_id,
             iteration,
             query_benchmark,
-            query_metric_boundary,
+            query_parameter,
+            query_boundary,
+            query_metric,
         ) = schema::alert::table
             .filter(schema::alert::id.eq(self.id))
-            // The view already carries the boundary the alert points at, so the alert
-            // joins straight onto it rather than through the boundary table.
+            // The alert names its boundary, the boundary names its metric row, and
+            // that row names the grid point it was measured under. Each hop is an
+            // identifier seek off the hop before it.
             .inner_join(
-                view::metric_boundary::table
-                    .inner_join(
-                        schema::report_benchmark::table
-                            .inner_join(schema::report::table)
-                            .inner_join(schema::benchmark::table),
-                    )
-                    .on(view::metric_boundary::boundary_id
-                        .eq(schema::alert::boundary_id.nullable())),
+                schema::boundary::table.on(schema::boundary::id.eq(schema::alert::boundary_id)),
+            )
+            .inner_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
+            .inner_join(
+                schema::report_benchmark::table
+                    .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
+            )
+            .inner_join(
+                schema::report::table.on(schema::report::id.eq(schema::report_benchmark::report_id)),
+            )
+            .inner_join(
+                schema::benchmark::table
+                    .on(schema::benchmark::id.eq(schema::report_benchmark::benchmark_id)),
+            )
+            .inner_join(
+                schema::parameter::table
+                    .on(schema::parameter::id.eq(schema::report_benchmark::parameter_id)),
             )
             .select((
                 schema::report::uuid,
@@ -124,7 +138,9 @@ impl QueryAlert {
                 schema::report::spec_id,
                 schema::report_benchmark::iteration,
                 QueryBenchmark::as_select(),
-                QueryMetricBoundary::as_select(),
+                QueryParameter::as_select(),
+                QueryBoundary::as_select(),
+                QueryMetric::as_select(),
             ))
             .first::<(
                 ReportUuid,
@@ -134,40 +150,35 @@ impl QueryAlert {
                 Option<SpecId>,
                 Iteration,
                 QueryBenchmark,
-                QueryMetricBoundary,
+                QueryParameter,
+                QueryBoundary,
+                QueryMetric,
             )>(conn)
             .map_err(resource_not_found_err!(Alert, self))?;
         let project = QueryProject::get(conn, query_benchmark.project_id)?;
         self.into_json_for_report(
             conn,
             &project,
-            report_uuid,
-            created,
-            head_id,
-            version_id,
-            spec_id,
-            iteration,
-            query_benchmark,
-            query_metric_boundary,
+            AlertContext {
+                report_uuid,
+                created,
+                head_id,
+                version_id,
+                spec_id,
+                iteration,
+                query_benchmark,
+                query_parameter,
+                query_boundary,
+                query_metric,
+            },
         )
     }
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "alert JSON requires full report context"
-    )]
     pub fn into_json_for_report(
         self,
         conn: &mut DbConnection,
         project: &QueryProject,
-        report_uuid: ReportUuid,
-        created: DateTime,
-        head_id: HeadId,
-        version_id: VersionId,
-        spec_id: Option<SpecId>,
-        iteration: Iteration,
-        query_benchmark: QueryBenchmark,
-        query_metric_boundary: QueryMetricBoundary,
+        context: AlertContext,
     ) -> Result<JsonAlert, HttpError> {
         let Self {
             uuid,
@@ -176,16 +187,18 @@ impl QueryAlert {
             modified,
             ..
         } = self;
-        // An alert is only ever created for a boundary, and the view is keyed on the
-        // `value` row that boundary hangs off, so the split always yields one here.
-        let (json_metric, query_boundary) = query_metric_boundary.split();
-        let Some(query_boundary) = query_boundary else {
-            return Err(issue_error(
-                "Failed to find alert boundary",
-                &format!("Failed to find the boundary for alert ({uuid})."),
-                "The alert's metric row carries no boundary",
-            ));
-        };
+        let AlertContext {
+            report_uuid,
+            created,
+            head_id,
+            version_id,
+            spec_id,
+            iteration,
+            query_benchmark,
+            query_parameter,
+            query_boundary,
+            query_metric,
+        } = context;
         let threshold = QueryThreshold::get_alert_json(
             conn,
             query_boundary.threshold_id,
@@ -194,11 +207,21 @@ impl QueryAlert {
             version_id,
             spec_id,
         )?;
+        // A boundary is only ever computed for a `value` row, so the triple is
+        // always the one the alert fired on.
+        debug_assert_eq!(
+            query_metric.name,
+            MetricName::value(),
+            "alert ({uuid}) fired on a metric row that is not a point estimate"
+        );
+        let json_metric = query_metric.triple(conn)?;
+        let json_parameter = query_parameter.into_json_for_benchmark(&query_benchmark);
         Ok(JsonAlert {
             uuid,
             report: report_uuid,
             iteration,
             benchmark: query_benchmark.into_json_for_project(project),
+            parameter: json_parameter,
             metric: json_metric,
             threshold,
             boundary: query_boundary.into_json(),
@@ -224,6 +247,24 @@ impl QueryAlert {
             modified,
         }
     }
+}
+
+/// Everything an alert's JSON needs beyond the alert row itself.
+///
+/// The report response reads all of it for every alert it embeds in one query, and
+/// the alert endpoint reads it for one alert, so it travels as a value rather than
+/// as a dozen positional arguments.
+pub struct AlertContext {
+    pub report_uuid: ReportUuid,
+    pub created: DateTime,
+    pub head_id: HeadId,
+    pub version_id: VersionId,
+    pub spec_id: Option<SpecId>,
+    pub iteration: Iteration,
+    pub query_benchmark: QueryBenchmark,
+    pub query_parameter: QueryParameter,
+    pub query_boundary: QueryBoundary,
+    pub query_metric: QueryMetric,
 }
 
 #[derive(Debug, diesel::Insertable)]

@@ -10,13 +10,16 @@
 //!
 //! A migration that rebuilds the metric table is only safe if it is invisible from
 //! the outside. That is not a claim to assert, it is a thing to demonstrate: these
-//! tests seed a database in the shape the migration finds, capture the raw bytes of
-//! every response that reads a metric, run the migration, and capture them again.
-//! The two captures must be equal byte for byte.
+//! tests seed a database in the shape the migration finds, capture what the outside
+//! could see, run the migration, and capture it again. The two captures must be
+//! equal byte for byte.
 //!
-//! The same binary serves both captures because every reader captured here goes
-//! through the `metric_boundary` view, whose column list the migration holds
-//! unchanged.
+//! What both captures can read is the `metric_boundary` view, which the migration
+//! holds unchanged and which is defined on either shape of the table. No endpoint
+//! reads it any more: every reader now drives on the named `metric` rows, and those
+//! rows do not exist before the migration, so no response has a pre-migration form
+//! to compare. The view is therefore captured directly, and the responses that read
+//! the named rows are anchored on the first migrated capture instead.
 
 use bencher_api_tests::{
     TestServer,
@@ -51,25 +54,25 @@ struct Fixture {
     metric_uuids: Vec<MetricUuid>,
 }
 
-/// The raw bytes of every response that reads a metric through the
-/// `metric_boundary` view, which is the view this migration holds unchanged.
+/// Every row of the `metric_boundary` view, rendered, which is the artifact this
+/// migration holds unchanged.
 ///
-/// The report, perf, and metric responses are deliberately absent. All three are
-/// built from the named `metric` rows rather than from the view, and those rows do
-/// not exist before the migration, so none of them has a pre-migration form to
-/// compare. None is stable across a down and up round trip either, because the
-/// migration mints a fresh uuid for every bound row it recreates and all three now
-/// echo those uuids. That is not a regression: a server runs its migrations before
-/// it serves, and the `value` row, which every reader of the old shape saw, keeps
-/// its identity. What the perf response owes older clients is pinned where that
-/// response lives, by the byte compatibility test in `perf.rs`; the metric endpoint
-/// is pinned the same way in `metrics.rs`, and what it owes this migration is that
-/// a down and up round trip leaves it unmoved, which
+/// The report, perf, alert, and metric responses are deliberately absent. All four
+/// are built from the named `metric` rows, and those rows do not exist before the
+/// migration, so none of them has a pre-migration form to compare. None is stable
+/// across a down and up round trip either, because the migration mints a fresh uuid
+/// for every bound row it recreates and all four now echo or read those rows. That
+/// is not a regression: a server runs its migrations before it serves, and the
+/// `value` row, which every reader of the old shape saw, keeps its identity. What
+/// the perf response owes older clients is pinned where that response lives, by the
+/// byte compatibility test in `perf.rs`; the metric endpoint is pinned the same way
+/// in `metrics.rs` and the alert responses in `parameters.rs`. What they owe this
+/// migration is that a down and up round trip leaves them unmoved, which
 /// [`migration_down_and_up_round_trips_the_metric_triple`] asserts against
-/// [`capture_metrics`].
+/// [`capture_metrics`] and [`capture_alerts`].
 #[derive(Debug, PartialEq, Eq)]
 struct Captured {
-    alerts: String,
+    view: String,
 }
 
 /// The fixture rows, chosen to reach every branch of the explosion and the pivot.
@@ -111,24 +114,23 @@ const FIXTURE_METRICS: [LegacyMetric; 4] = [
 /// table hands back the same numbering either way.
 const FIXTURE_METRIC_IDS: [i32; 4] = [10, 20, 30, 40];
 
-// Every response that reads a metric through the view is byte identical across the
-// migration.
+// The view every reader used to go through is byte identical across the migration.
 #[tokio::test]
 async fn responses_are_byte_identical_across_the_migration() {
     let server = TestServer::new().await;
     let fixture = seed_legacy_project(&server, "equiv").await;
 
-    let before = capture(&server, &fixture).await;
+    let before = capture(&server);
     assert!(
-        before.alerts.contains("40.5"),
-        "the fixture reaches the alert response before anything is compared"
+        before.view.contains("40.5"),
+        "the fixture reaches the view before anything is compared"
     );
     apply_migration(&server);
-    let after = capture(&server, &fixture).await;
+    let after = capture(&server);
 
     assert_eq!(
-        before.alerts, after.alerts,
-        "the alerts response changed across the migration"
+        before.view, after.view,
+        "the metric boundary view changed across the migration"
     );
 
     // The metric endpoint reads the named rows, so the migration is what gives it a
@@ -348,40 +350,50 @@ async fn migration_down_and_up_round_trips_the_metric_triple() {
     let server = TestServer::new().await;
     let fixture = seed_legacy_project(&server, "roundtrip").await;
 
-    let before = capture(&server, &fixture).await;
+    let before = capture(&server);
     apply_migration(&server);
-    let after_first = capture(&server, &fixture).await;
+    let after_first = capture(&server);
     let metrics_first = capture_metrics(&server, &fixture).await;
+    let alerts_first = capture_alerts(&server, &fixture).await;
     assert_eq!(
         before, after_first,
-        "applying the migration leaves every response unchanged"
+        "applying the migration leaves the view unchanged"
     );
 
     let mut conn = server.db_conn();
     revert_migration(&mut conn);
     drop(conn);
 
-    let after_revert = capture(&server, &fixture).await;
+    let after_revert = capture(&server);
     assert_eq!(
         before, after_revert,
-        "reverting the migration leaves every response unchanged"
+        "reverting the migration leaves the view unchanged"
     );
 
     apply_migration(&server);
-    let after_round_trip = capture(&server, &fixture).await;
+    let after_round_trip = capture(&server);
     assert_eq!(
         before, after_round_trip,
-        "a down and up round trip leaves every response unchanged"
+        "a down and up round trip leaves the view unchanged"
     );
 
-    // The metric endpoint has no response to capture in the legacy shape, so its
-    // anchor is the first migrated capture rather than the pre-migration one. The
-    // bound rows the round trip recreates carry fresh uuids, and the metric endpoint
-    // never echoes a bound row's uuid, so the response is stable across it.
+    // The metric endpoint and the alert responses have nothing to capture in the
+    // legacy shape, so their anchor is the first migrated capture rather than the
+    // pre-migration one. The bound rows the round trip recreates carry fresh uuids,
+    // and neither reader echoes a bound row's uuid, so both are stable across it.
     assert_eq!(
         metrics_first,
         capture_metrics(&server, &fixture).await,
         "a down and up round trip leaves every metric response unchanged"
+    );
+    assert!(
+        alerts_first.contains("40.5"),
+        "the fixture reaches the alert response before anything is compared"
+    );
+    assert_eq!(
+        alerts_first,
+        capture_alerts(&server, &fixture).await,
+        "a down and up round trip leaves the alerts response unchanged"
     );
 
     // The responses can only be trusted if the schema they were served from is the
@@ -1178,21 +1190,99 @@ fn seed_threshold_and_alert(
 ///
 /// The bytes are compared, not parsed values: parsing and re-serializing would
 /// hide exactly the float formatting drift this migration has to rule out.
-async fn capture(server: &TestServer, fixture: &Fixture) -> Captured {
+fn capture(server: &TestServer) -> Captured {
+    let mut conn = server.db_conn();
+    let view = diesel::sql_query(VIEW_ROWS_SQL)
+        .load::<ViewRow>(&mut conn)
+        .expect("Failed to read the metric boundary view")
+        .into_iter()
+        .map(
+            |ViewRow {
+                 metric_id,
+                 metric_uuid,
+                 report_benchmark_id,
+                 measure_id,
+                 value,
+                 lower_value,
+                 upper_value,
+                 boundary_id,
+                 boundary_uuid,
+                 threshold_id,
+                 model_id,
+                 baseline,
+                 lower_limit,
+                 upper_limit,
+             }| {
+                format!(
+                    "{metric_id}|{metric_uuid}|{report_benchmark_id}|{measure_id}|{value:?}|{lower_value:?}|{upper_value:?}|{boundary_id:?}|{boundary_uuid:?}|{threshold_id:?}|{model_id:?}|{baseline:?}|{lower_limit:?}|{upper_limit:?}"
+                )
+            },
+        )
+        .collect::<Vec<_>>()
+        .join("\n");
+    Captured { view }
+}
+
+/// Every row of the `metric_boundary` view, in a stable order.
+const VIEW_ROWS_SQL: &str = "SELECT * FROM metric_boundary ORDER BY metric_id";
+
+/// One row of the `metric_boundary` view.
+///
+/// The floats are read as floats and rendered with Rust's shortest round trip
+/// formatting, which is what makes formatting drift visible: it is exact, and it
+/// prints the sign of a negative zero that `==` cannot see. The render destructures
+/// the row, so a column added here is a build error rather than a silent omission.
+/// A column added to the view itself is caught by [`VIEW_COLUMNS`], which pins the
+/// view's column list against what `view.rs` declares.
+#[derive(diesel::QueryableByName)]
+struct ViewRow {
+    #[diesel(sql_type = Integer)]
+    metric_id: i32,
+    #[diesel(sql_type = Text)]
+    metric_uuid: String,
+    #[diesel(sql_type = Integer)]
+    report_benchmark_id: i32,
+    #[diesel(sql_type = Integer)]
+    measure_id: i32,
+    #[diesel(sql_type = Double)]
+    value: f64,
+    #[diesel(sql_type = Nullable<Double>)]
+    lower_value: Option<f64>,
+    #[diesel(sql_type = Nullable<Double>)]
+    upper_value: Option<f64>,
+    #[diesel(sql_type = Nullable<Integer>)]
+    boundary_id: Option<i32>,
+    #[diesel(sql_type = Nullable<Text>)]
+    boundary_uuid: Option<String>,
+    #[diesel(sql_type = Nullable<Integer>)]
+    threshold_id: Option<i32>,
+    #[diesel(sql_type = Nullable<Integer>)]
+    model_id: Option<i32>,
+    #[diesel(sql_type = Nullable<Double>)]
+    baseline: Option<f64>,
+    #[diesel(sql_type = Nullable<Double>)]
+    lower_limit: Option<f64>,
+    #[diesel(sql_type = Nullable<Double>)]
+    upper_limit: Option<f64>,
+}
+
+/// Capture the raw bytes of the alerts endpoint.
+///
+/// Separate from [`capture`] because the alert responses read the named `metric`
+/// rows, so they only have a response to capture once the migration has made them.
+async fn capture_alerts(server: &TestServer, fixture: &Fixture) -> String {
     let Fixture {
         project_slug,
         token,
         metric_uuids: _,
     } = fixture;
 
-    let alerts = get(
+    get(
         server,
         token,
         &format!("/v0/projects/{project_slug}/alerts"),
     )
-    .await;
-
-    Captured { alerts }
+    .await
 }
 
 /// Capture the raw bytes of the metric endpoint, one response per seeded metric.

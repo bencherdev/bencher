@@ -222,6 +222,15 @@ export interface JsonBenchmark {
 	archived?: string;
 }
 
+export interface JsonParameter {
+	uuid: Uuid;
+	benchmark: Uuid;
+	set: Record<string, string | number | boolean>;
+	created: string;
+	modified: string;
+	archived?: string;
+}
+
 export interface JsonMetricTriple {
 	uuid: Uuid;
 	value: number;
@@ -345,6 +354,13 @@ export interface JsonAlert {
 	report: Uuid;
 	iteration: Iteration;
 	benchmark: JsonBenchmark;
+	/**
+	 * The grid point the alert fired on.
+	 * 
+	 * Two grid points of one benchmark raise two alerts, and this is what tells
+	 * them apart.
+	 */
+	parameter: JsonParameter;
 	metric: JsonMetricTriple;
 	threshold: JsonThreshold;
 	boundary: JsonBoundary;
@@ -910,15 +926,6 @@ export interface JsonOAuthUrl {
 export interface JsonOAuthUser {
 	user: JsonAuthUser;
 	plan?: PlanLevel;
-}
-
-export interface JsonParameter {
-	uuid: Uuid;
-	benchmark: Uuid;
-	set: Record<string, string | number | boolean>;
-	created: string;
-	modified: string;
-	archived?: string;
 }
 
 /**

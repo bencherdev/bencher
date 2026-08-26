@@ -1,13 +1,14 @@
-use bencher_json::{MetricName, MetricUuid};
-#[cfg(feature = "plus")]
+use bencher_json::{JsonMetricTriple, MetricName, MetricUuid};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 #[cfg(feature = "plus")]
 use crate::model::organization::OrganizationId;
-#[cfg(feature = "plus")]
-use crate::schema;
-use crate::{context::DbConnection, macros::fn_get::fn_from_uuid, schema::metric as metric_table};
+use crate::{
+    context::DbConnection,
+    macros::fn_get::fn_from_uuid,
+    schema::{self, metric as metric_table},
+};
 
 use super::{
     measure::{MeasureId, QueryMeasure},
@@ -33,6 +34,42 @@ pub struct QueryMetric {
 
 impl QueryMetric {
     fn_from_uuid!(metric, MetricUuid, Metric);
+
+    /// The metric triple built around this row.
+    ///
+    /// The triple is a convention over three names, so it is only meaningful for a
+    /// `value` row: the caller is what decides that this row is one. The bounds are
+    /// this row's siblings under the same report benchmark and the same measure, so
+    /// the lookup rides `index_metric_report_benchmark_measure_name`.
+    pub fn triple(&self, conn: &mut DbConnection) -> Result<JsonMetricTriple, HttpError> {
+        let bounds = schema::metric::table
+            .filter(schema::metric::report_benchmark_id.eq(self.report_benchmark_id))
+            .filter(schema::metric::measure_id.eq(self.measure_id))
+            .filter(
+                schema::metric::name.eq_any([MetricName::lower_value(), MetricName::upper_value()]),
+            )
+            .select((schema::metric::name, schema::metric::value))
+            .load::<(MetricName, f64)>(conn)
+            .map_err(|e| {
+                let message = format!(
+                    "Failed to query the bounds for metric ({metric_uuid})",
+                    metric_uuid = self.uuid
+                );
+                crate::error::issue_error("Failed to query metric bounds", &message, e)
+            })?;
+
+        let bound = |bound: &MetricName| {
+            bounds
+                .iter()
+                .find_map(|(name, value)| (name == bound).then_some((*value).into()))
+        };
+        Ok(JsonMetricTriple {
+            uuid: self.uuid,
+            value: self.value.into(),
+            lower_value: bound(&MetricName::lower_value()),
+            upper_value: bound(&MetricName::upper_value()),
+        })
+    }
 
     /// Count metric usage for an organization over a time window, across all project
     /// visibilities. This is the billable figure for legacy Team (and metered

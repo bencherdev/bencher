@@ -52,12 +52,16 @@ use crate::{
             metric::QueryMetric,
             parameter::QueryParameter,
             testbed::{QueryTestbed, ResolvedTestbed, TestbedId},
-            threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
+            threshold::{
+                QueryThreshold,
+                alert::{AlertContext, QueryAlert},
+                model::QueryModel,
+            },
         },
         user::{QueryUser, UserId, actor::ApiActor},
     },
     schema::{self, report as report_table},
-    view, write_transaction,
+    write_transaction,
 };
 
 /// Encapsulates all context from a run request for report creation.
@@ -94,7 +98,6 @@ impl NewRunJob {
 
 use super::{
     branch::{BranchId, QueryBranch, head::HeadId, version::VersionId},
-    metric_boundary::QueryMetricBoundary,
     threshold::{InsertThreshold, boundary::QueryBoundary},
 };
 
@@ -1070,16 +1073,25 @@ fn get_report_alerts(
     spec_id: Option<SpecId>,
 ) -> Result<JsonReportAlerts, HttpError> {
     let alerts = schema::alert::table
-        // The view already carries the boundary the alert points at, so the alert
-        // joins straight onto it rather than through the boundary table.
+        // The alert names its boundary, the boundary names its metric row, and that
+        // row names both the report it landed in and the grid point it was measured
+        // under. Each hop is an identifier seek off the hop before it.
+        .inner_join(schema::boundary::table.on(schema::boundary::id.eq(schema::alert::boundary_id)))
+        .inner_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
         .inner_join(
-            view::metric_boundary::table
-                .inner_join(
-                    schema::report_benchmark::table
-                        .inner_join(schema::report::table)
-                        .inner_join(schema::benchmark::table),
-                )
-                .on(view::metric_boundary::boundary_id.eq(schema::alert::boundary_id.nullable())),
+            schema::report_benchmark::table
+                .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
+        )
+        .inner_join(
+            schema::report::table.on(schema::report::id.eq(schema::report_benchmark::report_id)),
+        )
+        .inner_join(
+            schema::benchmark::table
+                .on(schema::benchmark::id.eq(schema::report_benchmark::benchmark_id)),
+        )
+        .inner_join(
+            schema::parameter::table
+                .on(schema::parameter::id.eq(schema::report_benchmark::parameter_id)),
         )
         .filter(schema::report::id.eq(report_id))
         .order((schema::report_benchmark::iteration, schema::benchmark::name))
@@ -1089,7 +1101,9 @@ fn get_report_alerts(
             schema::report_benchmark::iteration,
             QueryAlert::as_select(),
             QueryBenchmark::as_select(),
-            QueryMetricBoundary::as_select(),
+            QueryParameter::as_select(),
+            QueryBoundary::as_select(),
+            QueryMetric::as_select(),
         ))
         .load::<(
             ReportUuid,
@@ -1097,25 +1111,39 @@ fn get_report_alerts(
             Iteration,
             QueryAlert,
             QueryBenchmark,
-            QueryMetricBoundary,
+            QueryParameter,
+            QueryBoundary,
+            QueryMetric,
         )>(conn)
         .map_err(resource_not_found_err!(Alert, report_id))?;
 
     let mut report_alerts = Vec::new();
-    for (report_uuid, created, iteration, query_alert, query_benchmark, query_metric_boundary) in
-        alerts
+    for (
+        report_uuid,
+        created,
+        iteration,
+        query_alert,
+        query_benchmark,
+        query_parameter,
+        query_boundary,
+        query_metric,
+    ) in alerts
     {
         let json_alert = query_alert.into_json_for_report(
             conn,
             project,
-            report_uuid,
-            created,
-            head_id,
-            version_id,
-            spec_id,
-            iteration,
-            query_benchmark,
-            query_metric_boundary,
+            AlertContext {
+                report_uuid,
+                created,
+                head_id,
+                version_id,
+                spec_id,
+                iteration,
+                query_benchmark,
+                query_parameter,
+                query_boundary,
+                query_metric,
+            },
         )?;
         report_alerts.push(json_alert);
     }

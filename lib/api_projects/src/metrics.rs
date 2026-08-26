@@ -8,7 +8,7 @@ use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
     actor_conn,
     context::{ApiContext, DbConnection},
-    error::{issue_error, resource_not_found_err, with_auth_hint},
+    error::{resource_not_found_err, with_auth_hint},
     model::{
         project::{
             ProjectId, QueryProject,
@@ -288,33 +288,7 @@ fn metric_triple(
         return Ok(None);
     }
 
-    // The bounds are the addressed row's siblings under the same report benchmark and
-    // the same measure, so this rides `index_metric_report_benchmark_measure_name`.
-    let bounds = schema::metric::table
-        .filter(schema::metric::report_benchmark_id.eq(query_metric.report_benchmark_id))
-        .filter(schema::metric::measure_id.eq(query_metric.measure_id))
-        .filter(schema::metric::name.eq_any([MetricName::lower_value(), MetricName::upper_value()]))
-        .select((schema::metric::name, schema::metric::value))
-        .load::<(MetricName, f64)>(conn)
-        .map_err(|e| {
-            let message = format!(
-                "Failed to query the bounds for metric ({metric_uuid})",
-                metric_uuid = query_metric.uuid
-            );
-            issue_error("Failed to query metric bounds", &message, e)
-        })?;
-
-    let bound = |bound: &MetricName| {
-        bounds
-            .iter()
-            .find_map(|(name, value)| (name == bound).then_some((*value).into()))
-    };
-    Ok(Some(JsonMetricTriple {
-        uuid: query_metric.uuid,
-        value: query_metric.value.into(),
-        lower_value: bound(&MetricName::lower_value()),
-        upper_value: bound(&MetricName::upper_value()),
-    }))
+    query_metric.triple(conn).map(Some)
 }
 
 fn metric_query_json(
