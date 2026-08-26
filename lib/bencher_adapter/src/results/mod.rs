@@ -1,4 +1,4 @@
-use bencher_json::project::report::Adapter;
+use bencher_json::{BmfVersion, project::report::Adapter};
 
 use crate::{Adaptable as _, AdapterError, Settings};
 
@@ -42,6 +42,19 @@ impl AdapterResultsArray {
     /// How many named values the per measure cap dropped across every payload.
     pub fn dropped_names(&self) -> usize {
         self.inner.iter().map(|results| results.dropped_names).sum()
+    }
+
+    /// The highest BMF version any payload in the array parsed as.
+    ///
+    /// This is what a project gate is checked against, so it takes the highest of
+    /// the array rather than the first: one v1 payload among v0 payloads is still a
+    /// v1 ingest. An empty array is the lowest version, since nothing parsed.
+    pub fn version(&self) -> BmfVersion {
+        self.inner
+            .iter()
+            .map(|results| results.version)
+            .max()
+            .unwrap_or_default()
     }
 
     /// Every result as a foldable BMF v0 payload, or the array back untouched if

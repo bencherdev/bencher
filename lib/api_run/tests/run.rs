@@ -10,7 +10,7 @@
 use bencher_api_tests::TestServer;
 #[cfg(feature = "plus")]
 use bencher_api_tests::oci::compute_digest;
-use bencher_json::JsonReport;
+use bencher_json::{BmfVersion, JsonReport};
 #[cfg(feature = "plus")]
 use bencher_json::{JsonJob, JsonReports, JsonRunners, JsonSpec, runner::JsonJobs};
 use http::StatusCode;
@@ -143,6 +143,9 @@ async fn run_post_bmf_version_1() {
     let user = server.signup("Test User", "runbmf@example.com").await;
     let org = server.create_org(&user, "Run Bmf Org").await;
     let project = server.create_project(&user, &org, "Run Bmf Project").await;
+    // The project gate refuses version 1 until an admin raises it, and the first
+    // signup on a server is its admin.
+    server.set_bmf_version(&project.slug, BmfVersion::V1);
 
     let project_slug: &str = project.slug.as_ref();
     let body = serde_json::json!({
@@ -215,6 +218,196 @@ async fn run_post_unknown_bmf_version() {
     assert!(
         body.contains("0 or 1"),
         "expected the rejection to name the accepted versions: {body}"
+    );
+}
+
+/// POST /v0/run - the project gate refuses a version the project does not accept.
+///
+/// `/v0/run` and report ingest share one check, so a payload refused on one route
+/// is refused on the other, with the same message naming both versions.
+#[tokio::test]
+async fn run_post_bmf_version_above_the_project_gate() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runbmfgate@example.com").await;
+    let org = server.create_org(&user, "Run Gate Org").await;
+    let project = server.create_project(&user, &org, "Run Gate Project").await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "bmf_version": 1,
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::LOCKED);
+    let body = resp.text().await.expect("Failed to read the response");
+    assert_gate_refusal(&body, 1, 0);
+
+    // The admin raises the gate and the same payload ingests.
+    server.set_bmf_version(&project.slug, BmfVersion::V1);
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({
+            "project": project_slug,
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": [bmf_results().to_string()],
+            "bmf_version": 1,
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+}
+
+/// POST one run payload and return its status and body, whatever they are.
+async fn post_run(
+    server: &TestServer,
+    token: &str,
+    body: &serde_json::Value,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .json(body)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+/// POST /v0/run - a replay is retry safety, so a lowered gate does not refuse it.
+///
+/// The gate is a plain setting, so it can be lowered while a client is still
+/// retrying. A replay creates nothing: it hands back the report the first request
+/// already created, and turning it away would report an already accepted request as
+/// a failure. A request that is not a replay is a different matter, and the gate
+/// still refuses it.
+#[tokio::test]
+async fn run_post_idempotent_replay_survives_a_lowered_gate() {
+    let server = TestServer::new().await;
+    // The first signup on a server is its admin, which is who may move the gate.
+    let user = server.signup("Test User", "runbmfreplay@example.com").await;
+    let org = server.create_org(&user, "Run Replay Org").await;
+    let project = server
+        .create_project(&user, &org, "Run Replay Project")
+        .await;
+    server.set_bmf_version(&project.slug, BmfVersion::V1);
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "idempotency_key": uuid::Uuid::new_v4().to_string(),
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "bmf_version": 1,
+    });
+
+    let (status, first) = post_run(&server, &user.token, &body).await;
+    assert_eq!(status, StatusCode::CREATED, "the first request: {first}");
+    let first: JsonReport = serde_json::from_str(&first).expect("Failed to parse the report");
+
+    // The admin lowers the gate out from under the client.
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "bmf_version": 0 }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "the admin lowers the gate");
+
+    // The replay is the same request, so it is the same report.
+    let (status, replay) = post_run(&server, &user.token, &body).await;
+    assert_eq!(status, StatusCode::CREATED, "the replay: {replay}");
+    let replay: JsonReport = serde_json::from_str(&replay).expect("Failed to parse the report");
+    assert_eq!(
+        first.uuid, replay.uuid,
+        "the replay returns the report the first request created"
+    );
+
+    // And it created nothing: the project still holds exactly the one report.
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/reports")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET reports");
+    let reports: serde_json::Value = resp.json().await.expect("Failed to parse the reports");
+    let reports = reports.as_array().expect("the reports are an array");
+    assert_eq!(reports.len(), 1, "the replay created no second report");
+
+    // A fresh request is not a replay, so the gate refuses it.
+    let mut fresh = body.clone();
+    if let Some(object) = fresh.as_object_mut() {
+        object.insert(
+            "idempotency_key".to_owned(),
+            serde_json::json!(uuid::Uuid::new_v4().to_string()),
+        );
+    }
+    let (status, refusal) = post_run(&server, &user.token, &fresh).await;
+    assert_eq!(status, StatusCode::LOCKED, "a fresh request: {refusal}");
+    assert_gate_refusal(&refusal, 1, 0);
+}
+
+/// The refusal names the payload's version and the project's.
+///
+/// The whole phrase is asserted, and against the message rather than the body: the
+/// request id the server mints is a uuid, so it carries digits of its own and an
+/// assertion against the body would pass on the id alone.
+fn assert_gate_refusal(body: &str, payload: u8, project: u8) {
+    let error: serde_json::Value = serde_json::from_str(body).expect("Failed to parse the error");
+    let message = error
+        .get("message")
+        .and_then(serde_json::Value::as_str)
+        .expect("the error carries a message");
+    let named =
+        format!("BMF version {payload}, but this project accepts BMF version {project} at most.");
+    assert!(
+        message.contains(&named),
+        "expected the refusal to say {named:?}: {message}"
     );
 }
 

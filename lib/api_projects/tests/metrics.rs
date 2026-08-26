@@ -17,8 +17,8 @@ use bencher_api_tests::{
     helpers::{base_timestamp, create_empty_parameter, create_test_report, get_project_id},
 };
 use bencher_json::{
-    BenchmarkUuid, JsonAlerts, JsonOneMetric, JsonReport, MeasureUuid, MetricName, MetricUuid,
-    ReportBenchmarkUuid,
+    BenchmarkUuid, BmfVersion, JsonAlerts, JsonOneMetric, JsonReport, MeasureUuid, MetricName,
+    MetricUuid, ProjectSlug, ReportBenchmarkUuid,
 };
 use bencher_schema::{
     model::project::report::{ReportId, upsert_metric_count},
@@ -481,7 +481,7 @@ async fn metric_count_by_report_upsert() {
 
 /// A signed up user with an organization and a project to report into.
 struct Fixture {
-    project_slug: String,
+    project_slug: ProjectSlug,
     token: String,
 }
 
@@ -495,9 +495,13 @@ async fn fixture(server: &TestServer, label: &str) -> Fixture {
     let project = server
         .create_project(&user, &org, &format!("Metric Row Project {label}"))
         .await;
+    // This file carries BMF v1 payloads that declare no version at all, and the
+    // project gate refuses results that parse as v1 while the project is still at
+    // version 0.
+    server.set_bmf_version(&project.slug, BmfVersion::V1);
     Fixture {
-        project_slug: project.slug.to_string(),
-        token: user.token.clone(),
+        project_slug: project.slug,
+        token: user.token,
     }
 }
 

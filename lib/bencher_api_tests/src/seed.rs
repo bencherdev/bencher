@@ -1,10 +1,13 @@
 use bencher_json::{
-    Email, JsonConfirm, JsonNewOrganization, JsonNewProject, JsonOrganization, JsonProject,
-    JsonSignup, OrganizationSlug, OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName,
-    UserName, UserSlug, UserUuid, system::auth::JsonAuthUser,
+    BmfVersion, Email, JsonConfirm, JsonNewOrganization, JsonNewProject, JsonOrganization,
+    JsonProject, JsonSignup, OrganizationSlug, OrganizationUuid, ProjectSlug, ProjectUuid,
+    ResourceName, UserName, UserSlug, UserUuid, system::auth::JsonAuthUser,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{JsonProjectKeyCreated, ProjectKey};
+
+use bencher_schema::schema;
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
 use crate::TestServer;
 
@@ -195,6 +198,23 @@ impl TestServer {
             name: project.name,
             slug: project.slug,
         }
+    }
+
+    /// Set the highest BMF payload version a project accepts.
+    ///
+    /// Only a server admin can move the gate through the API, and most fixtures are
+    /// not about who may move it. This writes the column, so a fixture can put its
+    /// project at the version its payloads are written in without also having to be
+    /// the server's first signup.
+    #[expect(clippy::expect_used, reason = "test helper for the project BMF gate")]
+    pub fn set_bmf_version(&self, project: &ProjectSlug, bmf_version: BmfVersion) {
+        let mut conn = self.db_conn();
+        let updated =
+            diesel::update(schema::project::table.filter(schema::project::slug.eq(project)))
+                .set(schema::project::bmf_version.eq(bmf_version))
+                .execute(&mut conn)
+                .expect("Failed to set the project BMF version");
+        assert_eq!(updated, 1, "the project to set the BMF version on exists");
     }
 
     #[cfg(feature = "plus")]

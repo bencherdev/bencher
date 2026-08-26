@@ -18,8 +18,8 @@ use bencher_api_tests::{
     helpers::{base_timestamp, get_project_id},
 };
 use bencher_json::{
-    DateTime, JsonBenchmark, JsonBenchmarks, JsonParameter, JsonParameters, MetricName,
-    ParameterSet, ParameterUuid, Slug,
+    BmfVersion, DateTime, JsonBenchmark, JsonBenchmarks, JsonParameter, JsonParameters, MetricName,
+    ParameterSet, ParameterUuid, ProjectSlug, Slug,
 };
 use bencher_schema::{
     context::DbConnection,
@@ -47,7 +47,7 @@ fn threshold_models() -> serde_json::Value {
 
 /// A signed up user with an organization and a project to report into.
 struct Fixture {
-    project_slug: String,
+    project_slug: ProjectSlug,
     token: String,
 }
 
@@ -61,9 +61,13 @@ async fn fixture(server: &TestServer, label: &str) -> Fixture {
     let project = server
         .create_project(&user, &org, &format!("Params Project {label}"))
         .await;
+    // This file carries BMF v1 payloads that declare no version at all, and the
+    // project gate refuses results that parse as v1 while the project is still at
+    // version 0.
+    server.set_bmf_version(&project.slug, BmfVersion::V1);
     Fixture {
-        project_slug: project.slug.to_string(),
-        token: user.token.clone(),
+        project_slug: project.slug,
+        token: user.token,
     }
 }
 
@@ -275,7 +279,7 @@ async fn v1_report_lands_grid_points_and_named_values() {
     )
     .await;
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
 
     // The empty set the benchmark was born with, plus one row per grid point.
@@ -328,7 +332,7 @@ async fn ingest_flat(server: &TestServer) -> (Fixture, i32) {
         )
         .await;
     }
-    let project_id = get_project_id(server, &fixture.project_slug);
+    let project_id = get_project_id(server, fixture.project_slug.as_ref());
     (fixture, project_id)
 }
 
@@ -363,7 +367,7 @@ async fn ingest_grid(server: &TestServer) -> (Fixture, i32) {
         )
         .await;
     }
-    let project_id = get_project_id(server, &fixture.project_slug);
+    let project_id = get_project_id(server, fixture.project_slug.as_ref());
     (fixture, project_id)
 }
 
@@ -453,7 +457,7 @@ async fn baselines_separate_by_parameter() {
         .await;
     }
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
     assert_eq!(
         alerts(&mut conn, project_id),
@@ -489,7 +493,7 @@ async fn bare_threshold_gates_only_the_value_name() {
         .await;
     }
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
 
     let names = boundary_names(&mut conn, project_id);
@@ -532,7 +536,7 @@ async fn absent_parameters_land_on_the_empty_set() {
     )
     .await;
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
 
     assert_eq!(
@@ -592,7 +596,7 @@ async fn v1_entry_without_measures_mints_nothing() {
     )
     .await;
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
 
     assert_eq!(benchmark_count(&mut conn, project_id), 1);
@@ -620,7 +624,7 @@ async fn v1_benchmark_without_entries_mints_nothing() {
 
     report(&server, &fixture, 1, vec![v1("bench", &[])], None, None).await;
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
 
     assert_eq!(benchmark_count(&mut conn, project_id), 1);
@@ -652,7 +656,7 @@ async fn v0_benchmark_without_measures_is_unchanged() {
     )
     .await;
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
 
     assert_eq!(benchmark_count(&mut conn, project_id), 1);
@@ -682,7 +686,7 @@ async fn archived_parameter_set_is_unarchived_on_report() {
     );
     report(&server, &fixture, 1, vec![grid_point.clone()], None, None).await;
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     {
         let mut conn = server.db_conn();
         let updated = diesel::update(
@@ -740,7 +744,7 @@ async fn fold_with_v1_warns_and_lands_every_iteration() {
     )
     .await;
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
 
     let iterations: Vec<i32> = schema::report_benchmark::table
@@ -790,7 +794,7 @@ async fn named_value_cap_does_not_fail_the_report() {
     )
     .await;
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
     let names = named_values(&mut conn, project_id);
     assert_eq!(names.len(), 8, "the cap keeps eight names, got {names:?}");
@@ -832,7 +836,7 @@ async fn named_values_do_not_change_the_metric_count() {
     )
     .await;
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
 
     let rows = named_values(&mut conn, project_id);
@@ -1103,7 +1107,7 @@ async fn parameter_creation_is_rate_limited() {
 
     // Minting stopped at the ceiling: the birth empty set plus three grid points,
     // with the fourth refused rather than written.
-    let project_id = get_project_id(&server, &over.project_slug);
+    let project_id = get_project_id(&server, over.project_slug.as_ref());
     let mut conn = server.db_conn();
     assert_eq!(
         parameter_sets(&mut conn, project_id).len(),
@@ -1143,7 +1147,7 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
 
     // Stored. Ingest is best effort, and a measure that names no point estimate is a
     // legitimate payload rather than an error.
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
     assert_eq!(
         named_values(&mut conn, project_id),
@@ -1345,7 +1349,7 @@ async fn v0_fold_still_folds() {
     )
     .await;
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
 
     // One grid point, one row: the two iterations folded rather than landing apart.
@@ -2110,7 +2114,7 @@ async fn parameter_delete_refuses_while_reports_reference_it() {
         .find(|parameter| parameter.set == parameters(r#"{"size_mb":16}"#))
         .expect("the reported grid point");
 
-    let project_id = get_project_id(&server, &fixture.project_slug);
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
     let mut conn = server.db_conn();
     let grid_point_id = parameter_row_id(&mut conn, &grid_point.uuid).expect("the grid point row");
     assert_eq!(report_benchmarks_for_parameter(&mut conn, grid_point_id), 1);

@@ -23,7 +23,7 @@ use crate::{
         organization::{OrganizationId, plan::PlanKind},
         project::{
             QueryProject,
-            report::{QueryReport, ReportId},
+            report::{QueryReport, ReportId, bmf_version::BmfVersionGate},
         },
         runner::{QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
@@ -174,8 +174,11 @@ impl QueryJob {
         //
         // A job's results are the runner's own output rather than the submitted
         // report payload, and `bmf_version` versions that payload. The report row
-        // does not carry the key, so a job run parses in the default order, which
-        // is the order every run has always parsed in.
+        // does not carry the key, so a job run declares the default version and
+        // parses in the default order, which is the order every run has always
+        // parsed in. The project gate still applies: the runner's output is
+        // refused if it parses as a version the project does not accept.
+        let bmf_version = BmfVersionGate::new(query_project.bmf_version, BmfVersion::default())?;
         query_report
             .process_results(
                 log,
@@ -184,7 +187,7 @@ impl QueryJob {
                 &results_array,
                 query_report.adapter,
                 settings,
-                BmfVersion::default(),
+                bmf_version,
                 plan_kind,
                 #[cfg(feature = "otel")]
                 self.priority,

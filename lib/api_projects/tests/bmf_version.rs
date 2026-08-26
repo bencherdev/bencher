@@ -7,13 +7,24 @@
 //! The `bmf_version` key of a report payload, end to end through ingest.
 //!
 //! The key states the Bencher Metric Format version the whole payload is written
-//! in. An absent key is version 0. In this layer the key does one thing to the
-//! results: at version 1 the `json` node tries its v1 leaf first and falls back to
-//! v0, and at version 0 it tries them the other way around. Every test here is
-//! about that being a reordering rather than a filter, so no payload that ingested
-//! before is refused now and every payload lands on the same leaf either way.
+//! in. An absent key is version 0.
+//!
+//! The first half of this file is what the key does to the results: at version 1
+//! the `json` node tries its v1 leaf first and falls back to v0, and at version 0
+//! it tries them the other way around. Those tests are about that being a
+//! reordering rather than a filter, so every payload lands on the same leaf either
+//! way and the key on its own refuses nothing.
+//!
+//! The second half is the project gate, which is the part that does refuse. A
+//! project names the highest version it accepts, and a payload above that gate is
+//! turned away whether it declared the version or merely parsed as it. Every
+//! project starts at version 0, so a payload that ingested before the gate existed
+//! ingests still, with one deliberate exception: v1 results reaching a v1 leaf with
+//! no declared key, either through the `json_v1` adapter named outright or through
+//! the fallback the `magic` and `json` nodes do.
 
 use bencher_api_tests::{TestServer, TestUser};
+use bencher_json::{BmfVersion, ProjectSlug};
 use http::StatusCode;
 
 /// A BMF v0 payload: a benchmark maps straight to its measures.
@@ -51,8 +62,11 @@ fn v1_results() -> String {
 const EMPTY: &str = "{}";
 
 /// A signed up user with an organization and a project to report into.
+///
+/// The user is the server's first signup, which makes them its admin, so this
+/// fixture is also what moves the project's BMF version gate.
 struct Fixture {
-    project_slug: String,
+    project_slug: ProjectSlug,
     user: TestUser,
 }
 
@@ -65,9 +79,20 @@ async fn fixture(server: &TestServer, label: &str) -> Fixture {
         .create_project(&user, &org, &format!("Bmf Project {label}"))
         .await;
     Fixture {
-        project_slug: project.slug.to_string(),
+        project_slug: project.slug,
         user,
     }
+}
+
+/// The same fixture with the project's gate raised to BMF version 1.
+///
+/// Every payload that states version 1, by declaring the key or by parsing as v1,
+/// needs this: a project accepts version 0 and nothing above it until an admin
+/// says otherwise.
+async fn gated_fixture(server: &TestServer, label: &str) -> Fixture {
+    let fixture = fixture(server, label).await;
+    server.set_bmf_version(&fixture.project_slug, BmfVersion::V1);
+    fixture
 }
 
 /// One report request.
@@ -260,7 +285,7 @@ async fn report_absent_bmf_version_is_version_0() {
 #[tokio::test]
 async fn report_bmf_version_1_ingests_a_v1_payload_identically_to_version_0() {
     let server = TestServer::new().await;
-    let fixture = fixture(&server, "v1").await;
+    let fixture = gated_fixture(&server, "v1").await;
     let results = v1_results();
 
     let one = report(
@@ -308,7 +333,7 @@ async fn report_bmf_version_1_ingests_a_v1_payload_identically_to_version_0() {
 #[tokio::test]
 async fn report_bmf_version_1_still_ingests_a_v0_payload() {
     let server = TestServer::new().await;
-    let fixture = fixture(&server, "fallback").await;
+    let fixture = gated_fixture(&server, "fallback").await;
     let results = v0_results();
 
     let one = report(
@@ -385,7 +410,7 @@ async fn report_unknown_bmf_version_is_rejected() {
 #[tokio::test]
 async fn report_explicit_leaf_wins_over_bmf_version() {
     let server = TestServer::new().await;
-    let fixture = fixture(&server, "leaf").await;
+    let fixture = gated_fixture(&server, "leaf").await;
     let v1 = v1_results();
     let v0 = v0_results();
 
@@ -447,7 +472,7 @@ async fn report_explicit_leaf_wins_over_bmf_version() {
 #[tokio::test]
 async fn report_fold_is_unmoved_by_the_declared_version() {
     let server = TestServer::new().await;
-    let fixture = fixture(&server, "fold").await;
+    let fixture = gated_fixture(&server, "fold").await;
     let ten = v0_value(10.0);
     let twenty = v0_value(20.0);
 
@@ -497,7 +522,7 @@ async fn report_fold_is_unmoved_by_the_declared_version() {
 #[tokio::test]
 async fn report_fold_is_still_refused_for_a_v1_payload() {
     let server = TestServer::new().await;
-    let fixture = fixture(&server, "foldv1").await;
+    let fixture = gated_fixture(&server, "foldv1").await;
     let v1 = v1_results();
 
     let one = report(
@@ -526,6 +551,335 @@ async fn report_fold_is_still_refused_for_a_v1_payload() {
     assert_eq!(one, zero);
     // Unfolded: one iteration per result, which is what refusing the fold means.
     assert_eq!(iterations(&one), 2);
+
+    server.close().await;
+}
+
+// --- The project gate ---
+//
+// A project declares the highest BMF payload version it accepts. It defaults to 0
+// everywhere, only a server admin can raise it, and it is visible to everyone.
+
+/// GET one project as `user`.
+async fn get_project(
+    server: &TestServer,
+    user: &TestUser,
+    project: &ProjectSlug,
+) -> serde_json::Value {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    assert_eq!(status, StatusCode::OK, "GET project: {status}");
+    resp.json().await.expect("Failed to parse the project")
+}
+
+/// PATCH one project with whatever body, and return its status and body.
+async fn try_patch(
+    server: &TestServer,
+    user: &TestUser,
+    project: &ProjectSlug,
+    body: &serde_json::Value,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(body)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+/// What an error response said, without the request id the server mints for it.
+fn message(body: &str) -> String {
+    let error: serde_json::Value = serde_json::from_str(body).expect("Failed to parse the error");
+    error
+        .get("message")
+        .and_then(serde_json::Value::as_str)
+        .expect("the error carries a message")
+        .to_owned()
+}
+
+/// The refusal has to name the payload's version and the project's, so the message
+/// says both what was sent and what the project would take.
+///
+/// The whole phrase is asserted, and against the message rather than the body: the
+/// request id the server mints is a uuid, so it carries digits of its own and an
+/// assertion against the body would pass on the id alone.
+fn assert_gate_refusal(status: StatusCode, body: &str, payload: u8, project: u8) {
+    assert_eq!(status, StatusCode::LOCKED, "{body}");
+    let message = message(body);
+    let named =
+        format!("BMF version {payload}, but this project accepts BMF version {project} at most.");
+    assert!(
+        message.contains(&named),
+        "expected the refusal to say {named:?}: {message}"
+    );
+}
+
+/// A new project accepts BMF version 0 and says so.
+#[tokio::test]
+async fn project_bmf_version_defaults_to_0() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "default").await;
+
+    let project = get_project(&server, &fixture.user, &fixture.project_slug).await;
+    assert_eq!(project["bmf_version"], serde_json::json!(0));
+
+    server.close().await;
+}
+
+/// A payload that declares a version above the gate is refused, and the same
+/// project still takes a version 0 payload.
+#[tokio::test]
+async fn report_declared_version_above_the_gate_is_refused() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "declared").await;
+    let results = v0_results();
+
+    let (status, body) = try_report(
+        &server,
+        &fixture,
+        Post {
+            results: vec![&results],
+            bmf_version: Some(serde_json::json!(1)),
+            ..Post::default()
+        },
+    )
+    .await;
+    assert_gate_refusal(status, &body, 1, 0);
+
+    // The gate is about the version, not about the project: version 0 still ingests.
+    report(
+        &server,
+        &fixture,
+        Post {
+            results: vec![&results],
+            bmf_version: Some(serde_json::json!(0)),
+            ..Post::default()
+        },
+    )
+    .await;
+
+    server.close().await;
+}
+
+/// Results that parse as v1 are refused even when no version was declared.
+///
+/// These are the three side doors the declared key does not cover: the `json_v1`
+/// leaf named outright, the `json` node falling back to that leaf after its v0 leaf
+/// fails, and the default `magic` adapter reaching the same fallback through the
+/// node. All three are refused, and refused the same way, because all three are the
+/// same statement about the payload.
+#[tokio::test]
+async fn report_parsed_v1_above_the_gate_is_refused() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "parsed").await;
+    let results = v1_results();
+
+    let mut refusals = Vec::new();
+    for adapter in [None, Some("json"), Some("json_v1")] {
+        let (status, body) = try_report(
+            &server,
+            &fixture,
+            Post {
+                results: vec![&results],
+                adapter,
+                ..Post::default()
+            },
+        )
+        .await;
+        assert_gate_refusal(status, &body, 1, 0);
+        refusals.push(message(&body));
+    }
+
+    // The same refusal, not just the same class. Only the request id differs,
+    // since the server mints a fresh one per request, and that is not compared.
+    assert_eq!(refusals.len(), 3);
+    for refusal in &refusals {
+        assert_eq!(refusal, &refusals[0], "every side door is refused alike");
+    }
+
+    server.close().await;
+}
+
+/// An admin raises the gate, and every payload the gate refused ingests.
+#[tokio::test]
+async fn admin_raising_the_gate_admits_the_refused_payloads() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "raise").await;
+    let v0 = v0_results();
+    let v1 = v1_results();
+
+    let refused = || {
+        [
+            Post {
+                results: vec![&v0],
+                bmf_version: Some(serde_json::json!(1)),
+                ..Post::default()
+            },
+            Post {
+                results: vec![&v1],
+                ..Post::default()
+            },
+            Post {
+                results: vec![&v1],
+                adapter: Some("json_v1"),
+                ..Post::default()
+            },
+        ]
+    };
+
+    for post in refused() {
+        let (status, body) = try_report(&server, &fixture, post).await;
+        assert_gate_refusal(status, &body, 1, 0);
+    }
+
+    let (status, body) = try_patch(
+        &server,
+        &fixture.user,
+        &fixture.project_slug,
+        &serde_json::json!({ "bmf_version": 1 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let project = get_project(&server, &fixture.user, &fixture.project_slug).await;
+    assert_eq!(project["bmf_version"], serde_json::json!(1));
+
+    for post in refused() {
+        report(&server, &fixture, post).await;
+    }
+
+    server.close().await;
+}
+
+/// The gate is a maximum, so a raised project takes every lower version unchanged.
+#[tokio::test]
+async fn a_raised_gate_still_accepts_version_0_payloads() {
+    let server = TestServer::new().await;
+    let fixture = gated_fixture(&server, "maximum").await;
+    let results = v0_results();
+
+    let absent = report(
+        &server,
+        &fixture,
+        Post {
+            results: vec![&results],
+            ..Post::default()
+        },
+    )
+    .await;
+    let zero = report(
+        &server,
+        &fixture,
+        Post {
+            results: vec![&results],
+            bmf_version: Some(serde_json::json!(0)),
+            ..Post::default()
+        },
+    )
+    .await;
+    assert_eq!(absent, zero);
+
+    server.close().await;
+}
+
+/// Nothing ratchets: the gate is a plain setting an admin can put back.
+#[tokio::test]
+async fn admin_can_lower_the_gate() {
+    let server = TestServer::new().await;
+    let fixture = gated_fixture(&server, "lower").await;
+    let results = v1_results();
+
+    report(
+        &server,
+        &fixture,
+        Post {
+            results: vec![&results],
+            bmf_version: Some(serde_json::json!(1)),
+            ..Post::default()
+        },
+    )
+    .await;
+
+    let (status, body) = try_patch(
+        &server,
+        &fixture.user,
+        &fixture.project_slug,
+        &serde_json::json!({ "bmf_version": 0 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let project = get_project(&server, &fixture.user, &fixture.project_slug).await;
+    assert_eq!(project["bmf_version"], serde_json::json!(0));
+
+    let (status, body) = try_report(
+        &server,
+        &fixture,
+        Post {
+            results: vec![&results],
+            bmf_version: Some(serde_json::json!(1)),
+            ..Post::default()
+        },
+    )
+    .await;
+    assert_gate_refusal(status, &body, 1, 0);
+
+    server.close().await;
+}
+
+/// Only a server admin can move the gate, and the rest of the patch is unaffected.
+///
+/// The second user owns their own organization and project, so they are allowed to
+/// edit it. The only thing standing between them and the field is the admin check.
+#[tokio::test]
+async fn non_admin_cannot_move_the_gate() {
+    let server = TestServer::new().await;
+    // The first signup is the server admin, so the second one is not.
+    let _admin = fixture(&server, "owner").await;
+    let user = server.signup("Other User", "bmfother@example.com").await;
+    let org = server.create_org(&user, "Bmf Other Org").await;
+    let project = server
+        .create_project(&user, &org, "Bmf Other Project")
+        .await;
+
+    let (status, body) = try_patch(
+        &server,
+        &user,
+        &project.slug,
+        &serde_json::json!({ "bmf_version": 1 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.contains("bmf_version"), "{body}");
+
+    // The same patch without the field is the patch it has always been.
+    let (status, body) = try_patch(
+        &server,
+        &user,
+        &project.slug,
+        &serde_json::json!({ "name": "Bmf Renamed Project" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let project = get_project(&server, &user, &project.slug).await;
+    assert_eq!(project["name"], serde_json::json!("Bmf Renamed Project"));
+    assert_eq!(project["bmf_version"], serde_json::json!(0));
 
     server.close().await;
 }

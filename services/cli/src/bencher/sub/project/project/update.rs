@@ -62,6 +62,9 @@ impl From<Update> for JsonUpdateProject {
                     slug: slug.map(Into::into),
                     url: Some(url.into()),
                     visibility,
+                    // The project BMF version gate is server admin only, so the
+                    // CLI never states it.
+                    bmf_version: None,
                 }),
                 subtype_1: None,
             },
@@ -72,6 +75,7 @@ impl From<Update> for JsonUpdateProject {
                     slug: slug.map(Into::into),
                     url: (),
                     visibility,
+                    bmf_version: None,
                 }),
             },
             None => Self {
@@ -80,6 +84,7 @@ impl From<Update> for JsonUpdateProject {
                     slug: slug.map(Into::into),
                     url: None,
                     visibility,
+                    bmf_version: None,
                 }),
                 subtype_1: None,
             },
