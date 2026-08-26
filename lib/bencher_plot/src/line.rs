@@ -664,10 +664,17 @@ impl Extent {
         let mut right_min_y = None;
         let mut right_max_y = None;
 
-        let lines = json_perf
+        // Only the lines that are drawn decide what the labels say. A grid point past
+        // the line limit is not in the image, so it does not change how the lines
+        // that are in the image are told apart.
+        let results = json_perf
             .results
             .iter()
             .take(MAX_LINES)
+            .collect::<Vec<&JsonPerfMetrics>>();
+
+        let lines = results
+            .iter()
             .enumerate()
             .map(|(index, result)| {
                 let anchor = find_anchor(&result.measure).unwrap_or_default();
@@ -708,7 +715,7 @@ impl Extent {
                     })
                     .collect();
                 let color = LineData::color(index);
-                let dimensions = LineData::dimensions(result);
+                let dimensions = LineData::dimensions(result, &results);
                 LineData {
                     data,
                     anchor,
@@ -804,11 +811,43 @@ impl LineData {
         TABLEAU_10_RGB[index % 10]
     }
 
-    fn dimensions(result: &JsonPerfMetrics) -> String {
+    /// The key text for one line: its branch, its testbed, its benchmark, and its
+    /// measure, one to a row.
+    ///
+    /// The benchmark row names the grid point the line plots when the benchmark has
+    /// more than the empty parameter set in the image, because then the benchmark
+    /// name alone no longer says which line is which. The set is spelled in its
+    /// canonical form, so the empty set among them reads `{}`.
+    ///
+    /// The set follows the benchmark name on the same row, so the key text the plot
+    /// already wraps and shrinks to fit loses the tail of the set spelling first and
+    /// the benchmark name never.
+    fn dimensions(result: &JsonPerfMetrics, results: &[&JsonPerfMetrics]) -> String {
+        let benchmark = if Self::spells_parameters(result, results) {
+            format!(
+                "{} {}",
+                result.benchmark.name,
+                result.parameter.set.canonical()
+            )
+        } else {
+            result.benchmark.name.to_string()
+        };
         format!(
-            "- {}\n- {}\n- {}\n- {}",
-            result.branch.name, result.testbed.name, result.benchmark.name, result.measure.name,
+            "- {}\n- {}\n- {benchmark}\n- {}",
+            result.branch.name, result.testbed.name, result.measure.name,
         )
+    }
+
+    /// Whether this line's benchmark names the parameter set each of its lines plots.
+    ///
+    /// A benchmark whose every line in the image plots the empty parameter set keeps
+    /// the bare benchmark name it has always had. One non-empty set is enough to
+    /// name them all, whether it stands alone or beside the empty set, because a set
+    /// is what tells two lines of one benchmark apart.
+    fn spells_parameters(result: &JsonPerfMetrics, results: &[&JsonPerfMetrics]) -> bool {
+        results.iter().any(|line| {
+            line.benchmark.uuid == result.benchmark.uuid && !line.parameter.set.is_empty()
+        })
     }
 }
 
@@ -816,8 +855,9 @@ impl LineData {
 mod tests {
     use std::{fs::File, io::Write as _, sync::LazyLock};
 
-    use bencher_json::JsonPerf;
+    use bencher_json::{JsonPerf, project::perf::JsonPerfMetrics};
 
+    use super::Extent;
     use crate::LinePlot;
 
     pub const PERF_DOT_JSON: &str = include_str!("../perf.json");
@@ -839,6 +879,17 @@ mod tests {
     pub const DECIMAL_DOT_JSON: &str = include_str!("../decimal.json");
     static JSON_PERF_DECIMAL: LazyLock<JsonPerf> = LazyLock::new(|| {
         serde_json::from_str(DECIMAL_DOT_JSON).expect("Failed to serialize decimal JSON")
+    });
+
+    pub const PERF_GRID_DOT_JSON: &str = include_str!("../perf_grid.json");
+    static JSON_PERF_GRID: LazyLock<JsonPerf> = LazyLock::new(|| {
+        serde_json::from_str(PERF_GRID_DOT_JSON).expect("Failed to serialize perf grid JSON")
+    });
+
+    pub const PERF_MISSING_VALUE_DOT_JSON: &str = include_str!("../perf_missing_value.json");
+    static JSON_PERF_MISSING_VALUE: LazyLock<JsonPerf> = LazyLock::new(|| {
+        serde_json::from_str(PERF_MISSING_VALUE_DOT_JSON)
+            .expect("Failed to serialize perf missing value JSON")
     });
 
     fn save_jpeg(jpeg: &[u8], name: &str) {
@@ -889,5 +940,119 @@ mod tests {
         json_perf.results.clear();
         let plot_buffer = plot.draw(None, &json_perf).unwrap();
         save_jpeg(&plot_buffer, "empty");
+    }
+
+    #[test]
+    fn plot_grid() {
+        let plot = LinePlot::new();
+        let plot_buffer = plot
+            .draw(Some("Benchmark Adapter Comparison"), &JSON_PERF_GRID)
+            .unwrap();
+        save_jpeg(&plot_buffer, "perf_grid");
+    }
+
+    #[test]
+    fn plot_missing_value() {
+        let plot = LinePlot::new();
+        let plot_buffer = plot
+            .draw(
+                Some("Benchmark Adapter Comparison"),
+                &JSON_PERF_MISSING_VALUE,
+            )
+            .unwrap();
+        save_jpeg(&plot_buffer, "perf_missing_value");
+    }
+
+    /// The key text of every line the plot draws, in the order it draws them.
+    fn line_labels(json_perf: &JsonPerf) -> Vec<String> {
+        Extent::new(json_perf)
+            .unwrap()
+            .lines
+            .into_iter()
+            .map(|line| line.dimensions)
+            .collect()
+    }
+
+    /// The key text a line had before a benchmark had grid points.
+    fn bare_label(result: &JsonPerfMetrics) -> String {
+        format!(
+            "- {}\n- {}\n- {}\n- {}",
+            result.branch.name, result.testbed.name, result.benchmark.name, result.measure.name,
+        )
+    }
+
+    // A project that only ever reported the empty parameter set draws exactly what it
+    // has always drawn: every line is labeled with the bare benchmark name, so the
+    // plot is handed the same inputs it was handed before.
+    #[test]
+    fn labels_stay_bare_without_grid_points() {
+        for json_perf in [
+            &*JSON_PERF,
+            &*JSON_PERF_LOG,
+            &*JSON_PERF_DUAL_AXES,
+            &*JSON_PERF_DECIMAL,
+        ] {
+            let bare = json_perf
+                .results
+                .iter()
+                .take(super::MAX_LINES)
+                .map(bare_label)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                line_labels(json_perf),
+                bare,
+                "a project with no grid points is labeled the way it always was"
+            );
+        }
+    }
+
+    // Two grid points of one benchmark are two lines, so each line names the set it
+    // plots, and the empty set among them reads `{}`. A benchmark with nothing but
+    // its empty set in the same image keeps its bare label.
+    #[test]
+    fn labels_name_each_grid_point() {
+        assert_eq!(
+            line_labels(&JSON_PERF_GRID),
+            vec![
+                "- master\n- base\n- bencher::mock_0 {}\n- Latency".to_owned(),
+                "- master\n- base\n- bencher::mock_0 {\"size_mb\":16}\n- Latency".to_owned(),
+                "- master\n- base\n- bencher::mock_0 {\"size_mb\":32}\n- Latency".to_owned(),
+                "- master\n- base\n- bencher::mock_1\n- Latency".to_owned(),
+            ],
+            "each grid point of a benchmark names the set it plots"
+        );
+    }
+
+    // A lone grid point that is not the empty set names itself too: the benchmark
+    // name alone would not say which of its grid points the line plots.
+    #[test]
+    fn labels_name_a_lone_grid_point() {
+        let mut json_perf = JSON_PERF_GRID.clone();
+        json_perf
+            .results
+            .retain(|result| result.parameter.set.canonical() == r#"{"size_mb":16}"#);
+        assert_eq!(
+            line_labels(&json_perf),
+            vec!["- master\n- base\n- bencher::mock_0 {\"size_mb\":16}\n- Latency".to_owned()],
+            "a lone grid point that is not the empty set names itself"
+        );
+    }
+
+    // A point whose measure named no `value` has no point estimate to place on the
+    // axis, so it is left out of the line rather than drawn.
+    #[test]
+    fn point_without_a_value_is_left_out() {
+        let extent = Extent::new(&JSON_PERF_MISSING_VALUE).unwrap();
+        let line = extent.lines.first().unwrap();
+        let points = JSON_PERF_MISSING_VALUE.results[0].metrics.len();
+        assert_eq!(
+            line.data.len(),
+            points - 1,
+            "the value-less point is not on the line"
+        );
+        assert!(
+            !line.data.iter().any(|(_, y)| *y == 1024.0),
+            "the named scalar of the value-less point is not plotted"
+        );
     }
 }

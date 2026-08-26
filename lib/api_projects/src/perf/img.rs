@@ -33,6 +33,8 @@ pub async fn proj_perf_img_options(
 /// The query results are every permutation of each branch, testbed, benchmark, and measure.
 /// There is a limit of 8 permutations for a single image.
 /// Therefore, only the first 8 permutations are plotted.
+/// Each permutation plots one line per grid point of its benchmark,
+/// narrowed by the `parameters` filter when one is given.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project,
 /// or provide a valid project key for the project.
