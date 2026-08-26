@@ -213,6 +213,7 @@ diesel::table! {
         x_axis -> Integer,
         y_axis -> Integer,
         window -> BigInt,
+        parameters -> Nullable<Jsonb>,
         created -> BigInt,
         modified -> BigInt,
     }
