@@ -10,7 +10,7 @@
 //! so no concurrent INSERT can interleave between the INSERT and the `last_insert_rowid()` call.
 
 use bencher_json::{
-    DateTime, MetricName, ParameterSet, ParameterUuid,
+    DateTime, MetricName, ParameterFilter, ParameterSet, ParameterUuid,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
@@ -256,7 +256,7 @@ pub fn create_measure(
         .expect("Failed to get measure id")
 }
 
-/// Create a threshold for testing.
+/// Create a bare threshold for testing: the `value` name of every grid point.
 pub fn create_threshold(
     conn: &mut SqliteConnection,
     project_id: ProjectId,
@@ -265,6 +265,34 @@ pub fn create_threshold(
     measure_id: MeasureId,
     threshold_uuid: &str,
 ) -> ThresholdId {
+    create_gating_threshold(
+        conn,
+        project_id,
+        branch_id,
+        testbed_id,
+        measure_id,
+        threshold_uuid,
+        None,
+        None,
+    )
+}
+
+/// Create a threshold that gates a named metric, a filtered set of grid points, or
+/// both. `None` for either is the default: the `value` name, and every grid point.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a threshold is its dimensions and what it gates"
+)]
+pub fn create_gating_threshold(
+    conn: &mut SqliteConnection,
+    project_id: ProjectId,
+    branch_id: BranchId,
+    testbed_id: TestbedId,
+    measure_id: MeasureId,
+    threshold_uuid: &str,
+    metric: Option<MetricName>,
+    parameters: Option<ParameterFilter>,
+) -> ThresholdId {
     diesel::insert_into(schema::threshold::table)
         .values((
             schema::threshold::uuid.eq(threshold_uuid),
@@ -272,6 +300,8 @@ pub fn create_threshold(
             schema::threshold::branch_id.eq(branch_id),
             schema::threshold::testbed_id.eq(testbed_id),
             schema::threshold::measure_id.eq(measure_id),
+            schema::threshold::metric.eq(metric),
+            schema::threshold::parameters.eq(parameters),
             schema::threshold::created.eq(DateTime::TEST),
             schema::threshold::modified.eq(DateTime::TEST),
         ))

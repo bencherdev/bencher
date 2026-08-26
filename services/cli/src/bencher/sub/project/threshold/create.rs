@@ -62,6 +62,11 @@ impl From<Create> for JsonNewThreshold {
             branch: branch.into(),
             testbed: testbed.into(),
             measure: measure.into(),
+            // The CLI creates the bare threshold: the conventional `value` name of
+            // every grid point. A threshold that gates a name or a corner of the grid
+            // is created through the API.
+            metric: None,
+            parameters: None,
             test,
             min_sample_size,
             max_sample_size,

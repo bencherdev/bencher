@@ -1,3 +1,4 @@
+use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -29,7 +30,18 @@ pub struct JsonAlert {
     /// Two grid points of one benchmark raise two alerts, and this is what tells
     /// them apart.
     pub parameter: JsonParameter,
-    pub metric: JsonMetricTriple,
+    /// The scalar the alert fired on.
+    ///
+    /// The name that scalar was reported under is the threshold's, at
+    /// `threshold.metric`, because that is the name the threshold gates.
+    pub value: OrderedFloat<f64>,
+    /// Deprecated. The metric triple built around the gated row.
+    ///
+    /// Present only when the gated row is a `value` row, which is every row a
+    /// threshold could gate before a threshold could name a metric. Reconstructing
+    /// the triple around any other row would assert numbers the alert does not name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<JsonMetricTriple>,
     pub threshold: JsonThreshold,
     pub boundary: JsonBoundary,
     pub limit: BoundaryLimit,

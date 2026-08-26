@@ -884,9 +884,13 @@ async fn metrics_get_gated_value_row() {
     let alert = &alerts.0[0];
     assert_eq!(metric["alert"]["uuid"], serde_json::json!(alert.uuid));
     assert_eq!(metric["boundary"], serde_json::json!(alert.boundary));
+    let alert_metric = alert
+        .metric
+        .as_ref()
+        .expect("the alert gated a `value` row, so it carries the triple");
     assert_eq!(
         metric["metric"]["uuid"],
-        serde_json::json!(alert.metric.uuid),
+        serde_json::json!(alert_metric.uuid),
         "the alert is on the addressed row",
     );
 

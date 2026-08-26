@@ -207,14 +207,19 @@ impl QueryAlert {
             version_id,
             spec_id,
         )?;
-        // A boundary is only ever computed for a `value` row, so the triple is
-        // always the one the alert fired on.
-        debug_assert_eq!(
-            query_metric.name,
-            MetricName::value(),
-            "alert ({uuid}) fired on a metric row that is not a point estimate"
-        );
-        let json_metric = query_metric.triple(conn)?;
+        // The scalar the alert fired on, whatever it was named. The name is the
+        // threshold's, which the response already carries at `threshold.metric`.
+        let value = query_metric.value.into();
+        // The triple is a convention over the `value` name, so it is only meaningful
+        // when the gated row is a `value` row. Every alert a threshold could raise
+        // before a threshold could name a metric is one, so no legacy response moves.
+        //
+        // The base of this branch asserted the opposite: that a gated row is always a
+        // point estimate. That invariant is what this layer retires, so the assertion
+        // goes with it.
+        let json_metric = (query_metric.name == MetricName::value())
+            .then(|| query_metric.triple(conn))
+            .transpose()?;
         let json_parameter = query_parameter.into_json_for_benchmark(&query_benchmark);
         Ok(JsonAlert {
             uuid,
@@ -222,6 +227,7 @@ impl QueryAlert {
             iteration,
             benchmark: query_benchmark.into_json_for_project(project),
             parameter: json_parameter,
+            value,
             metric: json_metric,
             threshold,
             boundary: query_boundary.into_json(),

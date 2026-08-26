@@ -1,5 +1,4 @@
 use bencher_boundary::MetricsData;
-use bencher_json::MetricName;
 use chrono::offset::Utc;
 use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -43,11 +42,11 @@ pub fn metrics_data(
         // sample is the one grid point's, never the benchmark's grid pooled.
         .filter(schema::report_benchmark::parameter_id.eq(parameter_id))
         .filter(schema::metric::measure_id.eq(detector.measure_id))
-        // Detection has only ever gated the `value` scalar, and the sample it is
-        // gated against is the point estimates alone. A measure's bounds are named
-        // rows beside it now, so without this the sample would be a mixture of
-        // measurements and the limits previously computed from them.
-        .filter(schema::metric::name.eq(MetricName::value()))
+        // A threshold gates one name, and the sample it gates against is that name's
+        // history and nothing else: a threshold on `p99` is tested against `p99`
+        // rows, never against the `value` rows beside them. A bare threshold names
+        // `value`, which is the sample detection has always drawn.
+        .filter(schema::metric::name.eq(detector.threshold.metric.clone()))
         .into_boxed();
 
     if let Some(spec_id) = detector.spec_id {

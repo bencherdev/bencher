@@ -324,6 +324,16 @@ export interface JsonThreshold {
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	measure: JsonMeasure;
+	/**
+	 * The name of the metric this threshold gates.
+	 * Absent when the threshold gates the conventional `value` name.
+	 */
+	metric?: string;
+	/**
+	 * The grid points this threshold gates, in canonical order.
+	 * Absent when the threshold gates every grid point.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
 	model?: JsonModel;
 	created: string;
 	modified: string;
@@ -361,7 +371,21 @@ export interface JsonAlert {
 	 * them apart.
 	 */
 	parameter: JsonParameter;
-	metric: JsonMetricTriple;
+	/**
+	 * The scalar the alert fired on.
+	 * 
+	 * The name that scalar was reported under is the threshold's, at
+	 * `threshold.metric`, because that is the name the threshold gates.
+	 */
+	value: number;
+	/**
+	 * Deprecated. The metric triple built around the gated row.
+	 * 
+	 * Present only when the gated row is a `value` row, which is every row a
+	 * threshold could gate before a threshold could name a metric. Reconstructing
+	 * the triple around any other row would assert numbers the alert does not name.
+	 */
+	metric?: JsonMetricTriple;
 	threshold: JsonThreshold;
 	boundary: JsonBoundary;
 	limit: BoundaryLimit;

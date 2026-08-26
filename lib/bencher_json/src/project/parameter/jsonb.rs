@@ -111,6 +111,31 @@ impl Object {
     }
 }
 
+/// A JSONB array under construction.
+///
+/// Elements are appended in the order they are given, which for a parameters
+/// filter is the order the canonical form puts its sets in. The encoder never
+/// sorts.
+#[derive(Debug, Default)]
+pub struct Array(Vec<u8>);
+
+impl Array {
+    /// Append one element, given its own JSONB encoding.
+    ///
+    /// An element of an array is encoded exactly as it is on its own, so what
+    /// [`Object::into_blob`] returns is what goes here.
+    pub fn push(&mut self, element: &[u8]) {
+        self.0.extend_from_slice(element);
+    }
+
+    /// The JSONB encoding of the array.
+    pub fn into_blob(self) -> Result<Vec<u8>, JsonbError> {
+        let mut blob = Vec::with_capacity(self.0.len().saturating_add(5));
+        push_element(&mut blob, ARRAY, &self.0)?;
+        Ok(blob)
+    }
+}
+
 /// A string's element type and the payload that goes with it.
 ///
 /// The payload is the string as it appears between the quotes of the canonical

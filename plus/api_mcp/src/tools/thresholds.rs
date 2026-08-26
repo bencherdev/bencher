@@ -53,7 +53,8 @@ pub fn list_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "List thresholds for a project. \
-         A threshold is the combination of a branch, testbed, and measure with a statistical model.",
+         A threshold is a branch, testbed, and measure with a statistical model, gating one \
+         metric name and a filter over the benchmark's grid points.",
         input_schema::<ListThresholdsInput>(),
     )
 }
@@ -77,7 +78,12 @@ pub fn create_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Create a threshold for a project: a branch, testbed, and measure with a statistical model \
-         used to detect performance regressions.",
+         used to detect performance regressions. \
+         `metric` names the metric the threshold gates and defaults to `value`. \
+         `parameters` is a list of parameter sets, and a benchmark's grid point is gated when \
+         any set in the list is a subset of it; the default gates every grid point. \
+         Every threshold that matches a metric row runs, so a row may earn several boundaries \
+         and several alerts.",
         input_schema::<CreateThresholdInput>(),
     )
 }

@@ -541,13 +541,17 @@ fn perf_query(
             schema::version::hash,
             QueryMetric::as_select(),
             (
+                // The column order is `QueryThreshold`'s field order, because that is
+                // what a tuple selection deserializes into, positionally.
                 (
                     schema::threshold::id,
                     schema::threshold::uuid,
                     schema::threshold::project_id,
-                    schema::threshold::measure_id,
                     schema::threshold::branch_id,
                     schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::metric,
+                    schema::threshold::parameters,
                     schema::threshold::model_id,
                     schema::threshold::created,
                     schema::threshold::modified,
@@ -686,6 +690,7 @@ fn into_perf_metrics(
                 },
                 value_uuid: None,
                 metrics: BTreeMap::new(),
+                bare_gate: None,
             });
         }
         let Some(pending) = line.last_mut() else {
@@ -747,6 +752,9 @@ struct PendingMetric {
     /// metric triple carries.
     value_uuid: Option<MetricUuid>,
     metrics: BTreeMap<MetricName, JsonMetricEntry>,
+    /// The bare threshold's gate on this point, if a bare threshold gated it: what
+    /// the deprecated singular `threshold`, `boundary`, and `alert` fields carry.
+    bare_gate: Option<JsonPerfBoundary>,
 }
 
 impl PendingMetric {
@@ -764,22 +772,36 @@ impl PendingMetric {
             self.value_uuid = Some(uuid);
         }
 
+        let perf_boundary = gate.map(
+            |(query_threshold, query_model, query_boundary, query_alert)| {
+                // The deprecated singular gate is the bare threshold's, and no
+                // other's: the `value` name of every grid point, which is the only
+                // kind of threshold there was when those fields were the whole story.
+                let is_bare = query_threshold.identity().is_bare();
+                let perf_boundary = JsonPerfBoundary {
+                    threshold: query_threshold
+                        .into_threshold_model_json_for_project(project, query_model),
+                    boundary: query_boundary.into_json(),
+                    alert: query_alert.map(QueryAlert::into_perf_json),
+                };
+                (is_bare, perf_boundary)
+            },
+        );
+        if let Some((true, perf_boundary)) = perf_boundary.as_ref() {
+            self.bare_gate = Some(perf_boundary.clone());
+        }
+
         // A named scalar repeats across rows only when several thresholds gated it,
         // and the boundaries list is what absorbs that.
         let entry = self.metrics.entry(name).or_insert(JsonMetricEntry {
             value: value.into(),
             boundaries: None,
         });
-        if let Some((query_threshold, query_model, query_boundary, query_alert)) = gate {
+        if let Some((_, perf_boundary)) = perf_boundary {
             entry
                 .boundaries
                 .get_or_insert_with(Vec::new)
-                .push(JsonPerfBoundary {
-                    threshold: query_threshold
-                        .into_threshold_model_json_for_project(project, query_model),
-                    boundary: query_boundary.into_json(),
-                    alert: query_alert.map(QueryAlert::into_perf_json),
-                });
+                .push(perf_boundary);
         }
     }
 
@@ -797,8 +819,17 @@ impl PendingMetric {
             end_time,
             version,
             value_uuid,
-            metrics,
+            mut metrics,
+            bare_gate,
         } = self;
+
+        // Several thresholds may gate one named scalar, so the list is put in one
+        // order: the threshold creation order, oldest first.
+        for entry in metrics.values_mut() {
+            if let Some(boundaries) = entry.boundaries.as_mut() {
+                boundaries.sort_by_key(|gate| gate.threshold.boundary_order());
+            }
+        }
 
         let value = metrics.get(&MetricName::value());
         let metric = value_uuid.zip(value).map(|(uuid, value)| JsonMetricTriple {
@@ -811,10 +842,7 @@ impl PendingMetric {
                 .get(&MetricName::upper_value())
                 .map(|entry| entry.value),
         });
-        // The deprecated singular gate is the one that gated the `value` row, which is
-        // the only kind of threshold there is today. A measure that names no `value`
-        // has nothing for it to have gated.
-        let (threshold, boundary, alert) = value.map_or((None, None, None), deprecated_gate);
+        let (threshold, boundary, alert) = deprecated_gate(bare_gate);
 
         JsonPerfMetric {
             report,
@@ -837,20 +865,20 @@ type DeprecatedGate = (
     Option<JsonPerfAlert>,
 );
 
-fn deprecated_gate(value: &JsonMetricEntry) -> DeprecatedGate {
-    let Some(perf_boundary) = value
-        .boundaries
-        .as_ref()
-        .and_then(|boundaries| boundaries.first())
-    else {
-        return (None, None, None);
-    };
-    let JsonPerfBoundary {
+/// The deprecated singular gate: the bare threshold's, and no other's.
+///
+/// A point that only a named or filtered threshold gates reports no gate here, which
+/// is exactly what a caller from before named gating would have seen for it.
+fn deprecated_gate(bare_gate: Option<JsonPerfBoundary>) -> DeprecatedGate {
+    let Some(JsonPerfBoundary {
         threshold,
         boundary,
         alert,
-    } = perf_boundary;
-    (Some(threshold.clone()), Some(*boundary), alert.clone())
+    }) = bare_gate
+    else {
+        return (None, None, None);
+    };
+    (Some(threshold), Some(boundary), alert)
 }
 
 #[cfg(test)]
