@@ -773,6 +773,12 @@ export interface JsonNewPlot {
 	 */
 	benchmarks: Uuid[];
 	/**
+	 * The variants to include in the plot, as a parameters filter.
+	 * A variant matches when any entry in the filter is a subset of its parameters.
+	 * If not set, or set to an empty list, the plot includes every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
+	/**
 	 * The measures to include in the plot.
 	 * At least one measure must be specified.
 	 */
@@ -1169,6 +1175,11 @@ export interface JsonPlot {
 	branches: Uuid[];
 	testbeds: Uuid[];
 	benchmarks: Uuid[];
+	/**
+	 * The variants this plot draws, in canonical order.
+	 * Absent when the plot draws every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
 	measures: Uuid[];
 	created: string;
 	modified: string;
