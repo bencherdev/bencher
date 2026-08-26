@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    DateTime, MetricName, Model, ParameterFilter, ParameterSet, ThresholdUuid,
+    BmfVersion, DateTime, MetricName, Model, ParameterFilter, ParameterSet, ThresholdUuid,
     project::{
-        report::JsonReportThresholds,
+        report::{JsonReportThresholdEntry, JsonReportThresholdModels, JsonReportThresholds},
         threshold::{JsonThreshold, JsonThresholdModel},
     },
 };
@@ -26,8 +26,8 @@ use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
     error::{
-        BencherResource, assert_parentage, assert_siblings, resource_conflict_error,
-        resource_not_found_err,
+        BencherResource, assert_parentage, assert_siblings, bad_request_error,
+        resource_conflict_error, resource_not_found_err,
     },
     macros::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
@@ -443,7 +443,7 @@ enum StartPointAction {
 }
 
 enum ThresholdAction {
-    Create(MeasureId, Model),
+    Create(MeasureId, ThresholdIdentity, Model),
     Update(QueryThreshold, Model),
     NoChange,
 }
@@ -761,6 +761,13 @@ impl InsertThreshold {
         Ok((actions, orphans))
     }
 
+    /// The thresholds a report declares, created or updated for its branch and its
+    /// testbed.
+    ///
+    /// The payload's declared BMF version says which shape the thresholds are
+    /// written in, and it is the version rather than the shape that decides: a
+    /// payload that declares a version and then sends the other version's shape is
+    /// refused. An explicit declaration earns exact validation.
     #[expect(
         clippy::too_many_lines,
         reason = "Batch threshold processing with rate limiting"
@@ -771,6 +778,7 @@ impl InsertThreshold {
         project_id: ProjectId,
         branch_id: BranchId,
         testbed_id: TestbedId,
+        bmf_version: BmfVersion,
         json_thresholds: Option<JsonReportThresholds>,
     ) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]
@@ -780,73 +788,87 @@ impl InsertThreshold {
             slog::debug!(log, "No thresholds in report");
             return Ok(());
         };
-        let no_models = json_thresholds
-            .models
+        let JsonReportThresholds { models, reset } = json_thresholds;
+        // Ingest already refused a mismatched shape beside the version gate, before
+        // it created anything. This keeps the check with the code that relies on it,
+        // so the function is sound on its own and an empty map at version 1 is
+        // refused for the same reason a full one is.
+        check_models_shape(bmf_version, models.as_ref())?;
+
+        let reset_thresholds = reset.unwrap_or_default();
+        if models
             .as_ref()
-            .is_none_or(HashMap::is_empty);
-        let reset_thresholds = json_thresholds.reset.unwrap_or_default();
-        if no_models && !reset_thresholds {
+            .is_none_or(JsonReportThresholdModels::is_empty)
+            && !reset_thresholds
+        {
             slog::debug!(log, "No threshold models or reset in report");
             return Ok(());
         }
 
         // Get all thresholds for the report branch and testbed (read phase).
         //
-        // The map a report carries names a measure and a model and nothing else, so
-        // the threshold it addresses is the bare one: the `value` name of every grid
-        // point. A threshold that gates a name or a corner of the grid is addressed
-        // through the thresholds endpoint, so it is not what this updates and not
-        // what `reset` takes a model away from.
-        let mut current_thresholds = schema::threshold::table
+        // What the payload can address is what `reset` can reach. A version 0 map
+        // key names a measure and nothing else, so the threshold it addresses is the
+        // bare one: the `value` name of every grid point. A threshold that gates a
+        // name or a corner of the grid is not expressible in that shape, so a legacy
+        // run cannot strip one it cannot even name. A version 1 entry names
+        // everything a threshold gates, so the list reaches every threshold on the
+        // branch and testbed and `reset` reaches them all with it.
+        let mut current_query = schema::threshold::table
             .filter(schema::threshold::project_id.eq(project_id))
             .filter(schema::threshold::branch_id.eq(branch_id))
             .filter(schema::threshold::testbed_id.eq(testbed_id))
-            .filter(schema::threshold::metric.is_null())
-            .filter(schema::threshold::parameters.is_null())
+            .into_boxed();
+        if bmf_version < BmfVersion::V1 {
+            current_query = current_query
+                .filter(schema::threshold::metric.is_null())
+                .filter(schema::threshold::parameters.is_null());
+        }
+        let mut current_thresholds = current_query
             .load::<QueryThreshold>(auth_conn!(context))
             .map_err(resource_not_found_err!(Threshold, (branch_id, testbed_id)))?
             .into_iter()
-            .map(|threshold| (threshold.measure_id, threshold))
+            .map(|threshold| ((threshold.measure_id, threshold.identity()), threshold))
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
 
         // Phase 1: Pre-resolve all measure IDs (may trigger get_or_create writes)
         // and read current model state.
+        let declared = Self::declared_thresholds(log, context, project_id, models).await?;
         let auth_conn = auth_conn!(context);
         let mut actions = Vec::new();
-        if let Some(models) = json_thresholds.models {
-            for (measure, model) in models {
-                let measure_id = QueryMeasure::get_or_create(context, project_id, &measure).await?;
-                slog::debug!(log, "Processing threshold for measure {measure_id}");
-                if let Some(current_threshold) = current_thresholds.remove(&measure_id) {
-                    match QueryThreshold::compute_model_action(
-                        auth_conn,
-                        current_threshold.model_id,
-                        Some(model),
-                    )? {
-                        ThresholdModelAction::Update(model) => {
-                            #[cfg(feature = "plus")]
-                            InsertModel::rate_limit(context, &current_threshold).await?;
-                            slog::debug!(log, "Updating threshold for measure {measure_id}");
-                            actions.push(ThresholdAction::Update(current_threshold, model));
-                        },
-                        ThresholdModelAction::NoChange => {
-                            slog::debug!(log, "Model unchanged for measure {measure_id}");
-                            actions.push(ThresholdAction::NoChange);
-                        },
-                        // Cannot happen: we always pass Some(model) as new_model.
-                        ThresholdModelAction::Remove => {
-                            return Err(crate::error::issue_error(
-                                "Unexpected threshold model removal",
-                                "compute_model_action returned Remove with Some(model) input for measure:",
-                                measure_id,
-                            ));
-                        },
-                    }
-                } else {
-                    slog::debug!(log, "Creating threshold for measure {measure_id}");
-                    actions.push(ThresholdAction::Create(measure_id, model));
+        for ((measure_id, identity), model) in declared {
+            slog::debug!(log, "Processing threshold for measure {measure_id}");
+            if let Some(current_threshold) =
+                current_thresholds.remove(&(measure_id, identity.clone()))
+            {
+                match QueryThreshold::compute_model_action(
+                    auth_conn,
+                    current_threshold.model_id,
+                    Some(model),
+                )? {
+                    ThresholdModelAction::Update(model) => {
+                        #[cfg(feature = "plus")]
+                        InsertModel::rate_limit(context, &current_threshold).await?;
+                        slog::debug!(log, "Updating threshold for measure {measure_id}");
+                        actions.push(ThresholdAction::Update(current_threshold, model));
+                    },
+                    ThresholdModelAction::NoChange => {
+                        slog::debug!(log, "Model unchanged for measure {measure_id}");
+                        actions.push(ThresholdAction::NoChange);
+                    },
+                    // Cannot happen: we always pass Some(model) as new_model.
+                    ThresholdModelAction::Remove => {
+                        return Err(crate::error::issue_error(
+                            "Unexpected threshold model removal",
+                            "compute_model_action returned Remove with Some(model) input for measure:",
+                            measure_id,
+                        ));
+                    },
                 }
+            } else {
+                slog::debug!(log, "Creating threshold for measure {measure_id}");
+                actions.push(ThresholdAction::Create(measure_id, identity, model));
             }
         }
 
@@ -868,7 +890,7 @@ impl InsertThreshold {
             write_transaction!(context, |conn| {
                 for action in actions {
                     match action {
-                        ThresholdAction::Create(measure_id, model) => {
+                        ThresholdAction::Create(measure_id, identity, model) => {
                             InsertThreshold::from_model_inner(
                                 conn,
                                 project_id,
@@ -877,7 +899,7 @@ impl InsertThreshold {
                                     testbed_id,
                                     measure_id,
                                 },
-                                ThresholdIdentity::default(),
+                                identity,
                                 model,
                             )?;
                         },
@@ -904,6 +926,123 @@ impl InsertThreshold {
 
         Ok(())
     }
+
+    /// The thresholds the payload declares, each resolved to the measure and the
+    /// identity it addresses.
+    ///
+    /// A measure name or slug the project has never seen is created here, which is
+    /// what makes this the one phase that writes before the batch.
+    ///
+    /// A version 1 list may name one identity twice, which the last entry wins:
+    /// declaring a threshold is a statement of what the model should be, and the
+    /// payload's last word on it is the one it meant. A version 0 map is left
+    /// exactly as it was, duplicates and all, because a JSON object cannot repeat a
+    /// key and two spellings of one measure in one map is not a shape this layer
+    /// changes.
+    async fn declared_thresholds(
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        models: Option<JsonReportThresholdModels>,
+    ) -> Result<Vec<((MeasureId, ThresholdIdentity), Model)>, HttpError> {
+        let mut declared = Vec::new();
+        match models {
+            None => {},
+            Some(JsonReportThresholdModels::Map(models)) => {
+                for (measure, model) in models {
+                    let measure_id =
+                        QueryMeasure::get_or_create(context, project_id, &measure).await?;
+                    declared.push(((measure_id, ThresholdIdentity::default()), model));
+                }
+            },
+            Some(JsonReportThresholdModels::List(entries)) => {
+                // The model is the last entry's and the position is the first
+                // entry's, so a payload that names one identity twice reads as one
+                // entry where it was first written, carrying what it was last told.
+                let mut models = HashMap::new();
+                let mut order = Vec::new();
+                for entry in entries {
+                    let JsonReportThresholdEntry {
+                        parameters,
+                        measure,
+                        metric,
+                        model,
+                    } = entry;
+                    let measure_id =
+                        QueryMeasure::get_or_create(context, project_id, &measure).await?;
+                    let identity = ThresholdIdentity::new(metric, parameters);
+                    let key = (measure_id, identity);
+                    if let Some(replaced) = models.insert(key.clone(), model) {
+                        slog::debug!(
+                            log,
+                            "Threshold declared more than once in one report for measure {measure_id}, replacing model {replaced:?}"
+                        );
+                    } else {
+                        order.push(key);
+                    }
+                }
+                for key in order {
+                    if let Some(model) = models.remove(&key) {
+                        declared.push((key, model));
+                    }
+                }
+            },
+        }
+        Ok(declared)
+    }
+}
+
+/// Refuse a report whose thresholds are not in the shape its declared BMF version
+/// spells.
+///
+/// Called beside the project's version gate, before anything at all is created for
+/// the report, for the same reason the declared version is checked there: a payload
+/// that is going to be turned away for what it said about itself should not leave a
+/// branch, a testbed, or a measure behind on its way out.
+pub fn check_report_thresholds_shape(
+    bmf_version: BmfVersion,
+    json_thresholds: Option<&JsonReportThresholds>,
+) -> Result<(), HttpError> {
+    check_models_shape(
+        bmf_version,
+        json_thresholds.and_then(|thresholds| thresholds.models.as_ref()),
+    )
+}
+
+/// Refuse a thresholds shape that is not the one the payload's declared BMF version
+/// spells.
+///
+/// The declared version is what discriminates, not the shape that arrived: a
+/// payload that says version 1 and sends the version 0 map is as wrong as the
+/// reverse, and both refusals name the version that was declared and the shape it
+/// expects.
+fn check_models_shape(
+    bmf_version: BmfVersion,
+    models: Option<&JsonReportThresholdModels>,
+) -> Result<(), HttpError> {
+    let expected = if bmf_version < BmfVersion::V1 {
+        "a map of measure to threshold model"
+    } else {
+        "a list of threshold entries"
+    };
+    let sent = match models {
+        None => return Ok(()),
+        Some(JsonReportThresholdModels::Map(_)) => {
+            if bmf_version < BmfVersion::V1 {
+                return Ok(());
+            }
+            "a map"
+        },
+        Some(JsonReportThresholdModels::List(_)) => {
+            if bmf_version >= BmfVersion::V1 {
+                return Ok(());
+            }
+            "a list"
+        },
+    };
+    Err(bad_request_error(format!(
+        "The report payload declared BMF version {bmf_version}, so `thresholds.models` must be {expected}, but {sent} was sent."
+    )))
 }
 
 #[derive(Debug, Clone, diesel::AsChangeset)]
@@ -2425,5 +2564,42 @@ mod tests {
             read.identity().parameters.expect("No filter").canonical(),
             r#"[{"size":1024,"threads":4},{"size":512}]"#
         );
+    }
+}
+
+#[cfg(test)]
+mod shape_tests {
+    use bencher_json::{BmfVersion, project::report::JsonReportThresholdModels};
+
+    use super::check_models_shape;
+
+    /// A payload that declares nothing about its thresholds is neither shape.
+    #[test]
+    fn absent_models_are_every_version() {
+        check_models_shape(BmfVersion::V0, None).expect("no models at version 0");
+        check_models_shape(BmfVersion::V1, None).expect("no models at version 1");
+    }
+
+    /// Each version accepts its own shape and refuses the other's, and both
+    /// refusals name the version that was declared and the shape it expects.
+    #[test]
+    fn each_version_takes_its_own_shape() {
+        let map = JsonReportThresholdModels::Map(std::collections::HashMap::new());
+        let list = JsonReportThresholdModels::List(Vec::new());
+
+        check_models_shape(BmfVersion::V0, Some(&map)).expect("a map at version 0");
+        check_models_shape(BmfVersion::V1, Some(&list)).expect("a list at version 1");
+
+        let map_at_v1 = check_models_shape(BmfVersion::V1, Some(&map))
+            .expect_err("a map at version 1")
+            .external_message;
+        assert!(map_at_v1.contains('1'), "{map_at_v1}");
+        assert!(map_at_v1.contains("list"), "{map_at_v1}");
+
+        let list_at_v0 = check_models_shape(BmfVersion::V0, Some(&list))
+            .expect_err("a list at version 0")
+            .external_message;
+        assert!(list_at_v0.contains('0'), "{list_at_v0}");
+        assert!(list_at_v0.contains("map"), "{list_at_v0}");
     }
 }

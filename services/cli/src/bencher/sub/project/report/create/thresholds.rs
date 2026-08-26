@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_client::types::JsonReportThresholds;
+use bencher_client::types::{JsonReportThresholdModels, JsonReportThresholds};
 use bencher_json::{Boundary, MeasureNameId, SampleSize, Window};
 
 use crate::{
@@ -148,7 +148,9 @@ impl From<Thresholds> for Option<JsonReportThresholds> {
             None
         } else {
             Some(JsonReportThresholds {
-                models,
+                // The CLI declares bare thresholds, which is the map the BMF
+                // version 0 payload spells them in.
+                models: models.map(JsonReportThresholdModels::Map),
                 reset: reset.then_some(reset),
             })
         }

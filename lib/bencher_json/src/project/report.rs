@@ -4,14 +4,14 @@ use bencher_valid::{BmfVersion, DateTime, DateTimeMillis, GitHash, MetricName, M
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de, de::Visitor};
 
 #[cfg(feature = "plus")]
 use crate::runner::job::JobUuid;
 use crate::{
     BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure,
     JsonMetricTriple, JsonProject, JsonPubUser, JsonTestbed, MeasureNameId, MetricUuid,
-    ParameterSet, ParameterUuid, TestbedNameId,
+    ParameterFilter, ParameterSet, ParameterUuid, TestbedNameId,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -65,14 +65,178 @@ pub struct JsonNewReport {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportThresholds {
-    /// Map of measure UUID, slug, or name to the threshold model to use.
+    /// The thresholds to create or update for the report's branch and testbed.
+    /// At BMF version 0 this is a map of measure UUID, slug, or name to the threshold model to use.
+    /// At BMF version 1 this is a list of threshold entries.
     /// If a measure name or slug is provided, the measure will be created if it does not exist.
-    pub models: Option<HashMap<MeasureNameId, Model>>,
+    pub models: Option<JsonReportThresholdModels>,
     /// Reset all thresholds for the branch and testbed.
-    /// Any models present in the `models` field will still be updated accordingly.
+    /// Any thresholds present in the `models` field will still be updated accordingly.
     /// If a threshold already exists and is not present in the `models` field,
     /// its current model will be removed.
+    /// The payload's BMF version decides which thresholds this can reach:
+    /// a version 0 map can only address bare thresholds, so only bare thresholds are reset,
+    /// while a version 1 list can address every threshold, so every threshold is reset.
     pub reset: Option<bool>,
+}
+
+/// The thresholds a report declares, in the shape its BMF version spells them.
+///
+/// The two shapes are not interchangeable: the version the payload declares is what
+/// says which one is expected, and the other one is a bad request.
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub enum JsonReportThresholdModels {
+    /// BMF version 0: a map of measure to model.
+    ///
+    /// A map key names a measure and nothing else, so the threshold it addresses is
+    /// the bare one: the conventional `value` name of every grid point.
+    Map(HashMap<MeasureNameId, Model>),
+    /// BMF version 1: a list of entries.
+    ///
+    /// An entry names everything a threshold gates, so one measure may carry several
+    /// of them.
+    List(Vec<JsonReportThresholdEntry>),
+}
+
+impl JsonReportThresholdModels {
+    /// Whether this declares no threshold at all.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Map(models) => models.is_empty(),
+            Self::List(entries) => entries.is_empty(),
+        }
+    }
+}
+
+/// The shape is known from the first token, `{` or `[`, so the two are told apart
+/// by looking once rather than by trying one and then the other.
+///
+/// This is written out instead of derived because `#[serde(untagged)]` swallows
+/// what went wrong inside the shape it chose. An untagged enum buffers the input,
+/// tries each variant, and on failure reports only that nothing matched, so a
+/// misspelled model test in a version 0 map comes back as "data did not match any
+/// variant" rather than as the field and the variants it could have been. Every
+/// error a client used to get is an error it still gets, because the map's own
+/// deserialize and the list's own deserialize are what run.
+impl<'de> Deserialize<'de> for JsonReportThresholdModels {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(JsonReportThresholdModelsVisitor)
+    }
+}
+
+struct JsonReportThresholdModelsVisitor;
+
+impl<'de> Visitor<'de> for JsonReportThresholdModelsVisitor {
+    type Value = JsonReportThresholdModels;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(
+            "a map of measure to threshold model (BMF version 0) or a list of threshold entries (BMF version 1)",
+        )
+    }
+
+    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::MapAccess<'de>,
+    {
+        HashMap::deserialize(de::value::MapAccessDeserializer::new(map))
+            .map(JsonReportThresholdModels::Map)
+    }
+
+    fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::SeqAccess<'de>,
+    {
+        Vec::deserialize(de::value::SeqAccessDeserializer::new(seq))
+            .map(JsonReportThresholdModels::List)
+    }
+}
+
+/// One threshold a BMF version 1 report declares.
+///
+/// The fields are the dimensions a threshold hangs off that the report does not
+/// already state, in their canonical order, and the model to gate with.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportThresholdEntry {
+    /// The grid points this threshold gates, as a list of parameter sets.
+    /// A grid point matches when any set in the list is a subset of it.
+    /// If not set, or set to an empty list, the threshold gates every grid point.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
+    /// Measure UUID, slug, or name.
+    /// If a measure name or slug is provided, the measure will be created if it does not exist.
+    pub measure: MeasureNameId,
+    /// The name of the metric this threshold gates.
+    /// If not set, the threshold gates the conventional `value` name.
+    /// A threshold always gates exactly one name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<MetricName>,
+    /// The threshold model to use.
+    pub model: Model,
+}
+
+/// The description a derived schema would have taken from the doc comment, spelled
+/// out because a hand written schema takes nothing from it.
+#[cfg(feature = "schema")]
+const MODELS_DESCRIPTION: &str = "The thresholds a report declares, in the shape its BMF version spells them.\n\nThe two shapes are not interchangeable: the version the payload declares is what says which one is expected, and the other one is a bad request.";
+
+/// The two shapes are mutually exclusive, so they are a `oneOf` rather than the
+/// `anyOf` a derived untagged enum would emit. A client generator turns an `anyOf`
+/// of two objects into one struct of flattened optional members, and a list cannot
+/// be flattened into a struct.
+#[cfg(feature = "schema")]
+impl JsonSchema for JsonReportThresholdModels {
+    fn schema_name() -> String {
+        "JsonReportThresholdModels".to_owned()
+    }
+
+    fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        use schemars::schema::{Metadata, SchemaObject, SubschemaValidation};
+
+        fn described(
+            title: &str,
+            description: &str,
+            schema: schemars::schema::Schema,
+        ) -> schemars::schema::Schema {
+            let mut schema = SchemaObject::from(schema);
+            schema.metadata = Some(Box::new(Metadata {
+                title: Some(title.to_owned()),
+                description: Some(description.to_owned()),
+                ..Default::default()
+            }));
+            schema.into()
+        }
+
+        SchemaObject {
+            metadata: Some(Box::new(Metadata {
+                description: Some(MODELS_DESCRIPTION.to_owned()),
+                ..Default::default()
+            })),
+            subschemas: Some(Box::new(SubschemaValidation {
+                one_of: Some(vec![
+                    described(
+                        "Map",
+                        "BMF version 0: a map of measure to model. A map key names a measure and nothing else, so the threshold it addresses is the bare one: the conventional `value` name of every grid point.",
+                        <HashMap<MeasureNameId, Model>>::json_schema(generator),
+                    ),
+                    described(
+                        "List",
+                        "BMF version 1: a list of entries. An entry names everything a threshold gates, so one measure may carry several of them.",
+                        <Vec<JsonReportThresholdEntry>>::json_schema(generator),
+                    ),
+                ]),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+        .into()
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
