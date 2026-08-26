@@ -1,5 +1,5 @@
 use bencher_context::RunContext;
-use bencher_valid::{DateTime, GitHash};
+use bencher_valid::{BmfVersion, DateTime, GitHash};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -67,6 +67,10 @@ pub struct JsonNewRun {
     pub end_time: DateTime,
     /// An array of benchmarks results in Bencher Metric Format (BMF).
     pub results: Vec<String>,
+    /// The Bencher Metric Format (BMF) version these results are written in.
+    /// The accepted versions are 0 or 1.
+    /// If no version is specified, then version 0 is used.
+    pub bmf_version: Option<BmfVersion>,
     /// Settings for how to handle the results.
     pub settings: Option<JsonReportSettings>,
     /// Context for the report.
@@ -94,6 +98,7 @@ impl From<JsonNewRun> for JsonNewReport {
             start_time,
             end_time,
             results,
+            bmf_version,
             settings,
             context,
             #[cfg(feature = "plus")]
@@ -130,6 +135,7 @@ impl From<JsonNewRun> for JsonNewReport {
             start_time,
             end_time,
             results,
+            bmf_version,
             settings,
         }
     }

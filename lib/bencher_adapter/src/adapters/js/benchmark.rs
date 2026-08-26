@@ -88,6 +88,7 @@ fn parse_benchmark_time(input: &str) -> IResult<&str, JsonNewMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_js_benchmark {
+    use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
@@ -110,17 +111,13 @@ pub(crate) mod test_js_benchmark {
             None,
             opt_convert_file_path::<AdapterJsBenchmark>(
                 file_path,
-                Settings {
-                    average: Some(JsonAverage::Mean)
-                }
+                Settings::new(Some(JsonAverage::Mean), BmfVersion::default())
             )
         );
 
         let results = opt_convert_file_path::<AdapterJsBenchmark>(
             file_path,
-            Settings {
-                average: Some(JsonAverage::Median),
-            },
+            Settings::new(Some(JsonAverage::Median), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_js_benchmark(&results);

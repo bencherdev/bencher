@@ -52,11 +52,13 @@ pub(crate) mod test_json_v0 {
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
+    use bencher_json::BmfVersion;
+
     use super::AdapterJsonV0;
     use crate::{
         Adaptable as _, Settings,
         adapters::test_util::{convert_file_path, opt_convert_file_path, validate_latency},
-        results::adapter_results::{AdapterResults, BmfVersion},
+        results::adapter_results::AdapterResults,
     };
 
     fn convert_json_v0(suffix: &str) -> AdapterResults {

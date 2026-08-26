@@ -142,6 +142,7 @@ fn combine_name(full_name: &str, name: BenchmarkName) -> BenchmarkName {
 
 #[cfg(test)]
 pub(crate) mod test_js_vitest {
+    use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
@@ -244,9 +245,7 @@ pub(crate) mod test_js_vitest {
         // An explicit mean average matches the default.
         let results = opt_convert_file_path::<AdapterJsVitest>(
             &file_path,
-            Settings {
-                average: Some(JsonAverage::Mean),
-            },
+            Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_js_vitest(&results);

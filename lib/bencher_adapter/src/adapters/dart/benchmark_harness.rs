@@ -70,6 +70,7 @@ fn parse_dart_line(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)>
 
 #[cfg(test)]
 pub(crate) mod test_dart_benchmark_harness {
+    use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
@@ -92,9 +93,7 @@ pub(crate) mod test_dart_benchmark_harness {
             None,
             opt_convert_file_path::<AdapterDartBenchmarkHarness>(
                 file_path,
-                Settings {
-                    average: Some(JsonAverage::Median)
-                }
+                Settings::new(Some(JsonAverage::Median), BmfVersion::default())
             )
         );
     }

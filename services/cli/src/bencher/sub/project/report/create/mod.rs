@@ -98,6 +98,8 @@ impl From<Create> for JsonNewReport {
             start_time,
             end_time,
             results,
+            // The CLI declares no BMF version yet, so the report is read as version 0.
+            bmf_version: None,
             settings: Some(JsonReportSettings {
                 adapter,
                 average,

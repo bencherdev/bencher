@@ -110,6 +110,57 @@ mod test_magic {
         );
     }
 
+    /// Magic reaches the JSON leaves only through the `json` node, so it carries
+    /// the node's version preference without knowing about it.
+    ///
+    /// The empty payload is the one payload both leaves claim, so it is what shows
+    /// which leaf ran first; every other fixture lands where it always did.
+    #[test]
+    fn adapter_magic_carries_the_json_version_preference() {
+        use bencher_json::BmfVersion;
+
+        use crate::{
+            Adaptable as _,
+            adapters::json::test_json::{JSON_FIXTURES, version_settings},
+        };
+
+        let results = AdapterMagic::parse("{}", version_settings(BmfVersion::V1)).unwrap();
+        assert!(results.is_empty());
+        assert_eq!(results.version, BmfVersion::V1);
+
+        for suffix in JSON_FIXTURES {
+            let file_path = format!("./tool_output/json/report_{suffix}.json");
+            assert_eq!(
+                opt_convert_file_path::<AdapterMagic>(&file_path, version_settings(BmfVersion::V1)),
+                opt_convert_file_path::<AdapterMagic>(&file_path, version_settings(BmfVersion::V0)),
+                "{suffix}"
+            );
+        }
+    }
+
+    /// A non-JSON payload is untouched by the key: nothing below the `json` node
+    /// reads it.
+    #[test]
+    fn adapter_magic_non_json_ignores_the_version() {
+        use bencher_json::BmfVersion;
+
+        use crate::adapters::json::test_json::version_settings;
+
+        for file_path in [
+            "./tool_output/cpp/google/two.txt",
+            "./tool_output/go/bench/five.txt",
+            "./tool_output/rust/bench/many.txt",
+            "./tool_output/shell/hyperfine/two.json",
+            "./tool_output/java/jmh/six.json",
+        ] {
+            assert_eq!(
+                opt_convert_file_path::<AdapterMagic>(file_path, version_settings(BmfVersion::V1)),
+                opt_convert_file_path::<AdapterMagic>(file_path, version_settings(BmfVersion::V0)),
+                "{file_path}"
+            );
+        }
+    }
+
     /// An out of bounds parameter set fails magic outright: the json node rejects
     /// it and no other adapter claims it either.
     #[test]

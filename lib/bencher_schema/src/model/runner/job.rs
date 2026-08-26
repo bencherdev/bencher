@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority, Timeout,
-    project::report::JsonReportSettings, runner::JsonIterationOutput, runner::job::JsonNewRunJob,
+    BmfVersion, DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority,
+    Timeout, project::report::JsonReportSettings, runner::JsonIterationOutput,
+    runner::job::JsonNewRunJob,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -170,6 +171,11 @@ impl QueryJob {
         };
 
         // Process results (adapter parsing, metrics, alerts, usage)
+        //
+        // A job's results are the runner's own output rather than the submitted
+        // report payload, and `bmf_version` versions that payload. The report row
+        // does not carry the key, so a job run parses in the default order, which
+        // is the order every run has always parsed in.
         query_report
             .process_results(
                 log,
@@ -178,6 +184,7 @@ impl QueryJob {
                 &results_array,
                 query_report.adapter,
                 settings,
+                BmfVersion::default(),
                 plan_kind,
                 #[cfg(feature = "otel")]
                 self.priority,

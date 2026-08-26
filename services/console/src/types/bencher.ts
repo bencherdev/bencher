@@ -10,6 +10,13 @@ export type BenchmarkNameId = Uuid | Slug | string;
 /** An benchmark UUID or slug. */
 export type BenchmarkResourceId = Uuid | Slug;
 
+/**
+ * The Bencher Metric Format (BMF) version.
+ * The accepted versions are 0 or 1.
+ * If no version is specified, then version 0 is used.
+ */
+export type BmfVersion = number;
+
 export type Boundary = number;
 
 export type BranchName = string;

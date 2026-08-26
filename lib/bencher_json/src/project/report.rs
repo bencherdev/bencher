@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt};
 
-use bencher_valid::{DateTime, DateTimeMillis, GitHash, MetricName, Model};
+use bencher_valid::{BmfVersion, DateTime, DateTimeMillis, GitHash, MetricName, Model};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -54,6 +54,10 @@ pub struct JsonNewReport {
     pub end_time: DateTime,
     /// An array of benchmarks results in Bencher Metric Format (BMF).
     pub results: Vec<String>,
+    /// The Bencher Metric Format (BMF) version this report is written in.
+    /// The accepted versions are 0 or 1.
+    /// If no version is specified, then version 0 is used.
+    pub bmf_version: Option<BmfVersion>,
     /// Settings for how to handle the report.
     pub settings: Option<JsonReportSettings>,
 }

@@ -109,6 +109,7 @@ impl TryFrom<Jmh> for Option<AdapterResults> {
 
 #[cfg(test)]
 pub(crate) mod test_java_jmh {
+    use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
@@ -163,9 +164,7 @@ pub(crate) mod test_java_jmh {
         let file_path = "./tool_output/java/jmh/six.json";
         let results = opt_convert_file_path::<AdapterJavaJmh>(
             file_path,
-            Settings {
-                average: Some(JsonAverage::Mean),
-            },
+            Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_java_jmh(&results);
@@ -174,9 +173,7 @@ pub(crate) mod test_java_jmh {
             None,
             opt_convert_file_path::<AdapterJavaJmh>(
                 file_path,
-                Settings {
-                    average: Some(JsonAverage::Median)
-                }
+                Settings::new(Some(JsonAverage::Median), BmfVersion::default())
             )
         );
     }

@@ -82,6 +82,7 @@ fn parse_time_time(input: &str) -> IResult<&str, JsonNewMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_js_time {
+    use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
@@ -104,9 +105,7 @@ pub(crate) mod test_js_time {
             None,
             opt_convert_file_path::<AdapterJsTime>(
                 file_path,
-                Settings {
-                    average: Some(JsonAverage::Mean)
-                }
+                Settings::new(Some(JsonAverage::Mean), BmfVersion::default())
             )
         );
 
@@ -114,9 +113,7 @@ pub(crate) mod test_js_time {
             None,
             opt_convert_file_path::<AdapterJsTime>(
                 file_path,
-                Settings {
-                    average: Some(JsonAverage::Median)
-                }
+                Settings::new(Some(JsonAverage::Median), BmfVersion::default())
             )
         );
     }

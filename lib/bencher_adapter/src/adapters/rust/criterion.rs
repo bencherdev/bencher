@@ -101,6 +101,7 @@ fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
 
 #[cfg(test)]
 pub(crate) mod test_rust_criterion {
+    use bencher_json::BmfVersion;
     use bencher_json::{JsonNewMetric, project::report::JsonAverage};
     use pretty_assertions::assert_eq;
 
@@ -174,9 +175,7 @@ pub(crate) mod test_rust_criterion {
         let file_path = "./tool_output/rust/criterion/many.txt";
         let results = opt_convert_file_path::<AdapterRustCriterion>(
             file_path,
-            Settings {
-                average: Some(JsonAverage::Mean),
-            },
+            Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_rust_criterion(&results);
@@ -185,9 +184,7 @@ pub(crate) mod test_rust_criterion {
             None,
             opt_convert_file_path::<AdapterRustCriterion>(
                 file_path,
-                Settings {
-                    average: Some(JsonAverage::Median)
-                }
+                Settings::new(Some(JsonAverage::Median), BmfVersion::default())
             )
         );
     }
