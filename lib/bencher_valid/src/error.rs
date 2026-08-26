@@ -66,6 +66,12 @@ pub enum ValidError {
     Index(u8),
     #[error("Failed to parse plot index: {0}")]
     IndexStr(std::num::ParseIntError),
+    // Both messages spell out `ACCEPTED_BMF_VERSIONS` because they are what a client
+    // reads back from a rejected `bmf_version`.
+    #[error("Invalid BMF version: {0}. The accepted versions are 0 or 1.")]
+    BmfVersion(u64),
+    #[error("Failed to parse BMF version: {0}. The accepted versions are 0 or 1.")]
+    BmfVersionStr(std::num::ParseIntError),
 
     #[cfg(feature = "plus")]
     #[error("Invalid CPU count: {0}")]

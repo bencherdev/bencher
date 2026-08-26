@@ -166,7 +166,10 @@ impl FoldableResultsArray {
 
 #[cfg(test)]
 mod test_foldable {
-    use bencher_json::project::report::{Adapter, JsonFold};
+    use bencher_json::{
+        BmfVersion,
+        project::report::{Adapter, JsonFold},
+    };
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -177,10 +180,20 @@ mod test_foldable {
     const V0_TWENTY: &str = r#"{"bench": {"latency": {"value": 20.0, "lower_value": 19.0}}}"#;
     const V1_P99: &str = r#"{"bench": [{"measures": {"latency": {"p99": 10.0}}}]}"#;
     const V1_TRIPLE: &str = r#"{"bench": [{"measures": {"latency": {"value": 20.0}}}]}"#;
+    /// The one payload both JSON leaves claim.
+    const EMPTY: &str = "{}";
 
     fn results_array(results_array: &[&str]) -> AdapterResultsArray {
-        AdapterResultsArray::new(results_array, Adapter::Json, Settings::default())
-            .expect("Failed to convert results")
+        results_array_at(results_array, BmfVersion::V0)
+    }
+
+    fn results_array_at(results_array: &[&str], bmf_version: BmfVersion) -> AdapterResultsArray {
+        AdapterResultsArray::new(
+            results_array,
+            Adapter::Json,
+            Settings::new(None, bmf_version),
+        )
+        .expect("Failed to convert results")
     }
 
     fn latency(results: &FoldableResults) -> OrderedFloat<f64> {
@@ -209,32 +222,66 @@ mod test_foldable {
         }
     }
 
+    /// An empty payload declared as version 0 is a v0 payload, so it folds beside
+    /// the v0 iterations exactly as it always has, empty iteration and all: the
+    /// mean divides by the length of the array.
+    #[test]
+    fn fold_v0_with_an_empty_iteration() {
+        for (fold, expected) in [
+            (JsonFold::Min, 10.0),
+            (JsonFold::Max, 20.0),
+            (JsonFold::Mean, 10.0),
+            (JsonFold::Median, 15.0),
+        ] {
+            let foldable = results_array(&[EMPTY, V0_TEN, V0_TWENTY])
+                .foldable()
+                .expect("BMF v0 results are foldable");
+            assert_eq!(
+                latency(&foldable.fold(fold)),
+                OrderedFloat::from(expected),
+                "{fold:?}"
+            );
+        }
+    }
+
     /// Fold is not supported for BMF v1: the mean of per iteration `p99` values
     /// is not the `p99` of the pooled sample. Refusal is by construction, since
     /// `fold` exists only on the foldable array a v1 payload cannot become.
     #[test]
     fn fold_refuses_v1() {
-        drop(results_array(&[V1_P99]).foldable().unwrap_err());
+        drop(
+            results_array_at(&[V1_P99], BmfVersion::V1)
+                .foldable()
+                .unwrap_err(),
+        );
     }
 
     /// Refusal keys on the payload version, not on which names a measure happens
     /// to carry: a v1 payload spelling only the conventional names is still v1.
     #[test]
     fn fold_refuses_v1_conventional_names() {
-        drop(results_array(&[V1_TRIPLE]).foldable().unwrap_err());
+        drop(
+            results_array_at(&[V1_TRIPLE], BmfVersion::V1)
+                .foldable()
+                .unwrap_err(),
+        );
     }
 
-    /// One v1 payload poisons the whole array, since fold spans every iteration.
+    /// An empty payload declared as version 1 is a v1 payload, so it refuses fold
+    /// like any other.
     #[test]
-    fn fold_refuses_a_mixed_array() {
-        drop(results_array(&[V0_TEN, V1_P99]).foldable().unwrap_err());
-        drop(results_array(&[V1_P99, V0_TEN]).foldable().unwrap_err());
+    fn fold_refuses_an_empty_v1_payload() {
+        drop(
+            results_array_at(&[EMPTY], BmfVersion::V1)
+                .foldable()
+                .unwrap_err(),
+        );
     }
 
     /// A refused array comes back untouched, so the caller can ingest unfolded.
     #[test]
     fn fold_hands_back_a_refused_array() {
-        let results_array = results_array(&[V0_TEN, V1_P99]);
+        let results_array = results_array_at(&[V1_P99, V1_TRIPLE], BmfVersion::V1);
         let expected = results_array.inner.clone();
         let returned = results_array
             .foldable()

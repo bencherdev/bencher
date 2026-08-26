@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, JsonNewMetric, ParameterSet,
+    BenchmarkName, BenchmarkNameId, BmfVersion, JsonNewMetric, ParameterSet,
     project::measure::built_in::{self, BuiltInMeasure as _},
 };
 
@@ -32,16 +32,6 @@ pub type ResultsMap = HashMap<BenchmarkNameId, BenchmarkEntries>;
 /// The empty parameter set is the key every BMF v0 adapter uses, since a v0
 /// payload only ever reports one variant per benchmark.
 pub type BenchmarkEntries = BTreeMap<ParameterSet, AdapterMetrics>;
-
-/// The Bencher Metric Format version a results payload was parsed from.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum BmfVersion {
-    /// A benchmark name maps to its measures.
-    #[default]
-    V0,
-    /// A benchmark name maps to an array of parameter set entries.
-    V1,
-}
 
 impl From<ResultsMap> for AdapterResults {
     fn from(inner: ResultsMap) -> Self {

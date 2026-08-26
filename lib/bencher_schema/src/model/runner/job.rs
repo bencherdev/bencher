@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use bencher_json::{
-    DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority, Timeout,
-    project::report::JsonReportSettings, runner::JsonIterationOutput, runner::job::JsonNewRunJob,
+    BmfVersion, DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority,
+    Timeout, project::report::JsonReportSettings, runner::JsonIterationOutput,
+    runner::job::JsonNewRunJob,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -170,6 +171,8 @@ impl QueryJob {
         };
 
         // Process results (adapter parsing, metrics, alerts, usage)
+        //
+        // The job parses at the version the run declared.
         query_report
             .process_results(
                 log,
@@ -178,6 +181,7 @@ impl QueryJob {
                 &results_array,
                 query_report.adapter,
                 settings,
+                self.config.bmf_version.unwrap_or_default(),
                 plan_kind,
                 #[cfg(feature = "otel")]
                 self.priority,
@@ -342,6 +346,7 @@ impl PendingInsertJob {
         is_claimed: bool,
         new_run_job: JsonNewRunJob,
         settings: &JsonReportSettings,
+        bmf_version: Option<BmfVersion>,
     ) -> Result<Self, HttpError> {
         // 1. Validate registry and resolve image digest
         let registry_url = context.registry_url();
@@ -382,6 +387,7 @@ impl PendingInsertJob {
             average: settings.average,
             iter: new_run_job.iter,
             fold: settings.fold,
+            bmf_version,
             allow_failure: new_run_job.allow_failure,
             backdate: new_run_job.backdate,
         };

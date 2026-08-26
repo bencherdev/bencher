@@ -10,9 +10,9 @@
 use bencher_api_tests::TestServer;
 #[cfg(feature = "plus")]
 use bencher_api_tests::oci::compute_digest;
-use bencher_json::JsonReport;
 #[cfg(feature = "plus")]
-use bencher_json::{JsonJob, JsonReports, JsonRunners, JsonSpec, runner::JsonJobs};
+use bencher_json::{BmfVersion, JsonJob, JsonRunners, JsonSpec, runner::JsonJobs};
+use bencher_json::{JsonReport, JsonReports};
 use http::StatusCode;
 
 // POST /v0/run - create a run with authentication
@@ -130,6 +130,171 @@ async fn run_post_unauthenticated() {
 }
 
 // --- Job creation integration tests (Plus only) ---
+
+/// POST /v0/run - the run payload carries `bmf_version` through to the adapter.
+///
+/// `/v0/run` takes its own payload and converts it into a report payload, so the
+/// key reaches ingest only because `JsonNewRun` carries it and the conversion
+/// forwards it. A BMF v1 payload declared as version 1 ingests through the default
+/// Magic adapter, which reaches the JSON leaves through the `json` node.
+#[tokio::test]
+async fn run_post_bmf_version_1_ingests_v1_results() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runbmf@example.com").await;
+    let org = server.create_org(&user, "Run Bmf Org").await;
+    let project = server.create_project(&user, &org, "Run Bmf Project").await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_v1_results().to_string()],
+        "bmf_version": 1,
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+    // The variant's parameter set is the proof the v1 shape was read: a v0
+    // payload has no parameters to report.
+    let results = report.results.expect("Report results");
+    let iteration = results.first().expect("Report iteration");
+    let result = iteration.first().expect("Report result");
+    assert!(!result.parameter.set.is_empty());
+}
+
+/// POST /v0/run - v0 results declared as version 1 are refused, because the
+/// declared version is a contract over the results.
+#[tokio::test]
+async fn run_post_bmf_version_1_refuses_v0_results() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runbmfv0@example.com").await;
+    let org = server.create_org(&user, "Run Bmf V0 Org").await;
+    let project = server
+        .create_project(&user, &org, "Run Bmf V0 Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "bmf_version": 1,
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = resp.text().await.expect("Failed to read the response");
+    assert!(
+        body.contains("parsed as BMF version 0") && body.contains("declared version 1"),
+        "expected the refusal to name both versions: {body}"
+    );
+    assert!(
+        !body.contains("right adapter"),
+        "expected no adapter hint on a version refusal: {body}"
+    );
+}
+
+/// POST /v0/run - an unknown `bmf_version` is rejected before anything is created.
+#[tokio::test]
+async fn run_post_unknown_bmf_version_is_rejected() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runbmfbad@example.com").await;
+    let org = server.create_org(&user, "Run Bad Bmf Org").await;
+    let project = server
+        .create_project(&user, &org, "Run Bad Bmf Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "bmf_version": 2,
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = resp.text().await.expect("Failed to read the response");
+    assert!(
+        body.contains("0 or 1"),
+        "expected the rejection to name the accepted versions: {body}"
+    );
+    assert_eq!(report_count(&server, &user, project_slug).await, 0);
+}
+
+/// How many reports the project holds, so a rejection can be shown to create none.
+async fn report_count(
+    server: &TestServer,
+    user: &bencher_api_tests::TestUser,
+    project_slug: &str,
+) -> usize {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/reports")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET reports");
+    let reports: JsonReports = resp.json().await.expect("Failed to parse the reports");
+    reports.0.len()
+}
+
+/// A BMF v1 payload: a benchmark maps to an array of variants.
+fn bmf_v1_results() -> serde_json::Value {
+    serde_json::json!({
+        "benchmark_name": [{
+            "parameters": { "size_mb": 16 },
+            "measures": { "latency": { "value": 100.0 } },
+        }]
+    })
+}
 
 fn bmf_results() -> serde_json::Value {
     serde_json::json!({
@@ -1871,6 +2036,94 @@ async fn run_post_with_job_config_fields() {
         assert_eq!(env.get("MY_VAR").map(String::as_str), Some("my_value"));
         assert_eq!(env.get("OTHER").map(String::as_str), Some("123"));
     }
+}
+
+/// The declared `bmf_version` rides into the job config beside `average` and
+/// `fold`, as the payload declared it: `Some` when the key was sent and `None`
+/// when it was absent.
+#[cfg(feature = "plus")]
+async fn stored_job_bmf_version(bmf_version: Option<u8>, label: &str) -> Option<BmfVersion> {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", &format!("runjob_bmf_{label}@example.com"))
+        .await;
+    let org = server
+        .create_org(&user, &format!("Bmf Job Org {label}"))
+        .await;
+    let project = server
+        .create_project(&user, &org, &format!("Bmf Job Project {label}"))
+        .await;
+
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    let mut body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "job": {
+            "image": format!("localhost/{project_slug}:v1"),
+        }
+    });
+    if let Some(bmf_version) = bmf_version
+        && let Some(object) = body.as_object_mut()
+    {
+        object.insert("bmf_version".to_owned(), serde_json::json!(bmf_version));
+    }
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "POST run with a job");
+
+    // A pending job's config is not listed, so it is read from the row.
+    {
+        use bencher_schema::schema;
+        use diesel::{QueryDsl as _, RunQueryDsl as _};
+        let mut conn = server.db_conn();
+        let stored_config: String = schema::job::table
+            .select(schema::job::config)
+            .first(&mut conn)
+            .expect("Failed to query job config");
+        let config: bencher_json::JsonJobConfig =
+            serde_json::from_str(&stored_config).expect("Failed to parse job config");
+        config.bmf_version
+    }
+}
+
+// POST /v0/run with job and bmf_version stores the declared version on the job config
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_stores_bmf_version() {
+    assert_eq!(
+        stored_job_bmf_version(Some(1), "declared").await,
+        Some(BmfVersion::V1),
+        "a job declared at version 1 carries the key"
+    );
+}
+
+// POST /v0/run with job and no bmf_version stores no key on the job config
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_stores_no_bmf_version_when_absent() {
+    assert_eq!(
+        stored_job_bmf_version(None, "absent").await,
+        None,
+        "a job posted without the key carries none"
+    );
 }
 
 // POST /v0/run with job referencing a nonexistent tag — fails

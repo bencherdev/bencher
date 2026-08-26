@@ -376,6 +376,9 @@ impl Run {
             start_time: start_time.into(),
             end_time: end_time.into(),
             results,
+            // `bencher run` declares no BMF version yet, so the results are read as
+            // version 0, which is how every run has always been read.
+            bmf_version: None,
             settings: Some(JsonReportSettings {
                 adapter: Some(self.adapter),
                 average: self.average,
@@ -410,6 +413,7 @@ impl Run {
             start_time: now.into(),
             end_time: now.into(),
             results: Vec::new(),
+            bmf_version: None,
             settings: Some(JsonReportSettings {
                 adapter: Some(self.adapter),
                 average: self.average,

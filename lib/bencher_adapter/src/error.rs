@@ -1,3 +1,4 @@
+use bencher_json::BmfVersion;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -8,4 +9,9 @@ pub enum AdapterError {
     BenchmarkUnits(String),
     #[error("Failed to convert results: {0}")]
     Convert(String),
+    #[error("Results parsed as BMF version {parsed} but the payload declared version {declared}")]
+    BmfVersion {
+        declared: BmfVersion,
+        parsed: BmfVersion,
+    },
 }

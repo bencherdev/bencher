@@ -12453,6 +12453,12 @@
         "format": "uint64",
         "minimum": 0
       },
+      "BmfVersion": {
+        "description": "The Bencher Metric Format (BMF) version. The accepted versions are 0 or 1. If no version is specified, then version 0 is used.",
+        "type": "integer",
+        "format": "uint8",
+        "minimum": 0
+      },
       "Boundary": {
         "type": "number",
         "format": "double"
@@ -13477,6 +13483,15 @@
               }
             ]
           },
+          "bmf_version": {
+            "nullable": true,
+            "description": "The Bencher Metric Format (BMF) version the run declared",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BmfVersion"
+              }
+            ]
+          },
           "build_time": {
             "nullable": true,
             "description": "Track the build time of the benchmark command",
@@ -14396,6 +14411,15 @@
       "JsonNewReport": {
         "type": "object",
         "properties": {
+          "bmf_version": {
+            "nullable": true,
+            "description": "The Bencher Metric Format (BMF) version this report is written in. The accepted versions are 0 or 1. If no version is specified, then version 0 is used.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BmfVersion"
+              }
+            ]
+          },
           "branch": {
             "description": "Branch UUID, slug, or name. If the branch does not exist, it will be created.",
             "allOf": [
@@ -14483,6 +14507,15 @@
       "JsonNewRun": {
         "type": "object",
         "properties": {
+          "bmf_version": {
+            "nullable": true,
+            "description": "The Bencher Metric Format (BMF) version these results are written in. The accepted versions are 0 or 1. If no version is specified, then version 0 is used.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BmfVersion"
+              }
+            ]
+          },
           "branch": {
             "nullable": true,
             "description": "Branch UUID, slug, or name. If the branch is not provided or does not exist, it will be created.",

@@ -90,6 +90,7 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonNewMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_rust_bench {
+    use bencher_json::BmfVersion;
     use bencher_json::{JsonNewMetric, project::report::JsonAverage};
     use pretty_assertions::assert_eq;
 
@@ -126,17 +127,13 @@ pub(crate) mod test_rust_bench {
             None,
             opt_convert_file_path::<AdapterRustBench>(
                 file_path,
-                Settings {
-                    average: Some(JsonAverage::Mean)
-                }
+                Settings::new(Some(JsonAverage::Mean), BmfVersion::default())
             )
         );
 
         let results = opt_convert_file_path::<AdapterRustBench>(
             file_path,
-            Settings {
-                average: Some(JsonAverage::Median),
-            },
+            Settings::new(Some(JsonAverage::Median), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_rust_bench(&results);

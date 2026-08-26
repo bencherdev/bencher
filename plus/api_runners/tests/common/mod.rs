@@ -264,6 +264,59 @@ pub fn insert_test_job_full(
     job_uuid
 }
 
+/// Insert a test job whose config declares a BMF version, or none. Returns the job UUID.
+#[expect(clippy::expect_used, reason = "test helper")]
+pub fn insert_test_job_with_bmf_version(
+    server: &TestServer,
+    report_id: i32,
+    project_uuid: bencher_json::ProjectUuid,
+    spec_id: i32,
+    bmf_version: Option<u8>,
+) -> JobUuid {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let job_uuid = JobUuid::new();
+    let project_id = get_project_id_from_report(server, report_id);
+    let organization_id = get_organization_id_from_project_id(server, project_id);
+
+    let mut config = serde_json::json!({
+        "registry": "https://registry.bencher.dev",
+        "project": project_uuid,
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "timeout": 3600
+    });
+    if let Some(bmf_version) = bmf_version
+        && let Some(object) = config.as_object_mut()
+    {
+        object.insert("bmf_version".to_owned(), serde_json::json!(bmf_version));
+    }
+
+    diesel::insert_into(schema::job::table)
+        .values((
+            schema::job::uuid.eq(&job_uuid),
+            schema::job::report_id.eq(report_id),
+            schema::job::organization_id.eq(organization_id),
+            schema::job::source_ip.eq(TEST_SOURCE_IP),
+            schema::job::status.eq(JobStatus::Pending),
+            schema::job::spec_id.eq(spec_id),
+            schema::job::config.eq(config.to_string()),
+            schema::job::timeout.eq(3600),
+            schema::job::priority.eq(Priority::Unclaimed),
+            schema::job::created.eq(&now),
+            schema::job::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert test job");
+
+    // Set spec_id on the report to match the job's spec
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::spec_id.eq(Some(spec_id)))
+        .execute(&mut conn)
+        .expect("Failed to set report spec_id");
+
+    job_uuid
+}
+
 /// Insert a test job with optional fields populated. Returns the job UUID.
 #[expect(clippy::expect_used, reason = "test helper")]
 pub fn insert_test_job_with_optional_fields(
