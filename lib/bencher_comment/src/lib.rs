@@ -1192,6 +1192,7 @@ mod tests {
                 slug: "my-project".parse().unwrap(),
                 url: None,
                 visibility,
+                bmf_version: bencher_json::BmfVersion::default(),
                 created: DateTime::TEST,
                 modified: DateTime::TEST,
                 claimed: Some(DateTime::TEST),

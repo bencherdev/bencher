@@ -346,7 +346,7 @@ impl PendingInsertJob {
         is_claimed: bool,
         new_run_job: JsonNewRunJob,
         settings: &JsonReportSettings,
-        bmf_version: Option<BmfVersion>,
+        bmf_version: BmfVersion,
     ) -> Result<Self, HttpError> {
         // 1. Validate registry and resolve image digest
         let registry_url = context.registry_url();
@@ -387,7 +387,7 @@ impl PendingInsertJob {
             average: settings.average,
             iter: new_run_job.iter,
             fold: settings.fold,
-            bmf_version,
+            bmf_version: Some(bmf_version),
             allow_failure: new_run_job.allow_failure,
             backdate: new_run_job.backdate,
         };

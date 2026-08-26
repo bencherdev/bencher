@@ -13,7 +13,6 @@ export type BenchmarkResourceId = Uuid | Slug;
 /**
  * The Bencher Metric Format (BMF) version.
  * The accepted versions are 0 or 1.
- * If no version is specified, then version 0 is used.
  */
 export type BmfVersion = number;
 
@@ -154,7 +153,7 @@ export interface JsonJobConfig {
 	iter?: Iteration;
 	/** Fold operation for combining multiple iteration results */
 	fold?: JsonFold;
-	/** The Bencher Metric Format (BMF) version the run declared */
+	/** The Bencher Metric Format (BMF) version the run's results are read as */
 	bmf_version?: BmfVersion;
 	/** Allow benchmark failure without short-circuiting iterations */
 	allow_failure?: boolean;
@@ -988,6 +987,7 @@ export interface JsonProject {
 	slug: Slug;
 	url?: Url;
 	visibility: Visibility;
+	bmf_version: BmfVersion;
 	created: string;
 	modified: string;
 	claimed?: string;

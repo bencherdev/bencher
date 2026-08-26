@@ -256,6 +256,7 @@ diesel::table! {
         slug -> Text,
         url -> Nullable<Text>,
         visibility -> Integer,
+        bmf_version -> Integer,
         created -> BigInt,
         modified -> BigInt,
         deleted -> Nullable<BigInt>,
