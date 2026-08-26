@@ -364,10 +364,13 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 	const skipped_upper_data = [];
 
 	for (const perf_metric of result.metrics) {
+		// A measure that names no `value` has no point estimate, so there is nothing
+		// to place on the axis and no skipped boundary marker to hang beside it.
+		const value = perf_metric.metric?.value;
 		const datum = {
 			report: perf_metric.report,
 			metric: perf_metric.metric?.uuid,
-			value: perf_metric.metric?.value,
+			value,
 			lower_value: perf_metric.metric?.lower_value,
 			upper_value: perf_metric.metric?.upper_value,
 			date_time: new Date(perf_metric.start_time),
@@ -408,6 +411,7 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 		}
 
 		if (
+			value !== undefined &&
 			boundary_skipped(
 				perf_metric.threshold?.model?.lower_boundary,
 				perf_metric.boundary?.lower_limit,
@@ -417,11 +421,12 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 				date_time: datum.date_time,
 				number: datum.number,
 				iteration: datum.iteration,
-				y: perf_metric.metric?.value * 0.9,
+				y: value * 0.9,
 				threshold: perf_metric.threshold,
 			});
 		}
 		if (
+			value !== undefined &&
 			boundary_skipped(
 				perf_metric.threshold?.model?.upper_boundary,
 				perf_metric.boundary?.upper_limit,
@@ -431,7 +436,7 @@ const perf_result = (result: JsonPerfMetrics, index: number) => {
 				date_time: datum.date_time,
 				number: datum.number,
 				iteration: datum.iteration,
-				y: perf_metric.metric?.value * 1.1,
+				y: value * 1.1,
 				threshold: perf_metric.threshold,
 			});
 		}

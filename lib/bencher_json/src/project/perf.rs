@@ -1,3 +1,7 @@
+use std::collections::BTreeMap;
+
+use bencher_valid::MetricName;
+use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::ser::{self, SerializeStruct as _};
@@ -8,11 +12,12 @@ use url::Url;
 use crate::SpecUuid;
 use crate::urlencoded::{
     UrlEncodedError, from_urlencoded_list, from_urlencoded_nullable_list, to_urlencoded,
-    to_urlencoded_list, to_urlencoded_optional_list,
+    to_urlencoded_element_list, to_urlencoded_list, to_urlencoded_optional_list,
 };
 use crate::{
     BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, HeadUuid, JsonBenchmark, JsonBranch,
-    JsonMeasure, JsonProject, JsonTestbed, MeasureUuid, ReportUuid, TestbedUuid,
+    JsonMeasure, JsonParameter, JsonProject, JsonTestbed, MeasureUuid, ParameterSet, ReportUuid,
+    TestbedUuid,
 };
 
 use super::alert::JsonPerfAlert;
@@ -44,6 +49,11 @@ pub struct JsonPerfQueryParams {
     pub specs: Option<String>,
     /// A comma separated list of benchmark UUIDs to query.
     pub benchmarks: String,
+    /// An optional comma separated list of URL encoded parameter sets to filter on.
+    /// A grid point is queried when at least one of them is a subset of its
+    /// parameter set: every key the filter names, with the same value.
+    /// Leaving this off queries every grid point.
+    pub parameters: Option<String>,
     /// A comma separated list of measure UUIDs to query.
     pub measures: String,
     /// Search for metrics after the given date time in milliseconds.
@@ -97,6 +107,9 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
             testbeds,
             specs,
             benchmarks,
+            // The perf image has no parameters filter of its own yet, so it plots
+            // every grid point its dimensions name.
+            parameters: None,
             measures,
             start_time,
             end_time,
@@ -115,6 +128,8 @@ pub struct JsonPerfQuery {
     #[cfg(feature = "plus")]
     pub specs: Vec<Option<SpecUuid>>,
     pub benchmarks: Vec<BenchmarkUuid>,
+    /// The parameters filter, OR across its elements. Empty matches every grid point.
+    pub parameters: Vec<ParameterSet>,
     pub measures: Vec<MeasureUuid>,
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
@@ -130,6 +145,7 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
             testbeds,
             specs,
             benchmarks,
+            parameters,
             measures,
             start_time,
             end_time,
@@ -152,6 +168,13 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
         let heads = from_urlencoded_nullable_list(heads.as_deref())?;
         let testbeds = from_urlencoded_list(&testbeds)?;
         let benchmarks = from_urlencoded_list(&benchmarks)?;
+        // An absent filter and an empty one both mean the same thing: no filter.
+        // Spelling it out here keeps the empty string out of the list reader, which
+        // rejects an empty element.
+        let parameters = match parameters.as_deref() {
+            Some(parameters) if !parameters.is_empty() => from_urlencoded_list(parameters)?,
+            _ => Vec::new(),
+        };
         let measures = from_urlencoded_list(&measures)?;
 
         // Guarantee that the `heads` array is the same length as the `branches` array.
@@ -173,6 +196,7 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
             #[cfg(feature = "plus")]
             specs,
             benchmarks,
+            parameters,
             measures,
             start_time: start_time.map(Into::into),
             end_time: end_time.map(Into::into),
@@ -245,7 +269,7 @@ impl JsonPerfQuery {
         serde_urlencoded::to_string(query).map_err(Into::into)
     }
 
-    fn urlencoded(&self) -> Result<[(&'static str, Option<String>); 8], UrlEncodedError> {
+    fn urlencoded(&self) -> Result<[(&'static str, Option<String>); 9], UrlEncodedError> {
         QUERY_KEYS
             .into_iter()
             .zip([
@@ -254,6 +278,7 @@ impl JsonPerfQuery {
                 Some(self.testbeds()),
                 self.specs(),
                 Some(self.benchmarks()),
+                self.parameters(),
                 Some(self.measures()),
                 self.start_time_str(),
                 self.end_time_str(),
@@ -298,6 +323,18 @@ impl JsonPerfQuery {
         to_urlencoded_list(&self.benchmarks)
     }
 
+    /// The parameters filter, or nothing at all when there is no filter.
+    ///
+    /// A parameter set spells commas, so its elements are encoded with the separator
+    /// escaped rather than left literal the way a UUID may be.
+    pub fn parameters(&self) -> Option<String> {
+        if self.parameters.is_empty() {
+            None
+        } else {
+            Some(to_urlencoded_element_list(&self.parameters))
+        }
+    }
+
     pub fn measures(&self) -> String {
         to_urlencoded_list(&self.measures)
     }
@@ -329,6 +366,7 @@ pub enum PerfQueryKey {
     Testbeds,
     Specs,
     Benchmarks,
+    Parameters,
     Measures,
     StartTime,
     EndTime,
@@ -339,11 +377,12 @@ pub const HEADS: &str = "heads";
 pub const TESTBEDS: &str = "testbeds";
 pub const SPECS: &str = "specs";
 pub const BENCHMARKS: &str = "benchmarks";
+pub const PARAMETERS: &str = "parameters";
 pub const MEASURES: &str = "measures";
 pub const START_TIME: &str = "start_time";
 pub const END_TIME: &str = "end_time";
-const QUERY_KEYS: [&str; 8] = [
-    BRANCHES, HEADS, TESTBEDS, SPECS, BENCHMARKS, MEASURES, START_TIME, END_TIME,
+const QUERY_KEYS: [&str; 9] = [
+    BRANCHES, HEADS, TESTBEDS, SPECS, BENCHMARKS, PARAMETERS, MEASURES, START_TIME, END_TIME,
 ];
 
 #[typeshare::typeshare]
@@ -356,6 +395,12 @@ pub struct JsonPerf {
     pub results: Vec<JsonPerfMetrics>,
 }
 
+/// One line of a perf query: one grid point of one benchmark, on one branch, one
+/// testbed, and one measure.
+///
+/// The parameter set sits between the benchmark and the measure because a line is
+/// what a grid point plots: two parameter sets of one benchmark are two lines, not
+/// one line with the points interleaved.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -363,10 +408,14 @@ pub struct JsonPerfMetrics {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
+    /// The parameter set this line plots.
+    pub parameter: JsonParameter,
     pub measure: JsonMeasure,
     pub metrics: Vec<JsonPerfMetric>,
 }
 
+/// One point of a perf line: everything one measure of one grid point measured, in
+/// one iteration of one report.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -376,10 +425,46 @@ pub struct JsonPerfMetric {
     pub start_time: DateTime,
     pub end_time: DateTime,
     pub version: JsonVersion,
-    pub metric: JsonMetricTriple,
+    /// Every named scalar this measure ingested, keyed by name.
+    #[typeshare(typescript(type = "Record<string, JsonMetricEntry>"))]
+    pub metrics: BTreeMap<MetricName, JsonMetricEntry>,
+
+    /// Deprecated. Reconstructed from the `value` row and its
+    /// `lower_value`/`upper_value` siblings. Retained for compatibility with older
+    /// clients and removed in a future release.
+    ///
+    /// Absent when the measure carries no `value` name, which BMF v1 permits. Never
+    /// absent for anything an older client could produce.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<JsonMetricTriple>,
+    /// Deprecated. The threshold that gated the `value` row, if any.
     // The threshold model is necessary for each metric as it may change over time
     pub threshold: Option<JsonThresholdModel>,
+    /// Deprecated. The boundary computed for the `value` row, if any.
     pub boundary: Option<JsonBoundary>,
+    /// Deprecated. The alert raised on the `value` row's boundary, if any.
+    pub alert: Option<JsonPerfAlert>,
+}
+
+/// Exactly one `metric` row: one named scalar and every threshold that gated it.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonMetricEntry {
+    pub value: OrderedFloat<f64>,
+    /// Every threshold that gated this named scalar, with the boundary it produced
+    /// and any alert that boundary raised. Absent when nothing gated it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub boundaries: Option<Vec<JsonPerfBoundary>>,
+}
+
+/// A threshold and the boundary it produced, with any alert that boundary raised.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPerfBoundary {
+    pub threshold: JsonThresholdModel,
+    pub boundary: JsonBoundary,
     pub alert: Option<JsonPerfAlert>,
 }
 
@@ -427,7 +512,7 @@ pub mod table {
                         end_time: metric.end_time,
                         version_number: metric.version.number,
                         version_hash: DisplayOption(metric.version.hash),
-                        metric: metric.metric,
+                        metric: DisplayOption(metric.metric),
                         baseline,
                         lower_limit,
                         upper_limit,
@@ -461,7 +546,7 @@ pub mod table {
         #[tabled(rename = "Version Hash")]
         pub version_hash: DisplayOption<GitHash>,
         #[tabled(rename = "Metric Value")]
-        pub metric: JsonMetricTriple,
+        pub metric: DisplayOption<JsonMetricTriple>,
         #[tabled(rename = "Boundary Baseline")]
         pub baseline: DisplayOption<OrderedFloat<f64>>,
         #[tabled(rename = "Lower Boundary Limit")]

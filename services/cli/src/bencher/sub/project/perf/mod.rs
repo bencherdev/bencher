@@ -95,6 +95,9 @@ impl From<Perf> for JsonPerfQuery {
             #[cfg(feature = "plus")]
             specs,
             benchmarks,
+            // The CLI has no parameters filter of its own yet, so it queries every
+            // grid point its dimensions name.
+            parameters: Vec::new(),
             measures,
             start_time,
             end_time,

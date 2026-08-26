@@ -14,8 +14,9 @@
 //! every response that reads a metric, run the migration, and capture them again.
 //! The two captures must be equal byte for byte.
 //!
-//! The same binary serves both captures because every reader goes through the
-//! `metric_boundary` view, whose column list the migration holds unchanged.
+//! The same binary serves both captures because every reader captured here goes
+//! through the `metric_boundary` view, whose column list the migration holds
+//! unchanged.
 
 use bencher_api_tests::{
     TestServer,
@@ -47,26 +48,23 @@ struct LegacyMetric {
 struct Fixture {
     project_slug: String,
     token: String,
-    branch_uuid: BranchUuid,
-    testbed_uuid: TestbedUuid,
-    benchmark_uuid: BenchmarkUuid,
-    measure_uuids: Vec<MeasureUuid>,
     metric_uuids: Vec<MetricUuid>,
 }
 
 /// The raw bytes of every response that reads a metric through the
 /// `metric_boundary` view, which is the view this migration holds unchanged.
 ///
-/// The report response is deliberately absent. It is built from the named `metric`
-/// rows rather than from the view, and those rows do not exist before the
-/// migration, so it has no pre-migration form to compare. It is also not stable
-/// across a down and up round trip, because the migration mints a fresh uuid for
-/// every bound row it recreates and the response now echoes those uuids. Neither
-/// is a regression: a server runs its migrations before it serves, and the
-/// `value` row, which every reader of the old shape saw, keeps its identity.
+/// The report and perf responses are deliberately absent. Both are built from the
+/// named `metric` rows rather than from the view, and those rows do not exist
+/// before the migration, so neither has a pre-migration form to compare. Neither
+/// is stable across a down and up round trip either, because the migration mints a
+/// fresh uuid for every bound row it recreates and both responses now echo those
+/// uuids. That is not a regression: a server runs its migrations before it serves,
+/// and the `value` row, which every reader of the old shape saw, keeps its
+/// identity. What the perf response owes older clients is pinned where that
+/// response lives, by the byte compatibility test in `perf.rs`.
 #[derive(Debug, PartialEq, Eq)]
 struct Captured {
-    perf: String,
     metrics: Vec<String>,
     alerts: String,
 }
@@ -118,16 +116,12 @@ async fn responses_are_byte_identical_across_the_migration() {
 
     let before = capture(&server, &fixture).await;
     assert!(
-        before.perf.contains("44.25") && before.alerts.contains("40.5"),
-        "the fixture reaches the perf and alert responses before anything is compared"
+        before.alerts.contains("40.5"),
+        "the fixture reaches the alert response before anything is compared"
     );
     apply_migration(&server);
     let after = capture(&server, &fixture).await;
 
-    assert_eq!(
-        before.perf, after.perf,
-        "the perf response changed across the migration"
-    );
     assert_eq!(
         before.metrics, after.metrics,
         "a metric response changed across the migration"
@@ -1034,10 +1028,6 @@ async fn seed_legacy_project(server: &TestServer, label: &str) -> Fixture {
     Fixture {
         project_slug,
         token: user.token,
-        branch_uuid,
-        testbed_uuid,
-        benchmark_uuid,
-        measure_uuids,
         metric_uuids,
     }
 }
@@ -1138,26 +1128,8 @@ async fn capture(server: &TestServer, fixture: &Fixture) -> Captured {
     let Fixture {
         project_slug,
         token,
-        branch_uuid,
-        testbed_uuid,
-        benchmark_uuid,
-        measure_uuids,
         metric_uuids,
     } = fixture;
-
-    let measures = measure_uuids
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join(",");
-    let perf = get(
-        server,
-        token,
-        &format!(
-            "/v0/projects/{project_slug}/perf?branches={branch_uuid}&testbeds={testbed_uuid}&benchmarks={benchmark_uuid}&measures={measures}"
-        ),
-    )
-    .await;
 
     let mut metrics = Vec::new();
     for metric_uuid in metric_uuids {
@@ -1178,11 +1150,7 @@ async fn capture(server: &TestServer, fixture: &Fixture) -> Captured {
     )
     .await;
 
-    Captured {
-        perf,
-        metrics,
-        alerts,
-    }
+    Captured { metrics, alerts }
 }
 
 /// GET a path and return its body, asserting that it was served.

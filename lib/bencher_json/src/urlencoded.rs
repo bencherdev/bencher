@@ -4,7 +4,17 @@ use percent_encoding::{AsciiSet, CONTROLS, percent_decode, utf8_percent_encode};
 use thiserror::Error;
 
 // https://url.spec.whatwg.org/#fragment-percent-encode-set
-const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
+const FRAGMENT_SET: AsciiSet = CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
+const FRAGMENT: &AsciiSet = &FRAGMENT_SET;
+
+/// The fragment set, plus the two characters a list element must not spell literally.
+///
+/// A comma separates list elements, so an element that contains one has to escape it
+/// or the list splits in the wrong place. A percent sign introduces an escape, so an
+/// element that contains one has to escape it or the decode reads it as an escape it
+/// never wrote. Neither matters for a UUID or a timestamp; both matter for a JSON
+/// object.
+const ELEMENT: &AsciiSet = &FRAGMENT_SET.add(b'%').add(b',');
 
 #[derive(Debug, Error)]
 pub enum UrlEncodedError {
@@ -136,4 +146,67 @@ where
     let value_str = value.to_string();
     let encoded = utf8_percent_encode(&value_str, FRAGMENT);
     encoded.collect()
+}
+
+/// A comma separated list whose elements may themselves contain commas.
+///
+/// Each element is encoded with the separator escaped, so the list splits back into
+/// exactly the elements that went into it. [`from_urlencoded_list`] is the reader.
+pub fn to_urlencoded_element_list<T>(values: &[T]) -> String
+where
+    T: ToString,
+{
+    values
+        .iter()
+        .map(to_urlencoded_element)
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn to_urlencoded_element<T>(value: &T) -> String
+where
+    T: ToString,
+{
+    let value_str = value.to_string();
+    let encoded = utf8_percent_encode(&value_str, ELEMENT);
+    encoded.collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{from_urlencoded_list, to_urlencoded_element_list};
+
+    /// A list element that spells a comma round trips: the element is encoded with
+    /// the separator escaped, so the split lands between elements and never inside
+    /// one.
+    #[test]
+    fn element_list_round_trips_commas() {
+        let elements = [
+            r#"{"op":"read","size_mb":16}"#.to_owned(),
+            r#"{"op":"write"}"#.to_owned(),
+        ];
+
+        let list = to_urlencoded_element_list(&elements);
+        assert_eq!(
+            list,
+            "{%22op%22:%22read%22%2C%22size_mb%22:16},{%22op%22:%22write%22}"
+        );
+        assert_eq!(list.matches(',').count(), 1, "one separator, one comma");
+
+        let decoded: Vec<String> =
+            from_urlencoded_list(&list).expect("Failed to read the element list");
+        assert_eq!(decoded, elements);
+    }
+
+    /// A percent sign inside an element is escaped too, so the decode never reads an
+    /// escape the element did not write.
+    #[test]
+    fn element_list_round_trips_percents() {
+        let elements = [r#"{"label":"100%2Cdone"}"#.to_owned()];
+
+        let decoded: Vec<String> = from_urlencoded_list(&to_urlencoded_element_list(&elements))
+            .expect("Failed to read the element list");
+
+        assert_eq!(decoded, elements);
+    }
 }

@@ -45,6 +45,14 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
+            "parameter": {
+                "uuid": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                "benchmark": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                "set": {},
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z",
+                "archived": null
+            },
             "measure": {
                 "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -65,6 +73,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 6.363568939941679
+                        },
+                        "upper_value": {
+                            "value": 7.77769537103983
+                        },
+                        "value": {
+                            "value": 7.070632155490754
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 7.070632155490754,
@@ -87,6 +106,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 0.35090864273162703
+                        },
+                        "upper_value": {
+                            "value": 0.42888834111643304
+                        },
+                        "value": {
+                            "value": 0.38989849192403
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 0.38989849192403,
@@ -109,6 +139,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 7.756277114705289
+                        },
+                        "upper_value": {
+                            "value": 9.479894251306463
+                        },
+                        "value": {
+                            "value": 8.618085683005877
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 8.618085683005877,
@@ -131,6 +172,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1.824757736467896
+                        },
+                        "upper_value": {
+                            "value": 2.230259455682984
+                        },
+                        "value": {
+                            "value": 2.02750859607544
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 2.02750859607544,
@@ -153,6 +205,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1.4382864542637654
+                        },
+                        "upper_value": {
+                            "value": 1.75790566632238
+                        },
+                        "value": {
+                            "value": 1.5980960602930727
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1.5980960602930727,
@@ -175,6 +238,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 6.479398002777131
+                        },
+                        "upper_value": {
+                            "value": 7.919264225616493
+                        },
+                        "value": {
+                            "value": 7.199331114196812
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 7.199331114196812,
@@ -197,6 +271,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 5.506783742659492
+                        },
+                        "upper_value": {
+                            "value": 6.730513463250489
+                        },
+                        "value": {
+                            "value": 6.11864860295499
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 6.11864860295499,
@@ -219,6 +304,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1.395044920023633
+                        },
+                        "upper_value": {
+                            "value": 1.705054902251107
+                        },
+                        "value": {
+                            "value": 1.55004991113737
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1.55004991113737,
@@ -266,6 +362,14 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
+            "parameter": {
+                "uuid": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                "benchmark": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                "set": {},
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z",
+                "archived": null
+            },
             "measure": {
                 "uuid": "123485d0-f19d-4f20-895a-e3c684ec6cbc",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -286,6 +390,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 106.363568939941679
+                        },
+                        "upper_value": {
+                            "value": 107.77769537103983
+                        },
+                        "value": {
+                            "value": 107.070632155490754
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 107.070632155490754,
@@ -308,6 +423,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 100.35090864273162703
+                        },
+                        "upper_value": {
+                            "value": 100.42888834111643304
+                        },
+                        "value": {
+                            "value": 100.38989849192403
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 100.38989849192403,
@@ -330,6 +456,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 107.756277114705289
+                        },
+                        "upper_value": {
+                            "value": 109.479894251306463
+                        },
+                        "value": {
+                            "value": 108.618085683005877
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 108.618085683005877,
@@ -352,6 +489,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 101.824757736467896
+                        },
+                        "upper_value": {
+                            "value": 102.230259455682984
+                        },
+                        "value": {
+                            "value": 102.02750859607544
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 102.02750859607544,
@@ -374,6 +522,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 101.4382864542637654
+                        },
+                        "upper_value": {
+                            "value": 101.75790566632238
+                        },
+                        "value": {
+                            "value": 101.5980960602930727
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 101.5980960602930727,
@@ -396,6 +555,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 106.479398002777131
+                        },
+                        "upper_value": {
+                            "value": 107.919264225616493
+                        },
+                        "value": {
+                            "value": 107.199331114196812
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 107.199331114196812,
@@ -418,6 +588,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 105.506783742659492
+                        },
+                        "upper_value": {
+                            "value": 106.730513463250489
+                        },
+                        "value": {
+                            "value": 106.11864860295499
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 106.11864860295499,
@@ -440,6 +621,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 101.395044920023633
+                        },
+                        "upper_value": {
+                            "value": 101.705054902251107
+                        },
+                        "value": {
+                            "value": 101.55004991113737
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 101.55004991113737,
@@ -487,6 +679,14 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
+            "parameter": {
+                "uuid": "0d680df6-432b-4335-bb37-afd2453c0db1",
+                "benchmark": "0d680df6-432b-4335-bb37-afd2453c0db1",
+                "set": {},
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z",
+                "archived": null
+            },
             "measure": {
                 "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -507,6 +707,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 9.646146370344914
+                        },
+                        "upper_value": {
+                            "value": 11.789734452643785
+                        },
+                        "value": {
+                            "value": 10.717940411494348
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 10.717940411494348,
@@ -529,6 +740,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 10.46675044099625
+                        },
+                        "upper_value": {
+                            "value": 12.792694983439862
+                        },
+                        "value": {
+                            "value": 11.629722712218056
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 11.629722712218056,
@@ -551,6 +773,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 17.31126368636183
+                        },
+                        "upper_value": {
+                            "value": 21.158211172220017
+                        },
+                        "value": {
+                            "value": 19.234737429290924
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 19.234737429290924,
@@ -573,6 +806,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 12.4983965705781
+                        },
+                        "upper_value": {
+                            "value": 15.275818030706564
+                        },
+                        "value": {
+                            "value": 13.887107300642333
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 13.887107300642333,
@@ -595,6 +839,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 10.90794931075032
+                        },
+                        "upper_value": {
+                            "value": 13.331938046472612
+                        },
+                        "value": {
+                            "value": 12.119943678611468
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 12.119943678611468,
@@ -617,6 +872,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 10.190975988578607
+                        },
+                        "upper_value": {
+                            "value": 12.455637319373857
+                        },
+                        "value": {
+                            "value": 11.323306653976232
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 11.323306653976232,
@@ -639,6 +905,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 17.28471459721883
+                        },
+                        "upper_value": {
+                            "value": 21.12576228548968
+                        },
+                        "value": {
+                            "value": 19.205238441354258
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 19.205238441354258,
@@ -661,6 +938,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 13.312406796163527
+                        },
+                        "upper_value": {
+                            "value": 16.2707194175332
+                        },
+                        "value": {
+                            "value": 14.791563106848365
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 14.791563106848365,
@@ -708,6 +996,14 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
+            "parameter": {
+                "uuid": "0d680df6-432b-4335-bb37-afd2453c0db1",
+                "benchmark": "0d680df6-432b-4335-bb37-afd2453c0db1",
+                "set": {},
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z",
+                "archived": null
+            },
             "measure": {
                 "uuid": "123485d0-f19d-4f20-895a-e3c684ec6cbc",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -728,6 +1024,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 109.646146370344914
+                        },
+                        "upper_value": {
+                            "value": 1011.789734452643785
+                        },
+                        "value": {
+                            "value": 1010.717940411494348
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1010.717940411494348,
@@ -750,6 +1057,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1010.46675044099625
+                        },
+                        "upper_value": {
+                            "value": 1012.792694983439862
+                        },
+                        "value": {
+                            "value": 1011.629722712218056
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1011.629722712218056,
@@ -772,6 +1090,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1017.31126368636183
+                        },
+                        "upper_value": {
+                            "value": 1021.158211172220017
+                        },
+                        "value": {
+                            "value": 1019.234737429290924
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1019.234737429290924,
@@ -794,6 +1123,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1012.4983965705781
+                        },
+                        "upper_value": {
+                            "value": 1015.275818030706564
+                        },
+                        "value": {
+                            "value": 1013.887107300642333
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1013.887107300642333,
@@ -816,6 +1156,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1010.90794931075032
+                        },
+                        "upper_value": {
+                            "value": 1013.331938046472612
+                        },
+                        "value": {
+                            "value": 1012.119943678611468
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1012.119943678611468,
@@ -838,6 +1189,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1010.190975988578607
+                        },
+                        "upper_value": {
+                            "value": 1012.455637319373857
+                        },
+                        "value": {
+                            "value": 1011.323306653976232
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1011.323306653976232,
@@ -860,6 +1222,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1017.28471459721883
+                        },
+                        "upper_value": {
+                            "value": 1021.12576228548968
+                        },
+                        "value": {
+                            "value": 1019.205238441354258
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1019.205238441354258,
@@ -882,6 +1255,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1013.312406796163527
+                        },
+                        "upper_value": {
+                            "value": 1016.2707194175332
+                        },
+                        "value": {
+                            "value": 1014.791563106848365
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1014.791563106848365,
@@ -929,6 +1313,14 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
+            "parameter": {
+                "uuid": "4bf1a480-b8fc-497b-9d42-a2d3c3ec99d5",
+                "benchmark": "4bf1a480-b8fc-497b-9d42-a2d3c3ec99d5",
+                "set": {},
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z",
+                "archived": null
+            },
             "measure": {
                 "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -949,6 +1341,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 18.62739135543843
+                        },
+                        "upper_value": {
+                            "value": 22.76681165664697
+                        },
+                        "value": {
+                            "value": 20.6971015060427
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 20.6971015060427,
@@ -971,6 +1374,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 21.70621904203964
+                        },
+                        "upper_value": {
+                            "value": 26.52982327360401
+                        },
+                        "value": {
+                            "value": 24.118021157821826
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 24.118021157821826,
@@ -993,6 +1407,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 26.401671599552213
+                        },
+                        "upper_value": {
+                            "value": 32.268709732786036
+                        },
+                        "value": {
+                            "value": 29.33519066616913
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 29.33519066616913,
@@ -1015,6 +1440,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 23.862286442631454
+                        },
+                        "upper_value": {
+                            "value": 29.16501676321623
+                        },
+                        "value": {
+                            "value": 26.513651602923844
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 26.513651602923844,
@@ -1037,6 +1473,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 24.091285534470703
+                        },
+                        "upper_value": {
+                            "value": 29.44490454213086
+                        },
+                        "value": {
+                            "value": 26.768095038300785
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 26.768095038300785,
@@ -1059,6 +1506,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 18.997100967994196
+                        },
+                        "upper_value": {
+                            "value": 23.218678960881793
+                        },
+                        "value": {
+                            "value": 21.10788996443799
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 21.10788996443799,
@@ -1081,6 +1539,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 21.09719803067132
+                        },
+                        "upper_value": {
+                            "value": 25.78546425970939
+                        },
+                        "value": {
+                            "value": 23.44133114519035
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 23.44133114519035,
@@ -1103,6 +1572,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 18.449810304552205
+                        },
+                        "upper_value": {
+                            "value": 22.54976815000825
+                        },
+                        "value": {
+                            "value": 20.49978922728023
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 20.49978922728023,
@@ -1150,6 +1630,14 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
+            "parameter": {
+                "uuid": "4bf1a480-b8fc-497b-9d42-a2d3c3ec99d5",
+                "benchmark": "4bf1a480-b8fc-497b-9d42-a2d3c3ec99d5",
+                "set": {},
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z",
+                "archived": null
+            },
             "measure": {
                 "uuid": "123485d0-f19d-4f20-895a-e3c684ec6cbc",
                 "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
@@ -1170,6 +1658,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1018.62739135543843
+                        },
+                        "upper_value": {
+                            "value": 1022.76681165664697
+                        },
+                        "value": {
+                            "value": 1020.6971015060427
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1020.6971015060427,
@@ -1192,6 +1691,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1021.70621904203964
+                        },
+                        "upper_value": {
+                            "value": 1026.52982327360401
+                        },
+                        "value": {
+                            "value": 1024.118021157821826
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1024.118021157821826,
@@ -1214,6 +1724,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1026.401671599552213
+                        },
+                        "upper_value": {
+                            "value": 1032.268709732786036
+                        },
+                        "value": {
+                            "value": 1029.33519066616913
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1029.33519066616913,
@@ -1236,6 +1757,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1023.862286442631454
+                        },
+                        "upper_value": {
+                            "value": 1029.16501676321623
+                        },
+                        "value": {
+                            "value": 1026.513651602923844
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1026.513651602923844,
@@ -1258,6 +1790,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1024.091285534470703
+                        },
+                        "upper_value": {
+                            "value": 1029.44490454213086
+                        },
+                        "value": {
+                            "value": 1026.768095038300785
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1026.768095038300785,
@@ -1280,6 +1823,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1018.997100967994196
+                        },
+                        "upper_value": {
+                            "value": 1023.218678960881793
+                        },
+                        "value": {
+                            "value": 1021.10788996443799
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1021.10788996443799,
@@ -1302,6 +1856,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1021.09719803067132
+                        },
+                        "upper_value": {
+                            "value": 1025.78546425970939
+                        },
+                        "value": {
+                            "value": 1023.44133114519035
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1023.44133114519035,
@@ -1324,6 +1889,17 @@
                         "hash": null
                     },
                     "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1018.449810304552205
+                        },
+                        "upper_value": {
+                            "value": 1022.54976815000825
+                        },
+                        "value": {
+                            "value": 1020.49978922728023
+                        }
+                    },
                     "metric": {
                         "uuid": "00000000-0000-0000-0000-000000000000",
                         "value": 1020.49978922728023,
