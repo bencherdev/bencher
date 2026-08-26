@@ -1,0 +1,317 @@
+{
+    "project": {
+        "uuid": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+        "organization": "4142ce9a-f0a0-44d5-94cd-fc76c77d9098",
+        "name": "The Computer",
+        "slug": "the-computer",
+        "url": null,
+        "visibility": "public",
+        "created": "2023-07-02T12:53:33Z",
+        "modified": "2023-07-02T12:53:33Z"
+    },
+    "start_time": null,
+    "end_time": null,
+    "results": [
+        {
+            "branch": {
+                "uuid": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                "name": "master",
+                "slug": "master",
+                "head": {
+                    "uuid": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                    "branch": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                    "start_point": null,
+                    "version": null,
+                    "created": "2023-07-02T12:53:33Z",
+                    "replaced": null
+                },
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
+            },
+            "testbed": {
+                "uuid": "e095df48-52a6-474b-aaa7-1a8546c235b6",
+                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                "name": "base",
+                "slug": "base",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
+            },
+            "benchmark": {
+                "uuid": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                "name": "bencher::mock_0",
+                "slug": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
+            },
+            "parameter": {
+                "uuid": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                "benchmark": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                "set": {},
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z",
+                "archived": null
+            },
+            "measure": {
+                "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
+                "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                "name": "Latency",
+                "slug": "latency",
+                "units": "nanoseconds (ns)",
+                "created": "2023-07-02T12:53:33Z",
+                "modified": "2023-07-02T12:53:33Z"
+            },
+            "metrics": [
+                {
+                    "report": "ef582192-c7f4-47a0-8668-55cf7d99d8cc",
+                    "iteration": 0,
+                    "start_time": "2023-07-02T12:53:33Z",
+                    "end_time": "2023-07-02T12:53:33Z",
+                    "version": {
+                        "number": 0,
+                        "hash": null
+                    },
+                    "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 6.363568939941679
+                        },
+                        "upper_value": {
+                            "value": 7.77769537103983
+                        },
+                        "value": {
+                            "value": 7.070632155490754
+                        }
+                    },
+                    "metric": {
+                        "uuid": "00000000-0000-0000-0000-000000000000",
+                        "value": 7.070632155490754,
+                        "lower_value": 6.363568939941679,
+                        "upper_value": 7.77769537103983
+                    },
+                    "boundary": {
+                        "baseline": null,
+                        "lower_limit": null,
+                        "upper_limit": null
+                    }
+                },
+                {
+                    "report": "ef582192-c7f4-47a0-8668-55cf7d99d8cc",
+                    "iteration": 1,
+                    "start_time": "2023-07-02T12:53:33Z",
+                    "end_time": "2023-07-02T12:53:33Z",
+                    "version": {
+                        "number": 0,
+                        "hash": null
+                    },
+                    "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 0.35090864273162703
+                        },
+                        "upper_value": {
+                            "value": 0.42888834111643304
+                        },
+                        "value": {
+                            "value": 0.38989849192403
+                        }
+                    },
+                    "metric": {
+                        "uuid": "00000000-0000-0000-0000-000000000000",
+                        "value": 0.38989849192403,
+                        "lower_value": 0.35090864273162703,
+                        "upper_value": 0.42888834111643304
+                    },
+                    "boundary": {
+                        "baseline": null,
+                        "lower_limit": null,
+                        "upper_limit": null
+                    }
+                },
+                {
+                    "report": "ef582192-c7f4-47a0-8668-55cf7d99d8cc",
+                    "iteration": 2,
+                    "start_time": "2023-07-02T12:53:33Z",
+                    "end_time": "2023-07-02T12:53:33Z",
+                    "version": {
+                        "number": 0,
+                        "hash": null
+                    },
+                    "threshold": null,
+                    "metrics": {
+                        "allocations": {
+                            "value": 1024.0
+                        }
+                    },
+                    "boundary": null
+                },
+                {
+                    "report": "48439503-0803-47ab-be0f-713ee13b5704",
+                    "iteration": 0,
+                    "start_time": "2023-07-02T12:53:36Z",
+                    "end_time": "2023-07-02T12:53:36Z",
+                    "version": {
+                        "number": 1,
+                        "hash": null
+                    },
+                    "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1.824757736467896
+                        },
+                        "upper_value": {
+                            "value": 2.230259455682984
+                        },
+                        "value": {
+                            "value": 2.02750859607544
+                        }
+                    },
+                    "metric": {
+                        "uuid": "00000000-0000-0000-0000-000000000000",
+                        "value": 2.02750859607544,
+                        "lower_value": 1.824757736467896,
+                        "upper_value": 2.230259455682984
+                    },
+                    "boundary": {
+                        "baseline": null,
+                        "lower_limit": null,
+                        "upper_limit": null
+                    }
+                },
+                {
+                    "report": "a0dc813c-1eec-4062-919e-822562aeb1d6",
+                    "iteration": 0,
+                    "start_time": "2023-07-02T12:53:38Z",
+                    "end_time": "2023-07-02T12:53:38Z",
+                    "version": {
+                        "number": 2,
+                        "hash": null
+                    },
+                    "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1.4382864542637654
+                        },
+                        "upper_value": {
+                            "value": 1.75790566632238
+                        },
+                        "value": {
+                            "value": 1.5980960602930727
+                        }
+                    },
+                    "metric": {
+                        "uuid": "00000000-0000-0000-0000-000000000000",
+                        "value": 1.5980960602930727,
+                        "lower_value": 1.4382864542637654,
+                        "upper_value": 1.75790566632238
+                    },
+                    "boundary": {
+                        "baseline": null,
+                        "lower_limit": null,
+                        "upper_limit": null
+                    }
+                },
+                {
+                    "report": "cdcf7763-2776-4536-acc1-fa317833ee39",
+                    "iteration": 0,
+                    "start_time": "2023-07-02T12:53:39Z",
+                    "end_time": "2023-07-02T12:53:39Z",
+                    "version": {
+                        "number": 3,
+                        "hash": null
+                    },
+                    "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 6.479398002777131
+                        },
+                        "upper_value": {
+                            "value": 7.919264225616493
+                        },
+                        "value": {
+                            "value": 7.199331114196812
+                        }
+                    },
+                    "metric": {
+                        "uuid": "00000000-0000-0000-0000-000000000000",
+                        "value": 7.199331114196812,
+                        "lower_value": 6.479398002777131,
+                        "upper_value": 7.919264225616493
+                    },
+                    "boundary": {
+                        "baseline": null,
+                        "lower_limit": null,
+                        "upper_limit": null
+                    }
+                },
+                {
+                    "report": "2d57774e-594d-4b1e-8335-8950b9389547",
+                    "iteration": 0,
+                    "start_time": "2023-07-02T12:53:40Z",
+                    "end_time": "2023-07-02T12:53:40Z",
+                    "version": {
+                        "number": 4,
+                        "hash": null
+                    },
+                    "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 5.506783742659492
+                        },
+                        "upper_value": {
+                            "value": 6.730513463250489
+                        },
+                        "value": {
+                            "value": 6.11864860295499
+                        }
+                    },
+                    "metric": {
+                        "uuid": "00000000-0000-0000-0000-000000000000",
+                        "value": 6.11864860295499,
+                        "lower_value": 5.506783742659492,
+                        "upper_value": 6.730513463250489
+                    },
+                    "boundary": {
+                        "baseline": null,
+                        "lower_limit": null,
+                        "upper_limit": null
+                    }
+                },
+                {
+                    "report": "c3677a74-a4cc-4fd7-bff2-1a57ba5d28bb",
+                    "iteration": 0,
+                    "start_time": "2023-07-02T12:53:41Z",
+                    "end_time": "2023-07-02T12:53:41Z",
+                    "version": {
+                        "number": 5,
+                        "hash": null
+                    },
+                    "threshold": null,
+                    "metrics": {
+                        "lower_value": {
+                            "value": 1.395044920023633
+                        },
+                        "upper_value": {
+                            "value": 1.705054902251107
+                        },
+                        "value": {
+                            "value": 1.55004991113737
+                        }
+                    },
+                    "metric": {
+                        "uuid": "00000000-0000-0000-0000-000000000000",
+                        "value": 1.55004991113737,
+                        "lower_value": 1.395044920023633,
+                        "upper_value": 1.705054902251107
+                    },
+                    "boundary": {
+                        "baseline": null,
+                        "lower_limit": null,
+                        "upper_limit": null
+                    }
+                }
+            ]
+        }
+    ]
+}

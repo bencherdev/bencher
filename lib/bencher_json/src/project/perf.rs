@@ -94,6 +94,12 @@ pub struct JsonPerfImgQueryParams {
     /// A comma separated list of benchmark UUIDs to query.
     /// Only the first 64 benchmarks are queried.
     pub benchmarks: String,
+    /// An optional comma separated list of URL encoded parameter sets to filter on.
+    /// A variant is queried when at least one of them is a subset of its
+    /// parameter set: every key the filter names, with the same value.
+    /// Leaving this off queries every variant.
+    /// Only the first 64 parameter sets are queried.
+    pub parameters: Option<String>,
     /// A comma separated list of measure UUIDs to query.
     /// Only the first 64 measures are queried.
     pub measures: String,
@@ -114,6 +120,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
             testbeds,
             specs,
             benchmarks,
+            parameters,
             measures,
             start_time,
             end_time,
@@ -124,8 +131,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
             testbeds,
             specs,
             benchmarks,
-            // No filter, so every variant is plotted.
-            parameters: None,
+            parameters,
             measures,
             start_time,
             end_time,
