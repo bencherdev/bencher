@@ -1,0 +1,114 @@
+import BmfV1Example from "../bmf-v1-example.mdx";
+import BmfV1Schema from "../bmf-v1-schema.mdx";
+
+## Bencher Metric Format (BMF) v1
+
+Mit BMF `v1` kann ein [Benchmark][benchmark] mehr als ein Ergebnis melden und eine [Measure][measure] mehr als einen Wert.
+Ein Benchmark-Name wird einem Array von Einträgen zugeordnet.
+Jeder Eintrag benennt die `parameters`, mit denen der Benchmark ausgeführt wurde, und die `measures`, die er erzeugt hat.
+
+<BmfV1Example />
+
+In diesem Beispiel meldet `benchmark_name` drei Ergebnisse:
+eines ohne Parameter, eines mit `{"op":"read","size_mb":16}` und eines mit `{"op":"read","size_mb":32}`.
+Jedes der drei ist ein eigener Gitterpunkt, mit eigener Historie und eigenen [Alarmen][alert].
+
+BMF `v1` erfordert, dass die `bmf_version` des Projekts `1` ist.
+Ein Projekt akzeptiert standardmäßig BMF `v0`, und nur ein Server-Administrator kann die `bmf_version` eines Projekts anheben.
+BMF `v1` erfordert außerdem eine aktuelle Version [der `bencher` CLI][bencher run].
+
+### Parameter
+
+Das `parameters`-Objekt ist die Permutation der Eingaben, mit denen ein Benchmark ausgeführt wurde.
+Jeder Schlüssel wird einem JSON-Skalar zugeordnet: einer Zeichenkette, einer Zahl oder einem Boolean.
+`null`, Arrays und Objekte werden abgelehnt.
+Ein Schlüssel und ein Zeichenketten-Wert sind jeweils höchstens `64` Zeichen lang, und ein Parametersatz trägt höchstens `8` Schlüssel.
+
+Parametersätze werden in ihrer kanonischen Form verglichen, [RFC 8785 (JSON Canonicalization Scheme)][jcs].
+Die Reihenfolge der Schlüssel spielt keine Rolle, und Zahlen sind ECMAScript-Doubles,
+sodass `16`, `16.0` und `1.6e1` ein Wert sind und `{"size_mb": 16}` und `{"size_mb": 16.0}` ein Parametersatz.
+
+Ein Eintrag ohne `parameters` und ein Eintrag mit `"parameters": {}` sind derselbe Gitterpunkt:
+der leere Parametersatz, mit dem jeder Benchmark geboren wird.
+Zwei Einträge, die zum selben Parametersatz aufgelöst werden, sind ein Gitterpunkt,
+sodass ihre Measures zusammengeführt werden, statt eine Reihe abzuspalten.
+
+### Benannte Metrikwerte
+
+Jede Measure wird einem Objekt aus benannten Werten zugeordnet, und jeder benannte Wert ist eine JSON-Zahl.
+Ein Name ist höchstens `64` Zeichen lang, und eine Measure trägt höchstens `8` Namen.
+Namen jenseits der Obergrenze werden verworfen: die konventionellen Namen bleiben immer erhalten,
+und der Rest wird in lexikographischer Reihenfolge bis zur Obergrenze behalten.
+
+Drei Namen sind konventionell, nicht privilegiert:
+
+- `value`: die Punktschätzung, also der Wert, den der Perf-Plot zeichnet und den ein [Threshold][threshold] standardmäßig prüft
+- `lower_value`: die untere Grenze der Punktschätzung
+- `upper_value`: die obere Grenze der Punktschätzung
+
+Jeder andere Name, etwa `p95` oder `p99`, wird genau auf dieselbe Weise gespeichert und abgefragt.
+Eine Measure darf nur `value` benennen, nur andere Namen oder eine beliebige Mischung aus beidem.
+
+### Der Array-Wrapper
+
+⚠️ Ein BMF-`v1`-Payload, das ohne seinen Array-Wrapper geschrieben wird, ist ein gültiges BMF-`v0`-Payload.
+
+Der generische [`json`-Adapter][json adapter] akzeptiert beide Versionen.
+Ein BMF-`v0`-Payload wird als BMF `v0` geparst, und nichts geht verloren.
+Aber ein Eintragsobjekt, das dort steht, wo das Array hingehört, sieht genau aus wie eine BMF-`v0`-Measure-Map,
+sodass `parameters` und jeder benannte Wert als Measures des Benchmarks gelesen werden
+und die beabsichtigten Ergebnisse stillschweigend verloren gehen.
+
+Wählen Sie für ein BMF-`v1`-Payload den `json_v1`-Adapter.
+Der `json_v1`-Adapter akzeptiert nichts außer BMF `v1`,
+sodass ein Payload, dem sein Array-Wrapper fehlt, nicht geparst werden kann
+und der Bericht abgelehnt statt stillschweigend herabgestuft wird.
+
+Setzen Sie `bmf_version` im Bericht ebenfalls auf `1`.
+Das Feld `bmf_version` gibt die Version an, in der das Payload geschrieben ist,
+es ist das, wogegen die `bmf_version`-Schranke des Projekts geprüft wird,
+und es ist das, was dem `json`-Adapter sagt, zuerst BMF `v1` zu versuchen.
+Eine fehlende `bmf_version` bedeutet Version `0`.
+
+### Thresholds
+
+Ein Bericht deklariert seine [Thresholds][threshold] im Feld `thresholds.models`.
+Bei BMF `v0` ist dieses Feld eine Map von Measure auf Modell.
+Bei BMF `v1` ist es eine Liste von Einträgen, und jeder Eintrag benennt alles, was der Threshold prüft:
+
+- `measure`: die UUID, der Slug oder der Name der Measure
+- `metric`: der Name der Metrik, die der Threshold prüft. Wenn nicht gesetzt, prüft der Threshold den konventionellen Namen `value`. Ein Threshold prüft immer genau einen Namen.
+- `parameters`: die Gitterpunkte, die der Threshold prüft, als Liste von Parametersätzen. Ein Gitterpunkt passt, wenn irgendein Satz aus der Liste eine Teilmenge von ihm ist, sodass ein Satz nur die Schlüssel benennt, die für ihn wichtig sind, und ein Gitterpunkt, der mehr Schlüssel festlegt, dennoch passt. Wenn nicht gesetzt oder auf eine leere Liste gesetzt, prüft der Threshold jeden Gitterpunkt.
+- `model`: das zu verwendende Threshold-Modell
+
+Jeder Threshold, der passt, löst aus.
+Ein Threshold, der jeden Gitterpunkt prüft, und ein Threshold, der nur `{"size_mb":16}` prüft,
+prüfen beide den Gitterpunkt `{"size_mb":16}`,
+sodass eine Regression dort zwei Alarme auslöst, einen für jeden Threshold.
+
+Das Feld `thresholds.reset` löscht die Thresholds, welche die Form des Payloads adressieren kann.
+Eine BMF-`v0`-Map benennt eine Measure und sonst nichts, sodass `reset` nur die Thresholds erreicht,
+die den konventionellen Namen `value` jedes Gitterpunkts prüfen.
+Eine BMF-`v1`-Liste kann jeden Threshold adressieren, sodass `reset` sie alle erreicht.
+
+### Fold
+
+Fold wird für BMF `v1` nicht unterstützt.
+Der Mittelwert der `p99`-Werte je Iteration ist nicht der `p99` der zusammengefassten Stichprobe,
+sodass ein für ein BMF-`v1`-Payload angefordertes Fold eine Warnung auslöst
+und die Ergebnisse ungefaltet aufgenommen werden, eine Iteration pro Payload.
+
+### Bencher Metric Format (BMF) v1 JSON-Schema
+
+Dies ist das [JSON-Schema][json schema] für BMF-`v1`-JSON:
+
+<BmfV1Schema />
+
+[benchmark]: /de/docs/explanation/benchmarking/#benchmark
+[measure]: /de/docs/explanation/benchmarking/#measure
+[alert]: /de/docs/explanation/thresholds/#alerts
+[threshold]: /de/docs/explanation/thresholds/
+[bencher run]: /de/docs/explanation/bencher-run/
+[json adapter]: /de/docs/explanation/adapters/#-json
+[jcs]: https://www.rfc-editor.org/rfc/rfc8785
+[json schema]: https://json-schema.org/draft-07/json-schema-release-notes

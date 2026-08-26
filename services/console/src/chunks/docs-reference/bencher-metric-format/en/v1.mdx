@@ -1,0 +1,114 @@
+import BmfV1Example from "../bmf-v1-example.mdx";
+import BmfV1Schema from "../bmf-v1-schema.mdx";
+
+## Bencher Metric Format (BMF) v1
+
+BMF `v1` lets one [Benchmark][benchmark] report more than one result and one [Measure][measure] report more than one value.
+A Benchmark name maps to an array of entries.
+Each entry names the `parameters` the Benchmark ran with and the `measures` it produced.
+
+<BmfV1Example />
+
+In this example, `benchmark_name` reports three results:
+one with no parameters, one with `{"op":"read","size_mb":16}`, and one with `{"op":"read","size_mb":32}`.
+Each of the three is its own grid point, with its own history and its own [Alerts][alert].
+
+BMF `v1` requires the Project's `bmf_version` to be `1`.
+A Project accepts BMF `v0` by default, and only a server admin can raise a Project's `bmf_version`.
+BMF `v1` also requires a current version of [the `bencher` CLI][bencher run].
+
+### Parameters
+
+The `parameters` object is the permutation of inputs a Benchmark ran with.
+Each key maps to a JSON scalar: a string, a number, or a boolean.
+`null`, arrays, and objects are rejected.
+A key and a string value are each at most `64` characters, and a parameter set carries at most `8` keys.
+
+Parameter sets are compared in their canonical form, [RFC 8785 (JSON Canonicalization Scheme)][jcs].
+Key order does not matter, and numbers are ECMAScript doubles,
+so `16`, `16.0`, and `1.6e1` are one value and `{"size_mb": 16}` and `{"size_mb": 16.0}` are one parameter set.
+
+An entry without `parameters` and an entry with `"parameters": {}` are the same grid point:
+the empty parameter set that every Benchmark is born with.
+Two entries that resolve to the same parameter set are one grid point,
+so their measures merge rather than fork a series.
+
+### Named Metric Values
+
+Each Measure maps to an object of named values, and every named value is a JSON number.
+A name is at most `64` characters, and a Measure carries at most `8` names.
+Names beyond the cap are dropped: the conventional names are always kept,
+and the rest are kept in lexicographic order up to the cap.
+
+Three names are conventional, not privileged:
+
+- `value`: the point estimate, which is the value the perf plot draws and the value a [Threshold][threshold] gates by default
+- `lower_value`: the lower bound of the point estimate
+- `upper_value`: the upper bound of the point estimate
+
+Every other name, such as `p95` or `p99`, is stored and queried exactly the same way.
+A Measure may name only `value`, only other names, or any mix of the two.
+
+### The Array Wrapper
+
+⚠️ A BMF `v1` payload written without its array wrapper is a valid BMF `v0` payload.
+
+The generic [`json` adapter][json adapter] accepts both versions.
+A BMF `v0` payload parses as BMF `v0` and nothing is dropped.
+But an entry object written where the array belongs looks exactly like a BMF `v0` Measure map,
+so `parameters` and every named value are read as Measures of the Benchmark
+and the intended results are silently lost.
+
+Select the `json_v1` adapter for a BMF `v1` payload.
+The `json_v1` adapter accepts nothing but BMF `v1`,
+so a payload that is missing its array wrapper fails to parse
+and the Report is rejected instead of quietly downgraded.
+
+Set `bmf_version` to `1` on the Report as well.
+The `bmf_version` field states the version the payload is written in,
+it is what the Project's `bmf_version` gate is checked against,
+and it is what tells the `json` adapter to try BMF `v1` first.
+An absent `bmf_version` means version `0`.
+
+### Thresholds
+
+A Report declares its [Thresholds][threshold] in the `thresholds.models` field.
+At BMF `v0` that field is a map of Measure to model.
+At BMF `v1` it is a list of entries, and each entry names everything the Threshold gates:
+
+- `measure`: the Measure UUID, slug, or name
+- `metric`: the name of the metric the Threshold gates. If not set, the Threshold gates the conventional `value` name. A Threshold always gates exactly one name.
+- `parameters`: the grid points the Threshold gates, as a list of parameter sets. A grid point matches when any set in the list is a subset of it, so a set names only the keys it cares about and a grid point that pins more keys still matches. If not set, or set to an empty list, the Threshold gates every grid point.
+- `model`: the Threshold model to use
+
+Every Threshold that matches fires.
+A Threshold that gates every grid point and a Threshold that gates only `{"size_mb":16}`
+both gate the `{"size_mb":16}` grid point,
+so one regression there raises two Alerts, one for each Threshold.
+
+The `thresholds.reset` field clears the Thresholds the payload's shape can address.
+A BMF `v0` map names a Measure and nothing else, so `reset` reaches only the Thresholds
+that gate the conventional `value` name of every grid point.
+A BMF `v1` list can address every Threshold, so `reset` reaches all of them.
+
+### Fold
+
+Fold is not supported for BMF `v1`.
+The mean of per iteration `p99` values is not the `p99` of the pooled sample,
+so a fold requested for a BMF `v1` payload is warned about
+and the results are ingested unfolded, one iteration per payload.
+
+### Bencher Metric Format (BMF) v1 JSON Schema
+
+This is the [JSON schema][json schema] for BMF `v1` JSON:
+
+<BmfV1Schema />
+
+[benchmark]: /docs/explanation/benchmarking/#benchmark
+[measure]: /docs/explanation/benchmarking/#measure
+[alert]: /docs/explanation/thresholds/#alerts
+[threshold]: /docs/explanation/thresholds/
+[bencher run]: /docs/explanation/bencher-run/
+[json adapter]: /docs/explanation/adapters/#-json
+[jcs]: https://www.rfc-editor.org/rfc/rfc8785
+[json schema]: https://json-schema.org/draft-07/json-schema-release-notes
