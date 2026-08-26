@@ -7,12 +7,17 @@
 //! The `bmf_version` key of a report payload, end to end through ingest.
 //!
 //! The key is a contract: the Bencher Metric Format version it declares is what
-//! the whole payload is, and an absent key is version 0. The `json` node parses
-//! with that version's leaf only, and a payload whose parsed version differs from
-//! its declared version is refused with a 400 that names both versions. Fold is
-//! refused for every v1 payload, the empty payload included.
+//! the whole payload is. The `json` node parses with that version's leaf only, and
+//! a payload whose parsed version differs from its declared version is refused
+//! with a 400 that names both versions. Fold is refused for every v1 payload, the
+//! empty payload included.
+//!
+//! The second section is the project's `bmf_version`: the version a payload that
+//! declares none is read as. It starts at 0, only a server admin moves it, and an
+//! explicit key wins over it in either direction.
 
 use bencher_api_tests::{TestServer, TestUser};
+use bencher_json::{BmfVersion, ProjectSlug};
 use http::StatusCode;
 
 /// A BMF v0 payload: a benchmark maps straight to its measures.
@@ -50,7 +55,7 @@ const EMPTY: &str = "{}";
 
 /// A signed up user with an organization and a project to report into.
 struct Fixture {
-    project_slug: String,
+    project_slug: ProjectSlug,
     user: TestUser,
 }
 
@@ -63,7 +68,7 @@ async fn fixture(server: &TestServer, label: &str) -> Fixture {
         .create_project(&user, &org, &format!("Bmf Project {label}"))
         .await;
     Fixture {
-        project_slug: project.slug.to_string(),
+        project_slug: project.slug,
         user,
     }
 }
@@ -541,6 +546,262 @@ async fn report_fold_is_refused_for_an_empty_v1_payload() {
         0,
         "an empty iteration writes no rows"
     );
+
+    server.close().await;
+}
+
+// --- The project's version ---
+
+/// GET one project as `user`.
+async fn get_project(
+    server: &TestServer,
+    user: &TestUser,
+    project: &ProjectSlug,
+) -> serde_json::Value {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    assert_eq!(status, StatusCode::OK, "GET project: {status}");
+    resp.json().await.expect("Failed to parse the project")
+}
+
+/// PATCH one project with whatever body, and return its status and body.
+async fn try_patch(
+    server: &TestServer,
+    user: &TestUser,
+    project: &ProjectSlug,
+    body: &serde_json::Value,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(body)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+/// Move the project's `bmf_version` as `user`, who has to be the server admin.
+async fn set_bmf_version(server: &TestServer, fixture: &Fixture, bmf_version: BmfVersion) {
+    let (status, body) = try_patch(
+        server,
+        &fixture.user,
+        &fixture.project_slug,
+        &serde_json::json!({ "bmf_version": bmf_version }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "PATCH bmf_version: {body}");
+}
+
+/// A new project is at version 0, in the create response and on a GET alike.
+#[tokio::test]
+async fn project_bmf_version_defaults_to_0() {
+    let server = TestServer::new().await;
+    let user = server.signup("Bmf User", "bmfdefault@example.com").await;
+    let org = server.create_org(&user, "Bmf Default Org").await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/organizations/{}/projects", org.slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "name": "Bmf Default Project" }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let created: serde_json::Value = resp.json().await.expect("Failed to parse the project");
+    assert_eq!(created["bmf_version"], serde_json::json!(0), "{created}");
+
+    let slug: ProjectSlug = created["slug"]
+        .as_str()
+        .expect("the project has a slug")
+        .parse()
+        .expect("the slug is valid");
+    let project = get_project(&server, &user, &slug).await;
+    assert_eq!(project["bmf_version"], serde_json::json!(0), "{project}");
+
+    server.close().await;
+}
+
+/// A payload with no key is read at the project's version.
+///
+/// On a project at 1 the absent key, `null`, and an explicit 1 all read a v1
+/// payload the same way, and a v0 payload with no key meets the contract as
+/// version 1.
+#[tokio::test]
+async fn absent_bmf_version_is_the_projects_version() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "absentv1").await;
+    set_bmf_version(&server, &fixture, BmfVersion::V1).await;
+    let v1 = v1_results();
+    let v0 = v0_results();
+
+    let absent = report(
+        &server,
+        &fixture,
+        Post {
+            results: vec![&v1],
+            bmf_version: None,
+            ..Post::default()
+        },
+    )
+    .await;
+    let parameter_set = absent
+        .pointer("/results/0/0/parameter/set")
+        .and_then(serde_json::Value::as_object)
+        .expect("Report result parameter set");
+    assert!(!parameter_set.is_empty(), "{absent}");
+
+    let null = report(
+        &server,
+        &fixture,
+        Post {
+            results: vec![&v1],
+            bmf_version: Some(serde_json::Value::Null),
+            ..Post::default()
+        },
+    )
+    .await;
+    let one = report(
+        &server,
+        &fixture,
+        Post {
+            results: vec![&v1],
+            bmf_version: Some(serde_json::json!(1)),
+            ..Post::default()
+        },
+    )
+    .await;
+    assert_eq!(absent, one);
+    assert_eq!(null, one);
+
+    let body = refused(
+        &server,
+        &fixture,
+        Post {
+            results: vec![&v0],
+            bmf_version: None,
+            ..Post::default()
+        },
+    )
+    .await;
+    assert_names_both_versions(&body, 0, 1);
+
+    server.close().await;
+}
+
+/// The project's version is a default, not a ceiling: a declared key is read as
+/// declared on any project, in either direction.
+#[tokio::test]
+async fn explicit_bmf_version_wins_over_the_projects_version() {
+    let server = TestServer::new().await;
+    // The first signup is the server admin, so only this fixture can move its project.
+    let at_one = fixture(&server, "atone").await;
+    set_bmf_version(&server, &at_one, BmfVersion::V1).await;
+    let at_zero = fixture(&server, "atzero").await;
+    let v0 = v0_results();
+    let v1 = v1_results();
+
+    report(
+        &server,
+        &at_one,
+        Post {
+            results: vec![&v0],
+            bmf_version: Some(serde_json::json!(0)),
+            ..Post::default()
+        },
+    )
+    .await;
+    report(
+        &server,
+        &at_zero,
+        Post {
+            results: vec![&v1],
+            bmf_version: Some(serde_json::json!(1)),
+            ..Post::default()
+        },
+    )
+    .await;
+
+    server.close().await;
+}
+
+/// Nothing ratchets: the admin moves the version up and back down.
+#[tokio::test]
+async fn admin_moves_the_project_bmf_version_both_ways() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "bothways").await;
+
+    set_bmf_version(&server, &fixture, BmfVersion::V1).await;
+    let project = get_project(&server, &fixture.user, &fixture.project_slug).await;
+    assert_eq!(project["bmf_version"], serde_json::json!(1), "{project}");
+
+    set_bmf_version(&server, &fixture, BmfVersion::V0).await;
+    let project = get_project(&server, &fixture.user, &fixture.project_slug).await;
+    assert_eq!(project["bmf_version"], serde_json::json!(0), "{project}");
+
+    server.close().await;
+}
+
+/// Only a server admin can set the field, and the rest of the patch is unaffected.
+///
+/// The second user owns their own organization and project, so they are allowed to
+/// edit it. The only thing standing between them and the field is the admin check.
+#[tokio::test]
+async fn non_admin_cannot_set_the_project_bmf_version() {
+    let server = TestServer::new().await;
+    // The first signup is the server admin, so the second one is not.
+    let _admin = fixture(&server, "owner").await;
+    let user = server.signup("Other User", "bmfother@example.com").await;
+    let org = server.create_org(&user, "Bmf Other Org").await;
+    let project = server
+        .create_project(&user, &org, "Bmf Other Project")
+        .await;
+
+    // The refused patch applies nothing, the rename included.
+    let (status, body) = try_patch(
+        &server,
+        &user,
+        &project.slug,
+        &serde_json::json!({ "name": "Bmf Renamed Project", "bmf_version": 1 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    assert!(body.contains("bmf_version"), "{body}");
+    let unchanged = get_project(&server, &user, &project.slug).await;
+    assert_eq!(unchanged["name"], serde_json::json!("Bmf Other Project"));
+    assert_eq!(unchanged["bmf_version"], serde_json::json!(0));
+
+    // The same patch without the field is the patch it has always been.
+    let (status, body) = try_patch(
+        &server,
+        &user,
+        &project.slug,
+        &serde_json::json!({ "name": "Bmf Renamed Project" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let renamed = get_project(&server, &user, &project.slug).await;
+    assert_eq!(renamed["name"], serde_json::json!("Bmf Renamed Project"));
+    assert_eq!(renamed["bmf_version"], serde_json::json!(0));
 
     server.close().await;
 }

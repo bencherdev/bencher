@@ -376,8 +376,8 @@ impl Run {
             start_time: start_time.into(),
             end_time: end_time.into(),
             results,
-            // `bencher run` declares no BMF version yet, so the results are read as
-            // version 0, which is how every run has always been read.
+            // `bencher run` declares no BMF version yet, so the results are read at
+            // the project's default.
             bmf_version: None,
             settings: Some(JsonReportSettings {
                 adapter: Some(self.adapter),

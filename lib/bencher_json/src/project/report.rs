@@ -56,7 +56,7 @@ pub struct JsonNewReport {
     pub results: Vec<String>,
     /// The Bencher Metric Format (BMF) version this report is written in.
     /// The accepted versions are 0 or 1.
-    /// If no version is specified, then version 0 is used.
+    /// If no version is specified, then the project's `bmf_version` is used.
     pub bmf_version: Option<BmfVersion>,
     /// Settings for how to handle the report.
     pub settings: Option<JsonReportSettings>,

@@ -18,10 +18,11 @@ pub const ACCEPTED_BMF_VERSIONS: &str = "0 or 1";
 // One type serves both the declared and the parsed version, so the two can be compared.
 /// The Bencher Metric Format (BMF) version.
 /// The accepted versions are 0 or 1.
-/// If no version is specified, then version 0 is used.
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Copy, Default, Eq, PartialEq, Hash, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
 pub struct BmfVersion(u8);
 
 impl TryFrom<u8> for BmfVersion {
@@ -37,6 +38,12 @@ impl TryFrom<u8> for BmfVersion {
 impl From<BmfVersion> for u8 {
     fn from(version: BmfVersion) -> Self {
         version.0
+    }
+}
+
+impl From<BmfVersion> for i32 {
+    fn from(version: BmfVersion) -> Self {
+        Self::from(version.0)
     }
 }
 
@@ -90,6 +97,38 @@ impl Visitor<'_> for BmfVersionVisitor {
         E: de::Error,
     {
         v.try_into().map_err(E::custom)
+    }
+}
+
+#[cfg(feature = "db")]
+mod db {
+    use super::BmfVersion;
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for BmfVersion
+    where
+        DB: diesel::backend::Backend,
+        for<'a> i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>
+            + Into<<DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            out.set_value(i32::from(*self));
+            Ok(diesel::serialize::IsNull::No)
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for BmfVersion
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            u8::try_from(i32::from_sql(bytes)?)?
+                .try_into()
+                .map_err(Into::into)
+        }
     }
 }
 

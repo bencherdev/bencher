@@ -10,9 +10,9 @@
 use bencher_api_tests::TestServer;
 #[cfg(feature = "plus")]
 use bencher_api_tests::oci::compute_digest;
+use bencher_json::{BmfVersion, JsonReport, JsonReports};
 #[cfg(feature = "plus")]
-use bencher_json::{BmfVersion, JsonJob, JsonRunners, JsonSpec, runner::JsonJobs};
-use bencher_json::{JsonReport, JsonReports};
+use bencher_json::{JsonJob, JsonRunners, JsonSpec, runner::JsonJobs};
 use http::StatusCode;
 
 // POST /v0/run - create a run with authentication
@@ -263,6 +263,98 @@ async fn run_post_unknown_bmf_version_is_rejected() {
         "expected the rejection to name the accepted versions: {body}"
     );
     assert_eq!(report_count(&server, &user, project_slug).await, 0);
+}
+
+/// POST /v0/run - a run with no `bmf_version` is read at the project's version.
+///
+/// The user is the server's first signup, which makes them its admin, so they can
+/// move the project to version 1. Then v1 results with no key ingest, and v0
+/// results with no key meet the contract as version 1.
+#[tokio::test]
+async fn run_post_absent_bmf_version_is_the_projects_version() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runbmfabsent@example.com").await;
+    let org = server.create_org(&user, "Run Bmf Absent Org").await;
+    let project = server
+        .create_project(&user, &org, "Run Bmf Absent Project")
+        .await;
+    set_project_bmf_version(&server, &user, &project, BmfVersion::V1).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let run = |results: serde_json::Value| {
+        serde_json::json!({
+            "project": project_slug,
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": [results.to_string()],
+        })
+    };
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&run(bmf_v1_results()))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+    let results = report.results.expect("Report results");
+    let iteration = results.first().expect("Report iteration");
+    let result = iteration.first().expect("Report result");
+    assert!(!result.parameter.set.is_empty());
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&run(bmf_results()))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = resp.text().await.expect("Failed to read the response");
+    assert!(
+        body.contains("parsed as BMF version 0") && body.contains("declared version 1"),
+        "expected the refusal to name both versions: {body}"
+    );
+    assert!(
+        !body.contains("right adapter"),
+        "expected no adapter hint on a version refusal: {body}"
+    );
+}
+
+/// Move the project's `bmf_version` as `user`, who has to be the server admin.
+async fn set_project_bmf_version(
+    server: &TestServer,
+    user: &bencher_api_tests::TestUser,
+    project: &bencher_api_tests::TestProject,
+    bmf_version: BmfVersion,
+) {
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "bmf_version": bmf_version }))
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    assert_eq!(status, StatusCode::OK, "PATCH bmf_version: {body}");
 }
 
 /// How many reports the project holds, so a rejection can be shown to create none.
@@ -2038,11 +2130,17 @@ async fn run_post_with_job_config_fields() {
     }
 }
 
-/// The declared `bmf_version` rides into the job config beside `average` and
-/// `fold`, as the payload declared it: `Some` when the key was sent and `None`
-/// when it was absent.
+/// The resolved `bmf_version` rides into the job config beside `average` and
+/// `fold`: the version the payload declared, or the project's when it declared none.
+///
+/// The user is the server's first signup, which makes them its admin, so they can
+/// put the project at `project_version` before the run.
 #[cfg(feature = "plus")]
-async fn stored_job_bmf_version(bmf_version: Option<u8>, label: &str) -> Option<BmfVersion> {
+async fn stored_job_bmf_version(
+    project_version: BmfVersion,
+    bmf_version: Option<u8>,
+    label: &str,
+) -> Option<BmfVersion> {
     let server = TestServer::new().await;
     let user = server
         .signup("Job User", &format!("runjob_bmf_{label}@example.com"))
@@ -2053,6 +2151,7 @@ async fn stored_job_bmf_version(bmf_version: Option<u8>, label: &str) -> Option<
     let project = server
         .create_project(&user, &org, &format!("Bmf Job Project {label}"))
         .await;
+    set_project_bmf_version(&server, &user, &project, project_version).await;
 
     create_fallback_spec(&server, &user).await;
 
@@ -2109,20 +2208,36 @@ async fn stored_job_bmf_version(bmf_version: Option<u8>, label: &str) -> Option<
 #[tokio::test]
 async fn run_post_with_job_stores_bmf_version() {
     assert_eq!(
-        stored_job_bmf_version(Some(1), "declared").await,
+        stored_job_bmf_version(BmfVersion::V0, Some(1), "declared").await,
         Some(BmfVersion::V1),
-        "a job declared at version 1 carries the key"
+        "a job declared at version 1 carries version 1"
     );
 }
 
-// POST /v0/run with job and no bmf_version stores no key on the job config
+// POST /v0/run with job and an explicit bmf_version 0 on a project at 1 stores 0
 #[cfg(feature = "plus")]
 #[tokio::test]
-async fn run_post_with_job_stores_no_bmf_version_when_absent() {
+async fn run_post_with_job_stores_explicit_bmf_version_0_on_a_project_at_1() {
     assert_eq!(
-        stored_job_bmf_version(None, "absent").await,
-        None,
-        "a job posted without the key carries none"
+        stored_job_bmf_version(BmfVersion::V1, Some(0), "declared0").await,
+        Some(BmfVersion::V0),
+        "a job declared at version 0 carries version 0 whatever the project says"
+    );
+}
+
+// POST /v0/run with job and no bmf_version stores the project's version on the job config
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_stores_the_projects_bmf_version_when_absent() {
+    assert_eq!(
+        stored_job_bmf_version(BmfVersion::V0, None, "absent0").await,
+        Some(BmfVersion::V0),
+        "a job posted without the key on a project at 0 carries version 0"
+    );
+    assert_eq!(
+        stored_job_bmf_version(BmfVersion::V1, None, "absent1").await,
+        Some(BmfVersion::V1),
+        "a job posted without the key on a project at 1 carries version 1"
     );
 }
 

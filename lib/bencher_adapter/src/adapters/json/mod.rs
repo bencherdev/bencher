@@ -10,8 +10,8 @@ use v1::AdapterJsonV1;
 
 /// The `json` node of the adapter tree, over the `json_v0` and `json_v1` leaves.
 ///
-/// The payload's declared `bmf_version` picks the one leaf this node parses with,
-/// and an absent key is version 0. A payload that leaf does not claim fails the node.
+/// The payload's `bmf_version` picks the one leaf this node parses with, and a
+/// payload that leaf does not claim fails the node.
 pub struct AdapterJson;
 
 impl Adaptable for AdapterJson {
@@ -225,7 +225,7 @@ pub(crate) mod test_json {
         }
     }
 
-    /// An absent `bmf_version` is version 0, so the two parse to the same bytes.
+    /// The default settings are version 0, so the two parse to the same bytes.
     #[test]
     fn adapter_json_absent_version_is_version_0() {
         for suffix in JSON_FIXTURES {

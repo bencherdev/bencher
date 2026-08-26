@@ -3223,7 +3223,7 @@
           "projects"
         ],
         "summary": "Update a project",
-        "description": "Update a project. The user must have `edit` permissions for the project.",
+        "description": "Update a project. The user must have `edit` permissions for the project. Setting the `bmf_version` field requires a server admin.",
         "operationId": "project_patch",
         "parameters": [
           {
@@ -12454,7 +12454,7 @@
         "minimum": 0
       },
       "BmfVersion": {
-        "description": "The Bencher Metric Format (BMF) version. The accepted versions are 0 or 1. If no version is specified, then version 0 is used.",
+        "description": "The Bencher Metric Format (BMF) version. The accepted versions are 0 or 1.",
         "type": "integer",
         "format": "uint8",
         "minimum": 0
@@ -13485,7 +13485,7 @@
           },
           "bmf_version": {
             "nullable": true,
-            "description": "The Bencher Metric Format (BMF) version the run declared",
+            "description": "The Bencher Metric Format (BMF) version the run's results are read as",
             "allOf": [
               {
                 "$ref": "#/components/schemas/BmfVersion"
@@ -14413,7 +14413,7 @@
         "properties": {
           "bmf_version": {
             "nullable": true,
-            "description": "The Bencher Metric Format (BMF) version this report is written in. The accepted versions are 0 or 1. If no version is specified, then version 0 is used.",
+            "description": "The Bencher Metric Format (BMF) version this report is written in. The accepted versions are 0 or 1. If no version is specified, then the project's `bmf_version` is used.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/BmfVersion"
@@ -14509,7 +14509,7 @@
         "properties": {
           "bmf_version": {
             "nullable": true,
-            "description": "The Bencher Metric Format (BMF) version these results are written in. The accepted versions are 0 or 1. If no version is specified, then version 0 is used.",
+            "description": "The Bencher Metric Format (BMF) version these results are written in. The accepted versions are 0 or 1. If no version is specified, then the project's `bmf_version` is used.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/BmfVersion"
@@ -16168,6 +16168,9 @@
       "JsonProject": {
         "type": "object",
         "properties": {
+          "bmf_version": {
+            "$ref": "#/components/schemas/BmfVersion"
+          },
           "claimed": {
             "nullable": true,
             "allOf": [
@@ -16207,6 +16210,7 @@
           }
         },
         "required": [
+          "bmf_version",
           "created",
           "modified",
           "name",
@@ -16305,6 +16309,15 @@
       "JsonProjectPatch": {
         "type": "object",
         "properties": {
+          "bmf_version": {
+            "nullable": true,
+            "description": "Server admin only: Set the default BMF version for the project.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BmfVersion"
+              }
+            ]
+          },
           "name": {
             "nullable": true,
             "description": "The new name of the project. Maximum length is 64 characters.",
@@ -16346,6 +16359,14 @@
       "JsonProjectPatchNull": {
         "type": "object",
         "properties": {
+          "bmf_version": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BmfVersion"
+              }
+            ]
+          },
           "name": {
             "nullable": true,
             "allOf": [

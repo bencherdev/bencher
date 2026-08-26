@@ -391,7 +391,7 @@ pub struct JsonJobConfig {
     /// Fold operation for combining multiple iteration results
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fold: Option<JsonFold>,
-    /// The Bencher Metric Format (BMF) version the run declared
+    /// The Bencher Metric Format (BMF) version the run's results are read as
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bmf_version: Option<BmfVersion>,
     /// Allow benchmark failure without short-circuiting iterations
