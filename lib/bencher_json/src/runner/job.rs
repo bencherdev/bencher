@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
 
-use bencher_valid::{DateTime, ImageDigest, ImageReference, Jwt, PollTimeout, Timeout, Url};
+use bencher_valid::{
+    BmfVersion, DateTime, ImageDigest, ImageReference, Jwt, PollTimeout, Timeout, Url,
+};
 use camino::Utf8PathBuf;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -281,6 +283,7 @@ struct JsonUncheckedJobConfig {
     pub average: Option<JsonAverage>,
     pub iter: Option<Iteration>,
     pub fold: Option<JsonFold>,
+    pub bmf_version: Option<BmfVersion>,
     pub allow_failure: Option<bool>,
     pub backdate: Option<DateTime>,
 }
@@ -304,6 +307,7 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
             average,
             iter,
             fold,
+            bmf_version,
             allow_failure,
             backdate,
         } = unchecked;
@@ -328,6 +332,7 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
             average,
             iter,
             fold,
+            bmf_version,
             allow_failure,
             backdate,
         })
@@ -386,6 +391,9 @@ pub struct JsonJobConfig {
     /// Fold operation for combining multiple iteration results
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fold: Option<JsonFold>,
+    /// The Bencher Metric Format (BMF) version the run declared
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bmf_version: Option<BmfVersion>,
     /// Allow benchmark failure without short-circuiting iterations
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allow_failure: Option<bool>,
@@ -397,6 +405,44 @@ pub struct JsonJobConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn job_config(fields: &str) -> JsonJobConfig {
+        let config = format!(
+            r#"{{"registry": "https://registry.bencher.dev", "project": "{}", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "timeout": 3600{fields}}}"#,
+            ProjectUuid::new()
+        );
+        serde_json::from_str(&config).unwrap()
+    }
+
+    /// A stored config without the key is version 0, so every existing job keeps
+    /// parsing as it did.
+    #[test]
+    fn job_config_without_bmf_version_is_none() {
+        let config = job_config("");
+        assert_eq!(config.bmf_version, None);
+        assert!(
+            !serde_json::to_string(&config)
+                .unwrap()
+                .contains("bmf_version")
+        );
+    }
+
+    #[test]
+    fn job_config_bmf_version_round_trips() {
+        let config = job_config(r#", "bmf_version": 1"#);
+        assert_eq!(config.bmf_version, Some(BmfVersion::V1));
+        let json = serde_json::to_string(&config).unwrap();
+        let config: JsonJobConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.bmf_version, Some(BmfVersion::V1));
+    }
+
+    /// A config that carries a key this binary does not know still deserializes,
+    /// which is what lets an older runner accept a config with `bmf_version`.
+    #[test]
+    fn job_config_ignores_an_unknown_key() {
+        let config = job_config(r#", "not_a_field": true"#);
+        assert_eq!(config.bmf_version, None);
+    }
 
     #[test]
     fn round_trip_all_fields() {

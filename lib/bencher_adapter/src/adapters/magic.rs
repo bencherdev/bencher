@@ -24,8 +24,10 @@ impl Adaptable for AdapterMagic {
 
 #[cfg(test)]
 mod test_magic {
+    use bencher_json::BmfVersion;
+    use pretty_assertions::assert_eq;
+
     use super::AdapterMagic;
-    use crate::Settings;
     use crate::adapters::{
         c_sharp::{AdapterCSharp, dot_net::test_c_sharp_dot_net},
         cpp::{catch2::test_cpp_catch2, google::test_cpp_google},
@@ -44,6 +46,7 @@ mod test_magic {
         shell::hyperfine::test_shell_hyperfine,
         test_util::{convert_file_path, opt_convert_file_path},
     };
+    use crate::{Adaptable as _, AdapterJson, Settings, results::adapter_results::AdapterResults};
 
     #[test]
     fn adapter_magic_json_latency() {
@@ -63,36 +66,42 @@ mod test_magic {
         test_json_v0::validate_adapter_json_bmf_mixed(&results);
     }
 
+    /// A v1 fixture through magic at declared version 1.
+    fn convert_magic_v1(suffix: &str) -> AdapterResults {
+        opt_convert_file_path::<AdapterMagic>(
+            &test_json::fixture_path(suffix),
+            test_json::version_settings(BmfVersion::V1),
+        )
+        .unwrap_or_else(|| panic!("expected {suffix} to parse at version 1"))
+    }
+
     #[test]
     fn adapter_magic_json_v1_latency() {
-        let results =
-            convert_file_path::<AdapterMagic>("./tool_output/json/report_v1_latency.json");
+        let results = convert_magic_v1("v1_latency");
         test_json_v1::validate_adapter_json_v1_latency(&results);
     }
 
     #[test]
     fn adapter_magic_json_v1_parameters() {
-        let results =
-            convert_file_path::<AdapterMagic>("./tool_output/json/report_v1_parameters.json");
+        let results = convert_magic_v1("v1_parameters");
         test_json_v1::validate_adapter_json_v1_parameters(&results);
     }
 
     #[test]
     fn adapter_magic_json_v1_named() {
-        let results = convert_file_path::<AdapterMagic>("./tool_output/json/report_v1_named.json");
+        let results = convert_magic_v1("v1_named");
         test_json_v1::validate_adapter_json_v1_named(&results);
     }
 
     #[test]
     fn adapter_magic_json_v1_cap() {
-        let results = convert_file_path::<AdapterMagic>("./tool_output/json/report_v1_cap.json");
+        let results = convert_magic_v1("v1_cap");
         test_json_v1::validate_adapter_json_v1_cap(&results);
     }
 
     #[test]
     fn adapter_magic_json_v1_canonical() {
-        let results =
-            convert_file_path::<AdapterMagic>("./tool_output/json/report_v1_canonical.json");
+        let results = convert_magic_v1("v1_canonical");
         test_json_v1::validate_adapter_json_v1_canonical(&results);
     }
 
@@ -108,6 +117,50 @@ mod test_magic {
             .is_none(),
             "expected a mixed version payload to fail magic"
         );
+    }
+
+    /// Magic reaches the JSON leaves only through the `json` node, so at version 1
+    /// it parses the empty payload as v1 and refuses every v0 JSON fixture.
+    #[test]
+    fn adapter_magic_version_1_parses_json_v1_only() {
+        let settings = test_json::version_settings(BmfVersion::V1);
+        let results = AdapterMagic::parse("{}", settings).unwrap();
+        assert!(results.is_empty());
+        assert_eq!(results.version, BmfVersion::V1);
+
+        for suffix in test_json::V1_FIXTURES {
+            assert_eq!(
+                opt_convert_file_path::<AdapterMagic>(&test_json::fixture_path(suffix), settings),
+                opt_convert_file_path::<AdapterJson>(&test_json::fixture_path(suffix), settings),
+                "{suffix}"
+            );
+        }
+        for suffix in test_json::V0_FIXTURES {
+            assert!(
+                opt_convert_file_path::<AdapterMagic>(&test_json::fixture_path(suffix), settings)
+                    .is_none(),
+                "expected magic to refuse the v0 payload {suffix} at version 1"
+            );
+        }
+    }
+
+    /// A non-JSON payload is a v0 payload, so at version 0 the key moves nothing.
+    #[test]
+    fn adapter_magic_non_json_is_unmoved_at_version_0() {
+        for file_path in [
+            "./tool_output/cpp/google/two.txt",
+            "./tool_output/go/bench/five.txt",
+            "./tool_output/rust/bench/many.txt",
+            "./tool_output/shell/hyperfine/two.json",
+            "./tool_output/java/jmh/six.json",
+        ] {
+            let results = opt_convert_file_path::<AdapterMagic>(
+                file_path,
+                test_json::version_settings(BmfVersion::V0),
+            )
+            .unwrap_or_else(|| panic!("expected {file_path} to parse at version 0"));
+            assert_eq!(results.version, BmfVersion::V0, "{file_path}");
+        }
     }
 
     /// An out of bounds parameter set fails magic outright: the json node rejects

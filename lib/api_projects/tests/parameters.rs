@@ -79,8 +79,10 @@ async fn report(
     results: Vec<String>,
     thresholds: Option<serde_json::Value>,
     fold: Option<&str>,
+    bmf_version: Option<u8>,
 ) -> serde_json::Value {
-    let (status, body) = try_report(server, fixture, day, results, thresholds, fold).await;
+    let (status, body) =
+        try_report(server, fixture, day, results, thresholds, fold, bmf_version).await;
     assert_eq!(status, StatusCode::CREATED, "POST report {day}: {body}");
     serde_json::from_str(&body).expect("Failed to parse the report")
 }
@@ -93,10 +95,11 @@ async fn try_report(
     results: Vec<String>,
     thresholds: Option<serde_json::Value>,
     fold: Option<&str>,
+    bmf_version: Option<u8>,
 ) -> (StatusCode, String) {
     // Both optional fields are omitted by sending `null`, which is what an absent
     // `Option` deserializes from.
-    let body = serde_json::json!({
+    let mut body = serde_json::json!({
         "branch": "main",
         "testbed": "localhost",
         "start_time": format!("2024-01-{day:02}T00:00:00Z"),
@@ -105,6 +108,12 @@ async fn try_report(
         "thresholds": thresholds,
         "settings": fold.map(|fold| serde_json::json!({ "fold": fold })),
     });
+    // A v1 payload has to declare its version; a v0 payload keeps no key.
+    if let Some(bmf_version) = bmf_version
+        && let Some(object) = body.as_object_mut()
+    {
+        object.insert("bmf_version".to_owned(), serde_json::json!(bmf_version));
+    }
 
     let resp = server
         .client
@@ -272,6 +281,7 @@ async fn v1_report_lands_variants_and_metrics() {
         )],
         None,
         None,
+        Some(1),
     )
     .await;
 
@@ -325,6 +335,7 @@ async fn ingest_flat(server: &TestServer) -> (Fixture, i32) {
             vec![serde_json::to_string(&results).expect("the results serialize")],
             Some(threshold_models()),
             None,
+            None,
         )
         .await;
     }
@@ -360,6 +371,7 @@ async fn ingest_variants(server: &TestServer) -> (Fixture, i32) {
             )],
             Some(threshold_models()),
             None,
+            Some(1),
         )
         .await;
     }
@@ -449,6 +461,7 @@ async fn baselines_separate_by_parameter() {
             )],
             Some(threshold_models()),
             None,
+            Some(1),
         )
         .await;
     }
@@ -485,6 +498,7 @@ async fn bare_threshold_checks_only_the_value_name() {
             )],
             Some(threshold_models()),
             None,
+            Some(1),
         )
         .await;
     }
@@ -529,6 +543,7 @@ async fn absent_parameters_land_on_the_empty_set() {
         ],
         None,
         None,
+        Some(1),
     )
     .await;
 
@@ -589,6 +604,7 @@ async fn v1_entry_without_measures_mints_nothing() {
         )],
         None,
         None,
+        Some(1),
     )
     .await;
 
@@ -618,7 +634,16 @@ async fn v1_benchmark_without_entries_mints_nothing() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "no-entries").await;
 
-    report(&server, &fixture, 1, vec![v1("bench", &[])], None, None).await;
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1("bench", &[])],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
 
     let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
@@ -647,6 +672,7 @@ async fn v0_benchmark_without_measures_is_unchanged() {
         &fixture,
         1,
         vec![serde_json::to_string(&serde_json::json!({ "bench": {} })).expect("it serializes")],
+        None,
         None,
         None,
     )
@@ -680,7 +706,16 @@ async fn archived_parameter_set_is_unarchived_on_report() {
             &serde_json::json!({ "latency": { "value": 1.0 } }),
         )],
     );
-    report(&server, &fixture, 1, vec![variant.clone()], None, None).await;
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![variant.clone()],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
 
     let project_id = get_project_id(&server, &fixture.project_slug);
     {
@@ -695,7 +730,7 @@ async fn archived_parameter_set_is_unarchived_on_report() {
         assert_eq!(updated, 1);
     }
 
-    report(&server, &fixture, 2, vec![variant], None, None).await;
+    report(&server, &fixture, 2, vec![variant], None, None, Some(1)).await;
 
     let mut conn = server.db_conn();
     let archived: Vec<Option<i64>> = schema::parameter::table
@@ -737,6 +772,7 @@ async fn fold_with_v1_warns_and_lands_every_iteration() {
         ],
         None,
         Some("min"),
+        Some(1),
     )
     .await;
 
@@ -787,6 +823,7 @@ async fn metric_cap_does_not_fail_the_report() {
         )],
         None,
         None,
+        Some(1),
     )
     .await;
 
@@ -830,6 +867,7 @@ async fn extra_metrics_do_not_change_the_metric_count() {
         )],
         None,
         None,
+        Some(1),
     )
     .await;
 
@@ -908,6 +946,7 @@ async fn report_response_echoes_metrics_and_separates_variants() {
             )],
             Some(threshold_models()),
             None,
+            Some(1),
         )
         .await;
     }
@@ -936,7 +975,7 @@ async fn report_response_echoes_metrics_and_separates_variants() {
             ],
         )],
         Some(threshold_models()),
-        None,
+        None, Some(1),
     )
     .await;
 
@@ -1085,13 +1124,13 @@ async fn parameter_creation_is_rate_limited() {
 
     // Under the ceiling: three new variants on top of the birth empty set.
     let under = fixture(&server, "under-limit").await;
-    let (status, body) = try_report(&server, &under, 1, variants(3), None, None).await;
+    let (status, body) = try_report(&server, &under, 1, variants(3), None, None, Some(1)).await;
     assert_eq!(status, StatusCode::CREATED, "under the ceiling: {body}");
 
     // Over the ceiling, and in its own project, so what is counted is this project's
     // own parameter rows rather than every project's.
     let over = fixture(&server, "over-limit").await;
-    let (status, body) = try_report(&server, &over, 1, variants(4), None, None).await;
+    let (status, body) = try_report(&server, &over, 1, variants(4), None, None, Some(1)).await;
     assert_eq!(
         status,
         StatusCode::TOO_MANY_REQUESTS,
@@ -1139,6 +1178,7 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
         )],
         None,
         None,
+        Some(1),
     )
     .await;
 
@@ -1265,6 +1305,7 @@ async fn v0_measure_response_is_unchanged() {
         ],
         None,
         None,
+        None,
     )
     .await;
 
@@ -1343,6 +1384,7 @@ async fn v0_fold_still_folds() {
         vec![iteration(10.0), iteration(20.0)],
         None,
         Some("min"),
+        None,
     )
     .await;
 
@@ -1409,6 +1451,7 @@ async fn alert_json_carries_the_boundary_the_metric_exceeded() {
             )],
             Some(threshold_models()),
             None,
+            Some(1),
         )
         .await;
     }
@@ -2100,6 +2143,7 @@ async fn parameter_delete_refuses_while_reports_reference_it() {
         )],
         None,
         None,
+        Some(1),
     )
     .await;
 
@@ -2163,6 +2207,7 @@ async fn parameter_delete_removes_an_unreferenced_set() {
         )],
         None,
         None,
+        Some(1),
     )
     .await;
     let report_uuid = json_report

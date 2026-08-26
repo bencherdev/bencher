@@ -24,8 +24,11 @@ use adapters::{
     },
     shell::{AdapterShell, hyperfine::AdapterShellHyperfine},
 };
-use bencher_json::project::report::{Adapter, JsonAverage};
 pub use bencher_json::{BenchmarkName, JsonNewMetric};
+use bencher_json::{
+    BmfVersion,
+    project::report::{Adapter, JsonAverage},
+};
 pub use error::AdapterError;
 pub use results::{
     AdapterResultsArray,
@@ -90,10 +93,18 @@ impl Adaptable for Adapter {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Settings {
     pub average: Option<JsonAverage>,
+    /// The BMF version the report payload declared, where an absent key is version 0.
+    ///
+    /// The `json` node parses with that version's leaf only, and the results array
+    /// refuses any payload whose parsed version differs.
+    pub bmf_version: BmfVersion,
 }
 
 impl Settings {
-    pub fn new(average: Option<JsonAverage>) -> Self {
-        Self { average }
+    pub fn new(average: Option<JsonAverage>, bmf_version: BmfVersion) -> Self {
+        Self {
+            average,
+            bmf_version,
+        }
     }
 }

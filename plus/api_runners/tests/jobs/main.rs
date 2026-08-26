@@ -28,10 +28,10 @@ use bencher_schema::{
 use common::{
     assert_ws_closed, associate_runner_spec, base_timestamp, claim_via_channel, connect_channel_ws,
     create_runner, create_test_report, get_job_priority, get_project_id, get_runner_id,
-    insert_test_job, insert_test_job_full, insert_test_job_with_invalid_config,
-    insert_test_job_with_project, insert_test_spec, insert_test_spec_full,
-    recv_server_msg as recv_msg, send_runner_msg as send_msg, set_job_runner_id, set_job_status,
-    try_connect_channel_ws, ws_url,
+    insert_test_job, insert_test_job_full, insert_test_job_with_bmf_version,
+    insert_test_job_with_invalid_config, insert_test_job_with_project, insert_test_spec,
+    insert_test_spec_full, recv_server_msg as recv_msg, send_runner_msg as send_msg,
+    set_job_runner_id, set_job_status, try_connect_channel_ws, ws_url,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
@@ -2661,6 +2661,92 @@ async fn reprocess_completed_job_no_output() {
         JobStatus::Failed,
         "Completed job without stored output should be marked as Failed"
     );
+}
+
+/// Complete a job whose config declares `bmf_version` with BMF v1 stdout, then
+/// reprocess it, returning the job's status and how many metrics it wrote.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn reprocess_v1_output_at(bmf_version: Option<u8>, label: &str) -> (JobStatus, i64) {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin", &format!("reprocess-bmf-{label}@example.com"))
+        .await;
+    let org = server
+        .create_org(&admin, &format!("Reprocess Bmf Org {label}"))
+        .await;
+    let project = server
+        .create_project(&admin, &org, &format!("Reprocess bmf {label}"))
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid =
+        insert_test_job_with_bmf_version(&server, report_id, project.uuid, spec_id, bmf_version);
+    set_job_status(&server, job_uuid, JobStatus::Completed);
+
+    let v1_results = serde_json::json!({
+        "bench_a": [{
+            "parameters": { "size_mb": 16 },
+            "measures": { "latency": { "value": 42.0 } },
+        }]
+    });
+    let output = bencher_json::runner::JsonJobOutput {
+        results: vec![bencher_json::runner::JsonIterationOutput {
+            exit_code: 0,
+            stdout: Some(v1_results.to_string()),
+            stderr: None,
+            output: None,
+        }],
+        error: None,
+    };
+    server
+        .context()
+        .oci_storage()
+        .job_output()
+        .put(project.uuid, job_uuid, &output)
+        .await
+        .expect("Failed to store job output");
+
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    reprocess_completed_jobs(&log, server.context()).await;
+
+    let mut conn = server.db_conn();
+    let status: JobStatus = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::status)
+        .first(&mut conn)
+        .expect("Failed to get job status");
+    let metrics: i64 = schema::metric::table
+        .count()
+        .get_result(&mut conn)
+        .expect("Failed to count metrics");
+    (status, metrics)
+}
+
+/// A job declared at version 1 parses its v1 output under the contract.
+#[tokio::test]
+async fn reprocess_completed_job_declared_v1_ingests_v1_output() {
+    let (status, metrics) = reprocess_v1_output_at(Some(1), "v1").await;
+    assert_eq!(
+        status,
+        JobStatus::Processed,
+        "v1 output at version 1 ingests"
+    );
+    assert!(metrics > 0, "v1 output at version 1 writes its metrics");
+}
+
+/// A job config without the key is version 0, so its v1 output is refused and
+/// writes no metrics.
+#[tokio::test]
+async fn reprocess_completed_job_undeclared_refuses_v1_output() {
+    let (status, metrics) = reprocess_v1_output_at(None, "v0").await;
+    assert_eq!(
+        status,
+        JobStatus::Failed,
+        "v1 output at version 0 is refused"
+    );
+    assert_eq!(metrics, 0, "a refused job writes no metrics");
 }
 
 // =============================================================================

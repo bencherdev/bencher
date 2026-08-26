@@ -196,6 +196,7 @@ fn parse_catch2_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {
 
 #[cfg(test)]
 pub(crate) mod test_cpp_catch2 {
+    use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
@@ -247,9 +248,7 @@ pub(crate) mod test_cpp_catch2 {
         let file_path = "./tool_output/cpp/catch2/four.txt";
         let results = opt_convert_file_path::<AdapterCppCatch2>(
             file_path,
-            Settings {
-                average: Some(JsonAverage::Mean),
-            },
+            Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_cpp_catch2(&results);
@@ -258,9 +257,7 @@ pub(crate) mod test_cpp_catch2 {
             None,
             opt_convert_file_path::<AdapterCppCatch2>(
                 file_path,
-                Settings {
-                    average: Some(JsonAverage::Median)
-                }
+                Settings::new(Some(JsonAverage::Median), BmfVersion::default())
             )
         );
     }

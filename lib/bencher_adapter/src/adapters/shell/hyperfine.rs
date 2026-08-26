@@ -89,6 +89,7 @@ impl Hyperfine {
 
 #[cfg(test)]
 pub(crate) mod test_shell_hyperfine {
+    use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
@@ -125,9 +126,7 @@ pub(crate) mod test_shell_hyperfine {
 
         let results = opt_convert_file_path::<AdapterShellHyperfine>(
             &file_path,
-            Settings {
-                average: Some(JsonAverage::Mean),
-            },
+            Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_shell_hyperfine(&results);

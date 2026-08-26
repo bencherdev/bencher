@@ -504,8 +504,9 @@ async fn report(
     day: usize,
     results: Vec<String>,
     thresholds: Option<serde_json::Value>,
+    bmf_version: Option<u8>,
 ) -> serde_json::Value {
-    let body = serde_json::json!({
+    let mut body = serde_json::json!({
         "branch": "main",
         "testbed": "localhost",
         "start_time": format!("2024-01-{day:02}T00:00:00Z"),
@@ -513,6 +514,12 @@ async fn report(
         "results": results,
         "thresholds": thresholds,
     });
+    // A v1 payload has to declare its version; a v0 payload keeps no key.
+    if let Some(bmf_version) = bmf_version
+        && let Some(object) = body.as_object_mut()
+    {
+        object.insert("bmf_version".to_owned(), serde_json::json!(bmf_version));
+    }
 
     let resp = server
         .client
@@ -654,6 +661,7 @@ async fn metrics_get_value_row_is_unchanged_but_for_the_additions() {
                 .to_owned(),
         ],
         None,
+        None,
     )
     .await;
 
@@ -717,6 +725,7 @@ async fn metrics_get_bound_row_resolves() {
                 .to_owned(),
         ],
         None,
+        None,
     )
     .await;
 
@@ -760,6 +769,7 @@ async fn metrics_get_named_row_resolves() {
             )],
         )],
         None,
+        Some(1),
     )
     .await;
 
@@ -827,6 +837,7 @@ async fn metrics_get_checked_value_row() {
                 )],
             )],
             Some(threshold_models()),
+            Some(1),
         )
         .await;
     }
@@ -892,6 +903,7 @@ async fn metrics_get_named_row_wrong_project() {
             )],
         )],
         None,
+        Some(1),
     )
     .await;
 
