@@ -777,7 +777,7 @@ fn perf_query(
 }
 
 /// The threshold, model, boundary, and any alert for one metric.
-type PerfBoundary = (
+pub(super) type PerfBoundary = (
     QueryThreshold,
     QueryModel,
     QueryBoundary,
@@ -960,20 +960,6 @@ impl PendingMetric {
             boundary,
             alert,
         }
-    }
-}
-
-pub(super) fn threshold_model_alert(
-    project: &QueryProject,
-    tma: Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
-) -> (Option<JsonThresholdModel>, Option<JsonPerfAlert>) {
-    if let Some((query_threshold, query_model, query_alert)) = tma {
-        let threshold =
-            Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
-        let alert = query_alert.map(QueryAlert::into_perf_json);
-        (threshold, alert)
-    } else {
-        (None, None)
     }
 }
 
