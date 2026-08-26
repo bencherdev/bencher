@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, Model};
+use bencher_valid::{DateTime, MetricName, Model};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -9,8 +9,8 @@ use serde::{
 };
 
 use crate::{
-    BranchNameId, JsonBranch, JsonMeasure, JsonModel, JsonTestbed, MeasureNameId, ProjectUuid,
-    TestbedNameId,
+    BranchNameId, JsonBranch, JsonMeasure, JsonModel, JsonTestbed, MeasureNameId, ParameterFilter,
+    ProjectUuid, TestbedNameId,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -25,6 +25,16 @@ pub struct JsonNewThreshold {
     pub testbed: TestbedNameId,
     /// The UUID, slug, or name of the threshold measure.
     pub measure: MeasureNameId,
+    /// The name of the metric this threshold checks.
+    /// If not set, the threshold checks the conventional `value` name.
+    /// A threshold always checks exactly one name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<MetricName>,
+    /// The variants this threshold checks, as a parameters filter.
+    /// A variant matches when any entry in the filter is a subset of its parameters.
+    /// If not set, or set to an empty list, the threshold checks every variant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     #[serde(flatten)]
     pub model: Model,
 }
@@ -44,6 +54,14 @@ pub struct JsonThreshold {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub measure: JsonMeasure,
+    /// The name of the metric this threshold checks.
+    /// Absent when the threshold checks the conventional `value` name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<MetricName>,
+    /// The variants this threshold checks, in canonical order.
+    /// Absent when the threshold checks every variant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     pub model: Option<JsonModel>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -57,6 +75,20 @@ pub struct JsonThresholdModel {
     pub project: ProjectUuid,
     pub model: JsonModel,
     pub created: DateTime,
+}
+
+impl JsonThresholdModel {
+    /// The order a list of boundaries is returned in.
+    ///
+    /// A metric row may carry a boundary per threshold that checked it, and the
+    /// thresholds are put in the order they were created, oldest first, with the
+    /// UUID breaking a tie between two created in the same second. Nothing about the
+    /// list is a ranking: every threshold that checked the row is in it, and no reader
+    /// should read the first as the winner.
+    #[must_use]
+    pub fn boundary_order(&self) -> (i64, ThresholdUuid) {
+        (self.created.timestamp(), self.uuid)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
