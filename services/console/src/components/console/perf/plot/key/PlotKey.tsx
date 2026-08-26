@@ -4,7 +4,7 @@ import { BENCHMARK_ICON } from "../../../../../config/project/benchmarks";
 import { BRANCH_ICON } from "../../../../../config/project/branches";
 import { MEASURE_ICON } from "../../../../../config/project/measures";
 import { TESTBED_ICON } from "../../../../../config/project/testbeds";
-import type { JsonPerf, JsonPerfMetrics } from "../../../../../types/bencher";
+import type { JsonPerf, JsonPerfLine } from "../../../../../types/bencher";
 
 export interface Props {
 	key: Accessor<boolean>;
@@ -47,7 +47,7 @@ const ExpandedKey = (props: {
 	handlePerfActive: (index: number) => void;
 	togglePerfActive: () => void;
 }) => {
-	const dimensions = (resultDimension: (result: JsonPerfMetrics) => string) =>
+	const dimensions = (resultDimension: (result: JsonPerfLine) => string) =>
 		props.perfData()?.results?.reduce((set, result) => {
 			return set.add(resultDimension(result));
 		}, new Set());

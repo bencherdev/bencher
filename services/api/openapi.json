@@ -6448,7 +6448,7 @@
           "perf"
         ],
         "summary": "Query project performance metrics",
-        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
+        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. Each permutation returns one result per grid point of its benchmark, narrowed by the `parameters` filter when one is given. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_perf_get",
         "parameters": [
           {
@@ -6501,6 +6501,15 @@
             "description": "A comma separated list of measure UUIDs to query.",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parameters",
+            "description": "An optional comma separated list of URL encoded parameter sets to filter on. A grid point is queried when at least one of them is a subset of its parameter set: every key the filter names, with the same value. Leaving this off queries every grid point.",
+            "schema": {
+              "nullable": true,
               "type": "string"
             }
           },
@@ -13845,6 +13854,27 @@
           "$ref": "#/components/schemas/JsonMember"
         }
       },
+      "JsonMetricEntry": {
+        "description": "Exactly one `metric` row: one named scalar and every threshold that gated it.",
+        "type": "object",
+        "properties": {
+          "boundaries": {
+            "nullable": true,
+            "description": "Every threshold that gated this named scalar, with the boundary it produced and any alert that boundary raised. Absent when nothing gated it.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonPerfBoundary"
+            }
+          },
+          "value": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "value"
+        ]
+      },
       "JsonMetricTriple": {
         "type": "object",
         "properties": {
@@ -15376,7 +15406,7 @@
           "results": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/JsonPerfMetrics"
+              "$ref": "#/components/schemas/JsonPerfLine"
             }
           },
           "start_time": {
@@ -15416,7 +15446,8 @@
           "uuid"
         ]
       },
-      "JsonPerfMetric": {
+      "JsonPerfBoundary": {
+        "description": "A threshold and the boundary it produced, with any alert that boundary raised.",
         "type": "object",
         "properties": {
           "alert": {
@@ -15428,50 +15459,19 @@
             ]
           },
           "boundary": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonBoundary"
-              }
-            ]
-          },
-          "end_time": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "iteration": {
-            "$ref": "#/components/schemas/Iteration"
-          },
-          "metric": {
-            "$ref": "#/components/schemas/JsonMetricTriple"
-          },
-          "report": {
-            "$ref": "#/components/schemas/ReportUuid"
-          },
-          "start_time": {
-            "$ref": "#/components/schemas/DateTime"
+            "$ref": "#/components/schemas/JsonBoundary"
           },
           "threshold": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonThresholdModel"
-              }
-            ]
-          },
-          "version": {
-            "$ref": "#/components/schemas/JsonVersion"
+            "$ref": "#/components/schemas/JsonThresholdModel"
           }
         },
         "required": [
-          "end_time",
-          "iteration",
-          "metric",
-          "report",
-          "start_time",
-          "version"
+          "boundary",
+          "threshold"
         ]
       },
-      "JsonPerfMetrics": {
+      "JsonPerfLine": {
+        "description": "One line of a perf query: one grid point of one benchmark, on one branch, one testbed, and one measure.",
         "type": "object",
         "properties": {
           "benchmark": {
@@ -15486,8 +15486,16 @@
           "metrics": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/JsonPerfMetric"
+              "$ref": "#/components/schemas/JsonPerfMetrics"
             }
+          },
+          "parameter": {
+            "description": "The parameter set this line plots.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonParameter"
+              }
+            ]
           },
           "testbed": {
             "$ref": "#/components/schemas/JsonTestbed"
@@ -15498,7 +15506,80 @@
           "branch",
           "measure",
           "metrics",
+          "parameter",
           "testbed"
+        ]
+      },
+      "JsonPerfMetrics": {
+        "description": "One point of a perf line: everything one measure of one grid point measured, in one iteration of one report.",
+        "type": "object",
+        "properties": {
+          "alert": {
+            "nullable": true,
+            "description": "Deprecated. The alert raised on the `value` row's boundary, if any.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonPerfAlert"
+              }
+            ]
+          },
+          "boundary": {
+            "nullable": true,
+            "description": "Deprecated. The boundary computed for the `value` row, if any.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonBoundary"
+              }
+            ]
+          },
+          "end_time": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "iteration": {
+            "$ref": "#/components/schemas/Iteration"
+          },
+          "metric": {
+            "nullable": true,
+            "description": "Deprecated. Reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nAbsent when the measure carries no `value` name, which BMF v1 permits. Never absent for anything an older client could produce.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonMetricTriple"
+              }
+            ]
+          },
+          "metrics": {
+            "description": "Every named scalar this measure ingested, keyed by name.",
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonMetricEntry"
+            }
+          },
+          "report": {
+            "$ref": "#/components/schemas/ReportUuid"
+          },
+          "start_time": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "threshold": {
+            "nullable": true,
+            "description": "Deprecated. The threshold that gated the `value` row, if any.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonThresholdModel"
+              }
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/JsonVersion"
+          }
+        },
+        "required": [
+          "end_time",
+          "iteration",
+          "metrics",
+          "report",
+          "start_time",
+          "version"
         ]
       },
       "JsonPlan": {

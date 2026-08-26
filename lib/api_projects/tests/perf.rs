@@ -15,8 +15,8 @@ use bencher_api_tests::{
 };
 use bencher_json::{
     AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, HeadUuid, JobStatus, JobUuid, JsonPerf,
-    MeasureUuid, MetricName, MetricUuid, Priority, ReportBenchmarkUuid, ReportUuid, SpecUuid,
-    TestbedUuid, VersionUuid,
+    JsonPerfQuery, MeasureUuid, MetricName, MetricUuid, ParameterSet, ParameterUuid, Priority,
+    ReportBenchmarkUuid, ReportUuid, SpecUuid, TestbedUuid, VersionUuid,
     project::{alert::AlertStatus, boundary::BoundaryLimit},
 };
 use bencher_schema::{
@@ -568,7 +568,13 @@ async fn perf_get_single_result() {
     let perf: JsonPerf = resp.json().await.expect("parse response");
     assert_eq!(perf.results.len(), 1);
     assert_eq!(perf.results[0].metrics.len(), 1);
-    assert_eq!(perf.results[0].metrics[0].metric.value, 42.0);
+    assert_eq!(
+        perf.results[0].metrics[0]
+            .metric
+            .expect("the metric triple")
+            .value,
+        42.0
+    );
     assert_eq!(perf.results[0].metrics[0].report, data.report_uuid);
 }
 
@@ -780,8 +786,20 @@ async fn perf_get_multiple_metrics_same_permutation() {
     assert_eq!(perf.results.len(), 1);
     assert_eq!(perf.results[0].metrics.len(), 2);
     // Ordered by version number (oldest first)
-    assert_eq!(perf.results[0].metrics[0].metric.value, 42.0);
-    assert_eq!(perf.results[0].metrics[1].metric.value, 99.0);
+    assert_eq!(
+        perf.results[0].metrics[0]
+            .metric
+            .expect("the metric triple")
+            .value,
+        42.0
+    );
+    assert_eq!(
+        perf.results[0].metrics[1]
+            .metric
+            .expect("the metric triple")
+            .value,
+        99.0
+    );
 }
 
 // =============================================================================
@@ -1962,9 +1980,21 @@ async fn perf_ordered_by_version_number() {
     assert_eq!(perf.results[0].metrics.len(), 2);
     // v1 should come first (oldest version number)
     assert_eq!(perf.results[0].metrics[0].version.number.0, 1);
-    assert_eq!(perf.results[0].metrics[0].metric.value, 100.0);
+    assert_eq!(
+        perf.results[0].metrics[0]
+            .metric
+            .expect("the metric triple")
+            .value,
+        100.0
+    );
     assert_eq!(perf.results[0].metrics[1].version.number.0, 2);
-    assert_eq!(perf.results[0].metrics[1].metric.value, 200.0);
+    assert_eq!(
+        perf.results[0].metrics[1]
+            .metric
+            .expect("the metric triple")
+            .value,
+        200.0
+    );
 }
 
 #[tokio::test]
@@ -2094,8 +2124,20 @@ async fn perf_ordered_by_start_time_within_version() {
     let perf: JsonPerf = resp.json().await.expect("parse response");
     assert_eq!(perf.results[0].metrics.len(), 2);
     // Earlier start_time should come first (within same version number)
-    assert_eq!(perf.results[0].metrics[0].metric.value, 100.0);
-    assert_eq!(perf.results[0].metrics[1].metric.value, 200.0);
+    assert_eq!(
+        perf.results[0].metrics[0]
+            .metric
+            .expect("the metric triple")
+            .value,
+        100.0
+    );
+    assert_eq!(
+        perf.results[0].metrics[1]
+            .metric
+            .expect("the metric triple")
+            .value,
+        200.0
+    );
 }
 
 #[tokio::test]
@@ -2502,7 +2544,9 @@ async fn perf_lower_upper_values() {
 
     assert_eq!(resp.status(), StatusCode::OK);
     let perf: JsonPerf = resp.json().await.expect("parse response");
-    let metric = &perf.results[0].metrics[0].metric;
+    let metric = perf.results[0].metrics[0]
+        .metric
+        .expect("the metric triple");
     assert_eq!(metric.value, 100.0);
     assert_eq!(metric.lower_value, Some(90.0.into()));
     assert_eq!(metric.upper_value, Some(110.0.into()));
@@ -2585,9 +2629,21 @@ async fn perf_multiple_iterations() {
     assert_eq!(perf.results[0].metrics.len(), 2);
     // Ordered by iteration
     assert_eq!(perf.results[0].metrics[0].iteration.0, 0);
-    assert_eq!(perf.results[0].metrics[0].metric.value, 10.0);
+    assert_eq!(
+        perf.results[0].metrics[0]
+            .metric
+            .expect("the metric triple")
+            .value,
+        10.0
+    );
     assert_eq!(perf.results[0].metrics[1].iteration.0, 1);
-    assert_eq!(perf.results[0].metrics[1].metric.value, 20.0);
+    assert_eq!(
+        perf.results[0].metrics[1]
+            .metric
+            .expect("the metric triple")
+            .value,
+        20.0
+    );
 }
 
 #[tokio::test]
@@ -3048,4 +3104,756 @@ async fn perf_access_by_project_uuid() {
     assert_eq!(resp.status(), StatusCode::OK);
     let perf: JsonPerf = resp.json().await.expect("parse response");
     assert_eq!(perf.results.len(), 1);
+}
+
+// =============================================================================
+// Section: Parameter sets
+// =============================================================================
+
+fn create_parameter(
+    server: &TestServer,
+    benchmark_id: i32,
+    set: &ParameterSet,
+) -> (ParameterUuid, i32) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let parameter_uuid = ParameterUuid::new();
+    diesel::insert_into(schema::parameter::table)
+        .values((
+            schema::parameter::uuid.eq(&parameter_uuid),
+            schema::parameter::benchmark_id.eq(benchmark_id),
+            schema::parameter::set.eq(set),
+            schema::parameter::created.eq(&now),
+            schema::parameter::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert parameter");
+    let parameter_id: i32 = schema::parameter::table
+        .filter(schema::parameter::uuid.eq(&parameter_uuid))
+        .select(schema::parameter::id)
+        .first(&mut conn)
+        .expect("get parameter id");
+    (parameter_uuid, parameter_id)
+}
+
+/// Add one grid point to a benchmark inside the fixture's report.
+fn create_grid_point(
+    server: &TestServer,
+    data: &PerfTestData,
+    benchmark_id: i32,
+    set: &str,
+    value: f64,
+) -> ParameterUuid {
+    let set: ParameterSet = set.parse().expect("parse parameter set");
+    let (parameter_uuid, parameter_id) = create_parameter(server, benchmark_id, &set);
+
+    let mut conn = server.db_conn();
+    let report_benchmark_uuid = ReportBenchmarkUuid::new();
+    diesel::insert_into(schema::report_benchmark::table)
+        .values((
+            schema::report_benchmark::uuid.eq(&report_benchmark_uuid),
+            schema::report_benchmark::report_id.eq(data.report_id),
+            schema::report_benchmark::iteration.eq(0),
+            schema::report_benchmark::benchmark_id.eq(benchmark_id),
+            schema::report_benchmark::parameter_id.eq(parameter_id),
+        ))
+        .execute(&mut conn)
+        .expect("insert report_benchmark");
+    let report_benchmark_id: i32 = schema::report_benchmark::table
+        .filter(schema::report_benchmark::uuid.eq(&report_benchmark_uuid))
+        .select(schema::report_benchmark::id)
+        .first(&mut conn)
+        .expect("get report_benchmark id");
+
+    create_metric(
+        &mut conn,
+        &MetricUuid::new(),
+        report_benchmark_id,
+        data.measure_id,
+        value,
+        None,
+        None,
+    );
+
+    parameter_uuid
+}
+
+/// Create a second benchmark, with only the empty parameter set.
+fn create_sibling_benchmark(server: &TestServer, project_id: i32) -> (BenchmarkUuid, i32) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let benchmark_uuid = BenchmarkUuid::new();
+    diesel::insert_into(schema::benchmark::table)
+        .values((
+            schema::benchmark::uuid.eq(&benchmark_uuid),
+            schema::benchmark::project_id.eq(project_id),
+            schema::benchmark::name.eq(&format!("test-benchmark-{benchmark_uuid}")),
+            schema::benchmark::slug.eq(&format!("test-benchmark-{benchmark_uuid}")),
+            schema::benchmark::created.eq(&now),
+            schema::benchmark::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert benchmark");
+    let benchmark_id: i32 = schema::benchmark::table
+        .filter(schema::benchmark::uuid.eq(&benchmark_uuid))
+        .select(schema::benchmark::id)
+        .first(&mut conn)
+        .expect("get benchmark id");
+    create_empty_parameter(&mut conn, benchmark_id);
+    (benchmark_uuid, benchmark_id)
+}
+
+fn create_named_metric(
+    server: &TestServer,
+    report_benchmark_id: i32,
+    measure_id: i32,
+    name: MetricName,
+    value: f64,
+) {
+    let mut conn = server.db_conn();
+    diesel::insert_into(schema::metric::table)
+        .values((
+            schema::metric::uuid.eq(MetricUuid::new()),
+            schema::metric::report_benchmark_id.eq(report_benchmark_id),
+            schema::metric::measure_id.eq(measure_id),
+            schema::metric::name.eq(name),
+            schema::metric::value.eq(value),
+        ))
+        .execute(&mut conn)
+        .expect("insert named metric");
+}
+
+/// The perf path for a fully built query, through the encoder a client uses.
+fn perf_query_url(project_slug: &str, query: &JsonPerfQuery) -> String {
+    format!(
+        "/v0/projects/{project_slug}/perf?{}",
+        query.to_query_string(&[]).expect("build query string")
+    )
+}
+
+/// A `JsonPerfQuery` over the fixture's dimensions.
+fn fixture_query(
+    data: &PerfTestData,
+    benchmarks: Vec<BenchmarkUuid>,
+    parameters: &[&str],
+) -> JsonPerfQuery {
+    JsonPerfQuery {
+        branches: vec![data.branch_uuid],
+        heads: Vec::new(),
+        testbeds: vec![data.testbed_uuid],
+        specs: Vec::new(),
+        benchmarks,
+        parameters: parameters
+            .iter()
+            .map(|set| set.parse().expect("parse parameter set"))
+            .collect(),
+        measures: vec![data.measure_uuid],
+        start_time: None,
+        end_time: None,
+    }
+}
+
+/// The `parameters` query value for filter blobs spelled exactly as given.
+///
+/// Each blob is percent encoded as a list element and then again as a query string
+/// value, which are the two decodes the request undoes on the way in.
+fn raw_parameters_query(blobs: &[&str]) -> String {
+    blobs
+        .iter()
+        .map(|blob| {
+            let element = blob
+                .replace('%', "%25")
+                .replace('"', "%22")
+                .replace(',', "%2C");
+            element.replace('%', "%25")
+        })
+        .collect::<Vec<_>>()
+        .join("%2C")
+}
+
+async fn get_perf(server: &TestServer, token: &str, url: &str) -> JsonPerf {
+    let resp = server
+        .client
+        .get(server.api_url(url))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET {url}");
+    resp.json().await.expect("parse response")
+}
+
+/// The canonical parameter set of every line, in response order.
+fn line_parameters(perf: &JsonPerf) -> Vec<String> {
+    perf.results
+        .iter()
+        .map(|result| result.parameter.set.canonical())
+        .collect()
+}
+
+#[tokio::test]
+async fn perf_fans_out_one_line_per_grid_point() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "perffanout@example.com").await;
+    let org = server.create_org(&user, "Perf Fan Out Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Fan Out Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+    let sixteen = create_grid_point(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
+    let thirty_two =
+        create_grid_point(&server, &data, data.benchmark_id, r#"{"size_mb": 32}"#, 2.0);
+
+    let query = fixture_query(&data, vec![data.benchmark_uuid], &[]);
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(project.slug.as_ref(), &query),
+    )
+    .await;
+
+    // The lines come out in grid point creation order, so the empty set is first.
+    assert_eq!(
+        line_parameters(&perf),
+        vec![
+            "{}".to_owned(),
+            r#"{"size_mb":16}"#.to_owned(),
+            r#"{"size_mb":32}"#.to_owned()
+        ]
+    );
+    for result in &perf.results {
+        assert_eq!(result.benchmark.uuid, data.benchmark_uuid);
+        assert_eq!(result.measure.uuid, data.measure_uuid);
+        assert_eq!(result.parameter.benchmark, data.benchmark_uuid);
+        assert_eq!(result.metrics.len(), 1, "one point per line");
+    }
+    assert_eq!(
+        perf.results[0].metrics[0]
+            .metric
+            .expect("the metric triple")
+            .value,
+        42.0
+    );
+    assert_eq!(
+        perf.results[1].metrics[0]
+            .metric
+            .expect("the metric triple")
+            .value,
+        1.0
+    );
+    assert_eq!(
+        perf.results[2].metrics[0]
+            .metric
+            .expect("the metric triple")
+            .value,
+        2.0
+    );
+    assert_eq!(perf.results[1].parameter.uuid, sixteen);
+    assert_eq!(perf.results[2].parameter.uuid, thirty_two);
+}
+
+#[tokio::test]
+async fn perf_parameters_filter_is_an_or_of_ands() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "perffilteror@example.com").await;
+    let org = server.create_org(&user, "Perf Filter Or Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Filter Or Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+    for (set, value) in [
+        (r#"{"op": "read", "size_mb": 16}"#, 1.0),
+        (r#"{"op": "read", "size_mb": 32}"#, 2.0),
+        (r#"{"op": "write", "size_mb": 16}"#, 3.0),
+        (r#"{"op": "write", "size_mb": 32}"#, 4.0),
+    ] {
+        create_grid_point(&server, &data, data.benchmark_id, set, value);
+    }
+
+    // Every read, plus the one write at 32.
+    let query = fixture_query(
+        &data,
+        vec![data.benchmark_uuid],
+        &[r#"{"op": "read"}"#, r#"{"op": "write", "size_mb": 32}"#],
+    );
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(project.slug.as_ref(), &query),
+    )
+    .await;
+
+    // A one key element matches every superset of itself.
+    assert_eq!(
+        line_parameters(&perf),
+        vec![
+            r#"{"op":"read","size_mb":16}"#.to_owned(),
+            r#"{"op":"read","size_mb":32}"#.to_owned(),
+            r#"{"op":"write","size_mb":32}"#.to_owned(),
+        ]
+    );
+
+    // The empty element is a subset of every parameter set, so it matches them all.
+    let query = fixture_query(&data, vec![data.benchmark_uuid], &["{}"]);
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(project.slug.as_ref(), &query),
+    )
+    .await;
+    assert_eq!(perf.results.len(), 5, "the empty element matches every set");
+}
+
+#[tokio::test]
+async fn perf_parameters_filter_matching_nothing_returns_no_lines() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "perffilternone@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf Filter None Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Filter None Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+    create_grid_point(&server, &data, data.benchmark_id, r#"{"op": "read"}"#, 1.0);
+    let (sibling_uuid, sibling_id) = create_sibling_benchmark(&server, project_id);
+    create_grid_point(&server, &data, sibling_id, r#"{"op": "write"}"#, 2.0);
+
+    // The write benchmark still returns its line while the read one returns none.
+    let query = fixture_query(
+        &data,
+        vec![data.benchmark_uuid, sibling_uuid],
+        &[r#"{"op": "write"}"#],
+    );
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(project.slug.as_ref(), &query),
+    )
+    .await;
+    assert_eq!(perf.results.len(), 1);
+    assert_eq!(perf.results[0].benchmark.uuid, sibling_uuid);
+    assert_eq!(
+        perf.results[0].parameter.set.canonical(),
+        r#"{"op":"write"}"#
+    );
+
+    // A filter that matches nothing anywhere returns nothing at all.
+    let query = fixture_query(
+        &data,
+        vec![data.benchmark_uuid, sibling_uuid],
+        &[r#"{"op": "trim"}"#],
+    );
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(project.slug.as_ref(), &query),
+    )
+    .await;
+    assert!(perf.results.is_empty());
+}
+
+#[tokio::test]
+async fn perf_parameters_filter_is_number_spelling_blind() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "perffilterspelling@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf Filter Spelling Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Filter Spelling Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+    create_grid_point(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
+
+    for blob in [
+        r#"{"size_mb":16}"#,
+        r#"{"size_mb":16.0}"#,
+        r#"{"size_mb":1.6e1}"#,
+    ] {
+        let url = format!(
+            "{}&parameters={}",
+            build_perf_url(
+                project.slug.as_ref(),
+                &[data.branch_uuid],
+                &[data.testbed_uuid],
+                &[data.benchmark_uuid],
+                &[data.measure_uuid],
+                "",
+            ),
+            raw_parameters_query(&[blob])
+        );
+        let perf = get_perf(&server, &user.token, &url).await;
+        assert_eq!(
+            line_parameters(&perf),
+            vec![r#"{"size_mb":16}"#.to_owned()],
+            "{blob} must hit the same grid point"
+        );
+    }
+
+    // A different number is a different grid point, spelling notwithstanding.
+    let url = format!(
+        "{}&parameters={}",
+        build_perf_url(
+            project.slug.as_ref(),
+            &[data.branch_uuid],
+            &[data.testbed_uuid],
+            &[data.benchmark_uuid],
+            &[data.measure_uuid],
+            "",
+        ),
+        raw_parameters_query(&[r#"{"size_mb":16.5}"#])
+    );
+    let perf = get_perf(&server, &user.token, &url).await;
+    assert!(perf.results.is_empty());
+}
+
+#[tokio::test]
+async fn perf_parameters_filter_empty_value_is_no_filter() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "perffilterempty@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf Filter Empty Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Filter Empty Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+    create_grid_point(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
+
+    let url = build_perf_url(
+        project.slug.as_ref(),
+        &[data.branch_uuid],
+        &[data.testbed_uuid],
+        &[data.benchmark_uuid],
+        &[data.measure_uuid],
+        "&parameters=",
+    );
+    let perf = get_perf(&server, &user.token, &url).await;
+    assert_eq!(perf.results.len(), 2);
+}
+
+// =============================================================================
+// Section: The metrics map
+// =============================================================================
+
+#[tokio::test]
+async fn perf_metrics_map_carries_every_named_scalar() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "perfmetricsmap@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf Metrics Map Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Metrics Map Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let opts = PerfDataOptions {
+        metric_value: 42.0,
+        lower_value: Some(40.5),
+        upper_value: Some(44.25),
+        ..Default::default()
+    };
+    let data = create_perf_data_with_options(&server, project_id, &opts);
+    create_named_metric(
+        &server,
+        data.report_benchmark_id,
+        data.measure_id,
+        "p99".parse().expect("parse metric name"),
+        99.5,
+    );
+    let (_, boundary_id) = create_threshold_and_boundary(&server, &data, project_id);
+    let alert_uuid = create_alert(&server, boundary_id);
+
+    let query = fixture_query(&data, vec![data.benchmark_uuid], &[]);
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(project.slug.as_ref(), &query),
+    )
+    .await;
+
+    assert_eq!(perf.results.len(), 1);
+    let point = &perf.results[0].metrics[0];
+    let names = point
+        .metrics
+        .keys()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        names,
+        vec![
+            "lower_value".to_owned(),
+            "p99".to_owned(),
+            "upper_value".to_owned(),
+            "value".to_owned()
+        ]
+    );
+    for (name, value) in [
+        ("value", 42.0),
+        ("lower_value", 40.5),
+        ("upper_value", 44.25),
+        ("p99", 99.5),
+    ] {
+        let name = name.parse().expect("parse metric name");
+        let entry = point.metrics.get(&name).expect("named scalar");
+        assert_eq!(entry.value, value);
+    }
+
+    // Only the gated named scalar carries a boundaries list.
+    let value = point
+        .metrics
+        .get(&MetricName::value())
+        .expect("the value scalar");
+    let boundaries = value
+        .boundaries
+        .as_ref()
+        .expect("the value scalar is gated");
+    assert_eq!(boundaries.len(), 1);
+    assert_eq!(boundaries[0].boundary.baseline, Some(100.0.into()));
+    assert_eq!(
+        boundaries[0].alert.as_ref().map(|a| a.uuid),
+        Some(alert_uuid)
+    );
+    for name in ["lower_value", "upper_value", "p99"] {
+        let name = name.parse().expect("parse metric name");
+        assert!(
+            point
+                .metrics
+                .get(&name)
+                .expect("named scalar")
+                .boundaries
+                .is_none(),
+            "{name} is gated by nothing"
+        );
+    }
+
+    // The deprecated singular fields still say what they always said.
+    let metric = point.metric.expect("the metric triple");
+    assert_eq!(metric.uuid, data.metric_uuid);
+    assert_eq!(metric.value, 42.0);
+    assert_eq!(metric.lower_value, Some(40.5.into()));
+    assert_eq!(metric.upper_value, Some(44.25.into()));
+    assert_eq!(
+        point.threshold.as_ref().map(|t| t.uuid),
+        boundaries.first().map(|b| b.threshold.uuid)
+    );
+    assert_eq!(
+        point.boundary.and_then(|boundary| boundary.baseline),
+        Some(100.0.into())
+    );
+    assert_eq!(point.alert.as_ref().map(|a| a.uuid), Some(alert_uuid));
+}
+
+#[tokio::test]
+async fn perf_v0_response_fields_are_unchanged() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "perfbytecompat@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf Byte Compat Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Byte Compat Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let opts = PerfDataOptions {
+        metric_value: 42.0,
+        lower_value: Some(40.5),
+        upper_value: Some(44.25),
+        ..Default::default()
+    };
+    let data = create_perf_data_with_options(&server, project_id, &opts);
+    let (_, boundary_id) = create_threshold_and_boundary(&server, &data, project_id);
+    let alert_uuid = create_alert(&server, boundary_id);
+
+    let url = build_perf_url(
+        project.slug.as_ref(),
+        &[data.branch_uuid],
+        &[data.testbed_uuid],
+        &[data.benchmark_uuid],
+        &[data.measure_uuid],
+        "",
+    );
+    let resp = server
+        .client
+        .get(server.api_url(&url))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = resp.text().await.expect("read response");
+
+    // The float bytes are compared, not parsed values: parsing and re-serializing
+    // would hide exactly the formatting drift this has to rule out.
+    assert!(
+        body.contains(&format!(
+            r#""metric":{{"uuid":"{}","value":42.0,"lower_value":40.5,"upper_value":44.25}}"#,
+            data.metric_uuid
+        )),
+        "{body}"
+    );
+    assert!(
+        body.contains(r#""boundary":{"baseline":100.0,"lower_limit":50.0,"upper_limit":150.0}"#),
+        "{body}"
+    );
+
+    let json: serde_json::Value = serde_json::from_str(&body).expect("parse response");
+    let results = json["results"].as_array().expect("results");
+    assert_eq!(results.len(), 1);
+    let result = results[0].as_object().expect("result");
+    let mut keys = result.keys().cloned().collect::<Vec<_>>();
+    keys.sort();
+    assert_eq!(
+        keys,
+        vec![
+            "benchmark".to_owned(),
+            "branch".to_owned(),
+            "measure".to_owned(),
+            "metrics".to_owned(),
+            "parameter".to_owned(),
+            "testbed".to_owned(),
+        ],
+        "the parameter set is the only field added beside the dimensions"
+    );
+    assert_eq!(result["branch"]["uuid"], data.branch_uuid.to_string());
+    assert_eq!(result["testbed"]["uuid"], data.testbed_uuid.to_string());
+    assert_eq!(result["benchmark"]["uuid"], data.benchmark_uuid.to_string());
+    assert_eq!(result["measure"]["uuid"], data.measure_uuid.to_string());
+
+    let points = result["metrics"].as_array().expect("metrics");
+    assert_eq!(points.len(), 1);
+    let point = points[0].as_object().expect("point");
+    let mut keys = point.keys().cloned().collect::<Vec<_>>();
+    keys.sort();
+    assert_eq!(
+        keys,
+        vec![
+            "alert".to_owned(),
+            "boundary".to_owned(),
+            "end_time".to_owned(),
+            "iteration".to_owned(),
+            "metric".to_owned(),
+            "metrics".to_owned(),
+            "report".to_owned(),
+            "start_time".to_owned(),
+            "threshold".to_owned(),
+            "version".to_owned(),
+        ],
+        "the metrics map is the only field added beside the deprecated ones"
+    );
+    assert_eq!(point["report"], data.report_uuid.to_string());
+    assert_eq!(point["iteration"], 0);
+    assert_eq!(point["version"]["number"], 1);
+    assert_eq!(point["version"]["hash"], serde_json::Value::Null);
+    assert_eq!(point["alert"]["uuid"], alert_uuid.to_string());
+    assert_eq!(point["alert"]["limit"], "upper");
+    assert_eq!(point["alert"]["status"], "active");
+    assert!(point["threshold"]["model"].is_object());
+}
+
+#[tokio::test]
+async fn perf_point_without_a_value_name_keeps_its_line() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "perfnovalue@example.com").await;
+    let org = server.create_org(&user, "Perf No Value Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf No Value Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+
+    // A second report benchmark, in its own iteration, naming only `p99`.
+    let mut conn = server.db_conn();
+    let report_benchmark_uuid = ReportBenchmarkUuid::new();
+    diesel::insert_into(schema::report_benchmark::table)
+        .values((
+            schema::report_benchmark::uuid.eq(&report_benchmark_uuid),
+            schema::report_benchmark::report_id.eq(data.report_id),
+            schema::report_benchmark::iteration.eq(1),
+            schema::report_benchmark::benchmark_id.eq(data.benchmark_id),
+            schema::report_benchmark::parameter_id.eq(data.parameter_id),
+        ))
+        .execute(&mut conn)
+        .expect("insert report_benchmark");
+    let report_benchmark_id: i32 = schema::report_benchmark::table
+        .filter(schema::report_benchmark::uuid.eq(&report_benchmark_uuid))
+        .select(schema::report_benchmark::id)
+        .first(&mut conn)
+        .expect("get report_benchmark id");
+    drop(conn);
+    create_named_metric(
+        &server,
+        report_benchmark_id,
+        data.measure_id,
+        "p99".parse().expect("parse metric name"),
+        99.5,
+    );
+
+    let query = fixture_query(&data, vec![data.benchmark_uuid], &[]);
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(project.slug.as_ref(), &query),
+    )
+    .await;
+
+    assert_eq!(perf.results.len(), 1, "one grid point, one line");
+    let points = &perf.results[0].metrics;
+    assert_eq!(
+        points.len(),
+        2,
+        "the point that named no value is still a point"
+    );
+
+    // The fixture's point still says everything it always said.
+    let value_point = &points[0];
+    assert_eq!(value_point.iteration.0, 0);
+    assert_eq!(
+        value_point.metric.expect("the metric triple").value,
+        42.0,
+        "a point that names value still carries the triple"
+    );
+
+    // `p99` is in the map and nothing is in the deprecated fields.
+    let named_point = &points[1];
+    assert_eq!(named_point.iteration.0, 1);
+    assert!(
+        named_point.metric.is_none(),
+        "a point that names no value carries no triple"
+    );
+    assert!(named_point.threshold.is_none());
+    assert!(named_point.boundary.is_none());
+    assert!(named_point.alert.is_none());
+    let names = named_point
+        .metrics
+        .keys()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+    assert_eq!(names, vec!["p99".to_owned()]);
+    let p99 = named_point
+        .metrics
+        .get(&"p99".parse().expect("parse metric name"))
+        .expect("the p99 scalar");
+    assert_eq!(p99.value, 99.5);
+    assert!(p99.boundaries.is_none());
 }

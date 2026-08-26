@@ -105,6 +105,16 @@ impl ParameterSet {
         self.0.is_empty()
     }
 
+    /// Whether every key of this set is in `superset` with an identical value.
+    ///
+    /// This is what a parameters filter element matches on. Values compare
+    /// canonically, so `16`, `16.0`, and `1.6e1` are one number and one match.
+    pub fn is_subset_of(&self, superset: &Self) -> bool {
+        self.0
+            .iter()
+            .all(|(key, value)| superset.0.get(key) == Some(value))
+    }
+
     /// The `SQLite` JSONB encoding of the canonical form.
     ///
     /// Byte identical to what `SQLite`'s own `jsonb()` produces over
@@ -423,11 +433,14 @@ mod tests {
 
     use super::{ParameterKey, ParameterScalar, ParameterSet};
 
-    fn canonical(parameters: &str) -> String {
+    fn parse(parameters: &str) -> ParameterSet {
         parameters
             .parse::<ParameterSet>()
             .expect("Failed to parse parameters")
-            .canonical()
+    }
+
+    fn canonical(parameters: &str) -> String {
+        parse(parameters).canonical()
     }
 
     /// A one key parameter set holding an exact `f64`, built without a parsing
@@ -799,6 +812,69 @@ mod tests {
             canonical(r#"{"a": true, "b": false}"#),
             r#"{"a":true,"b":false}"#
         );
+    }
+
+    #[test]
+    fn subset_match_includes_supersets() {
+        let grid_point = parse(r#"{"fsync": true, "op": "read", "size_mb": 16}"#);
+
+        for filter in [
+            "{}",
+            r#"{"op": "read"}"#,
+            r#"{"size_mb": 16}"#,
+            r#"{"op": "read", "size_mb": 16}"#,
+            r#"{"fsync": true, "op": "read", "size_mb": 16}"#,
+        ] {
+            assert!(
+                parse(filter).is_subset_of(&grid_point),
+                "expected {filter} to match the grid point"
+            );
+        }
+
+        for filter in [
+            r#"{"op": "write"}"#,
+            r#"{"size_mb": 32}"#,
+            r#"{"fsync": false}"#,
+            // A key the grid point does not pin at all.
+            r#"{"threads": 4}"#,
+            // Every key has to match, not just one of them.
+            r#"{"op": "read", "size_mb": 32}"#,
+        ] {
+            assert!(
+                !parse(filter).is_subset_of(&grid_point),
+                "expected {filter} not to match the grid point"
+            );
+        }
+    }
+
+    #[test]
+    fn subset_match_of_the_empty_set() {
+        let empty = ParameterSet::default();
+        assert!(empty.is_subset_of(&empty));
+        assert!(!parse(r#"{"op": "read"}"#).is_subset_of(&empty));
+    }
+
+    #[test]
+    fn subset_match_is_number_spelling_blind() {
+        let grid_point = parse(r#"{"n": 16}"#);
+        for filter in [r#"{"n": 16}"#, r#"{"n": 16.0}"#, r#"{"n": 1.6e1}"#] {
+            assert!(
+                parse(filter).is_subset_of(&grid_point),
+                "expected {filter} to match {{\"n\":16}}"
+            );
+        }
+        assert!(!parse(r#"{"n": 16.5}"#).is_subset_of(&grid_point));
+    }
+
+    #[test]
+    fn subset_match_is_type_aware() {
+        let grid_point = parse(r#"{"a": 1, "b": "true", "c": true}"#);
+        for filter in [r#"{"a": "1"}"#, r#"{"b": true}"#, r#"{"c": "true"}"#] {
+            assert!(
+                !parse(filter).is_subset_of(&grid_point),
+                "expected {filter} not to match the grid point"
+            );
+        }
     }
 
     #[test]

@@ -1,13 +1,19 @@
+use std::collections::{BTreeMap, HashMap};
+
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 #[cfg(feature = "plus")]
 use bencher_json::SpecUuid;
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, GitHash, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
-    ProjectResourceId, ReportUuid, TestbedUuid,
+    MetricName, MetricUuid, ParameterSet, ProjectResourceId, ReportUuid, TestbedUuid,
     project::{
         alert::JsonPerfAlert,
+        boundary::JsonBoundary,
         head::{JsonVersion, VersionNumber},
-        perf::{JsonPerfMetric, JsonPerfMetrics, JsonPerfQueryParams},
+        metric::JsonMetricTriple,
+        perf::{
+            JsonMetricEntry, JsonPerfBoundary, JsonPerfLine, JsonPerfMetrics, JsonPerfQueryParams,
+        },
         report::Iteration,
         threshold::JsonThresholdModel,
     },
@@ -21,11 +27,13 @@ use bencher_schema::{
     error::{bad_request_error, resource_not_found_err, with_auth_hint},
     model::{
         project::{
-            QueryProject,
+            ProjectId, QueryProject,
             benchmark::QueryBenchmark,
             branch::{QueryBranch, head::QueryHead},
             measure::QueryMeasure,
-            metric_boundary::QueryMetricBoundary,
+            metric::QueryMetric,
+            parameter::{ParameterId, QueryParameter},
+            report::report_benchmark::ReportBenchmarkId,
             testbed::QueryTestbed,
             threshold::{
                 QueryThreshold, alert::QueryAlert, boundary::QueryBoundary, model::QueryModel,
@@ -33,11 +41,12 @@ use bencher_schema::{
         },
         user::actor::{ApiActor, PubProjectBearerToken},
     },
-    schema, view,
+    schema,
 };
 use diesel::{
     ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _,
+    RunQueryDsl as _, SelectableHelper as _, query_builder::QueryFragment, query_dsl::LoadQuery,
+    sqlite::Sqlite,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
@@ -72,6 +81,8 @@ pub async fn proj_perf_options(
 /// The query results are every permutation of each branch, testbed, benchmark, and measure.
 /// There is a limit of 255 permutations for a single request.
 /// Therefore, only the first 255 permutations are returned.
+/// Each permutation returns one result per grid point of its benchmark,
+/// narrowed by the `parameters` filter when one is given.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project,
 /// or provide a valid project key for the project.
@@ -135,6 +146,7 @@ pub async fn get_inner(
         #[cfg(feature = "plus")]
         specs,
         benchmarks,
+        parameters,
         measures,
         start_time,
         end_time,
@@ -156,6 +168,7 @@ pub async fn get_inner(
         #[cfg(feature = "plus")]
         &specs,
         &benchmarks,
+        &parameters,
         &measures,
         times,
     )
@@ -175,6 +188,109 @@ struct Times {
     end_time: Option<DateTime>,
 }
 
+/// The grid points of one benchmark that a perf query plots.
+///
+/// The parameters filter is resolved here, in memory, so what reaches SQL is a
+/// list of row identifiers and never a JSON predicate.
+struct BenchmarkGrid {
+    benchmark: QueryBenchmark,
+    /// Keyed by row identifier and therefore in creation order, so the empty set
+    /// every benchmark is born with comes first.
+    grid_points: BTreeMap<ParameterId, QueryParameter>,
+    filtered: bool,
+}
+
+impl BenchmarkGrid {
+    fn parameter_ids(&self) -> Option<Vec<ParameterId>> {
+        self.filtered
+            .then(|| self.grid_points.keys().copied().collect())
+    }
+}
+
+fn benchmark_grid(
+    conn: &mut DbConnection,
+    project: &QueryProject,
+    benchmark_uuid: BenchmarkUuid,
+    parameters: &[ParameterSet],
+) -> Result<BenchmarkGrid, HttpError> {
+    let benchmark = QueryBenchmark::from_uuid(conn, project.id, benchmark_uuid)?;
+    let grid_points = schema::parameter::table
+        .filter(schema::parameter::benchmark_id.eq(benchmark.id))
+        .order(schema::parameter::id)
+        .select(QueryParameter::as_select())
+        .load::<QueryParameter>(conn)
+        .map_err(resource_not_found_err!(
+            Parameter,
+            (project, benchmark_uuid)
+        ))?
+        .into_iter()
+        .filter(|grid_point| {
+            parameters.is_empty()
+                || parameters
+                    .iter()
+                    .any(|filter| filter.is_subset_of(&grid_point.set))
+        })
+        .map(|grid_point| (grid_point.id, grid_point))
+        .collect();
+
+    Ok(BenchmarkGrid {
+        benchmark,
+        grid_points,
+        filtered: !parameters.is_empty(),
+    })
+}
+
+#[cfg(feature = "plus")]
+enum QueriedSpec {
+    Spec(Option<SpecId>),
+    Missing,
+}
+
+/// A spec that does not exist skips its permutation rather than failing the query.
+#[cfg(feature = "plus")]
+fn queried_spec(
+    conn: &mut DbConnection,
+    log: &slog::Logger,
+    spec_uuid: Option<SpecUuid>,
+) -> QueriedSpec {
+    let Some(spec_uuid) = spec_uuid else {
+        return QueriedSpec::Spec(None);
+    };
+    match QuerySpec::get_id(conn, spec_uuid) {
+        Ok(spec_id) => QueriedSpec::Spec(Some(spec_id)),
+        Err(e) => {
+            slog::info!(log, "Skipping perf query for nonexistent spec UUID: {spec_uuid}"; "error" => %e);
+            QueriedSpec::Missing
+        },
+    }
+}
+
+/// A benchmark that does not exist, and a benchmark whose every grid point the
+/// filter excludes, both return nothing rather than an error, so the other
+/// benchmarks of the same query still return their lines.
+fn queried_grid<'g>(
+    conn: &mut DbConnection,
+    log: &slog::Logger,
+    grids: &'g mut HashMap<BenchmarkUuid, Option<BenchmarkGrid>>,
+    project: &QueryProject,
+    benchmark_uuid: BenchmarkUuid,
+    parameters: &[ParameterSet],
+) -> Option<&'g BenchmarkGrid> {
+    grids
+        .entry(benchmark_uuid)
+        .or_insert_with(
+            || match benchmark_grid(conn, project, benchmark_uuid, parameters) {
+                Ok(grid) => Some(grid),
+                Err(e) => {
+                    slog::info!(log, "Skipping perf query for nonexistent benchmark UUID: {benchmark_uuid}"; "error" => %e);
+                    None
+                },
+            },
+        )
+        .as_ref()
+        .filter(|grid| !grid.grid_points.is_empty())
+}
+
 #[expect(
     clippy::too_many_arguments,
     reason = "perf query requires all filter dimensions"
@@ -189,35 +305,40 @@ async fn perf_results(
     testbeds: &[TestbedUuid],
     #[cfg(feature = "plus")] specs: &[Option<SpecUuid>],
     benchmarks: &[BenchmarkUuid],
+    parameters: &[ParameterSet],
     measures: &[MeasureUuid],
     times: Times,
-) -> Result<Vec<JsonPerfMetrics>, HttpError> {
-    #[cfg(not(feature = "plus"))]
-    let _ = log;
+) -> Result<Vec<JsonPerfLine>, HttpError> {
     let permutations = branches.len() * testbeds.len() * benchmarks.len() * measures.len();
     let gt_max_permutations = permutations > MAX_PERMUTATIONS;
     let mut results = Vec::with_capacity(permutations.min(MAX_PERMUTATIONS));
+    let mut grids: HashMap<BenchmarkUuid, Option<BenchmarkGrid>> = HashMap::new();
     // It is okay to use `zip` because `JsonPerfQuery` guarantees that the lengths are the same.
     for (branch_index, (branch_uuid, head_uuid)) in branches.iter().zip(heads.iter()).enumerate() {
         for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
             #[cfg(feature = "plus")]
-            let spec_id: Option<SpecId> = if let Some(spec_uuid) =
-                specs.get(testbed_index).copied().flatten()
-            {
-                match QuerySpec::get_id(actor_conn!(context, api_actor), spec_uuid) {
-                    Ok(id) => Some(id),
-                    Err(e) => {
-                        slog::info!(log, "Skipping perf query for nonexistent spec UUID: {spec_uuid}"; "error" => %e);
-                        continue;
-                    },
-                }
-            } else {
-                None
+            let QueriedSpec::Spec(spec_id) = queried_spec(
+                actor_conn!(context, api_actor),
+                log,
+                specs.get(testbed_index).copied().flatten(),
+            ) else {
+                continue;
             };
             #[cfg(not(feature = "plus"))]
             let spec_id: Option<SpecId> = None;
 
             for (benchmark_index, benchmark_uuid) in benchmarks.iter().enumerate() {
+                let Some(grid) = queried_grid(
+                    actor_conn!(context, api_actor),
+                    log,
+                    &mut grids,
+                    project,
+                    *benchmark_uuid,
+                    parameters,
+                ) else {
+                    continue;
+                };
+
                 for (measure_index, measure_uuid) in measures.iter().enumerate() {
                     if gt_max_permutations
                         && (branch_index + 1)
@@ -230,39 +351,35 @@ async fn perf_results(
                     }
 
                     let pq = perf_query(
-                        context,
-                        api_actor,
-                        project,
+                        project.id,
                         *branch_uuid,
                         *head_uuid,
                         *testbed_uuid,
                         spec_id,
                         *benchmark_uuid,
+                        grid.parameter_ids(),
                         *measure_uuid,
                         times,
                     )
-                    .await?;
+                    .load::<PerfQuery>(actor_conn!(context, api_actor))
+                    .map_err(resource_not_found_err!(
+                        Metric,
+                        (
+                            project,
+                            branch_uuid,
+                            testbed_uuid,
+                            benchmark_uuid,
+                            measure_uuid
+                        )
+                    ))?;
 
-                    let mut perf_metrics: Option<JsonPerfMetrics> = None;
-                    for (query_dimensions, perf_metric) in
-                        pq.into_iter().map(|pq| split_perf_query(project, pq))
-                    {
-                        if let Some(perf_metrics) = &mut perf_metrics {
-                            perf_metrics.metrics.push(perf_metric);
-                        } else {
-                            perf_metrics = new_perf_metrics(
-                                actor_conn!(context, api_actor),
-                                project,
-                                query_dimensions,
-                                perf_metric,
-                                spec_id,
-                            )
-                            .ok();
-                        }
-                    }
-                    if let Some(perf_metrics) = perf_metrics.take() {
-                        results.push(perf_metrics);
-                    }
+                    results.extend(into_perf_lines(
+                        actor_conn!(context, api_actor),
+                        project,
+                        grid,
+                        spec_id,
+                        pq,
+                    )?);
                 }
             }
         }
@@ -270,40 +387,58 @@ async fn perf_results(
     Ok(results)
 }
 
+/// One row per named scalar.
+///
+/// This reads the `metric` table directly rather than the `metric_boundary` view.
+/// All of a grid point's named scalars for one measure sit together on
+/// `index_metric_report_benchmark_measure_name`, so one range read returns every
+/// one of them, where the view had to seek each conventional name separately.
 #[expect(
     clippy::too_many_arguments,
     clippy::too_many_lines,
     reason = "perf query requires all filter dimensions"
 )]
-async fn perf_query(
-    context: &ApiContext,
-    api_actor: &ApiActor,
-    project: &QueryProject,
+fn perf_query(
+    project_id: ProjectId,
     branch_uuid: BranchUuid,
     head_uuid: Option<HeadUuid>,
     testbed_uuid: TestbedUuid,
     spec_id: Option<SpecId>,
     benchmark_uuid: BenchmarkUuid,
+    parameter_ids: Option<Vec<ParameterId>>,
     measure_uuid: MeasureUuid,
     times: Times,
-) -> Result<Vec<PerfQuery>, HttpError> {
-    let mut query = view::metric_boundary::table
+) -> impl LoadQuery<'static, DbConnection, PerfQuery> + QueryFragment<Sqlite> {
+    let mut query = schema::metric::table
         .inner_join(
-            schema::report_benchmark::table.inner_join(
-                schema::report::table
-                    .inner_join(schema::version::table
-                        .inner_join(schema::head_version::table
-                            .inner_join(schema::head::table
-                                .on(schema::head_version::head_id.eq(schema::head::id)),
-                            )
-                            .inner_join(schema::branch::table.on(schema::head::branch_id.eq(schema::branch::id))),
-                        ),
-                    )
-                    .inner_join(schema::testbed::table)
-            )
-            .inner_join(schema::benchmark::table)
+            schema::report_benchmark::table
+                .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
         )
-        .inner_join(schema::measure::table)
+        .inner_join(
+            schema::benchmark::table
+                .on(schema::benchmark::id.eq(schema::report_benchmark::benchmark_id)),
+        )
+        .inner_join(
+            schema::report::table.on(schema::report::id.eq(schema::report_benchmark::report_id)),
+        )
+        .inner_join(schema::version::table.on(schema::version::id.eq(schema::report::version_id)))
+        .inner_join(
+            schema::head_version::table.on(schema::head_version::version_id.eq(schema::version::id)),
+        )
+        .inner_join(schema::head::table.on(schema::head::id.eq(schema::head_version::head_id)))
+        .inner_join(schema::branch::table.on(schema::branch::id.eq(schema::head::branch_id)))
+        .inner_join(schema::testbed::table.on(schema::testbed::id.eq(schema::report::testbed_id)))
+        .inner_join(schema::measure::table.on(schema::measure::id.eq(schema::metric::measure_id)))
+        // Keep these joins flat with explicit `ON` clauses. SQLite cannot flatten a
+        // compound right operand of an outer join, so nesting the threshold, the
+        // model, and the alert inside the boundary join makes it scan the whole
+        // boundary table once per request.
+        .left_join(schema::boundary::table.on(schema::boundary::metric_id.eq(schema::metric::id)))
+        .left_join(
+            schema::threshold::table.on(schema::threshold::id.eq(schema::boundary::threshold_id)),
+        )
+        .left_join(schema::model::table.on(schema::model::id.eq(schema::boundary::model_id)))
+        .left_join(schema::alert::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
         // It is important to filter for the branch through the `head_version` table
         // and NOT on the head in the `report` table.
         // This is because the `head_version` table is the one that is updated
@@ -315,15 +450,10 @@ async fn perf_query(
         .filter(schema::benchmark::uuid.eq(benchmark_uuid))
         .filter(schema::measure::uuid.eq(measure_uuid))
         // Make sure that the project is the same for all dimensions
-        .filter(schema::branch::project_id.eq(project.id))
-        .filter(schema::testbed::project_id.eq(project.id))
-        .filter(schema::benchmark::project_id.eq(project.id))
-        .filter(schema::measure::project_id.eq(project.id))
-        // There may or may not be a boundary for any given metric
-        .left_join(schema::threshold::table)
-        .left_join(schema::model::table)
-        // There may or may not be an alert for any given boundary
-        .left_join(schema::alert::table.on(view::metric_boundary::boundary_id.eq(schema::alert::boundary_id.nullable())))
+        .filter(schema::branch::project_id.eq(project_id))
+        .filter(schema::testbed::project_id.eq(project_id))
+        .filter(schema::benchmark::project_id.eq(project_id))
+        .filter(schema::measure::project_id.eq(project_id))
         .into_boxed();
 
     // Filter for the branch head if it is provided.
@@ -339,6 +469,11 @@ async fn perf_query(
         query = query.filter(schema::report::spec_id.eq(spec_id));
     }
 
+    // Already resolved to row identifiers, so this is an indexed lookup.
+    if let Some(parameter_ids) = parameter_ids {
+        query = query.filter(schema::report_benchmark::parameter_id.eq_any(parameter_ids));
+    }
+
     let Times {
         start_time,
         end_time,
@@ -350,14 +485,16 @@ async fn perf_query(
         query = query.filter(schema::report::end_time.le(end_time));
     }
 
-    let query = query
+    query
         // Order by the version number so that the oldest version is first.
         // Because multiple reports can use the same version (via git hash), order by the start time next.
         // Then within a report order by the iteration number.
+        // Finally the report benchmark, so one grid point's named scalars stay together.
         .order((
             schema::version::number,
             schema::report::start_time,
             schema::report_benchmark::iteration,
+            schema::report_benchmark::id,
         ))
         .select((
             QueryBranch::as_select(),
@@ -365,12 +502,15 @@ async fn perf_query(
             QueryTestbed::as_select(),
             QueryBenchmark::as_select(),
             QueryMeasure::as_select(),
+            schema::report_benchmark::id,
+            schema::report_benchmark::parameter_id,
             schema::report::uuid,
             schema::report_benchmark::iteration,
             schema::report::start_time,
             schema::report::end_time,
             schema::version::number,
             schema::version::hash,
+            QueryMetric::as_select(),
             (
                 (
                     schema::threshold::id,
@@ -397,28 +537,36 @@ async fn perf_query(
                     schema::model::replaced,
                 ),
                 (
+                    schema::boundary::id,
+                    schema::boundary::uuid,
+                    schema::boundary::metric_id,
+                    schema::boundary::threshold_id,
+                    schema::boundary::model_id,
+                    schema::boundary::baseline,
+                    schema::boundary::lower_limit,
+                    schema::boundary::upper_limit,
+                ),
+                (
                     schema::alert::id,
                     schema::alert::uuid,
                     schema::alert::boundary_id,
                     schema::alert::boundary_limit,
                     schema::alert::status,
                     schema::alert::modified,
-                ).nullable(),
-            ).nullable(),
-            QueryMetricBoundary::as_select(),
-        ));
-
-    // Use this to print the raw SQL query
-    // https://bencher.dev/learn/engineering/sqlite-performance-tuning/
-    // println!("{}", diesel::debug_query(&query).to_string());
-
-    query
-        // Acquire the lock on the database connection for every query.
-        // This helps to avoid resource contention when the database is under heavy load.
-        // This will make the perf query itself slower, but it will make the overall system more stable.
-        .load::<PerfQuery>(actor_conn!(context, api_actor))
-        .map_err(resource_not_found_err!(Metric, (project,  branch_uuid, testbed_uuid, benchmark_uuid, measure_uuid)))
+                )
+                    .nullable(),
+            )
+                .nullable(),
+        ))
 }
+
+/// The threshold, model, boundary, and any alert for one named scalar.
+type PerfGate = (
+    QueryThreshold,
+    QueryModel,
+    QueryBoundary,
+    Option<QueryAlert>,
+);
 
 type PerfQuery = (
     QueryBranch,
@@ -426,105 +574,217 @@ type PerfQuery = (
     QueryTestbed,
     QueryBenchmark,
     QueryMeasure,
+    ReportBenchmarkId,
+    ParameterId,
     ReportUuid,
     Iteration,
     DateTime,
     DateTime,
     VersionNumber,
     Option<GitHash>,
-    Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
-    QueryMetricBoundary,
+    QueryMetric,
+    Option<PerfGate>,
 );
 
 struct QueryDimensions {
     branch: QueryBranch,
     head: QueryHead,
     testbed: QueryTestbed,
-    benchmark: QueryBenchmark,
     measure: QueryMeasure,
 }
 
-type PerfMetricQuery = (
-    ReportUuid,
-    Iteration,
-    DateTime,
-    DateTime,
-    VersionNumber,
-    Option<GitHash>,
-    Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
-    QueryMetricBoundary,
-);
-
-fn split_perf_query(
+/// One grid point's rows are contiguous in plot order, so each line is built as
+/// its rows are read.
+fn into_perf_lines(
+    conn: &mut DbConnection,
     project: &QueryProject,
-    (
-        branch,
-        head,
-        testbed,
-        benchmark,
-        measure,
-        report_uuid,
+    grid: &BenchmarkGrid,
+    spec_id: Option<SpecId>,
+    rows: Vec<PerfQuery>,
+) -> Result<Vec<JsonPerfLine>, HttpError> {
+    let mut dimensions: Option<QueryDimensions> = None;
+    let mut benchmark: Option<QueryBenchmark> = None;
+    let mut lines: BTreeMap<ParameterId, Vec<PendingMetric>> = BTreeMap::new();
+
+    for (
+        query_branch,
+        query_head,
+        query_testbed,
+        query_benchmark,
+        query_measure,
+        report_benchmark_id,
+        parameter_id,
+        report,
         iteration,
         start_time,
         end_time,
         version_number,
         version_hash,
-        boundary_limit,
-        query_metric_boundary,
-    ): PerfQuery,
-) -> (QueryDimensions, JsonPerfMetric) {
-    let query_dimensions = QueryDimensions {
-        branch,
-        head,
-        testbed,
-        benchmark,
-        measure,
+        query_metric,
+        gate,
+    ) in rows
+    {
+        // Every row of one permutation carries the same dimensions, so the first row
+        // is the one that names them.
+        if dimensions.is_none() {
+            dimensions = Some(QueryDimensions {
+                branch: query_branch,
+                head: query_head,
+                testbed: query_testbed,
+                measure: query_measure,
+            });
+            benchmark = Some(query_benchmark);
+        }
+
+        let line = lines.entry(parameter_id).or_default();
+        if line
+            .last()
+            .is_none_or(|pending| pending.report_benchmark_id != report_benchmark_id)
+        {
+            line.push(PendingMetric {
+                report_benchmark_id,
+                report,
+                iteration,
+                start_time,
+                end_time,
+                version: JsonVersion {
+                    number: version_number,
+                    hash: version_hash,
+                },
+                value_uuid: None,
+                metrics: BTreeMap::new(),
+            });
+        }
+        let Some(pending) = line.last_mut() else {
+            debug_assert!(false, "the pending metric was just pushed");
+            continue;
+        };
+        pending.push(project, query_metric, gate);
+    }
+
+    let (Some(dimensions), Some(benchmark)) = (dimensions, benchmark) else {
+        return Ok(Vec::new());
     };
-    let metric_query = (
-        report_uuid,
-        iteration,
-        start_time,
-        end_time,
-        version_number,
-        version_hash,
-        boundary_limit,
-        query_metric_boundary,
-    );
-    (query_dimensions, new_perf_metric(project, metric_query))
+    let QueryDimensions {
+        branch,
+        head,
+        testbed,
+        measure,
+    } = dimensions;
+    let json_branch = branch.into_json_for_head(conn, project, &head, None)?;
+    let json_testbed = testbed.into_json_for_spec(conn, project, spec_id)?;
+    let json_benchmark = benchmark.into_json_for_project(project);
+    let json_measure = measure.into_json_for_project(project);
+
+    let mut results = Vec::with_capacity(lines.len());
+    for (parameter_id, line) in lines {
+        let Some(grid_point) = grid.grid_points.get(&parameter_id) else {
+            debug_assert!(false, "the queried grid point is one of the matched ones");
+            continue;
+        };
+        let metrics = line
+            .into_iter()
+            .map(PendingMetric::into_json)
+            .collect::<Vec<_>>();
+        results.push(JsonPerfLine {
+            branch: json_branch.clone(),
+            testbed: json_testbed.clone(),
+            benchmark: json_benchmark.clone(),
+            parameter: grid_point.clone().into_json_for_benchmark(&grid.benchmark),
+            measure: json_measure.clone(),
+            metrics,
+        });
+    }
+    Ok(results)
 }
 
-fn new_perf_metric(
-    project: &QueryProject,
-    (
-        report_uuid,
-        iteration,
-        start_time,
-        end_time,
-        version_number,
-        version_hash,
-        tma,
-        query_metric_boundary,
-    ): PerfMetricQuery,
-) -> JsonPerfMetric {
-    let version = JsonVersion {
-        number: version_number,
-        hash: version_hash,
-    };
+/// The deprecated metric triple needs the `value`, `lower_value`, and `upper_value`
+/// rows together, which is only true once the last row has been read.
+struct PendingMetric {
+    report_benchmark_id: ReportBenchmarkId,
+    report: ReportUuid,
+    iteration: Iteration,
+    start_time: DateTime,
+    end_time: DateTime,
+    version: JsonVersion,
+    /// The identifier the deprecated metric triple carries.
+    value_uuid: Option<MetricUuid>,
+    metrics: BTreeMap<MetricName, JsonMetricEntry>,
+}
 
-    let (threshold, alert) = threshold_model_alert(project, tma);
-    let (metric, boundary) = QueryMetricBoundary::split(query_metric_boundary);
-    let boundary = boundary.map(QueryBoundary::into_json);
+impl PendingMetric {
+    fn push(&mut self, project: &QueryProject, query_metric: QueryMetric, gate: Option<PerfGate>) {
+        let QueryMetric {
+            id: _,
+            uuid,
+            report_benchmark_id: _,
+            measure_id: _,
+            name,
+            value,
+        } = query_metric;
 
-    JsonPerfMetric {
-        report: report_uuid,
-        iteration,
-        start_time,
-        end_time,
-        version,
-        metric,
-        threshold,
-        boundary,
-        alert,
+        if name == MetricName::value() {
+            self.value_uuid = Some(uuid);
+        }
+
+        // A named scalar repeats across rows only when several thresholds gated it.
+        let entry = self.metrics.entry(name).or_insert(JsonMetricEntry {
+            value: value.into(),
+            boundaries: None,
+        });
+        if let Some((query_threshold, query_model, query_boundary, query_alert)) = gate {
+            entry
+                .boundaries
+                .get_or_insert_with(Vec::new)
+                .push(JsonPerfBoundary {
+                    threshold: query_threshold
+                        .into_threshold_model_json_for_project(project, query_model),
+                    boundary: query_boundary.into_json(),
+                    alert: query_alert.map(QueryAlert::into_perf_json),
+                });
+        }
+    }
+
+    /// A measure with no `value` metric is still a point, but it has no deprecated
+    /// metric triple.
+    fn into_json(self) -> JsonPerfMetrics {
+        let Self {
+            report_benchmark_id: _,
+            report,
+            iteration,
+            start_time,
+            end_time,
+            version,
+            value_uuid,
+            metrics,
+        } = self;
+
+        let value = metrics.get(&MetricName::value());
+        let metric = value_uuid.zip(value).map(|(uuid, value)| JsonMetricTriple {
+            uuid,
+            value: value.value,
+            lower_value: metrics
+                .get(&MetricName::lower_value())
+                .map(|entry| entry.value),
+            upper_value: metrics
+                .get(&MetricName::upper_value())
+                .map(|entry| entry.value),
+        });
+        // The deprecated gate is the one that gated the `value` row.
+        let (threshold, boundary, alert) = value.map_or((None, None, None), deprecated_gate);
+
+        JsonPerfMetrics {
+            report,
+            iteration,
+            start_time,
+            end_time,
+            version,
+            metrics,
+            metric,
+            threshold,
+            boundary,
+            alert,
+        }
     }
 }
 
@@ -542,25 +802,116 @@ pub(super) fn threshold_model_alert(
     }
 }
 
-fn new_perf_metrics(
-    conn: &mut DbConnection,
-    project: &QueryProject,
-    query_dimensions: QueryDimensions,
-    metric: JsonPerfMetric,
-    spec_id: Option<SpecId>,
-) -> Result<JsonPerfMetrics, HttpError> {
-    let QueryDimensions {
-        branch,
-        head,
-        testbed,
-        benchmark,
-        measure,
-    } = query_dimensions;
-    Ok(JsonPerfMetrics {
-        branch: branch.into_json_for_head(conn, project, &head, None)?,
-        testbed: testbed.into_json_for_spec(conn, project, spec_id)?,
-        benchmark: benchmark.into_json_for_project(project),
-        measure: measure.into_json_for_project(project),
-        metrics: vec![metric],
-    })
+type DeprecatedGate = (
+    Option<JsonThresholdModel>,
+    Option<JsonBoundary>,
+    Option<JsonPerfAlert>,
+);
+
+fn deprecated_gate(value: &JsonMetricEntry) -> DeprecatedGate {
+    let Some(perf_boundary) = value
+        .boundaries
+        .as_ref()
+        .and_then(|boundaries| boundaries.first())
+    else {
+        return (None, None, None);
+    };
+    let JsonPerfBoundary {
+        threshold,
+        boundary,
+        alert,
+    } = perf_boundary;
+    (Some(threshold.clone()), Some(*boundary), alert.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::{BenchmarkUuid, BranchUuid, MeasureUuid, TestbedUuid};
+    use bencher_schema::model::project::ProjectId;
+
+    use super::{ParameterId, Sqlite, Times, perf_query};
+
+    fn perf_query_sql() -> String {
+        diesel::debug_query::<Sqlite, _>(&perf_query(
+            ProjectId::default(),
+            BranchUuid::new(),
+            None,
+            TestbedUuid::new(),
+            None,
+            BenchmarkUuid::new(),
+            None,
+            MeasureUuid::new(),
+            Times {
+                start_time: None,
+                end_time: None,
+            },
+        ))
+        .to_string()
+    }
+
+    #[test]
+    fn perf_query_reads_the_metric_table() {
+        let sql = perf_query_sql();
+
+        assert!(
+            sql.contains(
+                "`metric` INNER JOIN `report_benchmark` ON (`report_benchmark`.`id` = `metric`.`report_benchmark_id`)"
+            ),
+            "{sql}"
+        );
+        assert!(!sql.contains("metric_boundary"), "{sql}");
+    }
+
+    #[test]
+    fn perf_query_joins_the_boundary_flat() {
+        let sql = perf_query_sql();
+
+        assert!(
+            sql.contains("LEFT OUTER JOIN `boundary` ON (`boundary`.`metric_id` = `metric`.`id`)"),
+            "{sql}"
+        );
+        assert!(
+            sql.contains(
+                "LEFT OUTER JOIN `threshold` ON (`threshold`.`id` = `boundary`.`threshold_id`)"
+            ),
+            "{sql}"
+        );
+        assert!(
+            sql.contains("LEFT OUTER JOIN `model` ON (`model`.`id` = `boundary`.`model_id`)"),
+            "{sql}"
+        );
+        assert!(
+            sql.contains("LEFT OUTER JOIN `alert` ON (`alert`.`boundary_id` = `boundary`.`id`)"),
+            "{sql}"
+        );
+        assert!(!sql.contains("LEFT OUTER JOIN (("), "{sql}");
+    }
+
+    #[test]
+    fn perf_query_filters_on_resolved_parameter_ids() {
+        assert!(
+            !perf_query_sql().contains("`report_benchmark`.`parameter_id` IN"),
+            "an unfiltered query filters on no parameter set"
+        );
+
+        let sql = diesel::debug_query::<Sqlite, _>(&perf_query(
+            ProjectId::default(),
+            BranchUuid::new(),
+            None,
+            TestbedUuid::new(),
+            None,
+            BenchmarkUuid::new(),
+            Some(vec![ParameterId::default()]),
+            MeasureUuid::new(),
+            Times {
+                start_time: None,
+                end_time: None,
+            },
+        ))
+        .to_string();
+        assert!(
+            sql.contains("`report_benchmark`.`parameter_id` IN"),
+            "{sql}"
+        );
+    }
 }

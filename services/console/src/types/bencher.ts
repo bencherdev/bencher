@@ -603,6 +603,30 @@ export interface JsonLogin {
 	recaptcha_token?: NonEmpty;
 }
 
+export interface JsonPerfAlert {
+	uuid: Uuid;
+	limit: BoundaryLimit;
+	status: AlertStatus;
+	modified: string;
+}
+
+/** A threshold and the boundary it produced, with any alert that boundary raised. */
+export interface JsonPerfBoundary {
+	threshold: JsonThresholdModel;
+	boundary: JsonBoundary;
+	alert?: JsonPerfAlert;
+}
+
+/** Exactly one `metric` row: one named scalar and every threshold that gated it. */
+export interface JsonMetricEntry {
+	value: number;
+	/**
+	 * Every threshold that gated this named scalar, with the boundary it produced
+	 * and any alert that boundary raised. Absent when nothing gated it.
+	 */
+	boundaries?: JsonPerfBoundary[];
+}
+
 export interface JsonNewCheckout {
 	organization: OrganizationResourceId;
 	level: PlanLevel;
@@ -881,13 +905,6 @@ export interface JsonOAuthUser {
 	plan?: PlanLevel;
 }
 
-export interface JsonPerfAlert {
-	uuid: Uuid;
-	limit: BoundaryLimit;
-	status: AlertStatus;
-	modified: string;
-}
-
 export interface JsonOneMetric {
 	uuid: Uuid;
 	report: Uuid;
@@ -942,31 +959,54 @@ export interface JsonProject {
 	claimed?: string;
 }
 
-export interface JsonPerfMetric {
+/**
+ * One point of a perf line: everything one measure of one grid point measured, in
+ * one iteration of one report.
+ */
+export interface JsonPerfMetrics {
 	report: Uuid;
 	iteration: Iteration;
 	start_time: string;
 	end_time: string;
 	version: JsonVersion;
-	metric: JsonMetricTriple;
+	/** Every named scalar this measure ingested, keyed by name. */
+	metrics: Record<string, JsonMetricEntry>;
+	/**
+	 * Deprecated. Reconstructed from the `value` row and its
+	 * `lower_value`/`upper_value` siblings. Retained for compatibility with older
+	 * clients and removed in a future release.
+	 * 
+	 * Absent when the measure carries no `value` name, which BMF v1 permits. Never
+	 * absent for anything an older client could produce.
+	 */
+	metric?: JsonMetricTriple;
+	/** Deprecated. The threshold that gated the `value` row, if any. */
 	threshold?: JsonThresholdModel;
+	/** Deprecated. The boundary computed for the `value` row, if any. */
 	boundary?: JsonBoundary;
+	/** Deprecated. The alert raised on the `value` row's boundary, if any. */
 	alert?: JsonPerfAlert;
 }
 
-export interface JsonPerfMetrics {
+/**
+ * One line of a perf query: one grid point of one benchmark, on one branch, one
+ * testbed, and one measure.
+ */
+export interface JsonPerfLine {
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	benchmark: JsonBenchmark;
+	/** The parameter set this line plots. */
+	parameter: JsonParameter;
 	measure: JsonMeasure;
-	metrics: JsonPerfMetric[];
+	metrics: JsonPerfMetrics[];
 }
 
 export interface JsonPerf {
 	project: JsonProject;
 	start_time?: string;
 	end_time?: string;
-	results: JsonPerfMetrics[];
+	results: JsonPerfLine[];
 }
 
 /**
@@ -979,6 +1019,8 @@ export interface JsonPerfQuery {
 	testbeds: Uuid[];
 	specs: Uuid[];
 	benchmarks: Uuid[];
+	/** The parameters filter, OR across its elements. Empty matches every grid point. */
+	parameters: Record<string, string | number | boolean>[];
 	measures: Uuid[];
 	start_time?: string;
 	end_time?: string;
@@ -1380,6 +1422,7 @@ export enum PerfQueryKey {
 	Testbeds = "testbeds",
 	Specs = "specs",
 	Benchmarks = "benchmarks",
+	Parameters = "parameters",
 	Measures = "measures",
 	StartTime = "start_time",
 	EndTime = "end_time",

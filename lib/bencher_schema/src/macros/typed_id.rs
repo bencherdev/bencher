@@ -8,6 +8,10 @@ macro_rules! typed_id {
             Default,
             PartialEq,
             Eq,
+            // A row identifier is assigned in creation order, so ordering by it is
+            // ordering by age.
+            PartialOrd,
+            Ord,
             Hash,
             derive_more::Display,
             diesel::FromSqlRow,

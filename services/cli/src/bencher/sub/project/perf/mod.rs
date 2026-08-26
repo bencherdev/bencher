@@ -95,6 +95,8 @@ impl From<Perf> for JsonPerfQuery {
             #[cfg(feature = "plus")]
             specs,
             benchmarks,
+            // No filter, so every grid point is queried.
+            parameters: Vec::new(),
             measures,
             start_time,
             end_time,
