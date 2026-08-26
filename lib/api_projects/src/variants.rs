@@ -3,21 +3,21 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    BenchmarkResourceId, JsonDirection, JsonPagination, JsonVariant, JsonVariants,
-    ProjectResourceId, VariantUuid,
+    BenchmarkResourceId, JsonDirection, JsonPagination, JsonVariant, JsonVariants, ParameterFilter,
+    ParameterSet, ProjectResourceId, ThresholdUuid, VariantUuid,
     project::variant::{JsonNewVariant, JsonUpdateVariant},
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     actor_conn, auth_conn,
-    context::ApiContext,
+    context::{ApiContext, DbConnection},
     error::{
         conflict_error, resource_conflict_err, resource_not_found_err, with_auth_hint,
         with_token_hint,
     },
     model::{
         project::{
-            QueryProject,
+            ProjectId, QueryProject,
             benchmark::QueryBenchmark,
             variant::{QueryVariant, UpdateVariant},
         },
@@ -26,7 +26,7 @@ use bencher_schema::{
             auth::{AuthUser, BearerToken},
         },
     },
-    schema, write_conn,
+    schema, write_conn, write_transaction,
 };
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
@@ -402,6 +402,12 @@ pub async fn patch_inner(
 /// Delete a variant for a benchmark.
 /// The user must have `delete` permissions for the project.
 /// All reports that use this variant must be deleted first!
+/// All thresholds that use this variant must be deleted first!
+///
+/// A threshold uses a variant when its `parameters` filter names that exact set of
+/// parameters. A filter that merely matches the variant, because the variant pins
+/// every key the filter names and more besides, is a predicate over values rather
+/// than a reference to this row, and it does not stand in the way.
 ///
 /// A benchmark's empty variant cannot be deleted.
 /// The empty variant is structural: every benchmark is born with exactly one, and
@@ -457,9 +463,59 @@ async fn delete_inner(
         )));
     }
 
-    diesel::delete(schema::variant::table.filter(schema::variant::id.eq(query_variant.id)))
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Variant, &query_variant))?;
+    let mut blocking_threshold = None;
+    let deleted = write_transaction!(context, |conn| {
+        diesel::delete(schema::variant::table.filter(schema::variant::id.eq(query_variant.id)))
+            .execute(conn)?;
 
-    Ok(())
+        blocking_threshold =
+            threshold_naming_parameters(conn, query_project.id, &query_variant.parameters)?;
+        if blocking_threshold.is_some() {
+            return Err(diesel::result::Error::RollbackTransaction);
+        }
+        diesel::QueryResult::Ok(())
+    });
+
+    match (deleted, blocking_threshold) {
+        (Ok(()), _) => Ok(()),
+        (Err(diesel::result::Error::RollbackTransaction), Some(threshold)) => {
+            Err(conflict_error(format!(
+                "All thresholds that use this variant must be deleted first! Threshold ({threshold}) checks the variant ({variant}) of benchmark ({benchmark}).",
+                variant = query_variant.parameters,
+                benchmark = query_benchmark.uuid,
+            )))
+        },
+        (Err(e), _) => Err(resource_conflict_err!(Variant, &query_variant)(e)),
+    }
+}
+
+/// The first threshold in the project whose filter names this exact set of
+/// parameters, if there is one.
+///
+/// A filter names parameters by canonical equality and only by canonical equality. A
+/// filter that merely matches them, say `{"a":1}` against the variant
+/// `{"a":1,"b":2}`, is a predicate over values rather than a reference to a row, and
+/// deleting the row it happens to match takes nothing out from under it.
+fn threshold_naming_parameters(
+    conn: &mut DbConnection,
+    project_id: ProjectId,
+    parameters: &ParameterSet,
+) -> diesel::QueryResult<Option<ThresholdUuid>> {
+    let canonical = parameters.canonical();
+    Ok(schema::threshold::table
+        .filter(schema::threshold::project_id.eq(project_id))
+        .filter(schema::threshold::parameters.is_not_null())
+        .order(schema::threshold::id.asc())
+        .select((schema::threshold::uuid, schema::threshold::parameters))
+        .load::<(ThresholdUuid, Option<ParameterFilter>)>(conn)?
+        .into_iter()
+        .find(|(_, parameters)| {
+            parameters.as_ref().is_some_and(|parameters| {
+                parameters
+                    .sets()
+                    .iter()
+                    .any(|set| set.canonical() == canonical)
+            })
+        })
+        .map(|(uuid, _)| uuid))
 }
