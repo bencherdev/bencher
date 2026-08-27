@@ -4508,7 +4508,7 @@
           "parameters"
         ],
         "summary": "Delete a parameter set",
-        "description": "Delete a parameter set for a benchmark. The user must have `delete` permissions for the project. All reports that use this parameter must be deleted first!\n\nA benchmark's empty parameter set cannot be deleted. The empty set is structural: every benchmark is born with exactly one, and report ingest treats a missing empty set as data corruption rather than a set to mint. Deleting it would manufacture exactly that corruption, so the request is refused. Archiving the empty set stays allowed, because a later report revives it the same way it revives any other archived set.",
+        "description": "Delete a parameter set for a benchmark. The user must have `delete` permissions for the project. All reports that use this parameter must be deleted first! All thresholds that use this parameter must be deleted first!\n\nA threshold uses a parameter set when its `parameters` filter names that exact set. A filter that merely matches the set, because the set pins every key the filter names and more besides, is a predicate over values rather than a reference to this row, and it does not stand in the way.\n\nA benchmark's empty parameter set cannot be deleted. The empty set is structural: every benchmark is born with exactly one, and report ingest treats a missing empty set as data corruption rather than a set to mint. Deleting it would manufacture exactly that corruption, so the request is refused. Archiving the empty set stays allowed, because a later report revives it the same way it revives any other archived set.",
         "operationId": "proj_parameter_delete",
         "parameters": [
           {
@@ -17117,20 +17117,86 @@
           }
         }
       },
-      "JsonReportThresholds": {
+      "JsonReportThresholdEntry": {
+        "description": "One threshold a BMF version 1 report declares.\n\nThe fields are the dimensions a threshold hangs off that the report does not already state, in their canonical order, and the model to gate with.",
         "type": "object",
         "properties": {
-          "models": {
+          "measure": {
+            "description": "Measure UUID, slug, or name. If a measure name or slug is provided, the measure will be created if it does not exist.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NameId"
+              }
+            ]
+          },
+          "metric": {
             "nullable": true,
-            "description": "Map of measure UUID, slug, or name to the threshold model to use. If a measure name or slug is provided, the measure will be created if it does not exist.",
+            "description": "The name of the metric this threshold gates. If not set, the threshold gates the conventional `value` name. A threshold always gates exactly one name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricName"
+              }
+            ]
+          },
+          "model": {
+            "description": "The threshold model to use.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Model"
+              }
+            ]
+          },
+          "parameters": {
+            "nullable": true,
+            "description": "The grid points this threshold gates, as a list of parameter sets. A grid point matches when any set in the list is a subset of it. If not set, or set to an empty list, the threshold gates every grid point.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterFilter"
+              }
+            ]
+          }
+        },
+        "required": [
+          "measure",
+          "model"
+        ]
+      },
+      "JsonReportThresholdModels": {
+        "description": "The thresholds a report declares, in the shape its BMF version spells them.\n\nThe two shapes are not interchangeable: the version the payload declares is what says which one is expected, and the other one is a bad request.",
+        "oneOf": [
+          {
+            "title": "Map",
+            "description": "BMF version 0: a map of measure to model. A map key names a measure and nothing else, so the threshold it addresses is the bare one: the conventional `value` name of every grid point.",
             "type": "object",
             "additionalProperties": {
               "$ref": "#/components/schemas/Model"
             }
           },
+          {
+            "title": "List",
+            "description": "BMF version 1: a list of entries. An entry names everything a threshold gates, so one measure may carry several of them.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonReportThresholdEntry"
+            }
+          }
+        ]
+      },
+      "JsonReportThresholds": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "nullable": true,
+            "description": "The thresholds to create or update for the report's branch and testbed. At BMF version 0 this is a map of measure UUID, slug, or name to the threshold model to use. At BMF version 1 this is a list of threshold entries. If a measure name or slug is provided, the measure will be created if it does not exist.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReportThresholdModels"
+              }
+            ]
+          },
           "reset": {
             "nullable": true,
-            "description": "Reset all thresholds for the branch and testbed. Any models present in the `models` field will still be updated accordingly. If a threshold already exists and is not present in the `models` field, its current model will be removed.",
+            "description": "Reset all thresholds for the branch and testbed. Any thresholds present in the `models` field will still be updated accordingly. If a threshold already exists and is not present in the `models` field, its current model will be removed. The payload's BMF version decides which thresholds this can reach: a version 0 map can only address bare thresholds, so only bare thresholds are reset, while a version 1 list can address every threshold, so every threshold is reset.",
             "type": "boolean"
           }
         }

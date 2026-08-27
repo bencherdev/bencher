@@ -100,7 +100,7 @@ impl NewRunJob {
 
 use super::{
     branch::{BranchId, QueryBranch, head::HeadId, version::VersionId},
-    threshold::{InsertThreshold, boundary::QueryBoundary},
+    threshold::{InsertThreshold, boundary::QueryBoundary, check_report_thresholds_shape},
 };
 
 pub mod bmf_version;
@@ -198,6 +198,11 @@ impl QueryReport {
             json_report.bmf_version.unwrap_or_default(),
         )?;
 
+        // The declared version also says which shape the payload's thresholds are
+        // written in, and that is checked here for the same reason: a payload turned
+        // away for what it said about itself leaves nothing behind on its way out.
+        check_report_thresholds_shape(bmf_version.declared(), json_report.thresholds.as_ref())?;
+
         #[cfg(all(feature = "plus", not(feature = "otel")))]
         let _ = is_claimed;
         #[cfg(all(feature = "plus", feature = "otel"))]
@@ -236,13 +241,17 @@ impl QueryReport {
         )
         .await?;
 
-        // Insert the thresholds for the report
+        // Insert the thresholds for the report.
+        //
+        // The declared version is what says which shape the thresholds are written
+        // in, and it has already met the project's gate above.
         InsertThreshold::from_report_json(
             log,
             context,
             project_id,
             branch_id,
             testbed_id,
+            bmf_version.declared(),
             json_report.thresholds.take(),
         )
         .await?;

@@ -4,20 +4,20 @@ use bencher_endpoint::{
 };
 use bencher_json::{
     BenchmarkResourceId, JsonDirection, JsonPagination, JsonParameter, JsonParameters,
-    ParameterUuid, ProjectResourceId,
+    ParameterFilter, ParameterSet, ParameterUuid, ProjectResourceId, ThresholdUuid,
     project::parameter::{JsonNewParameter, JsonUpdateParameter},
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     actor_conn, auth_conn,
-    context::ApiContext,
+    context::{ApiContext, DbConnection},
     error::{
         conflict_error, resource_conflict_err, resource_not_found_err, with_auth_hint,
         with_token_hint,
     },
     model::{
         project::{
-            QueryProject,
+            ProjectId, QueryProject,
             benchmark::QueryBenchmark,
             parameter::{QueryParameter, UpdateParameter},
         },
@@ -26,7 +26,7 @@ use bencher_schema::{
             auth::{AuthUser, BearerToken},
         },
     },
-    schema, write_conn,
+    schema, write_conn, write_transaction,
 };
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
@@ -407,6 +407,12 @@ pub async fn patch_inner(
 /// Delete a parameter set for a benchmark.
 /// The user must have `delete` permissions for the project.
 /// All reports that use this parameter must be deleted first!
+/// All thresholds that use this parameter must be deleted first!
+///
+/// A threshold uses a parameter set when its `parameters` filter names that exact
+/// set. A filter that merely matches the set, because the set pins every key the
+/// filter names and more besides, is a predicate over values rather than a reference
+/// to this row, and it does not stand in the way.
 ///
 /// A benchmark's empty parameter set cannot be deleted.
 /// The empty set is structural: every benchmark is born with exactly one, and
@@ -465,9 +471,74 @@ async fn delete_inner(
         )));
     }
 
-    diesel::delete(schema::parameter::table.filter(schema::parameter::id.eq(query_parameter.id)))
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Parameter, &query_parameter))?;
+    // The delete goes first and the threshold check goes second, both inside one
+    // transaction, so a set that a report still references is refused for that
+    // reason: the foreign key fires on the delete itself and the report refusal is
+    // the one the client reads. A set nothing reports is deleted and then put back
+    // if a threshold names it, which is what keeps the two refusals in that order
+    // without either of them growing a query the other already does.
+    let mut blocking_threshold = None;
+    let deleted = write_transaction!(context, |conn| {
+        diesel::delete(
+            schema::parameter::table.filter(schema::parameter::id.eq(query_parameter.id)),
+        )
+        .execute(conn)?;
 
-    Ok(())
+        blocking_threshold = threshold_naming_set(conn, query_project.id, &query_parameter.set)?;
+        if blocking_threshold.is_some() {
+            return Err(diesel::result::Error::RollbackTransaction);
+        }
+        diesel::QueryResult::Ok(())
+    });
+
+    match (deleted, blocking_threshold) {
+        (Ok(()), _) => Ok(()),
+        (Err(diesel::result::Error::RollbackTransaction), Some(threshold)) => {
+            Err(conflict_error(format!(
+                "All thresholds that use this parameter must be deleted first! Threshold ({threshold}) gates the parameter set ({parameter}) of benchmark ({benchmark}).",
+                parameter = query_parameter.set,
+                benchmark = query_benchmark.uuid,
+            )))
+        },
+        (Err(e), _) => Err(resource_conflict_err!(Parameter, &query_parameter)(e)),
+    }
+}
+
+/// The first threshold in the project whose filter names this exact parameter set,
+/// if there is one.
+///
+/// A filter names a set by canonical equality and only by canonical equality. A
+/// filter that merely matches the set, say `{"a":1}` against the grid point
+/// `{"a":1,"b":2}`, is a predicate over values rather than a reference to a row, and
+/// deleting the row it happens to match takes nothing out from under it.
+///
+/// The comparison runs here rather than in SQL because canonical equality is what
+/// the canonical form defines and that form is written in Rust. Only the thresholds
+/// carrying a filter at all are read, which is a small share of a project's
+/// thresholds and empty for every project that has never written one, and deleting a
+/// parameter set is a rare administrative request rather than anything on the ingest
+/// path. Nothing here caps the read, so a project that one day holds a great many
+/// filtered thresholds is what would move this into SQL.
+fn threshold_naming_set(
+    conn: &mut DbConnection,
+    project_id: ProjectId,
+    set: &ParameterSet,
+) -> diesel::QueryResult<Option<ThresholdUuid>> {
+    let canonical = set.canonical();
+    Ok(schema::threshold::table
+        .filter(schema::threshold::project_id.eq(project_id))
+        .filter(schema::threshold::parameters.is_not_null())
+        .order(schema::threshold::id.asc())
+        .select((schema::threshold::uuid, schema::threshold::parameters))
+        .load::<(ThresholdUuid, Option<ParameterFilter>)>(conn)?
+        .into_iter()
+        .find(|(_, parameters)| {
+            parameters.as_ref().is_some_and(|parameters| {
+                parameters
+                    .sets()
+                    .iter()
+                    .any(|set| set.canonical() == canonical)
+            })
+        })
+        .map(|(uuid, _)| uuid))
 }

@@ -3781,3 +3781,258 @@ async fn start_point_clone_carries_what_each_threshold_gates() {
     let source = list_thresholds(&server, &fixture, Some("main")).await;
     assert_eq!(source.len(), 2, "the start point is unchanged: {source:?}");
 }
+
+/// Delete a threshold through the thresholds endpoint.
+async fn delete_threshold(
+    server: &TestServer,
+    fixture: &Fixture,
+    threshold: &str,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v0/projects/{}/thresholds/{threshold}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+/// The UUID a threshold response carries.
+fn threshold_uuid(threshold: &serde_json::Value) -> String {
+    threshold
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the threshold carries its uuid")
+        .to_owned()
+}
+
+/// One report of one grid point, taken back out again.
+///
+/// A parameter set is only ever minted by a report, and a report that still
+/// references it refuses the delete on its own. Deleting the report leaves the set
+/// behind with nothing pointing at it, which is the state where a threshold's claim
+/// on it is the only thing left to see.
+async fn unreferenced_grid_point(
+    server: &TestServer,
+    fixture: &Fixture,
+    set: &serde_json::Value,
+) -> (String, JsonParameter) {
+    let json_report = report(
+        server,
+        fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                set,
+                &serde_json::json!({ "latency": { "value": 1.0 } }),
+            )],
+        )],
+        None,
+        None,
+    )
+    .await;
+    let report_uuid = json_report
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the report carries its uuid")
+        .to_owned();
+
+    let benchmark = only_benchmark(server, fixture).await;
+    let wanted = parameters(&serde_json::to_string(set).expect("the set serializes"));
+    let grid_point = parameter_list(server, fixture, &benchmark, "")
+        .await
+        .into_iter()
+        .find(|parameter| parameter.set == wanted)
+        .expect("the reported grid point");
+
+    let (status, body) = delete_report(server, fixture, &report_uuid).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "DELETE report: {body}");
+
+    (benchmark, grid_point)
+}
+
+// A threshold that names a parameter set in its filter is a reference to it, so the
+// set cannot be deleted out from under it. Deleting the threshold is what makes the
+// set deletable, exactly as deleting a report is one level up.
+#[tokio::test]
+async fn parameter_delete_refuses_while_a_threshold_names_it() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "delete-threshold").await;
+    let (benchmark, grid_point) =
+        unreferenced_grid_point(&server, &fixture, &serde_json::json!({ "size_mb": 16 })).await;
+
+    let threshold = create_threshold(
+        &server,
+        &fixture,
+        None,
+        Some(serde_json::json!([{ "size_mb": 16 }])),
+    )
+    .await;
+
+    let (status, body) = delete_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &grid_point.uuid,
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "a threshold names the set: {body}"
+    );
+    assert!(
+        body.contains("All thresholds that use this parameter must be deleted first!"),
+        "the refusal says what to delete first: {body}"
+    );
+
+    let mut conn = server.db_conn();
+    assert!(
+        parameter_row_id(&mut conn, &grid_point.uuid).is_some(),
+        "the refused delete put the parameter set back"
+    );
+    drop(conn);
+
+    let (status, body) = delete_threshold(&server, &fixture, &threshold_uuid(&threshold)).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "DELETE threshold: {body}");
+
+    let (status, body) = delete_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &grid_point.uuid,
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::NO_CONTENT,
+        "nothing names the set any more: {body}"
+    );
+
+    let mut conn = server.db_conn();
+    assert!(
+        parameter_row_id(&mut conn, &grid_point.uuid).is_none(),
+        "the parameter set is gone"
+    );
+}
+
+// Matching a set is not naming it. A filter of `{"size_mb": 16}` matches the grid
+// point `{"size_mb": 16, "os": "linux"}` because a filter names only the keys it
+// cares about, but it is a predicate over values rather than a reference to that
+// row: the grid point can go and the filter still says what it said.
+#[tokio::test]
+async fn parameter_delete_allows_a_filter_that_only_matches_it() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "delete-subset").await;
+    let (benchmark, grid_point) = unreferenced_grid_point(
+        &server,
+        &fixture,
+        &serde_json::json!({ "os": "linux", "size_mb": 16 }),
+    )
+    .await;
+
+    create_threshold(
+        &server,
+        &fixture,
+        None,
+        Some(serde_json::json!([{ "size_mb": 16 }])),
+    )
+    .await;
+
+    let (status, body) = delete_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &grid_point.uuid,
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::NO_CONTENT,
+        "a filter that merely matches does not stand in the way: {body}"
+    );
+
+    let mut conn = server.db_conn();
+    assert!(
+        parameter_row_id(&mut conn, &grid_point.uuid).is_none(),
+        "the parameter set is gone"
+    );
+}
+
+// When a report and a threshold both point at a set, the report is the one the
+// refusal names. The results have to go first either way, and telling a client
+// about the threshold while its reports still reference the set would send it to
+// the wrong place.
+#[tokio::test]
+async fn parameter_delete_reports_the_report_reference_first() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "delete-precedence").await;
+
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size_mb": 16 }),
+                &serde_json::json!({ "latency": { "value": 1.0 } }),
+            )],
+        )],
+        None,
+        None,
+    )
+    .await;
+
+    let benchmark = only_benchmark(&server, &fixture).await;
+    let grid_point = parameter_list(&server, &fixture, &benchmark, "")
+        .await
+        .into_iter()
+        .find(|parameter| parameter.set == parameters(r#"{"size_mb":16}"#))
+        .expect("the reported grid point");
+
+    create_threshold(
+        &server,
+        &fixture,
+        None,
+        Some(serde_json::json!([{ "size_mb": 16 }])),
+    )
+    .await;
+
+    let (status, body) = delete_parameter(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &grid_point.uuid,
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "both point at the set: {body}"
+    );
+    assert!(
+        !body.contains("All thresholds that use this parameter must be deleted first!"),
+        "the report reference is the one that fires: {body}"
+    );
+
+    let mut conn = server.db_conn();
+    assert!(
+        parameter_row_id(&mut conn, &grid_point.uuid).is_some(),
+        "the parameter set is still there"
+    );
+}
