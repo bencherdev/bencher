@@ -3887,3 +3887,101 @@ async fn perf_point_without_a_value_name_keeps_its_line() {
     assert_eq!(p99.value, 99.5);
     assert!(p99.boundaries.is_none());
 }
+
+// =============================================================================
+// Section: The perf image
+// =============================================================================
+
+/// The perf image path for a fully built query, through the encoder a client uses.
+fn perf_img_url(project_slug: &str, query: &JsonPerfQuery) -> String {
+    format!(
+        "/v0/projects/{project_slug}/perf/img?{}",
+        query.to_query_string(&[]).expect("build query string")
+    )
+}
+
+/// GET a perf image path and return the JPEG.
+async fn get_perf_img(server: &TestServer, token: &str, url: &str) -> Vec<u8> {
+    let resp = server
+        .client
+        .get(server.api_url(url))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET {url}");
+    assert_eq!(
+        resp.headers()
+            .get(http::header::CONTENT_TYPE)
+            .expect("content type"),
+        "image/jpeg",
+        "GET {url} is a JPEG"
+    );
+    resp.bytes().await.expect("read image").to_vec()
+}
+
+// The image takes the same `parameters` filter the query takes, and plots exactly
+// the lines the query answers with: the image of a filtered query is the plot of
+// that query's response, byte for byte.
+#[tokio::test]
+async fn perf_img_parameters_filter_plots_the_queried_grid_points() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "perfimgfilter@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf Img Filter Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Img Filter Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+    create_grid_point(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
+    create_grid_point(&server, &data, data.benchmark_id, r#"{"size_mb": 32}"#, 2.0);
+
+    let filtered = fixture_query(
+        &data,
+        vec![data.benchmark_uuid],
+        &[r#"{"size_mb": 16}"#, r#"{"size_mb": 32}"#],
+    );
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(project.slug.as_ref(), &filtered),
+    )
+    .await;
+    assert_eq!(
+        line_parameters(&perf),
+        vec![
+            r#"{"size_mb":16}"#.to_owned(),
+            r#"{"size_mb":32}"#.to_owned()
+        ],
+        "the filter leaves the empty grid point out"
+    );
+
+    // The image endpoint takes no title here, so both sides fall back to the
+    // project name and the plot is handed the very same inputs.
+    let jpeg = get_perf_img(
+        &server,
+        &user.token,
+        &perf_img_url(project.slug.as_ref(), &filtered),
+    )
+    .await;
+    let plotted = bencher_plot::LinePlot::new()
+        .draw(None, &perf)
+        .expect("draw the queried lines");
+    assert_eq!(jpeg, plotted, "the image plots the query's own lines");
+
+    // Without the filter the empty grid point is a third line, so the image differs.
+    let unfiltered = fixture_query(&data, vec![data.benchmark_uuid], &[]);
+    let all_jpeg = get_perf_img(
+        &server,
+        &user.token,
+        &perf_img_url(project.slug.as_ref(), &unfiltered),
+    )
+    .await;
+    assert_ne!(jpeg, all_jpeg, "the filter reaches the image query");
+}

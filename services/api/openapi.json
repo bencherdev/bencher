@@ -6604,7 +6604,7 @@
           "perf"
         ],
         "summary": "Generate a dynamic image of project performance metrics",
-        "description": "Generate a dynamic image of performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 8 permutations for a single image. Therefore, only the first 8 permutations are plotted. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
+        "description": "Generate a dynamic image of performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 8 permutations for a single image. Therefore, only the first 8 permutations are plotted. Each permutation plots one line per grid point of its benchmark, narrowed by the `parameters` filter when one is given. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_perf_img_get",
         "parameters": [
           {
@@ -6657,6 +6657,15 @@
             "description": "A comma separated list of measure UUIDs to query.",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parameters",
+            "description": "An optional comma separated list of URL encoded parameter sets to filter on. A grid point is queried when at least one of them is a subset of its parameter set: every key the filter names, with the same value. Leaving this off queries every grid point.",
+            "schema": {
+              "nullable": true,
               "type": "string"
             }
           },

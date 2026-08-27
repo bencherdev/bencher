@@ -80,6 +80,11 @@ pub struct JsonPerfImgQueryParams {
     pub specs: Option<String>,
     /// A comma separated list of benchmark UUIDs to query.
     pub benchmarks: String,
+    /// An optional comma separated list of URL encoded parameter sets to filter on.
+    /// A grid point is queried when at least one of them is a subset of its
+    /// parameter set: every key the filter names, with the same value.
+    /// Leaving this off queries every grid point.
+    pub parameters: Option<String>,
     /// A comma separated list of measure UUIDs to query.
     pub measures: String,
     /// Search for metrics after the given date time in milliseconds.
@@ -97,6 +102,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
             testbeds,
             specs,
             benchmarks,
+            parameters,
             measures,
             start_time,
             end_time,
@@ -107,9 +113,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
             testbeds,
             specs,
             benchmarks,
-            // The perf image has no parameters filter of its own yet, so it plots
-            // every grid point its dimensions name.
-            parameters: None,
+            parameters,
             measures,
             start_time,
             end_time,
