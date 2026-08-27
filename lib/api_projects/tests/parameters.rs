@@ -1572,8 +1572,8 @@ const ALERT_BEFORE_KEYS: [&str; 11] = [
     "modified",
 ];
 
-/// The one key naming the grid point adds.
-const ALERT_ADDED_KEYS: [&str; 1] = ["parameter"];
+/// The keys naming the grid point and the gated scalar add.
+const ALERT_ADDED_KEYS: [&str; 2] = ["parameter", "value"];
 
 /// Ingest one benchmark's two grid points under one threshold, ending on `finals`.
 /// Returns the fixture and the last report's response.
@@ -1687,7 +1687,7 @@ async fn alert_json_is_unchanged_but_for_the_grid_point() {
     assert_eq!(
         keys(alert),
         sorted(&[ALERT_BEFORE_KEYS.as_slice(), ALERT_ADDED_KEYS.as_slice()].concat()),
-        "the key set is the old one plus the grid point"
+        "the key set is the old one plus the grid point and the gated scalar"
     );
 
     // Every key that was there before, with the value the previous shape gave it.
@@ -1749,12 +1749,27 @@ async fn alert_json_is_unchanged_but_for_the_grid_point() {
         "the alert names the report it landed in"
     );
 
-    // The addition: the grid point the alert fired on.
+    // The additions: the grid point the alert fired on, and the scalar it fired on.
     assert_eq!(
         alert["parameter"]["set"],
         serde_json::json!({ "size_mb": 16 })
     );
     assert_eq!(alert["parameter"]["benchmark"], alert["benchmark"]["uuid"]);
+    assert_eq!(
+        alert["value"],
+        serde_json::json!(SMALL_FINAL),
+        "the scalar the alert fired on"
+    );
+    assert_eq!(
+        alert["threshold"]["metric"],
+        serde_json::Value::Null,
+        "a bare threshold gates the conventional `value` name, so it names none"
+    );
+    assert_eq!(
+        alert["threshold"]["parameters"],
+        serde_json::Value::Null,
+        "a bare threshold gates every grid point, so it names no filter"
+    );
 }
 
 // The report response's embedded alerts are the alerts endpoint's alerts, for the
@@ -2802,4 +2817,967 @@ async fn parameter_writes_require_permission() {
     let all = parameter_list(&server, &fixture, &benchmark, "").await;
     assert_eq!(all.len(), 2, "nothing the outsider sent landed");
     assert!(all.iter().all(|parameter| parameter.archived.is_none()));
+}
+
+/// Create a threshold through the thresholds endpoint.
+///
+/// `metric` names the metric it gates and `parameters` is the filter over grid
+/// points; either omitted is the default that half of the identity carries.
+async fn post_threshold(
+    server: &TestServer,
+    fixture: &Fixture,
+    metric: Option<&str>,
+    parameters: Option<serde_json::Value>,
+) -> (StatusCode, String) {
+    let body = serde_json::json!({
+        "branch": "main",
+        "testbed": "localhost",
+        "measure": "latency",
+        "metric": metric,
+        "parameters": parameters,
+        "test": "t_test",
+        "min_sample_size": 2,
+        "max_sample_size": 64,
+        "lower_boundary": 0.98,
+        "upper_boundary": 0.98,
+    });
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/thresholds", fixture.project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+/// Create a threshold and return it, failing the test if the server refused.
+async fn create_threshold(
+    server: &TestServer,
+    fixture: &Fixture,
+    metric: Option<&str>,
+    parameters: Option<serde_json::Value>,
+) -> serde_json::Value {
+    let (status, body) = post_threshold(server, fixture, metric, parameters).await;
+    assert_eq!(status, StatusCode::CREATED, "POST threshold: {body}");
+    serde_json::from_str(&body).expect("Failed to parse the threshold")
+}
+
+/// The UUID of one of a project's resources, addressed by slug.
+///
+/// The perf endpoint takes UUIDs and nothing else, so every dimension a perf query
+/// names goes through here first.
+async fn resource_uuid(
+    server: &TestServer,
+    fixture: &Fixture,
+    resource: &str,
+    slug: &str,
+) -> String {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/{resource}/{slug}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET {resource}/{slug}");
+    let json: serde_json::Value = resp.json().await.expect("Failed to parse the resource");
+    json.get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the resource names its uuid")
+        .to_owned()
+}
+
+/// The `latency` lines of one benchmark, from the perf endpoint.
+async fn perf_line(
+    server: &TestServer,
+    fixture: &Fixture,
+    benchmark: &str,
+) -> Vec<serde_json::Value> {
+    let branch = resource_uuid(server, fixture, "branches", "main").await;
+    let testbed = resource_uuid(server, fixture, "testbeds", "localhost").await;
+    let measure = resource_uuid(server, fixture, "measures", "latency").await;
+    let benchmark = resource_uuid(server, fixture, "benchmarks", benchmark).await;
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/perf?branches={branch}&testbeds={testbed}&benchmarks={benchmark}&measures={measure}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET perf");
+    let perf: serde_json::Value = resp.json().await.expect("Failed to parse the perf");
+    perf.get("results")
+        .and_then(serde_json::Value::as_array)
+        .expect("the perf results are a list")
+        .clone()
+}
+
+/// The stable `value` history the named gating fixtures report beside the name
+/// under test, an order of magnitude away from it.
+///
+/// The gap is the point: pool the two names into one sample and its standard
+/// deviation swallows the regression, so the named fixtures raise no alert at all.
+const NAMED_VALUE: [f64; 6] = [1_000.0, 1_001.0, 1_002.0, 1_003.0, 1_004.0, 1_005.0];
+const NAMED_P99: [f64; 5] = [10.0, 11.0, 12.0, 13.0, 14.0];
+const NAMED_P99_FINAL: f64 = 50.0;
+
+// A threshold that names `p99` gates the `p99` series: it alerts on a `p99`
+// regression, and the sample it tests against is `p99` rows alone.
+#[tokio::test]
+async fn named_threshold_gates_its_own_name() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "namedgate").await;
+
+    // The first report mints the branch, the testbed, and the measure the threshold
+    // hangs off, and carries no threshold model of its own.
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size": 512 }),
+                &serde_json::json!({
+                    "latency": { "value": NAMED_VALUE[0], "p99": NAMED_P99[0] }
+                }),
+            )],
+        )],
+        None,
+        None,
+    )
+    .await;
+
+    let threshold = create_threshold(&server, &fixture, Some("p99"), None).await;
+    assert_eq!(threshold["metric"], serde_json::json!("p99"));
+    assert_eq!(threshold["parameters"], serde_json::Value::Null);
+
+    for (day, (value, p99)) in NAMED_VALUE
+        .into_iter()
+        .skip(1)
+        .zip(NAMED_P99.into_iter().skip(1).chain([NAMED_P99_FINAL]))
+        .enumerate()
+    {
+        report(
+            &server,
+            &fixture,
+            day + 2,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({ "size": 512 }),
+                    &serde_json::json!({ "latency": { "value": value, "p99": p99 } }),
+                )],
+            )],
+            None,
+            None,
+        )
+        .await;
+    }
+
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
+    let mut conn = server.db_conn();
+    let names = boundary_names(&mut conn, project_id);
+    assert!(!names.is_empty(), "the fixture computes boundaries");
+    assert!(
+        names.iter().all(|name| name == "p99"),
+        "a `p99` threshold gates the `p99` rows and nothing else, got {names:?}"
+    );
+    assert_eq!(
+        alerts(&mut conn, project_id),
+        vec![(parameters(r#"{"size": 512}"#), "p99".to_owned())],
+        "the `p99` regression alerts, tested against the `p99` history alone"
+    );
+    drop(conn);
+
+    let listed = list_alerts(&server, &fixture).await;
+    assert_eq!(listed.len(), 1, "one alert: {listed:?}");
+    let alert = &listed[0];
+    assert_eq!(
+        alert["value"],
+        serde_json::json!(NAMED_P99_FINAL),
+        "the alert carries the scalar it fired on"
+    );
+    assert_eq!(
+        alert["metric"],
+        serde_json::Value::Null,
+        "the triple is a convention over `value`, so a `p99` alert has none"
+    );
+    assert_eq!(
+        alert["threshold"]["metric"],
+        serde_json::json!("p99"),
+        "the gated name is the threshold's"
+    );
+    assert_eq!(
+        alert["parameter"]["set"],
+        serde_json::json!({ "size": 512 }),
+        "the alert names the grid point it fired on"
+    );
+}
+
+/// A filtered fixture's history, tight enough that the final value is an outlier
+/// against it under every grid point.
+const FILTERED: [f64; 5] = [10.0, 11.0, 12.0, 13.0, 14.0];
+const FILTERED_FINAL: f64 = 50.0;
+
+/// Report one day of every named grid point of `bench`, each measuring `value`.
+async fn report_grid(
+    server: &TestServer,
+    fixture: &Fixture,
+    day: usize,
+    sizes: &[i64],
+    value: f64,
+) {
+    let entries = sizes
+        .iter()
+        .map(|size| {
+            entry(
+                &serde_json::json!({ "size": size }),
+                &serde_json::json!({ "latency": { "value": value } }),
+            )
+        })
+        .collect::<Vec<_>>();
+    report(
+        server,
+        fixture,
+        day,
+        vec![v1("bench", &entries)],
+        None,
+        None,
+    )
+    .await;
+}
+
+// A parameters filter gates the grid points it matches and no others, and a filter
+// naming several sets gates their union.
+#[tokio::test]
+async fn filtered_threshold_gates_the_matching_grid_points() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "filtered").await;
+
+    let sizes = [512, 1_024, 2_048];
+    report_grid(&server, &fixture, 1, &sizes, FILTERED[0]).await;
+    let threshold = create_threshold(
+        &server,
+        &fixture,
+        None,
+        Some(serde_json::json!([{ "size": 512 }, { "size": 1024 }])),
+    )
+    .await;
+    assert_eq!(
+        threshold["parameters"],
+        serde_json::json!([{ "size": 1024 }, { "size": 512 }]),
+        "the response carries the canonical form, sorted by canonical bytes"
+    );
+
+    for (day, value) in FILTERED
+        .into_iter()
+        .skip(1)
+        .chain([FILTERED_FINAL])
+        .enumerate()
+    {
+        report_grid(&server, &fixture, day + 2, &sizes, value).await;
+    }
+
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
+    let mut conn = server.db_conn();
+    let mut alerted = alerts(&mut conn, project_id);
+    alerted.sort_by_key(|(set, _)| set.canonical());
+    assert_eq!(
+        alerted,
+        vec![
+            (parameters(r#"{"size": 1024}"#), "value".to_owned()),
+            (parameters(r#"{"size": 512}"#), "value".to_owned()),
+        ],
+        "the filter is an OR across its sets, and the third grid point is in neither"
+    );
+}
+
+// A grid point that a bare threshold and a filtered threshold both match earns a
+// boundary from each and, on a regression, an alert from each. There is no winner.
+#[tokio::test]
+async fn every_matching_threshold_fires() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "double").await;
+
+    // The bare threshold comes from the report's own models map, so it is the older
+    // of the two and sorts first in every boundaries list.
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size": 512 }),
+                &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
+            )],
+        )],
+        Some(threshold_models()),
+        None,
+    )
+    .await;
+    let filtered = create_threshold(
+        &server,
+        &fixture,
+        None,
+        Some(serde_json::json!([{ "size": 512 }])),
+    )
+    .await;
+
+    let mut last = serde_json::Value::Null;
+    for (day, value) in FILTERED
+        .into_iter()
+        .skip(1)
+        .chain([FILTERED_FINAL])
+        .enumerate()
+    {
+        last = report(
+            &server,
+            &fixture,
+            day + 2,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({ "size": 512 }),
+                    &serde_json::json!({ "latency": { "value": value } }),
+                )],
+            )],
+            Some(threshold_models()),
+            None,
+        )
+        .await;
+    }
+
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
+    let mut conn = server.db_conn();
+    assert_eq!(
+        alerts(&mut conn, project_id),
+        vec![
+            (parameters(r#"{"size": 512}"#), "value".to_owned()),
+            (parameters(r#"{"size": 512}"#), "value".to_owned()),
+        ],
+        "one regression, two thresholds, two alerts"
+    );
+    drop(conn);
+
+    // The report response lists both boundaries on the one `value` row, oldest
+    // threshold first, and its deprecated singular fields carry the bare one.
+    let measure = &last["results"][0][0]["measures"][0];
+    let boundaries = measure["metrics"][0]["boundaries"]
+        .as_array()
+        .expect("the metric lists its boundaries");
+    assert_eq!(boundaries.len(), 2, "two thresholds gated the row");
+    assert_ne!(
+        boundaries[0]["threshold"]["uuid"], filtered["uuid"],
+        "the bare threshold was created first, so it is listed first"
+    );
+    assert_eq!(boundaries[1]["threshold"]["uuid"], filtered["uuid"]);
+    assert_eq!(
+        measure["threshold"]["uuid"], boundaries[0]["threshold"]["uuid"],
+        "the deprecated singular threshold is the bare one"
+    );
+    assert_eq!(
+        measure["boundary"], boundaries[0]["boundary"],
+        "the deprecated singular boundary is the bare one's"
+    );
+
+    // The perf response says the same thing about the same row.
+    let benchmark = only_benchmark(&server, &fixture).await;
+    let line = perf_line(&server, &fixture, &benchmark).await;
+    assert_eq!(line.len(), 1, "one grid point, one line");
+    let point = line[0]["metrics"]
+        .as_array()
+        .expect("the line has points")
+        .last()
+        .expect("the line has a last point")
+        .clone();
+    let boundaries = point["metrics"]["value"]["boundaries"]
+        .as_array()
+        .expect("the `value` row lists its boundaries");
+    assert_eq!(boundaries.len(), 2, "two thresholds gated the row");
+    assert_eq!(
+        point["threshold"]["uuid"], boundaries[0]["threshold"]["uuid"],
+        "the deprecated singular threshold is the bare one"
+    );
+    assert_eq!(point["boundary"], boundaries[0]["boundary"]);
+    assert_eq!(
+        point["alert"]["uuid"], boundaries[0]["alert"]["uuid"],
+        "the deprecated singular alert is the bare threshold's"
+    );
+}
+
+// A row that only a named threshold gates reports no deprecated singular gate at
+// all, which is exactly what a caller from before named gating would have seen.
+#[tokio::test]
+async fn legacy_fields_are_absent_without_a_bare_threshold() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "legacyabsent").await;
+
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({}),
+                &serde_json::json!({
+                    "latency": { "value": NAMED_VALUE[0], "p99": NAMED_P99[0] }
+                }),
+            )],
+        )],
+        None,
+        None,
+    )
+    .await;
+    create_threshold(&server, &fixture, Some("p99"), None).await;
+
+    let mut last = serde_json::Value::Null;
+    for (day, (value, p99)) in NAMED_VALUE
+        .into_iter()
+        .skip(1)
+        .zip(NAMED_P99.into_iter().skip(1).chain([NAMED_P99_FINAL]))
+        .enumerate()
+    {
+        last = report(
+            &server,
+            &fixture,
+            day + 2,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({}),
+                    &serde_json::json!({ "latency": { "value": value, "p99": p99 } }),
+                )],
+            )],
+            None,
+            None,
+        )
+        .await;
+    }
+
+    let measure = &last["results"][0][0]["measures"][0];
+    assert_eq!(
+        measure["threshold"],
+        serde_json::Value::Null,
+        "no bare threshold gated the `value` row, so the deprecated field is absent"
+    );
+    assert_eq!(measure["boundary"], serde_json::Value::Null);
+    assert!(
+        measure["metric"]["value"].is_number(),
+        "the deprecated triple is still the `value` row's"
+    );
+
+    let benchmark = only_benchmark(&server, &fixture).await;
+    let line = perf_line(&server, &fixture, &benchmark).await;
+    let point = line[0]["metrics"]
+        .as_array()
+        .expect("the line has points")
+        .last()
+        .expect("the line has a last point")
+        .clone();
+    assert_eq!(point["threshold"], serde_json::Value::Null);
+    assert_eq!(point["boundary"], serde_json::Value::Null);
+    assert_eq!(point["alert"], serde_json::Value::Null);
+    assert_eq!(
+        point["metrics"]["p99"]["boundaries"]
+            .as_array()
+            .expect("the `p99` row lists its boundary")
+            .len(),
+        1,
+        "the `p99` row carries the gate the `value` row does not"
+    );
+}
+
+// Two spellings of one identity are one threshold: the second create collides.
+#[tokio::test]
+async fn duplicate_identity_is_refused_at_both_spellings() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "identity").await;
+
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({}),
+                &serde_json::json!({ "latency": { "value": 1.0 } }),
+            )],
+        )],
+        None,
+        None,
+    )
+    .await;
+
+    // A bare threshold, then the same one with everything it defaults to spelled out.
+    create_threshold(&server, &fixture, None, None).await;
+    for spelling in [
+        (None, Some(serde_json::json!([]))),
+        (Some("value"), None),
+        (Some("value"), Some(serde_json::json!([{}]))),
+    ] {
+        let (status, body) = post_threshold(&server, &fixture, spelling.0, spelling.1).await;
+        assert_eq!(
+            status,
+            StatusCode::CONFLICT,
+            "the bare threshold already exists: {body}"
+        );
+    }
+
+    // A filtered threshold, then the same filter spelled another way.
+    create_threshold(
+        &server,
+        &fixture,
+        Some("p99"),
+        Some(serde_json::json!([{ "size": 512 }])),
+    )
+    .await;
+    let (status, body) = post_threshold(
+        &server,
+        &fixture,
+        Some("p99"),
+        Some(serde_json::json!([{ "size": 512.0 }, { "size": 512 }])),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "one number has one canonical spelling: {body}"
+    );
+
+    // But a filter that names a different grid point is a different threshold.
+    create_threshold(
+        &server,
+        &fixture,
+        Some("p99"),
+        Some(serde_json::json!([{ "size": 1024 }])),
+    )
+    .await;
+}
+
+/// One metric row from the metrics endpoint, addressed by UUID.
+async fn metric_row(
+    server: &TestServer,
+    fixture: &Fixture,
+    metric_uuid: &str,
+) -> serde_json::Value {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/metrics/{metric_uuid}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET metrics/{metric_uuid}");
+    resp.json().await.expect("Failed to parse the metric row")
+}
+
+// The metrics endpoint's deprecated singular gate is the bare threshold's, under a
+// grid point that a bare threshold and a filtered one both gate.
+//
+// This is the one surface that picks the bare gate in SQL rather than in Rust, so it
+// is the one that could lose the bare threshold silently. The filtered threshold is
+// created first on purpose: it takes the lower identifier, so it is the row the
+// outer join reaches first and the row a query with no order would keep.
+#[tokio::test]
+async fn metric_row_singular_gate_is_the_bare_one() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "onemetricbare").await;
+
+    // The first report mints the branch, the testbed, and the measure the filtered
+    // threshold hangs off, and carries no threshold model of its own.
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size": 512 }),
+                &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
+            )],
+        )],
+        None,
+        None,
+    )
+    .await;
+    let filtered = create_threshold(
+        &server,
+        &fixture,
+        None,
+        Some(serde_json::json!([{ "size": 512 }])),
+    )
+    .await;
+
+    // The bare threshold comes second, from the report's own models map.
+    let mut last = serde_json::Value::Null;
+    for (day, value) in FILTERED
+        .into_iter()
+        .skip(1)
+        .chain([FILTERED_FINAL])
+        .enumerate()
+    {
+        last = report(
+            &server,
+            &fixture,
+            day + 2,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({ "size": 512 }),
+                    &serde_json::json!({ "latency": { "value": value } }),
+                )],
+            )],
+            Some(threshold_models()),
+            None,
+        )
+        .await;
+    }
+
+    let bare = threshold_with(
+        &list_thresholds(&server, &fixture, None).await,
+        &serde_json::Value::Null,
+    );
+    assert_ne!(bare["uuid"], filtered["uuid"], "two distinct thresholds");
+
+    let measure = &last["results"][0][0]["measures"][0];
+    let metric_uuid = measure["metrics"][0]["uuid"]
+        .as_str()
+        .expect("the metric names its uuid")
+        .to_owned();
+    let boundaries = measure["metrics"][0]["boundaries"]
+        .as_array()
+        .expect("the metric lists its boundaries")
+        .clone();
+    assert_eq!(boundaries.len(), 2, "two thresholds gated the row");
+    let bare_boundary = boundaries
+        .iter()
+        .find(|gate| gate["threshold"]["uuid"] == bare["uuid"])
+        .expect("the bare threshold gated the row");
+
+    let row = metric_row(&server, &fixture, &metric_uuid).await;
+    assert_eq!(
+        row["threshold"]["uuid"], bare["uuid"],
+        "the deprecated singular threshold is the bare one"
+    );
+    assert_ne!(
+        row["threshold"]["uuid"], filtered["uuid"],
+        "and never the filtered one, whichever the join reaches first"
+    );
+    assert_eq!(
+        row["boundary"], bare_boundary["boundary"],
+        "the deprecated singular boundary is the bare one's"
+    );
+    assert!(
+        row["alert"]["uuid"].is_string(),
+        "the deprecated singular alert is the bare threshold's"
+    );
+}
+
+// A row that only a named threshold gates reports no singular gate on the metrics
+// endpoint either, and neither does the `value` row beside it.
+#[tokio::test]
+async fn metric_row_singular_gate_is_absent_without_a_bare_threshold() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "onemetricnobare").await;
+
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({}),
+                &serde_json::json!({
+                    "latency": { "value": NAMED_VALUE[0], "p99": NAMED_P99[0] }
+                }),
+            )],
+        )],
+        None,
+        None,
+    )
+    .await;
+    create_threshold(&server, &fixture, Some("p99"), None).await;
+
+    let mut last = serde_json::Value::Null;
+    for (day, (value, p99)) in NAMED_VALUE
+        .into_iter()
+        .skip(1)
+        .zip(NAMED_P99.into_iter().skip(1).chain([NAMED_P99_FINAL]))
+        .enumerate()
+    {
+        last = report(
+            &server,
+            &fixture,
+            day + 2,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({}),
+                    &serde_json::json!({ "latency": { "value": value, "p99": p99 } }),
+                )],
+            )],
+            None,
+            None,
+        )
+        .await;
+    }
+
+    let measure = &last["results"][0][0]["measures"][0];
+    for metric in measure["metrics"]
+        .as_array()
+        .expect("the measure lists its metrics")
+    {
+        let uuid = metric["uuid"].as_str().expect("the metric names its uuid");
+        let row = metric_row(&server, &fixture, uuid).await;
+        assert_eq!(
+            row["threshold"],
+            serde_json::Value::Null,
+            "no bare threshold gated {name}",
+            name = metric["name"]
+        );
+        assert_eq!(row["boundary"], serde_json::Value::Null);
+        assert_eq!(row["alert"], serde_json::Value::Null);
+    }
+}
+
+/// Every threshold of a project, from the thresholds endpoint, optionally narrowed
+/// to one branch by name.
+async fn list_thresholds(
+    server: &TestServer,
+    fixture: &Fixture,
+    branch: Option<&str>,
+) -> Vec<serde_json::Value> {
+    let query = branch.map_or_else(String::new, |branch| format!("?branch={branch}"));
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/thresholds{query}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET thresholds");
+    let thresholds: serde_json::Value = resp.json().await.expect("Failed to parse the thresholds");
+    thresholds
+        .as_array()
+        .expect("the thresholds are a list")
+        .clone()
+}
+
+/// The one threshold of a list whose parameters filter is `parameters`.
+fn threshold_with(
+    thresholds: &[serde_json::Value],
+    parameters: &serde_json::Value,
+) -> serde_json::Value {
+    let matched = thresholds
+        .iter()
+        .filter(|threshold| {
+            threshold
+                .get("parameters")
+                .unwrap_or(&serde_json::Value::Null)
+                == parameters
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        matched.len(),
+        1,
+        "expected one threshold filtered on {parameters}, got {matched:?}"
+    );
+    matched
+        .first()
+        .map(|threshold| (*threshold).clone())
+        .expect("the matched threshold")
+}
+
+// A report's `thresholds` map names a measure and a model and nothing else, so the
+// threshold it addresses is the bare one. `reset` takes a model away from the bare
+// thresholds it did not name, and from no others: a threshold that gates a corner of
+// the grid is addressed through the thresholds endpoint, so a report cannot reset it.
+#[tokio::test]
+async fn reset_leaves_a_filtered_threshold_alone() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "reset").await;
+
+    // The report's map mints the bare threshold with a model.
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size": 512 }),
+                &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
+            )],
+        )],
+        Some(threshold_models()),
+        None,
+    )
+    .await;
+    create_threshold(
+        &server,
+        &fixture,
+        None,
+        Some(serde_json::json!([{ "size": 512 }])),
+    )
+    .await;
+
+    let before = list_thresholds(&server, &fixture, None).await;
+    assert_eq!(before.len(), 2, "one bare threshold and one filtered");
+    assert!(
+        threshold_with(&before, &serde_json::Value::Null)["model"]["test"].is_string(),
+        "the bare threshold starts with a model"
+    );
+
+    // A reset that names nothing at all.
+    report(
+        &server,
+        &fixture,
+        2,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size": 512 }),
+                &serde_json::json!({ "latency": { "value": FILTERED[1] } }),
+            )],
+        )],
+        Some(serde_json::json!({ "reset": true })),
+        None,
+    )
+    .await;
+
+    let after = list_thresholds(&server, &fixture, None).await;
+    assert_eq!(after.len(), 2, "reset removes models, never thresholds");
+    assert_eq!(
+        threshold_with(&after, &serde_json::Value::Null)["model"],
+        serde_json::Value::Null,
+        "the reset took the bare threshold's model, because the map did not name it"
+    );
+    let filtered = threshold_with(&after, &serde_json::json!([{ "size": 512 }]));
+    assert!(
+        filtered["model"]["test"].is_string(),
+        "the filtered threshold keeps its model: no report map addresses it"
+    );
+}
+
+/// Create a branch that starts from `start_point` and deep copies its thresholds.
+async fn post_branch_from(
+    server: &TestServer,
+    fixture: &Fixture,
+    name: &str,
+    start_point: &str,
+) -> serde_json::Value {
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", fixture.project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .json(&serde_json::json!({
+            "name": name,
+            "start_point": { "branch": start_point, "clone_thresholds": true },
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    assert_eq!(status, StatusCode::CREATED, "POST branch: {body}");
+    serde_json::from_str(&body).expect("Failed to parse the branch")
+}
+
+// A start point deep copies every threshold of its branch, and what a threshold
+// gates travels with it. One measure may carry several thresholds now, so the clone
+// matches on the whole of what each gates and not on the measure alone.
+#[tokio::test]
+async fn start_point_clone_carries_what_each_threshold_gates() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "clone").await;
+
+    // A bare threshold and a filtered one, both on `latency`, both with a model.
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size": 512 }),
+                &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
+            )],
+        )],
+        Some(threshold_models()),
+        None,
+    )
+    .await;
+    create_threshold(
+        &server,
+        &fixture,
+        Some("p99"),
+        Some(serde_json::json!([{ "size": 512 }])),
+    )
+    .await;
+
+    post_branch_from(&server, &fixture, "feature", "main").await;
+
+    let cloned = list_thresholds(&server, &fixture, Some("feature")).await;
+    assert_eq!(cloned.len(), 2, "both thresholds cloned: {cloned:?}");
+
+    let bare = threshold_with(&cloned, &serde_json::Value::Null);
+    assert_eq!(
+        bare["metric"],
+        serde_json::Value::Null,
+        "the bare threshold arrives bare"
+    );
+    assert!(bare["model"]["test"].is_string(), "with its model");
+    assert_eq!(bare["branch"]["slug"], serde_json::json!("feature"));
+
+    let filtered = threshold_with(&cloned, &serde_json::json!([{ "size": 512 }]));
+    assert_eq!(
+        filtered["metric"],
+        serde_json::json!("p99"),
+        "the filtered threshold arrives with the name it gates"
+    );
+    assert!(filtered["model"]["test"].is_string(), "with its model");
+    assert_eq!(filtered["branch"]["slug"], serde_json::json!("feature"));
+
+    // And the start point branch still has exactly what it had.
+    let source = list_thresholds(&server, &fixture, Some("main")).await;
+    assert_eq!(source.len(), 2, "the start point is unchanged: {source:?}");
 }

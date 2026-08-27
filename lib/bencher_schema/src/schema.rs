@@ -411,6 +411,8 @@ diesel::table! {
         branch_id -> Integer,
         testbed_id -> Integer,
         measure_id -> Integer,
+        metric -> Nullable<Text>,
+        parameters -> Nullable<Jsonb>,
         model_id -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,

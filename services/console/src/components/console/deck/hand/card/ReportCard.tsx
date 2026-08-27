@@ -162,7 +162,7 @@ const ReportCard = (props: Props) => {
 								<tbody>
 									<For each={props.value()?.alerts}>
 										{(alert) => {
-											const value = alert?.metric?.value;
+											const value = alert?.value;
 											const baseline = alert?.boundary?.baseline;
 											const lowerLimit = alert?.boundary?.lower_limit;
 											const upperLimit = alert?.boundary?.upper_limit;

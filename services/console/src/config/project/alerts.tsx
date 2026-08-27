@@ -141,7 +141,7 @@ const alertsConfig = {
 				{
 					kind: Card.NESTED_FIELD,
 					label: "Metric",
-					keys: ["metric", "value"],
+					keys: ["value"],
 					display: Display.FLOAT,
 				},
 				{

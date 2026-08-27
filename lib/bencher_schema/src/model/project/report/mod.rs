@@ -3,8 +3,9 @@ use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
 use std::collections::HashSet;
 
 use bencher_json::{
-    DateTime, JsonBenchmark, JsonMeasure, JsonMetricTriple, JsonNewReport, JsonReport,
-    JsonReportAlertsCounts, JsonReportCounts, JsonReportIterationCounts, MetricName, ReportUuid,
+    DateTime, JsonBenchmark, JsonBoundary, JsonMeasure, JsonMetricTriple, JsonNewReport,
+    JsonReport, JsonReportAlertsCounts, JsonReportCounts, JsonReportIterationCounts, MetricName,
+    ReportUuid,
     project::{
         alert::AlertStatus,
         report::{
@@ -12,6 +13,7 @@ use bencher_json::{
             JsonReportMetric, JsonReportParameter, JsonReportResult, JsonReportResults,
             JsonReportSettings, ReportIdempotencyKey,
         },
+        threshold::JsonThresholdModel,
     },
 };
 use diesel::OptionalExtension as _;
@@ -725,13 +727,17 @@ fn report_results_query(
         QueryMeasure::as_select(),
         QueryMetric::as_select(),
         (
+            // The column order is `QueryThreshold`'s field order, because that is
+            // what a tuple selection deserializes into, positionally.
             (
                 schema::threshold::id,
                 schema::threshold::uuid,
                 schema::threshold::project_id,
-                schema::threshold::measure_id,
                 schema::threshold::branch_id,
                 schema::threshold::testbed_id,
+                schema::threshold::measure_id,
+                schema::threshold::metric,
+                schema::threshold::parameters,
                 schema::threshold::model_id,
                 schema::threshold::created,
                 schema::threshold::modified,
@@ -813,6 +819,7 @@ fn into_report_results_json(
             report_result.measures.push(PendingMeasure {
                 measure: query_measure.into_json_for_project(project),
                 metrics: Vec::new(),
+                bare_gate: None,
             });
         }
         let Some(report_measure) = report_result.measures.last_mut() else {
@@ -841,17 +848,27 @@ fn into_report_results_json(
                 boundaries: Vec::new(),
             });
         }
-        let Some(report_metric) = report_measure.metrics.last_mut() else {
-            debug_assert!(false, "the report metric was just pushed");
-            continue;
-        };
 
         if let Some((query_threshold, query_model, query_boundary)) = gate {
-            report_metric.boundaries.push(JsonReportBoundary {
+            // The deprecated singular fields carry the bare threshold's boundary and
+            // nothing else: the `value` name of every grid point, which is what a
+            // threshold could gate before it could gate anything narrower, and so
+            // exactly what a legacy consumer has always been shown.
+            let is_bare = query_threshold.identity().is_bare();
+            let report_boundary = JsonReportBoundary {
                 threshold: query_threshold
                     .into_threshold_model_json_for_project(project, query_model),
                 boundary: query_boundary.into_json(),
-            });
+            };
+            if is_bare {
+                report_measure.bare_gate =
+                    Some((report_boundary.threshold.clone(), report_boundary.boundary));
+            }
+            let Some(report_metric) = report_measure.metrics.last_mut() else {
+                debug_assert!(false, "the report metric was just pushed");
+                continue;
+            };
+            report_metric.boundaries.push(report_boundary);
         }
     }
 
@@ -891,6 +908,9 @@ struct PendingResult {
 struct PendingMeasure {
     measure: JsonMeasure,
     metrics: Vec<JsonReportMetric>,
+    /// The bare threshold's gate on this measure, if a bare threshold gated it:
+    /// what the deprecated singular `threshold` and `boundary` fields carry.
+    bare_gate: Option<(JsonThresholdModel, JsonBoundary)>,
 }
 
 impl PendingResult {
@@ -924,7 +944,19 @@ impl PendingMeasure {
     /// three deprecated fields are absent. Only a BMF v1 payload can report that
     /// shape, and its named values are stored, billed, and returned like any other.
     fn into_json(self) -> JsonReportMeasure {
-        let Self { measure, metrics } = self;
+        let Self {
+            measure,
+            mut metrics,
+            bare_gate,
+        } = self;
+
+        // Several thresholds may gate one named scalar, so the list is put in one
+        // order: the threshold creation order, oldest first.
+        for report_metric in &mut metrics {
+            report_metric
+                .boundaries
+                .sort_by_key(|gate| gate.threshold.boundary_order());
+        }
 
         let named = |name: &MetricName| -> Option<&JsonReportMetric> {
             metrics
@@ -938,11 +970,9 @@ impl PendingMeasure {
             lower_value: named(&MetricName::lower_value()).map(|metric| metric.value),
             upper_value: named(&MetricName::upper_value()).map(|metric| metric.value),
         });
-        let (threshold, boundary) = value
-            .and_then(|value| value.boundaries.first())
-            .map_or((None, None), |gate| {
-                (Some(gate.threshold.clone()), Some(gate.boundary))
-            });
+        let (threshold, boundary) = bare_gate.map_or((None, None), |(threshold, boundary)| {
+            (Some(threshold), Some(boundary))
+        });
 
         JsonReportMeasure {
             measure,
