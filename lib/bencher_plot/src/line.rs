@@ -674,7 +674,11 @@ impl Extent {
                 let data = result
                     .metrics
                     .iter()
-                    .map(|metric| {
+                    // A measure that names no `value` has no point estimate, so
+                    // there is nothing to place on the axis. It is left out of the
+                    // plot rather than drawn at zero.
+                    .filter_map(|metric| {
+                        let y_value = metric.metric.as_ref()?.value;
                         let x_value = metric.start_time.into_inner();
                         min_x = min_x
                             .map(|min| std::cmp::min(min, x_value))
@@ -682,7 +686,6 @@ impl Extent {
                         max_x = max_x
                             .map(|max| std::cmp::max(max, x_value))
                             .or(Some(x_value));
-                        let y_value = metric.metric.value;
                         match anchor {
                             Anchor::Left => {
                                 left_min_y = left_min_y
@@ -701,7 +704,7 @@ impl Extent {
                                     .or(Some(y_value));
                             },
                         }
-                        (x_value, y_value)
+                        Some((x_value, y_value))
                     })
                     .collect();
                 let color = LineData::color(index);

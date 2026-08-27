@@ -1,6 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
-    DateTime, JsonOneMetric, MetricUuid, ProjectResourceId, ReportUuid, project::report::Iteration,
+    DateTime, JsonOneMetric, MetricUuid, ProjectResourceId, ReportUuid,
+    project::{alert::JsonPerfAlert, report::Iteration, threshold::JsonThresholdModel},
 };
 use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
@@ -30,8 +31,6 @@ use diesel::{
 use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use super::perf::threshold_model_alert;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjMetricParams {
@@ -194,6 +193,20 @@ pub(super) type MetricQuery = (
     Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
     QueryMetricBoundary,
 );
+
+fn threshold_model_alert(
+    project: &QueryProject,
+    tma: Option<(QueryThreshold, QueryModel, Option<QueryAlert>)>,
+) -> (Option<JsonThresholdModel>, Option<JsonPerfAlert>) {
+    if let Some((query_threshold, query_model, query_alert)) = tma {
+        let threshold =
+            Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
+        let alert = query_alert.map(QueryAlert::into_perf_json);
+        (threshold, alert)
+    } else {
+        (None, None)
+    }
+}
 
 fn metric_query_json(
     conn: &mut DbConnection,
