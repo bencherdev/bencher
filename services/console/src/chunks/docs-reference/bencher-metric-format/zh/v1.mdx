@@ -1,0 +1,113 @@
+import BmfV1Example from "../bmf-v1-example.mdx";
+import BmfV1Schema from "../bmf-v1-schema.mdx";
+
+## Bencher Metric Format (BMF) v1
+
+BMF `v1` 让一个[基准测试][benchmark]可以报告多个结果，也让一个[度量][measure]可以报告多个值。
+一个基准测试名称映射到一个条目数组。
+每个条目指明该基准测试运行时所用的 `parameters`，以及它产出的 `measures`。
+
+<BmfV1Example />
+
+在这个示例中，`benchmark_name` 报告了三个结果：
+一个不带参数，一个带 `{"op":"read","size_mb":16}`，一个带 `{"op":"read","size_mb":32}`。
+这三个结果各自是一个网格点，各有自己的历史和自己的[警报][alert]。
+
+BMF `v1` 要求项目的 `bmf_version` 为 `1`。
+项目默认接受 BMF `v0`，只有服务器管理员才能提升项目的 `bmf_version`。
+BMF `v1` 还要求使用最新版本的 [`bencher` CLI][bencher run]。
+
+### 参数
+
+`parameters` 对象是该基准测试运行时所用输入的组合。
+每个键映射到一个 JSON 标量：字符串、数字或布尔值。
+`null`、数组和对象会被拒绝。
+键和字符串值各自最多 `64` 个字符，一个参数集最多携带 `8` 个键。
+
+参数集按其规范形式进行比较，即 [RFC 8785 (JSON Canonicalization Scheme)][jcs]。
+键的顺序无关紧要，数字是 ECMAScript 双精度浮点数，
+所以 `16`、`16.0` 和 `1.6e1` 是同一个值，`{"size_mb": 16}` 和 `{"size_mb": 16.0}` 是同一个参数集。
+
+没有 `parameters` 的条目与带 `"parameters": {}` 的条目是同一个网格点：
+每个基准测试与生俱来的空参数集。
+两个解析为同一参数集的条目就是一个网格点，
+因此它们的度量会汇合在一起，而不是分出一条新的序列。
+
+### 具名指标值
+
+每个度量映射到一个具名值对象，每个具名值都是一个 JSON 数字。
+一个名称最多 `64` 个字符，一个度量最多携带 `8` 个名称。
+超出上限的名称会被丢弃：约定俗成的名称始终保留，
+其余的按字典序保留，直到达到上限。
+
+有三个名称是约定俗成的，而非享有特权的：
+
+- `value`：点估计值，也就是性能图所绘制的值，以及[阈值][threshold]默认据以把关的值
+- `lower_value`：点估计值的下界
+- `upper_value`：点估计值的上界
+
+其他任何名称，例如 `p95` 或 `p99`，都以完全相同的方式存储和查询。
+一个度量可以只指定 `value`，只指定其他名称，或者两者任意混用。
+
+### 数组包装层
+
+⚠️ 缺少数组包装层的 BMF `v1` 载荷是一个有效的 BMF `v0` 载荷。
+
+通用的 [`json` 适配器][json adapter]接受这两个版本。
+BMF `v0` 载荷会按 BMF `v0` 解析，不会丢失任何内容。
+但写在数组位置上的条目对象，看起来与 BMF `v0` 的度量映射一模一样，
+于是 `parameters` 和每个具名值都会被读作该基准测试的度量，
+而本来想要的结果就悄无声息地丢失了。
+
+对 BMF `v1` 载荷请选择 `json_v1` 适配器。
+`json_v1` 适配器只接受 BMF `v1`，
+因此缺少数组包装层的载荷会解析失败，
+报告会被拒绝，而不是被悄悄降级。
+
+同时也要把报告上的 `bmf_version` 设为 `1`。
+`bmf_version` 字段声明载荷所采用的版本，
+项目的 `bmf_version` 门槛正是据此校验的，
+也正是它告诉 `json` 适配器先尝试 BMF `v1`。
+缺失的 `bmf_version` 表示版本 `0`。
+
+### 阈值
+
+报告在 `thresholds.models` 字段中声明它的[阈值][threshold]。
+在 BMF `v0` 中，该字段是度量到模型的映射。
+在 BMF `v1` 中，它是一个条目列表，每个条目指明该阈值把关的一切：
+
+- `measure`：度量的 UUID、标识符或名称
+- `metric`：该阈值把关的指标名称。若未设置，该阈值把关约定俗成的 `value` 名称。一个阈值始终只把关一个名称。
+- `parameters`：该阈值把关的网格点，以参数集列表给出。当列表中任一集合是某个网格点的子集时，该网格点即匹配，因此一个集合只需指明它关心的键，而固定了更多键的网格点仍然匹配。若未设置或设为空列表，该阈值把关每一个网格点。
+- `model`：要使用的阈值模型
+
+每个匹配的阈值都会触发。
+一个把关每个网格点的阈值，和一个只把关 `{"size_mb":16}` 的阈值，
+都会把关 `{"size_mb":16}` 这个网格点，
+所以那里的一次性能回归会引发两个警报，每个阈值一个。
+
+`thresholds.reset` 字段会清除载荷的形态所能寻址到的阈值。
+BMF `v0` 的映射只能指明一个度量，别无其他，所以 `reset` 只能触及那些把关每个网格点约定俗成的 `value` 名称的阈值。
+BMF `v1` 的列表可以寻址任何阈值，所以 `reset` 能触及全部阈值。
+
+### 合并
+
+BMF `v1` 不支持合并。
+各次迭代 `p99` 值的平均数并不是合并样本的 `p99`，
+所以针对 BMF `v1` 载荷请求的合并会收到警告，
+结果会不经合并地被摄取，每个载荷一次迭代。
+
+### Bencher Metric Format (BMF) v1 的 JSON 模式
+
+以下是 BMF `v1` JSON 的 [JSON 模式][json schema]：
+
+<BmfV1Schema />
+
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+[measure]: /zh/docs/explanation/benchmarking/#measure
+[alert]: /zh/docs/explanation/thresholds/#alerts
+[threshold]: /zh/docs/explanation/thresholds/
+[bencher run]: /zh/docs/explanation/bencher-run/
+[json adapter]: /zh/docs/explanation/adapters/#-json
+[jcs]: https://www.rfc-editor.org/rfc/rfc8785
+[json schema]: https://json-schema.org/draft-07/json-schema-release-notes

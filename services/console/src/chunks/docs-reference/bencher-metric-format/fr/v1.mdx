@@ -1,0 +1,114 @@
+import BmfV1Example from "../bmf-v1-example.mdx";
+import BmfV1Schema from "../bmf-v1-schema.mdx";
+
+## Bencher Metric Format (BMF) v1
+
+Le BMF `v1` permet à un [Benchmark][benchmark] de rapporter plusieurs résultats et à une [Mesure][measure] de rapporter plusieurs valeurs.
+Un nom de Benchmark correspond à un tableau d'entrées.
+Chaque entrée nomme les `parameters` avec lesquels le Benchmark s'est exécuté et les `measures` qu'il a produites.
+
+<BmfV1Example />
+
+Dans cet exemple, `benchmark_name` rapporte trois résultats :
+un sans paramètres, un avec `{"op":"read","size_mb":16}` et un avec `{"op":"read","size_mb":32}`.
+Chacun des trois est son propre point de grille, avec son propre historique et ses propres [Alertes][alert].
+
+Le BMF `v1` exige que le `bmf_version` du Projet soit `1`.
+Un Projet accepte le BMF `v0` par défaut, et seul un administrateur du serveur peut relever le `bmf_version` d'un Projet.
+Le BMF `v1` exige également une version à jour de [la CLI `bencher`][bencher run].
+
+### Paramètres
+
+L'objet `parameters` est la permutation des entrées avec lesquelles un Benchmark s'est exécuté.
+Chaque clé correspond à un scalaire JSON : une chaîne de caractères, un nombre ou un booléen.
+`null`, les tableaux et les objets sont rejetés.
+Une clé et une valeur de type chaîne font chacune au plus `64` caractères, et un ensemble de paramètres porte au plus `8` clés.
+
+Les ensembles de paramètres sont comparés sous leur forme canonique, [RFC 8785 (JSON Canonicalization Scheme)][jcs].
+L'ordre des clés n'a pas d'importance, et les nombres sont des doubles ECMAScript,
+donc `16`, `16.0` et `1.6e1` ne font qu'une seule valeur et `{"size_mb": 16}` et `{"size_mb": 16.0}` ne font qu'un seul ensemble de paramètres.
+
+Une entrée sans `parameters` et une entrée avec `"parameters": {}` sont le même point de grille :
+l'ensemble de paramètres vide avec lequel chaque Benchmark naît.
+Deux entrées qui se résolvent vers le même ensemble de paramètres ne forment qu'un seul point de grille,
+donc leurs mesures fusionnent au lieu de créer une série distincte.
+
+### Valeurs de métrique nommées
+
+Chaque Mesure correspond à un objet de valeurs nommées, et chaque valeur nommée est un nombre JSON.
+Un nom fait au plus `64` caractères, et une Mesure porte au plus `8` noms.
+Les noms au-delà de cette limite sont supprimés : les noms conventionnels sont toujours conservés,
+et les autres sont conservés dans l'ordre lexicographique jusqu'à la limite.
+
+Trois noms sont conventionnels, sans pour autant être privilégiés :
+
+- `value` : l'estimation ponctuelle, c'est-à-dire la valeur que le graphique de performance trace et la valeur qu'un [Seuil][threshold] contrôle par défaut
+- `lower_value` : la borne inférieure de l'estimation ponctuelle
+- `upper_value` : la borne supérieure de l'estimation ponctuelle
+
+Tout autre nom, tel que `p95` ou `p99`, est stocké et interrogé exactement de la même façon.
+Une Mesure peut ne nommer que `value`, ne nommer que d'autres noms, ou n'importe quel mélange des deux.
+
+### L'enveloppe de tableau
+
+⚠️ Une charge utile BMF `v1` écrite sans son enveloppe de tableau est une charge utile BMF `v0` valide.
+
+L'[adaptateur `json`][json adapter] générique accepte les deux versions.
+Une charge utile BMF `v0` est analysée comme du BMF `v0` et rien n'est perdu.
+Mais un objet d'entrée écrit là où le tableau devrait se trouver ressemble exactement à une carte de Mesures BMF `v0`,
+donc `parameters` et chaque valeur nommée sont lus comme des Mesures du Benchmark
+et les résultats attendus sont silencieusement perdus.
+
+Sélectionnez l'adaptateur `json_v1` pour une charge utile BMF `v1`.
+L'adaptateur `json_v1` n'accepte rien d'autre que du BMF `v1`,
+donc une charge utile à laquelle il manque son enveloppe de tableau échoue à l'analyse
+et le Rapport est rejeté au lieu d'être discrètement rétrogradé.
+
+Définissez également `bmf_version` à `1` sur le Rapport.
+Le champ `bmf_version` indique la version dans laquelle la charge utile est écrite,
+c'est lui qui est vérifié par le contrôle `bmf_version` du Projet,
+et c'est lui qui indique à l'adaptateur `json` d'essayer d'abord le BMF `v1`.
+Un `bmf_version` absent signifie la version `0`.
+
+### Seuils
+
+Un Rapport déclare ses [Seuils][threshold] dans le champ `thresholds.models`.
+En BMF `v0`, ce champ est une carte de Mesure vers Modèle.
+En BMF `v1`, c'est une liste d'entrées, et chaque entrée nomme tout ce que le Seuil contrôle :
+
+- `measure` : l'UUID, le slug ou le nom de la Mesure
+- `metric` : le nom de la métrique que le Seuil contrôle. S'il n'est pas défini, le Seuil contrôle le nom conventionnel `value`. Un Seuil contrôle toujours exactement un nom.
+- `parameters` : les points de grille que le Seuil contrôle, sous forme de liste d'ensembles de paramètres. Un point de grille correspond dès qu'un ensemble de la liste en est un sous-ensemble, donc un ensemble ne nomme que les clés qui l'intéressent et un point de grille qui fixe davantage de clés correspond quand même. S'il n'est pas défini, ou défini comme une liste vide, le Seuil contrôle tous les points de grille.
+- `model` : le Modèle de Seuil à utiliser
+
+Chaque Seuil qui correspond se déclenche.
+Un Seuil qui contrôle tous les points de grille et un Seuil qui ne contrôle que `{"size_mb":16}`
+contrôlent tous deux le point de grille `{"size_mb":16}`,
+donc une seule régression à cet endroit génère deux Alertes, une pour chaque Seuil.
+
+Le champ `thresholds.reset` efface les Seuils que la forme de la charge utile peut désigner.
+Une carte BMF `v0` ne nomme qu'une Mesure et rien d'autre, donc `reset` n'atteint que les Seuils
+qui contrôlent le nom conventionnel `value` de chaque point de grille.
+Une liste BMF `v1` peut désigner n'importe quel Seuil, donc `reset` les atteint tous.
+
+### Repli
+
+Le repli n'est pas pris en charge pour le BMF `v1`.
+La moyenne des valeurs `p99` de chaque itération n'est pas le `p99` de l'échantillon regroupé,
+donc un repli demandé pour une charge utile BMF `v1` fait l'objet d'un avertissement
+et les résultats sont ingérés sans repli, une itération par charge utile.
+
+### Schéma JSON de Bencher Metric Format (BMF) v1
+
+Il s'agit du [schéma JSON][json schema] pour le BMF `v1` au format JSON :
+
+<BmfV1Schema />
+
+[benchmark]: /fr/docs/explanation/benchmarking/#benchmark
+[measure]: /fr/docs/explanation/benchmarking/#measure
+[alert]: /fr/docs/explanation/thresholds/#alerts
+[threshold]: /fr/docs/explanation/thresholds/
+[bencher run]: /fr/docs/explanation/bencher-run/
+[json adapter]: /fr/docs/explanation/adapters/#-json
+[jcs]: https://www.rfc-editor.org/rfc/rfc8785
+[json schema]: https://json-schema.org/draft-07/json-schema-release-notes

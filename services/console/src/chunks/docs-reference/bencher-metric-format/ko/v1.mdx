@@ -1,0 +1,114 @@
+import BmfV1Example from "../bmf-v1-example.mdx";
+import BmfV1Schema from "../bmf-v1-schema.mdx";
+
+## Bencher Metric Format (BMF) v1
+
+BMF `v1`에서는 하나의 [Benchmark][benchmark]가 여러 결과를 보고할 수 있고, 하나의 [Measure][measure]가 여러 값을 보고할 수 있습니다.
+Benchmark 이름은 항목의 배열에 대응됩니다.
+각 항목은 해당 Benchmark가 실행된 `parameters`와 생성한 `measures`를 지정합니다.
+
+<BmfV1Example />
+
+이 예제에서 `benchmark_name`은 세 개의 결과를 보고합니다.
+하나는 파라미터가 없고, 하나는 `{"op":"read","size_mb":16}`, 나머지 하나는 `{"op":"read","size_mb":32}`입니다.
+이 셋은 각각 독립된 그리드 포인트이며, 각자의 이력과 각자의 [Alert][alert]를 가집니다.
+
+BMF `v1`을 사용하려면 Project의 `bmf_version`이 `1`이어야 합니다.
+Project는 기본적으로 BMF `v0`을 허용하며, Project의 `bmf_version`을 올릴 수 있는 것은 서버 관리자뿐입니다.
+BMF `v1`은 최신 버전의 [`bencher` CLI][bencher run]도 필요합니다.
+
+### 파라미터
+
+`parameters` 객체는 해당 Benchmark가 실행된 입력의 조합입니다.
+각 키는 JSON 스칼라 값, 즉 문자열, 숫자, 불리언 중 하나에 대응됩니다.
+`null`, 배열, 객체는 거부됩니다.
+키와 문자열 값은 각각 최대 `64`자이며, 하나의 파라미터 집합은 최대 `8`개의 키를 가집니다.
+
+파라미터 집합은 정규 형식인 [RFC 8785 (JSON Canonicalization Scheme)][jcs]로 비교됩니다.
+키 순서는 영향을 주지 않으며, 숫자는 ECMAScript 배정밀도 부동소수점으로 취급됩니다.
+따라서 `16`, `16.0`, `1.6e1`은 하나의 값이고, `{"size_mb": 16}`과 `{"size_mb": 16.0}`은 하나의 파라미터 집합입니다.
+
+`parameters`가 없는 항목과 `"parameters": {}`를 가진 항목은 같은 그리드 포인트입니다.
+이는 모든 Benchmark가 처음부터 가지고 있는 빈 파라미터 집합입니다.
+같은 파라미터 집합으로 해석되는 두 항목은 하나의 그리드 포인트이므로,
+그 measures는 계열을 나누지 않고 병합됩니다.
+
+### 이름이 지정된 메트릭 값
+
+각 Measure는 이름이 지정된 값의 객체에 대응되며, 이름이 지정된 값은 모두 JSON 숫자입니다.
+이름은 최대 `64`자이며, 하나의 Measure는 최대 `8`개의 이름을 가집니다.
+상한을 넘는 이름은 버려집니다. 관례적인 이름은 항상 유지되고,
+나머지는 사전순으로 상한까지 유지됩니다.
+
+관례적인 이름은 세 가지이며, 특별한 권한을 가지지는 않습니다:
+
+- `value`: 점 추정치로, 성능 플롯이 그리는 값이자 [Threshold][threshold]가 기본적으로 게이트하는 값입니다
+- `lower_value`: 점 추정치의 하한
+- `upper_value`: 점 추정치의 상한
+
+`p95`나 `p99` 같은 다른 모든 이름도 정확히 같은 방식으로 저장되고 조회됩니다.
+Measure는 `value`만 지정할 수도, 다른 이름만 지정할 수도, 둘을 섞어서 지정할 수도 있습니다.
+
+### 배열 래퍼
+
+⚠️ 배열 래퍼 없이 작성된 BMF `v1` 페이로드는 유효한 BMF `v0` 페이로드입니다.
+
+범용 [`json` 어댑터][json adapter]는 두 버전을 모두 허용합니다.
+BMF `v0` 페이로드는 BMF `v0`으로 파싱되며 아무것도 손실되지 않습니다.
+하지만 배열이 있어야 할 자리에 작성된 항목 객체는 BMF `v0`의 Measure 맵과 정확히 똑같아 보입니다.
+그래서 `parameters`와 이름이 지정된 값이 모두 해당 Benchmark의 Measure로 읽히고,
+의도한 결과는 아무런 알림 없이 손실됩니다.
+
+BMF `v1` 페이로드에는 `json_v1` 어댑터를 선택하십시오.
+`json_v1` 어댑터는 BMF `v1` 외에는 아무것도 허용하지 않습니다.
+따라서 배열 래퍼가 빠진 페이로드는 파싱에 실패하고,
+Report는 조용히 하위 버전으로 강등되는 대신 거부됩니다.
+
+Report에도 `bmf_version`을 `1`로 설정하십시오.
+`bmf_version` 필드는 해당 페이로드가 어떤 버전으로 작성되었는지를 나타내고,
+Project의 `bmf_version` 게이트가 대조하는 대상이며,
+`json` 어댑터가 BMF `v1`을 먼저 시도하도록 알려 주는 값입니다.
+`bmf_version`이 없으면 버전 `0`을 의미합니다.
+
+### Thresholds
+
+Report는 자신의 [Threshold][threshold]를 `thresholds.models` 필드에 선언합니다.
+BMF `v0`에서 이 필드는 Measure를 model에 대응시키는 맵입니다.
+BMF `v1`에서는 항목의 목록이며, 각 항목은 해당 Threshold가 게이트하는 모든 것을 지정합니다:
+
+- `measure`: Measure의 UUID, 슬러그 또는 이름
+- `metric`: 해당 Threshold가 게이트하는 메트릭의 이름. 설정하지 않으면 Threshold는 관례적인 `value` 이름을 게이트합니다. Threshold는 항상 정확히 하나의 이름을 게이트합니다.
+- `parameters`: 해당 Threshold가 게이트하는 그리드 포인트를 파라미터 집합의 목록으로 지정합니다. 목록의 어느 한 집합이 그리드 포인트의 부분집합이면 그 그리드 포인트는 일치합니다. 따라서 집합은 관심 있는 키만 지정하면 되고, 더 많은 키를 고정한 그리드 포인트도 일치합니다. 설정하지 않거나 빈 목록으로 설정하면 Threshold는 모든 그리드 포인트를 게이트합니다.
+- `model`: 사용할 Threshold model
+
+일치하는 모든 Threshold가 발동합니다.
+모든 그리드 포인트를 게이트하는 Threshold와 `{"size_mb":16}`만 게이트하는 Threshold는
+둘 다 `{"size_mb":16}` 그리드 포인트를 게이트합니다.
+따라서 그곳에서 성능 저하가 한 번 발생하면 Threshold마다 하나씩, 두 개의 Alert가 생성됩니다.
+
+`thresholds.reset` 필드는 해당 페이로드의 형태로 지정할 수 있는 Threshold를 해제합니다.
+BMF `v0` 맵은 Measure만 지정할 뿐이므로, `reset`은 모든 그리드 포인트의 관례적인 `value` 이름을
+게이트하는 Threshold에만 도달합니다.
+BMF `v1` 목록은 모든 Threshold를 지정할 수 있으므로, `reset`은 그 전부에 도달합니다.
+
+### Fold
+
+BMF `v1`에서는 Fold가 지원되지 않습니다.
+반복별 `p99` 값의 평균은 합쳐진 표본의 `p99`가 아닙니다.
+따라서 BMF `v1` 페이로드에 대해 요청된 fold는 경고가 발생하고,
+결과는 fold되지 않은 채 페이로드당 한 번의 반복으로 수집됩니다.
+
+### Bencher Metric Format (BMF) v1 JSON 스키마
+
+다음은 BMF `v1` JSON의 [JSON 스키마][json schema]입니다:
+
+<BmfV1Schema />
+
+[benchmark]: /ko/docs/explanation/benchmarking/#benchmark
+[measure]: /ko/docs/explanation/benchmarking/#measure
+[alert]: /ko/docs/explanation/thresholds/#alerts
+[threshold]: /ko/docs/explanation/thresholds/
+[bencher run]: /ko/docs/explanation/bencher-run/
+[json adapter]: /ko/docs/explanation/adapters/#-json
+[jcs]: https://www.rfc-editor.org/rfc/rfc8785
+[json schema]: https://json-schema.org/draft-07/json-schema-release-notes

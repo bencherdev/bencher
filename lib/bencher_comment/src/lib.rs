@@ -1,7 +1,7 @@
 #![expect(clippy::format_push_string, reason = "todo")]
 
 use std::{
-    collections::{BTreeMap, HashSet, btree_map::Entry},
+    collections::{BTreeMap, BTreeSet, HashSet},
     ops::{BitOr, BitOrAssign},
     time::Duration,
 };
@@ -9,14 +9,15 @@ use std::{
 #[cfg(feature = "plus")]
 use bencher_json::SpecUuid;
 use bencher_json::{
-    AlertUuid, BenchmarkSlug, BranchSlug, HeadUuid, JsonAlert, JsonBenchmark, JsonBoundary,
-    JsonMeasure, JsonPerfQuery, JsonReport, MeasureSlug, ModelUuid, ProjectSlug, ReportUuid,
-    ResourceName, TestbedSlug, ThresholdUuid, Units,
+    AlertUuid, BenchmarkSlug, BenchmarkUuid, BranchSlug, HeadUuid, JsonAlert, JsonBenchmark,
+    JsonBoundary, JsonMeasure, JsonPerfQuery, JsonReport, MeasureSlug, MetricName, ModelUuid,
+    ParameterSet, ProjectSlug, ReportUuid, ResourceName, TestbedSlug, ThresholdUuid, Units,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
         plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
         report::{JsonReportIteration, JsonReportMeasure, JsonReportResult},
+        threshold::JsonThresholdModel,
     },
 };
 use ordered_float::OrderedFloat;
@@ -39,6 +40,7 @@ pub struct ReportComment {
     multiple_iterations: bool,
     benchmark_count: usize,
     missing_threshold: HashSet<Measure>,
+    grid_benchmarks: HashSet<BenchmarkUuid>,
     json_report: JsonReport,
     sub_adapter: SubAdapter,
     source: String,
@@ -64,9 +66,39 @@ impl ReportComment {
             multiple_iterations: results.len() > 1,
             benchmark_count: results.iter().map(Vec::len).sum(),
             missing_threshold: Measure::missing_threshold(&json_report),
+            grid_benchmarks: grid_benchmarks(&json_report),
             json_report,
             sub_adapter,
             source,
+        }
+    }
+
+    /// The name a row gives its benchmark, and the grid point that row carries.
+    ///
+    /// A benchmark whose every row in this comment carries the empty parameter set
+    /// keeps the bare benchmark name it has always had. One non-empty set among its
+    /// rows names them all, the empty set among them included, which reads `{}`.
+    /// The set is spelled in its canonical form and follows the benchmark name, the
+    /// way the perf image spells it.
+    fn benchmark_label(&self, benchmark: &JsonBenchmark, set: &ParameterSet) -> String {
+        if self.grid_benchmarks.contains(&benchmark.uuid) {
+            format!("{name} {set}", name = benchmark.name, set = set.canonical())
+        } else {
+            benchmark.name.to_string()
+        }
+    }
+
+    /// The name a row gives a gated measure: the measure, and the metric the
+    /// threshold gates when that is not the conventional `value`.
+    ///
+    /// A threshold that names no metric gates `value`, so it reads as the measure
+    /// alone, which is every threshold an older client could create.
+    fn measure_label(measure: &JsonMeasure, metric: Option<&MetricName>) -> String {
+        match metric {
+            Some(metric) if *metric != MetricName::value() => {
+                format!("{name} ({metric})", name = measure.name)
+            },
+            _ => measure.name.to_string(),
         }
     }
 
@@ -116,7 +148,7 @@ impl ReportComment {
                 for report_measure in &result.measures {
                     text.push_str(&format!(
                         "\n- {benchmark} ({measure}): {console_url}",
-                        benchmark = result.benchmark.name,
+                        benchmark = self.benchmark_label(&result.benchmark, &result.parameter.set),
                         measure = report_measure.measure.name,
                         console_url = self.perf_url(
                             &result.benchmark,
@@ -138,8 +170,9 @@ impl ReportComment {
         for alert in self.alerts() {
             text.push_str(&format!(
                 "\n- {benchmark_name} ({measure_name}){iter}: {console_url}",
-                benchmark_name = alert.benchmark.name,
-                measure_name = alert.threshold.measure.name,
+                benchmark_name = self.benchmark_label(&alert.benchmark, &alert.parameter.set),
+                measure_name =
+                    Self::measure_label(&alert.threshold.measure, alert.threshold.metric.as_ref()),
                 iter = if self.multiple_iterations {
                     format!(" (Iteration {iteration})", iteration = alert.iteration)
                 } else {
@@ -346,12 +379,13 @@ impl ReportComment {
             html.push_str(&format!(
                 "<td><a href=\"{url}\">{benchmark}</a></td>",
                 url = self.resource_url(Resource::Benchmark(alert.benchmark.slug.clone())),
-                benchmark = alert.benchmark.name,
+                benchmark = self.benchmark_label(&alert.benchmark, &alert.parameter.set),
             ));
             html.push_str(&format!(
                 "<td><a href=\"{url}\">{measure}<br />{units}</a></td>",
                 url = self.resource_url(Resource::Measure(alert.threshold.measure.slug.clone())),
-                measure = alert.threshold.measure.name,
+                measure =
+                    Self::measure_label(&alert.threshold.measure, alert.threshold.metric.as_ref()),
             ));
             self.html_alerts_table_view_cell(html, alert);
             value_cell(
@@ -443,24 +477,24 @@ impl ReportComment {
         iteration: &JsonReportIteration,
         require_threshold: bool,
     ) {
-        let mbl = boundary_limits_map(iteration, require_threshold);
+        let columns = measure_columns(iteration, require_threshold);
 
         html.push_str("<table>");
-        self.html_iteration_table_header(html, &mbl);
-        self.html_iteration_table_body(html, iteration, &mbl);
+        self.html_iteration_table_header(html, &columns);
+        self.html_iteration_table_body(html, iteration, &columns);
         html.push_str("</table>");
     }
 
     fn html_iteration_table_header(
         &self,
         html: &mut String,
-        mbl: &BTreeMap<Measure, BoundaryLimits>,
+        columns: &BTreeMap<Measure, MeasureColumns>,
     ) {
         html.push_str("<thead>");
         html.push_str("<tr>");
         html.push_str("<th>Benchmark</th>");
-        for (measure, boundary_limits) in mbl {
-            let units = Units::new(boundary_limits.min.into(), measure.units.clone()).scale_units();
+        for (measure, measure_columns) in columns {
+            let units = Units::new(measure_columns.min.into(), measure.units.clone()).scale_units();
 
             html.push_str(&format!(
                 "<th><a href=\"{url}\">{measure}</a></th>",
@@ -468,25 +502,34 @@ impl ReportComment {
                 measure = measure.name,
             ));
 
-            html.push_str("<th>");
-            if boundary_limits.has_limit() {
-                html.push_str("Benchmark Result<br />");
-            }
-            html.push_str(units.as_ref());
-            if boundary_limits.has_limit() {
-                html.push_str("<br />(Result Δ%)");
-            }
-            html.push_str("</th>");
+            if let Some(boundary_limits) = measure_columns.point_estimate {
+                html.push_str("<th>");
+                if boundary_limits.has_limit() {
+                    html.push_str("Benchmark Result<br />");
+                }
+                html.push_str(units.as_ref());
+                if boundary_limits.has_limit() {
+                    html.push_str("<br />(Result Δ%)");
+                }
+                html.push_str("</th>");
 
-            if boundary_limits.lower {
-                html.push_str(&format!(
-                    "<th>Lower Boundary<br />{units}<br />(Limit %)</th>"
-                ));
+                if boundary_limits.lower {
+                    html.push_str(&format!(
+                        "<th>Lower Boundary<br />{units}<br />(Limit %)</th>"
+                    ));
+                }
+
+                if boundary_limits.upper {
+                    html.push_str(&format!(
+                        "<th>Upper Boundary<br />{units}<br />(Limit %)</th>"
+                    ));
+                }
             }
 
-            if boundary_limits.upper {
+            for name in &measure_columns.names {
                 html.push_str(&format!(
-                    "<th>Upper Boundary<br />{units}<br />(Limit %)</th>"
+                    "<th>{measure} ({name})<br />{units}</th>",
+                    measure = measure.name,
                 ));
             }
         }
@@ -498,7 +541,7 @@ impl ReportComment {
         &self,
         html: &mut String,
         iteration: &JsonReportIteration,
-        mbl: &BTreeMap<Measure, BoundaryLimits>,
+        columns: &BTreeMap<Measure, MeasureColumns>,
     ) {
         html.push_str("<tbody>");
         for result in iteration {
@@ -506,78 +549,122 @@ impl ReportComment {
             html.push_str(&format!(
                 "<td><a href=\"{url}\">{name}</a></td>",
                 url = self.resource_url(Resource::Benchmark(result.benchmark.slug.clone())),
-                name = result.benchmark.name,
+                name = self.benchmark_label(&result.benchmark, &result.parameter.set),
             ));
-            for (measure, boundary_limits) in mbl {
-                let (factor, units_symbol) = {
-                    let units = Units::new(boundary_limits.min.into(), measure.units.clone());
-                    (units.scale_factor(), units.scale_units_symbol())
-                };
-
-                let report_measure = result
-                    .measures
-                    .iter()
-                    .find(|m| m.measure.slug == measure.slug);
-                // The point estimate. A measure that named no `value` has nothing for
-                // this table to draw, so its cells stay empty.
-                let point_estimate = report_measure.and_then(|m| m.metric.as_ref());
-                let alert = self.find_alert(result, measure);
-
-                if let Some(report_measure) = report_measure {
-                    self.html_iteration_table_view_cell(
-                        html,
-                        result,
-                        report_measure,
-                        *boundary_limits,
-                        alert,
-                    );
-                } else {
-                    html.push_str(EMPTY_CELL);
-                }
-                if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
-                    value_cell(
-                        html,
-                        metric.value,
-                        report_measure.boundary.and_then(|b| b.baseline),
-                        factor,
-                        &units_symbol,
-                        alert.is_some(),
-                    );
-                } else {
-                    html.push_str(EMPTY_CELL);
-                }
-                if boundary_limits.lower {
-                    if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
-                        lower_limit_cell(
-                            html,
-                            metric.value,
-                            report_measure.boundary.and_then(|b| b.lower_limit),
-                            factor,
-                            &units_symbol,
-                            alert.is_some_and(|a| a.limit == BoundaryLimit::Lower),
-                        );
-                    } else {
-                        html.push_str(EMPTY_CELL);
-                    }
-                }
-                if boundary_limits.upper {
-                    if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
-                        upper_limit_cell(
-                            html,
-                            metric.value,
-                            report_measure.boundary.and_then(|b| b.upper_limit),
-                            factor,
-                            &units_symbol,
-                            alert.is_some_and(|a| a.limit == BoundaryLimit::Upper),
-                        );
-                    } else {
-                        html.push_str(EMPTY_CELL);
-                    }
-                }
+            for (measure, measure_columns) in columns {
+                self.html_iteration_table_measure_cells(html, result, measure, measure_columns);
             }
             html.push_str("</tr>");
         }
         html.push_str("</tbody>");
+    }
+
+    /// Every cell one measure contributes to one row: the view cell, the point
+    /// estimate's cells when it has columns, and one cell per name of its own.
+    fn html_iteration_table_measure_cells(
+        &self,
+        html: &mut String,
+        result: &JsonReportResult,
+        measure: &Measure,
+        measure_columns: &MeasureColumns,
+    ) {
+        let (factor, units_symbol) = {
+            let units = Units::new(measure_columns.min.into(), measure.units.clone());
+            (units.scale_factor(), units.scale_units_symbol())
+        };
+
+        let report_measure = result
+            .measures
+            .iter()
+            .find(|m| m.measure.slug == measure.slug);
+        // The point estimate. A measure that named no `value` has nothing for
+        // this table to draw, so its cells stay empty.
+        let point_estimate = report_measure.and_then(|m| m.metric.as_ref());
+        let alert = self.find_alert(result, measure, &MetricName::value());
+
+        if let Some(report_measure) = report_measure {
+            self.html_iteration_table_view_cell(
+                html,
+                result,
+                report_measure,
+                measure_columns.point_estimate.unwrap_or_default(),
+                alert,
+            );
+        } else {
+            html.push_str(EMPTY_CELL);
+        }
+
+        if let Some(boundary_limits) = measure_columns.point_estimate {
+            if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
+                value_cell(
+                    html,
+                    metric.value,
+                    report_measure.boundary.and_then(|b| b.baseline),
+                    factor,
+                    &units_symbol,
+                    alert.is_some(),
+                );
+            } else {
+                html.push_str(EMPTY_CELL);
+            }
+            if boundary_limits.lower {
+                if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
+                    lower_limit_cell(
+                        html,
+                        metric.value,
+                        report_measure.boundary.and_then(|b| b.lower_limit),
+                        factor,
+                        &units_symbol,
+                        alert.is_some_and(|a| a.limit == BoundaryLimit::Lower),
+                    );
+                } else {
+                    html.push_str(EMPTY_CELL);
+                }
+            }
+            if boundary_limits.upper {
+                if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
+                    upper_limit_cell(
+                        html,
+                        metric.value,
+                        report_measure.boundary.and_then(|b| b.upper_limit),
+                        factor,
+                        &units_symbol,
+                        alert.is_some_and(|a| a.limit == BoundaryLimit::Upper),
+                    );
+                } else {
+                    html.push_str(EMPTY_CELL);
+                }
+            }
+        }
+
+        for name in &measure_columns.names {
+            let named =
+                report_measure.and_then(|m| m.metrics.iter().find(|metric| metric.name == *name));
+            if let Some(named) = named {
+                // A named value has one column, so what a threshold computed
+                // for it rides inside the cell the way a baseline does.
+                //
+                // The boundaries are in threshold creation order, oldest first, and
+                // that order is not a ranking: the first is not the winner. It is
+                // taken because a cell draws one baseline and the choice has to be
+                // deterministic. This is display only and decides nothing.
+                let baseline = named
+                    .boundaries
+                    .first()
+                    .and_then(|boundary| boundary.boundary.baseline);
+                let named_alert = self.find_alert(result, measure, name);
+                value_cell(
+                    html,
+                    named.value,
+                    baseline,
+                    factor,
+                    &units_symbol,
+                    named_alert.is_some(),
+                );
+            } else {
+                html.push_str(EMPTY_CELL);
+            }
+        }
     }
 
     fn html_iteration_table_view_cell(
@@ -597,7 +684,7 @@ impl ReportComment {
                 Some(boundary_limits)
             )
         ));
-        if let Some(threshold) = &report_measure.threshold {
+        if let Some(threshold) = view_threshold(report_measure) {
             html.push_str("<br />");
             html.push_str(&format!(
                 "🚷 <a href=\"{url}\">view threshold</a>",
@@ -672,7 +759,7 @@ impl ReportComment {
         for iteration in self.results() {
             for result in iteration {
                 for report_measure in &result.measures {
-                    if report_measure.threshold.is_some() {
+                    if has_threshold(report_measure) {
                         return true;
                     }
                 }
@@ -685,10 +772,32 @@ impl ReportComment {
         !self.alerts().is_empty()
     }
 
-    pub fn find_alert(&self, result: &JsonReportResult, measure: &Measure) -> Option<&JsonAlert> {
+    /// The alert this row's cell shows, if any.
+    ///
+    /// Four dimensions are matched: the benchmark, the grid point, the measure, and
+    /// the name. Two grid points of one benchmark are two rows and two names of one
+    /// measure are two columns, so a cell that matched fewer would show an alert
+    /// that fired somewhere else.
+    ///
+    /// The iteration is a fifth dimension and is deliberately not matched, which is
+    /// how this has always behaved. Matching it would change what an existing
+    /// multi-iteration BMF v0 comment renders, so it stays as it is.
+    pub fn find_alert(
+        &self,
+        result: &JsonReportResult,
+        measure: &Measure,
+        metric: &MetricName,
+    ) -> Option<&JsonAlert> {
         self.alerts().iter().find(|alert| {
             alert.benchmark.slug == result.benchmark.slug
+                && alert.parameter.uuid == result.parameter.uuid
                 && alert.threshold.measure.slug == measure.slug
+                && alert
+                    .threshold
+                    .metric
+                    .clone()
+                    .unwrap_or_else(MetricName::value)
+                    == *metric
         })
     }
 
@@ -898,7 +1007,7 @@ impl Measure {
                     result
                         .measures
                         .iter()
-                        .filter(|&report_measure| report_measure.threshold.is_none())
+                        .filter(|&report_measure| !has_threshold(report_measure))
                         .map(|report_measure| Measure::from(report_measure.measure.clone()))
                 })
             })
@@ -1118,19 +1227,95 @@ impl BoundaryLimits {
     }
 }
 
-fn boundary_limits_map(
+/// The columns one measure contributes to an iteration table.
+#[derive(Clone)]
+struct MeasureColumns {
+    /// The smallest number any column of this measure shows, which is what scales
+    /// the units the whole measure is spelled in.
+    min: OrderedFloat<f64>,
+    /// The point estimate's columns: the value column, and whichever boundary
+    /// columns the results produced.
+    ///
+    /// Absent when no result of this measure named a point estimate, which BMF v1
+    /// permits. Such a measure renders its named columns instead of nothing.
+    point_estimate: Option<BoundaryLimits>,
+    /// Every name this measure carries beyond the conventional trio, in name order.
+    ///
+    /// One column each, after the point estimate's columns. The trio is what the
+    /// existing columns already draw, so it never earns a column of its own.
+    names: BTreeSet<MetricName>,
+}
+
+/// The threshold this measure's cell links to, if anything gated it.
+///
+/// The deprecated singular threshold is the bare one, which gates the conventional
+/// `value` name of every grid point. Every threshold a BMF v0 payload can create is
+/// bare, so a v0 measure that anything gated has it and this never looks any
+/// further: the v0 cell is the cell it always was. A measure gated only by a
+/// threshold that names a metric or filters grid points has to be read off the rows
+/// themselves, which is the only way the cell, `--ci-only-thresholds`, and the no
+/// threshold warning can agree about the same measure.
+///
+/// The rows are already in threshold creation order, oldest first, and nothing about
+/// that order is a ranking. The first is taken because a cell links to one threshold
+/// and the choice has to be deterministic, not because it won anything.
+fn view_threshold(report_measure: &JsonReportMeasure) -> Option<&JsonThresholdModel> {
+    report_measure.threshold.as_ref().or_else(|| {
+        report_measure
+            .metrics
+            .iter()
+            .flat_map(|metric| metric.boundaries.iter())
+            .map(|boundary| &boundary.threshold)
+            .next()
+    })
+}
+
+/// Whether anything gated this measure of this grid point.
+///
+/// One predicate for the cell, `--ci-only-thresholds`, and the no threshold warning,
+/// so no comment can shout `NO THRESHOLD` in a cell while staying silent about that
+/// measure in the warning above it.
+fn has_threshold(report_measure: &JsonReportMeasure) -> bool {
+    view_threshold(report_measure).is_some()
+}
+
+/// Whether a name is one of the three the metric triple maps onto.
+fn is_conventional(name: &MetricName) -> bool {
+    *name == MetricName::value()
+        || *name == MetricName::lower_value()
+        || *name == MetricName::upper_value()
+}
+
+/// Every benchmark whose rows in this comment name the grid point they carry.
+///
+/// A benchmark is in here when any row of it, result or alert, carries a non-empty
+/// parameter set. Results and alerts are counted together so the two tables of one
+/// comment never disagree about how a benchmark is named.
+fn grid_benchmarks(json_report: &JsonReport) -> HashSet<BenchmarkUuid> {
+    let mut grid = HashSet::new();
+    for iteration in json_report.results.as_deref().unwrap_or_default() {
+        for result in iteration {
+            if !result.parameter.set.is_empty() {
+                grid.insert(result.benchmark.uuid);
+            }
+        }
+    }
+    for alert in json_report.alerts.as_deref().unwrap_or_default() {
+        if !alert.parameter.set.is_empty() {
+            grid.insert(alert.benchmark.uuid);
+        }
+    }
+    grid
+}
+
+fn measure_columns(
     iteration: &JsonReportIteration,
     require_threshold: bool,
-) -> BTreeMap<Measure, BoundaryLimits> {
-    let mut map = BTreeMap::new();
+) -> BTreeMap<Measure, MeasureColumns> {
+    let mut map: BTreeMap<Measure, MeasureColumns> = BTreeMap::new();
     for result in iteration {
         for report_measure in &result.measures {
-            // A measure that named no point estimate has no row in this table.
-            let Some(metric) = report_measure.metric.as_ref() else {
-                continue;
-            };
-            let measure = Measure::from(report_measure.measure.clone());
-            let min = {
+            let point_estimate = report_measure.metric.as_ref().and_then(|metric| {
                 let mut min = metric.value;
                 if let Some(lower_limit) = report_measure.boundary.and_then(|b| b.lower_limit) {
                     min = min.min(lower_limit);
@@ -1138,28 +1323,50 @@ fn boundary_limits_map(
                 if let Some(upper_limit) = report_measure.boundary.and_then(|b| b.upper_limit) {
                     min = min.min(upper_limit);
                 }
-                min
-            };
-            let lower = report_measure
-                .boundary
-                .and_then(|b| b.lower_limit)
-                .is_some();
-            let upper = report_measure
-                .boundary
-                .and_then(|b| b.upper_limit)
-                .is_some();
-            let boundary_limits = BoundaryLimits { min, lower, upper };
-            if require_threshold && !boundary_limits.has_limit() {
+                let lower = report_measure
+                    .boundary
+                    .and_then(|b| b.lower_limit)
+                    .is_some();
+                let upper = report_measure
+                    .boundary
+                    .and_then(|b| b.upper_limit)
+                    .is_some();
+                let boundary_limits = BoundaryLimits { min, lower, upper };
+                (!require_threshold || boundary_limits.has_limit()).then_some(boundary_limits)
+            });
+
+            // A name beyond the trio earns a column of its own. Under
+            // `--ci-only-thresholds` only a gated name does, the same way only a
+            // bounded point estimate does.
+            let named = report_measure
+                .metrics
+                .iter()
+                .filter(|metric| !is_conventional(&metric.name))
+                .filter(|metric| !require_threshold || !metric.boundaries.is_empty())
+                .collect::<Vec<_>>();
+
+            // A measure with neither a point estimate nor a name of its own has
+            // nothing for this table to draw.
+            if point_estimate.is_none() && named.is_empty() {
                 continue;
             }
-            match map.entry(measure) {
-                Entry::Occupied(mut entry) => {
-                    let entry = entry.get_mut();
-                    *entry |= boundary_limits;
-                },
-                Entry::Vacant(entry) => {
-                    entry.insert(boundary_limits);
-                },
+
+            let measure = Measure::from(report_measure.measure.clone());
+            let columns = map.entry(measure).or_insert_with(|| MeasureColumns {
+                min: f64::INFINITY.into(),
+                point_estimate: None,
+                names: BTreeSet::new(),
+            });
+            if let Some(boundary_limits) = point_estimate {
+                columns.min = columns.min.min(boundary_limits.min);
+                match &mut columns.point_estimate {
+                    Some(point_estimate) => *point_estimate |= boundary_limits,
+                    None => columns.point_estimate = Some(boundary_limits),
+                }
+            }
+            for metric in named {
+                columns.min = columns.min.min(metric.value);
+                columns.names.insert(metric.name.clone());
             }
         }
     }
@@ -1172,7 +1379,7 @@ mod tests {
         DateTime, JsonBranch, JsonHead, JsonProject, JsonReport, JsonReportCounts, JsonTestbed,
         project::{
             Visibility,
-            report::{Adapter, JsonReportResults},
+            report::{Adapter, JsonReportAlerts, JsonReportResults},
         },
     };
     use ordered_float::OrderedFloat;
@@ -1254,11 +1461,46 @@ mod tests {
     }
 
     /// One iteration with two measures of one benchmark: one that named a point
-    /// estimate and one that named only a percentile.
+    /// estimate and one that named only a percentile, with nothing gating either.
+    fn value_less_results() -> JsonReportResults {
+        value_less_results_gated(&serde_json::json!([]))
+    }
+
+    /// The same iteration, with `boundaries` on the percentile row.
     ///
+    /// A threshold that names a metric is never the bare one, so the deprecated
+    /// singular `threshold` stays absent however many of these there are. That is
+    /// the wire shape a BMF v1 report produces and the shape this pins.
+    fn named_gate() -> serde_json::Value {
+        let date = serde_json::to_value(DateTime::TEST).unwrap();
+        serde_json::json!([{
+            "threshold": {
+                "uuid": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+                "project": "11111111-1111-1111-1111-111111111111",
+                "model": {
+                    "uuid": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+                    "test": "t_test",
+                    "min_sample_size": null,
+                    "max_sample_size": null,
+                    "window": null,
+                    "lower_boundary": null,
+                    "upper_boundary": 0.95,
+                    "created": date,
+                    "replaced": null,
+                },
+                "created": date,
+            },
+            "boundary": {
+                "baseline": 1.0,
+                "lower_limit": null,
+                "upper_limit": 3.0,
+            },
+        }])
+    }
+
     /// Built from JSON rather than constructors because the absent deprecated
     /// `metric` is the wire shape under test.
-    fn value_less_results() -> JsonReportResults {
+    fn value_less_results_gated(boundaries: &serde_json::Value) -> JsonReportResults {
         let date = serde_json::to_value(DateTime::TEST).unwrap();
         let measure = |uuid: &str, name: &str, slug: &str| {
             serde_json::json!({
@@ -1311,7 +1553,7 @@ mod tests {
                         "uuid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
                         "name": "p99",
                         "value": 2.0,
-                        "boundaries": [],
+                        "boundaries": boundaries,
                     }],
                     "threshold": null,
                     "boundary": null,
@@ -1321,9 +1563,148 @@ mod tests {
         .unwrap()
     }
 
+    /// One iteration of one benchmark on `sets`, one grid point per set, each with
+    /// one measure that named a point estimate.
+    ///
+    /// Built from JSON rather than constructors because the parameter set on the
+    /// wire is what is under test.
+    fn grid_results(sets: &[serde_json::Value]) -> JsonReportResults {
+        let date = serde_json::to_value(DateTime::TEST).unwrap();
+        let results = sets
+            .iter()
+            .enumerate()
+            .map(|(index, set)| {
+                serde_json::json!({
+                    "iteration": 0,
+                    "benchmark": {
+                        "uuid": "66666666-6666-6666-6666-666666666666",
+                        "project": "11111111-1111-1111-1111-111111111111",
+                        "name": "bench",
+                        "slug": "bench",
+                        "created": date,
+                        "modified": date,
+                        "archived": null,
+                    },
+                    "parameter": {
+                        "uuid": format!("77777777-7777-7777-7777-77777777777{index}"),
+                        "set": set,
+                    },
+                    "measures": [{
+                        "measure": {
+                            "uuid": "88888888-8888-8888-8888-888888888888",
+                            "project": "11111111-1111-1111-1111-111111111111",
+                            "name": "Latency",
+                            "slug": "latency",
+                            "units": "nanoseconds (ns)",
+                            "created": date,
+                            "modified": date,
+                            "archived": null,
+                        },
+                        "metrics": [{
+                            "uuid": "99999999-9999-9999-9999-999999999999",
+                            "name": "value",
+                            "value": 1.0,
+                            "boundaries": [],
+                        }],
+                        "metric": {
+                            "uuid": "99999999-9999-9999-9999-999999999999",
+                            "value": 1.0,
+                            "lower_value": null,
+                            "upper_value": null,
+                        },
+                        "threshold": null,
+                        "boundary": null,
+                    }],
+                })
+            })
+            .collect::<Vec<_>>();
+        serde_json::from_value(serde_json::json!([results])).unwrap()
+    }
+
+    /// One alert on the `p99` row of one grid point of `bench`.
+    fn named_alert(set: &serde_json::Value) -> JsonReportAlerts {
+        let date = serde_json::to_value(DateTime::TEST).unwrap();
+        serde_json::from_value(serde_json::json!([{
+            "uuid": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+            "report": "00000000-0000-0000-0000-000000000000",
+            "iteration": 0,
+            "benchmark": {
+                "uuid": "66666666-6666-6666-6666-666666666666",
+                "project": "11111111-1111-1111-1111-111111111111",
+                "name": "bench",
+                "slug": "bench",
+                "created": date,
+                "modified": date,
+                "archived": null,
+            },
+            "parameter": {
+                "uuid": "77777777-7777-7777-7777-777777777770",
+                "benchmark": "66666666-6666-6666-6666-666666666666",
+                "set": set,
+                "created": date,
+                "modified": date,
+                "archived": null,
+            },
+            "value": 2.0,
+            "threshold": {
+                "uuid": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+                "project": "11111111-1111-1111-1111-111111111111",
+                "branch": {
+                    "uuid": "33333333-3333-3333-3333-333333333333",
+                    "project": "11111111-1111-1111-1111-111111111111",
+                    "name": "main",
+                    "slug": "main",
+                    "head": {
+                        "uuid": "44444444-4444-4444-4444-444444444444",
+                        "start_point": null,
+                        "version": null,
+                        "created": date,
+                        "replaced": null,
+                    },
+                    "created": date,
+                    "modified": date,
+                    "archived": null,
+                },
+                "testbed": {
+                    "uuid": "55555555-5555-5555-5555-555555555555",
+                    "project": "11111111-1111-1111-1111-111111111111",
+                    "name": "localhost",
+                    "slug": "localhost",
+                    "created": date,
+                    "modified": date,
+                    "archived": null,
+                },
+                "measure": {
+                    "uuid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                    "project": "11111111-1111-1111-1111-111111111111",
+                    "name": "Throughput",
+                    "slug": "throughput",
+                    "units": "nanoseconds (ns)",
+                    "created": date,
+                    "modified": date,
+                    "archived": null,
+                },
+                "metric": "p99",
+                "model": null,
+                "created": date,
+                "modified": date,
+            },
+            "boundary": {
+                "baseline": 1.0,
+                "lower_limit": null,
+                "upper_limit": 1.5,
+            },
+            "limit": "upper",
+            "status": "active",
+            "created": date,
+            "modified": date,
+        }]))
+        .unwrap()
+    }
+
     // A measure that named no point estimate reaches the comment with the deprecated
-    // `metric` absent. There is nothing for the table to draw, so it has no column,
-    // and rendering neither panics nor invents a zero.
+    // `metric` absent. It has no point estimate column, and every name it did carry
+    // beyond the conventional trio gets a column of its own.
     #[test]
     fn report_table_value_less_measure() {
         let mut report = json_report(Visibility::Public);
@@ -1339,13 +1720,192 @@ mod tests {
             "unexpected table: {html}"
         );
         assert!(
-            !html.contains(">Throughput</a></th>"),
-            "the measure that named no point estimate has no column: {html}"
+            html.contains(">Throughput</a></th>"),
+            "the measure that named no point estimate still has its named column: {html}"
+        );
+        assert!(
+            html.contains("<th>Throughput (p99)<br />nanoseconds (ns)</th>"),
+            "the named value has a column of its own: {html}"
+        );
+        assert!(
+            html.contains("<td>2.00 ns</td>"),
+            "the named value is drawn: {html}"
         );
         // It is still a measure of this report, so the threshold warning names it.
         assert!(
             html.contains("/measures/throughput\">Throughput"),
             "unexpected report: {html}"
+        );
+    }
+
+    // A measure gated only by a threshold that names a metric has no bare threshold,
+    // so the deprecated singular field is absent. The cell links to the threshold
+    // that did gate it and never shouts NO THRESHOLD, which is what keeps the cell
+    // and the report level warning telling the same story about one measure.
+    #[test]
+    fn report_table_named_threshold_gates_the_cell() {
+        let mut report = json_report(Visibility::Public);
+        report.results = Some(value_less_results_gated(&named_gate()));
+
+        let comment = report_comment_for(report);
+        let html = comment.html(false, None);
+
+        // The measure the named threshold gated: linked, not warned about.
+        assert!(
+            html.contains(
+                "/thresholds/eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee?model=ffffffff-ffff-ffff-ffff-ffffffffffff\">view threshold</a>"
+            ),
+            "the cell links the threshold that gated the named value: {html}"
+        );
+        // The warning lists a measure as `<name> (<units>)`, which the table header
+        // never does, so this is the warning and not the column.
+        assert!(
+            !html.contains("/measures/throughput\">Throughput (nanoseconds (ns))</a>"),
+            "the warning does not name a measure something gated: {html}"
+        );
+        // The measure nothing gated is still warned about, in the cell and above it.
+        assert_eq!(
+            html.matches("⚠️ NO THRESHOLD").count(),
+            1,
+            "only the ungated measure's cell says so: {html}"
+        );
+        assert!(
+            html.contains("/measures/latency\">Latency (nanoseconds (ns))</a>"),
+            "the warning still names the ungated measure: {html}"
+        );
+        // One gated measure is enough for `--ci-only-thresholds` to post.
+        assert!(comment.has_threshold(), "unexpected report: {html}");
+    }
+
+    // Nothing gated either measure, so every reader agrees the other way too.
+    #[test]
+    fn report_table_ungated_measures_have_no_threshold() {
+        let mut report = json_report(Visibility::Public);
+        report.results = Some(value_less_results());
+
+        let comment = report_comment_for(report);
+        assert!(!comment.has_threshold());
+        let html = comment.html(false, None);
+        assert!(
+            !html.contains("view threshold</a>"),
+            "unexpected table: {html}"
+        );
+        assert!(html.contains("⚠️ NO THRESHOLD"), "unexpected table: {html}");
+    }
+
+    // A BMF v0 report has nothing but the conventional trio, so no measure earns a
+    // named column and the point estimate keeps every column it always had.
+    #[test]
+    fn report_table_v0_has_no_named_columns() {
+        let mut report = json_report(Visibility::Public);
+        report.results = Some(grid_results(&[serde_json::json!({})]));
+
+        let html = report_comment_for(report).html(false, None);
+        assert!(
+            html.contains(">Latency</a></th><th>nanoseconds (ns)</th>"),
+            "unexpected table: {html}"
+        );
+        assert!(
+            !html.contains("<th>Latency ("),
+            "the conventional trio never earns a column of its own: {html}"
+        );
+    }
+
+    // A benchmark whose every row in the comment carries the empty parameter set
+    // keeps the bare benchmark name it has always had, in the table and in the human
+    // text alike.
+    #[test]
+    fn report_labels_stay_bare_without_grid_points() {
+        let mut report = json_report(Visibility::Public);
+        report.results = Some(grid_results(&[serde_json::json!({})]));
+        let comment = report_comment_for(report);
+
+        let html = comment.html(false, None);
+        assert!(
+            html.contains("/benchmarks/bench\">bench</a>"),
+            "unexpected table: {html}"
+        );
+        assert!(
+            !html.contains("bench {}"),
+            "a benchmark with no grid points is named the way it always was: {html}"
+        );
+        assert!(
+            comment.human().contains("\n- bench (Latency): "),
+            "unexpected text: {}",
+            comment.human()
+        );
+    }
+
+    // Two grid points of one benchmark are two rows, so each row names the set it
+    // carries, and the empty set among them reads `{}`.
+    #[test]
+    fn report_labels_name_each_grid_point() {
+        let mut report = json_report(Visibility::Public);
+        report.results = Some(grid_results(&[
+            serde_json::json!({}),
+            serde_json::json!({ "size_mb": 16 }),
+        ]));
+        let comment = report_comment_for(report);
+
+        let html = comment.html(false, None);
+        assert!(
+            html.contains("/benchmarks/bench\">bench {}</a>"),
+            "unexpected table: {html}"
+        );
+        assert!(
+            html.contains(r#"/benchmarks/bench">bench {"size_mb":16}</a>"#),
+            "unexpected table: {html}"
+        );
+        let human = comment.human();
+        assert!(human.contains("\n- bench {} (Latency): "), "{human}");
+        assert!(
+            human.contains("\n- bench {\"size_mb\":16} (Latency): "),
+            "{human}"
+        );
+    }
+
+    // The alert table reads the flat value, names the grid point the alert fired on,
+    // and names the metric its threshold gates when that is not `value`.
+    #[test]
+    fn report_alert_names_the_grid_point_and_the_metric() {
+        let mut report = json_report(Visibility::Public);
+        report.results = Some(grid_results(&[serde_json::json!({ "size_mb": 16 })]));
+        report.alerts = Some(named_alert(&serde_json::json!({ "size_mb": 16 })));
+
+        let html = report_comment_for(report).html(false, None);
+        assert!(
+            html.contains(r#"/benchmarks/bench">bench {"size_mb":16}</a>"#),
+            "the alert names the grid point it fired on: {html}"
+        );
+        assert!(
+            html.contains(">Throughput (p99)<br />nanoseconds (ns)</a>"),
+            "the alert names the metric its threshold gates: {html}"
+        );
+        // The flat `value`, drawn against the boundary's baseline.
+        assert!(
+            html.contains("<b>2.00 ns"),
+            "the alert draws its scalar: {html}"
+        );
+    }
+
+    // A threshold that names no metric gates the conventional `value`, so the alert
+    // reads as the measure alone, which is every alert an older client could raise.
+    #[test]
+    fn report_alert_without_a_metric_names_the_measure_alone() {
+        let mut alerts = named_alert(&serde_json::json!({}));
+        alerts[0].threshold.metric = None;
+        let mut report = json_report(Visibility::Public);
+        report.results = Some(grid_results(&[serde_json::json!({})]));
+        report.alerts = Some(alerts);
+
+        let html = report_comment_for(report).html(false, None);
+        assert!(
+            html.contains(">Throughput<br />nanoseconds (ns)</a>"),
+            "unexpected table: {html}"
+        );
+        assert!(
+            html.contains("/benchmarks/bench\">bench</a>"),
+            "unexpected table: {html}"
         );
     }
 

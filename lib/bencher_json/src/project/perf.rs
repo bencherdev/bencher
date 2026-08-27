@@ -478,7 +478,10 @@ pub mod table {
 
     use bencher_valid::GitHash;
     use ordered_float::OrderedFloat;
-    use tabled::{Table, Tabled};
+    use tabled::{
+        Table, Tabled,
+        settings::{Remove, location::ByColumnName},
+    };
 
     use crate::{
         DateTime, JsonBenchmark, JsonBranch, JsonMeasure, JsonMetricTriple, JsonPerf, JsonProject,
@@ -486,10 +489,26 @@ pub mod table {
         project::{head::VersionNumber, report::Iteration},
     };
 
+    /// The header of the column that names each line's grid point.
+    ///
+    /// A project that never reported a parameter set has nothing to tell its lines
+    /// apart by, so the column is removed rather than filled with `{}`, and this is
+    /// what names it for removal. The `tabled` rename attribute takes a literal, so
+    /// the field below spells the same string out.
+    const PARAMETERS: &str = "Parameters";
+
     impl From<JsonPerf> for Table {
         fn from(json_perf: JsonPerf) -> Self {
+            // One non-empty set anywhere in the query is what makes the column worth
+            // a column: without one, every line is the benchmark's only grid point.
+            let grid = json_perf
+                .results
+                .iter()
+                .any(|result| !result.parameter.set.is_empty());
+
             let mut perf_table = Vec::new();
             for result in json_perf.results {
+                let parameters = result.parameter.set.canonical();
                 for metric in result.metrics {
                     let (baseline, lower_limit, upper_limit) =
                         if let Some(boundary) = metric.boundary {
@@ -510,6 +529,7 @@ pub mod table {
                         branch: result.branch.clone(),
                         testbed: result.testbed.clone(),
                         benchmark: result.benchmark.clone(),
+                        parameters: parameters.clone(),
                         measure: result.measure.clone(),
                         iteration: metric.iteration,
                         start_time: metric.start_time,
@@ -523,7 +543,11 @@ pub mod table {
                     });
                 }
             }
-            Self::new(perf_table)
+            let mut table = Self::new(perf_table);
+            if !grid {
+                table.with(Remove::column(ByColumnName::new(PARAMETERS)));
+            }
+            table
         }
     }
 
@@ -537,6 +561,13 @@ pub mod table {
         pub testbed: JsonTestbed,
         #[tabled(rename = "Benchmark")]
         pub benchmark: JsonBenchmark,
+        /// The canonical spelling of the grid point this line plots.
+        ///
+        /// The column sits between the benchmark and the measure, the way the
+        /// parameter set sits between them in a perf result, and it is removed
+        /// entirely when no line of the query plots a non-empty set.
+        #[tabled(rename = "Parameters")]
+        pub parameters: String,
         #[tabled(rename = "Measure")]
         pub measure: JsonMeasure,
         #[tabled(rename = "Iteration")]
@@ -572,6 +603,150 @@ pub mod table {
             } else {
                 write!(f, "")
             }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use tabled::Table;
+
+        use crate::JsonPerf;
+
+        /// A one line perf query whose benchmark plots `set`.
+        fn line(benchmark: &str, set: &str, value: f64) -> String {
+            format!(
+                r#"{{
+                    "branch": {{
+                        "uuid": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                        "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                        "name": "master",
+                        "slug": "master",
+                        "head": {{
+                            "uuid": "7d7e73de-78c2-43f7-bc2a-da31a5b9a819",
+                            "start_point": null,
+                            "version": null,
+                            "created": "2023-07-02T12:53:33Z",
+                            "replaced": null
+                        }},
+                        "created": "2023-07-02T12:53:33Z",
+                        "modified": "2023-07-02T12:53:33Z"
+                    }},
+                    "testbed": {{
+                        "uuid": "e095df48-52a6-474b-aaa7-1a8546c235b6",
+                        "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                        "name": "base",
+                        "slug": "base",
+                        "created": "2023-07-02T12:53:33Z",
+                        "modified": "2023-07-02T12:53:33Z"
+                    }},
+                    "benchmark": {{
+                        "uuid": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                        "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                        "name": "{benchmark}",
+                        "slug": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                        "created": "2023-07-02T12:53:33Z",
+                        "modified": "2023-07-02T12:53:33Z"
+                    }},
+                    "parameter": {{
+                        "uuid": "b23b1a5e-0f4f-4b8a-9a35-2b7a2f5f0a2f",
+                        "benchmark": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
+                        "set": {set},
+                        "created": "2023-07-02T12:53:33Z",
+                        "modified": "2023-07-02T12:53:33Z",
+                        "archived": null
+                    }},
+                    "measure": {{
+                        "uuid": "61a385d0-f19d-4f20-895a-e3c684ec6cbc",
+                        "project": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                        "name": "Latency",
+                        "slug": "latency",
+                        "units": "nanoseconds (ns)",
+                        "created": "2023-07-02T12:53:33Z",
+                        "modified": "2023-07-02T12:53:33Z"
+                    }},
+                    "metrics": [
+                        {{
+                            "report": "ef582192-c7f4-47a0-8668-55cf7d99d8cc",
+                            "iteration": 0,
+                            "start_time": "2023-07-02T12:53:33Z",
+                            "end_time": "2023-07-02T12:53:33Z",
+                            "version": {{ "number": 0, "hash": null }},
+                            "threshold": null,
+                            "boundary": null,
+                            "alert": null,
+                            "metrics": {{ "value": {{ "value": {value} }} }},
+                            "metric": {{
+                                "uuid": "00000000-0000-0000-0000-000000000000",
+                                "value": {value},
+                                "lower_value": null,
+                                "upper_value": null
+                            }}
+                        }}
+                    ]
+                }}"#
+            )
+        }
+
+        fn json_perf(lines: &[String]) -> JsonPerf {
+            let results = lines.join(",");
+            serde_json::from_str(&format!(
+                r#"{{
+                    "project": {{
+                        "uuid": "c7fd3581-73d1-443c-b30f-6aa5c1c516cf",
+                        "organization": "4142ce9a-f0a0-44d5-94cd-fc76c77d9098",
+                        "name": "The Computer",
+                        "slug": "the-computer",
+                        "url": null,
+                        "visibility": "public",
+                        "bmf_version": 0,
+                        "created": "2023-07-02T12:53:33Z",
+                        "modified": "2023-07-02T12:53:33Z"
+                    }},
+                    "start_time": null,
+                    "end_time": null,
+                    "results": [{results}]
+                }}"#
+            ))
+            .expect("Failed to parse perf JSON")
+        }
+
+        fn table(lines: &[String]) -> String {
+            Table::from(json_perf(lines)).to_string()
+        }
+
+        // A query whose every line plots the empty parameter set is the query every
+        // project made before a benchmark could have more than one grid point. It
+        // prints exactly the table it always printed, column for column.
+        #[test]
+        fn table_without_grid_points() {
+            let table = table(&[line("bencher::mock_0", "{}", 7.0)]);
+            assert_eq!(
+                table,
+                concat!(
+                    "+--------------+--------+---------+-----------------+---------------------------+-----------+-------------------------+-------------------------+----------------+--------------+--------------+-------------------+----------------------+----------------------+\n",
+                    "| Project      | Branch | Testbed | Benchmark       | Measure                   | Iteration | Start Time              | End Time                | Version Number | Version Hash | Metric Value | Boundary Baseline | Lower Boundary Limit | Upper Boundary Limit |\n",
+                    "+--------------+--------+---------+-----------------+---------------------------+-----------+-------------------------+-------------------------+----------------+--------------+--------------+-------------------+----------------------+----------------------+\n",
+                    "| The Computer | master | base    | bencher::mock_0 | Latency: nanoseconds (ns) | 0         | 2023-07-02 12:53:33 UTC | 2023-07-02 12:53:33 UTC | 0              |              | 7            |                   |                      |                      |\n",
+                    "+--------------+--------+---------+-----------------+---------------------------+-----------+-------------------------+-------------------------+----------------+--------------+--------------+-------------------+----------------------+----------------------+",
+                ),
+                "the table a project without grid points prints"
+            );
+        }
+
+        // One non-empty set anywhere in the query earns the column, and every line
+        // spells the set it plots, the empty set among them as `{}`.
+        #[test]
+        fn table_with_grid_points() {
+            let table = table(&[
+                line("bencher::mock_0", "{}", 7.0),
+                line("bencher::mock_0", r#"{"size_mb": 16}"#, 8.0),
+            ]);
+            assert!(table.contains("Parameters"), "unexpected table: {table}");
+            assert!(table.contains("| {} "), "unexpected table: {table}");
+            assert!(
+                table.contains(r#"| {"size_mb":16} "#),
+                "unexpected table: {table}"
+            );
         }
     }
 }

@@ -1,0 +1,114 @@
+import BmfV1Example from "../bmf-v1-example.mdx";
+import BmfV1Schema from "../bmf-v1-schema.mdx";
+
+## Bencher Metric Format (BMF) v1
+
+O BMF `v1` permite que um [Benchmark][benchmark] relate mais de um resultado e que uma [Measure][measure] relate mais de um valor.
+Um nome de Benchmark corresponde a um array de entradas.
+Cada entrada nomeia os `parameters` com os quais o Benchmark foi executado e as `measures` que ele produziu.
+
+<BmfV1Example />
+
+Neste exemplo, `benchmark_name` relata três resultados:
+um sem parâmetros, um com `{"op":"read","size_mb":16}` e um com `{"op":"read","size_mb":32}`.
+Cada um dos três é seu próprio ponto da grade, com seu próprio histórico e seus próprios [Alertas][alert].
+
+O BMF `v1` exige que o `bmf_version` do Projeto seja `1`.
+Um Projeto aceita o BMF `v0` por padrão, e apenas um administrador do servidor pode elevar o `bmf_version` de um Projeto.
+O BMF `v1` também exige uma versão atual da [CLI `bencher`][bencher run].
+
+### Parâmetros
+
+O objeto `parameters` é a permutação de entradas com as quais um Benchmark foi executado.
+Cada chave corresponde a um escalar JSON: uma string, um número ou um booleano.
+`null`, arrays e objetos são rejeitados.
+Uma chave e um valor de string têm, cada um, no máximo `64` caracteres, e um conjunto de parâmetros carrega no máximo `8` chaves.
+
+Conjuntos de parâmetros são comparados em sua forma canônica, [RFC 8785 (JSON Canonicalization Scheme)][jcs].
+A ordem das chaves não importa, e os números são doubles do ECMAScript,
+portanto `16`, `16.0` e `1.6e1` são um único valor e `{"size_mb": 16}` e `{"size_mb": 16.0}` são um único conjunto de parâmetros.
+
+Uma entrada sem `parameters` e uma entrada com `"parameters": {}` são o mesmo ponto da grade:
+o conjunto de parâmetros vazio com o qual todo Benchmark nasce.
+Duas entradas que resolvem para o mesmo conjunto de parâmetros são um único ponto da grade,
+portanto suas measures se fundem em vez de bifurcar uma série.
+
+### Valores de Métrica Nomeados
+
+Cada Measure corresponde a um objeto de valores nomeados, e todo valor nomeado é um número JSON.
+Um nome tem no máximo `64` caracteres, e uma Measure carrega no máximo `8` nomes.
+Os nomes que ultrapassam esse limite são descartados: os nomes convencionais são sempre mantidos,
+e os demais são mantidos em ordem lexicográfica até o limite.
+
+Três nomes são convencionais, não privilegiados:
+
+- `value`: a estimativa pontual, que é o valor que o gráfico de desempenho desenha e o valor que um [Limiar][threshold] controla por padrão
+- `lower_value`: o limite inferior da estimativa pontual
+- `upper_value`: o limite superior da estimativa pontual
+
+Todo outro nome, como `p95` ou `p99`, é armazenado e consultado exatamente da mesma maneira.
+Uma Measure pode nomear apenas `value`, apenas outros nomes, ou qualquer mistura dos dois.
+
+### O Invólucro de Array
+
+⚠️ Um payload BMF `v1` escrito sem seu invólucro de array é um payload BMF `v0` válido.
+
+O [adaptador `json`][json adapter] genérico aceita ambas as versões.
+Um payload BMF `v0` é analisado como BMF `v0` e nada é descartado.
+Mas um objeto de entrada escrito onde o array deveria estar se parece exatamente com um mapa de Measures do BMF `v0`,
+portanto `parameters` e cada valor nomeado são lidos como Measures do Benchmark
+e os resultados pretendidos são perdidos silenciosamente.
+
+Selecione o adaptador `json_v1` para um payload BMF `v1`.
+O adaptador `json_v1` não aceita nada além de BMF `v1`,
+portanto um payload ao qual falta o invólucro de array não consegue ser analisado
+e o Relatório é rejeitado em vez de rebaixado sem aviso.
+
+Defina também `bmf_version` como `1` no Relatório.
+O campo `bmf_version` declara a versão na qual o payload está escrito,
+é ele que é verificado pelo controle de `bmf_version` do Projeto,
+e é ele que diz ao adaptador `json` para tentar o BMF `v1` primeiro.
+Um `bmf_version` ausente significa a versão `0`.
+
+### Limiares
+
+Um Relatório declara seus [Limiares][threshold] no campo `thresholds.models`.
+No BMF `v0`, esse campo é um mapa de Measure para Modelo.
+No BMF `v1`, ele é uma lista de entradas, e cada entrada nomeia tudo o que o Limiar controla:
+
+- `measure`: o UUID, o slug ou o nome da Measure
+- `metric`: o nome da métrica que o Limiar controla. Se não for definido, o Limiar controla o nome convencional `value`. Um Limiar sempre controla exatamente um nome.
+- `parameters`: os pontos da grade que o Limiar controla, como uma lista de conjuntos de parâmetros. Um ponto da grade corresponde quando qualquer conjunto da lista é um subconjunto dele, portanto um conjunto nomeia apenas as chaves que lhe interessam e um ponto da grade que fixa mais chaves ainda corresponde. Se não for definido, ou se for definido como uma lista vazia, o Limiar controla todos os pontos da grade.
+- `model`: o Modelo de Limiar a ser usado
+
+Todo Limiar que corresponde é disparado.
+Um Limiar que controla todos os pontos da grade e um Limiar que controla apenas `{"size_mb":16}`
+controlam ambos o ponto da grade `{"size_mb":16}`,
+portanto uma única regressão ali gera dois Alertas, um para cada Limiar.
+
+O campo `thresholds.reset` limpa os Limiares que o formato do payload consegue endereçar.
+Um mapa BMF `v0` nomeia uma Measure e nada mais, portanto `reset` alcança apenas os Limiares
+que controlam o nome convencional `value` de cada ponto da grade.
+Uma lista BMF `v1` consegue endereçar qualquer Limiar, portanto `reset` alcança todos eles.
+
+### Combinação
+
+A combinação não é suportada para o BMF `v1`.
+A média dos valores `p99` de cada iteração não é o `p99` da amostra agrupada,
+portanto uma combinação solicitada para um payload BMF `v1` gera um aviso
+e os resultados são ingeridos sem combinação, uma iteração por payload.
+
+### Esquema JSON do Bencher Metric Format (BMF) v1
+
+Este é o [esquema JSON][json schema] para o BMF `v1` em JSON:
+
+<BmfV1Schema />
+
+[benchmark]: /pt/docs/explanation/benchmarking/#benchmark
+[measure]: /pt/docs/explanation/benchmarking/#measure
+[alert]: /pt/docs/explanation/thresholds/#alerts
+[threshold]: /pt/docs/explanation/thresholds/
+[bencher run]: /pt/docs/explanation/bencher-run/
+[json adapter]: /pt/docs/explanation/adapters/#-json
+[jcs]: https://www.rfc-editor.org/rfc/rfc8785
+[json schema]: https://json-schema.org/draft-07/json-schema-release-notes
