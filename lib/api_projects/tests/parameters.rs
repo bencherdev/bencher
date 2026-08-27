@@ -1381,10 +1381,10 @@ async fn v0_fold_still_folds() {
 // An alert's JSON carries the boundary the metric broke through, with the values the
 // detector computed rather than whatever the shapes of the query happen to line up.
 //
-// Both endpoints that render an alert read the boundary out of the `metric_boundary`
-// view. The rest of the suite counts alerts and never reads one, so a transposed
-// baseline and limit, or a boundary belonging to another metric, would pass it. This
-// asserts the values, and asserts the two endpoints agree on them.
+// Both endpoints that render an alert reach the boundary from the alert's own
+// `boundary_id`. The rest of the suite counts alerts and never reads one, so a
+// transposed baseline and limit, or a boundary belonging to another metric, would
+// pass it. This asserts the values, and asserts the two endpoints agree on them.
 #[tokio::test]
 async fn alert_json_carries_the_boundary_the_metric_exceeded() {
     let server = TestServer::new().await;
@@ -1494,6 +1494,440 @@ async fn alert_json_carries_the_boundary_the_metric_exceeded() {
         &from_endpoint, from_report,
         "the two endpoints that render an alert render the same alert"
     );
+}
+
+/// Every alert of a project, from the alerts list endpoint.
+async fn list_alerts(server: &TestServer, fixture: &Fixture) -> Vec<serde_json::Value> {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{}/alerts", fixture.project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET alerts");
+    resp.json().await.expect("Failed to parse the alerts")
+}
+
+/// One alert of a project, from the alert detail endpoint.
+async fn get_alert(server: &TestServer, fixture: &Fixture, alert: &str) -> serde_json::Value {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/alerts/{alert}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET alert");
+    resp.json().await.expect("Failed to parse the alert")
+}
+
+/// The alerts a report response embeds.
+fn report_alerts(report: &serde_json::Value) -> Vec<serde_json::Value> {
+    report
+        .get("alerts")
+        .and_then(serde_json::Value::as_array)
+        .expect("the report carries its alerts")
+        .clone()
+}
+
+fn keys(value: &serde_json::Value) -> Vec<String> {
+    let mut keys = value
+        .as_object()
+        .expect("the alert is an object")
+        .keys()
+        .cloned()
+        .collect::<Vec<_>>();
+    keys.sort();
+    keys
+}
+
+fn sorted(keys: &[&str]) -> Vec<String> {
+    let mut keys = keys.iter().map(|key| (*key).to_owned()).collect::<Vec<_>>();
+    keys.sort();
+    keys
+}
+
+/// Every key an alert carried before it named its grid point.
+const ALERT_BEFORE_KEYS: [&str; 11] = [
+    "uuid",
+    "report",
+    "iteration",
+    "benchmark",
+    "metric",
+    "threshold",
+    "boundary",
+    "limit",
+    "status",
+    "created",
+    "modified",
+];
+
+/// The one key naming the grid point adds.
+const ALERT_ADDED_KEYS: [&str; 1] = ["parameter"];
+
+/// Ingest one benchmark's two grid points under one threshold, ending on `finals`.
+/// Returns the fixture and the last report's response.
+///
+/// The history is [`SMALL`] and [`LARGE`], the same one [`ingest_grid`] lands, so
+/// the boundary the detector computes here is the one it has always computed.
+async fn ingest_grid_points(
+    server: &TestServer,
+    label: &str,
+    finals: (f64, f64),
+) -> (Fixture, serde_json::Value) {
+    let fixture = fixture(server, label).await;
+    let mut last = serde_json::Value::Null;
+    for (day, (small, large)) in SMALL.into_iter().zip(LARGE).chain([finals]).enumerate() {
+        last = report(
+            server,
+            &fixture,
+            day + 1,
+            vec![v1(
+                "bench",
+                &[
+                    entry(
+                        &serde_json::json!({ "size_mb": 16 }),
+                        &serde_json::json!({ "latency": { "value": small } }),
+                    ),
+                    entry(
+                        &serde_json::json!({ "size_mb": 32 }),
+                        &serde_json::json!({ "latency": { "value": large } }),
+                    ),
+                ],
+            )],
+            Some(threshold_models()),
+            None,
+        )
+        .await;
+    }
+    (fixture, last)
+}
+
+// Two grid points of one benchmark under one threshold, one of which regresses. The
+// alert names the grid point it fired on, on every surface that renders an alert.
+//
+// This is the disambiguation the field exists for: without it the two grid points
+// raise alerts that read identically, because they share a benchmark, a measure, and
+// a threshold.
+#[tokio::test]
+async fn alert_names_the_grid_point_that_regressed() {
+    let server = TestServer::new().await;
+    let (fixture, last) =
+        ingest_grid_points(&server, "gridalert", (SMALL_FINAL, LARGE_FINAL)).await;
+
+    let regressed = serde_json::json!({ "size_mb": 16 });
+
+    // The report response that raised it.
+    let embedded = report_alerts(&last);
+    assert_eq!(
+        embedded.len(),
+        1,
+        "only the grid point that regressed alerts: {embedded:?}"
+    );
+    assert_eq!(
+        embedded[0].pointer("/parameter/set"),
+        Some(&regressed),
+        "the report's embedded alert names the grid point that regressed"
+    );
+
+    // The alerts list.
+    let alerts = list_alerts(&server, &fixture).await;
+    assert_eq!(alerts.len(), 1, "one alert: {alerts:?}");
+    let from_list = &alerts[0];
+    assert_eq!(
+        from_list.pointer("/parameter/set"),
+        Some(&regressed),
+        "the alerts list names the grid point that regressed"
+    );
+    assert_eq!(
+        from_list.pointer("/parameter/benchmark"),
+        from_list.pointer("/benchmark/uuid"),
+        "the grid point belongs to the benchmark the alert is on"
+    );
+
+    // The alert detail.
+    let alert_uuid = from_list
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the alert carries its uuid");
+    let from_endpoint = get_alert(&server, &fixture, alert_uuid).await;
+    assert_eq!(
+        &from_endpoint, from_list,
+        "the alerts list and the alert endpoint render the same alert"
+    );
+    assert_eq!(
+        &from_endpoint, &embedded[0],
+        "the report response and the alert endpoint render the same alert"
+    );
+}
+
+// An alert answers with everything it answered with before, unchanged, plus the one
+// key naming the grid point. This is the compatibility claim stated as a fixture:
+// the key set and the values are both pinned against what the previous shape gave
+// this exact fixture.
+#[tokio::test]
+async fn alert_json_is_unchanged_but_for_the_grid_point() {
+    let server = TestServer::new().await;
+    let (fixture, _last) = ingest_grid_points(&server, "gridpin", (SMALL_FINAL, LARGE_FINAL)).await;
+
+    let alerts = list_alerts(&server, &fixture).await;
+    assert_eq!(alerts.len(), 1, "one alert: {alerts:?}");
+    let alert = &alerts[0];
+
+    assert_eq!(
+        keys(alert),
+        sorted(&[ALERT_BEFORE_KEYS.as_slice(), ALERT_ADDED_KEYS.as_slice()].concat()),
+        "the key set is the old one plus the grid point"
+    );
+
+    // Every key that was there before, with the value the previous shape gave it.
+    assert_eq!(alert["iteration"], serde_json::json!(0));
+    assert_eq!(alert["limit"], serde_json::json!("upper"));
+    assert_eq!(alert["status"], serde_json::json!("active"));
+    assert_eq!(alert["benchmark"]["name"], serde_json::json!("bench"));
+    assert_eq!(alert["benchmark"]["slug"], serde_json::json!("bench"));
+    assert_eq!(
+        alert["metric"],
+        serde_json::json!({
+            "uuid": alert["metric"]["uuid"],
+            "value": SMALL_FINAL,
+            "lower_value": serde_json::Value::Null,
+            "upper_value": serde_json::Value::Null,
+        }),
+        "the triple is the `value` row the boundary was computed for"
+    );
+    assert_eq!(
+        alert["boundary"],
+        serde_json::json!({
+            "baseline": 12.0,
+            "lower_limit": 6.806_397_375_694_743,
+            "upper_limit": 17.193_602_624_305_257,
+        }),
+        "the boundary is the one the detector computed"
+    );
+    assert_eq!(
+        alert["threshold"]["branch"]["slug"],
+        serde_json::json!("main")
+    );
+    assert_eq!(
+        alert["threshold"]["testbed"]["slug"],
+        serde_json::json!("localhost")
+    );
+    assert_eq!(
+        alert["threshold"]["measure"]["slug"],
+        serde_json::json!("latency")
+    );
+    assert_eq!(
+        alert["threshold"]["model"]["test"],
+        serde_json::json!("t_test")
+    );
+    assert_eq!(
+        alert["threshold"]["model"]["min_sample_size"],
+        serde_json::json!(2)
+    );
+    assert_eq!(
+        alert["threshold"]["model"]["max_sample_size"],
+        serde_json::json!(64)
+    );
+    assert_eq!(
+        alert["threshold"]["branch"]["head"]["version"]["number"],
+        serde_json::json!(5),
+        "the alert is on the version the last report landed"
+    );
+    assert!(
+        alert["report"].is_string(),
+        "the alert names the report it landed in"
+    );
+
+    // The addition: the grid point the alert fired on.
+    assert_eq!(
+        alert["parameter"]["set"],
+        serde_json::json!({ "size_mb": 16 })
+    );
+    assert_eq!(alert["parameter"]["benchmark"], alert["benchmark"]["uuid"]);
+}
+
+// The report response's embedded alerts are the alerts endpoint's alerts, for the
+// same report: the same uuids, and the same grid points.
+//
+// The two used to be two different queries against the same view; they are now two
+// different queries against the same base tables, and this is what keeps them from
+// drifting apart.
+#[tokio::test]
+async fn report_alerts_are_the_alerts_endpoint_alerts() {
+    let server = TestServer::new().await;
+    // Both grid points regress on the final report, so the report carries more than
+    // one alert and the two reads have to agree on a set of alerts, not just on one.
+    let (fixture, last) =
+        ingest_grid_points(&server, "gridboth", (SMALL_FINAL, LARGE_FINAL * 10.0)).await;
+
+    let embedded = report_alerts(&last);
+    assert_eq!(
+        embedded.len(),
+        2,
+        "both grid points regressed: {embedded:?}"
+    );
+
+    let report_uuid = last
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the report carries its uuid");
+    let mut from_endpoint = list_alerts(&server, &fixture)
+        .await
+        .into_iter()
+        .filter(|alert| alert["report"] == serde_json::json!(report_uuid))
+        .collect::<Vec<_>>();
+
+    // Sorted by uuid, which is unique, so the order is the alerts themselves rather
+    // than anything either read chose.
+    let identity = |alert: &serde_json::Value| alert["uuid"].to_string();
+    let mut embedded = embedded;
+    embedded.sort_by_key(identity);
+    from_endpoint.sort_by_key(identity);
+    assert_eq!(
+        embedded, from_endpoint,
+        "the report's alerts are the alerts endpoint's alerts for that report"
+    );
+
+    // Two alerts, two grid points. Sorted by the set so the assertion does not ride
+    // on whichever alert was written first.
+    let mut sets = embedded
+        .iter()
+        .map(|alert| alert["parameter"]["set"].to_string())
+        .collect::<Vec<_>>();
+    sets.sort();
+    assert_eq!(
+        sets,
+        vec![
+            serde_json::json!({ "size_mb": 16 }).to_string(),
+            serde_json::json!({ "size_mb": 32 }).to_string()
+        ],
+        "the two alerts name the two grid points, one each"
+    );
+}
+
+/// Ingest one grid point's history, regressing at the end, with `measures` deciding
+/// which named values each report carries. Returns the alert the regression raised.
+async fn alert_for_bounds(
+    label: &str,
+    measures: impl Fn(f64) -> serde_json::Value,
+) -> serde_json::Value {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, label).await;
+    for (day, value) in SMALL.into_iter().chain([SMALL_FINAL]).enumerate() {
+        report(
+            &server,
+            &fixture,
+            day + 1,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({ "size_mb": 16 }),
+                    &measures(value),
+                )],
+            )],
+            Some(threshold_models()),
+            None,
+        )
+        .await;
+    }
+
+    let alerts = list_alerts(&server, &fixture).await;
+    assert_eq!(alerts.len(), 1, "one alert: {alerts:?}");
+    let from_list = alerts.into_iter().next().expect("the only alert");
+    let alert_uuid = from_list
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the alert carries its uuid")
+        .to_owned();
+    let from_endpoint = get_alert(&server, &fixture, &alert_uuid).await;
+    assert_eq!(
+        from_endpoint, from_list,
+        "the alert list and the alert endpoint render the same alert"
+    );
+    from_list
+}
+
+// The metric triple an alert carries is assembled from the `value` row the boundary
+// was computed for and that row's bound siblings, so it is the same triple for a row
+// with both bounds, either bound alone, and no bounds at all.
+#[tokio::test]
+async fn alert_metric_triple_carries_every_bound_shape() {
+    let both = alert_for_bounds("boundsboth", |value| {
+        serde_json::json!({
+            "latency": { "value": value, "lower_value": value * 0.9, "upper_value": value * 1.1 }
+        })
+    })
+    .await;
+    assert_eq!(
+        both["metric"]["value"],
+        serde_json::json!(SMALL_FINAL),
+        "the triple is built around the row that alerted"
+    );
+    assert_eq!(both["metric"]["lower_value"], serde_json::json!(900.0));
+    assert_eq!(both["metric"]["upper_value"], serde_json::json!(1_100.0));
+
+    let lower = alert_for_bounds(
+        "boundslower",
+        |value| serde_json::json!({ "latency": { "value": value, "lower_value": value * 0.9 } }),
+    )
+    .await;
+    assert_eq!(lower["metric"]["value"], serde_json::json!(SMALL_FINAL));
+    assert_eq!(lower["metric"]["lower_value"], serde_json::json!(900.0));
+    assert_eq!(
+        lower["metric"]["upper_value"],
+        serde_json::Value::Null,
+        "the bound that was never reported stays absent"
+    );
+
+    let upper = alert_for_bounds(
+        "boundsupper",
+        |value| serde_json::json!({ "latency": { "value": value, "upper_value": value * 1.1 } }),
+    )
+    .await;
+    assert_eq!(upper["metric"]["value"], serde_json::json!(SMALL_FINAL));
+    assert_eq!(
+        upper["metric"]["lower_value"],
+        serde_json::Value::Null,
+        "the bound that was never reported stays absent"
+    );
+    assert_eq!(upper["metric"]["upper_value"], serde_json::json!(1_100.0));
+
+    let none = alert_for_bounds(
+        "boundsnone",
+        |value| serde_json::json!({ "latency": { "value": value } }),
+    )
+    .await;
+    assert_eq!(none["metric"]["value"], serde_json::json!(SMALL_FINAL));
+    assert_eq!(none["metric"]["lower_value"], serde_json::Value::Null);
+    assert_eq!(none["metric"]["upper_value"], serde_json::Value::Null);
+
+    // The bounds are the only thing that moved: the boundary the detector computed
+    // is the same in all four, because the `value` series is the same in all four.
+    for alert in [&both, &lower, &upper, &none] {
+        assert_eq!(
+            alert["boundary"],
+            serde_json::json!({
+                "baseline": 12.0,
+                "lower_limit": 6.806_397_375_694_743,
+                "upper_limit": 17.193_602_624_305_257,
+            }),
+        );
+        assert_eq!(
+            alert["parameter"]["set"],
+            serde_json::json!({ "size_mb": 16 })
+        );
+    }
 }
 
 // The parameter set resource endpoints, nested under their benchmark.

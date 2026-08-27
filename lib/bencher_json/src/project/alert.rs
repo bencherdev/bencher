@@ -2,7 +2,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{DateTime, JsonBenchmark, JsonBoundary, JsonMetricTriple, JsonThreshold};
+use crate::{
+    DateTime, JsonBenchmark, JsonBoundary, JsonMetricTriple, JsonParameter, JsonThreshold,
+};
 
 use super::{boundary::BoundaryLimit, report::Iteration, report::ReportUuid};
 
@@ -22,6 +24,11 @@ pub struct JsonAlert {
     pub report: ReportUuid,
     pub iteration: Iteration,
     pub benchmark: JsonBenchmark,
+    /// The grid point the alert fired on.
+    ///
+    /// Two grid points of one benchmark raise two alerts, and this is what tells
+    /// them apart.
+    pub parameter: JsonParameter,
     pub metric: JsonMetricTriple,
     pub threshold: JsonThreshold,
     pub boundary: JsonBoundary,

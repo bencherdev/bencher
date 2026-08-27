@@ -43,7 +43,6 @@ pub mod branch;
 pub mod key;
 pub mod measure;
 pub mod metric;
-pub mod metric_boundary;
 pub mod parameter;
 pub mod plot;
 pub mod project_role;
