@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, fmt, iter::Sum, ops::Add};
 
-use bencher_valid::{BenchmarkName, DateTime};
+use bencher_valid::{BenchmarkName, DateTime, MetricName};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -13,7 +13,8 @@ pub use mean::Mean;
 pub use median::Median;
 
 use crate::{
-    JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonTestbed, MeasureNameId, ReportUuid,
+    JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonParameter, JsonTestbed,
+    MeasureNameId, ReportUuid,
 };
 
 use super::{alert::JsonPerfAlert, report::Iteration, threshold::JsonThresholdModel};
@@ -173,6 +174,12 @@ impl fmt::Display for JsonMetricTriple {
     }
 }
 
+/// Exactly one `metric` row: the named scalar the UUID addresses, and everything
+/// that named it.
+///
+/// The response describes the addressed row and nothing else. `value`,
+/// `lower_value`, `upper_value`, and every other name are equal here: each is one
+/// row, each resolves, and each answers with its own name and its own scalar.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -185,9 +192,26 @@ pub struct JsonOneMetric {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
+    /// The parameter set this row was measured under.
+    pub parameter: JsonParameter,
     pub measure: JsonMeasure,
-    pub metric: JsonMetricTriple,
+    /// The addressed row's name.
+    pub name: MetricName,
+    /// The addressed row's scalar.
+    pub value: OrderedFloat<f64>,
+
+    /// Deprecated. Reconstructed from the `value` row and its
+    /// `lower_value`/`upper_value` siblings. Retained for compatibility with older
+    /// clients and removed in a future release.
+    ///
+    /// Present only when the addressed row is the `value` row. Reconstructing the
+    /// triple around any other row would assert numbers the address does not name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<JsonMetricTriple>,
+    /// The threshold that gated the addressed row, if any.
     pub threshold: Option<JsonThresholdModel>,
+    /// The boundary computed for the addressed row, if any.
     pub boundary: Option<JsonBoundary>,
+    /// The alert raised on the addressed row's boundary, if any.
     pub alert: Option<JsonPerfAlert>,
 }
