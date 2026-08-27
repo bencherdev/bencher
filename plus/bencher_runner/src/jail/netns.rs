@@ -1,0 +1,307 @@
+//! The empty network namespace the jailed VMM joins.
+//!
+//! The guest has no network device and never will; this namespace is for the
+//! VMM process itself. A compromised Firecracker with host network access can
+//! exfiltrate, and an empty namespace removes that reach. The vsock transport
+//! is unaffected: its host side is filesystem-scoped Unix domain sockets, not
+//! network-namespace-scoped.
+
+use std::fs;
+use std::os::unix::fs::MetadataExt as _;
+
+use camino::{Utf8Path, Utf8PathBuf};
+use nix::mount::{MntFlags, MsFlags, mount, umount2};
+use nix::sched::{CloneFlags, unshare};
+
+use crate::error::JailError;
+use crate::jail::lock::{flock_exclusive, flock_nonblocking};
+
+/// Directory holding named network namespace handles.
+///
+/// This follows the `ip netns` convention (iproute2's `NETNS_RUN_DIR`), so the
+/// runner's namespace shows up in `ip netns list` for operators. `/run` is a
+/// tmpfs, so handles do not survive a reboot, which is exactly right for a
+/// handle onto a kernel object.
+const NETNS_DIR: &str = "/run/netns";
+
+/// Name of the empty network namespace the jailed VMM joins.
+const NETNS_NAME: &str = "bencher-jail";
+
+/// The runner's own network namespace, used as the reference for deciding
+/// whether a handle is a live namespace distinct from the host's.
+const SELF_NETNS: &str = "/proc/self/ns/net";
+
+/// How many stacked mounts to unwind at the handle before giving up.
+///
+/// Bounded rather than unbounded: a path that keeps reporting a successful
+/// unmount forever is a kernel fault, and the failed unlink that follows
+/// reports the real state either way.
+const MAX_STACKED_MOUNTS: usize = 32;
+
+/// Lock file serializing access to the global network namespace handle.
+const NETNS_LOCK_PATH: &str = "/run/bencher_runner_netns.lock";
+
+/// The calling *thread's* network namespace.
+///
+/// `/proc/self` resolves through the thread group leader, so it must not be
+/// used from the namespace-creating thread: it would name the runner's own
+/// namespace and pin the host network instead of the new one.
+const THREAD_NETNS: &str = "/proc/thread-self/ns/net";
+
+/// The path of the network namespace handle.
+#[must_use]
+pub fn handle_path() -> Utf8PathBuf {
+    Utf8Path::new(NETNS_DIR).join(NETNS_NAME)
+}
+
+/// Build a fresh empty network namespace, returning its handle path.
+///
+/// The handle is always cleared and recreated rather than reused. Proving a
+/// handle is a namespace and is not the runner's own does not prove it is
+/// empty: a `bencher-jail` left by an operator experimenting with `ip netns`,
+/// or by a name collision, could hold interfaces, and the VMM would silently
+/// regain the host network reach this module exists to remove. Recreating is
+/// both cheaper and stronger than trying to assert a namespace holds nothing
+/// but a down `lo`.
+///
+/// Called per job rather than once per daemon lifetime. `/run` is a tmpfs and
+/// the handle is a shared, operator-visible object, so an `ip netns del` or a
+/// remount would otherwise break every subsequent job until a restart.
+///
+/// The namespace is process-global while the jail lock is per state directory,
+/// so this takes its own lock: two runners started with different
+/// `--state-dir` values hold different jail locks and would otherwise clear
+/// and rebind the same handle concurrently.
+///
+/// The lock covers the rebuild, not the use. The jailer opens the handle
+/// itself, after this returns and after the lock is released, so a second
+/// runner rebuilding the handle in that window can make the first runner's
+/// jailer see `ENOENT` between the unlink and the bind. That is narrow, it
+/// requires two runners on one host, and it fails the job loudly rather than
+/// silently leaving the VMM on the host network, which is the failure that
+/// would matter. Holding the lock until the VMM has started would close it,
+/// at the cost of serializing every job on a process-global lock.
+pub fn ensure() -> Result<Utf8PathBuf, JailError> {
+    let handle = handle_path();
+
+    fs::create_dir_all(NETNS_DIR).map_err(|e| JailError::NetnsDir {
+        path: Utf8PathBuf::from(NETNS_DIR),
+        source: e,
+    })?;
+
+    let _lock = NetnsLock::acquire()?;
+
+    clear(&handle)?;
+
+    // The bind mount needs a regular file to land on.
+    fs::File::create(&handle).map_err(|e| JailError::NetnsHandle {
+        path: handle.clone(),
+        source: e,
+    })?;
+
+    // Unwound through `clear`, never a bare unlink. Reaching the second arm
+    // means the bind mount is definitely there, since that is what makes the
+    // namespace live, and unlinking a mounted path fails with `EBUSY`: the
+    // handle would stay mounted, which is the state that makes every later
+    // `ensure` fail on a stacked mount. `clear` is the only way it is removed.
+    if let Err(e) = create(&handle) {
+        drop(clear(&handle));
+        return Err(e);
+    }
+
+    // The namespace has to be a real one and not the runner's own, or the VMM
+    // would keep host network reach. Cheap, and the whole point of the module.
+    if !is_live_netns(&handle) {
+        drop(clear(&handle));
+        return Err(JailError::NetnsNotDistinct {
+            path: handle.clone(),
+        });
+    }
+
+    Ok(handle)
+}
+
+/// Remove whatever is at the handle path, mounts included.
+///
+/// Bind mounting over a file does not report `EBUSY`, so mounts stack: a
+/// handle that has been recreated more than once carries more than one. A
+/// single detach unwinds only the top mount, the unlink of the still-mounted
+/// path then fails with `EBUSY`, and `File::create` on the surviving nsfs
+/// mount fails with `EPERM` even as root. Unwinding one mount at a time and
+/// reporting a failed unlink is what keeps a stacked handle from wedging the
+/// host: without it, `ensure` fails permanently and every sandboxed job with
+/// it, until an operator loops `umount` by hand.
+fn clear(handle: &Utf8Path) -> Result<(), JailError> {
+    for _ in 0..MAX_STACKED_MOUNTS {
+        if umount2(handle.as_std_path(), MntFlags::MNT_DETACH).is_err() {
+            break;
+        }
+    }
+
+    match fs::remove_file(handle) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(JailError::NetnsHandle {
+            path: handle.to_owned(),
+            source: e,
+        }),
+    }
+}
+
+/// Advisory lock over the process-global network namespace handle.
+///
+/// Separate from the jail lock, which is scoped to a state directory: the
+/// handle is a single global object and two runners with different state
+/// directories must still not rebind it at the same time. It lives beside the
+/// host tuning lock, in root-writable tmpfs that clears on reboot.
+struct NetnsLock {
+    _file: fs::File,
+}
+
+impl NetnsLock {
+    /// Take the lock, waiting for whichever runner holds it.
+    ///
+    /// Announces the wait, as the jail lock does. This handle is global to the
+    /// host, so two runners with unrelated state directories contend here, and a
+    /// runner that sat silently on it would look hung rather than queued.
+    #[expect(
+        clippy::print_stdout,
+        reason = "prints why the runner is waiting, as the jail lock does"
+    )]
+    fn acquire() -> Result<Self, JailError> {
+        let path = Utf8Path::new(NETNS_LOCK_PATH);
+        let file = fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(false)
+            .open(path)
+            .map_err(|e| JailError::OpenNetnsLock {
+                path: path.to_owned(),
+                source: e,
+            })?;
+
+        // Try once without blocking, so the wait can be announced rather than
+        // looking like a hang.
+        if flock_nonblocking(&file).is_ok() {
+            return Ok(Self { _file: file });
+        }
+        println!("  Waiting for another bencher runner to release {path}...");
+
+        flock_exclusive(&file).map_err(|e| JailError::NetnsLock {
+            path: path.to_owned(),
+            source: e,
+        })?;
+        Ok(Self { _file: file })
+    }
+}
+
+/// Whether `handle` is a live network namespace other than the runner's own.
+///
+/// Every namespace inode lives on the single kernel `nsfs`, so sharing a
+/// device with a known namespace proves the handle is one, and a differing
+/// inode proves it is not the host namespace the runner itself is in. A
+/// leftover placeholder file sits on the `/run` tmpfs and fails the device
+/// check.
+fn is_live_netns(handle: &Utf8Path) -> bool {
+    let (Ok(own), Ok(candidate)) = (fs::metadata(SELF_NETNS), fs::metadata(handle)) else {
+        return false;
+    };
+    own.dev() == candidate.dev() && own.ino() != candidate.ino()
+}
+
+/// Create the namespace and bind its handle into place.
+///
+/// The namespace is unshared on a dedicated thread rather than in the runner
+/// itself. Network namespaces are per-task, so only this thread moves and the
+/// runner stays on the host network; the bind mount then holds a reference
+/// that keeps the namespace alive once the thread exits. The thread is not
+/// reused for anything else, precisely because it never returns to the host
+/// namespace.
+fn create(handle: &Utf8Path) -> Result<(), JailError> {
+    let target = handle.to_owned();
+    std::thread::spawn(move || -> Result<(), JailError> {
+        unshare(CloneFlags::CLONE_NEWNET).map_err(JailError::Unshare)?;
+        mount(
+            Some(THREAD_NETNS),
+            target.as_std_path(),
+            None::<&str>,
+            MsFlags::MS_BIND,
+            None::<&str>,
+        )
+        .map_err(|e| JailError::BindNetns {
+            path: target.clone(),
+            source: e,
+        })
+    })
+    .join()
+    .map_err(|_panic| JailError::NetnsThread)?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn handle_follows_the_ip_netns_convention() {
+        assert_eq!(handle_path(), "/run/netns/bencher-jail");
+    }
+
+    #[test]
+    fn a_plain_file_is_not_a_live_netns() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let path = root.join("net");
+        fs::write(&path, b"").unwrap();
+
+        assert!(!is_live_netns(&path));
+    }
+
+    #[test]
+    fn a_missing_handle_is_not_a_live_netns() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        assert!(!is_live_netns(&root.join("absent")));
+    }
+
+    #[test]
+    fn clear_removes_a_plain_handle() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let path = root.join("net");
+        fs::write(&path, b"").unwrap();
+
+        clear(&path).unwrap();
+
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn clear_is_idempotent_on_a_missing_handle() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        clear(&root.join("absent")).unwrap();
+    }
+
+    #[test]
+    fn clear_reports_a_handle_it_cannot_remove() {
+        // A directory stands in for the unremovable handle: the real case is
+        // a still-mounted path, which unlinks with EBUSY. Either way the
+        // failure has to surface rather than be swallowed into a confusing
+        // File::create error further down.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let path = root.join("net");
+        fs::create_dir(&path).unwrap();
+
+        clear(&path).unwrap_err();
+    }
+
+    #[test]
+    fn the_runners_own_namespace_is_not_a_distinct_netns() {
+        // The handle must be a namespace *other* than the one the runner is
+        // in, or the VMM would keep host network reach.
+        assert!(!is_live_netns(Utf8Path::new(SELF_NETNS)));
+    }
+}

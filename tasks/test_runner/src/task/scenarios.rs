@@ -37,7 +37,24 @@ fn extract_json_substr(line: &str) -> &str {
     &line[start..end]
 }
 
+/// A host-side check run while the runner is still executing.
+///
+/// Some confinement invariants only exist while the VMM is alive and cannot
+/// be recovered from the runner's output afterwards. The probe receives the
+/// runner's state directory and returns `Ok(false)` while the VMM has not
+/// appeared yet, `Ok(true)` once the invariant has been observed to hold, and
+/// `Err` once it has been observed to be violated.
+type Probe = fn(&Utf8Path) -> Result<bool>;
+
 /// Test scenario definition.
+///
+/// Build one with `..Scenario::default()` so a scenario names only what it
+/// actually varies, and so adding a field does not have to be written out
+/// across every scenario in this file.
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each flag switches one independent property of a run on"
+)]
 struct Scenario {
     name: &'static str,
     description: &'static str,
@@ -47,7 +64,55 @@ struct Scenario {
     cancel_after_secs: Option<u64>,
     /// Whether to use `--sandbox firecracker` (default: true).
     sandboxed: bool,
+    /// If set, run before the runner starts, to put the host in some state.
+    setup: Option<fn() -> Result<()>>,
+    /// If set, run once the scenario is over, to take that state back off.
+    ///
+    /// Whatever the outcome, and whatever a `setup` managed to do before
+    /// failing. What a setup touches is global to the machine, so anything left
+    /// behind reaches every scenario that follows and any real runner on the
+    /// box.
+    teardown: Option<fn() -> Result<()>>,
+    /// If set, a host-side check run while the runner is executing.
+    probe: Option<Probe>,
+    /// Run with host tuning enabled and assert it applies and is restored.
+    ///
+    /// Every other scenario passes `--no-tuning`, so this is the only one that
+    /// can leave the machine changed, and the harness undoes it itself.
+    tuning: bool,
+    /// Kill the runner once its VMM is up so nothing unwinds, then run the
+    /// image again and report the second run.
+    ///
+    /// SIGKILL is the point: it is the exit that never unwinds, so `Drop`
+    /// cannot reclaim the chroot and only the sweep can.
+    orphan_then_rerun: bool,
+    /// Point the runner at a state directory it has to refuse, and assert it
+    /// failed the job rather than running the VMM outside a jail.
+    unusable_state_dir: bool,
     validate: fn(&ScenarioOutput) -> Result<()>,
+}
+
+impl Default for Scenario {
+    fn default() -> Self {
+        Self {
+            name: "",
+            description: "",
+            dockerfile: "",
+            extra_args: &[],
+            cancel_after_secs: None,
+            setup: None,
+            teardown: None,
+            probe: None,
+            tuning: false,
+            orphan_then_rerun: false,
+            unusable_state_dir: false,
+            // Sandboxed is the interesting case and the overwhelming majority,
+            // so the handful of non-sandboxed scenarios opt out rather than
+            // every other scenario opting in.
+            sandboxed: true,
+            validate: |_output| Ok(()),
+        }
+    }
 }
 
 /// Output from running a scenario.
@@ -62,6 +127,7 @@ struct ScenarioOutput {
 pub struct Scenarios {
     scenario: Option<String>,
     list: bool,
+    build_only: bool,
 }
 
 impl TryFrom<TaskScenarios> for Scenarios {
@@ -71,6 +137,7 @@ impl TryFrom<TaskScenarios> for Scenarios {
         Ok(Self {
             scenario: task.scenario,
             list: task.list,
+            build_only: task.build_only,
         })
     }
 }
@@ -82,7 +149,29 @@ impl Scenarios {
             return Ok(());
         }
 
-        // Check prerequisites
+        if self.build_only {
+            let runner_bin = ensure_runner_bin()?;
+            println!("Built runner: {runner_bin}");
+            println!("Run the scenarios with:");
+            println!("  sudo {RUNNER_BIN_ENV}={runner_bin} <test_runner binary> scenarios");
+            return Ok(());
+        }
+
+        // Check prerequisites.
+        //
+        // Root is one of them. The jailer creates the chroot's device nodes
+        // with mknod, chowns the tree to the jail user, pivot_roots, and joins
+        // a network namespace, none of which an unprivileged process can do.
+        // A udev rule that makes /dev/kvm world accessible is enough to *use*
+        // KVM without root but not to build the jail around it.
+        if !is_root() {
+            bail!(
+                "The scenarios must run as root: the sandbox is built by dropping privilege, not by starting without it.\n\
+                 Build unprivileged first, then run elevated:\n\
+                 \x20 cargo test-runner scenarios --build-only\n\
+                 \x20 sudo {RUNNER_BIN_ENV}=./target/debug/runner ./target/debug/test_runner scenarios"
+            );
+        }
         if !kvm_available() {
             bail!("KVM is not available (/dev/kvm not found)");
         }
@@ -105,27 +194,80 @@ impl Scenarios {
         let runner_bin = ensure_runner_bin()?;
 
         let mut scenarios = all_scenarios();
+        scenarios.extend(jail_scenarios());
         scenarios.extend(nosandbox_scenarios());
+        // Last, always. It is the only scenario that tunes the machine, so
+        // nothing it leaves behind can reach the others, and if the suite is
+        // killed part way through it is the least likely to have started.
+        scenarios.extend(tuning_scenarios());
 
-        if let Some(name) = &self.scenario {
+        let result = if let Some(name) = &self.scenario {
             // Run a single scenario
-            let scenario = scenarios
+            scenarios
                 .iter()
                 .find(|s| s.name == name)
-                .with_context(|| format!("Unknown scenario: {name}"))?;
-
-            run_scenario(scenario, &runner_bin)
+                .with_context(|| format!("Unknown scenario: {name}"))
+                .and_then(|scenario| run_scenario(scenario, &runner_bin))
         } else {
             // Run all scenarios
             run_all_scenarios(&scenarios, &runner_bin)
-        }
+        };
+
+        // Whatever the outcome. Everything the run wrote is only root-owned
+        // because the scenarios had to be, and it sits inside the repo tree.
+        return_work_dir_to_invoker();
+
+        result
     }
+}
+
+/// Hand everything the elevated run wrote back to whoever invoked `sudo`.
+///
+/// The scenarios must run as root, so the whole tree under the crate's target
+/// directory comes out root-owned: the runner's state directory at 0700, the
+/// docker build contexts, and the unpacked OCI layouts, whose per-scenario
+/// cleanup a scenario that returns early never reaches. CI throws that tree
+/// away, so it costs nothing there, but on a developer's machine one red
+/// scenario leaves directories the next unprivileged `cargo`, `rm -rf` or
+/// `git clean` can neither read nor remove. `SUDO_UID` names who to give it back
+/// to; with no one to give it back to, or a `chown` that will not run, the path
+/// is printed with the command that clears it rather than left to be discovered.
+fn return_work_dir_to_invoker() {
+    // The crate's target directory rather than the work directory inside it.
+    // This run creates both, and a root-owned parent is one the invoker cannot
+    // remove the work directory from, however the tree below it is owned.
+    let work_dir = super::work_dir();
+    let returned = work_dir.parent().unwrap_or(&work_dir).to_owned();
+    if !returned.exists() {
+        return;
+    }
+
+    if let Some((uid, gid)) = invoking_user()
+        && Command::new("chown")
+            .args(["-R", &format!("{uid}:{gid}"), returned.as_str()])
+            .status()
+            .is_ok_and(|status| status.success())
+    {
+        println!("Returned {returned} to uid {uid}");
+        return;
+    }
+
+    println!("Note: {returned} is left owned by root. Remove it with: sudo rm -rf {returned}");
+}
+
+/// The uid and gid that invoked `sudo`, when one did.
+fn invoking_user() -> Option<(u32, u32)> {
+    let uid = std::env::var("SUDO_UID").ok()?.parse().ok()?;
+    let gid = std::env::var("SUDO_GID").ok()?.parse().ok()?;
+    Some((uid, gid))
 }
 
 /// List all available scenarios.
 fn list_scenarios() {
     let mut scenarios = all_scenarios();
+    scenarios.extend(jail_scenarios());
     scenarios.extend(nosandbox_scenarios());
+    scenarios.extend(tuning_scenarios());
     println!("Available scenarios:");
     println!();
     for scenario in &scenarios {
@@ -179,16 +321,74 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     let image_path = build_test_image(scenario.name, scenario.dockerfile)
         .with_context(|| format!("Failed to build image for {}", scenario.name))?;
 
-    // Prepend --sandbox firecracker for sandboxed scenarios
-    let mut args: Vec<&str> = Vec::new();
+    // Armed before the setup runs, so a setup that fails part way through is
+    // unwound too, and held to the end of the scenario, so nothing the
+    // assertions do with `?` can skip it.
+    let _teardown = ScenarioTeardown::armed(scenario);
+    if let Some(setup) = scenario.setup {
+        setup().with_context(|| format!("Setup failed for {}", scenario.name))?;
+    }
+
+    // One state directory for the suite, wiped before each scenario, so jail
+    // assertions see only this scenario's jails and never touch a real runner's
+    // state. Reclaimed before the wipe, because the wipe is the one thing the
+    // runner's own sweep refuses to do.
+    let state_dir = scenario_state_dir();
+    reclaim_stranded_jails(&state_dir)
+        .with_context(|| format!("Failed to reclaim jails stranded before {}", scenario.name))?;
+    drop(fs::remove_dir_all(&state_dir));
+
+    // The one scenario that sabotages the jail is pointed somewhere else
+    // entirely: a path the runner has to refuse, planted beside the suite's own
+    // state directory so nothing outside the harness's tree is ever named.
+    let state_arg = if scenario.unusable_state_dir {
+        unusable_state_dir().with_context(|| {
+            format!(
+                "Failed to plant a state directory the runner must refuse for {}",
+                scenario.name
+            )
+        })?
+    } else {
+        state_dir.clone()
+    };
+
+    // Prepend --sandbox firecracker for sandboxed scenarios.
+    //
+    // `--no-tuning` everywhere except the one scenario that exists to test
+    // tuning. Elevated, the knobs really apply, and a suite that tuned the
+    // machine twenty-five times would offline SMT siblings on a two-vCPU hosted
+    // runner, changing the core count under itself. The tuning scenario turns
+    // them back on for one job, keeps SMT and IRQ steering out of it, and the
+    // harness undoes everything itself afterwards.
+    let mut args: Vec<&str> = vec!["--state-dir", state_arg.as_str()];
+    if scenario.tuning {
+        // The two knobs this scenario deliberately does not exercise. `--smt`
+        // keeps hyper-threading on: offlining a sibling changes `nproc` for
+        // everything that follows in the CI job, and the harness cannot put a
+        // CPU back if the runner is killed before its guard runs. IRQ steering
+        // is skipped because a hand-restore of it is unavoidably partial, since
+        // an unmovable IRQ rejects the write with EIO, and the rule for this
+        // scenario is that the harness can undo anything it turned on.
+        args.extend(["--smt", "--no-irq-steering"]);
+    } else {
+        args.push("--no-tuning");
+    }
     if scenario.sandboxed {
         args.extend(["--sandbox", "firecracker"]);
     }
     args.extend(scenario.extra_args);
 
-    // Run the runner (with optional cancellation)
-    let output = if let Some(secs) = scenario.cancel_after_secs {
+    // Run the runner (with optional cancellation or host-side probe)
+    let output = if scenario.unusable_state_dir {
+        run_runner_without_unjailed_vmm(&image_path, &args, runner_bin)
+    } else if let Some(secs) = scenario.cancel_after_secs {
         run_runner_with_cancel(&image_path, &args, Duration::from_secs(secs), runner_bin)
+    } else if scenario.orphan_then_rerun {
+        run_runner_after_orphan(&image_path, &args, &state_dir, runner_bin)
+    } else if let Some(probe) = scenario.probe {
+        run_runner_with_probe(&image_path, &args, probe, &state_dir, runner_bin)
+    } else if scenario.tuning {
+        run_runner_with_tuning(&image_path, &args, runner_bin)
     } else {
         run_runner(&image_path, &args, runner_bin)
     }
@@ -206,6 +406,42 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     Ok(())
 }
 
+/// Runs a scenario's teardown when it goes out of scope.
+///
+/// A guard rather than a call at the end, for the same reason `RestoreTuning` is
+/// one: everything between the setup and the end of the scenario reports failure
+/// with `?`, and a scenario that goes red is exactly when the host state a setup
+/// put in place has to come away.
+struct ScenarioTeardown {
+    name: &'static str,
+    teardown: Option<fn() -> Result<()>>,
+}
+
+impl ScenarioTeardown {
+    /// Arm the teardown a scenario declared, if it declared one.
+    fn armed(scenario: &Scenario) -> Self {
+        Self {
+            name: scenario.name,
+            teardown: scenario.teardown,
+        }
+    }
+}
+
+impl Drop for ScenarioTeardown {
+    fn drop(&mut self) {
+        let Some(teardown) = self.teardown else {
+            return;
+        };
+        // Said out loud rather than swallowed. The scenario has already
+        // reported its own outcome by the time this runs, but what a teardown
+        // could not undo is on the machine, not in this run, so the next person
+        // to touch the host needs to hear about it.
+        if let Err(e) = teardown() {
+            println!("  teardown of {} did not finish: {e:#}", self.name);
+        }
+    }
+}
+
 /// Get all test scenarios.
 #[expect(
     clippy::too_many_lines,
@@ -218,8 +454,6 @@ fn all_scenarios() -> Vec<Scenario> {
             description: "Simple echo command",
             dockerfile: r#"FROM busybox
 CMD ["echo", "hello from vm"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("hello from vm") {
@@ -228,6 +462,7 @@ CMD ["echo", "hello from vm"]"#,
                     bail!("Expected 'hello from vm' in output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "environment_variables",
@@ -235,8 +470,6 @@ CMD ["echo", "hello from vm"]"#,
             dockerfile: r#"FROM busybox
 ENV MY_VAR=test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("test_value") {
@@ -250,6 +483,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "working_directory",
@@ -257,8 +491,6 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
             dockerfile: r#"FROM busybox
 WORKDIR /myapp
 CMD ["pwd"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("/myapp") {
@@ -267,14 +499,13 @@ CMD ["pwd"]"#,
                     bail!("Expected '/myapp' in output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "file_output",
             description: "Output file collection via vsock",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.json"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
             validate: |output| {
                 if output.stdout.contains("\"result\"") || output.stdout.contains("42") {
@@ -283,14 +514,13 @@ CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.
                     bail!("Expected JSON output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "exit_code",
             description: "Non-zero exit codes captured",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "exit 42"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -300,14 +530,13 @@ CMD ["sh", "-c", "exit 42"]"#,
                     bail!("Expected exit code 42 in output")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "timeout_handling",
             description: "VM killed after timeout",
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr).to_lowercase();
@@ -317,14 +546,13 @@ CMD ["sleep", "3600"]"#,
                     bail!("Expected timeout error")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "writable_filesystem",
             description: "Guest can write to ext4 rootfs",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("test") {
@@ -336,14 +564,13 @@ CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "stderr_capture",
             description: "Stderr captured separately",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -353,14 +580,13 @@ CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
                     bail!("Expected 'stdout' in output")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "multi_cpu",
             description: "Multiple vCPUs work (expected: timeout, SMP boot unsupported)",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "10", "--vcpus", "4"],
             validate: |output| {
                 // SMP boot is not yet supported (requires LAPIC/APIC emulation).
@@ -379,6 +605,7 @@ CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "entrypoint_with_args",
@@ -386,8 +613,6 @@ CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo"]
 CMD ["hello", "world"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("hello world") {
@@ -396,14 +621,13 @@ CMD ["hello", "world"]"#,
                     bail!("Expected 'hello world' in output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "no_network_access",
             description: "Guest has no network",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -416,6 +640,7 @@ CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
                     bail!("Expected network failure, got: {combined}")
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Security hardening scenarios
@@ -426,8 +651,6 @@ CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
             // Generate ~20MB of output - should be truncated to the 10MB limit
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && echo DONE"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "120", "--max-output-size", "10485760"],
             validate: |output| {
                 // The key test: the runner completes without OOM and output is bounded.
@@ -441,6 +664,7 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && e
                 // Runner completed (didn't hang or OOM) - that's a pass
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "timeout_enforced",
@@ -448,8 +672,6 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && e
             // This process ignores signals and runs forever
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 // The VM should be killed after 5 seconds due to timeout
@@ -465,6 +687,7 @@ CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Error regression scenarios
@@ -479,8 +702,6 @@ CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]
             // causing uid_map writes to fail with EPERM.
             dockerfile: r#"FROM busybox
 CMD ["id"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The runner should not fail with uid_map errors.
@@ -496,6 +717,7 @@ CMD ["id"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "dev_kvm_available",
@@ -505,8 +727,6 @@ CMD ["id"]"#,
             // the bind-mounted /dev/kvm.
             dockerfile: r#"FROM busybox
 CMD ["echo", "kvm_test_ok"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -518,6 +738,7 @@ CMD ["echo", "kvm_test_ok"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "proc_mount_works",
@@ -527,8 +748,6 @@ CMD ["echo", "kvm_test_ok"]"#,
             // which we fixed by bind-mounting the host's /proc instead.
             dockerfile: r#"FROM busybox
 CMD ["cat", "/proc/version"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -542,6 +761,7 @@ CMD ["cat", "/proc/version"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "rootfs_writable",
@@ -551,8 +771,6 @@ CMD ["cat", "/proc/version"]"#,
             // when trying to write to the filesystem.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("write_ok") {
@@ -567,6 +785,7 @@ CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
                     bail!("Expected 'write_ok' in output, got: {combined}")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "timeout_includes_partial_output",
@@ -576,8 +795,6 @@ CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
             // short-circuited before serial output extraction.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "10"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -592,6 +809,7 @@ CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
                     bail!("Expected timeout error in output, got: {combined}")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "no_seccomp_sigsys",
@@ -602,8 +820,6 @@ CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
             // This scenario exercises the timeout path which requires kill().
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 // SIGSYS from seccomp violation produces exit code 159 (128 + 31)
@@ -621,6 +837,7 @@ CMD ["sleep", "3600"]"#,
                     bail!("Expected timeout exit, got exit_code={}", output.exit_code)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "iopl_dropped_before_exec",
@@ -635,8 +852,6 @@ RUN printf '#include <stdio.h>\n#include <signal.h>\n#include <setjmp.h>\nstatic
 FROM busybox
 COPY --from=build /test_iopl /test_iopl
 CMD ["/test_iopl"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("IOPL_DROPPED") {
@@ -655,6 +870,7 @@ CMD ["/test_iopl"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "unique_output_validation",
@@ -664,8 +880,6 @@ CMD ["/test_iopl"]"#,
             // never appear in runner logs.
             dockerfile: r#"FROM busybox
 CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // This unique string should only appear if the VM actually ran
@@ -681,6 +895,7 @@ CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // PID namespace isolation scenarios (Item 9)
@@ -692,8 +907,6 @@ CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
             // The init process should be PID 1, and there should be very few processes.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The guest should see a small number of PIDs (1-5), not hundreds
@@ -715,6 +928,7 @@ CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
                     Ok(())
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "pid_namespace_procfs",
@@ -724,8 +938,6 @@ CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
             // should be accessible and /proc/1/cmdline should show the init process.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0' ' ')"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -741,6 +953,7 @@ CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Telemetry/Metrics scenarios (Item 10)
@@ -751,8 +964,6 @@ CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0
             // Verifies the runner outputs ---BENCHER_METRICS:{json}--- on stderr.
             dockerfile: r#"FROM busybox
 CMD ["echo", "metrics_test"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stderr.contains("---BENCHER_METRICS:") && output.stderr.contains("---") {
@@ -765,6 +976,7 @@ CMD ["echo", "metrics_test"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "metrics_wall_clock_reasonable",
@@ -773,8 +985,6 @@ CMD ["echo", "metrics_test"]"#,
             // This catches cases where timing is broken (e.g., always 0 or absurdly large).
             dockerfile: r#"FROM busybox
 CMD ["echo", "fast_benchmark"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // Parse metrics from stderr
@@ -803,6 +1013,7 @@ CMD ["echo", "fast_benchmark"]"#,
                 }
                 bail!("Could not parse wall_clock_ms from metrics: {json_str}")
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "metrics_timeout_flag",
@@ -810,8 +1021,6 @@ CMD ["echo", "fast_benchmark"]"#,
             // When a VM times out, the metrics should include timed_out: true.
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "5"],
             validate: |output| {
                 // The stderr should contain metrics with timed_out: true
@@ -837,6 +1046,7 @@ CMD ["sleep", "3600"]"#,
                 }
                 bail!("Expected timed_out: true in metrics: {json_str}")
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // HMAC Result Integrity scenarios (Item 11)
@@ -848,8 +1058,6 @@ CMD ["sleep", "3600"]"#,
             // The vmm child process should log [HMAC] status on stderr.
             dockerfile: r#"FROM busybox
 CMD ["echo", "hmac_test_output"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -873,6 +1081,7 @@ CMD ["echo", "hmac_test_output"]"#,
                     }
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "metrics_transport_type",
@@ -880,8 +1089,6 @@ CMD ["echo", "hmac_test_output"]"#,
             // Verifies the metrics include the transport type (vsock or serial).
             dockerfile: r#"FROM busybox
 CMD ["echo", "transport_test"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let metrics_line = output
@@ -903,6 +1110,7 @@ CMD ["echo", "transport_test"]"#,
                 }
                 bail!("Could not find transport in metrics: {json_str}")
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Cancellation scenarios
@@ -915,7 +1123,6 @@ CMD ["echo", "transport_test"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             cancel_after_secs: Some(5),
-            sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
                 // The runner should exit with a non-zero code (killed by signal)
@@ -931,6 +1138,7 @@ CMD ["sh", "-c", "echo started && sleep 3600"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Output edge-case scenarios
@@ -940,8 +1148,6 @@ CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             description: "Stderr captured when stdout is empty",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo error_output >&2"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stderr.contains("error_output") {
@@ -954,14 +1160,13 @@ CMD ["sh", "-c", "echo error_output >&2"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "empty_output",
             description: "Process exits 0 with no output",
             dockerfile: r#"FROM busybox
 CMD ["true"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -974,6 +1179,7 @@ CMD ["true"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "binary_output",
@@ -982,8 +1188,6 @@ CMD ["true"]"#,
             // The runner should not panic — it should lossy-convert or pass through.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The runner must not crash. Exit code 0 and "done" somewhere
@@ -1005,6 +1209,7 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // OCI config parsing scenarios
@@ -1016,8 +1221,6 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
             // OCI config stores this as ["/bin/sh", "-c", "echo shell_form_works"]
             // which differs from exec form ["echo", "shell_form_works"].
             dockerfile: "FROM busybox\nCMD echo shell_form_works",
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("shell_form_works") {
@@ -1031,6 +1234,7 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "entrypoint_only",
@@ -1039,8 +1243,6 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
             // CMD args appended. The runner must not fail when Cmd is null/empty.
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("entrypoint_only_works") {
@@ -1054,6 +1256,7 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "shell_form_entrypoint",
@@ -1061,8 +1264,6 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
             // Shell form ENTRYPOINT: stored as ["/bin/sh", "-c", "echo ..."]
             // in OCI config. CMD is ignored when ENTRYPOINT uses shell form.
             dockerfile: "FROM busybox\nENTRYPOINT echo shell_entrypoint_works",
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.stdout.contains("shell_entrypoint_works") {
@@ -1076,6 +1277,7 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "entrypoint_shell_with_cmd",
@@ -1090,8 +1292,6 @@ ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT echo ep_marker
 CMD ["cmd_arg"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1111,6 +1311,7 @@ CMD ["cmd_arg"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "no_cmd_no_entrypoint",
@@ -1119,8 +1320,6 @@ CMD ["cmd_arg"]"#,
             // to fail with a clear error, not crash or hang.
             dockerfile: r#"FROM busybox
 RUN echo "no command set""#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "30"],
             validate: |output| {
                 // The runner should fail (non-zero exit) since there's nothing to run.
@@ -1135,6 +1334,7 @@ RUN echo "no command set""#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "bencher_cli_mock",
@@ -1146,8 +1346,6 @@ RUN echo "no command set""#,
             // shared libraries, and ld.so.cache from multi-layer images.
             dockerfile: r#"FROM ghcr.io/bencherdev/bencher:latest
 CMD ["mock"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
                 if output.exit_code == 127 {
@@ -1173,6 +1371,7 @@ CMD ["mock"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "distroless_glibc_image",
@@ -1189,8 +1388,6 @@ RUN echo '#include <stdio.h>\nint main(){printf("distroless_glibc_ok\\n");return
 FROM gcr.io/distroless/cc-debian12
 COPY --from=builder /tmp/hello /usr/bin/hello
 CMD ["/usr/bin/hello"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
                 if output.exit_code == 127 {
@@ -1215,6 +1412,7 @@ CMD ["/usr/bin/hello"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Race condition scenarios
@@ -1227,8 +1425,6 @@ CMD ["/usr/bin/hello"]"#,
             // results are collected even for very short-lived processes.
             dockerfile: r#"FROM busybox
 CMD ["echo", "rapid_exit_marker"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1249,6 +1445,7 @@ CMD ["echo", "rapid_exit_marker"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Exit code scenarios
@@ -1260,8 +1457,6 @@ CMD ["echo", "rapid_exit_marker"]"#,
             // The runner should capture and report this exit code.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "exit 137"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The runner should report exit code 137 somewhere in its output,
@@ -1278,6 +1473,7 @@ CMD ["sh", "-c", "exit 137"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Environment scenarios
@@ -1292,8 +1488,6 @@ ENV A1=val1 A2=val2 A3=val3 A4=val4 A5=val5 A6=val6 A7=val7 A8=val8 A9=val9 A10=
 ENV B1=val11 B2=val12 B3=val13 B4=val14 B5=val15 B6=val16 B7=val17 B8=val18 B9=val19 B10=val20
 ENV LARGE_VALUE=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1313,6 +1507,7 @@ CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // File output edge cases
@@ -1324,8 +1519,6 @@ CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
             // The runner should still succeed (exit 0) without crashing.
             dockerfile: r#"FROM busybox
 CMD ["echo", "no file written"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/nonexistent/path.json"],
             validate: |output| {
                 // Runner should not crash, regardless of exit code.
@@ -1336,14 +1529,13 @@ CMD ["echo", "no file written"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "large_file_output",
             description: "Large output file (~2 MB) transferred via vsock",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /tmp/output.json && echo done"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1352,14 +1544,13 @@ CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "completed_with_all_fields",
             description: "Stdout + stderr + output file simultaneously",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\":true}' > /tmp/out.json"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--output", "/tmp/out.json"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1374,14 +1565,13 @@ CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "multi_file_output",
             description: "Multiple output files collected via vsock",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}' > /tmp/b.json && echo done"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &[
                 "--timeout",
                 "60",
@@ -1397,6 +1587,7 @@ CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}'
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // OCI image variations
@@ -1409,8 +1600,6 @@ RUN echo "a" > /tmp/file_a.txt
 RUN mkdir -p /opt && echo "b" > /opt/file_b.txt
 RUN echo "c" > /var/file_c.txt
 CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1426,6 +1615,7 @@ CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
                     bail!("Expected 'a', 'b', 'c' in output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "image_with_symlinks",
@@ -1433,8 +1623,6 @@ CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
             dockerfile: r#"FROM busybox
 RUN echo "target" > /tmp/target.txt && ln -s /tmp/target.txt /tmp/link.txt
 CMD ["cat", "/tmp/link.txt"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1450,6 +1638,7 @@ CMD ["cat", "/tmp/link.txt"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Error / edge case scenarios
@@ -1459,8 +1648,6 @@ CMD ["cat", "/tmp/link.txt"]"#,
             description: "Writes stdout+stderr then exits non-zero",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The runner may succeed (exit 0) even when the guest exits non-zero.
@@ -1472,14 +1659,13 @@ CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
                     bail!("Expected partial output to be captured, got: {combined}")
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "minimum_timeout",
             description: "1-second timeout kills long-running process",
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "1"],
             validate: |output| {
                 if output.exit_code == 0 {
@@ -1487,6 +1673,7 @@ CMD ["sleep", "3600"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "max_output_size_truncation",
@@ -1494,8 +1681,6 @@ CMD ["sleep", "3600"]"#,
             // Generate ~50 KB of `X` bytes, but limit the payload to 1024 bytes.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1024 count=50 2>/dev/null | tr '\\0' 'X'"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--max-output-size", "1024"],
             validate: |output| {
                 // The runner prints its progress logs and the guest payload to the
@@ -1520,6 +1705,7 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1024 count=50 2>/dev/null | tr '\\0' 'X'"]"
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "env_var_passthrough",
@@ -1529,8 +1715,6 @@ ENV LD_PRELOAD=/test.so
 ENV LD_LIBRARY_PATH=/testlib
 ENV SAFE_VAR=safe_value
 CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH SAFE=$SAFE_VAR"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1557,6 +1741,7 @@ CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH S
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Resource constraint enforcement
@@ -1568,8 +1753,6 @@ CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH S
             // `free -m` reports total memory; we check it's in the right ballpark.
             dockerfile: r#"FROM busybox
 CMD ["free", "-m"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--memory", "64", "--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1585,6 +1768,7 @@ CMD ["free", "-m"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "disk_size_override",
@@ -1595,8 +1779,6 @@ CMD ["free", "-m"]"#,
             // the block device level. This test validates the config path.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--disk", "64", "--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1613,6 +1795,7 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "disk_limit_enforced",
@@ -1622,8 +1805,6 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
             // approximately 64 MiB total (minus overhead), not more.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--disk", "64", "--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1648,14 +1829,13 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
                     output.stdout
                 )
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cpu_count_visible",
             description: "Guest sees 1 CPU with default vCPU count",
             dockerfile: r#"FROM busybox
 CMD ["nproc"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1668,6 +1848,7 @@ CMD ["nproc"]"#,
                     bail!("Expected '1' CPU from nproc, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Network enabled
@@ -1679,8 +1860,6 @@ CMD ["nproc"]"#,
             // Use wget to a well-known URL as a connectivity test.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.txt && echo net_ok || echo net_fail"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "30", "--network"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -1697,6 +1876,7 @@ CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.t
                     Ok(())
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // File permissions
@@ -1709,8 +1889,6 @@ CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.t
             dockerfile: r#"FROM busybox
 RUN mkdir -p /data && echo "content_ok" > /data/file.txt
 CMD ["cat", "/data/file.txt"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1723,6 +1901,7 @@ CMD ["cat", "/data/file.txt"]"#,
                     bail!("Expected 'content_ok' in output, got: {}", output.stdout)
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "file_permissions_preserved",
@@ -1732,8 +1911,6 @@ CMD ["cat", "/data/file.txt"]"#,
             dockerfile: r#"FROM busybox
 RUN mkdir -p /data && printf '#!/bin/sh\necho hello' > /data/test.sh && chmod +x /data/test.sh
 CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1749,6 +1926,7 @@ CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "directory_permissions_preserved",
@@ -1758,8 +1936,6 @@ CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
             dockerfile: r#"FROM busybox
 RUN mkdir -p /data/restricted && chmod 750 /data/restricted
 CMD ["stat", "-c", "%a", "/data/restricted"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1775,6 +1951,7 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // Special characters in environment variables
@@ -1784,8 +1961,6 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
             description: "Env vars with spaces, equals, and quotes work",
             // Use Docker's multi-line ENV syntax with quotes for values with spaces.
             dockerfile: "FROM busybox\nENV SPACED=\"hello world\" WITH_EQ=\"key=value\"\nCMD [\"sh\", \"-c\", \"echo SPACED=$SPACED EQ=$WITH_EQ\"]",
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1803,6 +1978,7 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         // =======================================================================
         // CLI override scenarios (--entrypoint, --cmd, --env)
@@ -1813,8 +1989,6 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo", "image_ep"]
 CMD ["image_cmd"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--entrypoint", "echo", "cli_ep"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1843,6 +2017,7 @@ CMD ["image_cmd"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_cmd_override",
@@ -1850,8 +2025,6 @@ CMD ["image_cmd"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo"]
 CMD ["image_cmd"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--cmd", "cli_cmd"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1873,6 +2046,7 @@ CMD ["image_cmd"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_entrypoint_and_cmd_override",
@@ -1880,8 +2054,6 @@ CMD ["image_cmd"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo", "image_ep"]
 CMD ["image_cmd"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &[
                 "--timeout",
                 "60",
@@ -1910,6 +2082,7 @@ CMD ["image_cmd"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_env_override",
@@ -1917,8 +2090,6 @@ CMD ["image_cmd"]"#,
             dockerfile: r#"FROM busybox
 ENV MY_VAR=image_value
 CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "MY_VAR=cli_value"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1935,6 +2106,7 @@ CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_env_add",
@@ -1942,8 +2114,6 @@ CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
             dockerfile: r#"FROM busybox
 ENV EXISTING=from_image
 CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "NEW_VAR=from_cli"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1964,14 +2134,13 @@ CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_env_multiple",
             description: "Multiple --env flags",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo A=$A B=$B"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--env", "A=one", "--env", "B=two"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -1986,14 +2155,13 @@ CMD ["sh", "-c", "echo A=$A B=$B"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "cli_entrypoint_no_image_entrypoint",
             description: "Add entrypoint when image only has CMD",
             dockerfile: r#"FROM busybox
 CMD ["hello", "world"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--entrypoint", "echo"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2011,14 +2179,13 @@ CMD ["hello", "world"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "multiple_iterations",
             description: "Multiple iterations execute sequentially",
             dockerfile: r#"FROM busybox
 CMD ["echo", "iter_output"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2031,14 +2198,13 @@ CMD ["echo", "iter_output"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "zero_iterations",
             description: "Zero iterations executes no benchmarks",
             dockerfile: r#"FROM busybox
 CMD ["echo", "should_not_appear"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "0"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2049,14 +2215,13 @@ CMD ["echo", "should_not_appear"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "allow_failure_false_aborts",
             description: "Non-zero exit code aborts iteration without --allow-failure",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3"],
             validate: |output| {
                 if output.exit_code == 0 {
@@ -2075,14 +2240,13 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "allow_failure_true_continues",
             description: "Non-zero exit code continues with --allow-failure",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
-            cancel_after_secs: None,
-            sandboxed: true,
             extra_args: &["--timeout", "60", "--iter", "3", "--allow-failure"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2101,6 +2265,7 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
                 }
                 Ok(())
             },
+            ..Scenario::default()
         },
     ]
 }
@@ -2116,7 +2281,6 @@ fn nosandbox_scenarios() -> Vec<Scenario> {
             description: "Non-sandboxed: simple echo",
             dockerfile: r#"FROM busybox:musl
 CMD ["echo", "hello from host"]"#,
-            cancel_after_secs: None,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2130,6 +2294,7 @@ CMD ["echo", "hello from host"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "nosandbox_env",
@@ -2137,7 +2302,6 @@ CMD ["echo", "hello from host"]"#,
             dockerfile: r#"FROM busybox:musl
 ENV MY_VAR=host_test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
-            cancel_after_secs: None,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2151,6 +2315,7 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "nosandbox_metrics",
@@ -2159,7 +2324,6 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
             // transport "local" (it previously emitted no metrics at all).
             dockerfile: r#"FROM busybox:musl
 CMD ["echo", "local_metrics_test"]"#,
-            cancel_after_secs: None,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2185,13 +2349,13 @@ CMD ["echo", "local_metrics_test"]"#,
                 }
                 bail!("Could not find transport in metrics: {json_str}")
             },
+            ..Scenario::default()
         },
         Scenario {
             name: "nosandbox_exit_code",
             description: "Non-sandboxed: non-zero exit code propagation",
             dockerfile: r#"FROM busybox:musl
 CMD ["sh", "-c", "exit 42"]"#,
-            cancel_after_secs: None,
             sandboxed: false,
             extra_args: &["--timeout", "60"],
             validate: |output| {
@@ -2208,6 +2372,7 @@ CMD ["sh", "-c", "exit 42"]"#,
                     )
                 }
             },
+            ..Scenario::default()
         },
     ]
 }
@@ -2226,6 +2391,64 @@ fn temp_dir() -> Utf8PathBuf {
 /// Check if KVM is available.
 fn kvm_available() -> bool {
     Path::new("/dev/kvm").exists()
+}
+
+/// The cargo target directory the builds above land in.
+///
+/// `CARGO_TARGET_DIR` is honored rather than assumed away: a caller that
+/// redirects it would otherwise have the binaries built in one place and
+/// looked for in another, and the harness would report a missing binary
+/// immediately after reporting a successful build.
+fn target_dir() -> Result<Utf8PathBuf> {
+    resolve_target_dir(
+        std::env::var_os("CARGO_TARGET_DIR").as_deref(),
+        &super::workspace_root(),
+    )
+}
+
+/// Where a build run from `workspace_root` puts its output.
+///
+/// A relative `CARGO_TARGET_DIR` is resolved against the workspace root rather
+/// than carried through as it stands. Cargo resolves it against the working
+/// directory of the build, which is the workspace root the builds above hand to
+/// `current_dir`, so a harness invoked from anywhere else would look for the
+/// binaries under its own working directory instead. That is the same missing
+/// binary immediately after a successful build that honoring the variable at all
+/// exists to prevent.
+///
+/// A value that is not UTF-8 is refused rather than converted lossily: the
+/// replacement characters would name a different directory again, and would do
+/// it while reporting a path that looks like the one that was asked for.
+fn resolve_target_dir(
+    dir: Option<&std::ffi::OsStr>,
+    workspace_root: &Utf8Path,
+) -> Result<Utf8PathBuf> {
+    let Some(dir) = dir else {
+        return Ok(workspace_root.join("target"));
+    };
+    let dir = Utf8PathBuf::from_path_buf(std::path::PathBuf::from(dir)).map_err(|dir| {
+        anyhow::anyhow!(
+            "CARGO_TARGET_DIR is not valid UTF-8: {}",
+            dir.as_os_str().display()
+        )
+    })?;
+    Ok(if dir.is_absolute() {
+        dir
+    } else {
+        workspace_root.join(dir)
+    })
+}
+
+/// Whether this process is running as root.
+fn is_root() -> bool {
+    #[expect(
+        unsafe_code,
+        reason = "geteuid has no std wrapper and cannot fail or touch memory"
+    )]
+    // SAFETY: `geteuid` takes no arguments, returns a plain integer, and is
+    // always successful.
+    let euid = unsafe { libc::geteuid() };
+    euid == 0
 }
 
 /// Check if Docker is available.
@@ -2345,6 +2568,31 @@ fn run_runner_with_cancel(
 /// Build bencher-init for the musl target and the runner CLI with `BENCHER_INIT_PATH`,
 /// then return the path to the runner binary.
 fn ensure_runner_bin() -> Result<Utf8PathBuf> {
+    // The elevated run must not invoke cargo: doing so as root leaves the
+    // target directory and cargo's cache root-owned, which then breaks the
+    // unprivileged steps around it. CI builds first and points here.
+    if let Some(path) = std::env::var_os(RUNNER_BIN_ENV) {
+        let path = Utf8PathBuf::from(path.to_string_lossy().into_owned());
+        if !path.exists() {
+            bail!("{RUNNER_BIN_ENV} is set to {path}, which does not exist");
+        }
+        println!("Using pre-built runner from {RUNNER_BIN_ENV}: {path}");
+        return Ok(path);
+    }
+
+    // Falling through to cargo as root is the exact outcome the
+    // build-then-elevate split exists to prevent: it leaves the target
+    // directory and the cargo cache owned by root, and it does so silently.
+    // Sudo does pass the variable through on both runner images, so this is
+    // belt and braces, but a loud failure beats a root-owned cache.
+    anyhow::ensure!(
+        !is_root(),
+        "Running as root without {RUNNER_BIN_ENV} set. Building here would run cargo as root and \
+         leave the target directory and cargo cache root-owned. Build unprivileged first:\n\
+         \x20 cargo test-runner scenarios --build-only\n\
+         \x20 sudo {RUNNER_BIN_ENV}=./target/debug/runner ./target/debug/test_runner scenarios"
+    );
+
     let workspace_root = super::workspace_root();
     let target_triple = super::musl_target_triple()?;
 
@@ -2359,7 +2607,7 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
         bail!("cargo build -p bencher_init --target {target_triple} failed");
     }
 
-    let init_path = workspace_root.join(format!("target/{target_triple}/debug/bencher-init"));
+    let init_path = target_dir()?.join(format!("{target_triple}/debug/bencher-init"));
     if !init_path.exists() {
         bail!("bencher-init binary not found at {init_path} after build");
     }
@@ -2376,12 +2624,1517 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
         bail!("cargo build -p bencher_runner_cli failed");
     }
 
-    let runner_bin = workspace_root.join("target/debug/runner");
+    let runner_bin = target_dir()?.join("debug/runner");
     if !runner_bin.exists() {
         bail!("Runner binary not found at {runner_bin} after build");
     }
 
     Ok(runner_bin)
+}
+
+// ---------------------------------------------------------------------------
+// Jail confinement
+// ---------------------------------------------------------------------------
+
+/// Environment variable naming a pre-built runner binary.
+const RUNNER_BIN_ENV: &str = "BENCHER_RUNNER_BIN";
+
+/// How long to wait for the jailed VMM to appear before giving up.
+///
+/// Generous: the runner pulls and unpacks the image and builds the rootfs
+/// before the VMM is spawned.
+const PROBE_TIMEOUT: Duration = Duration::from_mins(3);
+
+/// How often to look for the jailed VMM.
+const PROBE_INTERVAL: Duration = Duration::from_millis(100);
+
+/// The uid the jail scenarios hand the runner with `--jail-uid`.
+///
+/// Asked for by name rather than left to the runner's default, and asserted as
+/// this number rather than as whatever the chroot turns out to be owned by. The
+/// chown of the chroot and the setuid of the VMM are made from one config, so
+/// they agree with each other on a runner that ignores the flag and the default
+/// alike, and a uid the operator never chose would pass unnoticed.
+const SCENARIO_JAIL_UID: u32 = 61017;
+
+/// [`SCENARIO_JAIL_UID`] as the scenarios spell it on the command line.
+///
+/// Written twice because a scenario's arguments are `&'static str`. A test keeps
+/// the two from drifting apart.
+const SCENARIO_JAIL_UID_ARG: &str = "61017";
+
+/// The network namespace handle the runner builds for the jailed VMM.
+///
+/// Global to the host and named by the `ip netns` convention, which is the
+/// product's own reasoning: an operator has to be able to see it. Spelled here
+/// rather than read from the runner, since the harness deliberately depends on
+/// nothing the product could redefine underneath it.
+const NETNS_HANDLE: &str = "/run/netns/bencher-jail";
+
+/// The harness's own network namespace, which is the host's.
+const HARNESS_NETNS: &str = "/proc/self/ns/net";
+
+/// How many stacked mounts the teardown unwinds before giving up.
+///
+/// Bounded, and bounded at the same number the runner's own unwind uses: a path
+/// that keeps reporting a successful unmount forever is a kernel fault, and the
+/// count taken afterwards reports the real state either way.
+const MAX_NETNS_UNWIND: usize = 32;
+
+/// The state directory scenarios run against.
+fn scenario_state_dir() -> Utf8PathBuf {
+    super::work_dir().join("state")
+}
+
+/// The directory holding one chroot per jailed VMM.
+fn jail_parent(state_dir: &Utf8Path) -> Utf8PathBuf {
+    state_dir.join("jail").join("firecracker")
+}
+
+/// Scenarios covering the confinement of the VMM itself.
+fn jail_scenarios() -> Vec<Scenario> {
+    vec![
+        Scenario {
+            name: "jail_confinement",
+            description: "A jailed job succeeds with the VMM unprivileged, off the host network, and in its cgroup",
+            // The guest sleeps so the VMM is alive long enough to be observed
+            // by a probe that polls every 100ms.
+            //
+            // The marker is a token the runner's own output cannot contain.
+            // "jailed" collided with the runner announcing "Launching jailed
+            // Firecracker microVM...", so the check passed on the runner
+            // saying it was about to start a VM that then never booted.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
+            cancel_after_secs: None,
+            probe: Some(probe_confinement),
+            orphan_then_rerun: false,
+            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            validate: |output| {
+                // The job has to have actually run before anything the probe
+                // saw means anything. Every confinement property the probe
+                // checks is equally true of a VMM that started and then never
+                // booted a guest, so without this the scenario stays green
+                // while the product is broken.
+                assert_job_succeeded(output, "JAIL_CONFINEMENT_a7f3b2c9")?;
+                assert_cpu_isolation_applied(output)?;
+                assert_no_chroot_remains(&scenario_state_dir())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "jail_netns_recovers_from_stacked_mounts",
+            description: "A job succeeds against a network namespace handle carrying stacked mounts",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "JAIL_NETNS_a7f3b2c9"]"#,
+            setup: Some(stack_netns_mounts),
+            teardown: Some(unstack_netns_mounts),
+            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            validate: |output| assert_job_succeeded(output, "JAIL_NETNS_a7f3b2c9"),
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "jail_refused_fails_the_job",
+            description: "A state directory the runner must refuse fails the job rather than running the VMM unjailed",
+            // Nothing in here should ever run, and the marker is how that is
+            // known: the guest prints it and the runner cannot.
+            dockerfile: r#"FROM busybox
+CMD ["echo", "JAIL_REFUSED_a7f3b2c9"]"#,
+            unusable_state_dir: true,
+            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            validate: |output| {
+                // Failing the job is the invariant, and the runner is free to
+                // reword why: nothing here reads the message. That no VMM was
+                // left running is asserted against the host's own processes, in
+                // `run_runner_without_unjailed_vmm`; that none ran at all is the
+                // marker check below.
+                if output.exit_code == 0 {
+                    bail!(
+                        "Expected the job to fail when the jail could not be built, got exit code 0.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                if output.stdout.contains("JAIL_REFUSED_a7f3b2c9") {
+                    bail!(
+                        "The guest ran even though the runner could not build a jail to run it in.\nstdout: {}\nstderr: {}",
+                        output.stdout,
+                        output.stderr
+                    )
+                }
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "jail_sweep_reclaims_orphan",
+            description: "A chroot orphaned by a runner that never unwound is swept by the next job",
+            // Likewise a token the runner cannot print: "swept" sits one
+            // refactor away from colliding with the sweep's own reporting.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo JAIL_SWEEP_a7f3b2c9 && sleep 10"]"#,
+            cancel_after_secs: None,
+            probe: None,
+            orphan_then_rerun: true,
+            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            validate: |output| {
+                assert_job_succeeded(output, "JAIL_SWEEP_a7f3b2c9")?;
+                assert_no_chroot_remains(&scenario_state_dir())
+            },
+            ..Scenario::default()
+        },
+    ]
+}
+
+/// Assert the runner reported that it confined the VMM to the benchmark cores.
+///
+/// The runner prints this only after creating the cgroup, writing the cpuset,
+/// and reading the effective set back, so it is the runner's own statement
+/// that a cgroup exists for the probe to have checked membership against.
+/// Without it the probe could pass on a host where no cgroup was ever made.
+fn assert_cpu_isolation_applied(output: &ScenarioOutput) -> Result<()> {
+    const PINNED: &str = "CPU isolation: Firecracker pinned to cores";
+    if output.stdout.contains(PINNED) {
+        return Ok(());
+    }
+    bail!(
+        "The runner never reported pinning the VMM to benchmark cores, so no cgroup was created \
+         and cgroup placement went unexercised by this run. Expected {PINNED:?}.\nstdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    )
+}
+
+/// Stack extra bind mounts on the network namespace handle.
+///
+/// Recreating the handle bind mounts over it, and a bind mount over a file
+/// reports no error, so mounts stack. Against a stacked handle a single
+/// detach leaves one behind, the unlink then fails with EBUSY, and creating
+/// the placeholder fails with EPERM even as root: every sandboxed job on the
+/// host fails until an operator loops `umount` by hand. The unwind loop exists
+/// for exactly this, and nothing else exercises it.
+fn stack_netns_mounts() -> Result<()> {
+    let handle = NETNS_HANDLE;
+    fs::create_dir_all("/run/netns").context("Failed to create the netns directory")?;
+    if !Utf8Path::new(handle).exists() {
+        fs::File::create(handle).context("Failed to create the netns handle")?;
+    }
+
+    for _ in 0..2 {
+        let status = Command::new("unshare")
+            .args(["--net", "sh", "-c"])
+            .arg(format!("mount --bind {HARNESS_NETNS} {handle}"))
+            .status()
+            .context("Failed to run unshare to stack a netns mount")?;
+        anyhow::ensure!(status.success(), "Failed to stack a netns mount");
+    }
+
+    let stacked = stacked_netns_mounts()?;
+    anyhow::ensure!(
+        stacked >= 2,
+        "Expected at least two stacked mounts on {handle}, found {stacked}"
+    );
+    println!("  stacked {stacked} mounts on {handle}");
+    Ok(())
+}
+
+/// The state directory the sabotage scenario points the runner at.
+fn unusable_state_dir() -> Result<Utf8PathBuf> {
+    plant_unusable_state_dir(&super::work_dir())
+}
+
+/// Plant a state directory the runner has to refuse, under `root`.
+///
+/// A symlinked component, because that is refused rather than resolved: under a
+/// state directory whose parent an unprivileged user can write to, following a
+/// link would have root chmod and sweep a directory of somebody else's choosing.
+/// It is the cheapest sabotage that is certainly fatal and never names anything
+/// outside the harness's own tree. An unwritable directory would not do, since
+/// these scenarios run as root and root writes anyway.
+///
+/// The link points at a directory of the harness's own, so a runner that
+/// resolved it instead of refusing it would be caught by the scenario rather
+/// than by an operator noticing a system directory at 0700.
+fn plant_unusable_state_dir(root: &Utf8Path) -> Result<Utf8PathBuf> {
+    use std::os::unix::fs::symlink;
+
+    let target = root.join("refused-state-target");
+    let planted = root.join("refused-state");
+
+    fs::create_dir_all(&target)
+        .with_context(|| format!("Failed to create {target} for the refused state directory"))?;
+    // Whichever it is after a previous run: the link itself, or a directory a
+    // runner that resolved it went on to build a tree in.
+    drop(fs::remove_file(&planted));
+    drop(fs::remove_dir_all(&planted));
+    symlink(&target, &planted).with_context(|| format!("Failed to link {planted} at {target}"))?;
+
+    Ok(planted)
+}
+
+/// Run the runner and prove it left no VMM running.
+///
+/// The pair is the invariant: a runner that cannot build the jail has to fail
+/// the job rather than fall back to an unjailed VMM. Asserted against the
+/// processes on the host, never against what the runner printed, so a reworded
+/// error stays green and a guest running outside a jail does not.
+///
+/// Left running is all the comparison can establish. The snapshots bracket the
+/// runner's lifetime, so a VMM that launched and exited inside it leaves the
+/// difference empty. That case is the scenario's own marker assertion, which
+/// fails on a guest that got far enough to print anything at all.
+///
+/// A set difference rather than a count, since the machine is shared: what
+/// matters is whether this run added a Firecracker, not what was already there.
+fn run_runner_without_unjailed_vmm(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let before = firecracker_pids()?;
+    let output = run_runner(image_path, args, runner_bin)?;
+    let after = firecracker_pids()?;
+
+    let launched: Vec<u32> = after.difference(&before).copied().collect();
+    anyhow::ensure!(
+        launched.is_empty(),
+        "The runner could not build a jail, and a VMM is running anyway (pid(s) {launched:?}). \
+         A confinement that cannot be built has to fail the job, not run the guest without it.\nstdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    );
+
+    Ok(output)
+}
+
+/// Every Firecracker running on the host right now, by pid.
+fn firecracker_pids() -> Result<std::collections::BTreeSet<u32>> {
+    let mut pids = std::collections::BTreeSet::new();
+    for entry in fs::read_dir("/proc").context("Failed to read /proc")? {
+        let entry = entry.context("Failed to read a /proc entry")?;
+        let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
+            continue;
+        };
+        if is_firecracker(pid)? {
+            pids.insert(pid);
+        }
+    }
+    Ok(pids)
+}
+
+/// Take the stacked mounts back off the network namespace handle.
+///
+/// Nothing else will. The handle is global to the host and shared with any real
+/// runner on it, and the runner only unwinds it while it is building a jail of
+/// its own, so a scenario that fails before it gets that far would leave the
+/// stack on the host: the wedged state this scenario exists to prove the runner
+/// recovers from, inflicted on everything that comes after it.
+///
+/// One detach at a time, exactly as the runner's own unwind does, since a bind
+/// mount over a file stacks rather than reporting `EBUSY` and a single `umount`
+/// leaves the rest. The handle itself goes too, rather than being left as the
+/// single mount a successful run finishes with: an absent handle is what a host
+/// that never ran this scenario looks like, and the runner clears and rebinds
+/// the handle at the start of every job either way.
+fn unstack_netns_mounts() -> Result<()> {
+    let handle = Utf8Path::new(NETNS_HANDLE);
+    for _ in 0..MAX_NETNS_UNWIND {
+        let status = Command::new("umount")
+            .args(["--lazy", handle.as_str()])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .context("Failed to run umount to unwind a netns mount")?;
+        // Nothing left mounted there, which is where this is going anyway.
+        if !status.success() {
+            break;
+        }
+    }
+
+    match fs::remove_file(handle) {
+        Ok(()) => {},
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {},
+        Err(e) => {
+            return Err(e).with_context(|| {
+                format!("Failed to remove {handle}, so its mounts are still stacked on the host")
+            });
+        },
+    }
+
+    let stacked = stacked_netns_mounts()?;
+    anyhow::ensure!(
+        stacked == 0,
+        "{stacked} mount(s) are still stacked on {handle}, which every sandboxed job on this host now trips over"
+    );
+    println!("  unwound the stacked mounts on {handle}");
+    Ok(())
+}
+
+/// How many mounts are stacked on the network namespace handle right now.
+fn stacked_netns_mounts() -> Result<usize> {
+    let mountinfo =
+        fs::read_to_string("/proc/self/mountinfo").context("Failed to read mountinfo")?;
+    Ok(mounts_on(&mountinfo, NETNS_HANDLE))
+}
+
+/// How many mounts `mountinfo` shows at exactly `mount_point`.
+///
+/// The whole field, delimited by the spaces around it, never a substring: the
+/// mount point sits in the middle of the line, and a plain `contains` counts a
+/// mount on any path this one is a prefix of.
+fn mounts_on(mountinfo: &str, mount_point: &str) -> usize {
+    mountinfo
+        .lines()
+        .filter(|line| line.contains(&format!(" {mount_point} ")))
+        .count()
+}
+
+/// Assert the runner actually completed the job.
+///
+/// A confinement scenario that asserts only confinement passes vacuously when
+/// the VM never boots: the VMM process exists, is unprivileged, and is in its
+/// cgroup either way. Success of the job itself is the precondition for any of
+/// that meaning anything.
+///
+/// `marker` has to be a token the runner's own progress output cannot contain.
+/// This captures the runner's stdout, not the guest's, and the runner prints
+/// plenty about jails and sweeps on its way to launching a VM.
+fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
+    if output.exit_code != 0 {
+        bail!(
+            "Expected the job to succeed, got exit code {}.\nstdout: {}\nstderr: {}",
+            output.exit_code,
+            output.stdout,
+            output.stderr
+        );
+    }
+    if !output.stdout.contains(marker) {
+        bail!(
+            "Expected '{marker}' in the guest output, so the VM booted and ran.\nstdout: {}\nstderr: {}",
+            output.stdout,
+            output.stderr
+        );
+    }
+    Ok(())
+}
+
+/// Assert every chroot has been reclaimed.
+///
+/// The jailer cleans up nothing by design, so a leftover here means the
+/// runner's teardown did not run: each one holds a copy of the VMM binary and
+/// a full guest rootfs image.
+fn assert_no_chroot_remains(state_dir: &Utf8Path) -> Result<()> {
+    let parent = jail_parent(state_dir);
+    // A read that failed is not an empty directory. An assertion that could not
+    // look has not passed, it has not run, and a vacuous pass here would hide the
+    // exact leak it exists to catch. Absence is the one reading that does mean
+    // nothing was left behind: the runner creates this tree on demand.
+    let entries = match fs::read_dir(&parent) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => {
+            return Err(e).with_context(|| {
+                format!("Failed to read {parent}, so whether a chroot was left behind is unknown")
+            });
+        },
+    };
+
+    let mut leftovers = Vec::new();
+    for entry in entries {
+        let entry = entry.with_context(|| {
+            format!("Failed to read an entry under {parent}, so whether a chroot was left behind is unknown")
+        })?;
+        leftovers.push(entry.file_name().to_string_lossy().into_owned());
+    }
+
+    anyhow::ensure!(
+        leftovers.is_empty(),
+        "Chroots left behind under {parent}: {leftovers:?}"
+    );
+    Ok(())
+}
+
+/// Check that the jailed VMM is unprivileged, off the host network, and
+/// already in its cgroup.
+///
+/// Every one of these disappears with the process, so none can be recovered
+/// from the runner's output. The network namespace is the one with nothing else
+/// watching it: the guest has no NIC either way, so a VMM launched without
+/// `--netns` still runs a guest with no network and still satisfies every other
+/// scenario in this suite. Cgroup membership in particular must already hold the
+/// first time the VMM is seen: it is established before the exec, not after the
+/// VM is running.
+fn probe_confinement(state_dir: &Utf8Path) -> Result<bool> {
+    let parent = jail_parent(state_dir);
+    let Some((vm_id, jail_root)) = find_jail(&parent)? else {
+        return Ok(false);
+    };
+    let Some(pid) = find_jailed_vmm(&jail_root)? else {
+        return Ok(false);
+    };
+
+    if !check_unprivileged(pid, &jail_root, SCENARIO_JAIL_UID)? {
+        return Ok(false);
+    }
+    if !check_netns(pid)? {
+        return Ok(false);
+    }
+    // Placement happens in `pre_exec`, before the jailer itself starts, so
+    // membership already holds the first time the process is observable.
+    // There is no not-ready-yet window for it.
+    check_cgroup_membership(&vm_id, pid)?;
+
+    Ok(true)
+}
+
+/// Find the single chroot under the jail parent, if one exists yet.
+///
+/// `Ok(None)` is "not yet", which the parent not existing also means: the runner
+/// creates it on demand. Every other failure is an error, because this drives a
+/// poll loop whose only other outcome is a timeout, and a timeout would report
+/// that no VMM ever appeared when the truth is that nobody could look.
+fn find_jail(parent: &Utf8Path) -> Result<Option<(String, Utf8PathBuf)>> {
+    let entries = match fs::read_dir(parent) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e).with_context(|| format!("Failed to read {parent}")),
+    };
+
+    for entry in entries {
+        let entry = entry.with_context(|| format!("Failed to read an entry under {parent}"))?;
+        let file_type = entry
+            .file_type()
+            .with_context(|| format!("Failed to read the kind of an entry under {parent}"))?;
+        if !file_type.is_dir() {
+            continue;
+        }
+        let vm_id = entry.file_name().to_string_lossy().into_owned();
+        let jail_root = parent.join(&vm_id).join("root");
+        if jail_root.is_dir() {
+            return Ok(Some((vm_id, jail_root)));
+        }
+    }
+    Ok(None)
+}
+
+/// Find the pid of the VMM confined to `jail_root`, if it is running yet.
+///
+/// The jailer pivots into a private mount namespace, so the process's root
+/// path reads back as `/` and is useless as an identifier. Its identity is
+/// compared instead: the bind mount the jailer pivots onto preserves the
+/// device and inode of the chroot directory, so stat'ing through
+/// `/proc/<pid>/root` and stat'ing the jail root agree for exactly the VMM
+/// confined to this jail and for no other process on the host.
+///
+/// `Ok(None)` is "not running yet", which a jail root that does not exist also
+/// means. A jail root that cannot be stat'ed, or a `/proc` that cannot be listed,
+/// is neither: it would surface as a probe timeout blaming the runner for
+/// something the harness could not see.
+fn find_jailed_vmm(jail_root: &Utf8Path) -> Result<Option<u32>> {
+    let jail = match fs::metadata(jail_root) {
+        Ok(jail) => jail,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e).with_context(|| format!("Failed to stat {jail_root}")),
+    };
+    for entry in fs::read_dir("/proc").context("Failed to read /proc")? {
+        let entry = entry.context("Failed to read a /proc entry")?;
+        let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
+            continue;
+        };
+        // Following the magic symlink crosses into the process's own mount
+        // namespace, which a privileged reader is allowed to do. A read that
+        // fails is a process that has exited or is not this jail's, which is the
+        // one failure here that is genuinely an answer.
+        let Ok(root) = fs::metadata(format!("/proc/{pid}/root")) else {
+            continue;
+        };
+        if same_object(&root, &jail) {
+            return Ok(Some(pid));
+        }
+    }
+    Ok(None)
+}
+
+/// Check the VMM dropped root and runs as the user the jail was handed to.
+///
+/// `expected_uid` is the uid the scenario asked for by name, and it is checked
+/// against the VMM as well as against the chroot. Both of those come from one
+/// config, so a runner that used a uid of its own for the chown and the setuid
+/// alike would satisfy them against each other while honoring neither
+/// `--jail-uid` nor the default.
+///
+/// Returns `Ok(false)` while the observation is premature rather than wrong.
+/// The jailer `pivot_root`s before it drops privilege, so there is a window in
+/// which the process root already matches the jail while the process is still
+/// root and the jail root is still root-owned. Treating that as a violation
+/// would fail the run for catching the jailer mid-flight; the probe's timeout
+/// is what catches a VMM that genuinely never drops.
+fn check_unprivileged(pid: u32, jail_root: &Utf8Path, expected_uid: u32) -> Result<bool> {
+    let status = fs::read_to_string(format!("/proc/{pid}/status"))
+        .with_context(|| format!("Failed to read the status of the VMM (pid {pid})"))?;
+    let uid_line = status
+        .lines()
+        .find_map(|line| line.strip_prefix("Uid:"))
+        .context("No Uid line in the VMM's /proc status")?;
+    let vmm_uid: u32 = uid_line
+        .split_whitespace()
+        .next()
+        .context("Empty Uid line in the VMM's /proc status")?
+        .parse()
+        .context("Unparsable uid in the VMM's /proc status")?;
+
+    if vmm_uid == 0 {
+        return Ok(false);
+    }
+
+    // Unprivileged is not enough: it has to be the uid that was asked for.
+    if vmm_uid != expected_uid {
+        bail!(
+            "The VMM (pid {pid}) runs as uid {vmm_uid}, but the runner was handed --jail-uid {expected_uid}"
+        );
+    }
+
+    // The jailer chowns the chroot root to the jail uid, so the two must
+    // agree: a VMM running as some other unprivileged user would not be
+    // confined to the jail it was given.
+    let Some(jail_uid) = jail_root_uid(jail_root) else {
+        return Ok(false);
+    };
+    if vmm_uid != jail_uid {
+        bail!("The VMM (pid {pid}) runs as uid {vmm_uid} but its jail is owned by uid {jail_uid}");
+    }
+
+    Ok(true)
+}
+
+/// The uid the jailer handed the chroot root to, once it has handed it over.
+///
+/// `None` while the root is still owned by root, which is the same
+/// not-ready-yet window `check_unprivileged` documents.
+fn jail_root_uid(jail_root: &Utf8Path) -> Option<u32> {
+    use std::os::unix::fs::MetadataExt as _;
+
+    let uid = fs::metadata(jail_root).ok()?.uid();
+    (uid != 0).then_some(uid)
+}
+
+/// Check the VMM joined the jail's network namespace.
+///
+/// Nothing else in the suite can see this. The guest has no network device in
+/// either case, so a VMM launched without `--netns` leaves every other scenario
+/// green while the VMM process itself keeps the host network reach the empty
+/// namespace exists to remove.
+///
+/// Compared by identity rather than by path, the same way the chroot is: every
+/// namespace inode lives on the single kernel `nsfs`, and `/proc/<pid>/ns/net`
+/// names the namespace a process is in, so device and inode agree for exactly
+/// the processes in one namespace. Two readings are needed, because either one
+/// alone can be satisfied by an accident: matching the handle without differing
+/// from the harness would hold if the handle were the host's own namespace, and
+/// differing from the harness without matching the handle would hold for any
+/// namespace at all.
+///
+/// There is no not-ready-yet window. The handle lives at an absolute path
+/// outside the chroot, so the jailer has to join before it chroots, and the
+/// probe sees the process only once its root is the jail. `Ok(false)` is only
+/// for a process that has gone, which is the probe's own race and not a
+/// violation.
+fn check_netns(pid: u32) -> Result<bool> {
+    let handle = Utf8Path::new(NETNS_HANDLE);
+    let expected = fs::metadata(handle).with_context(|| {
+        format!(
+            "Failed to stat {handle}, which the runner builds before it launches the VMM, so which namespace the VMM joined is unknown"
+        )
+    })?;
+    let own = fs::metadata(HARNESS_NETNS)
+        .context("Failed to stat the harness's own network namespace")?;
+    // A read that fails is a VMM that has exited, which is the one failure here
+    // that is an answer rather than a blind spot: the pid came from a listing
+    // taken moments ago.
+    let Ok(joined) = fs::metadata(format!("/proc/{pid}/ns/net")) else {
+        return Ok(false);
+    };
+
+    if same_object(&joined, &own) {
+        bail!(
+            "The VMM (pid {pid}) is in the harness's own network namespace, so it was launched without --netns and keeps the host's network reach"
+        );
+    }
+    if !same_object(&joined, &expected) {
+        bail!(
+            "The VMM (pid {pid}) is in network namespace {}, not the {handle} the runner built ({})",
+            namespace_id(&joined),
+            namespace_id(&expected)
+        );
+    }
+
+    Ok(true)
+}
+
+/// How a namespace is named when the comparison fails.
+fn namespace_id(metadata: &fs::Metadata) -> String {
+    use std::os::unix::fs::MetadataExt as _;
+
+    format!("{}:{}", metadata.dev(), metadata.ino())
+}
+
+/// Whether two readings name the same file, namespace, or directory.
+///
+/// Device and inode, which is the only identity that survives the jail: the
+/// jailer pivots into a private mount namespace, so paths read back as
+/// something else on both sides of it, and namespaces have no path of their own
+/// at all.
+fn same_object(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt as _;
+
+    left.dev() == right.dev() && left.ino() == right.ino()
+}
+
+/// Check the VMM is in its cgroup.
+///
+/// Placement happens before the exec, so the pid is already a member the
+/// first time the process is observable.
+fn check_cgroup_membership(vm_id: &str, pid: u32) -> Result<()> {
+    let procs_path = format!("/sys/fs/cgroup/bencher/{vm_id}/cgroup.procs");
+
+    // A missing cgroup is a failure, not a note. Placement before exec is the
+    // centrepiece of the jail: it is what fixed the cpuset being applied after
+    // the VMM was already running. Letting its absence pass quietly is how a
+    // scenario named for confinement ends up asserting only the uid half of
+    // it, which is a green that means less than it looks like.
+    let procs = fs::read_to_string(&procs_path).with_context(|| {
+        format!(
+            "No cgroup at {procs_path}, so cgroup placement was not exercised at all. \
+             The runner creates one whenever its CPU layout offers isolation, which needs \
+             two or more online CPUs and the cpuset controller delegated to this cgroup tree."
+        )
+    })?;
+
+    if procs.lines().any(|line| line.trim() == pid.to_string()) {
+        Ok(())
+    } else {
+        bail!(
+            "The VMM (pid {pid}) is not in {procs_path}, which holds: {procs:?}. \
+             Placement happens in pre_exec, before the jailer starts, so membership must \
+             already hold the first time the process is visible."
+        )
+    }
+}
+
+/// Orphan a jail by killing the runner, then prove the next job sweeps it.
+///
+/// SIGKILL rather than SIGTERM, because SIGTERM on the one-shot path takes the
+/// default disposition too (signal handlers are installed only by the daemon),
+/// and either way nothing unwinds. That is the point: `Drop` cannot reclaim
+/// the chroot, so if the next job finds a clean tree it can only be because
+/// the sweep reclaimed it.
+fn run_runner_after_orphan(
+    image_path: &Utf8Path,
+    args: &[&str],
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let parent = jail_parent(state_dir);
+
+    let mut child = Command::new(runner_bin.as_str())
+        .arg("run")
+        .arg("--image")
+        .arg(image_path.as_str())
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+
+    // Drain both pipes for the same reason the probe path does. This polls for
+    // up to three minutes while the runner pulls an image, unpacks it, and
+    // builds an ext4, which is more than enough output to fill a 64 KiB pipe
+    // and block the runner. It would surface as "No jailed VMM appeared",
+    // which points at the sweep rather than at the pipe.
+    let readers = drain_output(&mut child);
+
+    // Wait for a real orphan: a chroot with a VMM running in it, not just an
+    // empty directory created microseconds before the kill.
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let orphan = loop {
+        if let Some((vm_id, jail_root)) = find_jail(&parent)?
+            && let Some(pid) = find_jailed_vmm(&jail_root)?
+        {
+            break Some((vm_id, jail_root, pid));
+        }
+        if child.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
+            break None;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    };
+
+    let Some((vm_id, jail_root, vmm_pid)) = orphan else {
+        // Killed before the wait. A probe that timed out leaves the runner still
+        // going, so waiting on it first would sit there until the runner's own
+        // timeout expired and report the failure minutes late, which is exactly
+        // when somebody is watching. Only if it has not already been reaped:
+        // `try_wait` in the loop above reaps it, and signalling a reaped pid can
+        // reach whatever inherited the number.
+        if child.try_wait()?.is_none() {
+            kill_pid(child.id(), libc::SIGKILL);
+        }
+        drop(child.wait());
+        let (stdout, stderr) = readers.join();
+        bail!(
+            "No jailed VMM appeared within {PROBE_TIMEOUT:?}, so nothing was orphaned and the sweep is untested.\nstdout: {stdout}\nstderr: {stderr}"
+        );
+    };
+
+    kill_pid(child.id(), libc::SIGKILL);
+    drop(child.wait());
+    drop(readers.join());
+
+    if !jail_root
+        .try_exists()
+        .with_context(|| format!("Failed to check whether {jail_root} was left behind"))?
+    {
+        bail!(
+            "The chroot {jail_root} was reclaimed despite the runner being killed without unwinding, so the sweep is untested"
+        );
+    }
+
+    // Deliberately NOT reaping the VMM here. Killing it by hand would leave
+    // the next job's sweep with nothing to find, so the reap, the pidfd
+    // handling, and the cgroup removal would all be skipped and the scenario
+    // would prove only that a directory can be deleted. The stray Firecracker
+    // that a hand-reap guards against is exactly what the sweep now exists to
+    // prevent, so if the sweep fails this scenario has to go red.
+    let cgroup = stale_cgroup(&vm_id);
+    let cgroup_existed = cgroup
+        .try_exists()
+        .with_context(|| format!("Failed to check whether {cgroup} was created"))?;
+    println!(
+        "  orphaned jail {vm_id} (VMM pid {vmm_pid}, cgroup present: {cgroup_existed}), running a second job..."
+    );
+
+    let output = run_runner(image_path, args, runner_bin)?;
+
+    // `try_exists`, not `exists`: the latter reports false for an error as well
+    // as for absence, which would pass this assertion for the wrong reason.
+    if jail_root
+        .try_exists()
+        .with_context(|| format!("Failed to check whether {jail_root} survived"))?
+    {
+        bail!("The orphaned chroot {jail_root} survived the next job, so it was never swept");
+    }
+    if is_firecracker(vmm_pid)? {
+        bail!(
+            "The orphaned VMM (pid {vmm_pid}) is still running after the next job, so the sweep never reaped it. It still holds the benchmark cores."
+        );
+    }
+    // Only meaningful where a cgroup was created at all: a host with no CPU
+    // isolation never makes one, and asserting its absence would pass for the
+    // wrong reason.
+    if cgroup_existed
+        && cgroup
+            .try_exists()
+            .with_context(|| format!("Failed to check whether {cgroup} survived"))?
+    {
+        bail!(
+            "The orphaned cgroup {cgroup} survived the next job, so the sweep never removed it. Stale cgroups accumulate, and one that will not go away usually means its VMM is still running."
+        );
+    }
+
+    Ok(output)
+}
+
+/// The cgroup a jail leaves behind, which shares the jail's name.
+fn stale_cgroup(vm_id: &str) -> Utf8PathBuf {
+    Utf8PathBuf::from("/sys/fs/cgroup/bencher").join(vm_id)
+}
+
+/// Whether a pid is a running Firecracker.
+///
+/// Checking the command as well as the pid keeps a recycled pid from reading
+/// as a VMM that was never reaped.
+///
+/// A process that is gone has no `comm` to read, and that is the answer the
+/// caller wants. Any other read failure is not: the assertion that uses this
+/// passes when it returns false, so swallowing an error would pass it for the
+/// wrong reason.
+fn is_firecracker(pid: u32) -> Result<bool> {
+    match fs::read_to_string(format!("/proc/{pid}/comm")) {
+        Ok(comm) => Ok(comm.trim() == "firecracker"),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e).with_context(|| {
+            format!(
+                "Failed to read the command of pid {pid}, so whether the VMM was reaped is unknown"
+            )
+        }),
+    }
+}
+
+/// Reader threads draining a child's piped output.
+struct DrainedOutput {
+    stdout: std::thread::JoinHandle<String>,
+    stderr: std::thread::JoinHandle<String>,
+}
+
+impl DrainedOutput {
+    /// Wait for both readers and return what they collected.
+    fn join(self) -> (String, String) {
+        let stdout = self.stdout.join().unwrap_or_default();
+        let stderr = self.stderr.join().unwrap_or_default();
+        (stdout, stderr)
+    }
+}
+
+/// Start reading a child's stdout and stderr so neither pipe can fill.
+fn drain_output(child: &mut std::process::Child) -> DrainedOutput {
+    fn reader<R: std::io::Read + Send + 'static>(
+        stream: Option<R>,
+    ) -> std::thread::JoinHandle<String> {
+        std::thread::spawn(move || {
+            let mut buffer = String::new();
+            if let Some(mut stream) = stream {
+                drop(stream.read_to_string(&mut buffer));
+            }
+            buffer
+        })
+    }
+
+    DrainedOutput {
+        stdout: reader(child.stdout.take()),
+        stderr: reader(child.stderr.take()),
+    }
+}
+
+/// Send a signal to a process, ignoring the result.
+fn kill_pid(pid: u32, signal: libc::c_int) {
+    #[expect(
+        unsafe_code,
+        clippy::cast_possible_wrap,
+        reason = "libc::kill requires unsafe; PID fits in i32"
+    )]
+    // SAFETY: `kill` takes plain integers and touches no memory. A signal to a
+    // pid that has already exited fails harmlessly with ESRCH.
+    unsafe {
+        libc::kill(pid as i32, signal);
+    }
+}
+
+/// The host settings the tuning scenario watches, and what the runner sets them
+/// to.
+///
+/// Only settings whose whole value the runner rewrites. The bracketed sysfs
+/// files (`transparent_hugepage/*`) and the cpuset partition are handled
+/// separately below, and the knobs this scenario deliberately leaves alone are
+/// listed with the arguments that switch them off.
+const TUNED_SETTINGS: &[(&str, &str)] = &[
+    ("/proc/sys/kernel/randomize_va_space", "0"),
+    ("/proc/sys/kernel/nmi_watchdog", "0"),
+    ("/proc/sys/vm/swappiness", "10"),
+    ("/proc/sys/kernel/perf_event_paranoid", "-1"),
+    ("/proc/sys/kernel/numa_balancing", "0"),
+    ("/proc/sys/kernel/timer_migration", "0"),
+    ("/proc/sys/kernel/soft_watchdog", "0"),
+    ("/sys/kernel/mm/ksm/run", "0"),
+];
+
+/// The transparent hugepage settings, whose files list every mode and bracket
+/// the selected one.
+const TUNED_THP: &[&str] = &[
+    "/sys/kernel/mm/transparent_hugepage/enabled",
+    "/sys/kernel/mm/transparent_hugepage/defrag",
+];
+
+/// What the runner sets the transparent hugepage mode to.
+const THP_TARGET: &str = "never";
+
+/// The cpuset partition files, which the tuning writes and the guard restores.
+const TUNED_PARTITION: &[&str] = &[
+    "/sys/fs/cgroup/bencher/cpuset.cpus",
+    "/sys/fs/cgroup/bencher/cpuset.mems",
+    "/sys/fs/cgroup/bencher/cpuset.cpus.partition",
+];
+
+/// One host setting the scenario expects the runner to change.
+#[derive(Debug, Clone)]
+struct TunedSetting {
+    path: Utf8PathBuf,
+    /// What it held before the runner started, and what it must hold after.
+    original: String,
+    /// What the runner should set it to while the Job runs, when this host
+    /// lets it. `None` for a setting that is present and writable but already
+    /// holds the target, which the runner leaves alone and reports as such.
+    expected: Option<String>,
+    /// Whether the value is the bracketed kind (`always [madvise] never`).
+    bracketed: bool,
+}
+
+/// Every host setting the tuning scenario touches, as it stood before it ran.
+///
+/// The harness restores from this itself rather than trusting the mechanism it
+/// is testing. A test of a restore path has to be safe when the restore path is
+/// broken, which is the whole reason this scenario can be allowed to run in CI
+/// at all.
+#[derive(Debug)]
+struct TuningSnapshot {
+    settings: Vec<TunedSetting>,
+}
+
+impl TuningSnapshot {
+    /// Read every setting, and work out which of them this host will let the
+    /// runner change.
+    ///
+    /// Writability is established by writing the current value back, which
+    /// changes nothing and is the only honest way to know: a file that exists
+    /// may still be read-only, and a scenario that waited for a change the
+    /// kernel was never going to make would fail for the host's reasons rather
+    /// than the runner's.
+    fn take() -> Self {
+        let mut settings = Vec::new();
+
+        for (path, target) in TUNED_SETTINGS {
+            let path = Utf8PathBuf::from(*path);
+            let Some(original) = readable_setting(&path) else {
+                println!("  tuning: {path} is not present on this host");
+                continue;
+            };
+            let expected = if !writable_setting(&path, &original) {
+                println!("  tuning: {path} is present but not writable");
+                None
+            } else if original == *target {
+                println!("  tuning: {path} already holds {target}");
+                None
+            } else {
+                Some((*target).to_owned())
+            };
+            settings.push(TunedSetting {
+                path,
+                original,
+                expected,
+                bracketed: false,
+            });
+        }
+
+        for path in TUNED_THP {
+            let path = Utf8PathBuf::from(*path);
+            let Some(original) = readable_setting(&path) else {
+                println!("  tuning: {path} is not present on this host");
+                continue;
+            };
+            // Probed with the mode the file already selects, never with a
+            // fallback: writing `never` to a file whose selection could not be
+            // parsed would change the very setting this is only supposed to
+            // measure.
+            let Some(selected) = bracketed_value(&original) else {
+                println!("  tuning: {path} does not read as a mode listing: '{original}'");
+                continue;
+            };
+            let expected = if !writable_setting(&path, selected) {
+                println!("  tuning: {path} is present but not writable");
+                None
+            } else if selected == THP_TARGET {
+                println!("  tuning: {path} already selects {THP_TARGET}");
+                None
+            } else {
+                Some(THP_TARGET.to_owned())
+            };
+            settings.push(TunedSetting {
+                path,
+                original,
+                expected,
+                bracketed: true,
+            });
+        }
+
+        Self { settings }
+    }
+
+    /// The settings this host should show changed while the Job runs.
+    fn expected(&self) -> impl Iterator<Item = &TunedSetting> {
+        self.settings
+            .iter()
+            .filter(|setting| setting.expected.is_some())
+    }
+
+    /// Whether every expected setting currently holds its tuned value.
+    fn all_applied(&self) -> bool {
+        self.expected().all(|setting| {
+            let Some(current) = readable_setting(&setting.path) else {
+                return false;
+            };
+            let Some(target) = setting.expected.as_deref() else {
+                return true;
+            };
+            if setting.bracketed {
+                bracketed_value(&current) == Some(target)
+            } else {
+                current == target
+            }
+        })
+    }
+
+    /// Which expected settings are not showing their tuned value.
+    fn missing(&self) -> Vec<String> {
+        self.expected()
+            .filter(|setting| {
+                let Some(current) = readable_setting(&setting.path) else {
+                    return true;
+                };
+                let target = setting.expected.as_deref().unwrap_or_default();
+                if setting.bracketed {
+                    bracketed_value(&current) != Some(target)
+                } else {
+                    current != target
+                }
+            })
+            .map(|setting| {
+                let current = readable_setting(&setting.path).unwrap_or_else(|| "?".to_owned());
+                format!(
+                    "{} is '{current}', expected '{}'",
+                    setting.path,
+                    setting.expected.as_deref().unwrap_or_default()
+                )
+            })
+            .collect()
+    }
+
+    /// Which settings are not back to what they were.
+    fn unrestored(&self) -> Vec<String> {
+        self.settings
+            .iter()
+            .filter_map(|setting| {
+                let current = readable_setting(&setting.path)?;
+                (current != setting.original).then(|| {
+                    format!(
+                        "{} is '{current}', was '{}'",
+                        setting.path, setting.original
+                    )
+                })
+            })
+            .collect()
+    }
+
+    /// Put everything back, whatever the runner did or failed to do.
+    ///
+    /// Reports what it had to undo: anything here means the guard under test did
+    /// not do its job, and the scenario has already failed for that reason, but
+    /// the machine still has to be left as it was found.
+    fn restore(&self) {
+        for setting in &self.settings {
+            let Some(current) = readable_setting(&setting.path) else {
+                continue;
+            };
+            if current == setting.original {
+                continue;
+            }
+            // The bracketed files take the mode alone, never the whole listing.
+            let value = if setting.bracketed {
+                bracketed_value(&setting.original)
+                    .unwrap_or(THP_TARGET)
+                    .to_owned()
+            } else {
+                setting.original.clone()
+            };
+            match fs::write(&setting.path, &value) {
+                Ok(()) => println!("  tuning: harness restored {} to '{value}'", setting.path),
+                Err(e) => println!(
+                    "  tuning: harness could NOT restore {} to '{value}': {e}",
+                    setting.path
+                ),
+            }
+        }
+    }
+}
+
+/// Restores the host tuning when it goes out of scope.
+///
+/// A guard rather than a call at the end, so a panic or an early return in the
+/// scenario cannot leave the machine tuned. Nothing survives the harness itself
+/// being killed, which is why the scenario runs last.
+struct RestoreTuning(TuningSnapshot);
+
+impl Drop for RestoreTuning {
+    fn drop(&mut self) {
+        self.0.restore();
+    }
+}
+
+/// Read a host setting, trimmed, if it is there at all.
+fn readable_setting(path: &Utf8Path) -> Option<String> {
+    fs::read_to_string(path).ok().map(|v| v.trim().to_owned())
+}
+
+/// Whether a setting can be written, established by writing back what it holds.
+fn writable_setting(path: &Utf8Path, current: &str) -> bool {
+    fs::write(path, current).is_ok()
+}
+
+/// The selected mode in a bracketed sysfs listing (`always [madvise] never`).
+fn bracketed_value(listing: &str) -> Option<&str> {
+    let (_, selected) = listing.split_once('[')?;
+    let (selected, _) = selected.split_once(']')?;
+    Some(selected)
+}
+
+/// The cpuset partition files that exist, with what they hold.
+///
+/// Read separately from the rest because the partition is created by the tuning
+/// itself: the files do not exist before the first tuned run on a fresh host, so
+/// there is nothing to snapshot and their absence afterwards is the restored
+/// state.
+fn partition_state() -> Vec<(Utf8PathBuf, String)> {
+    TUNED_PARTITION
+        .iter()
+        .map(Utf8PathBuf::from)
+        .filter_map(|path| readable_setting(&path).map(|value| (path, value)))
+        .collect()
+}
+
+/// Reap anything a previous scenario left running, before the wipe strands it.
+///
+/// A cancelled scenario SIGTERMs `runner run`, which installs no handler for it,
+/// so the process dies without unwinding: its VMM stays alive in its cgroup and
+/// its chroot stays on disk. That is the case the runner's sweep exists for, and
+/// the sweep finds the VMM by the chroot, comparing device and inode against
+/// `/proc/<pid>/root`. Wiping the state directory destroys that handle, so the
+/// next runner sweeps a directory that no longer names anything, reports the
+/// host clean, and the orphan runs on through every scenario that follows.
+///
+/// The product refuses to remove a chroot whose VMM is alive for exactly this
+/// reason. The harness has been doing it once per scenario, so it does the
+/// reclaiming the sweep would have done rather than leaving a live VMM with
+/// nothing pointing at it.
+fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<()> {
+    let parent = jail_parent(state_dir);
+    let entries = match fs::read_dir(&parent) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(e).with_context(|| format!("Failed to read {parent}")),
+    };
+
+    for entry in entries {
+        let entry = entry.with_context(|| format!("Failed to read an entry under {parent}"))?;
+        if !entry
+            .file_type()
+            .with_context(|| format!("Failed to read the kind of an entry under {parent}"))?
+            .is_dir()
+        {
+            continue;
+        }
+        let vm_id = entry.file_name().to_string_lossy().into_owned();
+        let jail_root = parent.join(&vm_id).join("root");
+
+        if let Some(pid) = find_jailed_vmm(&jail_root)? {
+            println!("  reclaiming VMM (pid {pid}) stranded in {vm_id}");
+            kill_pid(pid, libc::SIGKILL);
+            let deadline = std::time::Instant::now() + Duration::from_secs(5);
+            while is_firecracker(pid)? && std::time::Instant::now() < deadline {
+                std::thread::sleep(PROBE_INTERVAL);
+            }
+            anyhow::ensure!(
+                !is_firecracker(pid)?,
+                "A VMM stranded in {vm_id} (pid {pid}) would not die, so it would run on through every scenario that follows"
+            );
+        }
+
+        // The cgroup shares the jail's name, and nothing else will come looking
+        // for it once the directory below is gone.
+        let cgroup = stale_cgroup(&vm_id);
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        while cgroup.exists() {
+            if fs::remove_dir(&cgroup).is_ok() {
+                println!("  reclaimed the cgroup {cgroup}");
+                break;
+            }
+            anyhow::ensure!(
+                std::time::Instant::now() < deadline,
+                "The cgroup {cgroup} could not be removed, so it would block the cpuset restore of every run that follows"
+            );
+            std::thread::sleep(PROBE_INTERVAL);
+        }
+    }
+
+    Ok(())
+}
+
+/// What the `bencher` cgroup looks like, for when the partition assertion fails.
+///
+/// Clearing a parent's `cpuset.cpus` is refused with `EIO` while any task remains
+/// in a descendant, so the useful question after a failed restore is what is
+/// still in there. Without this the answer costs a CI round.
+fn partition_diagnosis() -> String {
+    let root = Utf8Path::new("/sys/fs/cgroup/bencher");
+    if !root.exists() {
+        return "the bencher cgroup is gone".to_owned();
+    }
+    let procs = fs::read_to_string(root.join("cgroup.procs")).unwrap_or_default();
+    let children: Vec<String> = fs::read_dir(root)
+        .map(|entries| {
+            entries
+                .flatten()
+                .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .collect()
+        })
+        .unwrap_or_default();
+    let child_procs: Vec<String> = children
+        .iter()
+        .map(|child| {
+            let tasks =
+                fs::read_to_string(root.join(child).join("cgroup.procs")).unwrap_or_default();
+            // Named, not numbered. A bare pid costs a round trip to identify,
+            // and what the process is decides whose bug it is.
+            let named: Vec<String> = tasks
+                .split_whitespace()
+                .map(|pid| {
+                    let comm = fs::read_to_string(format!("/proc/{pid}/comm"))
+                        .map_or_else(|_| "gone".to_owned(), |comm| comm.trim().to_owned());
+                    format!("{pid} ({comm})")
+                })
+                .collect();
+            format!("{child} holds [{}]", named.join(" "))
+        })
+        .collect();
+    format!(
+        "the bencher cgroup is still there, holding tasks [{}] and children {child_procs:?}",
+        procs.split_whitespace().collect::<Vec<_>>().join(" ")
+    )
+}
+
+/// Run the runner with host tuning on, and assert it both applies and unwinds.
+///
+/// The assertion that matters is the pair. Applying is what the runner is for;
+/// restoring is what keeps a benchmark host from drifting a knob at a time
+/// across every Job it ever runs, and `TuningGuard` restoring on `Drop` had
+/// never once executed in CI before this scenario existed.
+/// Read the host, and work out what this run should change.
+///
+/// Separated so the scenario itself stays readable: everything here happens
+/// before the runner starts and decides whether there is anything to test.
+fn plan_tuning() -> Result<(TuningSnapshot, Vec<String>)> {
+    let snapshot = TuningSnapshot::take();
+    let expected: Vec<String> = snapshot
+        .expected()
+        .map(|setting| {
+            format!(
+                "{} -> {}",
+                setting.path,
+                setting.expected.as_deref().unwrap_or_default()
+            )
+        })
+        .collect();
+
+    // A scenario that finds nothing to change would pass without testing
+    // anything, which is the failure this suite has spent the most effort
+    // removing. If a host really offers none of these, that is a fact worth a
+    // red build rather than a green one.
+    anyhow::ensure!(
+        !expected.is_empty(),
+        "No tuning knob on this host can be exercised, so the scenario would pass vacuously. Settings considered: {:?}",
+        snapshot
+            .settings
+            .iter()
+            .map(|s| s.path.as_str())
+            .collect::<Vec<_>>()
+    );
+    println!(
+        "  tuning: expecting {} setting(s) to change: {}",
+        expected.len(),
+        expected.join(", ")
+    );
+    Ok((snapshot, expected))
+}
+
+fn run_runner_with_tuning(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let (snapshot, expected) = plan_tuning()?;
+    let partition_before = partition_state();
+
+    // Taken before the runner starts, so the machine is put back even if the
+    // scenario panics, the assertions fail, or the runner dies without
+    // unwinding. The point of the scenario is that the guard under test might
+    // not work.
+    let restore = RestoreTuning(snapshot);
+
+    let mut child = Command::new(runner_bin.as_str())
+        .arg("run")
+        .arg("--image")
+        .arg(image_path.as_str())
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+    let readers = drain_output(&mut child);
+
+    // Watch for the tuning to land while the Job runs. The runner applies it
+    // before it pulls the image, so this is looking at a window that lasts the
+    // whole run.
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let mut applied = false;
+    loop {
+        if restore.0.all_applied() {
+            applied = true;
+            break;
+        }
+        if child.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
+            break;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    }
+    let partition_during = partition_state();
+
+    if !applied && child.try_wait()?.is_none() {
+        kill_pid(child.id(), libc::SIGKILL);
+    }
+    let status = child.wait()?;
+    let (stdout, stderr) = readers.join();
+
+    if !applied {
+        bail!(
+            "Host tuning never applied within {PROBE_TIMEOUT:?}: {:?}.\nstdout: {stdout}\nstderr: {stderr}",
+            restore.0.missing()
+        );
+    }
+
+    // The Job has to have succeeded as well. A scenario that only watched the
+    // knobs would pass on a runner that tuned the host and then failed to run
+    // anything, which is the vacuous half of a confinement assertion in another
+    // dress.
+    if status.code() != Some(0) {
+        bail!(
+            "Tuning applied but the Job failed with exit code {:?}.\nstdout: {stdout}\nstderr: {stderr}",
+            status.code()
+        );
+    }
+
+    // And it has to be gone now that the runner has exited.
+    let unrestored = restore.0.unrestored();
+    if !unrestored.is_empty() {
+        bail!(
+            "Host tuning was not restored when the runner exited: {unrestored:?}.\nstdout: {stdout}\nstderr: {stderr}"
+        );
+    }
+
+    // Only the files that were there to change. The partition creates its own
+    // cgroup, so a file that did not exist before the run has no previous value
+    // to be restored to, and asserting on its appearance would fail the scenario
+    // for the tuning having worked.
+    let partition_after = partition_state();
+    let partition_unrestored: Vec<String> = partition_before
+        .iter()
+        .filter_map(|(path, before)| {
+            let after = partition_after
+                .iter()
+                .find_map(|(p, v)| (p == path).then_some(v.as_str()))?;
+            (after != before).then(|| format!("{path} is '{after}', was '{before}'"))
+        })
+        .collect();
+    if !partition_unrestored.is_empty() {
+        bail!(
+            "The cpuset partition was not restored: {partition_unrestored:?}. Now {}.\nstdout: {stdout}\nstderr: {stderr}",
+            partition_diagnosis()
+        );
+    }
+    if partition_during.is_empty() {
+        println!("  tuning: no cpuset partition files on this host, so none were asserted");
+    }
+
+    println!(
+        "  tuning: {} setting(s) applied and restored, {} partition file(s) checked",
+        expected.len(),
+        partition_before.len()
+    );
+
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.code().unwrap_or(-1),
+    })
+}
+
+/// Scenarios covering host tuning, which every other scenario switches off.
+fn tuning_scenarios() -> Vec<Scenario> {
+    vec![Scenario {
+        name: "host_tuning",
+        description: "Host tuning applies while a Job runs and is restored after",
+        dockerfile: r#"FROM busybox
+CMD ["echo", "tuned run complete"]"#,
+        extra_args: &["--timeout", "60"],
+        tuning: true,
+        // The Job's own output as well as the knobs. A run that tuned the host
+        // and then never booted a VM would otherwise satisfy this scenario.
+        validate: |output| assert_job_succeeded(output, "tuned run complete"),
+        ..Scenario::default()
+    }]
+}
+
+/// Run the runner while checking a host-side invariant.
+fn run_runner_with_probe(
+    image_path: &Utf8Path,
+    args: &[&str],
+    probe: Probe,
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let mut child = Command::new(runner_bin.as_str())
+        .arg("run")
+        .arg("--image")
+        .arg(image_path.as_str())
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+
+    // Drain both pipes while the probe runs. Nothing reads them during the
+    // loop otherwise, so a runner chatty enough to fill the 64 KiB pipe buffer
+    // blocks on its own output until the probe times out.
+    let readers = drain_output(&mut child);
+
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let mut observed = None;
+    loop {
+        match probe(state_dir) {
+            Ok(true) => {
+                observed = Some(Ok(()));
+                break;
+            },
+            Ok(false) => {},
+            Err(e) => {
+                observed = Some(Err(e));
+                break;
+            },
+        }
+        // Stop looking once the runner is gone or the wait is hopeless: the
+        // output is collected either way so the failure can be explained.
+        if child.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
+            break;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    }
+
+    // A probe that ended without observing the VMM leaves the runner going, and
+    // waiting on it would sit there until the runner's own timeout expired,
+    // reporting the failure minutes late. Only a run that observed what it came
+    // for is allowed to finish, since its output is the result being collected.
+    // Guarded on the reap, because `try_wait` above reaps and signalling a reaped
+    // pid can reach whatever inherited the number.
+    if !matches!(observed, Some(Ok(()))) && child.try_wait()?.is_none() {
+        kill_pid(child.id(), libc::SIGKILL);
+    }
+    let status = child.wait()?;
+    let (stdout, stderr) = readers.join();
+
+    match observed {
+        Some(Ok(())) => Ok(ScenarioOutput {
+            stdout,
+            stderr,
+            exit_code: status.code().unwrap_or(-1),
+        }),
+        Some(Err(e)) => Err(e).with_context(|| format!("stdout: {stdout}\nstderr: {stderr}")),
+        None => bail!(
+            "The jailed VMM was never observed within {PROBE_TIMEOUT:?}.\nstdout: {stdout}\nstderr: {stderr}"
+        ),
+    }
 }
 
 /// Run the runner and capture output.
@@ -2402,4 +4155,249 @@ fn run_runner(
         stderr: String::from_utf8_lossy(&output.stderr).to_string(),
         exit_code: output.status.code().unwrap_or(-1),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::OsStr;
+
+    use super::*;
+
+    #[test]
+    fn a_relative_target_dir_is_resolved_against_the_workspace_root() {
+        // Cargo resolves a relative value against the working directory of the
+        // build, which is the workspace root the builds are handed. Carrying it
+        // through as it stands would have the harness look under its own
+        // working directory and report a missing binary immediately after
+        // building it there.
+        assert_eq!(
+            resolve_target_dir(Some(OsStr::new("build-alt")), Utf8Path::new("/workspace")).unwrap(),
+            "/workspace/build-alt"
+        );
+    }
+
+    #[test]
+    fn an_absolute_target_dir_is_where_it_says() {
+        assert_eq!(
+            resolve_target_dir(
+                Some(OsStr::new("/elsewhere/target")),
+                Utf8Path::new("/workspace")
+            )
+            .unwrap(),
+            "/elsewhere/target"
+        );
+    }
+
+    #[test]
+    fn no_target_dir_is_the_workspace_target() {
+        assert_eq!(
+            resolve_target_dir(None, Utf8Path::new("/workspace")).unwrap(),
+            "/workspace/target"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_target_dir_that_is_not_utf8_is_refused() {
+        // Converting it lossily would name a directory nobody asked for, which
+        // is the missing binary this resolution exists to prevent, reported
+        // against a path that reads like the one that was given.
+        use std::os::unix::ffi::OsStrExt as _;
+
+        resolve_target_dir(
+            Some(OsStr::from_bytes(b"/tmp/target-\xff")),
+            Utf8Path::new("/workspace"),
+        )
+        .unwrap_err();
+    }
+
+    #[test]
+    fn the_sabotaged_state_directory_is_one_the_runner_refuses() {
+        // The scenario only means something while the planted path is one the
+        // runner cannot take: a plain empty directory would be accepted, the
+        // job would run, and the scenario would assert a failure that never
+        // came. A link is refused rather than resolved, and it is refused at
+        // the first thing the runner does with a state directory.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+
+        let planted = plant_unusable_state_dir(root).unwrap();
+
+        assert!(
+            fs::symlink_metadata(&planted)
+                .unwrap()
+                .file_type()
+                .is_symlink(),
+            "the runner refuses a symlinked component"
+        );
+        assert!(
+            planted.is_absolute(),
+            "a relative state directory is refused for another reason entirely"
+        );
+
+        // Planting it twice is what a second run of the suite does.
+        plant_unusable_state_dir(root).unwrap();
+    }
+
+    #[test]
+    fn one_object_read_twice_is_the_same_object() {
+        // The identity the netns and chroot checks are built on. Two readings
+        // of one path agree, and that is what makes a differing reading mean
+        // the VMM is somewhere else rather than that the reading is noisy.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let path = root.join("ns");
+        fs::write(&path, "").unwrap();
+
+        let left = fs::metadata(&path).unwrap();
+        let right = fs::metadata(&path).unwrap();
+
+        assert!(same_object(&left, &right));
+    }
+
+    #[test]
+    fn two_objects_are_not_one() {
+        // Neighbors on one filesystem, so the device matches and only the inode
+        // separates them: a comparison that dropped the inode would call the
+        // VMM's namespace the jail's.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        fs::write(root.join("host"), "").unwrap();
+        fs::write(root.join("jail"), "").unwrap();
+
+        let host = fs::metadata(root.join("host")).unwrap();
+        let jail = fs::metadata(root.join("jail")).unwrap();
+
+        assert!(!same_object(&host, &jail));
+    }
+
+    #[test]
+    fn a_stacked_handle_is_counted_by_its_own_mount_point() {
+        // The mount point is a field in the middle of the line, so counting
+        // lines that merely contain the path counts mounts on every path it is
+        // a prefix of. Both readings matter: the setup asserts it stacked what
+        // it meant to, and the teardown asserts it unwound all of it.
+        let mountinfo = "\
+25 1 0:23 / /run rw,nosuid,nodev shared:2 - tmpfs tmpfs rw
+71 25 0:4 net:[4026532290] /run/netns/bencher-jail rw shared:3 - nsfs nsfs rw
+72 25 0:4 net:[4026532351] /run/netns/bencher-jail rw shared:4 - nsfs nsfs rw
+73 25 0:4 net:[4026532999] /run/netns/bencher-jail-other rw shared:5 - nsfs nsfs rw
+";
+
+        assert_eq!(mounts_on(mountinfo, "/run/netns/bencher-jail"), 2);
+        assert_eq!(mounts_on(mountinfo, "/run/netns/bencher-jail-other"), 1);
+        assert_eq!(mounts_on(mountinfo, "/run/netns/absent"), 0);
+    }
+
+    #[test]
+    fn the_uid_the_scenarios_pass_is_the_uid_the_probe_demands() {
+        // The flag is a string and the assertion is a number, so the value is
+        // written twice. A scenario handing the runner one uid while the probe
+        // demanded another would fail every jail scenario for a reason that has
+        // nothing to do with the runner.
+        assert_eq!(
+            SCENARIO_JAIL_UID_ARG.parse::<u32>().unwrap(),
+            SCENARIO_JAIL_UID
+        );
+        // The product's `DEFAULT_JAIL_UID`, spelled out because the harness does
+        // not depend on the runner library. Asking for the default would leave
+        // the probe unable to tell `--jail-uid` being honored from it being
+        // ignored, which is the whole point of asking for one.
+        assert_ne!(SCENARIO_JAIL_UID, 61016);
+        // And root is no jail: the runner refuses this one at the command line.
+        assert_ne!(SCENARIO_JAIL_UID, 0);
+    }
+
+    #[test]
+    fn the_run_writes_nothing_outside_the_tree_it_hands_back() {
+        // The chown has to reach the docker build contexts and the unpacked OCI
+        // layouts as well as the state directory. Their per-scenario cleanup is
+        // skipped by any early return, so on a red run they are left behind
+        // root-owned, and a tree that is handed back short of them is one the
+        // invoker still cannot remove.
+        let work_dir = crate::task::work_dir();
+        let returned = work_dir.parent().expect("the work directory has a parent");
+
+        assert!(
+            scenario_state_dir().starts_with(returned),
+            "the state directory"
+        );
+        assert!(temp_dir().starts_with(returned), "the image trees");
+    }
+
+    #[test]
+    fn the_selected_mode_is_the_bracketed_one() {
+        // What the kernel prints for a transparent hugepage setting: every mode
+        // it offers, with the live one in brackets. Comparing the whole line
+        // against "never" would never match, and asserting on a substring would
+        // match a mode that is merely offered.
+        assert_eq!(
+            bracketed_value("always [madvise] never"),
+            Some("madvise"),
+            "the enabled listing"
+        );
+        assert_eq!(
+            bracketed_value("always defer defer+madvise [madvise] never"),
+            Some("madvise"),
+            "the defrag listing, which offers more modes"
+        );
+        assert_eq!(bracketed_value("[always] madvise never"), Some("always"));
+        assert_eq!(bracketed_value("always madvise [never]"), Some("never"));
+    }
+
+    #[test]
+    fn a_listing_with_no_selection_has_no_value() {
+        // A plain sysctl is not a listing, and a truncated read is not a mode.
+        assert_eq!(bracketed_value("never"), None);
+        assert_eq!(bracketed_value(""), None);
+        assert_eq!(bracketed_value("always [madvise"), None);
+    }
+
+    #[test]
+    fn a_setting_that_is_not_there_reads_as_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+
+        assert_eq!(readable_setting(&root.join("absent")), None);
+    }
+
+    #[test]
+    fn a_setting_reads_back_trimmed() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let path = root.join("swappiness");
+        fs::write(&path, "60\n").unwrap();
+
+        assert_eq!(readable_setting(&path).as_deref(), Some("60"));
+    }
+
+    #[test]
+    fn writability_is_established_by_writing_what_is_already_there() {
+        // The probe that decides whether a knob can be exercised on this host.
+        // A file that exists may still refuse writes, which is not something a
+        // stat can answer: `/proc/sys/kernel/nmi_watchdog` is exactly that on a
+        // kernel without a hardware watchdog, and waiting for it to change would
+        // fail the scenario for the host's reasons rather than the runner's.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let path = root.join("knob");
+        fs::write(&path, "1\n").unwrap();
+
+        assert!(writable_setting(&path, "1"));
+        assert_eq!(
+            readable_setting(&path).as_deref(),
+            Some("1"),
+            "the probe writes back what was there, so it changes nothing"
+        );
+
+        // Root ignores the permission bits, and the scenarios run as root, so
+        // this half only means anything unprivileged.
+        if !is_root() {
+            let mut perms = fs::metadata(&path).unwrap().permissions();
+            perms.set_readonly(true);
+            fs::set_permissions(&path, perms).unwrap();
+
+            assert!(!writable_setting(&path, "1"));
+        }
+    }
 }

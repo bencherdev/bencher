@@ -169,7 +169,10 @@ Defined in `.cargo/config.toml`:
   - `cargo test-api seed` needs the API server already running (`cargo run` in `services/api`) with a fresh database (`services/api/data` holds only a tracked `.gitignore`; delete `services/api/data/bencher.db`, not the whole directory)
   - `cargo test-api seed` also needs the `bencher` CLI binary already built (`cargo build --bin bencher`); it shells out via `assert_cmd`, which panics with `` `CARGO_BIN_EXE_bencher` is unset `` if the binary is missing
   - Pass `--no-git` when running the seed test in this repo: there is no colocated `.git`, so `bencher run` cannot derive a git context and the on-the-fly project naming assertions (`bencher` vs `Project`) will fail without it
-- `cargo test-runner` - Runner integration tests (requires Linux + KVM)
+- `cargo test-runner` - Runner integration tests (requires Linux + KVM + root)
+  - `cargo test-runner scenarios` always fails unelevated: the sandbox is built by dropping privilege, so the scenarios refuse to start without it. Build unprivileged, then run elevated, which also keeps `cargo` from leaving root-owned artifacts in `target`:
+    - `cargo test-runner scenarios --build-only`
+    - `sudo BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios`
 
 ## Git Flow
 

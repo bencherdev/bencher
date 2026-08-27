@@ -17,6 +17,28 @@ use std::fs;
 #[cfg(target_os = "linux")]
 use std::io;
 
+/// The kernel's list of online CPU IDs.
+#[cfg(target_os = "linux")]
+const ONLINE_CPUS: &str = "/sys/devices/system/cpu/online";
+
+/// Say that the CPU layout is a guess rather than the host's online set.
+///
+/// The count-based fallback numbers cores `0..n`. That is wrong on a host whose
+/// online set has gaps, which is the ordinary result of disabling SMT on a
+/// topology with interleaved sibling numbering: the online set reads `0,2,4,6`
+/// and a counted layout pins the benchmark to cores that are offline. Nothing
+/// downstream can tell the difference, so the one place that knows says so.
+#[cfg(target_os = "linux")]
+#[expect(
+    clippy::print_stderr,
+    reason = "a CPU layout the runner had to guess is announced"
+)]
+fn warn_guessed_layout(reason: &str) {
+    eprintln!(
+        "Warning: {reason}. The CPU layout falls back to a core count, which assumes cores are numbered 0..n; on a host whose online set has gaps the benchmark cores may be wrong."
+    );
+}
+
 /// CPU layout for the runner.
 ///
 /// Partitions available cores into housekeeping (for heartbeat, networking)
@@ -38,14 +60,18 @@ impl CpuLayout {
     /// interleaved sibling numbering (common on AMD) leaves a non-contiguous
     /// online set like `0,2,4,6`, and a count-based layout would pin to
     /// offline cores.
+    /// A fallback that cannot read the online set is announced rather than taken
+    /// quietly: it is a layout the runner guessed, and every cpuset written from
+    /// it claims cores nobody confirmed are online.
     #[must_use]
     pub fn detect() -> Self {
         #[cfg(target_os = "linux")]
-        if let Ok(online) = fs::read_to_string("/sys/devices/system/cpu/online")
-            && let Some(ids) = parse_cpu_id_list(&online)
-            && !ids.is_empty()
-        {
-            return Self::with_cpu_ids(ids);
+        match fs::read_to_string(ONLINE_CPUS) {
+            Ok(online) => match parse_cpu_id_list(&online).filter(|ids| !ids.is_empty()) {
+                Some(ids) => return Self::with_cpu_ids(ids),
+                None => warn_guessed_layout(&format!("{ONLINE_CPUS} reads as '{}'", online.trim())),
+            },
+            Err(e) => warn_guessed_layout(&format!("{ONLINE_CPUS} could not be read: {e}")),
         }
 
         Self::with_core_count(Self::available_cores())
@@ -487,6 +513,26 @@ mod tests {
     #[test]
     fn format_cpumask_third_word() {
         assert_eq!(format_cpumask(&[64, 1]), "1,00000000,00000002");
+    }
+
+    #[test]
+    fn two_cores_is_enough_for_isolation() {
+        // The scenario suite runs on two-vCPU hosted runners, and the runner
+        // only builds a cgroup when the layout offers isolation. If this ever
+        // stopped holding, cgroup placement would silently go unexercised in
+        // CI, which is the whole reason the scenario asserts it.
+        let layout = CpuLayout::with_cpu_ids(vec![0, 1]);
+
+        assert!(layout.has_isolation());
+        assert_eq!(layout.housekeeping, vec![0]);
+        assert_eq!(layout.benchmark, vec![1]);
+    }
+
+    #[test]
+    fn one_core_offers_no_isolation() {
+        let layout = CpuLayout::with_cpu_ids(vec![0]);
+
+        assert!(!layout.has_isolation());
     }
 
     #[test]
