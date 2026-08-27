@@ -18,6 +18,7 @@ pub mod jobs;
 mod keys;
 pub mod measures;
 pub mod metrics;
+pub mod parameters;
 pub mod perf;
 pub mod plots;
 pub mod projects;
@@ -142,6 +143,17 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(benchmarks::proj_benchmark_get)?;
         api_description.register(benchmarks::proj_benchmark_patch)?;
         api_description.register(benchmarks::proj_benchmark_delete)?;
+
+        // Parameters
+        if http_options {
+            api_description.register(parameters::proj_parameters_options)?;
+            api_description.register(parameters::proj_parameter_options)?;
+        }
+        api_description.register(parameters::proj_parameters_get)?;
+        api_description.register(parameters::proj_parameter_post)?;
+        api_description.register(parameters::proj_parameter_get)?;
+        api_description.register(parameters::proj_parameter_patch)?;
+        api_description.register(parameters::proj_parameter_delete)?;
 
         // Measures
         if http_options {
