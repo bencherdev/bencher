@@ -8,7 +8,7 @@ use serde::{
     de::{self, Visitor},
 };
 
-use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ProjectUuid, TestbedUuid};
+use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ParameterFilter, ProjectUuid, TestbedUuid};
 
 crate::typed_uuid::typed_uuid!(PlotUuid);
 
@@ -52,6 +52,11 @@ pub struct JsonNewPlot {
     /// The benchmarks to include in the plot.
     /// At least one benchmark must be specified.
     pub benchmarks: Vec<BenchmarkUuid>,
+    /// The grid points to include in the plot, as a list of parameter sets.
+    /// A grid point matches when any set in the list is a subset of it.
+    /// If not set, or set to an empty list, the plot includes every grid point.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     /// The measures to include in the plot.
     /// At least one measure must be specified.
     pub measures: Vec<MeasureUuid>,
@@ -84,6 +89,10 @@ pub struct JsonPlot {
     pub branches: Vec<BranchUuid>,
     pub testbeds: Vec<TestbedUuid>,
     pub benchmarks: Vec<BenchmarkUuid>,
+    /// The grid points this plot draws, in canonical order.
+    /// Absent when the plot draws every grid point.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     pub measures: Vec<MeasureUuid>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -134,6 +143,13 @@ pub struct JsonPlotPatch {
     /// Replaces the current benchmarks for the plot.
     /// At least one benchmark must be specified.
     pub benchmarks: Option<Vec<BenchmarkUuid>>,
+    /// The grid points to include in the plot, as a list of parameter sets.
+    /// Replaces the current filter for the plot.
+    /// Set to `null` or to an empty list to include every grid point again.
+    // Skipped when absent so a patch that leaves the filter alone says nothing
+    // about it: an explicit `null` on the wire clears the filter.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     /// The measures to include in the plot.
     /// Replaces the current measures for the plot.
     /// At least one measure must be specified.
@@ -155,6 +171,8 @@ pub struct JsonPlotPatchNull {
     pub branches: Option<Vec<BranchUuid>>,
     pub testbeds: Option<Vec<TestbedUuid>>,
     pub benchmarks: Option<Vec<BenchmarkUuid>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     pub measures: Option<Vec<MeasureUuid>>,
 }
 
@@ -176,6 +194,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
         const BRANCHES_FIELD: &str = "branches";
         const TESTBEDS_FIELD: &str = "testbeds";
         const BENCHMARKS_FIELD: &str = "benchmarks";
+        const PARAMETERS_FIELD: &str = "parameters";
         const MEASURES_FIELD: &str = "measures";
         const FIELDS: &[&str] = &[
             INDEX_FIELD,
@@ -190,6 +209,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
             BRANCHES_FIELD,
             TESTBEDS_FIELD,
             BENCHMARKS_FIELD,
+            PARAMETERS_FIELD,
             MEASURES_FIELD,
         ];
 
@@ -208,6 +228,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
             Branches,
             Testbeds,
             Benchmarks,
+            Parameters,
             Measures,
         }
 
@@ -237,6 +258,11 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                 let mut branches = None;
                 let mut testbeds = None;
                 let mut benchmarks = None;
+                // The outer option is whether the key was written, the inner is
+                // whether it was written as `null`. An absent filter leaves the
+                // plot's filter alone; an explicit `null` clears it, the same way
+                // an empty list does.
+                let mut parameters: Option<Option<ParameterFilter>> = None;
                 let mut measures = None;
 
                 while let Some(key) = map.next_key()? {
@@ -313,6 +339,12 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                             }
                             benchmarks = Some(map.next_value()?);
                         },
+                        Field::Parameters => {
+                            if parameters.is_some() {
+                                return Err(de::Error::duplicate_field(PARAMETERS_FIELD));
+                            }
+                            parameters = Some(map.next_value()?);
+                        },
                         Field::Measures => {
                             if measures.is_some() {
                                 return Err(de::Error::duplicate_field(MEASURES_FIELD));
@@ -321,6 +353,12 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         },
                     }
                 }
+
+                // An explicit `null` and an empty list are two spellings of one
+                // filter, the one that matches every grid point, so a written
+                // `null` folds to the canonical empty filter here and the two
+                // clear the plot's filter alike.
+                let parameters = parameters.map(Option::unwrap_or_default);
 
                 Ok(match title {
                     Some(Some(title)) => Self::Value::Patch(JsonPlotPatch {
@@ -336,6 +374,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         branches,
                         testbeds,
                         benchmarks,
+                        parameters,
                         measures,
                     }),
                     Some(None) => Self::Value::Null(JsonPlotPatchNull {
@@ -351,6 +390,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         branches,
                         testbeds,
                         benchmarks,
+                        parameters,
                         measures,
                     }),
                     None => Self::Value::Patch(JsonPlotPatch {
@@ -366,6 +406,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         branches,
                         testbeds,
                         benchmarks,
+                        parameters,
                         measures,
                     }),
                 })
@@ -659,5 +700,77 @@ mod tests {
     fn deserialize_duplicate_field_errors() {
         serde_json::from_str::<JsonUpdatePlot>(r#"{"lower_value": true, "lower_value": false}"#)
             .unwrap_err();
+    }
+
+    #[test]
+    fn deserialize_absent_parameters_leaves_filter_alone() {
+        let update: JsonUpdatePlot = serde_json::from_str(r#"{"lower_value": true}"#).unwrap();
+        let JsonUpdatePlot::Patch(patch) = update else {
+            panic!("expected Patch variant");
+        };
+        assert!(patch.parameters.is_none());
+    }
+
+    #[test]
+    fn deserialize_null_and_empty_parameters_both_clear() {
+        for body in [r#"{"parameters": null}"#, r#"{"parameters": []}"#] {
+            let update: JsonUpdatePlot = serde_json::from_str(body).unwrap();
+            let JsonUpdatePlot::Patch(patch) = update else {
+                panic!("expected Patch variant");
+            };
+            let parameters = patch.parameters.expect("parameters was written");
+            assert!(parameters.is_match_all(), "{body}");
+        }
+    }
+
+    #[test]
+    fn deserialize_empty_set_parameters_clears() {
+        let update: JsonUpdatePlot = serde_json::from_str(r#"{"parameters": [{}]}"#).unwrap();
+        let JsonUpdatePlot::Patch(patch) = update else {
+            panic!("expected Patch variant");
+        };
+        let parameters = patch.parameters.expect("parameters was written");
+        assert!(parameters.is_match_all());
+    }
+
+    #[test]
+    fn deserialize_parameters_canonicalizes() {
+        // Scrambled order and two spellings of one number are one canonical filter.
+        let update: JsonUpdatePlot =
+            serde_json::from_str(r#"{"parameters": [{"size": 2}, {"size": 1.0}, {"size": 1}]}"#)
+                .unwrap();
+        let JsonUpdatePlot::Patch(patch) = update else {
+            panic!("expected Patch variant");
+        };
+        let parameters = patch.parameters.expect("parameters was written");
+        assert_eq!(parameters.canonical(), r#"[{"size":1},{"size":2}]"#);
+    }
+
+    #[test]
+    fn deserialize_parameters_over_the_cap_errors() {
+        // The cap bounds what was written, before duplicates collapse.
+        let sets = (0..9)
+            .map(|index| format!(r#"{{"size":{index}}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        serde_json::from_str::<JsonUpdatePlot>(&format!(r#"{{"parameters": [{sets}]}}"#))
+            .unwrap_err();
+    }
+
+    #[test]
+    fn deserialize_duplicate_parameters_field_errors() {
+        serde_json::from_str::<JsonUpdatePlot>(r#"{"parameters": [], "parameters": []}"#)
+            .unwrap_err();
+    }
+
+    #[test]
+    fn deserialize_null_title_carries_parameters() {
+        let update: JsonUpdatePlot =
+            serde_json::from_str(r#"{"title": null, "parameters": [{"size": 1}]}"#).unwrap();
+        let JsonUpdatePlot::Null(patch) = update else {
+            panic!("expected Null variant");
+        };
+        let parameters = patch.parameters.expect("parameters was written");
+        assert_eq!(parameters.canonical(), r#"[{"size":1}]"#);
     }
 }

@@ -134,6 +134,9 @@ impl From<Update> for JsonUpdatePlot {
                     branches,
                     testbeds,
                     benchmarks,
+                    // The CLI has no parameters filter of its own yet, so an
+                    // update leaves the plot's filter alone.
+                    parameters: None,
                     measures,
                 }),
                 subtype_1: None,
@@ -153,6 +156,9 @@ impl From<Update> for JsonUpdatePlot {
                     branches,
                     testbeds,
                     benchmarks,
+                    // The CLI has no parameters filter of its own yet, so an
+                    // update leaves the plot's filter alone.
+                    parameters: None,
                     measures,
                 }),
             },
@@ -170,6 +176,9 @@ impl From<Update> for JsonUpdatePlot {
                     branches,
                     testbeds,
                     benchmarks,
+                    // The CLI has no parameters filter of its own yet, so an
+                    // update leaves the plot's filter alone.
+                    parameters: None,
                     measures,
                 }),
                 subtype_1: None,
