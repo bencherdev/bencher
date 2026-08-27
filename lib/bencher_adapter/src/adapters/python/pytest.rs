@@ -94,6 +94,7 @@ impl Pytest {
 
 #[cfg(test)]
 pub(crate) mod test_python_pytest {
+    use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
@@ -174,9 +175,7 @@ pub(crate) mod test_python_pytest {
 
         let results = opt_convert_file_path::<AdapterPythonPytest>(
             &file_path,
-            Settings {
-                average: Some(JsonAverage::Mean),
-            },
+            Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_python_pytest(&results);

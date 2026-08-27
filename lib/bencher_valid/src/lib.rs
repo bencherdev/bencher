@@ -4,6 +4,7 @@ use regex as _;
 use wasm_bindgen_test as _;
 
 mod benchmark_name;
+mod bmf_version;
 mod branch_name;
 mod date_time;
 mod email;
@@ -36,6 +37,7 @@ pub use crate::image_digest::ImageDigest;
 pub use crate::slug::{BASE_36, Slug};
 pub use crate::url::Url;
 pub use benchmark_name::BenchmarkName;
+pub use bmf_version::{ACCEPTED_BMF_VERSIONS, BmfVersion, is_valid_bmf_version};
 pub use branch_name::BranchName;
 pub use date_time::{DateTime, DateTimeMillis};
 pub use email::Email;

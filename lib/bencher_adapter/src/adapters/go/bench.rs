@@ -77,6 +77,7 @@ fn parse_go_bench(input: &str) -> IResult<&str, JsonNewMetric> {
 
 #[cfg(test)]
 pub(crate) mod test_go_bench {
+    use bencher_json::BmfVersion;
     use bencher_json::{JsonNewMetric, project::report::JsonAverage};
     use pretty_assertions::assert_eq;
 
@@ -192,9 +193,7 @@ pub(crate) mod test_go_bench {
         let file_path = "./tool_output/go/bench/five.txt";
         let results = opt_convert_file_path::<AdapterGoBench>(
             file_path,
-            Settings {
-                average: Some(JsonAverage::Mean),
-            },
+            Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_go_bench(&results);
@@ -203,9 +202,7 @@ pub(crate) mod test_go_bench {
             None,
             opt_convert_file_path::<AdapterGoBench>(
                 file_path,
-                Settings {
-                    average: Some(JsonAverage::Median)
-                }
+                Settings::new(Some(JsonAverage::Median), BmfVersion::default())
             )
         );
     }

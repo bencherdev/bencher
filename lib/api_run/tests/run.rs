@@ -131,6 +131,103 @@ async fn run_post_unauthenticated() {
 
 // --- Job creation integration tests (Plus only) ---
 
+/// POST /v0/run - the run payload carries `bmf_version` through to the adapter.
+///
+/// `/v0/run` takes its own payload and converts it into a report payload, so the
+/// key reaches ingest only because `JsonNewRun` carries it and the conversion
+/// forwards it. A BMF v1 payload declared as version 1 ingests through the default
+/// Magic adapter, which reaches the JSON leaves through the `json` node.
+#[tokio::test]
+async fn run_post_bmf_version_1() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runbmf@example.com").await;
+    let org = server.create_org(&user, "Run Bmf Org").await;
+    let project = server.create_project(&user, &org, "Run Bmf Project").await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_v1_results().to_string()],
+        "bmf_version": 1,
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+    // The grid point is the proof the v1 shape was read: a v0 payload has no
+    // parameters to report.
+    let results = report.results.expect("Report results");
+    let iteration = results.first().expect("Report iteration");
+    let result = iteration.first().expect("Report result");
+    assert!(!result.parameter.set.is_empty());
+}
+
+/// POST /v0/run - an unknown `bmf_version` is rejected before anything is created.
+#[tokio::test]
+async fn run_post_unknown_bmf_version() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runbmfbad@example.com").await;
+    let org = server.create_org(&user, "Run Bad Bmf Org").await;
+    let project = server
+        .create_project(&user, &org, "Run Bad Bmf Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "bmf_version": 2,
+    });
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = resp.text().await.expect("Failed to read the response");
+    assert!(
+        body.contains("0 or 1"),
+        "expected the rejection to name the accepted versions: {body}"
+    );
+}
+
+/// A BMF v1 payload: a benchmark maps to an array of grid points.
+fn bmf_v1_results() -> serde_json::Value {
+    serde_json::json!({
+        "benchmark_name": [{
+            "parameters": { "size_mb": 16 },
+            "measures": { "latency": { "value": 100.0 } },
+        }]
+    })
+}
+
 fn bmf_results() -> serde_json::Value {
     serde_json::json!({
         "benchmark_name": {

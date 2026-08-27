@@ -3,7 +3,7 @@ use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
 use std::collections::HashSet;
 
 use bencher_json::{
-    DateTime, JsonBenchmark, JsonMeasure, JsonMetricTriple, JsonNewReport, JsonReport,
+    BmfVersion, DateTime, JsonBenchmark, JsonMeasure, JsonMetricTriple, JsonNewReport, JsonReport,
     JsonReportAlertsCounts, JsonReportCounts, JsonReportIterationCounts, MetricName, ReportUuid,
     project::{
         alert::AlertStatus,
@@ -227,6 +227,9 @@ impl QueryReport {
 
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default().normalize();
+        // An absent `bmf_version` is version 0, which is the order the `json` node
+        // has always tried its leaves in.
+        let bmf_version = json_report.bmf_version.unwrap_or_default();
 
         // Validate job before inserting report so that report + job creation is atomic:
         // if OCI resolution fails, neither the report nor the job is created.
@@ -352,6 +355,7 @@ impl QueryReport {
                 &results_array,
                 adapter,
                 json_settings,
+                bmf_version,
                 #[cfg(feature = "plus")]
                 plan_kind,
                 #[cfg(all(feature = "plus", feature = "otel"))]
@@ -492,6 +496,7 @@ impl QueryReport {
         results: &[&str],
         adapter: Adapter,
         settings: JsonReportSettings,
+        bmf_version: BmfVersion,
         #[cfg(feature = "plus")] plan_kind: PlanKind,
         #[cfg(all(feature = "plus", feature = "otel"))] priority: bencher_json::Priority,
         #[cfg(feature = "plus")] query_project: &QueryProject,
@@ -523,6 +528,7 @@ impl QueryReport {
                 results,
                 adapter,
                 settings,
+                bmf_version,
                 #[cfg(feature = "plus")]
                 &mut usage,
             )

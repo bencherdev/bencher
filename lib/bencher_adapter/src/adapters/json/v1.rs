@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use bencher_json::{BenchmarkNameId, MeasureNameId, ParameterSet};
+use bencher_json::{BenchmarkNameId, BmfVersion, MeasureNameId, ParameterSet};
 use serde::Deserialize;
 
 use crate::{
     Adaptable, Settings,
     results::{
         adapter_metrics::{AdapterMetrics, NamedMap},
-        adapter_results::{AdapterResults, BenchmarkEntries, BmfVersion, ResultsMap},
+        adapter_results::{AdapterResults, BenchmarkEntries, ResultsMap},
     },
 };
 
@@ -86,7 +86,7 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
 
 #[cfg(test)]
 pub(crate) mod test_json_v1 {
-    use bencher_json::{BenchmarkNameId, MAX_PARAMETER_KEYS, MetricName, ParameterSet};
+    use bencher_json::{BenchmarkNameId, BmfVersion, MAX_PARAMETER_KEYS, MetricName, ParameterSet};
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -99,7 +99,7 @@ pub(crate) mod test_json_v1 {
         },
         results::{
             adapter_metrics::{AdapterMetrics, MAX_METRIC_NAMES},
-            adapter_results::{AdapterResults, BmfVersion},
+            adapter_results::AdapterResults,
         },
     };
 

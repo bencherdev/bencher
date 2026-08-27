@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, JsonNewMetric, ParameterSet,
+    BenchmarkName, BenchmarkNameId, BmfVersion, JsonNewMetric, ParameterSet,
     project::measure::built_in::{self, BuiltInMeasure as _},
 };
 
@@ -32,16 +32,6 @@ pub type ResultsMap = HashMap<BenchmarkNameId, BenchmarkEntries>;
 /// The empty parameter set is the key every BMF v0 adapter uses, since a v0
 /// payload only ever reports one grid point per benchmark.
 pub type BenchmarkEntries = BTreeMap<ParameterSet, AdapterMetrics>;
-
-/// The Bencher Metric Format version a results payload was parsed from.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum BmfVersion {
-    /// A benchmark name maps to its measures.
-    #[default]
-    V0,
-    /// A benchmark name maps to an array of parameter set entries.
-    V1,
-}
 
 impl From<ResultsMap> for AdapterResults {
     fn from(inner: ResultsMap) -> Self {
@@ -598,8 +588,14 @@ impl AdapterResults {
     }
 
     /// Whether these results are a BMF v0 payload, which is what fold operates on.
+    ///
+    /// An empty payload is foldable at any version. The refusal exists because a
+    /// pooled statistic cannot be recomputed from per iteration values, and a
+    /// payload that reported nothing has no such values, so it has nothing to
+    /// refuse over. Fold is all or nothing across the array, so without this an
+    /// empty iteration would disable fold for every other iteration beside it.
     pub(crate) fn is_foldable(&self) -> bool {
-        self.version == BmfVersion::V0
+        self.version == BmfVersion::V0 || self.inner.is_empty()
     }
 
     /// The BMF v0 view of these results, only ever taken once [`Self::is_foldable`] holds.

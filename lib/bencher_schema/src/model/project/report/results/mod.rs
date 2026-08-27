@@ -2,13 +2,10 @@ use std::collections::HashMap;
 
 use bencher_adapter::{
     AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
-    results::{
-        adapter_metrics::{AdapterMetrics, NamedMap},
-        adapter_results::BmfVersion,
-    },
+    results::adapter_metrics::{AdapterMetrics, NamedMap},
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, MeasureNameId, MetricName, ParameterSet, Slug,
+    BenchmarkName, BenchmarkNameId, BmfVersion, MeasureNameId, MetricName, ParameterSet, Slug,
     project::report::{Adapter, Iteration, JsonReportSettings},
 };
 use diesel::RunQueryDsl as _;
@@ -111,6 +108,10 @@ impl ReportResults {
     /// followed by a Phase 2 write (committing new metrics).
     /// Iteration N+1's boundary detection must see iteration N's committed metrics,
     /// so iterations cannot be collapsed into a single deferred transaction.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "cfg features add extra params, as does the report payload version"
+    )]
     pub async fn process(
         &mut self,
         log: &Logger,
@@ -118,12 +119,13 @@ impl ReportResults {
         results_array: &[&str],
         adapter: Adapter,
         settings: JsonReportSettings,
+        bmf_version: BmfVersion,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         #[cfg(feature = "otel")]
         let process_start = context.clock.now();
 
-        let adapter_settings = AdapterSettings::new(settings.average);
+        let adapter_settings = AdapterSettings::new(settings.average, bmf_version);
         let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
             .map_err(|e| {
                 bad_request_error(format!(

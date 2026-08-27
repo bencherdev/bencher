@@ -172,6 +172,7 @@ impl DotNet {
 
 #[cfg(test)]
 pub(crate) mod test_c_sharp_dot_net {
+    use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
@@ -209,9 +210,7 @@ pub(crate) mod test_c_sharp_dot_net {
 
         let results = opt_convert_file_path::<AdapterCSharpDotNet>(
             &file_path,
-            Settings {
-                average: Some(JsonAverage::Mean),
-            },
+            Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
 
@@ -233,9 +232,7 @@ pub(crate) mod test_c_sharp_dot_net {
 
         let results = opt_convert_file_path::<AdapterCSharpDotNet>(
             &file_path,
-            Settings {
-                average: Some(JsonAverage::Mean),
-            },
+            Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_c_sharp_dot_net(&results);

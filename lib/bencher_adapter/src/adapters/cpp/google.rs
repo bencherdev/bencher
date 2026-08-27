@@ -70,6 +70,7 @@ impl TryFrom<Google> for Option<AdapterResults> {
 
 #[cfg(test)]
 pub(crate) mod test_cpp_google {
+    use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
 
@@ -90,9 +91,7 @@ pub(crate) mod test_cpp_google {
         let file_path = "./tool_output/cpp/google/two.txt";
         let results = opt_convert_file_path::<AdapterCppGoogle>(
             file_path,
-            Settings {
-                average: Some(JsonAverage::Mean),
-            },
+            Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
         validate_adapter_cpp_google(&results);
@@ -101,9 +100,7 @@ pub(crate) mod test_cpp_google {
             None,
             opt_convert_file_path::<AdapterCppGoogle>(
                 file_path,
-                Settings {
-                    average: Some(JsonAverage::Median)
-                }
+                Settings::new(Some(JsonAverage::Median), BmfVersion::default())
             )
         );
     }

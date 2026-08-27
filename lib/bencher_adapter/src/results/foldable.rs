@@ -166,7 +166,10 @@ impl FoldableResultsArray {
 
 #[cfg(test)]
 mod test_foldable {
-    use bencher_json::project::report::{Adapter, JsonFold};
+    use bencher_json::{
+        BmfVersion,
+        project::report::{Adapter, JsonFold},
+    };
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -177,10 +180,21 @@ mod test_foldable {
     const V0_TWENTY: &str = r#"{"bench": {"latency": {"value": 20.0, "lower_value": 19.0}}}"#;
     const V1_P99: &str = r#"{"bench": [{"measures": {"latency": {"p99": 10.0}}}]}"#;
     const V1_TRIPLE: &str = r#"{"bench": [{"measures": {"latency": {"value": 20.0}}}]}"#;
+    /// The one payload both JSON leaves claim, and so the one payload whose parsed
+    /// version the declared version moves.
+    const EMPTY: &str = "{}";
 
     fn results_array(results_array: &[&str]) -> AdapterResultsArray {
-        AdapterResultsArray::new(results_array, Adapter::Json, Settings::default())
-            .expect("Failed to convert results")
+        results_array_at(results_array, BmfVersion::V0)
+    }
+
+    fn results_array_at(results_array: &[&str], bmf_version: BmfVersion) -> AdapterResultsArray {
+        AdapterResultsArray::new(
+            results_array,
+            Adapter::Json,
+            Settings::new(None, bmf_version),
+        )
+        .expect("Failed to convert results")
     }
 
     fn latency(results: &FoldableResults) -> OrderedFloat<f64> {
@@ -229,6 +243,78 @@ mod test_foldable {
     fn fold_refuses_a_mixed_array() {
         drop(results_array(&[V0_TEN, V1_P99]).foldable().unwrap_err());
         drop(results_array(&[V1_P99, V0_TEN]).foldable().unwrap_err());
+    }
+
+    /// An empty payload is foldable at either declared version.
+    ///
+    /// At version 1 the empty payload parses through the v1 leaf, so without an
+    /// explicit carve out it would read as a v1 payload and, since fold is all or
+    /// nothing across the array, disable fold for every v0 iteration beside it.
+    /// The refusal exists because a pooled statistic cannot be recomputed from per
+    /// iteration values, and a payload that reported nothing has none, so it has
+    /// nothing to refuse over.
+    #[test]
+    fn fold_accepts_an_empty_payload_at_either_version() {
+        for fold in [
+            JsonFold::Min,
+            JsonFold::Max,
+            JsonFold::Mean,
+            JsonFold::Median,
+        ] {
+            let at_zero = results_array_at(&[EMPTY, V0_TEN, V0_TWENTY], BmfVersion::V0)
+                .foldable()
+                .expect("an empty payload beside v0 results is foldable at version 0")
+                .fold(fold);
+            let at_one = results_array_at(&[EMPTY, V0_TEN, V0_TWENTY], BmfVersion::V1)
+                .foldable()
+                .expect("an empty payload beside v0 results is foldable at version 1")
+                .fold(fold);
+            assert_eq!(at_one, at_zero, "{fold:?}");
+        }
+    }
+
+    /// A pure v0 array folds to the same thing at either declared version.
+    #[test]
+    fn fold_v0_is_unmoved_by_the_declared_version() {
+        for fold in [
+            JsonFold::Min,
+            JsonFold::Max,
+            JsonFold::Mean,
+            JsonFold::Median,
+        ] {
+            let at_zero = results_array_at(&[V0_TEN, V0_TWENTY], BmfVersion::V0)
+                .foldable()
+                .expect("BMF v0 results are foldable")
+                .fold(fold);
+            let at_one = results_array_at(&[V0_TEN, V0_TWENTY], BmfVersion::V1)
+                .foldable()
+                .expect("BMF v0 results are foldable")
+                .fold(fold);
+            assert_eq!(at_one, at_zero, "{fold:?}");
+        }
+    }
+
+    /// A payload that actually reported something as v1 is still refused, and the
+    /// declared version does not change that. Refusal keys on what was parsed.
+    #[test]
+    fn fold_refuses_v1_at_either_version() {
+        for bmf_version in [BmfVersion::V0, BmfVersion::V1] {
+            drop(
+                results_array_at(&[V1_P99], bmf_version)
+                    .foldable()
+                    .unwrap_err(),
+            );
+            drop(
+                results_array_at(&[V1_TRIPLE], bmf_version)
+                    .foldable()
+                    .unwrap_err(),
+            );
+            drop(
+                results_array_at(&[EMPTY, V1_P99], bmf_version)
+                    .foldable()
+                    .unwrap_err(),
+            );
+        }
     }
 
     /// A refused array comes back untouched, so the caller can ingest unfolded.

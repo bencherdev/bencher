@@ -29,12 +29,15 @@ fn print_ln(input: &str) -> IResult<&str, ()> {
 
 #[cfg(test)]
 pub(crate) mod test_util {
-    use bencher_json::project::{
-        measure::built_in::{
-            BuiltInMeasure as _,
-            default::{Latency, Throughput},
+    use bencher_json::{
+        BmfVersion,
+        project::{
+            measure::built_in::{
+                BuiltInMeasure as _,
+                default::{Latency, Throughput},
+            },
+            report::JsonAverage,
         },
-        report::JsonAverage,
     };
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
@@ -56,9 +59,7 @@ pub(crate) mod test_util {
     where
         A: Adaptable,
     {
-        let settings = Settings {
-            average: Some(JsonAverage::Median),
-        };
+        let settings = Settings::new(Some(JsonAverage::Median), BmfVersion::default());
         opt_convert_file_path::<A>(file_path, settings)
             .unwrap_or_else(|| panic!("Failed to convert contents of {file_path}"))
     }
