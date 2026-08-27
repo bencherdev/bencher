@@ -259,6 +259,7 @@ diesel::table! {
         created -> BigInt,
         modified -> BigInt,
         deleted -> Nullable<BigInt>,
+        bmf_version -> Integer,
     }
 }
 

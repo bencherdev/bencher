@@ -1,7 +1,7 @@
 use std::{string::ToString as _, sync::LazyLock};
 
 use bencher_json::{
-    DateTime, JsonNewProject, JsonProject, ProjectResourceId, ProjectSlug, ProjectUuid,
+    BmfVersion, DateTime, JsonNewProject, JsonProject, ProjectResourceId, ProjectSlug, ProjectUuid,
     ResourceName, Url,
     project::{JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, ProjectRole, Visibility},
 };
@@ -75,6 +75,10 @@ pub struct QueryProject {
     pub created: DateTime,
     pub modified: DateTime,
     pub deleted: Option<DateTime>,
+    /// The highest BMF payload version this project accepts.
+    ///
+    /// Every project starts at 0 and only a server admin can move it.
+    pub bmf_version: BmfVersion,
 }
 
 impl QueryProject {
@@ -597,6 +601,7 @@ impl QueryProject {
             visibility,
             created,
             modified,
+            bmf_version,
             ..
         } = self;
         assert_parentage(
@@ -613,6 +618,7 @@ impl QueryProject {
             slug,
             url,
             visibility,
+            bmf_version,
             created,
             modified,
             claimed,
@@ -743,6 +749,9 @@ impl InsertProject {
             created,
             modified,
             deleted: None,
+            // Neither column is insertable, so both mirror what the table stores
+            // for a brand new row: no deletion, and the lowest BMF version.
+            bmf_version: BmfVersion::default(),
         }
     }
 
@@ -784,6 +793,7 @@ pub struct UpdateProject {
     pub slug: Option<ProjectSlug>,
     pub url: Option<Option<Url>>,
     pub visibility: Option<Visibility>,
+    pub bmf_version: Option<BmfVersion>,
     pub modified: DateTime,
 }
 
@@ -796,12 +806,14 @@ impl From<JsonUpdateProject> for UpdateProject {
                     slug,
                     url,
                     visibility,
+                    bmf_version,
                 } = patch;
                 Self {
                     name,
                     slug,
                     url: url.map(Some),
                     visibility,
+                    bmf_version,
                     modified: DateTime::now(),
                 }
             },
@@ -811,12 +823,14 @@ impl From<JsonUpdateProject> for UpdateProject {
                     slug,
                     url: (),
                     visibility,
+                    bmf_version,
                 } = patch_url;
                 Self {
                     name,
                     slug,
                     url: Some(None),
                     visibility,
+                    bmf_version,
                     modified: DateTime::now(),
                 }
             },

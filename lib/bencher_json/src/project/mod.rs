@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use bencher_valid::{DateTime, ResourceId, ResourceName, Url};
+use bencher_valid::{BmfVersion, DateTime, ResourceId, ResourceName, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -79,6 +79,8 @@ pub struct JsonProject {
     pub slug: ProjectSlug,
     pub url: Option<Url>,
     pub visibility: Visibility,
+    /// The highest BMF payload version the project accepts.
+    pub bmf_version: BmfVersion,
     pub created: DateTime,
     pub modified: DateTime,
     pub claimed: Option<DateTime>,
@@ -124,6 +126,8 @@ pub struct JsonProjectPatch {
     /// ➕ Bencher Plus: Set the new visibility of the project.
     /// Moving to a `private` project requires a valid Bencher Plus subscription.
     pub visibility: Option<Visibility>,
+    /// 🔒 Server admin only: Set the highest BMF payload version the project accepts.
+    pub bmf_version: Option<BmfVersion>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -133,6 +137,7 @@ pub struct JsonProjectPatchNull {
     pub slug: Option<ProjectSlug>,
     pub url: (),
     pub visibility: Option<Visibility>,
+    pub bmf_version: Option<BmfVersion>,
 }
 
 impl<'de> Deserialize<'de> for JsonUpdateProject {
@@ -144,7 +149,14 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
         const SLUG_FIELD: &str = "slug";
         const URL_FIELD: &str = "url";
         const VISIBILITY_FIELD: &str = "visibility";
-        const FIELDS: &[&str] = &[NAME_FIELD, SLUG_FIELD, URL_FIELD, VISIBILITY_FIELD];
+        const BMF_VERSION_FIELD: &str = "bmf_version";
+        const FIELDS: &[&str] = &[
+            NAME_FIELD,
+            SLUG_FIELD,
+            URL_FIELD,
+            VISIBILITY_FIELD,
+            BMF_VERSION_FIELD,
+        ];
 
         #[derive(Deserialize)]
         #[serde(field_identifier, rename_all = "snake_case")]
@@ -153,6 +165,7 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
             Slug,
             Url,
             Visibility,
+            BmfVersion,
         }
 
         struct UpdateProjectVisitor;
@@ -172,6 +185,7 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
                 let mut slug = None;
                 let mut url = None;
                 let mut visibility = None;
+                let mut bmf_version = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -199,6 +213,12 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
                             }
                             visibility = Some(map.next_value()?);
                         },
+                        Field::BmfVersion => {
+                            if bmf_version.is_some() {
+                                return Err(de::Error::duplicate_field(BMF_VERSION_FIELD));
+                            }
+                            bmf_version = Some(map.next_value()?);
+                        },
                     }
                 }
 
@@ -208,18 +228,21 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
                         slug,
                         url: Some(url),
                         visibility,
+                        bmf_version,
                     }),
                     Some(None) => Self::Value::Null(JsonProjectPatchNull {
                         name,
                         slug,
                         url: (),
                         visibility,
+                        bmf_version,
                     }),
                     None => Self::Value::Patch(JsonProjectPatch {
                         name,
                         slug,
                         url: None,
                         visibility,
+                        bmf_version,
                     }),
                 })
             }
@@ -234,6 +257,13 @@ impl JsonUpdateProject {
         match self {
             Self::Patch(patch) => patch.visibility,
             Self::Null(patch) => patch.visibility,
+        }
+    }
+
+    pub fn bmf_version(&self) -> Option<BmfVersion> {
+        match self {
+            Self::Patch(patch) => patch.bmf_version,
+            Self::Null(patch) => patch.bmf_version,
         }
     }
 }

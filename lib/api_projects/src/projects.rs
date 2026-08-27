@@ -3,7 +3,7 @@ use bencher_endpoint::{
 };
 use bencher_json::{
     JsonDirection, JsonPagination, JsonProject, JsonProjects, ProjectResourceId, ResourceName,
-    Search,
+    Sanitize as _, Search,
     project::{JsonUpdateProject, Visibility},
 };
 use bencher_rbac::project::Permission;
@@ -277,6 +277,7 @@ pub async fn get_one_inner(
 ///
 /// Update a project.
 /// The user must have `edit` permissions for the project.
+/// Setting the `bmf_version` field requires a server admin.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}",
@@ -320,6 +321,16 @@ async fn patch_inner(
         &auth_user,
         Permission::Edit,
     )?;
+
+    // Only a server admin can move the project's BMF payload version gate.
+    // Every other field of the patch is unaffected by this check.
+    if json_project.bmf_version().is_some() && !auth_user.is_admin(&context.rbac) {
+        let mut auth_user = auth_user.clone();
+        auth_user.sanitize();
+        return Err(forbidden_error(format!(
+            "Only admins can update the `bmf_version` field for a project. User is not an admin: {auth_user:?}",
+        )));
+    }
 
     // Check project visibility
     if let Some(visibility) = json_project.visibility() {

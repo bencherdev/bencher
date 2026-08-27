@@ -719,8 +719,17 @@ fn apply_migration(server: &TestServer) {
 /// It is not the last migration any more, so reverting only the last one would
 /// revert someone else's. Each layer above it is reverted first, and
 /// `run_pending_migrations` puts them all back.
+///
+/// The project gate migration is put back immediately, because the compiled
+/// `QueryProject` selects `project.bmf_version` on every project lookup: without
+/// the column the API serves nothing at all and there is no capture to compare.
+/// It adds a column to `project` and depends on nothing the metric migration did,
+/// so it re-applies cleanly here. Every other reverted layer is invisible to the
+/// responses this file captures; a later layer that adds a column the model reads
+/// belongs on this list too.
 fn revert_migration(conn: &mut DbConnection) {
     const METRIC_MIGRATION: &str = "20260816120000";
+    const REAPPLIED_MIGRATIONS: &[&str] = &["20260826120000"];
 
     conn.batch_execute("PRAGMA foreign_keys = OFF")
         .expect("Failed to disable foreign keys");
@@ -732,6 +741,19 @@ fn revert_migration(conn: &mut DbConnection) {
             break;
         }
     }
+
+    let migrations =
+        diesel::migration::MigrationSource::<diesel::sqlite::Sqlite>::migrations(&MIGRATIONS)
+            .expect("Failed to read the migrations");
+    for version in REAPPLIED_MIGRATIONS {
+        let migration = migrations
+            .iter()
+            .find(|migration| migration.name().version().to_string() == **version)
+            .expect("Failed to find the migration to re-apply");
+        conn.run_migration(migration.as_ref())
+            .expect("Failed to re-apply the migration");
+    }
+
     conn.batch_execute("PRAGMA foreign_keys = ON")
         .expect("Failed to enable foreign keys");
 }

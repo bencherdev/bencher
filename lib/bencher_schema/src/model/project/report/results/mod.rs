@@ -43,7 +43,7 @@ pub mod detector;
 
 use detector::{Detector, PreparedDetection};
 
-use super::ReportId;
+use super::{ReportId, bmf_version::BmfVersionGate};
 
 /// `ReportResults` is used to process the report results.
 pub struct ReportResults {
@@ -119,19 +119,25 @@ impl ReportResults {
         results_array: &[&str],
         adapter: Adapter,
         settings: JsonReportSettings,
-        bmf_version: BmfVersion,
+        bmf_version: BmfVersionGate,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         #[cfg(feature = "otel")]
         let process_start = context.clock.now();
 
-        let adapter_settings = AdapterSettings::new(settings.average, bmf_version);
+        let adapter_settings = AdapterSettings::new(settings.average, bmf_version.declared());
         let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
             .map_err(|e| {
                 bad_request_error(format!(
                     "Failed to convert results with adapter ({adapter} | {settings:?}): {e}\n\nAre you sure {adapter} is the right adapter?\nRead more about adapters here: https://bencher.dev/docs/explanation/adapters/"
                 ))
             })?;
+
+        // The version the results parsed as is the other half of the project gate.
+        // A payload can reach a v1 leaf without declaring anything, through the
+        // `json_v1` adapter or through the fallback the `magic` and `json` nodes do,
+        // so the declared key alone does not close the gate.
+        bmf_version.check_parsed(results_array.version())?;
 
         // The per measure cap has already truncated, so this is the report of it and
         // never an ingest error: a harness that names more statistics than the cap

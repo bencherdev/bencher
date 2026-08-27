@@ -986,6 +986,8 @@ export interface JsonProject {
 	slug: Slug;
 	url?: Url;
 	visibility: Visibility;
+	/** The highest BMF payload version the project accepts. */
+	bmf_version: BmfVersion;
 	created: string;
 	modified: string;
 	claimed?: string;

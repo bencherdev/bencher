@@ -3,7 +3,7 @@ use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
 use std::collections::HashSet;
 
 use bencher_json::{
-    BmfVersion, DateTime, JsonBenchmark, JsonMeasure, JsonMetricTriple, JsonNewReport, JsonReport,
+    DateTime, JsonBenchmark, JsonMeasure, JsonMetricTriple, JsonNewReport, JsonReport,
     JsonReportAlertsCounts, JsonReportCounts, JsonReportIterationCounts, MetricName, ReportUuid,
     project::{
         alert::AlertStatus,
@@ -21,6 +21,7 @@ use diesel::{
     query_builder::QueryFragment, query_dsl::LoadQuery, sqlite::Sqlite,
 };
 
+use bmf_version::BmfVersionGate;
 use dropshot::HttpError;
 use results::ReportResults;
 use slog::Logger;
@@ -97,6 +98,7 @@ use super::{
     threshold::{InsertThreshold, boundary::QueryBoundary},
 };
 
+pub mod bmf_version;
 pub mod report_benchmark;
 pub mod results;
 
@@ -170,11 +172,26 @@ impl QueryReport {
         } = new_run_report;
 
         // Idempotency check: if a key is provided, look for an existing report
+        //
+        // This comes before the project gate. A replay is retry safety and creates
+        // nothing: it hands back the report the first request already created. The
+        // gate is a plain setting that can be lowered while a client is still
+        // retrying, and refusing the replay would report an already accepted request
+        // as a failure. A request that is not a replay still meets the gate below.
         if let Some(existing) =
             Self::check_idempotency(actor_conn!(context, api_actor), project_id, idempotency_key)?
         {
             return existing.into_json(log, actor_conn!(context, api_actor), ReportMode::Full);
         }
+
+        // The project gate refuses a payload version the project does not accept
+        // before anything at all is created for the report. An absent `bmf_version`
+        // is version 0, which is the order the `json` node has always tried its
+        // leaves in.
+        let bmf_version = BmfVersionGate::new(
+            query_project.bmf_version,
+            json_report.bmf_version.unwrap_or_default(),
+        )?;
 
         #[cfg(all(feature = "plus", not(feature = "otel")))]
         let _ = is_claimed;
@@ -227,9 +244,6 @@ impl QueryReport {
 
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default().normalize();
-        // An absent `bmf_version` is version 0, which is the order the `json` node
-        // has always tried its leaves in.
-        let bmf_version = json_report.bmf_version.unwrap_or_default();
 
         // Validate job before inserting report so that report + job creation is atomic:
         // if OCI resolution fails, neither the report nor the job is created.
@@ -496,7 +510,7 @@ impl QueryReport {
         results: &[&str],
         adapter: Adapter,
         settings: JsonReportSettings,
-        bmf_version: BmfVersion,
+        bmf_version: BmfVersionGate,
         #[cfg(feature = "plus")] plan_kind: PlanKind,
         #[cfg(all(feature = "plus", feature = "otel"))] priority: bencher_json::Priority,
         #[cfg(feature = "plus")] query_project: &QueryProject,

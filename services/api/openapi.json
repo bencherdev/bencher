@@ -3223,7 +3223,7 @@
           "projects"
         ],
         "summary": "Update a project",
-        "description": "Update a project. The user must have `edit` permissions for the project.",
+        "description": "Update a project. The user must have `edit` permissions for the project. Setting the `bmf_version` field requires a server admin.",
         "operationId": "project_patch",
         "parameters": [
           {
@@ -16157,6 +16157,14 @@
       "JsonProject": {
         "type": "object",
         "properties": {
+          "bmf_version": {
+            "description": "The highest BMF payload version the project accepts.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BmfVersion"
+              }
+            ]
+          },
           "claimed": {
             "nullable": true,
             "allOf": [
@@ -16196,6 +16204,7 @@
           }
         },
         "required": [
+          "bmf_version",
           "created",
           "modified",
           "name",
@@ -16294,6 +16303,15 @@
       "JsonProjectPatch": {
         "type": "object",
         "properties": {
+          "bmf_version": {
+            "nullable": true,
+            "description": "🔒 Server admin only: Set the highest BMF payload version the project accepts.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BmfVersion"
+              }
+            ]
+          },
           "name": {
             "nullable": true,
             "description": "The new name of the project. Maximum length is 64 characters.",
@@ -16335,6 +16353,14 @@
       "JsonProjectPatchNull": {
         "type": "object",
         "properties": {
+          "bmf_version": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BmfVersion"
+              }
+            ]
+          },
           "name": {
             "nullable": true,
             "allOf": [
