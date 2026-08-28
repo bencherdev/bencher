@@ -3550,7 +3550,7 @@ async fn perf_parameters_filter_empty_value_is_no_filter() {
 // =============================================================================
 
 #[tokio::test]
-async fn perf_metrics_map_carries_every_named_scalar() {
+async fn perf_metrics_map_carries_every_metric() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "perfmetricsmap@example.com")
@@ -3609,11 +3609,11 @@ async fn perf_metrics_map_carries_every_named_scalar() {
         ("p99", 99.5),
     ] {
         let name = name.parse().expect("parse metric name");
-        let entry = point.metrics.get(&name).expect("named scalar");
+        let entry = point.metrics.get(&name).expect("metric");
         assert_eq!(entry.value, value);
     }
 
-    // Only the checked named scalar carries a boundaries list.
+    // Only the checked metric carries a boundaries list.
     let value = point
         .metrics
         .get(&MetricName::value())
@@ -3634,7 +3634,7 @@ async fn perf_metrics_map_carries_every_named_scalar() {
             point
                 .metrics
                 .get(&name)
-                .expect("named scalar")
+                .expect("metric")
                 .boundaries
                 .is_none(),
             "{name} is checked by nothing"

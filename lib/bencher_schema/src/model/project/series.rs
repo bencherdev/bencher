@@ -501,11 +501,11 @@ mod tests {
         .expect("upsert series");
     }
 
-    /// Ingest one report for a single variant, writing every `named` scalar as
+    /// Ingest one report for a single variant, writing every entry of `named` as
     /// its own metric row.
     ///
-    /// A variant is its own series and a named value is not, so this is the
-    /// helper the parameter and named value billing tests reach for.
+    /// A variant is its own series and a metric is not, so this is the
+    /// helper the parameter and metric billing tests reach for.
     #[expect(
         clippy::too_many_arguments,
         reason = "test helper threads the full series key"
@@ -619,10 +619,10 @@ mod tests {
         assert_eq!(oracle_count(&mut conn, org, start, end, None), 3);
     }
 
-    // Named values collapse into their measure's series. Names are not billed; the
+    // Metrics collapse into their measure's series. Names are not billed, and the
     // cap of eight is the guardrail on that.
     #[test]
-    fn named_values_collapse_into_their_measure_series() {
+    fn metrics_collapse_into_their_measure_series() {
         let mut conn = setup_test_db();
         let mut uuids = Uuids(1);
         let org = make_org(&mut conn, &mut uuids);

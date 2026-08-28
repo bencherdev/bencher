@@ -15,7 +15,7 @@ CREATE TABLE down_metric (
     UNIQUE(report_benchmark_id, measure_id)
 );
 -- The inverse of the explosion: the `value` row keeps its id and uuid, and the
--- bound rows collapse back into its columns. Named values that are not part of
+-- bound rows collapse back into its columns. Metrics that are not part of
 -- the metric triple have no column to land in and are dropped, which is the
 -- price of going back to a shape that cannot hold them.
 INSERT INTO down_metric(

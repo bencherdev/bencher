@@ -368,13 +368,13 @@ export interface JsonReportBoundary {
 	boundary: JsonBoundary;
 }
 
-/** Exactly one `metric` row: one named scalar. */
+/** Exactly one `metric` row: the metric's name and value. */
 export interface JsonReportMetric {
 	uuid: Uuid;
 	name: string;
 	value: number;
 	/**
-	 * Every threshold that checked this named scalar, with the boundary it produced.
+	 * Every threshold that checked this metric, with the boundary it produced.
 	 * Length 0 or 1 until threshold predicates ship.
 	 */
 	boundaries: JsonReportBoundary[];
@@ -382,10 +382,10 @@ export interface JsonReportMetric {
 
 export interface JsonReportMeasure {
 	measure: JsonMeasure;
-	/** Every named scalar ingested for this measure, in a stable order. */
+	/** Every metric ingested for this measure, in a stable order. */
 	metrics: JsonReportMetric[];
 	/**
-	 * Deprecated. Reconstructed from the `value` row and its
+	 * Deprecated. The metric triple, reconstructed from the `value` row and its
 	 * `lower_value`/`upper_value` siblings. Retained for compatibility with older
 	 * clients and removed in a future release.
 	 * 
@@ -617,11 +617,11 @@ export interface JsonPerfBoundary {
 	alert?: JsonPerfAlert;
 }
 
-/** Exactly one `metric` row: one named scalar and every threshold that checked it. */
+/** Exactly one `metric` row: the metric's value and every threshold that checked it. */
 export interface JsonMetricEntry {
 	value: number;
 	/**
-	 * Every threshold that checked this named scalar, with the boundary it produced
+	 * Every threshold that checked this metric, with the boundary it produced
 	 * and any alert that boundary raised. Absent when nothing checked it.
 	 */
 	boundaries?: JsonPerfBoundary[];
@@ -969,10 +969,10 @@ export interface JsonPerfMetrics {
 	start_time: string;
 	end_time: string;
 	version: JsonVersion;
-	/** Every named scalar this measure ingested, keyed by name. */
+	/** Every metric this measure ingested, keyed by name. */
 	metrics: Record<string, JsonMetricEntry>;
 	/**
-	 * Deprecated. Reconstructed from the `value` row and its
+	 * Deprecated. The metric triple, reconstructed from the `value` row and its
 	 * `lower_value`/`upper_value` siblings. Retained for compatibility with older
 	 * clients and removed in a future release.
 	 * 

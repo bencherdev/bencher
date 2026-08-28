@@ -25,7 +25,7 @@ pub struct JsonV1Entry {
     pub measures: HashMap<MeasureNameId, JsonV1Measure>,
 }
 
-/// A measure's named scalars. Every name is equal on the wire.
+/// A measure's metrics. Every name is equal on the wire.
 pub type JsonV1Measure = NamedMap;
 
 /// The BMF v1 leaf of the `json` adapter tree.
@@ -53,7 +53,7 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
         } in entries
         {
             // Two entries that canonicalize to the same parameter set are one
-            // variant, so their named values merge rather than fork a series. A name
+            // variant, so their metrics merge rather than fork a series. A name
             // that genuinely repeats takes the later entry, which is deterministic
             // because entries are an ordered array in wire order. Nothing is
             // dropped, so nothing is counted: a harness that emits one entry per
@@ -135,7 +135,7 @@ pub(crate) mod test_json_v1 {
             .expect("Missing parameter set")
     }
 
-    /// One named scalar of one measure.
+    /// One metric of one measure.
     pub fn named(metrics: &AdapterMetrics, measure: &str, name: &str) -> Option<OrderedFloat<f64>> {
         metrics
             .inner
@@ -222,10 +222,10 @@ pub(crate) mod test_json_v1 {
         assert_eq!(named(metrics, "throughput", "value"), Some(2.0.into()));
     }
 
-    /// Named values are scalars and every name is equal:
+    /// Metrics are scalars and every name is equal:
     /// a measure may carry only `p99` and never mention `value`.
     #[test]
-    fn adapter_json_v1_named_values() {
+    fn adapter_json_v1_metrics() {
         let results = convert_json_v1("v1_named");
         validate_adapter_json_v1_named(&results);
     }
@@ -237,7 +237,7 @@ pub(crate) mod test_json_v1 {
         assert_eq!(named(metrics, "latency", "value"), None);
     }
 
-    /// Two entries that resolve to the same variant union their named values.
+    /// Two entries that resolve to the same variant union their metrics.
     /// Nothing is dropped, so nothing is counted, and a name that genuinely repeats
     /// takes the later entry's value, deterministically, because entries are an
     /// ordered array in wire order.
@@ -379,8 +379,8 @@ pub(crate) mod test_json_v1 {
         assert_eq!(results.dropped_names, 2);
     }
 
-    /// A name written by two entries is one name, never a drop: nine named
-    /// values across two entries are eight names and nothing is counted.
+    /// A name written by two entries is one name, never a drop: nine metrics
+    /// across two entries are eight names and nothing is counted.
     #[test]
     fn adapter_json_v1_overwrite_is_not_a_drop() {
         let results = parse_json_v1(
@@ -400,7 +400,7 @@ pub(crate) mod test_json_v1 {
     /// The cap keeps the three conventional names regardless of where they sort,
     /// keeps the rest lexicographically, and reports what it dropped.
     #[test]
-    fn adapter_json_v1_named_value_cap() {
+    fn adapter_json_v1_metric_cap() {
         let results = convert_json_v1("v1_cap");
         validate_adapter_json_v1_cap(&results);
     }

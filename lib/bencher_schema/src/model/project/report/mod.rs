@@ -644,7 +644,7 @@ pub enum ReportMode {
     Collapsed,
 }
 
-/// One row of the results query: one named scalar of one measure at one variant,
+/// One row of the results query: one metric of one measure at one variant,
 /// with the threshold and boundary that checked it, if any.
 type ResultsQuery = (
     Iteration,
@@ -667,7 +667,7 @@ fn get_report_results(
         .map_err(resource_not_found_err!(ReportBenchmark, project))
 }
 
-/// The results query for one report, one row per named scalar.
+/// The results query for one report, one row per metric.
 fn report_results_query(
     report_id: ReportId,
 ) -> impl LoadQuery<'static, DbConnection, ResultsQuery> {
@@ -676,7 +676,7 @@ fn report_results_query(
     .inner_join(schema::benchmark::table)
     .inner_join(schema::parameter::table)
     .inner_join(schema::metric::table.inner_join(schema::measure::table))
-    // There may or may not be a boundary for any given named value.
+    // There may or may not be a boundary for any given metric.
     // Keep these three joins flat with explicit `ON` clauses instead of nesting the
     // threshold and the model inside the boundary join. SQLite cannot flatten a
     // compound right operand of an outer join, so the nested form makes it scan the
@@ -687,7 +687,7 @@ fn report_results_query(
     // It is important to order by the iteration first in order to make sure they are grouped together below.
     // The parameter set comes between the benchmark and the measure because a variant is what a result is:
     // two parameter sets of one benchmark are two results, not one result with the measures interleaved.
-    // Finally the metric name orders a measure's named values, so the response order is stable.
+    // Finally the metric name orders a measure's metrics, so the response order is stable.
     .order((
         schema::report_benchmark::iteration,
         schema::benchmark::name,
@@ -804,7 +804,7 @@ fn into_report_results_json(
             continue;
         };
 
-        // One named value repeats across rows only when several thresholds checked it.
+        // One metric repeats across rows only when several thresholds checked it.
         let QueryMetric {
             id: _,
             uuid,
@@ -906,7 +906,7 @@ impl PendingMeasure {
     ///
     /// A measure that named no `value` at all has no triple to reconstruct, so all
     /// three deprecated fields are absent. Only a BMF v1 payload can report that
-    /// shape, and its named values are stored, billed, and returned like any other.
+    /// shape, and its metrics are stored, billed, and returned like any other.
     fn into_json(self) -> JsonReportMeasure {
         let Self { measure, metrics } = self;
 
@@ -1667,8 +1667,8 @@ mod tests {
         );
     }
 
-    /// A measure that named no `value` is returned like any other, carrying its named
-    /// values and no deprecated metric triple. The counts have to count it too, or the
+    /// A measure that named no `value` is returned like any other, carrying its metrics
+    /// and no deprecated metric triple. The counts have to count it too, or the
     /// same report is two measures from the endpoint that loads its results and one
     /// from the endpoint that counts them.
     #[test]
@@ -1974,8 +1974,8 @@ mod tests {
         assert_eq!(count, i32::MAX);
     }
 
-    /// Every named value carries the boundary that checked it, with that boundary's own
-    /// threshold and model, and a named value without a boundary carries nothing.
+    /// Every metric carries the boundary that checked it, with that boundary's own
+    /// threshold and model, and a metric without a boundary carries nothing.
     ///
     /// The thresholds are both created before either model, so a threshold identifier
     /// never equals its own model identifier. Following the wrong foreign key therefore

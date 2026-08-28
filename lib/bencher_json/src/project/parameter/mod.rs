@@ -52,8 +52,8 @@ pub struct JsonUpdateParameter {
     pub archived: Option<bool>,
 }
 
-/// The most keys one parameter set may carry, anchored to the number of named
-/// values one measure may carry.
+/// The most keys one parameter set may carry, anchored to the number of metrics
+/// one measure may carry.
 ///
 /// Deliberately low: raising the cap is a release note and lowering it is a
 /// breaking change, so the asymmetry runs one way.
@@ -708,7 +708,7 @@ mod tests {
     }
 
     // The cap is deliberately low, so raising it stays easy and lowering it never
-    // has to happen. Eight is where the named value cap starts too.
+    // has to happen. Eight is where the metric cap starts too.
     #[test]
     fn rejects_more_than_the_key_cap() {
         keys(8)

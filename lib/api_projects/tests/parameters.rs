@@ -166,7 +166,7 @@ fn parameter_sets(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet
 }
 
 /// Every metric name stored for a project, with its value, keyed by parameter set.
-fn named_values(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet, String, f64)> {
+fn metric_rows(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet, String, f64)> {
     schema::metric::table
         .inner_join(
             schema::report_benchmark::table
@@ -247,9 +247,9 @@ fn parameters(canonical: &str) -> ParameterSet {
 }
 
 // A BMF v1 report lands one `report_benchmark` row per variant and one `metric`
-// row per named value, under the parameter set the entry declared.
+// row per metric name, under the parameter set the entry declared.
 #[tokio::test]
-async fn v1_report_lands_variants_and_named_values() {
+async fn v1_report_lands_variants_and_metrics() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "variant").await;
 
@@ -289,7 +289,7 @@ async fn v1_report_lands_variants_and_named_values() {
     );
 
     assert_eq!(
-        named_values(&mut conn, project_id),
+        metric_rows(&mut conn, project_id),
         vec![
             (parameters(r#"{"size_mb": 16}"#), "p99".to_owned(), 97.0),
             (parameters(r#"{"size_mb": 16}"#), "value".to_owned(), 42.0),
@@ -601,7 +601,7 @@ async fn v1_entry_without_measures_mints_nothing() {
         vec![(ParameterSet::default(), 0)],
         "only the empty set the benchmark was born with, pointed at by nothing"
     );
-    assert_eq!(named_values(&mut conn, project_id), vec![]);
+    assert_eq!(metric_rows(&mut conn, project_id), vec![]);
     assert_eq!(series_measures(&mut conn, project_id), Vec::<String>::new());
     assert_eq!(metric_counts(&mut conn), vec![0]);
     assert_eq!(
@@ -628,7 +628,7 @@ async fn v1_benchmark_without_entries_mints_nothing() {
         parameter_sets(&mut conn, project_id),
         vec![(ParameterSet::default(), 0)],
     );
-    assert_eq!(named_values(&mut conn, project_id), vec![]);
+    assert_eq!(metric_rows(&mut conn, project_id), vec![]);
     assert_eq!(series_measures(&mut conn, project_id), Vec::<String>::new());
     assert_eq!(metric_counts(&mut conn), vec![0]);
 }
@@ -661,7 +661,7 @@ async fn v0_benchmark_without_measures_is_unchanged() {
         vec![(ParameterSet::default(), 1)],
         "the v0 row still lands on the empty parameter set"
     );
-    assert_eq!(named_values(&mut conn, project_id), vec![]);
+    assert_eq!(metric_rows(&mut conn, project_id), vec![]);
     assert_eq!(series_measures(&mut conn, project_id), Vec::<String>::new());
     assert_eq!(metric_counts(&mut conn), vec![0]);
 }
@@ -762,9 +762,9 @@ async fn fold_with_v1_warns_and_lands_every_iteration() {
     assert_eq!(values, vec![10.0, 20.0], "nothing was folded away");
 }
 
-// The named value cap drops the excess best effort. The report still succeeds.
+// The metric cap drops the excess best effort. The report still succeeds.
 #[tokio::test]
-async fn named_value_cap_does_not_fail_the_report() {
+async fn metric_cap_does_not_fail_the_report() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "cap").await;
 
@@ -792,7 +792,7 @@ async fn named_value_cap_does_not_fail_the_report() {
 
     let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
-    let names = named_values(&mut conn, project_id);
+    let names = metric_rows(&mut conn, project_id);
     assert_eq!(names.len(), 8, "the cap keeps eight names, got {names:?}");
     assert!(
         names.iter().any(|(_, name, _)| name == "value"),
@@ -800,14 +800,15 @@ async fn named_value_cap_does_not_fail_the_report() {
     );
 }
 
-// What the legacy metric-count meter counts once named metric values exist.
+// What the legacy metric-count meter counts once a measure can carry several
+// metrics.
 //
 // `QueryMetric::usage` counts `value` rows, so a measure carrying several names
-// still counts once: named values do not inflate a metric count. The other half is
+// still counts once: extra metrics do not inflate a metric count. The other half is
 // the open question this test records rather than settles: a measure that names no
 // `value` at all, which only BMF v1 can produce, counts zero.
 #[tokio::test]
-async fn named_values_do_not_change_the_metric_count() {
+async fn extra_metrics_do_not_change_the_metric_count() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "meter").await;
 
@@ -835,7 +836,7 @@ async fn named_values_do_not_change_the_metric_count() {
     let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
 
-    let rows = named_values(&mut conn, project_id);
+    let rows = metric_rows(&mut conn, project_id);
     assert_eq!(rows.len(), 5, "five named rows landed, got {rows:?}");
 
     // The production meter itself, not a copy of its filter: this is the function
@@ -866,7 +867,7 @@ async fn named_values_do_not_change_the_metric_count() {
     );
 }
 
-// The report response echoes every named value, keeps the deprecated metric,
+// The report response echoes every metric, keeps the deprecated metric triple,
 // threshold, and boundary fields correct, and separates two variants into two
 // results rather than merging them into one.
 //
@@ -876,7 +877,7 @@ async fn named_values_do_not_change_the_metric_count() {
 // which only ever compares against the previous row, emits four results of one
 // measure each instead of two results of two measures each.
 #[tokio::test]
-async fn report_response_echoes_named_values_and_separates_variants() {
+async fn report_response_echoes_metrics_and_separates_variants() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "response").await;
 
@@ -1005,17 +1006,17 @@ async fn report_response_echoes_named_values_and_separates_variants() {
         .pointer("/measures/0")
         .expect("the result echoes its measure");
 
-    // The named values, in a stable order.
+    // The metrics, in a stable order.
     let names: Vec<&str> = measure
         .pointer("/metrics")
         .and_then(serde_json::Value::as_array)
-        .expect("the measure echoes its named values")
+        .expect("the measure echoes its metrics")
         .iter()
         .map(|metric| {
             metric
                 .pointer("/name")
                 .and_then(serde_json::Value::as_str)
-                .expect("each named value has a name")
+                .expect("each metric has a name")
         })
         .collect();
     assert_eq!(names, vec!["lower_value", "p99", "upper_value", "value"]);
@@ -1052,7 +1053,7 @@ async fn report_response_echoes_named_values_and_separates_variants() {
         measure
             .pointer("/metrics")
             .and_then(serde_json::Value::as_array)
-            .expect("the measure echoes its named values")
+            .expect("the measure echoes its metrics")
             .iter()
             .find(|metric| metric.pointer("/name") == Some(&serde_json::json!(name)))
             .and_then(|metric| metric.pointer("/boundaries"))
@@ -1060,7 +1061,7 @@ async fn report_response_echoes_named_values_and_separates_variants() {
             .map_or(0, Vec::len)
     };
     assert_eq!(boundaries("value"), 1, "the point estimate was checked");
-    assert_eq!(boundaries("p99"), 0, "a named value was not checked");
+    assert_eq!(boundaries("p99"), 0, "a metric beside it was not checked");
 }
 
 // Parameter sets are minted straight from report content, one row per variant, so
@@ -1115,8 +1116,8 @@ async fn parameter_creation_is_rate_limited() {
 // A BMF v1 measure may name only percentiles and never mention `value` at all, which
 // is the one shape the deprecated `metric` field cannot describe. Its named rows are
 // stored like any other and its series is billed like any other, so the report that
-// created them says so: the measure comes back with its named values, and the
-// deprecated `metric` is simply absent.
+// created them says so: the measure comes back with its metrics, and the
+// deprecated `metric` triple is simply absent.
 #[tokio::test]
 async fn value_less_measure_is_stored_billed_and_echoed() {
     let server = TestServer::new().await;
@@ -1146,7 +1147,7 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
     let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
     assert_eq!(
-        named_values(&mut conn, project_id),
+        metric_rows(&mut conn, project_id),
         vec![
             (parameters("{}"), "p50".to_owned(), 2.0),
             (parameters("{}"), "p99".to_owned(), 3.0),
@@ -1196,7 +1197,7 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
     let named: Vec<(Option<&str>, Option<f64>)> = value_less
         .get("metrics")
         .and_then(serde_json::Value::as_array)
-        .expect("the measure echoes its named values")
+        .expect("the measure echoes its metrics")
         .iter()
         .map(|metric| {
             (
@@ -1208,7 +1209,7 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
     assert_eq!(
         named,
         vec![(Some("p50"), Some(2.0)), (Some("p99"), Some(3.0))],
-        "the named values are the whole of what was reported"
+        "the metrics are the whole of what was reported"
     );
     // The other two deprecated fields are null, as they are for any unchecked measure:
     // a bare threshold checks the `value` name, so this measure has no boundary.
@@ -1232,7 +1233,7 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
     );
 
     // The legacy metric-count meter is a separate question that
-    // `named_values_do_not_change_the_metric_count` records rather than settles: it
+    // `extra_metrics_do_not_change_the_metric_count` records rather than settles: it
     // counts `value` rows, so this report meters one. Pinned here so a change to
     // either view cannot pass unnoticed.
     let counted: i32 = schema::metric_count_by_report::table
@@ -1280,11 +1281,11 @@ async fn v0_measure_response_is_unchanged() {
         .expect("the deprecated metric carries a uuid") = serde_json::json!("<uuid>");
     for metric in measure["metrics"]
         .as_array_mut()
-        .expect("the measure echoes its named values")
+        .expect("the measure echoes its metrics")
     {
         *metric
             .pointer_mut("/uuid")
-            .expect("the named value carries a uuid") = serde_json::json!("<uuid>");
+            .expect("the metric carries a uuid") = serde_json::json!("<uuid>");
     }
 
     assert_eq!(
@@ -1356,7 +1357,7 @@ async fn v0_fold_still_folds() {
     );
 
     assert_eq!(
-        named_values(&mut conn, project_id),
+        metric_rows(&mut conn, project_id),
         vec![
             (parameters("{}"), "lower_value".to_owned(), 9.0),
             (parameters("{}"), "upper_value".to_owned(), 11.0),

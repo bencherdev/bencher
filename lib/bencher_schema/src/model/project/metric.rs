@@ -55,8 +55,8 @@ impl QueryMetric {
             .filter(schema::project::organization_id.eq(organization_id))
             .filter(schema::report::end_time.ge(start_time))
             .filter(schema::report::end_time.le(end_time))
-            // Named values collapse into their measure's series, so only the point
-            // estimate is counted: a bounded metric is one measurement, not three.
+            // Metrics collapse into their measure's series, so only the point
+            // estimate is counted: a bounded metric triple is one measurement, not three.
             // In this shape every measure has exactly one `value` row, which makes
             // this exactly the count the row-per-measure table produced. The billing
             // layer revisits it when a payload can name `p99` and never name `value`.
@@ -92,7 +92,7 @@ pub struct InsertMetric {
 }
 
 impl InsertMetric {
-    /// One named scalar.
+    /// One metric.
     ///
     /// `value`, `lower_value`, and `upper_value` are ordinary named rows: the
     /// metric triple is a convention over three names, not a shape the table
@@ -245,7 +245,7 @@ mod tests {
         assert_eq!(all, 2, "usage counts Public and Private Project metrics");
     }
 
-    // A bounded metric is one measurement, not three. Named values collapse into
+    // A bounded metric triple is one measurement, not three. Metrics collapse into
     // their measure's series, so the bound rows must not reach the billable count.
     #[test]
     fn usage_does_not_count_the_bound_rows() {

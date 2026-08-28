@@ -20,7 +20,7 @@ pub struct AdapterResults {
     /// The BMF version these results were parsed from.
     /// Fold is a v0 only operation, so this is what gates it.
     pub version: BmfVersion,
-    /// How many named values the per measure cap dropped.
+    /// How many metrics the per measure cap dropped.
     /// The log line and the counter belong to ingest, where the providers are in scope.
     pub dropped_names: usize,
 }

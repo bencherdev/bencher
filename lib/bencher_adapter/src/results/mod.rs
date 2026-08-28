@@ -39,7 +39,7 @@ impl AdapterResultsArray {
         Ok(parsed_results_array.into())
     }
 
-    /// How many named values the per measure cap dropped across every payload.
+    /// How many metrics the per measure cap dropped across every payload.
     pub fn dropped_names(&self) -> usize {
         self.inner.iter().map(|results| results.dropped_names).sum()
     }

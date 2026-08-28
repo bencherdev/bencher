@@ -416,11 +416,11 @@ pub struct JsonPerfMetrics {
     pub start_time: DateTime,
     pub end_time: DateTime,
     pub version: JsonVersion,
-    /// Every named scalar this measure ingested, keyed by name.
+    /// Every metric this measure ingested, keyed by name.
     #[typeshare(typescript(type = "Record<string, JsonMetricEntry>"))]
     pub metrics: BTreeMap<MetricName, JsonMetricEntry>,
 
-    /// Deprecated. Reconstructed from the `value` row and its
+    /// Deprecated. The metric triple, reconstructed from the `value` row and its
     /// `lower_value`/`upper_value` siblings. Retained for compatibility with older
     /// clients and removed in a future release.
     ///
@@ -437,13 +437,13 @@ pub struct JsonPerfMetrics {
     pub alert: Option<JsonPerfAlert>,
 }
 
-/// Exactly one `metric` row: one named scalar and every threshold that checked it.
+/// Exactly one `metric` row: the metric's value and every threshold that checked it.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetricEntry {
     pub value: OrderedFloat<f64>,
-    /// Every threshold that checked this named scalar, with the boundary it produced
+    /// Every threshold that checked this metric, with the boundary it produced
     /// and any alert that boundary raised. Absent when nothing checked it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub boundaries: Option<Vec<JsonPerfBoundary>>,

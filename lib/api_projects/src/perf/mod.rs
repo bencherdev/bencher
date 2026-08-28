@@ -386,10 +386,10 @@ async fn perf_results(
     Ok(results)
 }
 
-/// One row per named scalar.
+/// One row per metric.
 ///
 /// This reads the `metric` table directly rather than the `metric_boundary` view.
-/// All of a variant's named scalars for one measure sit together on
+/// All of a variant's metrics for one measure sit together on
 /// `index_metric_report_benchmark_measure_name`, so one range read returns every
 /// one of them, where the view had to seek each conventional name separately.
 #[expect(
@@ -488,7 +488,7 @@ fn perf_query(
         // Order by the version number so that the oldest version is first.
         // Because multiple reports can use the same version (via git hash), order by the start time next.
         // Then within a report order by the iteration number.
-        // Finally the report benchmark, so one variant's named scalars stay together.
+        // Finally the report benchmark, so one variant's metrics stay together.
         .order((
             schema::version::number,
             schema::report::start_time,
@@ -559,7 +559,7 @@ fn perf_query(
         ))
 }
 
-/// The threshold, model, boundary, and any alert for one named scalar.
+/// The threshold, model, boundary, and any alert for one metric.
 type PerfBoundary = (
     QueryThreshold,
     QueryModel,
@@ -731,7 +731,7 @@ impl PendingMetric {
             self.value_uuid = Some(uuid);
         }
 
-        // A named scalar repeats across rows only when several thresholds checked it.
+        // A metric repeats across rows only when several thresholds checked it.
         let entry = self.metrics.entry(name).or_insert(JsonMetricEntry {
             value: value.into(),
             boundaries: None,

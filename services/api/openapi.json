@@ -13855,12 +13855,12 @@
         }
       },
       "JsonMetricEntry": {
-        "description": "Exactly one `metric` row: one named scalar and every threshold that checked it.",
+        "description": "Exactly one `metric` row: the metric's value and every threshold that checked it.",
         "type": "object",
         "properties": {
           "boundaries": {
             "nullable": true,
-            "description": "Every threshold that checked this named scalar, with the boundary it produced and any alert that boundary raised. Absent when nothing checked it.",
+            "description": "Every threshold that checked this metric, with the boundary it produced and any alert that boundary raised. Absent when nothing checked it.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonPerfBoundary"
@@ -15540,7 +15540,7 @@
           },
           "metric": {
             "nullable": true,
-            "description": "Deprecated. Reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nAbsent when the measure carries no `value` name, which BMF v1 permits. Never absent for anything an older client could produce.",
+            "description": "Deprecated. The metric triple, reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nAbsent when the measure carries no `value` name, which BMF v1 permits. Never absent for anything an older client could produce.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonMetricTriple"
@@ -15548,7 +15548,7 @@
             ]
           },
           "metrics": {
-            "description": "Every named scalar this measure ingested, keyed by name.",
+            "description": "Every metric this measure ingested, keyed by name.",
             "type": "object",
             "additionalProperties": {
               "$ref": "#/components/schemas/JsonMetricEntry"
@@ -16849,7 +16849,7 @@
           },
           "metric": {
             "nullable": true,
-            "description": "Deprecated. Reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nAbsent when the measure carries no `value` name, which BMF v1 permits. Never absent for anything an older client could produce.",
+            "description": "Deprecated. The metric triple, reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nAbsent when the measure carries no `value` name, which BMF v1 permits. Never absent for anything an older client could produce.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonMetricTriple"
@@ -16857,7 +16857,7 @@
             ]
           },
           "metrics": {
-            "description": "Every named scalar ingested for this measure, in a stable order.",
+            "description": "Every metric ingested for this measure, in a stable order.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonReportMetric"
@@ -16879,11 +16879,11 @@
         ]
       },
       "JsonReportMetric": {
-        "description": "Exactly one `metric` row: one named scalar.",
+        "description": "Exactly one `metric` row: the metric's name and value.",
         "type": "object",
         "properties": {
           "boundaries": {
-            "description": "Every threshold that checked this named scalar, with the boundary it produced. Length 0 or 1 until threshold predicates ship.",
+            "description": "Every threshold that checked this metric, with the boundary it produced. Length 0 or 1 until threshold predicates ship.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonReportBoundary"

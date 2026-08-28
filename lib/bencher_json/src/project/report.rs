@@ -449,10 +449,10 @@ pub struct JsonReportParameter {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportMeasure {
     pub measure: JsonMeasure,
-    /// Every named scalar ingested for this measure, in a stable order.
+    /// Every metric ingested for this measure, in a stable order.
     pub metrics: Vec<JsonReportMetric>,
 
-    /// Deprecated. Reconstructed from the `value` row and its
+    /// Deprecated. The metric triple, reconstructed from the `value` row and its
     /// `lower_value`/`upper_value` siblings. Retained for compatibility with older
     /// clients and removed in a future release.
     ///
@@ -466,7 +466,7 @@ pub struct JsonReportMeasure {
     pub boundary: Option<JsonBoundary>,
 }
 
-/// Exactly one `metric` row: one named scalar.
+/// Exactly one `metric` row: the metric's name and value.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -474,7 +474,7 @@ pub struct JsonReportMetric {
     pub uuid: MetricUuid,
     pub name: MetricName,
     pub value: OrderedFloat<f64>,
-    /// Every threshold that checked this named scalar, with the boundary it produced.
+    /// Every threshold that checked this metric, with the boundary it produced.
     /// Length 0 or 1 until threshold predicates ship.
     pub boundaries: Vec<JsonReportBoundary>,
 }

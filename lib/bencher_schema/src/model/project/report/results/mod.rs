@@ -239,7 +239,7 @@ impl ReportResults {
             }
         }
 
-        // Compute metric count once before acquiring write lock. Named values collapse
+        // Compute metric count once before acquiring write lock. Metrics collapse
         // into their measure's point estimate, so this counts exactly the rows
         // `QueryMetric::usage` reads back: one per measure that named a `value`.
         let iteration_metric_count: i32 = prepared_variants
@@ -542,7 +542,7 @@ fn write_variant(
 /// Pre-computed data for a single measure at one variant.
 struct PreparedMeasure {
     measure_id: MeasureId,
-    /// Every named scalar the measure reported, in lexicographic order.
+    /// Every metric the measure reported, in lexicographic order.
     named: NamedMap,
     /// The detection prepared for the `value` scalar. `None` when no threshold
     /// covers the measure, or when the measure named no point estimate.
