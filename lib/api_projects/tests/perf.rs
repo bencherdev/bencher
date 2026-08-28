@@ -1566,156 +1566,213 @@ async fn perf_private_project_wrong_user() {
 }
 
 // =============================================================================
-// Section 5: Permutation limit
+// Section 5: The line limit
 // =============================================================================
 
 #[tokio::test]
-async fn perf_permutation_limit_exact_255() {
+async fn perf_line_limit_exact_256() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "perflimit255@example.com").await;
-    let org = server.create_org(&user, "Perf Limit255 Org").await;
-    let project = server
-        .create_project(&user, &org, "Perf Limit255 Project")
-        .await;
+    // `4` branches by `64` measures is exactly the budget.
+    let (user, project_slug, grid) = grid_project(&server, "limit256", 4, 1, 1, 64).await;
 
-    let project_id = get_project_id(&server, project.slug.as_ref());
-    let data = create_perf_data(&server, project_id);
-
-    // 1 branch * 1 testbed * 1 benchmark * 255 measures = 255 permutations
-    let mut conn = server.db_conn();
-    let now = base_timestamp();
-    let mut measure_uuids = vec![data.measure_uuid];
-    for i in 0..254 {
-        let m_uuid = MeasureUuid::new();
-        diesel::insert_into(schema::measure::table)
-            .values((
-                schema::measure::uuid.eq(&m_uuid),
-                schema::measure::project_id.eq(project_id),
-                schema::measure::name.eq(&format!("measure-{i}")),
-                schema::measure::slug.eq(&format!("measure-{i}-{m_uuid}")),
-                schema::measure::units.eq("ns"),
-                schema::measure::created.eq(&now),
-                schema::measure::modified.eq(&now),
-            ))
-            .execute(&mut conn)
-            .expect("insert measure");
-        let m_id: i32 = schema::measure::table
-            .filter(schema::measure::uuid.eq(&m_uuid))
-            .select(schema::measure::id)
-            .first(&mut conn)
-            .expect("get measure id");
-
-        let metric_uuid = MetricUuid::new();
-        diesel::insert_into(schema::metric::table)
-            .values((
-                schema::metric::uuid.eq(&metric_uuid),
-                schema::metric::report_benchmark_id.eq(data.report_benchmark_id),
-                schema::metric::measure_id.eq(m_id),
-                schema::metric::name.eq(MetricName::value()),
-                schema::metric::value.eq(1.0),
-            ))
-            .execute(&mut conn)
-            .expect("insert metric");
-        measure_uuids.push(m_uuid);
-    }
-
-    let url = build_perf_url(
-        project.slug.as_ref(),
-        &[data.branch_uuid],
-        &[data.testbed_uuid],
-        &[data.benchmark_uuid],
-        &measure_uuids,
-        "",
-    );
-    let resp = server
-        .client
-        .get(server.api_url(&url))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let perf: JsonPerf = resp.json().await.expect("parse response");
-    assert_eq!(perf.results.len(), 255);
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    let expected = grid.expected_lines();
+    assert_eq!(expected.len(), 256);
+    assert_eq!(perf.results.len(), 256);
+    assert_eq!(response_lines(&perf), expected);
 }
 
 #[tokio::test]
-async fn perf_permutation_limit_truncated_256() {
+async fn perf_line_limit_truncated_past_256() {
     let server = TestServer::new().await;
-    let user = server.signup("Test User", "perflimit256@example.com").await;
-    let org = server.create_org(&user, "Perf Limit256 Org").await;
-    let project = server
-        .create_project(&user, &org, "Perf Limit256 Project")
-        .await;
+    // `5` branches by `64` measures is `320`.
+    let (user, project_slug, grid) = grid_project(&server, "limitpast", 5, 1, 1, 64).await;
 
-    let project_id = get_project_id(&server, project.slug.as_ref());
-    let data = create_perf_data(&server, project_id);
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    let mut expected = grid.expected_lines();
+    assert_eq!(expected.len(), 320);
+    expected.truncate(256);
+    assert_eq!(perf.results.len(), 256);
+    assert_eq!(response_lines(&perf), expected);
+}
 
-    // 1 branch * 1 testbed * 1 benchmark * 256 measures = 256 permutations
-    let mut conn = server.db_conn();
-    let now = base_timestamp();
-    let mut measure_uuids = vec![data.measure_uuid];
-    for i in 0..255 {
-        let m_uuid = MeasureUuid::new();
-        diesel::insert_into(schema::measure::table)
-            .values((
-                schema::measure::uuid.eq(&m_uuid),
-                schema::measure::project_id.eq(project_id),
-                schema::measure::name.eq(&format!("measure-t-{i}")),
-                schema::measure::slug.eq(&format!("measure-t-{i}-{m_uuid}")),
-                schema::measure::units.eq("ns"),
-                schema::measure::created.eq(&now),
-                schema::measure::modified.eq(&now),
-            ))
-            .execute(&mut conn)
-            .expect("insert measure");
-        let m_id: i32 = schema::measure::table
-            .filter(schema::measure::uuid.eq(&m_uuid))
-            .select(schema::measure::id)
-            .first(&mut conn)
-            .expect("get measure id");
+// The budget is a running count of lines, not a product of dimension indexes.
+#[tokio::test]
+async fn perf_line_limit_holds_on_an_asymmetric_grid() {
+    let server = TestServer::new().await;
+    let (user, project_slug, grid) = grid_project(&server, "asymmetric", 2, 2, 6, 21).await;
 
-        let metric_uuid = MetricUuid::new();
-        diesel::insert_into(schema::metric::table)
-            .values((
-                schema::metric::uuid.eq(&metric_uuid),
-                schema::metric::report_benchmark_id.eq(data.report_benchmark_id),
-                schema::metric::measure_id.eq(m_id),
-                schema::metric::name.eq(MetricName::value()),
-                schema::metric::value.eq(1.0),
-            ))
-            .execute(&mut conn)
-            .expect("insert metric");
-        measure_uuids.push(m_uuid);
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    let mut expected = grid.expected_lines();
+    assert_eq!(expected.len(), 504);
+    expected.truncate(256);
+    assert_eq!(perf.results.len(), 256);
+    assert_eq!(response_lines(&perf), expected);
+}
+
+#[tokio::test]
+async fn perf_line_limit_holds_within_one_benchmark() {
+    let server = TestServer::new().await;
+    let (user, project_slug, mut grid) = grid_project(&server, "variants", 1, 1, 1, 1).await;
+    // The empty parameter set, plus `299` more.
+    for size in 0..299 {
+        grid.add_variant(&server, 0, &format!(r#"{{"size_mb": {size}}}"#));
     }
 
-    let url = build_perf_url(
-        project.slug.as_ref(),
-        &[data.branch_uuid],
-        &[data.testbed_uuid],
-        &[data.benchmark_uuid],
-        &measure_uuids,
-        "",
-    );
-    let resp = server
-        .client
-        .get(server.api_url(&url))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    let mut expected = grid.expected_lines();
+    assert_eq!(expected.len(), 300);
+    expected.truncate(256);
+    assert_eq!(perf.results.len(), 256);
+    assert_eq!(response_lines(&perf), expected);
+}
 
-    assert_eq!(resp.status(), StatusCode::OK);
-    let perf: JsonPerf = resp.json().await.expect("parse response");
-    // Should be truncated to 255
-    assert_eq!(perf.results.len(), 255);
+#[tokio::test]
+async fn perf_line_limit_clips_a_fan_out() {
+    let server = TestServer::new().await;
+    let (user, project_slug, mut grid) = grid_project(&server, "clipped", 1, 1, 2, 1).await;
+    for size in 0..199 {
+        grid.add_variant(&server, 0, &format!(r#"{{"size_mb": {size}}}"#));
+    }
+    for size in 0..99 {
+        grid.add_variant(&server, 1, &format!(r#"{{"size_mb": {size}}}"#));
+    }
+
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    let mut expected = grid.expected_lines();
+    assert_eq!(expected.len(), 300);
+    expected.truncate(256);
+    assert_eq!(perf.results.len(), 256);
+    assert_eq!(response_lines(&perf), expected);
+
+    // The first benchmark spent `200`, so `56` of the second's `100` variants are
+    // plotted, and they are the first `56`.
+    let clipped = perf
+        .results
+        .iter()
+        .filter(|result| result.benchmark.uuid == grid.benchmarks[1].0)
+        .count();
+    assert_eq!(clipped, 56);
+}
+
+#[tokio::test]
+async fn perf_line_limit_refunds_empty_permutations() {
+    let server = TestServer::new().await;
+    let (user, project_slug, mut grid) = empty_grid_project(&server, "refund", 3, 1, 1, 1).await;
+    // Reported on the last branch only, so the two permutations before it hold
+    // nothing.
+    for size in 0..99 {
+        grid.add_variant(&server, 0, &format!(r#"{{"size_mb": {size}}}"#));
+    }
+    grid.report(&server, 2, 0);
+
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    let expected = grid.expected_lines();
+    assert_eq!(expected.len(), 100, "one line per variant, on one branch");
+    assert_eq!(perf.results.len(), 100);
+    assert_eq!(response_lines(&perf), expected);
+}
+
+#[tokio::test]
+async fn perf_line_limit_bounds_the_permutations_queried() {
+    let server = TestServer::new().await;
+    let (user, project_slug, mut grid) =
+        empty_grid_project(&server, "workbound", 5, 1, 1, 64).await;
+    // `192` permutations that hold nothing, leaving `64` of the `256` for the
+    // branches that do.
+    grid.report(&server, 3, 0);
+    grid.report(&server, 4, 0);
+
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    let mut expected = grid.expected_lines();
+    assert_eq!(expected.len(), 128, "the two branches that reported");
+    expected.truncate(64);
+    assert_eq!(perf.results.len(), 64);
+    assert_eq!(response_lines(&perf), expected);
+}
+
+#[tokio::test]
+async fn perf_truncates_the_benchmarks_list() {
+    let server = TestServer::new().await;
+    let (user, project_slug, grid) = grid_project(&server, "benchmarklist", 1, 1, 8, 1).await;
+
+    // `60` benchmarks that do not exist, then the first `4` that do, then the
+    // last `4` past the `64`th entry.
+    let mut query = grid.query();
+    let mut benchmarks = std::iter::repeat_with(BenchmarkUuid::new)
+        .take(60)
+        .collect::<Vec<_>>();
+    benchmarks.extend(grid.benchmarks.iter().map(|(uuid, _)| *uuid));
+    query.benchmarks = benchmarks;
+    assert_eq!(query.benchmarks.len(), 68);
+
+    let perf = get_perf(&server, &user.token, &perf_query_url(&project_slug, &query)).await;
+    let plotted = perf
+        .results
+        .iter()
+        .map(|result| result.benchmark.uuid)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        plotted,
+        grid.benchmarks
+            .iter()
+            .take(4)
+            .map(|(uuid, _)| *uuid)
+            .collect::<Vec<_>>(),
+        "the four benchmarks inside the first sixty four entries"
+    );
+}
+
+#[tokio::test]
+async fn perf_truncates_the_measures_list() {
+    let server = TestServer::new().await;
+    let (user, project_slug, grid) = grid_project(&server, "measurelist", 1, 1, 1, 70).await;
+
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    let mut expected = grid.expected_lines();
+    assert_eq!(expected.len(), 70);
+    expected.truncate(64);
+    assert_eq!(response_lines(&perf), expected);
 }
 
 // =============================================================================
@@ -3901,25 +3958,6 @@ fn grid_value(
 }
 
 impl PerfGrid {
-    /// Build the full grid: every branch reports on every testbed, for every
-    /// benchmark and every measure.
-    fn build(
-        server: &TestServer,
-        project_id: i32,
-        branches: usize,
-        testbeds: usize,
-        benchmarks: usize,
-        measures: usize,
-    ) -> Self {
-        let mut grid = Self::empty(server, project_id, branches, testbeds, benchmarks, measures);
-        for branch in 0..branches {
-            for testbed in 0..testbeds {
-                grid.report(server, branch, testbed);
-            }
-        }
-        grid
-    }
-
     /// Build the dimensions of the grid without any report at all.
     fn empty(
         server: &TestServer,
@@ -4423,8 +4461,8 @@ fn create_check(
     (threshold_uuid, boundary_id)
 }
 
-/// Set up a project with a grid over it.
-async fn grid_project(
+/// Set up a project with the dimensions of a grid and no report at all.
+async fn empty_grid_project(
     server: &TestServer,
     label: &str,
     branches: usize,
@@ -4443,7 +4481,26 @@ async fn grid_project(
         .await;
     let project_slug: String = AsRef::<str>::as_ref(&project.slug).to_owned();
     let project_id = get_project_id(server, &project_slug);
-    let grid = PerfGrid::build(server, project_id, branches, testbeds, benchmarks, measures);
+    let grid = PerfGrid::empty(server, project_id, branches, testbeds, benchmarks, measures);
+    (user, project_slug, grid)
+}
+
+/// Set up a project with a grid over it, every pair reported.
+async fn grid_project(
+    server: &TestServer,
+    label: &str,
+    branches: usize,
+    testbeds: usize,
+    benchmarks: usize,
+    measures: usize,
+) -> (TestUser, String, PerfGrid) {
+    let (user, project_slug, mut grid) =
+        empty_grid_project(server, label, branches, testbeds, benchmarks, measures).await;
+    for branch in 0..branches {
+        for testbed in 0..testbeds {
+            grid.report(server, branch, testbed);
+        }
+    }
     (user, project_slug, grid)
 }
 
@@ -4470,19 +4527,10 @@ async fn perf_every_line_carries_its_own_dimensions() {
 #[tokio::test]
 async fn perf_permutation_without_metrics_returns_no_line() {
     let server = TestServer::new().await;
-    let user = server
-        .signup("Test User", "perfgridempty@example.com")
-        .await;
-    let org = server.create_org(&user, "Perf Grid Empty Org").await;
-    let project = server
-        .create_project(&user, &org, "Perf Grid Empty Project")
-        .await;
-    let project_slug: String = AsRef::<str>::as_ref(&project.slug).to_owned();
-    let project_id = get_project_id(&server, &project_slug);
+    let (user, project_slug, mut grid) = empty_grid_project(&server, "empty", 2, 2, 2, 1).await;
 
     // Two branches and two testbeds, but only one pair ever reported, and that
     // report holds only the first benchmark.
-    let mut grid = PerfGrid::empty(&server, project_id, 2, 2, 2, 1);
     grid.report_some(&server, 0, 0, &[0]);
     // The second benchmark has variants of its own and no report of any of them.
     grid.add_variant(&server, 1, r#"{"size_mb": 16}"#);

@@ -57,7 +57,13 @@ use serde::Deserialize;
 
 pub mod img;
 
-const MAX_PERMUTATIONS: usize = 255;
+/// A permutation is one (branch, testbed, benchmark, measure), and each one is a
+/// query of its own, so this bounds the work a request can ask for.
+const MAX_PERMUTATIONS: usize = 256;
+
+/// A line is one variant of one benchmark, on one branch, one testbed, and one
+/// measure. Only a line that comes back spends one of these.
+const MAX_LINES: usize = 256;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPerfParams {
@@ -82,10 +88,13 @@ pub async fn proj_perf_options(
 ///
 /// Query the performance metrics for a project.
 /// The query results are every permutation of each branch, testbed, benchmark, and measure.
-/// There is a limit of 255 permutations for a single request.
-/// Therefore, only the first 255 permutations are returned.
-/// Each permutation returns one result per variant of its benchmark,
+/// Each permutation returns one line per variant of its benchmark,
 /// narrowed by the `parameters` filter when one is given.
+/// Only the first 64 entries of each dimension list are queried,
+/// the `parameters` filter included.
+/// There is a limit of 256 permutations and 256 lines for a single request.
+/// A permutation with nothing to plot returns no line,
+/// but it still counts against the permutation limit.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project,
 /// or provide a valid project key for the project.
@@ -205,9 +214,19 @@ struct BenchmarkVariants {
 }
 
 impl BenchmarkVariants {
-    fn parameter_ids(&self) -> Option<Vec<ParameterId>> {
-        self.filtered
-            .then(|| self.variants.keys().copied().collect())
+    /// The variants to query, clipped to what is left of the line budget. `None`
+    /// leaves the query without a parameter set filter at all.
+    fn parameter_ids(&self, lines_remaining: usize) -> Option<Vec<ParameterId>> {
+        if !self.filtered && lines_remaining >= self.variants.len() {
+            return None;
+        }
+        Some(
+            self.variants
+                .keys()
+                .take(lines_remaining)
+                .copied()
+                .collect(),
+        )
     }
 }
 
@@ -429,12 +448,13 @@ async fn perf_results(
     times: Times,
 ) -> Result<Vec<JsonPerfLine>, HttpError> {
     let permutations = branches.len() * testbeds.len() * benchmarks.len() * measures.len();
-    let gt_max_permutations = permutations > MAX_PERMUTATIONS;
-    let mut results = Vec::with_capacity(permutations.min(MAX_PERMUTATIONS));
+    let mut results = Vec::with_capacity(permutations.min(MAX_LINES));
+    let mut permutations_remaining = MAX_PERMUTATIONS;
+    let mut lines_remaining = MAX_LINES;
     let mut variants_cache: HashMap<BenchmarkUuid, Option<BenchmarkVariants>> = HashMap::new();
     let mut dimensions_cache = DimensionCache::default();
     // It is okay to use `zip` because `JsonPerfQuery` guarantees that the lengths are the same.
-    for (branch_index, (branch_uuid, head_uuid)) in branches.iter().zip(heads.iter()).enumerate() {
+    for (branch_uuid, head_uuid) in branches.iter().zip(heads.iter()) {
         for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
             #[cfg(feature = "plus")]
             let QueriedSpec::Spec(spec_id) = queried_spec(
@@ -447,7 +467,7 @@ async fn perf_results(
             #[cfg(not(feature = "plus"))]
             let spec_id: Option<SpecId> = None;
 
-            for (benchmark_index, benchmark_uuid) in benchmarks.iter().enumerate() {
+            for benchmark_uuid in benchmarks {
                 let Some(variants) = queried_variants(
                     actor_conn!(context, api_actor),
                     log,
@@ -459,14 +479,8 @@ async fn perf_results(
                     continue;
                 };
 
-                for (measure_index, measure_uuid) in measures.iter().enumerate() {
-                    if gt_max_permutations
-                        && (branch_index + 1)
-                            * (testbed_index + 1)
-                            * (benchmark_index + 1)
-                            * (measure_index + 1)
-                            > MAX_PERMUTATIONS
-                    {
+                for measure_uuid in measures {
+                    if permutations_remaining == 0 || lines_remaining == 0 {
                         return Ok(results);
                     }
 
@@ -476,6 +490,7 @@ async fn perf_results(
                         testbed_uuid: *testbed_uuid,
                         spec_id,
                         benchmark_uuid: *benchmark_uuid,
+                        parameter_ids: variants.parameter_ids(lines_remaining),
                         measure_uuid: *measure_uuid,
                     };
                     let lines = actor_conn!(context, api_actor, |conn| perf_permutation(
@@ -487,6 +502,8 @@ async fn perf_results(
                         permutation,
                         times,
                     ))?;
+                    permutations_remaining -= 1;
+                    lines_remaining = lines_remaining.saturating_sub(lines.len());
                     results.extend(lines);
                 }
             }
@@ -495,13 +512,14 @@ async fn perf_results(
     Ok(results)
 }
 
-#[derive(Clone, Copy)]
 struct Permutation {
     branch_uuid: BranchUuid,
     head_uuid: Option<HeadUuid>,
     testbed_uuid: TestbedUuid,
     spec_id: Option<SpecId>,
     benchmark_uuid: BenchmarkUuid,
+    /// `None` queries every variant.
+    parameter_ids: Option<Vec<ParameterId>>,
     measure_uuid: MeasureUuid,
 }
 
@@ -522,6 +540,7 @@ fn perf_permutation(
         testbed_uuid,
         spec_id,
         benchmark_uuid,
+        parameter_ids,
         measure_uuid,
     } = permutation;
 
@@ -532,7 +551,7 @@ fn perf_permutation(
         testbed_uuid,
         spec_id,
         benchmark_uuid,
-        variants.parameter_ids(),
+        parameter_ids,
         measure_uuid,
         times,
     )

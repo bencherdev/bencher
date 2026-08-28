@@ -6448,7 +6448,7 @@
           "perf"
         ],
         "summary": "Query project performance metrics",
-        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. Each permutation returns one result per variant of its benchmark, narrowed by the `parameters` filter when one is given. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
+        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. Each permutation returns one line per variant of its benchmark, narrowed by the `parameters` filter when one is given. Only the first 64 entries of each dimension list are queried, the `parameters` filter included. There is a limit of 256 permutations and 256 lines for a single request. A permutation with nothing to plot returns no line, but it still counts against the permutation limit. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_perf_get",
         "parameters": [
           {
@@ -6463,7 +6463,7 @@
           {
             "in": "query",
             "name": "benchmarks",
-            "description": "A comma separated list of benchmark UUIDs to query.",
+            "description": "A comma separated list of benchmark UUIDs to query. Only the first 64 benchmarks are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6472,7 +6472,7 @@
           {
             "in": "query",
             "name": "branches",
-            "description": "A comma separated list of branch UUIDs to query.",
+            "description": "A comma separated list of branch UUIDs to query. Only the first 64 branches are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6498,7 +6498,7 @@
           {
             "in": "query",
             "name": "measures",
-            "description": "A comma separated list of measure UUIDs to query.",
+            "description": "A comma separated list of measure UUIDs to query. Only the first 64 measures are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6507,7 +6507,7 @@
           {
             "in": "query",
             "name": "parameters",
-            "description": "An optional comma separated list of URL encoded parameter sets to filter on. A variant is queried when at least one of them is a subset of its parameter set: every key the filter names, with the same value. Leaving this off queries every variant.",
+            "description": "An optional comma separated list of URL encoded parameter sets to filter on. A variant is queried when at least one of them is a subset of its parameter set: every key the filter names, with the same value. Leaving this off queries every variant. Only the first 64 parameter sets are queried.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -6533,7 +6533,7 @@
           {
             "in": "query",
             "name": "testbeds",
-            "description": "A comma separated list of testbed UUIDs to query.",
+            "description": "A comma separated list of testbed UUIDs to query. Only the first 64 testbeds are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6619,7 +6619,7 @@
           {
             "in": "query",
             "name": "benchmarks",
-            "description": "A comma separated list of benchmark UUIDs to query.",
+            "description": "A comma separated list of benchmark UUIDs to query. Only the first 64 benchmarks are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6628,7 +6628,7 @@
           {
             "in": "query",
             "name": "branches",
-            "description": "A comma separated list of branch UUIDs to query.",
+            "description": "A comma separated list of branch UUIDs to query. Only the first 64 branches are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6654,7 +6654,7 @@
           {
             "in": "query",
             "name": "measures",
-            "description": "A comma separated list of measure UUIDs to query.",
+            "description": "A comma separated list of measure UUIDs to query. Only the first 64 measures are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6680,7 +6680,7 @@
           {
             "in": "query",
             "name": "testbeds",
-            "description": "A comma separated list of testbed UUIDs to query.",
+            "description": "A comma separated list of testbed UUIDs to query. Only the first 64 testbeds are queried.",
             "required": true,
             "schema": {
               "type": "string"
