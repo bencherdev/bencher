@@ -2,6 +2,7 @@
 #![expect(
     unused_crate_dependencies,
     clippy::expect_used,
+    clippy::indexing_slicing,
     clippy::tests_outside_test_module,
     clippy::similar_names,
     clippy::too_many_lines,
@@ -9,8 +10,10 @@
 )]
 //! Integration tests for the `/v0/projects/{project}/perf` endpoint.
 
+use std::collections::BTreeMap;
+
 use bencher_api_tests::{
-    TestServer,
+    TestServer, TestUser,
     helpers::{base_timestamp, create_empty_parameter, create_metric, get_project_id},
 };
 use bencher_json::{
@@ -3855,4 +3858,824 @@ async fn perf_point_without_a_value_name_keeps_its_line() {
         .expect("the p99 scalar");
     assert_eq!(p99.value, 99.5);
     assert!(p99.boundaries.is_none());
+}
+
+// =============================================================================
+// Section: The permutation grid
+// =============================================================================
+
+/// A grid of perf dimensions, with a report for every (branch, testbed) pair and
+/// a metric for every cell of it.
+///
+/// One `create_perf_data` fixture is one permutation, so it can only pin the first
+/// line of a response. A grid pins every line.
+struct PerfGrid {
+    project_id: i32,
+    /// The branches, and the head each one is currently on.
+    branches: Vec<(BranchUuid, i32)>,
+    heads: Vec<(HeadUuid, i32)>,
+    testbeds: Vec<(TestbedUuid, i32)>,
+    benchmarks: Vec<(BenchmarkUuid, i32)>,
+    measures: Vec<(MeasureUuid, i32)>,
+    /// Per benchmark, its variants in creation order, the empty set first.
+    variants: Vec<Vec<(i32, String)>>,
+    /// The report of one (branch, testbed) pair, for the pairs that reported.
+    reports: BTreeMap<(usize, usize), i32>,
+    /// The report benchmark of one (branch, testbed, benchmark, variant) cell.
+    report_benchmarks: BTreeMap<(usize, usize, usize, usize), i32>,
+    /// The `value` row of one (branch, testbed, benchmark, variant, measure) cell.
+    metrics: BTreeMap<(usize, usize, usize, usize, usize), MetricUuid>,
+}
+
+/// The value of one cell, distinct for every cell of the grid so that a line's
+/// points name the cell they were read from.
+fn grid_value(
+    branch: usize,
+    testbed: usize,
+    benchmark: usize,
+    variant: usize,
+    measure: usize,
+) -> f64 {
+    let cell = 10_000 * branch + 1_000 * testbed + 100 * benchmark + 10 * variant + measure;
+    f64::from(u16::try_from(cell).expect("the grid cell fits"))
+}
+
+impl PerfGrid {
+    /// Build the full grid: every branch reports on every testbed, for every
+    /// benchmark and every measure.
+    fn build(
+        server: &TestServer,
+        project_id: i32,
+        branches: usize,
+        testbeds: usize,
+        benchmarks: usize,
+        measures: usize,
+    ) -> Self {
+        let mut grid = Self::empty(server, project_id, branches, testbeds, benchmarks, measures);
+        for branch in 0..branches {
+            for testbed in 0..testbeds {
+                grid.report(server, branch, testbed);
+            }
+        }
+        grid
+    }
+
+    /// Build the dimensions of the grid without any report at all.
+    fn empty(
+        server: &TestServer,
+        project_id: i32,
+        branches: usize,
+        testbeds: usize,
+        benchmarks: usize,
+        measures: usize,
+    ) -> Self {
+        let mut grid = Self {
+            project_id,
+            branches: Vec::new(),
+            heads: Vec::new(),
+            testbeds: Vec::new(),
+            benchmarks: Vec::new(),
+            measures: Vec::new(),
+            variants: Vec::new(),
+            reports: BTreeMap::new(),
+            report_benchmarks: BTreeMap::new(),
+            metrics: BTreeMap::new(),
+        };
+        for branch in 0..branches {
+            let (branch_uuid, branch_id, head_uuid, head_id) =
+                insert_branch(server, project_id, branch);
+            grid.branches.push((branch_uuid, branch_id));
+            grid.heads.push((head_uuid, head_id));
+        }
+        for testbed in 0..testbeds {
+            grid.testbeds
+                .push(insert_testbed(server, project_id, testbed));
+        }
+        for benchmark in 0..benchmarks {
+            let (benchmark_uuid, benchmark_id, parameter_id) =
+                insert_benchmark(server, project_id, benchmark);
+            grid.benchmarks.push((benchmark_uuid, benchmark_id));
+            grid.variants.push(vec![(parameter_id, "{}".to_owned())]);
+        }
+        for measure in 0..measures {
+            grid.measures
+                .push(insert_measure(server, project_id, measure));
+        }
+        grid
+    }
+
+    /// Report one (branch, testbed) pair over every cell of the grid.
+    fn report(&mut self, server: &TestServer, branch: usize, testbed: usize) {
+        let benchmarks = (0..self.benchmarks.len()).collect::<Vec<_>>();
+        self.report_some(server, branch, testbed, &benchmarks);
+    }
+
+    /// Report one (branch, testbed) pair for the named benchmarks only, so the
+    /// benchmarks left out have dimensions and no rows.
+    fn report_some(
+        &mut self,
+        server: &TestServer,
+        branch: usize,
+        testbed: usize,
+        benchmarks: &[usize],
+    ) {
+        let (_, head_id) = self.heads[branch];
+        let (_, testbed_id) = self.testbeds[testbed];
+        let version_id = insert_version(server, self.project_id, head_id);
+        let report_id = insert_report(server, self.project_id, head_id, version_id, testbed_id);
+        self.reports.insert((branch, testbed), report_id);
+        for benchmark in benchmarks.iter().copied() {
+            for variant in 0..self.variants[benchmark].len() {
+                self.report_variant(server, branch, testbed, benchmark, variant);
+            }
+        }
+    }
+
+    /// Add one variant to a benchmark, wherever that benchmark already reports.
+    fn add_variant(&mut self, server: &TestServer, benchmark: usize, set: &str) -> ParameterUuid {
+        let (_, benchmark_id) = self.benchmarks[benchmark];
+        let parsed: ParameterSet = set.parse().expect("parse parameter set");
+        let (parameter_uuid, parameter_id) = create_parameter(server, benchmark_id, &parsed);
+        self.variants[benchmark].push((parameter_id, parsed.canonical()));
+        let variant = self.variants[benchmark].len() - 1;
+        let reported = self
+            .reports
+            .keys()
+            .copied()
+            .filter(|(branch, testbed)| {
+                self.report_benchmarks
+                    .contains_key(&(*branch, *testbed, benchmark, 0))
+            })
+            .collect::<Vec<_>>();
+        for (branch, testbed) in reported {
+            self.report_variant(server, branch, testbed, benchmark, variant);
+        }
+        parameter_uuid
+    }
+
+    /// Report one cell: its report benchmark, and one metric per measure.
+    fn report_variant(
+        &mut self,
+        server: &TestServer,
+        branch: usize,
+        testbed: usize,
+        benchmark: usize,
+        variant: usize,
+    ) {
+        let Some(report_id) = self.reports.get(&(branch, testbed)).copied() else {
+            return;
+        };
+        let (_, benchmark_id) = self.benchmarks[benchmark];
+        let (parameter_id, _) = self.variants[benchmark][variant];
+        let report_benchmark_id =
+            insert_report_benchmark(server, report_id, benchmark_id, parameter_id);
+        self.report_benchmarks
+            .insert((branch, testbed, benchmark, variant), report_benchmark_id);
+        let mut conn = server.db_conn();
+        for (measure, (_, measure_id)) in self.measures.iter().enumerate() {
+            let metric_uuid = MetricUuid::new();
+            create_metric(
+                &mut conn,
+                &metric_uuid,
+                report_benchmark_id,
+                *measure_id,
+                grid_value(branch, testbed, benchmark, variant, measure),
+                None,
+                None,
+            );
+            self.metrics
+                .insert((branch, testbed, benchmark, variant, measure), metric_uuid);
+        }
+    }
+
+    /// The query over every dimension of the grid.
+    fn query(&self) -> JsonPerfQuery {
+        JsonPerfQuery {
+            branches: self.branches.iter().map(|(uuid, _)| *uuid).collect(),
+            heads: Vec::new(),
+            testbeds: self.testbeds.iter().map(|(uuid, _)| *uuid).collect(),
+            specs: Vec::new(),
+            benchmarks: self.benchmarks.iter().map(|(uuid, _)| *uuid).collect(),
+            parameters: Vec::new(),
+            measures: self.measures.iter().map(|(uuid, _)| *uuid).collect(),
+            start_time: None,
+            end_time: None,
+        }
+    }
+
+    /// Every line the grid's own query returns, in the order the endpoint walks
+    /// its dimensions: branch, testbed, benchmark, variant, measure.
+    fn expected_lines(&self) -> Vec<GridLine> {
+        let mut lines = Vec::new();
+        for branch in 0..self.branches.len() {
+            for testbed in 0..self.testbeds.len() {
+                for benchmark in 0..self.benchmarks.len() {
+                    for measure in 0..self.measures.len() {
+                        for variant in 0..self.variants[benchmark].len() {
+                            if !self
+                                .metrics
+                                .contains_key(&(branch, testbed, benchmark, variant, measure))
+                            {
+                                continue;
+                            }
+                            lines.push(GridLine {
+                                branch: self.branches[branch].0,
+                                testbed: self.testbeds[testbed].0,
+                                benchmark: self.benchmarks[benchmark].0,
+                                parameter: self.variants[benchmark][variant].1.clone(),
+                                measure: self.measures[measure].0,
+                                value: grid_value(branch, testbed, benchmark, variant, measure),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        lines
+    }
+}
+
+/// One line of a perf response, flattened to what a grid can predict.
+#[derive(Debug, PartialEq)]
+struct GridLine {
+    branch: BranchUuid,
+    testbed: TestbedUuid,
+    benchmark: BenchmarkUuid,
+    parameter: String,
+    measure: MeasureUuid,
+    value: f64,
+}
+
+/// The lines of a response, flattened the same way. Every line of a grid holds
+/// exactly one point, so its value names the cell the line was read from.
+fn response_lines(perf: &JsonPerf) -> Vec<GridLine> {
+    perf.results
+        .iter()
+        .map(|result| {
+            assert_eq!(result.metrics.len(), 1, "one report, so one point per line");
+            GridLine {
+                branch: result.branch.uuid,
+                testbed: result.testbed.uuid,
+                benchmark: result.benchmark.uuid,
+                parameter: result.parameter.set.canonical(),
+                measure: result.measure.uuid,
+                value: result.metrics[0]
+                    .metrics
+                    .get(&MetricName::value())
+                    .expect("the value metric")
+                    .value
+                    .into_inner(),
+            }
+        })
+        .collect()
+}
+
+/// Insert a branch, its head, and point the branch at that head.
+fn insert_branch(
+    server: &TestServer,
+    project_id: i32,
+    index: usize,
+) -> (BranchUuid, i32, HeadUuid, i32) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let branch_uuid = BranchUuid::new();
+    diesel::insert_into(schema::branch::table)
+        .values((
+            schema::branch::uuid.eq(&branch_uuid),
+            schema::branch::project_id.eq(project_id),
+            schema::branch::name.eq(&format!("grid-branch-{index}-{branch_uuid}")),
+            schema::branch::slug.eq(&format!("grid-branch-{index}-{branch_uuid}")),
+            schema::branch::created.eq(&now),
+            schema::branch::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert branch");
+    let branch_id: i32 = schema::branch::table
+        .filter(schema::branch::uuid.eq(&branch_uuid))
+        .select(schema::branch::id)
+        .first(&mut conn)
+        .expect("get branch id");
+
+    let head_uuid = HeadUuid::new();
+    diesel::insert_into(schema::head::table)
+        .values((
+            schema::head::uuid.eq(&head_uuid),
+            schema::head::branch_id.eq(branch_id),
+            schema::head::created.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert head");
+    let head_id: i32 = schema::head::table
+        .filter(schema::head::uuid.eq(&head_uuid))
+        .select(schema::head::id)
+        .first(&mut conn)
+        .expect("get head id");
+
+    diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch_id)))
+        .set(schema::branch::head_id.eq(head_id))
+        .execute(&mut conn)
+        .expect("update branch head_id");
+
+    (branch_uuid, branch_id, head_uuid, head_id)
+}
+
+fn insert_testbed(server: &TestServer, project_id: i32, index: usize) -> (TestbedUuid, i32) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let testbed_uuid = TestbedUuid::new();
+    diesel::insert_into(schema::testbed::table)
+        .values((
+            schema::testbed::uuid.eq(&testbed_uuid),
+            schema::testbed::project_id.eq(project_id),
+            schema::testbed::name.eq(&format!("grid-testbed-{index}-{testbed_uuid}")),
+            schema::testbed::slug.eq(&format!("grid-testbed-{index}-{testbed_uuid}")),
+            schema::testbed::created.eq(&now),
+            schema::testbed::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert testbed");
+    let testbed_id: i32 = schema::testbed::table
+        .filter(schema::testbed::uuid.eq(&testbed_uuid))
+        .select(schema::testbed::id)
+        .first(&mut conn)
+        .expect("get testbed id");
+    (testbed_uuid, testbed_id)
+}
+
+fn insert_measure(server: &TestServer, project_id: i32, index: usize) -> (MeasureUuid, i32) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let measure_uuid = MeasureUuid::new();
+    diesel::insert_into(schema::measure::table)
+        .values((
+            schema::measure::uuid.eq(&measure_uuid),
+            schema::measure::project_id.eq(project_id),
+            schema::measure::name.eq(&format!("grid-measure-{index}-{measure_uuid}")),
+            schema::measure::slug.eq(&format!("grid-measure-{index}-{measure_uuid}")),
+            schema::measure::units.eq("ns"),
+            schema::measure::created.eq(&now),
+            schema::measure::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert measure");
+    let measure_id: i32 = schema::measure::table
+        .filter(schema::measure::uuid.eq(&measure_uuid))
+        .select(schema::measure::id)
+        .first(&mut conn)
+        .expect("get measure id");
+    (measure_uuid, measure_id)
+}
+
+/// Insert a benchmark and the empty parameter set it is born with.
+fn insert_benchmark(
+    server: &TestServer,
+    project_id: i32,
+    index: usize,
+) -> (BenchmarkUuid, i32, i32) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let benchmark_uuid = BenchmarkUuid::new();
+    diesel::insert_into(schema::benchmark::table)
+        .values((
+            schema::benchmark::uuid.eq(&benchmark_uuid),
+            schema::benchmark::project_id.eq(project_id),
+            schema::benchmark::name.eq(&format!("grid-benchmark-{index}-{benchmark_uuid}")),
+            schema::benchmark::slug.eq(&format!("grid-benchmark-{index}-{benchmark_uuid}")),
+            schema::benchmark::created.eq(&now),
+            schema::benchmark::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert benchmark");
+    let benchmark_id: i32 = schema::benchmark::table
+        .filter(schema::benchmark::uuid.eq(&benchmark_uuid))
+        .select(schema::benchmark::id)
+        .first(&mut conn)
+        .expect("get benchmark id");
+    let parameter_id = create_empty_parameter(&mut conn, benchmark_id);
+    (benchmark_uuid, benchmark_id, parameter_id)
+}
+
+fn insert_version(server: &TestServer, project_id: i32, head_id: i32) -> i32 {
+    let mut conn = server.db_conn();
+    let version_uuid = VersionUuid::new();
+    let number: i32 = schema::head_version::table
+        .filter(schema::head_version::head_id.eq(head_id))
+        .count()
+        .get_result::<i64>(&mut conn)
+        .expect("count head versions")
+        .try_into()
+        .expect("version number fits");
+    diesel::insert_into(schema::version::table)
+        .values((
+            schema::version::uuid.eq(&version_uuid),
+            schema::version::project_id.eq(project_id),
+            schema::version::number.eq(number + 1),
+        ))
+        .execute(&mut conn)
+        .expect("insert version");
+    let version_id: i32 = schema::version::table
+        .filter(schema::version::uuid.eq(&version_uuid))
+        .select(schema::version::id)
+        .first(&mut conn)
+        .expect("get version id");
+    diesel::insert_into(schema::head_version::table)
+        .values((
+            schema::head_version::head_id.eq(head_id),
+            schema::head_version::version_id.eq(version_id),
+        ))
+        .execute(&mut conn)
+        .expect("insert head_version");
+    version_id
+}
+
+fn insert_report(
+    server: &TestServer,
+    project_id: i32,
+    head_id: i32,
+    version_id: i32,
+    testbed_id: i32,
+) -> i32 {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    let report_uuid = ReportUuid::new();
+    diesel::insert_into(schema::report::table)
+        .values((
+            schema::report::uuid.eq(&report_uuid),
+            schema::report::project_id.eq(project_id),
+            schema::report::head_id.eq(head_id),
+            schema::report::version_id.eq(version_id),
+            schema::report::testbed_id.eq(testbed_id),
+            schema::report::adapter.eq(0),
+            schema::report::start_time.eq(&now),
+            schema::report::end_time.eq(&now),
+            schema::report::created.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert report");
+    schema::report::table
+        .filter(schema::report::uuid.eq(&report_uuid))
+        .select(schema::report::id)
+        .first(&mut conn)
+        .expect("get report id")
+}
+
+fn insert_report_benchmark(
+    server: &TestServer,
+    report_id: i32,
+    benchmark_id: i32,
+    parameter_id: i32,
+) -> i32 {
+    let mut conn = server.db_conn();
+    let report_benchmark_uuid = ReportBenchmarkUuid::new();
+    diesel::insert_into(schema::report_benchmark::table)
+        .values((
+            schema::report_benchmark::uuid.eq(&report_benchmark_uuid),
+            schema::report_benchmark::report_id.eq(report_id),
+            schema::report_benchmark::iteration.eq(0),
+            schema::report_benchmark::benchmark_id.eq(benchmark_id),
+            schema::report_benchmark::parameter_id.eq(parameter_id),
+        ))
+        .execute(&mut conn)
+        .expect("insert report_benchmark");
+    schema::report_benchmark::table
+        .filter(schema::report_benchmark::uuid.eq(&report_benchmark_uuid))
+        .select(schema::report_benchmark::id)
+        .first(&mut conn)
+        .expect("get report_benchmark id")
+}
+
+/// Create a threshold, its model, and a boundary on one metric, and return the
+/// threshold's UUID with the boundary's row.
+fn create_check(
+    server: &TestServer,
+    project_id: i32,
+    branch_id: i32,
+    testbed_id: i32,
+    measure_id: i32,
+    metric_uuid: MetricUuid,
+) -> (bencher_json::ThresholdUuid, i32) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+
+    let threshold_uuid = bencher_json::ThresholdUuid::new();
+    diesel::insert_into(schema::threshold::table)
+        .values((
+            schema::threshold::uuid.eq(&threshold_uuid),
+            schema::threshold::project_id.eq(project_id),
+            schema::threshold::branch_id.eq(branch_id),
+            schema::threshold::testbed_id.eq(testbed_id),
+            schema::threshold::measure_id.eq(measure_id),
+            schema::threshold::created.eq(&now),
+            schema::threshold::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert threshold");
+    let threshold_id: i32 = schema::threshold::table
+        .filter(schema::threshold::uuid.eq(&threshold_uuid))
+        .select(schema::threshold::id)
+        .first(&mut conn)
+        .expect("get threshold id");
+
+    let model_uuid = bencher_json::ModelUuid::new();
+    diesel::insert_into(schema::model::table)
+        .values((
+            schema::model::uuid.eq(&model_uuid),
+            schema::model::threshold_id.eq(threshold_id),
+            schema::model::test.eq(0),
+            schema::model::created.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("insert model");
+    let model_id: i32 = schema::model::table
+        .filter(schema::model::uuid.eq(&model_uuid))
+        .select(schema::model::id)
+        .first(&mut conn)
+        .expect("get model id");
+    diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
+        .set(schema::threshold::model_id.eq(model_id))
+        .execute(&mut conn)
+        .expect("update threshold model_id");
+
+    let metric_id: i32 = schema::metric::table
+        .filter(schema::metric::uuid.eq(&metric_uuid))
+        .select(schema::metric::id)
+        .first(&mut conn)
+        .expect("get metric id");
+    let boundary_uuid = BoundaryUuid::new();
+    diesel::insert_into(schema::boundary::table)
+        .values((
+            schema::boundary::uuid.eq(&boundary_uuid),
+            schema::boundary::metric_id.eq(metric_id),
+            schema::boundary::threshold_id.eq(threshold_id),
+            schema::boundary::model_id.eq(model_id),
+            schema::boundary::baseline.eq(Some(100.0)),
+            schema::boundary::lower_limit.eq(Some(50.0)),
+            schema::boundary::upper_limit.eq(Some(150.0)),
+        ))
+        .execute(&mut conn)
+        .expect("insert boundary");
+    let boundary_id: i32 = schema::boundary::table
+        .filter(schema::boundary::uuid.eq(&boundary_uuid))
+        .select(schema::boundary::id)
+        .first(&mut conn)
+        .expect("get boundary id");
+
+    (threshold_uuid, boundary_id)
+}
+
+/// Set up a project with a grid over it.
+async fn grid_project(
+    server: &TestServer,
+    label: &str,
+    branches: usize,
+    testbeds: usize,
+    benchmarks: usize,
+    measures: usize,
+) -> (TestUser, String, PerfGrid) {
+    let user = server
+        .signup("Test User", &format!("perfgrid{label}@example.com"))
+        .await;
+    let org = server
+        .create_org(&user, &format!("Perf Grid {label} Org"))
+        .await;
+    let project = server
+        .create_project(&user, &org, &format!("Perf Grid {label} Project"))
+        .await;
+    let project_slug: String = AsRef::<str>::as_ref(&project.slug).to_owned();
+    let project_id = get_project_id(server, &project_slug);
+    let grid = PerfGrid::build(server, project_id, branches, testbeds, benchmarks, measures);
+    (user, project_slug, grid)
+}
+
+#[tokio::test]
+async fn perf_every_line_carries_its_own_dimensions() {
+    let server = TestServer::new().await;
+    let (user, project_slug, mut grid) = grid_project(&server, "dims", 2, 2, 2, 2).await;
+    // One benchmark fans out over two variants, so a permutation is not a line.
+    grid.add_variant(&server, 0, r#"{"size_mb": 16}"#);
+
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+
+    // `2` branches, `2` testbeds, `2` benchmarks, and `2` measures is `16`
+    // permutations, and the benchmark with `2` variants makes `24` lines.
+    assert_eq!(perf.results.len(), 24);
+    assert_eq!(response_lines(&perf), grid.expected_lines());
+}
+
+#[tokio::test]
+async fn perf_permutation_without_metrics_returns_no_line() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "perfgridempty@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf Grid Empty Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Grid Empty Project")
+        .await;
+    let project_slug: String = AsRef::<str>::as_ref(&project.slug).to_owned();
+    let project_id = get_project_id(&server, &project_slug);
+
+    // Two branches and two testbeds, but only one pair ever reported, and that
+    // report holds only the first benchmark.
+    let mut grid = PerfGrid::empty(&server, project_id, 2, 2, 2, 1);
+    grid.report_some(&server, 0, 0, &[0]);
+    // The second benchmark has variants of its own and no report of any of them.
+    grid.add_variant(&server, 1, r#"{"size_mb": 16}"#);
+    grid.add_variant(&server, 1, r#"{"size_mb": 32}"#);
+
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+
+    // Only the pair that reported, and only the benchmark it reported.
+    assert_eq!(response_lines(&perf), grid.expected_lines());
+    assert_eq!(perf.results.len(), 1);
+    assert_eq!(perf.results[0].branch.uuid, grid.branches[0].0);
+    assert_eq!(perf.results[0].testbed.uuid, grid.testbeds[0].0);
+    assert_eq!(perf.results[0].benchmark.uuid, grid.benchmarks[0].0);
+}
+
+#[tokio::test]
+async fn perf_unknown_dimension_uuids_skip_their_permutations() {
+    let server = TestServer::new().await;
+    let (user, project_slug, grid) = grid_project(&server, "unknown", 1, 1, 1, 1).await;
+
+    let mut query = grid.query();
+    query.branches.push(BranchUuid::new());
+    query.testbeds.push(TestbedUuid::new());
+    query.benchmarks.push(BenchmarkUuid::new());
+    query.measures.push(MeasureUuid::new());
+    let perf = get_perf(&server, &user.token, &perf_query_url(&project_slug, &query)).await;
+    assert_eq!(response_lines(&perf), grid.expected_lines());
+
+    // A head that names nothing skips its branch the same way.
+    let mut query = grid.query();
+    query.heads = vec![Some(HeadUuid::new())];
+    let perf = get_perf(&server, &user.token, &perf_query_url(&project_slug, &query)).await;
+    assert!(perf.results.is_empty());
+}
+
+#[tokio::test]
+async fn perf_checks_land_on_the_lines_they_checked() {
+    let server = TestServer::new().await;
+    let (user, project_slug, mut grid) = grid_project(&server, "checks", 2, 1, 1, 2).await;
+    grid.add_variant(&server, 0, r#"{"size_mb": 16}"#);
+
+    // One threshold, on the first branch and the first measure.
+    let checked = grid.metrics[&(0, 0, 0, 0, 0)];
+    let (threshold_uuid, boundary_id) = create_check(
+        &server,
+        grid.project_id,
+        grid.branches[0].1,
+        grid.testbeds[0].1,
+        grid.measures[0].1,
+        checked,
+    );
+    let alert_uuid = create_alert(&server, boundary_id);
+
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    assert_eq!(response_lines(&perf), grid.expected_lines());
+
+    let mut checked_lines = 0;
+    for result in &perf.results {
+        let point = &result.metrics[0];
+        let value = point
+            .metrics
+            .get(&MetricName::value())
+            .expect("the value metric");
+        let is_checked = result.branch.uuid == grid.branches[0].0
+            && result.measure.uuid == grid.measures[0].0
+            && result.parameter.set.canonical() == "{}";
+        if is_checked {
+            checked_lines += 1;
+            let boundaries = value.boundaries.as_ref().expect("the checked metric");
+            assert_eq!(boundaries.len(), 1);
+            assert_eq!(boundaries[0].threshold.uuid, threshold_uuid);
+            assert_eq!(boundaries[0].boundary.baseline, Some(100.0.into()));
+            assert_eq!(
+                boundaries[0].alert.as_ref().map(|alert| alert.uuid),
+                Some(alert_uuid)
+            );
+            // The deprecated singular fields say the same thing.
+            assert_eq!(
+                point.threshold.as_ref().map(|t| t.uuid),
+                Some(threshold_uuid)
+            );
+            assert_eq!(
+                point.boundary.and_then(|boundary| boundary.baseline),
+                Some(100.0.into())
+            );
+            assert_eq!(
+                point.alert.as_ref().map(|alert| alert.uuid),
+                Some(alert_uuid)
+            );
+        } else {
+            assert!(value.boundaries.is_none(), "nothing checked this metric");
+            assert!(point.threshold.is_none());
+            assert!(point.boundary.is_none());
+            assert!(point.alert.is_none());
+        }
+    }
+    assert_eq!(checked_lines, 1, "one line was checked");
+}
+
+#[tokio::test]
+async fn perf_v0_metric_triple_on_every_line() {
+    let server = TestServer::new().await;
+    let (user, project_slug, grid) = grid_project(&server, "triple", 2, 1, 1, 1).await;
+
+    // Give both lines the bounds the deprecated triple carries.
+    for branch in 0..2 {
+        let report_benchmark_id = grid.report_benchmarks[&(branch, 0, 0, 0)];
+        let value = grid_value(branch, 0, 0, 0, 0);
+        create_named_metric(
+            &server,
+            report_benchmark_id,
+            grid.measures[0].1,
+            MetricName::lower_value(),
+            value - 0.5,
+        );
+        create_named_metric(
+            &server,
+            report_benchmark_id,
+            grid.measures[0].1,
+            MetricName::upper_value(),
+            value + 0.25,
+        );
+    }
+
+    let url = perf_query_url(&project_slug, &grid.query());
+    let resp = server
+        .client
+        .get(server.api_url(&url))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = resp.text().await.expect("read response");
+
+    // The float bytes are compared, not parsed values, on every line.
+    for branch in 0..2 {
+        let value = grid_value(branch, 0, 0, 0, 0);
+        let metric_uuid = grid.metrics[&(branch, 0, 0, 0, 0)];
+        assert!(
+            body.contains(&format!(
+                r#""metric":{{"uuid":"{metric_uuid}","value":{value:?},"lower_value":{:?},"upper_value":{:?}}}"#,
+                value - 0.5,
+                value + 0.25
+            )),
+            "{body}"
+        );
+    }
+
+    let json: serde_json::Value = serde_json::from_str(&body).expect("parse response");
+    let results = json["results"].as_array().expect("results");
+    assert_eq!(results.len(), 2);
+    for (branch, result) in results.iter().enumerate() {
+        assert_eq!(
+            result["branch"]["uuid"],
+            grid.branches[branch].0.to_string()
+        );
+        let points = result["metrics"].as_array().expect("metrics");
+        assert_eq!(points.len(), 1);
+        let mut keys = points[0]
+            .as_object()
+            .expect("point")
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        keys.sort();
+        assert_eq!(
+            keys,
+            vec![
+                "alert".to_owned(),
+                "boundary".to_owned(),
+                "end_time".to_owned(),
+                "iteration".to_owned(),
+                "metric".to_owned(),
+                "metrics".to_owned(),
+                "report".to_owned(),
+                "start_time".to_owned(),
+                "threshold".to_owned(),
+                "version".to_owned(),
+            ],
+        );
+    }
 }
