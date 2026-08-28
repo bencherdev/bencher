@@ -428,7 +428,7 @@ pub struct JsonPerfMetrics {
     /// absent for anything an older client could produce.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metric: Option<JsonMetricTriple>,
-    /// Deprecated. The threshold that gated the `value` row, if any.
+    /// Deprecated. The threshold that checked the `value` row, if any.
     // The threshold model is necessary for each metric as it may change over time
     pub threshold: Option<JsonThresholdModel>,
     /// Deprecated. The boundary computed for the `value` row, if any.
@@ -437,14 +437,14 @@ pub struct JsonPerfMetrics {
     pub alert: Option<JsonPerfAlert>,
 }
 
-/// Exactly one `metric` row: one named scalar and every threshold that gated it.
+/// Exactly one `metric` row: one named scalar and every threshold that checked it.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonMetricEntry {
     pub value: OrderedFloat<f64>,
-    /// Every threshold that gated this named scalar, with the boundary it produced
-    /// and any alert that boundary raised. Absent when nothing gated it.
+    /// Every threshold that checked this named scalar, with the boundary it produced
+    /// and any alert that boundary raised. Absent when nothing checked it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub boundaries: Option<Vec<JsonPerfBoundary>>,
 }

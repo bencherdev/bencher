@@ -645,7 +645,7 @@ pub enum ReportMode {
 }
 
 /// One row of the results query: one named scalar of one measure at one variant,
-/// with the threshold and boundary that gated it, if any.
+/// with the threshold and boundary that checked it, if any.
 type ResultsQuery = (
     Iteration,
     QueryBenchmark,
@@ -749,7 +749,14 @@ fn into_report_results_json(
     let mut report_iteration: Vec<PendingResult> = Vec::new();
     let mut prev_iteration: Option<Iteration> = None;
 
-    for (iteration, query_benchmark, query_parameter, query_measure, query_metric, gate) in results
+    for (
+        iteration,
+        query_benchmark,
+        query_parameter,
+        query_measure,
+        query_metric,
+        report_boundary,
+    ) in results
     {
         // If onto a new iteration, then add the report iteration list to the report results list.
         if let Some(prev_iteration) = prev_iteration.take()
@@ -797,7 +804,7 @@ fn into_report_results_json(
             continue;
         };
 
-        // One named value repeats across rows only when several thresholds gated it.
+        // One named value repeats across rows only when several thresholds checked it.
         let QueryMetric {
             id: _,
             uuid,
@@ -823,7 +830,7 @@ fn into_report_results_json(
             continue;
         };
 
-        if let Some((query_threshold, query_model, query_boundary)) = gate {
+        if let Some((query_threshold, query_model, query_boundary)) = report_boundary {
             report_metric.boundaries.push(JsonReportBoundary {
                 threshold: query_threshold
                     .into_threshold_model_json_for_project(project, query_model),
@@ -894,7 +901,7 @@ impl PendingMeasure {
     /// Fill in the deprecated `metric`, `threshold`, and `boundary` fields.
     ///
     /// The metric triple is the `value` row and its `lower_value`/`upper_value`
-    /// siblings, and the threshold and boundary are the ones that gated the `value`
+    /// siblings, and the threshold and boundary are the ones that checked the `value`
     /// row.
     ///
     /// A measure that named no `value` at all has no triple to reconstruct, so all
@@ -915,11 +922,15 @@ impl PendingMeasure {
             lower_value: named(&MetricName::lower_value()).map(|metric| metric.value),
             upper_value: named(&MetricName::upper_value()).map(|metric| metric.value),
         });
-        let (threshold, boundary) = value
-            .and_then(|value| value.boundaries.first())
-            .map_or((None, None), |gate| {
-                (Some(gate.threshold.clone()), Some(gate.boundary))
-            });
+        let (threshold, boundary) = value.and_then(|value| value.boundaries.first()).map_or(
+            (None, None),
+            |report_boundary| {
+                (
+                    Some(report_boundary.threshold.clone()),
+                    Some(report_boundary.boundary),
+                )
+            },
+        );
 
         JsonReportMeasure {
             measure,
@@ -1963,7 +1974,7 @@ mod tests {
         assert_eq!(count, i32::MAX);
     }
 
-    /// Every named value carries the boundary that gated it, with that boundary's own
+    /// Every named value carries the boundary that checked it, with that boundary's own
     /// threshold and model, and a named value without a boundary carries nothing.
     ///
     /// The thresholds are both created before either model, so a threshold identifier
@@ -1971,7 +1982,7 @@ mod tests {
     /// returns the other row rather than no row at all.
     #[test]
     #[expect(clippy::too_many_lines, reason = "test data setup")]
-    fn report_results_gate_follows_the_boundary() {
+    fn report_results_check_follows_the_boundary() {
         let mut conn = setup_test_db();
         let fixture = create_report_fixture(&mut conn);
 
@@ -2024,7 +2035,9 @@ mod tests {
         );
 
         let mut add_result =
-            |benchmark_index: u8, measure_id: MeasureId, gate: Option<(ThresholdId, ModelId)>| {
+            |benchmark_index: u8,
+             measure_id: MeasureId,
+             threshold_model: Option<(ThresholdId, ModelId)>| {
                 let benchmark_id = create_benchmark(
                     &mut conn,
                     fixture.project_id,
@@ -2046,7 +2059,7 @@ mod tests {
                     measure_id,
                     1.0,
                 );
-                if let Some((threshold_id, model_id)) = gate {
+                if let Some((threshold_id, model_id)) = threshold_model {
                     create_boundary(
                         &mut conn,
                         &format!("00000000-0000-0000-0000-0000000000c{benchmark_index}"),
@@ -2064,24 +2077,26 @@ mod tests {
             .load(&mut conn)
             .expect("Failed to load report results");
 
-        let gates = results
+        let report_boundaries = results
             .iter()
-            .map(|(_, benchmark, _, _, _, gate)| {
+            .map(|(_, benchmark, _, _, _, report_boundary)| {
                 (
                     benchmark.name.to_string(),
-                    gate.as_ref().map(|(threshold, model, boundary)| {
-                        (
-                            threshold.uuid.to_string(),
-                            model.uuid.to_string(),
-                            boundary.uuid.to_string(),
-                        )
-                    }),
+                    report_boundary
+                        .as_ref()
+                        .map(|(threshold, model, boundary)| {
+                            (
+                                threshold.uuid.to_string(),
+                                model.uuid.to_string(),
+                                boundary.uuid.to_string(),
+                            )
+                        }),
                 )
             })
             .collect::<Vec<_>>();
 
         assert_eq!(
-            gates,
+            report_boundaries,
             vec![
                 (
                     "bench_0".to_owned(),

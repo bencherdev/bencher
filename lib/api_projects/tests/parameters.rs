@@ -370,7 +370,7 @@ async fn ingest_variants(server: &TestServer) -> (Fixture, i32) {
 // A project whose variants are flat benchmarks and a project whose variants
 // are parameter sets raise exactly the same alerts from exactly the same numbers.
 //
-// This is the promise of the whole layer: a bare threshold gates the conventional
+// This is the promise of the whole layer: a bare threshold checks the conventional
 // value series of every parameter set under its measure, which is what a
 // measure-level threshold over flat benchmarks has always done.
 #[tokio::test]
@@ -462,10 +462,10 @@ async fn baselines_separate_by_parameter() {
     );
 }
 
-// A bare threshold gates the conventional `value` series and nothing else: a report
+// A bare threshold checks the conventional `value` series and nothing else: a report
 // carrying `p50` and `p99` produces boundaries on `value` alone.
 #[tokio::test]
-async fn bare_threshold_gates_only_the_value_name() {
+async fn bare_threshold_checks_only_the_value_name() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "named").await;
 
@@ -496,7 +496,7 @@ async fn bare_threshold_gates_only_the_value_name() {
     assert!(!names.is_empty(), "the fixture computes boundaries");
     assert!(
         names.iter().all(|name| name == "value"),
-        "a bare threshold gates only the point estimate, got {names:?}"
+        "a bare threshold checks only the point estimate, got {names:?}"
     );
 
     let alerts = alerts(&mut conn, project_id);
@@ -1047,7 +1047,7 @@ async fn report_response_echoes_named_values_and_separates_variants() {
     );
 
     // The plural form pairs each threshold with the boundary it produced, and only
-    // the point estimate was gated.
+    // the point estimate was checked.
     let boundaries = |name: &str| -> usize {
         measure
             .pointer("/metrics")
@@ -1059,8 +1059,8 @@ async fn report_response_echoes_named_values_and_separates_variants() {
             .and_then(serde_json::Value::as_array)
             .map_or(0, Vec::len)
     };
-    assert_eq!(boundaries("value"), 1, "the point estimate was gated");
-    assert_eq!(boundaries("p99"), 0, "a named value was not gated");
+    assert_eq!(boundaries("value"), 1, "the point estimate was checked");
+    assert_eq!(boundaries("p99"), 0, "a named value was not checked");
 }
 
 // Parameter sets are minted straight from report content, one row per variant, so
@@ -1210,8 +1210,8 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
         vec![(Some("p50"), Some(2.0)), (Some("p99"), Some(3.0))],
         "the named values are the whole of what was reported"
     );
-    // The other two deprecated fields are null, as they are for any ungated measure:
-    // a bare threshold gates the `value` name, so this measure has no boundary.
+    // The other two deprecated fields are null, as they are for any unchecked measure:
+    // a bare threshold checks the `value` name, so this measure has no boundary.
     assert_eq!(
         value_less.get("threshold"),
         Some(&serde_json::Value::Null),

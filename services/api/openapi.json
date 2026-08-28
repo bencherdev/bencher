@@ -13855,12 +13855,12 @@
         }
       },
       "JsonMetricEntry": {
-        "description": "Exactly one `metric` row: one named scalar and every threshold that gated it.",
+        "description": "Exactly one `metric` row: one named scalar and every threshold that checked it.",
         "type": "object",
         "properties": {
           "boundaries": {
             "nullable": true,
-            "description": "Every threshold that gated this named scalar, with the boundary it produced and any alert that boundary raised. Absent when nothing gated it.",
+            "description": "Every threshold that checked this named scalar, with the boundary it produced and any alert that boundary raised. Absent when nothing checked it.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonPerfBoundary"
@@ -15562,7 +15562,7 @@
           },
           "threshold": {
             "nullable": true,
-            "description": "Deprecated. The threshold that gated the `value` row, if any.",
+            "description": "Deprecated. The threshold that checked the `value` row, if any.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonThresholdModel"
@@ -16865,7 +16865,7 @@
           },
           "threshold": {
             "nullable": true,
-            "description": "Deprecated. The threshold that gated the `value` row, if any.",
+            "description": "Deprecated. The threshold that checked the `value` row, if any.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonThresholdModel"
@@ -16883,7 +16883,7 @@
         "type": "object",
         "properties": {
           "boundaries": {
-            "description": "Every threshold that gated this named scalar, with the boundary it produced. Length 0 or 1 until threshold predicates ship.",
+            "description": "Every threshold that checked this named scalar, with the boundary it produced. Length 0 or 1 until threshold predicates ship.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonReportBoundary"

@@ -43,8 +43,8 @@ pub fn metrics_data(
         // sample is the one variant's, never the benchmark's variants pooled.
         .filter(schema::report_benchmark::parameter_id.eq(parameter_id))
         .filter(schema::metric::measure_id.eq(detector.measure_id))
-        // Detection has only ever gated the `value` scalar, and the sample it is
-        // gated against is the point estimates alone. A measure's bounds are named
+        // Detection has only ever checked the `value` scalar, and the sample it is
+        // checked against is the point estimates alone. A measure's bounds are named
         // rows beside it now, so without this the sample would be a mixture of
         // measurements and the limits previously computed from them.
         .filter(schema::metric::name.eq(MetricName::value()))

@@ -347,7 +347,7 @@ impl ReportResults {
             let measure_id = self.measure_id(context, measure_key).await?;
             let named = metric.inner;
 
-            // A bare threshold gates the conventional `value` series, of every
+            // A bare threshold checks the conventional `value` series, of every
             // parameter set under its measure, and nothing else. That is exactly what
             // a measure level threshold over flat benchmarks has always done, so no
             // project's alert volume moves.
@@ -502,9 +502,9 @@ fn write_variant(
         } = prepared_measure;
 
         // The point estimate goes in first so that `last_insert_rowid` still names
-        // the row a boundary attaches to. Detection has only ever gated the `value`
+        // the row a boundary attaches to. Detection has only ever checked the `value`
         // scalar. A BMF v1 measure may name no `value` at all, in which case there
-        // is nothing to gate.
+        // is nothing to check.
         if let Some(value) = named.remove(&MetricName::value()) {
             let insert_metric = InsertMetric::named(
                 report_benchmark_id,

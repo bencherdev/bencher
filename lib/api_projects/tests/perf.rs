@@ -3613,7 +3613,7 @@ async fn perf_metrics_map_carries_every_named_scalar() {
         assert_eq!(entry.value, value);
     }
 
-    // Only the gated named scalar carries a boundaries list.
+    // Only the checked named scalar carries a boundaries list.
     let value = point
         .metrics
         .get(&MetricName::value())
@@ -3621,7 +3621,7 @@ async fn perf_metrics_map_carries_every_named_scalar() {
     let boundaries = value
         .boundaries
         .as_ref()
-        .expect("the value scalar is gated");
+        .expect("the value scalar is checked");
     assert_eq!(boundaries.len(), 1);
     assert_eq!(boundaries[0].boundary.baseline, Some(100.0.into()));
     assert_eq!(
@@ -3637,7 +3637,7 @@ async fn perf_metrics_map_carries_every_named_scalar() {
                 .expect("named scalar")
                 .boundaries
                 .is_none(),
-            "{name} is gated by nothing"
+            "{name} is checked by nothing"
         );
     }
 

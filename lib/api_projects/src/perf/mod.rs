@@ -560,7 +560,7 @@ fn perf_query(
 }
 
 /// The threshold, model, boundary, and any alert for one named scalar.
-type PerfGate = (
+type PerfBoundary = (
     QueryThreshold,
     QueryModel,
     QueryBoundary,
@@ -582,7 +582,7 @@ type PerfQuery = (
     VersionNumber,
     Option<GitHash>,
     QueryMetric,
-    Option<PerfGate>,
+    Option<PerfBoundary>,
 );
 
 struct QueryDimensions {
@@ -620,7 +620,7 @@ fn into_perf_lines(
         version_number,
         version_hash,
         query_metric,
-        gate,
+        perf_boundary,
     ) in rows
     {
         // Every row of one permutation carries the same dimensions, so the first row
@@ -658,7 +658,7 @@ fn into_perf_lines(
             debug_assert!(false, "the pending metric was just pushed");
             continue;
         };
-        pending.push(project, query_metric, gate);
+        pending.push(project, query_metric, perf_boundary);
     }
 
     let (Some(dimensions), Some(benchmark)) = (dimensions, benchmark) else {
@@ -712,7 +712,12 @@ struct PendingMetric {
 }
 
 impl PendingMetric {
-    fn push(&mut self, project: &QueryProject, query_metric: QueryMetric, gate: Option<PerfGate>) {
+    fn push(
+        &mut self,
+        project: &QueryProject,
+        query_metric: QueryMetric,
+        perf_boundary: Option<PerfBoundary>,
+    ) {
         let QueryMetric {
             id: _,
             uuid,
@@ -726,12 +731,12 @@ impl PendingMetric {
             self.value_uuid = Some(uuid);
         }
 
-        // A named scalar repeats across rows only when several thresholds gated it.
+        // A named scalar repeats across rows only when several thresholds checked it.
         let entry = self.metrics.entry(name).or_insert(JsonMetricEntry {
             value: value.into(),
             boundaries: None,
         });
-        if let Some((query_threshold, query_model, query_boundary, query_alert)) = gate {
+        if let Some((query_threshold, query_model, query_boundary, query_alert)) = perf_boundary {
             entry
                 .boundaries
                 .get_or_insert_with(Vec::new)
@@ -769,8 +774,8 @@ impl PendingMetric {
                 .get(&MetricName::upper_value())
                 .map(|entry| entry.value),
         });
-        // The deprecated gate is the one that gated the `value` row.
-        let (threshold, boundary, alert) = value.map_or((None, None, None), deprecated_gate);
+        // The deprecated check is the one that checked the `value` row.
+        let (threshold, boundary, alert) = value.map_or((None, None, None), deprecated_check);
 
         JsonPerfMetrics {
             report,
@@ -801,13 +806,13 @@ pub(super) fn threshold_model_alert(
     }
 }
 
-type DeprecatedGate = (
+type DeprecatedCheck = (
     Option<JsonThresholdModel>,
     Option<JsonBoundary>,
     Option<JsonPerfAlert>,
 );
 
-fn deprecated_gate(value: &JsonMetricEntry) -> DeprecatedGate {
+fn deprecated_check(value: &JsonMetricEntry) -> DeprecatedCheck {
     let Some(perf_boundary) = value
         .boundaries
         .as_ref()

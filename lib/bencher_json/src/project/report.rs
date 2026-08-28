@@ -460,7 +460,7 @@ pub struct JsonReportMeasure {
     /// absent for anything an older client could produce.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metric: Option<JsonMetricTriple>,
-    /// Deprecated. The threshold that gated the `value` row, if any.
+    /// Deprecated. The threshold that checked the `value` row, if any.
     pub threshold: Option<JsonThresholdModel>,
     /// Deprecated. The boundary computed for the `value` row, if any.
     pub boundary: Option<JsonBoundary>,
@@ -474,7 +474,7 @@ pub struct JsonReportMetric {
     pub uuid: MetricUuid,
     pub name: MetricName,
     pub value: OrderedFloat<f64>,
-    /// Every threshold that gated this named scalar, with the boundary it produced.
+    /// Every threshold that checked this named scalar, with the boundary it produced.
     /// Length 0 or 1 until threshold predicates ship.
     pub boundaries: Vec<JsonReportBoundary>,
 }

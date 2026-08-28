@@ -374,7 +374,7 @@ export interface JsonReportMetric {
 	name: string;
 	value: number;
 	/**
-	 * Every threshold that gated this named scalar, with the boundary it produced.
+	 * Every threshold that checked this named scalar, with the boundary it produced.
 	 * Length 0 or 1 until threshold predicates ship.
 	 */
 	boundaries: JsonReportBoundary[];
@@ -393,7 +393,7 @@ export interface JsonReportMeasure {
 	 * absent for anything an older client could produce.
 	 */
 	metric?: JsonMetricTriple;
-	/** Deprecated. The threshold that gated the `value` row, if any. */
+	/** Deprecated. The threshold that checked the `value` row, if any. */
 	threshold?: JsonThresholdModel;
 	/** Deprecated. The boundary computed for the `value` row, if any. */
 	boundary?: JsonBoundary;
@@ -617,12 +617,12 @@ export interface JsonPerfBoundary {
 	alert?: JsonPerfAlert;
 }
 
-/** Exactly one `metric` row: one named scalar and every threshold that gated it. */
+/** Exactly one `metric` row: one named scalar and every threshold that checked it. */
 export interface JsonMetricEntry {
 	value: number;
 	/**
-	 * Every threshold that gated this named scalar, with the boundary it produced
-	 * and any alert that boundary raised. Absent when nothing gated it.
+	 * Every threshold that checked this named scalar, with the boundary it produced
+	 * and any alert that boundary raised. Absent when nothing checked it.
 	 */
 	boundaries?: JsonPerfBoundary[];
 }
@@ -980,7 +980,7 @@ export interface JsonPerfMetrics {
 	 * absent for anything an older client could produce.
 	 */
 	metric?: JsonMetricTriple;
-	/** Deprecated. The threshold that gated the `value` row, if any. */
+	/** Deprecated. The threshold that checked the `value` row, if any. */
 	threshold?: JsonThresholdModel;
 	/** Deprecated. The boundary computed for the `value` row, if any. */
 	boundary?: JsonBoundary;
