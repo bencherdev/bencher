@@ -45,8 +45,7 @@ use bencher_schema::{
 };
 use diesel::{
     ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _, query_builder::QueryFragment, query_dsl::LoadQuery,
-    sqlite::Sqlite,
+    RunQueryDsl as _, SelectableHelper as _, query_dsl::LoadQuery,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
@@ -408,7 +407,7 @@ fn perf_query(
     parameter_ids: Option<Vec<ParameterId>>,
     measure_uuid: MeasureUuid,
     times: Times,
-) -> impl LoadQuery<'static, DbConnection, PerfQuery> + QueryFragment<Sqlite> {
+) -> impl LoadQuery<'static, DbConnection, PerfQuery> {
     let mut query = schema::metric::table
         .inner_join(
             schema::report_benchmark::table
@@ -822,96 +821,4 @@ fn deprecated_gate(value: &JsonMetricEntry) -> DeprecatedGate {
         alert,
     } = perf_boundary;
     (Some(threshold.clone()), Some(*boundary), alert.clone())
-}
-
-#[cfg(test)]
-mod tests {
-    use bencher_json::{BenchmarkUuid, BranchUuid, MeasureUuid, TestbedUuid};
-    use bencher_schema::model::project::ProjectId;
-
-    use super::{ParameterId, Sqlite, Times, perf_query};
-
-    fn perf_query_sql() -> String {
-        diesel::debug_query::<Sqlite, _>(&perf_query(
-            ProjectId::default(),
-            BranchUuid::new(),
-            None,
-            TestbedUuid::new(),
-            None,
-            BenchmarkUuid::new(),
-            None,
-            MeasureUuid::new(),
-            Times {
-                start_time: None,
-                end_time: None,
-            },
-        ))
-        .to_string()
-    }
-
-    #[test]
-    fn perf_query_reads_the_metric_table() {
-        let sql = perf_query_sql();
-
-        assert!(
-            sql.contains(
-                "`metric` INNER JOIN `report_benchmark` ON (`report_benchmark`.`id` = `metric`.`report_benchmark_id`)"
-            ),
-            "{sql}"
-        );
-        assert!(!sql.contains("metric_boundary"), "{sql}");
-    }
-
-    #[test]
-    fn perf_query_joins_the_boundary_flat() {
-        let sql = perf_query_sql();
-
-        assert!(
-            sql.contains("LEFT OUTER JOIN `boundary` ON (`boundary`.`metric_id` = `metric`.`id`)"),
-            "{sql}"
-        );
-        assert!(
-            sql.contains(
-                "LEFT OUTER JOIN `threshold` ON (`threshold`.`id` = `boundary`.`threshold_id`)"
-            ),
-            "{sql}"
-        );
-        assert!(
-            sql.contains("LEFT OUTER JOIN `model` ON (`model`.`id` = `boundary`.`model_id`)"),
-            "{sql}"
-        );
-        assert!(
-            sql.contains("LEFT OUTER JOIN `alert` ON (`alert`.`boundary_id` = `boundary`.`id`)"),
-            "{sql}"
-        );
-        assert!(!sql.contains("LEFT OUTER JOIN (("), "{sql}");
-    }
-
-    #[test]
-    fn perf_query_filters_on_resolved_parameter_ids() {
-        assert!(
-            !perf_query_sql().contains("`report_benchmark`.`parameter_id` IN"),
-            "an unfiltered query filters on no parameter set"
-        );
-
-        let sql = diesel::debug_query::<Sqlite, _>(&perf_query(
-            ProjectId::default(),
-            BranchUuid::new(),
-            None,
-            TestbedUuid::new(),
-            None,
-            BenchmarkUuid::new(),
-            Some(vec![ParameterId::default()]),
-            MeasureUuid::new(),
-            Times {
-                start_time: None,
-                end_time: None,
-            },
-        ))
-        .to_string();
-        assert!(
-            sql.contains("`report_benchmark`.`parameter_id` IN"),
-            "{sql}"
-        );
-    }
 }

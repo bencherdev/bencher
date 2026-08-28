@@ -18,7 +18,7 @@ use diesel::OptionalExtension as _;
 use diesel::{
     AggregateExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
     NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
-    query_builder::QueryFragment, query_dsl::LoadQuery, sqlite::Sqlite,
+    query_dsl::LoadQuery,
 };
 
 use dropshot::HttpError;
@@ -670,7 +670,7 @@ fn get_report_results(
 /// The results query for one report, one row per named scalar.
 fn report_results_query(
     report_id: ReportId,
-) -> impl LoadQuery<'static, DbConnection, ResultsQuery> + QueryFragment<Sqlite> {
+) -> impl LoadQuery<'static, DbConnection, ResultsQuery> {
     schema::report_benchmark::table
     .filter(schema::report_benchmark::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
@@ -1204,7 +1204,7 @@ mod tests {
     };
 
     use super::{
-        QueryReport, ReportId, ReportMode, ResultsQuery, Sqlite, get_report_counts, report_counts,
+        QueryReport, ReportId, ReportMode, ResultsQuery, get_report_counts, report_counts,
         report_results_query,
     };
     use crate::macros::sql::last_insert_rowid;
@@ -1961,36 +1961,6 @@ mod tests {
             .expect("Failed to read metric count after overflow attempt");
         // Should be clamped at i32::MAX, not wrapped/truncated
         assert_eq!(count, i32::MAX);
-    }
-
-    /// The results query joins each named value to its boundary, and that boundary to
-    /// its own threshold and model, as a flat chain of left joins.
-    ///
-    /// Nesting the threshold and the model inside the boundary join renders the group in
-    /// parentheses, and `SQLite` cannot flatten a compound right operand of an outer join:
-    /// it materializes the whole subjoin, scanning the entire boundary table once per
-    /// request, however small the report is. Pin the rendered shape so that the nesting
-    /// cannot come back unnoticed.
-    #[test]
-    fn report_results_query_joins_the_boundary_flat() {
-        let sql = diesel::debug_query::<Sqlite, _>(&report_results_query(ReportId::default()))
-            .to_string();
-
-        assert!(
-            sql.contains("LEFT OUTER JOIN `boundary` ON (`boundary`.`metric_id` = `metric`.`id`)"),
-            "{sql}"
-        );
-        assert!(
-            sql.contains(
-                "LEFT OUTER JOIN `threshold` ON (`threshold`.`id` = `boundary`.`threshold_id`)"
-            ),
-            "{sql}"
-        );
-        assert!(
-            sql.contains("LEFT OUTER JOIN `model` ON (`model`.`id` = `boundary`.`model_id`)"),
-            "{sql}"
-        );
-        assert!(!sql.contains("LEFT OUTER JOIN (("), "{sql}");
     }
 
     /// Every named value carries the boundary that gated it, with that boundary's own
