@@ -30,6 +30,16 @@ use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
 // =============================================================================
+// Helper: perf_server
+// =============================================================================
+
+/// A test server whose clock is frozen beside the fixtures, which all report at
+/// `base_timestamp()` and would otherwise fall outside the default window.
+async fn perf_server() -> TestServer {
+    TestServer::new_at(base_timestamp()).await
+}
+
+// =============================================================================
 // Helper: PerfTestData
 // =============================================================================
 
@@ -538,7 +548,7 @@ fn create_alert(server: &TestServer, boundary_id: i32) -> AlertUuid {
 
 #[tokio::test]
 async fn perf_get_single_result() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfsingle@example.com").await;
     let org = server.create_org(&user, "Perf Single Org").await;
     let project = server
@@ -583,7 +593,7 @@ async fn perf_get_single_result() {
 
 #[tokio::test]
 async fn perf_get_response_structure() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfstructure@example.com")
         .await;
@@ -618,7 +628,11 @@ async fn perf_get_response_structure() {
     let perf: JsonPerf = resp.json().await.expect("parse response");
     // Verify top-level structure
     assert_eq!(perf.project.uuid, project.uuid);
-    assert!(perf.start_time.is_none());
+    // The query named no window, so the response carries the default one.
+    assert_eq!(
+        perf.start_time.expect("the window it plotted").timestamp(),
+        base_timestamp().timestamp() - REPORT_HISTORY_SECS
+    );
     assert!(perf.end_time.is_none());
     // Verify result dimensions
     let result = &perf.results[0];
@@ -636,7 +650,7 @@ async fn perf_get_response_structure() {
 
 #[tokio::test]
 async fn perf_get_empty_results() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfempty@example.com").await;
     let org = server.create_org(&user, "Perf Empty Org").await;
     let project = server
@@ -674,7 +688,7 @@ async fn perf_get_empty_results() {
 
 #[tokio::test]
 async fn perf_get_multiple_metrics_same_permutation() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfmultimetric@example.com")
         .await;
@@ -811,7 +825,7 @@ async fn perf_get_multiple_metrics_same_permutation() {
 
 #[tokio::test]
 async fn perf_filter_by_start_time() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfstarttime@example.com")
         .await;
@@ -861,7 +875,7 @@ async fn perf_filter_by_start_time() {
 
 #[tokio::test]
 async fn perf_filter_by_end_time() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfendtime@example.com").await;
     let org = server.create_org(&user, "Perf EndTime Org").await;
     let project = server
@@ -908,7 +922,7 @@ async fn perf_filter_by_end_time() {
 
 #[tokio::test]
 async fn perf_filter_includes_matching_time() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perftimematch@example.com")
         .await;
@@ -958,7 +972,7 @@ async fn perf_filter_includes_matching_time() {
 
 #[tokio::test]
 async fn perf_multi_branch_query() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfmultibranch@example.com")
         .await;
@@ -1000,7 +1014,7 @@ async fn perf_multi_branch_query() {
 
 #[tokio::test]
 async fn perf_multi_testbed_query() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfmultitestbed@example.com")
         .await;
@@ -1042,7 +1056,7 @@ async fn perf_multi_testbed_query() {
 
 #[tokio::test]
 async fn perf_multi_measure_query() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfmultimeasure@example.com")
         .await;
@@ -1114,7 +1128,7 @@ async fn perf_multi_measure_query() {
 
 #[tokio::test]
 async fn perf_multi_benchmark_query() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfmultibenchmark@example.com")
         .await;
@@ -1207,7 +1221,7 @@ async fn perf_multi_benchmark_query() {
 
 #[tokio::test]
 async fn perf_missing_branches_param() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfnobranch@example.com").await;
     let org = server.create_org(&user, "Perf NoBranch Org").await;
     let project = server
@@ -1234,7 +1248,7 @@ async fn perf_missing_branches_param() {
 
 #[tokio::test]
 async fn perf_missing_testbeds_param() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfnotestbed@example.com")
         .await;
@@ -1263,7 +1277,7 @@ async fn perf_missing_testbeds_param() {
 
 #[tokio::test]
 async fn perf_missing_benchmarks_param() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfnobench@example.com").await;
     let org = server.create_org(&user, "Perf NoBench Org").await;
     let project = server
@@ -1290,7 +1304,7 @@ async fn perf_missing_benchmarks_param() {
 
 #[tokio::test]
 async fn perf_missing_measures_param() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfnomeasure@example.com")
         .await;
@@ -1319,7 +1333,7 @@ async fn perf_missing_measures_param() {
 
 #[tokio::test]
 async fn perf_invalid_branch_uuid() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfinvbranch@example.com")
         .await;
@@ -1345,7 +1359,7 @@ async fn perf_invalid_branch_uuid() {
 
 #[tokio::test]
 async fn perf_nonexistent_project() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfnoproj@example.com").await;
 
     let uuid = BranchUuid::new();
@@ -1364,7 +1378,7 @@ async fn perf_nonexistent_project() {
 
 #[tokio::test]
 async fn perf_no_query_params() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfnoparams@example.com").await;
     let org = server.create_org(&user, "Perf NoParams Org").await;
     let project = server
@@ -1388,7 +1402,7 @@ async fn perf_no_query_params() {
 
 #[tokio::test]
 async fn perf_empty_branches_value() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfemptybranch@example.com")
         .await;
@@ -1418,7 +1432,7 @@ async fn perf_empty_branches_value() {
 
 #[tokio::test]
 async fn perf_public_project_no_auth() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfpublicnoauth@example.com")
         .await;
@@ -1453,7 +1467,7 @@ async fn perf_public_project_no_auth() {
 
 #[tokio::test]
 async fn perf_private_project_no_auth() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfprivnoauth@example.com")
         .await;
@@ -1490,7 +1504,7 @@ async fn perf_private_project_no_auth() {
 
 #[tokio::test]
 async fn perf_private_project_with_auth() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfprivauth@example.com").await;
     let org = server.create_org(&user, "Perf PrivAuth Org").await;
     let project = server
@@ -1527,7 +1541,7 @@ async fn perf_private_project_with_auth() {
 
 #[tokio::test]
 async fn perf_private_project_wrong_user() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let owner = server.signup("Owner", "perfprivowner@example.com").await;
     let other = server.signup("Other", "perfprivother@example.com").await;
     let org = server.create_org(&owner, "Perf PrivOther Org").await;
@@ -1571,7 +1585,7 @@ async fn perf_private_project_wrong_user() {
 
 #[tokio::test]
 async fn perf_line_limit_exact_256() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     // `4` branches by `64` measures is exactly the budget.
     let (user, project_slug, grid) = grid_project(&server, "limit256", 4, 1, 1, 64).await;
 
@@ -1589,7 +1603,7 @@ async fn perf_line_limit_exact_256() {
 
 #[tokio::test]
 async fn perf_line_limit_truncated_past_256() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     // `5` branches by `64` measures is `320`.
     let (user, project_slug, grid) = grid_project(&server, "limitpast", 5, 1, 1, 64).await;
 
@@ -1609,7 +1623,7 @@ async fn perf_line_limit_truncated_past_256() {
 // The budget is a running count of lines, not a product of dimension indexes.
 #[tokio::test]
 async fn perf_line_limit_holds_on_an_asymmetric_grid() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, grid) = grid_project(&server, "asymmetric", 2, 2, 6, 21).await;
 
     let perf = get_perf(
@@ -1627,7 +1641,7 @@ async fn perf_line_limit_holds_on_an_asymmetric_grid() {
 
 #[tokio::test]
 async fn perf_line_limit_holds_within_one_benchmark() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, mut grid) = grid_project(&server, "variants", 1, 1, 1, 1).await;
     // The empty parameter set, plus `299` more.
     for size in 0..299 {
@@ -1649,7 +1663,7 @@ async fn perf_line_limit_holds_within_one_benchmark() {
 
 #[tokio::test]
 async fn perf_line_limit_clips_a_fan_out() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, mut grid) = grid_project(&server, "clipped", 1, 1, 2, 1).await;
     for size in 0..199 {
         grid.add_variant(&server, 0, &format!(r#"{{"size_mb": {size}}}"#));
@@ -1682,7 +1696,7 @@ async fn perf_line_limit_clips_a_fan_out() {
 
 #[tokio::test]
 async fn perf_line_limit_refunds_empty_permutations() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, mut grid) = empty_grid_project(&server, "refund", 3, 1, 1, 1).await;
     // Reported on the last branch only, so the two permutations before it hold
     // nothing.
@@ -1705,7 +1719,7 @@ async fn perf_line_limit_refunds_empty_permutations() {
 
 #[tokio::test]
 async fn perf_line_limit_bounds_the_permutations_queried() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, mut grid) =
         empty_grid_project(&server, "workbound", 5, 1, 1, 64).await;
     // `192` permutations that hold nothing, leaving `64` of the `256` for the
@@ -1728,7 +1742,7 @@ async fn perf_line_limit_bounds_the_permutations_queried() {
 
 #[tokio::test]
 async fn perf_truncates_the_benchmarks_list() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, grid) = grid_project(&server, "benchmarklist", 1, 1, 8, 1).await;
 
     // `60` benchmarks that do not exist, then the first `4` that do, then the
@@ -1760,7 +1774,7 @@ async fn perf_truncates_the_benchmarks_list() {
 
 #[tokio::test]
 async fn perf_truncates_the_measures_list() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, grid) = grid_project(&server, "measurelist", 1, 1, 1, 70).await;
 
     let perf = get_perf(
@@ -1781,7 +1795,7 @@ async fn perf_truncates_the_measures_list() {
 
 #[tokio::test]
 async fn perf_without_threshold() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfnothreshold@example.com")
         .await;
@@ -1822,7 +1836,7 @@ async fn perf_without_threshold() {
 
 #[tokio::test]
 async fn perf_with_boundary() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfboundary@example.com").await;
     let org = server.create_org(&user, "Perf Boundary Org").await;
     let project = server
@@ -1868,7 +1882,7 @@ async fn perf_with_boundary() {
 
 #[tokio::test]
 async fn perf_with_alert() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfalert@example.com").await;
     let org = server.create_org(&user, "Perf Alert Org").await;
     let project = server
@@ -1915,7 +1929,7 @@ async fn perf_with_alert() {
 
 #[tokio::test]
 async fn perf_ordered_by_version_number() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perforderversion@example.com")
         .await;
@@ -2059,7 +2073,7 @@ async fn perf_ordered_by_version_number() {
 
 #[tokio::test]
 async fn perf_ordered_by_start_time_within_version() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfordertime@example.com")
         .await;
@@ -2202,7 +2216,7 @@ async fn perf_ordered_by_start_time_within_version() {
 
 #[tokio::test]
 async fn perf_version_hash_returned() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfversionhash@example.com")
         .await;
@@ -2260,7 +2274,7 @@ async fn perf_version_hash_returned() {
 
 #[tokio::test]
 async fn perf_default_head() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfdefaulthead@example.com")
         .await;
@@ -2299,7 +2313,7 @@ async fn perf_default_head() {
 
 #[tokio::test]
 async fn perf_explicit_head() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfexplicithead@example.com")
         .await;
@@ -2339,7 +2353,7 @@ async fn perf_explicit_head() {
 
 #[tokio::test]
 async fn perf_no_head_id_set_on_branch() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfnoheadid@example.com").await;
     let org = server.create_org(&user, "Perf NoHeadId Org").await;
     let project = server
@@ -2387,7 +2401,7 @@ async fn perf_no_head_id_set_on_branch() {
 
 #[tokio::test]
 async fn perf_wrong_project_branch() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfwrongprojbranch@example.com")
         .await;
@@ -2428,7 +2442,7 @@ async fn perf_wrong_project_branch() {
 
 #[tokio::test]
 async fn perf_wrong_project_testbed() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfwrongprojtestbed@example.com")
         .await;
@@ -2472,7 +2486,7 @@ async fn perf_wrong_project_testbed() {
 
 #[tokio::test]
 async fn perf_wrong_project_benchmark() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfwrongprojbench@example.com")
         .await;
@@ -2515,7 +2529,7 @@ async fn perf_wrong_project_benchmark() {
 
 #[tokio::test]
 async fn perf_wrong_project_measure() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfwrongprojmeasure@example.com")
         .await;
@@ -2562,7 +2576,7 @@ async fn perf_wrong_project_measure() {
 
 #[tokio::test]
 async fn perf_lower_upper_values() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perflowerupper@example.com")
         .await;
@@ -2614,7 +2628,7 @@ async fn perf_lower_upper_values() {
 
 #[tokio::test]
 async fn perf_multiple_iterations() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfiterations@example.com")
         .await;
@@ -2708,7 +2722,7 @@ async fn perf_multiple_iterations() {
 
 #[tokio::test]
 async fn perf_time_echo() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perftimeecho@example.com").await;
     let org = server.create_org(&user, "Perf TimeEcho Org").await;
     let project = server
@@ -2774,7 +2788,7 @@ async fn perf_time_echo() {
 
 #[tokio::test]
 async fn perf_spec_from_query_param() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfspecquery@example.com")
         .await;
@@ -2820,7 +2834,7 @@ async fn perf_spec_from_query_param() {
 
 #[tokio::test]
 async fn perf_no_spec_when_omitted() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfnospec@example.com").await;
     let org = server.create_org(&user, "Perf NoSpec Org").await;
     let project = server
@@ -2867,7 +2881,7 @@ async fn perf_no_spec_when_omitted() {
 
 #[tokio::test]
 async fn perf_spec_empty_entry() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfspecempty@example.com")
         .await;
@@ -2907,7 +2921,7 @@ async fn perf_spec_empty_entry() {
 
 #[tokio::test]
 async fn perf_spec_filters_results() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfspecfilter@example.com")
         .await;
@@ -3086,7 +3100,7 @@ async fn perf_spec_filters_results() {
 
 #[tokio::test]
 async fn perf_spec_nonexistent_uuid() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfspecnonexist@example.com")
         .await;
@@ -3131,7 +3145,7 @@ async fn perf_spec_nonexistent_uuid() {
 
 #[tokio::test]
 async fn perf_access_by_project_uuid() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfprojuuid@example.com").await;
     let org = server.create_org(&user, "Perf ProjUuid Org").await;
     let project = server
@@ -3356,7 +3370,7 @@ fn line_parameters(perf: &JsonPerf) -> Vec<String> {
 
 #[tokio::test]
 async fn perf_fans_out_one_line_per_variant() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perffanout@example.com").await;
     let org = server.create_org(&user, "Perf Fan Out Org").await;
     let project = server
@@ -3418,7 +3432,7 @@ async fn perf_fans_out_one_line_per_variant() {
 
 #[tokio::test]
 async fn perf_parameters_filter_is_an_or_of_ands() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perffilteror@example.com").await;
     let org = server.create_org(&user, "Perf Filter Or Org").await;
     let project = server
@@ -3472,7 +3486,7 @@ async fn perf_parameters_filter_is_an_or_of_ands() {
 
 #[tokio::test]
 async fn perf_parameters_filter_matching_nothing_returns_no_lines() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perffilternone@example.com")
         .await;
@@ -3523,7 +3537,7 @@ async fn perf_parameters_filter_matching_nothing_returns_no_lines() {
 
 #[tokio::test]
 async fn perf_parameters_filter_is_number_spelling_blind() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perffilterspelling@example.com")
         .await;
@@ -3580,7 +3594,7 @@ async fn perf_parameters_filter_is_number_spelling_blind() {
 
 #[tokio::test]
 async fn perf_parameters_filter_empty_value_is_no_filter() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perffilterempty@example.com")
         .await;
@@ -3611,7 +3625,7 @@ async fn perf_parameters_filter_empty_value_is_no_filter() {
 
 #[tokio::test]
 async fn perf_metrics_map_carries_every_metric() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfmetricsmap@example.com")
         .await;
@@ -3720,7 +3734,7 @@ async fn perf_metrics_map_carries_every_metric() {
 
 #[tokio::test]
 async fn perf_v0_response_fields_are_unchanged() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server
         .signup("Test User", "perfbytecompat@example.com")
         .await;
@@ -3831,7 +3845,7 @@ async fn perf_v0_response_fields_are_unchanged() {
 
 #[tokio::test]
 async fn perf_point_without_a_value_name_keeps_its_line() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let user = server.signup("Test User", "perfnovalue@example.com").await;
     let org = server.create_org(&user, "Perf No Value Org").await;
     let project = server
@@ -4506,7 +4520,7 @@ async fn grid_project(
 
 #[tokio::test]
 async fn perf_every_line_carries_its_own_dimensions() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, mut grid) = grid_project(&server, "dims", 2, 2, 2, 2).await;
     // One benchmark fans out over two variants, so a permutation is not a line.
     grid.add_variant(&server, 0, r#"{"size_mb": 16}"#);
@@ -4526,7 +4540,7 @@ async fn perf_every_line_carries_its_own_dimensions() {
 
 #[tokio::test]
 async fn perf_permutation_without_metrics_returns_no_line() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, mut grid) = empty_grid_project(&server, "empty", 2, 2, 2, 1).await;
 
     // Two branches and two testbeds, but only one pair ever reported, and that
@@ -4553,7 +4567,7 @@ async fn perf_permutation_without_metrics_returns_no_line() {
 
 #[tokio::test]
 async fn perf_unknown_dimension_uuids_skip_their_permutations() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, grid) = grid_project(&server, "unknown", 1, 1, 1, 1).await;
 
     let mut query = grid.query();
@@ -4573,7 +4587,7 @@ async fn perf_unknown_dimension_uuids_skip_their_permutations() {
 
 #[tokio::test]
 async fn perf_checks_land_on_the_lines_they_checked() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, mut grid) = grid_project(&server, "checks", 2, 1, 1, 2).await;
     grid.add_variant(&server, 0, r#"{"size_mb": 16}"#);
 
@@ -4642,7 +4656,7 @@ async fn perf_checks_land_on_the_lines_they_checked() {
 
 #[tokio::test]
 async fn perf_v0_metric_triple_on_every_line() {
-    let server = TestServer::new().await;
+    let server = perf_server().await;
     let (user, project_slug, grid) = grid_project(&server, "triple", 2, 1, 1, 1).await;
 
     // Give both lines the bounds the deprecated triple carries.
@@ -4726,4 +4740,132 @@ async fn perf_v0_metric_triple_on_every_line() {
             ],
         );
     }
+}
+
+// =============================================================================
+// Section: The default window
+// =============================================================================
+
+/// A grid whose one report sits at the given offset in seconds from the server's
+/// frozen now, so a test can put a report inside or outside the default window.
+async fn window_grid(
+    server: &TestServer,
+    label: &str,
+    offset_secs: i64,
+) -> (TestUser, String, PerfGrid) {
+    let (user, project_slug, grid) = grid_project(server, label, 1, 1, 1, 1).await;
+    let start_time = bencher_json::DateTime::try_from(base_timestamp().timestamp() + offset_secs)
+        .expect("valid timestamp");
+    let mut conn = server.db_conn();
+    diesel::update(schema::report::table)
+        .set((
+            schema::report::start_time.eq(&start_time),
+            schema::report::end_time.eq(&start_time),
+        ))
+        .execute(&mut conn)
+        .expect("move the report in time");
+    (user, project_slug, grid)
+}
+
+// 4 weeks, the history every one of its four sites reaches back.
+const REPORT_HISTORY_SECS: i64 = 60 * 60 * 24 * 28;
+
+#[tokio::test]
+async fn perf_defaults_to_the_report_history() {
+    let server = perf_server().await;
+    let (user, project_slug, grid) =
+        window_grid(&server, "windowin", -REPORT_HISTORY_SECS + 60).await;
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    assert_eq!(response_lines(&perf), grid.expected_lines());
+
+    let server = perf_server().await;
+    let (user, project_slug, grid) =
+        window_grid(&server, "windowout", -REPORT_HISTORY_SECS - 60).await;
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    assert!(
+        perf.results.is_empty(),
+        "a report older than the window is outside it"
+    );
+}
+
+#[tokio::test]
+async fn perf_echoes_the_default_window() {
+    let server = perf_server().await;
+    let (user, project_slug, grid) = grid_project(&server, "windowecho", 1, 1, 1, 1).await;
+
+    let perf = get_perf(
+        &server,
+        &user.token,
+        &perf_query_url(&project_slug, &grid.query()),
+    )
+    .await;
+    assert_eq!(response_lines(&perf), grid.expected_lines());
+    assert_eq!(
+        perf.start_time.expect("the window it plotted").timestamp(),
+        base_timestamp().timestamp() - REPORT_HISTORY_SECS,
+        "the window runs back from the server's now"
+    );
+    assert!(perf.end_time.is_none(), "the query named no end time");
+
+    // With an end time the window runs back from that instead.
+    let mut query = grid.query();
+    let end_time = bencher_json::DateTime::try_from(base_timestamp().timestamp() - 60)
+        .expect("valid timestamp");
+    query.end_time = Some(end_time);
+    let perf = get_perf(&server, &user.token, &perf_query_url(&project_slug, &query)).await;
+    assert_eq!(
+        perf.start_time.expect("the window it plotted").timestamp(),
+        end_time.timestamp() - REPORT_HISTORY_SECS
+    );
+}
+
+#[tokio::test]
+async fn perf_honors_an_explicit_start_time_however_old() {
+    let server = perf_server().await;
+    let (user, project_slug, grid) =
+        window_grid(&server, "windowold", -REPORT_HISTORY_SECS * 10).await;
+
+    let mut query = grid.query();
+    query.start_time = Some(
+        bencher_json::DateTime::try_from(base_timestamp().timestamp() - REPORT_HISTORY_SECS * 20)
+            .expect("valid timestamp"),
+    );
+    let perf = get_perf(&server, &user.token, &perf_query_url(&project_slug, &query)).await;
+    assert_eq!(response_lines(&perf), grid.expected_lines());
+    assert_eq!(perf.start_time, query.start_time);
+}
+
+#[tokio::test]
+async fn perf_window_runs_back_from_the_end_time() {
+    // The report sits ten windows back, which is outside the window from now and
+    // inside the window from an end time just after it.
+    let server = perf_server().await;
+    let (user, project_slug, grid) =
+        window_grid(&server, "windowend", -REPORT_HISTORY_SECS * 10).await;
+    let report_time = base_timestamp().timestamp() - REPORT_HISTORY_SECS * 10;
+
+    let mut query = grid.query();
+    query.end_time =
+        Some(bencher_json::DateTime::try_from(report_time + 60).expect("valid timestamp"));
+    let perf = get_perf(&server, &user.token, &perf_query_url(&project_slug, &query)).await;
+    assert_eq!(response_lines(&perf), grid.expected_lines());
+
+    // One window further back and the same report falls outside it.
+    let mut query = grid.query();
+    query.end_time = Some(
+        bencher_json::DateTime::try_from(report_time + REPORT_HISTORY_SECS + 60)
+            .expect("valid timestamp"),
+    );
+    let perf = get_perf(&server, &user.token, &perf_query_url(&project_slug, &query)).await;
+    assert!(perf.results.is_empty());
 }

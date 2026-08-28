@@ -697,8 +697,8 @@ const LimitCell = (props: {
 	);
 };
 
-// 30 days
-const DEFAULT_ALERT_HISTORY = 30 * 24 * 60 * 60 * 1000;
+// 4 weeks
+const DEFAULT_ALERT_HISTORY = 28 * 24 * 60 * 60 * 1000;
 
 export const alertPerfUrl = (
 	isConsole: undefined | boolean,

@@ -66,6 +66,8 @@ pub struct JsonPerfQueryParams {
     /// Only the first 64 measures are queried.
     pub measures: String,
     /// Search for metrics after the given date time in milliseconds.
+    /// Defaults to four weeks before the end time,
+    /// or four weeks before now when there is no end time.
     pub start_time: Option<DateTimeMillis>,
     /// Search for metrics before the given date time in milliseconds.
     pub end_time: Option<DateTimeMillis>,
@@ -96,6 +98,8 @@ pub struct JsonPerfImgQueryParams {
     /// Only the first 64 measures are queried.
     pub measures: String,
     /// Search for metrics after the given date time in milliseconds.
+    /// Defaults to four weeks before the end time,
+    /// or four weeks before now when there is no end time.
     pub start_time: Option<DateTimeMillis>,
     /// Search for metrics before the given date time in milliseconds.
     pub end_time: Option<DateTimeMillis>,
@@ -404,7 +408,10 @@ const QUERY_KEYS: [&str; 9] = [
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerf {
     pub project: JsonProject,
+    /// The start of the window that was plotted, which is the default window
+    /// when the query named no start time.
     pub start_time: Option<DateTime>,
+    /// The end of the window the query named, if it named one.
     pub end_time: Option<DateTime>,
     pub results: Vec<JsonPerfLine>,
 }

@@ -1,12 +1,15 @@
-use std::collections::{BTreeMap, HashMap};
+use std::{
+    collections::{BTreeMap, HashMap},
+    time::Duration,
+};
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 #[cfg(feature = "plus")]
 use bencher_json::SpecUuid;
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, GitHash, HeadUuid, JsonBenchmark, JsonBranch, JsonMeasure,
-    JsonPerf, JsonPerfQuery, JsonTestbed, MeasureUuid, MetricName, MetricUuid, ParameterSet,
-    ProjectResourceId, ReportUuid, TestbedUuid,
+    BenchmarkUuid, BranchUuid, Clock, DateTime, GitHash, HeadUuid, JsonBenchmark, JsonBranch,
+    JsonMeasure, JsonPerf, JsonPerfQuery, JsonTestbed, MeasureUuid, MetricName, MetricUuid,
+    ParameterSet, ProjectResourceId, ReportUuid, TestbedUuid,
     project::{
         alert::JsonPerfAlert,
         boundary::JsonBoundary,
@@ -57,6 +60,9 @@ use serde::Deserialize;
 
 pub mod img;
 
+// 4 weeks, a whole number of weeks so the window always spans the same weekday mix.
+const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(672);
+
 /// A permutation is one (branch, testbed, benchmark, measure), and each one is a
 /// query of its own, so this bounds the work a request can ask for.
 const MAX_PERMUTATIONS: usize = 256;
@@ -95,6 +101,9 @@ pub async fn proj_perf_options(
 /// There is a limit of 256 permutations and 256 lines for a single request.
 /// A permutation with nothing to plot returns no line,
 /// but it still counts against the permutation limit.
+/// If there is no `start_time`, then the last four weeks are queried,
+/// back from the `end_time` when there is one and from now when there is not.
+/// The response always states the window that was queried.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project,
 /// or provide a valid project key for the project.
@@ -164,6 +173,7 @@ pub async fn get_inner(
         end_time,
     } = json_perf_query;
 
+    let start_time = start_time.or_else(|| default_start_time(&context.clock, end_time));
     let times = Times {
         start_time,
         end_time,
@@ -198,6 +208,13 @@ pub async fn get_inner(
 struct Times {
     start_time: Option<DateTime>,
     end_time: Option<DateTime>,
+}
+
+/// A window that does not convert is left unset rather than an error.
+fn default_start_time(clock: &Clock, end_time: Option<DateTime>) -> Option<DateTime> {
+    let end = end_time.unwrap_or_else(|| clock.now());
+    let history = i64::try_from(DEFAULT_REPORT_HISTORY.as_secs()).ok()?;
+    DateTime::try_from(end.timestamp().saturating_sub(history)).ok()
 }
 
 /// The variants of one benchmark that a perf query plots.

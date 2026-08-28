@@ -22,8 +22,8 @@ use bencher_json::{
 use ordered_float::OrderedFloat;
 use url::Url;
 
-// 30 days
-const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(720);
+// 4 weeks
+const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(672);
 
 const EMPTY_CELL: &str = "<td></td>";
 

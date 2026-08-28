@@ -1004,7 +1004,12 @@ export interface JsonPerfLine {
 
 export interface JsonPerf {
 	project: JsonProject;
+	/**
+	 * The start of the window that was plotted, which is the default window
+	 * when the query named no start time.
+	 */
 	start_time?: string;
+	/** The end of the window the query named, if it named one. */
 	end_time?: string;
 	results: JsonPerfLine[];
 }
