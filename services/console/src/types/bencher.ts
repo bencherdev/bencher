@@ -400,7 +400,7 @@ export interface JsonReportMeasure {
 }
 
 /**
- * One grid point of one benchmark, in one iteration of a report.
+ * One variant of one benchmark, in one iteration of a report.
  * 
  * A benchmark reports as many results per iteration as it has parameter sets, so
  * the parameter set is what tells two results of one benchmark apart.
@@ -960,7 +960,7 @@ export interface JsonProject {
 }
 
 /**
- * One point of a perf line: everything one measure of one grid point measured, in
+ * One point of a perf line: everything one measure of one variant measured, in
  * one iteration of one report.
  */
 export interface JsonPerfMetrics {
@@ -989,7 +989,7 @@ export interface JsonPerfMetrics {
 }
 
 /**
- * One line of a perf query: one grid point of one benchmark, on one branch, one
+ * One line of a perf query: one variant of one benchmark, on one branch, one
  * testbed, and one measure.
  */
 export interface JsonPerfLine {
@@ -1019,7 +1019,7 @@ export interface JsonPerfQuery {
 	testbeds: Uuid[];
 	specs: Uuid[];
 	benchmarks: Uuid[];
-	/** The parameters filter, OR across its elements. Empty matches every grid point. */
+	/** The parameters filter, OR across its elements. Empty matches every variant. */
 	parameters: Record<string, string | number | boolean>[];
 	measures: Uuid[];
 	start_time?: string;
@@ -1173,7 +1173,7 @@ export enum Adapter {
 /** Counts for a single iteration of a report. */
 export interface JsonReportIterationCounts {
 	/**
-	 * The number of results in this iteration: one per grid point, so one per
+	 * The number of results in this iteration: one per variant, so one per
 	 * benchmark for a benchmark that reports a single parameter set.
 	 */
 	benchmarks: number;

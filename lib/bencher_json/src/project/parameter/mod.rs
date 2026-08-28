@@ -816,7 +816,7 @@ mod tests {
 
     #[test]
     fn subset_match_includes_supersets() {
-        let grid_point = parse(r#"{"fsync": true, "op": "read", "size_mb": 16}"#);
+        let variant = parse(r#"{"fsync": true, "op": "read", "size_mb": 16}"#);
 
         for filter in [
             "{}",
@@ -826,8 +826,8 @@ mod tests {
             r#"{"fsync": true, "op": "read", "size_mb": 16}"#,
         ] {
             assert!(
-                parse(filter).is_subset_of(&grid_point),
-                "expected {filter} to match the grid point"
+                parse(filter).is_subset_of(&variant),
+                "expected {filter} to match the variant"
             );
         }
 
@@ -835,14 +835,14 @@ mod tests {
             r#"{"op": "write"}"#,
             r#"{"size_mb": 32}"#,
             r#"{"fsync": false}"#,
-            // A key the grid point does not pin at all.
+            // A key the variant does not pin at all.
             r#"{"threads": 4}"#,
             // Every key has to match, not just one of them.
             r#"{"op": "read", "size_mb": 32}"#,
         ] {
             assert!(
-                !parse(filter).is_subset_of(&grid_point),
-                "expected {filter} not to match the grid point"
+                !parse(filter).is_subset_of(&variant),
+                "expected {filter} not to match the variant"
             );
         }
     }
@@ -856,23 +856,23 @@ mod tests {
 
     #[test]
     fn subset_match_is_number_spelling_blind() {
-        let grid_point = parse(r#"{"n": 16}"#);
+        let variant = parse(r#"{"n": 16}"#);
         for filter in [r#"{"n": 16}"#, r#"{"n": 16.0}"#, r#"{"n": 1.6e1}"#] {
             assert!(
-                parse(filter).is_subset_of(&grid_point),
+                parse(filter).is_subset_of(&variant),
                 "expected {filter} to match {{\"n\":16}}"
             );
         }
-        assert!(!parse(r#"{"n": 16.5}"#).is_subset_of(&grid_point));
+        assert!(!parse(r#"{"n": 16.5}"#).is_subset_of(&variant));
     }
 
     #[test]
     fn subset_match_is_type_aware() {
-        let grid_point = parse(r#"{"a": 1, "b": "true", "c": true}"#);
+        let variant = parse(r#"{"a": 1, "b": "true", "c": true}"#);
         for filter in [r#"{"a": "1"}"#, r#"{"b": true}"#, r#"{"c": "true"}"#] {
             assert!(
-                !parse(filter).is_subset_of(&grid_point),
-                "expected {filter} not to match the grid point"
+                !parse(filter).is_subset_of(&variant),
+                "expected {filter} not to match the variant"
             );
         }
     }

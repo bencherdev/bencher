@@ -202,7 +202,7 @@ impl ReportResults {
     ) -> Result<(), HttpError> {
         // Phase 1: Pre-compute all data using read connections.
         // Resolve IDs (get_or_create), fetch historical data, compute boundaries.
-        let mut prepared_grid_points = Vec::with_capacity(results.inner.len());
+        let mut prepared_variants = Vec::with_capacity(results.inner.len());
 
         // A BMF v1 entry that names no measure measured nothing, so it writes
         // nothing: its parameter set is never resolved, it writes no
@@ -210,22 +210,22 @@ impl ReportResults {
         //
         // Gated on the version because BMF v0 says the same thing with `{"bench": {}}`
         // and has always written that row on the benchmark's empty parameter set.
-        // Skipping every empty grid point would move a v0 payload, which this whole
+        // Skipping every empty variant would move a v0 payload, which this whole
         // layer promises not to do.
-        let skip_empty_grid_points = results.version == BmfVersion::V1;
+        let skip_empty_variants = results.version == BmfVersion::V1;
 
         for (benchmark, entries) in results.inner {
             // If benchmark name is ignored then strip the special suffix before querying
             let (benchmark, ignore_benchmark) = strip_ignore_suffix(benchmark);
             let benchmark_id = self.benchmark_id(context, benchmark).await?;
-            // A benchmark reports as many grid points as it has parameter sets, and
+            // A benchmark reports as many variants as it has parameter sets, and
             // each is its own `report_benchmark` row with its own series history.
             for (parameters, metrics) in entries {
-                if skip_empty_grid_points && metrics.inner.is_empty() {
+                if skip_empty_variants && metrics.inner.is_empty() {
                     continue;
                 }
                 let prepared = self
-                    .prepare_grid_point(
+                    .prepare_variant(
                         log,
                         context,
                         iteration,
@@ -235,18 +235,18 @@ impl ReportResults {
                         metrics,
                     )
                     .await?;
-                prepared_grid_points.push(prepared);
+                prepared_variants.push(prepared);
             }
         }
 
         // Compute metric count once before acquiring write lock. Named values collapse
         // into their measure's point estimate, so this counts exactly the rows
         // `QueryMetric::usage` reads back: one per measure that named a `value`.
-        let iteration_metric_count: i32 = prepared_grid_points
+        let iteration_metric_count: i32 = prepared_variants
             .iter()
-            .map(|grid_point| {
+            .map(|variant| {
                 i32::try_from(
-                    grid_point
+                    variant
                         .measures
                         .iter()
                         .filter(|measure| measure.named.contains_key(&MetricName::value()))
@@ -266,13 +266,13 @@ impl ReportResults {
             // cache cannot drift from the metrics it bills.
             #[cfg(feature = "plus")]
             let mut series_keys: Vec<SeriesKey> = Vec::new();
-            for prepared in prepared_grid_points {
-                // The series this grid point touches, taken before it is written out.
+            for prepared in prepared_variants {
+                // The series this variant touches, taken before it is written out.
                 #[cfg(feature = "plus")]
-                let grid_point_series = prepared.series_keys(self.testbed_id);
-                write_grid_point(conn, prepared)?;
+                let variant_series = prepared.series_keys(self.testbed_id);
+                write_variant(conn, prepared)?;
                 #[cfg(feature = "plus")]
-                series_keys.extend(grid_point_series);
+                series_keys.extend(variant_series);
             }
 
             // Upsert metric count summary (count computed before acquiring write lock)
@@ -320,12 +320,12 @@ impl ReportResults {
         Ok(())
     }
 
-    /// Phase 1: Prepare all data for a single grid point (reads + compute only).
+    /// Phase 1: Prepare all data for a single variant (reads + compute only).
     #[expect(
         clippy::too_many_arguments,
-        reason = "a grid point is a benchmark, its parameter set, and its metrics"
+        reason = "a variant is a benchmark, its parameter set, and its metrics"
     )]
-    async fn prepare_grid_point(
+    async fn prepare_variant(
         &mut self,
         log: &Logger,
         context: &ApiContext,
@@ -334,7 +334,7 @@ impl ReportResults {
         ignore_benchmark: bool,
         parameters: ParameterSet,
         metrics: AdapterMetrics,
-    ) -> Result<PreparedGridPoint, HttpError> {
+    ) -> Result<PreparedVariant, HttpError> {
         // Resolved here in Phase 1, alongside the benchmark and the measures, so the
         // Phase 2 write transaction stays read free and never nests a transaction.
         let parameter_id = self.parameter_id(context, benchmark_id, parameters).await?;
@@ -372,7 +372,7 @@ impl ReportResults {
             });
         }
 
-        Ok(PreparedGridPoint {
+        Ok(PreparedVariant {
             insert_report_benchmark,
             measures: prepared_measures,
         })
@@ -394,7 +394,7 @@ impl ReportResults {
     }
 
     /// The parameter set's row, keyed on both the benchmark and the set itself:
-    /// one benchmark has as many grid points as it has parameter sets.
+    /// one benchmark has as many variants as it has parameter sets.
     async fn parameter_id(
         &mut self,
         context: &ApiContext,
@@ -452,14 +452,14 @@ impl ReportResults {
     }
 }
 
-/// Pre-computed data for a single grid point within a report iteration.
-struct PreparedGridPoint {
+/// Pre-computed data for a single variant within a report iteration.
+struct PreparedVariant {
     insert_report_benchmark: InsertReportBenchmark,
     measures: Vec<PreparedMeasure>,
 }
 
-impl PreparedGridPoint {
-    /// The series this grid point bills: one per measure, however many names the
+impl PreparedVariant {
+    /// The series this variant bills: one per measure, however many names the
     /// measure carried.
     #[cfg(feature = "plus")]
     fn series_keys(&self, testbed_id: TestbedId) -> Vec<SeriesKey> {
@@ -475,15 +475,15 @@ impl PreparedGridPoint {
     }
 }
 
-/// Phase 2: write one grid point's `report_benchmark` row, every named metric row
+/// Phase 2: write one variant's `report_benchmark` row, every named metric row
 /// under it, and the boundary and alert its point estimate earned.
 ///
 /// Runs inside the ingest write transaction and opens none of its own.
-fn write_grid_point(
+fn write_variant(
     conn: &mut crate::context::DbConnection,
-    prepared: PreparedGridPoint,
+    prepared: PreparedVariant,
 ) -> diesel::QueryResult<()> {
-    let PreparedGridPoint {
+    let PreparedVariant {
         insert_report_benchmark,
         measures,
     } = prepared;
@@ -539,7 +539,7 @@ fn write_grid_point(
     Ok(())
 }
 
-/// Pre-computed data for a single measure at one grid point.
+/// Pre-computed data for a single measure at one variant.
 struct PreparedMeasure {
     measure_id: MeasureId,
     /// Every named scalar the measure reported, in lexicographic order.

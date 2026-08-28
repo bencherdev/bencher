@@ -644,7 +644,7 @@ pub enum ReportMode {
     Collapsed,
 }
 
-/// One row of the results query: one named scalar of one measure at one grid point,
+/// One row of the results query: one named scalar of one measure at one variant,
 /// with the threshold and boundary that gated it, if any.
 type ResultsQuery = (
     Iteration,
@@ -685,7 +685,7 @@ fn report_results_query(
     .left_join(schema::threshold::table.on(schema::threshold::id.eq(schema::boundary::threshold_id)))
     .left_join(schema::model::table.on(schema::model::id.eq(schema::boundary::model_id)))
     // It is important to order by the iteration first in order to make sure they are grouped together below.
-    // The parameter set comes between the benchmark and the measure because a grid point is what a result is:
+    // The parameter set comes between the benchmark and the measure because a variant is what a result is:
     // two parameter sets of one benchmark are two results, not one result with the measures interleaved.
     // Finally the metric name orders a measure's named values, so the response order is stable.
     .order((
@@ -762,7 +762,7 @@ fn into_report_results_json(
         }
         prev_iteration = Some(iteration);
 
-        // A result is one grid point: the same benchmark on a different parameter set
+        // A result is one variant: the same benchmark on a different parameter set
         // is a different result.
         let benchmark_uuid = query_benchmark.uuid;
         let parameter_uuid = query_parameter.uuid;
@@ -945,7 +945,7 @@ fn get_report_counts(
         .order(schema::report_benchmark::iteration.asc())
         .select((
             schema::report_benchmark::iteration,
-            // A `report_benchmark` row is exactly one grid point, which is exactly one
+            // A `report_benchmark` row is exactly one variant, which is exactly one
             // result, so this agrees with the count taken from the loaded results.
             diesel::dsl::count(schema::report_benchmark::id).aggregate_distinct(),
             // Every measure with a metric row, whatever it named, because that is

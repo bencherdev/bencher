@@ -420,7 +420,7 @@ pub type JsonReportResults = Vec<JsonReportIteration>;
 #[typeshare::typeshare]
 pub type JsonReportIteration = Vec<JsonReportResult>;
 
-/// One grid point of one benchmark, in one iteration of a report.
+/// One variant of one benchmark, in one iteration of a report.
 ///
 /// A benchmark reports as many results per iteration as it has parameter sets, so
 /// the parameter set is what tells two results of one benchmark apart.
@@ -507,7 +507,7 @@ pub struct JsonReportCounts {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportIterationCounts {
-    /// The number of results in this iteration: one per grid point, so one per
+    /// The number of results in this iteration: one per variant, so one per
     /// benchmark for a benchmark that reports a single parameter set.
     pub benchmarks: u32,
     /// The number of distinct measures in this iteration.

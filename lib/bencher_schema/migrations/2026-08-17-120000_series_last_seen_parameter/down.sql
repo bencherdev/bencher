@@ -14,7 +14,7 @@ CREATE TABLE down_series_last_seen (
     FOREIGN KEY (benchmark_id) REFERENCES benchmark (id) ON DELETE CASCADE,
     FOREIGN KEY (measure_id) REFERENCES measure (id) ON DELETE CASCADE
 );
--- Grid points of one benchmark collapse back into one series, keeping the greatest
+-- Variants of one benchmark collapse back into one series, keeping the greatest
 -- `last_seen` of the rows that merge, which is what the pre-parameter cache held.
 INSERT INTO down_series_last_seen (
         organization_id,

@@ -10,7 +10,7 @@
 //!
 //! The promise this file exists to keep is that no existing project's alert volume
 //! changes. Every other test here is about the new shape reaching the database;
-//! [`alert_volume_is_identical_for_flat_benchmarks_and_grid_points`] is about the
+//! [`alert_volume_is_identical_for_flat_benchmarks_and_variants`] is about the
 //! old shape not moving when it does.
 
 use bencher_api_tests::{
@@ -122,7 +122,7 @@ async fn try_report(
     (status, body)
 }
 
-/// One BMF v1 payload for a single benchmark's grid points.
+/// One BMF v1 payload for a single benchmark's variants.
 fn v1(benchmark: &str, entries: &[serde_json::Value]) -> String {
     serde_json::to_string(&serde_json::json!({ benchmark: entries }))
         .expect("the results serialize")
@@ -246,12 +246,12 @@ fn parameters(canonical: &str) -> ParameterSet {
     canonical.parse().expect("Failed to parse the parameters")
 }
 
-// A BMF v1 report lands one `report_benchmark` row per grid point and one `metric`
+// A BMF v1 report lands one `report_benchmark` row per variant and one `metric`
 // row per named value, under the parameter set the entry declared.
 #[tokio::test]
-async fn v1_report_lands_grid_points_and_named_values() {
+async fn v1_report_lands_variants_and_named_values() {
     let server = TestServer::new().await;
-    let fixture = fixture(&server, "grid").await;
+    let fixture = fixture(&server, "variant").await;
 
     report(
         &server,
@@ -278,7 +278,7 @@ async fn v1_report_lands_grid_points_and_named_values() {
     let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
 
-    // The empty set the benchmark was born with, plus one row per grid point.
+    // The empty set the benchmark was born with, plus one row per variant.
     assert_eq!(
         parameter_sets(&mut conn, project_id),
         vec![
@@ -298,7 +298,7 @@ async fn v1_report_lands_grid_points_and_named_values() {
     );
 }
 
-/// The point estimates each grid point reports, run after run. The first grid point
+/// The point estimates each variant reports, run after run. The first variant
 /// jumps tenfold on the final report and the second does not.
 const SMALL: [f64; 5] = [10.0, 11.0, 12.0, 13.0, 14.0];
 const LARGE: [f64; 5] = [100.0, 101.0, 102.0, 103.0, 104.0];
@@ -332,9 +332,9 @@ async fn ingest_flat(server: &TestServer) -> (Fixture, i32) {
     (fixture, project_id)
 }
 
-/// Ingest the same measurements as one benchmark's two grid points.
-async fn ingest_grid(server: &TestServer) -> (Fixture, i32) {
-    let fixture = fixture(server, "grid-parity").await;
+/// Ingest the same measurements as one benchmark's two variants.
+async fn ingest_variants(server: &TestServer) -> (Fixture, i32) {
+    let fixture = fixture(server, "variant-parity").await;
     for (day, (small, large)) in SMALL
         .into_iter()
         .zip(LARGE)
@@ -367,22 +367,22 @@ async fn ingest_grid(server: &TestServer) -> (Fixture, i32) {
     (fixture, project_id)
 }
 
-// A project whose grid points are flat benchmarks and a project whose grid points
+// A project whose variants are flat benchmarks and a project whose variants
 // are parameter sets raise exactly the same alerts from exactly the same numbers.
 //
 // This is the promise of the whole layer: a bare threshold gates the conventional
 // value series of every parameter set under its measure, which is what a
 // measure-level threshold over flat benchmarks has always done.
 #[tokio::test]
-async fn alert_volume_is_identical_for_flat_benchmarks_and_grid_points() {
+async fn alert_volume_is_identical_for_flat_benchmarks_and_variants() {
     let server = TestServer::new().await;
 
     let (_flat, flat_project) = ingest_flat(&server).await;
-    let (_grid, grid_project) = ingest_grid(&server).await;
+    let (_variants, variant_project) = ingest_variants(&server).await;
 
     let mut conn = server.db_conn();
     let flat_alerts = alerts(&mut conn, flat_project);
-    let grid_alerts = alerts(&mut conn, grid_project);
+    let variant_alerts = alerts(&mut conn, variant_project);
 
     assert_eq!(
         flat_alerts.len(),
@@ -390,14 +390,14 @@ async fn alert_volume_is_identical_for_flat_benchmarks_and_grid_points() {
         "the flat fixture raises exactly one alert, got {flat_alerts:?}"
     );
     assert_eq!(
-        grid_alerts.len(),
+        variant_alerts.len(),
         flat_alerts.len(),
         "migrating to parameters must not change alert volume"
     );
     assert_eq!(
-        grid_alerts,
+        variant_alerts,
         vec![(parameters(r#"{"size_mb": 16}"#), "value".to_owned())],
-        "the alert belongs to the grid point that regressed"
+        "the alert belongs to the variant that regressed"
     );
 }
 
@@ -406,18 +406,18 @@ async fn alert_volume_is_identical_for_flat_benchmarks_and_grid_points() {
 /// with `TIGHT_LARGE`, whose spread swamps it.
 ///
 /// That gap is the whole point of these numbers. The parity fixture above cannot
-/// tell a per grid point baseline from a pooled one, because a tenfold jump is an
+/// tell a per variant baseline from a pooled one, because a tenfold jump is an
 /// outlier either way; here a pooled baseline raises no alert at all.
 const TIGHT_SMALL: [f64; 5] = [10.0, 11.0, 12.0, 13.0, 14.0];
 const TIGHT_LARGE: [f64; 5] = [1_000.0, 1_001.0, 1_002.0, 1_003.0, 1_004.0];
 const TIGHT_SMALL_FINAL: f64 = 50.0;
 const TIGHT_LARGE_FINAL: f64 = 1_004.0;
 
-// One grid point's regression does not alert against another's baseline, and one
-// grid point's ordinary run is not an outlier against the other's history.
+// One variant's regression does not alert against another's baseline, and one
+// variant's ordinary run is not an outlier against the other's history.
 //
 // The historical query behind detection has to filter on the parameter set as well
-// as the benchmark. Drop that filter and the two grid points pool into one sample
+// as the benchmark. Drop that filter and the two variants pool into one sample
 // whose standard deviation hides the regression, so this test raises no alert.
 #[tokio::test]
 async fn baselines_separate_by_parameter() {
@@ -458,7 +458,7 @@ async fn baselines_separate_by_parameter() {
     assert_eq!(
         alerts(&mut conn, project_id),
         vec![(parameters(r#"{"size_mb": 16}"#), "value".to_owned())],
-        "each grid point is tested against its own history, and only the small one regressed"
+        "each variant is tested against its own history, and only the small one regressed"
     );
 }
 
@@ -538,7 +538,7 @@ async fn absent_parameters_land_on_the_empty_set() {
     assert_eq!(
         parameter_sets(&mut conn, project_id),
         vec![(ParameterSet::default(), 1)],
-        "an absent parameter set and an explicit empty one are one grid point"
+        "an absent parameter set and an explicit empty one are one variant"
     );
 }
 
@@ -607,7 +607,7 @@ async fn v1_entry_without_measures_mints_nothing() {
     assert_eq!(
         response.get("results"),
         Some(&serde_json::json!([])),
-        "a grid point that measured nothing is echoed as nothing"
+        "a variant that measured nothing is echoed as nothing"
     );
 }
 
@@ -673,14 +673,14 @@ async fn archived_parameter_set_is_unarchived_on_report() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "archived").await;
 
-    let grid_point = v1(
+    let variant = v1(
         "bench",
         &[entry(
             &serde_json::json!({ "size_mb": 16 }),
             &serde_json::json!({ "latency": { "value": 1.0 } }),
         )],
     );
-    report(&server, &fixture, 1, vec![grid_point.clone()], None, None).await;
+    report(&server, &fixture, 1, vec![variant.clone()], None, None).await;
 
     let project_id = get_project_id(&server, &fixture.project_slug);
     {
@@ -695,7 +695,7 @@ async fn archived_parameter_set_is_unarchived_on_report() {
         assert_eq!(updated, 1);
     }
 
-    report(&server, &fixture, 2, vec![grid_point], None, None).await;
+    report(&server, &fixture, 2, vec![variant], None, None).await;
 
     let mut conn = server.db_conn();
     let archived: Vec<Option<i64>> = schema::parameter::table
@@ -705,7 +705,7 @@ async fn archived_parameter_set_is_unarchived_on_report() {
         .select(schema::parameter::archived)
         .load(&mut conn)
         .expect("Failed to load the parameter set");
-    assert_eq!(archived, vec![None], "reporting unarchives the grid point");
+    assert_eq!(archived, vec![None], "reporting unarchives the variant");
 }
 
 // Fold is not supported for BMF v1: the report warns and ingests unfolded, one
@@ -867,16 +867,16 @@ async fn named_values_do_not_change_the_metric_count() {
 }
 
 // The report response echoes every named value, keeps the deprecated metric,
-// threshold, and boundary fields correct, and separates two grid points into two
+// threshold, and boundary fields correct, and separates two variants into two
 // results rather than merging them into one.
 //
 // Two measures across two parameter sets is the smallest fixture that can see the
 // results query's ordering. Drop the parameter from the `ORDER BY` and the measure
-// name outranks it, so the rows arrive interleaved by grid point and the grouping,
+// name outranks it, so the rows arrive interleaved by variant and the grouping,
 // which only ever compares against the previous row, emits four results of one
 // measure each instead of two results of two measures each.
 #[tokio::test]
-async fn report_response_echoes_named_values_and_separates_grid_points() {
+async fn report_response_echoes_named_values_and_separates_variants() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "response").await;
 
@@ -946,10 +946,10 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
     assert_eq!(
         results.len(),
         2,
-        "two grid points are two results, got {results:#?}"
+        "two variants are two results, got {results:#?}"
     );
 
-    // Each grid point keeps both of its measures together in one result. Four
+    // Each variant keeps both of its measures together in one result. Four
     // results of one measure each is what a benchmark first ordering produces.
     let measure_names: Vec<Vec<&str>> = results
         .iter()
@@ -971,17 +971,17 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
     assert_eq!(
         measure_names,
         vec![vec!["latency", "throughput"], vec!["latency", "throughput"]],
-        "both measures of a grid point belong to that grid point's one result"
+        "both measures of a variant belong to that variant's one result"
     );
 
     // The counts are computed two ways, from the loaded results and by aggregate
-    // query, and both have to see two grid points rather than one benchmark.
+    // query, and both have to see two variants rather than one benchmark.
     assert_eq!(
         response.pointer("/counts/results/0"),
         Some(&serde_json::json!({ "benchmarks": 2, "measures": 2 })),
     );
 
-    let grid_points: Vec<ParameterSet> = results
+    let variants: Vec<ParameterSet> = results
         .iter()
         .map(|result| {
             serde_json::from_value(
@@ -994,7 +994,7 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
         })
         .collect();
     assert_eq!(
-        grid_points,
+        variants,
         vec![
             parameters(r#"{"size_mb": 16}"#),
             parameters(r#"{"size_mb": 32}"#),
@@ -1063,34 +1063,34 @@ async fn report_response_echoes_named_values_and_separates_grid_points() {
     assert_eq!(boundaries("p99"), 0, "a named value was not gated");
 }
 
-// Parameter sets are minted straight from report content, one row per grid point, so
+// Parameter sets are minted straight from report content, one row per variant, so
 // they carry the same per project creation ceiling as every other entity a report
 // mints. Without it a harness that interpolates a commit sha or a timestamp into its
-// parameters mints rows, grid points, and billable series without bound.
+// parameters mints rows, variants, and billable series without bound.
 #[tokio::test]
 async fn parameter_creation_is_rate_limited() {
     // Four creations per project per window. A benchmark is born with its empty
-    // parameter set, which is one of the four, so the fourth new grid point under one
+    // parameter set, which is one of the four, so the fourth new variant under one
     // benchmark is the one that is refused.
     let server = TestServer::new_with_creation_limits(4, 4).await;
 
     let measures = serde_json::json!({ "latency": { "value": 1.0 } });
-    let grid_points = |count: usize| -> Vec<String> {
+    let variants = |count: usize| -> Vec<String> {
         let entries = (0..count)
             .map(|n| entry(&serde_json::json!({ "n": n }), &measures))
             .collect::<Vec<_>>();
         vec![v1("bench", &entries)]
     };
 
-    // Under the ceiling: three new grid points on top of the birth empty set.
+    // Under the ceiling: three new variants on top of the birth empty set.
     let under = fixture(&server, "under-limit").await;
-    let (status, body) = try_report(&server, &under, 1, grid_points(3), None, None).await;
+    let (status, body) = try_report(&server, &under, 1, variants(3), None, None).await;
     assert_eq!(status, StatusCode::CREATED, "under the ceiling: {body}");
 
     // Over the ceiling, and in its own project, so what is counted is this project's
     // own parameter rows rather than every project's.
     let over = fixture(&server, "over-limit").await;
-    let (status, body) = try_report(&server, &over, 1, grid_points(4), None, None).await;
+    let (status, body) = try_report(&server, &over, 1, variants(4), None, None).await;
     assert_eq!(
         status,
         StatusCode::TOO_MANY_REQUESTS,
@@ -1101,7 +1101,7 @@ async fn parameter_creation_is_rate_limited() {
         "the limit that fired is the parameter one: {body}"
     );
 
-    // Minting stopped at the ceiling: the birth empty set plus three grid points,
+    // Minting stopped at the ceiling: the birth empty set plus three variants,
     // with the fourth refused rather than written.
     let project_id = get_project_id(&server, &over.project_slug);
     let mut conn = server.db_conn();
@@ -1154,7 +1154,7 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
         ],
     );
 
-    // Billed. Every measure of a grid point is its own active series, the one that
+    // Billed. Every measure of a variant is its own active series, the one that
     // named no point estimate included.
     assert_eq!(
         series_measures(&mut conn, project_id),
@@ -1348,7 +1348,7 @@ async fn v0_fold_still_folds() {
     let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
 
-    // One grid point, one row: the two iterations folded rather than landing apart.
+    // One variant, one row: the two iterations folded rather than landing apart.
     assert_eq!(
         parameter_sets(&mut conn, project_id),
         vec![(parameters("{}"), 1)],
@@ -1812,7 +1812,7 @@ async fn parameter_list_paginates_in_creation_order() {
     assert_eq!(status, StatusCode::OK, "GET parameters: {body}");
     assert_eq!(total_count.as_deref(), Some("4"));
 
-    // The empty set the benchmark was born with, then the three grid points in the
+    // The empty set the benchmark was born with, then the three variants in the
     // order they were created.
     let all = parameter_list(&server, &fixture, &benchmark, "").await;
     assert_eq!(all.len(), 4);
@@ -1824,7 +1824,7 @@ async fn parameter_list_paginates_in_creation_order() {
     assert_eq!(
         all.iter().skip(1).map(|p| p.uuid).collect::<Vec<_>>(),
         created,
-        "the grid points list in creation order"
+        "the variants list in creation order"
     );
 
     let first_page = parameter_list(&server, &fixture, &benchmark, "?per_page=2&page=1").await;
@@ -1954,7 +1954,7 @@ async fn parameter_post_duplicate_is_a_conflict() {
     assert_eq!(
         all.len(),
         2,
-        "the birth empty set and the one created grid point"
+        "the birth empty set and the one created variant"
     );
     assert!(all.iter().any(|parameter| parameter.uuid == created.uuid));
 }
@@ -1964,7 +1964,7 @@ async fn parameter_post_duplicate_is_a_conflict() {
 #[tokio::test]
 async fn parameter_post_is_rate_limited() {
     // Four creations per project per window. A benchmark is born with its empty
-    // parameter set, which is one of the four, so the fourth posted grid point is
+    // parameter set, which is one of the four, so the fourth posted variant is
     // the one that is refused.
     let server = TestServer::new_with_creation_limits(4, 4).await;
     let fixture = fixture(&server, "post-limit").await;
@@ -2105,25 +2105,19 @@ async fn parameter_delete_refuses_while_reports_reference_it() {
     let benchmark = only_benchmark(&server, &fixture).await;
     let all = parameter_list(&server, &fixture, &benchmark, "").await;
     assert_eq!(all.len(), 2);
-    let grid_point = all
+    let variant = all
         .iter()
         .find(|parameter| parameter.set == parameters(r#"{"size_mb":16}"#))
-        .expect("the reported grid point");
+        .expect("the reported variant");
 
     let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
-    let grid_point_id = parameter_row_id(&mut conn, &grid_point.uuid).expect("the grid point row");
-    assert_eq!(report_benchmarks_for_parameter(&mut conn, grid_point_id), 1);
+    let variant_id = parameter_row_id(&mut conn, &variant.uuid).expect("the variant row");
+    assert_eq!(report_benchmarks_for_parameter(&mut conn, variant_id), 1);
     drop(conn);
 
-    let (status, body) = delete_parameter(
-        &server,
-        &fixture,
-        &benchmark,
-        &fixture.token,
-        &grid_point.uuid,
-    )
-    .await;
+    let (status, body) =
+        delete_parameter(&server, &fixture, &benchmark, &fixture.token, &variant.uuid).await;
     assert_eq!(
         status,
         StatusCode::CONFLICT,
@@ -2134,11 +2128,11 @@ async fn parameter_delete_refuses_while_reports_reference_it() {
     // series are all still there.
     let mut conn = server.db_conn();
     assert!(
-        parameter_row_id(&mut conn, &grid_point.uuid).is_some(),
+        parameter_row_id(&mut conn, &variant.uuid).is_some(),
         "the parameter set is still there"
     );
-    assert_eq!(report_benchmarks_for_parameter(&mut conn, grid_point_id), 1);
-    assert_eq!(series_for_parameter(&mut conn, grid_point_id), 1);
+    assert_eq!(report_benchmarks_for_parameter(&mut conn, variant_id), 1);
+    assert_eq!(series_for_parameter(&mut conn, variant_id), 1);
     assert_eq!(project_metric_count(&mut conn, project_id), 2);
     drop(conn);
 
@@ -2178,17 +2172,17 @@ async fn parameter_delete_removes_an_unreferenced_set() {
 
     let benchmark = only_benchmark(&server, &fixture).await;
     let all = parameter_list(&server, &fixture, &benchmark, "").await;
-    let grid_point = all
+    let variant = all
         .iter()
         .find(|parameter| parameter.set == parameters(r#"{"size_mb":16}"#))
-        .expect("the reported grid point");
+        .expect("the reported variant");
     let empty_set = all
         .iter()
         .find(|parameter| parameter.set == ParameterSet::default())
         .expect("the empty parameter set");
 
     let mut conn = server.db_conn();
-    let grid_point_id = parameter_row_id(&mut conn, &grid_point.uuid).expect("the grid point row");
+    let variant_id = parameter_row_id(&mut conn, &variant.uuid).expect("the variant row");
     let empty_set_id = parameter_row_id(&mut conn, &empty_set.uuid).expect("the empty set row");
     drop(conn);
 
@@ -2199,34 +2193,28 @@ async fn parameter_delete_removes_an_unreferenced_set() {
     // billed behind.
     let mut conn = server.db_conn();
     assert_eq!(
-        report_benchmarks_for_parameter(&mut conn, grid_point_id),
+        report_benchmarks_for_parameter(&mut conn, variant_id),
         0,
         "the report took its results"
     );
     assert_eq!(
-        series_for_parameter(&mut conn, grid_point_id),
+        series_for_parameter(&mut conn, variant_id),
         1,
         "the billable series outlives the report"
     );
     drop(conn);
 
-    let (status, body) = delete_parameter(
-        &server,
-        &fixture,
-        &benchmark,
-        &fixture.token,
-        &grid_point.uuid,
-    )
-    .await;
+    let (status, body) =
+        delete_parameter(&server, &fixture, &benchmark, &fixture.token, &variant.uuid).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "DELETE parameter: {body}");
 
     let mut conn = server.db_conn();
     assert!(
-        parameter_row_id(&mut conn, &grid_point.uuid).is_none(),
+        parameter_row_id(&mut conn, &variant.uuid).is_none(),
         "the parameter set is gone"
     );
     assert_eq!(
-        series_for_parameter(&mut conn, grid_point_id),
+        series_for_parameter(&mut conn, variant_id),
         0,
         "its billable series go with it"
     );

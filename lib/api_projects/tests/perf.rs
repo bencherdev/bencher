@@ -3136,8 +3136,8 @@ fn create_parameter(
     (parameter_uuid, parameter_id)
 }
 
-/// Add one grid point to a benchmark inside the fixture's report.
-fn create_grid_point(
+/// Add one variant to a benchmark inside the fixture's report.
+fn create_variant(
     server: &TestServer,
     data: &PerfTestData,
     benchmark_id: i32,
@@ -3295,7 +3295,7 @@ fn line_parameters(perf: &JsonPerf) -> Vec<String> {
 }
 
 #[tokio::test]
-async fn perf_fans_out_one_line_per_grid_point() {
+async fn perf_fans_out_one_line_per_variant() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "perffanout@example.com").await;
     let org = server.create_org(&user, "Perf Fan Out Org").await;
@@ -3305,9 +3305,8 @@ async fn perf_fans_out_one_line_per_grid_point() {
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let data = create_perf_data(&server, project_id);
-    let sixteen = create_grid_point(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
-    let thirty_two =
-        create_grid_point(&server, &data, data.benchmark_id, r#"{"size_mb": 32}"#, 2.0);
+    let sixteen = create_variant(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
+    let thirty_two = create_variant(&server, &data, data.benchmark_id, r#"{"size_mb": 32}"#, 2.0);
 
     let query = fixture_query(&data, vec![data.benchmark_uuid], &[]);
     let perf = get_perf(
@@ -3317,7 +3316,7 @@ async fn perf_fans_out_one_line_per_grid_point() {
     )
     .await;
 
-    // The lines come out in grid point creation order, so the empty set is first.
+    // The lines come out in variant creation order, so the empty set is first.
     assert_eq!(
         line_parameters(&perf),
         vec![
@@ -3374,7 +3373,7 @@ async fn perf_parameters_filter_is_an_or_of_ands() {
         (r#"{"op": "write", "size_mb": 16}"#, 3.0),
         (r#"{"op": "write", "size_mb": 32}"#, 4.0),
     ] {
-        create_grid_point(&server, &data, data.benchmark_id, set, value);
+        create_variant(&server, &data, data.benchmark_id, set, value);
     }
 
     // Every read, plus the one write at 32.
@@ -3424,9 +3423,9 @@ async fn perf_parameters_filter_matching_nothing_returns_no_lines() {
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let data = create_perf_data(&server, project_id);
-    create_grid_point(&server, &data, data.benchmark_id, r#"{"op": "read"}"#, 1.0);
+    create_variant(&server, &data, data.benchmark_id, r#"{"op": "read"}"#, 1.0);
     let (sibling_uuid, sibling_id) = create_sibling_benchmark(&server, project_id);
-    create_grid_point(&server, &data, sibling_id, r#"{"op": "write"}"#, 2.0);
+    create_variant(&server, &data, sibling_id, r#"{"op": "write"}"#, 2.0);
 
     // The write benchmark still returns its line while the read one returns none.
     let query = fixture_query(
@@ -3475,7 +3474,7 @@ async fn perf_parameters_filter_is_number_spelling_blind() {
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let data = create_perf_data(&server, project_id);
-    create_grid_point(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
+    create_variant(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
 
     for blob in [
         r#"{"size_mb":16}"#,
@@ -3498,11 +3497,11 @@ async fn perf_parameters_filter_is_number_spelling_blind() {
         assert_eq!(
             line_parameters(&perf),
             vec![r#"{"size_mb":16}"#.to_owned()],
-            "{blob} must hit the same grid point"
+            "{blob} must hit the same variant"
         );
     }
 
-    // A different number is a different grid point, spelling notwithstanding.
+    // A different number is a different variant, spelling notwithstanding.
     let url = format!(
         "{}&parameters={}",
         build_perf_url(
@@ -3532,7 +3531,7 @@ async fn perf_parameters_filter_empty_value_is_no_filter() {
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let data = create_perf_data(&server, project_id);
-    create_grid_point(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
+    create_variant(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
 
     let url = build_perf_url(
         project.slug.as_ref(),
@@ -3817,7 +3816,7 @@ async fn perf_point_without_a_value_name_keeps_its_line() {
     )
     .await;
 
-    assert_eq!(perf.results.len(), 1, "one grid point, one line");
+    assert_eq!(perf.results.len(), 1, "one variant, one line");
     let points = &perf.results[0].metrics;
     assert_eq!(
         points.len(),

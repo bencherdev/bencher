@@ -788,7 +788,7 @@ impl ReportComment {
             #[cfg(feature = "plus")]
             specs: vec![self.json_report.testbed.spec.as_ref().map(|s| s.uuid)],
             benchmarks: vec![benchmark.uuid],
-            // No filter, so the link plots every grid point of the benchmark.
+            // No filter, so the link plots every variant of the benchmark.
             parameters: Vec::new(),
             measures: vec![measure.uuid],
             start_time: Some(

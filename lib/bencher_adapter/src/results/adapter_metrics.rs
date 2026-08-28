@@ -6,7 +6,7 @@ use std::{
 use bencher_json::{JsonNewMetric, MeasureNameId, MetricName};
 use ordered_float::OrderedFloat;
 
-/// Every measure a benchmark reported at one grid point.
+/// Every measure a benchmark reported at one variant.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AdapterMetrics {
     pub inner: MetricsMap,

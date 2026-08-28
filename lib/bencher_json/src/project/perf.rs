@@ -50,9 +50,9 @@ pub struct JsonPerfQueryParams {
     /// A comma separated list of benchmark UUIDs to query.
     pub benchmarks: String,
     /// An optional comma separated list of URL encoded parameter sets to filter on.
-    /// A grid point is queried when at least one of them is a subset of its
+    /// A variant is queried when at least one of them is a subset of its
     /// parameter set: every key the filter names, with the same value.
-    /// Leaving this off queries every grid point.
+    /// Leaving this off queries every variant.
     pub parameters: Option<String>,
     /// A comma separated list of measure UUIDs to query.
     pub measures: String,
@@ -107,7 +107,7 @@ impl From<JsonPerfImgQueryParams> for JsonPerfQueryParams {
             testbeds,
             specs,
             benchmarks,
-            // No filter, so every grid point is plotted.
+            // No filter, so every variant is plotted.
             parameters: None,
             measures,
             start_time,
@@ -127,7 +127,7 @@ pub struct JsonPerfQuery {
     #[cfg(feature = "plus")]
     pub specs: Vec<Option<SpecUuid>>,
     pub benchmarks: Vec<BenchmarkUuid>,
-    /// The parameters filter, OR across its elements. Empty matches every grid point.
+    /// The parameters filter, OR across its elements. Empty matches every variant.
     pub parameters: Vec<ParameterSet>,
     pub measures: Vec<MeasureUuid>,
     pub start_time: Option<DateTime>,
@@ -390,7 +390,7 @@ pub struct JsonPerf {
     pub results: Vec<JsonPerfLine>,
 }
 
-/// One line of a perf query: one grid point of one benchmark, on one branch, one
+/// One line of a perf query: one variant of one benchmark, on one branch, one
 /// testbed, and one measure.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -405,7 +405,7 @@ pub struct JsonPerfLine {
     pub metrics: Vec<JsonPerfMetrics>,
 }
 
-/// One point of a perf line: everything one measure of one grid point measured, in
+/// One point of a perf line: everything one measure of one variant measured, in
 /// one iteration of one report.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]

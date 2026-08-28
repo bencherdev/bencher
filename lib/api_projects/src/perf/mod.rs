@@ -81,7 +81,7 @@ pub async fn proj_perf_options(
 /// The query results are every permutation of each branch, testbed, benchmark, and measure.
 /// There is a limit of 255 permutations for a single request.
 /// Therefore, only the first 255 permutations are returned.
-/// Each permutation returns one result per grid point of its benchmark,
+/// Each permutation returns one result per variant of its benchmark,
 /// narrowed by the `parameters` filter when one is given.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project,
@@ -188,33 +188,33 @@ struct Times {
     end_time: Option<DateTime>,
 }
 
-/// The grid points of one benchmark that a perf query plots.
+/// The variants of one benchmark that a perf query plots.
 ///
 /// The parameters filter is resolved here, in memory, so what reaches SQL is a
 /// list of row identifiers and never a JSON predicate.
-struct BenchmarkGrid {
+struct BenchmarkVariants {
     benchmark: QueryBenchmark,
     /// Keyed by row identifier and therefore in creation order, so the empty set
     /// every benchmark is born with comes first.
-    grid_points: BTreeMap<ParameterId, QueryParameter>,
+    variants: BTreeMap<ParameterId, QueryParameter>,
     filtered: bool,
 }
 
-impl BenchmarkGrid {
+impl BenchmarkVariants {
     fn parameter_ids(&self) -> Option<Vec<ParameterId>> {
         self.filtered
-            .then(|| self.grid_points.keys().copied().collect())
+            .then(|| self.variants.keys().copied().collect())
     }
 }
 
-fn benchmark_grid(
+fn benchmark_variants(
     conn: &mut DbConnection,
     project: &QueryProject,
     benchmark_uuid: BenchmarkUuid,
     parameters: &[ParameterSet],
-) -> Result<BenchmarkGrid, HttpError> {
+) -> Result<BenchmarkVariants, HttpError> {
     let benchmark = QueryBenchmark::from_uuid(conn, project.id, benchmark_uuid)?;
-    let grid_points = schema::parameter::table
+    let variants = schema::parameter::table
         .filter(schema::parameter::benchmark_id.eq(benchmark.id))
         .order(schema::parameter::id)
         .select(QueryParameter::as_select())
@@ -224,18 +224,18 @@ fn benchmark_grid(
             (project, benchmark_uuid)
         ))?
         .into_iter()
-        .filter(|grid_point| {
+        .filter(|variant| {
             parameters.is_empty()
                 || parameters
                     .iter()
-                    .any(|filter| filter.is_subset_of(&grid_point.set))
+                    .any(|filter| filter.is_subset_of(&variant.set))
         })
-        .map(|grid_point| (grid_point.id, grid_point))
+        .map(|variant| (variant.id, variant))
         .collect();
 
-    Ok(BenchmarkGrid {
+    Ok(BenchmarkVariants {
         benchmark,
-        grid_points,
+        variants,
         filtered: !parameters.is_empty(),
     })
 }
@@ -265,22 +265,22 @@ fn queried_spec(
     }
 }
 
-/// A benchmark that does not exist, and a benchmark whose every grid point the
-/// filter excludes, both return nothing rather than an error, so the other
-/// benchmarks of the same query still return their lines.
-fn queried_grid<'g>(
+/// A benchmark that does not exist, and a benchmark whose every variant the filter
+/// excludes, both return nothing rather than an error, so the other benchmarks of
+/// the same query still return their lines.
+fn queried_variants<'v>(
     conn: &mut DbConnection,
     log: &slog::Logger,
-    grids: &'g mut HashMap<BenchmarkUuid, Option<BenchmarkGrid>>,
+    variants_cache: &'v mut HashMap<BenchmarkUuid, Option<BenchmarkVariants>>,
     project: &QueryProject,
     benchmark_uuid: BenchmarkUuid,
     parameters: &[ParameterSet],
-) -> Option<&'g BenchmarkGrid> {
-    grids
+) -> Option<&'v BenchmarkVariants> {
+    variants_cache
         .entry(benchmark_uuid)
         .or_insert_with(
-            || match benchmark_grid(conn, project, benchmark_uuid, parameters) {
-                Ok(grid) => Some(grid),
+            || match benchmark_variants(conn, project, benchmark_uuid, parameters) {
+                Ok(variants) => Some(variants),
                 Err(e) => {
                     slog::info!(log, "Skipping perf query for nonexistent benchmark UUID: {benchmark_uuid}"; "error" => %e);
                     None
@@ -288,7 +288,7 @@ fn queried_grid<'g>(
             },
         )
         .as_ref()
-        .filter(|grid| !grid.grid_points.is_empty())
+        .filter(|variants| !variants.variants.is_empty())
 }
 
 #[expect(
@@ -312,7 +312,7 @@ async fn perf_results(
     let permutations = branches.len() * testbeds.len() * benchmarks.len() * measures.len();
     let gt_max_permutations = permutations > MAX_PERMUTATIONS;
     let mut results = Vec::with_capacity(permutations.min(MAX_PERMUTATIONS));
-    let mut grids: HashMap<BenchmarkUuid, Option<BenchmarkGrid>> = HashMap::new();
+    let mut variants_cache: HashMap<BenchmarkUuid, Option<BenchmarkVariants>> = HashMap::new();
     // It is okay to use `zip` because `JsonPerfQuery` guarantees that the lengths are the same.
     for (branch_index, (branch_uuid, head_uuid)) in branches.iter().zip(heads.iter()).enumerate() {
         for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
@@ -328,10 +328,10 @@ async fn perf_results(
             let spec_id: Option<SpecId> = None;
 
             for (benchmark_index, benchmark_uuid) in benchmarks.iter().enumerate() {
-                let Some(grid) = queried_grid(
+                let Some(variants) = queried_variants(
                     actor_conn!(context, api_actor),
                     log,
-                    &mut grids,
+                    &mut variants_cache,
                     project,
                     *benchmark_uuid,
                     parameters,
@@ -357,7 +357,7 @@ async fn perf_results(
                         *testbed_uuid,
                         spec_id,
                         *benchmark_uuid,
-                        grid.parameter_ids(),
+                        variants.parameter_ids(),
                         *measure_uuid,
                         times,
                     )
@@ -376,7 +376,7 @@ async fn perf_results(
                     results.extend(into_perf_lines(
                         actor_conn!(context, api_actor),
                         project,
-                        grid,
+                        variants,
                         spec_id,
                         pq,
                     )?);
@@ -390,7 +390,7 @@ async fn perf_results(
 /// One row per named scalar.
 ///
 /// This reads the `metric` table directly rather than the `metric_boundary` view.
-/// All of a grid point's named scalars for one measure sit together on
+/// All of a variant's named scalars for one measure sit together on
 /// `index_metric_report_benchmark_measure_name`, so one range read returns every
 /// one of them, where the view had to seek each conventional name separately.
 #[expect(
@@ -489,7 +489,7 @@ fn perf_query(
         // Order by the version number so that the oldest version is first.
         // Because multiple reports can use the same version (via git hash), order by the start time next.
         // Then within a report order by the iteration number.
-        // Finally the report benchmark, so one grid point's named scalars stay together.
+        // Finally the report benchmark, so one variant's named scalars stay together.
         .order((
             schema::version::number,
             schema::report::start_time,
@@ -593,12 +593,12 @@ struct QueryDimensions {
     measure: QueryMeasure,
 }
 
-/// One grid point's rows are contiguous in plot order, so each line is built as
-/// its rows are read.
+/// One variant's rows are contiguous in plot order, so each line is built as its
+/// rows are read.
 fn into_perf_lines(
     conn: &mut DbConnection,
     project: &QueryProject,
-    grid: &BenchmarkGrid,
+    variants: &BenchmarkVariants,
     spec_id: Option<SpecId>,
     rows: Vec<PerfQuery>,
 ) -> Result<Vec<JsonPerfLine>, HttpError> {
@@ -678,8 +678,8 @@ fn into_perf_lines(
 
     let mut results = Vec::with_capacity(lines.len());
     for (parameter_id, line) in lines {
-        let Some(grid_point) = grid.grid_points.get(&parameter_id) else {
-            debug_assert!(false, "the queried grid point is one of the matched ones");
+        let Some(variant) = variants.variants.get(&parameter_id) else {
+            debug_assert!(false, "the queried variant is one of the matched ones");
             continue;
         };
         let metrics = line
@@ -690,7 +690,7 @@ fn into_perf_lines(
             branch: json_branch.clone(),
             testbed: json_testbed.clone(),
             benchmark: json_benchmark.clone(),
-            parameter: grid_point.clone().into_json_for_benchmark(&grid.benchmark),
+            parameter: variant.clone().into_json_for_benchmark(&variants.benchmark),
             measure: json_measure.clone(),
             metrics,
         });

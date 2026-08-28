@@ -6448,7 +6448,7 @@
           "perf"
         ],
         "summary": "Query project performance metrics",
-        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. Each permutation returns one result per grid point of its benchmark, narrowed by the `parameters` filter when one is given. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
+        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. Each permutation returns one result per variant of its benchmark, narrowed by the `parameters` filter when one is given. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_perf_get",
         "parameters": [
           {
@@ -6507,7 +6507,7 @@
           {
             "in": "query",
             "name": "parameters",
-            "description": "An optional comma separated list of URL encoded parameter sets to filter on. A grid point is queried when at least one of them is a subset of its parameter set: every key the filter names, with the same value. Leaving this off queries every grid point.",
+            "description": "An optional comma separated list of URL encoded parameter sets to filter on. A variant is queried when at least one of them is a subset of its parameter set: every key the filter names, with the same value. Leaving this off queries every variant.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -15471,7 +15471,7 @@
         ]
       },
       "JsonPerfLine": {
-        "description": "One line of a perf query: one grid point of one benchmark, on one branch, one testbed, and one measure.",
+        "description": "One line of a perf query: one variant of one benchmark, on one branch, one testbed, and one measure.",
         "type": "object",
         "properties": {
           "benchmark": {
@@ -15511,7 +15511,7 @@
         ]
       },
       "JsonPerfMetrics": {
-        "description": "One point of a perf line: everything one measure of one grid point measured, in one iteration of one report.",
+        "description": "One point of a perf line: everything one measure of one variant measured, in one iteration of one report.",
         "type": "object",
         "properties": {
           "alert": {
@@ -16815,7 +16815,7 @@
         "type": "object",
         "properties": {
           "benchmarks": {
-            "description": "The number of results in this iteration: one per grid point, so one per benchmark for a benchmark that reports a single parameter set.",
+            "description": "The number of results in this iteration: one per variant, so one per benchmark for a benchmark that reports a single parameter set.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -16924,7 +16924,7 @@
         ]
       },
       "JsonReportResult": {
-        "description": "One grid point of one benchmark, in one iteration of a report.\n\nA benchmark reports as many results per iteration as it has parameter sets, so the parameter set is what tells two results of one benchmark apart.",
+        "description": "One variant of one benchmark, in one iteration of a report.\n\nA benchmark reports as many results per iteration as it has parameter sets, so the parameter set is what tells two results of one benchmark apart.",
         "type": "object",
         "properties": {
           "benchmark": {

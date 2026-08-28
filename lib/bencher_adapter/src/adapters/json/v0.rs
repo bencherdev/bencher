@@ -177,7 +177,7 @@ pub(crate) mod test_json_v0 {
     }
 
     /// A benchmark that reports no measures is a benchmark that measured nothing.
-    /// It is accepted, it is not an error, and it parses to one grid point on the
+    /// It is accepted, it is not an error, and it parses to one variant on the
     /// empty parameter set with no metric under it. BMF v1 mirrors this shape with
     /// an entry whose `measures` is empty.
     #[test]
