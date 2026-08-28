@@ -4,8 +4,9 @@ use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 #[cfg(feature = "plus")]
 use bencher_json::SpecUuid;
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, GitHash, HeadUuid, JsonPerf, JsonPerfQuery, MeasureUuid,
-    MetricName, MetricUuid, ParameterSet, ProjectResourceId, ReportUuid, TestbedUuid,
+    BenchmarkUuid, BranchUuid, DateTime, GitHash, HeadUuid, JsonBenchmark, JsonBranch, JsonMeasure,
+    JsonPerf, JsonPerfQuery, JsonTestbed, MeasureUuid, MetricName, MetricUuid, ParameterSet,
+    ProjectResourceId, ReportUuid, TestbedUuid,
     project::{
         alert::JsonPerfAlert,
         boundary::JsonBoundary,
@@ -24,7 +25,10 @@ use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
     actor_conn,
     context::{ApiContext, DbConnection},
-    error::{bad_request_error, resource_not_found_err, with_auth_hint},
+    error::{
+        BencherResource, bad_request_error, resource_not_found_err, resource_not_found_error,
+        with_auth_hint,
+    },
     model::{
         project::{
             ProjectId, QueryProject,
@@ -193,6 +197,7 @@ struct Times {
 /// list of row identifiers and never a JSON predicate.
 struct BenchmarkVariants {
     benchmark: QueryBenchmark,
+    json: JsonBenchmark,
     /// Keyed by row identifier and therefore in creation order, so the empty set
     /// every benchmark is born with comes first.
     variants: BTreeMap<ParameterId, QueryParameter>,
@@ -213,6 +218,7 @@ fn benchmark_variants(
     parameters: &[ParameterSet],
 ) -> Result<BenchmarkVariants, HttpError> {
     let benchmark = QueryBenchmark::from_uuid(conn, project.id, benchmark_uuid)?;
+    let json = benchmark.clone().into_json_for_project(project);
     let variants = schema::parameter::table
         .filter(schema::parameter::benchmark_id.eq(benchmark.id))
         .order(schema::parameter::id)
@@ -234,9 +240,123 @@ fn benchmark_variants(
 
     Ok(BenchmarkVariants {
         benchmark,
+        json,
         variants,
         filtered: !parameters.is_empty(),
     })
+}
+
+/// Every row of a permutation carries the same branch, testbed, and measure, so
+/// they are resolved once per distinct value instead of read off every row.
+#[derive(Default)]
+struct DimensionCache {
+    branches: HashMap<(BranchUuid, Option<HeadUuid>), Option<JsonBranch>>,
+    testbeds: HashMap<(TestbedUuid, Option<SpecId>), Option<JsonTestbed>>,
+    measures: HashMap<MeasureUuid, Option<JsonMeasure>>,
+}
+
+struct QueryDimensions {
+    branch: JsonBranch,
+    testbed: JsonTestbed,
+    measure: JsonMeasure,
+}
+
+impl DimensionCache {
+    /// Resolves the same head the perf query rows carry, which is the branch's
+    /// current head when the query names none.
+    fn branch(
+        &mut self,
+        conn: &mut DbConnection,
+        log: &slog::Logger,
+        project: &QueryProject,
+        branch_uuid: BranchUuid,
+        head_uuid: Option<HeadUuid>,
+    ) -> Option<JsonBranch> {
+        self.branches
+            .entry((branch_uuid, head_uuid))
+            .or_insert_with(|| {
+                match branch_json(conn, project, branch_uuid, head_uuid) {
+                    Ok(json_branch) => Some(json_branch),
+                    Err(e) => {
+                        slog::info!(log, "Skipping perf query for unresolved branch UUID: {branch_uuid}"; "error" => %e);
+                        None
+                    },
+                }
+            })
+            .clone()
+    }
+
+    fn testbed(
+        &mut self,
+        conn: &mut DbConnection,
+        log: &slog::Logger,
+        project: &QueryProject,
+        testbed_uuid: TestbedUuid,
+        spec_id: Option<SpecId>,
+    ) -> Option<JsonTestbed> {
+        self.testbeds
+            .entry((testbed_uuid, spec_id))
+            .or_insert_with(|| {
+                match QueryTestbed::from_uuid(conn, project.id, testbed_uuid)
+                    .and_then(|testbed| testbed.into_json_for_spec(conn, project, spec_id))
+                {
+                    Ok(json_testbed) => Some(json_testbed),
+                    Err(e) => {
+                        slog::info!(log, "Skipping perf query for unresolved testbed UUID: {testbed_uuid}"; "error" => %e);
+                        None
+                    },
+                }
+            })
+            .clone()
+    }
+
+    fn measure(
+        &mut self,
+        conn: &mut DbConnection,
+        log: &slog::Logger,
+        project: &QueryProject,
+        measure_uuid: MeasureUuid,
+    ) -> Option<JsonMeasure> {
+        self.measures
+            .entry(measure_uuid)
+            .or_insert_with(|| {
+                match QueryMeasure::from_uuid(conn, project.id, measure_uuid) {
+                    Ok(measure) => Some(measure.into_json_for_project(project)),
+                    Err(e) => {
+                        slog::info!(log, "Skipping perf query for unresolved measure UUID: {measure_uuid}"; "error" => %e);
+                        None
+                    },
+                }
+            })
+            .clone()
+    }
+}
+
+/// The perf query joins the branch to its head, so a missing head, or a head on
+/// another branch, returns no rows. Not found here keeps that the same.
+fn branch_json(
+    conn: &mut DbConnection,
+    project: &QueryProject,
+    branch_uuid: BranchUuid,
+    head_uuid: Option<HeadUuid>,
+) -> Result<JsonBranch, HttpError> {
+    let branch = QueryBranch::from_uuid(conn, project.id, branch_uuid)?;
+    let head = if let Some(head_uuid) = head_uuid {
+        QueryHead::from_uuid(conn, project.id, head_uuid)?
+    } else {
+        let head_id = branch.head_id.ok_or_else(|| {
+            resource_not_found_error(BencherResource::Head, (project, branch_uuid), "no head")
+        })?;
+        QueryHead::get(conn, head_id)?
+    };
+    if head.branch_id != branch.id {
+        return Err(resource_not_found_error(
+            BencherResource::Head,
+            (project, branch_uuid),
+            "head is on another branch",
+        ));
+    }
+    branch.into_json_for_head(conn, project, &head, None)
 }
 
 #[cfg(feature = "plus")]
@@ -312,6 +432,7 @@ async fn perf_results(
     let gt_max_permutations = permutations > MAX_PERMUTATIONS;
     let mut results = Vec::with_capacity(permutations.min(MAX_PERMUTATIONS));
     let mut variants_cache: HashMap<BenchmarkUuid, Option<BenchmarkVariants>> = HashMap::new();
+    let mut dimensions_cache = DimensionCache::default();
     // It is okay to use `zip` because `JsonPerfQuery` guarantees that the lengths are the same.
     for (branch_index, (branch_uuid, head_uuid)) in branches.iter().zip(heads.iter()).enumerate() {
         for (testbed_index, testbed_uuid) in testbeds.iter().enumerate() {
@@ -349,41 +470,102 @@ async fn perf_results(
                         return Ok(results);
                     }
 
-                    let pq = perf_query(
-                        project.id,
-                        *branch_uuid,
-                        *head_uuid,
-                        *testbed_uuid,
+                    let permutation = Permutation {
+                        branch_uuid: *branch_uuid,
+                        head_uuid: *head_uuid,
+                        testbed_uuid: *testbed_uuid,
                         spec_id,
-                        *benchmark_uuid,
-                        variants.parameter_ids(),
-                        *measure_uuid,
-                        times,
-                    )
-                    .load::<PerfQuery>(actor_conn!(context, api_actor))
-                    .map_err(resource_not_found_err!(
-                        Metric,
-                        (
-                            project,
-                            branch_uuid,
-                            testbed_uuid,
-                            benchmark_uuid,
-                            measure_uuid
-                        )
-                    ))?;
-
-                    results.extend(into_perf_lines(
-                        actor_conn!(context, api_actor),
+                        benchmark_uuid: *benchmark_uuid,
+                        measure_uuid: *measure_uuid,
+                    };
+                    let lines = actor_conn!(context, api_actor, |conn| perf_permutation(
+                        conn,
+                        log,
+                        &mut dimensions_cache,
                         project,
                         variants,
-                        spec_id,
-                        pq,
-                    )?);
+                        permutation,
+                        times,
+                    ))?;
+                    results.extend(lines);
                 }
             }
         }
     }
     Ok(results)
+}
+
+#[derive(Clone, Copy)]
+struct Permutation {
+    branch_uuid: BranchUuid,
+    head_uuid: Option<HeadUuid>,
+    testbed_uuid: TestbedUuid,
+    spec_id: Option<SpecId>,
+    benchmark_uuid: BenchmarkUuid,
+    measure_uuid: MeasureUuid,
+}
+
+/// A permutation with no rows, or with a dimension that does not resolve, has no
+/// line rather than an error.
+fn perf_permutation(
+    conn: &mut DbConnection,
+    log: &slog::Logger,
+    dimensions_cache: &mut DimensionCache,
+    project: &QueryProject,
+    variants: &BenchmarkVariants,
+    permutation: Permutation,
+    times: Times,
+) -> Result<Vec<JsonPerfLine>, HttpError> {
+    let Permutation {
+        branch_uuid,
+        head_uuid,
+        testbed_uuid,
+        spec_id,
+        benchmark_uuid,
+        measure_uuid,
+    } = permutation;
+
+    let rows = perf_query(
+        project.id,
+        branch_uuid,
+        head_uuid,
+        testbed_uuid,
+        spec_id,
+        benchmark_uuid,
+        variants.parameter_ids(),
+        measure_uuid,
+        times,
+    )
+    .load::<PerfQuery>(conn)
+    .map_err(resource_not_found_err!(
+        Metric,
+        (
+            project,
+            branch_uuid,
+            testbed_uuid,
+            benchmark_uuid,
+            measure_uuid
+        )
+    ))?;
+
+    if rows.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let (Some(branch), Some(testbed), Some(measure)) = (
+        dimensions_cache.branch(conn, log, project, branch_uuid, head_uuid),
+        dimensions_cache.testbed(conn, log, project, testbed_uuid, spec_id),
+        dimensions_cache.measure(conn, log, project, measure_uuid),
+    ) else {
+        return Ok(Vec::new());
+    };
+    let dimensions = QueryDimensions {
+        branch,
+        testbed,
+        measure,
+    };
+
+    Ok(into_perf_lines(project, &dimensions, variants, rows))
 }
 
 /// One row per metric.
@@ -495,12 +677,11 @@ fn perf_query(
             schema::report_benchmark::iteration,
             schema::report_benchmark::id,
         ))
+        // The branch, head, testbed, benchmark, and measure are identical on every
+        // row of a permutation, so they are resolved per distinct value instead of
+        // selected. Selecting them puts `41` more columns in every sorted record of
+        // the temp B-tree.
         .select((
-            QueryBranch::as_select(),
-            QueryHead::as_select(),
-            QueryTestbed::as_select(),
-            QueryBenchmark::as_select(),
-            QueryMeasure::as_select(),
             schema::report_benchmark::id,
             schema::report_benchmark::parameter_id,
             schema::report::uuid,
@@ -568,11 +749,6 @@ type PerfBoundary = (
 );
 
 type PerfQuery = (
-    QueryBranch,
-    QueryHead,
-    QueryTestbed,
-    QueryBenchmark,
-    QueryMeasure,
     ReportBenchmarkId,
     ParameterId,
     ReportUuid,
@@ -585,32 +761,17 @@ type PerfQuery = (
     Option<PerfBoundary>,
 );
 
-struct QueryDimensions {
-    branch: QueryBranch,
-    head: QueryHead,
-    testbed: QueryTestbed,
-    measure: QueryMeasure,
-}
-
 /// One variant's rows are contiguous in plot order, so each line is built as its
 /// rows are read.
 fn into_perf_lines(
-    conn: &mut DbConnection,
     project: &QueryProject,
+    dimensions: &QueryDimensions,
     variants: &BenchmarkVariants,
-    spec_id: Option<SpecId>,
     rows: Vec<PerfQuery>,
-) -> Result<Vec<JsonPerfLine>, HttpError> {
-    let mut dimensions: Option<QueryDimensions> = None;
-    let mut benchmark: Option<QueryBenchmark> = None;
+) -> Vec<JsonPerfLine> {
     let mut lines: BTreeMap<ParameterId, Vec<PendingMetric>> = BTreeMap::new();
 
     for (
-        query_branch,
-        query_head,
-        query_testbed,
-        query_benchmark,
-        query_measure,
         report_benchmark_id,
         parameter_id,
         report,
@@ -623,18 +784,6 @@ fn into_perf_lines(
         perf_boundary,
     ) in rows
     {
-        // Every row of one permutation carries the same dimensions, so the first row
-        // is the one that names them.
-        if dimensions.is_none() {
-            dimensions = Some(QueryDimensions {
-                branch: query_branch,
-                head: query_head,
-                testbed: query_testbed,
-                measure: query_measure,
-            });
-            benchmark = Some(query_benchmark);
-        }
-
         let line = lines.entry(parameter_id).or_default();
         if line
             .last()
@@ -661,20 +810,6 @@ fn into_perf_lines(
         pending.push(project, query_metric, perf_boundary);
     }
 
-    let (Some(dimensions), Some(benchmark)) = (dimensions, benchmark) else {
-        return Ok(Vec::new());
-    };
-    let QueryDimensions {
-        branch,
-        head,
-        testbed,
-        measure,
-    } = dimensions;
-    let json_branch = branch.into_json_for_head(conn, project, &head, None)?;
-    let json_testbed = testbed.into_json_for_spec(conn, project, spec_id)?;
-    let json_benchmark = benchmark.into_json_for_project(project);
-    let json_measure = measure.into_json_for_project(project);
-
     let mut results = Vec::with_capacity(lines.len());
     for (parameter_id, line) in lines {
         let Some(variant) = variants.variants.get(&parameter_id) else {
@@ -686,15 +821,15 @@ fn into_perf_lines(
             .map(PendingMetric::into_json)
             .collect::<Vec<_>>();
         results.push(JsonPerfLine {
-            branch: json_branch.clone(),
-            testbed: json_testbed.clone(),
-            benchmark: json_benchmark.clone(),
+            branch: dimensions.branch.clone(),
+            testbed: dimensions.testbed.clone(),
+            benchmark: variants.json.clone(),
             parameter: variant.clone().into_json_for_benchmark(&variants.benchmark),
-            measure: json_measure.clone(),
+            measure: dimensions.measure.clone(),
             metrics,
         });
     }
-    Ok(results)
+    results
 }
 
 /// The deprecated metric triple needs the `value`, `lower_value`, and `upper_value`
