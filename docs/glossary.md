@@ -23,8 +23,9 @@ concepts the benchmark parameters work introduces and are open for refinement.
   regression test is new to Bencher, then a Benchmark is automatically created.
 - **Parameter Set** *(proposed)*: A set of parameters reported for a Benchmark.
   Each key maps to a JSON scalar: a string, a number, or a boolean. Values are
-  canonicalized, so `16`, `16.0`, and `1.6e1` are the same value. Every
-  Benchmark starts with the empty Parameter Set.
+  canonicalized, so `16`, `16.0`, and `1.6e1` are the same value. A Parameter
+  Set may carry at most 8 keys. Every Benchmark starts with the empty
+  Parameter Set.
 - **Variant** *(proposed)*: A Benchmark with one concrete Parameter Set. A
   Benchmark that never reports parameters has a single Variant, the empty
   Parameter Set.
@@ -45,7 +46,7 @@ concepts the benchmark parameters work introduces and are open for refinement.
   Parameter Set, and Measure. Each Series has its own Metric history and bills
   as its own Series. A Series does not include a Branch.
 - **Line** *(proposed)*: One Series plotted on one Branch. A Perf query returns
-  at most the first 255 Lines.
+  at most the first 256 Lines.
 - **Permutation** *(proposed)*: One combination of Branch, Testbed, Benchmark,
   and Measure that a Perf query runs. Each Permutation fans out into one Line
   per Variant of its Benchmark.
