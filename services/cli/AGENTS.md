@@ -1,4 +1,4 @@
-# Bencher CLI CLAUDE.md
+# Bencher CLI AGENTS.md
 
 ## Skill Sync
 

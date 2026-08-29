@@ -1,9 +1,9 @@
-# API Server CLAUDE.md
+# API Server AGENTS.md
 
 The goal of this file is to describe the common mistakes and confusion points
 an agent might face as they work in this codebase.
 If you ever encounter something in the project that surprises you,
-please alert the developer working with you and indicate that this is the case by editing the `CLAUDE.md` file to help prevent future agents from having the same issue.
+please alert the developer working with you and indicate that this is the case by editing the `AGENTS.md` file to help prevent future agents from having the same issue.
 
 ## Project Overview
 
