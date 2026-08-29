@@ -1,17 +1,17 @@
-# Bencher CLAUDE.md
+# Bencher AGENTS.md
 
 The goal of this file is to describe the common mistakes and confusion points
 an agent might face as they work in this codebase.
 If you ever encounter something in the project that surprises you,
-please alert the developer working with you and indicate that this is the case by editing the `CLAUDE.md` file to help prevent future agents from having the same issue.
+please alert the developer working with you and indicate that this is the case by editing the `AGENTS.md` file to help prevent future agents from having the same issue.
 
 ## Project Overview
 
 Bencher is a continuous benchmarking platform that detects and prevents performance regressions.
 
-- **Bencher API Server** (`services/api`) - see [`services/api/CLAUDE.md`](services/api/CLAUDE.md)
-- **`bencher` CLI** (`services/cli`) - see [`services/cli/CLAUDE.md`](services/cli/CLAUDE.md)
-- **Bencher Console** (`services/console`) - see [`services/console/CLAUDE.md`](services/console/CLAUDE.md)
+- **Bencher API Server** (`services/api`) - see [`services/api/AGENTS.md`](services/api/AGENTS.md)
+- **`bencher` CLI** (`services/cli`) - see [`services/cli/AGENTS.md`](services/cli/AGENTS.md)
+- **Bencher Console** (`services/console`) - see [`services/console/AGENTS.md`](services/console/AGENTS.md)
 - **Bare Metal `runner`** (`services/runner`) - Bare Metal benchmark runner
 
 ## Version Control

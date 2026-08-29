@@ -1,9 +1,9 @@
-# Runner CLAUDE.md
+# Runner AGENTS.md
 
 The goal of this file is to describe the common mistakes and confusion points
 an agent might face as they work in this codebase.
 If you ever encounter something in the project that surprises you,
-please alert the developer working with you and indicate that this is the case by editing the `CLAUDE.md` file to help prevent future agents from having the same issue.
+please alert the developer working with you and indicate that this is the case by editing the `AGENTS.md` file to help prevent future agents from having the same issue.
 
 **Bare Metal `runner`** (`services/runner`) - Bare Metal benchmark runner:
 - Rust
@@ -19,7 +19,7 @@ The runner is documented in the published docs:
 
 ## Operations
 
-See [`tasks/runner_ops/CLAUDE.md`](../../tasks/runner_ops/CLAUDE.md) for deploying and managing runner servers.
+See [`tasks/runner_ops/AGENTS.md`](../../tasks/runner_ops/AGENTS.md) for deploying and managing runner servers.
 
 ## Testing
 

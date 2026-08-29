@@ -54,7 +54,7 @@ jobs:
           - Potential bugs or issues
           - Security concerns
           - Performance implications
-          - Compliance with the project standards outlined in CLAUDE.md
+          - Compliance with the project standards outlined in AGENTS.md
 
           Provide a concise review in markdown format." \
             --max-turns "${{ env.CLAUDE_MAX_TURNS }}" \
