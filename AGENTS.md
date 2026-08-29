@@ -14,6 +14,8 @@ Bencher is a continuous benchmarking platform that detects and prevents performa
 - **Bencher Console** (`services/console`) - see [`services/console/AGENTS.md`](services/console/AGENTS.md)
 - **Bare Metal `runner`** (`services/runner`) - Bare Metal benchmark runner
 
+Terminology: use the definitions in [`docs/glossary.md`](docs/glossary.md).
+
 ## Version Control
 
 Version control uses Jujutsu (`jj`) with Git.
