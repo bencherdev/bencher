@@ -15,7 +15,7 @@ use crate::{
 /// each carrying a parameter set and its measures.
 pub type JsonV1Results = HashMap<BenchmarkNameId, Vec<JsonV1Entry>>;
 
-/// One grid point: what the benchmark ran with, and what it measured.
+/// One variant: what the benchmark ran with, and what it measured.
 #[derive(Debug, Clone, Deserialize)]
 pub struct JsonV1Entry {
     /// Optional. An entry without it resolves to the benchmark's empty parameter set,
@@ -25,7 +25,7 @@ pub struct JsonV1Entry {
     pub measures: HashMap<MeasureNameId, JsonV1Measure>,
 }
 
-/// A measure's named scalars. Every name is equal on the wire.
+/// A measure's metrics. Every name is equal on the wire.
 pub type JsonV1Measure = NamedMap;
 
 /// The BMF v1 leaf of the `json` adapter tree.
@@ -52,8 +52,8 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
             measures,
         } in entries
         {
-            // Two entries that canonicalize to the same parameter set are one grid
-            // point, so their named values merge rather than fork a series. A name
+            // Two entries that canonicalize to the same parameter set are one
+            // variant, so their metrics merge rather than fork a series. A name
             // that genuinely repeats takes the later entry, which is deterministic
             // because entries are an ordered array in wire order. Nothing is
             // dropped, so nothing is counted: a harness that emits one entry per
@@ -68,7 +68,7 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
                     .extend(named);
             }
         }
-        // The cap applies to the merged grid point, so a name is counted once.
+        // The cap applies to the merged variant, so a name is counted once.
         for metrics in benchmark_entries.values_mut() {
             for metric in metrics.inner.values_mut() {
                 dropped_names += metric.truncate();
@@ -115,8 +115,8 @@ pub(crate) mod test_json_v1 {
             .unwrap_or_else(|| panic!("Failed to parse {input}"))
     }
 
-    /// The metrics of one benchmark's grid point.
-    pub fn grid_point<'r>(
+    /// The metrics of one benchmark's variant.
+    pub fn variant<'r>(
         results: &'r AdapterResults,
         benchmark: &str,
         parameters: &str,
@@ -135,7 +135,7 @@ pub(crate) mod test_json_v1 {
             .expect("Missing parameter set")
     }
 
-    /// One named scalar of one measure.
+    /// One metric of one measure.
     pub fn named(metrics: &AdapterMetrics, measure: &str, name: &str) -> Option<OrderedFloat<f64>> {
         metrics
             .inner
@@ -174,7 +174,7 @@ pub(crate) mod test_json_v1 {
         let benchmark = "tests::benchmark_a".parse::<BenchmarkNameId>().unwrap();
         assert_eq!(results.inner[&benchmark].len(), 2);
 
-        let metrics = grid_point(
+        let metrics = variant(
             results,
             "tests::benchmark_a",
             r#"{"size_mb": 16, "op": "read"}"#,
@@ -183,7 +183,7 @@ pub(crate) mod test_json_v1 {
         assert_eq!(named(metrics, "latency", "p99"), Some(97.0.into()));
         assert_eq!(named(metrics, "latency", "p50"), Some(40.5.into()));
 
-        let metrics = grid_point(
+        let metrics = variant(
             results,
             "tests::benchmark_a",
             r#"{"size_mb": 32, "op": "read"}"#,
@@ -194,7 +194,7 @@ pub(crate) mod test_json_v1 {
     }
 
     /// An entry without `parameters` resolves to the empty parameter set,
-    /// which is exactly what an explicit `{}` resolves to: one grid point, not two.
+    /// which is exactly what an explicit `{}` resolves to: one variant, not two.
     #[test]
     fn adapter_json_v1_absent_parameters_are_the_empty_set() {
         let results = convert_json_v1("v1_parameters");
@@ -213,7 +213,7 @@ pub(crate) mod test_json_v1 {
                 .is_empty()
         );
 
-        // An absent `parameters` and an explicit `{}` merge into one grid point.
+        // An absent `parameters` and an explicit `{}` merge into one variant.
         let merged = "tests::merged".parse::<BenchmarkNameId>().unwrap();
         let entries = &results.inner[&merged];
         assert_eq!(entries.len(), 1);
@@ -222,35 +222,35 @@ pub(crate) mod test_json_v1 {
         assert_eq!(named(metrics, "throughput", "value"), Some(2.0.into()));
     }
 
-    /// Named values are scalars and every name is equal:
+    /// Metrics are scalars and every name is equal:
     /// a measure may carry only `p99` and never mention `value`.
     #[test]
-    fn adapter_json_v1_named_values() {
+    fn adapter_json_v1_metrics() {
         let results = convert_json_v1("v1_named");
         validate_adapter_json_v1_named(&results);
     }
 
     pub fn validate_adapter_json_v1_named(results: &AdapterResults) {
-        let metrics = grid_point(results, "tests::percentiles", "{}");
+        let metrics = variant(results, "tests::percentiles", "{}");
         assert_eq!(names(metrics, "latency"), vec!["p99".parse().unwrap()]);
         assert_eq!(named(metrics, "latency", "p99"), Some(97.0.into()));
         assert_eq!(named(metrics, "latency", "value"), None);
     }
 
-    /// Two entries that resolve to the same grid point union their named values.
+    /// Two entries that resolve to the same variant union their metrics.
     /// Nothing is dropped, so nothing is counted, and a name that genuinely repeats
     /// takes the later entry's value, deterministically, because entries are an
     /// ordered array in wire order.
     #[test]
-    fn adapter_json_v1_duplicate_grid_points_union_names() {
+    fn adapter_json_v1_duplicate_variants_union_names() {
         let input = r#"{"bench": [
             {"measures": {"latency": {"p50": 1.0, "value": 3.0}}},
             {"measures": {"latency": {"p99": 2.0, "value": 4.0}}}
         ]}"#;
         let results = AdapterJsonV1::parse(input, Settings::default())
-            .expect("Failed to parse the duplicate grid points");
+            .expect("Failed to parse the duplicate variants");
 
-        let metrics = grid_point(&results, "bench", "{}");
+        let metrics = variant(&results, "bench", "{}");
         assert_eq!(
             names(metrics, "latency"),
             vec![
@@ -272,21 +272,21 @@ pub(crate) mod test_json_v1 {
 
     /// The union is per measure: a measure only one entry mentions is untouched.
     #[test]
-    fn adapter_json_v1_duplicate_grid_points_union_measures() {
+    fn adapter_json_v1_duplicate_variants_union_measures() {
         let input = r#"{"bench": [
             {"measures": {"latency": {"value": 1.0}}},
             {"measures": {"throughput": {"value": 2.0}}}
         ]}"#;
         let results = AdapterJsonV1::parse(input, Settings::default())
-            .expect("Failed to parse the duplicate grid points");
+            .expect("Failed to parse the duplicate variants");
 
-        let metrics = grid_point(&results, "bench", "{}");
+        let metrics = variant(&results, "bench", "{}");
         assert_eq!(named(metrics, "latency", "value"), Some(1.0.into()));
         assert_eq!(named(metrics, "throughput", "value"), Some(2.0.into()));
     }
 
     /// Two entries whose parameters differ only in key order or number spelling
-    /// are the same grid point, and the measures of all three union by name.
+    /// are the same variant, and the measures of all three union by name.
     #[test]
     fn adapter_json_v1_canonical_parameters() {
         let results = convert_json_v1("v1_canonical");
@@ -298,7 +298,7 @@ pub(crate) mod test_json_v1 {
         let entries = &results.inner[&benchmark];
         assert_eq!(entries.len(), 1);
 
-        let metrics = grid_point(results, "tests::canonical", r#"{"op":"read","size_mb":16}"#);
+        let metrics = variant(results, "tests::canonical", r#"{"op":"read","size_mb":16}"#);
         // Every entry's names survive and the last entry wins the one they share.
         assert_eq!(
             names(metrics, "latency"),
@@ -328,7 +328,7 @@ pub(crate) mod test_json_v1 {
             ]}"#,
         );
 
-        let metrics = grid_point(&results, "tests::disjoint", "{}");
+        let metrics = variant(&results, "tests::disjoint", "{}");
         assert_eq!(named(metrics, "latency", "value"), Some(1.0.into()));
         assert_eq!(named(metrics, "latency", "p99"), Some(2.0.into()));
         assert_eq!(results.dropped_names, 0);
@@ -345,7 +345,7 @@ pub(crate) mod test_json_v1 {
             ]}"#,
         );
 
-        let metrics = grid_point(&results, "tests::overlap", "{}");
+        let metrics = variant(&results, "tests::overlap", "{}");
         assert_eq!(named(metrics, "latency", "p99"), Some(3.0.into()));
         assert_eq!(named(metrics, "latency", "value"), Some(1.0.into()));
         assert_eq!(results.dropped_names, 0);
@@ -362,7 +362,7 @@ pub(crate) mod test_json_v1 {
             ]}"#,
         );
 
-        let metrics = grid_point(&results, "tests::capped", "{}");
+        let metrics = variant(&results, "tests::capped", "{}");
         assert_eq!(
             names(metrics, "latency"),
             vec![
@@ -379,8 +379,8 @@ pub(crate) mod test_json_v1 {
         assert_eq!(results.dropped_names, 2);
     }
 
-    /// A name written by two entries is one name, never a drop: nine named
-    /// values across two entries are eight names and nothing is counted.
+    /// A name written by two entries is one name, never a drop: nine metrics
+    /// across two entries are eight names and nothing is counted.
     #[test]
     fn adapter_json_v1_overwrite_is_not_a_drop() {
         let results = parse_json_v1(
@@ -390,7 +390,7 @@ pub(crate) mod test_json_v1 {
             ]}"#,
         );
 
-        let metrics = grid_point(&results, "tests::overwritten", "{}");
+        let metrics = variant(&results, "tests::overwritten", "{}");
         assert_eq!(names(metrics, "latency").len(), MAX_METRIC_NAMES);
         assert_eq!(named(metrics, "latency", "a1"), Some(1.0.into()));
         assert_eq!(named(metrics, "latency", "value"), Some(9.0.into()));
@@ -400,13 +400,13 @@ pub(crate) mod test_json_v1 {
     /// The cap keeps the three conventional names regardless of where they sort,
     /// keeps the rest lexicographically, and reports what it dropped.
     #[test]
-    fn adapter_json_v1_named_value_cap() {
+    fn adapter_json_v1_metric_cap() {
         let results = convert_json_v1("v1_cap");
         validate_adapter_json_v1_cap(&results);
     }
 
     pub fn validate_adapter_json_v1_cap(results: &AdapterResults) {
-        let metrics = grid_point(results, "tests::capped", "{}");
+        let metrics = variant(results, "tests::capped", "{}");
         let names = names(metrics, "latency");
         assert_eq!(names.len(), MAX_METRIC_NAMES);
         assert_eq!(
@@ -436,10 +436,10 @@ pub(crate) mod test_json_v1 {
         // The same names in a different order on the wire keep the same survivors.
         let permuted =
             convert_file_path::<AdapterJsonV1>("./tool_output/json/report_v1_cap_permuted.json");
-        let metrics = grid_point(&permuted, "tests::capped", "{}");
+        let metrics = variant(&permuted, "tests::capped", "{}");
         assert_eq!(
             names(metrics, "latency"),
-            names(grid_point(&expected, "tests::capped", "{}"), "latency")
+            names(variant(&expected, "tests::capped", "{}"), "latency")
         );
         assert_eq!(permuted.dropped_names, 2);
     }
@@ -466,7 +466,7 @@ pub(crate) mod test_json_v1 {
 
     /// A benchmark that reports zero entries is a well formed v1 benchmark that
     /// measured nothing. It is accepted, it is not an error, and it yields no
-    /// grid point and therefore no metric.
+    /// variant and therefore no metric.
     #[test]
     fn adapter_json_v1_empty_entries() {
         let results = parse_json_v1(r#"{"tests::none": []}"#);
@@ -476,32 +476,32 @@ pub(crate) mod test_json_v1 {
         assert_eq!(results.dropped_names, 0);
     }
 
-    /// An entry that names no measure is a grid point that measured nothing. It is
+    /// An entry that names no measure is a variant that measured nothing. It is
     /// accepted, it is not an error, and it yields no metric. This is exactly the
-    /// v0 shape `{"bench": {}}`, which has always parsed to one grid point on the
+    /// v0 shape `{"bench": {}}`, which has always parsed to one variant on the
     /// empty parameter set with no measures under it.
     #[test]
     fn adapter_json_v1_empty_measures() {
         let results = parse_json_v1(r#"{"tests::none": [{"measures": {}}]}"#);
 
-        let metrics = grid_point(&results, "tests::none", "{}");
+        let metrics = variant(&results, "tests::none", "{}");
         assert!(metrics.inner.is_empty());
         assert_eq!(results.dropped_names, 0);
 
-        // The v0 analog, byte for byte the same grid point.
+        // The v0 analog, byte for byte the same variant.
         let v0 = AdapterJsonV0::parse(r#"{"tests::none": {}}"#, Settings::default())
             .expect("Failed to parse the v0 payload");
         assert_eq!(results.inner, v0.inner);
     }
 
     /// An entry that names a parameter set but no measure still resolves that
-    /// parameter set: the grid point exists, it just measured nothing.
+    /// parameter set: the variant exists, it just measured nothing.
     #[test]
     fn adapter_json_v1_empty_measures_keeps_the_parameter_set() {
         let results =
             parse_json_v1(r#"{"tests::none": [{"parameters": {"size_mb": 16}, "measures": {}}]}"#);
 
-        let metrics = grid_point(&results, "tests::none", r#"{"size_mb":16}"#);
+        let metrics = variant(&results, "tests::none", r#"{"size_mb":16}"#);
         assert!(metrics.inner.is_empty());
         assert_eq!(results.dropped_names, 0);
     }
@@ -510,7 +510,7 @@ pub(crate) mod test_json_v1 {
     /// or a string value that is non-empty, trimmed, and within `MAX_LEN` bytes.
     ///
     /// A payload that breaks a bound is not a v1 payload. The whole report fails
-    /// to parse, so the run is rejected rather than quietly losing the grid point
+    /// to parse, so the run is rejected rather than quietly losing the variant
     /// that carried the offending set.
     #[test]
     fn adapter_json_v1_rejects_out_of_bounds_parameters() {

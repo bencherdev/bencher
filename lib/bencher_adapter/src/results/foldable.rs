@@ -7,7 +7,7 @@ use bencher_json::{
 
 use super::{CombinedKind, OrdKind, results_reducer::ResultsReducer};
 
-/// A BMF v0 results payload: one grid point per benchmark, on the empty
+/// A BMF v0 results payload: one variant per benchmark, on the empty
 /// parameter set, with every measure spelling out a metric triple.
 ///
 /// Fold is defined here and nowhere else, so a BMF v1 payload can never be

@@ -70,6 +70,13 @@ impl TestServer {
         .await
     }
 
+    /// Create a new test server whose clock is frozen at the given time.
+    #[cfg(feature = "plus")]
+    pub async fn new_at(now: bencher_json::DateTime) -> Self {
+        let clock = bencher_json::Clock::Custom(Arc::new(move || now));
+        Self::build(None, None, Some(clock), None, None).await
+    }
+
     /// Create a new test server with a custom runner self-update base URL.
     #[cfg(feature = "plus")]
     pub async fn new_with_runner_update_base_url(base_url: url::Url) -> Self {

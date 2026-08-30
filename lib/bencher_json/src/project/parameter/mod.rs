@@ -52,8 +52,8 @@ pub struct JsonUpdateParameter {
     pub archived: Option<bool>,
 }
 
-/// The most keys one parameter set may carry, anchored to the number of named
-/// values one measure may carry.
+/// The most keys one parameter set may carry, anchored to the number of metrics
+/// one measure may carry.
 ///
 /// Deliberately low: raising the cap is a release note and lowering it is a
 /// breaking change, so the asymmetry runs one way.
@@ -103,6 +103,16 @@ impl ParameterSet {
     /// Whether this is the empty parameter set.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    /// Whether every key of this set is in `superset` with an identical value.
+    ///
+    /// This is what a parameters filter element matches on. Values compare
+    /// canonically, so `16`, `16.0`, and `1.6e1` are one number and one match.
+    pub fn is_subset_of(&self, superset: &Self) -> bool {
+        self.0
+            .iter()
+            .all(|(key, value)| superset.0.get(key) == Some(value))
     }
 
     /// The `SQLite` JSONB encoding of the canonical form.
@@ -423,11 +433,14 @@ mod tests {
 
     use super::{ParameterKey, ParameterScalar, ParameterSet};
 
-    fn canonical(parameters: &str) -> String {
+    fn parse(parameters: &str) -> ParameterSet {
         parameters
             .parse::<ParameterSet>()
             .expect("Failed to parse parameters")
-            .canonical()
+    }
+
+    fn canonical(parameters: &str) -> String {
+        parse(parameters).canonical()
     }
 
     /// A one key parameter set holding an exact `f64`, built without a parsing
@@ -695,7 +708,7 @@ mod tests {
     }
 
     // The cap is deliberately low, so raising it stays easy and lowering it never
-    // has to happen. Eight is where the named value cap starts too.
+    // has to happen. Eight is where the metric cap starts too.
     #[test]
     fn rejects_more_than_the_key_cap() {
         keys(8)
@@ -799,6 +812,69 @@ mod tests {
             canonical(r#"{"a": true, "b": false}"#),
             r#"{"a":true,"b":false}"#
         );
+    }
+
+    #[test]
+    fn subset_match_includes_supersets() {
+        let variant = parse(r#"{"fsync": true, "op": "read", "size_mb": 16}"#);
+
+        for filter in [
+            "{}",
+            r#"{"op": "read"}"#,
+            r#"{"size_mb": 16}"#,
+            r#"{"op": "read", "size_mb": 16}"#,
+            r#"{"fsync": true, "op": "read", "size_mb": 16}"#,
+        ] {
+            assert!(
+                parse(filter).is_subset_of(&variant),
+                "expected {filter} to match the variant"
+            );
+        }
+
+        for filter in [
+            r#"{"op": "write"}"#,
+            r#"{"size_mb": 32}"#,
+            r#"{"fsync": false}"#,
+            // A key the variant does not pin at all.
+            r#"{"threads": 4}"#,
+            // Every key has to match, not just one of them.
+            r#"{"op": "read", "size_mb": 32}"#,
+        ] {
+            assert!(
+                !parse(filter).is_subset_of(&variant),
+                "expected {filter} not to match the variant"
+            );
+        }
+    }
+
+    #[test]
+    fn subset_match_of_the_empty_set() {
+        let empty = ParameterSet::default();
+        assert!(empty.is_subset_of(&empty));
+        assert!(!parse(r#"{"op": "read"}"#).is_subset_of(&empty));
+    }
+
+    #[test]
+    fn subset_match_is_number_spelling_blind() {
+        let variant = parse(r#"{"n": 16}"#);
+        for filter in [r#"{"n": 16}"#, r#"{"n": 16.0}"#, r#"{"n": 1.6e1}"#] {
+            assert!(
+                parse(filter).is_subset_of(&variant),
+                "expected {filter} to match {{\"n\":16}}"
+            );
+        }
+        assert!(!parse(r#"{"n": 16.5}"#).is_subset_of(&variant));
+    }
+
+    #[test]
+    fn subset_match_is_type_aware() {
+        let variant = parse(r#"{"a": 1, "b": "true", "c": true}"#);
+        for filter in [r#"{"a": "1"}"#, r#"{"b": true}"#, r#"{"c": "true"}"#] {
+            assert!(
+                !parse(filter).is_subset_of(&variant),
+                "expected {filter} not to match the variant"
+            );
+        }
     }
 
     #[test]

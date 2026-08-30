@@ -76,7 +76,7 @@ mod tests {
         report: ReportId,
         benchmark: BenchmarkId,
         empty_set: ParameterId,
-        grid_point: ParameterId,
+        variant: ParameterId,
     }
 
     fn seed(conn: &mut SqliteConnection) -> TestRows {
@@ -120,19 +120,19 @@ mod tests {
         );
         let empty_set_id = get_empty_parameter(conn, benchmark_id);
 
-        let grid_point: ParameterSet =
+        let variant: ParameterSet =
             r#"{"size_mb": 16}"#.parse().expect("Failed to parse parameters");
         diesel::insert_into(schema::parameter::table)
             .values((
                 schema::parameter::uuid.eq(ParameterUuid::new()),
                 schema::parameter::benchmark_id.eq(benchmark_id),
-                schema::parameter::set.eq(&grid_point),
+                schema::parameter::set.eq(&variant),
                 schema::parameter::created.eq(DateTime::TEST),
                 schema::parameter::modified.eq(DateTime::TEST),
             ))
             .execute(&mut *conn)
             .expect("Failed to insert parameter");
-        let grid_point_id: ParameterId = diesel::select(last_insert_rowid())
+        let variant_id: ParameterId = diesel::select(last_insert_rowid())
             .get_result(&mut *conn)
             .expect("Failed to get parameter id");
 
@@ -140,7 +140,7 @@ mod tests {
             report: report_id,
             benchmark: benchmark_id,
             empty_set: empty_set_id,
-            grid_point: grid_point_id,
+            variant: variant_id,
         }
     }
 
@@ -161,14 +161,14 @@ mod tests {
     }
 
     #[test]
-    fn grid_points_coexist_in_one_iteration() {
+    fn variants_coexist_in_one_iteration() {
         let mut conn = setup_test_db();
         let rows = seed(&mut conn);
 
         insert_report_benchmark(&mut conn, &rows, rows.empty_set)
             .expect("Failed to insert the empty set report benchmark");
-        insert_report_benchmark(&mut conn, &rows, rows.grid_point)
-            .expect("Failed to insert the grid point report benchmark");
+        insert_report_benchmark(&mut conn, &rows, rows.variant)
+            .expect("Failed to insert the variant report benchmark");
 
         let count: i64 = schema::report_benchmark::table
             .filter(schema::report_benchmark::report_id.eq(rows.report))
@@ -179,14 +179,14 @@ mod tests {
     }
 
     #[test]
-    fn same_grid_point_twice_collides() {
+    fn same_variant_twice_collides() {
         let mut conn = setup_test_db();
         let rows = seed(&mut conn);
 
-        insert_report_benchmark(&mut conn, &rows, rows.grid_point)
-            .expect("Failed to insert the grid point report benchmark");
+        insert_report_benchmark(&mut conn, &rows, rows.variant)
+            .expect("Failed to insert the variant report benchmark");
         assert!(
-            insert_report_benchmark(&mut conn, &rows, rows.grid_point).is_err(),
+            insert_report_benchmark(&mut conn, &rows, rows.variant).is_err(),
             "one parameter set cannot appear twice in one report iteration"
         );
     }

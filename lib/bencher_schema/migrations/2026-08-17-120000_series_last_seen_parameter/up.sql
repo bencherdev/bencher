@@ -1,8 +1,8 @@
 PRAGMA foreign_keys = off;
 -- series_last_seen
--- A series is a distinct `(testbed, benchmark, parameter, measure)` now: each grid
--- point of a benchmark has its own history and bills as its own series. A project
--- whose grid points are currently flat benchmarks bills exactly what it billed
+-- A series is a distinct `(testbed, benchmark, parameter, measure)` now: each
+-- variant of a benchmark has its own history and bills as its own series. A project
+-- whose variants are currently flat benchmarks bills exactly what it billed
 -- before, since every one of its `report_benchmark` rows rides its benchmark's
 -- empty parameter set.
 --

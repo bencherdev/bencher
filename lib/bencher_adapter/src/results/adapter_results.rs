@@ -12,7 +12,7 @@ use super::{
 
 /// Everything one results payload reported.
 ///
-/// A benchmark name maps to its grid points rather than straight to its
+/// A benchmark name maps to its variants rather than straight to its
 /// measures, because BMF v1 lets one benchmark report several parameter sets.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AdapterResults {
@@ -20,17 +20,17 @@ pub struct AdapterResults {
     /// The BMF version these results were parsed from.
     /// Fold is a v0 only operation, so this is what gates it.
     pub version: BmfVersion,
-    /// How many named values the per measure cap dropped.
+    /// How many metrics the per measure cap dropped.
     /// The log line and the counter belong to ingest, where the providers are in scope.
     pub dropped_names: usize,
 }
 
 pub type ResultsMap = HashMap<BenchmarkNameId, BenchmarkEntries>;
 
-/// Every grid point one benchmark reported, keyed by its canonical parameter set.
+/// Every variant one benchmark reported, keyed by its canonical parameter set.
 ///
 /// The empty parameter set is the key every BMF v0 adapter uses, since a v0
-/// payload only ever reports one grid point per benchmark.
+/// payload only ever reports one variant per benchmark.
 pub type BenchmarkEntries = BTreeMap<ParameterSet, AdapterMetrics>;
 
 /// The Bencher Metric Format version a results payload was parsed from.
@@ -53,7 +53,7 @@ impl From<ResultsMap> for AdapterResults {
     }
 }
 
-/// Folded results are BMF v0 again: one grid point per benchmark, on the empty
+/// Folded results are BMF v0 again: one variant per benchmark, on the empty
 /// parameter set, with each metric triple spelled back out as its conventional names.
 ///
 /// The round trip through [`AdapterResults::into_foldable`] and back is lossless
@@ -81,7 +81,7 @@ impl From<FoldableResults> for AdapterResults {
 
 /// The metrics of a benchmark's empty parameter set, created if absent.
 ///
-/// Every adapter but `json_v1` reports one grid point per benchmark and does not
+/// Every adapter but `json_v1` reports one variant per benchmark and does not
 /// need to know that parameter sets exist.
 fn empty_set(results_map: &mut ResultsMap, benchmark_name: BenchmarkName) -> &mut AdapterMetrics {
     results_map

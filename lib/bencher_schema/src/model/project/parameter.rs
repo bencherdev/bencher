@@ -27,7 +27,7 @@ use super::{
 
 crate::macros::typed_id::typed_id!(ParameterId);
 
-/// A parameter set: one grid point under its benchmark.
+/// A parameter set: one variant under its benchmark.
 ///
 /// Parameter sets have neither a name nor a slug, so they are UUID addressed only,
 /// following the `report` and `alert` precedent.
@@ -88,7 +88,7 @@ impl QueryParameter {
     /// concurrent reports.
     ///
     /// Mirrors [`QueryBenchmark::get_or_create`]: a resolved set that is archived is
-    /// unarchived, because a grid point that reports again is a live grid point.
+    /// unarchived, because a variant that reports again is a live variant.
     ///
     /// Called from report ingest's read phase, so the write transaction it opens
     /// never nests inside the ingest write transaction.
@@ -259,7 +259,7 @@ impl InsertParameter {
     ///
     /// The count includes the empty parameter set each benchmark is born with, which
     /// makes the ceiling slightly conservative for a project creating benchmarks and
-    /// grid points in the same window. That is the safe direction, and it costs a
+    /// variants in the same window. That is the safe direction, and it costs a
     /// project nothing that the benchmark ceiling was not already going to cost it.
     #[cfg(feature = "plus")]
     async fn rate_limit(context: &ApiContext, project_id: ProjectId) -> Result<(), HttpError> {
@@ -366,7 +366,7 @@ impl From<JsonUpdateParameter> for UpdateParameter {
 }
 
 impl UpdateParameter {
-    /// A grid point that reports again is a live grid point.
+    /// A variant that reports again is a live variant.
     fn unarchive() -> Self {
         Self {
             modified: DateTime::now(),
@@ -852,9 +852,9 @@ mod tests {
             "bench2",
         );
 
-        let grid_point = parameters(r#"{"size_mb": 16}"#);
-        insert_parameter(&mut conn, first, &grid_point).expect("Failed to insert parameter");
-        insert_parameter(&mut conn, second, &grid_point).expect("Failed to insert parameter");
+        let variant = parameters(r#"{"size_mb": 16}"#);
+        insert_parameter(&mut conn, first, &variant).expect("Failed to insert parameter");
+        insert_parameter(&mut conn, second, &variant).expect("Failed to insert parameter");
 
         assert_eq!(count_parameters(&mut conn, first), 2);
         assert_eq!(count_parameters(&mut conn, second), 2);

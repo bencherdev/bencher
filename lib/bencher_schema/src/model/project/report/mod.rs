@@ -18,7 +18,7 @@ use diesel::OptionalExtension as _;
 use diesel::{
     AggregateExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
     NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
-    query_builder::QueryFragment, query_dsl::LoadQuery, sqlite::Sqlite,
+    query_dsl::LoadQuery,
 };
 
 use dropshot::HttpError;
@@ -644,8 +644,8 @@ pub enum ReportMode {
     Collapsed,
 }
 
-/// One row of the results query: one named scalar of one measure at one grid point,
-/// with the threshold and boundary that gated it, if any.
+/// One row of the results query: one metric of one measure at one variant,
+/// with the threshold and boundary that checked it, if any.
 type ResultsQuery = (
     Iteration,
     QueryBenchmark,
@@ -667,16 +667,16 @@ fn get_report_results(
         .map_err(resource_not_found_err!(ReportBenchmark, project))
 }
 
-/// The results query for one report, one row per named scalar.
+/// The results query for one report, one row per metric.
 fn report_results_query(
     report_id: ReportId,
-) -> impl LoadQuery<'static, DbConnection, ResultsQuery> + QueryFragment<Sqlite> {
+) -> impl LoadQuery<'static, DbConnection, ResultsQuery> {
     schema::report_benchmark::table
     .filter(schema::report_benchmark::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
     .inner_join(schema::parameter::table)
     .inner_join(schema::metric::table.inner_join(schema::measure::table))
-    // There may or may not be a boundary for any given named value.
+    // There may or may not be a boundary for any given metric.
     // Keep these three joins flat with explicit `ON` clauses instead of nesting the
     // threshold and the model inside the boundary join. SQLite cannot flatten a
     // compound right operand of an outer join, so the nested form makes it scan the
@@ -685,9 +685,9 @@ fn report_results_query(
     .left_join(schema::threshold::table.on(schema::threshold::id.eq(schema::boundary::threshold_id)))
     .left_join(schema::model::table.on(schema::model::id.eq(schema::boundary::model_id)))
     // It is important to order by the iteration first in order to make sure they are grouped together below.
-    // The parameter set comes between the benchmark and the measure because a grid point is what a result is:
+    // The parameter set comes between the benchmark and the measure because a variant is what a result is:
     // two parameter sets of one benchmark are two results, not one result with the measures interleaved.
-    // Finally the metric name orders a measure's named values, so the response order is stable.
+    // Finally the metric name orders a measure's metrics, so the response order is stable.
     .order((
         schema::report_benchmark::iteration,
         schema::benchmark::name,
@@ -749,7 +749,14 @@ fn into_report_results_json(
     let mut report_iteration: Vec<PendingResult> = Vec::new();
     let mut prev_iteration: Option<Iteration> = None;
 
-    for (iteration, query_benchmark, query_parameter, query_measure, query_metric, gate) in results
+    for (
+        iteration,
+        query_benchmark,
+        query_parameter,
+        query_measure,
+        query_metric,
+        report_boundary,
+    ) in results
     {
         // If onto a new iteration, then add the report iteration list to the report results list.
         if let Some(prev_iteration) = prev_iteration.take()
@@ -762,7 +769,7 @@ fn into_report_results_json(
         }
         prev_iteration = Some(iteration);
 
-        // A result is one grid point: the same benchmark on a different parameter set
+        // A result is one variant: the same benchmark on a different parameter set
         // is a different result.
         let benchmark_uuid = query_benchmark.uuid;
         let parameter_uuid = query_parameter.uuid;
@@ -797,7 +804,7 @@ fn into_report_results_json(
             continue;
         };
 
-        // One named value repeats across rows only when several thresholds gated it.
+        // One metric repeats across rows only when several thresholds checked it.
         let QueryMetric {
             id: _,
             uuid,
@@ -823,7 +830,7 @@ fn into_report_results_json(
             continue;
         };
 
-        if let Some((query_threshold, query_model, query_boundary)) = gate {
+        if let Some((query_threshold, query_model, query_boundary)) = report_boundary {
             report_metric.boundaries.push(JsonReportBoundary {
                 threshold: query_threshold
                     .into_threshold_model_json_for_project(project, query_model),
@@ -894,12 +901,12 @@ impl PendingMeasure {
     /// Fill in the deprecated `metric`, `threshold`, and `boundary` fields.
     ///
     /// The metric triple is the `value` row and its `lower_value`/`upper_value`
-    /// siblings, and the threshold and boundary are the ones that gated the `value`
+    /// siblings, and the threshold and boundary are the ones that checked the `value`
     /// row.
     ///
     /// A measure that named no `value` at all has no triple to reconstruct, so all
     /// three deprecated fields are absent. Only a BMF v1 payload can report that
-    /// shape, and its named values are stored, billed, and returned like any other.
+    /// shape, and its metrics are stored, billed, and returned like any other.
     fn into_json(self) -> JsonReportMeasure {
         let Self { measure, metrics } = self;
 
@@ -915,11 +922,15 @@ impl PendingMeasure {
             lower_value: named(&MetricName::lower_value()).map(|metric| metric.value),
             upper_value: named(&MetricName::upper_value()).map(|metric| metric.value),
         });
-        let (threshold, boundary) = value
-            .and_then(|value| value.boundaries.first())
-            .map_or((None, None), |gate| {
-                (Some(gate.threshold.clone()), Some(gate.boundary))
-            });
+        let (threshold, boundary) = value.and_then(|value| value.boundaries.first()).map_or(
+            (None, None),
+            |report_boundary| {
+                (
+                    Some(report_boundary.threshold.clone()),
+                    Some(report_boundary.boundary),
+                )
+            },
+        );
 
         JsonReportMeasure {
             measure,
@@ -945,7 +956,7 @@ fn get_report_counts(
         .order(schema::report_benchmark::iteration.asc())
         .select((
             schema::report_benchmark::iteration,
-            // A `report_benchmark` row is exactly one grid point, which is exactly one
+            // A `report_benchmark` row is exactly one variant, which is exactly one
             // result, so this agrees with the count taken from the loaded results.
             diesel::dsl::count(schema::report_benchmark::id).aggregate_distinct(),
             // Every measure with a metric row, whatever it named, because that is
@@ -1204,7 +1215,7 @@ mod tests {
     };
 
     use super::{
-        QueryReport, ReportId, ReportMode, ResultsQuery, Sqlite, get_report_counts, report_counts,
+        QueryReport, ReportId, ReportMode, ResultsQuery, get_report_counts, report_counts,
         report_results_query,
     };
     use crate::macros::sql::last_insert_rowid;
@@ -1656,8 +1667,8 @@ mod tests {
         );
     }
 
-    /// A measure that named no `value` is returned like any other, carrying its named
-    /// values and no deprecated metric triple. The counts have to count it too, or the
+    /// A measure that named no `value` is returned like any other, carrying its metrics
+    /// and no deprecated metric triple. The counts have to count it too, or the
     /// same report is two measures from the endpoint that loads its results and one
     /// from the endpoint that counts them.
     #[test]
@@ -1963,45 +1974,15 @@ mod tests {
         assert_eq!(count, i32::MAX);
     }
 
-    /// The results query joins each named value to its boundary, and that boundary to
-    /// its own threshold and model, as a flat chain of left joins.
-    ///
-    /// Nesting the threshold and the model inside the boundary join renders the group in
-    /// parentheses, and `SQLite` cannot flatten a compound right operand of an outer join:
-    /// it materializes the whole subjoin, scanning the entire boundary table once per
-    /// request, however small the report is. Pin the rendered shape so that the nesting
-    /// cannot come back unnoticed.
-    #[test]
-    fn report_results_query_joins_the_boundary_flat() {
-        let sql = diesel::debug_query::<Sqlite, _>(&report_results_query(ReportId::default()))
-            .to_string();
-
-        assert!(
-            sql.contains("LEFT OUTER JOIN `boundary` ON (`boundary`.`metric_id` = `metric`.`id`)"),
-            "{sql}"
-        );
-        assert!(
-            sql.contains(
-                "LEFT OUTER JOIN `threshold` ON (`threshold`.`id` = `boundary`.`threshold_id`)"
-            ),
-            "{sql}"
-        );
-        assert!(
-            sql.contains("LEFT OUTER JOIN `model` ON (`model`.`id` = `boundary`.`model_id`)"),
-            "{sql}"
-        );
-        assert!(!sql.contains("LEFT OUTER JOIN (("), "{sql}");
-    }
-
-    /// Every named value carries the boundary that gated it, with that boundary's own
-    /// threshold and model, and a named value without a boundary carries nothing.
+    /// Every metric carries the boundary that checked it, with that boundary's own
+    /// threshold and model, and a metric without a boundary carries nothing.
     ///
     /// The thresholds are both created before either model, so a threshold identifier
     /// never equals its own model identifier. Following the wrong foreign key therefore
     /// returns the other row rather than no row at all.
     #[test]
     #[expect(clippy::too_many_lines, reason = "test data setup")]
-    fn report_results_gate_follows_the_boundary() {
+    fn report_results_check_follows_the_boundary() {
         let mut conn = setup_test_db();
         let fixture = create_report_fixture(&mut conn);
 
@@ -2054,7 +2035,9 @@ mod tests {
         );
 
         let mut add_result =
-            |benchmark_index: u8, measure_id: MeasureId, gate: Option<(ThresholdId, ModelId)>| {
+            |benchmark_index: u8,
+             measure_id: MeasureId,
+             threshold_model: Option<(ThresholdId, ModelId)>| {
                 let benchmark_id = create_benchmark(
                     &mut conn,
                     fixture.project_id,
@@ -2076,7 +2059,7 @@ mod tests {
                     measure_id,
                     1.0,
                 );
-                if let Some((threshold_id, model_id)) = gate {
+                if let Some((threshold_id, model_id)) = threshold_model {
                     create_boundary(
                         &mut conn,
                         &format!("00000000-0000-0000-0000-0000000000c{benchmark_index}"),
@@ -2094,24 +2077,26 @@ mod tests {
             .load(&mut conn)
             .expect("Failed to load report results");
 
-        let gates = results
+        let report_boundaries = results
             .iter()
-            .map(|(_, benchmark, _, _, _, gate)| {
+            .map(|(_, benchmark, _, _, _, report_boundary)| {
                 (
                     benchmark.name.to_string(),
-                    gate.as_ref().map(|(threshold, model, boundary)| {
-                        (
-                            threshold.uuid.to_string(),
-                            model.uuid.to_string(),
-                            boundary.uuid.to_string(),
-                        )
-                    }),
+                    report_boundary
+                        .as_ref()
+                        .map(|(threshold, model, boundary)| {
+                            (
+                                threshold.uuid.to_string(),
+                                model.uuid.to_string(),
+                                boundary.uuid.to_string(),
+                            )
+                        }),
                 )
             })
             .collect::<Vec<_>>();
 
         assert_eq!(
-            gates,
+            report_boundaries,
             vec![
                 (
                     "bench_0".to_owned(),

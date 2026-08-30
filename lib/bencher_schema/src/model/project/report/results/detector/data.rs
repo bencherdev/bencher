@@ -39,12 +39,12 @@ pub fn metrics_data(
         .filter(schema::head::id.eq(detector.head_id))
         .filter(schema::testbed::id.eq(detector.testbed_id))
         .filter(schema::benchmark::id.eq(benchmark_id))
-        // A parameter set is a grid point with its own series history, so the
-        // sample is the one grid point's, never the benchmark's grid pooled.
+        // A parameter set is a variant with its own series history, so the
+        // sample is the one variant's, never the benchmark's variants pooled.
         .filter(schema::report_benchmark::parameter_id.eq(parameter_id))
         .filter(schema::metric::measure_id.eq(detector.measure_id))
-        // Detection has only ever gated the `value` scalar, and the sample it is
-        // gated against is the point estimates alone. A measure's bounds are named
+        // Detection has only ever checked the `value` scalar, and the sample it is
+        // checked against is the point estimates alone. A measure's bounds are named
         // rows beside it now, so without this the sample would be a mixture of
         // measurements and the limits previously computed from them.
         .filter(schema::metric::name.eq(MetricName::value()))

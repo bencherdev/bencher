@@ -6,7 +6,7 @@ use std::{
 use bencher_json::{JsonNewMetric, MeasureNameId, MetricName};
 use ordered_float::OrderedFloat;
 
-/// Every measure a benchmark reported at one grid point.
+/// Every measure a benchmark reported at one variant.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AdapterMetrics {
     pub inner: MetricsMap,
@@ -30,7 +30,7 @@ impl AdapterMetrics {
     }
 }
 
-/// One measure's named scalars.
+/// One measure's metrics.
 ///
 /// Every name is equal here. `value`, `lower_value`, and `upper_value` are
 /// conventional, not privileged: they are the names a BMF v0 metric triple maps
@@ -41,10 +41,10 @@ pub struct AdapterMetric {
     pub inner: NamedMap,
 }
 
-/// Named scalars in lexicographic order, which is the order the cap keeps.
+/// Metrics in lexicographic order, which is the order the cap keeps.
 pub type NamedMap = BTreeMap<MetricName, OrderedFloat<f64>>;
 
-/// The most named values one measure may carry, anchored to the number of
+/// The most metrics one measure may carry, anchored to the number of
 /// statistics k6's `summary_trend_stats` reports by default.
 ///
 /// Deliberately low: raising the cap is a release note and lowering it is a
@@ -89,7 +89,7 @@ impl AdapterMetric {
         })
     }
 
-    /// Drop named values beyond [`MAX_METRIC_NAMES`], returning how many were dropped.
+    /// Drop metrics beyond [`MAX_METRIC_NAMES`], returning how many were dropped.
     ///
     /// Survival is deterministic because hash map iteration order is not an
     /// acceptable tiebreak: the three conventional names are never dropped, and

@@ -22,8 +22,8 @@ use bencher_json::{
 use ordered_float::OrderedFloat;
 use url::Url;
 
-// 30 days
-const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(720);
+// 4 weeks
+const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(672);
 
 const EMPTY_CELL: &str = "<td></td>";
 
@@ -788,6 +788,8 @@ impl ReportComment {
             #[cfg(feature = "plus")]
             specs: vec![self.json_report.testbed.spec.as_ref().map(|s| s.uuid)],
             benchmarks: vec![benchmark.uuid],
+            // No filter, so the link plots every variant of the benchmark.
+            parameters: Vec::new(),
             measures: vec![measure.uuid],
             start_time: Some(
                 (self.json_report.start_time.into_inner() - DEFAULT_REPORT_HISTORY).into(),

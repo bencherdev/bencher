@@ -420,7 +420,7 @@ pub type JsonReportResults = Vec<JsonReportIteration>;
 #[typeshare::typeshare]
 pub type JsonReportIteration = Vec<JsonReportResult>;
 
-/// One grid point of one benchmark, in one iteration of a report.
+/// One variant of one benchmark, in one iteration of a report.
 ///
 /// A benchmark reports as many results per iteration as it has parameter sets, so
 /// the parameter set is what tells two results of one benchmark apart.
@@ -449,10 +449,10 @@ pub struct JsonReportParameter {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportMeasure {
     pub measure: JsonMeasure,
-    /// Every named scalar ingested for this measure, in a stable order.
+    /// Every metric ingested for this measure, in a stable order.
     pub metrics: Vec<JsonReportMetric>,
 
-    /// Deprecated. Reconstructed from the `value` row and its
+    /// Deprecated. The metric triple, reconstructed from the `value` row and its
     /// `lower_value`/`upper_value` siblings. Retained for compatibility with older
     /// clients and removed in a future release.
     ///
@@ -460,13 +460,13 @@ pub struct JsonReportMeasure {
     /// absent for anything an older client could produce.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metric: Option<JsonMetricTriple>,
-    /// Deprecated. The threshold that gated the `value` row, if any.
+    /// Deprecated. The threshold that checked the `value` row, if any.
     pub threshold: Option<JsonThresholdModel>,
     /// Deprecated. The boundary computed for the `value` row, if any.
     pub boundary: Option<JsonBoundary>,
 }
 
-/// Exactly one `metric` row: one named scalar.
+/// Exactly one `metric` row: the metric's name and value.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -474,7 +474,7 @@ pub struct JsonReportMetric {
     pub uuid: MetricUuid,
     pub name: MetricName,
     pub value: OrderedFloat<f64>,
-    /// Every threshold that gated this named scalar, with the boundary it produced.
+    /// Every threshold that checked this metric, with the boundary it produced.
     /// Length 0 or 1 until threshold predicates ship.
     pub boundaries: Vec<JsonReportBoundary>,
 }
@@ -507,7 +507,7 @@ pub struct JsonReportCounts {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportIterationCounts {
-    /// The number of results in this iteration: one per grid point, so one per
+    /// The number of results in this iteration: one per variant, so one per
     /// benchmark for a benchmark that reports a single parameter set.
     pub benchmarks: u32,
     /// The number of distinct measures in this iteration.

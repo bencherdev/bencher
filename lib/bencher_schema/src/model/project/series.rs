@@ -3,7 +3,7 @@
 //! Cache of each monitored series' most recent activity.
 //!
 //! A *series* is a distinct `(testbed, benchmark, parameter, measure)` an organization
-//! reports to: each grid point of a benchmark has its own history and bills as its own
+//! reports to: each variant of a benchmark has its own history and bills as its own
 //! series, and named metric values collapse into their measure's series rather than
 //! multiplying it. `series_last_seen` stores, per series, the greatest `report.created`
 //! (the server-side ingestion time, not the user-supplied `end_time`) ever recorded for
@@ -39,7 +39,7 @@ use crate::{
     schema::{self, series_last_seen as series_table},
 };
 
-/// One billable series: a grid point's measure on a testbed.
+/// One billable series: a variant's measure on a testbed.
 ///
 /// The four columns travel together because they are one identity, and because
 /// they are what the primary key is.
@@ -501,16 +501,16 @@ mod tests {
         .expect("upsert series");
     }
 
-    /// Ingest one report for a single grid point, writing every `named` scalar as
+    /// Ingest one report for a single variant, writing every entry of `named` as
     /// its own metric row.
     ///
-    /// A grid point is its own series and a named value is not, so this is the
-    /// helper the parameter and named value billing tests reach for.
+    /// A variant is its own series and a metric is not, so this is the
+    /// helper the parameter and metric billing tests reach for.
     #[expect(
         clippy::too_many_arguments,
         reason = "test helper threads the full series key"
     )]
-    fn ingest_grid_point(
+    fn ingest_variant(
         conn: &mut DbConnection,
         uuids: &mut Uuids,
         proj: Proj,
@@ -583,11 +583,11 @@ mod tests {
         )
     }
 
-    // Each grid point bills as its own series, which is exactly today's economics:
-    // a project whose grid points are currently flat benchmarks bills the same after
+    // Each variant bills as its own series, which is exactly today's economics:
+    // a project whose variants are currently flat benchmarks bills the same after
     // migrating to parameters.
     #[test]
-    fn grid_points_count_as_distinct_series() {
+    fn variants_count_as_distinct_series() {
         let mut conn = setup_test_db();
         let mut uuids = Uuids(1);
         let org = make_org(&mut conn, &mut uuids);
@@ -601,7 +601,7 @@ mod tests {
         let thirty_two = make_parameter(&mut conn, benchmark, r#"{"size_mb": 32}"#);
 
         for parameter in [empty_set, sixteen, thirty_two] {
-            ingest_grid_point(
+            ingest_variant(
                 &mut conn,
                 &mut uuids,
                 proj,
@@ -619,10 +619,10 @@ mod tests {
         assert_eq!(oracle_count(&mut conn, org, start, end, None), 3);
     }
 
-    // Named values collapse into their measure's series. Names are not billed; the
+    // Metrics collapse into their measure's series. Names are not billed, and the
     // cap of eight is the guardrail on that.
     #[test]
-    fn named_values_collapse_into_their_measure_series() {
+    fn metrics_collapse_into_their_measure_series() {
         let mut conn = setup_test_db();
         let mut uuids = Uuids(1);
         let org = make_org(&mut conn, &mut uuids);
@@ -641,7 +641,7 @@ mod tests {
         ];
 
         for parameter in [empty_set, sixteen] {
-            ingest_grid_point(
+            ingest_variant(
                 &mut conn,
                 &mut uuids,
                 proj,
@@ -655,7 +655,7 @@ mod tests {
         }
 
         let (start, end) = always();
-        // Two grid points, four names each: two series, not eight.
+        // Two variants, four names each: two series, not eight.
         assert_eq!(count_active(&mut conn, org, start, end).unwrap(), 2);
         assert_eq!(oracle_count(&mut conn, org, start, end, None), 2);
     }

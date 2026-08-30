@@ -9,8 +9,8 @@ export const CLEAR_PARAM = "clear";
 
 // The most benchmarks to plot by default
 const DEFAULT_REPORT_BENCHMARKS = 10;
-// 30 days
-export const DEFAULT_REPORT_HISTORY = 30 * 24 * 60 * 60 * 1000;
+// 4 weeks
+export const DEFAULT_REPORT_HISTORY = 28 * 24 * 60 * 60 * 1000;
 
 // The query params for the default perf plot, bootstrapped from the first report.
 export const firstReportParams = (first_report: JsonReport): SetParams => {

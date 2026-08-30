@@ -6448,7 +6448,7 @@
           "perf"
         ],
         "summary": "Query project performance metrics",
-        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. There is a limit of 255 permutations for a single request. Therefore, only the first 255 permutations are returned. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
+        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. Each permutation returns one line per variant of its benchmark, narrowed by the `parameters` filter when one is given. Only the first 64 entries of each dimension list are queried, the `parameters` filter included. There is a limit of 256 permutations and 256 lines for a single request. A permutation with nothing to plot returns no line, but it still counts against the permutation limit. If there is no `start_time`, then the last four weeks are queried, back from the `end_time` when there is one and from now when there is not. The response always states the window that was queried. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_perf_get",
         "parameters": [
           {
@@ -6463,7 +6463,7 @@
           {
             "in": "query",
             "name": "benchmarks",
-            "description": "A comma separated list of benchmark UUIDs to query.",
+            "description": "A comma separated list of benchmark UUIDs to query. Only the first 64 benchmarks are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6472,7 +6472,7 @@
           {
             "in": "query",
             "name": "branches",
-            "description": "A comma separated list of branch UUIDs to query.",
+            "description": "A comma separated list of branch UUIDs to query. Only the first 64 branches are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6498,9 +6498,18 @@
           {
             "in": "query",
             "name": "measures",
-            "description": "A comma separated list of measure UUIDs to query.",
+            "description": "A comma separated list of measure UUIDs to query. Only the first 64 measures are queried.",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "parameters",
+            "description": "An optional comma separated list of URL encoded parameter sets to filter on. A variant is queried when at least one of them is a subset of its parameter set: every key the filter names, with the same value. Leaving this off queries every variant. Only the first 64 parameter sets are queried.",
+            "schema": {
+              "nullable": true,
               "type": "string"
             }
           },
@@ -6516,7 +6525,7 @@
           {
             "in": "query",
             "name": "start_time",
-            "description": "Search for metrics after the given date time in milliseconds.",
+            "description": "Search for metrics after the given date time in milliseconds. Defaults to four weeks before the end time, or four weeks before now when there is no end time.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -6524,7 +6533,7 @@
           {
             "in": "query",
             "name": "testbeds",
-            "description": "A comma separated list of testbed UUIDs to query.",
+            "description": "A comma separated list of testbed UUIDs to query. Only the first 64 testbeds are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6610,7 +6619,7 @@
           {
             "in": "query",
             "name": "benchmarks",
-            "description": "A comma separated list of benchmark UUIDs to query.",
+            "description": "A comma separated list of benchmark UUIDs to query. Only the first 64 benchmarks are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6619,7 +6628,7 @@
           {
             "in": "query",
             "name": "branches",
-            "description": "A comma separated list of branch UUIDs to query.",
+            "description": "A comma separated list of branch UUIDs to query. Only the first 64 branches are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6645,7 +6654,7 @@
           {
             "in": "query",
             "name": "measures",
-            "description": "A comma separated list of measure UUIDs to query.",
+            "description": "A comma separated list of measure UUIDs to query. Only the first 64 measures are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -6663,7 +6672,7 @@
           {
             "in": "query",
             "name": "start_time",
-            "description": "Search for metrics after the given date time in milliseconds.",
+            "description": "Search for metrics after the given date time in milliseconds. Defaults to four weeks before the end time, or four weeks before now when there is no end time.",
             "schema": {
               "$ref": "#/components/schemas/DateTimeMillis"
             }
@@ -6671,7 +6680,7 @@
           {
             "in": "query",
             "name": "testbeds",
-            "description": "A comma separated list of testbed UUIDs to query.",
+            "description": "A comma separated list of testbed UUIDs to query. Only the first 64 testbeds are queried.",
             "required": true,
             "schema": {
               "type": "string"
@@ -13845,6 +13854,27 @@
           "$ref": "#/components/schemas/JsonMember"
         }
       },
+      "JsonMetricEntry": {
+        "description": "Exactly one `metric` row: the metric's value and every threshold that checked it.",
+        "type": "object",
+        "properties": {
+          "boundaries": {
+            "nullable": true,
+            "description": "Every threshold that checked this metric, with the boundary it produced and any alert that boundary raised. Absent when nothing checked it.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonPerfBoundary"
+            }
+          },
+          "value": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "value"
+        ]
+      },
       "JsonMetricTriple": {
         "type": "object",
         "properties": {
@@ -15364,6 +15394,7 @@
         "properties": {
           "end_time": {
             "nullable": true,
+            "description": "The end of the window the query named, if it named one.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/DateTime"
@@ -15376,11 +15407,12 @@
           "results": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/JsonPerfMetrics"
+              "$ref": "#/components/schemas/JsonPerfLine"
             }
           },
           "start_time": {
             "nullable": true,
+            "description": "The start of the window that was plotted, which is the default window when the query named no start time.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/DateTime"
@@ -15416,7 +15448,8 @@
           "uuid"
         ]
       },
-      "JsonPerfMetric": {
+      "JsonPerfBoundary": {
+        "description": "A threshold and the boundary it produced, with any alert that boundary raised.",
         "type": "object",
         "properties": {
           "alert": {
@@ -15428,50 +15461,19 @@
             ]
           },
           "boundary": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonBoundary"
-              }
-            ]
-          },
-          "end_time": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "iteration": {
-            "$ref": "#/components/schemas/Iteration"
-          },
-          "metric": {
-            "$ref": "#/components/schemas/JsonMetricTriple"
-          },
-          "report": {
-            "$ref": "#/components/schemas/ReportUuid"
-          },
-          "start_time": {
-            "$ref": "#/components/schemas/DateTime"
+            "$ref": "#/components/schemas/JsonBoundary"
           },
           "threshold": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonThresholdModel"
-              }
-            ]
-          },
-          "version": {
-            "$ref": "#/components/schemas/JsonVersion"
+            "$ref": "#/components/schemas/JsonThresholdModel"
           }
         },
         "required": [
-          "end_time",
-          "iteration",
-          "metric",
-          "report",
-          "start_time",
-          "version"
+          "boundary",
+          "threshold"
         ]
       },
-      "JsonPerfMetrics": {
+      "JsonPerfLine": {
+        "description": "One line of a perf query: one variant of one benchmark, on one branch, one testbed, and one measure.",
         "type": "object",
         "properties": {
           "benchmark": {
@@ -15486,8 +15488,16 @@
           "metrics": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/JsonPerfMetric"
+              "$ref": "#/components/schemas/JsonPerfMetrics"
             }
+          },
+          "parameter": {
+            "description": "The parameter set this line plots.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonParameter"
+              }
+            ]
           },
           "testbed": {
             "$ref": "#/components/schemas/JsonTestbed"
@@ -15498,7 +15508,80 @@
           "branch",
           "measure",
           "metrics",
+          "parameter",
           "testbed"
+        ]
+      },
+      "JsonPerfMetrics": {
+        "description": "One point of a perf line: everything one measure of one variant measured, in one iteration of one report.",
+        "type": "object",
+        "properties": {
+          "alert": {
+            "nullable": true,
+            "description": "Deprecated. The alert raised on the `value` row's boundary, if any.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonPerfAlert"
+              }
+            ]
+          },
+          "boundary": {
+            "nullable": true,
+            "description": "Deprecated. The boundary computed for the `value` row, if any.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonBoundary"
+              }
+            ]
+          },
+          "end_time": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "iteration": {
+            "$ref": "#/components/schemas/Iteration"
+          },
+          "metric": {
+            "nullable": true,
+            "description": "Deprecated. The metric triple, reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nAbsent when the measure carries no `value` name, which BMF v1 permits. Never absent for anything an older client could produce.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonMetricTriple"
+              }
+            ]
+          },
+          "metrics": {
+            "description": "Every metric this measure ingested, keyed by name.",
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonMetricEntry"
+            }
+          },
+          "report": {
+            "$ref": "#/components/schemas/ReportUuid"
+          },
+          "start_time": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "threshold": {
+            "nullable": true,
+            "description": "Deprecated. The threshold that checked the `value` row, if any.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonThresholdModel"
+              }
+            ]
+          },
+          "version": {
+            "$ref": "#/components/schemas/JsonVersion"
+          }
+        },
+        "required": [
+          "end_time",
+          "iteration",
+          "metrics",
+          "report",
+          "start_time",
+          "version"
         ]
       },
       "JsonPlan": {
@@ -16734,7 +16817,7 @@
         "type": "object",
         "properties": {
           "benchmarks": {
-            "description": "The number of results in this iteration: one per grid point, so one per benchmark for a benchmark that reports a single parameter set.",
+            "description": "The number of results in this iteration: one per variant, so one per benchmark for a benchmark that reports a single parameter set.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -16768,7 +16851,7 @@
           },
           "metric": {
             "nullable": true,
-            "description": "Deprecated. Reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nAbsent when the measure carries no `value` name, which BMF v1 permits. Never absent for anything an older client could produce.",
+            "description": "Deprecated. The metric triple, reconstructed from the `value` row and its `lower_value`/`upper_value` siblings. Retained for compatibility with older clients and removed in a future release.\n\nAbsent when the measure carries no `value` name, which BMF v1 permits. Never absent for anything an older client could produce.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonMetricTriple"
@@ -16776,7 +16859,7 @@
             ]
           },
           "metrics": {
-            "description": "Every named scalar ingested for this measure, in a stable order.",
+            "description": "Every metric ingested for this measure, in a stable order.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonReportMetric"
@@ -16784,7 +16867,7 @@
           },
           "threshold": {
             "nullable": true,
-            "description": "Deprecated. The threshold that gated the `value` row, if any.",
+            "description": "Deprecated. The threshold that checked the `value` row, if any.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonThresholdModel"
@@ -16798,11 +16881,11 @@
         ]
       },
       "JsonReportMetric": {
-        "description": "Exactly one `metric` row: one named scalar.",
+        "description": "Exactly one `metric` row: the metric's name and value.",
         "type": "object",
         "properties": {
           "boundaries": {
-            "description": "Every threshold that gated this named scalar, with the boundary it produced. Length 0 or 1 until threshold predicates ship.",
+            "description": "Every threshold that checked this metric, with the boundary it produced. Length 0 or 1 until threshold predicates ship.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonReportBoundary"
@@ -16843,7 +16926,7 @@
         ]
       },
       "JsonReportResult": {
-        "description": "One grid point of one benchmark, in one iteration of a report.\n\nA benchmark reports as many results per iteration as it has parameter sets, so the parameter set is what tells two results of one benchmark apart.",
+        "description": "One variant of one benchmark, in one iteration of a report.\n\nA benchmark reports as many results per iteration as it has parameter sets, so the parameter set is what tells two results of one benchmark apart.",
         "type": "object",
         "properties": {
           "benchmark": {
