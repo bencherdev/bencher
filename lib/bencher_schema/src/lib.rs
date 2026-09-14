@@ -119,9 +119,37 @@ pub fn run_migrations(database: &mut context::DbConnection) -> Result<(), Migrat
 
 #[cfg(test)]
 mod tests {
-    use diesel::{Connection as _, connection::SimpleConnection as _};
+    use diesel::{Connection as _, RunQueryDsl as _, connection::SimpleConnection as _};
 
     use super::{cache_size, run_migrations};
+
+    #[derive(diesel::QueryableByName)]
+    struct TableName {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        name: String,
+    }
+
+    // The planner runs on its structural heuristics: a statistics table left behind
+    // by `ANALYZE` would steer it into scanning instead of using the indexes.
+    #[test]
+    fn migrations_leave_no_planner_statistics_behind() {
+        let mut conn = diesel::SqliteConnection::establish(":memory:")
+            .expect("Failed to create an in-memory database");
+
+        run_migrations(&mut conn).expect("Failed to run migrations");
+
+        let statistics_tables: Vec<String> =
+            diesel::sql_query("SELECT name FROM sqlite_master WHERE name LIKE 'sqlite_stat%'")
+                .load::<TableName>(&mut conn)
+                .expect("Failed to list the statistics tables")
+                .into_iter()
+                .map(|table| table.name)
+                .collect();
+        assert!(
+            statistics_tables.is_empty(),
+            "the migrations leave no statistics tables behind, found {statistics_tables:?}"
+        );
+    }
 
     // The connection that runs the migrations is the connection the API then serves
     // from, so the window's cache size has to be handed back when the window closes.
