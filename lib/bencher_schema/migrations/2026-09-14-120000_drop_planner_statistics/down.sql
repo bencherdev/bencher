@@ -1,0 +1,1 @@
+-- The statistics are not restored: a limited ANALYZE would reintroduce the problem.
