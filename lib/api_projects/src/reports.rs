@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk,
     TotalCount,
@@ -25,10 +23,7 @@ use bencher_schema::{
     model::{
         project::{
             QueryProject,
-            branch::{
-                head::HeadId,
-                version::{QueryVersion, VersionId},
-            },
+            branch::{head::HeadId, version::VersionId},
             report::{
                 NewRunReport, QueryReport, ReportId, ReportMode,
                 report_benchmark::ReportBenchmarkId,
@@ -39,11 +34,11 @@ use bencher_schema::{
             auth::{AuthUser, BearerToken},
         },
     },
-    schema, write_conn,
+    schema, write_conn, write_transaction,
 };
 use diesel::{
     BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
-    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    OptionalExtension as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use futures::{StreamExt as _, stream::FuturesOrdered};
@@ -495,82 +490,46 @@ async fn delete_inner(
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ReportDelete);
 
-    // If there are no more reports for this version, delete the version
-    // This is necessary because multiple reports can use the same version via a git hash
-    // This will cascade and delete all head versions for this version
-    // Before doing so, decrement all greater versions
-    // Otherwise, just return since the version is still in use
-    if schema::report::table
-        .filter(schema::report::version_id.eq(version_id))
-        .count()
-        .first::<i64>(auth_conn!(context))
-        .map_err(resource_not_found_err!(
-            Version,
-            (&query_project, report_id, version_id)
-        ))?
-        != 0
-    {
-        return Ok(());
-    }
-
-    let query_version = QueryVersion::get(auth_conn!(context), version_id)?;
-    // Get all heads that use this version
-    let heads = schema::head::table
-        .inner_join(
-            schema::head_version::table.on(schema::head_version::head_id.eq(schema::head::id)),
-        )
-        .filter(schema::head_version::version_id.eq(version_id))
-        .select(schema::head::id)
-        .load::<HeadId>(auth_conn!(context))
-        .map_err(resource_not_found_err!(
-            Head,
-            (&query_project, report_id, version_id)
-        ))?;
-
-    let mut version_map = HashMap::new();
-    // Get all versions greater than this one for each of the heads
-    for head_id in heads {
-        schema::version::table
-            .inner_join(schema::head_version::table)
-            .filter(schema::version::number.gt(query_version.number))
-            .filter(schema::head_version::head_id.eq(head_id))
-            .select((schema::version::id, schema::version::number))
-            .load::<(VersionId, VersionNumber)>(auth_conn!(context))
-            .map_err(resource_not_found_err!(
-                Version,
-                (&query_project, report_id, head_id, &query_version)
-            ))?
-            .into_iter()
-            .for_each(|(version_id, version_number)| {
-                version_map.insert(version_id, version_number);
-            });
-    }
-
-    // For each version greater than this one, decrement the version number
-    for (version_id, version_number) in version_map {
-        if let Err(e) =
-            diesel::update(schema::version::table.filter(schema::version::id.eq(version_id)))
-                .set(schema::version::number.eq(version_number.decrement()))
-                .execute(write_conn!(context))
-        {
-            debug_assert!(
-                false,
-                "Failed to decrement version ({version_id}) number ({version_number}): {e}"
-            );
-            #[cfg(feature = "sentry")]
-            sentry::capture_error(&e);
+    // Several reports can share a version via a git hash, so the version and its
+    // renumbering only go once no report uses it.
+    write_transaction!(context, |conn| {
+        let remaining = schema::report::table
+            .filter(schema::report::version_id.eq(version_id))
+            .count()
+            .get_result::<i64>(conn)?;
+        if remaining != 0 {
+            return Ok(());
         }
-    }
-
-    // Finally delete the dangling version
-    diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(
-            Version,
-            (&query_project, report_id, &query_version)
-        ))?;
-
-    Ok(())
+        let Some(number) = schema::version::table
+            .filter(schema::version::id.eq(version_id))
+            .select(schema::version::number)
+            .first::<VersionNumber>(conn)
+            .optional()?
+        else {
+            return Ok(());
+        };
+        let heads = schema::head_version::table
+            .filter(schema::head_version::version_id.eq(version_id))
+            .select(schema::head_version::head_id)
+            .load::<HeadId>(conn)?;
+        let head_versions = schema::head_version::table
+            .filter(schema::head_version::head_id.eq_any(heads))
+            .select(schema::head_version::version_id);
+        diesel::update(
+            schema::version::table
+                .filter(schema::version::id.eq_any(head_versions))
+                .filter(schema::version::number.gt(number)),
+        )
+        .set(schema::version::number.eq(schema::version::number - 1))
+        .execute(conn)?;
+        diesel::delete(schema::version::table.filter(schema::version::id.eq(version_id)))
+            .execute(conn)
+            .map(|_| ())
+    })
+    .map_err(resource_conflict_err!(
+        Version,
+        (&query_project, report_id, version_id)
+    ))
 }
 
 /// Delete a report's results in bounded chunks, each in its own write

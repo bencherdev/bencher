@@ -54,11 +54,6 @@ mod version_number {
         pub fn increment(self) -> Self {
             Self(self.0.saturating_add(1))
         }
-
-        #[must_use]
-        pub fn decrement(self) -> Self {
-            Self(self.0.saturating_sub(1))
-        }
     }
 
     impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for VersionNumber
