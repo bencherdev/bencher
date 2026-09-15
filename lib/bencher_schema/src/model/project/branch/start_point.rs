@@ -2,14 +2,21 @@ use bencher_json::{
     GitHash, JsonNewStartPoint,
     project::branch::{JsonUpdateStartPoint, START_POINT_MAX_VERSIONS},
 };
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
-use crate::{auth_conn, context::ApiContext, error::is_not_found, model::project::ProjectId};
+use crate::{
+    auth_conn,
+    context::{ApiContext, DbConnection},
+    error::{is_not_found, resource_not_found_err},
+    model::project::ProjectId,
+    schema,
+};
 
 use super::{
     QueryBranch,
     head_version::{HeadVersionId, QueryHeadVersion},
-    version::QueryVersion,
+    version::{QueryVersion, VersionId},
 };
 
 #[derive(Debug, Clone)]
@@ -146,5 +153,17 @@ impl StartPoint {
 
     pub fn max_versions(&self) -> u32 {
         self.max_versions.unwrap_or(START_POINT_MAX_VERSIONS)
+    }
+
+    pub fn version_ids(&self, conn: &mut DbConnection) -> Result<Vec<VersionId>, HttpError> {
+        schema::head_version::table
+            .inner_join(schema::version::table)
+            .filter(schema::head_version::head_id.eq(self.head_version.head_id))
+            .filter(schema::version::number.le(self.version.number))
+            .order(schema::version::number.desc())
+            .limit(i64::from(self.max_versions()))
+            .select(schema::head_version::version_id)
+            .load(conn)
+            .map_err(resource_not_found_err!(HeadVersion, self))
     }
 }
