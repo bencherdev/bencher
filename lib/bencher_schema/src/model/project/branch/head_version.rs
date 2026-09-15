@@ -87,3 +87,26 @@ pub struct InsertHeadVersion {
     pub head_id: HeadId,
     pub version_id: VersionId,
 }
+
+impl InsertHeadVersion {
+    pub fn insert_all(
+        conn: &mut DbConnection,
+        head_id: HeadId,
+        version_ids: &[VersionId],
+    ) -> diesel::QueryResult<()> {
+        if version_ids.is_empty() {
+            return Ok(());
+        }
+        let insert_head_versions: Vec<Self> = version_ids
+            .iter()
+            .map(|&version_id| Self {
+                head_id,
+                version_id,
+            })
+            .collect();
+        diesel::insert_into(schema::head_version::table)
+            .values(&insert_head_versions)
+            .execute(conn)?;
+        Ok(())
+    }
+}

@@ -14,19 +14,19 @@ use super::{
     BranchId, QueryBranch,
     head_version::{HeadVersionId, InsertHeadVersion},
     start_point::StartPoint,
-    version::{QueryVersion, VersionId},
+    version::QueryVersion,
 };
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
-    error::{issue_error, resource_conflict_err, resource_not_found_err},
+    error::{issue_error, resource_not_found_err},
     macros::{fn_get::fn_get, sql::last_insert_rowid},
     model::project::{
         ProjectId,
         threshold::{InsertThreshold, alert::QueryAlert},
     },
     schema::{self, head as head_table},
-    write_conn, write_transaction,
+    write_transaction,
 };
 
 crate::macros::typed_id::typed_id!(HeadId);
@@ -112,85 +112,6 @@ impl QueryHead {
             created,
             replaced,
         })
-    }
-
-    pub async fn clone_start_point(
-        &self,
-        log: &Logger,
-        context: &ApiContext,
-        query_branch: &QueryBranch,
-        branch_start_point: Option<&StartPoint>,
-    ) -> Result<(), HttpError> {
-        match (self.start_point_id, branch_start_point) {
-            (Some(start_point_id), Some(branch_start_point)) => {
-                debug_assert_eq!(
-                    start_point_id, branch_start_point.head_version.id,
-                    "Branch start point mismatch"
-                );
-                self.clone_versions(log, context, branch_start_point)
-                    .await?;
-                InsertThreshold::from_start_point(log, context, query_branch, branch_start_point)
-                    .await
-            },
-            (None, None) => Ok(()),
-            _ => Err(issue_error(
-                "Branch start point mismatch",
-                "Failed to match branch start point for head",
-                format!("{branch_start_point:?}\n{self:?}"),
-            )),
-        }
-    }
-
-    async fn clone_versions(
-        &self,
-        log: &Logger,
-        context: &ApiContext,
-        branch_start_point: &StartPoint,
-    ) -> Result<(), HttpError> {
-        let start_point_version = QueryVersion::get(
-            auth_conn!(context),
-            branch_start_point.head_version.version_id,
-        )?;
-        slog::debug!(log, "Got start point version: {start_point_version:?}");
-
-        // Get all prior versions (version number less than or equal to) for the start point head
-        let version_ids = schema::head_version::table
-            .inner_join(schema::version::table)
-            .filter(schema::head_version::head_id.eq(branch_start_point.head_version.head_id))
-            .filter(schema::version::number.le(start_point_version.number))
-            .order(schema::version::number.desc())
-            .limit(i64::from(branch_start_point.max_versions()))
-            .select(schema::head_version::version_id)
-            .load::<VersionId>(auth_conn!(context))
-            .map_err(resource_not_found_err!(
-                HeadVersion,
-                (branch_start_point, start_point_version)
-            ))?;
-        slog::debug!(log, "Got version ids: {version_ids:?}");
-
-        // Add new head to all start point head versions in a single batch insert
-        let insert_head_versions: Vec<InsertHeadVersion> = version_ids
-            .into_iter()
-            .map(|version_id| InsertHeadVersion {
-                head_id: self.id,
-                version_id,
-            })
-            .collect();
-
-        if !insert_head_versions.is_empty() {
-            diesel::insert_into(schema::head_version::table)
-                .values(&insert_head_versions)
-                .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(HeadVersion, &insert_head_versions))?;
-            slog::debug!(
-                log,
-                "Inserted {} head versions in batch",
-                insert_head_versions.len()
-            );
-        }
-
-        slog::debug!(log, "Cloned all head versions");
-        Ok(())
     }
 }
 
@@ -282,6 +203,12 @@ impl InsertHead {
                 .values(&insert_head)
                 .execute(conn)?;
             let new_head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
+            let version_ids = if let Some(start_point) = branch_start_point {
+                start_point.version_ids(conn)?
+            } else {
+                Vec::new()
+            };
+            InsertHeadVersion::insert_all(conn, new_head_id, &version_ids)?;
 
             // Update the branch to point to the new head
             diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
@@ -321,14 +248,9 @@ impl InsertHead {
         let query_branch = QueryBranch::get(auth_conn!(context), query_branch.id)?;
         slog::debug!(log, "Got updated branch: {query_branch:?}");
 
-        // Clone data from the start point for the head
-        query_head
-            .clone_start_point(log, context, &query_branch, branch_start_point)
-            .await?;
-        slog::debug!(
-            log,
-            "Cloned start point for head: {query_head:?} {branch_start_point:?}"
-        );
+        if let Some(start_point) = branch_start_point {
+            InsertThreshold::from_start_point(log, context, &query_branch, start_point).await?;
+        }
 
         Ok((query_branch, query_head))
     }
@@ -367,7 +289,7 @@ mod tests {
     };
 
     /// Test that `head_version` records can be queried by `head_id`.
-    /// This is the foundation of the `clone_versions` operation.
+    /// This is the foundation of the `StartPoint::version_ids` operation.
     #[test]
     fn query_head_versions_by_head() {
         let mut conn = setup_test_db();
@@ -421,7 +343,7 @@ mod tests {
     }
 
     /// Test querying `head_versions` with version number filter (le = less than or equal).
-    /// The `clone_versions` function uses this filter to clone only versions up to
+    /// The `StartPoint::version_ids` function uses this filter to clone only versions up to
     /// the start point version.
     #[test]
     fn query_head_versions_with_version_number_filter() {
@@ -499,7 +421,7 @@ mod tests {
     }
 
     /// Test that the limit clause works correctly for `max_versions`.
-    /// The `clone_versions` function uses limit to cap the number of versions cloned.
+    /// The `StartPoint::version_ids` function uses limit to cap the number of versions cloned.
     #[test]
     fn query_head_versions_with_limit() {
         let mut conn = setup_test_db();
@@ -538,179 +460,6 @@ mod tests {
 
         assert_eq!(version_ids.len(), 5);
         // Should get the 5 most recent versions (highest numbers) in descending order
-    }
-
-    /// Test cloning versions to a new head using individual inserts.
-    /// This simulates the current `clone_versions` behavior before optimization.
-    #[test]
-    fn clone_versions_individual_inserts() {
-        let mut conn = setup_test_db();
-        let base = create_base_entities(&mut conn);
-
-        // Create source branch with head
-        let source = create_branch_with_head(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000010",
-            "source",
-            "source",
-            "00000000-0000-0000-0000-000000000011",
-        );
-
-        // Create destination branch with head
-        let dest = create_branch_with_head(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000020",
-            "dest",
-            "dest",
-            "00000000-0000-0000-0000-000000000021",
-        );
-
-        // Create versions and link to source
-        let v1 = create_version(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000100",
-            1,
-            None,
-        );
-        let v2 = create_version(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000101",
-            2,
-            None,
-        );
-        let v3 = create_version(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000102",
-            3,
-            None,
-        );
-
-        create_head_version(&mut conn, source.head_id, v1);
-        create_head_version(&mut conn, source.head_id, v2);
-        create_head_version(&mut conn, source.head_id, v3);
-
-        // Simulate clone_versions: clone versions <= 3 to dest head
-        // This uses individual inserts like the current implementation
-        let version_ids: Vec<VersionId> = schema::head_version::table
-            .inner_join(schema::version::table)
-            .filter(schema::head_version::head_id.eq(source.head_id))
-            .filter(schema::version::number.le(3))
-            .order(schema::version::number.desc())
-            .limit(255) // max_versions default
-            .select(schema::head_version::version_id)
-            .load(&mut conn)
-            .expect("Failed to query");
-
-        // Insert each version individually (current behavior)
-        for version_id in &version_ids {
-            diesel::insert_into(schema::head_version::table)
-                .values((
-                    schema::head_version::head_id.eq(dest.head_id),
-                    schema::head_version::version_id.eq(*version_id),
-                ))
-                .execute(&mut conn)
-                .expect("Failed to insert");
-        }
-
-        // Verify dest head now has all 3 versions
-        let dest_versions = get_head_versions(&mut conn, dest.head_id);
-        assert_eq!(dest_versions.len(), 3);
-
-        // Verify source head still has its versions
-        let source_versions = get_head_versions(&mut conn, source.head_id);
-        assert_eq!(source_versions.len(), 3);
-    }
-
-    /// Test cloning versions to a new head using batch insert.
-    /// This simulates the optimized `clone_versions` behavior.
-    #[test]
-    fn clone_versions_batch_insert() {
-        let mut conn = setup_test_db();
-        let base = create_base_entities(&mut conn);
-
-        // Create source branch with head
-        let source = create_branch_with_head(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000010",
-            "source",
-            "source",
-            "00000000-0000-0000-0000-000000000011",
-        );
-
-        // Create destination branch with head
-        let dest = create_branch_with_head(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000020",
-            "dest",
-            "dest",
-            "00000000-0000-0000-0000-000000000021",
-        );
-
-        // Create versions and link to source
-        let v1 = create_version(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000100",
-            1,
-            None,
-        );
-        let v2 = create_version(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000101",
-            2,
-            None,
-        );
-        let v3 = create_version(
-            &mut conn,
-            base.project_id,
-            "00000000-0000-0000-0000-000000000102",
-            3,
-            None,
-        );
-
-        create_head_version(&mut conn, source.head_id, v1);
-        create_head_version(&mut conn, source.head_id, v2);
-        create_head_version(&mut conn, source.head_id, v3);
-
-        // Simulate clone_versions with batch insert (optimized behavior)
-        let version_ids: Vec<VersionId> = schema::head_version::table
-            .inner_join(schema::version::table)
-            .filter(schema::head_version::head_id.eq(source.head_id))
-            .filter(schema::version::number.le(3))
-            .order(schema::version::number.desc())
-            .limit(255)
-            .select(schema::head_version::version_id)
-            .load(&mut conn)
-            .expect("Failed to query");
-
-        // Create batch of tuple values for insert
-        let insert_values: Vec<_> = version_ids
-            .into_iter()
-            .map(|version_id| {
-                (
-                    schema::head_version::head_id.eq(dest.head_id),
-                    schema::head_version::version_id.eq(version_id),
-                )
-            })
-            .collect();
-
-        // Insert all at once (optimized behavior)
-        diesel::insert_into(schema::head_version::table)
-            .values(&insert_values)
-            .execute(&mut conn)
-            .expect("Failed to batch insert");
-
-        // Verify dest head now has all 3 versions
-        let dest_versions = get_head_versions(&mut conn, dest.head_id);
-        assert_eq!(dest_versions.len(), 3);
     }
 
     /// Test that batch insert and individual insert produce the same result.

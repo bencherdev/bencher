@@ -1,15 +1,25 @@
 use bencher_json::{
     GitHash, JsonNewStartPoint,
-    project::branch::{JsonUpdateStartPoint, START_POINT_MAX_VERSIONS},
+    project::{
+        branch::{JsonUpdateStartPoint, START_POINT_MAX_VERSIONS},
+        head::VersionNumber,
+    },
 };
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
-use crate::{auth_conn, context::ApiContext, error::is_not_found, model::project::ProjectId};
+use crate::{
+    auth_conn,
+    context::{ApiContext, DbConnection},
+    error::is_not_found,
+    model::project::ProjectId,
+    schema,
+};
 
 use super::{
     QueryBranch,
     head_version::{HeadVersionId, QueryHeadVersion},
-    version::QueryVersion,
+    version::{QueryVersion, VersionId},
 };
 
 #[derive(Debug, Clone)]
@@ -146,5 +156,124 @@ impl StartPoint {
 
     pub fn max_versions(&self) -> u32 {
         self.max_versions.unwrap_or(START_POINT_MAX_VERSIONS)
+    }
+
+    pub fn version_ids(&self, conn: &mut DbConnection) -> diesel::QueryResult<Vec<VersionId>> {
+        let number: VersionNumber = schema::version::table
+            .filter(schema::version::id.eq(self.head_version.version_id))
+            .select(schema::version::number)
+            .first(conn)?;
+        schema::head_version::table
+            .inner_join(schema::version::table)
+            .filter(schema::head_version::head_id.eq(self.head_version.head_id))
+            .filter(schema::version::number.le(number))
+            .order(schema::version::number.desc())
+            .limit(i64::from(self.max_versions()))
+            .select(schema::head_version::version_id)
+            .load(conn)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
+
+    use crate::{
+        model::project::branch::{
+            QueryBranch,
+            head_version::QueryHeadVersion,
+            version::{QueryVersion, VersionId},
+        },
+        schema,
+        test_util::{
+            create_base_entities, create_branch_with_head, create_head_version, create_version,
+            setup_test_db,
+        },
+    };
+
+    use super::StartPoint;
+
+    /// A start point resolved before a renumber must not copy a version that
+    /// took the start point's old number on a newer id.
+    #[test]
+    fn version_ids_reads_the_start_point_number_at_copy_time() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let source = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "source",
+            "source",
+            "00000000-0000-0000-0000-000000000011",
+        );
+        let versions: Vec<VersionId> = (1..=5)
+            .map(|i| {
+                let v = create_version(
+                    &mut conn,
+                    base.project_id,
+                    &format!("00000000-0000-0000-0000-0000000001{i:02}"),
+                    i,
+                    None,
+                );
+                create_head_version(&mut conn, source.head_id, v);
+                v
+            })
+            .collect();
+        let [v1, v2, v3, v4, v5]: [VersionId; 5] = versions.try_into().expect("five versions");
+
+        // Resolve the start point at the newest version, number 5.
+        let branch = schema::branch::table
+            .filter(schema::branch::id.eq(source.branch_id))
+            .select(QueryBranch::as_select())
+            .first(&mut conn)
+            .expect("Failed to get branch");
+        let head_version = schema::head_version::table
+            .filter(schema::head_version::head_id.eq(source.head_id))
+            .filter(schema::head_version::version_id.eq(v5))
+            .select(QueryHeadVersion::as_select())
+            .first(&mut conn)
+            .expect("Failed to get head version");
+        let version = QueryVersion::get(&mut conn, v5).expect("Failed to get version");
+        let start_point = StartPoint {
+            branch,
+            head_version,
+            version,
+            max_versions: None,
+            clone_thresholds: None,
+        };
+
+        // A report delete removes version 2 and renumbers 3 to 5 down to 2 to 4.
+        diesel::delete(schema::version::table.filter(schema::version::id.eq(v2)))
+            .execute(&mut conn)
+            .expect("Failed to delete version");
+        for (v, n) in [(v3, 2), (v4, 3), (v5, 4)] {
+            diesel::update(schema::version::table.filter(schema::version::id.eq(v)))
+                .set(schema::version::number.eq(n))
+                .execute(&mut conn)
+                .expect("Failed to renumber version");
+        }
+        // An upload then takes the freed number 5 on a newer id.
+        let newer = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000199",
+            5,
+            None,
+        );
+        create_head_version(&mut conn, source.head_id, newer);
+
+        let version_ids = start_point
+            .version_ids(&mut conn)
+            .expect("Failed to load version ids");
+        assert_eq!(
+            version_ids,
+            vec![v5, v4, v3, v1],
+            "only versions at or below the start point's current number, newest first"
+        );
+        assert!(
+            !version_ids.contains(&newer),
+            "the newer version must not be copied"
+        );
     }
 }
