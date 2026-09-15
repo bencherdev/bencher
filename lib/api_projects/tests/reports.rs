@@ -16,15 +16,15 @@ use bencher_api_tests::{
     },
 };
 use bencher_json::{
-    BenchmarkUuid, BoundaryUuid, JsonReport, JsonReports, MeasureUuid, MetricName, MetricUuid,
-    ModelUuid, ParameterSet, ReportBenchmarkUuid, ThresholdUuid,
+    BenchmarkUuid, BoundaryUuid, HeadUuid, JsonReport, JsonReports, MeasureUuid, MetricName,
+    MetricUuid, ModelUuid, ParameterSet, ReportBenchmarkUuid, ThresholdUuid, VersionUuid,
 };
 use bencher_schema::{
     context::DbConnection,
     model::project::report::{ReportId, upsert_metric_count},
     schema,
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
 /// Insert the benchmark, measure, threshold, and model rows needed for
@@ -306,6 +306,204 @@ async fn reports_delete_with_results() {
 async fn reports_delete_chunked() {
     let count = i32::try_from(2 * api_projects::DELETE_CHUNK_SIZE).expect("count fits in i32");
     delete_report_and_assert_empty(count).await;
+}
+
+/// A report whose version (number 1) is shared by two heads, which also share
+/// versions 2 and 3. A third head holds an unrelated version numbered 2.
+struct SharedVersions {
+    server: TestServer,
+    token: String,
+    project_slug: String,
+    report_uuid: String,
+    version_id: i32,
+    later_ids: [i32; 2],
+    unrelated_id: i32,
+    head_ids: [i32; 2],
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn seed_shared_versions() -> SharedVersions {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "reportdelversions@example.com")
+        .await;
+    let org = server.create_org(&user, "Report Del Versions Org").await;
+    let project = server
+        .create_project(&user, &org, "Report Del Versions Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+    let report_id = create_test_report(&server, project_id);
+
+    let mut conn = server.db_conn();
+    let (report_uuid, head_id, version_id): (String, i32, i32) = schema::report::table
+        .filter(schema::report::id.eq(report_id))
+        .select((
+            schema::report::uuid,
+            schema::report::head_id,
+            schema::report::version_id,
+        ))
+        .first(&mut conn)
+        .expect("Failed to get report");
+    let branch_id: i32 = schema::head::table
+        .filter(schema::head::id.eq(head_id))
+        .select(schema::head::branch_id)
+        .first(&mut conn)
+        .expect("Failed to get branch ID");
+
+    let later_ids = [
+        insert_version(&mut conn, project_id, 2),
+        insert_version(&mut conn, project_id, 3),
+    ];
+    let unrelated_id = insert_version(&mut conn, project_id, 2);
+    let other_head_id = insert_head(&mut conn, branch_id);
+    let unrelated_head_id = insert_head(&mut conn, branch_id);
+    for head in [head_id, other_head_id] {
+        for version in [version_id, later_ids[0], later_ids[1]] {
+            insert_head_version(&mut conn, head, version);
+        }
+    }
+    insert_head_version(&mut conn, unrelated_head_id, unrelated_id);
+
+    SharedVersions {
+        server,
+        token: user.token,
+        project_slug: project_slug.to_owned(),
+        report_uuid,
+        version_id,
+        later_ids,
+        unrelated_id,
+        head_ids: [head_id, other_head_id],
+    }
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn insert_version(conn: &mut DbConnection, project_id: i32, number: i32) -> i32 {
+    let version_uuid = VersionUuid::new();
+    diesel::insert_into(schema::version::table)
+        .values((
+            schema::version::uuid.eq(&version_uuid),
+            schema::version::project_id.eq(project_id),
+            schema::version::number.eq(number),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert version");
+    schema::version::table
+        .filter(schema::version::uuid.eq(&version_uuid))
+        .select(schema::version::id)
+        .first(conn)
+        .expect("Failed to get version ID")
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn insert_head(conn: &mut DbConnection, branch_id: i32) -> i32 {
+    let head_uuid = HeadUuid::new();
+    diesel::insert_into(schema::head::table)
+        .values((
+            schema::head::uuid.eq(&head_uuid),
+            schema::head::branch_id.eq(branch_id),
+            schema::head::created.eq(&base_timestamp()),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert head");
+    schema::head::table
+        .filter(schema::head::uuid.eq(&head_uuid))
+        .select(schema::head::id)
+        .first(conn)
+        .expect("Failed to get head ID")
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn insert_head_version(conn: &mut DbConnection, head_id: i32, version_id: i32) {
+    diesel::insert_into(schema::head_version::table)
+        .values((
+            schema::head_version::head_id.eq(head_id),
+            schema::head_version::version_id.eq(version_id),
+        ))
+        .execute(conn)
+        .expect("Failed to insert head version");
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn version_number(conn: &mut DbConnection, version_id: i32) -> Option<i32> {
+    schema::version::table
+        .filter(schema::version::id.eq(version_id))
+        .select(schema::version::number)
+        .first(conn)
+        .optional()
+        .expect("Failed to get version number")
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn delete_shared_version_report(seed: &SharedVersions) -> StatusCode {
+    seed.server
+        .client
+        .delete(seed.server.api_url(&format!(
+            "/v0/projects/{}/reports/{}",
+            seed.project_slug, seed.report_uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&seed.token),
+        )
+        .send()
+        .await
+        .expect("Request failed")
+        .status()
+}
+
+// DELETE /v0/projects/{project}/reports/{report} - removing the last report on a
+// version shared by two heads decrements each later version exactly once
+#[tokio::test]
+async fn reports_delete_renumbers_shared_versions_once() {
+    let seed = seed_shared_versions().await;
+
+    assert_eq!(
+        delete_shared_version_report(&seed).await,
+        StatusCode::NO_CONTENT
+    );
+
+    let mut conn = seed.server.db_conn();
+    assert_eq!(version_number(&mut conn, seed.version_id), None);
+    assert_eq!(version_number(&mut conn, seed.later_ids[0]), Some(1));
+    assert_eq!(version_number(&mut conn, seed.later_ids[1]), Some(2));
+    assert_eq!(version_number(&mut conn, seed.unrelated_id), Some(2));
+    for head_id in seed.head_ids {
+        let numbers: Vec<i32> = schema::head_version::table
+            .inner_join(schema::version::table)
+            .filter(schema::head_version::head_id.eq(head_id))
+            .order(schema::version::id)
+            .select(schema::version::number)
+            .load(&mut conn)
+            .expect("Failed to load head versions");
+        assert_eq!(numbers, [1, 2], "head {head_id} version numbers");
+    }
+}
+
+// DELETE /v0/projects/{project}/reports/{report} - a failed version delete
+// rolls back the renumber and fails the request
+#[tokio::test]
+async fn reports_delete_version_failure_rolls_back_renumber() {
+    let seed = seed_shared_versions().await;
+
+    let mut conn = seed.server.db_conn();
+    diesel::sql_query(format!(
+        "CREATE TRIGGER block_version_delete BEFORE DELETE ON version \
+         WHEN OLD.id = {} BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+        seed.version_id
+    ))
+    .execute(&mut conn)
+    .expect("Failed to create trigger");
+
+    assert_eq!(
+        delete_shared_version_report(&seed).await,
+        StatusCode::CONFLICT
+    );
+
+    assert_eq!(version_number(&mut conn, seed.version_id), Some(1));
+    assert_eq!(version_number(&mut conn, seed.later_ids[0]), Some(2));
+    assert_eq!(version_number(&mut conn, seed.later_ids[1]), Some(3));
+    assert_eq!(version_number(&mut conn, seed.unrelated_id), Some(2));
 }
 
 /// Create a report with two iterations, each with two benchmarks and one measure.
