@@ -1,5 +1,6 @@
 #![expect(
     unused_crate_dependencies,
+    clippy::expect_used,
     clippy::similar_names,
     clippy::tests_outside_test_module,
     clippy::uninlined_format_args,
@@ -7,9 +8,9 @@
 )]
 //! Integration tests for project branch endpoints.
 
-use bencher_api_tests::TestServer;
-use bencher_json::{HeadUuid, JsonBranch, JsonBranches};
-use bencher_schema::schema;
+use bencher_api_tests::{TestServer, TestUser};
+use bencher_json::{HeadUuid, JsonBranch, JsonBranches, VersionUuid};
+use bencher_schema::{context::DbConnection, schema};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
@@ -419,4 +420,160 @@ async fn branches_get_with_wrong_branch_head() {
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+async fn send_branch_json(
+    server: &TestServer,
+    user: &TestUser,
+    method: http::Method,
+    path: &str,
+    body: &serde_json::Value,
+) -> StatusCode {
+    server
+        .client
+        .request(method, server.api_url(path))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(body)
+        .send()
+        .await
+        .expect("Request failed")
+        .status()
+}
+
+fn branch_head_id(conn: &mut DbConnection, slug: &str) -> Option<i32> {
+    schema::branch::table
+        .filter(schema::branch::slug.eq(slug))
+        .select(schema::branch::head_id)
+        .first(conn)
+        .expect("Failed to get branch head")
+}
+
+fn head_version_ids(conn: &mut DbConnection, head_id: i32) -> Vec<i32> {
+    schema::head_version::table
+        .filter(schema::head_version::head_id.eq(head_id))
+        .order(schema::head_version::version_id)
+        .select(schema::head_version::version_id)
+        .load(conn)
+        .expect("Failed to get head versions")
+}
+
+fn seed_versions(conn: &mut DbConnection, slug: &str, count: i32) -> Vec<i32> {
+    let (project_id, head_id): (i32, Option<i32>) = schema::branch::table
+        .filter(schema::branch::slug.eq(slug))
+        .select((schema::branch::project_id, schema::branch::head_id))
+        .first(conn)
+        .expect("Failed to get branch");
+    let head_id = head_id.expect("Branch has no head");
+    for number in 1..=count {
+        let version_uuid = VersionUuid::new();
+        diesel::insert_into(schema::version::table)
+            .values((
+                schema::version::uuid.eq(&version_uuid),
+                schema::version::project_id.eq(project_id),
+                schema::version::number.eq(number),
+            ))
+            .execute(conn)
+            .expect("Failed to insert version");
+        let version_id: i32 = schema::version::table
+            .filter(schema::version::uuid.eq(&version_uuid))
+            .select(schema::version::id)
+            .first(conn)
+            .expect("Failed to get version ID");
+        diesel::insert_into(schema::head_version::table)
+            .values((
+                schema::head_version::head_id.eq(head_id),
+                schema::head_version::version_id.eq(version_id),
+            ))
+            .execute(conn)
+            .expect("Failed to insert head version");
+    }
+    head_version_ids(conn, head_id)
+}
+
+fn fail_head_version_inserts(conn: &mut DbConnection, fail: bool) {
+    let sql = if fail {
+        "CREATE TRIGGER fail_head_version BEFORE INSERT ON head_version BEGIN SELECT RAISE(ABORT, 'injected failure'); END"
+    } else {
+        "DROP TRIGGER fail_head_version"
+    };
+    diesel::sql_query(sql)
+        .execute(conn)
+        .expect("Failed to toggle trigger");
+}
+
+// POST /v0/projects/{project}/branches - a start point clone failure leaves no branch behind
+#[tokio::test]
+async fn branches_create_with_start_point_is_atomic() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "branchstart@example.com").await;
+    let org = server.create_org(&user, "Branch Start Org").await;
+    let project = server
+        .create_project(&user, &org, "Branch Start Project")
+        .await;
+    let path = format!("/v0/projects/{}/branches", project.slug);
+
+    let source = serde_json::json!({ "name": "source", "slug": "source" });
+    let status = send_branch_json(&server, &user, http::Method::POST, &path, &source).await;
+    assert_eq!(status, StatusCode::CREATED);
+    let mut conn = server.db_conn();
+    let source_versions = seed_versions(&mut conn, "source", 3);
+
+    let feature = serde_json::json!({
+        "name": "feature",
+        "slug": "feature",
+        "start_point": { "branch": "source" }
+    });
+    fail_head_version_inserts(&mut conn, true);
+    let status = send_branch_json(&server, &user, http::Method::POST, &path, &feature).await;
+    assert!(!status.is_success(), "{status}");
+    let feature_count: i64 = schema::branch::table
+        .filter(schema::branch::slug.eq("feature"))
+        .count()
+        .get_result(&mut conn)
+        .expect("Failed to count branches");
+    assert_eq!(feature_count, 0);
+
+    fail_head_version_inserts(&mut conn, false);
+    let status = send_branch_json(&server, &user, http::Method::POST, &path, &feature).await;
+    assert_eq!(status, StatusCode::CREATED);
+    let head_id = branch_head_id(&mut conn, "feature").expect("Branch has no head");
+    assert_eq!(head_version_ids(&mut conn, head_id), source_versions);
+}
+
+// PATCH /v0/projects/{project}/branches/{branch} - a start point clone failure keeps the old head
+#[tokio::test]
+async fn branches_reset_start_point_is_atomic() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "branchreset@example.com").await;
+    let org = server.create_org(&user, "Branch Reset Org").await;
+    let project = server
+        .create_project(&user, &org, "Branch Reset Project")
+        .await;
+    let path = format!("/v0/projects/{}/branches", project.slug);
+
+    for slug in ["source", "feature"] {
+        let body = serde_json::json!({ "name": slug, "slug": slug });
+        let status = send_branch_json(&server, &user, http::Method::POST, &path, &body).await;
+        assert_eq!(status, StatusCode::CREATED);
+    }
+    let mut conn = server.db_conn();
+    let source_versions = seed_versions(&mut conn, "source", 3);
+    let old_head_id = branch_head_id(&mut conn, "feature");
+
+    let path = format!("{path}/feature");
+    let reset = serde_json::json!({ "start_point": { "branch": "source", "reset": true } });
+    fail_head_version_inserts(&mut conn, true);
+    let status = send_branch_json(&server, &user, http::Method::PATCH, &path, &reset).await;
+    assert!(!status.is_success(), "{status}");
+    assert_eq!(branch_head_id(&mut conn, "feature"), old_head_id);
+
+    fail_head_version_inserts(&mut conn, false);
+    let status = send_branch_json(&server, &user, http::Method::PATCH, &path, &reset).await;
+    assert_eq!(status, StatusCode::OK);
+    let head_id = branch_head_id(&mut conn, "feature").expect("Branch has no head");
+    assert_ne!(Some(head_id), old_head_id);
+    assert_eq!(head_version_ids(&mut conn, head_id), source_versions);
 }

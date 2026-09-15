@@ -9,7 +9,7 @@ use dropshot::HttpError;
 use slog::Logger;
 use version::{QueryVersion, VersionId};
 
-use super::{ProjectId, QueryProject};
+use super::{ProjectId, QueryProject, threshold::InsertThreshold};
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
@@ -34,7 +34,7 @@ pub mod start_point;
 pub mod version;
 
 use head::{HeadId, InsertHead, QueryHead};
-use head_version::QueryHeadVersion;
+use head_version::{InsertHeadVersion, QueryHeadVersion};
 use start_point::StartPoint;
 
 crate::macros::typed_id::typed_id!(BranchId);
@@ -415,6 +415,11 @@ impl InsertBranch {
 
         let insert_branch = Self::from_json_inner(auth_conn!(context), project_id, name, slug);
         let start_point_id = branch_start_point.as_ref().map(StartPoint::head_version_id);
+        let version_ids = if let Some(start_point) = &branch_start_point {
+            start_point.version_ids(auth_conn!(context))?
+        } else {
+            Vec::new()
+        };
 
         // Atomically create branch + head in a single transaction
         // so the branch never exists in the DB without a head.
@@ -429,6 +434,7 @@ impl InsertBranch {
                 .values(&insert_head)
                 .execute(conn)?;
             let head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
+            InsertHeadVersion::insert_all(conn, head_id, &version_ids)?;
 
             diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch_id)))
                 .set(schema::branch::head_id.eq(head_id))
@@ -445,14 +451,9 @@ impl InsertBranch {
             "Created branch {query_branch:?} with head {query_head:?}"
         );
 
-        // Clone data from the start point for the head
-        query_head
-            .clone_start_point(log, context, &query_branch, branch_start_point.as_ref())
-            .await?;
-        slog::debug!(
-            log,
-            "Cloned start point for head: {query_head:?} {branch_start_point:?}"
-        );
+        if let Some(start_point) = &branch_start_point {
+            InsertThreshold::from_start_point(log, context, &query_branch, start_point).await?;
+        }
 
         Ok((query_branch, query_head))
     }
