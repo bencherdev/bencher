@@ -22,13 +22,12 @@ const caseStudy = (project: string, slug: string) => {
 export const PROJECTS: Project[][] = [
 	[
 		{
-			name: "Microsoft CCF",
-			about:
-				"A framework for building a new category of secure, highly available, and performant applications",
+			name: "Microsoft snmalloc",
+			about: "Message passing based allocator",
 			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/microsoft.png",
-			slug: "ccf",
+			slug: "snmalloc",
 			query:
-				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=d5004f0a-5dbe-42bb-a821-1f55704d6ec2&testbeds=1e6f6a27-eb58-4f16-8d01-0148fbaed70e&benchmarks=3bae8305-29e0-4e5f-8157-01f8f471b408&measures=bc9fb376-9a85-478a-97fd-ebd7703c9663&start_time=1715185355000&end_time=1717777355000&clear=true&tab=benchmarks",
+				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=dc041689-5eaf-4b70-b1c8-9da23594c030&heads=3caf3a2d-f6aa-4e58-b7de-92219e9b4616&testbeds=c7457113-7c66-42a7-ac72-ee4e74d9f300&benchmarks=e6fdc724-f1e4-477e-81eb-19185eaef02d%2Cf99f94fb-805f-4338-a5ce-13d261f91afc%2C24eb178e-d9d4-45d7-90ec-1c82dfb58ea2&measures=44c8d1f2-5a3e-4573-bc7d-79f80461103c&start_time=1781395200000&end_time=1789430400000&clear=true&tab=benchmarks&x_axis=version",
 		},
 		{
 			name: "Google Sedpack",
@@ -49,6 +48,32 @@ export const PROJECTS: Project[][] = [
 	],
 	[
 		{
+			name: "conda",
+			about: "A system-level, binary package and environment manager",
+			logo: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/conda.svg",
+			slug: "conda-tdj8rt90",
+			query:
+				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=67634f05-6858-4e0b-8c77-9222afaa78a3&heads=3075025a-cf38-4fbc-851c-fcbf223d35ee&testbeds=d32fdfd6-9631-4a16-b71c-da1e838eaf0f&benchmarks=fbbe288f-2b29-4395-977a-1254429d3ca5%2C08b608e7-8ebb-41ea-a579-9d812b05135c%2C0bad22f1-5340-45fd-9229-7f6cd114c48d&measures=d40e34c0-83a2-4f3e-926c-3f5870705694&start_time=1781395200000&end_time=1789430400000&upper_boundary=true&clear=true&tab=benchmarks",
+		},
+		{
+			name: "Firezone",
+			about: "Blazing-fast remote access",
+			logo: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/firezone.svg",
+			slug: "firezone-1l75jv1z",
+			query:
+				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=455d0566-7315-404c-93e1-877e2732cc97&heads=455d0566-7315-404c-93e1-877e2732cc97&testbeds=258ac4fc-9cc9-4281-a45b-666cd8264371&benchmarks=f0008569-a7be-4f17-8f53-37abe7cbc31b%2Cb35d8c57-795d-4eac-9105-6911d81320a7%2Cdbebadcd-b0cf-4abd-a4f8-7274f064f6da&measures=a777fd3c-5f6c-4884-82e8-39cd8b2d30f1&start_time=1781395200000&end_time=1789430400000&clear=true&tab=benchmarks",
+		},
+		{
+			name: "pnpm",
+			about: "Fast, disk space efficient package manager",
+			logo: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/pnpm.svg",
+			slug: "pnpm",
+			query:
+				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=b06c9054-8025-4f4d-973a-36e92a38ba01&heads=751ebac5-6f89-4ed7-889d-74b2b27c8bc8&testbeds=e76d4447-6105-4421-bd5f-092ab7013510&benchmarks=d9e5dbb5-fb8b-42b4-b5bd-6c3afc491616%2Ccbb1df50-ee25-4018-9aa3-9dd41b4d125f%2C94a7b145-0268-4341-904c-6caa15e85686&measures=d54343e2-b40b-4dec-a120-2fc6cb336362&start_time=1781395200000&end_time=1789430400000&clear=true&tab=benchmarks",
+		},
+	],
+	[
+		{
 			name: "Servo",
 			about:
 				"The embeddable, independent, memory-safe, modular, parallel web rendering engine",
@@ -56,43 +81,6 @@ export const PROJECTS: Project[][] = [
 			slug: "servo",
 			query:
 				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=52e1e9bb-959c-4171-a53d-e06bd694a6c1&heads=3dbe3681-11b1-4e30-b482-4ee72dc0960c&testbeds=d742c702-3842-4108-9d0c-2db74e57599a&measures=678e4118-c8a5-494d-8799-08abc3021cd5&start_time=1734048000000&end_time=1735236203000&lower_boundary=false&upper_boundary=false&clear=true&tab=benchmarks&benchmarks=c4da10d8-9539-4943-95ca-5e08df0cd6f9&benchmarks_search=servo",
-		},
-		{
-			name: "Mozilla Neqo",
-			about: "The Mozilla Firefox implementation of QUIC in Rust",
-			logo: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/mozilla.svg",
-			slug: "neqo",
-			query:
-				"branches=1c3aa454-5e63-4a34-bc7e-a86c397661fe&heads=a5e4e812-c619-44d3-844e-ee795a2b26e9&testbeds=f8b47e59-8dac-4a95-aec4-5bfb9756e749&measures=8bfeb966-6e8a-4719-9705-23fe985d6e40&upper_boundary=true&start_time=1762992000000&end_time=1765152000000&key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&tab=benchmarks&benchmarks_search=decode+1048576+bytes&benchmarks=66a0e29f-9d91-4656-903e-d4c0c817387c%2C9c88c263-c57e-45b8-89c9-34e3a5f196cb%2C0258133c-8223-4b76-a76c-9e92a1a60f60&clear=true",
-		},
-		{
-			name: "GreptimeDB",
-			about:
-				"An open-source, cloud-native, distributed time-series database with PromQL/SQL/Python supported",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/greptimedb.svg",
-			slug: "greptimedb",
-			query:
-				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&report=8dcbda4a-c239-4a9e-8399-4fc699f775b4&branches=3b46708f-b87f-4f52-b1bb-1d9cc7bfee2d&testbeds=6d3be02f-9efe-4e47-8a5d-e389c228172d&benchmarks=da5c8cbe-9aef-431e-9168-11ef0821c8db%2Cbb7ce469-5c34-4a69-ab2f-d9769ca5be2a&measures=a2f1689d-44d5-4d5e-863f-47d285cedf97&start_time=1707524593000&end_time=1710116593000&clear=true",
-		},
-	],
-	[
-		{
-			name: "Diesel",
-			about: "A safe, extensible ORM and Query Builder for Rust",
-			logo: "https://s3.amazonaws.com/public.bencher.dev/case-study/diesel.svg",
-			slug: "diesel",
-			query: `key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=benchmarks&measures=2d3bd4cd-c4d4-4aa1-9e60-47e51e2b9dde&branches=bf9a5209-6524-45e3-af26-b8f98eee3bad&testbeds=4e5c3c90-920c-4741-8cf7-aaed4e16e9a5&benchmarks=5dfa78a5-7785-4d33-a336-aab5fff43372%2Cf65ec533-abf5-443e-a0d8-e4a583c5779e%2C0c1bcad9-2100-4170-9bc7-96a3b89071b9%2Ccee41d01-30db-4acc-8727-0d0b4ccbe216%2C6d23685f-e082-4913-8c22-14311030d130&${caseStudy(
-				"Diesel",
-				"diesel",
-			)}`,
-		},
-		{
-			name: "clap",
-			about: "A full featured, fast Command Line Argument Parser for Rust",
-			logo: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/clap.png",
-			slug: "clap-rs-clap",
-			query:
-				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=b920383c-b9ee-4bd6-94ea-8d101b55286a&heads=5eeccfee-4fdd-405a-8554-90cd945ee1c1&testbeds=551ebdbf-b50a-4813-9064-286d2e66888f&benchmarks=b0a8ca01-4418-485e-9446-81d2a9c62774&measures=04ff075b-dc09-4c77-909a-634352fd5b02&end_time=1767052800000&lower_boundary=false&upper_boundary=false&clear=true&start_time=1748908800000&tab=branches&branches_search=master",
 		},
 		{
 			name: "Rustls",
@@ -103,6 +91,14 @@ export const PROJECTS: Project[][] = [
 				"Rustls",
 				"rustls",
 			)}`,
+		},
+		{
+			name: "clap",
+			about: "A full featured, fast Command Line Argument Parser for Rust",
+			logo: "https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/clap.png",
+			slug: "clap-rs-clap",
+			query:
+				"key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=b920383c-b9ee-4bd6-94ea-8d101b55286a&heads=5eeccfee-4fdd-405a-8554-90cd945ee1c1&testbeds=551ebdbf-b50a-4813-9064-286d2e66888f&benchmarks=b0a8ca01-4418-485e-9446-81d2a9c62774&measures=04ff075b-dc09-4c77-909a-634352fd5b02&end_time=1767052800000&lower_boundary=false&upper_boundary=false&clear=true&start_time=1748908800000&tab=branches&branches_search=master",
 		},
 	],
 ];
