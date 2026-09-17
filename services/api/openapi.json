@@ -4181,15 +4181,15 @@
         }
       }
     },
-    "/v0/projects/{project}/benchmarks/{benchmark}/parameters": {
+    "/v0/projects/{project}/benchmarks/{benchmark}/variants": {
       "get": {
         "tags": [
           "projects",
-          "parameters"
+          "variants"
         ],
-        "summary": "List parameter sets for a benchmark",
-        "description": "List all parameter sets for a benchmark. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the parameter sets are sorted by creation date time. The HTTP response header `X-Total-Count` contains the total number of parameter sets.",
-        "operationId": "proj_parameters_get",
+        "summary": "List variants for a benchmark",
+        "description": "List all variants for a benchmark. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project. By default, the variants are sorted by creation date time. The HTTP response header `X-Total-Count` contains the total number of variants.",
+        "operationId": "proj_variants_get",
         "parameters": [
           {
             "in": "path",
@@ -4244,13 +4244,13 @@
             "name": "sort",
             "description": "The field to sort by. If not specified, the default sort field is used.",
             "schema": {
-              "$ref": "#/components/schemas/ProjParametersSort"
+              "$ref": "#/components/schemas/ProjVariantsSort"
             }
           },
           {
             "in": "query",
             "name": "archived",
-            "description": "If set to `true`, only returns archived parameter sets. If not set or set to `false`, only returns non-archived parameter sets.",
+            "description": "If set to `true`, only returns archived variants. If not set or set to `false`, only returns non-archived variants.",
             "schema": {
               "nullable": true,
               "type": "boolean"
@@ -4300,7 +4300,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonParameters"
+                  "$ref": "#/components/schemas/JsonVariants"
                 }
               }
             }
@@ -4316,11 +4316,11 @@
       "post": {
         "tags": [
           "projects",
-          "parameters"
+          "variants"
         ],
-        "summary": "Create a parameter set",
-        "description": "Create a parameter set for a benchmark. The user must have `create` permissions for the project, or provide a valid project key for the project. A parameter set that already exists for the benchmark is a conflict, so this endpoint never returns an existing parameter set.",
-        "operationId": "proj_parameter_post",
+        "summary": "Create a variant",
+        "description": "Create a variant for a benchmark. The user must have `create` permissions for the project, or provide a valid project key for the project. A variant that already exists for the benchmark is a conflict, so this endpoint never returns an existing variant.",
+        "operationId": "proj_variant_post",
         "parameters": [
           {
             "in": "path",
@@ -4345,7 +4345,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JsonNewParameter"
+                "$ref": "#/components/schemas/JsonNewVariant"
               }
             }
           },
@@ -4394,7 +4394,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonParameter"
+                  "$ref": "#/components/schemas/JsonVariant"
                 }
               }
             }
@@ -4408,15 +4408,15 @@
         }
       }
     },
-    "/v0/projects/{project}/benchmarks/{benchmark}/parameters/{parameter}": {
+    "/v0/projects/{project}/benchmarks/{benchmark}/variants/{variant}": {
       "get": {
         "tags": [
           "projects",
-          "parameters"
+          "variants"
         ],
-        "summary": "View a parameter set",
-        "description": "View a parameter set for a benchmark. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
-        "operationId": "proj_parameter_get",
+        "summary": "View a variant",
+        "description": "View a variant for a benchmark. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
+        "operationId": "proj_variant_get",
         "parameters": [
           {
             "in": "path",
@@ -4429,20 +4429,20 @@
           },
           {
             "in": "path",
-            "name": "parameter",
-            "description": "The UUID for a parameter set.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ParameterUuid"
-            }
-          },
-          {
-            "in": "path",
             "name": "project",
             "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "variant",
+            "description": "The UUID for a variant.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/VariantUuid"
             }
           }
         ],
@@ -4489,7 +4489,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonParameter"
+                  "$ref": "#/components/schemas/JsonVariant"
                 }
               }
             }
@@ -4505,11 +4505,11 @@
       "delete": {
         "tags": [
           "projects",
-          "parameters"
+          "variants"
         ],
-        "summary": "Delete a parameter set",
-        "description": "Delete a parameter set for a benchmark. The user must have `delete` permissions for the project. All reports that use this parameter must be deleted first!\n\nA benchmark's empty parameter set cannot be deleted. The empty set is structural: every benchmark is born with exactly one, and report ingest treats a missing empty set as data corruption rather than a set to mint. Deleting it would manufacture exactly that corruption, so the request is refused. Archiving the empty set stays allowed, because a later report revives it the same way it revives any other archived set.",
-        "operationId": "proj_parameter_delete",
+        "summary": "Delete a variant",
+        "description": "Delete a variant for a benchmark. The user must have `delete` permissions for the project. All reports that use this variant must be deleted first!\n\nA benchmark's empty variant cannot be deleted. The empty variant is structural: every benchmark is born with exactly one, and report ingest treats a missing empty variant as data corruption rather than a variant to mint. Deleting it would manufacture exactly that corruption, so the request is refused. Archiving the empty variant stays allowed, because a later report revives it the same way it revives any other archived variant.",
+        "operationId": "proj_variant_delete",
         "parameters": [
           {
             "in": "path",
@@ -4522,20 +4522,20 @@
           },
           {
             "in": "path",
-            "name": "parameter",
-            "description": "The UUID for a parameter set.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ParameterUuid"
-            }
-          },
-          {
-            "in": "path",
             "name": "project",
             "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "variant",
+            "description": "The UUID for a variant.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/VariantUuid"
             }
           }
         ],
@@ -4591,11 +4591,11 @@
       "patch": {
         "tags": [
           "projects",
-          "parameters"
+          "variants"
         ],
-        "summary": "Update a parameter set",
-        "description": "Update a parameter set for a benchmark. The user must have `edit` permissions for the project, or provide a valid project key for the project. Archiving a parameter set hides it without losing its history, and a report that names the set again unarchives it.",
-        "operationId": "proj_parameter_patch",
+        "summary": "Update a variant",
+        "description": "Update a variant for a benchmark. The user must have `edit` permissions for the project, or provide a valid project key for the project. Archiving a variant hides it without losing its history, and a report that names the variant again unarchives it.",
+        "operationId": "proj_variant_patch",
         "parameters": [
           {
             "in": "path",
@@ -4608,20 +4608,20 @@
           },
           {
             "in": "path",
-            "name": "parameter",
-            "description": "The UUID for a parameter set.",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/ParameterUuid"
-            }
-          },
-          {
-            "in": "path",
             "name": "project",
             "description": "The slug or UUID for a project.",
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "path",
+            "name": "variant",
+            "description": "The UUID for a variant.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/VariantUuid"
             }
           }
         ],
@@ -4629,7 +4629,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JsonUpdateParameter"
+                "$ref": "#/components/schemas/JsonUpdateVariant"
               }
             }
           },
@@ -4678,7 +4678,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonParameter"
+                  "$ref": "#/components/schemas/JsonVariant"
                 }
               }
             }
@@ -6507,7 +6507,7 @@
           {
             "in": "query",
             "name": "parameters",
-            "description": "An optional comma separated list of URL encoded parameter sets to filter on. A variant is queried when at least one of them is a subset of its parameter set: every key the filter names, with the same value. Leaving this off queries every variant. Only the first 64 parameter sets are queried.",
+            "description": "An optional comma separated list of URL encoded parameters to filter on. A variant is queried when at least one of them is a subset of its parameters: every key the filter names, with the same value. Leaving this off queries every variant. Only the first 64 are queried.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -6663,7 +6663,7 @@
           {
             "in": "query",
             "name": "parameters",
-            "description": "An optional comma separated list of URL encoded parameter sets to filter on. A variant is queried when at least one of them is a subset of its parameter set: every key the filter names, with the same value. Leaving this off queries every variant. Only the first 64 parameter sets are queried.",
+            "description": "An optional comma separated list of URL encoded parameters to filter on. A variant is queried when at least one of them is a subset of its parameters: every key the filter names, with the same value. Leaving this off queries every variant. Only the first 64 are queried.",
             "schema": {
               "nullable": true,
               "type": "string"
@@ -14187,22 +14187,6 @@
           "name"
         ]
       },
-      "JsonNewParameter": {
-        "type": "object",
-        "properties": {
-          "set": {
-            "description": "The parameter set. Each key maps to a JSON scalar: a string, a number, or a boolean.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ParameterSet"
-              }
-            ]
-          }
-        },
-        "required": [
-          "set"
-        ]
-      },
       "JsonNewPlan": {
         "type": "object",
         "properties": {
@@ -15096,6 +15080,22 @@
           "name"
         ]
       },
+      "JsonNewVariant": {
+        "type": "object",
+        "properties": {
+          "parameters": {
+            "description": "The parameters of the variant. Each key maps to a JSON scalar: a string, a number, or a boolean.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterSet"
+              }
+            ]
+          }
+        },
+        "required": [
+          "parameters"
+        ]
+      },
       "JsonOAuth": {
         "type": "object",
         "properties": {
@@ -15222,14 +15222,6 @@
               }
             ]
           },
-          "parameter": {
-            "description": "The parameter set this row was measured under.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonParameter"
-              }
-            ]
-          },
           "report": {
             "$ref": "#/components/schemas/ReportUuid"
           },
@@ -15255,6 +15247,14 @@
             "description": "The addressed row's scalar.",
             "type": "number",
             "format": "double"
+          },
+          "variant": {
+            "description": "The variant this row was measured under.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVariant"
+              }
+            ]
           }
         },
         "required": [
@@ -15264,12 +15264,12 @@
           "iteration",
           "measure",
           "name",
-          "parameter",
           "report",
           "start_time",
           "testbed",
           "uuid",
-          "value"
+          "value",
+          "variant"
         ]
       },
       "JsonOpenApiSpec": {},
@@ -15423,47 +15423,6 @@
           "protocol"
         ]
       },
-      "JsonParameter": {
-        "type": "object",
-        "properties": {
-          "archived": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DateTime"
-              }
-            ]
-          },
-          "benchmark": {
-            "$ref": "#/components/schemas/BenchmarkUuid"
-          },
-          "created": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "modified": {
-            "$ref": "#/components/schemas/DateTime"
-          },
-          "set": {
-            "$ref": "#/components/schemas/ParameterSet"
-          },
-          "uuid": {
-            "$ref": "#/components/schemas/ParameterUuid"
-          }
-        },
-        "required": [
-          "benchmark",
-          "created",
-          "modified",
-          "set",
-          "uuid"
-        ]
-      },
-      "JsonParameters": {
-        "type": "array",
-        "items": {
-          "$ref": "#/components/schemas/JsonParameter"
-        }
-      },
       "JsonPerf": {
         "type": "object",
         "properties": {
@@ -15566,16 +15525,16 @@
               "$ref": "#/components/schemas/JsonPerfMetrics"
             }
           },
-          "parameter": {
-            "description": "The parameter set this line plots.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonParameter"
-              }
-            ]
-          },
           "testbed": {
             "$ref": "#/components/schemas/JsonTestbed"
+          },
+          "variant": {
+            "description": "The variant this line plots.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonVariant"
+              }
+            ]
           }
         },
         "required": [
@@ -15583,8 +15542,8 @@
           "branch",
           "measure",
           "metrics",
-          "parameter",
-          "testbed"
+          "testbed",
+          "variant"
         ]
       },
       "JsonPerfMetrics": {
@@ -16913,7 +16872,7 @@
         "type": "object",
         "properties": {
           "benchmarks": {
-            "description": "The number of results in this iteration: one per variant, so one per benchmark for a benchmark that reports a single parameter set.",
+            "description": "The number of results in this iteration: one per variant, so one per benchmark for a benchmark that reports a single variant.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -17005,24 +16964,8 @@
           "value"
         ]
       },
-      "JsonReportParameter": {
-        "description": "The parameter set a report result ran with.",
-        "type": "object",
-        "properties": {
-          "set": {
-            "$ref": "#/components/schemas/ParameterSet"
-          },
-          "uuid": {
-            "$ref": "#/components/schemas/ParameterUuid"
-          }
-        },
-        "required": [
-          "set",
-          "uuid"
-        ]
-      },
       "JsonReportResult": {
-        "description": "One variant of one benchmark, in one iteration of a report.\n\nA benchmark reports as many results per iteration as it has parameter sets, so the parameter set is what tells two results of one benchmark apart.",
+        "description": "One variant of one benchmark, in one iteration of a report.\n\nA benchmark reports as many results per iteration as it has variants, so the variant is what tells two results of one benchmark apart.",
         "type": "object",
         "properties": {
           "benchmark": {
@@ -17037,11 +16980,11 @@
               "$ref": "#/components/schemas/JsonReportMeasure"
             }
           },
-          "parameter": {
-            "description": "The parameter set this result ran with.",
+          "variant": {
+            "description": "The variant this result ran with.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/JsonReportParameter"
+                "$ref": "#/components/schemas/JsonReportVariant"
               }
             ]
           }
@@ -17050,7 +16993,7 @@
           "benchmark",
           "iteration",
           "measures",
-          "parameter"
+          "variant"
         ]
       },
       "JsonReportSettings": {
@@ -17102,6 +17045,22 @@
             "type": "boolean"
           }
         }
+      },
+      "JsonReportVariant": {
+        "description": "The variant a report result ran with.",
+        "type": "object",
+        "properties": {
+          "parameters": {
+            "$ref": "#/components/schemas/ParameterSet"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/VariantUuid"
+          }
+        },
+        "required": [
+          "parameters",
+          "uuid"
+        ]
       },
       "JsonReports": {
         "type": "array",
@@ -18604,16 +18563,6 @@
           }
         ]
       },
-      "JsonUpdateParameter": {
-        "type": "object",
-        "properties": {
-          "archived": {
-            "nullable": true,
-            "description": "Set whether the parameter set is archived.",
-            "type": "boolean"
-          }
-        }
-      },
       "JsonUpdatePlan": {
         "type": "object",
         "properties": {
@@ -18850,6 +18799,16 @@
                 "$ref": "#/components/schemas/ResourceName"
               }
             ]
+          }
+        }
+      },
+      "JsonUpdateVariant": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "nullable": true,
+            "description": "Set whether the variant is archived.",
+            "type": "boolean"
           }
         }
       },
@@ -19134,6 +19093,47 @@
           }
         }
       },
+      "JsonVariant": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "benchmark": {
+            "$ref": "#/components/schemas/BenchmarkUuid"
+          },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "modified": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/ParameterSet"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/VariantUuid"
+          }
+        },
+        "required": [
+          "benchmark",
+          "created",
+          "modified",
+          "parameters",
+          "uuid"
+        ]
+      },
+      "JsonVariants": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonVariant"
+        }
+      },
       "JsonVersion": {
         "type": "object",
         "properties": {
@@ -19340,10 +19340,6 @@
             }
           ]
         }
-      },
-      "ParameterUuid": {
-        "type": "string",
-        "format": "uuid"
       },
       "PlanLevel": {
         "type": "string",
@@ -19659,6 +19655,10 @@
         "type": "string",
         "format": "uuid"
       },
+      "VariantUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "VersionNumber": {
         "type": "integer",
         "format": "uint32",
@@ -19830,10 +19830,10 @@
           }
         ]
       },
-      "ProjParametersSort": {
+      "ProjVariantsSort": {
         "oneOf": [
           {
-            "description": "Sort by parameter set creation date time.",
+            "description": "Sort by variant creation date time.",
             "type": "string",
             "enum": [
               "created"
@@ -20091,10 +20091,6 @@
       "description": "Organizations"
     },
     {
-      "name": "parameters",
-      "description": "Benchmark Parameters"
-    },
-    {
       "name": "perf",
       "description": "Perf Metrics"
     },
@@ -20154,6 +20150,10 @@
     {
       "name": "users",
       "description": "Users"
+    },
+    {
+      "name": "variants",
+      "description": "Benchmark Variants"
     }
   ]
 }
