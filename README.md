@@ -49,13 +49,13 @@ When a number moves, it means something.
 
 <p>
   Used by the teams behind
+  <a href="#showcase">Microsoft snmalloc</a>,
   <a href="#showcase">Google Sedpack</a>,
-  <a href="#showcase">Microsoft CCF</a>,
   <a href="#showcase">GitLab Git</a>,
-  <a href="#showcase">Mozilla Neqo</a>,
-  <a href="#showcase">Rustls</a>,
-  <a href="#showcase">Servo</a>,
-  and <a href="#showcase">Diesel</a>.
+  <a href="#showcase">pnpm</a>,
+  <a href="#showcase">conda</a>,
+  <a href="#showcase">Firezone</a>,
+  and <a href="#showcase">Servo</a>.
 </p>
 
 > 🐰 [Use the GitHub Action with your project](#github-actions)
@@ -200,7 +200,7 @@ Don't see your harness? [Open an issue →](https://github.com/bencherdev/benche
   <tr>
     <td>
       <p align="center">
-        <a href="https://bencher.dev/perf/ccf?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=d5004f0a-5dbe-42bb-a821-1f55704d6ec2&testbeds=1e6f6a27-eb58-4f16-8d01-0148fbaed70e&benchmarks=3bae8305-29e0-4e5f-8157-01f8f471b408&measures=bc9fb376-9a85-478a-97fd-ebd7703c9663&start_time=1715185355000&end_time=1717777355000&clear=true&tab=benchmarks">
+        <a href="https://bencher.dev/perf/snmalloc?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=dc041689-5eaf-4b70-b1c8-9da23594c030&heads=3caf3a2d-f6aa-4e58-b7de-92219e9b4616&testbeds=c7457113-7c66-42a7-ac72-ee4e74d9f300&benchmarks=e6fdc724-f1e4-477e-81eb-19185eaef02d%2Cf99f94fb-805f-4338-a5ce-13d261f91afc%2C24eb178e-d9d4-45d7-90ec-1c82dfb58ea2&measures=44c8d1f2-5a3e-4573-bc7d-79f80461103c&start_time=1781395200000&end_time=1789430400000&clear=true&tab=benchmarks&x_axis=version">
           <img
             src="https://s3.amazonaws.com/public.bencher.dev/case-study/microsoft.png"
             alt="Microsoft"
@@ -208,7 +208,7 @@ Don't see your harness? [Open an issue →](https://github.com/bencherdev/benche
           />
         </a>
       </p>
-      <p align="center">Microsoft CCF</p>
+      <p align="center">Microsoft snmalloc</p>
     </td>
     <td>
       <p align="center">
@@ -238,6 +238,44 @@ Don't see your harness? [Open an issue →](https://github.com/bencherdev/benche
   <tr>
     <td>
       <p align="center">
+        <a href="https://bencher.dev/perf/conda-tdj8rt90?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=67634f05-6858-4e0b-8c77-9222afaa78a3&heads=3075025a-cf38-4fbc-851c-fcbf223d35ee&testbeds=d32fdfd6-9631-4a16-b71c-da1e838eaf0f&benchmarks=fbbe288f-2b29-4395-977a-1254429d3ca5%2C08b608e7-8ebb-41ea-a579-9d812b05135c%2C0bad22f1-5340-45fd-9229-7f6cd114c48d&measures=d40e34c0-83a2-4f3e-926c-3f5870705694&start_time=1781395200000&end_time=1789430400000&upper_boundary=true&clear=true&tab=benchmarks">
+          <img
+            src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/conda.svg"
+            alt="conda"
+            width="300px"
+          />
+        </a>
+      </p>
+      <p align="center">conda</p>
+    </td>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/firezone-1l75jv1z?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=455d0566-7315-404c-93e1-877e2732cc97&heads=455d0566-7315-404c-93e1-877e2732cc97&testbeds=258ac4fc-9cc9-4281-a45b-666cd8264371&benchmarks=f0008569-a7be-4f17-8f53-37abe7cbc31b%2Cb35d8c57-795d-4eac-9105-6911d81320a7%2Cdbebadcd-b0cf-4abd-a4f8-7274f064f6da&measures=a777fd3c-5f6c-4884-82e8-39cd8b2d30f1&start_time=1781395200000&end_time=1789430400000&clear=true&tab=benchmarks">
+          <img
+            src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/firezone.svg"
+            alt="Firezone"
+            width="300px"
+          />
+        </a>
+      </p>
+      <p align="center">Firezone</p>
+    </td>
+    <td>
+      <p align="center">
+        <a href="https://bencher.dev/perf/pnpm?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=b06c9054-8025-4f4d-973a-36e92a38ba01&heads=751ebac5-6f89-4ed7-889d-74b2b27c8bc8&testbeds=e76d4447-6105-4421-bd5f-092ab7013510&benchmarks=d9e5dbb5-fb8b-42b4-b5bd-6c3afc491616%2Ccbb1df50-ee25-4018-9aa3-9dd41b4d125f%2C94a7b145-0268-4341-904c-6caa15e85686&measures=d54343e2-b40b-4dec-a120-2fc6cb336362&start_time=1781395200000&end_time=1789430400000&clear=true&tab=benchmarks">
+          <img
+            src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/pnpm.svg"
+            alt="pnpm"
+            width="300px"
+          />
+        </a>
+      </p>
+      <p align="center">pnpm</p>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <p align="center">
         <a href="https://bencher.dev/perf/servo?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&branches=52e1e9bb-959c-4171-a53d-e06bd694a6c1&heads=3dbe3681-11b1-4e30-b482-4ee72dc0960c&testbeds=d742c702-3842-4108-9d0c-2db74e57599a&measures=678e4118-c8a5-494d-8799-08abc3021cd5&start_time=1734048000000&end_time=1735236203000&lower_boundary=false&upper_boundary=false&clear=true&tab=benchmarks&benchmarks=c4da10d8-9539-4943-95ca-5e08df0cd6f9&benchmarks_search=servo">
           <img
             src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/servo-tlf.svg"
@@ -250,41 +288,15 @@ Don't see your harness? [Open an issue →](https://github.com/bencherdev/benche
     </td>
     <td>
       <p align="center">
-        <a href="https://bencher.dev/perf/neqo?branches=1c3aa454-5e63-4a34-bc7e-a86c397661fe&heads=a5e4e812-c619-44d3-844e-ee795a2b26e9&testbeds=f8b47e59-8dac-4a95-aec4-5bfb9756e749&measures=8bfeb966-6e8a-4719-9705-23fe985d6e40&upper_boundary=true&start_time=1762992000000&end_time=1765152000000&key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&plots_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&plots_page=1&tab=benchmarks&benchmarks_search=decode+1048576+bytes&benchmarks=66a0e29f-9d91-4656-903e-d4c0c817387c%2C9c88c263-c57e-45b8-89c9-34e3a5f196cb%2C0258133c-8223-4b76-a76c-9e92a1a60f60&clear=true">
+        <a href="https://bencher.dev/perf/rustls-821705769?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000&notify_kind=alert&notify_text=Learn%20more%20about%20continuous%20benchmarking%20for%20the%20Rustls%20project.&notify_timeout=2147483647&notify_link_url=https%3A%2F%2Fbencher.dev%2Flearn%2Fcase-study%2Frustls%2F&notify_link_text=Read%20the%20case%20study">
           <img
-            src="https://s3.us-east-1.amazonaws.com/public.bencher.dev/case-study/mozilla.svg"
-            alt="Mozilla"
+            src="https://s3.amazonaws.com/public.bencher.dev/case-study/rustls-rust-tls.png"
+            alt="Rustls TLS Library"
             width="300px"
           />
         </a>
       </p>
-      <p align="center">Mozilla Neqo</p>
-    </td>
-    <td>
-      <p align="center">
-        <a href="https://bencher.dev/perf/greptimedb?key=true&reports_per_page=4&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&report=8dcbda4a-c239-4a9e-8399-4fc699f775b4&branches=3b46708f-b87f-4f52-b1bb-1d9cc7bfee2d&testbeds=6d3be02f-9efe-4e47-8a5d-e389c228172d&benchmarks=da5c8cbe-9aef-431e-9168-11ef0821c8db%2Cbb7ce469-5c34-4a69-ab2f-d9769ca5be2a&measures=a2f1689d-44d5-4d5e-863f-47d285cedf97&start_time=1707524593000&end_time=1710116593000&clear=true">
-          <img
-            src="https://s3.amazonaws.com/public.bencher.dev/case-study/greptimedb.svg"
-            alt="GreptimeDB"
-            width="300px"
-          />
-        </a>
-      </p>
-      <p align="center">GreptimeDB</p>
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <p align="center">
-        <a href="https://bencher.dev/perf/diesel?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=benchmarks&measures=2d3bd4cd-c4d4-4aa1-9e60-47e51e2b9dde&branches=bf9a5209-6524-45e3-af26-b8f98eee3bad&testbeds=4e5c3c90-920c-4741-8cf7-aaed4e16e9a5&benchmarks=5dfa78a5-7785-4d33-a336-aab5fff43372%2Cf65ec533-abf5-443e-a0d8-e4a583c5779e%2C0c1bcad9-2100-4170-9bc7-96a3b89071b9%2Ccee41d01-30db-4acc-8727-0d0b4ccbe216%2C6d23685f-e082-4913-8c22-14311030d130&notify_kind=alert&notify_text=Learn%20more%20about%20continuous%20benchmarking%20for%20the%20Diesel%20project.&notify_timeout=2147483647&notify_link_url=https%3A%2F%2Fbencher.dev%2Flearn%2Fcase-study%2Fdiesel%2F&notify_link_text=Read%20the%20case%20study">
-          <img
-            src="https://s3.amazonaws.com/public.bencher.dev/case-study/diesel.svg"
-            alt="Diesel"
-            width="300px"
-          />
-        </a>
-      </p>
-      <p align="center">Diesel</p>
+      <p align="center">Rustls</p>
     </td>
     <td>
       <p align="center">
@@ -297,18 +309,6 @@ Don't see your harness? [Open an issue →](https://github.com/bencherdev/benche
         </a>
       </p>
       <p align="center">clap</p>
-    </td>
-    <td>
-      <p align="center">
-        <a href="https://bencher.dev/perf/rustls-821705769?key=true&reports_per_page=8&branches_per_page=8&testbeds_per_page=8&benchmarks_per_page=8&reports_page=1&branches_page=1&testbeds_page=1&benchmarks_page=1&clear=true&tab=branches&measures=013468de-9c37-4605-b363-aebbbf63268d&branches=28fae530-2b53-4482-acd4-47e16030d54f&testbeds=62ed31c3-8a58-479c-b828-52521ed67bee&benchmarks=bd25f73c-b2b9-4188-91b4-f632287c0a1b%2C8d443816-7a23-40a1-a54c-59de911eb517%2C42edb37f-ca91-4984-8835-445514575c85&start_time=1704067200000&notify_kind=alert&notify_text=Learn%20more%20about%20continuous%20benchmarking%20for%20the%20Rustls%20project.&notify_timeout=2147483647&notify_link_url=https%3A%2F%2Fbencher.dev%2Flearn%2Fcase-study%2Frustls%2F&notify_link_text=Read%20the%20case%20study">
-          <img
-            src="https://s3.amazonaws.com/public.bencher.dev/case-study/rustls-rust-tls.png"
-            alt="Rustls TLS Library"
-            width="300px"
-          />
-        </a>
-      </p>
-      <p align="center">Rustls</p>
     </td>
   </tr>
 </table>
