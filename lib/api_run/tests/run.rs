@@ -169,12 +169,12 @@ async fn run_post_bmf_version_1_ingests_v1_results() {
 
     assert_eq!(resp.status(), StatusCode::CREATED);
     let report: JsonReport = resp.json().await.expect("Failed to parse response");
-    // The variant's parameter set is the proof the v1 shape was read: a v0
+    // The variant's parameters are the proof the v1 shape was read: a v0
     // payload has no parameters to report.
     let results = report.results.expect("Report results");
     let iteration = results.first().expect("Report iteration");
     let result = iteration.first().expect("Report result");
-    assert!(!result.parameter.set.is_empty());
+    assert!(!result.variant.parameters.is_empty());
 }
 
 /// POST /v0/run - v0 results declared as version 1 are refused, because the
@@ -308,7 +308,7 @@ async fn run_post_absent_bmf_version_is_the_projects_version() {
     let results = report.results.expect("Report results");
     let iteration = results.first().expect("Report iteration");
     let result = iteration.first().expect("Report result");
-    assert!(!result.parameter.set.is_empty());
+    assert!(!result.variant.parameters.is_empty());
 
     let resp = server
         .client

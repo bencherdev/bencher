@@ -46,10 +46,10 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
-            "parameter": {
+            "variant": {
                 "uuid": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
                 "benchmark": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
-                "set": {},
+                "parameters": {},
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z",
                 "archived": null
@@ -363,10 +363,10 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
-            "parameter": {
+            "variant": {
                 "uuid": "0d680df6-432b-4335-bb37-afd2453c0db1",
                 "benchmark": "0d680df6-432b-4335-bb37-afd2453c0db1",
-                "set": {},
+                "parameters": {},
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z",
                 "archived": null
@@ -680,10 +680,10 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
-            "parameter": {
+            "variant": {
                 "uuid": "4bf1a480-b8fc-497b-9d42-a2d3c3ec99d5",
                 "benchmark": "4bf1a480-b8fc-497b-9d42-a2d3c3ec99d5",
-                "set": {},
+                "parameters": {},
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z",
                 "archived": null

@@ -312,13 +312,13 @@ async fn report_bmf_version_1_ingests_a_v1_payload() {
     )
     .await;
 
-    // The variant's parameter set is the proof the v1 shape was read: a v0
+    // The variant's parameters are the proof the v1 shape was read: a v0
     // payload has no parameters to report.
-    let parameter_set = one
-        .pointer("/results/0/0/parameter/set")
+    let parameters = one
+        .pointer("/results/0/0/variant/parameters")
         .and_then(serde_json::Value::as_object)
-        .expect("Report result parameter set");
-    assert!(!parameter_set.is_empty(), "{one}");
+        .expect("Report result variant");
+    assert!(!parameters.is_empty(), "{one}");
 
     server.close().await;
 }
@@ -664,11 +664,11 @@ async fn absent_bmf_version_is_the_projects_version() {
         },
     )
     .await;
-    let parameter_set = absent
-        .pointer("/results/0/0/parameter/set")
+    let parameters = absent
+        .pointer("/results/0/0/variant/parameters")
         .and_then(serde_json::Value::as_object)
-        .expect("Report result parameter set");
-    assert!(!parameter_set.is_empty(), "{absent}");
+        .expect("Report result variant");
+    assert!(!parameters.is_empty(), "{absent}");
 
     let null = report(
         &server,

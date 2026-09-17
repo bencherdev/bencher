@@ -14,12 +14,12 @@ use std::collections::BTreeMap;
 
 use bencher_api_tests::{
     TestServer, TestUser,
-    helpers::{base_timestamp, create_empty_parameter, create_metric, get_project_id},
+    helpers::{base_timestamp, create_empty_variant, create_metric, get_project_id},
 };
 use bencher_json::{
     AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, HeadUuid, JobStatus, JobUuid, JsonPerf,
-    JsonPerfQuery, MeasureUuid, MetricName, MetricUuid, ParameterSet, ParameterUuid, Priority,
-    ReportBenchmarkUuid, ReportUuid, SpecUuid, TestbedUuid, VersionUuid,
+    JsonPerfQuery, MeasureUuid, MetricName, MetricUuid, ParameterSet, Priority,
+    ReportBenchmarkUuid, ReportUuid, SpecUuid, TestbedUuid, VariantUuid, VersionUuid,
     project::{alert::AlertStatus, boundary::BoundaryLimit},
 };
 use bencher_schema::{
@@ -57,7 +57,7 @@ struct PerfTestData {
     head_id: i32,
     testbed_id: i32,
     benchmark_id: i32,
-    parameter_id: i32,
+    variant_id: i32,
     measure_id: i32,
     report_id: i32,
     report_benchmark_id: i32,
@@ -246,7 +246,7 @@ fn create_perf_data_with_options(
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("get benchmark id");
-    let parameter_id = create_empty_parameter(&mut conn, benchmark_id);
+    let variant_id = create_empty_variant(&mut conn, benchmark_id);
 
     // Measure
     let measure_uuid = MeasureUuid::new();
@@ -276,7 +276,7 @@ fn create_perf_data_with_options(
             schema::report_benchmark::report_id.eq(report_id),
             schema::report_benchmark::iteration.eq(opts.iteration),
             schema::report_benchmark::benchmark_id.eq(benchmark_id),
-            schema::report_benchmark::parameter_id.eq(parameter_id),
+            schema::report_benchmark::variant_id.eq(variant_id),
         ))
         .execute(&mut conn)
         .expect("insert report_benchmark");
@@ -314,7 +314,7 @@ fn create_perf_data_with_options(
         head_id,
         testbed_id,
         benchmark_id,
-        parameter_id,
+        variant_id,
         measure_id,
         report_id,
         report_benchmark_id,
@@ -757,7 +757,7 @@ async fn perf_get_multiple_metrics_same_permutation() {
             schema::report_benchmark::report_id.eq(report2_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(data.benchmark_id),
-            schema::report_benchmark::parameter_id.eq(data.parameter_id),
+            schema::report_benchmark::variant_id.eq(data.variant_id),
         ))
         .execute(&mut conn)
         .expect("insert rb2");
@@ -1160,7 +1160,7 @@ async fn perf_multi_benchmark_query() {
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("get benchmark2 id");
-    let parameter2_id = create_empty_parameter(&mut conn, benchmark2_id);
+    let variant2_id = create_empty_variant(&mut conn, benchmark2_id);
 
     let report_benchmark2_uuid = ReportBenchmarkUuid::new();
     diesel::insert_into(schema::report_benchmark::table)
@@ -1169,7 +1169,7 @@ async fn perf_multi_benchmark_query() {
             schema::report_benchmark::report_id.eq(data.report_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(benchmark2_id),
-            schema::report_benchmark::parameter_id.eq(parameter2_id),
+            schema::report_benchmark::variant_id.eq(variant2_id),
         ))
         .execute(&mut conn)
         .expect("insert report_benchmark2");
@@ -1643,7 +1643,7 @@ async fn perf_line_limit_holds_on_an_asymmetric_grid() {
 async fn perf_line_limit_holds_within_one_benchmark() {
     let server = perf_server().await;
     let (user, project_slug, mut grid) = grid_project(&server, "variants", 1, 1, 1, 1).await;
-    // The empty parameter set, plus `299` more.
+    // The empty variant, plus `299` more.
     for size in 0..299 {
         grid.add_variant(&server, 0, &format!(r#"{{"size_mb": {size}}}"#));
     }
@@ -2008,7 +2008,7 @@ async fn perf_ordered_by_version_number() {
             schema::report_benchmark::report_id.eq(report_v1_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(data_v2.benchmark_id),
-            schema::report_benchmark::parameter_id.eq(data_v2.parameter_id),
+            schema::report_benchmark::variant_id.eq(data_v2.variant_id),
         ))
         .execute(&mut conn)
         .expect("insert rb v1");
@@ -2153,7 +2153,7 @@ async fn perf_ordered_by_start_time_within_version() {
             schema::report_benchmark::report_id.eq(r_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(data.benchmark_id),
-            schema::report_benchmark::parameter_id.eq(data.parameter_id),
+            schema::report_benchmark::variant_id.eq(data.variant_id),
         ))
         .execute(&mut conn)
         .expect("insert rb");
@@ -2657,7 +2657,7 @@ async fn perf_multiple_iterations() {
             schema::report_benchmark::report_id.eq(data.report_id),
             schema::report_benchmark::iteration.eq(1),
             schema::report_benchmark::benchmark_id.eq(data.benchmark_id),
-            schema::report_benchmark::parameter_id.eq(data.parameter_id),
+            schema::report_benchmark::variant_id.eq(data.variant_id),
         ))
         .execute(&mut conn)
         .expect("insert rb iter1");
@@ -2992,7 +2992,7 @@ async fn perf_spec_filters_results() {
             schema::report_benchmark::report_id.eq(report2_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(data1.benchmark_id),
-            schema::report_benchmark::parameter_id.eq(data1.parameter_id),
+            schema::report_benchmark::variant_id.eq(data1.variant_id),
         ))
         .execute(&mut conn)
         .expect("insert rb2");
@@ -3181,33 +3181,33 @@ async fn perf_access_by_project_uuid() {
 }
 
 // =============================================================================
-// Section: Parameter sets
+// Section: Variants
 // =============================================================================
 
-fn create_parameter(
+fn insert_variant(
     server: &TestServer,
     benchmark_id: i32,
-    set: &ParameterSet,
-) -> (ParameterUuid, i32) {
+    parameters: &ParameterSet,
+) -> (VariantUuid, i32) {
     let mut conn = server.db_conn();
     let now = base_timestamp();
-    let parameter_uuid = ParameterUuid::new();
-    diesel::insert_into(schema::parameter::table)
+    let variant_uuid = VariantUuid::new();
+    diesel::insert_into(schema::variant::table)
         .values((
-            schema::parameter::uuid.eq(&parameter_uuid),
-            schema::parameter::benchmark_id.eq(benchmark_id),
-            schema::parameter::set.eq(set),
-            schema::parameter::created.eq(&now),
-            schema::parameter::modified.eq(&now),
+            schema::variant::uuid.eq(&variant_uuid),
+            schema::variant::benchmark_id.eq(benchmark_id),
+            schema::variant::parameters.eq(parameters),
+            schema::variant::created.eq(&now),
+            schema::variant::modified.eq(&now),
         ))
         .execute(&mut conn)
-        .expect("insert parameter");
-    let parameter_id: i32 = schema::parameter::table
-        .filter(schema::parameter::uuid.eq(&parameter_uuid))
-        .select(schema::parameter::id)
+        .expect("insert variant");
+    let variant_id: i32 = schema::variant::table
+        .filter(schema::variant::uuid.eq(&variant_uuid))
+        .select(schema::variant::id)
         .first(&mut conn)
-        .expect("get parameter id");
-    (parameter_uuid, parameter_id)
+        .expect("get variant id");
+    (variant_uuid, variant_id)
 }
 
 /// Add one variant to a benchmark inside the fixture's report.
@@ -3215,11 +3215,11 @@ fn create_variant(
     server: &TestServer,
     data: &PerfTestData,
     benchmark_id: i32,
-    set: &str,
+    parameters: &str,
     value: f64,
-) -> ParameterUuid {
-    let set: ParameterSet = set.parse().expect("parse parameter set");
-    let (parameter_uuid, parameter_id) = create_parameter(server, benchmark_id, &set);
+) -> VariantUuid {
+    let parameters: ParameterSet = parameters.parse().expect("parse parameters");
+    let (variant_uuid, variant_id) = insert_variant(server, benchmark_id, &parameters);
 
     let mut conn = server.db_conn();
     let report_benchmark_uuid = ReportBenchmarkUuid::new();
@@ -3229,7 +3229,7 @@ fn create_variant(
             schema::report_benchmark::report_id.eq(data.report_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(benchmark_id),
-            schema::report_benchmark::parameter_id.eq(parameter_id),
+            schema::report_benchmark::variant_id.eq(variant_id),
         ))
         .execute(&mut conn)
         .expect("insert report_benchmark");
@@ -3249,10 +3249,10 @@ fn create_variant(
         None,
     );
 
-    parameter_uuid
+    variant_uuid
 }
 
-/// Create a second benchmark, with only the empty parameter set.
+/// Create a second benchmark, with only the empty variant.
 fn create_sibling_benchmark(server: &TestServer, project_id: i32) -> (BenchmarkUuid, i32) {
     let mut conn = server.db_conn();
     let now = base_timestamp();
@@ -3273,7 +3273,7 @@ fn create_sibling_benchmark(server: &TestServer, project_id: i32) -> (BenchmarkU
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("get benchmark id");
-    create_empty_parameter(&mut conn, benchmark_id);
+    create_empty_variant(&mut conn, benchmark_id);
     (benchmark_uuid, benchmark_id)
 }
 
@@ -3319,7 +3319,7 @@ fn fixture_query(
         benchmarks,
         parameters: parameters
             .iter()
-            .map(|set| set.parse().expect("parse parameter set"))
+            .map(|parameters| parameters.parse().expect("parse parameters"))
             .collect(),
         measures: vec![data.measure_uuid],
         start_time: None,
@@ -3360,11 +3360,11 @@ async fn get_perf(server: &TestServer, token: &str, url: &str) -> JsonPerf {
     resp.json().await.expect("parse response")
 }
 
-/// The canonical parameter set of every line, in response order.
+/// The canonical variant of every line, in response order.
 fn line_parameters(perf: &JsonPerf) -> Vec<String> {
     perf.results
         .iter()
-        .map(|result| result.parameter.set.canonical())
+        .map(|result| result.variant.parameters.canonical())
         .collect()
 }
 
@@ -3390,7 +3390,7 @@ async fn perf_fans_out_one_line_per_variant() {
     )
     .await;
 
-    // The lines come out in variant creation order, so the empty set is first.
+    // The lines come out in variant creation order, so the empty variant is first.
     assert_eq!(
         line_parameters(&perf),
         vec![
@@ -3402,7 +3402,7 @@ async fn perf_fans_out_one_line_per_variant() {
     for result in &perf.results {
         assert_eq!(result.benchmark.uuid, data.benchmark_uuid);
         assert_eq!(result.measure.uuid, data.measure_uuid);
-        assert_eq!(result.parameter.benchmark, data.benchmark_uuid);
+        assert_eq!(result.variant.benchmark, data.benchmark_uuid);
         assert_eq!(result.metrics.len(), 1, "one point per line");
     }
     assert_eq!(
@@ -3426,8 +3426,8 @@ async fn perf_fans_out_one_line_per_variant() {
             .value,
         2.0
     );
-    assert_eq!(perf.results[1].parameter.uuid, sixteen);
-    assert_eq!(perf.results[2].parameter.uuid, thirty_two);
+    assert_eq!(perf.results[1].variant.uuid, sixteen);
+    assert_eq!(perf.results[2].variant.uuid, thirty_two);
 }
 
 #[tokio::test]
@@ -3441,13 +3441,13 @@ async fn perf_parameters_filter_is_an_or_of_ands() {
 
     let project_id = get_project_id(&server, project.slug.as_ref());
     let data = create_perf_data(&server, project_id);
-    for (set, value) in [
+    for (parameters, value) in [
         (r#"{"op": "read", "size_mb": 16}"#, 1.0),
         (r#"{"op": "read", "size_mb": 32}"#, 2.0),
         (r#"{"op": "write", "size_mb": 16}"#, 3.0),
         (r#"{"op": "write", "size_mb": 32}"#, 4.0),
     ] {
-        create_variant(&server, &data, data.benchmark_id, set, value);
+        create_variant(&server, &data, data.benchmark_id, parameters, value);
     }
 
     // Every read, plus the one write at 32.
@@ -3473,7 +3473,7 @@ async fn perf_parameters_filter_is_an_or_of_ands() {
         ]
     );
 
-    // The empty element is a subset of every parameter set, so it matches them all.
+    // The empty element is a subset of every variant, so it matches them all.
     let query = fixture_query(&data, vec![data.benchmark_uuid], &["{}"]);
     let perf = get_perf(
         &server,
@@ -3481,7 +3481,11 @@ async fn perf_parameters_filter_is_an_or_of_ands() {
         &perf_query_url(project.slug.as_ref(), &query),
     )
     .await;
-    assert_eq!(perf.results.len(), 5, "the empty element matches every set");
+    assert_eq!(
+        perf.results.len(),
+        5,
+        "the empty element matches every variant"
+    );
 }
 
 #[tokio::test]
@@ -3516,7 +3520,7 @@ async fn perf_parameters_filter_matching_nothing_returns_no_lines() {
     assert_eq!(perf.results.len(), 1);
     assert_eq!(perf.results[0].benchmark.uuid, sibling_uuid);
     assert_eq!(
-        perf.results[0].parameter.set.canonical(),
+        perf.results[0].variant.parameters.canonical(),
         r#"{"op":"write"}"#
     );
 
@@ -3802,10 +3806,10 @@ async fn perf_v0_response_fields_are_unchanged() {
             "branch".to_owned(),
             "measure".to_owned(),
             "metrics".to_owned(),
-            "parameter".to_owned(),
             "testbed".to_owned(),
+            "variant".to_owned(),
         ],
-        "the parameter set is the only field added beside the dimensions"
+        "the variant is the only field added beside the dimensions"
     );
     assert_eq!(result["branch"]["uuid"], data.branch_uuid.to_string());
     assert_eq!(result["testbed"]["uuid"], data.testbed_uuid.to_string());
@@ -3864,7 +3868,7 @@ async fn perf_point_without_a_value_name_keeps_its_line() {
             schema::report_benchmark::report_id.eq(data.report_id),
             schema::report_benchmark::iteration.eq(1),
             schema::report_benchmark::benchmark_id.eq(data.benchmark_id),
-            schema::report_benchmark::parameter_id.eq(data.parameter_id),
+            schema::report_benchmark::variant_id.eq(data.variant_id),
         ))
         .execute(&mut conn)
         .expect("insert report_benchmark");
@@ -3948,7 +3952,7 @@ struct PerfGrid {
     testbeds: Vec<(TestbedUuid, i32)>,
     benchmarks: Vec<(BenchmarkUuid, i32)>,
     measures: Vec<(MeasureUuid, i32)>,
-    /// Per benchmark, its variants in creation order, the empty set first.
+    /// Per benchmark, its variants in creation order, the empty variant first.
     variants: Vec<Vec<(i32, String)>>,
     /// The report of one (branch, testbed) pair, for the pairs that reported.
     reports: BTreeMap<(usize, usize), i32>,
@@ -4004,10 +4008,10 @@ impl PerfGrid {
                 .push(insert_testbed(server, project_id, testbed));
         }
         for benchmark in 0..benchmarks {
-            let (benchmark_uuid, benchmark_id, parameter_id) =
+            let (benchmark_uuid, benchmark_id, variant_id) =
                 insert_benchmark(server, project_id, benchmark);
             grid.benchmarks.push((benchmark_uuid, benchmark_id));
-            grid.variants.push(vec![(parameter_id, "{}".to_owned())]);
+            grid.variants.push(vec![(variant_id, "{}".to_owned())]);
         }
         for measure in 0..measures {
             grid.measures
@@ -4044,11 +4048,16 @@ impl PerfGrid {
     }
 
     /// Add one variant to a benchmark, wherever that benchmark already reports.
-    fn add_variant(&mut self, server: &TestServer, benchmark: usize, set: &str) -> ParameterUuid {
+    fn add_variant(
+        &mut self,
+        server: &TestServer,
+        benchmark: usize,
+        parameters: &str,
+    ) -> VariantUuid {
         let (_, benchmark_id) = self.benchmarks[benchmark];
-        let parsed: ParameterSet = set.parse().expect("parse parameter set");
-        let (parameter_uuid, parameter_id) = create_parameter(server, benchmark_id, &parsed);
-        self.variants[benchmark].push((parameter_id, parsed.canonical()));
+        let parsed: ParameterSet = parameters.parse().expect("parse parameters");
+        let (variant_uuid, variant_id) = insert_variant(server, benchmark_id, &parsed);
+        self.variants[benchmark].push((variant_id, parsed.canonical()));
         let variant = self.variants[benchmark].len() - 1;
         let reported = self
             .reports
@@ -4062,7 +4071,7 @@ impl PerfGrid {
         for (branch, testbed) in reported {
             self.report_variant(server, branch, testbed, benchmark, variant);
         }
-        parameter_uuid
+        variant_uuid
     }
 
     /// Report one cell: its report benchmark, and one metric per measure.
@@ -4078,9 +4087,9 @@ impl PerfGrid {
             return;
         };
         let (_, benchmark_id) = self.benchmarks[benchmark];
-        let (parameter_id, _) = self.variants[benchmark][variant];
+        let (variant_id, _) = self.variants[benchmark][variant];
         let report_benchmark_id =
-            insert_report_benchmark(server, report_id, benchmark_id, parameter_id);
+            insert_report_benchmark(server, report_id, benchmark_id, variant_id);
         self.report_benchmarks
             .insert((branch, testbed, benchmark, variant), report_benchmark_id);
         let mut conn = server.db_conn();
@@ -4134,7 +4143,7 @@ impl PerfGrid {
                                 branch: self.branches[branch].0,
                                 testbed: self.testbeds[testbed].0,
                                 benchmark: self.benchmarks[benchmark].0,
-                                parameter: self.variants[benchmark][variant].1.clone(),
+                                variant: self.variants[benchmark][variant].1.clone(),
                                 measure: self.measures[measure].0,
                                 value: grid_value(branch, testbed, benchmark, variant, measure),
                             });
@@ -4153,7 +4162,7 @@ struct GridLine {
     branch: BranchUuid,
     testbed: TestbedUuid,
     benchmark: BenchmarkUuid,
-    parameter: String,
+    variant: String,
     measure: MeasureUuid,
     value: f64,
 }
@@ -4169,7 +4178,7 @@ fn response_lines(perf: &JsonPerf) -> Vec<GridLine> {
                 branch: result.branch.uuid,
                 testbed: result.testbed.uuid,
                 benchmark: result.benchmark.uuid,
-                parameter: result.parameter.set.canonical(),
+                variant: result.variant.parameters.canonical(),
                 measure: result.measure.uuid,
                 value: result.metrics[0]
                     .metrics
@@ -4278,7 +4287,7 @@ fn insert_measure(server: &TestServer, project_id: i32, index: usize) -> (Measur
     (measure_uuid, measure_id)
 }
 
-/// Insert a benchmark and the empty parameter set it is born with.
+/// Insert a benchmark and the empty variant it is born with.
 fn insert_benchmark(
     server: &TestServer,
     project_id: i32,
@@ -4303,8 +4312,8 @@ fn insert_benchmark(
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("get benchmark id");
-    let parameter_id = create_empty_parameter(&mut conn, benchmark_id);
-    (benchmark_uuid, benchmark_id, parameter_id)
+    let variant_id = create_empty_variant(&mut conn, benchmark_id);
+    (benchmark_uuid, benchmark_id, variant_id)
 }
 
 fn insert_version(server: &TestServer, project_id: i32, head_id: i32) -> i32 {
@@ -4375,7 +4384,7 @@ fn insert_report_benchmark(
     server: &TestServer,
     report_id: i32,
     benchmark_id: i32,
-    parameter_id: i32,
+    variant_id: i32,
 ) -> i32 {
     let mut conn = server.db_conn();
     let report_benchmark_uuid = ReportBenchmarkUuid::new();
@@ -4385,7 +4394,7 @@ fn insert_report_benchmark(
             schema::report_benchmark::report_id.eq(report_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(benchmark_id),
-            schema::report_benchmark::parameter_id.eq(parameter_id),
+            schema::report_benchmark::variant_id.eq(variant_id),
         ))
         .execute(&mut conn)
         .expect("insert report_benchmark");
@@ -4620,7 +4629,7 @@ async fn perf_checks_land_on_the_lines_they_checked() {
             .expect("the value metric");
         let is_checked = result.branch.uuid == grid.branches[0].0
             && result.measure.uuid == grid.measures[0].0
-            && result.parameter.set.canonical() == "{}";
+            && result.variant.parameters.canonical() == "{}";
         if is_checked {
             checked_lines += 1;
             let boundaries = value.boundaries.as_ref().expect("the checked metric");

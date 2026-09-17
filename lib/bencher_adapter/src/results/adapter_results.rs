@@ -13,7 +13,7 @@ use super::{
 /// Everything one results payload reported.
 ///
 /// A benchmark name maps to its variants rather than straight to its
-/// measures, because BMF v1 lets one benchmark report several parameter sets.
+/// measures, because BMF v1 lets one benchmark report several variants.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AdapterResults {
     pub inner: ResultsMap,
@@ -27,9 +27,9 @@ pub struct AdapterResults {
 
 pub type ResultsMap = HashMap<BenchmarkNameId, BenchmarkEntries>;
 
-/// Every variant one benchmark reported, keyed by its canonical parameter set.
+/// Every variant one benchmark reported, keyed by its canonical parameters.
 ///
-/// The empty parameter set is the key every BMF v0 adapter uses, since a v0
+/// Empty parameters are the key every BMF v0 adapter uses, since a v0
 /// payload only ever reports one variant per benchmark.
 pub type BenchmarkEntries = BTreeMap<ParameterSet, AdapterMetrics>;
 
@@ -43,8 +43,8 @@ impl From<ResultsMap> for AdapterResults {
     }
 }
 
-/// Folded results are BMF v0 again: one variant per benchmark, on the empty
-/// parameter set, with each metric triple spelled back out as its conventional names.
+/// Folded results are BMF v0 again: one variant per benchmark, with empty
+/// parameters, with each metric triple spelled back out as its conventional names.
 ///
 /// The round trip through [`AdapterResults::into_foldable`] and back is lossless
 /// because fold only ever runs on a v0 payload, which is exactly this shape.
@@ -69,10 +69,10 @@ impl From<FoldableResults> for AdapterResults {
     }
 }
 
-/// The metrics of a benchmark's empty parameter set, created if absent.
+/// The metrics of a benchmark's empty variant, created if absent.
 ///
 /// Every adapter but `json_v1` reports one variant per benchmark and does not
-/// need to know that parameter sets exist.
+/// need to know that parameters exist.
 fn empty_set(results_map: &mut ResultsMap, benchmark_name: BenchmarkName) -> &mut AdapterMetrics {
     results_map
         .entry(BenchmarkNameId::new_name(benchmark_name))
@@ -577,7 +577,7 @@ impl AdapterResults {
         ))
     }
 
-    /// The metrics a benchmark reported on the empty parameter set.
+    /// The metrics a benchmark reported with empty parameters.
     #[cfg(test)]
     pub fn entry(&self, benchmark: &BenchmarkNameId) -> Option<&AdapterMetrics> {
         self.inner.get(benchmark)?.get(&ParameterSet::default())

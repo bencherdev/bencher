@@ -115,24 +115,24 @@ pub(crate) mod test_json {
         test_json_v0::validate_adapter_json_bmf_mixed(&results);
     }
 
-    /// A v1 payload whose parameter set breaks a bound is claimed by no leaf, so
+    /// A v1 payload whose parameters break a bound is claimed by no leaf, so
     /// the report fails to parse rather than degrading and dropping the parameters.
     #[test]
     fn adapter_json_out_of_bounds_parameters_fails_every_leaf() {
         let file_path = fixture_path("v1_bad_parameters");
         assert!(
             opt_convert_file_path::<AdapterJsonV0>(&file_path, Settings::default()).is_none(),
-            "expected the v0 leaf to reject an out of bounds parameter set"
+            "expected the v0 leaf to reject out of bounds parameters"
         );
         assert!(
             opt_convert_file_path::<AdapterJsonV1>(&file_path, Settings::default()).is_none(),
-            "expected the v1 leaf to reject an out of bounds parameter set"
+            "expected the v1 leaf to reject out of bounds parameters"
         );
         for bmf_version in [BmfVersion::V0, BmfVersion::V1] {
             assert!(
                 opt_convert_file_path::<AdapterJson>(&file_path, version_settings(bmf_version))
                     .is_none(),
-                "expected the json node to reject an out of bounds parameter set at version {bmf_version}"
+                "expected the json node to reject out of bounds parameters at version {bmf_version}"
             );
         }
     }

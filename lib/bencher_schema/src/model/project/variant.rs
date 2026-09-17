@@ -1,6 +1,6 @@
 use bencher_json::{
-    DateTime, JsonParameter, ParameterSet, ParameterUuid,
-    project::{parameter::JsonUpdateParameter, report::JsonReportParameter},
+    DateTime, JsonVariant, ParameterSet, VariantUuid,
+    project::{report::JsonReportVariant, variant::JsonUpdateVariant},
 };
 use diesel::{
     ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
@@ -16,7 +16,7 @@ use crate::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         sql::last_insert_rowid,
     },
-    schema::{self, parameter as parameter_table},
+    schema::{self, variant as variant_table},
     write_conn, write_transaction,
 };
 
@@ -25,69 +25,62 @@ use super::{
     benchmark::{BenchmarkId, QueryBenchmark},
 };
 
-crate::macros::typed_id::typed_id!(ParameterId);
+crate::macros::typed_id::typed_id!(VariantId);
 
-/// A parameter set: one variant under its benchmark.
+/// A variant: a benchmark with one set of parameters.
 ///
-/// Parameter sets have neither a name nor a slug, so they are UUID addressed only,
+/// Variants have neither a name nor a slug, so they are UUID addressed only,
 /// following the `report` and `alert` precedent.
 #[derive(
     Debug, Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
 )]
-#[diesel(table_name = parameter_table)]
+#[diesel(table_name = variant_table)]
 #[diesel(belongs_to(QueryBenchmark, foreign_key = benchmark_id))]
-pub struct QueryParameter {
-    pub id: ParameterId,
-    pub uuid: ParameterUuid,
+pub struct QueryVariant {
+    pub id: VariantId,
+    pub uuid: VariantUuid,
     pub benchmark_id: BenchmarkId,
-    pub set: ParameterSet,
+    pub parameters: ParameterSet,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
 }
 
-impl QueryParameter {
-    fn_get!(parameter, ParameterId);
-    fn_get_id!(parameter, ParameterId, ParameterUuid);
-    fn_get_uuid!(parameter, ParameterId, ParameterUuid);
-    fn_from_uuid!(
-        benchmark_id,
-        BenchmarkId,
-        parameter,
-        ParameterUuid,
-        Parameter
-    );
+impl QueryVariant {
+    fn_get!(variant, VariantId);
+    fn_get_id!(variant, VariantId, VariantUuid);
+    fn_get_uuid!(variant, VariantId, VariantUuid);
+    fn_from_uuid!(benchmark_id, BenchmarkId, variant, VariantUuid, Variant);
 
-    /// Get the benchmark's empty parameter set.
+    /// Get the benchmark's empty variant.
     ///
-    /// Every benchmark is created atomically with its empty parameter set,
+    /// Every benchmark is created atomically with its empty variant,
     /// so a missing row is data corruption and not a missing get-or-create.
-    pub fn get_empty_set_id(
+    pub fn get_empty_id(
         conn: &mut DbConnection,
         benchmark_id: BenchmarkId,
-    ) -> Result<ParameterId, HttpError> {
-        schema::parameter::table
-            .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-            .filter(schema::parameter::set.eq(ParameterSet::default()))
-            .select(schema::parameter::id)
+    ) -> Result<VariantId, HttpError> {
+        schema::variant::table
+            .filter(schema::variant::benchmark_id.eq(benchmark_id))
+            .filter(schema::variant::parameters.eq(ParameterSet::default()))
+            .select(schema::variant::id)
             .first(conn)
             .map_err(|e| {
-                let message = format!(
-                    "Failed to query the empty parameter set for benchmark ({benchmark_id})"
-                );
+                let message =
+                    format!("Failed to query the empty variant for benchmark ({benchmark_id})");
                 issue_error(&message, &message, e)
             })
     }
 
-    /// Resolve a reported parameter set to its row, creating it if it is new.
+    /// Resolve a reported variant to its row, creating it if it is new.
     ///
-    /// The empty parameter set is never created here: every benchmark is born with
+    /// The empty variant is never created here: every benchmark is born with
     /// one, so its absence is data corruption rather than a row to mint. Every
-    /// other set is created on first sight by its canonical form, and
-    /// `UNIQUE (benchmark_id, "set")` is what makes that idempotent under
+    /// other variant is created on first sight by its canonical form, and
+    /// `UNIQUE(benchmark_id, parameters)` is what makes that idempotent under
     /// concurrent reports.
     ///
-    /// Mirrors [`QueryBenchmark::get_or_create`]: a resolved set that is archived is
+    /// Mirrors [`QueryBenchmark::get_or_create`]: a resolved variant that is archived is
     /// unarchived, because a variant that reports again is a live variant.
     ///
     /// Called from report ingest's read phase, so the write transaction it opens
@@ -97,21 +90,19 @@ impl QueryParameter {
         project_id: ProjectId,
         benchmark_id: BenchmarkId,
         parameters: &ParameterSet,
-    ) -> Result<ParameterId, HttpError> {
-        let query_parameter =
+    ) -> Result<VariantId, HttpError> {
+        let query_variant =
             Self::get_or_create_inner(context, project_id, benchmark_id, parameters).await?;
 
-        if query_parameter.archived.is_some() {
-            let update_parameter = UpdateParameter::unarchive();
-            diesel::update(
-                schema::parameter::table.filter(schema::parameter::id.eq(query_parameter.id)),
-            )
-            .set(&update_parameter)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(Parameter, &query_parameter))?;
+        if query_variant.archived.is_some() {
+            let update_variant = UpdateVariant::unarchive();
+            diesel::update(schema::variant::table.filter(schema::variant::id.eq(query_variant.id)))
+                .set(&update_variant)
+                .execute(write_conn!(context))
+                .map_err(resource_conflict_err!(Variant, &query_variant))?;
         }
 
-        Ok(query_parameter.id)
+        Ok(query_variant.id)
     }
 
     async fn get_or_create_inner(
@@ -120,37 +111,36 @@ impl QueryParameter {
         benchmark_id: BenchmarkId,
         parameters: &ParameterSet,
     ) -> Result<Self, HttpError> {
-        if let Some(query_parameter) =
+        if let Some(query_variant) =
             Self::from_parameters(auth_conn!(context), benchmark_id, parameters)?
         {
-            return Ok(query_parameter);
+            return Ok(query_variant);
         }
 
         if parameters.is_empty() {
-            let message =
-                format!("Benchmark ({benchmark_id}) has no empty parameter set to report to");
+            let message = format!("Benchmark ({benchmark_id}) has no empty variant to report to");
             return Err(issue_error(
-                "Failed to find the empty parameter set",
+                "Failed to find the empty variant",
                 &message,
                 diesel::result::Error::NotFound,
             ));
         }
 
         match Self::create(context, project_id, benchmark_id, parameters).await {
-            Ok(query_parameter) => Ok(query_parameter),
+            Ok(query_variant) => Ok(query_variant),
             Err(e) if crate::error::is_conflict(&e) => {
-                // Another concurrent report created this parameter set.
+                // Another concurrent report created this variant.
                 Self::from_parameters(auth_conn!(context), benchmark_id, parameters)?.ok_or(e)
             },
             Err(e) => Err(e),
         }
     }
 
-    /// Create a parameter set under its benchmark.
+    /// Create a variant under its benchmark.
     ///
-    /// A set that already exists under the benchmark collides on
-    /// `UNIQUE (benchmark_id, "set")`, so this is create and not get-or-create.
-    /// The per project ceiling is checked first, exactly as it is for a set a
+    /// A variant that already exists under the benchmark collides on
+    /// `UNIQUE(benchmark_id, parameters)`, so this is create and not get-or-create.
+    /// The per project ceiling is checked first, exactly as it is for a variant a
     /// report mints.
     pub async fn create(
         context: &ApiContext,
@@ -159,21 +149,20 @@ impl QueryParameter {
         parameters: &ParameterSet,
     ) -> Result<Self, HttpError> {
         #[cfg(feature = "plus")]
-        InsertParameter::rate_limit(context, project_id).await?;
+        InsertVariant::rate_limit(context, project_id).await?;
         #[cfg(not(feature = "plus"))]
         let _ = project_id;
 
-        let insert_parameter =
-            InsertParameter::new(benchmark_id, parameters.clone(), DateTime::now());
+        let insert_variant = InsertVariant::new(benchmark_id, parameters.clone(), DateTime::now());
 
         write_transaction!(context, |conn| {
-            diesel::insert_into(schema::parameter::table)
-                .values(&insert_parameter)
+            diesel::insert_into(schema::variant::table)
+                .values(&insert_variant)
                 .execute(conn)?;
-            diesel::select(last_insert_rowid()).get_result::<ParameterId>(conn)
+            diesel::select(last_insert_rowid()).get_result::<VariantId>(conn)
         })
-        .map_err(resource_conflict_err!(Parameter, &insert_parameter))
-        .map(|id| insert_parameter.into_query(id))
+        .map_err(resource_conflict_err!(Variant, &insert_variant))
+        .map(|id| insert_variant.into_query(id))
     }
 
     fn from_parameters(
@@ -181,27 +170,27 @@ impl QueryParameter {
         benchmark_id: BenchmarkId,
         parameters: &ParameterSet,
     ) -> Result<Option<Self>, HttpError> {
-        schema::parameter::table
-            .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-            .filter(schema::parameter::set.eq(parameters))
+        schema::variant::table
+            .filter(schema::variant::benchmark_id.eq(benchmark_id))
+            .filter(schema::variant::parameters.eq(parameters))
             .select(Self::as_select())
             .first(conn)
             .optional()
             .map_err(|e| {
                 let message = format!(
-                    "Failed to query parameter set ({parameters}) for benchmark ({benchmark_id})"
+                    "Failed to query variant ({parameters}) for benchmark ({benchmark_id})"
                 );
                 issue_error(&message, &message, e)
             })
     }
 
-    /// The parameter set as its own resource, under its benchmark.
-    pub fn into_json_for_benchmark(self, benchmark: &QueryBenchmark) -> JsonParameter {
+    /// The variant as its own resource, under its benchmark.
+    pub fn into_json_for_benchmark(self, benchmark: &QueryBenchmark) -> JsonVariant {
         let Self {
             id: _,
             uuid,
             benchmark_id,
-            set,
+            parameters,
             created,
             modified,
             archived,
@@ -209,55 +198,55 @@ impl QueryParameter {
         assert_parentage(
             BencherResource::Benchmark,
             benchmark.id,
-            BencherResource::Parameter,
+            BencherResource::Variant,
             benchmark_id,
         );
-        JsonParameter {
+        JsonVariant {
             uuid,
             benchmark: benchmark.uuid,
-            set,
+            parameters,
             created,
             modified,
             archived,
         }
     }
 
-    /// The parameter set as a report result names it.
-    pub fn into_report_json(self) -> JsonReportParameter {
+    /// The variant as a report result names it.
+    pub fn into_report_json(self) -> JsonReportVariant {
         let Self {
             id: _,
             uuid,
             benchmark_id: _,
-            set,
+            parameters,
             created: _,
             modified: _,
             archived: _,
         } = self;
-        JsonReportParameter { uuid, set }
+        JsonReportVariant { uuid, parameters }
     }
 }
 
 #[derive(Debug, diesel::Insertable)]
-#[diesel(table_name = parameter_table)]
-pub struct InsertParameter {
-    pub uuid: ParameterUuid,
+#[diesel(table_name = variant_table)]
+pub struct InsertVariant {
+    pub uuid: VariantUuid,
     pub benchmark_id: BenchmarkId,
-    pub set: ParameterSet,
+    pub parameters: ParameterSet,
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
 }
 
-impl InsertParameter {
-    /// The per project ceiling on minting parameter sets.
+impl InsertVariant {
+    /// The per project ceiling on minting variants.
     ///
     /// Hand written rather than [`fn_rate_limit`](crate::macros::rate_limit) because
-    /// `parameter` has no `project_id` of its own: a parameter set belongs to its
+    /// `variant` has no `project_id` of its own: a variant belongs to its
     /// benchmark, and the benchmark is what belongs to the project. The window is
     /// counted through that join instead, with the same limits and the same error as
     /// every other resource a report mints.
     ///
-    /// The count includes the empty parameter set each benchmark is born with, which
+    /// The count includes the empty variant each benchmark is born with, which
     /// makes the ceiling slightly conservative for a project creating benchmarks and
     /// variants in the same window. That is the safe direction, and it costs a
     /// project nothing that the benchmark ceiling was not already going to cost it.
@@ -270,15 +259,15 @@ impl InsertParameter {
         let is_claimed = query_organization.is_claimed(auth_conn!(context))?;
 
         let (start_time, end_time) = context.rate_limiting.window();
-        let window_usage: u32 = schema::parameter::table
+        let window_usage: u32 = schema::variant::table
             .inner_join(schema::benchmark::table)
             .filter(schema::benchmark::project_id.eq(project_id))
-            .filter(schema::parameter::created.ge(start_time))
-            .filter(schema::parameter::created.le(end_time))
+            .filter(schema::variant::created.ge(start_time))
+            .filter(schema::variant::created.le(end_time))
             .count()
             .get_result::<i64>(auth_conn!(context))
             .map_err(crate::error::resource_not_found_err!(
-                Parameter,
+                Variant,
                 (project_id, start_time, end_time)
             ))?
             .try_into()
@@ -286,7 +275,7 @@ impl InsertParameter {
                 issue_error(
                     "Failed to count creation",
                     &format!(
-                        "Failed to count parameter creation for project ({project_id}) between {start_time} and {end_time}."
+                        "Failed to count variant creation for project ({project_id}) between {start_time} and {end_time}."
                     ),
                     e,
                 )
@@ -297,51 +286,51 @@ impl InsertParameter {
             window_usage,
             |rate_limit| crate::context::RateLimitingError::UnclaimedProject {
                 project: query_project.clone(),
-                resource: BencherResource::Parameter,
+                resource: BencherResource::Variant,
                 rate_limit,
             },
             |rate_limit| crate::context::RateLimitingError::ClaimedProject {
                 project: query_project.clone(),
-                resource: BencherResource::Parameter,
+                resource: BencherResource::Variant,
                 rate_limit,
             },
         )
     }
 
-    /// The empty parameter set that every benchmark is born with.
+    /// The empty variant that every benchmark is born with.
     ///
     /// The timestamp is the benchmark's own creation timestamp:
-    /// the parameter set is created in the same transaction as its benchmark.
-    pub fn empty_set(benchmark_id: BenchmarkId, timestamp: DateTime) -> Self {
+    /// the variant is created in the same transaction as its benchmark.
+    pub fn empty(benchmark_id: BenchmarkId, timestamp: DateTime) -> Self {
         Self::new(benchmark_id, ParameterSet::default(), timestamp)
     }
 
-    /// A parameter set as a report first named it, already canonical.
-    pub fn new(benchmark_id: BenchmarkId, set: ParameterSet, timestamp: DateTime) -> Self {
+    /// A variant as a report first named it, already canonical.
+    pub fn new(benchmark_id: BenchmarkId, parameters: ParameterSet, timestamp: DateTime) -> Self {
         Self {
-            uuid: ParameterUuid::new(),
+            uuid: VariantUuid::new(),
             benchmark_id,
-            set,
+            parameters,
             created: timestamp,
             modified: timestamp,
             archived: None,
         }
     }
 
-    pub fn into_query(self, id: ParameterId) -> QueryParameter {
+    pub fn into_query(self, id: VariantId) -> QueryVariant {
         let Self {
             uuid,
             benchmark_id,
-            set,
+            parameters,
             created,
             modified,
             archived,
         } = self;
-        QueryParameter {
+        QueryVariant {
             id,
             uuid,
             benchmark_id,
-            set,
+            parameters,
             created,
             modified,
             archived,
@@ -350,22 +339,22 @@ impl InsertParameter {
 }
 
 #[derive(Debug, Clone, diesel::AsChangeset)]
-#[diesel(table_name = parameter_table)]
-pub struct UpdateParameter {
+#[diesel(table_name = variant_table)]
+pub struct UpdateVariant {
     pub modified: DateTime,
     pub archived: Option<Option<DateTime>>,
 }
 
-impl From<JsonUpdateParameter> for UpdateParameter {
-    fn from(update: JsonUpdateParameter) -> Self {
-        let JsonUpdateParameter { archived } = update;
+impl From<JsonUpdateVariant> for UpdateVariant {
+    fn from(update: JsonUpdateVariant) -> Self {
+        let JsonUpdateVariant { archived } = update;
         let modified = DateTime::now();
         let archived = archived.map(|archived| archived.then_some(modified));
         Self { modified, archived }
     }
 }
 
-impl UpdateParameter {
+impl UpdateVariant {
     /// A variant that reports again is a live variant.
     fn unarchive() -> Self {
         Self {
@@ -377,7 +366,7 @@ impl UpdateParameter {
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, ParameterSet, ParameterUuid};
+    use bencher_json::{DateTime, ParameterSet, VariantUuid};
     use diesel::{
         ExpressionMethods as _, QueryDsl as _, QueryResult, RunQueryDsl as _, SqliteConnection,
         connection::SimpleConnection as _,
@@ -390,16 +379,16 @@ mod tests {
         model::project::benchmark::BenchmarkId,
         schema,
         test_util::{
-            create_base_entities, create_benchmark, create_branch_with_head, create_parameter,
-            create_report, create_report_benchmark, create_testbed, create_version,
-            get_empty_parameter, setup_test_db,
+            create_base_entities, create_benchmark, create_branch_with_head, create_report,
+            create_report_benchmark, create_testbed, create_variant, create_version,
+            get_empty_variant, setup_test_db,
         },
     };
 
     /// Where the blob under test comes from.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum Encode {
-        /// Written through the `parameter.set` column: the production path.
+        /// Written through the `variant.parameters` column: the production path.
         Column,
         /// Encoded directly. Parameter values are scalar only, so a null value
         /// never reaches the column, but the encoder still has to agree with `SQLite`.
@@ -485,28 +474,28 @@ mod tests {
             .value
     }
 
-    /// A scalar SQL expression over one stored parameter set.
-    fn parameter_text(
+    /// A scalar SQL expression over one stored variant.
+    fn variant_text(
         conn: &mut SqliteConnection,
-        parameter_id: super::ParameterId,
+        variant_id: super::VariantId,
         sql: &str,
     ) -> String {
-        diesel::sql_query(format!("SELECT {sql} AS value FROM parameter WHERE id = ?"))
-            .bind::<diesel::sql_types::Integer, _>(parameter_id)
+        diesel::sql_query(format!("SELECT {sql} AS value FROM variant WHERE id = ?"))
+            .bind::<diesel::sql_types::Integer, _>(variant_id)
             .get_result::<SqlText>(conn)
-            .expect("Failed to read the parameter set")
+            .expect("Failed to read the variant")
             .value
     }
 
-    fn parameter_integer(
+    fn variant_integer(
         conn: &mut SqliteConnection,
-        parameter_id: super::ParameterId,
+        variant_id: super::VariantId,
         sql: &str,
     ) -> i32 {
-        diesel::sql_query(format!("SELECT {sql} AS value FROM parameter WHERE id = ?"))
-            .bind::<diesel::sql_types::Integer, _>(parameter_id)
+        diesel::sql_query(format!("SELECT {sql} AS value FROM variant WHERE id = ?"))
+            .bind::<diesel::sql_types::Integer, _>(variant_id)
             .get_result::<SqlInteger>(conn)
-            .expect("Failed to read the parameter set")
+            .expect("Failed to read the variant")
             .value
     }
 
@@ -516,7 +505,7 @@ mod tests {
         diesel::sql_query(format!("SELECT {sql} AS value"))
             .bind::<diesel::sql_types::Binary, _>(blob)
             .get_result::<SqlText>(conn)
-            .expect("Failed to read the encoded parameter set")
+            .expect("Failed to read the encoded variant")
             .value
     }
 
@@ -524,21 +513,21 @@ mod tests {
         diesel::sql_query(format!("SELECT {sql} AS value"))
             .bind::<diesel::sql_types::Binary, _>(blob)
             .get_result::<SqlInteger>(conn)
-            .expect("Failed to read the encoded parameter set")
+            .expect("Failed to read the encoded variant")
             .value
     }
 
-    /// Mint a parameter set with `SQLite`'s `jsonb()`, the migration's write path.
-    fn mint_parameter(
+    /// Mint a variant with `SQLite`'s `jsonb()`, the migration's write path.
+    fn mint_variant(
         conn: &mut SqliteConnection,
         benchmark_id: BenchmarkId,
         canonical: &str,
     ) -> QueryResult<usize> {
         diesel::sql_query(
-            r#"INSERT INTO parameter(uuid, benchmark_id, "set", created, modified)
-               VALUES (?, ?, jsonb(?), 0, 0)"#,
+            "INSERT INTO variant(uuid, benchmark_id, parameters, created, modified)
+               VALUES (?, ?, jsonb(?), 0, 0)",
         )
-        .bind::<diesel::sql_types::Text, _>(ParameterUuid::new().to_string())
+        .bind::<diesel::sql_types::Text, _>(VariantUuid::new().to_string())
         .bind::<diesel::sql_types::Integer, _>(benchmark_id)
         .bind::<diesel::sql_types::Text, _>(canonical)
         .execute(conn)
@@ -563,22 +552,22 @@ mod tests {
         }
     }
 
-    /// The parameter set a benchmark was born with, or a freshly written one.
-    fn write_parameter(
+    /// The variant a benchmark was born with, or a freshly written one.
+    fn write_variant(
         conn: &mut SqliteConnection,
         benchmark_id: BenchmarkId,
         parameters: &ParameterSet,
-    ) -> super::ParameterId {
+    ) -> super::VariantId {
         if parameters.is_empty() {
-            get_empty_parameter(conn, benchmark_id)
+            get_empty_variant(conn, benchmark_id)
         } else {
-            create_parameter(conn, benchmark_id, parameters)
+            create_variant(conn, benchmark_id, parameters)
         }
     }
 
     // The encoder has to be byte identical to SQLite's `jsonb()` over the same
-    // canonical text, because `UNIQUE(benchmark_id, "set")` compares bytes and
-    // both writers reach that column: the migration mints the empty set with
+    // canonical text, because `UNIQUE(benchmark_id, parameters)` compares bytes and
+    // both writers reach that column: the migration mints the empty variant with
     // `jsonb('{}')` and everything after that is written through Diesel.
     #[test]
     fn byte_agreement_with_sqlite_jsonb() {
@@ -603,19 +592,19 @@ mod tests {
                         "{name}: the conformance text is already canonical"
                     );
 
-                    let parameter_id = write_parameter(&mut conn, benchmark_id, &parameters);
+                    let variant_id = write_variant(&mut conn, benchmark_id, &parameters);
                     assert_eq!(
-                        parameter_text(&mut conn, parameter_id, "hex(\"set\")"),
+                        variant_text(&mut conn, variant_id, "hex(parameters)"),
                         minted,
                         "{name}: the written bytes must be the bytes jsonb() mints"
                     );
                     assert_eq!(
-                        parameter_integer(&mut conn, parameter_id, "json_valid(\"set\", 8)"),
+                        variant_integer(&mut conn, variant_id, "json_valid(parameters, 8)"),
                         1,
                         "{name}: SQLite's JSON functions must accept the written bytes"
                     );
                     assert_eq!(
-                        parameter_text(&mut conn, parameter_id, "json(\"set\")"),
+                        variant_text(&mut conn, variant_id, "json(parameters)"),
                         *canonical,
                         "{name}: the canonical text must survive the column unchanged"
                     );
@@ -652,8 +641,8 @@ mod tests {
         }
     }
 
-    // A parameter set read back out of the column has to be the set that was
-    // written, whichever writer wrote it, and re-canonicalizing it has to land on
+    // Parameters read back out of the column have to be the ones that were
+    // written, whichever writer wrote it, and re-canonicalizing them has to land on
     // the same text or the unique constraint stops holding.
     #[test]
     fn parameters_read_back_from_both_writers() {
@@ -673,11 +662,11 @@ mod tests {
             "bench2",
             "bench2",
         );
-        // SQLite mints every set under this benchmark, the empty one included, so
-        // the Diesel written set it was born with is cleared out of the way first.
-        diesel::delete(schema::parameter::table.filter(schema::parameter::benchmark_id.eq(minted)))
+        // SQLite mints every variant under this benchmark, the empty one included, so
+        // the Diesel written variant it was born with is cleared out of the way first.
+        diesel::delete(schema::variant::table.filter(schema::variant::benchmark_id.eq(minted)))
             .execute(&mut conn)
-            .expect("Failed to clear the minted benchmark's parameter sets");
+            .expect("Failed to clear the minted benchmark's variants");
 
         for (name, canonical, encode) in CONFORMANCE {
             if *encode != Encode::Column {
@@ -685,12 +674,12 @@ mod tests {
             }
             let parameters = parameters(canonical);
 
-            let parameter_id = write_parameter(&mut conn, written, &parameters);
-            let read: ParameterSet = schema::parameter::table
-                .filter(schema::parameter::id.eq(parameter_id))
-                .select(schema::parameter::set)
+            let variant_id = write_variant(&mut conn, written, &parameters);
+            let read: ParameterSet = schema::variant::table
+                .filter(schema::variant::id.eq(variant_id))
+                .select(schema::variant::parameters)
                 .first(&mut conn)
-                .expect("Failed to read back a written parameter set");
+                .expect("Failed to read back a written variant");
             assert_eq!(read, parameters, "{name}: written and read back");
             assert_eq!(
                 read.canonical(),
@@ -698,13 +687,13 @@ mod tests {
                 "{name}: written stays canonical"
             );
 
-            mint_parameter(&mut conn, minted, canonical).expect("Failed to mint a parameter set");
-            let read: ParameterSet = schema::parameter::table
-                .filter(schema::parameter::benchmark_id.eq(minted))
-                .order(schema::parameter::id.desc())
-                .select(schema::parameter::set)
+            mint_variant(&mut conn, minted, canonical).expect("Failed to mint a variant");
+            let read: ParameterSet = schema::variant::table
+                .filter(schema::variant::benchmark_id.eq(minted))
+                .order(schema::variant::id.desc())
+                .select(schema::variant::parameters)
                 .first(&mut conn)
-                .expect("Failed to read back a minted parameter set");
+                .expect("Failed to read back a minted variant");
             assert_eq!(read, parameters, "{name}: minted and read back");
             assert_eq!(
                 read.canonical(),
@@ -733,14 +722,14 @@ mod tests {
                 &format!("bench{index}"),
             );
 
-            // The empty set is already there, written through Diesel when the
-            // benchmark was born, so for that one set the mint is what collides.
-            let minted = mint_parameter(&mut conn, benchmark_id, canonical);
-            let written = insert_parameter(&mut conn, benchmark_id, &parameters(canonical));
+            // The empty variant is already there, written through Diesel when the
+            // benchmark was born, so for that one the mint is what collides.
+            let minted = mint_variant(&mut conn, benchmark_id, canonical);
+            let written = insert_variant(&mut conn, benchmark_id, &parameters(canonical));
 
             assert!(
                 is_unique_violation(&minted) || is_unique_violation(&written),
-                r#"{name}: the two writers must collide on UNIQUE(benchmark_id, "set")"#
+                "{name}: the two writers must collide on UNIQUE(benchmark_id, parameters)"
             );
             assert!(
                 landed_or_collided(&minted),
@@ -753,32 +742,32 @@ mod tests {
 
             let expected = if *canonical == "{}" { 1 } else { 2 };
             assert_eq!(
-                count_parameters(&mut conn, benchmark_id),
+                count_variants(&mut conn, benchmark_id),
                 expected,
-                "{name}: one row per distinct parameter set"
+                "{name}: one row per distinct variant"
             );
         }
     }
 
-    fn insert_parameter(
+    fn insert_variant(
         conn: &mut SqliteConnection,
         benchmark_id: BenchmarkId,
         parameters: &ParameterSet,
     ) -> QueryResult<usize> {
-        diesel::insert_into(schema::parameter::table)
+        diesel::insert_into(schema::variant::table)
             .values((
-                schema::parameter::uuid.eq(ParameterUuid::new()),
-                schema::parameter::benchmark_id.eq(benchmark_id),
-                schema::parameter::set.eq(parameters),
-                schema::parameter::created.eq(DateTime::TEST),
-                schema::parameter::modified.eq(DateTime::TEST),
+                schema::variant::uuid.eq(VariantUuid::new()),
+                schema::variant::benchmark_id.eq(benchmark_id),
+                schema::variant::parameters.eq(parameters),
+                schema::variant::created.eq(DateTime::TEST),
+                schema::variant::modified.eq(DateTime::TEST),
             ))
             .execute(conn)
     }
 
-    fn count_parameters(conn: &mut SqliteConnection, benchmark_id: BenchmarkId) -> i64 {
-        schema::parameter::table
-            .filter(schema::parameter::benchmark_id.eq(benchmark_id))
+    fn count_variants(conn: &mut SqliteConnection, benchmark_id: BenchmarkId) -> i64 {
+        schema::variant::table
+            .filter(schema::variant::benchmark_id.eq(benchmark_id))
             .count()
             .get_result(conn)
             .expect("Failed to count parameters")
@@ -796,17 +785,16 @@ mod tests {
             "bench1",
         );
 
-        insert_parameter(&mut conn, benchmark_id, &parameters(r#"{"b": 1, "a": 2}"#))
-            .expect("Failed to insert parameter");
-        let collision =
-            insert_parameter(&mut conn, benchmark_id, &parameters(r#"{"a": 2, "b": 1}"#));
+        insert_variant(&mut conn, benchmark_id, &parameters(r#"{"b": 1, "a": 2}"#))
+            .expect("Failed to insert variant");
+        let collision = insert_variant(&mut conn, benchmark_id, &parameters(r#"{"a": 2, "b": 1}"#));
 
         assert!(
             collision.is_err(),
-            r#"logically equal parameter sets must collide on UNIQUE(benchmark_id, "set")"#
+            "logically equal variants must collide on UNIQUE(benchmark_id, parameters)"
         );
-        // The empty set the benchmark was born with, plus the one that landed.
-        assert_eq!(count_parameters(&mut conn, benchmark_id), 2);
+        // The empty variant the benchmark was born with, plus the one that landed.
+        assert_eq!(count_variants(&mut conn, benchmark_id), 2);
     }
 
     #[test]
@@ -821,16 +809,16 @@ mod tests {
             "bench1",
         );
 
-        insert_parameter(&mut conn, benchmark_id, &parameters(r#"{"n": 16}"#))
-            .expect("Failed to insert parameter");
+        insert_variant(&mut conn, benchmark_id, &parameters(r#"{"n": 16}"#))
+            .expect("Failed to insert variant");
         for spelling in [r#"{"n": 16.0}"#, r#"{"n": 1.6e1}"#] {
             assert!(
-                insert_parameter(&mut conn, benchmark_id, &parameters(spelling)).is_err(),
+                insert_variant(&mut conn, benchmark_id, &parameters(spelling)).is_err(),
                 "{spelling} must collide with 16"
             );
         }
 
-        assert_eq!(count_parameters(&mut conn, benchmark_id), 2);
+        assert_eq!(count_variants(&mut conn, benchmark_id), 2);
     }
 
     #[test]
@@ -853,15 +841,15 @@ mod tests {
         );
 
         let variant = parameters(r#"{"size_mb": 16}"#);
-        insert_parameter(&mut conn, first, &variant).expect("Failed to insert parameter");
-        insert_parameter(&mut conn, second, &variant).expect("Failed to insert parameter");
+        insert_variant(&mut conn, first, &variant).expect("Failed to insert variant");
+        insert_variant(&mut conn, second, &variant).expect("Failed to insert variant");
 
-        assert_eq!(count_parameters(&mut conn, first), 2);
-        assert_eq!(count_parameters(&mut conn, second), 2);
+        assert_eq!(count_variants(&mut conn, first), 2);
+        assert_eq!(count_variants(&mut conn, second), 2);
     }
 
     /// Seed the pre-migration shape: benchmarks and `report_benchmark` rows with
-    /// no `parameter_id`, written as raw SQL because the Diesel DSL describes the
+    /// no `variant_id`, written as raw SQL because the Diesel DSL describes the
     /// post-migration schema.
     fn seed_legacy_rows(conn: &mut SqliteConnection) {
         conn.batch_execute(
@@ -914,7 +902,7 @@ mod tests {
     }
 
     #[test]
-    fn migration_backfills_empty_parameter_sets() {
+    fn migration_backfills_empty_variants() {
         let mut conn = setup_test_db();
 
         // Foreign keys cannot be toggled inside a transaction, and Diesel runs each
@@ -938,40 +926,40 @@ mod tests {
         assert_eq!(benchmark_ids.len(), 2);
 
         for benchmark_id in benchmark_ids {
-            let backfilled: Vec<ParameterSet> = schema::parameter::table
-                .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-                .select(schema::parameter::set)
+            let backfilled: Vec<ParameterSet> = schema::variant::table
+                .filter(schema::variant::benchmark_id.eq(benchmark_id))
+                .select(schema::variant::parameters)
                 .load(&mut conn)
                 .expect("Failed to load parameters");
             assert_eq!(
                 backfilled,
                 vec![ParameterSet::default()],
-                "every benchmark gets exactly one empty parameter set"
+                "every benchmark gets exactly one empty variant"
             );
 
             // The migration mints the canonical empty object in SQL, so a set minted
             // in Rust has to be byte identical to it.
             assert!(
-                insert_parameter(&mut conn, benchmark_id, &ParameterSet::default()).is_err(),
-                "the backfilled empty set must collide with a Rust minted one"
+                insert_variant(&mut conn, benchmark_id, &ParameterSet::default()).is_err(),
+                "the backfilled empty variant must collide with a Rust minted one"
             );
         }
 
-        let report_benchmarks: Vec<(BenchmarkId, super::ParameterId)> =
+        let report_benchmarks: Vec<(BenchmarkId, super::VariantId)> =
             schema::report_benchmark::table
                 .select((
                     schema::report_benchmark::benchmark_id,
-                    schema::report_benchmark::parameter_id,
+                    schema::report_benchmark::variant_id,
                 ))
                 .load(&mut conn)
                 .expect("Failed to load report benchmarks");
         assert_eq!(report_benchmarks.len(), 3);
-        for (benchmark_id, parameter_id) in report_benchmarks {
-            let empty_set_id = super::QueryParameter::get_empty_set_id(&mut conn, benchmark_id)
-                .expect("Failed to get the empty parameter set");
+        for (benchmark_id, variant_id) in report_benchmarks {
+            let empty_variant_id = super::QueryVariant::get_empty_id(&mut conn, benchmark_id)
+                .expect("Failed to get the empty variant");
             assert_eq!(
-                parameter_id, empty_set_id,
-                "every report benchmark points at its own benchmark's empty set"
+                variant_id, empty_variant_id,
+                "every report benchmark points at its own benchmark's empty variant"
             );
         }
     }
@@ -991,12 +979,12 @@ mod tests {
     }
 
     /// Re-insert an existing `report_benchmark` row under a new uuid, which collides
-    /// on the unique key over the report, iteration, benchmark, and parameter set.
+    /// on the unique key over the report, iteration, benchmark, and variant.
     fn duplicate_report_benchmark_key(conn: &mut SqliteConnection) -> QueryResult<usize> {
         diesel::sql_query(
-            "INSERT INTO report_benchmark (uuid, report_id, iteration, benchmark_id, parameter_id)
+            "INSERT INTO report_benchmark (uuid, report_id, iteration, benchmark_id, variant_id)
                 SELECT '00000000-0000-0000-0000-000000000013',
-                    report_id, iteration, benchmark_id, parameter_id
+                    report_id, iteration, benchmark_id, variant_id
                 FROM report_benchmark
                 WHERE id = 1",
         )
@@ -1007,8 +995,8 @@ mod tests {
     /// collides on the unique uuid.
     fn duplicate_report_benchmark_uuid(conn: &mut SqliteConnection) -> QueryResult<usize> {
         diesel::sql_query(
-            "INSERT INTO report_benchmark (uuid, report_id, iteration, benchmark_id, parameter_id)
-                SELECT uuid, report_id, 42, benchmark_id, parameter_id
+            "INSERT INTO report_benchmark (uuid, report_id, iteration, benchmark_id, variant_id)
+                SELECT uuid, report_id, 42, benchmark_id, variant_id
                 FROM report_benchmark
                 WHERE id = 1",
         )
@@ -1050,9 +1038,9 @@ mod tests {
             report_benchmark_indexes(&mut conn),
             vec![
                 "index_report_benchmark_benchmark_report".to_owned(),
-                "index_report_benchmark_parameter".to_owned(),
-                "index_report_benchmark_report_iteration_benchmark_parameter".to_owned(),
+                "index_report_benchmark_report_iteration_benchmark_variant".to_owned(),
                 "index_report_benchmark_uuid".to_owned(),
+                "index_report_benchmark_variant".to_owned(),
             ],
             "the rebuilt table's indexes are the named ones the migration builds"
         );
@@ -1060,7 +1048,7 @@ mod tests {
         let repeated_key = duplicate_report_benchmark_key(&mut conn);
         assert!(
             is_unique_violation(&repeated_key),
-            "a repeated report, iteration, benchmark, and parameter set collides"
+            "a repeated report, iteration, benchmark, and variant collides"
         );
         let repeated_uuid = duplicate_report_benchmark_uuid(&mut conn);
         assert!(
@@ -1080,7 +1068,7 @@ mod tests {
             "bench1",
             "bench1",
         );
-        assert_eq!(count_parameters(&mut conn, benchmark_id), 1);
+        assert_eq!(count_variants(&mut conn, benchmark_id), 1);
 
         conn.batch_execute("PRAGMA foreign_keys = OFF")
             .expect("Failed to disable foreign keys");
@@ -1090,6 +1078,6 @@ mod tests {
         conn.batch_execute("PRAGMA foreign_keys = ON")
             .expect("Failed to enable foreign keys");
 
-        assert_eq!(count_parameters(&mut conn, benchmark_id), 1);
+        assert_eq!(count_variants(&mut conn, benchmark_id), 1);
     }
 }

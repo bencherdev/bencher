@@ -16,7 +16,7 @@ use crate::urlencoded::{
 };
 use crate::{
     BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, HeadUuid, JsonBenchmark, JsonBranch,
-    JsonMeasure, JsonParameter, JsonProject, JsonTestbed, MeasureUuid, ParameterSet, ReportUuid,
+    JsonMeasure, JsonProject, JsonTestbed, JsonVariant, MeasureUuid, ParameterSet, ReportUuid,
     TestbedUuid,
 };
 
@@ -56,11 +56,11 @@ pub struct JsonPerfQueryParams {
     /// A comma separated list of benchmark UUIDs to query.
     /// Only the first 64 benchmarks are queried.
     pub benchmarks: String,
-    /// An optional comma separated list of URL encoded parameter sets to filter on.
+    /// An optional comma separated list of URL encoded parameters to filter on.
     /// A variant is queried when at least one of them is a subset of its
-    /// parameter set: every key the filter names, with the same value.
+    /// parameters: every key the filter names, with the same value.
     /// Leaving this off queries every variant.
-    /// Only the first 64 parameter sets are queried.
+    /// Only the first 64 are queried.
     pub parameters: Option<String>,
     /// A comma separated list of measure UUIDs to query.
     /// Only the first 64 measures are queried.
@@ -94,11 +94,11 @@ pub struct JsonPerfImgQueryParams {
     /// A comma separated list of benchmark UUIDs to query.
     /// Only the first 64 benchmarks are queried.
     pub benchmarks: String,
-    /// An optional comma separated list of URL encoded parameter sets to filter on.
+    /// An optional comma separated list of URL encoded parameters to filter on.
     /// A variant is queried when at least one of them is a subset of its
-    /// parameter set: every key the filter names, with the same value.
+    /// parameters: every key the filter names, with the same value.
     /// Leaving this off queries every variant.
-    /// Only the first 64 parameter sets are queried.
+    /// Only the first 64 are queried.
     pub parameters: Option<String>,
     /// A comma separated list of measure UUIDs to query.
     /// Only the first 64 measures are queried.
@@ -349,7 +349,7 @@ impl JsonPerfQuery {
         to_urlencoded_list(&self.benchmarks)
     }
 
-    /// A parameter set spells commas, so its elements are encoded with the
+    /// Parameters spell commas, so the elements are encoded with the
     /// separator escaped rather than left literal the way a UUID may be.
     pub fn parameters(&self) -> Option<String> {
         if self.parameters.is_empty() {
@@ -431,8 +431,8 @@ pub struct JsonPerfLine {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
-    /// The parameter set this line plots.
-    pub parameter: JsonParameter,
+    /// The variant this line plots.
+    pub variant: JsonVariant,
     pub measure: JsonMeasure,
     pub metrics: Vec<JsonPerfMetrics>,
 }

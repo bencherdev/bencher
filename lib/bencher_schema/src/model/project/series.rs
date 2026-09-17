@@ -2,7 +2,7 @@
 
 //! Cache of each monitored series' most recent activity.
 //!
-//! A *series* is a distinct `(testbed, benchmark, parameter, measure)` an organization
+//! A *series* is a distinct `(testbed, benchmark, variant, measure)` an organization
 //! reports to: each variant of a benchmark has its own history and bills as its own
 //! series, and named metric values collapse into their measure's series rather than
 //! multiplying it. `series_last_seen` stores, per series, the greatest `report.created`
@@ -12,7 +12,7 @@
 //! rises (`MAX`): reprocessing an older report cannot lower it, and deleting a report
 //! does NOT lower it either; a series that reported during a period was active that
 //! period and stays billed for it. The one way a series leaves the count early is
-//! hard-deleting its testbed, benchmark, parameter set, or measure, which cascades its
+//! hard-deleting its testbed, benchmark, variant, or measure, which cascades its
 //! rows away and can lower the current period's count. Accepted: entity deletion requires
 //! first deleting all of that entity's reports (destroying the org's own history), and an
 //! inactive series stops billing next period anyway.
@@ -32,8 +32,8 @@ use crate::{
     model::{
         organization::OrganizationId,
         project::{
-            ProjectId, benchmark::BenchmarkId, measure::MeasureId, parameter::ParameterId,
-            testbed::TestbedId,
+            ProjectId, benchmark::BenchmarkId, measure::MeasureId, testbed::TestbedId,
+            variant::VariantId,
         },
     },
     schema::{self, series_last_seen as series_table},
@@ -47,7 +47,7 @@ use crate::{
 pub struct SeriesKey {
     pub testbed_id: TestbedId,
     pub benchmark_id: BenchmarkId,
-    pub parameter_id: ParameterId,
+    pub variant_id: VariantId,
     pub measure_id: MeasureId,
 }
 
@@ -75,7 +75,7 @@ pub fn upsert_series_last_seen(
     let SeriesKey {
         testbed_id,
         benchmark_id,
-        parameter_id,
+        variant_id,
         measure_id,
     } = series;
 
@@ -85,14 +85,14 @@ pub fn upsert_series_last_seen(
             series_table::project_id.eq(project_id),
             series_table::testbed_id.eq(testbed_id),
             series_table::benchmark_id.eq(benchmark_id),
-            series_table::parameter_id.eq(parameter_id),
+            series_table::variant_id.eq(variant_id),
             series_table::measure_id.eq(measure_id),
             series_table::last_seen.eq(last_seen),
         ))
         .on_conflict((
             series_table::testbed_id,
             series_table::benchmark_id,
-            series_table::parameter_id,
+            series_table::variant_id,
             series_table::measure_id,
         ))
         .do_update()
@@ -190,7 +190,7 @@ fn count_inner(
 /// Test-only oracle: the distinct-series count the cache must equal, computed from
 /// scratch over the raw metric rows in plain Rust (independent of the cache's SQL).
 ///
-/// Counts distinct `(testbed, benchmark, parameter, measure)` whose latest
+/// Counts distinct `(testbed, benchmark, variant, measure)` whose latest
 /// `report.created`
 /// falls in `[start_time, end_time]`, excluding soft-deleted projects, optionally
 /// restricted to a `visibility`. Never run at runtime; [`count_inner`] is the
@@ -210,7 +210,7 @@ pub(crate) fn oracle_count(
     type OracleRow = (
         TestbedId,
         BenchmarkId,
-        ParameterId,
+        VariantId,
         MeasureId,
         DateTime,
         Visibility,
@@ -228,7 +228,7 @@ pub(crate) fn oracle_count(
         .select((
             schema::report::testbed_id,
             schema::report_benchmark::benchmark_id,
-            schema::report_benchmark::parameter_id,
+            schema::report_benchmark::variant_id,
             schema::metric::measure_id,
             schema::report::created,
             schema::project::visibility,
@@ -243,7 +243,7 @@ pub(crate) fn oracle_count(
     for (
         testbed_id,
         benchmark_id,
-        parameter_id,
+        variant_id,
         measure_id,
         created_row,
         project_visibility,
@@ -265,7 +265,7 @@ pub(crate) fn oracle_count(
             .entry(SeriesKey {
                 testbed_id,
                 benchmark_id,
-                parameter_id,
+                variant_id,
                 measure_id,
             })
             .and_modify(|latest| {
@@ -306,17 +306,17 @@ mod tests {
                 benchmark::BenchmarkId,
                 branch::{head::HeadId, version::VersionId},
                 measure::MeasureId,
-                parameter::ParameterId,
                 report::ReportId,
                 testbed::TestbedId,
+                variant::VariantId,
             },
         },
         schema,
         test_util::{
             archive_benchmark, archive_measure, archive_testbed, create_benchmark,
-            create_branch_with_head, create_measure, create_parameter, create_report_benchmark,
-            create_report_benchmark_for_parameter, create_testbed, create_version,
-            get_empty_parameter, setup_test_db,
+            create_branch_with_head, create_measure, create_report_benchmark,
+            create_report_benchmark_for_variant, create_testbed, create_variant, create_version,
+            get_empty_variant, setup_test_db,
         },
     };
 
@@ -485,7 +485,7 @@ mod tests {
             ))
             .execute(conn)
             .expect("insert metric");
-        let parameter = get_empty_parameter(conn, benchmark);
+        let variant = get_empty_variant(conn, benchmark);
         upsert_series_last_seen(
             conn,
             proj.org,
@@ -493,7 +493,7 @@ mod tests {
             SeriesKey {
                 testbed_id: testbed,
                 benchmark_id: benchmark,
-                parameter_id: parameter,
+                variant_id: variant,
                 measure_id: measure,
             },
             end_time,
@@ -505,7 +505,7 @@ mod tests {
     /// its own metric row.
     ///
     /// A variant is its own series and a metric is not, so this is the
-    /// helper the parameter and metric billing tests reach for.
+    /// helper the variant and metric billing tests reach for.
     #[expect(
         clippy::too_many_arguments,
         reason = "test helper threads the full series key"
@@ -516,7 +516,7 @@ mod tests {
         proj: Proj,
         testbed: TestbedId,
         benchmark: BenchmarkId,
-        parameter: ParameterId,
+        variant: VariantId,
         measure: MeasureId,
         named: &[MetricName],
         end_time: DateTime,
@@ -541,7 +541,7 @@ mod tests {
             .expect("report id");
         let rb_uuid = uuids.next();
         let report_benchmark =
-            create_report_benchmark_for_parameter(conn, &rb_uuid, report, 0, benchmark, parameter);
+            create_report_benchmark_for_variant(conn, &rb_uuid, report, 0, benchmark, variant);
         for name in named {
             let metric_uuid = uuids.next();
             diesel::insert_into(schema::metric::table)
@@ -562,7 +562,7 @@ mod tests {
             SeriesKey {
                 testbed_id: testbed,
                 benchmark_id: benchmark,
-                parameter_id: parameter,
+                variant_id: variant,
                 measure_id: measure,
             },
             end_time,
@@ -570,13 +570,9 @@ mod tests {
         .expect("upsert series");
     }
 
-    /// A non-empty parameter set under `benchmark`.
-    fn make_parameter(
-        conn: &mut DbConnection,
-        benchmark: BenchmarkId,
-        canonical: &str,
-    ) -> ParameterId {
-        create_parameter(
+    /// A non-empty variant under `benchmark`.
+    fn make_variant(conn: &mut DbConnection, benchmark: BenchmarkId, canonical: &str) -> VariantId {
+        create_variant(
             conn,
             benchmark,
             &canonical.parse().expect("Failed to parse the parameters"),
@@ -596,18 +592,18 @@ mod tests {
         let benchmark = make_benchmark(&mut conn, &mut uuids, proj.project);
         let measure = make_measure(&mut conn, &mut uuids, proj.project);
 
-        let empty_set = get_empty_parameter(&mut conn, benchmark);
-        let sixteen = make_parameter(&mut conn, benchmark, r#"{"size_mb": 16}"#);
-        let thirty_two = make_parameter(&mut conn, benchmark, r#"{"size_mb": 32}"#);
+        let empty_variant = get_empty_variant(&mut conn, benchmark);
+        let sixteen = make_variant(&mut conn, benchmark, r#"{"size_mb": 16}"#);
+        let thirty_two = make_variant(&mut conn, benchmark, r#"{"size_mb": 32}"#);
 
-        for parameter in [empty_set, sixteen, thirty_two] {
+        for variant in [empty_variant, sixteen, thirty_two] {
             ingest_variant(
                 &mut conn,
                 &mut uuids,
                 proj,
                 testbed,
                 benchmark,
-                parameter,
+                variant,
                 measure,
                 &[MetricName::value()],
                 at(0),
@@ -631,8 +627,8 @@ mod tests {
         let benchmark = make_benchmark(&mut conn, &mut uuids, proj.project);
         let measure = make_measure(&mut conn, &mut uuids, proj.project);
 
-        let empty_set = get_empty_parameter(&mut conn, benchmark);
-        let sixteen = make_parameter(&mut conn, benchmark, r#"{"size_mb": 16}"#);
+        let empty_variant = get_empty_variant(&mut conn, benchmark);
+        let sixteen = make_variant(&mut conn, benchmark, r#"{"size_mb": 16}"#);
         let named = [
             MetricName::value(),
             MetricName::lower_value(),
@@ -640,14 +636,14 @@ mod tests {
             "p99".parse().expect("Failed to parse the metric name"),
         ];
 
-        for parameter in [empty_set, sixteen] {
+        for variant in [empty_variant, sixteen] {
             ingest_variant(
                 &mut conn,
                 &mut uuids,
                 proj,
                 testbed,
                 benchmark,
-                parameter,
+                variant,
                 measure,
                 &named,
                 at(0),
@@ -661,10 +657,10 @@ mod tests {
     }
 
     // The migration's backfill maps every existing series row to its benchmark's
-    // empty parameter set, which is the set every legacy `report_benchmark` row was
+    // empty variant, which is the one every legacy `report_benchmark` row was
     // itself backfilled to.
     #[test]
-    fn backfill_maps_existing_rows_to_the_empty_parameter_set() {
+    fn backfill_maps_existing_rows_to_the_empty_variant() {
         use diesel::sql_query;
 
         #[derive(diesel::QueryableByName)]
@@ -690,21 +686,21 @@ mod tests {
             at(0),
         );
 
-        // Every cache row names a parameter set, and it is the benchmark's empty one.
+        // Every cache row names a variant, and it is the benchmark's empty one.
         let mismatched = sql_query(
-            r#"SELECT COUNT(*) AS count
+            "SELECT COUNT(*) AS count
                FROM series_last_seen s
-               LEFT JOIN parameter p ON p.id = s.parameter_id
+               LEFT JOIN variant p ON p.id = s.variant_id
                WHERE p.id IS NULL
                   OR p.benchmark_id != s.benchmark_id
-                  OR p."set" != jsonb('{}')"#,
+                  OR p.parameters != jsonb('{}')",
         )
         .get_result::<SqlCount>(&mut conn)
-        .expect("Failed to check the backfilled parameter sets")
+        .expect("Failed to check the backfilled variants")
         .count;
         assert_eq!(
             mismatched, 0,
-            "every series row names its benchmark's empty parameter set"
+            "every series row names its benchmark's empty variant"
         );
     }
 
@@ -730,7 +726,7 @@ mod tests {
 
     // Upgrading carries every existing cache row over. The rows are seeded in the
     // shape the old schema had, keyed on `(testbed, benchmark, measure)` with no
-    // parameter at all, and the empty parameter sets they have to land on are the ones
+    // variant at all, and the empty variants they have to land on are the ones
     // Diesel minted rather than ones spelled with `jsonb('{}')` in SQL. That is the
     // point of seeding this way: the backfill joins the two encodings together, so
     // this is where they have to agree.
@@ -777,13 +773,13 @@ mod tests {
         conn.batch_execute("PRAGMA foreign_keys = ON")
             .expect("Failed to enable foreign keys");
 
-        let carried: Vec<(TestbedId, BenchmarkId, ParameterId, MeasureId, i64)> =
+        let carried: Vec<(TestbedId, BenchmarkId, VariantId, MeasureId, i64)> =
             schema::series_last_seen::table
                 .order(schema::series_last_seen::benchmark_id.asc())
                 .select((
                     schema::series_last_seen::testbed_id,
                     schema::series_last_seen::benchmark_id,
-                    schema::series_last_seen::parameter_id,
+                    schema::series_last_seen::variant_id,
                     schema::series_last_seen::measure_id,
                     schema::series_last_seen::last_seen,
                 ))
@@ -796,7 +792,7 @@ mod tests {
                 (
                     testbed,
                     benchmark,
-                    get_empty_parameter(&mut conn, benchmark),
+                    get_empty_variant(&mut conn, benchmark),
                     measure,
                     last_seen,
                 )
@@ -804,7 +800,7 @@ mod tests {
             .collect();
         assert_eq!(
             carried, expected,
-            "every legacy series row is carried onto its benchmark's empty parameter set, untouched"
+            "every legacy series row is carried onto its benchmark's empty variant, untouched"
         );
     }
 
@@ -1229,11 +1225,11 @@ mod tests {
             make_benchmark(&mut conn, &mut uuids, proj.project),
             make_measure(&mut conn, &mut uuids, proj.project),
         );
-        let parameter = get_empty_parameter(&mut conn, benchmark);
+        let variant = get_empty_variant(&mut conn, benchmark);
         let series = SeriesKey {
             testbed_id: testbed,
             benchmark_id: benchmark,
-            parameter_id: parameter,
+            variant_id: variant,
             measure_id: measure,
         };
         // Two bare upserts of the same series key converge to one row, last_seen = MAX,
@@ -1331,18 +1327,18 @@ mod tests {
 
         // What the two backfills compose to: 2026-06-24-120000_series_last_seen fills
         // the cache from the metrics, and 2026-08-17-120000_series_last_seen_parameter
-        // gives every row a parameter set, which for a legacy row is its benchmark's
-        // empty set, which is the set the parameter migration gave every legacy
+        // gives every row a variant, which for a legacy row is its benchmark's
+        // empty variant, which is the one the parameter migration gave every legacy
         // `report_benchmark` row.
         const BACKFILL: &str = "\
-INSERT INTO series_last_seen (organization_id, project_id, testbed_id, benchmark_id, parameter_id, measure_id, last_seen)
-SELECT p.organization_id, p.id, r.testbed_id, rb.benchmark_id, rb.parameter_id, m.measure_id, MAX(r.created)
+INSERT INTO series_last_seen (organization_id, project_id, testbed_id, benchmark_id, variant_id, measure_id, last_seen)
+SELECT p.organization_id, p.id, r.testbed_id, rb.benchmark_id, rb.variant_id, m.measure_id, MAX(r.created)
 FROM metric m
 INNER JOIN report_benchmark rb ON m.report_benchmark_id = rb.id
 INNER JOIN report r ON rb.report_id = r.id
 INNER JOIN benchmark b ON rb.benchmark_id = b.id
 INNER JOIN project p ON b.project_id = p.id
-GROUP BY r.testbed_id, rb.benchmark_id, rb.parameter_id, m.measure_id";
+GROUP BY r.testbed_id, rb.benchmark_id, rb.variant_id, m.measure_id";
 
         let mut conn = setup_test_db();
         let mut uuids = Uuids(1);

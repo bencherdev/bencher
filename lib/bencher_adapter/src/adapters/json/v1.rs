@@ -12,13 +12,13 @@ use crate::{
 };
 
 /// The BMF v1 wire shape: a benchmark name maps to an array of entries,
-/// each carrying a parameter set and its measures.
+/// each carrying its parameters and its measures.
 pub type JsonV1Results = HashMap<BenchmarkNameId, Vec<JsonV1Entry>>;
 
 /// One variant: what the benchmark ran with, and what it measured.
 #[derive(Debug, Clone, Deserialize)]
 pub struct JsonV1Entry {
-    /// Optional. An entry without it resolves to the benchmark's empty parameter set,
+    /// Optional. An entry without it resolves to the benchmark's empty variant,
     /// which is exactly what an explicit `{}` resolves to.
     #[serde(default)]
     pub parameters: ParameterSet,
@@ -52,7 +52,7 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
             measures,
         } in entries
         {
-            // Two entries that canonicalize to the same parameter set are one
+            // Two entries that canonicalize to the same parameters are one
             // variant, so their metrics merge rather than fork a series. A name
             // that genuinely repeats takes the later entry, which is deterministic
             // because entries are an ordered array in wire order. Nothing is
@@ -132,7 +132,7 @@ pub(crate) mod test_json_v1 {
             .get(&benchmark)
             .expect("Missing benchmark")
             .get(&parameters)
-            .expect("Missing parameter set")
+            .expect("Missing variant")
     }
 
     /// One metric of one measure.
@@ -193,7 +193,7 @@ pub(crate) mod test_json_v1 {
         assert_eq!(named(metrics, "latency", "p50"), Some(51.9.into()));
     }
 
-    /// An entry without `parameters` resolves to the empty parameter set,
+    /// An entry without `parameters` resolves to empty parameters,
     /// which is exactly what an explicit `{}` resolves to: one variant, not two.
     #[test]
     fn adapter_json_v1_absent_parameters_are_the_empty_set() {
@@ -205,13 +205,7 @@ pub(crate) mod test_json_v1 {
         let absent = "tests::absent".parse::<BenchmarkNameId>().unwrap();
         let entries = &results.inner[&absent];
         assert_eq!(entries.len(), 1);
-        assert!(
-            entries
-                .keys()
-                .next()
-                .expect("Missing parameter set")
-                .is_empty()
-        );
+        assert!(entries.keys().next().expect("Missing variant").is_empty());
 
         // An absent `parameters` and an explicit `{}` merge into one variant.
         let merged = "tests::merged".parse::<BenchmarkNameId>().unwrap();
@@ -317,7 +311,7 @@ pub(crate) mod test_json_v1 {
         assert_eq!(results.dropped_names, 0);
     }
 
-    /// Two entries of one canonical parameter set union the names of the
+    /// Two entries with the same canonical parameters union the names of the
     /// measure they share, rather than the later entry replacing the earlier.
     #[test]
     fn adapter_json_v1_duplicate_entries_union_names() {
@@ -478,8 +472,8 @@ pub(crate) mod test_json_v1 {
 
     /// An entry that names no measure is a variant that measured nothing. It is
     /// accepted, it is not an error, and it yields no metric. This is exactly the
-    /// v0 shape `{"bench": {}}`, which has always parsed to one variant on the
-    /// empty parameter set with no measures under it.
+    /// v0 shape `{"bench": {}}`, which has always parsed to one variant with
+    /// empty parameters and no measures under it.
     #[test]
     fn adapter_json_v1_empty_measures() {
         let results = parse_json_v1(r#"{"tests::none": [{"measures": {}}]}"#);
@@ -494,10 +488,10 @@ pub(crate) mod test_json_v1 {
         assert_eq!(results.inner, v0.inner);
     }
 
-    /// An entry that names a parameter set but no measure still resolves that
-    /// parameter set: the variant exists, it just measured nothing.
+    /// An entry that names parameters but no measure still resolves its
+    /// variant: the variant exists, it just measured nothing.
     #[test]
-    fn adapter_json_v1_empty_measures_keeps_the_parameter_set() {
+    fn adapter_json_v1_empty_measures_keeps_the_variant() {
         let results =
             parse_json_v1(r#"{"tests::none": [{"parameters": {"size_mb": 16}, "measures": {}}]}"#);
 
@@ -506,7 +500,7 @@ pub(crate) mod test_json_v1 {
         assert_eq!(results.dropped_names, 0);
     }
 
-    /// A parameter set is bounded: at most `MAX_PARAMETER_KEYS` keys, and a key
+    /// Parameters are bounded: at most `MAX_PARAMETER_KEYS` keys, and a key
     /// or a string value that is non-empty, trimmed, and within `MAX_LEN` bytes.
     ///
     /// A payload that breaks a bound is not a v1 payload. The whole report fails

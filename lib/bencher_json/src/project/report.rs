@@ -11,7 +11,7 @@ use crate::runner::job::JobUuid;
 use crate::{
     BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure,
     JsonMetricTriple, JsonProject, JsonPubUser, JsonTestbed, MeasureNameId, MetricUuid,
-    ParameterSet, ParameterUuid, TestbedNameId,
+    ParameterSet, TestbedNameId, VariantUuid,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -426,26 +426,26 @@ pub type JsonReportIteration = Vec<JsonReportResult>;
 
 /// One variant of one benchmark, in one iteration of a report.
 ///
-/// A benchmark reports as many results per iteration as it has parameter sets, so
-/// the parameter set is what tells two results of one benchmark apart.
+/// A benchmark reports as many results per iteration as it has variants, so
+/// the variant is what tells two results of one benchmark apart.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportResult {
     pub iteration: Iteration,
     pub benchmark: JsonBenchmark,
-    /// The parameter set this result ran with.
-    pub parameter: JsonReportParameter,
+    /// The variant this result ran with.
+    pub variant: JsonReportVariant,
     pub measures: Vec<JsonReportMeasure>,
 }
 
-/// The parameter set a report result ran with.
+/// The variant a report result ran with.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonReportParameter {
-    pub uuid: ParameterUuid,
-    pub set: ParameterSet,
+pub struct JsonReportVariant {
+    pub uuid: VariantUuid,
+    pub parameters: ParameterSet,
 }
 
 #[typeshare::typeshare]
@@ -512,7 +512,7 @@ pub struct JsonReportCounts {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportIterationCounts {
     /// The number of results in this iteration: one per variant, so one per
-    /// benchmark for a benchmark that reports a single parameter set.
+    /// benchmark for a benchmark that reports a single variant.
     pub benchmarks: u32,
     /// The number of distinct measures in this iteration.
     pub measures: u32,

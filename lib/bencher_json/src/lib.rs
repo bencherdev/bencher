@@ -87,7 +87,7 @@ pub use project::{
         JsonMetricTriple, JsonMetricsMap, JsonNewMetric, JsonOneMetric, JsonResultsMap, MetricUuid,
     },
     model::{JsonModel, ModelUuid},
-    parameter::{JsonParameter, JsonParameters, MAX_PARAMETER_KEYS, ParameterSet, ParameterUuid},
+    parameter::{MAX_PARAMETER_KEYS, ParameterSet},
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
     report::{
@@ -99,6 +99,7 @@ pub use project::{
         TestbedUuid,
     },
     threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
+    variant::{JsonVariant, JsonVariants, VariantUuid},
 };
 pub use run::JsonNewRun;
 #[cfg(feature = "plus")]

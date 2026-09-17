@@ -39,12 +39,12 @@ use bencher_schema::{
             branch::{QueryBranch, head::QueryHead},
             measure::QueryMeasure,
             metric::QueryMetric,
-            parameter::{ParameterId, QueryParameter},
             report::report_benchmark::ReportBenchmarkId,
             testbed::QueryTestbed,
             threshold::{
                 QueryThreshold, alert::QueryAlert, boundary::QueryBoundary, model::QueryModel,
             },
+            variant::{QueryVariant, VariantId},
         },
         user::actor::{ApiActor, PubProjectBearerToken},
     },
@@ -224,16 +224,16 @@ fn default_start_time(clock: &Clock, end_time: Option<DateTime>) -> Option<DateT
 struct BenchmarkVariants {
     benchmark: QueryBenchmark,
     json: JsonBenchmark,
-    /// Keyed by row identifier and therefore in creation order, so the empty set
+    /// Keyed by row identifier and therefore in creation order, so the empty variant
     /// every benchmark is born with comes first.
-    variants: BTreeMap<ParameterId, QueryParameter>,
+    variants: BTreeMap<VariantId, QueryVariant>,
     filtered: bool,
 }
 
 impl BenchmarkVariants {
     /// The variants to query, clipped to what is left of the line budget. `None`
-    /// leaves the query without a parameter set filter at all.
-    fn parameter_ids(&self, lines_remaining: usize) -> Option<Vec<ParameterId>> {
+    /// leaves the query without a variant filter at all.
+    fn variant_ids(&self, lines_remaining: usize) -> Option<Vec<VariantId>> {
         if !self.filtered && lines_remaining >= self.variants.len() {
             return None;
         }
@@ -255,21 +255,18 @@ fn benchmark_variants(
 ) -> Result<BenchmarkVariants, HttpError> {
     let benchmark = QueryBenchmark::from_uuid(conn, project.id, benchmark_uuid)?;
     let json = benchmark.clone().into_json_for_project(project);
-    let variants = schema::parameter::table
-        .filter(schema::parameter::benchmark_id.eq(benchmark.id))
-        .order(schema::parameter::id)
-        .select(QueryParameter::as_select())
-        .load::<QueryParameter>(conn)
-        .map_err(resource_not_found_err!(
-            Parameter,
-            (project, benchmark_uuid)
-        ))?
+    let variants = schema::variant::table
+        .filter(schema::variant::benchmark_id.eq(benchmark.id))
+        .order(schema::variant::id)
+        .select(QueryVariant::as_select())
+        .load::<QueryVariant>(conn)
+        .map_err(resource_not_found_err!(Variant, (project, benchmark_uuid)))?
         .into_iter()
         .filter(|variant| {
             parameters.is_empty()
                 || parameters
                     .iter()
-                    .any(|filter| filter.is_subset_of(&variant.set))
+                    .any(|filter| filter.is_subset_of(&variant.parameters))
         })
         .map(|variant| (variant.id, variant))
         .collect();
@@ -507,7 +504,7 @@ async fn perf_results(
                         testbed_uuid: *testbed_uuid,
                         spec_id,
                         benchmark_uuid: *benchmark_uuid,
-                        parameter_ids: variants.parameter_ids(lines_remaining),
+                        variant_ids: variants.variant_ids(lines_remaining),
                         measure_uuid: *measure_uuid,
                     };
                     let lines = actor_conn!(context, api_actor, |conn| perf_permutation(
@@ -536,7 +533,7 @@ struct Permutation {
     spec_id: Option<SpecId>,
     benchmark_uuid: BenchmarkUuid,
     /// `None` queries every variant.
-    parameter_ids: Option<Vec<ParameterId>>,
+    variant_ids: Option<Vec<VariantId>>,
     measure_uuid: MeasureUuid,
 }
 
@@ -557,7 +554,7 @@ fn perf_permutation(
         testbed_uuid,
         spec_id,
         benchmark_uuid,
-        parameter_ids,
+        variant_ids,
         measure_uuid,
     } = permutation;
 
@@ -568,7 +565,7 @@ fn perf_permutation(
         testbed_uuid,
         spec_id,
         benchmark_uuid,
-        parameter_ids,
+        variant_ids,
         measure_uuid,
         times,
     )
@@ -622,7 +619,7 @@ fn perf_query(
     testbed_uuid: TestbedUuid,
     spec_id: Option<SpecId>,
     benchmark_uuid: BenchmarkUuid,
-    parameter_ids: Option<Vec<ParameterId>>,
+    variant_ids: Option<Vec<VariantId>>,
     measure_uuid: MeasureUuid,
     times: Times,
 ) -> impl LoadQuery<'static, DbConnection, PerfQuery> {
@@ -687,8 +684,8 @@ fn perf_query(
     }
 
     // Already resolved to row identifiers, so this is an indexed lookup.
-    if let Some(parameter_ids) = parameter_ids {
-        query = query.filter(schema::report_benchmark::parameter_id.eq_any(parameter_ids));
+    if let Some(variant_ids) = variant_ids {
+        query = query.filter(schema::report_benchmark::variant_id.eq_any(variant_ids));
     }
 
     let Times {
@@ -719,7 +716,7 @@ fn perf_query(
         // the temp B-tree.
         .select((
             schema::report_benchmark::id,
-            schema::report_benchmark::parameter_id,
+            schema::report_benchmark::variant_id,
             schema::report::uuid,
             schema::report_benchmark::iteration,
             schema::report::start_time,
@@ -786,7 +783,7 @@ pub(super) type PerfBoundary = (
 
 type PerfQuery = (
     ReportBenchmarkId,
-    ParameterId,
+    VariantId,
     ReportUuid,
     Iteration,
     DateTime,
@@ -805,11 +802,11 @@ fn into_perf_lines(
     variants: &BenchmarkVariants,
     rows: Vec<PerfQuery>,
 ) -> Vec<JsonPerfLine> {
-    let mut lines: BTreeMap<ParameterId, Vec<PendingMetric>> = BTreeMap::new();
+    let mut lines: BTreeMap<VariantId, Vec<PendingMetric>> = BTreeMap::new();
 
     for (
         report_benchmark_id,
-        parameter_id,
+        variant_id,
         report,
         iteration,
         start_time,
@@ -820,7 +817,7 @@ fn into_perf_lines(
         perf_boundary,
     ) in rows
     {
-        let line = lines.entry(parameter_id).or_default();
+        let line = lines.entry(variant_id).or_default();
         if line
             .last()
             .is_none_or(|pending| pending.report_benchmark_id != report_benchmark_id)
@@ -847,8 +844,8 @@ fn into_perf_lines(
     }
 
     let mut results = Vec::with_capacity(lines.len());
-    for (parameter_id, line) in lines {
-        let Some(variant) = variants.variants.get(&parameter_id) else {
+    for (variant_id, line) in lines {
+        let Some(variant) = variants.variants.get(&variant_id) else {
             debug_assert!(false, "the queried variant is one of the matched ones");
             continue;
         };
@@ -860,7 +857,7 @@ fn into_perf_lines(
             branch: dimensions.branch.clone(),
             testbed: dimensions.testbed.clone(),
             benchmark: variants.json.clone(),
-            parameter: variant.clone().into_json_for_benchmark(&variants.benchmark),
+            variant: variant.clone().into_json_for_benchmark(&variants.benchmark),
             measure: dimensions.measure.clone(),
             metrics,
         });

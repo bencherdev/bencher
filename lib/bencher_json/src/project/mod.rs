@@ -28,6 +28,7 @@ pub mod plot;
 pub mod report;
 pub mod testbed;
 pub mod threshold;
+pub mod variant;
 
 crate::typed_uuid::typed_uuid!(ProjectUuid);
 crate::typed_slug::typed_slug!(ProjectSlug, ResourceName);

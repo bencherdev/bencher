@@ -20,7 +20,7 @@
 "SpecUuid" = "Uuid"
 "RunnerUuid" = "Uuid"
 "JobUuid" = "Uuid"
-"ParameterUuid" = "Uuid"
+"VariantUuid" = "Uuid"
 # Typed Slugs
 "Slug" = "string"
 "OrganizationSlug" = "Slug"

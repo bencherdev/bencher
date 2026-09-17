@@ -46,10 +46,10 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
-            "parameter": {
+            "variant": {
                 "uuid": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
                 "benchmark": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
-                "set": {},
+                "parameters": {},
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z",
                 "archived": null
@@ -363,10 +363,10 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
-            "parameter": {
+            "variant": {
                 "uuid": "1a4b0f14-1b0e-4a2e-8a0f-4b1d9c2f0a01",
                 "benchmark": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
-                "set": {
+                "parameters": {
                     "size_mb": 16
                 },
                 "created": "2023-07-02T12:53:33Z",
@@ -682,10 +682,10 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
-            "parameter": {
+            "variant": {
                 "uuid": "1a4b0f14-1b0e-4a2e-8a0f-4b1d9c2f0a02",
                 "benchmark": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
-                "set": {
+                "parameters": {
                     "size_mb": 32
                 },
                 "created": "2023-07-02T12:53:33Z",
@@ -1001,10 +1001,10 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
-            "parameter": {
+            "variant": {
                 "uuid": "0d680df6-432b-4335-bb37-afd2453c0db1",
                 "benchmark": "0d680df6-432b-4335-bb37-afd2453c0db1",
-                "set": {},
+                "parameters": {},
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z",
                 "archived": null

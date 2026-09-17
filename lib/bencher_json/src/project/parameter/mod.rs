@@ -1,56 +1,13 @@
 use std::{cmp::Ordering, collections::BTreeMap, fmt, str::FromStr};
 
-use bencher_valid::{DateTime, ParameterKey as ValidParameterKey, ParameterValue};
+use bencher_valid::{ParameterKey as ValidParameterKey, ParameterValue};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser::SerializeMap as _};
 
-use crate::BenchmarkUuid;
-
 #[cfg(feature = "db")]
 pub mod jsonb;
-
-crate::typed_uuid::typed_uuid!(ParameterUuid);
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNewParameter {
-    /// The parameter set.
-    /// Each key maps to a JSON scalar: a string, a number, or a boolean.
-    pub set: ParameterSet,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonParameters(pub Vec<JsonParameter>);
-
-crate::from_vec!(JsonParameters[JsonParameter]);
-
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonParameter {
-    pub uuid: ParameterUuid,
-    pub benchmark: BenchmarkUuid,
-    pub set: ParameterSet,
-    pub created: DateTime,
-    pub modified: DateTime,
-    pub archived: Option<DateTime>,
-}
-
-impl fmt::Display for JsonParameter {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.set)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonUpdateParameter {
-    /// Set whether the parameter set is archived.
-    pub archived: Option<bool>,
-}
 
 /// The most keys one parameter set may carry, anchored to the number of metrics
 /// one measure may carry.
@@ -65,7 +22,7 @@ pub const MAX_PARAMETER_KEYS: usize = 8;
 /// object keys sorted by UTF-16 code unit, ECMAScript number formatting,
 /// and no insignificant whitespace.
 /// Canonicalization happens here, before the write,
-/// so the database's `UNIQUE(benchmark_id, "set")` constraint
+/// so the database's `UNIQUE(benchmark_id, parameters)` constraint
 /// is the enforcement point for canonical equality.
 ///
 /// [jcs]: https://www.rfc-editor.org/rfc/rfc8785
@@ -119,7 +76,7 @@ impl ParameterSet {
     ///
     /// Byte identical to what `SQLite`'s own `jsonb()` produces over
     /// [`Self::canonical`], which is what lets a set written here collide with a
-    /// set minted in SQL on `UNIQUE(benchmark_id, "set")`.
+    /// set minted in SQL on `UNIQUE(benchmark_id, parameters)`.
     #[cfg(feature = "db")]
     pub fn to_jsonb(&self) -> Result<Vec<u8>, jsonb::JsonbError> {
         let mut object = jsonb::Object::default();
@@ -608,7 +565,7 @@ mod tests {
 
     // The canonical form has to survive a write and a read: a parameter set read
     // back out of the database is parsed, and re-canonicalizing it must land on
-    // the same bytes or `UNIQUE(benchmark_id, "set")` stops holding.
+    // the same bytes or `UNIQUE(benchmark_id, parameters)` stops holding.
     #[test]
     fn canonical_survives_a_round_trip() {
         // Deterministic xorshift64, so the sample never varies between runs.

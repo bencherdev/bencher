@@ -1282,9 +1282,9 @@ mod tests {
                 "modified": date,
                 "archived": null,
             },
-            "parameter": {
+            "variant": {
                 "uuid": "77777777-7777-7777-7777-777777777777",
-                "set": {},
+                "parameters": {},
             },
             "measures": [
                 {

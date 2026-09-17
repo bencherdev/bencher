@@ -5,7 +5,7 @@ use bencher_json::{
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
-use super::{ProjectId, QueryProject, parameter::InsertParameter};
+use super::{ProjectId, QueryProject, variant::InsertVariant};
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
@@ -121,7 +121,7 @@ impl QueryBenchmark {
         let insert_benchmark =
             InsertBenchmark::from_json(auth_conn!(context), project_id, json_benchmark);
 
-        // A benchmark is born with its empty parameter set, in the benchmark's own
+        // A benchmark is born with its empty variant, in the benchmark's own
         // transaction, so no benchmark ever exists without one. `write_transaction!`
         // does not nest, so `create` must never be called from inside another one.
         write_transaction!(context, |conn| {
@@ -130,10 +130,9 @@ impl QueryBenchmark {
                 .execute(conn)?;
             let benchmark_id: BenchmarkId = diesel::select(last_insert_rowid()).get_result(conn)?;
 
-            let insert_parameter =
-                InsertParameter::empty_set(benchmark_id, insert_benchmark.created);
-            diesel::insert_into(schema::parameter::table)
-                .values(&insert_parameter)
+            let insert_variant = InsertVariant::empty(benchmark_id, insert_benchmark.created);
+            diesel::insert_into(schema::variant::table)
+                .values(&insert_variant)
                 .execute(conn)?;
 
             diesel::QueryResult::Ok(benchmark_id)

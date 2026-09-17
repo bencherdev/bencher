@@ -44,13 +44,13 @@ pub mod key;
 pub mod measure;
 pub mod metric;
 pub mod metric_boundary;
-pub mod parameter;
 pub mod plot;
 pub mod project_role;
 pub mod report;
 pub mod series;
 pub mod testbed;
 pub mod threshold;
+pub mod variant;
 
 crate::macros::typed_id::typed_id!(ProjectId);
 

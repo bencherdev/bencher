@@ -810,16 +810,16 @@ impl LineData {
         TABLEAU_10_RGB[index % 10]
     }
 
-    /// The benchmark row carries the variant's canonical parameter set when the
-    /// benchmark plots more than the empty set. The set follows the name on the
-    /// same row, so the key text shrinking drops the set's tail and never the
+    /// The benchmark row carries the variant's canonical parameters when the
+    /// benchmark plots more than the empty variant. The parameters follow the name on
+    /// the same row, so the key text shrinking drops their tail and never the
     /// benchmark name.
     fn dimensions(result: &JsonPerfLine, results: &[&JsonPerfLine]) -> String {
         let benchmark = if Self::spells_parameters(result, results) {
             format!(
                 "{} {}",
                 result.benchmark.name,
-                result.parameter.set.canonical()
+                result.variant.parameters.canonical()
             )
         } else {
             result.benchmark.name.to_string()
@@ -830,15 +830,15 @@ impl LineData {
         )
     }
 
-    /// Whether this line's benchmark names the parameter set each of its lines plots.
+    /// Whether this line's benchmark names the parameters each of its lines plots.
     ///
-    /// A benchmark whose every line in the image plots the empty parameter set keeps
-    /// the bare benchmark name it has always had. One non-empty set is enough to
-    /// name them all, whether it stands alone or beside the empty set, because a set
-    /// is what tells two lines of one benchmark apart.
+    /// A benchmark whose every line in the image plots the empty variant keeps
+    /// the bare benchmark name it has always had. One non-empty variant is enough to
+    /// name them all, whether it stands alone or beside the empty one, because its
+    /// parameters are what tell two lines of one benchmark apart.
     fn spells_parameters(result: &JsonPerfLine, results: &[&JsonPerfLine]) -> bool {
         results.iter().any(|line| {
-            line.benchmark.uuid == result.benchmark.uuid && !line.parameter.set.is_empty()
+            line.benchmark.uuid == result.benchmark.uuid && !line.variant.parameters.is_empty()
         })
     }
 }
@@ -974,7 +974,7 @@ mod tests {
         )
     }
 
-    // A project that only ever reported the empty parameter set draws exactly what it
+    // A project that only ever reported the empty variant draws exactly what it
     // has always drawn: every line is labeled with the bare benchmark name, so the
     // plot is handed the same inputs it was handed before.
     #[test]
@@ -999,9 +999,9 @@ mod tests {
         }
     }
 
-    // Two variants of one benchmark are two lines, so each line names the set it
-    // plots, and the empty set among them reads `{}`. A benchmark with nothing but
-    // its empty set in the same image keeps its bare label.
+    // Two variants of one benchmark are two lines, so each line names the parameters it
+    // plots, and the empty variant among them reads `{}`. A benchmark with nothing but
+    // its empty variant in the same image keeps its bare label.
     #[test]
     fn labels_name_each_variant() {
         assert_eq!(
@@ -1012,22 +1012,22 @@ mod tests {
                 "- master\n- base\n- bencher::mock_0 {\"size_mb\":32}\n- Latency".to_owned(),
                 "- master\n- base\n- bencher::mock_1\n- Latency".to_owned(),
             ],
-            "each variant of a benchmark names the set it plots"
+            "each variant of a benchmark names the parameters it plots"
         );
     }
 
-    // A lone variant that is not the empty set names itself too: the benchmark
+    // A lone variant that is not the empty one names itself too: the benchmark
     // name alone would not say which of its variants the line plots.
     #[test]
     fn labels_name_a_lone_variant() {
         let mut json_perf = JSON_PERF_VARIANTS.clone();
         json_perf
             .results
-            .retain(|result| result.parameter.set.canonical() == r#"{"size_mb":16}"#);
+            .retain(|result| result.variant.parameters.canonical() == r#"{"size_mb":16}"#);
         assert_eq!(
             line_labels(&json_perf),
             vec!["- master\n- base\n- bencher::mock_0 {\"size_mb\":16}\n- Latency".to_owned()],
-            "a lone variant that is not the empty set names itself"
+            "a lone variant that is not the empty one names itself"
         );
     }
 

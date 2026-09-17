@@ -11,8 +11,8 @@ use crate::{
         benchmark::BenchmarkId,
         branch::{BranchId, head::HeadId},
         measure::MeasureId,
-        parameter::ParameterId,
         testbed::TestbedId,
+        variant::VariantId,
     },
 };
 
@@ -61,12 +61,12 @@ impl Detector {
         log: &Logger,
         conn: &mut DbConnection,
         benchmark_id: BenchmarkId,
-        parameter_id: ParameterId,
+        variant_id: VariantId,
         metric_value: f64,
         ignore_benchmark: bool,
     ) -> Result<PreparedDetection, HttpError> {
         // Query the historical population/sample data for the variant
-        let metrics_data = metrics_data(log, conn, self, benchmark_id, parameter_id)?;
+        let metrics_data = metrics_data(log, conn, self, benchmark_id, variant_id)?;
 
         // Check to see if the metric has a boundary check for the given threshold model.
         let boundary = MetricsBoundary::new(

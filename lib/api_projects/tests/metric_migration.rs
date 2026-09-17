@@ -24,8 +24,8 @@ use bencher_api_tests::{
 };
 use bencher_json::{
     AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, HeadUuid, MeasureUuid, MetricName,
-    MetricUuid, ModelUuid, ParameterUuid, ReportBenchmarkUuid, ReportUuid, TestbedUuid,
-    ThresholdUuid, VersionUuid, project::alert::AlertStatus, project::boundary::BoundaryLimit,
+    MetricUuid, ModelUuid, ReportBenchmarkUuid, ReportUuid, TestbedUuid, ThresholdUuid,
+    VariantUuid, VersionUuid, project::alert::AlertStatus, project::boundary::BoundaryLimit,
 };
 use bencher_schema::{MIGRATIONS, context::DbConnection, schema};
 use diesel::{
@@ -754,34 +754,34 @@ fn revert_migration(conn: &mut DbConnection) {
         .expect("Failed to enable foreign keys");
 }
 
-/// Seed a benchmark's empty parameter set at the reverted schema point.
+/// Seed a benchmark's empty variant at the reverted schema point.
 ///
 /// Benchmarks inserted directly into the database bypass `QueryBenchmark::create`,
 /// so they need the birth invariant applied by hand. The migrations are reverted
-/// when this runs, so the column is still spelled `parameters`: the rename to `set`
+/// when this runs, so the table is still spelled `parameter`: the rename to `variant`
 /// is a layer above, and the chain puts it back on the way up. That is why this is
-/// raw SQL rather than `create_empty_parameter`, for the same reason the metric rows
+/// raw SQL rather than `create_empty_variant`, for the same reason the metric rows
 /// below are.
-fn seed_empty_parameter(conn: &mut DbConnection, benchmark_id: i32) -> i32 {
+fn seed_empty_variant(conn: &mut DbConnection, benchmark_id: i32) -> i32 {
     let now = base_timestamp();
 
-    let parameter_uuid = ParameterUuid::new();
+    let variant_uuid = VariantUuid::new();
     diesel::sql_query(
         "INSERT INTO parameter (uuid, benchmark_id, parameters, created, modified)
          VALUES (?, ?, jsonb('{}'), ?, ?)",
     )
-    .bind::<Text, _>(parameter_uuid.to_string())
+    .bind::<Text, _>(variant_uuid.to_string())
     .bind::<Integer, _>(benchmark_id)
     .bind::<BigInt, _>(now)
     .bind::<BigInt, _>(now)
     .execute(&mut *conn)
-    .expect("Failed to seed the empty parameter set");
+    .expect("Failed to seed the empty variant");
 
-    schema::parameter::table
-        .filter(schema::parameter::uuid.eq(&parameter_uuid))
-        .select(schema::parameter::id)
-        .first(&mut *conn)
-        .expect("Failed to get the parameter id")
+    diesel::sql_query("SELECT id FROM parameter WHERE uuid = ?")
+        .bind::<Text, _>(variant_uuid.to_string())
+        .get_result::<SqlId>(&mut *conn)
+        .expect("Failed to get the variant id")
+        .id
 }
 
 /// The `metric_boundary` column list, in the order `view.rs` declares it.
@@ -813,6 +813,12 @@ const VIEW_COLUMNS_SQL: &str = "SELECT name FROM pragma_table_info('metric_bound
 struct SqlName {
     #[diesel(sql_type = Text)]
     name: String,
+}
+
+#[derive(diesel::QueryableByName)]
+struct SqlId {
+    #[diesel(sql_type = Integer)]
+    id: i32,
 }
 
 #[derive(diesel::QueryableByName)]
@@ -978,7 +984,7 @@ async fn seed_legacy_project(server: &TestServer, label: &str) -> Fixture {
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("Failed to get the benchmark id");
-    let parameter_id = seed_empty_parameter(&mut conn, benchmark_id);
+    let variant_id = seed_empty_variant(&mut conn, benchmark_id);
 
     // Two measures, so a pivot that joins on the report benchmark alone pulls a
     // bound across measures and fails.
@@ -1013,16 +1019,18 @@ async fn seed_legacy_project(server: &TestServer, label: &str) -> Fixture {
     let mut grid = Vec::new();
     for iteration in 0..2 {
         let report_benchmark_uuid = ReportBenchmarkUuid::new();
-        diesel::insert_into(schema::report_benchmark::table)
-            .values((
-                schema::report_benchmark::uuid.eq(&report_benchmark_uuid),
-                schema::report_benchmark::report_id.eq(report_id),
-                schema::report_benchmark::iteration.eq(iteration),
-                schema::report_benchmark::benchmark_id.eq(benchmark_id),
-                schema::report_benchmark::parameter_id.eq(parameter_id),
-            ))
-            .execute(&mut conn)
-            .expect("Failed to insert the report benchmark");
+        // Raw SQL: the column is still spelled `parameter_id` at the reverted schema point.
+        diesel::sql_query(
+            "INSERT INTO report_benchmark (uuid, report_id, iteration, benchmark_id, parameter_id)
+             VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind::<Text, _>(report_benchmark_uuid.to_string())
+        .bind::<Integer, _>(report_id)
+        .bind::<Integer, _>(iteration)
+        .bind::<Integer, _>(benchmark_id)
+        .bind::<Integer, _>(variant_id)
+        .execute(&mut conn)
+        .expect("Failed to insert the report benchmark");
         let report_benchmark_id: i32 = schema::report_benchmark::table
             .filter(schema::report_benchmark::uuid.eq(&report_benchmark_uuid))
             .select(schema::report_benchmark::id)

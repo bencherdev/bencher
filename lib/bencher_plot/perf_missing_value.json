@@ -46,10 +46,10 @@
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z"
             },
-            "parameter": {
+            "variant": {
                 "uuid": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
                 "benchmark": "dbb90f5c-e7e2-438c-9533-ce86792174ee",
-                "set": {},
+                "parameters": {},
                 "created": "2023-07-02T12:53:33Z",
                 "modified": "2023-07-02T12:53:33Z",
                 "archived": null

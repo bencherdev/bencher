@@ -3,9 +3,9 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    BenchmarkResourceId, JsonDirection, JsonPagination, JsonParameter, JsonParameters,
-    ParameterUuid, ProjectResourceId,
-    project::parameter::{JsonNewParameter, JsonUpdateParameter},
+    BenchmarkResourceId, JsonDirection, JsonPagination, JsonVariant, JsonVariants,
+    ProjectResourceId, VariantUuid,
+    project::variant::{JsonNewVariant, JsonUpdateVariant},
 };
 use bencher_rbac::project::Permission;
 use bencher_schema::{
@@ -19,7 +19,7 @@ use bencher_schema::{
         project::{
             QueryProject,
             benchmark::QueryBenchmark,
-            parameter::{QueryParameter, UpdateParameter},
+            variant::{QueryVariant, UpdateVariant},
         },
         user::{
             actor::{ApiActor, PubProjectBearerToken},
@@ -34,63 +34,63 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 #[derive(Deserialize, JsonSchema)]
-pub struct ProjParametersParams {
+pub struct ProjVariantsParams {
     /// The slug or UUID for a project.
     pub project: ProjectResourceId,
     /// The slug or UUID for a benchmark.
     pub benchmark: BenchmarkResourceId,
 }
 
-pub type ProjParametersPagination = JsonPagination<ProjParametersSort>;
+pub type ProjVariantsPagination = JsonPagination<ProjVariantsSort>;
 
 #[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum ProjParametersSort {
-    /// Sort by parameter set creation date time.
+pub enum ProjVariantsSort {
+    /// Sort by variant creation date time.
     #[default]
     Created,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
-pub struct ProjParametersQuery {
-    /// If set to `true`, only returns archived parameter sets.
-    /// If not set or set to `false`, only returns non-archived parameter sets.
+pub struct ProjVariantsQuery {
+    /// If set to `true`, only returns archived variants.
+    /// If not set or set to `false`, only returns non-archived variants.
     pub archived: Option<bool>,
 }
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/benchmarks/{benchmark}/parameters",
-    tags = ["projects", "parameters"]
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}/variants",
+    tags = ["projects", "variants"]
 }]
-pub async fn proj_parameters_options(
+pub async fn proj_variants_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<ProjParametersParams>,
-    _pagination_params: Query<ProjParametersPagination>,
-    _query_params: Query<ProjParametersQuery>,
+    _path_params: Path<ProjVariantsParams>,
+    _pagination_params: Query<ProjVariantsPagination>,
+    _query_params: Query<ProjVariantsQuery>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Get.into(), Post.into()]))
 }
 
-/// List parameter sets for a benchmark
+/// List variants for a benchmark
 ///
-/// List all parameter sets for a benchmark.
+/// List all variants for a benchmark.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project,
 /// or provide a valid project key for the project.
-/// By default, the parameter sets are sorted by creation date time.
-/// The HTTP response header `X-Total-Count` contains the total number of parameter sets.
+/// By default, the variants are sorted by creation date time.
+/// The HTTP response header `X-Total-Count` contains the total number of variants.
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/benchmarks/{benchmark}/parameters",
-    tags = ["projects", "parameters"]
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}/variants",
+    tags = ["projects", "variants"]
 }]
-pub async fn proj_parameters_get(
+pub async fn proj_variants_get(
     rqctx: RequestContext<ApiContext>,
-    path_params: Path<ProjParametersParams>,
-    pagination_params: Query<ProjParametersPagination>,
-    query_params: Query<ProjParametersQuery>,
-) -> Result<ResponseOk<JsonParameters>, HttpError> {
+    path_params: Path<ProjVariantsParams>,
+    pagination_params: Query<ProjVariantsPagination>,
+    query_params: Query<ProjVariantsQuery>,
+) -> Result<ResponseOk<JsonVariants>, HttpError> {
     let api_actor = ApiActor::new(&rqctx).await?;
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
@@ -111,10 +111,10 @@ pub async fn proj_parameters_get(
 pub async fn get_ls_inner(
     context: &ApiContext,
     api_actor: &ApiActor,
-    path_params: ProjParametersParams,
-    pagination_params: ProjParametersPagination,
-    query_params: ProjParametersQuery,
-) -> Result<(JsonParameters, TotalCount), HttpError> {
+    path_params: ProjVariantsParams,
+    pagination_params: ProjVariantsPagination,
+    query_params: ProjVariantsQuery,
+) -> Result<(JsonVariants, TotalCount), HttpError> {
     let query_project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
@@ -132,78 +132,76 @@ pub async fn get_ls_inner(
     let parameters = get_ls_query(&query_benchmark, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryParameter>(actor_conn!(context, api_actor))
+        .load::<QueryVariant>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
-            Parameter,
+            Variant,
             (&query_benchmark, &pagination_params, &query_params)
         ))?;
 
     // Drop connection lock before iterating
-    let json_parameters = parameters
+    let json_variants = parameters
         .into_iter()
-        .map(|parameter| parameter.into_json_for_benchmark(&query_benchmark))
+        .map(|variant| variant.into_json_for_benchmark(&query_benchmark))
         .collect();
 
     let total_count = get_ls_query(&query_benchmark, &pagination_params, &query_params)
         .count()
         .get_result::<i64>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
-            Parameter,
+            Variant,
             (&query_benchmark, &pagination_params, &query_params)
         ))?
         .try_into()?;
 
-    Ok((json_parameters, total_count))
+    Ok((json_variants, total_count))
 }
 
 fn get_ls_query<'q>(
     query_benchmark: &'q QueryBenchmark,
-    pagination_params: &ProjParametersPagination,
-    query_params: &'q ProjParametersQuery,
-) -> schema::parameter::BoxedQuery<'q, diesel::sqlite::Sqlite> {
-    let mut query = QueryParameter::belonging_to(query_benchmark).into_boxed();
+    pagination_params: &ProjVariantsPagination,
+    query_params: &'q ProjVariantsQuery,
+) -> schema::variant::BoxedQuery<'q, diesel::sqlite::Sqlite> {
+    let mut query = QueryVariant::belonging_to(query_benchmark).into_boxed();
 
     if let Some(true) = query_params.archived {
-        query = query.filter(schema::parameter::archived.is_not_null());
+        query = query.filter(schema::variant::archived.is_not_null());
     } else {
-        query = query.filter(schema::parameter::archived.is_null());
+        query = query.filter(schema::variant::archived.is_null());
     }
 
-    // A parameter set has no name to break ties with, and `created` is only second
-    // granular, so the row `id` orders sets minted within the same second. Without
-    // it a page boundary could repeat or skip a set.
+    // A variant has no name to break ties with, and `created` is only second
+    // granular, so the row `id` orders variants minted within the same second. Without
+    // it a page boundary could repeat or skip a variant.
     match pagination_params.order() {
-        ProjParametersSort::Created => match pagination_params.direction {
-            Some(JsonDirection::Asc) | None => query.order((
-                schema::parameter::created.asc(),
-                schema::parameter::id.asc(),
-            )),
-            Some(JsonDirection::Desc) => query.order((
-                schema::parameter::created.desc(),
-                schema::parameter::id.desc(),
-            )),
+        ProjVariantsSort::Created => match pagination_params.direction {
+            Some(JsonDirection::Asc) | None => {
+                query.order((schema::variant::created.asc(), schema::variant::id.asc()))
+            },
+            Some(JsonDirection::Desc) => {
+                query.order((schema::variant::created.desc(), schema::variant::id.desc()))
+            },
         },
     }
 }
 
-/// Create a parameter set
+/// Create a variant
 ///
-/// Create a parameter set for a benchmark.
+/// Create a variant for a benchmark.
 /// The user must have `create` permissions for the project,
 /// or provide a valid project key for the project.
-/// A parameter set that already exists for the benchmark is a conflict,
-/// so this endpoint never returns an existing parameter set.
+/// A variant that already exists for the benchmark is a conflict,
+/// so this endpoint never returns an existing variant.
 #[endpoint {
     method = POST,
-    path =  "/v0/projects/{project}/benchmarks/{benchmark}/parameters",
-    tags = ["projects", "parameters"]
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}/variants",
+    tags = ["projects", "variants"]
 }]
-pub async fn proj_parameter_post(
+pub async fn proj_variant_post(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubProjectBearerToken,
-    path_params: Path<ProjParametersParams>,
-    body: TypedBody<JsonNewParameter>,
-) -> Result<ResponseCreated<JsonParameter>, HttpError> {
+    path_params: Path<ProjVariantsParams>,
+    body: TypedBody<JsonNewVariant>,
+) -> Result<ResponseCreated<JsonVariant>, HttpError> {
     let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
@@ -225,10 +223,10 @@ pub async fn proj_parameter_post(
 
 pub async fn post_inner(
     context: &ApiContext,
-    path_params: ProjParametersParams,
-    json_parameter: JsonNewParameter,
+    path_params: ProjVariantsParams,
+    json_variant: JsonNewVariant,
     api_actor: &ApiActor,
-) -> Result<JsonParameter, HttpError> {
+) -> Result<JsonVariant, HttpError> {
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
@@ -245,50 +243,50 @@ pub async fn post_inner(
         &path_params.benchmark,
     )?;
 
-    let JsonNewParameter { set } = json_parameter;
-    QueryParameter::create(context, query_project.id, query_benchmark.id, &set)
+    let JsonNewVariant { parameters } = json_variant;
+    QueryVariant::create(context, query_project.id, query_benchmark.id, &parameters)
         .await
-        .map(|parameter| parameter.into_json_for_benchmark(&query_benchmark))
+        .map(|variant| variant.into_json_for_benchmark(&query_benchmark))
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct ProjParameterParams {
+pub struct ProjVariantParams {
     /// The slug or UUID for a project.
     pub project: ProjectResourceId,
     /// The slug or UUID for a benchmark.
     pub benchmark: BenchmarkResourceId,
-    /// The UUID for a parameter set.
-    pub parameter: ParameterUuid,
+    /// The UUID for a variant.
+    pub variant: VariantUuid,
 }
 
 #[endpoint {
     method = OPTIONS,
-    path =  "/v0/projects/{project}/benchmarks/{benchmark}/parameters/{parameter}",
-    tags = ["projects", "parameters"]
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}/variants/{variant}",
+    tags = ["projects", "variants"]
 }]
-pub async fn proj_parameter_options(
+pub async fn proj_variant_options(
     _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<ProjParameterParams>,
+    _path_params: Path<ProjVariantParams>,
 ) -> Result<CorsResponse, HttpError> {
     Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
 }
 
-/// View a parameter set
+/// View a variant
 ///
-/// View a parameter set for a benchmark.
+/// View a variant for a benchmark.
 /// If the project is public, then the user does not need to be authenticated.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project,
 /// or provide a valid project key for the project.
 #[endpoint {
     method = GET,
-    path =  "/v0/projects/{project}/benchmarks/{benchmark}/parameters/{parameter}",
-    tags = ["projects", "parameters"]
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}/variants/{variant}",
+    tags = ["projects", "variants"]
 }]
-pub async fn proj_parameter_get(
+pub async fn proj_variant_get(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubProjectBearerToken,
-    path_params: Path<ProjParameterParams>,
-) -> Result<ResponseOk<JsonParameter>, HttpError> {
+    path_params: Path<ProjVariantParams>,
+) -> Result<ResponseOk<JsonVariant>, HttpError> {
     let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
@@ -305,9 +303,9 @@ pub async fn proj_parameter_get(
 
 pub async fn get_one_inner(
     context: &ApiContext,
-    path_params: ProjParameterParams,
+    path_params: ProjVariantParams,
     api_actor: &ApiActor,
-) -> Result<JsonParameter, HttpError> {
+) -> Result<JsonVariant, HttpError> {
     actor_conn!(context, api_actor, |conn| {
         let query_project = QueryProject::is_allowed_actor_pub(
             conn,
@@ -320,29 +318,29 @@ pub async fn get_one_inner(
         let query_benchmark =
             QueryBenchmark::from_resource_id(conn, query_project.id, &path_params.benchmark)?;
 
-        QueryParameter::from_uuid(conn, query_benchmark.id, path_params.parameter)
-            .map(|parameter| parameter.into_json_for_benchmark(&query_benchmark))
+        QueryVariant::from_uuid(conn, query_benchmark.id, path_params.variant)
+            .map(|variant| variant.into_json_for_benchmark(&query_benchmark))
     })
 }
 
-/// Update a parameter set
+/// Update a variant
 ///
-/// Update a parameter set for a benchmark.
+/// Update a variant for a benchmark.
 /// The user must have `edit` permissions for the project,
 /// or provide a valid project key for the project.
-/// Archiving a parameter set hides it without losing its history,
-/// and a report that names the set again unarchives it.
+/// Archiving a variant hides it without losing its history,
+/// and a report that names the variant again unarchives it.
 #[endpoint {
     method = PATCH,
-    path =  "/v0/projects/{project}/benchmarks/{benchmark}/parameters/{parameter}",
-    tags = ["projects", "parameters"]
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}/variants/{variant}",
+    tags = ["projects", "variants"]
 }]
-pub async fn proj_parameter_patch(
+pub async fn proj_variant_patch(
     rqctx: RequestContext<ApiContext>,
     bearer_token: PubProjectBearerToken,
-    path_params: Path<ProjParameterParams>,
-    body: TypedBody<JsonUpdateParameter>,
-) -> Result<ResponseOk<JsonParameter>, HttpError> {
+    path_params: Path<ProjVariantParams>,
+    body: TypedBody<JsonUpdateVariant>,
+) -> Result<ResponseOk<JsonVariant>, HttpError> {
     let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
@@ -365,9 +363,9 @@ pub async fn proj_parameter_patch(
 pub async fn patch_inner(
     context: &ApiContext,
     api_actor: &ApiActor,
-    path_params: ProjParameterParams,
-    json_parameter: JsonUpdateParameter,
-) -> Result<JsonParameter, HttpError> {
+    path_params: ProjVariantParams,
+    json_variant: JsonUpdateVariant,
+) -> Result<JsonVariant, HttpError> {
     let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
@@ -382,47 +380,44 @@ pub async fn patch_inner(
         query_project.id,
         &path_params.benchmark,
     )?;
-    let query_parameter = QueryParameter::from_uuid(
-        auth_conn!(context),
-        query_benchmark.id,
-        path_params.parameter,
-    )?;
+    let query_variant =
+        QueryVariant::from_uuid(auth_conn!(context), query_benchmark.id, path_params.variant)?;
 
-    let update_parameter = UpdateParameter::from(json_parameter.clone());
-    diesel::update(schema::parameter::table.filter(schema::parameter::id.eq(query_parameter.id)))
-        .set(&update_parameter)
+    let update_variant = UpdateVariant::from(json_variant.clone());
+    diesel::update(schema::variant::table.filter(schema::variant::id.eq(query_variant.id)))
+        .set(&update_variant)
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(
-            Parameter,
-            (&query_parameter, &json_parameter)
+            Variant,
+            (&query_variant, &json_variant)
         ))?;
 
-    QueryParameter::get(auth_conn!(context), query_parameter.id)
-        .map(|parameter| parameter.into_json_for_benchmark(&query_benchmark))
-        .map_err(resource_not_found_err!(Parameter, query_parameter))
+    QueryVariant::get(auth_conn!(context), query_variant.id)
+        .map(|variant| variant.into_json_for_benchmark(&query_benchmark))
+        .map_err(resource_not_found_err!(Variant, query_variant))
 }
 
-/// Delete a parameter set
+/// Delete a variant
 ///
-/// Delete a parameter set for a benchmark.
+/// Delete a variant for a benchmark.
 /// The user must have `delete` permissions for the project.
-/// All reports that use this parameter must be deleted first!
+/// All reports that use this variant must be deleted first!
 ///
-/// A benchmark's empty parameter set cannot be deleted.
-/// The empty set is structural: every benchmark is born with exactly one, and
-/// report ingest treats a missing empty set as data corruption rather than a set
+/// A benchmark's empty variant cannot be deleted.
+/// The empty variant is structural: every benchmark is born with exactly one, and
+/// report ingest treats a missing empty variant as data corruption rather than a variant
 /// to mint. Deleting it would manufacture exactly that corruption, so the request
-/// is refused. Archiving the empty set stays allowed, because a later report
-/// revives it the same way it revives any other archived set.
+/// is refused. Archiving the empty variant stays allowed, because a later report
+/// revives it the same way it revives any other archived variant.
 #[endpoint {
     method = DELETE,
-    path =  "/v0/projects/{project}/benchmarks/{benchmark}/parameters/{parameter}",
-    tags = ["projects", "parameters"]
+    path =  "/v0/projects/{project}/benchmarks/{benchmark}/variants/{variant}",
+    tags = ["projects", "variants"]
 }]
-pub async fn proj_parameter_delete(
+pub async fn proj_variant_delete(
     rqctx: RequestContext<ApiContext>,
     bearer_token: BearerToken,
-    path_params: Path<ProjParameterParams>,
+    path_params: Path<ProjVariantParams>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
@@ -433,7 +428,7 @@ pub async fn proj_parameter_delete(
 
 async fn delete_inner(
     context: &ApiContext,
-    path_params: ProjParameterParams,
+    path_params: ProjVariantParams,
     auth_user: &AuthUser,
 ) -> Result<(), HttpError> {
     // Verify that the user is allowed
@@ -451,23 +446,20 @@ async fn delete_inner(
         query_project.id,
         &path_params.benchmark,
     )?;
-    let query_parameter = QueryParameter::from_uuid(
-        auth_conn!(context),
-        query_benchmark.id,
-        path_params.parameter,
-    )?;
+    let query_variant =
+        QueryVariant::from_uuid(auth_conn!(context), query_benchmark.id, path_params.variant)?;
 
-    if query_parameter.set.is_empty() {
+    if query_variant.parameters.is_empty() {
         return Err(conflict_error(format!(
-            "The empty parameter set ({parameter}) for benchmark ({benchmark}) cannot be deleted. Every benchmark must have exactly one empty parameter set. Archive it or delete the benchmark instead.",
-            parameter = query_parameter.uuid,
+            "The empty variant ({variant}) for benchmark ({benchmark}) cannot be deleted. Every benchmark must have exactly one empty variant. Archive it or delete the benchmark instead.",
+            variant = query_variant.uuid,
             benchmark = query_benchmark.uuid,
         )));
     }
 
-    diesel::delete(schema::parameter::table.filter(schema::parameter::id.eq(query_parameter.id)))
+    diesel::delete(schema::variant::table.filter(schema::variant::id.eq(query_variant.id)))
         .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Parameter, &query_parameter))?;
+        .map_err(resource_conflict_err!(Variant, &query_variant))?;
 
     Ok(())
 }
