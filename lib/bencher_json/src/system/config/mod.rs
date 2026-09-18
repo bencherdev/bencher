@@ -31,7 +31,7 @@ pub use plus::{
     },
     registry::{
         DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, MAX_CHUNK_SIZE,
-        RegistryDataStore,
+        RegistryStorage,
     },
     runners::{DEFAULT_HEARTBEAT_TIMEOUT_SECS, DEFAULT_JOB_TIMEOUT_GRACE_PERIOD_SECS},
     stats::JsonStats,

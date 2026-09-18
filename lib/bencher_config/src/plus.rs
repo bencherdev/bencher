@@ -7,9 +7,7 @@ use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
 use bencher_json::{
     is_bencher_cloud,
-    system::config::{
-        JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha, RegistryDataStore,
-    },
+    system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha, RegistryStorage},
 };
 use bencher_license::Licensor;
 use bencher_oci_storage::OciStorage;
@@ -87,11 +85,11 @@ impl Plus {
         };
 
         // Initialize registry storage - uses S3 if configured, otherwise local filesystem
-        let (registry_url, registry_data_store, upload_timeout, max_body_size) =
+        let (registry_url, registry_storage, upload_timeout, max_body_size) =
             plus.registry.map_or((None, None, None, None), |registry| {
                 (
                     registry.url,
-                    registry.data_store,
+                    registry.storage,
                     Some(registry.upload_timeout),
                     Some(registry.max_body_size),
                 )
@@ -100,15 +98,15 @@ impl Plus {
             .map(|url| url.try_into().map_err(PlusError::RegistryUrl))
             .transpose()?
             .unwrap_or_else(|| default_registry_url(console_url));
-        match &registry_data_store {
-            Some(RegistryDataStore::Local) | None => {
+        match &registry_storage {
+            Some(RegistryStorage::File { .. }) | None => {
                 info!(log, "Using local filesystem registry storage");
             },
-            Some(RegistryDataStore::AwsS3 { .. }) => info!(log, "Using S3 registry storage"),
+            Some(RegistryStorage::S3 { .. }) => info!(log, "Using S3 registry storage"),
         }
         let oci_storage = OciStorage::try_from_config(
             log.clone(),
-            registry_data_store,
+            registry_storage,
             database_path,
             upload_timeout,
             max_body_size,

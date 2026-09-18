@@ -3,6 +3,7 @@
 - **BREAKING CHANGE** The `plus.litestream` server config key is removed; use `plus.disaster_recovery`. A config that still uses `plus.litestream` is ignored and continuous replication does not start
 - **BREAKING CHANGE** The `sftp` disaster recovery replica scheme is removed; `file` and `s3` remain
 - **BREAKING CHANGE** The on demand database backup is removed: `POST /v0/server/backup`, `bencher server backup`, and the `database.data_store` server config section. Use `plus.disaster_recovery` for continuous replication. A config that still carries `database.data_store` is ignored
+- **BREAKING CHANGE** The container registry storage config moves from `plus.registry.data_store` (`service: aws_s3`, an S3 access point ARN) to `plus.registry.storage` (`scheme: file | s3`, a bucket plus optional `endpoint`, `region`, and `path`), and any S3-compatible object store now works. Stored keys and the local directory layout are unchanged for a plain prefix, so existing data is picked up as is; a `path` that began or ended with a slash is now normalized, so see the config reference before upgrading. A config that still carries `data_store` is ignored and the registry falls back to local files
 
 ## `0.6.12`
 - Support Gungraun JSON format (Thank you [gamma0987](https://github.com/gamma0987))

@@ -16397,21 +16397,21 @@
         "description": "Container registry configuration",
         "type": "object",
         "properties": {
-          "data_store": {
-            "nullable": true,
-            "description": "Storage configuration for the container registry. Defaults to local filesystem storage if not provided.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/RegistryDataStore"
-              }
-            ]
-          },
           "max_body_size": {
             "description": "Maximum body size in bytes for blob and manifest uploads. Requests exceeding this limit are rejected with 413 Payload Too Large. Defaults to 1 GiB (1,073,741,824 bytes).",
             "default": 1073741824,
             "type": "integer",
             "format": "uint64",
             "minimum": 0
+          },
+          "storage": {
+            "nullable": true,
+            "description": "Storage configuration for the container registry. Defaults to local filesystem storage if not provided.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RegistryStorage"
+              }
+            ]
           },
           "upload_timeout": {
             "description": "Upload session timeout in seconds. Uploads older than this are cleaned up when new uploads start. Defaults to 3600 (1 hour).",
@@ -19183,61 +19183,81 @@
         "type": "number",
         "format": "float"
       },
-      "RegistryDataStore": {
+      "RegistryStorage": {
         "description": "Container registry storage backend",
         "oneOf": [
           {
             "type": "object",
             "properties": {
-              "service": {
+              "path": {
+                "nullable": true,
+                "description": "Directory for registry data. Defaults to a `registry` directory beside the database file.",
+                "type": "string"
+              },
+              "scheme": {
                 "type": "string",
                 "enum": [
-                  "local"
+                  "file"
                 ]
               }
             },
             "required": [
-              "service"
+              "scheme"
             ]
           },
           {
             "type": "object",
             "properties": {
               "access_key_id": {
-                "description": "AWS Access Key ID with permissions to read/write the specified S3 bucket",
+                "description": "Access Key ID with permissions to read/write the specified bucket",
                 "type": "string"
               },
-              "access_point": {
-                "description": "S3 Access Point ARN with optional path prefix Format: arn:aws:s3:<region>:<account-id>:accesspoint/<bucket>[/path]",
+              "bucket": {
+                "description": "Bucket that holds the registry data",
                 "type": "string"
               },
               "chunk_size": {
                 "nullable": true,
-                "description": "Minimum chunk size in bytes for buffering upload data before storing to S3. Valid range: 5 MB–5 GB. Defaults to 5 MB (5,242,880 bytes). See [`DEFAULT_CHUNK_SIZE`] and [`MAX_CHUNK_SIZE`].",
+                "description": "Minimum chunk size in bytes for buffering upload data before storing. Valid range: 5 MB to 5 GB. Defaults to 5 MB (5,242,880 bytes). See [`DEFAULT_CHUNK_SIZE`] and [`MAX_CHUNK_SIZE`].",
                 "type": "integer",
                 "format": "uint64",
                 "minimum": 0
               },
+              "endpoint": {
+                "nullable": true,
+                "description": "Endpoint URL, required for any store other than AWS",
+                "type": "string"
+              },
+              "path": {
+                "nullable": true,
+                "description": "Key prefix inside the bucket",
+                "type": "string"
+              },
+              "region": {
+                "nullable": true,
+                "description": "Region, required for AWS. Defaults to `auto`, which S3-compatible stores expect.",
+                "type": "string"
+              },
+              "scheme": {
+                "type": "string",
+                "enum": [
+                  "s3"
+                ]
+              },
               "secret_access_key": {
-                "description": "AWS Secret Access Key with permissions to read/write the specified S3 bucket",
+                "description": "Secret Access Key with permissions to read/write the specified bucket",
                 "allOf": [
                   {
                     "$ref": "#/components/schemas/Secret"
                   }
                 ]
-              },
-              "service": {
-                "type": "string",
-                "enum": [
-                  "aws_s3"
-                ]
               }
             },
             "required": [
               "access_key_id",
-              "access_point",
-              "secret_access_key",
-              "service"
+              "bucket",
+              "scheme",
+              "secret_access_key"
             ]
           }
         ]
