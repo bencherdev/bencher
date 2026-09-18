@@ -177,6 +177,7 @@ For on-prem deployments, check out the [Bencher Self-Hosted Quickstart](https://
 - 🕸 JavaScript
   - [Benchmark.js](https://bencher.dev/docs/explanation/adapters/#-javascript-benchmark)
   - [console.time/console.timeEnd](https://bencher.dev/docs/explanation/adapters/#-javascript-time)
+  - [Vitest](https://bencher.dev/docs/explanation/adapters/#-javascript-vitest)
 - 🐍 Python
   - [airspeed velocity](https://bencher.dev/docs/explanation/adapters/#-python-asv)
   - [pytest-benchmark](https://bencher.dev/docs/explanation/adapters/#-python-pytest)
