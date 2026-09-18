@@ -23,10 +23,7 @@ impl<'a> JobOutput<'a> {
         job: JobUuid,
         output: &JsonJobOutput,
     ) -> Result<(), OciStorageError> {
-        match self.0 {
-            OciStorage::S3(s3) => s3.put_job_output(project, job, output).await,
-            OciStorage::Local(local) => local.put_job_output(project, job, output).await,
-        }
+        self.0.put_job_output(project, job, output).await
     }
 
     /// Retrieve job output for a job, or `None` if not stored.
@@ -35,9 +32,6 @@ impl<'a> JobOutput<'a> {
         project: ProjectUuid,
         job: JobUuid,
     ) -> Result<Option<JsonJobOutput>, OciStorageError> {
-        match self.0 {
-            OciStorage::S3(s3) => s3.get_job_output(project, job).await,
-            OciStorage::Local(local) => local.get_job_output(project, job).await,
-        }
+        self.0.get_job_output(project, job).await
     }
 }
