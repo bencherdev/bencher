@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 
 use crate::parser::CliBackend;
 
@@ -11,8 +11,6 @@ pub enum CliServer {
     /// Manager server config
     #[clap(subcommand)]
     Config(CliConfig),
-    /// Backup database
-    Backup(CliBackup),
     #[cfg(feature = "plus")]
     /// Server usage statistics
     Stats(CliServerStats),
@@ -48,32 +46,6 @@ pub struct CliConfigView {
 pub struct CliConfigConsole {
     #[clap(flatten)]
     pub backend: CliBackend,
-}
-
-#[derive(Parser, Debug)]
-pub struct CliBackup {
-    /// Compress database backup with gzip
-    #[clap(long)]
-    pub compress: bool,
-
-    /// Save database backup to data store
-    #[clap(long)]
-    pub data_store: Option<CliBackupDataStore>,
-
-    /// Remove local copy of database backup
-    #[clap(long, alias = "rm")]
-    pub remove: bool,
-
-    #[clap(flatten)]
-    pub backend: CliBackend,
-}
-
-/// Supported Fold Operations
-#[derive(ValueEnum, Debug, Clone)]
-#[clap(rename_all = "snake_case")]
-pub enum CliBackupDataStore {
-    /// AWS S3
-    AwsS3,
 }
 
 #[cfg(feature = "plus")]
