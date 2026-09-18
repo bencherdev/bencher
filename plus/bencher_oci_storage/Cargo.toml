@@ -12,23 +12,21 @@ test-clock = ["bencher_json?/test-clock"]
 # Required due to feature unification
 # https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
 plus = [
-    "dep:aws-credential-types",
-    "dep:aws-sdk-s3",
     "dep:bencher_json",
     "dep:bytes",
     "dep:chrono",
     "dep:futures",
     "dep:hex",
     "dep:http",
-    "dep:http-body-util",
     "dep:hyper",
+    "dep:object_store",
     "dep:serde",
     "dep:serde_json",
     "dep:sha2",
     "dep:slog",
+    "dep:sync_wrapper",
     "dep:thiserror",
     "dep:tokio",
-    "dep:tokio-util",
     "dep:uuid",
 ]
 sentry = ["dep:sentry"]
@@ -38,9 +36,6 @@ otel = []
 # Bencher internal crates
 bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
 
-aws-credential-types = { workspace = true, optional = true }
-aws-sdk-s3 = { workspace = true, optional = true }
-
 sentry = { workspace = true, optional = true }
 
 # External dependencies
@@ -49,21 +44,23 @@ chrono = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
-http-body-util = { workspace = true, optional = true }
 hyper = { workspace = true, optional = true }
+object_store = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 slog = { workspace = true, optional = true }
+sync_wrapper = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true, features = ["fs", "io-util"] }
-tokio-util = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["rt"] }
 uuid = { workspace = true, optional = true, features = ["v4"] }
 
 [dev-dependencies]
+bencher_json = { workspace = true, features = ["server", "plus", "test-clock"] }
+http-body-util.workspace = true
 reqwest = { workspace = true, features = ["blocking"] }
 tempfile.workspace = true
-tokio = { workspace = true, features = ["macros", "rt"] }
+tokio = { workspace = true, features = ["macros", "rt", "rt-multi-thread", "time"] }
 
 [lints]
 workspace = true

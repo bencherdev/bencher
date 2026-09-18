@@ -5,11 +5,8 @@
 //! This module provides the OCI Distribution Spec compliant container registry
 //! storage implementation and types.
 //!
-//! ## Storage Backends
-//!
-//! Two storage backends are supported:
-//! - **S3**: For production deployments with scalability and cross-instance consistency
-//! - **Local**: For development and single-instance deployments (stores files next to database)
+//! Storage is backed by a single [`object_store::ObjectStore`], configured as
+//! either a local filesystem directory or any S3-compatible bucket.
 
 // Reference dev-dependency used only in integration tests to silence unused_crate_dependencies warning
 #[cfg(test)]
@@ -17,7 +14,6 @@ use reqwest as _;
 
 mod error;
 mod job_output;
-mod local;
 mod storage;
 mod types;
 
@@ -26,8 +22,5 @@ pub use bencher_json::ProjectUuid;
 pub use bencher_json::system::config::DEFAULT_MAX_BODY_SIZE;
 pub use error::OciError;
 pub use job_output::JobOutput;
-pub use local::OciLocalStorage;
-pub use storage::{
-    BlobBody, ListTagsResult, MAX_CONCURRENCY, OciS3Storage, OciStorage, OciStorageError,
-};
+pub use storage::{BlobBody, ListTagsResult, MAX_CONCURRENCY, OciStorage, OciStorageError};
 pub use types::{Digest, DigestError, Reference, Tag, UploadId};

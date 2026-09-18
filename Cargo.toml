@@ -86,8 +86,6 @@ async-stripe-product = "1.0.0-rc.6"
 async-stripe-shared = "1.0.0-rc.6"
 async-stripe-types = "1.0.0-rc.6"
 async-trait = "0.1"
-aws-credential-types = "1.2"
-aws-sdk-s3 = { version = "1.126", default-features = false, features = ["behavior-version-latest", "sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 base64 = "0.22"
 bollard = "0.21"
 bytes = "1.11"
@@ -133,6 +131,7 @@ nom = "8.0"
 notify-rust = "4.12"
 oauth2 = { version = "5.0", default-features = false }
 oauth2-reqwest = "0.1.0-alpha.3"
+object_store = { version = "0.14", default-features = false, features = ["aws", "fs"] }
 oci-spec = "0.9"
 octocrab = { version = "0.53", default-features = false, features = ["follow-redirect", "retry", "rustls", "timeout", "tracing", "default-client", "rustls-aws-lc-rs", "jwt-rust-crypto", "rustls-webpki-tokio"] }
 opentelemetry = "0.32"
@@ -175,6 +174,7 @@ statrs = "0.18"
 strip-ansi-escapes = "0.2"
 strum = { version = "0.27", features = ["derive"] }
 syn = "2.0"
+sync_wrapper = "1.0"
 tabled = "0.20"
 tar = "0.4"
 tempfile = "3"

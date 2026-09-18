@@ -4,30 +4,33 @@
 Bencher 可以作为符合 OCI 标准的容器/工件注册表运行。
 
 如果未配置此部分，Bencher 将使用本地文件系统存储，
-存储在数据库文件旁边的 `oci` 目录中。
+存储在数据库文件旁边的 `registry` 目录中。
 这适用于开发和单实例部署。
 
 对于多实例的生产部署或需要持久性时，
-请配置基于 S3 的存储。
+请配置 S3 兼容的存储。
 
-有两种存储 `service` 选项：
-- `local`：将 OCI 工件存储在本地文件系统中（默认）
-- `aws_s3`：将 OCI 工件存储在 AWS S3 中
-    - `access_key_id`：AWS 访问密钥 ID
-    - `secret_access_key`：AWS 秘密访问密钥
-    - `access_point`：带有可选路径前缀的 S3 访问点 ARN。
-      格式：`arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
-    - `chunk_size`：上传数据存储到 S3 之前缓冲的最小块大小（字节）（默认：5 MB）。
-      HTTP 请求正文以小型网络帧的形式到达（通常为 8–64 KB）。如果不进行缓冲，每个帧都会成为一个单独的 S3 对象，每层会创建数千个对象。此值也与 S3 分段上传的最小分段大小一致。
+有两种存储 `scheme`：
+- `file`：将 OCI 工件存储在本地文件系统中（默认）
+    - `path`：（可选）注册表数据的目录。默认为数据库文件旁边的 `registry` 目录。
+- `s3`：将 OCI 工件存储在任何 S3 兼容的 Blob 存储中
+    - `bucket`：存储桶名称
+    - `path`：（可选）存储桶中的键前缀。开头、结尾和重复的斜杠会被移除，因此 `registry`、`registry/` 和 `/registry` 都存储在 `registry` 下。
+    - `endpoint`：（AWS：可选 | 非AWS：必需）存储端点
+    - `region`：（可选）存储桶区域。AWS 必需。默认为 `auto`，这是 S3 兼容存储所期望的值。
+    - `access_key_id`：S3 访问密钥
+    - `secret_access_key`：S3 密钥
+    - `chunk_size`：（可选）上传数据存储之前缓冲的最小块大小（字节）。默认值：5 MB。
+      HTTP 请求正文以小型网络帧的形式到达（通常为 8 到 64 KB）。如果不进行缓冲，每个帧都会成为一个单独的对象，每层会创建数千个对象。此值也与 S3 分段上传的最小分段大小一致。
 
-|             名称             |                                示例                                 | 默认值 | 必需  |                             描述                              |
-| :--------------------------: | :-----------------------------------------------------------------: | :----: | :---: | :-----------------------------------------------------------: |
-|             url              |              "https://registry.bencher.example.com"                 | "http://localhost:6610" |  否   | API 服务器的外部可达 URL，用于 OCI 注册表访问。 |
-|          data_store          |                              \{ ... \}                              |  ---   |  否   |            指定 OCI 存储后端。省略时使用本地存储。            |
-|      data_store.service      |                       "local" 或 "aws_s3"                           |  ---   |  是   |                      指定存储服务类型。                       |
-|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |  ---   | 仅 aws_s3 |                       AWS 访问密钥 ID。                       |
-| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |  ---   | 仅 aws_s3 |                      AWS 秘密访问密钥。                       |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |  ---   | 仅 aws_s3 |           S3 访问点 ARN。访问点名称后可选路径前缀。           |
-|   data_store.chunk_size      |                               5242880                                     | 5242880 | 仅 aws_s3 | 上传数据存储到 S3 之前缓冲的最小块大小（字节）。默认值：5 MB。 |
-|       upload_timeout         |                                3600                                 |  3600  |  否   | 上传会话超时时间（秒）。过期上传在启动新上传时被清理。 |
-|       max_body_size          |                            1073741824                               | 1073741824 |  否   | Blob 和清单上传的最大正文大小（字节）。超过此限制的请求将被拒绝并返回 413 Payload Too Large。默认值：1 GiB。 |
+请设置存储桶生命周期规则以中止未完成的分段上传。Blob 上传完成过程中崩溃会留下一个未完成的分段上传，服务器不会中止它。
+
+如果您之前配置的 `path` 以斜杠开头或结尾，请在升级前将现有对象移动到规范化的前缀。`path` 为 `registry/` 时，键存储在 `registry//<project>/...` 下，现在存储在 `registry/<project>/...` 下。包含 `A-Za-z0-9._-/` 之外任何字符的 `path` 在存储的键中会被百分号编码（`team#1` 变为 `team%231`），因此以前版本存储在此类前缀下的数据也需要同样的迁移。
+
+|      名称      |                  示例                  | 默认值 | 必需  |                      描述                      |
+| :------------: | :------------------------------------: | :----: | :---: | :--------------------------------------------: |
+|      url       | "https://registry.bencher.example.com" | "http://localhost:6610" |  否   | API 服务器的外部可达 URL，用于 OCI 注册表访问。 |
+|    storage     |               \{ ... \}                |  ---   |  否   | 指定注册表存储后端。省略时使用本地文件。 |
+| storage.scheme |                 "s3"                   |  ---   |  是   | 指定存储 `scheme`。有关所有其他 `storage` 键，请参见上面的列表。 |
+| upload_timeout |                  3600                  |  3600  |  否   | 上传会话超时时间（秒）。过期上传在启动新上传时被清理。 |
+| max_body_size  |               1073741824               | 1073741824 |  否   | Blob 和清单上传的最大正文大小（字节）。超过此限制的请求将被拒绝并返回 413 Payload Too Large。默认值：1 GiB。 |

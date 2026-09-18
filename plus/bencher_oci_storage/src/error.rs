@@ -79,9 +79,7 @@ impl OciError {
                 OciStorageError::BlobUploadInvalidContent(_) => OCI_ERROR_BLOB_UPLOAD_INVALID,
                 OciStorageError::BlobNotFound(_) => OCI_ERROR_BLOB_UNKNOWN,
                 OciStorageError::SizeExceeded { .. } => OCI_ERROR_SIZE_INVALID,
-                OciStorageError::S3(_)
-                | OciStorageError::LocalStorage(_)
-                | OciStorageError::InvalidArn(_)
+                OciStorageError::Storage(_)
                 | OciStorageError::Config(_)
                 | OciStorageError::Json(_) => OCI_ERROR_UNKNOWN,
             },
@@ -171,11 +169,11 @@ mod tests {
             OCI_ERROR_SIZE_INVALID
         );
         assert_eq!(
-            OciError::from(OciStorageError::S3("s3".into())).code(),
+            OciError::from(OciStorageError::Storage("store".into())).code(),
             OCI_ERROR_UNKNOWN
         );
         assert_eq!(
-            OciError::from(OciStorageError::LocalStorage("fs".into())).code(),
+            OciError::from(OciStorageError::Config("config".into())).code(),
             OCI_ERROR_UNKNOWN
         );
         assert_eq!(

@@ -4,30 +4,33 @@ Dieser Abschnitt spezifiziert die OCI (Open Container Initiative) Registry-Speic
 Bencher kann als OCI-kompatible Container-/Artefakt-Registry fungieren.
 
 Wenn dieser Abschnitt nicht konfiguriert ist, verwendet Bencher den lokalen Dateisystemspeicher
-in einem `oci`-Verzeichnis neben der Datenbankdatei.
+in einem `registry`-Verzeichnis neben der Datenbankdatei.
 Dies ist geeignet für Entwicklung und Einzelinstanz-Deployments.
 
 Für Produktions-Deployments mit mehreren Instanzen oder für Dauerhaftigkeit
-konfigurieren Sie S3-basierten Speicher.
+konfigurieren Sie S3-kompatiblen Speicher.
 
-Es gibt zwei Speicher-`service`-Optionen:
-- `local`: OCI-Artefakte im lokalen Dateisystem speichern (Standard)
-- `aws_s3`: OCI-Artefakte in AWS S3 speichern
-    - `access_key_id`: AWS-Zugangsschlüssel-ID
-    - `secret_access_key`: AWS-Geheimzugangsschlüssel
-    - `access_point`: S3 Access Point ARN mit optionalem Pfadpräfix.
-      Format: `arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
-    - `chunk_size`: Minimale Chunk-Größe in Bytes für die Pufferung von Upload-Daten vor dem Speichern in S3 (Standard: 5 MB).
-      HTTP-Anfragekörper kommen als kleine Netzwerk-Frames an (typischerweise 8–64 KB). Ohne Pufferung wird jeder Frame als separates S3-Objekt gespeichert, was Tausende von Objekten pro Layer erzeugt. Dieser Wert entspricht auch der minimalen S3-Multipart-Upload-Teilgröße.
+Es gibt zwei Speicher-`scheme`s:
+- `file`: OCI-Artefakte im lokalen Dateisystem speichern (Standard)
+    - `path`: (Optional) Verzeichnis für Registry-Daten. Standardmäßig ein `registry`-Verzeichnis neben der Datenbankdatei.
+- `s3`: OCI-Artefakte in einem S3-kompatiblen Blob-Speicher speichern
+    - `bucket`: Bucket-Name
+    - `path`: (Optional) Schlüsselpräfix im Bucket. Führende, abschließende und wiederholte Schrägstriche werden entfernt, sodass `registry`, `registry/` und `/registry` alle unter `registry` speichern.
+    - `endpoint`: (AWS: Optional | Nicht-AWS: Erforderlich) Speicherendpunkt
+    - `region`: (Optional) Bucket-Region. Erforderlich für AWS. Standardmäßig `auto`, was S3-kompatible Speicher erwarten.
+    - `access_key_id`: S3-Zugangsschlüssel
+    - `secret_access_key`: S3-Geheimzugangsschlüssel
+    - `chunk_size`: (Optional) Minimale Chunk-Größe in Bytes für die Pufferung von Upload-Daten vor dem Speichern. Standard: 5 MB.
+      HTTP-Anfragekörper kommen als kleine Netzwerk-Frames an (typischerweise 8 bis 64 KB). Ohne Pufferung wird jeder Frame als separates Objekt gespeichert, was Tausende von Objekten pro Layer erzeugt. Dieser Wert entspricht auch der minimalen S3-Multipart-Upload-Teilgröße.
 
-|             Name             |                              Beispiel                               | Standardwert | Erforderlich |                                            Beschreibung                                             |
-| :--------------------------: | :-----------------------------------------------------------------: | :----------: | :----------: | :-------------------------------------------------------------------------------------------------: |
-|             url              |              "https://registry.bencher.example.com"                 | "http://localhost:6610" |     Nein     | Die extern erreichbare URL des API-Servers für OCI-Registry-Zugriff. |
-|          data_store          |                              \{ ... \}                              |     ---      |     Nein     |                      Gibt das OCI-Speicher-Backend an. Lokal wenn weggelassen.                      |
-|      data_store.service      |                       "local" oder "aws_s3"                         |     ---      |      Ja      |                                   Gibt den Speicherdiensttyp an.                                    |
-|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |     ---      | nur aws_s3   |                                      AWS-Zugangsschlüssel-ID.                                       |
-| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |     ---      | nur aws_s3   |                                     AWS-Geheimzugangsschlüssel.                                     |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |     ---      | nur aws_s3   |               S3 Access Point ARN. Optionales Pfadpräfix nach dem Access-Point-Namen.               |
-|   data_store.chunk_size      |                               5242880                                     | 5242880 | nur aws_s3   | Minimale Chunk-Größe in Bytes für die Pufferung von Upload-Daten vor dem Speichern in S3. Standard: 5 MB. |
-|       upload_timeout         |                                3600                                 |     3600     |     Nein     | Upload-Sitzungs-Timeout in Sekunden. Veraltete Uploads werden bei neuen Uploads bereinigt. |
-|       max_body_size          |                            1073741824                               | 1073741824   |     Nein     | Maximale Body-Größe in Bytes für Blob- und Manifest-Uploads. Anfragen, die dieses Limit überschreiten, werden mit 413 Payload Too Large abgelehnt. Standard: 1 GiB. |
+Legen Sie eine Bucket-Lebenszyklusregel fest, die unvollständige Multipart-Uploads abbricht. Ein Absturz während des Abschlusses eines Blob-Uploads hinterlässt einen solchen, und der Server bricht ihn nicht ab.
+
+Wenn Sie zuvor einen `path` konfiguriert haben, der mit einem Schrägstrich begann oder endete, verschieben Sie die vorhandenen Objekte vor dem Upgrade auf das normalisierte Präfix. Ein `path` von `registry/` speicherte Schlüssel unter `registry//<project>/...` und speichert sie jetzt unter `registry/<project>/...`. Ein `path`, der ein Zeichen außerhalb von `A-Za-z0-9._-/` enthält, wird im gespeicherten Schlüssel prozentcodiert (`team#1` wird zu `team%231`), sodass Daten, die von der vorherigen Version unter einem solchen Präfix gespeichert wurden, dieselbe Verschiebung benötigen.
+
+|      Name      |                Beispiel                | Standardwert | Erforderlich |                     Beschreibung                      |
+| :------------: | :------------------------------------: | :----------: | :----------: | :---------------------------------------------------: |
+|      url       | "https://registry.bencher.example.com" | "http://localhost:6610" |     Nein     | Die extern erreichbare URL des API-Servers für OCI-Registry-Zugriff. |
+|    storage     |               \{ ... \}                |     ---      |     Nein     | Gibt das Registry-Speicher-Backend an. Lokale Dateien wenn weggelassen. |
+| storage.scheme |                 "s3"                   |     ---      |      Ja      | Gibt das Speicher-`scheme` an. Für alle anderen `storage`-Schlüssel siehe die Liste oben. |
+| upload_timeout |                  3600                  |     3600     |     Nein     | Upload-Sitzungs-Timeout in Sekunden. Veraltete Uploads werden bei neuen Uploads bereinigt. |
+| max_body_size  |               1073741824               |  1073741824  |     Nein     | Maximale Body-Größe in Bytes für Blob- und Manifest-Uploads. Anfragen, die dieses Limit überschreiten, werden mit 413 Payload Too Large abgelehnt. Standard: 1 GiB. |

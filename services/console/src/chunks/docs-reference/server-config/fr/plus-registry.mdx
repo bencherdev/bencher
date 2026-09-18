@@ -4,30 +4,33 @@ Cette section spécifie la configuration du stockage du registre OCI (Open Conta
 Bencher peut fonctionner comme un registre de conteneurs/artefacts compatible OCI.
 
 Si cette section n'est pas configurée, Bencher utilisera le stockage du système de fichiers local
-dans un répertoire `oci` adjacent au fichier de base de données.
+dans un répertoire `registry` adjacent au fichier de base de données.
 Ceci est adapté au développement et aux déploiements à instance unique.
 
 Pour les déploiements de production avec plusieurs instances ou pour la durabilité,
-configurez le stockage basé sur S3.
+configurez un stockage compatible S3.
 
-Il existe deux options de `service` de stockage :
-- `local` : Stocker les artefacts OCI sur le système de fichiers local (par défaut)
-- `aws_s3` : Stocker les artefacts OCI dans AWS S3
-    - `access_key_id` : ID de clé d'accès AWS
-    - `secret_access_key` : Clé d'accès secrète AWS
-    - `access_point` : ARN du point d'accès S3 avec préfixe de chemin optionnel.
-      Format : `arn:aws:s3:<region>:<account-id>:accesspoint/<access-point-name>[/<path-prefix>]`
-    - `chunk_size` : Taille minimale de fragment en octets pour la mise en tampon des données d'upload avant le stockage dans S3 (par défaut : 5 Mo).
-      Les corps de requête HTTP arrivent sous forme de petites trames réseau (typiquement 8–64 Ko). Sans mise en tampon, chaque trame devient un objet S3 séparé, créant des milliers d'objets par couche. Cette valeur correspond également à la taille minimale de partie pour les uploads multipart S3.
+Il existe deux `scheme`s de stockage :
+- `file` : Stocker les artefacts OCI sur le système de fichiers local (par défaut)
+    - `path` : (Optionnel) Répertoire pour les données du registre. Par défaut, un répertoire `registry` adjacent au fichier de base de données.
+- `s3` : Stocker les artefacts OCI dans un stockage de blob compatible S3
+    - `bucket` : Nom du bucket
+    - `path` : (Optionnel) Préfixe de clé dans le bucket. Les barres obliques initiales, finales et répétées sont supprimées, de sorte que `registry`, `registry/` et `/registry` stockent tous sous `registry`.
+    - `endpoint` : (AWS: Optionnel | Non-AWS: Requis) Point de terminaison de stockage
+    - `region` : (Optionnel) Région du bucket. Requis pour AWS. Par défaut `auto`, ce qu'attendent les stockages compatibles S3.
+    - `access_key_id` : Clé d'accès S3
+    - `secret_access_key` : Clé d'accès secret S3
+    - `chunk_size` : (Optionnel) Taille minimale de fragment en octets pour la mise en tampon des données d'upload avant le stockage. Par défaut : 5 Mo.
+      Les corps de requête HTTP arrivent sous forme de petites trames réseau (typiquement 8 à 64 Ko). Sans mise en tampon, chaque trame devient un objet séparé, créant des milliers d'objets par couche. Cette valeur correspond également à la taille minimale de partie pour les uploads multipart S3.
 
-|             Nom              |                               Exemple                               | Par défaut | Requis |                                              Description                                               |
-| :--------------------------: | :-----------------------------------------------------------------: | :--------: | :----: | :----------------------------------------------------------------------------------------------------: |
-|             url              |              "https://registry.bencher.example.com"                 | "http://localhost:6610" |  Non   | L'URL accessible de l'extérieur du serveur API pour l'accès au registre OCI. |
-|          data_store          |                              \{ ... \}                              |    ---     |  Non   |                              Spécifie le backend de stockage OCI. Local si omis.                       |
-|      data_store.service      |                       "local" ou "aws_s3"                           |    ---     |  Oui   |                                   Spécifie le type de service de stockage.                             |
-|   data_store.access_key_id   |                       "AKIAIOSFODNN7EXAMPLE"                        |    ---     | aws_s3 uniquement |                                            ID de clé d'accès AWS.                                      |
-| data_store.secret_access_key |             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"              |    ---     | aws_s3 uniquement |                                           Clé d'accès secrète AWS.                                     |
-|   data_store.access_point    | "arn:aws:s3:us-east-1:123456789012:accesspoint/my-access-point/registry" |    ---     | aws_s3 uniquement |              ARN du point d'accès S3. Préfixe de chemin optionnel après le nom du point d'accès.       |
-|   data_store.chunk_size      |                               5242880                                     | 5242880 | aws_s3 uniquement | Taille minimale de fragment en octets pour la mise en tampon des données d'upload avant le stockage dans S3. Par défaut : 5 Mo. |
-|       upload_timeout         |                                3600                                 |    3600    |  Non   | Délai d'expiration de la session d'upload en secondes. Les uploads obsolètes sont nettoyés au démarrage de nouveaux uploads. |
-|       max_body_size          |                            1073741824                               | 1073741824 |  Non   | Taille maximale du corps en octets pour les uploads de blobs et manifestes. Les requêtes dépassant cette limite sont rejetées avec 413 Payload Too Large. Par défaut : 1 Gio. |
+Définissez une règle de cycle de vie du bucket qui interrompt les uploads multipart incomplets. Un crash au milieu de la finalisation d'un upload de blob en laisse un, et le serveur ne l'interrompt pas.
+
+Si vous aviez configuré un `path` commençant ou se terminant par une barre oblique, déplacez les objets existants vers le préfixe normalisé avant la mise à niveau. Un `path` de `registry/` stockait les clés sous `registry//<project>/...` et les stocke désormais sous `registry/<project>/...`. Un `path` contenant un caractère en dehors de `A-Za-z0-9._-/` est encodé en pourcentage dans la clé stockée (`team#1` devient `team%231`), de sorte que les données stockées sous un tel préfixe par la version précédente nécessitent le même déplacement.
+
+|      Nom       |                Exemple                 | Par défaut | Requis |                   Description                    |
+| :------------: | :------------------------------------: | :--------: | :----: | :----------------------------------------------: |
+|      url       | "https://registry.bencher.example.com" | "http://localhost:6610" |  Non   | L'URL accessible de l'extérieur du serveur API pour l'accès au registre OCI. |
+|    storage     |               \{ ... \}                |    ---     |  Non   | Spécifie le backend de stockage du registre. Fichiers locaux si omis. |
+| storage.scheme |                 "s3"                   |    ---     |  Oui   | Spécifie le `scheme` de stockage. Pour toutes les autres clés `storage`, voir la liste ci-dessus. |
+| upload_timeout |                  3600                  |    3600    |  Non   | Délai d'expiration de la session d'upload en secondes. Les uploads obsolètes sont nettoyés au démarrage de nouveaux uploads. |
+| max_body_size  |               1073741824               | 1073741824 |  Non   | Taille maximale du corps en octets pour les uploads de blobs et manifestes. Les requêtes dépassant cette limite sont rejetées avec 413 Payload Too Large. Par défaut : 1 Gio. |
