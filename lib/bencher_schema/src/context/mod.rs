@@ -34,7 +34,7 @@ mod stats;
 
 #[cfg(feature = "plus")]
 use bencher_recaptcha::RecaptchaClient;
-pub use database::{DataStore, DataStoreError, Database, DbConnection};
+pub use database::{Database, DbConnection};
 #[cfg(feature = "plus")]
 pub use heartbeat_tasks::HeartbeatTasks;
 #[cfg(feature = "plus")]

@@ -12,7 +12,7 @@ mod server;
 mod smtp;
 
 pub use console::JsonConsole;
-pub use database::{DataStore, JsonDatabase};
+pub use database::JsonDatabase;
 pub use logging::{IfExists, JsonLogging, LogLevel, ServerLog};
 #[cfg(feature = "plus")]
 pub use plus::{
@@ -58,7 +58,6 @@ pub struct JsonConfig {
 impl Sanitize for JsonConfig {
     fn sanitize(&mut self) {
         self.security.sanitize();
-        self.database.sanitize();
         self.smtp.sanitize();
         #[cfg(feature = "plus")]
         self.plus.sanitize();

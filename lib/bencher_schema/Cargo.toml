@@ -32,10 +32,7 @@ sentry = ["dep:sentry"]
 otel = ["dep:bencher_otel", "bencher_recaptcha?/otel"]
 
 [dependencies]
-async-compression = { workspace = true, features = ["tokio", "gzip"] }
 async-trait.workspace = true
-aws-credential-types.workspace = true
-aws-sdk-s3.workspace = true
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
 bencher_bing_index = { workspace = true, optional = true }
@@ -67,7 +64,6 @@ http = { workspace = true, optional = true }
 libsqlite3-sys.workspace = true
 mail-send.workspace = true
 regex.workspace = true
-rusqlite = { workspace = true, features = ["backup"] }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 serde_urlencoded.workspace = true

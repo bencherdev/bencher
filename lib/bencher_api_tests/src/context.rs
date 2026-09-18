@@ -147,7 +147,6 @@ impl TestServer {
             public_pool,
             auth_pool,
             connection: Arc::new(Mutex::new(conn)),
-            data_store: None,
         };
 
         let request_body_max_bytes = max_body_size.map_or(DEFAULT_MAX_BODY_SIZE, |s| {
@@ -245,7 +244,6 @@ impl TestServer {
             public_pool,
             auth_pool,
             connection: Arc::new(Mutex::new(conn)),
-            data_store: None,
         };
 
         let _ = (upload_timeout, max_body_size);

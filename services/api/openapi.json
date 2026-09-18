@@ -9381,81 +9381,6 @@
         }
       }
     },
-    "/v0/server/backup": {
-      "post": {
-        "tags": [
-          "server"
-        ],
-        "summary": "Backup server",
-        "description": "Backup the API server database. The user must be an admin on the server to use this route.",
-        "operationId": "server_backup_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonBackup"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "successful creation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonBackupCreated"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/server/config": {
       "get": {
         "tags": [
@@ -12498,36 +12423,6 @@
         "format": "uint32",
         "minimum": 0
       },
-      "DataStore": {
-        "oneOf": [
-          {
-            "type": "object",
-            "properties": {
-              "access_key_id": {
-                "type": "string"
-              },
-              "access_point": {
-                "type": "string"
-              },
-              "secret_access_key": {
-                "$ref": "#/components/schemas/Secret"
-              },
-              "service": {
-                "type": "string",
-                "enum": [
-                  "aws_s3"
-                ]
-              }
-            },
-            "required": [
-              "access_key_id",
-              "access_point",
-              "secret_access_key",
-              "service"
-            ]
-          }
-        ]
-      },
       "DateTime": {
         "type": "string",
         "format": "date-time"
@@ -12760,41 +12655,6 @@
         "enum": [
           "mean",
           "median"
-        ]
-      },
-      "JsonBackup": {
-        "type": "object",
-        "properties": {
-          "compress": {
-            "nullable": true,
-            "description": "Compress the database backup with gzip. This operation runs first.",
-            "type": "boolean"
-          },
-          "data_store": {
-            "nullable": true,
-            "description": "Save the database backup to this data store. This operation runs second.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonDataStore"
-              }
-            ]
-          },
-          "remove": {
-            "nullable": true,
-            "description": "Remove the local copy of the database backup. This operation runs third.",
-            "type": "boolean"
-          }
-        }
-      },
-      "JsonBackupCreated": {
-        "type": "object",
-        "properties": {
-          "created": {
-            "$ref": "#/components/schemas/DateTime"
-          }
-        },
-        "required": [
-          "created"
         ]
       },
       "JsonBenchmark": {
@@ -13190,12 +13050,6 @@
           "uuid"
         ]
       },
-      "JsonDataStore": {
-        "type": "string",
-        "enum": [
-          "aws_s3"
-        ]
-      },
       "JsonDatabase": {
         "type": "object",
         "properties": {
@@ -13212,14 +13066,6 @@
             "type": "integer",
             "format": "uint32",
             "minimum": 1
-          },
-          "data_store": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DataStore"
-              }
-            ]
           },
           "file": {
             "type": "string"
