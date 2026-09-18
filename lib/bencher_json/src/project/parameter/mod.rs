@@ -133,7 +133,7 @@ impl<'de> Deserialize<'de> for ParameterSet {
         let parameters = BTreeMap::deserialize(deserializer)?;
         if parameters.len() > MAX_PARAMETER_KEYS {
             return Err(de::Error::custom(format!(
-                "Parameter set has {} keys, more than the {MAX_PARAMETER_KEYS} allowed",
+                "Parameters may carry at most {MAX_PARAMETER_KEYS} keys, found {}",
                 parameters.len()
             )));
         }
