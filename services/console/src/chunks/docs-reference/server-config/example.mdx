@@ -46,15 +46,13 @@
   },
   "plus": {
     "disaster_recovery": {
-      "replicas": [
-        {
-          "scheme": "s3",
-          "bucket": "my-bucket",
-          "path": "path/to/replicate",
-          "access_key_id": "ABC123DoRemMiABC123",
-          "secret_access_key": "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7"
-        }
-      ]
+      "replica": {
+        "scheme": "s3",
+        "bucket": "my-bucket",
+        "path": "path/to/replicate",
+        "access_key_id": "ABC123DoRemMiABC123",
+        "secret_access_key": "AA3Chr-JSF5sUQqKwayx-FvCfZKsMev-5BqPpcFC3m7"
+      }
     },
     "registry": {
       "url": "https://registry.bencher.example.com",

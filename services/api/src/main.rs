@@ -11,7 +11,7 @@ use bencher_api::api::Api;
 use bencher_config::{Config, ConfigTx};
 use bencher_json::BENCHER_API_VERSION;
 #[cfg(feature = "plus")]
-use bencher_json::system::config::JsonLitestream;
+use bencher_json::system::config::JsonDisasterRecovery;
 use bencher_schema::context::ApiContext;
 use dropshot::HttpServer;
 use futures_concurrency::future::Race as _;
@@ -98,13 +98,13 @@ async fn run(
         .map_err(ApiError::OpenTelemetry)?;
 
     #[cfg(feature = "plus")]
-    if let Some(litestream) = config
+    if let Some(disaster_recovery) = config
         .plus
         .as_ref()
-        .and_then(|plus| plus.litestream.clone())
+        .and_then(|plus| plus.disaster_recovery.clone())
     {
         let (restore_tx, restore_rx) = sync::oneshot::channel();
-        let litestream_handle = run_litestream(log, &config, litestream, restore_tx)?;
+        let litestream_handle = run_litestream(log, &config, disaster_recovery, restore_tx)?;
         // Wait for Litestream restore to complete (replicate starts in background)
         restore_rx.await.map_err(LitestreamError::RestoreRecv)?;
 
@@ -232,7 +232,7 @@ pub enum LitestreamError {
 fn run_litestream(
     log: &Logger,
     config: &Config,
-    litestream: JsonLitestream,
+    disaster_recovery: JsonDisasterRecovery,
     restore_tx: sync::oneshot::Sender<()>,
 ) -> Result<JoinHandle<Result<(), LitestreamError>>, LitestreamError> {
     // Get the absolute database path from the config
@@ -247,7 +247,7 @@ fn run_litestream(
     let config_path = PathBuf::from("etc/litestream.yml");
     #[cfg(not(debug_assertions))]
     let config_path = PathBuf::from("/etc/litestream.yml");
-    let yaml = litestream
+    let yaml = disaster_recovery
         .into_yaml(db_path.clone(), config.logging.log.level())
         .map_err(LitestreamError::Yaml)?;
     std::fs::write(&config_path, yaml)

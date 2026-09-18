@@ -4,16 +4,9 @@ Cette section spécifie la configuration de la récupération en cas de sinistre
 Bencher prend en charge la réplication continue de tous les changements de base de données.
 Pour exécuter des sauvegardes à la demande ou programmées, consultez la section `database.data_store` de la configuration.
 
-Il existe trois `schéma`s de réplication :
+Il existe deux `schéma`s de réplication :
 - `file`: Répliquer vers un chemin de fichier local
     - `path`: Chemin de réplication
-- `sftp`: Répliquer via SFTP
-    - `host`: Nom d'hôte du système cible
-    - `port`: Numéro de port du système cible
-    - `user`: Nom d'utilisateur sur le système cible
-    - `password`: (Optionnel) Mot de passe sur le système cible
-    - `path`: (Optionnel) Chemin sur le système cible
-    - `key_path`: (Optionnel) Chemin vers la clé SSH
 - `s3`: Répliquer vers un stockage de blob compatible S3
     - `bucket`: Nom du bucket
     - `path`: (Optionnel) Chemin dans le bucket
@@ -22,7 +15,7 @@ Il existe trois `schéma`s de réplication :
     - `access_key_id`: Clé d'accès S3
     - `secret_access_key`: Clé d'accès secret S3
 
-Les trois schémas de réplique ont les options supplémentaires suivantes :
+Les deux schémas de réplique ont les options supplémentaires suivantes :
 
 - `snapshot.interval`: (Optionnel) Spécifie la fréquence de création des nouveaux snapshots. Cela permet de réduire le temps de restauration car les snapshots plus récents auront moins de trames WAL à appliquer. La rétention s'applique toujours à ces snapshots. Si vous ne définissez pas d'intervalle de snapshot, un nouveau snapshot sera créé chaque fois que la rétention sera effectuée. La rétention se produit toutes les 24 heures par défaut.
 - `snapshot.retention`: (Optionnel) La durée pendant laquelle les fichiers snapshot & WAL seront conservés. Après la période de rétention, un nouveau snapshot sera créé et l'ancien sera supprimé. Les fichiers WAL existants avant le snapshot le plus ancien seront également supprimés. La valeur par défaut est `24h`.
