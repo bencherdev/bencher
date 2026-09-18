@@ -395,7 +395,7 @@ mod tests {
         Encoder,
     }
 
-    /// Every parameter set that has to encode to the same bytes as `SQLite`'s `jsonb()`.
+    /// The parameters that have to encode to the same bytes as `SQLite`'s `jsonb()`.
     ///
     /// Each entry is already in its RFC 8785 (JCS) canonical form. The set covers
     /// the shapes a parameter value can take: strings that need JSON escapes and
@@ -770,7 +770,7 @@ mod tests {
             .filter(schema::variant::benchmark_id.eq(benchmark_id))
             .count()
             .get_result(conn)
-            .expect("Failed to count parameters")
+            .expect("Failed to count variants")
     }
 
     #[test]

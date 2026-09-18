@@ -3360,7 +3360,7 @@ async fn get_perf(server: &TestServer, token: &str, url: &str) -> JsonPerf {
     resp.json().await.expect("parse response")
 }
 
-/// The canonical variant of every line, in response order.
+/// The canonical parameters of every line, in response order.
 fn line_parameters(perf: &JsonPerf) -> Vec<String> {
     perf.results
         .iter()
@@ -3473,7 +3473,7 @@ async fn perf_parameters_filter_is_an_or_of_ands() {
         ]
     );
 
-    // The empty element is a subset of every variant, so it matches them all.
+    // The empty element is a subset of every variant's parameters, so it matches them all.
     let query = fixture_query(&data, vec![data.benchmark_uuid], &["{}"]);
     let perf = get_perf(
         &server,

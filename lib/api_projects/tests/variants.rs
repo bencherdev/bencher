@@ -1940,7 +1940,7 @@ async fn variant_list_filters_by_archived() {
 
 // A created variant reads back the same through the one get endpoint.
 #[tokio::test]
-async fn variant_get_reads_back_the_created_set() {
+async fn variant_get_reads_back_the_created_variant() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "get-one").await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
@@ -2203,7 +2203,7 @@ async fn variant_delete_refuses_while_reports_reference_it() {
 // it left behind go with it. Deleting the report is what unreferences it: the report
 // takes its own results, and the variant and its series outlive them.
 #[tokio::test]
-async fn variant_delete_removes_an_unreferenced_set() {
+async fn variant_delete_removes_an_unreferenced_variant() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "delete-unreferenced").await;
 

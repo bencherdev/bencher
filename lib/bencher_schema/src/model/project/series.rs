@@ -690,10 +690,10 @@ mod tests {
         let mismatched = sql_query(
             "SELECT COUNT(*) AS count
                FROM series_last_seen s
-               LEFT JOIN variant p ON p.id = s.variant_id
-               WHERE p.id IS NULL
-                  OR p.benchmark_id != s.benchmark_id
-                  OR p.parameters != jsonb('{}')",
+               LEFT JOIN variant v ON v.id = s.variant_id
+               WHERE v.id IS NULL
+                  OR v.benchmark_id != s.benchmark_id
+                  OR v.parameters != jsonb('{}')",
         )
         .get_result::<SqlCount>(&mut conn)
         .expect("Failed to check the backfilled variants")

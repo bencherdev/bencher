@@ -129,7 +129,7 @@ pub async fn get_ls_inner(
         &path_params.benchmark,
     )?;
 
-    let parameters = get_ls_query(&query_benchmark, &pagination_params, &query_params)
+    let variants = get_ls_query(&query_benchmark, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
         .load::<QueryVariant>(actor_conn!(context, api_actor))
@@ -139,7 +139,7 @@ pub async fn get_ls_inner(
         ))?;
 
     // Drop connection lock before iterating
-    let json_variants = parameters
+    let json_variants = variants
         .into_iter()
         .map(|variant| variant.into_json_for_benchmark(&query_benchmark))
         .collect();

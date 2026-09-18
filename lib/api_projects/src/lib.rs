@@ -144,7 +144,7 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(benchmarks::proj_benchmark_patch)?;
         api_description.register(benchmarks::proj_benchmark_delete)?;
 
-        // Parameters
+        // Variants
         if http_options {
             api_description.register(variants::proj_variants_options)?;
             api_description.register(variants::proj_variant_options)?;
