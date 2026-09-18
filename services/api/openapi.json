@@ -13229,6 +13229,49 @@
           "file"
         ]
       },
+      "JsonDisasterRecovery": {
+        "type": "object",
+        "properties": {
+          "checkpoint": {
+            "nullable": true,
+            "description": "Checkpoint configuration",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCheckpoint"
+              }
+            ]
+          },
+          "replica": {
+            "description": "Disaster recovery replica",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReplica"
+              }
+            ]
+          },
+          "snapshot": {
+            "nullable": true,
+            "description": "Snapshot configuration",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonSnapshot"
+              }
+            ]
+          },
+          "validation": {
+            "nullable": true,
+            "description": "Validation configuration",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonValidation"
+              }
+            ]
+          }
+        },
+        "required": [
+          "replica"
+        ]
+      },
       "JsonFold": {
         "type": "string",
         "enum": [
@@ -13658,49 +13701,6 @@
           "key",
           "level",
           "organization"
-        ]
-      },
-      "JsonLitestream": {
-        "type": "object",
-        "properties": {
-          "checkpoint": {
-            "nullable": true,
-            "description": "Checkpoint configuration",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonCheckpoint"
-              }
-            ]
-          },
-          "replica": {
-            "description": "Disaster recovery replica",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonReplica"
-              }
-            ]
-          },
-          "snapshot": {
-            "nullable": true,
-            "description": "Snapshot configuration",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonSnapshot"
-              }
-            ]
-          },
-          "validation": {
-            "nullable": true,
-            "description": "Validation configuration",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonValidation"
-              }
-            ]
-          }
-        },
-        "required": [
-          "replica"
         ]
       },
       "JsonLogging": {
@@ -16024,6 +16024,14 @@
               }
             ]
           },
+          "disaster_recovery": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonDisasterRecovery"
+              }
+            ]
+          },
           "github": {
             "nullable": true,
             "allOf": [
@@ -16037,14 +16045,6 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonGoogle"
-              }
-            ]
-          },
-          "litestream": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JsonLitestream"
               }
             ]
           },
@@ -16662,54 +16662,6 @@
             "required": [
               "path",
               "scheme"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "host": {
-                "type": "string"
-              },
-              "key_path": {
-                "nullable": true,
-                "type": "string"
-              },
-              "password": {
-                "nullable": true,
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/Secret"
-                  }
-                ]
-              },
-              "path": {
-                "nullable": true,
-                "type": "string"
-              },
-              "port": {
-                "type": "integer",
-                "format": "uint16",
-                "minimum": 0
-              },
-              "scheme": {
-                "type": "string",
-                "enum": [
-                  "sftp"
-                ]
-              },
-              "sync_interval": {
-                "nullable": true,
-                "type": "string"
-              },
-              "user": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "host",
-              "port",
-              "scheme",
-              "user"
             ]
           },
           {

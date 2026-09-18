@@ -4,16 +4,9 @@ This section specifies the disaster recovery configuration.
 Bencher supports continuously replicating all database changes.
 For running on demand or scheduled backups, see the `database.data_store` section of the configuration.
 
-There are three replication `scheme`s:
+There are two replication `scheme`s:
 - `file`: Replicate to a local file path
     - `path`: Path to replicate to
-- `sftp`: Replicate over SFTP
-    - `host`: Target system hostname
-    - `port`: Target system port number
-    - `user`: Username on target system
-    - `password`: (Optional) Password on target system
-    - `path`: (Optional) Path on target system
-    - `key_path`: (Optional) Path to SSH key
 - `s3`: Replicate to any S3 compatible blob storage
     - `bucket`: Bucket name
     - `path`: (Optional) Path in bucket
@@ -22,7 +15,7 @@ There are three replication `scheme`s:
     - `access_key_id`: S3 access key
     - `secret_access_key`: S3 secret access key
 
-All three replica `scheme`s have the following additional options:
+Both replica `scheme`s have the following additional options:
 
 - `snapshot.interval`: (Optional) Specifies how often new snapshots will be created. This is used to reduce the time to restore since newer snapshots will have fewer WAL frames to apply. Retention still applies to these snapshots. If you do not set a snapshot interval then a new snapshot will be created whenever retention is performed. Retention occurs every 24 hours by default.
 - `snapshot.retention`: (Optional) The amount of time that snapshot & WAL files will be kept. After the retention period, a new snapshot will be created and the old one will be removed. WAL files that exist before the oldest snapshot will also be removed. Defaults to `24h`.

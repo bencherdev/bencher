@@ -240,7 +240,7 @@ async fn into_context(
     #[cfg(feature = "plus")]
     if plus
         .as_ref()
-        .and_then(|plus| plus.litestream.as_ref())
+        .and_then(|plus| plus.disaster_recovery.as_ref())
         .is_some()
     {
         info!(log, "Configuring Litestream");

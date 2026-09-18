@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 // https://litestream.io/reference/config/
-pub struct JsonLitestream {
+pub struct JsonDisasterRecovery {
     /// Disaster recovery replica
     pub replica: JsonReplica,
     /// Snapshot configuration
@@ -62,7 +62,7 @@ impl JsonCheckpoint {
     pub const TRUNCATE_DISABLED: u64 = 0;
 }
 
-impl Sanitize for JsonLitestream {
+impl Sanitize for JsonDisasterRecovery {
     fn sanitize(&mut self) {
         self.replica.sanitize();
     }
@@ -75,20 +75,6 @@ pub enum JsonReplica {
     // https://litestream.io/reference/config/#file-replica
     File {
         path: PathBuf,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        sync_interval: Option<String>,
-    },
-    // https://litestream.io/guides/sftp/
-    Sftp {
-        host: String,
-        port: u16,
-        user: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        password: Option<Secret>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        path: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        key_path: Option<PathBuf>,
         #[serde(skip_serializing_if = "Option::is_none")]
         sync_interval: Option<String>,
     },
@@ -112,7 +98,6 @@ impl Sanitize for JsonReplica {
     fn sanitize(&mut self) {
         match self {
             Self::File { .. } => {},
-            Self::Sftp { password, .. } => password.sanitize(),
             Self::S3 {
                 secret_access_key, ..
             } => secret_access_key.sanitize(),
@@ -129,9 +114,9 @@ mod db {
 
     use crate::system::config::LogLevel;
 
-    use super::{JsonCheckpoint, JsonLitestream, JsonReplica, JsonSnapshot, JsonValidation};
+    use super::{JsonCheckpoint, JsonDisasterRecovery, JsonReplica, JsonSnapshot, JsonValidation};
 
-    impl JsonLitestream {
+    impl JsonDisasterRecovery {
         pub fn into_yaml(
             self,
             path: PathBuf,
@@ -231,18 +216,6 @@ mod db {
             #[serde(skip_serializing_if = "Option::is_none")]
             sync_interval: Option<String>,
         },
-        Sftp {
-            host: String,
-            user: String,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            password: Option<Secret>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            path: Option<String>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            key_path: Option<PathBuf>,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            sync_interval: Option<String>,
-        },
         S3 {
             bucket: String,
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -266,22 +239,6 @@ mod db {
                     sync_interval,
                 } => Self::File {
                     path,
-                    sync_interval,
-                },
-                JsonReplica::Sftp {
-                    host,
-                    port,
-                    user,
-                    password,
-                    path,
-                    key_path,
-                    sync_interval,
-                } => Self::Sftp {
-                    host: format!("{host}:{port}"),
-                    user,
-                    password,
-                    path,
-                    key_path,
                     sync_interval,
                 },
                 JsonReplica::S3 {
@@ -354,7 +311,7 @@ mod db {
 
     #[test]
     fn into_yaml() {
-        let json_litestream = JsonLitestream {
+        let json_disaster_recovery = JsonDisasterRecovery {
             replica: JsonReplica::S3 {
                 bucket: "bucket".to_owned(),
                 path: Some("/path/to/backup".to_owned()),
@@ -370,7 +327,7 @@ mod db {
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
-        let yaml = json_litestream.into_yaml(path, log_level).unwrap();
+        let yaml = json_disaster_recovery.into_yaml(path, log_level).unwrap();
         pretty_assertions::assert_eq!(
             yaml,
             "dbs:
@@ -390,7 +347,7 @@ logging:
 
     #[test]
     fn into_yaml_with_snapshot_and_validation() {
-        let json_litestream = JsonLitestream {
+        let json_disaster_recovery = JsonDisasterRecovery {
             replica: JsonReplica::S3 {
                 bucket: "bucket".to_owned(),
                 path: Some("/path/to/backup".to_owned()),
@@ -411,7 +368,7 @@ logging:
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
-        let yaml = json_litestream.into_yaml(path, log_level).unwrap();
+        let yaml = json_disaster_recovery.into_yaml(path, log_level).unwrap();
         pretty_assertions::assert_eq!(
             yaml,
             "dbs:
@@ -436,7 +393,7 @@ logging:
 
     #[test]
     fn into_yaml_with_checkpoint_config() {
-        let json_litestream = JsonLitestream {
+        let json_disaster_recovery = JsonDisasterRecovery {
             replica: JsonReplica::S3 {
                 bucket: "bucket".to_owned(),
                 path: Some("/path/to/backup".to_owned()),
@@ -456,7 +413,7 @@ logging:
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
-        let yaml = json_litestream.into_yaml(path, log_level).unwrap();
+        let yaml = json_disaster_recovery.into_yaml(path, log_level).unwrap();
         pretty_assertions::assert_eq!(
             yaml,
             "dbs:
@@ -478,7 +435,7 @@ logging:
 
     #[test]
     fn into_yaml_file() {
-        let json_litestream = JsonLitestream {
+        let json_disaster_recovery = JsonDisasterRecovery {
             replica: JsonReplica::File {
                 path: PathBuf::from("/path/to/replica"),
                 sync_interval: Some("5s".to_owned()),
@@ -489,7 +446,7 @@ logging:
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
-        let yaml = json_litestream.into_yaml(path, log_level).unwrap();
+        let yaml = json_disaster_recovery.into_yaml(path, log_level).unwrap();
         pretty_assertions::assert_eq!(
             yaml,
             "dbs:
@@ -498,42 +455,6 @@ logging:
     type: file
     path: /path/to/replica
     sync-interval: 5s
-  truncate-page-n: 0
-logging:
-  level: info
-"
-        );
-    }
-
-    #[test]
-    fn into_yaml_sftp() {
-        let json_litestream = JsonLitestream {
-            replica: JsonReplica::Sftp {
-                host: "example.com".to_owned(),
-                port: 22,
-                user: "user".to_owned(),
-                password: Some("pass".parse().unwrap()),
-                path: Some("/backup".to_owned()),
-                key_path: None,
-                sync_interval: None,
-            },
-            snapshot: None,
-            validation: None,
-            checkpoint: None,
-        };
-        let path = PathBuf::from("/path/to/db");
-        let log_level = LogLevel::Info;
-        let yaml = json_litestream.into_yaml(path, log_level).unwrap();
-        pretty_assertions::assert_eq!(
-            yaml,
-            "dbs:
-- path: /path/to/db
-  replica:
-    type: sftp
-    host: example.com:22
-    user: user
-    password: pass
-    path: /backup
   truncate-page-n: 0
 logging:
   level: info
@@ -556,25 +477,6 @@ logging:
     }
 
     #[test]
-    fn sanitize_sftp() {
-        use bencher_valid::Sanitize as _;
-        let mut replica = JsonReplica::Sftp {
-            host: "example.com".to_owned(),
-            port: 22,
-            user: "user".to_owned(),
-            password: Some("secret_pass".parse().unwrap()),
-            path: None,
-            key_path: None,
-            sync_interval: None,
-        };
-        replica.sanitize();
-        let JsonReplica::Sftp { password, .. } = replica else {
-            panic!("expected Sftp")
-        };
-        assert_eq!(password.unwrap().as_ref(), "************");
-    }
-
-    #[test]
     fn sanitize_s3() {
         use bencher_valid::Sanitize as _;
         let mut replica = JsonReplica::S3 {
@@ -594,5 +496,87 @@ logging:
             panic!("expected S3")
         };
         assert_eq!(secret_access_key.as_ref(), "************");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use crate::system::config::plus::JsonPlus;
+
+    use super::{JsonDisasterRecovery, JsonReplica};
+
+    #[test]
+    fn deserialize_s3() {
+        let plus: JsonPlus = serde_json::from_str(
+            r#"{
+                "disaster_recovery": {
+                    "replica": {
+                        "scheme": "s3",
+                        "bucket": "bucket",
+                        "access_key_id": "access_key_id",
+                        "secret_access_key": "secret_access_key"
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+        let replica = plus.disaster_recovery.unwrap().replica;
+        let JsonReplica::S3 { bucket, .. } = replica else {
+            panic!("expected S3")
+        };
+        assert_eq!(bucket, "bucket");
+    }
+
+    #[test]
+    fn deserialize_file() {
+        let plus: JsonPlus = serde_json::from_str(
+            r#"{
+                "disaster_recovery": {
+                    "replica": {
+                        "scheme": "file",
+                        "path": "/path/to/replica"
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+        let replica = plus.disaster_recovery.unwrap().replica;
+        let JsonReplica::File { path, .. } = replica else {
+            panic!("expected File")
+        };
+        assert_eq!(path, PathBuf::from("/path/to/replica"));
+    }
+
+    #[test]
+    fn deserialize_sftp_rejected() {
+        serde_json::from_str::<JsonDisasterRecovery>(
+            r#"{
+                "replica": {
+                    "scheme": "sftp",
+                    "host": "example.com",
+                    "port": 22,
+                    "user": "user"
+                }
+            }"#,
+        )
+        .unwrap_err();
+    }
+
+    #[test]
+    fn deserialize_litestream_ignored() {
+        let plus: JsonPlus = serde_json::from_str(
+            r#"{
+                "litestream": {
+                    "replica": {
+                        "scheme": "file",
+                        "path": "/path/to/replica"
+                    }
+                }
+            }"#,
+        )
+        .unwrap();
+        assert!(plus.disaster_recovery.is_none());
     }
 }

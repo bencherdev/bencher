@@ -1,5 +1,7 @@
 ## Pending `v0.6.13`
 - Fix slow alert lists and perf queries on large projects
+- **BREAKING CHANGE** The `plus.litestream` server config key is removed; use `plus.disaster_recovery`. A config that still uses `plus.litestream` is ignored and continuous replication does not start
+- **BREAKING CHANGE** The `sftp` disaster recovery replica scheme is removed; `file` and `s3` remain
 
 ## `0.6.12`
 - Support Gungraun JSON format (Thank you [gamma0987](https://github.com/gamma0987))
