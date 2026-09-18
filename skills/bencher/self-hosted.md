@@ -105,4 +105,4 @@ bencher auth signup --name "Admin" --i-agree admin@example.com --host http://loc
 ## Full Documentation
 
 See https://bencher.dev/docs/tutorial/self-hosted/ for the complete self-hosted tutorial
-including production deployment, backups, and upgrades.
+including production deployment, disaster recovery, and upgrades.

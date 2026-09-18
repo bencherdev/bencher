@@ -71,8 +71,6 @@ pub enum ConfigTxError {
     DatabaseConnection(String, diesel::ConnectionError),
     #[error("Failed to create database connection pool ({0}): {1}")]
     DatabaseConnectionPool(String, diesel::r2d2::PoolError),
-    #[error("Failed to parse data store: {0}")]
-    DataStore(bencher_schema::context::DataStoreError),
     #[error("Failed to register endpoint: {0}")]
     Register(dropshot::ApiDescriptionRegisterError),
     #[error("Failed to create server: {0}")]
@@ -253,19 +251,12 @@ async fn into_context(
     let public_pool = connection_pool(log, &database_path, busy_timeout)?;
     let auth_pool = connection_pool(log, &database_path, busy_timeout)?;
 
-    let data_store = if let Some(data_store) = json_database.data_store {
-        Some(data_store.try_into().map_err(ConfigTxError::DataStore)?)
-    } else {
-        None
-    };
-
     let database = Database {
         path: json_database.file,
         busy_timeout,
         public_pool,
         auth_pool,
         connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
-        data_store,
     };
 
     info!(log, "Loading secret key");

@@ -77,7 +77,6 @@ bencher_output_protocol = { path = "plus/bencher_output_protocol" }
 anyhow = "1.0"
 backhand = "0.25"
 assert_cmd = "2.2"
-async-compression = "0.4"
 async-stripe = { version = "1.0.0-rc.6", default-features = false }
 async-stripe-billing = "1.0.0-rc.6"
 async-stripe-checkout = "1.0.0-rc.6"
@@ -153,7 +152,6 @@ regex-lite = "0.1"
 reqwest = { version = "0.13", default-features = false }
 rmcp = { version = "2.2", default-features = false }
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs"] }
-rusqlite = "0.38"
 rust_decimal = "1.40"
 # ECMAScript `Number::toString` formatting, which is what RFC 8785 (JCS) requires
 ryu-js = "1.0"
