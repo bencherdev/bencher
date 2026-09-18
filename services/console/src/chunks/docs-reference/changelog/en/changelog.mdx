@@ -1,5 +1,7 @@
 ## Pending `v0.6.14`
 - Fix a very large `page` query parameter returning the wrong page
+- **BREAKING CHANGE** The `plus.litestream` server config key is removed; use `plus.disaster_recovery`. A config that still uses `plus.litestream` is ignored and disaster recovery does not run at all: no restore at startup and no replication
+- **BREAKING CHANGE** The `sftp` disaster recovery replica scheme is removed; `file` and `s3` remain
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects
