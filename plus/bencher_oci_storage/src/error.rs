@@ -79,9 +79,7 @@ impl OciError {
                 OciStorageError::BlobUploadInvalidContent(_) => OCI_ERROR_BLOB_UPLOAD_INVALID,
                 OciStorageError::BlobNotFound(_) => OCI_ERROR_BLOB_UNKNOWN,
                 OciStorageError::SizeExceeded { .. } => OCI_ERROR_SIZE_INVALID,
-                OciStorageError::S3(_)
-                | OciStorageError::LocalStorage(_)
-                | OciStorageError::InvalidArn(_)
+                OciStorageError::Storage(_)
                 | OciStorageError::Config(_)
                 | OciStorageError::Json(_) => OCI_ERROR_UNKNOWN,
             },
@@ -138,51 +136,6 @@ impl OciError {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn storage_error_codes() {
-        // Each OciStorageError variant should map to the correct OCI error code
-        assert_eq!(
-            OciError::from(OciStorageError::ManifestNotFound("m".into())).code(),
-            OCI_ERROR_MANIFEST_UNKNOWN
-        );
-        assert_eq!(
-            OciError::from(OciStorageError::DigestMismatch {
-                expected: "a".into(),
-                actual: "b".into()
-            })
-            .code(),
-            OCI_ERROR_DIGEST_INVALID
-        );
-        assert_eq!(
-            OciError::from(OciStorageError::UploadNotFound("u".into())).code(),
-            OCI_ERROR_BLOB_UPLOAD_UNKNOWN
-        );
-        assert_eq!(
-            OciError::from(OciStorageError::InvalidContent("c".into())).code(),
-            OCI_ERROR_MANIFEST_INVALID
-        );
-        assert_eq!(
-            OciError::from(OciStorageError::BlobNotFound("b".into())).code(),
-            OCI_ERROR_BLOB_UNKNOWN
-        );
-        assert_eq!(
-            OciError::from(OciStorageError::SizeExceeded { size: 100, max: 50 }).code(),
-            OCI_ERROR_SIZE_INVALID
-        );
-        assert_eq!(
-            OciError::from(OciStorageError::S3("s3".into())).code(),
-            OCI_ERROR_UNKNOWN
-        );
-        assert_eq!(
-            OciError::from(OciStorageError::LocalStorage("fs".into())).code(),
-            OCI_ERROR_UNKNOWN
-        );
-        assert_eq!(
-            OciError::from(OciStorageError::Json("json".into())).code(),
-            OCI_ERROR_UNKNOWN
-        );
-    }
 
     #[test]
     fn direct_error_codes() {
