@@ -27,7 +27,7 @@ impl Adaptable for AdapterJsonV0 {
     }
 }
 
-/// Every v0 benchmark rides the empty parameter set, and every metric triple
+/// Every v0 benchmark rides empty parameters, and every metric triple
 /// becomes exactly the conventional `value`, `lower_value`, and `upper_value` names.
 fn from_wire(results: JsonV0Results) -> AdapterResults {
     results
@@ -179,8 +179,8 @@ pub(crate) mod test_json_v0 {
     }
 
     /// A benchmark that reports no measures is a benchmark that measured nothing.
-    /// It is accepted, it is not an error, and it parses to one variant on the
-    /// empty parameter set with no metric under it. BMF v1 mirrors this shape with
+    /// It is accepted, it is not an error, and it parses to one variant with
+    /// empty parameters and no metric under it. BMF v1 mirrors this shape with
     /// an entry whose `measures` is empty.
     #[test]
     fn adapter_json_v0_empty_measures() {
@@ -194,7 +194,7 @@ pub(crate) mod test_json_v0 {
         assert!(
             results
                 .entry(&benchmark)
-                .expect("Missing the empty parameter set")
+                .expect("Missing the empty variant")
                 .inner
                 .is_empty()
         );

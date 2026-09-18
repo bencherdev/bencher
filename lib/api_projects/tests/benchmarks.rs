@@ -6,7 +6,7 @@
 )]
 //! Integration tests for project benchmark endpoints.
 
-use bencher_api_tests::{TestServer, helpers::create_empty_parameter};
+use bencher_api_tests::{TestServer, helpers::create_empty_variant};
 use bencher_json::{JsonBenchmark, JsonBenchmarks, ParameterSet};
 use bencher_schema::schema;
 use diesel::{
@@ -134,7 +134,7 @@ async fn benchmarks_delete_not_found() {
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
-// Every benchmark is born with exactly one empty parameter set, so no benchmark
+// Every benchmark is born with exactly one empty variant, so no benchmark
 // row may exist without one.
 #[expect(clippy::expect_used, reason = "test assertion")]
 fn assert_benchmark_birth_invariant(server: &TestServer) {
@@ -149,29 +149,29 @@ fn assert_benchmark_birth_invariant(server: &TestServer) {
     );
 
     for benchmark_id in benchmark_ids {
-        let parameters: Vec<ParameterSet> = schema::parameter::table
-            .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-            .select(schema::parameter::set)
+        let parameters: Vec<ParameterSet> = schema::variant::table
+            .filter(schema::variant::benchmark_id.eq(benchmark_id))
+            .select(schema::variant::parameters)
             .load(&mut conn)
             .expect("Failed to load parameters");
         assert_eq!(
             parameters,
             vec![ParameterSet::default()],
-            "benchmark {benchmark_id} must have exactly one empty parameter set"
+            "benchmark {benchmark_id} must have exactly one empty variant"
         );
     }
 }
 
-// POST /v0/projects/{project}/benchmarks - create with the empty parameter set
+// POST /v0/projects/{project}/benchmarks - create with the empty variant
 #[tokio::test]
-async fn benchmarks_create_empty_parameter_set() {
+async fn benchmarks_create_empty_variant() {
     let server = TestServer::new().await;
     let user = server
-        .signup("Test User", "benchmarkparameter@example.com")
+        .signup("Test User", "benchmarkvariant@example.com")
         .await;
-    let org = server.create_org(&user, "Benchmark Parameter Org").await;
+    let org = server.create_org(&user, "Benchmark Variant Org").await;
     let project = server
-        .create_project(&user, &org, "Benchmark Parameter Project")
+        .create_project(&user, &org, "Benchmark Variant Project")
         .await;
 
     let project_slug: &str = project.slug.as_ref();
@@ -196,9 +196,9 @@ async fn benchmarks_create_empty_parameter_set() {
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("Failed to get benchmark ID");
-    let parameters: Vec<ParameterSet> = schema::parameter::table
-        .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-        .select(schema::parameter::set)
+    let parameters: Vec<ParameterSet> = schema::variant::table
+        .filter(schema::variant::benchmark_id.eq(benchmark_id))
+        .select(schema::variant::parameters)
         .load(&mut conn)
         .expect("Failed to load parameters");
     assert_eq!(parameters, vec![ParameterSet::default()]);
@@ -207,9 +207,9 @@ async fn benchmarks_create_empty_parameter_set() {
 }
 
 // POST /v0/projects/{project}/benchmarks - the benchmark insert rolls back with
-// the empty parameter set insert
+// the empty variant insert
 #[tokio::test]
-async fn benchmarks_create_rolls_back_with_parameter_set() {
+async fn benchmarks_create_rolls_back_with_variant() {
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "benchmarkrollback@example.com")
@@ -219,10 +219,10 @@ async fn benchmarks_create_rolls_back_with_parameter_set() {
         .create_project(&user, &org, "Benchmark Rollback Project")
         .await;
 
-    // Poison the empty parameter set that the next benchmark will be born with.
+    // Poison the empty variant that the next benchmark will be born with.
     // SQLite hands an `INTEGER PRIMARY KEY` the next rowid after the largest in
-    // use, so the row below collides on `UNIQUE(benchmark_id, "set")` with
-    // the set created inside the benchmark's own transaction. Foreign keys are
+    // use, so the row below collides on `UNIQUE(benchmark_id, parameters)` with
+    // the variant created inside the benchmark's own transaction. Foreign keys are
     // off on this connection, so it may point at a benchmark that does not exist yet.
     let mut conn = server.db_conn();
     let largest_benchmark_id: Option<i32> = schema::benchmark::table
@@ -232,7 +232,7 @@ async fn benchmarks_create_rolls_back_with_parameter_set() {
     let next_benchmark_id = largest_benchmark_id.unwrap_or_default() + 1;
     conn.batch_execute("PRAGMA foreign_keys = OFF")
         .expect("Failed to disable foreign keys");
-    create_empty_parameter(&mut conn, next_benchmark_id);
+    create_empty_variant(&mut conn, next_benchmark_id);
     conn.batch_execute("PRAGMA foreign_keys = ON")
         .expect("Failed to enable foreign keys");
 
@@ -250,7 +250,7 @@ async fn benchmarks_create_rolls_back_with_parameter_set() {
         .expect("Request failed");
     assert!(
         !resp.status().is_success(),
-        "creating a benchmark whose parameter set collides must fail"
+        "creating a benchmark whose variant collides must fail"
     );
 
     let benchmarks: i64 = schema::benchmark::table
@@ -260,6 +260,6 @@ async fn benchmarks_create_rolls_back_with_parameter_set() {
         .expect("Failed to count benchmarks");
     assert_eq!(
         benchmarks, 0,
-        "the benchmark insert must roll back with its parameter set insert"
+        "the benchmark insert must roll back with its variant insert"
     );
 }

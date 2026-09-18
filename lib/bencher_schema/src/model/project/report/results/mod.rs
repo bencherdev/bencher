@@ -32,9 +32,9 @@ use crate::{
         branch::{BranchId, head::HeadId},
         measure::{MeasureId, QueryMeasure},
         metric::InsertMetric,
-        parameter::{ParameterId, QueryParameter},
         report::report_benchmark::{InsertReportBenchmark, ReportBenchmarkId},
         testbed::TestbedId,
+        variant::{QueryVariant, VariantId},
     },
     schema, write_transaction,
 };
@@ -59,7 +59,7 @@ pub struct ReportResults {
     #[cfg(feature = "plus")]
     pub series_cache: SeriesCacheContext,
     pub benchmark_cache: HashMap<BenchmarkNameId, BenchmarkId>,
-    pub parameter_cache: HashMap<(BenchmarkId, ParameterSet), ParameterId>,
+    pub variant_cache: HashMap<(BenchmarkId, ParameterSet), VariantId>,
     pub measure_cache: HashMap<MeasureNameId, MeasureId>,
     pub detector_cache: HashMap<MeasureId, Option<Detector>>,
 }
@@ -95,7 +95,7 @@ impl ReportResults {
             #[cfg(feature = "plus")]
             series_cache,
             benchmark_cache: HashMap::new(),
-            parameter_cache: HashMap::new(),
+            variant_cache: HashMap::new(),
             measure_cache: HashMap::new(),
             detector_cache: HashMap::new(),
         }
@@ -211,11 +211,11 @@ impl ReportResults {
         let mut prepared_variants = Vec::with_capacity(results.inner.len());
 
         // A BMF v1 entry that names no measure measured nothing, so it writes
-        // nothing: its parameter set is never resolved, it writes no
+        // nothing: its variant is never resolved, it writes no
         // `report_benchmark` row, it touches no series, and it bills nothing.
         //
         // Gated on the version because BMF v0 says the same thing with `{"bench": {}}`
-        // and has always written that row on the benchmark's empty parameter set.
+        // and has always written that row on the benchmark's empty variant.
         // Skipping every empty variant would move a v0 payload, which this whole
         // layer promises not to do.
         let skip_empty_variants = results.version == BmfVersion::V1;
@@ -224,7 +224,7 @@ impl ReportResults {
             // If benchmark name is ignored then strip the special suffix before querying
             let (benchmark, ignore_benchmark) = strip_ignore_suffix(benchmark);
             let benchmark_id = self.benchmark_id(context, benchmark).await?;
-            // A benchmark reports as many variants as it has parameter sets, and
+            // A benchmark reports one result per variant, and
             // each is its own `report_benchmark` row with its own series history.
             for (parameters, metrics) in entries {
                 if skip_empty_variants && metrics.inner.is_empty() {
@@ -267,7 +267,7 @@ impl ReportResults {
         let write_start = context.clock.now();
 
         write_transaction!(context, |conn| {
-            // Series (testbed x benchmark x parameter x measure) seen in this iteration,
+            // Series (testbed x benchmark x variant x measure) seen in this iteration,
             // upserted into the active-series cache in this same transaction so the
             // cache cannot drift from the metrics it bills.
             #[cfg(feature = "plus")]
@@ -329,7 +329,7 @@ impl ReportResults {
     /// Phase 1: Prepare all data for a single variant (reads + compute only).
     #[expect(
         clippy::too_many_arguments,
-        reason = "a variant is a benchmark, its parameter set, and its metrics"
+        reason = "a variant is a benchmark, its parameters, and its metrics"
     )]
     async fn prepare_variant(
         &mut self,
@@ -343,10 +343,10 @@ impl ReportResults {
     ) -> Result<PreparedVariant, HttpError> {
         // Resolved here in Phase 1, alongside the benchmark and the measures, so the
         // Phase 2 write transaction stays read free and never nests a transaction.
-        let parameter_id = self.parameter_id(context, benchmark_id, parameters).await?;
+        let variant_id = self.variant_id(context, benchmark_id, parameters).await?;
 
         let insert_report_benchmark =
-            InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id, parameter_id);
+            InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id, variant_id);
 
         let mut prepared_measures = Vec::with_capacity(metrics.inner.len());
         for (measure_key, metric) in metrics.inner {
@@ -354,7 +354,7 @@ impl ReportResults {
             let named = metric.inner;
 
             // A bare threshold checks the conventional `value` series, of every
-            // parameter set under its measure, and nothing else. That is exactly what
+            // variant under its measure, and nothing else. That is exactly what
             // a measure level threshold over flat benchmarks has always done, so no
             // project's alert volume moves.
             let value = named.get(&MetricName::value()).copied();
@@ -364,7 +364,7 @@ impl ReportResults {
                     log,
                     auth_conn!(context),
                     benchmark_id,
-                    parameter_id,
+                    variant_id,
                     value.into_inner(),
                     ignore_benchmark,
                 )?),
@@ -399,23 +399,22 @@ impl ReportResults {
         })
     }
 
-    /// The parameter set's row, keyed on both the benchmark and the set itself:
-    /// one benchmark has as many variants as it has parameter sets.
-    async fn parameter_id(
+    /// The variant's row, keyed on both the benchmark and its parameters:
+    /// one benchmark has many variants.
+    async fn variant_id(
         &mut self,
         context: &ApiContext,
         benchmark_id: BenchmarkId,
         parameters: ParameterSet,
-    ) -> Result<ParameterId, HttpError> {
+    ) -> Result<VariantId, HttpError> {
         let key = (benchmark_id, parameters);
-        Ok(if let Some(id) = self.parameter_cache.get(&key) {
+        Ok(if let Some(id) = self.variant_cache.get(&key) {
             *id
         } else {
-            let parameter_id =
-                QueryParameter::get_or_create(context, self.project_id, benchmark_id, &key.1)
-                    .await?;
-            self.parameter_cache.insert(key, parameter_id);
-            parameter_id
+            let variant_id =
+                QueryVariant::get_or_create(context, self.project_id, benchmark_id, &key.1).await?;
+            self.variant_cache.insert(key, variant_id);
+            variant_id
         })
     }
 
@@ -474,7 +473,7 @@ impl PreparedVariant {
             .map(|prepared_measure| SeriesKey {
                 testbed_id,
                 benchmark_id: self.insert_report_benchmark.benchmark_id,
-                parameter_id: self.insert_report_benchmark.parameter_id,
+                variant_id: self.insert_report_benchmark.variant_id,
                 measure_id: prepared_measure.measure_id,
             })
             .collect()

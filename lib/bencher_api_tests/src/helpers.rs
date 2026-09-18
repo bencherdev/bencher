@@ -4,7 +4,7 @@
 
 use bencher_json::{
     BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, MetricName, MetricUuid, ParameterSet,
-    ParameterUuid, ReportUuid, ResourceName, TestbedUuid, TokenUuid, VersionUuid,
+    ReportUuid, ResourceName, TestbedUuid, TokenUuid, VariantUuid, VersionUuid,
 };
 use bencher_schema::{context::DbConnection, model::user::UserId, schema};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -29,42 +29,42 @@ pub fn get_project_id(server: &TestServer, project_slug: &str) -> i32 {
         .expect("Failed to get project ID")
 }
 
-/// Create the empty parameter set that every benchmark is born with.
+/// Create the empty variant that every benchmark is born with.
 ///
 /// Benchmarks inserted directly into the database bypass `QueryBenchmark::create`,
 /// so they need the birth invariant applied by hand.
-#[expect(clippy::expect_used, reason = "test helper inserting a parameter set")]
-pub fn create_empty_parameter(conn: &mut DbConnection, benchmark_id: i32) -> i32 {
+#[expect(clippy::expect_used, reason = "test helper inserting a variant")]
+pub fn create_empty_variant(conn: &mut DbConnection, benchmark_id: i32) -> i32 {
     let now = base_timestamp();
 
-    let parameter_uuid = ParameterUuid::new();
-    diesel::insert_into(schema::parameter::table)
+    let variant_uuid = VariantUuid::new();
+    diesel::insert_into(schema::variant::table)
         .values((
-            schema::parameter::uuid.eq(&parameter_uuid),
-            schema::parameter::benchmark_id.eq(benchmark_id),
-            schema::parameter::set.eq(ParameterSet::default()),
-            schema::parameter::created.eq(&now),
-            schema::parameter::modified.eq(&now),
+            schema::variant::uuid.eq(&variant_uuid),
+            schema::variant::benchmark_id.eq(benchmark_id),
+            schema::variant::parameters.eq(ParameterSet::default()),
+            schema::variant::created.eq(&now),
+            schema::variant::modified.eq(&now),
         ))
         .execute(&mut *conn)
-        .expect("Failed to insert parameter");
+        .expect("Failed to insert variant");
 
-    schema::parameter::table
-        .filter(schema::parameter::uuid.eq(&parameter_uuid))
-        .select(schema::parameter::id)
+    schema::variant::table
+        .filter(schema::variant::uuid.eq(&variant_uuid))
+        .select(schema::variant::id)
         .first(&mut *conn)
-        .expect("Failed to get parameter ID")
+        .expect("Failed to get variant ID")
 }
 
-/// Get a benchmark's empty parameter set.
-#[expect(clippy::expect_used, reason = "test helper querying a parameter set")]
-pub fn get_empty_parameter(conn: &mut DbConnection, benchmark_id: i32) -> i32 {
-    schema::parameter::table
-        .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-        .filter(schema::parameter::set.eq(ParameterSet::default()))
-        .select(schema::parameter::id)
+/// Get a benchmark's empty variant.
+#[expect(clippy::expect_used, reason = "test helper querying a variant")]
+pub fn get_empty_variant(conn: &mut DbConnection, benchmark_id: i32) -> i32 {
+    schema::variant::table
+        .filter(schema::variant::benchmark_id.eq(benchmark_id))
+        .filter(schema::variant::parameters.eq(ParameterSet::default()))
+        .select(schema::variant::id)
         .first(&mut *conn)
-        .expect("Failed to get empty parameter set")
+        .expect("Failed to get empty variant")
 }
 
 /// Create minimal test infrastructure (testbed, version, branch, head, report).

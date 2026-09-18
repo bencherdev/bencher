@@ -13,8 +13,8 @@ pub use mean::Mean;
 pub use median::Median;
 
 use crate::{
-    JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonParameter, JsonTestbed,
-    MeasureNameId, ReportUuid,
+    JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonTestbed, JsonVariant, MeasureNameId,
+    ReportUuid,
 };
 
 use super::{alert::JsonPerfAlert, report::Iteration, threshold::JsonThresholdModel};
@@ -192,8 +192,8 @@ pub struct JsonOneMetric {
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
     pub benchmark: JsonBenchmark,
-    /// The parameter set this row was measured under.
-    pub parameter: JsonParameter,
+    /// The variant this row was measured under.
+    pub variant: JsonVariant,
     pub measure: JsonMeasure,
     /// The addressed row's name.
     pub name: MetricName,

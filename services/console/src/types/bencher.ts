@@ -357,10 +357,10 @@ export interface JsonAlert {
 
 export type JsonReportAlerts = JsonAlert[];
 
-/** The parameter set a report result ran with. */
-export interface JsonReportParameter {
+/** The variant a report result ran with. */
+export interface JsonReportVariant {
 	uuid: Uuid;
-	set: Record<string, string | number | boolean>;
+	parameters: Record<string, string | number | boolean>;
 }
 
 export interface JsonThresholdModel {
@@ -410,14 +410,14 @@ export interface JsonReportMeasure {
 /**
  * One variant of one benchmark, in one iteration of a report.
  * 
- * A benchmark reports as many results per iteration as it has parameter sets, so
- * the parameter set is what tells two results of one benchmark apart.
+ * A benchmark reports as many results per iteration as it has variants, so
+ * the variant is what tells two results of one benchmark apart.
  */
 export interface JsonReportResult {
 	iteration: Iteration;
 	benchmark: JsonBenchmark;
-	/** The parameter set this result ran with. */
-	parameter: JsonReportParameter;
+	/** The variant this result ran with. */
+	variant: JsonReportVariant;
 	measures: JsonReportMeasure[];
 }
 
@@ -913,10 +913,10 @@ export interface JsonOAuthUser {
 	plan?: PlanLevel;
 }
 
-export interface JsonParameter {
+export interface JsonVariant {
 	uuid: Uuid;
 	benchmark: Uuid;
-	set: Record<string, string | number | boolean>;
+	parameters: Record<string, string | number | boolean>;
 	created: string;
 	modified: string;
 	archived?: string;
@@ -939,8 +939,8 @@ export interface JsonOneMetric {
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	benchmark: JsonBenchmark;
-	/** The parameter set this row was measured under. */
-	parameter: JsonParameter;
+	/** The variant this row was measured under. */
+	variant: JsonVariant;
 	measure: JsonMeasure;
 	/** The addressed row's name. */
 	name: string;
@@ -1030,8 +1030,8 @@ export interface JsonPerfLine {
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	benchmark: JsonBenchmark;
-	/** The parameter set this line plots. */
-	parameter: JsonParameter;
+	/** The variant this line plots. */
+	variant: JsonVariant;
 	measure: JsonMeasure;
 	metrics: JsonPerfMetrics[];
 }
@@ -1213,7 +1213,7 @@ export enum Adapter {
 export interface JsonReportIterationCounts {
 	/**
 	 * The number of results in this iteration: one per variant, so one per
-	 * benchmark for a benchmark that reports a single parameter set.
+	 * benchmark for a benchmark that reports a single variant.
 	 */
 	benchmarks: number;
 	/** The number of distinct measures in this iteration. */

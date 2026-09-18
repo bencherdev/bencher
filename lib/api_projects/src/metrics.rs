@@ -16,9 +16,9 @@ use bencher_schema::{
             branch::{QueryBranch, head::QueryHead, version::QueryVersion},
             measure::QueryMeasure,
             metric::QueryMetric,
-            parameter::QueryParameter,
             testbed::QueryTestbed,
             threshold::alert::QueryAlert,
+            variant::QueryVariant,
         },
         user::actor::{ApiActor, PubProjectBearerToken},
     },
@@ -134,8 +134,8 @@ fn metric_query(
                 .on(schema::benchmark::id.eq(schema::report_benchmark::benchmark_id)),
         )
         .inner_join(
-            schema::parameter::table
-                .on(schema::parameter::id.eq(schema::report_benchmark::parameter_id)),
+            schema::variant::table
+                .on(schema::variant::id.eq(schema::report_benchmark::variant_id)),
         )
         .inner_join(
             schema::report::table.on(schema::report::id.eq(schema::report_benchmark::report_id)),
@@ -167,7 +167,7 @@ fn metric_query(
             QueryVersion::as_select(),
             QueryTestbed::as_select(),
             QueryBenchmark::as_select(),
-            QueryParameter::as_select(),
+            QueryVariant::as_select(),
             QueryMeasure::as_select(),
             schema::report::uuid,
             schema::report_benchmark::iteration,
@@ -235,7 +235,7 @@ type MetricQuery = (
     QueryVersion,
     QueryTestbed,
     QueryBenchmark,
-    QueryParameter,
+    QueryVariant,
     QueryMeasure,
     ReportUuid,
     Iteration,
@@ -319,7 +319,7 @@ fn metric_query_json(
         version,
         testbed,
         benchmark,
-        parameter,
+        variant,
         measure,
         report,
         iteration,
@@ -332,7 +332,7 @@ fn metric_query_json(
 ) -> Result<JsonOneMetric, HttpError> {
     let branch = branch.into_json_for_head(conn, project, &head, Some(version))?;
     let testbed = testbed.into_json_for_spec(conn, project, spec_id)?;
-    let parameter = parameter.into_json_for_benchmark(&benchmark);
+    let variant = variant.into_json_for_benchmark(&benchmark);
     let benchmark = benchmark.into_json_for_project(project);
     let measure = measure.into_json_for_project(project);
 
@@ -356,7 +356,7 @@ fn metric_query_json(
         branch,
         testbed,
         benchmark,
-        parameter,
+        variant,
         measure,
         name,
         value: value.into(),

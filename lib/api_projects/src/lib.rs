@@ -18,13 +18,13 @@ pub mod jobs;
 mod keys;
 pub mod measures;
 pub mod metrics;
-pub mod parameters;
 pub mod perf;
 pub mod plots;
 pub mod projects;
 pub mod reports;
 pub mod testbeds;
 pub mod thresholds;
+pub mod variants;
 
 mod macros;
 
@@ -144,16 +144,16 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(benchmarks::proj_benchmark_patch)?;
         api_description.register(benchmarks::proj_benchmark_delete)?;
 
-        // Parameters
+        // Variants
         if http_options {
-            api_description.register(parameters::proj_parameters_options)?;
-            api_description.register(parameters::proj_parameter_options)?;
+            api_description.register(variants::proj_variants_options)?;
+            api_description.register(variants::proj_variant_options)?;
         }
-        api_description.register(parameters::proj_parameters_get)?;
-        api_description.register(parameters::proj_parameter_post)?;
-        api_description.register(parameters::proj_parameter_get)?;
-        api_description.register(parameters::proj_parameter_patch)?;
-        api_description.register(parameters::proj_parameter_delete)?;
+        api_description.register(variants::proj_variants_get)?;
+        api_description.register(variants::proj_variant_post)?;
+        api_description.register(variants::proj_variant_get)?;
+        api_description.register(variants::proj_variant_patch)?;
+        api_description.register(variants::proj_variant_delete)?;
 
         // Measures
         if http_options {

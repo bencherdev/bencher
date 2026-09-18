@@ -710,7 +710,7 @@ struct PlotDimensions {
 
 #[expect(clippy::expect_used, reason = "test helper seeding plot dimensions")]
 fn seed_plot_dimensions(server: &TestServer, project_id: i32) -> PlotDimensions {
-    use bencher_api_tests::helpers::{base_timestamp, create_empty_parameter};
+    use bencher_api_tests::helpers::{base_timestamp, create_empty_variant};
     use bencher_json::{BenchmarkUuid, BranchUuid, MeasureUuid, TestbedUuid};
     use bencher_schema::schema;
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -763,7 +763,7 @@ fn seed_plot_dimensions(server: &TestServer, project_id: i32) -> PlotDimensions 
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("Failed to get benchmark ID");
-    create_empty_parameter(&mut conn, benchmark_id);
+    create_empty_variant(&mut conn, benchmark_id);
     diesel::insert_into(schema::measure::table)
         .values((
             schema::measure::uuid.eq(&measure),

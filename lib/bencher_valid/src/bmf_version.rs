@@ -50,7 +50,7 @@ impl From<BmfVersion> for i32 {
 impl BmfVersion {
     /// A benchmark name maps to its measures.
     pub const V0: Self = Self(V0_VERSION);
-    /// A benchmark name maps to an array of parameter set entries.
+    /// A benchmark name maps to an array of variant entries.
     pub const V1: Self = Self(V1_VERSION);
 }
 

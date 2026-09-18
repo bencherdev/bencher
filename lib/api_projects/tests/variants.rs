@@ -18,8 +18,8 @@ use bencher_api_tests::{
     helpers::{base_timestamp, get_project_id},
 };
 use bencher_json::{
-    DateTime, JsonBenchmark, JsonBenchmarks, JsonParameter, JsonParameters, MetricName,
-    ParameterSet, ParameterUuid, Slug,
+    DateTime, JsonBenchmark, JsonBenchmarks, JsonVariant, JsonVariants, MetricName, ParameterSet,
+    Slug, VariantUuid,
 };
 use bencher_schema::{
     context::DbConnection,
@@ -150,22 +150,22 @@ fn organization_id(conn: &mut DbConnection, project_id: i32) -> OrganizationId {
         .expect("Failed to get the organization ID")
 }
 
-/// Every parameter set stored under a project, with the number of `report_benchmark`
+/// Every variant stored under a project, with the number of `report_benchmark`
 /// rows pointing at it.
-fn parameter_sets(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet, i64)> {
-    let parameters: Vec<(i32, ParameterSet)> = schema::parameter::table
+fn stored_variants(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet, i64)> {
+    let parameters: Vec<(i32, ParameterSet)> = schema::variant::table
         .inner_join(schema::benchmark::table)
         .filter(schema::benchmark::project_id.eq(project_id))
-        .order(schema::parameter::id.asc())
-        .select((schema::parameter::id, schema::parameter::set))
+        .order(schema::variant::id.asc())
+        .select((schema::variant::id, schema::variant::parameters))
         .load(&mut *conn)
-        .expect("Failed to load the parameter sets");
+        .expect("Failed to load the variants");
 
     parameters
         .into_iter()
-        .map(|(parameter_id, parameters)| {
+        .map(|(variant_id, parameters)| {
             let count: i64 = schema::report_benchmark::table
-                .filter(schema::report_benchmark::parameter_id.eq(parameter_id))
+                .filter(schema::report_benchmark::variant_id.eq(variant_id))
                 .count()
                 .get_result(&mut *conn)
                 .expect("Failed to count the report benchmarks");
@@ -174,18 +174,18 @@ fn parameter_sets(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet
         .collect()
 }
 
-/// Every metric name stored for a project, with its value, keyed by parameter set.
+/// Every metric name stored for a project, with its value, keyed by variant.
 fn metric_rows(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet, String, f64)> {
     schema::metric::table
         .inner_join(
             schema::report_benchmark::table
-                .inner_join(schema::parameter::table)
+                .inner_join(schema::variant::table)
                 .inner_join(schema::benchmark::table),
         )
         .filter(schema::benchmark::project_id.eq(project_id))
-        .order((schema::parameter::id.asc(), schema::metric::name.asc()))
+        .order((schema::variant::id.asc(), schema::metric::name.asc()))
         .select((
-            schema::parameter::set,
+            schema::variant::parameters,
             schema::metric::name,
             schema::metric::value,
         ))
@@ -196,21 +196,21 @@ fn metric_rows(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet, S
         .collect()
 }
 
-/// The parameter set and metric name of every alert in a project.
+/// The variant and metric name of every alert in a project.
 fn alerts(conn: &mut DbConnection, project_id: i32) -> Vec<(ParameterSet, String)> {
     schema::alert::table
         .inner_join(
             schema::boundary::table.inner_join(
                 schema::metric::table.inner_join(
                     schema::report_benchmark::table
-                        .inner_join(schema::parameter::table)
+                        .inner_join(schema::variant::table)
                         .inner_join(schema::benchmark::table),
                 ),
             ),
         )
         .filter(schema::benchmark::project_id.eq(project_id))
         .order(schema::alert::id.asc())
-        .select((schema::parameter::set, schema::metric::name))
+        .select((schema::variant::parameters, schema::metric::name))
         .load::<(ParameterSet, MetricName)>(&mut *conn)
         .expect("Failed to load the alerts")
         .into_iter()
@@ -236,7 +236,7 @@ fn boundary_names(conn: &mut DbConnection, project_id: i32) -> Vec<String> {
 
 /// The measure of every billable series a project has, in slug order.
 ///
-/// A series is `(testbed, benchmark, parameter, measure)`, so this is the measure
+/// A series is `(testbed, benchmark, variant, measure)`, so this is the measure
 /// side of what the active series cache bills.
 fn series_measures(conn: &mut DbConnection, project_id: i32) -> Vec<String> {
     schema::series_last_seen::table
@@ -256,7 +256,7 @@ fn parameters(canonical: &str) -> ParameterSet {
 }
 
 // A BMF v1 report lands one `report_benchmark` row per variant and one `metric`
-// row per metric name, under the parameter set the entry declared.
+// row per metric name, under the variant the entry declared.
 #[tokio::test]
 async fn v1_report_lands_variants_and_metrics() {
     let server = TestServer::new().await;
@@ -288,9 +288,9 @@ async fn v1_report_lands_variants_and_metrics() {
     let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
 
-    // The empty set the benchmark was born with, plus one row per variant.
+    // The empty variant the benchmark was born with, plus one row per variant.
     assert_eq!(
-        parameter_sets(&mut conn, project_id),
+        stored_variants(&mut conn, project_id),
         vec![
             (ParameterSet::default(), 0),
             (parameters(r#"{"size_mb": 16}"#), 1),
@@ -380,10 +380,10 @@ async fn ingest_variants(server: &TestServer) -> (Fixture, i32) {
 }
 
 // A project whose variants are flat benchmarks and a project whose variants
-// are parameter sets raise exactly the same alerts from exactly the same numbers.
+// are variants raise exactly the same alerts from exactly the same numbers.
 //
 // This is the promise of the whole layer: a bare threshold checks the conventional
-// value series of every parameter set under its measure, which is what a
+// value series of every variant under its measure, which is what a
 // measure-level threshold over flat benchmarks has always done.
 #[tokio::test]
 async fn alert_volume_is_identical_for_flat_benchmarks_and_variants() {
@@ -428,11 +428,11 @@ const TIGHT_LARGE_FINAL: f64 = 1_004.0;
 // One variant's regression does not alert against another's baseline, and one
 // variant's ordinary run is not an outlier against the other's history.
 //
-// The historical query behind detection has to filter on the parameter set as well
+// The historical query behind detection has to filter on the variant as well
 // as the benchmark. Drop that filter and the two variants pool into one sample
 // whose standard deviation hides the regression, so this test raises no alert.
 #[tokio::test]
-async fn baselines_separate_by_parameter() {
+async fn baselines_separate_by_variant() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "baseline").await;
 
@@ -521,10 +521,10 @@ async fn bare_threshold_checks_only_the_value_name() {
     );
 }
 
-// An entry with no `parameters` lands on the benchmark's empty parameter set,
-// which is the same set an explicit `{}` lands on.
+// An entry with no `parameters` lands on the benchmark's empty variant,
+// which is the same variant an explicit `{}` lands on.
 #[tokio::test]
-async fn absent_parameters_land_on_the_empty_set() {
+async fn absent_parameters_land_on_the_empty_variant() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "absent").await;
 
@@ -551,9 +551,9 @@ async fn absent_parameters_land_on_the_empty_set() {
     let mut conn = server.db_conn();
 
     assert_eq!(
-        parameter_sets(&mut conn, project_id),
+        stored_variants(&mut conn, project_id),
         vec![(ParameterSet::default(), 1)],
-        "an absent parameter set and an explicit empty one are one variant"
+        "an absent variant and an explicit empty one are one variant"
     );
 }
 
@@ -576,12 +576,12 @@ fn metric_counts(conn: &mut DbConnection) -> Vec<i32> {
 }
 
 // A BMF v1 entry that names no measure measured nothing, so it costs nothing: no
-// parameter set is minted for it, no `report_benchmark` row is written, and no
-// series is billed. The parameter set is the sharp half. An entry declaring
+// variant is minted for it, no `report_benchmark` row is written, and no
+// series is billed. The variant is the sharp half. An entry declaring
 // `{"size_mb": 16}` and measuring nothing must not leave a `{"size_mb": 16}` row
-// behind, or a payload of empty entries is a free way to fill the parameter table.
+// behind, or a payload of empty entries is a free way to fill the variant table.
 //
-// The benchmark itself is still born, with the empty parameter set every benchmark
+// The benchmark itself is still born, with the empty variant every benchmark
 // is born with, because the name was reported.
 #[tokio::test]
 async fn v1_entry_without_measures_mints_nothing() {
@@ -613,9 +613,9 @@ async fn v1_entry_without_measures_mints_nothing() {
 
     assert_eq!(benchmark_count(&mut conn, project_id), 1);
     assert_eq!(
-        parameter_sets(&mut conn, project_id),
+        stored_variants(&mut conn, project_id),
         vec![(ParameterSet::default(), 0)],
-        "only the empty set the benchmark was born with, pointed at by nothing"
+        "only the empty variant the benchmark was born with, pointed at by nothing"
     );
     assert_eq!(metric_rows(&mut conn, project_id), vec![]);
     assert_eq!(series_measures(&mut conn, project_id), Vec::<String>::new());
@@ -650,7 +650,7 @@ async fn v1_benchmark_without_entries_mints_nothing() {
 
     assert_eq!(benchmark_count(&mut conn, project_id), 1);
     assert_eq!(
-        parameter_sets(&mut conn, project_id),
+        stored_variants(&mut conn, project_id),
         vec![(ParameterSet::default(), 0)],
     );
     assert_eq!(metric_rows(&mut conn, project_id), vec![]);
@@ -659,7 +659,7 @@ async fn v1_benchmark_without_entries_mints_nothing() {
 }
 
 // BMF v0 does not move. A v0 benchmark that reports no measures writes the
-// `report_benchmark` row on its empty parameter set exactly as it always has,
+// `report_benchmark` row on its empty variant exactly as it always has,
 // which is why the skip above is gated on the payload's version rather than
 // applied to every shape that happens to be empty.
 #[tokio::test]
@@ -683,19 +683,19 @@ async fn v0_benchmark_without_measures_is_unchanged() {
 
     assert_eq!(benchmark_count(&mut conn, project_id), 1);
     assert_eq!(
-        parameter_sets(&mut conn, project_id),
+        stored_variants(&mut conn, project_id),
         vec![(ParameterSet::default(), 1)],
-        "the v0 row still lands on the empty parameter set"
+        "the v0 row still lands on the empty variant"
     );
     assert_eq!(metric_rows(&mut conn, project_id), vec![]);
     assert_eq!(series_measures(&mut conn, project_id), Vec::<String>::new());
     assert_eq!(metric_counts(&mut conn), vec![0]);
 }
 
-// An archived parameter set that reports again is unarchived, exactly as an
+// An archived variant that reports again is unarchived, exactly as an
 // archived benchmark is.
 #[tokio::test]
-async fn archived_parameter_set_is_unarchived_on_report() {
+async fn archived_variant_is_unarchived_on_report() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "archived").await;
 
@@ -721,25 +721,25 @@ async fn archived_parameter_set_is_unarchived_on_report() {
     {
         let mut conn = server.db_conn();
         let updated = diesel::update(
-            schema::parameter::table
-                .filter(schema::parameter::set.eq(parameters(r#"{"size_mb": 16}"#))),
+            schema::variant::table
+                .filter(schema::variant::parameters.eq(parameters(r#"{"size_mb": 16}"#))),
         )
-        .set(schema::parameter::archived.eq(Some(1_000_000_000i64)))
+        .set(schema::variant::archived.eq(Some(1_000_000_000i64)))
         .execute(&mut conn)
-        .expect("Failed to archive the parameter set");
+        .expect("Failed to archive the variant");
         assert_eq!(updated, 1);
     }
 
     report(&server, &fixture, 2, vec![variant], None, None, Some(1)).await;
 
     let mut conn = server.db_conn();
-    let archived: Vec<Option<i64>> = schema::parameter::table
+    let archived: Vec<Option<i64>> = schema::variant::table
         .inner_join(schema::benchmark::table)
         .filter(schema::benchmark::project_id.eq(project_id))
-        .filter(schema::parameter::set.eq(parameters(r#"{"size_mb": 16}"#)))
-        .select(schema::parameter::archived)
+        .filter(schema::variant::parameters.eq(parameters(r#"{"size_mb": 16}"#)))
+        .select(schema::variant::archived)
         .load(&mut conn)
-        .expect("Failed to load the parameter set");
+        .expect("Failed to load the variant");
     assert_eq!(archived, vec![None], "reporting unarchives the variant");
 }
 
@@ -909,8 +909,8 @@ async fn extra_metrics_do_not_change_the_metric_count() {
 // threshold, and boundary fields correct, and separates two variants into two
 // results rather than merging them into one.
 //
-// Two measures across two parameter sets is the smallest fixture that can see the
-// results query's ordering. Drop the parameter from the `ORDER BY` and the measure
+// Two measures across two variants is the smallest fixture that can see the
+// results query's ordering. Drop the variant from the `ORDER BY` and the measure
 // name outranks it, so the rows arrive interleaved by variant and the grouping,
 // which only ever compares against the previous row, emits four results of one
 // measure each instead of two results of two measures each.
@@ -1026,11 +1026,11 @@ async fn report_response_echoes_metrics_and_separates_variants() {
         .map(|result| {
             serde_json::from_value(
                 result
-                    .pointer("/parameter/set")
-                    .expect("each result names its parameter set")
+                    .pointer("/variant/parameters")
+                    .expect("each result names its variant")
                     .clone(),
             )
-            .expect("the parameter set parses")
+            .expect("the variant parses")
         })
         .collect();
     assert_eq!(
@@ -1103,14 +1103,14 @@ async fn report_response_echoes_metrics_and_separates_variants() {
     assert_eq!(boundaries("p99"), 0, "a metric beside it was not checked");
 }
 
-// Parameter sets are minted straight from report content, one row per variant, so
+// Variants are minted straight from report content, one row per variant, so
 // they carry the same per project creation ceiling as every other entity a report
 // mints. Without it a harness that interpolates a commit sha or a timestamp into its
 // parameters mints rows, variants, and billable series without bound.
 #[tokio::test]
-async fn parameter_creation_is_rate_limited() {
+async fn variant_creation_is_rate_limited() {
     // Four creations per project per window. A benchmark is born with its empty
-    // parameter set, which is one of the four, so the fourth new variant under one
+    // variant, which is one of the four, so the fourth new variant under one
     // benchmark is the one that is refused.
     let server = TestServer::new_with_creation_limits(4, 4).await;
 
@@ -1122,13 +1122,13 @@ async fn parameter_creation_is_rate_limited() {
         vec![v1("bench", &entries)]
     };
 
-    // Under the ceiling: three new variants on top of the birth empty set.
+    // Under the ceiling: three new variants on top of the birth empty variant.
     let under = fixture(&server, "under-limit").await;
     let (status, body) = try_report(&server, &under, 1, variants(3), None, None, Some(1)).await;
     assert_eq!(status, StatusCode::CREATED, "under the ceiling: {body}");
 
     // Over the ceiling, and in its own project, so what is counted is this project's
-    // own parameter rows rather than every project's.
+    // own variant rows rather than every project's.
     let over = fixture(&server, "over-limit").await;
     let (status, body) = try_report(&server, &over, 1, variants(4), None, None, Some(1)).await;
     assert_eq!(
@@ -1137,18 +1137,18 @@ async fn parameter_creation_is_rate_limited() {
         "over the ceiling: {body}"
     );
     assert!(
-        body.contains("Parameter"),
-        "the limit that fired is the parameter one: {body}"
+        body.contains("Variant"),
+        "the limit that fired is the variant one: {body}"
     );
 
-    // Minting stopped at the ceiling: the birth empty set plus three variants,
+    // Minting stopped at the ceiling: the birth empty variant plus three variants,
     // with the fourth refused rather than written.
     let project_id = get_project_id(&server, &over.project_slug);
     let mut conn = server.db_conn();
     assert_eq!(
-        parameter_sets(&mut conn, project_id).len(),
+        stored_variants(&mut conn, project_id).len(),
         4,
-        "no parameter set is minted past the ceiling"
+        "no variant is minted past the ceiling"
     );
 }
 
@@ -1352,10 +1352,10 @@ async fn v0_measure_response_is_unchanged() {
 
 // `--fold` is deprecated, not deleted: a BMF v0 report folds exactly as it always
 // has. The iterations collapse into one `report_benchmark` row on the benchmark's
-// empty parameter set, carrying the folded triple, and the metric count meter that
+// empty variant, carrying the folded triple, and the metric count meter that
 // bills Team, Enterprise, and licences reads exactly what it read before.
 //
-// The whole fold path was rewritten by this layer to speak parameter sets, so this
+// The whole fold path was rewritten by this layer to speak variants, so this
 // is the test that a pipeline running `bencher run --fold min` today sees no change
 // at all.
 #[tokio::test]
@@ -1393,9 +1393,9 @@ async fn v0_fold_still_folds() {
 
     // One variant, one row: the two iterations folded rather than landing apart.
     assert_eq!(
-        parameter_sets(&mut conn, project_id),
+        stored_variants(&mut conn, project_id),
         vec![(parameters("{}"), 1)],
-        "the folded report is one row on the empty parameter set"
+        "the folded report is one row on the empty variant"
     );
 
     assert_eq!(
@@ -1536,12 +1536,12 @@ async fn alert_json_carries_the_boundary_the_metric_exceeded() {
     );
 }
 
-// The parameter set resource endpoints, nested under their benchmark.
+// The variant resource endpoints, nested under their benchmark.
 //
-// A parameter set has neither a name nor a slug, so every one of these routes
+// A variant has neither a name nor a slug, so every one of these routes
 // addresses it by UUID, the way a report or an alert is addressed.
 
-/// Create a benchmark through the API and return the slug the parameter routes
+/// Create a benchmark through the API and return the slug the variant routes
 /// nest under.
 async fn create_benchmark(server: &TestServer, fixture: &Fixture, name: &str) -> String {
     let resp = server
@@ -1584,24 +1584,24 @@ async fn only_benchmark(server: &TestServer, fixture: &Fixture) -> String {
         .to_string()
 }
 
-async fn post_parameter(
+async fn post_variant(
     server: &TestServer,
     fixture: &Fixture,
     benchmark: &str,
     token: &str,
-    set: &serde_json::Value,
+    parameters: &serde_json::Value,
 ) -> (StatusCode, String) {
     let resp = server
         .client
         .post(server.api_url(&format!(
-            "/v0/projects/{}/benchmarks/{benchmark}/parameters",
+            "/v0/projects/{}/benchmarks/{benchmark}/variants",
             fixture.project_slug
         )))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(token),
         )
-        .json(&serde_json::json!({ "set": set }))
+        .json(&serde_json::json!({ "parameters": parameters }))
         .send()
         .await
         .expect("Request failed");
@@ -1610,19 +1610,19 @@ async fn post_parameter(
     (status, body)
 }
 
-async fn create_parameter(
+async fn create_variant(
     server: &TestServer,
     fixture: &Fixture,
     benchmark: &str,
-    set: &serde_json::Value,
-) -> JsonParameter {
-    let (status, body) = post_parameter(server, fixture, benchmark, &fixture.token, set).await;
-    assert_eq!(status, StatusCode::CREATED, "POST parameter: {body}");
-    serde_json::from_str(&body).expect("Failed to parse the parameter")
+    parameters: &serde_json::Value,
+) -> JsonVariant {
+    let (status, body) = post_variant(server, fixture, benchmark, &fixture.token, parameters).await;
+    assert_eq!(status, StatusCode::CREATED, "POST variant: {body}");
+    serde_json::from_str(&body).expect("Failed to parse the variant")
 }
 
-/// A parameter list request, with the `X-Total-Count` header it answered with.
-async fn list_parameters(
+/// A variant list request, with the `X-Total-Count` header it answered with.
+async fn list_variants(
     server: &TestServer,
     fixture: &Fixture,
     benchmark: &str,
@@ -1632,7 +1632,7 @@ async fn list_parameters(
     let resp = server
         .client
         .get(server.api_url(&format!(
-            "/v0/projects/{}/benchmarks/{benchmark}/parameters{query}",
+            "/v0/projects/{}/benchmarks/{benchmark}/variants{query}",
             fixture.project_slug
         )))
         .header(
@@ -1652,31 +1652,30 @@ async fn list_parameters(
     (status, total_count, body)
 }
 
-async fn parameter_list(
+async fn variant_list(
     server: &TestServer,
     fixture: &Fixture,
     benchmark: &str,
     query: &str,
-) -> Vec<JsonParameter> {
-    let (status, _, body) =
-        list_parameters(server, fixture, benchmark, &fixture.token, query).await;
+) -> Vec<JsonVariant> {
+    let (status, _, body) = list_variants(server, fixture, benchmark, &fixture.token, query).await;
     assert_eq!(status, StatusCode::OK, "GET parameters: {body}");
-    let parameters: JsonParameters =
+    let parameters: JsonVariants =
         serde_json::from_str(&body).expect("Failed to parse the parameters");
     parameters.0
 }
 
-async fn get_parameter(
+async fn get_variant(
     server: &TestServer,
     fixture: &Fixture,
     benchmark: &str,
     token: &str,
-    parameter: &ParameterUuid,
+    variant: &VariantUuid,
 ) -> (StatusCode, String) {
     let resp = server
         .client
         .get(server.api_url(&format!(
-            "/v0/projects/{}/benchmarks/{benchmark}/parameters/{parameter}",
+            "/v0/projects/{}/benchmarks/{benchmark}/variants/{variant}",
             fixture.project_slug
         )))
         .header(
@@ -1691,18 +1690,18 @@ async fn get_parameter(
     (status, body)
 }
 
-async fn patch_parameter(
+async fn patch_variant(
     server: &TestServer,
     fixture: &Fixture,
     benchmark: &str,
     token: &str,
-    parameter: &ParameterUuid,
+    variant: &VariantUuid,
     update: &serde_json::Value,
 ) -> (StatusCode, String) {
     let resp = server
         .client
         .patch(server.api_url(&format!(
-            "/v0/projects/{}/benchmarks/{benchmark}/parameters/{parameter}",
+            "/v0/projects/{}/benchmarks/{benchmark}/variants/{variant}",
             fixture.project_slug
         )))
         .header(
@@ -1718,17 +1717,17 @@ async fn patch_parameter(
     (status, body)
 }
 
-async fn delete_parameter(
+async fn delete_variant(
     server: &TestServer,
     fixture: &Fixture,
     benchmark: &str,
     token: &str,
-    parameter: &ParameterUuid,
+    variant: &VariantUuid,
 ) -> (StatusCode, String) {
     let resp = server
         .client
         .delete(server.api_url(&format!(
-            "/v0/projects/{}/benchmarks/{benchmark}/parameters/{parameter}",
+            "/v0/projects/{}/benchmarks/{benchmark}/variants/{variant}",
             fixture.project_slug
         )))
         .header(
@@ -1766,29 +1765,29 @@ async fn delete_report(
     (status, body)
 }
 
-/// The row id of a parameter set, or `None` once it is deleted.
-fn parameter_row_id(conn: &mut DbConnection, parameter: &ParameterUuid) -> Option<i32> {
+/// The row id of a variant, or `None` once it is deleted.
+fn variant_row_id(conn: &mut DbConnection, variant: &VariantUuid) -> Option<i32> {
     use diesel::OptionalExtension as _;
 
-    schema::parameter::table
-        .filter(schema::parameter::uuid.eq(parameter))
-        .select(schema::parameter::id)
+    schema::variant::table
+        .filter(schema::variant::uuid.eq(variant))
+        .select(schema::variant::id)
         .first(conn)
         .optional()
-        .expect("Failed to query the parameter set")
+        .expect("Failed to query the variant")
 }
 
-fn report_benchmarks_for_parameter(conn: &mut DbConnection, parameter_id: i32) -> i64 {
+fn report_benchmarks_for_variant(conn: &mut DbConnection, variant_id: i32) -> i64 {
     schema::report_benchmark::table
-        .filter(schema::report_benchmark::parameter_id.eq(parameter_id))
+        .filter(schema::report_benchmark::variant_id.eq(variant_id))
         .count()
         .get_result(conn)
         .expect("Failed to count the report benchmarks")
 }
 
-fn series_for_parameter(conn: &mut DbConnection, parameter_id: i32) -> i64 {
+fn series_for_variant(conn: &mut DbConnection, variant_id: i32) -> i64 {
     schema::series_last_seen::table
-        .filter(schema::series_last_seen::parameter_id.eq(parameter_id))
+        .filter(schema::series_last_seen::variant_id.eq(variant_id))
         .count()
         .get_result(conn)
         .expect("Failed to count the billable series")
@@ -1803,67 +1802,67 @@ fn project_metric_count(conn: &mut DbConnection, project_id: i32) -> i64 {
         .expect("Failed to count the metrics")
 }
 
-// A benchmark is born with exactly one parameter set, the empty one, and it is
+// A benchmark is born with exactly one variant, the empty one, and it is
 // listed with its total count like every other dimension list.
 #[tokio::test]
-async fn parameter_list_starts_with_the_empty_set() {
+async fn variant_list_starts_with_the_empty_variant() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "list-empty").await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
 
     let (status, total_count, body) =
-        list_parameters(&server, &fixture, &benchmark, &fixture.token, "").await;
+        list_variants(&server, &fixture, &benchmark, &fixture.token, "").await;
     assert_eq!(status, StatusCode::OK, "GET parameters: {body}");
     assert_eq!(total_count.as_deref(), Some("1"));
 
-    let parameters: JsonParameters =
+    let parameters: JsonVariants =
         serde_json::from_str(&body).expect("Failed to parse the parameters");
     assert_eq!(
         parameters.0.len(),
         1,
-        "a benchmark is born with exactly one parameter set: {body}"
+        "a benchmark is born with exactly one variant: {body}"
     );
-    let parameter = parameters.0.first().expect("the only parameter set");
-    assert_eq!(parameter.set, ParameterSet::default());
+    let variant = parameters.0.first().expect("the only variant");
+    assert_eq!(variant.parameters, ParameterSet::default());
     assert!(
-        parameter.archived.is_none(),
-        "the birth parameter set is not archived"
+        variant.archived.is_none(),
+        "the birth variant is not archived"
     );
 }
 
 // The list is sorted by creation, oldest first, and pages the way every other
 // dimension list pages.
 #[tokio::test]
-async fn parameter_list_paginates_in_creation_order() {
+async fn variant_list_paginates_in_creation_order() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "list-page").await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
 
     let mut created = Vec::new();
     for size_mb in [16, 32, 64] {
-        let parameter = create_parameter(
+        let variant = create_variant(
             &server,
             &fixture,
             &benchmark,
             &serde_json::json!({ "size_mb": size_mb }),
         )
         .await;
-        created.push(parameter.uuid);
+        created.push(variant.uuid);
     }
 
     let (status, total_count, body) =
-        list_parameters(&server, &fixture, &benchmark, &fixture.token, "").await;
+        list_variants(&server, &fixture, &benchmark, &fixture.token, "").await;
     assert_eq!(status, StatusCode::OK, "GET parameters: {body}");
     assert_eq!(total_count.as_deref(), Some("4"));
 
-    // The empty set the benchmark was born with, then the three variants in the
+    // The empty variant the benchmark was born with, then the three variants in the
     // order they were created.
-    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    let all = variant_list(&server, &fixture, &benchmark, "").await;
     assert_eq!(all.len(), 4);
     assert_eq!(
-        all.first().expect("the first parameter set").set,
+        all.first().expect("the first variant").parameters,
         ParameterSet::default(),
-        "the empty set the benchmark was born with sorts first"
+        "the empty variant the benchmark was born with sorts first"
     );
     assert_eq!(
         all.iter().skip(1).map(|p| p.uuid).collect::<Vec<_>>(),
@@ -1871,8 +1870,8 @@ async fn parameter_list_paginates_in_creation_order() {
         "the variants list in creation order"
     );
 
-    let first_page = parameter_list(&server, &fixture, &benchmark, "?per_page=2&page=1").await;
-    let second_page = parameter_list(&server, &fixture, &benchmark, "?per_page=2&page=2").await;
+    let first_page = variant_list(&server, &fixture, &benchmark, "?per_page=2&page=1").await;
+    let second_page = variant_list(&server, &fixture, &benchmark, "?per_page=2&page=2").await;
     assert_eq!(
         first_page
             .iter()
@@ -1883,7 +1882,7 @@ async fn parameter_list_paginates_in_creation_order() {
         "the two pages are the whole list, in order"
     );
 
-    let descending = parameter_list(&server, &fixture, &benchmark, "?direction=desc").await;
+    let descending = variant_list(&server, &fixture, &benchmark, "?direction=desc").await;
     assert_eq!(
         descending.iter().map(|p| p.uuid).collect::<Vec<_>>(),
         all.iter().rev().map(|p| p.uuid).collect::<Vec<_>>(),
@@ -1891,14 +1890,14 @@ async fn parameter_list_paginates_in_creation_order() {
     );
 }
 
-// The archived filter has the same two states a benchmark's does: archived sets are
+// The archived filter has the same two states a benchmark's does: archived variants are
 // out of the default list and are the only thing `archived=true` returns.
 #[tokio::test]
-async fn parameter_list_filters_by_archived() {
+async fn variant_list_filters_by_archived() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "list-archived").await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
-    let parameter = create_parameter(
+    let variant = create_variant(
         &server,
         &fixture,
         &benchmark,
@@ -1906,42 +1905,46 @@ async fn parameter_list_filters_by_archived() {
     )
     .await;
 
-    let (status, body) = patch_parameter(
+    let (status, body) = patch_variant(
         &server,
         &fixture,
         &benchmark,
         &fixture.token,
-        &parameter.uuid,
+        &variant.uuid,
         &serde_json::json!({ "archived": true }),
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "PATCH parameter: {body}");
+    assert_eq!(status, StatusCode::OK, "PATCH variant: {body}");
 
-    let default = parameter_list(&server, &fixture, &benchmark, "").await;
-    assert_eq!(default.len(), 1, "only the empty set is left unarchived");
+    let default = variant_list(&server, &fixture, &benchmark, "").await;
     assert_eq!(
-        default.first().expect("the empty set").set,
+        default.len(),
+        1,
+        "only the empty variant is left unarchived"
+    );
+    assert_eq!(
+        default.first().expect("the empty variant").parameters,
         ParameterSet::default(),
-        "the archived set is out of the default list"
+        "the archived variant is out of the default list"
     );
 
-    let archived = parameter_list(&server, &fixture, &benchmark, "?archived=true").await;
+    let archived = variant_list(&server, &fixture, &benchmark, "?archived=true").await;
     assert_eq!(archived.len(), 1);
-    let archived = archived.first().expect("the archived set");
-    assert_eq!(archived.uuid, parameter.uuid);
+    let archived = archived.first().expect("the archived variant");
+    assert_eq!(archived.uuid, variant.uuid);
     assert!(
         archived.archived.is_some(),
-        "the archived set carries its timestamp"
+        "the archived variant carries its timestamp"
     );
 }
 
-// A created parameter set reads back the same through the one get endpoint.
+// A created variant reads back the same through the one get endpoint.
 #[tokio::test]
-async fn parameter_get_reads_back_the_created_set() {
+async fn variant_get_reads_back_the_created_variant() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "get-one").await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
-    let created = create_parameter(
+    let created = create_variant(
         &server,
         &fixture,
         &benchmark,
@@ -1950,31 +1953,35 @@ async fn parameter_get_reads_back_the_created_set() {
     .await;
 
     let (status, body) =
-        get_parameter(&server, &fixture, &benchmark, &fixture.token, &created.uuid).await;
-    assert_eq!(status, StatusCode::OK, "GET parameter: {body}");
-    let parameter: JsonParameter = serde_json::from_str(&body).expect("Failed to parse");
-    assert_eq!(parameter.uuid, created.uuid);
-    assert_eq!(parameter.set, parameters(r#"{"op":"read","size_mb":16}"#));
-    assert_eq!(parameter.benchmark, created.benchmark);
+        get_variant(&server, &fixture, &benchmark, &fixture.token, &created.uuid).await;
+    assert_eq!(status, StatusCode::OK, "GET variant: {body}");
+    let variant: JsonVariant = serde_json::from_str(&body).expect("Failed to parse");
+    assert_eq!(variant.uuid, created.uuid);
+    assert_eq!(
+        variant.parameters,
+        parameters(r#"{"op":"read","size_mb":16}"#)
+    );
+    assert_eq!(variant.benchmark, created.benchmark);
 }
 
-// A parameter set that already exists under the benchmark is a conflict. This
-// endpoint is create, not get-or-create: the empty set the benchmark was born with
-// conflicts the same way any other repeated set does.
+// A variant that already exists under the benchmark is a conflict. This
+// endpoint is create, not get-or-create: the empty variant the benchmark was born with
+// conflicts the same way any other repeated variant does.
 #[tokio::test]
-async fn parameter_post_duplicate_is_a_conflict() {
+async fn variant_post_duplicate_is_a_conflict() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "post-duplicate").await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
 
-    let set = serde_json::json!({ "size_mb": 16 });
-    let created = create_parameter(&server, &fixture, &benchmark, &set).await;
+    let parameters = serde_json::json!({ "size_mb": 16 });
+    let created = create_variant(&server, &fixture, &benchmark, &parameters).await;
 
-    let (status, body) = post_parameter(&server, &fixture, &benchmark, &fixture.token, &set).await;
+    let (status, body) =
+        post_variant(&server, &fixture, &benchmark, &fixture.token, &parameters).await;
     assert_eq!(status, StatusCode::CONFLICT, "POST duplicate: {body}");
 
-    // A set that is logically the same set, spelled differently, is the same set.
-    let (status, body) = post_parameter(
+    // Parameters that are logically the same, spelled differently, are the same variant.
+    let (status, body) = post_variant(
         &server,
         &fixture,
         &benchmark,
@@ -1984,7 +1991,7 @@ async fn parameter_post_duplicate_is_a_conflict() {
     .await;
     assert_eq!(status, StatusCode::CONFLICT, "POST respelled: {body}");
 
-    let (status, body) = post_parameter(
+    let (status, body) = post_variant(
         &server,
         &fixture,
         &benchmark,
@@ -1992,30 +1999,34 @@ async fn parameter_post_duplicate_is_a_conflict() {
         &serde_json::json!({}),
     )
     .await;
-    assert_eq!(status, StatusCode::CONFLICT, "POST the empty set: {body}");
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "POST the empty variant: {body}"
+    );
 
-    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    let all = variant_list(&server, &fixture, &benchmark, "").await;
     assert_eq!(
         all.len(),
         2,
-        "the birth empty set and the one created variant"
+        "the birth empty variant and the one created variant"
     );
-    assert!(all.iter().any(|parameter| parameter.uuid == created.uuid));
+    assert!(all.iter().any(|variant| variant.uuid == created.uuid));
 }
 
-// The endpoint mints parameter sets, so it carries the same per project ceiling the
+// The endpoint mints variants, so it carries the same per project ceiling the
 // report path does, with the same error.
 #[tokio::test]
-async fn parameter_post_is_rate_limited() {
+async fn variant_post_is_rate_limited() {
     // Four creations per project per window. A benchmark is born with its empty
-    // parameter set, which is one of the four, so the fourth posted variant is
+    // variant, which is one of the four, so the fourth posted variant is
     // the one that is refused.
     let server = TestServer::new_with_creation_limits(4, 4).await;
     let fixture = fixture(&server, "post-limit").await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
 
     for size_mb in [16, 32, 64] {
-        create_parameter(
+        create_variant(
             &server,
             &fixture,
             &benchmark,
@@ -2024,7 +2035,7 @@ async fn parameter_post_is_rate_limited() {
         .await;
     }
 
-    let (status, body) = post_parameter(
+    let (status, body) = post_variant(
         &server,
         &fixture,
         &benchmark,
@@ -2038,22 +2049,22 @@ async fn parameter_post_is_rate_limited() {
         "over the ceiling: {body}"
     );
     assert!(
-        body.contains("Parameter"),
-        "the limit that fired is the parameter one: {body}"
+        body.contains("Variant"),
+        "the limit that fired is the variant one: {body}"
     );
 
-    let all = parameter_list(&server, &fixture, &benchmark, "").await;
-    assert_eq!(all.len(), 4, "no parameter set is minted past the ceiling");
+    let all = variant_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(all.len(), 4, "no variant is minted past the ceiling");
 }
 
 // Archiving sets the timestamp and unarchiving clears it, exactly as it does for a
 // benchmark.
 #[tokio::test]
-async fn parameter_patch_archives_and_unarchives() {
+async fn variant_patch_archives_and_unarchives() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "patch-archive").await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
-    let created = create_parameter(
+    let created = create_variant(
         &server,
         &fixture,
         &benchmark,
@@ -2062,7 +2073,7 @@ async fn parameter_patch_archives_and_unarchives() {
     .await;
     assert!(created.archived.is_none());
 
-    let (status, body) = patch_parameter(
+    let (status, body) = patch_variant(
         &server,
         &fixture,
         &benchmark,
@@ -2072,11 +2083,14 @@ async fn parameter_patch_archives_and_unarchives() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "PATCH archive: {body}");
-    let archived: JsonParameter = serde_json::from_str(&body).expect("Failed to parse");
+    let archived: JsonVariant = serde_json::from_str(&body).expect("Failed to parse");
     assert!(archived.archived.is_some(), "archiving sets the timestamp");
-    assert_eq!(archived.set, created.set, "archiving does not move the set");
+    assert_eq!(
+        archived.parameters, created.parameters,
+        "archiving does not move the parameters"
+    );
 
-    let (status, body) = patch_parameter(
+    let (status, body) = patch_variant(
         &server,
         &fixture,
         &benchmark,
@@ -2086,46 +2100,46 @@ async fn parameter_patch_archives_and_unarchives() {
     )
     .await;
     assert_eq!(status, StatusCode::OK, "PATCH unarchive: {body}");
-    let unarchived: JsonParameter = serde_json::from_str(&body).expect("Failed to parse");
+    let unarchived: JsonVariant = serde_json::from_str(&body).expect("Failed to parse");
     assert!(
         unarchived.archived.is_none(),
         "unarchiving clears the timestamp"
     );
 }
 
-// Archiving the empty parameter set is allowed, because a later report revives it.
+// Archiving the empty variant is allowed, because a later report revives it.
 #[tokio::test]
-async fn parameter_patch_archives_the_empty_set() {
+async fn variant_patch_archives_the_empty_variant() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "patch-empty").await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
-    let all = parameter_list(&server, &fixture, &benchmark, "").await;
-    let empty_set = all.first().expect("the empty parameter set").uuid;
+    let all = variant_list(&server, &fixture, &benchmark, "").await;
+    let empty_variant = all.first().expect("the empty variant").uuid;
 
-    let (status, body) = patch_parameter(
+    let (status, body) = patch_variant(
         &server,
         &fixture,
         &benchmark,
         &fixture.token,
-        &empty_set,
+        &empty_variant,
         &serde_json::json!({ "archived": true }),
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "PATCH the empty set: {body}");
+    assert_eq!(status, StatusCode::OK, "PATCH the empty variant: {body}");
 
-    let archived = parameter_list(&server, &fixture, &benchmark, "?archived=true").await;
+    let archived = variant_list(&server, &fixture, &benchmark, "?archived=true").await;
     assert_eq!(archived.len(), 1);
     assert_eq!(
-        archived.first().expect("the archived empty set").uuid,
-        empty_set
+        archived.first().expect("the archived empty variant").uuid,
+        empty_variant
     );
 }
 
-// A parameter set that a report still references cannot be deleted. Its results
+// A variant that a report still references cannot be deleted. Its results
 // have to be deleted first, exactly as a benchmark's do one level up, so the
-// deletable state is a parameter set nothing points at any more.
+// deletable state is a variant nothing points at any more.
 #[tokio::test]
-async fn parameter_delete_refuses_while_reports_reference_it() {
+async fn variant_delete_refuses_while_reports_reference_it() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "delete-referenced").await;
 
@@ -2148,48 +2162,48 @@ async fn parameter_delete_refuses_while_reports_reference_it() {
     .await;
 
     let benchmark = only_benchmark(&server, &fixture).await;
-    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    let all = variant_list(&server, &fixture, &benchmark, "").await;
     assert_eq!(all.len(), 2);
     let variant = all
         .iter()
-        .find(|parameter| parameter.set == parameters(r#"{"size_mb":16}"#))
+        .find(|variant| variant.parameters == parameters(r#"{"size_mb":16}"#))
         .expect("the reported variant");
 
     let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
-    let variant_id = parameter_row_id(&mut conn, &variant.uuid).expect("the variant row");
-    assert_eq!(report_benchmarks_for_parameter(&mut conn, variant_id), 1);
+    let variant_id = variant_row_id(&mut conn, &variant.uuid).expect("the variant row");
+    assert_eq!(report_benchmarks_for_variant(&mut conn, variant_id), 1);
     drop(conn);
 
     let (status, body) =
-        delete_parameter(&server, &fixture, &benchmark, &fixture.token, &variant.uuid).await;
+        delete_variant(&server, &fixture, &benchmark, &fixture.token, &variant.uuid).await;
     assert_eq!(
         status,
         StatusCode::CONFLICT,
-        "a referenced parameter set is not deletable: {body}"
+        "a referenced variant is not deletable: {body}"
     );
 
-    // Nothing moved: the parameter set, its results, its metrics, and its billable
+    // Nothing moved: the variant, its results, its metrics, and its billable
     // series are all still there.
     let mut conn = server.db_conn();
     assert!(
-        parameter_row_id(&mut conn, &variant.uuid).is_some(),
-        "the parameter set is still there"
+        variant_row_id(&mut conn, &variant.uuid).is_some(),
+        "the variant is still there"
     );
-    assert_eq!(report_benchmarks_for_parameter(&mut conn, variant_id), 1);
-    assert_eq!(series_for_parameter(&mut conn, variant_id), 1);
+    assert_eq!(report_benchmarks_for_variant(&mut conn, variant_id), 1);
+    assert_eq!(series_for_variant(&mut conn, variant_id), 1);
     assert_eq!(project_metric_count(&mut conn, project_id), 2);
     drop(conn);
 
-    let all = parameter_list(&server, &fixture, &benchmark, "").await;
-    assert_eq!(all.len(), 2, "both parameter sets are still listed");
+    let all = variant_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(all.len(), 2, "both variants are still listed");
 }
 
-// A parameter set nothing references any more is deletable, and the billable series
+// A variant nothing references any more is deletable, and the billable series
 // it left behind go with it. Deleting the report is what unreferences it: the report
-// takes its own results, and the parameter set and its series outlive them.
+// takes its own results, and the variant and its series outlive them.
 #[tokio::test]
-async fn parameter_delete_removes_an_unreferenced_set() {
+async fn variant_delete_removes_an_unreferenced_variant() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "delete-unreferenced").await;
 
@@ -2217,98 +2231,109 @@ async fn parameter_delete_removes_an_unreferenced_set() {
         .to_owned();
 
     let benchmark = only_benchmark(&server, &fixture).await;
-    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    let all = variant_list(&server, &fixture, &benchmark, "").await;
     let variant = all
         .iter()
-        .find(|parameter| parameter.set == parameters(r#"{"size_mb":16}"#))
+        .find(|variant| variant.parameters == parameters(r#"{"size_mb":16}"#))
         .expect("the reported variant");
-    let empty_set = all
+    let empty_variant = all
         .iter()
-        .find(|parameter| parameter.set == ParameterSet::default())
-        .expect("the empty parameter set");
+        .find(|variant| variant.parameters == ParameterSet::default())
+        .expect("the empty variant");
 
     let mut conn = server.db_conn();
-    let variant_id = parameter_row_id(&mut conn, &variant.uuid).expect("the variant row");
-    let empty_set_id = parameter_row_id(&mut conn, &empty_set.uuid).expect("the empty set row");
+    let variant_id = variant_row_id(&mut conn, &variant.uuid).expect("the variant row");
+    let empty_variant_id =
+        variant_row_id(&mut conn, &empty_variant.uuid).expect("the empty variant row");
     drop(conn);
 
     let (status, body) = delete_report(&server, &fixture, &report_uuid).await;
     assert_eq!(status, StatusCode::NO_CONTENT, "DELETE report: {body}");
 
-    // The report took its results, and left the parameter sets and the series they
+    // The report took its results, and left the variants and the series they
     // billed behind.
     let mut conn = server.db_conn();
     assert_eq!(
-        report_benchmarks_for_parameter(&mut conn, variant_id),
+        report_benchmarks_for_variant(&mut conn, variant_id),
         0,
         "the report took its results"
     );
     assert_eq!(
-        series_for_parameter(&mut conn, variant_id),
+        series_for_variant(&mut conn, variant_id),
         1,
         "the billable series outlives the report"
     );
     drop(conn);
 
     let (status, body) =
-        delete_parameter(&server, &fixture, &benchmark, &fixture.token, &variant.uuid).await;
-    assert_eq!(status, StatusCode::NO_CONTENT, "DELETE parameter: {body}");
+        delete_variant(&server, &fixture, &benchmark, &fixture.token, &variant.uuid).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "DELETE variant: {body}");
 
     let mut conn = server.db_conn();
     assert!(
-        parameter_row_id(&mut conn, &variant.uuid).is_none(),
-        "the parameter set is gone"
+        variant_row_id(&mut conn, &variant.uuid).is_none(),
+        "the variant is gone"
     );
     assert_eq!(
-        series_for_parameter(&mut conn, variant_id),
+        series_for_variant(&mut conn, variant_id),
         0,
         "its billable series go with it"
     );
-    // The benchmark's empty parameter set is untouched.
+    // The benchmark's empty variant is untouched.
     assert!(
-        parameter_row_id(&mut conn, &empty_set.uuid).is_some(),
-        "the empty set is still there"
+        variant_row_id(&mut conn, &empty_variant.uuid).is_some(),
+        "the empty variant is still there"
     );
-    assert_eq!(series_for_parameter(&mut conn, empty_set_id), 1);
+    assert_eq!(series_for_variant(&mut conn, empty_variant_id), 1);
     drop(conn);
 
-    let remaining = parameter_list(&server, &fixture, &benchmark, "").await;
+    let remaining = variant_list(&server, &fixture, &benchmark, "").await;
     assert_eq!(remaining.len(), 1);
     assert_eq!(
-        remaining.first().expect("the empty set").uuid,
-        empty_set.uuid
+        remaining.first().expect("the empty variant").uuid,
+        empty_variant.uuid
     );
 }
 
-// The empty parameter set is structural, so this endpoint may not delete it. Every
-// benchmark is born with exactly one, and ingest treats a missing empty set as data
+// The empty variant is structural, so this endpoint may not delete it. Every
+// benchmark is born with exactly one, and ingest treats a missing empty variant as data
 // corruption rather than a set to mint.
 #[tokio::test]
-async fn parameter_delete_refuses_the_empty_set() {
+async fn variant_delete_refuses_the_empty_variant() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "delete-empty").await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
-    let all = parameter_list(&server, &fixture, &benchmark, "").await;
-    let empty_set = all.first().expect("the empty parameter set").uuid;
+    let all = variant_list(&server, &fixture, &benchmark, "").await;
+    let empty_variant = all.first().expect("the empty variant").uuid;
 
-    let (status, body) =
-        delete_parameter(&server, &fixture, &benchmark, &fixture.token, &empty_set).await;
-    assert_eq!(status, StatusCode::CONFLICT, "DELETE the empty set: {body}");
+    let (status, body) = delete_variant(
+        &server,
+        &fixture,
+        &benchmark,
+        &fixture.token,
+        &empty_variant,
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "DELETE the empty variant: {body}"
+    );
 
-    let all = parameter_list(&server, &fixture, &benchmark, "").await;
-    assert_eq!(all.len(), 1, "the empty set is still there");
-    assert_eq!(all.first().expect("the empty set").uuid, empty_set);
+    let all = variant_list(&server, &fixture, &benchmark, "").await;
+    assert_eq!(all.len(), 1, "the empty variant is still there");
+    assert_eq!(all.first().expect("the empty variant").uuid, empty_variant);
 }
 
-// A parameter set under one benchmark is not addressable through another, and a
+// A variant under one benchmark is not addressable through another, and a
 // UUID that does not exist is not found.
 #[tokio::test]
-async fn parameter_get_is_scoped_to_its_benchmark() {
+async fn variant_get_is_scoped_to_its_benchmark() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "get-scope").await;
     let first = create_benchmark(&server, &fixture, "bench one").await;
     let second = create_benchmark(&server, &fixture, "bench two").await;
-    let parameter = create_parameter(
+    let variant = create_variant(
         &server,
         &fixture,
         &first,
@@ -2316,32 +2341,31 @@ async fn parameter_get_is_scoped_to_its_benchmark() {
     )
     .await;
 
-    let (status, _) =
-        get_parameter(&server, &fixture, &second, &fixture.token, &parameter.uuid).await;
+    let (status, _) = get_variant(&server, &fixture, &second, &fixture.token, &variant.uuid).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
-    let (status, _) = get_parameter(
+    let (status, _) = get_variant(
         &server,
         &fixture,
         &first,
         &fixture.token,
-        &ParameterUuid::new(),
+        &VariantUuid::new(),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
-// Permissions are the benchmark endpoints' permissions: a public project's sets are
+// Permissions are the benchmark endpoints' permissions: a public project's variants are
 // readable by anyone, and writing one takes a role on the project.
 #[tokio::test]
-async fn parameter_writes_require_permission() {
+async fn variant_writes_require_permission() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "permissions").await;
     let outsider = server
         .signup("Outsider", "paramsoutsider@example.com")
         .await;
     let benchmark = create_benchmark(&server, &fixture, "bench one").await;
-    let parameter = create_parameter(
+    let variant = create_variant(
         &server,
         &fixture,
         &benchmark,
@@ -2350,21 +2374,20 @@ async fn parameter_writes_require_permission() {
     .await;
 
     // The project is public, so the outsider may read.
-    let (status, _, body) =
-        list_parameters(&server, &fixture, &benchmark, &outsider.token, "").await;
+    let (status, _, body) = list_variants(&server, &fixture, &benchmark, &outsider.token, "").await;
     assert_eq!(status, StatusCode::OK, "GET parameters: {body}");
-    let (status, body) = get_parameter(
+    let (status, body) = get_variant(
         &server,
         &fixture,
         &benchmark,
         &outsider.token,
-        &parameter.uuid,
+        &variant.uuid,
     )
     .await;
-    assert_eq!(status, StatusCode::OK, "GET parameter: {body}");
+    assert_eq!(status, StatusCode::OK, "GET variant: {body}");
 
     // Every write is refused.
-    let (status, body) = post_parameter(
+    let (status, body) = post_variant(
         &server,
         &fixture,
         &benchmark,
@@ -2372,30 +2395,30 @@ async fn parameter_writes_require_permission() {
         &serde_json::json!({ "size_mb": 32 }),
     )
     .await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "POST parameter: {body}");
+    assert_eq!(status, StatusCode::FORBIDDEN, "POST variant: {body}");
 
-    let (status, body) = patch_parameter(
+    let (status, body) = patch_variant(
         &server,
         &fixture,
         &benchmark,
         &outsider.token,
-        &parameter.uuid,
+        &variant.uuid,
         &serde_json::json!({ "archived": true }),
     )
     .await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "PATCH parameter: {body}");
+    assert_eq!(status, StatusCode::FORBIDDEN, "PATCH variant: {body}");
 
-    let (status, body) = delete_parameter(
+    let (status, body) = delete_variant(
         &server,
         &fixture,
         &benchmark,
         &outsider.token,
-        &parameter.uuid,
+        &variant.uuid,
     )
     .await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "DELETE parameter: {body}");
+    assert_eq!(status, StatusCode::FORBIDDEN, "DELETE variant: {body}");
 
-    let all = parameter_list(&server, &fixture, &benchmark, "").await;
+    let all = variant_list(&server, &fixture, &benchmark, "").await;
     assert_eq!(all.len(), 2, "nothing the outsider sent landed");
-    assert!(all.iter().all(|parameter| parameter.archived.is_none()));
+    assert!(all.iter().all(|variant| variant.archived.is_none()));
 }

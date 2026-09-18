@@ -9,7 +9,7 @@ Glossary of terms for Bencher concepts.
 - **Report**:
   A collection of Benchmarks and their Metrics for a particular Branch and Testbed.
 - **Series**:
-  A distinct combination of Testbed, Benchmark, Parameter Set, and Measure.
+  A distinct combination of Testbed, Variant, and Measure.
   Each Series has its own Metric history and bills as its own Series.
   A Series does not include a Branch.
 - **Line**:
@@ -42,16 +42,18 @@ Glossary of terms for Bencher concepts.
 - **Benchmark**:
   A named performance regression test.
   A Benchmark may be ignored so it does not generate Alerts.
-- **Parameter Set**:
-  A set of parameters used for a Benchmark.
+- **Parameter**:
+  1 key mapped to 1 JSON scalar.
+- **Parameters**:
+  The full map of Parameters for 1 Variant.
   Each key maps to a JSON scalar: a string, a number, or a boolean.
   Values are canonicalized, so `16`, `16.0`, and `1.6e1` are the same value.
-  A Parameter Set may carry at most 8 keys.
-  A Parameter Set is a sub-dimension of a Benchmark.
+  Parameters may carry at most 8 keys.
 - **Variant**:
-  A Benchmark instantiated with one Parameter Set.
-  If no Parameter Sets are specified, a Benchmark has a Singe Variant
-  with an empty Parameter Set.
+  A Benchmark with 1 set of Parameters.
+  If no Parameters are declared, a Benchmark has a single Variant
+  with empty Parameters.
+  A Variant is a sub-dimension of a Benchmark.
 - **Measure**:
   The unit of measurement for a Metric.
   For example, `Latency` and `Throughput` with units of
@@ -69,7 +71,7 @@ Glossary of terms for Bencher concepts.
 - **Threshold**:
   Used to catch performance regressions.
   A Threshold is assigned to a unique combination of: Branch, Testbed, and Measure.
-  An array of Parameter Sets can be specified to filter the Benchmarks a Threshold checks.
+  A parameters filter can be specified to select the Variants a Threshold checks.
 - **Model**:
   The combination of a Test and its parameters for a Threshold.
 - **Test**:

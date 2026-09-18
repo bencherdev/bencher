@@ -14,7 +14,7 @@
 
 use bencher_api_tests::{
     TestServer,
-    helpers::{base_timestamp, create_empty_parameter, create_test_report, get_project_id},
+    helpers::{base_timestamp, create_empty_variant, create_test_report, get_project_id},
 };
 use bencher_json::{
     BenchmarkUuid, JsonAlerts, JsonOneMetric, JsonReport, MeasureUuid, MetricName, MetricUuid,
@@ -51,7 +51,7 @@ fn create_test_metric(server: &TestServer, project_id: i32, report_id: i32) -> M
         .select(schema::benchmark::id)
         .first(&mut conn)
         .expect("Failed to get benchmark ID");
-    let parameter_id = create_empty_parameter(&mut conn, benchmark_id);
+    let variant_id = create_empty_variant(&mut conn, benchmark_id);
 
     // Measure
     let measure_uuid = MeasureUuid::new();
@@ -81,7 +81,7 @@ fn create_test_metric(server: &TestServer, project_id: i32, report_id: i32) -> M
             schema::report_benchmark::report_id.eq(report_id),
             schema::report_benchmark::iteration.eq(0),
             schema::report_benchmark::benchmark_id.eq(benchmark_id),
-            schema::report_benchmark::parameter_id.eq(parameter_id),
+            schema::report_benchmark::variant_id.eq(variant_id),
         ))
         .execute(&mut conn)
         .expect("Failed to insert report_benchmark");
@@ -625,7 +625,7 @@ const BEFORE_KEYS: [&str; 13] = [
 
 /// The keys the addressed row shape adds, and the only difference a value row
 /// address sees.
-const ADDED_KEYS: [&str; 3] = ["parameter", "name", "value"];
+const ADDED_KEYS: [&str; 3] = ["variant", "name", "value"];
 
 fn keys(metric: &serde_json::Value) -> Vec<String> {
     let mut keys = metric
@@ -702,11 +702,8 @@ async fn metrics_get_value_row_is_unchanged_but_for_the_additions() {
     // measured under.
     assert_eq!(metric["name"], serde_json::json!("value"));
     assert_eq!(metric["value"], serde_json::json!(42.0));
-    assert_eq!(metric["parameter"]["set"], serde_json::json!({}));
-    assert_eq!(
-        metric["parameter"]["benchmark"],
-        metric["benchmark"]["uuid"]
-    );
+    assert_eq!(metric["variant"]["parameters"], serde_json::json!({}));
+    assert_eq!(metric["variant"]["benchmark"], metric["benchmark"]["uuid"]);
 }
 
 // A bound is an ordinary row with an ordinary UUID, and the report response hands it
@@ -747,7 +744,7 @@ async fn metrics_get_bound_row_resolves() {
     assert_eq!(metric["report"], posted["uuid"]);
     assert_eq!(metric["benchmark"]["name"], serde_json::json!("bench"));
     assert_eq!(metric["measure"]["slug"], serde_json::json!("latency"));
-    assert_eq!(metric["parameter"]["set"], serde_json::json!({}));
+    assert_eq!(metric["variant"]["parameters"], serde_json::json!({}));
 }
 
 // A name a report invented resolves the same way the conventional ones do, under the
@@ -785,7 +782,7 @@ async fn metrics_get_named_row_resolves() {
     assert_eq!(metric["boundary"], serde_json::Value::Null);
     assert_eq!(metric["alert"], serde_json::Value::Null);
     assert_eq!(
-        metric["parameter"]["set"],
+        metric["variant"]["parameters"],
         serde_json::json!({ "size_mb": 16 }),
     );
 
@@ -803,7 +800,7 @@ async fn metrics_get_named_row_resolves() {
             "upper_value": null,
         }),
     );
-    assert_eq!(value_row["parameter"]["uuid"], metric["parameter"]["uuid"]);
+    assert_eq!(value_row["variant"]["uuid"], metric["variant"]["uuid"]);
 }
 
 /// The point estimates the fixture reports, run after run. The final report jumps an

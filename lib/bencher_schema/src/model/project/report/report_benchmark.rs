@@ -2,7 +2,7 @@ use bencher_json::{ReportBenchmarkUuid, project::report::Iteration};
 
 use crate::{
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
-    model::project::{benchmark::BenchmarkId, parameter::ParameterId},
+    model::project::{benchmark::BenchmarkId, variant::VariantId},
     schema::report_benchmark as report_benchmark_table,
 };
 
@@ -19,7 +19,7 @@ pub struct QueryReportBenchmark {
     pub report_id: ReportId,
     pub iteration: Iteration,
     pub benchmark_id: BenchmarkId,
-    pub parameter_id: ParameterId,
+    pub variant_id: VariantId,
 }
 
 impl QueryReportBenchmark {
@@ -35,7 +35,7 @@ pub struct InsertReportBenchmark {
     pub report_id: ReportId,
     pub iteration: Iteration,
     pub benchmark_id: BenchmarkId,
-    pub parameter_id: ParameterId,
+    pub variant_id: VariantId,
 }
 
 impl InsertReportBenchmark {
@@ -43,40 +43,40 @@ impl InsertReportBenchmark {
         report_id: ReportId,
         iteration: Iteration,
         benchmark_id: BenchmarkId,
-        parameter_id: ParameterId,
+        variant_id: VariantId,
     ) -> Self {
         InsertReportBenchmark {
             uuid: ReportBenchmarkUuid::new(),
             report_id,
             iteration,
             benchmark_id,
-            parameter_id,
+            variant_id,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, ParameterSet, ParameterUuid, ReportBenchmarkUuid};
+    use bencher_json::{DateTime, ParameterSet, ReportBenchmarkUuid, VariantUuid};
     use diesel::{
         ExpressionMethods as _, QueryDsl as _, QueryResult, RunQueryDsl as _, SqliteConnection,
     };
 
     use crate::{
         macros::sql::last_insert_rowid,
-        model::project::{benchmark::BenchmarkId, parameter::ParameterId, report::ReportId},
+        model::project::{benchmark::BenchmarkId, report::ReportId, variant::VariantId},
         schema,
         test_util::{
             create_base_entities, create_benchmark, create_branch_with_head, create_report,
-            create_testbed, create_version, get_empty_parameter, setup_test_db,
+            create_testbed, create_version, get_empty_variant, setup_test_db,
         },
     };
 
     struct TestRows {
         report: ReportId,
         benchmark: BenchmarkId,
-        empty_set: ParameterId,
-        variant: ParameterId,
+        empty_variant: VariantId,
+        variant: VariantId,
     }
 
     fn seed(conn: &mut SqliteConnection) -> TestRows {
@@ -118,28 +118,28 @@ mod tests {
             "bench1",
             "bench1",
         );
-        let empty_set_id = get_empty_parameter(conn, benchmark_id);
+        let empty_variant_id = get_empty_variant(conn, benchmark_id);
 
         let variant: ParameterSet =
             r#"{"size_mb": 16}"#.parse().expect("Failed to parse parameters");
-        diesel::insert_into(schema::parameter::table)
+        diesel::insert_into(schema::variant::table)
             .values((
-                schema::parameter::uuid.eq(ParameterUuid::new()),
-                schema::parameter::benchmark_id.eq(benchmark_id),
-                schema::parameter::set.eq(&variant),
-                schema::parameter::created.eq(DateTime::TEST),
-                schema::parameter::modified.eq(DateTime::TEST),
+                schema::variant::uuid.eq(VariantUuid::new()),
+                schema::variant::benchmark_id.eq(benchmark_id),
+                schema::variant::parameters.eq(&variant),
+                schema::variant::created.eq(DateTime::TEST),
+                schema::variant::modified.eq(DateTime::TEST),
             ))
             .execute(&mut *conn)
-            .expect("Failed to insert parameter");
-        let variant_id: ParameterId = diesel::select(last_insert_rowid())
+            .expect("Failed to insert variant");
+        let variant_id: VariantId = diesel::select(last_insert_rowid())
             .get_result(&mut *conn)
-            .expect("Failed to get parameter id");
+            .expect("Failed to get variant id");
 
         TestRows {
             report: report_id,
             benchmark: benchmark_id,
-            empty_set: empty_set_id,
+            empty_variant: empty_variant_id,
             variant: variant_id,
         }
     }
@@ -147,7 +147,7 @@ mod tests {
     fn insert_report_benchmark(
         conn: &mut SqliteConnection,
         rows: &TestRows,
-        parameter_id: ParameterId,
+        variant_id: VariantId,
     ) -> QueryResult<usize> {
         diesel::insert_into(schema::report_benchmark::table)
             .values((
@@ -155,7 +155,7 @@ mod tests {
                 schema::report_benchmark::report_id.eq(rows.report),
                 schema::report_benchmark::iteration.eq(0),
                 schema::report_benchmark::benchmark_id.eq(rows.benchmark),
-                schema::report_benchmark::parameter_id.eq(parameter_id),
+                schema::report_benchmark::variant_id.eq(variant_id),
             ))
             .execute(conn)
     }
@@ -165,8 +165,8 @@ mod tests {
         let mut conn = setup_test_db();
         let rows = seed(&mut conn);
 
-        insert_report_benchmark(&mut conn, &rows, rows.empty_set)
-            .expect("Failed to insert the empty set report benchmark");
+        insert_report_benchmark(&mut conn, &rows, rows.empty_variant)
+            .expect("Failed to insert the empty variant report benchmark");
         insert_report_benchmark(&mut conn, &rows, rows.variant)
             .expect("Failed to insert the variant report benchmark");
 
@@ -187,7 +187,7 @@ mod tests {
             .expect("Failed to insert the variant report benchmark");
         assert!(
             insert_report_benchmark(&mut conn, &rows, rows.variant).is_err(),
-            "one parameter set cannot appear twice in one report iteration"
+            "one variant cannot appear twice in one report iteration"
         );
     }
 }

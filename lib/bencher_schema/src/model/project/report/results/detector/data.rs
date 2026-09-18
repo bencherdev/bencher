@@ -15,8 +15,8 @@ use crate::{
     error::not_found_error,
     model::{
         project::{
-            benchmark::BenchmarkId, branch::head::HeadId, measure::MeasureId,
-            parameter::ParameterId, testbed::TestbedId,
+            benchmark::BenchmarkId, branch::head::HeadId, measure::MeasureId, testbed::TestbedId,
+            variant::VariantId,
         },
         spec::SpecId,
     },
@@ -27,7 +27,7 @@ pub fn metrics_data(
     conn: &mut DbConnection,
     detector: &super::Detector,
     benchmark_id: BenchmarkId,
-    parameter_id: ParameterId,
+    variant_id: VariantId,
 ) -> Result<MetricsData, HttpError> {
     let model = &detector.threshold.model;
     let start_time = model.window.and_then(|window| {
@@ -47,7 +47,7 @@ pub fn metrics_data(
         head_id: detector.head_id,
         testbed_id: detector.testbed_id,
         benchmark_id,
-        parameter_id,
+        variant_id,
         measure_id: detector.measure_id,
         metric_name: MetricName::value(),
         spec_id: detector.spec_id,
@@ -68,7 +68,7 @@ struct HistoryQuery {
     head_id: HeadId,
     testbed_id: TestbedId,
     benchmark_id: BenchmarkId,
-    parameter_id: ParameterId,
+    variant_id: VariantId,
     measure_id: MeasureId,
     metric_name: MetricName,
     spec_id: Option<SpecId>,
@@ -95,7 +95,7 @@ impl QueryFragment<Sqlite> for HistoryQuery {
             head_id,
             testbed_id,
             benchmark_id,
-            parameter_id,
+            variant_id,
             measure_id,
             metric_name,
             spec_id,
@@ -114,8 +114,8 @@ impl QueryFragment<Sqlite> for HistoryQuery {
         pass.push_bind_param::<Integer, _>(testbed_id)?;
         pass.push_sql(" AND report_benchmark.benchmark_id = ");
         pass.push_bind_param::<Integer, _>(benchmark_id)?;
-        pass.push_sql(" AND report_benchmark.parameter_id = ");
-        pass.push_bind_param::<Integer, _>(parameter_id)?;
+        pass.push_sql(" AND report_benchmark.variant_id = ");
+        pass.push_bind_param::<Integer, _>(variant_id)?;
         pass.push_sql(" AND metric.measure_id = ");
         pass.push_bind_param::<Integer, _>(measure_id)?;
         pass.push_sql(" AND metric.name = ");
@@ -158,7 +158,6 @@ mod tests {
                 benchmark::BenchmarkId,
                 branch::{head::HeadId, version::VersionId},
                 measure::MeasureId,
-                parameter::ParameterId,
                 report::{
                     ReportId,
                     results::detector::{
@@ -168,16 +167,17 @@ mod tests {
                 },
                 testbed::TestbedId,
                 threshold::{ThresholdId, model::ModelId},
+                variant::VariantId,
             },
             spec::SpecId,
         },
         schema,
         test_util::{
             CreateSpecArgs, create_base_entities, create_benchmark, create_branch_with_head,
-            create_head_version, create_measure, create_metric, create_named_metric,
-            create_parameter, create_report, create_report_benchmark,
-            create_report_benchmark_for_parameter, create_spec, create_testbed, create_version,
-            get_empty_parameter, set_report_spec, setup_test_db,
+            create_head_version, create_measure, create_metric, create_named_metric, create_report,
+            create_report_benchmark, create_report_benchmark_for_variant, create_spec,
+            create_testbed, create_variant, create_version, get_empty_variant, set_report_spec,
+            setup_test_db,
         },
     };
 
@@ -189,7 +189,7 @@ mod tests {
         feature_head: HeadId,
         testbed: TestbedId,
         benchmark: BenchmarkId,
-        parameter: ParameterId,
+        variant: VariantId,
         measure: MeasureId,
         spec: SpecId,
     }
@@ -264,11 +264,11 @@ mod tests {
         let other_testbed = create_testbed(seed.conn, project_id, &uuid(6), "two", "two");
         let benchmark = create_benchmark(seed.conn, project_id, &uuid(7), "bench", "bench");
         let other_benchmark = create_benchmark(seed.conn, project_id, &uuid(8), "other", "other");
-        let parameter = get_empty_parameter(seed.conn, benchmark);
-        let other_parameter = create_parameter(
+        let variant = get_empty_variant(seed.conn, benchmark);
+        let other_variant = create_variant(
             seed.conn,
             benchmark,
-            &"{\"n\":1}".parse::<ParameterSet>().expect("parameter set"),
+            &"{\"n\":1}".parse::<ParameterSet>().expect("parameters"),
         );
         let measure = create_measure(seed.conn, project_id, &uuid(9), "latency", "latency");
         let other_measure = create_measure(seed.conn, project_id, &uuid(10), "memory", "memory");
@@ -341,13 +341,13 @@ mod tests {
             91.0,
         );
         let rb_uuid = seed.uuid();
-        let rb = create_report_benchmark_for_parameter(
+        let rb = create_report_benchmark_for_variant(
             seed.conn,
             &rb_uuid,
             r2f,
             2,
             benchmark,
-            other_parameter,
+            other_variant,
         );
         let metric_uuid = seed.uuid();
         create_metric(seed.conn, &metric_uuid, rb, measure, 92.0);
@@ -362,7 +362,7 @@ mod tests {
             feature_head: feature.head_id,
             testbed,
             benchmark,
-            parameter,
+            variant,
             measure,
             spec,
         }
@@ -400,7 +400,7 @@ mod tests {
             &mut fixture.conn,
             &detector,
             fixture.benchmark,
-            fixture.parameter,
+            fixture.variant,
         )
         .expect("Failed to query metrics data")
         .data

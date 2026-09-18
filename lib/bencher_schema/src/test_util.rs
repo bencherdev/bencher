@@ -10,7 +10,7 @@
 //! so no concurrent INSERT can interleave between the INSERT and the `last_insert_rowid()` call.
 
 use bencher_json::{
-    DateTime, MetricName, ParameterSet, ParameterUuid,
+    DateTime, MetricName, ParameterSet, VariantUuid,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
@@ -31,11 +31,11 @@ use crate::{
             branch::{BranchId, head::HeadId, head_version::HeadVersionId, version::VersionId},
             measure::MeasureId,
             metric::MetricId,
-            parameter::ParameterId,
             plot::PlotId,
             report::{ReportId, report_benchmark::ReportBenchmarkId},
             testbed::TestbedId,
             threshold::{ThresholdId, alert::AlertId, boundary::BoundaryId, model::ModelId},
+            variant::VariantId,
         },
         spec::SpecId,
     },
@@ -505,7 +505,7 @@ pub fn create_report(
         .expect("Failed to get report id")
 }
 
-/// Create a benchmark for testing, with the empty parameter set every benchmark is born with.
+/// Create a benchmark for testing, with the empty variant every benchmark is born with.
 pub fn create_benchmark(
     conn: &mut SqliteConnection,
     project_id: ProjectId,
@@ -529,44 +529,44 @@ pub fn create_benchmark(
         .get_result(conn)
         .expect("Failed to get benchmark id");
 
-    create_parameter(conn, benchmark_id, &ParameterSet::default());
+    create_variant(conn, benchmark_id, &ParameterSet::default());
 
     benchmark_id
 }
 
-/// Create a parameter set for a benchmark.
-pub fn create_parameter(
+/// Create a variant for a benchmark.
+pub fn create_variant(
     conn: &mut SqliteConnection,
     benchmark_id: BenchmarkId,
     parameters: &ParameterSet,
-) -> ParameterId {
-    diesel::insert_into(schema::parameter::table)
+) -> VariantId {
+    diesel::insert_into(schema::variant::table)
         .values((
-            schema::parameter::uuid.eq(ParameterUuid::new()),
-            schema::parameter::benchmark_id.eq(benchmark_id),
-            schema::parameter::set.eq(parameters),
-            schema::parameter::created.eq(DateTime::TEST),
-            schema::parameter::modified.eq(DateTime::TEST),
+            schema::variant::uuid.eq(VariantUuid::new()),
+            schema::variant::benchmark_id.eq(benchmark_id),
+            schema::variant::parameters.eq(parameters),
+            schema::variant::created.eq(DateTime::TEST),
+            schema::variant::modified.eq(DateTime::TEST),
         ))
         .execute(conn)
-        .expect("Failed to insert parameter");
+        .expect("Failed to insert variant");
 
     diesel::select(last_insert_rowid())
         .get_result(conn)
-        .expect("Failed to get parameter id")
+        .expect("Failed to get variant id")
 }
 
-/// Get a benchmark's empty parameter set.
-pub fn get_empty_parameter(conn: &mut SqliteConnection, benchmark_id: BenchmarkId) -> ParameterId {
-    schema::parameter::table
-        .filter(schema::parameter::benchmark_id.eq(benchmark_id))
-        .filter(schema::parameter::set.eq(ParameterSet::default()))
-        .select(schema::parameter::id)
+/// Get a benchmark's empty variant.
+pub fn get_empty_variant(conn: &mut SqliteConnection, benchmark_id: BenchmarkId) -> VariantId {
+    schema::variant::table
+        .filter(schema::variant::benchmark_id.eq(benchmark_id))
+        .filter(schema::variant::parameters.eq(ParameterSet::default()))
+        .select(schema::variant::id)
         .first(conn)
-        .expect("Failed to get empty parameter set")
+        .expect("Failed to get empty variant")
 }
 
-/// Create a report benchmark for testing, on the benchmark's empty parameter set.
+/// Create a report benchmark for testing, on the benchmark's empty variant.
 pub fn create_report_benchmark(
     conn: &mut SqliteConnection,
     report_benchmark_uuid: &str,
@@ -574,25 +574,25 @@ pub fn create_report_benchmark(
     iteration: i32,
     benchmark_id: BenchmarkId,
 ) -> ReportBenchmarkId {
-    let parameter_id = get_empty_parameter(conn, benchmark_id);
-    create_report_benchmark_for_parameter(
+    let variant_id = get_empty_variant(conn, benchmark_id);
+    create_report_benchmark_for_variant(
         conn,
         report_benchmark_uuid,
         report_id,
         iteration,
         benchmark_id,
-        parameter_id,
+        variant_id,
     )
 }
 
-/// Create a report benchmark for testing, on an explicit parameter set.
-pub fn create_report_benchmark_for_parameter(
+/// Create a report benchmark for testing, on an explicit variant.
+pub fn create_report_benchmark_for_variant(
     conn: &mut SqliteConnection,
     report_benchmark_uuid: &str,
     report_id: ReportId,
     iteration: i32,
     benchmark_id: BenchmarkId,
-    parameter_id: ParameterId,
+    variant_id: VariantId,
 ) -> ReportBenchmarkId {
     diesel::insert_into(schema::report_benchmark::table)
         .values((
@@ -600,7 +600,7 @@ pub fn create_report_benchmark_for_parameter(
             schema::report_benchmark::report_id.eq(report_id),
             schema::report_benchmark::iteration.eq(iteration),
             schema::report_benchmark::benchmark_id.eq(benchmark_id),
-            schema::report_benchmark::parameter_id.eq(parameter_id),
+            schema::report_benchmark::variant_id.eq(variant_id),
         ))
         .execute(conn)
         .expect("Failed to insert report_benchmark");

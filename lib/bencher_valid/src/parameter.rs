@@ -14,7 +14,7 @@ use crate::{ValidError, is_valid_len};
 /// A key names an input the benchmark ran with, so it is a name like every other
 /// name: non-empty, trimmed, and no longer than [`Self::MAX_LEN`].
 ///
-/// Ordering is deliberately absent. A parameter set is canonicalized under
+/// Ordering is deliberately absent. Parameters are canonicalized under
 /// [RFC 8785][jcs], which orders keys by UTF-16 code unit, and that is not the
 /// order a derived `Ord` gives. The canonicalizer owns the comparison.
 ///

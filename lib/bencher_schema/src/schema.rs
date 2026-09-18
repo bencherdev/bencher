@@ -173,18 +173,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    parameter (id) {
-        id -> Integer,
-        uuid -> Text,
-        benchmark_id -> Integer,
-        set -> Jsonb,
-        created -> BigInt,
-        modified -> BigInt,
-        archived -> Nullable<BigInt>,
-    }
-}
-
-diesel::table! {
     plan (id) {
         id -> Integer,
         organization_id -> Integer,
@@ -313,7 +301,7 @@ diesel::table! {
         report_id -> Integer,
         iteration -> Integer,
         benchmark_id -> Integer,
-        parameter_id -> Integer,
+        variant_id -> Integer,
     }
 }
 
@@ -340,12 +328,12 @@ diesel::table! {
 }
 
 diesel::table! {
-    series_last_seen (testbed_id, benchmark_id, parameter_id, measure_id) {
+    series_last_seen (testbed_id, benchmark_id, variant_id, measure_id) {
         organization_id -> Integer,
         project_id -> Integer,
         testbed_id -> Integer,
         benchmark_id -> Integer,
-        parameter_id -> Integer,
+        variant_id -> Integer,
         measure_id -> Integer,
         last_seen -> BigInt,
     }
@@ -458,6 +446,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    variant (id) {
+        id -> Integer,
+        uuid -> Text,
+        benchmark_id -> Integer,
+        parameters -> Jsonb,
+        created -> BigInt,
+        modified -> BigInt,
+        archived -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
     version (id) {
         id -> Integer,
         uuid -> Text,
@@ -485,7 +485,6 @@ diesel::joinable!(metric -> report_benchmark (report_benchmark_id));
 diesel::joinable!(metric_count_by_report -> report (report_id));
 diesel::joinable!(organization_role -> organization (organization_id));
 diesel::joinable!(organization_role -> user (user_id));
-diesel::joinable!(parameter -> benchmark (benchmark_id));
 diesel::joinable!(plot -> project (project_id));
 diesel::joinable!(plot_benchmark -> benchmark (benchmark_id));
 diesel::joinable!(plot_benchmark -> plot (plot_id));
@@ -507,16 +506,16 @@ diesel::joinable!(report -> testbed (testbed_id));
 diesel::joinable!(report -> user (user_id));
 diesel::joinable!(report -> version (version_id));
 diesel::joinable!(report_benchmark -> benchmark (benchmark_id));
-diesel::joinable!(report_benchmark -> parameter (parameter_id));
 diesel::joinable!(report_benchmark -> report (report_id));
+diesel::joinable!(report_benchmark -> variant (variant_id));
 diesel::joinable!(runner_spec -> runner (runner_id));
 diesel::joinable!(runner_spec -> spec (spec_id));
 diesel::joinable!(series_last_seen -> benchmark (benchmark_id));
 diesel::joinable!(series_last_seen -> measure (measure_id));
 diesel::joinable!(series_last_seen -> organization (organization_id));
-diesel::joinable!(series_last_seen -> parameter (parameter_id));
 diesel::joinable!(series_last_seen -> project (project_id));
 diesel::joinable!(series_last_seen -> testbed (testbed_id));
+diesel::joinable!(series_last_seen -> variant (variant_id));
 diesel::joinable!(sso -> organization (organization_id));
 diesel::joinable!(testbed -> project (project_id));
 diesel::joinable!(testbed -> spec (spec_id));
@@ -526,6 +525,7 @@ diesel::joinable!(threshold -> project (project_id));
 diesel::joinable!(threshold -> testbed (testbed_id));
 diesel::joinable!(token -> user (user_id));
 diesel::joinable!(user_key -> user (user_id));
+diesel::joinable!(variant -> benchmark (benchmark_id));
 diesel::joinable!(version -> project (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -543,7 +543,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     model,
     organization,
     organization_role,
-    parameter,
     plan,
     plot,
     plot_benchmark,
@@ -566,5 +565,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     token,
     user,
     user_key,
+    variant,
     version,
 );

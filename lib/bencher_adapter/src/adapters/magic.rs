@@ -163,8 +163,8 @@ mod test_magic {
         }
     }
 
-    /// An out of bounds parameter set fails magic outright: the json node rejects
-    /// it and no other adapter claims it either.
+    /// Out of bounds parameters fail magic outright: the json node rejects
+    /// them and no other adapter claims it either.
     #[test]
     fn adapter_magic_json_out_of_bounds_parameters_fails() {
         assert!(
@@ -173,7 +173,7 @@ mod test_magic {
                 Settings::default()
             )
             .is_none(),
-            "expected an out of bounds parameter set to fail magic"
+            "expected out of bounds parameters to fail magic"
         );
     }
 

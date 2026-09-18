@@ -9,8 +9,8 @@ use bencher_json::{
         alert::AlertStatus,
         report::{
             Adapter, Iteration, JsonReportAlerts, JsonReportBoundary, JsonReportMeasure,
-            JsonReportMetric, JsonReportParameter, JsonReportResult, JsonReportResults,
-            JsonReportSettings, ReportIdempotencyKey,
+            JsonReportMetric, JsonReportResult, JsonReportResults, JsonReportSettings,
+            JsonReportVariant, ReportIdempotencyKey,
         },
     },
 };
@@ -49,9 +49,9 @@ use crate::{
             branch::version::{InsertVersion, QueryVersion},
             measure::QueryMeasure,
             metric::QueryMetric,
-            parameter::QueryParameter,
             testbed::{QueryTestbed, ResolvedTestbed, TestbedId},
             threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
+            variant::QueryVariant,
         },
         user::{QueryUser, UserId, actor::ApiActor},
     },
@@ -654,7 +654,7 @@ pub enum ReportMode {
 type ResultsQuery = (
     Iteration,
     QueryBenchmark,
-    QueryParameter,
+    QueryVariant,
     QueryMeasure,
     QueryMetric,
     Option<(QueryThreshold, QueryModel, QueryBoundary)>,
@@ -679,7 +679,7 @@ fn report_results_query(
     schema::report_benchmark::table
     .filter(schema::report_benchmark::report_id.eq(report_id))
     .inner_join(schema::benchmark::table)
-    .inner_join(schema::parameter::table)
+    .inner_join(schema::variant::table)
     .inner_join(schema::metric::table.inner_join(schema::measure::table))
     // There may or may not be a boundary for any given metric.
     // Keep these three joins flat with explicit `ON` clauses instead of nesting the
@@ -690,20 +690,20 @@ fn report_results_query(
     .left_join(schema::threshold::table.on(schema::threshold::id.eq(schema::boundary::threshold_id)))
     .left_join(schema::model::table.on(schema::model::id.eq(schema::boundary::model_id)))
     // It is important to order by the iteration first in order to make sure they are grouped together below.
-    // The parameter set comes between the benchmark and the measure because a variant is what a result is:
-    // two parameter sets of one benchmark are two results, not one result with the measures interleaved.
+    // The variant comes between the benchmark and the measure because a variant is what a result is:
+    // two variants of one benchmark are two results, not one result with the measures interleaved.
     // Finally the metric name orders a measure's metrics, so the response order is stable.
     .order((
         schema::report_benchmark::iteration,
         schema::benchmark::name,
-        schema::parameter::id,
+        schema::variant::id,
         schema::measure::name,
         schema::metric::name,
     ))
     .select((
         schema::report_benchmark::iteration,
         QueryBenchmark::as_select(),
-        QueryParameter::as_select(),
+        QueryVariant::as_select(),
         QueryMeasure::as_select(),
         QueryMetric::as_select(),
         (
@@ -754,14 +754,8 @@ fn into_report_results_json(
     let mut report_iteration: Vec<PendingResult> = Vec::new();
     let mut prev_iteration: Option<Iteration> = None;
 
-    for (
-        iteration,
-        query_benchmark,
-        query_parameter,
-        query_measure,
-        query_metric,
-        report_boundary,
-    ) in results
+    for (iteration, query_benchmark, query_variant, query_measure, query_metric, report_boundary) in
+        results
     {
         // If onto a new iteration, then add the report iteration list to the report results list.
         if let Some(prev_iteration) = prev_iteration.take()
@@ -774,17 +768,17 @@ fn into_report_results_json(
         }
         prev_iteration = Some(iteration);
 
-        // A result is one variant: the same benchmark on a different parameter set
+        // A result is one variant: the same benchmark with different parameters
         // is a different result.
         let benchmark_uuid = query_benchmark.uuid;
-        let parameter_uuid = query_parameter.uuid;
+        let variant_uuid = query_variant.uuid;
         if report_iteration.last().is_none_or(|result| {
-            result.benchmark.uuid != benchmark_uuid || result.parameter.uuid != parameter_uuid
+            result.benchmark.uuid != benchmark_uuid || result.variant.uuid != variant_uuid
         }) {
             report_iteration.push(PendingResult {
                 iteration,
                 benchmark: query_benchmark.into_json_for_project(project),
-                parameter: query_parameter.into_report_json(),
+                variant: query_variant.into_report_json(),
                 measures: Vec::new(),
             });
         }
@@ -872,7 +866,7 @@ fn into_report_results_json(
 struct PendingResult {
     iteration: Iteration,
     benchmark: JsonBenchmark,
-    parameter: JsonReportParameter,
+    variant: JsonReportVariant,
     measures: Vec<PendingMeasure>,
 }
 
@@ -887,13 +881,13 @@ impl PendingResult {
         let Self {
             iteration,
             benchmark,
-            parameter,
+            variant,
             measures,
         } = self;
         JsonReportResult {
             iteration,
             benchmark,
-            parameter,
+            variant,
             measures: measures
                 .into_iter()
                 .map(PendingMeasure::into_json)
