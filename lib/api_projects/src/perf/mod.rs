@@ -725,13 +725,17 @@ fn perf_query(
             schema::version::hash,
             QueryMetric::as_select(),
             (
+                // The column order is `QueryThreshold`'s field order, because that is
+                // what a tuple selection deserializes into, positionally.
                 (
                     schema::threshold::id,
                     schema::threshold::uuid,
                     schema::threshold::project_id,
-                    schema::threshold::measure_id,
                     schema::threshold::branch_id,
                     schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::metric,
+                    schema::threshold::parameters,
                     schema::threshold::model_id,
                     schema::threshold::created,
                     schema::threshold::modified,
@@ -834,6 +838,7 @@ fn into_perf_lines(
                 },
                 value_uuid: None,
                 metrics: BTreeMap::new(),
+                bare_check: None,
             });
         }
         let Some(pending) = line.last_mut() else {
@@ -877,6 +882,10 @@ struct PendingMetric {
     /// The identifier the deprecated metric triple carries.
     value_uuid: Option<MetricUuid>,
     metrics: BTreeMap<MetricName, JsonMetricEntry>,
+    /// The bare threshold's check on this point, if a bare threshold checked it:
+    /// what the deprecated singular `threshold`, `boundary`, and `alert` fields
+    /// carry.
+    bare_check: Option<JsonPerfBoundary>,
 }
 
 impl PendingMetric {
@@ -899,21 +908,35 @@ impl PendingMetric {
             self.value_uuid = Some(uuid);
         }
 
+        let perf_boundary = perf_boundary.map(
+            |(query_threshold, query_model, query_boundary, query_alert)| {
+                // The deprecated singular check is the bare threshold's, and no
+                // other's: the `value` name of every variant, which is the only kind
+                // of threshold there was when those fields were the whole story.
+                let is_bare = query_threshold.identity().is_bare();
+                let perf_boundary = JsonPerfBoundary {
+                    threshold: query_threshold
+                        .into_threshold_model_json_for_project(project, query_model),
+                    boundary: query_boundary.into_json(),
+                    alert: query_alert.map(QueryAlert::into_perf_json),
+                };
+                (is_bare, perf_boundary)
+            },
+        );
+        if let Some((true, perf_boundary)) = perf_boundary.as_ref() {
+            self.bare_check = Some(perf_boundary.clone());
+        }
+
         // A metric repeats across rows only when several thresholds checked it.
         let entry = self.metrics.entry(name).or_insert(JsonMetricEntry {
             value: value.into(),
             boundaries: None,
         });
-        if let Some((query_threshold, query_model, query_boundary, query_alert)) = perf_boundary {
+        if let Some((_, perf_boundary)) = perf_boundary {
             entry
                 .boundaries
                 .get_or_insert_with(Vec::new)
-                .push(JsonPerfBoundary {
-                    threshold: query_threshold
-                        .into_threshold_model_json_for_project(project, query_model),
-                    boundary: query_boundary.into_json(),
-                    alert: query_alert.map(QueryAlert::into_perf_json),
-                });
+                .push(perf_boundary);
         }
     }
 
@@ -928,8 +951,17 @@ impl PendingMetric {
             end_time,
             version,
             value_uuid,
-            metrics,
+            mut metrics,
+            bare_check,
         } = self;
+
+        // Several thresholds may check one metric, so the list is put in one order:
+        // the threshold creation order, oldest first.
+        for entry in metrics.values_mut() {
+            if let Some(boundaries) = entry.boundaries.as_mut() {
+                boundaries.sort_by_key(|check| check.threshold.boundary_order());
+            }
+        }
 
         let value = metrics.get(&MetricName::value());
         let metric = value_uuid.zip(value).map(|(uuid, value)| JsonMetricTriple {
@@ -942,8 +974,7 @@ impl PendingMetric {
                 .get(&MetricName::upper_value())
                 .map(|entry| entry.value),
         });
-        // The deprecated check is the one that checked the `value` row.
-        let (threshold, boundary, alert) = value.map_or((None, None, None), deprecated_check);
+        let (threshold, boundary, alert) = deprecated_check(bare_check);
 
         JsonPerfMetrics {
             report,
@@ -966,18 +997,18 @@ type DeprecatedCheck = (
     Option<JsonPerfAlert>,
 );
 
-fn deprecated_check(value: &JsonMetricEntry) -> DeprecatedCheck {
-    let Some(perf_boundary) = value
-        .boundaries
-        .as_ref()
-        .and_then(|boundaries| boundaries.first())
-    else {
-        return (None, None, None);
-    };
-    let JsonPerfBoundary {
+/// The deprecated singular check: the bare threshold's, and no other's.
+///
+/// A point that only a named or filtered threshold checks reports no check here,
+/// which is exactly what a caller from before named checks would have seen for it.
+fn deprecated_check(bare_check: Option<JsonPerfBoundary>) -> DeprecatedCheck {
+    let Some(JsonPerfBoundary {
         threshold,
         boundary,
         alert,
-    } = perf_boundary;
-    (Some(threshold.clone()), Some(*boundary), alert.clone())
+    }) = bare_check
+    else {
+        return (None, None, None);
+    };
+    (Some(threshold), Some(boundary), alert)
 }

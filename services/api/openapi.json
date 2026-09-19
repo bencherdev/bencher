@@ -8251,7 +8251,7 @@
           "thresholds"
         ],
         "summary": "Create a threshold",
-        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, and measure.",
+        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, measure, metric name, and parameters filter. A threshold that names no metric checks the conventional `value` name, and a threshold with no parameters filter checks every variant. Every threshold that matches a metric row runs: there is no winner among them.",
         "operationId": "proj_threshold_post",
         "parameters": [
           {
@@ -12661,7 +12661,13 @@
             "$ref": "#/components/schemas/BoundaryLimit"
           },
           "metric": {
-            "$ref": "#/components/schemas/JsonMetricTriple"
+            "nullable": true,
+            "description": "Deprecated. The metric triple built around the checked row.\n\nPresent only when the checked row is a `value` row, which is every row a threshold could check before a threshold could name a metric. Reconstructing the triple around any other row would assert numbers the alert does not name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonMetricTriple"
+              }
+            ]
           },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
@@ -12678,6 +12684,11 @@
           "uuid": {
             "$ref": "#/components/schemas/AlertUuid"
           },
+          "value": {
+            "description": "The value the alert fired on.\n\nThe name that value was reported under is the threshold's, at `threshold.metric`, because that is the name the threshold checks.",
+            "type": "number",
+            "format": "double"
+          },
           "variant": {
             "description": "The variant the alert fired on.\n\nTwo variants of one benchmark raise two alerts, and this is what tells them apart.",
             "allOf": [
@@ -12693,12 +12704,12 @@
           "created",
           "iteration",
           "limit",
-          "metric",
           "modified",
           "report",
           "status",
           "threshold",
           "uuid",
+          "value",
           "variant"
         ]
       },
@@ -14991,12 +15002,30 @@
               }
             ]
           },
+          "metric": {
+            "nullable": true,
+            "description": "The name of the metric this threshold checks. If not set, the threshold checks the conventional `value` name. A threshold always checks exactly one name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricName"
+              }
+            ]
+          },
           "min_sample_size": {
             "nullable": true,
             "description": "The minimum number of historical samples required to perform the test. If there are fewer historical samples, the test will not be performed. The new Metric being tested is not counted towards this minimum.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/SampleSize"
+              }
+            ]
+          },
+          "parameters": {
+            "nullable": true,
+            "description": "The variants this threshold checks, as a parameters filter. A variant matches when any entry in the filter is a subset of its parameters. If not set, or set to an empty list, the threshold checks every variant.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterFilter"
               }
             ]
           },
@@ -18098,6 +18127,15 @@
           "measure": {
             "$ref": "#/components/schemas/JsonMeasure"
           },
+          "metric": {
+            "nullable": true,
+            "description": "The name of the metric this threshold checks. Absent when the threshold checks the conventional `value` name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricName"
+              }
+            ]
+          },
           "model": {
             "nullable": true,
             "allOf": [
@@ -18108,6 +18146,15 @@
           },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
+          },
+          "parameters": {
+            "nullable": true,
+            "description": "The variants this threshold checks, in canonical order. Absent when the threshold checks every variant.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterFilter"
+              }
+            ]
           },
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
@@ -19332,6 +19379,26 @@
             ]
           }
         ]
+      },
+      "ParameterFilter": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number",
+                "format": "double"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        }
       },
       "ParameterSet": {
         "type": "object",

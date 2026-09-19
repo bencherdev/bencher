@@ -325,6 +325,16 @@ export interface JsonThreshold {
 	branch: JsonBranch;
 	testbed: JsonTestbed;
 	measure: JsonMeasure;
+	/**
+	 * The name of the metric this threshold checks.
+	 * Absent when the threshold checks the conventional `value` name.
+	 */
+	metric?: string;
+	/**
+	 * The variants this threshold checks, in canonical order.
+	 * Absent when the threshold checks every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
 	model?: JsonModel;
 	created: string;
 	modified: string;
@@ -362,7 +372,21 @@ export interface JsonAlert {
 	 * them apart.
 	 */
 	variant: JsonVariant;
-	metric: JsonMetricTriple;
+	/**
+	 * The value the alert fired on.
+	 * 
+	 * The name that value was reported under is the threshold's, at
+	 * `threshold.metric`, because that is the name the threshold checks.
+	 */
+	value: number;
+	/**
+	 * Deprecated. The metric triple built around the checked row.
+	 * 
+	 * Present only when the checked row is a `value` row, which is every row a
+	 * threshold could check before a threshold could name a metric. Reconstructing
+	 * the triple around any other row would assert numbers the alert does not name.
+	 */
+	metric?: JsonMetricTriple;
 	threshold: JsonThreshold;
 	boundary: JsonBoundary;
 	limit: BoundaryLimit;

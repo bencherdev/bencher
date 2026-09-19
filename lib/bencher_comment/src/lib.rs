@@ -324,7 +324,7 @@ impl ReportComment {
 
         for alert in self.alerts() {
             let (factor, units, units_symbol) = {
-                let mut min = alert.metric.value;
+                let mut min = alert.value;
                 if let Some(lower_limit) = alert.boundary.lower_limit {
                     min = min.min(lower_limit);
                 }
@@ -356,7 +356,7 @@ impl ReportComment {
             self.html_alerts_table_view_cell(html, alert);
             value_cell(
                 html,
-                alert.metric.value,
+                alert.value,
                 alert.boundary.baseline,
                 factor,
                 &units_symbol,
@@ -365,7 +365,7 @@ impl ReportComment {
             if self.has_lower_boundary_alert() {
                 lower_limit_cell(
                     html,
-                    alert.metric.value,
+                    alert.value,
                     alert.boundary.lower_limit,
                     factor,
                     &units_symbol,
@@ -375,7 +375,7 @@ impl ReportComment {
             if self.has_upper_boundary_alert() {
                 upper_limit_cell(
                     html,
-                    alert.metric.value,
+                    alert.value,
                     alert.boundary.upper_limit,
                     factor,
                     &units_symbol,

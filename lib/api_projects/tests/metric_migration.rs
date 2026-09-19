@@ -713,7 +713,8 @@ fn apply_migration(server: &TestServer) {
 ///
 /// The project `bmf_version` migration is put back immediately, because the
 /// compiled `QueryProject` selects that column on every project lookup. A later
-/// layer that adds a column the model reads belongs on this list too.
+/// layer that adds a column a model reads while the chain is reverted belongs
+/// on this list too.
 fn revert_migration(conn: &mut DbConnection) {
     const METRIC_MIGRATION: &str = "20260816120000";
     const REAPPLIED_MIGRATIONS: &[&str] = &["20260826120000"];

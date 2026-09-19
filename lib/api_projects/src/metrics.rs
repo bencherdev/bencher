@@ -25,8 +25,9 @@ use bencher_schema::{
     schema,
 };
 use diesel::{
-    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _, query_dsl::methods::LoadQuery,
+    BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
+    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    query_dsl::methods::LoadQuery,
 };
 use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
@@ -176,13 +177,17 @@ fn metric_query(
             schema::report::spec_id,
             QueryMetric::as_select(),
             (
+                // The column order is `QueryThreshold`'s field order, because that is
+                // what a tuple selection deserializes into, positionally.
                 (
                     schema::threshold::id,
                     schema::threshold::uuid,
                     schema::threshold::project_id,
-                    schema::threshold::measure_id,
                     schema::threshold::branch_id,
                     schema::threshold::testbed_id,
+                    schema::threshold::measure_id,
+                    schema::threshold::metric,
+                    schema::threshold::parameters,
                     schema::threshold::model_id,
                     schema::threshold::created,
                     schema::threshold::modified,
@@ -222,11 +227,29 @@ fn metric_query(
             )
                 .nullable(),
         ))
-        // At most one row can match: the UUID is unique, every join lands on a
-        // primary key or a unique column, and a boundary raises at most one alert.
-        // The limit is what `first` renders, kept here because the query is built
-        // apart from its run.
+        // The bare threshold's row first, then one row, because the deprecated check
+        // this response reports is the bare threshold's. See `boundary_json`.
+        .order(bare_threshold_first())
         .limit(1)
+}
+
+/// Sort the bare threshold's row first.
+///
+/// A metric row may carry a boundary per threshold that checked it, and this query
+/// keeps one row. The one it keeps is the bare threshold's, which is what the
+/// deprecated singular fields have always carried.
+type BareThresholdFirst = diesel::dsl::Desc<
+    diesel::dsl::And<
+        diesel::dsl::IsNull<schema::threshold::metric>,
+        diesel::dsl::IsNull<schema::threshold::parameters>,
+    >,
+>;
+
+fn bare_threshold_first() -> BareThresholdFirst {
+    schema::threshold::metric
+        .is_null()
+        .and(schema::threshold::parameters.is_null())
+        .desc()
 }
 
 type MetricQuery = (
@@ -246,8 +269,14 @@ type MetricQuery = (
     Option<PerfBoundary>,
 );
 
-/// The check on the addressed row, if any: the threshold that checked it, the
-/// boundary it produced, and any alert that boundary raised.
+/// The check this response reports: the bare threshold's, and no other's.
+///
+/// A metric row may be checked by several thresholds now, so one of them has to be
+/// the one these three fields carry, and it is the bare one: the `value` name of
+/// every variant, which is the only kind of threshold there was when these fields
+/// were the whole story. A row that only a named or filtered threshold checks
+/// reports no check here, which is exactly what a caller from before named checks
+/// would have seen for it.
 fn boundary_json(
     project: &QueryProject,
     perf_boundary: Option<PerfBoundary>,
@@ -256,15 +285,16 @@ fn boundary_json(
     Option<JsonBoundary>,
     Option<JsonPerfAlert>,
 ) {
-    if let Some((query_threshold, query_model, query_boundary, query_alert)) = perf_boundary {
-        let threshold =
-            Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
-        let boundary = Some(query_boundary.into_json());
-        let alert = query_alert.map(QueryAlert::into_perf_json);
-        (threshold, boundary, alert)
-    } else {
-        (None, None, None)
-    }
+    let Some((query_threshold, query_model, query_boundary, query_alert)) =
+        perf_boundary.filter(|(query_threshold, _, _, _)| query_threshold.identity().is_bare())
+    else {
+        return (None, None, None);
+    };
+    let threshold =
+        Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
+    let boundary = Some(query_boundary.into_json());
+    let alert = query_alert.map(QueryAlert::into_perf_json);
+    (threshold, boundary, alert)
 }
 
 /// The metric triple, for a `value` row and for nothing else.

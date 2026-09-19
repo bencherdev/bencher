@@ -43,6 +43,7 @@
 "OrderedFloat" = "number"
 "MetricName" = "string"
 "ParameterSet" = "Record<string, string | number | boolean>"
+"ParameterFilter" = "Record<string, string | number | boolean>[]"
 "BigInt" = "number"
 "TimestampMillis" = "number"
 "Cpu" = "number"
