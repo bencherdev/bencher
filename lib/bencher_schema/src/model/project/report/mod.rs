@@ -16,9 +16,9 @@ use bencher_json::{
 };
 use diesel::OptionalExtension as _;
 use diesel::{
-    AggregateExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
-    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
-    query_dsl::LoadQuery,
+    AggregateExpressionMethods as _, BoolExpressionMethods as _, ExpressionMethods as _,
+    JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    SelectableHelper as _, query_dsl::LoadQuery,
 };
 
 use dropshot::HttpError;
@@ -48,15 +48,19 @@ use crate::{
             benchmark::QueryBenchmark,
             branch::version::{InsertVersion, QueryVersion},
             measure::QueryMeasure,
-            metric::QueryMetric,
+            metric::{QueryMetric, bound_join, metric_lower_value, metric_upper_value},
             testbed::{QueryTestbed, ResolvedTestbed, TestbedId},
-            threshold::{QueryThreshold, alert::QueryAlert, model::QueryModel},
+            threshold::{
+                QueryThreshold,
+                alert::{AlertContext, QueryAlert},
+                model::QueryModel,
+            },
             variant::QueryVariant,
         },
         user::{QueryUser, UserId, actor::ApiActor},
     },
     schema::{self, report as report_table},
-    view, write_transaction,
+    write_transaction,
 };
 
 /// Encapsulates all context from a run request for report creation.
@@ -93,7 +97,6 @@ impl NewRunJob {
 
 use super::{
     branch::{BranchId, QueryBranch, head::HeadId, version::VersionId},
-    metric_boundary::QueryMetricBoundary,
     threshold::{InsertThreshold, boundary::QueryBoundary},
 };
 
@@ -452,8 +455,18 @@ impl QueryReport {
         let (results, alerts, counts) = match mode {
             ReportMode::Full => {
                 let results = get_report_results(log, conn, &query_project, id)?;
-                let alerts =
-                    get_report_alerts(conn, &query_project, id, head_id, version_id, spec_id)?;
+                let alerts = get_report_alerts(
+                    conn,
+                    &query_project,
+                    &ReportAlertContext {
+                        id,
+                        uuid,
+                        created,
+                        head_id,
+                        version_id,
+                        spec_id,
+                    },
+                )?;
                 let counts = report_counts(&results, &alerts);
                 (Some(results), Some(alerts), counts)
             },
@@ -1051,61 +1064,109 @@ fn get_report_job(
         })
 }
 
-fn get_report_alerts(
-    conn: &mut DbConnection,
-    project: &QueryProject,
-    report_id: ReportId,
+/// What every alert of one report needs from the report itself.
+struct ReportAlertContext {
+    id: ReportId,
+    uuid: ReportUuid,
+    created: DateTime,
     head_id: HeadId,
     version_id: VersionId,
     spec_id: Option<SpecId>,
+}
+
+fn get_report_alerts(
+    conn: &mut DbConnection,
+    project: &QueryProject,
+    report: &ReportAlertContext,
 ) -> Result<JsonReportAlerts, HttpError> {
+    let &ReportAlertContext {
+        id: report_id,
+        uuid: report_uuid,
+        created,
+        head_id,
+        version_id,
+        spec_id,
+    } = report;
     let alerts = schema::alert::table
-        // The view already carries the boundary the alert points at, so the alert
-        // joins straight onto it rather than through the boundary table.
+        // The alert names its boundary, the boundary names its metric row, and that
+        // row names both the report benchmark it landed in and the variant it was
+        // measured under. Each hop is an identifier seek off the hop before it, and
+        // the two bound rows hang off the metric row by name.
+        .inner_join(schema::boundary::table.on(schema::boundary::id.eq(schema::alert::boundary_id)))
+        .inner_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
         .inner_join(
-            view::metric_boundary::table
-                .inner_join(
-                    schema::report_benchmark::table
-                        .inner_join(schema::report::table)
-                        .inner_join(schema::benchmark::table),
-                )
-                .on(view::metric_boundary::boundary_id.eq(schema::alert::boundary_id.nullable())),
+            schema::report_benchmark::table
+                .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
         )
-        .filter(schema::report::id.eq(report_id))
-        .order((schema::report_benchmark::iteration, schema::benchmark::name))
+        .inner_join(
+            schema::benchmark::table
+                .on(schema::benchmark::id.eq(schema::report_benchmark::benchmark_id)),
+        )
+        .inner_join(
+            schema::variant::table
+                .on(schema::variant::id.eq(schema::report_benchmark::variant_id)),
+        )
+        .left_join(bound_join!(metric_lower_value, MetricName::lower_value()))
+        .left_join(bound_join!(metric_upper_value, MetricName::upper_value()))
+        .filter(schema::report_benchmark::report_id.eq(report_id))
+        // Two variants of one benchmark tie on every other key, so the alert
+        // identifier is what makes the order total.
+        .order((
+            schema::report_benchmark::iteration.asc(),
+            schema::benchmark::name.asc(),
+            schema::alert::id.asc(),
+        ))
         .select((
-            schema::report::uuid,
-            schema::report::created,
             schema::report_benchmark::iteration,
             QueryAlert::as_select(),
             QueryBenchmark::as_select(),
-            QueryMetricBoundary::as_select(),
+            QueryVariant::as_select(),
+            QueryBoundary::as_select(),
+            QueryMetric::as_select(),
+            metric_lower_value.field(schema::metric::value).nullable(),
+            metric_upper_value.field(schema::metric::value).nullable(),
         ))
         .load::<(
-            ReportUuid,
-            DateTime,
             Iteration,
             QueryAlert,
             QueryBenchmark,
-            QueryMetricBoundary,
+            QueryVariant,
+            QueryBoundary,
+            QueryMetric,
+            Option<f64>,
+            Option<f64>,
         )>(conn)
         .map_err(resource_not_found_err!(Alert, report_id))?;
 
     let mut report_alerts = Vec::new();
-    for (report_uuid, created, iteration, query_alert, query_benchmark, query_metric_boundary) in
-        alerts
+    for (
+        iteration,
+        query_alert,
+        query_benchmark,
+        query_variant,
+        query_boundary,
+        query_metric,
+        lower_value,
+        upper_value,
+    ) in alerts
     {
         let json_alert = query_alert.into_json_for_report(
             conn,
             project,
-            report_uuid,
-            created,
-            head_id,
-            version_id,
-            spec_id,
-            iteration,
-            query_benchmark,
-            query_metric_boundary,
+            AlertContext {
+                report_uuid,
+                created,
+                head_id,
+                version_id,
+                spec_id,
+                iteration,
+                query_benchmark,
+                query_variant,
+                query_boundary,
+                query_metric,
+                lower_value,
+                upper_value,
+            },
         )?;
         report_alerts.push(json_alert);
     }

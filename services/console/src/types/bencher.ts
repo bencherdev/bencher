@@ -223,6 +223,15 @@ export interface JsonBenchmark {
 	archived?: string;
 }
 
+export interface JsonVariant {
+	uuid: Uuid;
+	benchmark: Uuid;
+	parameters: Record<string, string | number | boolean>;
+	created: string;
+	modified: string;
+	archived?: string;
+}
+
 export interface JsonMetricTriple {
 	uuid: Uuid;
 	value: number;
@@ -346,6 +355,13 @@ export interface JsonAlert {
 	report: Uuid;
 	iteration: Iteration;
 	benchmark: JsonBenchmark;
+	/**
+	 * The variant the alert fired on.
+	 * 
+	 * Two variants of one benchmark raise two alerts, and this is what tells
+	 * them apart.
+	 */
+	variant: JsonVariant;
 	metric: JsonMetricTriple;
 	threshold: JsonThreshold;
 	boundary: JsonBoundary;
@@ -911,15 +927,6 @@ export interface JsonOAuthUrl {
 export interface JsonOAuthUser {
 	user: JsonAuthUser;
 	plan?: PlanLevel;
-}
-
-export interface JsonVariant {
-	uuid: Uuid;
-	benchmark: Uuid;
-	parameters: Record<string, string | number | boolean>;
-	created: string;
-	modified: string;
-	archived?: string;
 }
 
 /**
