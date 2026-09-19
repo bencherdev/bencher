@@ -1,0 +1,113 @@
+import BmfV1Example from "../bmf-v1-example.mdx";
+import BmfV1Schema from "../bmf-v1-schema.mdx";
+
+## Bencher Metric Format (BMF) v1
+
+BMF `v1` では、1 つの [Benchmark][benchmark] が複数の結果を報告でき、1 つの [Measure][measure] が複数の値を報告できます。
+Benchmark 名は、エントリの配列に対応します。
+各エントリは、その Benchmark が実行された `parameters` と、生成した `measures` を指定します。
+
+<BmfV1Example />
+
+この例では、`benchmark_name` が 3 つの結果を報告しています。
+1 つはパラメータなし、1 つは `{"op":"read","size_mb":16}`、もう 1 つは `{"op":"read","size_mb":32}` です。
+この 3 つはそれぞれが独立したバリアントであり、それぞれ独自の履歴と独自の [Alert][alert] を持ちます。
+
+Project の `bmf_version` は、自身でバージョンを宣言しない Report がどのバージョンとして読まれるかを決めるものであり、
+これを変更できるのはサーバー管理者だけです。
+BMF `v1` には、最新バージョンの [`bencher` CLI][bencher run] が必要です。
+
+### パラメータ
+
+`parameters` オブジェクトは、その Benchmark が実行された入力の組み合わせです。
+各キーは JSON のスカラー値、つまり文字列、数値、真偽値のいずれかに対応します。
+`null`、配列、オブジェクトは拒否されます。
+キーと文字列値はそれぞれ最大 `64` 文字で、1 つの Benchmark のパラメータが持てるキーは最大 `8` 個です。
+
+パラメータは、正規形である [RFC 8785 (JSON Canonicalization Scheme)][jcs] で比較されます。
+キーの順序は影響せず、数値は ECMAScript の倍精度浮動小数点数として扱われます。
+そのため `16`、`16.0`、`1.6e1` は 1 つの値であり、`{"size_mb": 16}` と `{"size_mb": 16.0}` は同じパラメータです。
+
+`parameters` を持たないエントリと `"parameters": {}` を持つエントリは、同じバリアントです。
+これは、すべての Benchmark が最初から持っている空のバリアントです。
+同じパラメータに解決される 2 つのエントリは 1 つのバリアントであり、
+その measures は系列を分岐させるのではなく統合されます。
+
+### メトリック
+
+各 Measure はメトリックのオブジェクトに対応し、メトリックはすべて JSON の数値です。
+名前は最大 `64` 文字で、1 つの Measure が持てる名前は最大 `8` 個です。
+上限を超えた名前は破棄されます。慣例的な名前は常に保持され、
+残りは辞書順で上限まで保持されます。
+
+慣例的な名前は 3 つありますが、特別扱いされるわけではありません:
+
+- `value`: 点推定値。パフォーマンスプロットが描画する値であり、[Threshold][threshold] がデフォルトでチェックする値です
+- `lower_value`: 点推定値の下限
+- `upper_value`: 点推定値の上限
+
+`p95` や `p99` など、それ以外の名前もまったく同じように保存され、照会されます。
+Measure は `value` だけを指定することも、それ以外の名前だけを指定することも、両者を混在させることもできます。
+
+### 配列ラッパー
+
+⚠️ 配列ラッパーなしで書かれた BMF `v1` のペイロードは、有効な BMF `v0` のペイロードです。
+
+汎用の [`json` アダプター][json adapter] は両方のバージョンを受け付けます。
+BMF `v0` のペイロードは BMF `v0` として解析され、何も失われません。
+しかし、配列があるべき場所に書かれたエントリオブジェクトは、BMF `v0` の Measure のマップとまったく同じに見えます。
+そのため `parameters` とメトリックはすべてその Benchmark の Measure として読み取られ、
+意図した結果は何も告げられないまま失われます。
+
+BMF `v1` のペイロードには `json_v1` アダプターを選択してください。
+`json_v1` アダプターは BMF `v1` しか受け付けません。
+そのため、配列ラッパーのないペイロードは解析に失敗し、
+Report は黙って格下げされるのではなく拒否されます。
+
+Report の `bmf_version` にも `1` を設定してください。
+`bmf_version` フィールドは、そのペイロードがどのバージョンで書かれているかを示すものであり、
+`json` アダプターに BMF `v1` を先に試させるものです。
+`bmf_version` を設定しない Report は Project の `bmf_version` を引き継ぎ、その既定値は `0` です。
+
+### Thresholds
+
+Report は、その [Threshold][threshold] を `thresholds.models` フィールドで宣言します。
+BMF `v0` では、このフィールドは Measure から model へのマップです。
+BMF `v1` では、これはエントリのリストであり、各エントリはその Threshold がチェックするものをすべて指定します:
+
+- `measure`: Measure の UUID、スラッグ、または名前
+- `metric`: その Threshold がチェックするメトリックの名前。設定されていない場合、Threshold は慣例的な `value` という名前をチェックします。Threshold がチェックする名前は常にちょうど 1 つです。
+- `parameters`: その Threshold がチェックするバリアントを、パラメータフィルタとして指定します。フィルタ内のいずれかのエントリがバリアントのパラメータの部分集合であれば、そのバリアントは一致します。そのため、エントリは関心のあるキーだけを指定すればよく、より多くのキーを固定しているバリアントも一致します。設定されていない場合、または空のリストが設定されている場合、Threshold はすべてのバリアントをチェックします。
+- `model`: 使用する Threshold の model
+
+一致した Threshold はすべて発火します。
+すべてのバリアントをチェックする Threshold と、`{"size_mb":16}` だけをチェックする Threshold は、
+どちらも `{"size_mb":16}` のバリアントをチェックします。
+そのため、そこで 1 つの性能低下が起きると、Threshold ごとに 1 つずつ、計 2 つの Alert が生成されます。
+
+`thresholds.reset` フィールドは、そのペイロードの形式で指定できる Threshold を解除します。
+BMF `v0` のマップは Measure しか指定できないため、`reset` が届くのは、
+すべてのバリアントの慣例的な `value` という名前をチェックする Threshold だけです。
+BMF `v1` のリストはあらゆる Threshold を指定できるため、`reset` はそのすべてに届きます。
+
+### Fold
+
+BMF `v1` では Fold はサポートされません。
+反復ごとの `p99` の平均は、まとめた標本の `p99` ではありません。
+そのため、BMF `v1` のペイロードに対して要求された fold は警告され、
+結果は fold されずに、ペイロードごとに 1 反復として取り込まれます。
+
+### Bencher Metric Format (BMF) v1 JSON スキーマ
+
+これは BMF `v1` JSON の [JSON スキーマ][json schema]です:
+
+<BmfV1Schema />
+
+[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+[measure]: /ja/docs/explanation/benchmarking/#measure
+[alert]: /ja/docs/explanation/thresholds/#alerts
+[threshold]: /ja/docs/explanation/thresholds/
+[bencher run]: /ja/docs/explanation/bencher-run/
+[json adapter]: /ja/docs/explanation/adapters/#-json
+[jcs]: https://www.rfc-editor.org/rfc/rfc8785
+[json schema]: https://json-schema.org/draft-07/json-schema-release-notes
