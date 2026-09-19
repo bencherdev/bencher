@@ -478,19 +478,23 @@ async fn fixture(server: &TestServer, label: &str) -> Fixture {
     }
 }
 
-/// A threshold model loose enough to compute a boundary from a short history and
-/// tight enough that a tenfold jump is an outlier.
-fn threshold_models() -> serde_json::Value {
+/// The bare threshold, the conventional `value` name of every variant, with a model
+/// loose enough to compute a boundary from a short history and tight enough that a
+/// tenfold jump is an outlier. A version 1 payload declares its thresholds as a list.
+fn threshold_entries() -> serde_json::Value {
     serde_json::json!({
-        "models": {
-            "latency": {
-                "test": "t_test",
-                "min_sample_size": 2,
-                "max_sample_size": 64,
-                "lower_boundary": 0.98,
-                "upper_boundary": 0.98,
+        "models": [
+            {
+                "measure": "latency",
+                "model": {
+                    "test": "t_test",
+                    "min_sample_size": 2,
+                    "max_sample_size": 64,
+                    "lower_boundary": 0.98,
+                    "upper_boundary": 0.98,
+                }
             }
-        }
+        ]
     })
 }
 
@@ -833,7 +837,7 @@ async fn metrics_get_checked_value_row() {
                     &serde_json::json!({ "latency": { "value": value, "p99": value * 2.0 } }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             Some(1),
         )
         .await;

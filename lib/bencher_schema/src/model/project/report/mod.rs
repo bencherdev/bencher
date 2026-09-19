@@ -99,7 +99,7 @@ impl NewRunJob {
 
 use super::{
     branch::{BranchId, QueryBranch, head::HeadId, version::VersionId},
-    threshold::{InsertThreshold, boundary::QueryBoundary},
+    threshold::{InsertThreshold, boundary::QueryBoundary, check_report_thresholds_shape},
 };
 
 pub mod report_benchmark;
@@ -181,6 +181,13 @@ impl QueryReport {
             return existing.into_json(log, actor_conn!(context, api_actor), ReportMode::Full);
         }
 
+        // The report's BMF version, declared or else the project's default, says
+        // which shape the payload's thresholds are written in, and that is checked
+        // before anything at all is created for the report, so a payload turned away
+        // leaves nothing behind on its way out.
+        let bmf_version = json_report.bmf_version.unwrap_or(query_project.bmf_version);
+        check_report_thresholds_shape(bmf_version, json_report.thresholds.as_ref())?;
+
         #[cfg(all(feature = "plus", not(feature = "otel")))]
         let _ = is_claimed;
         #[cfg(all(feature = "plus", feature = "otel"))]
@@ -219,20 +226,23 @@ impl QueryReport {
         )
         .await?;
 
-        // Insert the thresholds for the report
+        // Insert the thresholds for the report.
+        //
+        // The report's BMF version says which shape the thresholds are written in,
+        // and the shape has already been checked above.
         InsertThreshold::from_report_json(
             log,
             context,
             project_id,
             branch_id,
             testbed_id,
+            bmf_version,
             json_report.thresholds.take(),
         )
         .await?;
 
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default().normalize();
-        let bmf_version = json_report.bmf_version.unwrap_or(query_project.bmf_version);
 
         // Validate job before inserting report so that report + job creation is atomic:
         // if OCI resolution fails, neither the report nor the job is created.

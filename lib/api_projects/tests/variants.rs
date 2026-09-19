@@ -45,6 +45,26 @@ fn threshold_models() -> serde_json::Value {
     })
 }
 
+/// The version 1 spelling of [`threshold_models`]: one entry naming the same measure
+/// and the same model, which is the bare threshold, the conventional `value` name of
+/// every variant. A version 1 payload has to declare its thresholds as a list.
+fn threshold_entries() -> serde_json::Value {
+    serde_json::json!({
+        "models": [
+            {
+                "measure": "latency",
+                "model": {
+                    "test": "t_test",
+                    "min_sample_size": 2,
+                    "max_sample_size": 64,
+                    "lower_boundary": 0.98,
+                    "upper_boundary": 0.98,
+                }
+            }
+        ]
+    })
+}
+
 /// A signed up user with an organization and a project to report into.
 struct Fixture {
     project_slug: String,
@@ -129,6 +149,12 @@ async fn try_report(
     let status = resp.status();
     let body = resp.text().await.expect("Failed to read the response");
     (status, body)
+}
+
+/// One BMF v0 payload: a benchmark, a measure, and a point estimate.
+fn v0(benchmark: &str, value: f64) -> String {
+    serde_json::to_string(&serde_json::json!({ benchmark: { "latency": { "value": value } } }))
+        .expect("the results serialize")
 }
 
 /// One BMF v1 payload for a single benchmark's variants.
@@ -369,7 +395,7 @@ async fn ingest_variants(server: &TestServer) -> (Fixture, i32) {
                     ),
                 ],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -459,7 +485,7 @@ async fn baselines_separate_by_variant() {
                     ),
                 ],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -496,7 +522,7 @@ async fn bare_threshold_checks_only_the_value_name() {
                     }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -944,7 +970,7 @@ async fn report_response_echoes_metrics_and_separates_variants() {
                     ),
                 ],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -974,7 +1000,7 @@ async fn report_response_echoes_metrics_and_separates_variants() {
                 ),
             ],
         )],
-        Some(threshold_models()),
+        Some(threshold_entries()),
         None, Some(1),
     )
     .await;
@@ -1449,7 +1475,7 @@ async fn alert_json_carries_the_boundary_the_metric_exceeded() {
                     &serde_json::json!({ "latency": { "value": value, "p99": value * 2.0 } }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -1676,7 +1702,7 @@ async fn ingest_two_variants(
                     ),
                 ],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -2009,7 +2035,7 @@ async fn alert_for_bounds(
                     &measures(value),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -3327,7 +3353,7 @@ async fn every_matching_threshold_fires() {
                 &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
             )],
         )],
-        Some(threshold_models()),
+        Some(threshold_entries()),
         None,
         Some(1),
     )
@@ -3358,7 +3384,7 @@ async fn every_matching_threshold_fires() {
                     &serde_json::json!({ "latency": { "value": value } }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -3657,7 +3683,7 @@ async fn metric_row_singular_check_is_the_bare_one() {
                     &serde_json::json!({ "latency": { "value": value } }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -3832,6 +3858,9 @@ fn threshold_with(
 // threshold it addresses is the bare one. `reset` takes a model away from the bare
 // thresholds it did not name, and from no others: a threshold that checks only some
 // variants is addressed through the thresholds endpoint, so a report cannot reset it.
+//
+// The payload is version 0, which is the shape a map is: it is the map's reach that
+// is under test, not the results.
 #[tokio::test]
 async fn reset_leaves_a_filtered_threshold_alone() {
     let server = TestServer::new().await;
@@ -3842,16 +3871,10 @@ async fn reset_leaves_a_filtered_threshold_alone() {
         &server,
         &fixture,
         1,
-        vec![v1(
-            "bench",
-            &[entry(
-                &serde_json::json!({ "size": 512 }),
-                &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
-            )],
-        )],
+        vec![v0("bench", FILTERED[0])],
         Some(threshold_models()),
         None,
-        Some(1),
+        None,
     )
     .await;
     create_threshold(
@@ -3874,16 +3897,10 @@ async fn reset_leaves_a_filtered_threshold_alone() {
         &server,
         &fixture,
         2,
-        vec![v1(
-            "bench",
-            &[entry(
-                &serde_json::json!({ "size": 512 }),
-                &serde_json::json!({ "latency": { "value": FILTERED[1] } }),
-            )],
-        )],
+        vec![v0("bench", FILTERED[1])],
         Some(serde_json::json!({ "reset": true })),
         None,
-        Some(1),
+        None,
     )
     .await;
 
@@ -3948,7 +3965,7 @@ async fn start_point_clone_carries_what_each_threshold_checks() {
                 &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
             )],
         )],
-        Some(threshold_models()),
+        Some(threshold_entries()),
         None,
         Some(1),
     )
@@ -3987,4 +4004,238 @@ async fn start_point_clone_carries_what_each_threshold_checks() {
     // And the start point branch still has exactly what it had.
     let source = list_thresholds(&server, &fixture, Some("main")).await;
     assert_eq!(source.len(), 2, "the start point is unchanged: {source:?}");
+}
+
+/// Delete a threshold through the thresholds endpoint.
+async fn delete_threshold(
+    server: &TestServer,
+    fixture: &Fixture,
+    threshold: &str,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v0/projects/{}/thresholds/{threshold}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+/// The UUID a threshold response carries.
+fn threshold_uuid(threshold: &serde_json::Value) -> String {
+    threshold
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the threshold carries its uuid")
+        .to_owned()
+}
+
+/// One report of one variant, taken back out again.
+///
+/// A variant is only ever minted by a report, and a report that still references
+/// it refuses the delete on its own. Deleting the report leaves the variant behind
+/// with nothing pointing at it, which is the state where a threshold's claim on it
+/// is the only thing left to see.
+async fn unreferenced_variant(
+    server: &TestServer,
+    fixture: &Fixture,
+    parameters_value: &serde_json::Value,
+) -> (String, JsonVariant) {
+    let json_report = report(
+        server,
+        fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                parameters_value,
+                &serde_json::json!({ "latency": { "value": 1.0 } }),
+            )],
+        )],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
+    let report_uuid = json_report
+        .get("uuid")
+        .and_then(serde_json::Value::as_str)
+        .expect("the report carries its uuid")
+        .to_owned();
+
+    let benchmark = only_benchmark(server, fixture).await;
+    let wanted =
+        parameters(&serde_json::to_string(parameters_value).expect("the parameters serialize"));
+    let variant = variant_list(server, fixture, &benchmark, "")
+        .await
+        .into_iter()
+        .find(|variant| variant.parameters == wanted)
+        .expect("the reported variant");
+
+    let (status, body) = delete_report(server, fixture, &report_uuid).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "DELETE report: {body}");
+
+    (benchmark, variant)
+}
+
+// A threshold that names a variant in its filter is a reference to it, so the
+// variant cannot be deleted out from under it. Deleting the threshold is what makes
+// the variant deletable, exactly as deleting a report is one level up.
+#[tokio::test]
+async fn variant_delete_refuses_while_a_threshold_names_it() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "delete-threshold").await;
+    let (benchmark, variant) =
+        unreferenced_variant(&server, &fixture, &serde_json::json!({ "size_mb": 16 })).await;
+
+    let threshold = create_threshold(
+        &server,
+        &fixture,
+        None,
+        Some(serde_json::json!([{ "size_mb": 16 }])),
+    )
+    .await;
+
+    let (status, body) =
+        delete_variant(&server, &fixture, &benchmark, &fixture.token, &variant.uuid).await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "a threshold names the variant: {body}"
+    );
+    assert!(
+        body.contains("All thresholds that use this variant must be deleted first!"),
+        "the refusal says what to delete first: {body}"
+    );
+
+    let mut conn = server.db_conn();
+    assert!(
+        variant_row_id(&mut conn, &variant.uuid).is_some(),
+        "the refused delete put the variant back"
+    );
+    drop(conn);
+
+    let (status, body) = delete_threshold(&server, &fixture, &threshold_uuid(&threshold)).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "DELETE threshold: {body}");
+
+    let (status, body) =
+        delete_variant(&server, &fixture, &benchmark, &fixture.token, &variant.uuid).await;
+    assert_eq!(
+        status,
+        StatusCode::NO_CONTENT,
+        "nothing names the variant any more: {body}"
+    );
+
+    let mut conn = server.db_conn();
+    assert!(
+        variant_row_id(&mut conn, &variant.uuid).is_none(),
+        "the variant is gone"
+    );
+}
+
+// Matching a variant is not naming it. A filter of `{"size_mb": 16}` matches the variant
+// `{"size_mb": 16, "os": "linux"}` because a filter names only the keys it
+// cares about, but it is a predicate over values rather than a reference to that
+// row: the variant can go and the filter still says what it said.
+#[tokio::test]
+async fn variant_delete_allows_a_filter_that_only_matches_it() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "delete-subset").await;
+    let (benchmark, variant) = unreferenced_variant(
+        &server,
+        &fixture,
+        &serde_json::json!({ "os": "linux", "size_mb": 16 }),
+    )
+    .await;
+
+    create_threshold(
+        &server,
+        &fixture,
+        None,
+        Some(serde_json::json!([{ "size_mb": 16 }])),
+    )
+    .await;
+
+    let (status, body) =
+        delete_variant(&server, &fixture, &benchmark, &fixture.token, &variant.uuid).await;
+    assert_eq!(
+        status,
+        StatusCode::NO_CONTENT,
+        "a filter that merely matches does not stand in the way: {body}"
+    );
+
+    let mut conn = server.db_conn();
+    assert!(
+        variant_row_id(&mut conn, &variant.uuid).is_none(),
+        "the variant is gone"
+    );
+}
+
+// When a report and a threshold both point at a variant, the report is the one the
+// refusal names. The results have to go first either way, and telling a client
+// about the threshold while its reports still reference the variant would send it
+// to the wrong place.
+#[tokio::test]
+async fn variant_delete_reports_the_report_reference_first() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "delete-precedence").await;
+
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size_mb": 16 }),
+                &serde_json::json!({ "latency": { "value": 1.0 } }),
+            )],
+        )],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
+
+    let benchmark = only_benchmark(&server, &fixture).await;
+    let variant = variant_list(&server, &fixture, &benchmark, "")
+        .await
+        .into_iter()
+        .find(|variant| variant.parameters == parameters(r#"{"size_mb":16}"#))
+        .expect("the reported variant");
+
+    create_threshold(
+        &server,
+        &fixture,
+        None,
+        Some(serde_json::json!([{ "size_mb": 16 }])),
+    )
+    .await;
+
+    let (status, body) =
+        delete_variant(&server, &fixture, &benchmark, &fixture.token, &variant.uuid).await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "both point at the variant: {body}"
+    );
+    assert!(
+        !body.contains("All thresholds that use this variant must be deleted first!"),
+        "the report reference is the one that fires: {body}"
+    );
+
+    let mut conn = server.db_conn();
+    assert!(
+        variant_row_id(&mut conn, &variant.uuid).is_some(),
+        "the variant is still there"
+    );
 }
