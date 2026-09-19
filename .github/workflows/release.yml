@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: rui314/setup-mold@7e4f20ad28a2e8ca6fd0892ccf72e2abb706b9c3 # v1
+      - uses: rui314/setup-mold@10ca16bf91dc22e05ebdc935cad9c75ea248f621 # v1
         if: matrix.os == 'ubuntu-22.04'
         with:
           mold-version: ${{ inputs.mold-version }}
@@ -182,7 +182,7 @@ jobs:
             ${GITHUB_IMAGE}:${{ github.sha }}
 
       # Generate release notes and publish
-      - uses: rui314/setup-mold@7e4f20ad28a2e8ca6fd0892ccf72e2abb706b9c3 # v1
+      - uses: rui314/setup-mold@10ca16bf91dc22e05ebdc935cad9c75ea248f621 # v1
         with:
           mold-version: ${{ inputs.mold-version }}
 
