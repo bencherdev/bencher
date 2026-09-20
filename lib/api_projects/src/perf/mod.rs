@@ -733,9 +733,9 @@ fn perf_query(
                     schema::threshold::project_id,
                     schema::threshold::branch_id,
                     schema::threshold::testbed_id,
+                    schema::threshold::parameters,
                     schema::threshold::measure_id,
                     schema::threshold::metric,
-                    schema::threshold::parameters,
                     schema::threshold::model_id,
                     schema::threshold::created,
                     schema::threshold::modified,
@@ -913,7 +913,7 @@ impl PendingMetric {
                 // The deprecated singular check is the bare threshold's, and no
                 // other's: the `value` name of every variant, which is the only kind
                 // of threshold there was when those fields were the whole story.
-                let is_bare = query_threshold.identity().is_bare();
+                let is_bare = query_threshold.is_bare();
                 let perf_boundary = JsonPerfBoundary {
                     threshold: query_threshold
                         .into_threshold_model_json_for_project(project, query_model),
@@ -955,8 +955,6 @@ impl PendingMetric {
             bare_check,
         } = self;
 
-        // Several thresholds may check one metric, so the list is put in one order:
-        // the threshold creation order, oldest first.
         for entry in metrics.values_mut() {
             if let Some(boundaries) = entry.boundaries.as_mut() {
                 boundaries.sort_by_key(|check| check.threshold.boundary_order());

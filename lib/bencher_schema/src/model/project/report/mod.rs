@@ -730,9 +730,9 @@ fn report_results_query(
                 schema::threshold::project_id,
                 schema::threshold::branch_id,
                 schema::threshold::testbed_id,
+                schema::threshold::parameters,
                 schema::threshold::measure_id,
                 schema::threshold::metric,
-                schema::threshold::parameters,
                 schema::threshold::model_id,
                 schema::threshold::created,
                 schema::threshold::modified,
@@ -881,7 +881,7 @@ fn push_result_row(
         // nothing else: the `value` name of every variant, which is what a
         // threshold could check before it could check anything narrower, and so
         // exactly what a legacy consumer has always been shown.
-        let is_bare = query_threshold.identity().is_bare();
+        let is_bare = query_threshold.is_bare();
         let report_boundary = JsonReportBoundary {
             threshold: query_threshold.into_threshold_model_json_for_project(project, query_model),
             boundary: query_boundary.into_json(),
@@ -956,8 +956,6 @@ impl PendingMeasure {
             bare_check,
         } = self;
 
-        // Several thresholds may check one metric, so the list is put in one order:
-        // the threshold creation order, oldest first.
         for report_metric in &mut metrics {
             report_metric
                 .boundaries

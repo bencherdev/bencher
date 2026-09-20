@@ -149,7 +149,9 @@ impl QueryFragment<Sqlite> for HistoryQuery {
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, MetricName, ModelTest, ParameterSet, SampleSize, Window};
+    use bencher_json::{
+        DateTime, MetricName, ModelTest, ParameterSet, SampleSize, ThresholdUuid, Window,
+    };
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SqliteConnection};
     use pretty_assertions::assert_eq;
 
@@ -385,9 +387,9 @@ mod tests {
             measure_id: fixture.measure,
             threshold: Threshold {
                 id: ThresholdId::default(),
-                metric: MetricName::value(),
+                uuid: ThresholdUuid::default(),
                 parameters: None,
-                created: DateTime::TEST,
+                metric: MetricName::value(),
                 model: ThresholdModel {
                     id: ModelId::default(),
                     test: ModelTest::TTest,

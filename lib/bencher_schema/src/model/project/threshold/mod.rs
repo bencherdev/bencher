@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    DateTime, MetricName, Model, ParameterFilter, ParameterSet, ThresholdUuid,
+    DateTime, MetricName, Model, ParameterFilter, ThresholdUuid,
     project::{
         report::JsonReportThresholds,
         threshold::{JsonThreshold, JsonThresholdModel},
@@ -55,71 +55,61 @@ pub struct QueryThreshold {
     pub project_id: ProjectId,
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
+    /// The variants this threshold checks, when it does not check every one.
+    pub parameters: Option<ParameterFilter>,
     pub measure_id: MeasureId,
     /// The name this threshold checks, when it is not the conventional `value` name.
     pub metric: Option<MetricName>,
-    /// The variants this threshold checks, when it does not check every one.
-    pub parameters: Option<ParameterFilter>,
     pub model_id: Option<ModelId>,
     pub created: DateTime,
     pub modified: DateTime,
 }
 
-/// The three dimensions a threshold hangs off.
+/// The dimensions a threshold hangs off, which together are its unique key.
 ///
-/// They travel together because the identity travels beside them, and the two
-/// halves of a threshold's unique key read better as two values than as five
-/// positional arguments.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The two nullable dimensions are stored in their canonical form, which is the
+/// absence of a value for the default: the conventional `value` name is a `NULL`
+/// metric and a filter that matches every variant is `NULL` parameters. The wire
+/// accepts either spelling and [`Self::new`] turns one into the other, so two
+/// spellings of one threshold are one row.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ThresholdDimensions {
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
-    pub measure_id: MeasureId,
-}
-
-/// What a threshold checks beyond its branch, testbed, and measure: one metric name
-/// and a filter over variants.
-///
-/// Both halves are stored in their canonical form, which is the absence of a value
-/// for the default: the conventional `value` name is a `NULL` metric and a filter
-/// that matches every variant is `NULL` parameters. The wire accepts either
-/// spelling and this is what turns one into the other, so two spellings of one
-/// threshold are one row.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct ThresholdIdentity {
-    pub metric: Option<MetricName>,
     pub parameters: Option<ParameterFilter>,
+    pub measure_id: MeasureId,
+    pub metric: Option<MetricName>,
 }
 
-impl ThresholdIdentity {
-    /// The canonical identity behind a metric name and a parameters filter.
+impl ThresholdDimensions {
+    /// The canonical dimensions behind a parameters filter and a metric name.
     #[must_use]
-    pub fn new(metric: Option<MetricName>, parameters: Option<ParameterFilter>) -> Self {
+    pub fn new(
+        branch_id: BranchId,
+        testbed_id: TestbedId,
+        parameters: Option<ParameterFilter>,
+        measure_id: MeasureId,
+        metric: Option<MetricName>,
+    ) -> Self {
         Self {
-            metric: metric.filter(|metric| *metric != MetricName::value()),
+            branch_id,
+            testbed_id,
             parameters: parameters.filter(|parameters| !parameters.is_match_all()),
+            measure_id,
+            metric: metric.filter(|metric| *metric != MetricName::value()),
         }
     }
 
-    /// The name this identity checks.
+    /// The same dimensions on another branch.
+    #[must_use]
+    pub fn on_branch(self, branch_id: BranchId) -> Self {
+        Self { branch_id, ..self }
+    }
+
+    /// The name these dimensions check.
     #[must_use]
     pub fn metric_name(&self) -> MetricName {
         self.metric.clone().unwrap_or_else(MetricName::value)
-    }
-
-    /// Whether this identity checks every variant of the conventional `value`
-    /// name, which is what every threshold did before a threshold could name either.
-    #[must_use]
-    pub fn is_bare(&self) -> bool {
-        self.metric.is_none() && self.parameters.is_none()
-    }
-
-    /// Whether this identity checks a variant.
-    #[must_use]
-    pub fn matches(&self, variant: &ParameterSet) -> bool {
-        self.parameters
-            .as_ref()
-            .is_none_or(|parameters| parameters.matches(variant))
     }
 }
 
@@ -136,40 +126,48 @@ impl QueryThreshold {
     fn_get_id!(threshold, ThresholdId, ThresholdUuid);
     fn_get_uuid!(threshold, ThresholdId, ThresholdUuid);
 
-    /// What this threshold checks beyond its dimensions.
+    /// The dimensions this threshold hangs off.
     #[must_use]
-    pub fn identity(&self) -> ThresholdIdentity {
-        ThresholdIdentity {
-            metric: self.metric.clone(),
+    pub fn dimensions(&self) -> ThresholdDimensions {
+        ThresholdDimensions {
+            branch_id: self.branch_id,
+            testbed_id: self.testbed_id,
             parameters: self.parameters.clone(),
+            measure_id: self.measure_id,
+            metric: self.metric.clone(),
         }
     }
 
-    /// The threshold with exactly this identity on these dimensions, if there is one.
+    /// Whether this threshold checks every variant of the conventional `value`
+    /// name, which is what every threshold did before a threshold could check
+    /// anything narrower.
+    #[must_use]
+    pub fn is_bare(&self) -> bool {
+        self.parameters.is_none() && self.metric.is_none()
+    }
+
+    /// The threshold on exactly these dimensions, if there is one.
     ///
-    /// The identity is already canonical, so the two nullable columns are matched
+    /// The dimensions are already canonical, so the two nullable columns are matched
     /// against the values they actually hold and never against a spelling of them.
     pub fn find_by_dimensions(
         conn: &mut DbConnection,
-        branch_id: BranchId,
-        testbed_id: TestbedId,
-        measure_id: MeasureId,
-        identity: &ThresholdIdentity,
+        dimensions: &ThresholdDimensions,
     ) -> diesel::QueryResult<Option<Self>> {
         let mut query = schema::threshold::table
-            .filter(schema::threshold::branch_id.eq(branch_id))
-            .filter(schema::threshold::testbed_id.eq(testbed_id))
-            .filter(schema::threshold::measure_id.eq(measure_id))
+            .filter(schema::threshold::branch_id.eq(dimensions.branch_id))
+            .filter(schema::threshold::testbed_id.eq(dimensions.testbed_id))
+            .filter(schema::threshold::measure_id.eq(dimensions.measure_id))
             .into_boxed();
-        query = if let Some(metric) = identity.metric.clone() {
-            query.filter(schema::threshold::metric.eq(metric))
-        } else {
-            query.filter(schema::threshold::metric.is_null())
-        };
-        query = if let Some(parameters) = identity.parameters.clone() {
+        query = if let Some(parameters) = dimensions.parameters.clone() {
             query.filter(schema::threshold::parameters.eq(parameters))
         } else {
             query.filter(schema::threshold::parameters.is_null())
+        };
+        query = if let Some(metric) = dimensions.metric.clone() {
+            query.filter(schema::threshold::metric.eq(metric))
+        } else {
+            query.filter(schema::threshold::metric.is_null())
         };
         query.first::<Self>(conn).optional()
     }
@@ -346,9 +344,9 @@ impl QueryThreshold {
             project_id,
             branch_id,
             testbed_id,
+            parameters,
             measure_id,
             metric,
-            parameters,
             created,
             modified,
             ..
@@ -374,9 +372,9 @@ impl QueryThreshold {
             project: query_project.uuid,
             branch,
             testbed,
+            parameters,
             measure,
             metric,
-            parameters,
             model,
             created,
             modified,
@@ -417,9 +415,9 @@ pub struct InsertThreshold {
     pub project_id: ProjectId,
     pub branch_id: BranchId,
     pub testbed_id: TestbedId,
+    pub parameters: Option<ParameterFilter>,
     pub measure_id: MeasureId,
     pub metric: Option<MetricName>,
-    pub parameters: Option<ParameterFilter>,
     pub model_id: Option<ModelId>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -436,7 +434,7 @@ enum ThresholdModelAction {
 }
 
 enum StartPointAction {
-    Create(TestbedId, MeasureId, ThresholdIdentity, Model),
+    Create(ThresholdDimensions, Model),
     Update(QueryThreshold, Model),
     Remove(QueryThreshold),
     NoChange,
@@ -452,23 +450,23 @@ impl InsertThreshold {
     #[cfg(feature = "plus")]
     crate::macros::rate_limit::fn_rate_limit!(threshold, Threshold);
 
-    pub fn new(
-        project_id: ProjectId,
-        branch_id: BranchId,
-        testbed_id: TestbedId,
-        measure_id: MeasureId,
-        identity: ThresholdIdentity,
-    ) -> Self {
+    pub fn new(project_id: ProjectId, dimensions: ThresholdDimensions) -> Self {
         let timestamp = DateTime::now();
-        let ThresholdIdentity { metric, parameters } = identity;
+        let ThresholdDimensions {
+            branch_id,
+            testbed_id,
+            parameters,
+            measure_id,
+            metric,
+        } = dimensions;
         Self {
             uuid: ThresholdUuid::new(),
             project_id,
             branch_id,
             testbed_id,
+            parameters,
             measure_id,
             metric,
-            parameters,
             model_id: None,
             created: timestamp,
             modified: timestamp,
@@ -479,40 +477,33 @@ impl InsertThreshold {
         context: &ApiContext,
         project_id: ProjectId,
         dimensions: ThresholdDimensions,
-        identity: ThresholdIdentity,
         model: Model,
     ) -> Result<ThresholdId, HttpError> {
-        let ThresholdDimensions {
-            branch_id,
-            testbed_id,
-            measure_id,
-        } = dimensions;
         // Check for an existing threshold with the same unique key before writing.
-        // The key is the three dimensions and the identity together: a threshold that
-        // checks `p99`, or that checks only some variants, sits beside the bare one
-        // rather than colliding with it.
-        if let Some(existing) = QueryThreshold::find_by_dimensions(
-            auth_conn!(context),
-            branch_id,
-            testbed_id,
-            measure_id,
-            &identity,
-        )
-        .map_err(|e| {
-            crate::error::issue_error(
-                "Failed to query threshold dimensions",
-                "Failed to query threshold dimensions:",
-                e,
-            )
-        })? {
-            let metric = identity.metric_name();
-            let parameters = identity
+        // The key is every dimension together: a threshold that checks `p99`, or that
+        // checks only some variants, sits beside the bare one rather than colliding
+        // with it.
+        if let Some(existing) = QueryThreshold::find_by_dimensions(auth_conn!(context), &dimensions)
+            .map_err(|e| {
+                crate::error::issue_error(
+                    "Failed to query threshold dimensions",
+                    "Failed to query threshold dimensions:",
+                    e,
+                )
+            })?
+        {
+            let metric = dimensions.metric_name();
+            let parameters = dimensions
                 .parameters
                 .as_ref()
                 .map_or_else(|| "every variant".to_owned(), ParameterFilter::canonical);
             return Err(resource_conflict_error(
                 BencherResource::Threshold,
-                (branch_id, testbed_id, measure_id),
+                (
+                    dimensions.branch_id,
+                    dimensions.testbed_id,
+                    dimensions.measure_id,
+                ),
                 format!(
                     "A threshold ({uuid}) already exists for this branch, testbed, and measure, checking {metric} of {parameters}",
                     uuid = existing.uuid
@@ -523,7 +514,7 @@ impl InsertThreshold {
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
         write_transaction!(context, |conn| {
-            Self::from_model_inner(conn, project_id, dimensions, identity, model)
+            Self::from_model_inner(conn, project_id, dimensions, model)
         })
         .map_err(|e| {
             crate::error::issue_error(
@@ -538,17 +529,10 @@ impl InsertThreshold {
         conn: &mut DbConnection,
         project_id: ProjectId,
         dimensions: ThresholdDimensions,
-        identity: ThresholdIdentity,
         model: Model,
     ) -> diesel::QueryResult<ThresholdId> {
-        let ThresholdDimensions {
-            branch_id,
-            testbed_id,
-            measure_id,
-        } = dimensions;
         // Create the new threshold
-        let insert_threshold =
-            InsertThreshold::new(project_id, branch_id, testbed_id, measure_id, identity);
+        let insert_threshold = InsertThreshold::new(project_id, dimensions);
         diesel::insert_into(schema::threshold::table)
             .values(&insert_threshold)
             .execute(conn)?;
@@ -605,22 +589,11 @@ impl InsertThreshold {
             || !orphans.is_empty();
         if has_writes {
             let project_id = query_branch.project_id;
-            let branch_id = query_branch.id;
             write_transaction!(context, |conn| {
                 for action in actions {
                     match action {
-                        StartPointAction::Create(testbed_id, measure_id, identity, model) => {
-                            InsertThreshold::from_model_inner(
-                                conn,
-                                project_id,
-                                ThresholdDimensions {
-                                    branch_id,
-                                    testbed_id,
-                                    measure_id,
-                                },
-                                identity,
-                                model,
-                            )?;
+                        StartPointAction::Create(dimensions, model) => {
+                            InsertThreshold::from_model_inner(conn, project_id, dimensions, model)?;
                         },
                         StartPointAction::Update(threshold, model) => {
                             threshold.update_from_model_inner(conn, model)?;
@@ -666,17 +639,8 @@ impl InsertThreshold {
             ))?
             .into_iter()
             // A branch may hold several thresholds on one (testbed, measure) now, so
-            // the key a clone matches on is the whole of what a threshold checks.
-            .map(|threshold| {
-                (
-                    (
-                        threshold.testbed_id,
-                        threshold.measure_id,
-                        threshold.identity(),
-                    ),
-                    threshold,
-                )
-            })
+            // the key a clone matches on is every dimension but the branch.
+            .map(|threshold| (threshold.dimensions(), threshold))
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
 
@@ -698,12 +662,10 @@ impl InsertThreshold {
             ))?
             .into_iter()
             .map(|(threshold, model)| {
+                // Keyed on the branch the clone lands on, so the two sides match on
+                // everything but the branch they came from.
                 (
-                    (
-                        threshold.testbed_id,
-                        threshold.measure_id,
-                        threshold.identity(),
-                    ),
+                    threshold.dimensions().on_branch(query_branch.id),
                     (threshold, model.map(QueryModel::into_model)),
                 )
             })
@@ -713,16 +675,10 @@ impl InsertThreshold {
         // Pre-compute actions using read connections
         let auth_conn = auth_conn!(context);
         let mut actions = Vec::new();
-        for (
-            (start_point_testbed_id, start_point_measure_id, start_point_identity),
-            (_start_point_threshold, start_point_model),
-        ) in &start_point_thresholds
+        for (start_point_dimensions, (_start_point_threshold, start_point_model)) in
+            &start_point_thresholds
         {
-            if let Some(current_threshold) = current_thresholds.remove(&(
-                *start_point_testbed_id,
-                *start_point_measure_id,
-                start_point_identity.clone(),
-            )) {
+            if let Some(current_threshold) = current_thresholds.remove(start_point_dimensions) {
                 match QueryThreshold::compute_model_action(
                     auth_conn,
                     current_threshold.model_id,
@@ -744,9 +700,7 @@ impl InsertThreshold {
                 #[cfg(feature = "plus")]
                 Self::rate_limit(context, query_branch.project_id).await?;
                 actions.push(StartPointAction::Create(
-                    *start_point_testbed_id,
-                    *start_point_measure_id,
-                    start_point_identity.clone(),
+                    start_point_dimensions.clone(),
                     *model,
                 ));
             } else {
@@ -801,8 +755,8 @@ impl InsertThreshold {
             .filter(schema::threshold::project_id.eq(project_id))
             .filter(schema::threshold::branch_id.eq(branch_id))
             .filter(schema::threshold::testbed_id.eq(testbed_id))
-            .filter(schema::threshold::metric.is_null())
             .filter(schema::threshold::parameters.is_null())
+            .filter(schema::threshold::metric.is_null())
             .load::<QueryThreshold>(auth_conn!(context))
             .map_err(resource_not_found_err!(Threshold, (branch_id, testbed_id)))?
             .into_iter()
@@ -872,12 +826,9 @@ impl InsertThreshold {
                             InsertThreshold::from_model_inner(
                                 conn,
                                 project_id,
-                                ThresholdDimensions {
-                                    branch_id,
-                                    testbed_id,
-                                    measure_id,
-                                },
-                                ThresholdIdentity::default(),
+                                ThresholdDimensions::new(
+                                    branch_id, testbed_id, None, measure_id, None,
+                                ),
                                 model,
                             )?;
                         },
@@ -949,14 +900,14 @@ mod tests {
         schema,
         test_util::{
             create_base_entities, create_branch_with_head, create_measure, create_model,
-            create_testbed, create_threshold, create_threshold_with_identity,
+            create_testbed, create_threshold, create_threshold_with_dimensions,
             get_threshold_model_id, get_thresholds_for_branch, setup_test_db,
         },
     };
 
     use super::{
-        InsertThreshold, MetricName, ParameterFilter, QueryThreshold, ThresholdDimensions,
-        ThresholdId, ThresholdIdentity, UpdateThreshold, model::ModelId,
+        BranchId, DbConnection, InsertThreshold, MetricName, ParameterFilter, QueryThreshold,
+        ThresholdDimensions, ThresholdId, UpdateThreshold, model::ModelId,
     };
     use crate::model::project::{ProjectId, measure::MeasureId, testbed::TestbedId};
 
@@ -2114,10 +2065,7 @@ mod tests {
 
         let result = QueryThreshold::find_by_dimensions(
             &mut conn,
-            branch.branch_id,
-            testbed,
-            measure,
-            &ThresholdIdentity::default(),
+            &ThresholdDimensions::new(branch.branch_id, testbed, None, measure, None),
         )
         .expect("Query should succeed");
         assert!(result.is_none());
@@ -2165,10 +2113,7 @@ mod tests {
 
         let result = QueryThreshold::find_by_dimensions(
             &mut conn,
-            branch.branch_id,
-            testbed,
-            measure,
-            &ThresholdIdentity::default(),
+            &ThresholdDimensions::new(branch.branch_id, testbed, None, measure, None),
         )
         .expect("Query should succeed");
         assert!(result.is_some());
@@ -2240,10 +2185,8 @@ mod tests {
         filter.parse().expect("Invalid parameters filter")
     }
 
-    /// The dimensions every identity test hangs off.
-    fn identity_fixture(
-        conn: &mut crate::context::DbConnection,
-    ) -> (ProjectId, ThresholdDimensions) {
+    /// The dimensions every threshold in these tests hangs off.
+    fn dimensions_fixture(conn: &mut DbConnection) -> (ProjectId, BranchId, TestbedId, MeasureId) {
         let base = create_base_entities(conn);
         let branch = create_branch_with_head(
             conn,
@@ -2267,56 +2210,65 @@ mod tests {
             "latency",
             "latency",
         );
-        (
-            base.project_id,
-            ThresholdDimensions {
-                branch_id: branch.branch_id,
-                testbed_id: testbed,
-                measure_id: measure,
-            },
-        )
+        (base.project_id, branch.branch_id, testbed, measure)
     }
 
-    /// The conventional `value` name spelled out is the same identity as no name at
+    /// The conventional `value` name spelled out is the same threshold as no name at
     /// all, and the canonical form of both is no name at all.
     #[test]
-    fn identity_collapses_the_value_name() {
-        let bare = ThresholdIdentity::new(None, None);
-        let explicit = ThresholdIdentity::new(Some(metric_name("value")), None);
+    fn dimensions_collapse_the_value_name() {
+        let mut conn = setup_test_db();
+        let (_project_id, branch_id, testbed_id, measure_id) = dimensions_fixture(&mut conn);
+
+        let bare = ThresholdDimensions::new(branch_id, testbed_id, None, measure_id, None);
+        let explicit = ThresholdDimensions::new(
+            branch_id,
+            testbed_id,
+            None,
+            measure_id,
+            Some(metric_name("value")),
+        );
         assert_eq!(bare, explicit);
         assert!(explicit.metric.is_none());
-        assert!(explicit.is_bare());
         assert_eq!(explicit.metric_name(), MetricName::value());
 
-        let named = ThresholdIdentity::new(Some(metric_name("p99")), None);
+        let named = ThresholdDimensions::new(
+            branch_id,
+            testbed_id,
+            None,
+            measure_id,
+            Some(metric_name("p99")),
+        );
         assert_ne!(bare, named);
-        assert!(!named.is_bare());
         assert_eq!(named.metric_name(), metric_name("p99"));
     }
 
-    /// A filter that matches every variant is the same identity as no filter, in
+    /// A filter that matches every variant is the same threshold as no filter, in
     /// either of the two spellings that say so.
     #[test]
-    fn identity_collapses_a_match_all_filter() {
-        let bare = ThresholdIdentity::new(None, None);
-        assert_eq!(bare, ThresholdIdentity::new(None, Some(filter("[]"))));
-        assert_eq!(bare, ThresholdIdentity::new(None, Some(filter("[{}]"))));
+    fn dimensions_collapse_a_match_all_filter() {
+        let mut conn = setup_test_db();
+        let (_project_id, branch_id, testbed_id, measure_id) = dimensions_fixture(&mut conn);
+        let on = |parameters| {
+            ThresholdDimensions::new(branch_id, testbed_id, parameters, measure_id, None)
+        };
+
+        let bare = on(None);
+        assert_eq!(bare, on(Some(filter("[]"))));
+        assert_eq!(bare, on(Some(filter("[{}]"))));
         // A filter holding the empty set matches everything the rest of it could
         // have narrowed, so it is match all too.
-        assert_eq!(
-            bare,
-            ThresholdIdentity::new(None, Some(filter(r#"[{"size": 512}, {}]"#)))
-        );
+        assert_eq!(bare, on(Some(filter(r#"[{"size": 512}, {}]"#))));
 
-        let filtered = ThresholdIdentity::new(None, Some(filter(r#"[{"size": 512}]"#)));
+        let filtered = on(Some(filter(r#"[{"size": 512}]"#)));
         assert_ne!(bare, filtered);
-        assert!(!filtered.is_bare());
+        assert!(filtered.parameters.is_some());
     }
 
     /// One filter has one canonical spelling: the sets sort by their canonical bytes
     /// and duplicates collapse, so a number written two ways is one set.
     #[test]
-    fn identity_canonicalizes_the_filter() {
+    fn filter_is_canonicalized() {
         let one_way = filter(r#"[{"a": 1}, {"a": 1.0}]"#);
         assert_eq!(one_way.sets().len(), 1);
         assert_eq!(one_way.canonical(), r#"[{"a":1}]"#);
@@ -2329,14 +2281,9 @@ mod tests {
     /// Two thresholds that check the same name of the same variants collide,
     /// whichever way each spells it.
     #[test]
-    fn duplicate_identity_insert_fails_at_both_spellings() {
+    fn duplicate_dimensions_insert_fails_at_both_spellings() {
         let mut conn = setup_test_db();
-        let (project_id, dimensions) = identity_fixture(&mut conn);
-        let ThresholdDimensions {
-            branch_id,
-            testbed_id,
-            measure_id,
-        } = dimensions;
+        let (project_id, branch_id, testbed_id, measure_id) = dimensions_fixture(&mut conn);
 
         // A bare threshold and one that spells out everything it defaults to.
         create_threshold(
@@ -2347,44 +2294,49 @@ mod tests {
             measure_id,
             "00000000-0000-0000-0000-000000000040",
         );
-        let spelled_out = ThresholdIdentity::new(Some(metric_name("value")), Some(filter("[{}]")));
-        let insert = InsertThreshold::new(
-            project_id,
+        let spelled_out = ThresholdDimensions::new(
             branch_id,
             testbed_id,
+            Some(filter("[{}]")),
             measure_id,
-            spelled_out.clone(),
+            Some(metric_name("value")),
         );
+        // The canonical form of the spelled out dimensions is the bare one, which is
+        // what makes the two collide.
+        assert_eq!(
+            spelled_out,
+            ThresholdDimensions::new(branch_id, testbed_id, None, measure_id, None)
+        );
+        let insert = InsertThreshold::new(project_id, spelled_out);
         diesel::insert_into(schema::threshold::table)
             .values(&insert)
             .execute(&mut conn)
             .unwrap_err();
-        // The canonical form of the spelled out identity is the bare one, which is
-        // what makes the two collide.
-        assert!(spelled_out.is_bare());
 
         // A named and filtered threshold sits beside the bare one.
-        let filtered =
-            ThresholdIdentity::new(Some(metric_name("p99")), Some(filter(r#"[{"size": 512}]"#)));
-        let insert = InsertThreshold::new(
-            project_id,
+        let filtered = ThresholdDimensions::new(
             branch_id,
             testbed_id,
+            Some(filter(r#"[{"size": 512}]"#)),
             measure_id,
-            filtered.clone(),
+            Some(metric_name("p99")),
         );
+        let insert = InsertThreshold::new(project_id, filtered.clone());
         diesel::insert_into(schema::threshold::table)
             .values(&insert)
             .execute(&mut conn)
             .expect("A filtered threshold sits beside the bare one");
 
         // But a second one that spells the same filter differently does not.
-        let restated = ThresholdIdentity::new(
-            Some(metric_name("p99")),
+        let restated = ThresholdDimensions::new(
+            branch_id,
+            testbed_id,
             Some(filter(r#"[{"size": 512.0}, {"size": 512}]"#)),
+            measure_id,
+            Some(metric_name("p99")),
         );
         assert_eq!(filtered, restated);
-        let insert = InsertThreshold::new(project_id, branch_id, testbed_id, measure_id, restated);
+        let insert = InsertThreshold::new(project_id, restated);
         diesel::insert_into(schema::threshold::table)
             .values(&insert)
             .execute(&mut conn)
@@ -2395,23 +2347,18 @@ mod tests {
     #[test]
     fn filter_round_trips_through_the_column() {
         let mut conn = setup_test_db();
-        let (project_id, dimensions) = identity_fixture(&mut conn);
-        let ThresholdDimensions {
-            branch_id,
-            testbed_id,
-            measure_id,
-        } = dimensions;
+        let (project_id, branch_id, testbed_id, measure_id) = dimensions_fixture(&mut conn);
 
         let stored = filter(r#"[{"threads": 4, "size": 1024}, {"size": 512}]"#);
-        create_threshold_with_identity(
+        create_threshold_with_dimensions(
             &mut conn,
             project_id,
             branch_id,
             testbed_id,
-            measure_id,
-            "00000000-0000-0000-0000-000000000040",
-            Some(metric_name("p99")),
             Some(stored.clone()),
+            measure_id,
+            Some(metric_name("p99")),
+            "00000000-0000-0000-0000-000000000040",
         );
 
         let read = schema::threshold::table
@@ -2422,8 +2369,64 @@ mod tests {
         assert_eq!(read.parameters, Some(stored));
         // Canonical bytes, not numeric value: `{"size":1` sorts before `{"size":5`.
         assert_eq!(
-            read.identity().parameters.expect("No filter").canonical(),
+            read.dimensions().parameters.expect("No filter").canonical(),
             r#"[{"size":1024,"threads":4},{"size":512}]"#
         );
+    }
+
+    #[derive(diesel::QueryableByName)]
+    struct SqlText {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        value: String,
+    }
+
+    fn sql_text(conn: &mut DbConnection, sql: &str, blob: Vec<u8>) -> String {
+        diesel::sql_query(format!("SELECT {sql} AS value"))
+            .bind::<diesel::sql_types::Binary, _>(blob)
+            .get_result::<SqlText>(conn)
+            .expect("Failed to read the encoded filter")
+            .value
+    }
+
+    /// The filter encoder has to be byte identical to `SQLite`'s own `jsonb()` over
+    /// the same canonical text, because the unique index compares the stored bytes
+    /// and `SQLite`'s JSON functions read them back.
+    #[test]
+    fn filter_bytes_agree_with_sqlite_jsonb() {
+        let mut conn = setup_test_db();
+        // The empty filter, one set, several sets, and a filter whose payload is past
+        // the one byte size a JSONB header carries after the inline nibble.
+        let long = "x".repeat(64);
+        let wide = ["a", "b", "c", "d"]
+            .map(|key| format!(r#"{{"{key}":"{long}"}}"#))
+            .join(",");
+        for canonical in [
+            "[]".to_owned(),
+            r#"[{"size":512}]"#.to_owned(),
+            r#"[{"size":1024,"threads":4},{"size":512}]"#.to_owned(),
+            format!("[{wide}]"),
+        ] {
+            let parsed = filter(&canonical);
+            assert_eq!(
+                parsed.canonical(),
+                canonical,
+                "{canonical}: the text is already canonical"
+            );
+            let blob = parsed.to_jsonb().expect("Failed to encode the filter");
+            assert_eq!(
+                sql_text(&mut conn, "hex(?)", blob.clone()),
+                sql_text(
+                    &mut conn,
+                    "hex(jsonb(CAST(? AS TEXT)))",
+                    canonical.clone().into_bytes()
+                ),
+                "{canonical}: the encoded bytes must be the bytes jsonb() mints"
+            );
+            assert_eq!(
+                sql_text(&mut conn, "json(?)", blob),
+                canonical,
+                "{canonical}: the canonical text must survive the encoder unchanged"
+            );
+        }
     }
 }

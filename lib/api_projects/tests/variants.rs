@@ -3008,20 +3008,20 @@ async fn variant_writes_require_permission() {
 
 /// Create a threshold through the thresholds endpoint.
 ///
-/// `metric` names the metric it checks and `parameters` is the filter over
-/// variants; either omitted is the default that half of the identity carries.
+/// `parameters` is the filter over variants and `metric` names the metric it
+/// checks; either omitted is the default that dimension carries.
 async fn post_threshold(
     server: &TestServer,
     fixture: &Fixture,
-    metric: Option<&str>,
     parameters: Option<serde_json::Value>,
+    metric: Option<&str>,
 ) -> (StatusCode, String) {
     let body = serde_json::json!({
         "branch": "main",
         "testbed": "localhost",
+        "parameters": parameters,
         "measure": "latency",
         "metric": metric,
-        "parameters": parameters,
         "test": "t_test",
         "min_sample_size": 2,
         "max_sample_size": 64,
@@ -3048,10 +3048,10 @@ async fn post_threshold(
 async fn create_threshold(
     server: &TestServer,
     fixture: &Fixture,
-    metric: Option<&str>,
     parameters: Option<serde_json::Value>,
+    metric: Option<&str>,
 ) -> serde_json::Value {
-    let (status, body) = post_threshold(server, fixture, metric, parameters).await;
+    let (status, body) = post_threshold(server, fixture, parameters, metric).await;
     assert_eq!(status, StatusCode::CREATED, "POST threshold: {body}");
     serde_json::from_str(&body).expect("Failed to parse the threshold")
 }
@@ -3160,7 +3160,7 @@ async fn named_threshold_checks_its_own_name() {
     )
     .await;
 
-    let threshold = create_threshold(&server, &fixture, Some("p99"), None).await;
+    let threshold = create_threshold(&server, &fixture, None, Some("p99")).await;
     assert_eq!(threshold["metric"], serde_json::json!("p99"));
     assert_eq!(threshold["parameters"], serde_json::Value::Null);
 
@@ -3274,8 +3274,8 @@ async fn filtered_threshold_checks_the_matching_variants() {
     let threshold = create_threshold(
         &server,
         &fixture,
-        None,
         Some(serde_json::json!([{ "size": 512 }, { "size": 1024 }])),
+        None,
     )
     .await;
     assert_eq!(
@@ -3335,8 +3335,8 @@ async fn every_matching_threshold_fires() {
     let filtered = create_threshold(
         &server,
         &fixture,
-        None,
         Some(serde_json::json!([{ "size": 512 }])),
+        None,
     )
     .await;
 
@@ -3448,7 +3448,7 @@ async fn legacy_fields_are_absent_without_a_bare_threshold() {
         Some(1),
     )
     .await;
-    create_threshold(&server, &fixture, Some("p99"), None).await;
+    create_threshold(&server, &fixture, None, Some("p99")).await;
 
     let mut last = serde_json::Value::Null;
     for (day, (value, p99)) in NAMED_VALUE
@@ -3534,9 +3534,9 @@ async fn duplicate_identity_is_refused_at_both_spellings() {
     // A bare threshold, then the same one with everything it defaults to spelled out.
     create_threshold(&server, &fixture, None, None).await;
     for spelling in [
-        (None, Some(serde_json::json!([]))),
-        (Some("value"), None),
-        (Some("value"), Some(serde_json::json!([{}]))),
+        (Some(serde_json::json!([])), None),
+        (None, Some("value")),
+        (Some(serde_json::json!([{}])), Some("value")),
     ] {
         let (status, body) = post_threshold(&server, &fixture, spelling.0, spelling.1).await;
         assert_eq!(
@@ -3550,15 +3550,15 @@ async fn duplicate_identity_is_refused_at_both_spellings() {
     create_threshold(
         &server,
         &fixture,
-        Some("p99"),
         Some(serde_json::json!([{ "size": 512 }])),
+        Some("p99"),
     )
     .await;
     let (status, body) = post_threshold(
         &server,
         &fixture,
-        Some("p99"),
         Some(serde_json::json!([{ "size": 512.0 }, { "size": 512 }])),
+        Some("p99"),
     )
     .await;
     assert_eq!(
@@ -3571,8 +3571,8 @@ async fn duplicate_identity_is_refused_at_both_spellings() {
     create_threshold(
         &server,
         &fixture,
-        Some("p99"),
         Some(serde_json::json!([{ "size": 1024 }])),
+        Some("p99"),
     )
     .await;
 }
@@ -3633,8 +3633,8 @@ async fn metric_row_singular_check_is_the_bare_one() {
     let filtered = create_threshold(
         &server,
         &fixture,
-        None,
         Some(serde_json::json!([{ "size": 512 }])),
+        None,
     )
     .await;
 
@@ -3729,7 +3729,7 @@ async fn metric_row_singular_check_is_absent_without_a_bare_threshold() {
         Some(1),
     )
     .await;
-    create_threshold(&server, &fixture, Some("p99"), None).await;
+    create_threshold(&server, &fixture, None, Some("p99")).await;
 
     let mut last = serde_json::Value::Null;
     for (day, (value, p99)) in NAMED_VALUE
@@ -3857,8 +3857,8 @@ async fn reset_leaves_a_filtered_threshold_alone() {
     create_threshold(
         &server,
         &fixture,
-        None,
         Some(serde_json::json!([{ "size": 512 }])),
+        None,
     )
     .await;
 
@@ -3956,8 +3956,8 @@ async fn start_point_clone_carries_what_each_threshold_checks() {
     create_threshold(
         &server,
         &fixture,
-        Some("p99"),
         Some(serde_json::json!([{ "size": 512 }])),
+        Some("p99"),
     )
     .await;
 

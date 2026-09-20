@@ -1,16 +1,16 @@
 PRAGMA foreign_keys = off;
 -- threshold
--- A threshold gains the name it checks and the variants it checks.
---
--- `metric` is the `metric.name` this threshold checks. NULL is the conventional
--- `value` name, which is what every threshold that predates this migration checks,
--- so every existing row carries NULL and nothing about it moves.
+-- A threshold gains the variants it checks and the name it checks.
 --
 -- `parameters` is the filter over variants: the SQLite JSONB encoding of a JSON
 -- array of partial parameters, OR across the array and subset match within each entry.
--- NULL is match all, which again is what every existing row does. It is declared
--- `BLOB` to match the SQLite representation of the `Jsonb` SQL type, the same as
--- `variant.parameters`.
+-- NULL is match all, which is what every threshold that predates this migration does.
+-- It is declared `BLOB` to match the SQLite representation of the `Jsonb` SQL type,
+-- the same as `variant.parameters`.
+--
+-- `metric` is the `metric.name` this threshold checks. NULL is the conventional
+-- `value` name, which again is what every existing row checks, so every existing row
+-- carries NULL and nothing about it moves.
 --
 -- The table is recreated rather than altered because the identity it enforces
 -- changes. `UNIQUE(branch_id, testbed_id, measure_id)` is backed by an automatic
@@ -24,9 +24,9 @@ CREATE TABLE up_threshold (
     project_id INTEGER NOT NULL,
     branch_id INTEGER NOT NULL,
     testbed_id INTEGER NOT NULL,
+    parameters BLOB,
     measure_id INTEGER NOT NULL,
     metric TEXT,
-    parameters BLOB,
     model_id INTEGER,
     created BIGINT NOT NULL,
     modified BIGINT NOT NULL,
@@ -42,9 +42,9 @@ INSERT INTO up_threshold(
         project_id,
         branch_id,
         testbed_id,
+        parameters,
         measure_id,
         metric,
-        parameters,
         model_id,
         created,
         modified
@@ -54,8 +54,8 @@ SELECT id,
     project_id,
     branch_id,
     testbed_id,
-    measure_id,
     NULL,
+    measure_id,
     NULL,
     model_id,
     created,
@@ -70,15 +70,15 @@ CREATE UNIQUE INDEX index_threshold_uuid ON threshold(uuid);
 -- A SQLite unique index treats NULLs as distinct, so a plain unique key over the
 -- five columns would let two bare thresholds sit on one (branch, testbed, measure)
 -- and would let an explicit `value` sit beside an absent one. The index is declared
--- over the effective values instead: NULL metric reads as `value` and NULL
--- parameters reads as the empty blob, which is a value no stored filter can take
--- because a filter that matches everything is stored as NULL.
+-- over the effective values instead: NULL parameters reads as the empty blob, which
+-- is a value no stored filter can take because a filter that matches everything is
+-- stored as NULL, and NULL metric reads as `value`.
 CREATE UNIQUE INDEX index_threshold_dimensions ON threshold(
     branch_id,
     testbed_id,
+    COALESCE(parameters, x''),
     measure_id,
-    COALESCE(metric, 'value'),
-    COALESCE(parameters, x'')
+    COALESCE(metric, 'value')
 );
 CREATE INDEX index_threshold_project_created ON threshold(project_id, created);
 -- Ingest loads every threshold of one (branch, testbed) once per report, so the

@@ -185,9 +185,9 @@ fn metric_query(
                     schema::threshold::project_id,
                     schema::threshold::branch_id,
                     schema::threshold::testbed_id,
+                    schema::threshold::parameters,
                     schema::threshold::measure_id,
                     schema::threshold::metric,
-                    schema::threshold::parameters,
                     schema::threshold::model_id,
                     schema::threshold::created,
                     schema::threshold::modified,
@@ -240,15 +240,15 @@ fn metric_query(
 /// deprecated singular fields have always carried.
 type BareThresholdFirst = diesel::dsl::Desc<
     diesel::dsl::And<
-        diesel::dsl::IsNull<schema::threshold::metric>,
         diesel::dsl::IsNull<schema::threshold::parameters>,
+        diesel::dsl::IsNull<schema::threshold::metric>,
     >,
 >;
 
 fn bare_threshold_first() -> BareThresholdFirst {
-    schema::threshold::metric
+    schema::threshold::parameters
         .is_null()
-        .and(schema::threshold::parameters.is_null())
+        .and(schema::threshold::metric.is_null())
         .desc()
 }
 
@@ -286,7 +286,7 @@ fn boundary_json(
     Option<JsonPerfAlert>,
 ) {
     let Some((query_threshold, query_model, query_boundary, query_alert)) =
-        perf_boundary.filter(|(query_threshold, _, _, _)| query_threshold.identity().is_bare())
+        perf_boundary.filter(|(query_threshold, _, _, _)| query_threshold.is_bare())
     else {
         return (None, None, None);
     };

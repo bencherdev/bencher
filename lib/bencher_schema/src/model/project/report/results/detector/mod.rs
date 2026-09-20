@@ -81,7 +81,7 @@ mod tests {
 
     use crate::test_util::{
         create_base_entities, create_branch_with_head, create_measure, create_model,
-        create_testbed, create_threshold, create_threshold_with_identity, setup_test_db,
+        create_testbed, create_threshold, create_threshold_with_dimensions, setup_test_db,
     };
 
     use super::Threshold;
@@ -223,15 +223,15 @@ mod tests {
             "00000000-0000-0000-0000-000000000050",
             0,
         );
-        let named_id = create_threshold_with_identity(
+        let named_id = create_threshold_with_dimensions(
             &mut conn,
             base.project_id,
             branch.branch_id,
             testbed,
-            measure,
-            "00000000-0000-0000-0000-000000000041",
-            Some(MetricName::try_from("p99".to_owned()).expect("Invalid metric name")),
             Some(filter(r#"[{"size": 512}]"#)),
+            measure,
+            Some(MetricName::try_from("p99".to_owned()).expect("Invalid metric name")),
+            "00000000-0000-0000-0000-000000000041",
         );
         create_model(
             &mut conn,

@@ -343,10 +343,17 @@ pub enum JsonbError {
 
 #[cfg(test)]
 mod tests {
-    use super::{JsonbError, Object, to_json};
+    use super::{Array, JsonbError, Object, to_json};
 
     fn object() -> Object {
         Object::default()
+    }
+
+    /// One parameter set encoded on its own, which is what an array element is.
+    fn element(key: &str, value: &str) -> Vec<u8> {
+        let mut object = object();
+        object.insert_string(key, value).expect("Failed to encode");
+        object.into_blob().expect("Failed to encode")
     }
 
     #[test]
@@ -393,6 +400,50 @@ mod tests {
         assert_eq!(
             to_json(&blob).expect("Failed to decode"),
             format!(r#"{{"k":"{}"}}"#, "x".repeat(300)),
+            "a payload past the inline size still round trips"
+        );
+    }
+
+    #[test]
+    fn empty_array_is_one_byte() {
+        let blob = Array::default().into_blob().expect("Failed to encode");
+        assert_eq!(blob, vec![0x0b], "the empty array is a single header byte");
+        assert_eq!(to_json(&blob).expect("Failed to decode"), "[]");
+    }
+
+    #[test]
+    fn array_elements_round_trip_in_order() {
+        let mut array = Array::default();
+        array.push(&element("os", "linux"));
+        let blob = array.into_blob().expect("Failed to encode");
+        assert_eq!(
+            to_json(&blob).expect("Failed to decode"),
+            r#"[{"os":"linux"}]"#,
+            "one element survives a round trip"
+        );
+
+        let mut array = Array::default();
+        array.push(&element("os", "linux"));
+        array.push(&element("path", "C:\\bench\\x"));
+        array.push(&Object::default().into_blob().expect("Failed to encode"));
+        let blob = array.into_blob().expect("Failed to encode");
+        assert_eq!(
+            to_json(&blob).expect("Failed to decode"),
+            r#"[{"os":"linux"},{"path":"C:\\bench\\x"},{}]"#,
+            "every element survives a round trip in the order it was pushed"
+        );
+    }
+
+    #[test]
+    fn array_payload_larger_than_the_inline_size() {
+        // An array payload of 12 bytes or more moves the size out of the header
+        // nibble, the same way an object payload does.
+        let mut array = Array::default();
+        array.push(&element("k", &"x".repeat(300)));
+        let blob = array.into_blob().expect("Failed to encode");
+        assert_eq!(
+            to_json(&blob).expect("Failed to decode"),
+            format!(r#"[{{"k":"{}"}}]"#, "x".repeat(300)),
             "a payload past the inline size still round trips"
         );
     }

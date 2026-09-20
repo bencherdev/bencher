@@ -265,33 +265,33 @@ pub fn create_threshold(
     measure_id: MeasureId,
     threshold_uuid: &str,
 ) -> ThresholdId {
-    create_threshold_with_identity(
+    create_threshold_with_dimensions(
         conn,
         project_id,
         branch_id,
         testbed_id,
+        None,
         measure_id,
+        None,
         threshold_uuid,
-        None,
-        None,
     )
 }
 
-/// Create a threshold that checks a named metric, a filtered set of variants, or
-/// both. `None` for either is the default: the `value` name, and every variant.
+/// Create a threshold that checks a filtered set of variants, a named metric, or
+/// both. `None` for either is the default: every variant, and the `value` name.
 #[expect(
     clippy::too_many_arguments,
-    reason = "a threshold is its dimensions and what it checks"
+    reason = "a threshold is every dimension it hangs off"
 )]
-pub fn create_threshold_with_identity(
+pub fn create_threshold_with_dimensions(
     conn: &mut SqliteConnection,
     project_id: ProjectId,
     branch_id: BranchId,
     testbed_id: TestbedId,
-    measure_id: MeasureId,
-    threshold_uuid: &str,
-    metric: Option<MetricName>,
     parameters: Option<ParameterFilter>,
+    measure_id: MeasureId,
+    metric: Option<MetricName>,
+    threshold_uuid: &str,
 ) -> ThresholdId {
     diesel::insert_into(schema::threshold::table)
         .values((
@@ -299,9 +299,9 @@ pub fn create_threshold_with_identity(
             schema::threshold::project_id.eq(project_id),
             schema::threshold::branch_id.eq(branch_id),
             schema::threshold::testbed_id.eq(testbed_id),
+            schema::threshold::parameters.eq(parameters),
             schema::threshold::measure_id.eq(measure_id),
             schema::threshold::metric.eq(metric),
-            schema::threshold::parameters.eq(parameters),
             schema::threshold::created.eq(DateTime::TEST),
             schema::threshold::modified.eq(DateTime::TEST),
         ))

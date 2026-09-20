@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    Boundary, DateTime, MetricName, ModelTest, ParameterFilter, ParameterSet, SampleSize, Window,
+    Boundary, MetricName, ModelTest, ParameterFilter, ParameterSet, SampleSize, ThresholdUuid,
+    Window,
 };
 use diesel::{
     ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
@@ -26,13 +27,13 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Threshold {
     pub id: ThresholdId,
+    /// The UUID, which is what orders the candidates.
+    pub uuid: ThresholdUuid,
+    /// The variants this threshold checks. `None` checks every variant.
+    pub parameters: Option<ParameterFilter>,
     /// The name this threshold checks. A threshold that names none checks the
     /// conventional `value` name, and a threshold always checks exactly one name.
     pub metric: MetricName,
-    /// The variants this threshold checks. `None` checks every variant.
-    pub parameters: Option<ParameterFilter>,
-    /// When the threshold was created, which is what orders the candidates.
-    pub created: DateTime,
     pub model: ThresholdModel,
 }
 
@@ -67,23 +68,23 @@ impl Threshold {
             .filter(schema::threshold::testbed_id.eq(testbed_id))
             .select((
                 schema::threshold::id,
+                schema::threshold::uuid,
+                schema::threshold::parameters,
                 schema::threshold::measure_id,
                 schema::threshold::metric,
-                schema::threshold::parameters,
-                schema::threshold::created,
                 QueryModel::as_select(),
             ))
             .load::<(
                 ThresholdId,
+                ThresholdUuid,
+                Option<ParameterFilter>,
                 MeasureId,
                 Option<MetricName>,
-                Option<ParameterFilter>,
-                DateTime,
                 QueryModel,
             )>(conn)?;
 
         let mut by_measure: HashMap<MeasureId, Vec<Self>> = HashMap::new();
-        for (id, measure_id, metric, parameters, created, query_model) in thresholds {
+        for (id, uuid, parameters, measure_id, metric, query_model) in thresholds {
             let QueryModel {
                 id: model_id,
                 test,
@@ -96,9 +97,9 @@ impl Threshold {
             } = query_model;
             by_measure.entry(measure_id).or_default().push(Self {
                 id,
-                metric: metric.unwrap_or_else(MetricName::value),
+                uuid,
                 parameters,
-                created,
+                metric: metric.unwrap_or_else(MetricName::value),
                 model: ThresholdModel {
                     id: model_id,
                     test,
@@ -110,12 +111,12 @@ impl Threshold {
                 },
             });
         }
-        // Creation order, oldest first, which is the order the boundaries one metric
-        // row earns are written in and the order they are read back in. Sorted here
-        // rather than in SQL: a measure's candidates are a handful of rows, and an
-        // `ORDER BY` would put a sort behind an index lookup that has none.
+        // UUID order, which is the order the boundaries one metric row earns are
+        // written in and the order they are read back in. Sorted here rather than in
+        // SQL: a measure's candidates are a handful of rows, and an `ORDER BY` would
+        // put a sort behind an index lookup that has none.
         for candidates in by_measure.values_mut() {
-            candidates.sort_by_key(|candidate| (candidate.created.timestamp(), candidate.id));
+            candidates.sort_by_key(|candidate| candidate.uuid);
         }
         Ok(by_measure)
     }

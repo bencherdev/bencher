@@ -64,7 +64,7 @@ pub struct ReportResults {
     /// Every threshold of this report's (branch, testbed) that runs a model, grouped
     /// by measure. Read once per report and matched in memory, so a variant that
     /// several thresholds check costs no extra query.
-    pub thresholds: HashMap<MeasureId, Vec<Threshold>>,
+    pub threshold_cache: HashMap<MeasureId, Vec<Threshold>>,
 }
 
 /// The report context the active-series cache write needs: the owning organization
@@ -100,7 +100,7 @@ impl ReportResults {
             benchmark_cache: HashMap::new(),
             variant_cache: HashMap::new(),
             measure_cache: HashMap::new(),
-            thresholds: HashMap::new(),
+            threshold_cache: HashMap::new(),
         }
     }
 
@@ -131,8 +131,8 @@ impl ReportResults {
         // Every threshold that could check anything this report ingests, read once.
         // The report's own threshold models have already been written, so a
         // threshold this report creates checks this report.
-        self.thresholds = Threshold::load(auth_conn!(context), self.branch_id, self.testbed_id)
-            .map_err(|e| {
+        self.threshold_cache =
+            Threshold::load(auth_conn!(context), self.branch_id, self.testbed_id).map_err(|e| {
                 issue_error(
                     "Failed to load report thresholds",
                     "Failed to load the thresholds for a report:",
@@ -380,7 +380,7 @@ impl ReportResults {
             // exactly what a measure level threshold over flat benchmarks has always
             // done, so no project's alert volume moves.
             let mut detections: HashMap<MetricName, Vec<PreparedDetection>> = HashMap::new();
-            for threshold in self.thresholds.get(&measure_id).into_iter().flatten() {
+            for threshold in self.threshold_cache.get(&measure_id).into_iter().flatten() {
                 let Some(value) = named.get(&threshold.metric).copied() else {
                     continue;
                 };

@@ -120,8 +120,9 @@ diesel::table! {
         uuid -> Text,
         report_benchmark_id -> Integer,
         measure_id -> Integer,
-        name -> Text,
         value -> Double,
+        lower_value -> Nullable<Double>,
+        upper_value -> Nullable<Double>,
     }
 }
 
@@ -196,7 +197,6 @@ diesel::table! {
         lower_boundary -> Bool,
         upper_boundary -> Bool,
         x_axis -> Integer,
-        y_axis -> Integer,
         window -> BigInt,
         created -> BigInt,
         modified -> BigInt,
@@ -244,7 +244,6 @@ diesel::table! {
         slug -> Text,
         url -> Nullable<Text>,
         visibility -> Integer,
-        bmf_version -> Integer,
         created -> BigInt,
         modified -> BigInt,
         deleted -> Nullable<BigInt>,
@@ -301,7 +300,6 @@ diesel::table! {
         report_id -> Integer,
         iteration -> Integer,
         benchmark_id -> Integer,
-        variant_id -> Integer,
     }
 }
 
@@ -328,12 +326,11 @@ diesel::table! {
 }
 
 diesel::table! {
-    series_last_seen (testbed_id, benchmark_id, variant_id, measure_id) {
+    series_last_seen (testbed_id, benchmark_id, measure_id) {
         organization_id -> Integer,
         project_id -> Integer,
         testbed_id -> Integer,
         benchmark_id -> Integer,
-        variant_id -> Integer,
         measure_id -> Integer,
         last_seen -> BigInt,
     }
@@ -399,8 +396,6 @@ diesel::table! {
         branch_id -> Integer,
         testbed_id -> Integer,
         measure_id -> Integer,
-        metric -> Nullable<Text>,
-        parameters -> Nullable<Jsonb>,
         model_id -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,
@@ -444,18 +439,6 @@ diesel::table! {
         creation -> BigInt,
         expiration -> BigInt,
         revoked -> Nullable<BigInt>,
-    }
-}
-
-diesel::table! {
-    variant (id) {
-        id -> Integer,
-        uuid -> Text,
-        benchmark_id -> Integer,
-        parameters -> Jsonb,
-        created -> BigInt,
-        modified -> BigInt,
-        archived -> Nullable<BigInt>,
     }
 }
 
@@ -509,7 +492,6 @@ diesel::joinable!(report -> user (user_id));
 diesel::joinable!(report -> version (version_id));
 diesel::joinable!(report_benchmark -> benchmark (benchmark_id));
 diesel::joinable!(report_benchmark -> report (report_id));
-diesel::joinable!(report_benchmark -> variant (variant_id));
 diesel::joinable!(runner_spec -> runner (runner_id));
 diesel::joinable!(runner_spec -> spec (spec_id));
 diesel::joinable!(series_last_seen -> benchmark (benchmark_id));
@@ -517,7 +499,6 @@ diesel::joinable!(series_last_seen -> measure (measure_id));
 diesel::joinable!(series_last_seen -> organization (organization_id));
 diesel::joinable!(series_last_seen -> project (project_id));
 diesel::joinable!(series_last_seen -> testbed (testbed_id));
-diesel::joinable!(series_last_seen -> variant (variant_id));
 diesel::joinable!(sso -> organization (organization_id));
 diesel::joinable!(testbed -> project (project_id));
 diesel::joinable!(testbed -> spec (spec_id));
@@ -527,7 +508,6 @@ diesel::joinable!(threshold -> project (project_id));
 diesel::joinable!(threshold -> testbed (testbed_id));
 diesel::joinable!(token -> user (user_id));
 diesel::joinable!(user_key -> user (user_id));
-diesel::joinable!(variant -> benchmark (benchmark_id));
 diesel::joinable!(version -> project (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -567,6 +547,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     token,
     user,
     user_key,
-    variant,
     version,
 );

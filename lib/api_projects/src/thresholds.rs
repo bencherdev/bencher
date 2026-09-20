@@ -24,8 +24,8 @@ use bencher_schema::{
             measure::QueryMeasure,
             testbed::QueryTestbed,
             threshold::{
-                InsertThreshold, QueryThreshold, ThresholdDimensions, ThresholdIdentity,
-                ThresholdSpec, model::QueryModel,
+                InsertThreshold, QueryThreshold, ThresholdDimensions, ThresholdSpec,
+                model::QueryModel,
             },
         },
         user::{
@@ -251,9 +251,9 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 /// The user must have `create` permissions for the project,
 /// or provide a valid project key for the project.
 /// There can only be one threshold for any unique combination of:
-/// branch, testbed, measure, metric name, and parameters filter.
-/// A threshold that names no metric checks the conventional `value` name,
-/// and a threshold with no parameters filter checks every variant.
+/// branch, testbed, parameters filter, measure, and metric name.
+/// A threshold with no parameters filter checks every variant,
+/// and a threshold that names no metric checks the conventional `value` name.
 /// Every threshold that matches a metric row runs: there is no winner among them.
 #[endpoint {
     method = POST,
@@ -314,25 +314,18 @@ pub async fn post_inner(
     let measure_id =
         QueryMeasure::from_name_id(auth_conn!(context), project_id, &json_threshold.measure)?.id;
 
-    // Create the new threshold. What it checks beyond its dimensions is canonicalized
-    // here, so an explicit `value` and an absent metric are one threshold, and so are
-    // an empty filter and an absent one.
-    let identity = ThresholdIdentity::new(
-        json_threshold.metric.clone(),
+    // Create the new threshold. Its nullable dimensions are canonicalized here, so an
+    // explicit `value` and an absent metric are one threshold, and so are an empty
+    // filter and an absent one.
+    let dimensions = ThresholdDimensions::new(
+        branch_id,
+        testbed_id,
         json_threshold.parameters.clone(),
+        measure_id,
+        json_threshold.metric.clone(),
     );
-    let threshold_id = InsertThreshold::from_model(
-        context,
-        project_id,
-        ThresholdDimensions {
-            branch_id,
-            testbed_id,
-            measure_id,
-        },
-        identity,
-        json_threshold.model,
-    )
-    .await?;
+    let threshold_id =
+        InsertThreshold::from_model(context, project_id, dimensions, json_threshold.model).await?;
 
     // Get the new threshold with the new model
     auth_conn!(context, |conn| {

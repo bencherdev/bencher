@@ -324,17 +324,17 @@ export interface JsonThreshold {
 	project: Uuid;
 	branch: JsonBranch;
 	testbed: JsonTestbed;
+	/**
+	 * The variants this threshold checks, in canonical order.
+	 * Absent when the threshold checks every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
 	measure: JsonMeasure;
 	/**
 	 * The name of the metric this threshold checks.
 	 * Absent when the threshold checks the conventional `value` name.
 	 */
 	metric?: string;
-	/**
-	 * The variants this threshold checks, in canonical order.
-	 * Absent when the threshold checks every variant.
-	 */
-	parameters?: Record<string, string | number | boolean>[];
 	model?: JsonModel;
 	created: string;
 	modified: string;
