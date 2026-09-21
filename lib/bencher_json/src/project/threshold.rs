@@ -77,20 +77,6 @@ pub struct JsonThresholdModel {
     pub created: DateTime,
 }
 
-impl JsonThresholdModel {
-    /// The order a list of boundaries is returned in.
-    ///
-    /// A metric row may carry a boundary per threshold that checked it, and the
-    /// thresholds are put in UUID order, which is creation order for a `UUIDv7` and
-    /// deterministic for the `UUIDv4` a threshold minted before the move to `UUIDv7`.
-    /// Nothing about the list is a ranking: every threshold that checked the row is
-    /// in it, and no reader should read the first as the winner.
-    #[must_use]
-    pub fn boundary_order(&self) -> ThresholdUuid {
-        self.uuid
-    }
-}
-
 #[derive(Debug, Clone, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonThresholdQueryParams {

@@ -12662,7 +12662,7 @@
           },
           "metric": {
             "nullable": true,
-            "description": "Deprecated. The metric triple built around the checked row.\n\nPresent only when the checked row is a `value` row, which is every row a threshold could check before a threshold could name a metric. Reconstructing the triple around any other row would assert numbers the alert does not name.",
+            "description": "Deprecated. The metric triple, present only when the checked row is a `value` row.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonMetricTriple"
@@ -13904,7 +13904,7 @@
         "properties": {
           "boundaries": {
             "nullable": true,
-            "description": "Every threshold that checked this metric, with the boundary it produced and any alert that boundary raised. Absent when nothing checked it.",
+            "description": "Every threshold that checked this metric, with the boundary it produced and any alert that boundary raised, in UUID order: creation order for a `UUIDv7` and deterministic for all. Absent when nothing checked it. The order is not a ranking, and the first entry is not a winner.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonPerfBoundary"
@@ -16978,7 +16978,7 @@
         "type": "object",
         "properties": {
           "boundaries": {
-            "description": "Every threshold that checked this metric, with the boundary it produced. Length 0 or 1 until threshold predicates ship.",
+            "description": "Every threshold that checked this metric, with the boundary it produced, in UUID order: creation order for a `UUIDv7` and deterministic for all. The order is not a ranking, and the first entry is not a winner.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonReportBoundary"
@@ -17079,7 +17079,7 @@
           },
           "reset": {
             "nullable": true,
-            "description": "Reset all thresholds for the branch and testbed. Any models present in the `models` field will still be updated accordingly. If a threshold already exists and is not present in the `models` field, its current model will be removed.",
+            "description": "Reset the thresholds of the branch and testbed that the `models` map can address, the ones with no parameters filter and no metric name. Any models present in the `models` field will still be updated accordingly. If a threshold already exists and is not present in the `models` field, its current model will be removed.",
             "type": "boolean"
           }
         }

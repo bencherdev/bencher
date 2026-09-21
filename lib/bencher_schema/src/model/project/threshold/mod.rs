@@ -67,11 +67,8 @@ pub struct QueryThreshold {
 
 /// The dimensions a threshold hangs off, which together are its unique key.
 ///
-/// The two nullable dimensions are stored in their canonical form, which is the
-/// absence of a value for the default: the conventional `value` name is a `NULL`
-/// metric and a filter that matches every variant is `NULL` parameters. The wire
-/// accepts either spelling and [`Self::new`] turns one into the other, so two
-/// spellings of one threshold are one row.
+/// The two nullable dimensions are canonical: the default spelling of each is its
+/// absence, and [`Self::new`] is what turns one into the other.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ThresholdDimensions {
     pub branch_id: BranchId,
@@ -138,9 +135,12 @@ impl QueryThreshold {
         }
     }
 
-    /// Whether this threshold checks every variant of the conventional `value`
-    /// name, which is what every threshold did before a threshold could check
-    /// anything narrower.
+    /// Whether this threshold checks every variant of the conventional `value` name.
+    ///
+    /// This is the only kind of threshold there was before a threshold could check
+    /// anything narrower, so it is the one the deprecated singular fields carry
+    /// wherever they appear: a row only a named or filtered threshold checks reports
+    /// no check in them at all.
     #[must_use]
     pub fn is_bare(&self) -> bool {
         self.parameters.is_none() && self.metric.is_none()
@@ -744,13 +744,8 @@ impl InsertThreshold {
             return Ok(());
         }
 
-        // Get all thresholds for the report branch and testbed (read phase).
-        //
         // The map a report carries names a measure and a model and nothing else, so
-        // the threshold it addresses is the bare one: the `value` name of every
-        // variant. A threshold that checks a name or only some variants is addressed
-        // through the thresholds endpoint, so it is not what this updates and not
-        // what `reset` takes a model away from.
+        // the only threshold it can address, or reset, is the bare one.
         let mut current_thresholds = schema::threshold::table
             .filter(schema::threshold::project_id.eq(project_id))
             .filter(schema::threshold::branch_id.eq(branch_id))
@@ -2263,19 +2258,6 @@ mod tests {
         let filtered = on(Some(filter(r#"[{"size": 512}]"#)));
         assert_ne!(bare, filtered);
         assert!(filtered.parameters.is_some());
-    }
-
-    /// One filter has one canonical spelling: the sets sort by their canonical bytes
-    /// and duplicates collapse, so a number written two ways is one set.
-    #[test]
-    fn filter_is_canonicalized() {
-        let one_way = filter(r#"[{"a": 1}, {"a": 1.0}]"#);
-        assert_eq!(one_way.sets().len(), 1);
-        assert_eq!(one_way.canonical(), r#"[{"a":1}]"#);
-
-        let sorted = filter(r#"[{"b": 2}, {"a": 1}]"#);
-        assert_eq!(sorted.canonical(), r#"[{"a":1},{"b":2}]"#);
-        assert_eq!(sorted, filter(r#"[{"a": 1}, {"b": 2}]"#));
     }
 
     /// Two thresholds that check the same name of the same variants collide,

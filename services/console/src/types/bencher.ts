@@ -380,11 +380,8 @@ export interface JsonAlert {
 	 */
 	value: number;
 	/**
-	 * Deprecated. The metric triple built around the checked row.
-	 * 
-	 * Present only when the checked row is a `value` row, which is every row a
-	 * threshold could check before a threshold could name a metric. Reconstructing
-	 * the triple around any other row would assert numbers the alert does not name.
+	 * Deprecated. The metric triple, present only when the checked row is a
+	 * `value` row.
 	 */
 	metric?: JsonMetricTriple;
 	threshold: JsonThreshold;
@@ -422,8 +419,9 @@ export interface JsonReportMetric {
 	name: string;
 	value: number;
 	/**
-	 * Every threshold that checked this metric, with the boundary it produced.
-	 * Length 0 or 1 until threshold predicates ship.
+	 * Every threshold that checked this metric, with the boundary it produced,
+	 * in UUID order: creation order for a `UUIDv7` and deterministic for all.
+	 * The order is not a ranking, and the first entry is not a winner.
 	 */
 	boundaries: JsonReportBoundary[];
 }
@@ -670,7 +668,9 @@ export interface JsonMetricEntry {
 	value: number;
 	/**
 	 * Every threshold that checked this metric, with the boundary it produced
-	 * and any alert that boundary raised. Absent when nothing checked it.
+	 * and any alert that boundary raised, in UUID order: creation order for a
+	 * `UUIDv7` and deterministic for all. Absent when nothing checked it.
+	 * The order is not a ranking, and the first entry is not a winner.
 	 */
 	boundaries?: JsonPerfBoundary[];
 }

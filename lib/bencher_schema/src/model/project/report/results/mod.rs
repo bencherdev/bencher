@@ -370,15 +370,8 @@ impl ReportResults {
             let measure_id = self.measure_id(context, measure_key).await?;
             let named = metric.inner;
 
-            // Every threshold whose measure matches, whose name this measure
-            // reported, and whose filter this variant matches. There is no winner
-            // among them: each runs its own test against its own sample and writes its
-            // own boundary, so a variant that a bare threshold and a filtered one both
-            // check earns two boundaries and, on a regression, two alerts.
-            //
-            // A bare threshold names `value` and matches every variant, which is
-            // exactly what a measure level threshold over flat benchmarks has always
-            // done, so no project's alert volume moves.
+            // Every matching threshold runs, so a row several of them check earns a
+            // boundary from each and, on a regression, an alert from each.
             let mut detections: HashMap<MetricName, Vec<PreparedDetection>> = HashMap::new();
             for threshold in self.threshold_cache.get(&measure_id).into_iter().flatten() {
                 let Some(value) = named.get(&threshold.metric).copied() else {

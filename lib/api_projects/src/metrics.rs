@@ -233,11 +233,7 @@ fn metric_query(
         .limit(1)
 }
 
-/// Sort the bare threshold's row first.
-///
-/// A metric row may carry a boundary per threshold that checked it, and this query
-/// keeps one row. The one it keeps is the bare threshold's, which is what the
-/// deprecated singular fields have always carried.
+/// Sort the bare threshold's row first, because that is the one row this query keeps.
 type BareThresholdFirst = diesel::dsl::Desc<
     diesel::dsl::And<
         diesel::dsl::IsNull<schema::threshold::parameters>,
@@ -270,13 +266,7 @@ type MetricQuery = (
 );
 
 /// The check this response reports: the bare threshold's, and no other's.
-///
-/// A metric row may be checked by several thresholds now, so one of them has to be
-/// the one these three fields carry, and it is the bare one: the `value` name of
-/// every variant, which is the only kind of threshold there was when these fields
-/// were the whole story. A row that only a named or filtered threshold checks
-/// reports no check here, which is exactly what a caller from before named checks
-/// would have seen for it.
+/// See [`QueryThreshold::is_bare`].
 fn boundary_json(
     project: &QueryProject,
     perf_boundary: Option<PerfBoundary>,

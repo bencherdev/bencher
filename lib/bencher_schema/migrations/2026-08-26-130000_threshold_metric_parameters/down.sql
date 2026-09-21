@@ -1,8 +1,39 @@
 PRAGMA foreign_keys = off;
 -- threshold
--- Back to the table level unique key over the three dimensions, and without the
--- two columns. A threshold that names a metric or a filter has no shape here, so
--- if any exists the restored unique key is what says so.
+-- Back to the table level unique key over the three dimensions, and without the two
+-- columns. A threshold that names a metric or checks only some variants has no shape
+-- here, so it is deleted rather than flattened into a bare one that would check
+-- something it was never given. Foreign keys are off for the swap, so its alerts,
+-- boundaries, and models are cleared here in that order rather than by cascade.
+DELETE FROM alert
+WHERE boundary_id IN (
+        SELECT boundary.id
+        FROM boundary
+            JOIN threshold ON threshold.id = boundary.threshold_id
+        WHERE threshold.metric IS NOT NULL
+            OR threshold.parameters IS NOT NULL
+    );
+
+DELETE FROM boundary
+WHERE threshold_id IN (
+        SELECT id
+        FROM threshold
+        WHERE metric IS NOT NULL
+            OR parameters IS NOT NULL
+    );
+
+DELETE FROM model
+WHERE threshold_id IN (
+        SELECT id
+        FROM threshold
+        WHERE metric IS NOT NULL
+            OR parameters IS NOT NULL
+    );
+
+DELETE FROM threshold
+WHERE metric IS NOT NULL
+    OR parameters IS NOT NULL;
+
 DROP INDEX IF EXISTS index_threshold_uuid;
 
 DROP INDEX IF EXISTS index_threshold_dimensions;
@@ -61,8 +92,8 @@ CREATE INDEX index_threshold_project_created ON threshold(project_id, created);
 CREATE INDEX index_threshold_branch ON threshold(branch_id);
 
 -- boundary
--- Back to `UNIQUE(metric_id)`. A metric row that carries more than one boundary
--- has no shape here either, and the restored unique key is what says so.
+-- Back to `UNIQUE(metric_id)`. Every threshold left is bare, and a bare threshold is
+-- unique per branch, testbed, and measure, so one metric row keeps one boundary.
 DROP VIEW IF EXISTS metric_boundary;
 
 DROP INDEX IF EXISTS index_boundary_uuid;

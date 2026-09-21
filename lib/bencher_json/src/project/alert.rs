@@ -33,11 +33,8 @@ pub struct JsonAlert {
     /// The name that value was reported under is the threshold's, at
     /// `threshold.metric`, because that is the name the threshold checks.
     pub value: OrderedFloat<f64>,
-    /// Deprecated. The metric triple built around the checked row.
-    ///
-    /// Present only when the checked row is a `value` row, which is every row a
-    /// threshold could check before a threshold could name a metric. Reconstructing
-    /// the triple around any other row would assert numbers the alert does not name.
+    /// Deprecated. The metric triple, present only when the checked row is a
+    /// `value` row.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metric: Option<JsonMetricTriple>,
     pub threshold: JsonThreshold,

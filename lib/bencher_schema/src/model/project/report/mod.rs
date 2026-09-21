@@ -877,10 +877,7 @@ fn push_result_row(
     }
 
     if let Some((query_threshold, query_model, query_boundary)) = report_boundary {
-        // The deprecated singular fields carry the bare threshold's boundary and
-        // nothing else: the `value` name of every variant, which is what a
-        // threshold could check before it could check anything narrower, and so
-        // exactly what a legacy consumer has always been shown.
+        // The deprecated singular fields carry the bare threshold's boundary only.
         let is_bare = query_threshold.is_bare();
         let report_boundary = JsonReportBoundary {
             threshold: query_threshold.into_threshold_model_json_for_project(project, query_model),
@@ -959,7 +956,7 @@ impl PendingMeasure {
         for report_metric in &mut metrics {
             report_metric
                 .boundaries
-                .sort_by_key(|check| check.threshold.boundary_order());
+                .sort_by_key(|check| check.threshold.uuid);
         }
 
         let named = |name: &MetricName| -> Option<&JsonReportMetric> {

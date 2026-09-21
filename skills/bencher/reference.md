@@ -39,7 +39,7 @@
 | `--threshold-window <secs>` | Time window in seconds |
 | `--threshold-upper-boundary <val>` | Upper boundary value |
 | `--threshold-lower-boundary <val>` | Lower boundary value |
-| `--thresholds-reset` | Reset all unspecified thresholds |
+| `--thresholds-reset` | Reset the unspecified thresholds with no parameters filter and no metric name |
 | `--error-on-alert` / `--err` | Exit non-zero on alert |
 
 ### Command Execution

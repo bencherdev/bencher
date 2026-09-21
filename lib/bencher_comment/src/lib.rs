@@ -521,7 +521,7 @@ impl ReportComment {
                 // The point estimate. A measure that named no `value` has nothing for
                 // this table to draw, so its cells stay empty.
                 let point_estimate = report_measure.and_then(|m| m.metric.as_ref());
-                let alert = self.find_alert(result, measure);
+                let alert = report_measure.and_then(|m| self.find_alert(result, m));
 
                 if let Some(report_measure) = report_measure {
                     self.html_iteration_table_view_cell(
@@ -672,7 +672,7 @@ impl ReportComment {
         for iteration in self.results() {
             for result in iteration {
                 for report_measure in &result.measures {
-                    if report_measure.threshold.is_some() {
+                    if is_checked(report_measure) {
                         return true;
                     }
                 }
@@ -685,10 +685,16 @@ impl ReportComment {
         !self.alerts().is_empty()
     }
 
-    pub fn find_alert(&self, result: &JsonReportResult, measure: &Measure) -> Option<&JsonAlert> {
+    /// The alert the deprecated singular fields describe, which is the only one this
+    /// table can draw limits for.
+    pub fn find_alert(
+        &self,
+        result: &JsonReportResult,
+        report_measure: &JsonReportMeasure,
+    ) -> Option<&JsonAlert> {
+        let threshold = report_measure.threshold.as_ref()?;
         self.alerts().iter().find(|alert| {
-            alert.benchmark.slug == result.benchmark.slug
-                && alert.threshold.measure.slug == measure.slug
+            alert.benchmark.slug == result.benchmark.slug && alert.threshold.uuid == threshold.uuid
         })
     }
 
@@ -897,12 +903,21 @@ impl Measure {
                     result
                         .measures
                         .iter()
-                        .filter(|&report_measure| report_measure.threshold.is_none())
+                        .filter(|&report_measure| !is_checked(report_measure))
                         .map(|report_measure| Measure::from(report_measure.measure.clone()))
                 })
             })
             .collect()
     }
+}
+
+/// Whether any threshold checked this measure, named or filtered or bare.
+fn is_checked(report_measure: &JsonReportMeasure) -> bool {
+    report_measure.threshold.is_some()
+        || report_measure
+            .metrics
+            .iter()
+            .any(|metric| !metric.boundaries.is_empty())
 }
 
 fn alert_status(alert: &JsonAlert) -> &str {
@@ -1318,6 +1333,184 @@ mod tests {
             ],
         }]]))
         .unwrap()
+    }
+
+    const NAMED_ALERT_PROJECT: &str = "11111111-1111-1111-1111-111111111111";
+    const NAMED_ALERT_BENCHMARK: &str = "66666666-6666-6666-6666-666666666666";
+    const NAMED_ALERT_VARIANT: &str = "77777777-7777-7777-7777-777777777777";
+    const NAMED_ALERT_BARE: &str = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+    const NAMED_ALERT_UUID: &str = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+
+    /// A report whose `latency` measure is checked by a bare threshold that did not
+    /// breach, beside a `p99` threshold that did.
+    ///
+    /// Built from JSON because the wire shape is what is under test: the singular
+    /// fields carry the bare threshold, and the alert carries the `p99` one.
+    fn named_alert_report() -> JsonReport {
+        let mut report = json_report(Visibility::Public);
+        report.results = Some(serde_json::from_value(named_alert_results()).unwrap());
+        // The only alert is the `p99` threshold's, on a row this table never draws.
+        report.alerts = Some(
+            serde_json::from_value(named_alert_alerts(&report.branch, &report.testbed)).unwrap(),
+        );
+        report
+    }
+
+    fn named_alert_date() -> serde_json::Value {
+        serde_json::to_value(DateTime::TEST).unwrap()
+    }
+
+    fn named_alert_benchmark() -> serde_json::Value {
+        serde_json::json!({
+            "uuid": NAMED_ALERT_BENCHMARK,
+            "project": NAMED_ALERT_PROJECT,
+            "name": "bench",
+            "slug": "bench",
+            "created": named_alert_date(),
+            "modified": named_alert_date(),
+            "archived": null,
+        })
+    }
+
+    fn named_alert_measure() -> serde_json::Value {
+        serde_json::json!({
+            "uuid": "88888888-8888-8888-8888-888888888888",
+            "project": NAMED_ALERT_PROJECT,
+            "name": "Latency",
+            "slug": "latency",
+            "units": "nanoseconds (ns)",
+            "created": named_alert_date(),
+            "modified": named_alert_date(),
+            "archived": null,
+        })
+    }
+
+    /// The bare threshold, as the deprecated singular `threshold` field carries it.
+    fn named_alert_bare_threshold() -> serde_json::Value {
+        serde_json::json!({
+            "uuid": NAMED_ALERT_BARE,
+            "project": NAMED_ALERT_PROJECT,
+            "model": {
+                "uuid": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+                "test": "t_test",
+                "min_sample_size": null,
+                "max_sample_size": null,
+                "window": null,
+                "lower_boundary": null,
+                "upper_boundary": 0.98,
+                "created": named_alert_date(),
+                "replaced": null,
+            },
+            "created": named_alert_date(),
+        })
+    }
+
+    /// One benchmark whose `latency` `value` row the bare threshold checked and
+    /// accepted: 1.0 sits well inside its upper limit of 100.0.
+    fn named_alert_results() -> serde_json::Value {
+        let boundary = serde_json::json!({
+            "baseline": 1.0,
+            "lower_limit": null,
+            "upper_limit": 100.0,
+        });
+        serde_json::json!([[{
+            "iteration": 0,
+            "benchmark": named_alert_benchmark(),
+            "variant": {
+                "uuid": NAMED_ALERT_VARIANT,
+                "parameters": {},
+            },
+            "measures": [{
+                "measure": named_alert_measure(),
+                "metrics": [{
+                    "uuid": "99999999-9999-9999-9999-999999999999",
+                    "name": "value",
+                    "value": 1.0,
+                    "boundaries": [{
+                        "threshold": named_alert_bare_threshold(),
+                        "boundary": boundary,
+                    }],
+                }],
+                "metric": {
+                    "uuid": "99999999-9999-9999-9999-999999999999",
+                    "value": 1.0,
+                    "lower_value": null,
+                    "upper_value": null,
+                },
+                "threshold": named_alert_bare_threshold(),
+                "boundary": boundary,
+            }],
+        }]])
+    }
+
+    /// One alert, from a `p99` threshold that is not the one the singular fields
+    /// describe, on the same benchmark and measure.
+    fn named_alert_alerts(branch: &JsonBranch, testbed: &JsonTestbed) -> serde_json::Value {
+        serde_json::json!([{
+            "uuid": NAMED_ALERT_UUID,
+            "report": "00000000-0000-0000-0000-000000000000",
+            "iteration": 0,
+            "benchmark": named_alert_benchmark(),
+            "variant": {
+                "uuid": NAMED_ALERT_VARIANT,
+                "benchmark": NAMED_ALERT_BENCHMARK,
+                "parameters": {},
+                "created": named_alert_date(),
+                "modified": named_alert_date(),
+                "archived": null,
+            },
+            "value": 500.0,
+            "threshold": {
+                "uuid": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+                "project": NAMED_ALERT_PROJECT,
+                "branch": serde_json::to_value(branch).unwrap(),
+                "testbed": serde_json::to_value(testbed).unwrap(),
+                "measure": named_alert_measure(),
+                "metric": "p99",
+                "model": null,
+                "created": named_alert_date(),
+                "modified": named_alert_date(),
+            },
+            "boundary": {
+                "baseline": 10.0,
+                "lower_limit": null,
+                "upper_limit": 20.0,
+            },
+            "limit": "upper",
+            "status": "active",
+            "created": named_alert_date(),
+            "modified": named_alert_date(),
+        }])
+    }
+
+    // An alert from a threshold the singular fields do not describe never lands on
+    // the `value` cell. The bare threshold did not breach, so the row draws no alert
+    // although the report carries one for the same benchmark and measure.
+    #[test]
+    fn find_alert_ignores_another_threshold_s_alert() {
+        let html = report_comment_for(named_alert_report()).html(false, None);
+        // The alerts table above carries the `p99` alert; only the benchmark table
+        // below is under test.
+        let (_, benchmark_table) = html
+            .split_once("Click to view all benchmark results")
+            .expect("the comment carries the benchmark table");
+
+        assert!(
+            benchmark_table.contains("<td>1.00 ns<br />"),
+            "the value cell is drawn plain: {benchmark_table}"
+        );
+        assert!(
+            !benchmark_table.contains("<b>1.00 ns"),
+            "the value the bare threshold accepted is not styled as alerting: {benchmark_table}"
+        );
+        assert!(
+            !benchmark_table.contains("<b>100.00 ns"),
+            "and its upper limit is not flagged as crossed: {benchmark_table}"
+        );
+        assert!(
+            !benchmark_table.contains("/alerts/"),
+            "the other threshold's alert does not badge the row: {benchmark_table}"
+        );
     }
 
     // A measure that named no point estimate reaches the comment with the deprecated

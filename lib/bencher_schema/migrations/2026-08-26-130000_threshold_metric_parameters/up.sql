@@ -128,18 +128,13 @@ DROP TABLE boundary;
 ALTER TABLE up_boundary
     RENAME TO boundary;
 -- The two unique keys the table was declared without, built now that every row is
--- in place. This is the largest table this migration touches. Declared on the table
--- they would be maintained online across every insert of the copy, and the uuids
--- are v4, so each insert would land on a random page of the uuid index and those
--- random reads and writes, not the scan, would set the pace. Built here each is one
--- external sort, which is indifferent to where its keys fall, so the rebuild floors
--- at the scan that copies the rows.
+-- in place, which sorts each key once rather than maintaining it across the copy.
 CREATE UNIQUE INDEX index_boundary_uuid ON boundary(uuid);
 CREATE UNIQUE INDEX index_boundary_metric_threshold ON boundary(metric_id, threshold_id);
 -- metric_boundary
--- Recreated exactly as it stood. The view carries at most one boundary per metric
--- row, which is no longer the whole truth, and no reader reaches a boundary through
--- it any more. It stays for the migration that pins its column list.
+-- Recreated exactly as it stood. It now repeats a metric row once per boundary, and
+-- no reader reaches a boundary through it, but it stays for the migration that pins
+-- its column list.
 CREATE VIEW metric_boundary AS
 SELECT metric.id AS metric_id,
     metric.uuid AS metric_uuid,

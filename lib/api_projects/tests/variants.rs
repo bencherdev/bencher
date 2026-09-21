@@ -18,8 +18,8 @@ use bencher_api_tests::{
     helpers::{base_timestamp, get_project_id},
 };
 use bencher_json::{
-    DateTime, JsonBenchmark, JsonBenchmarks, JsonVariant, JsonVariants, MetricName, ParameterSet,
-    Slug, VariantUuid,
+    DateTime, JsonBenchmark, JsonBenchmarks, JsonVariant, JsonVariants, MAX_FILTER_SETS,
+    MetricName, ParameterSet, Slug, VariantUuid,
 };
 use bencher_schema::{
     context::DbConnection,
@@ -3702,6 +3702,240 @@ async fn metric_row_singular_check_is_the_bare_one() {
         row["alert"]["uuid"].is_string(),
         "the deprecated singular alert is the bare threshold's"
     );
+}
+
+// The report and perf singular fields are the bare threshold's when the filtered
+// threshold was created FIRST, so the bare one is not `boundaries[0]`.
+//
+// The boundaries of one row are ordered by threshold UUID, so creating the filtered
+// threshold first puts it at `boundaries[0]`. A reader that took `boundaries.first()`
+// would pass every other assertion in this file and fail here.
+#[tokio::test]
+async fn singular_check_is_the_bare_one_when_it_is_younger() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "youngerbare").await;
+
+    // The first report mints the dimensions the filtered threshold hangs off and
+    // carries no threshold model of its own.
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size": 512 }),
+                &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
+            )],
+        )],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
+    let filtered = create_threshold(
+        &server,
+        &fixture,
+        Some(serde_json::json!([{ "size": 512 }])),
+        None,
+    )
+    .await;
+
+    // The bare threshold is created second, from the report's own models map, so it
+    // carries the younger UUID.
+    let mut last = serde_json::Value::Null;
+    for (day, value) in FILTERED
+        .into_iter()
+        .skip(1)
+        .chain([FILTERED_FINAL])
+        .enumerate()
+    {
+        last = report(
+            &server,
+            &fixture,
+            day + 2,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({ "size": 512 }),
+                    &serde_json::json!({ "latency": { "value": value } }),
+                )],
+            )],
+            Some(threshold_models()),
+            None,
+            Some(1),
+        )
+        .await;
+    }
+
+    let bare = threshold_with(
+        &list_thresholds(&server, &fixture, None).await,
+        &serde_json::Value::Null,
+    );
+    assert_ne!(bare["uuid"], filtered["uuid"], "two distinct thresholds");
+
+    // The report response.
+    let measure = &last["results"][0][0]["measures"][0];
+    let boundaries = measure["metrics"][0]["boundaries"]
+        .as_array()
+        .expect("the metric lists its boundaries");
+    assert_eq!(boundaries.len(), 2, "two thresholds checked the row");
+    assert_eq!(
+        boundaries[0]["threshold"]["uuid"], filtered["uuid"],
+        "the filtered threshold was created first, so it sorts first"
+    );
+    assert_eq!(
+        measure["threshold"]["uuid"], boundaries[1]["threshold"]["uuid"],
+        "the report's singular threshold is the bare one, not boundaries[0]"
+    );
+    assert_eq!(measure["threshold"]["uuid"], bare["uuid"]);
+    assert_eq!(
+        measure["boundary"], boundaries[1]["boundary"],
+        "and so is the report's singular boundary"
+    );
+
+    // The perf response, on the same row.
+    let line = perf_line(&server, &fixture, "bench").await;
+    let point = line[0]["metrics"]
+        .as_array()
+        .expect("the line has points")
+        .last()
+        .expect("the line has a last point")
+        .clone();
+    let point_boundaries = point["metrics"]["value"]["boundaries"]
+        .as_array()
+        .expect("the `value` row lists its boundaries");
+    assert_eq!(point_boundaries.len(), 2, "two thresholds checked the row");
+    assert_eq!(
+        point_boundaries[0]["threshold"]["uuid"], filtered["uuid"],
+        "the perf boundaries sort the same way"
+    );
+    assert_eq!(
+        point["threshold"]["uuid"], point_boundaries[1]["threshold"]["uuid"],
+        "the perf singular threshold is the bare one, not boundaries[0]"
+    );
+    assert_eq!(point["threshold"]["uuid"], bare["uuid"]);
+    assert_eq!(point["boundary"], point_boundaries[1]["boundary"]);
+}
+
+// A filter past the cap is refused, and a filter that spells one set as many times as
+// the cap allows is accepted and stored as one set.
+#[tokio::test]
+async fn filter_set_cap_is_enforced() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "filtercap").await;
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size": 512 }),
+                &serde_json::json!({ "latency": { "value": 1.0 } }),
+            )],
+        )],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
+
+    let over_cap = (0..=MAX_FILTER_SETS)
+        .map(|index| serde_json::json!({ format!("k{index}"): 1 }))
+        .collect::<Vec<_>>();
+    let (status, body) = post_threshold(
+        &server,
+        &fixture,
+        Some(serde_json::Value::Array(over_cap)),
+        None,
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "a filter past the cap is refused: {body}"
+    );
+
+    let restated = std::iter::repeat_with(|| serde_json::json!({ "size": 512 }))
+        .take(MAX_FILTER_SETS)
+        .collect::<Vec<_>>();
+    let threshold = create_threshold(
+        &server,
+        &fixture,
+        Some(serde_json::Value::Array(restated)),
+        None,
+    )
+    .await;
+    assert_eq!(
+        threshold["parameters"],
+        serde_json::json!([{ "size": 512 }]),
+        "the cap counts what was written, and the duplicates collapse to one set"
+    );
+}
+
+// A threshold that names a metric the report does not carry checks nothing.
+#[tokio::test]
+async fn a_threshold_naming_an_absent_metric_writes_nothing() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "absentname").await;
+
+    // Build the history and the threshold on a name the reports do carry.
+    for (day, value) in NAMED_VALUE.into_iter().enumerate() {
+        report(
+            &server,
+            &fixture,
+            day + 1,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({}),
+                    &serde_json::json!({ "latency": { "value": value } }),
+                )],
+            )],
+            None,
+            None,
+            Some(1),
+        )
+        .await;
+    }
+    // The threshold names `p99`, which no report here ever reports.
+    create_threshold(&server, &fixture, None, Some("p99")).await;
+
+    // A value an order of magnitude out, which a bare threshold would alert on.
+    let last = report(
+        &server,
+        &fixture,
+        NAMED_VALUE.len() + 1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({}),
+                &serde_json::json!({ "latency": { "value": 50_000.0 } }),
+            )],
+        )],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
+
+    let measure = &last["results"][0][0]["measures"][0];
+    let metrics = measure["metrics"]
+        .as_array()
+        .expect("the measure lists its metrics");
+    assert!(
+        metrics.iter().all(|metric| metric["name"] != "p99"),
+        "the report carries no `p99` row"
+    );
+    for metric in metrics {
+        assert_eq!(
+            metric["boundaries"],
+            serde_json::json!([]),
+            "a threshold that names an absent metric writes no boundary"
+        );
+    }
+    assert_eq!(last["alerts"], serde_json::json!([]), "and raises no alert");
 }
 
 // A row that only a named threshold checks reports no singular check on the metrics

@@ -111,10 +111,8 @@ impl Threshold {
                 },
             });
         }
-        // UUID order, which is the order the boundaries one metric row earns are
-        // written in and the order they are read back in. Sorted here rather than in
-        // SQL: a measure's candidates are a handful of rows, and an `ORDER BY` would
-        // put a sort behind an index lookup that has none.
+        // UUID order, which is the order the boundaries a metric row earns are written
+        // in and read back in.
         for candidates in by_measure.values_mut() {
             candidates.sort_by_key(|candidate| candidate.uuid);
         }

@@ -910,9 +910,6 @@ impl PendingMetric {
 
         let perf_boundary = perf_boundary.map(
             |(query_threshold, query_model, query_boundary, query_alert)| {
-                // The deprecated singular check is the bare threshold's, and no
-                // other's: the `value` name of every variant, which is the only kind
-                // of threshold there was when those fields were the whole story.
                 let is_bare = query_threshold.is_bare();
                 let perf_boundary = JsonPerfBoundary {
                     threshold: query_threshold
@@ -957,7 +954,7 @@ impl PendingMetric {
 
         for entry in metrics.values_mut() {
             if let Some(boundaries) = entry.boundaries.as_mut() {
-                boundaries.sort_by_key(|check| check.threshold.boundary_order());
+                boundaries.sort_by_key(|check| check.threshold.uuid);
             }
         }
 
@@ -996,9 +993,6 @@ type DeprecatedCheck = (
 );
 
 /// The deprecated singular check: the bare threshold's, and no other's.
-///
-/// A point that only a named or filtered threshold checks reports no check here,
-/// which is exactly what a caller from before named checks would have seen for it.
 fn deprecated_check(bare_check: Option<JsonPerfBoundary>) -> DeprecatedCheck {
     let Some(JsonPerfBoundary {
         threshold,

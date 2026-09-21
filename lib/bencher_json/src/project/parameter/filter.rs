@@ -10,9 +10,9 @@ use super::{ParameterSet, ParametersError};
 
 /// The most sets one parameters filter may name.
 ///
-/// Deliberately low, the same way [`MAX_PARAMETER_KEYS`](super::MAX_PARAMETER_KEYS) is: raising the cap is a
-/// release note and lowering it is a breaking change, so the asymmetry runs one
-/// way.
+/// Deliberately low, the same way [`MAX_PARAMETER_KEYS`](super::MAX_PARAMETER_KEYS)
+/// is: raising the cap is a release note and lowering it is a breaking change, so
+/// the asymmetry runs one way.
 pub const MAX_FILTER_SETS: usize = 8;
 
 /// A filter over variants: a list of parameter sets, OR across the list and
@@ -194,5 +194,121 @@ mod db {
         ) -> diesel::deserialize::Result<Self> {
             Ok(jsonb::to_json(bytes.read_blob())?.parse()?)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MAX_FILTER_SETS, ParameterFilter};
+    use crate::ParameterSet;
+
+    fn filter(filter: &str) -> ParameterFilter {
+        filter.parse().expect("Invalid parameters filter")
+    }
+
+    fn variant(variant: &str) -> ParameterSet {
+        variant.parse().expect("Invalid parameter set")
+    }
+
+    /// One filter has one canonical spelling: the sets sort by their canonical bytes
+    /// and duplicates collapse, so a number written two ways is one set.
+    #[test]
+    fn filter_is_canonicalized() {
+        let one_way = filter(r#"[{"a": 1}, {"a": 1.0}]"#);
+        assert_eq!(one_way.sets().len(), 1);
+        assert_eq!(one_way.canonical(), r#"[{"a":1}]"#);
+
+        let sorted = filter(r#"[{"b": 2}, {"a": 1}]"#);
+        assert_eq!(sorted.canonical(), r#"[{"a":1},{"b":2}]"#);
+        assert_eq!(sorted, filter(r#"[{"a": 1}, {"b": 2}]"#));
+    }
+
+    /// A set matches a variant that pins at least its keys, so a filter narrows on
+    /// the keys it names and ignores the rest.
+    #[test]
+    fn matches_is_subset_within_a_set() {
+        let one = filter(r#"[{"size": 512}]"#);
+        assert!(one.matches(&variant(r#"{"size": 512}"#)));
+        assert!(one.matches(&variant(r#"{"size": 512, "threads": 4}"#)));
+        assert!(!one.matches(&variant(r#"{"size": 1024}"#)));
+        assert!(!one.matches(&variant(r#"{"threads": 4}"#)));
+        assert!(!one.matches(&ParameterSet::default()));
+    }
+
+    /// The list is an OR: a variant matches when any one set does.
+    #[test]
+    fn matches_is_or_across_sets() {
+        let either = filter(r#"[{"size": 512}, {"threads": 4}]"#);
+        assert!(either.matches(&variant(r#"{"size": 512}"#)));
+        assert!(either.matches(&variant(r#"{"threads": 4}"#)));
+        assert!(either.matches(&variant(r#"{"size": 512, "threads": 4}"#)));
+        assert!(!either.matches(&variant(r#"{"size": 1024, "threads": 8}"#)));
+    }
+
+    /// Both spellings of match all match every variant and report themselves as such.
+    #[test]
+    fn matches_everything_when_match_all() {
+        for spelling in ["[]", "[{}]", r#"[{"size": 512}, {}]"#] {
+            let all = filter(spelling);
+            assert!(all.is_match_all(), "{spelling} is match all");
+            assert!(all.sets().is_empty(), "{spelling} canonicalizes to no sets");
+            assert!(all.matches(&ParameterSet::default()));
+            assert!(all.matches(&variant(r#"{"size": 1024}"#)));
+        }
+        assert!(!filter(r#"[{"size": 512}]"#).is_match_all());
+    }
+
+    /// `Display` writes the canonical form and `FromStr` reads it back.
+    #[test]
+    fn display_and_from_str_round_trip() {
+        for spelling in [
+            "[]",
+            r#"[{"size":512}]"#,
+            r#"[{"size":1024,"threads":4},{"size":512}]"#,
+        ] {
+            let parsed = filter(spelling);
+            assert_eq!(parsed.to_string(), spelling);
+            assert_eq!(filter(&parsed.to_string()), parsed);
+        }
+        // A non canonical spelling still lands on the canonical one.
+        assert_eq!(
+            filter(r#"[{"b": 2}, {"a": 1.0}]"#).to_string(),
+            r#"[{"a":1},{"b":2}]"#
+        );
+    }
+
+    /// Serializing emits the canonical order, not the order the wire gave.
+    #[test]
+    fn serialize_emits_canonical_order() {
+        let parsed = filter(r#"[{"size": 512}, {"a": 1}]"#);
+        assert_eq!(
+            serde_json::to_string(&parsed).expect("Failed to serialize"),
+            r#"[{"a":1},{"size":512}]"#
+        );
+    }
+
+    /// The cap bounds what was written, before duplicates collapse.
+    #[test]
+    fn deserialize_caps_the_set_count() {
+        let at_cap = (0..MAX_FILTER_SETS)
+            .map(|index| format!(r#"{{"k{index}":1}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        let parsed = filter(&format!("[{at_cap}]"));
+        assert_eq!(parsed.sets().len(), MAX_FILTER_SETS);
+
+        let over_cap = (0..=MAX_FILTER_SETS)
+            .map(|index| format!(r#"{{"k{index}":1}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        format!("[{over_cap}]")
+            .parse::<ParameterFilter>()
+            .expect_err("A filter past the cap is refused");
+
+        // Eight spellings of one set are eight sets at the cap and one set after.
+        let restated = [r#"{"size":512}"#; MAX_FILTER_SETS].join(",");
+        let collapsed = filter(&format!("[{restated}]"));
+        assert_eq!(collapsed.sets().len(), 1);
+        assert_eq!(collapsed.canonical(), r#"[{"size":512}]"#);
     }
 }
