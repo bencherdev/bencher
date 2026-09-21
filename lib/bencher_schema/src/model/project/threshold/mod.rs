@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bencher_json::{
-    DateTime, MetricName, Model, ParameterFilter, ThresholdUuid,
+    DateTime, MAX_THRESHOLDS_PER_MEASURE, MetricName, Model, ParameterFilter, ThresholdUuid,
     project::{
         report::JsonReportThresholds,
         threshold::{JsonThreshold, JsonThresholdModel},
@@ -26,8 +26,8 @@ use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
     error::{
-        BencherResource, assert_parentage, assert_siblings, resource_conflict_error,
-        resource_not_found_err,
+        BencherResource, assert_parentage, assert_siblings, bad_request_error,
+        resource_conflict_error, resource_not_found_err,
     },
     macros::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
@@ -170,6 +170,19 @@ impl QueryThreshold {
             query.filter(schema::threshold::metric.is_null())
         };
         query.first::<Self>(conn).optional()
+    }
+
+    /// How many thresholds already hang off this branch, testbed, and measure.
+    pub fn count_for_measure(
+        conn: &mut DbConnection,
+        dimensions: &ThresholdDimensions,
+    ) -> diesel::QueryResult<i64> {
+        schema::threshold::table
+            .filter(schema::threshold::branch_id.eq(dimensions.branch_id))
+            .filter(schema::threshold::testbed_id.eq(dimensions.testbed_id))
+            .filter(schema::threshold::measure_id.eq(dimensions.measure_id))
+            .count()
+            .get_result(conn)
     }
 
     pub fn get_with_uuid(
@@ -390,6 +403,8 @@ impl QueryThreshold {
         let Self {
             uuid,
             project_id,
+            parameters,
+            metric,
             created,
             ..
         } = self;
@@ -402,10 +417,23 @@ impl QueryThreshold {
         JsonThresholdModel {
             uuid,
             project: project.uuid,
+            parameters,
+            metric,
             model,
             created,
         }
     }
+}
+
+/// The cap as the count it is compared against.
+fn threshold_cap() -> i64 {
+    i64::try_from(MAX_THRESHOLDS_PER_MEASURE).unwrap_or(i64::MAX)
+}
+
+fn over_the_cap(thresholds: i64) -> String {
+    format!(
+        "A branch, testbed, and measure may carry at most {MAX_THRESHOLDS_PER_MEASURE} thresholds between them, found {thresholds}"
+    )
 }
 
 #[derive(Debug, Clone, diesel::Insertable)]
@@ -511,6 +539,20 @@ impl InsertThreshold {
             ));
         }
 
+        // Reported here so the caller gets the limit rather than a write failure.
+        // The write counts again under its own lock, which is what makes it safe.
+        let thresholds = QueryThreshold::count_for_measure(auth_conn!(context), &dimensions)
+            .map_err(|e| {
+                crate::error::issue_error(
+                    "Failed to count thresholds",
+                    "Failed to count the thresholds of a branch, testbed, and measure:",
+                    e,
+                )
+            })?;
+        if thresholds >= threshold_cap() {
+            return Err(bad_request_error(over_the_cap(thresholds)));
+        }
+
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
         write_transaction!(context, |conn| {
@@ -531,6 +573,15 @@ impl InsertThreshold {
         dimensions: ThresholdDimensions,
         model: Model,
     ) -> diesel::QueryResult<ThresholdId> {
+        // Counted inside the transaction that inserts, so two creates racing at the
+        // cap cannot both pass it.
+        let thresholds = QueryThreshold::count_for_measure(conn, &dimensions)?;
+        if thresholds >= threshold_cap() {
+            return Err(diesel::result::Error::QueryBuilderError(
+                over_the_cap(thresholds).into(),
+            ));
+        }
+
         // Create the new threshold
         let insert_threshold = InsertThreshold::new(project_id, dimensions);
         diesel::insert_into(schema::threshold::table)

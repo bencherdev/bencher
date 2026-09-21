@@ -403,6 +403,16 @@ export interface JsonReportVariant {
 export interface JsonThresholdModel {
 	uuid: Uuid;
 	project: Uuid;
+	/**
+	 * The variants this threshold checks, in canonical order.
+	 * Absent when the threshold checks every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
+	/**
+	 * The name of the metric this threshold checks.
+	 * Absent when the threshold checks the conventional `value` name.
+	 */
+	metric?: string;
 	model: JsonModel;
 	created: string;
 }

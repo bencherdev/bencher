@@ -19,7 +19,7 @@ use bencher_api_tests::{
 };
 use bencher_json::{
     DateTime, JsonBenchmark, JsonBenchmarks, JsonVariant, JsonVariants, MAX_FILTER_SETS,
-    MetricName, ParameterSet, Slug, VariantUuid,
+    MAX_THRESHOLDS_PER_MEASURE, MetricName, ParameterSet, Slug, VariantUuid,
 };
 use bencher_schema::{
     context::DbConnection,
@@ -3016,11 +3016,21 @@ async fn post_threshold(
     parameters: Option<serde_json::Value>,
     metric: Option<&str>,
 ) -> (StatusCode, String) {
+    post_threshold_for(server, fixture, parameters, "latency", metric).await
+}
+
+async fn post_threshold_for(
+    server: &TestServer,
+    fixture: &Fixture,
+    parameters: Option<serde_json::Value>,
+    measure: &str,
+    metric: Option<&str>,
+) -> (StatusCode, String) {
     let body = serde_json::json!({
         "branch": "main",
         "testbed": "localhost",
         "parameters": parameters,
-        "measure": "latency",
+        "measure": measure,
         "metric": metric,
         "test": "t_test",
         "min_sample_size": 2,
@@ -3871,6 +3881,284 @@ async fn filter_set_cap_is_enforced() {
         threshold["parameters"],
         serde_json::json!([{ "size": 512 }]),
         "the cap counts what was written, and the duplicates collapse to one set"
+    );
+}
+
+// A set another set of the same filter covers is dropped, so the two spell one
+// filter and the second create is the duplicate conflict.
+#[tokio::test]
+async fn a_covered_set_is_the_same_filter() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "coveredset").await;
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "a": 1 }),
+                &serde_json::json!({ "latency": { "value": 1.0 } }),
+            )],
+        )],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
+
+    let threshold = create_threshold(
+        &server,
+        &fixture,
+        Some(serde_json::json!([{ "a": 1 }])),
+        None,
+    )
+    .await;
+    assert_eq!(threshold["parameters"], serde_json::json!([{ "a": 1 }]));
+
+    let (status, body) = post_threshold(
+        &server,
+        &fixture,
+        Some(serde_json::json!([{ "a": 1 }, { "a": 1, "b": 2 }])),
+        None,
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "the covered set is dropped, so this is the same filter: {body}"
+    );
+}
+
+// One branch, testbed, and measure carry at most `MAX_THRESHOLDS_PER_MEASURE`
+// thresholds between them.
+#[tokio::test]
+async fn threshold_count_per_measure_is_capped() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "thresholdcap").await;
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size": 512 }),
+                &serde_json::json!({ "latency": { "value": 1.0 }, "throughput": { "value": 2.0 } }),
+            )],
+        )],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
+
+    // Fill the cap with thresholds that differ only in the name they check.
+    let mut created = Vec::new();
+    for index in 0..MAX_THRESHOLDS_PER_MEASURE {
+        let metric = format!("p{index}");
+        let threshold = create_threshold(&server, &fixture, None, Some(&metric)).await;
+        created.push(
+            threshold["uuid"]
+                .as_str()
+                .expect("the threshold names its uuid")
+                .to_owned(),
+        );
+    }
+    assert_eq!(created.len(), MAX_THRESHOLDS_PER_MEASURE);
+
+    // The next one is refused, and the message states the limit.
+    let (status, body) = post_threshold(&server, &fixture, None, Some("over")).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "over the cap: {body}");
+    assert!(
+        body.contains(&MAX_THRESHOLDS_PER_MEASURE.to_string()),
+        "the message states the limit: {body}"
+    );
+
+    // Another measure on the same branch and testbed has its own budget.
+    let (status, body) =
+        post_threshold_for(&server, &fixture, None, "throughput", Some("p0")).await;
+    assert_eq!(
+        status,
+        StatusCode::CREATED,
+        "a different measure is unaffected: {body}"
+    );
+
+    // Deleting one makes room again.
+    let doomed = created.first().expect("the cap was filled");
+    let resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v0/projects/{}/thresholds/{doomed}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT, "DELETE threshold");
+    let (status, body) = post_threshold(&server, &fixture, None, Some("over")).await;
+    assert_eq!(
+        status,
+        StatusCode::CREATED,
+        "deleting one made room: {body}"
+    );
+}
+
+// Every `boundaries[]` entry names what its threshold checks, so a reader can tell
+// two boundaries on one row apart without a second request.
+#[tokio::test]
+async fn boundaries_name_what_each_threshold_checks() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "boundarynames").await;
+
+    report(
+        &server,
+        &fixture,
+        1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({ "size": 512 }),
+                &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
+            )],
+        )],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
+    let filtered = create_threshold(
+        &server,
+        &fixture,
+        Some(serde_json::json!([{ "size": 512 }])),
+        None,
+    )
+    .await;
+
+    let mut last = serde_json::Value::Null;
+    for (day, value) in FILTERED
+        .into_iter()
+        .skip(1)
+        .chain([FILTERED_FINAL])
+        .enumerate()
+    {
+        last = report(
+            &server,
+            &fixture,
+            day + 2,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({ "size": 512 }),
+                    &serde_json::json!({ "latency": { "value": value } }),
+                )],
+            )],
+            Some(threshold_models()),
+            None,
+            Some(1),
+        )
+        .await;
+    }
+
+    let boundaries = last["results"][0][0]["measures"][0]["metrics"][0]["boundaries"]
+        .as_array()
+        .expect("the metric lists its boundaries");
+    assert_eq!(boundaries.len(), 2, "two thresholds checked the row");
+    let filtered_entry = boundaries
+        .iter()
+        .find(|check| check["threshold"]["uuid"] == filtered["uuid"])
+        .expect("the filtered threshold checked the row");
+    let bare_entry = boundaries
+        .iter()
+        .find(|check| check["threshold"]["uuid"] != filtered["uuid"])
+        .expect("the bare threshold checked the row");
+
+    assert_eq!(
+        filtered_entry["threshold"]["parameters"],
+        serde_json::json!([{ "size": 512 }]),
+        "the filtered entry carries its filter"
+    );
+    assert_eq!(
+        filtered_entry["threshold"]["metric"],
+        serde_json::Value::Null,
+        "and names no metric, because it checks the conventional one"
+    );
+    assert_eq!(
+        bare_entry["threshold"]["parameters"],
+        serde_json::Value::Null,
+        "the bare entry carries neither field"
+    );
+    assert_eq!(bare_entry["threshold"]["metric"], serde_json::Value::Null);
+}
+
+// A named threshold's `boundaries[]` entry carries the name it checks.
+#[tokio::test]
+async fn a_named_boundary_carries_its_name() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "boundaryname").await;
+
+    for (day, (value, p99)) in NAMED_VALUE.into_iter().zip(NAMED_P99).enumerate() {
+        report(
+            &server,
+            &fixture,
+            day + 1,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({}),
+                    &serde_json::json!({ "latency": { "value": value, "p99": p99 } }),
+                )],
+            )],
+            None,
+            None,
+            Some(1),
+        )
+        .await;
+    }
+    let named = create_threshold(&server, &fixture, None, Some("p99")).await;
+
+    let last = report(
+        &server,
+        &fixture,
+        NAMED_VALUE.len() + 1,
+        vec![v1(
+            "bench",
+            &[entry(
+                &serde_json::json!({}),
+                &serde_json::json!({ "latency": { "value": 1_006.0, "p99": NAMED_P99_FINAL } }),
+            )],
+        )],
+        None,
+        None,
+        Some(1),
+    )
+    .await;
+
+    let metrics = last["results"][0][0]["measures"][0]["metrics"]
+        .as_array()
+        .expect("the measure lists its metrics");
+    let p99 = metrics
+        .iter()
+        .find(|metric| metric["name"] == "p99")
+        .expect("the report carries the `p99` row");
+    let boundaries = p99["boundaries"]
+        .as_array()
+        .expect("the `p99` row lists its boundaries");
+    assert_eq!(boundaries.len(), 1, "one threshold checked the row");
+    assert_eq!(boundaries[0]["threshold"]["uuid"], named["uuid"]);
+    assert_eq!(
+        boundaries[0]["threshold"]["metric"],
+        serde_json::json!("p99"),
+        "the entry names the metric its threshold checks"
+    );
+    assert_eq!(
+        boundaries[0]["threshold"]["parameters"],
+        serde_json::Value::Null,
+        "and carries no filter, because it checks every variant"
     );
 }
 

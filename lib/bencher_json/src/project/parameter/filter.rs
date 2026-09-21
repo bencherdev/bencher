@@ -24,9 +24,10 @@ pub const MAX_FILTER_SETS: usize = 8;
 /// empty set, because the empty set is a subset of everything: both are match all,
 /// and both canonicalize to the same empty list here and to `NULL` in the column.
 ///
-/// The canonical form sorts the sets by their RFC 8785 canonical bytes and drops
-/// duplicates, so `[{"a":1},{"a":1.0}]` is one set and any spelling of one filter
-/// is one stored value.
+/// The canonical form sorts the sets by their RFC 8785 canonical bytes, drops
+/// duplicates, and drops any set that another set of the list already covers, so
+/// `[{"a":1},{"a":1.0}]` and `[{"a":1},{"a":1,"b":2}]` are both one set and any
+/// spelling of one filter is one stored value.
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Jsonb))]
@@ -47,7 +48,25 @@ impl ParameterFilter {
             .collect::<Vec<_>>();
         canonical.sort_by(|(left, _), (right, _)| left.as_bytes().cmp(right.as_bytes()));
         canonical.dedup_by(|(left, _), (right, _)| left == right);
-        Self(canonical.into_iter().map(|(_, set)| set).collect())
+        // A set that another one covers matches nothing that other one does not, so
+        // it narrows the filter by nothing. Duplicates are already gone, so no two
+        // sets cover each other and this can never drop both.
+        let covered = canonical
+            .iter()
+            .map(|(_, set)| {
+                canonical
+                    .iter()
+                    .any(|(_, smaller)| smaller != set && smaller.is_subset_of(set))
+            })
+            .collect::<Vec<_>>();
+        Self(
+            canonical
+                .into_iter()
+                .zip(covered)
+                .filter(|(_, covered)| !covered)
+                .map(|((_, set), _)| set)
+                .collect(),
+        )
     }
 
     /// Whether this filter matches every variant.
@@ -158,6 +177,7 @@ impl JsonSchema for ParameterFilter {
             instance_type: Some(InstanceType::Array.into()),
             array: Some(Box::new(ArrayValidation {
                 items: Some(ParameterSet::json_schema(generator).into()),
+                max_items: u32::try_from(MAX_FILTER_SETS).ok(),
                 ..Default::default()
             })),
             ..Default::default()
@@ -221,6 +241,73 @@ mod tests {
         let sorted = filter(r#"[{"b": 2}, {"a": 1}]"#);
         assert_eq!(sorted.canonical(), r#"[{"a":1},{"b":2}]"#);
         assert_eq!(sorted, filter(r#"[{"a": 1}, {"b": 2}]"#));
+    }
+
+    /// A set another set covers is dropped, whichever order the two arrive in.
+    #[test]
+    fn covered_set_is_dropped() {
+        let expected = filter(r#"[{"a": 1}]"#);
+        for spelling in [
+            r#"[{"a": 1}, {"a": 1, "b": 2}]"#,
+            r#"[{"a": 1, "b": 2}, {"a": 1}]"#,
+        ] {
+            let parsed = filter(spelling);
+            assert_eq!(
+                parsed, expected,
+                "{spelling} canonicalizes to the smaller set"
+            );
+            assert_eq!(parsed.canonical(), r#"[{"a":1}]"#);
+        }
+    }
+
+    /// A chain of covers collapses to the one set that covers the rest.
+    #[test]
+    fn covered_chain_keeps_only_the_smallest() {
+        let chain = filter(r#"[{"a": 1, "b": 2, "c": 3}, {"a": 1}, {"a": 1, "b": 2}]"#);
+        assert_eq!(chain.sets().len(), 1);
+        assert_eq!(chain.canonical(), r#"[{"a":1}]"#);
+    }
+
+    /// Two sets that cover neither way both stay.
+    #[test]
+    fn incomparable_sets_both_stay() {
+        let both = filter(r#"[{"b": 2}, {"a": 1}]"#);
+        assert_eq!(both.sets().len(), 2);
+        assert_eq!(both.canonical(), r#"[{"a":1},{"b":2}]"#);
+    }
+
+    /// Covering uses the same value equality the subset match does, so a number
+    /// spelled two ways is one value here too.
+    #[test]
+    fn covering_is_number_spelling_blind() {
+        let parsed = filter(r#"[{"a": 1}, {"a": 1.0, "b": 2}]"#);
+        assert_eq!(parsed.sets().len(), 1);
+        assert_eq!(parsed.canonical(), r#"[{"a":1}]"#);
+    }
+
+    /// Dropping a covered set changes no verdict, because the set that covers it
+    /// matches every variant it matched.
+    #[test]
+    fn dropping_a_covered_set_changes_no_verdict() {
+        let dropped = filter(r#"[{"a": 1}, {"a": 1, "b": 2}]"#);
+        let kept = ParameterFilter(vec![variant(r#"{"a": 1}"#), variant(r#"{"a": 1, "b": 2}"#)]);
+        for spelling in [
+            "{}",
+            r#"{"a": 1}"#,
+            r#"{"a": 2}"#,
+            r#"{"b": 2}"#,
+            r#"{"a": 1, "b": 2}"#,
+            r#"{"a": 1, "b": 3}"#,
+            r#"{"a": 1, "b": 2, "c": 3}"#,
+            r#"{"a": 2, "b": 2}"#,
+        ] {
+            let variant = variant(spelling);
+            assert_eq!(
+                dropped.matches(&variant),
+                kept.matches(&variant),
+                "{spelling} is matched the same either way"
+            );
+        }
     }
 
     /// A set matches a variant that pins at least its keys, so a filter narrows on

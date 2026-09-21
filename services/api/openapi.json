@@ -8251,7 +8251,7 @@
           "thresholds"
         ],
         "summary": "Create a threshold",
-        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, parameters filter, measure, and metric name. A threshold with no parameters filter checks every variant, and a threshold that names no metric checks the conventional `value` name. Every threshold that matches a metric row runs: there is no winner among them.",
+        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, parameters filter, measure, and metric name. A threshold with no parameters filter checks every variant, and a threshold that names no metric checks the conventional `value` name. Every threshold that matches a metric row runs: there is no winner among them. One branch, testbed, and measure may carry at most 8 thresholds between them.",
         "operationId": "proj_threshold_post",
         "parameters": [
           {
@@ -18182,8 +18182,26 @@
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "metric": {
+            "nullable": true,
+            "description": "The name of the metric this threshold checks. Absent when the threshold checks the conventional `value` name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricName"
+              }
+            ]
+          },
           "model": {
             "$ref": "#/components/schemas/JsonModel"
+          },
+          "parameters": {
+            "nullable": true,
+            "description": "The variants this threshold checks, in canonical order. Absent when the threshold checks every variant.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterFilter"
+              }
+            ]
           },
           "project": {
             "$ref": "#/components/schemas/ProjectUuid"
@@ -19387,7 +19405,9 @@
           "additionalProperties": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
               },
               {
                 "type": "number",
@@ -19397,15 +19417,19 @@
                 "type": "boolean"
               }
             ]
-          }
-        }
+          },
+          "maxProperties": 8
+        },
+        "maxItems": 8
       },
       "ParameterSet": {
         "type": "object",
         "additionalProperties": {
           "anyOf": [
             {
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
             },
             {
               "type": "number",
@@ -19415,7 +19439,8 @@
               "type": "boolean"
             }
           ]
-        }
+        },
+        "maxProperties": 8
       },
       "PlanLevel": {
         "type": "string",

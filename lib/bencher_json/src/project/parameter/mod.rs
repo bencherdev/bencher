@@ -155,12 +155,27 @@ impl JsonSchema for ParameterSet {
     }
 
     fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
-        use schemars::schema::{InstanceType, ObjectValidation, SchemaObject, SubschemaValidation};
+        use schemars::schema::{
+            InstanceType, ObjectValidation, SchemaObject, StringValidation, SubschemaValidation,
+        };
+
+        // A string value is non-empty and length bound, so the schema says so rather
+        // than leaving a generated client to find out. The same bound on a key is
+        // `propertyNames`, which OpenAPI 3.0 has no keyword for.
+        let string = SchemaObject {
+            instance_type: Some(InstanceType::String.into()),
+            string: Some(Box::new(StringValidation {
+                min_length: Some(1),
+                max_length: u32::try_from(ParameterValue::MAX_LEN).ok(),
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
 
         let scalar = SchemaObject {
             subschemas: Some(Box::new(SubschemaValidation {
                 any_of: Some(vec![
-                    String::json_schema(generator),
+                    string.into(),
                     f64::json_schema(generator),
                     bool::json_schema(generator),
                 ]),
@@ -172,6 +187,7 @@ impl JsonSchema for ParameterSet {
         SchemaObject {
             instance_type: Some(InstanceType::Object.into()),
             object: Some(Box::new(ObjectValidation {
+                max_properties: u32::try_from(MAX_PARAMETER_KEYS).ok(),
                 additional_properties: Some(Box::new(scalar.into())),
                 ..Default::default()
             })),

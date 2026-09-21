@@ -98,7 +98,9 @@ pub use project::{
         JsonNewTestbed, JsonTestbed, JsonTestbeds, TestbedNameId, TestbedResourceId, TestbedSlug,
         TestbedUuid,
     },
-    threshold::{JsonNewThreshold, JsonThreshold, JsonThresholds, ThresholdUuid},
+    threshold::{
+        JsonNewThreshold, JsonThreshold, JsonThresholds, MAX_THRESHOLDS_PER_MEASURE, ThresholdUuid,
+    },
     variant::{JsonVariant, JsonVariants, VariantUuid},
 };
 pub use run::JsonNewRun;

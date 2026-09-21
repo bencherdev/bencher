@@ -16,6 +16,13 @@ use crate::{
 
 crate::typed_uuid::typed_uuid!(ThresholdUuid);
 
+/// The most thresholds one branch, testbed, and measure may carry between them.
+///
+/// Deliberately low, the same way [`MAX_FILTER_SETS`](crate::MAX_FILTER_SETS) is:
+/// raising the cap is a release note and lowering it is a breaking change, so the
+/// asymmetry runs one way.
+pub const MAX_THRESHOLDS_PER_MEASURE: usize = 8;
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewThreshold {
@@ -73,6 +80,14 @@ pub struct JsonThreshold {
 pub struct JsonThresholdModel {
     pub uuid: ThresholdUuid,
     pub project: ProjectUuid,
+    /// The variants this threshold checks, in canonical order.
+    /// Absent when the threshold checks every variant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
+    /// The name of the metric this threshold checks.
+    /// Absent when the threshold checks the conventional `value` name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<MetricName>,
     pub model: JsonModel,
     pub created: DateTime,
 }
