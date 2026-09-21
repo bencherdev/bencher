@@ -1483,6 +1483,46 @@ mod tests {
         }])
     }
 
+    // A measure counts as checked when the deprecated singular threshold is present,
+    // and also when only a named or filtered threshold checked it, so a project whose
+    // thresholds are all narrow is not told it has none.
+    #[test]
+    fn is_checked_reads_both_shapes() {
+        // The singular threshold is present.
+        let report = named_alert_report();
+        let comment = report_comment_for(report);
+        assert!(comment.has_threshold());
+        assert!(comment.missing_threshold.is_empty());
+
+        // No singular threshold, but the metric carries a boundary.
+        let mut report = json_report(Visibility::Public);
+        let mut results = named_alert_results();
+        results[0][0]["measures"][0]["threshold"] = serde_json::Value::Null;
+        results[0][0]["measures"][0]["boundary"] = serde_json::Value::Null;
+        report.results = Some(serde_json::from_value(results).unwrap());
+        let comment = report_comment_for(report);
+        assert!(
+            comment.has_threshold(),
+            "a narrow threshold's boundary is still a check"
+        );
+        assert!(comment.missing_threshold.is_empty());
+
+        // Neither: no singular threshold and no boundary anywhere.
+        let mut report = json_report(Visibility::Public);
+        let mut results = named_alert_results();
+        results[0][0]["measures"][0]["threshold"] = serde_json::Value::Null;
+        results[0][0]["measures"][0]["boundary"] = serde_json::Value::Null;
+        results[0][0]["measures"][0]["metrics"][0]["boundaries"] = serde_json::json!([]);
+        report.results = Some(serde_json::from_value(results).unwrap());
+        let comment = report_comment_for(report);
+        assert!(!comment.has_threshold());
+        assert_eq!(
+            comment.missing_threshold.len(),
+            1,
+            "the unchecked measure is named"
+        );
+    }
+
     // An alert from a threshold the singular fields do not describe never lands on
     // the `value` cell. The bare threshold did not breach, so the row draws no alert
     // although the report carries one for the same benchmark and measure.

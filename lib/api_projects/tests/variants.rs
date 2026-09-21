@@ -19,7 +19,7 @@ use bencher_api_tests::{
 };
 use bencher_json::{
     DateTime, JsonBenchmark, JsonBenchmarks, JsonVariant, JsonVariants, MAX_FILTER_SETS,
-    MAX_THRESHOLDS_PER_MEASURE, MetricName, ParameterSet, Slug, VariantUuid,
+    MetricName, ParameterSet, Slug, VariantUuid,
 };
 use bencher_schema::{
     context::DbConnection,
@@ -3016,21 +3016,11 @@ async fn post_threshold(
     parameters: Option<serde_json::Value>,
     metric: Option<&str>,
 ) -> (StatusCode, String) {
-    post_threshold_for(server, fixture, parameters, "latency", metric).await
-}
-
-async fn post_threshold_for(
-    server: &TestServer,
-    fixture: &Fixture,
-    parameters: Option<serde_json::Value>,
-    measure: &str,
-    metric: Option<&str>,
-) -> (StatusCode, String) {
     let body = serde_json::json!({
         "branch": "main",
         "testbed": "localhost",
         "parameters": parameters,
-        "measure": measure,
+        "measure": "latency",
         "metric": metric,
         "test": "t_test",
         "min_sample_size": 2,
@@ -3927,84 +3917,6 @@ async fn a_covered_set_is_the_same_filter() {
         status,
         StatusCode::CONFLICT,
         "the covered set is dropped, so this is the same filter: {body}"
-    );
-}
-
-// One branch, testbed, and measure carry at most `MAX_THRESHOLDS_PER_MEASURE`
-// thresholds between them.
-#[tokio::test]
-async fn threshold_count_per_measure_is_capped() {
-    let server = TestServer::new().await;
-    let fixture = fixture(&server, "thresholdcap").await;
-    report(
-        &server,
-        &fixture,
-        1,
-        vec![v1(
-            "bench",
-            &[entry(
-                &serde_json::json!({ "size": 512 }),
-                &serde_json::json!({ "latency": { "value": 1.0 }, "throughput": { "value": 2.0 } }),
-            )],
-        )],
-        None,
-        None,
-        Some(1),
-    )
-    .await;
-
-    // Fill the cap with thresholds that differ only in the name they check.
-    let mut created = Vec::new();
-    for index in 0..MAX_THRESHOLDS_PER_MEASURE {
-        let metric = format!("p{index}");
-        let threshold = create_threshold(&server, &fixture, None, Some(&metric)).await;
-        created.push(
-            threshold["uuid"]
-                .as_str()
-                .expect("the threshold names its uuid")
-                .to_owned(),
-        );
-    }
-    assert_eq!(created.len(), MAX_THRESHOLDS_PER_MEASURE);
-
-    // The next one is refused, and the message states the limit.
-    let (status, body) = post_threshold(&server, &fixture, None, Some("over")).await;
-    assert_eq!(status, StatusCode::BAD_REQUEST, "over the cap: {body}");
-    assert!(
-        body.contains(&MAX_THRESHOLDS_PER_MEASURE.to_string()),
-        "the message states the limit: {body}"
-    );
-
-    // Another measure on the same branch and testbed has its own budget.
-    let (status, body) =
-        post_threshold_for(&server, &fixture, None, "throughput", Some("p0")).await;
-    assert_eq!(
-        status,
-        StatusCode::CREATED,
-        "a different measure is unaffected: {body}"
-    );
-
-    // Deleting one makes room again.
-    let doomed = created.first().expect("the cap was filled");
-    let resp = server
-        .client
-        .delete(server.api_url(&format!(
-            "/v0/projects/{}/thresholds/{doomed}",
-            fixture.project_slug
-        )))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&fixture.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT, "DELETE threshold");
-    let (status, body) = post_threshold(&server, &fixture, None, Some("over")).await;
-    assert_eq!(
-        status,
-        StatusCode::CREATED,
-        "deleting one made room: {body}"
     );
 }
 

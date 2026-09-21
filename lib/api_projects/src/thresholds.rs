@@ -255,7 +255,6 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 /// A threshold with no parameters filter checks every variant,
 /// and a threshold that names no metric checks the conventional `value` name.
 /// Every threshold that matches a metric row runs: there is no winner among them.
-/// One branch, testbed, and measure may carry at most 8 thresholds between them.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/thresholds",

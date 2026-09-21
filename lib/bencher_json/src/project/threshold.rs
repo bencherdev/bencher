@@ -16,13 +16,6 @@ use crate::{
 
 crate::typed_uuid::typed_uuid!(ThresholdUuid);
 
-/// The most thresholds one branch, testbed, and measure may carry between them.
-///
-/// Deliberately low, the same way [`MAX_FILTER_SETS`](crate::MAX_FILTER_SETS) is:
-/// raising the cap is a release note and lowering it is a breaking change, so the
-/// asymmetry runs one way.
-pub const MAX_THRESHOLDS_PER_MEASURE: usize = 8;
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewThreshold {
