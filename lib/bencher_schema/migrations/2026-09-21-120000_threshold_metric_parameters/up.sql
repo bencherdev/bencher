@@ -84,6 +84,8 @@ CREATE INDEX index_threshold_project_created ON threshold(project_id, created);
 -- Ingest loads every threshold of one (branch, testbed) once per report, so the
 -- branch is the leading column of the load.
 CREATE INDEX index_threshold_branch ON threshold(branch_id);
+-- Deleting a model checks for a threshold that still points at it, which seeks here.
+CREATE INDEX index_threshold_model ON threshold(model_id);
 -- boundary
 -- Several thresholds may check one metric row now, and each computes its own
 -- boundary against its own sample, so `UNIQUE(metric_id)` becomes
@@ -131,6 +133,11 @@ ALTER TABLE up_boundary
 -- in place, which sorts each key once rather than maintaining it across the copy.
 CREATE UNIQUE INDEX index_boundary_uuid ON boundary(uuid);
 CREATE UNIQUE INDEX index_boundary_metric_threshold ON boundary(metric_id, threshold_id);
+-- Deleting a threshold reads the boundaries that point at it, then cascades to its
+-- models and reads the boundaries that point at each of those, so without these two
+-- indexes both foreign key checks walk the whole table.
+CREATE INDEX index_boundary_threshold ON boundary(threshold_id);
+CREATE INDEX index_boundary_model ON boundary(model_id);
 -- metric_boundary
 -- Recreated exactly as it stood. It now repeats a metric row once per boundary, and
 -- no reader reaches a boundary through it, but it stays for the migration that pins
@@ -163,4 +170,18 @@ FROM metric
     )
     LEFT OUTER JOIN boundary ON (boundary.metric_id = metric.id)
 WHERE metric.name = 'value';
+-- report_benchmark
+-- Detection reads the history of one variant, so it seeks that variant's own reports
+-- rather than every variant of the benchmark.
+CREATE INDEX index_report_benchmark_variant_report ON report_benchmark(variant_id, report_id);
+-- Redundant with index_report_benchmark_variant_report(variant_id, report_id)
+DROP INDEX IF EXISTS index_report_benchmark_variant;
+-- head_version
+-- Deleting a version cascades to its head_version rows and first reads which heads
+-- hold it, so both seek by version rather than walk the table.
+CREATE INDEX index_head_version_version ON head_version(version_id);
+-- head
+-- Deleting a head_version row clears the start point of every head that names it, so
+-- that lookup seeks rather than walks the table.
+CREATE INDEX index_head_start_point ON head(start_point_id);
 PRAGMA foreign_keys = on;

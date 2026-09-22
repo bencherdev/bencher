@@ -2356,6 +2356,63 @@ mod tests {
             .value
     }
 
+    fn indexes(conn: &mut DbConnection, table: &str) -> Vec<String> {
+        diesel::sql_query(
+            "SELECT name AS value FROM sqlite_master
+                WHERE type = 'index' AND tbl_name = ?
+                ORDER BY name",
+        )
+        .bind::<diesel::sql_types::Text, _>(table)
+        .load::<SqlText>(conn)
+        .expect("Failed to read the indexes")
+        .into_iter()
+        .map(|index| index.value)
+        .collect()
+    }
+
+    // A missing foreign key index only makes a delete slow, never wrong, so the
+    // exact index lists are the only thing that can catch one.
+    #[test]
+    fn migration_indexes_threshold_boundary_head_version_and_head() {
+        let mut conn = setup_test_db();
+
+        assert_eq!(
+            indexes(&mut conn, "threshold"),
+            vec![
+                "index_threshold_branch".to_owned(),
+                "index_threshold_dimensions".to_owned(),
+                "index_threshold_model".to_owned(),
+                "index_threshold_project_created".to_owned(),
+                "index_threshold_uuid".to_owned(),
+            ],
+        );
+        assert_eq!(
+            indexes(&mut conn, "boundary"),
+            vec![
+                "index_boundary_metric_threshold".to_owned(),
+                "index_boundary_model".to_owned(),
+                "index_boundary_threshold".to_owned(),
+                "index_boundary_uuid".to_owned(),
+            ],
+        );
+        assert_eq!(
+            indexes(&mut conn, "head_version"),
+            vec![
+                "index_head_version_head".to_owned(),
+                "index_head_version_version".to_owned(),
+                "sqlite_autoindex_head_version_1".to_owned(),
+            ],
+        );
+        assert_eq!(
+            indexes(&mut conn, "head"),
+            vec![
+                "index_head_branch_created".to_owned(),
+                "index_head_start_point".to_owned(),
+                "sqlite_autoindex_head_1".to_owned(),
+            ],
+        );
+    }
+
     /// The filter encoder has to be byte identical to `SQLite`'s own `jsonb()` over
     /// the same canonical text, because the unique index compares the stored bytes
     /// and `SQLite`'s JSON functions read them back.

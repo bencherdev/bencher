@@ -3307,6 +3307,87 @@ async fn filtered_threshold_checks_the_matching_variants() {
     );
 }
 
+async fn delete_threshold(
+    server: &TestServer,
+    fixture: &Fixture,
+    threshold: &str,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v0/projects/{}/thresholds/{threshold}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+// A threshold that has already checked something is not deletable through this
+// endpoint: its boundaries reference it, so the delete is refused and nothing it
+// wrote is taken away with it.
+#[tokio::test]
+async fn threshold_delete_refuses_while_boundaries_reference_it() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "delete-checked").await;
+
+    let sizes = [512];
+    report_variants(&server, &fixture, 1, &sizes, FILTERED[0]).await;
+    let threshold = create_threshold(
+        &server,
+        &fixture,
+        Some(serde_json::json!([{ "size": 512 }])),
+        None,
+    )
+    .await;
+    for (day, value) in FILTERED
+        .into_iter()
+        .skip(1)
+        .chain([FILTERED_FINAL])
+        .enumerate()
+    {
+        report_variants(&server, &fixture, day + 2, &sizes, value).await;
+    }
+
+    let project_id = get_project_id(&server, fixture.project_slug.as_ref());
+    let mut conn = server.db_conn();
+    let boundaries = boundary_names(&mut conn, project_id);
+    let alerted = alerts(&mut conn, project_id);
+    let metrics = project_metric_count(&mut conn, project_id);
+    assert!(!boundaries.is_empty(), "the threshold checked its variant");
+    assert!(!alerted.is_empty(), "the regression alerted");
+    drop(conn);
+
+    let uuid = threshold["uuid"].as_str().expect("the threshold uuid");
+    let (status, body) = delete_threshold(&server, &fixture, uuid).await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "a threshold that has checked something is not deletable: {body}"
+    );
+
+    let mut conn = server.db_conn();
+    assert_eq!(boundary_names(&mut conn, project_id), boundaries);
+    assert_eq!(alerts(&mut conn, project_id), alerted);
+    assert_eq!(project_metric_count(&mut conn, project_id), metrics);
+    drop(conn);
+
+    let listed = list_thresholds(&server, &fixture, None).await;
+    assert!(
+        listed
+            .iter()
+            .any(|listed| listed["uuid"].as_str() == Some(uuid)),
+        "the threshold is still listed"
+    );
+}
+
 // A variant that a bare threshold and a filtered threshold both match earns a
 // boundary from each and, on a regression, an alert from each. There is no winner.
 #[tokio::test]

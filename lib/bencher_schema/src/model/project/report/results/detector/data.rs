@@ -101,7 +101,7 @@ impl QueryFragment<Sqlite> for HistoryQuery {
         pass.push_sql(
             "SELECT metric.value FROM head_version \
              CROSS JOIN report \
-             CROSS JOIN report_benchmark INDEXED BY index_report_benchmark_benchmark_report \
+             CROSS JOIN report_benchmark INDEXED BY index_report_benchmark_variant_report \
              CROSS JOIN metric \
              WHERE head_version.head_id = ",
         );

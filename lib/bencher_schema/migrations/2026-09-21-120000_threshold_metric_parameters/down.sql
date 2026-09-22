@@ -42,6 +42,8 @@ DROP INDEX IF EXISTS index_threshold_project_created;
 
 DROP INDEX IF EXISTS index_threshold_branch;
 
+DROP INDEX IF EXISTS index_threshold_model;
+
 CREATE TABLE down_threshold (
     id INTEGER PRIMARY KEY NOT NULL,
     uuid TEXT NOT NULL UNIQUE,
@@ -99,6 +101,10 @@ DROP VIEW IF EXISTS metric_boundary;
 DROP INDEX IF EXISTS index_boundary_uuid;
 
 DROP INDEX IF EXISTS index_boundary_metric_threshold;
+
+DROP INDEX IF EXISTS index_boundary_threshold;
+
+DROP INDEX IF EXISTS index_boundary_model;
 
 CREATE TABLE down_boundary (
     id INTEGER PRIMARY KEY NOT NULL,
@@ -168,5 +174,16 @@ FROM metric
     )
     LEFT OUTER JOIN boundary ON (boundary.metric_id = metric.id)
 WHERE metric.name = 'value';
+
+-- report_benchmark
+CREATE INDEX index_report_benchmark_variant ON report_benchmark(variant_id);
+
+DROP INDEX IF EXISTS index_report_benchmark_variant_report;
+
+-- head_version
+DROP INDEX IF EXISTS index_head_version_version;
+
+-- head
+DROP INDEX IF EXISTS index_head_start_point;
 
 PRAGMA foreign_keys = on;

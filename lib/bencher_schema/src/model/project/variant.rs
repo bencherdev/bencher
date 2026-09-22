@@ -1040,7 +1040,7 @@ mod tests {
                 "index_report_benchmark_benchmark_report".to_owned(),
                 "index_report_benchmark_report_iteration_benchmark_variant".to_owned(),
                 "index_report_benchmark_uuid".to_owned(),
-                "index_report_benchmark_variant".to_owned(),
+                "index_report_benchmark_variant_report".to_owned(),
             ],
             "the rebuilt table's indexes are the named ones the migration builds"
         );
