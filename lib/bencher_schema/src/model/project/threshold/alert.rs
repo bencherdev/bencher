@@ -235,11 +235,7 @@ impl QueryAlert {
             version_id,
             spec_id,
         )?;
-        // The value the alert fired on, whatever it was named. The name is the
-        // threshold's, which the response already carries at `threshold.metric`.
         let value = query_metric.value.into();
-        // The triple is a convention over the `value` name, so it exists only when the
-        // checked row is a `value` row.
         let json_metric = (query_metric.name == MetricName::value())
             .then(|| query_metric.triple_with(lower_value, upper_value));
         let json_variant = query_variant.into_json_for_benchmark(&query_benchmark);

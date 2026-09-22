@@ -79,7 +79,6 @@ pub struct ThresholdDimensions {
 }
 
 impl ThresholdDimensions {
-    /// The canonical dimensions behind a parameters filter and a metric name.
     #[must_use]
     pub fn new(
         branch_id: BranchId,
@@ -97,13 +96,11 @@ impl ThresholdDimensions {
         }
     }
 
-    /// The same dimensions on another branch.
     #[must_use]
     pub fn on_branch(self, branch_id: BranchId) -> Self {
         Self { branch_id, ..self }
     }
 
-    /// The name these dimensions check.
     #[must_use]
     pub fn metric_name(&self) -> MetricName {
         self.metric.clone().unwrap_or_else(MetricName::value)
@@ -123,7 +120,6 @@ impl QueryThreshold {
     fn_get_id!(threshold, ThresholdId, ThresholdUuid);
     fn_get_uuid!(threshold, ThresholdId, ThresholdUuid);
 
-    /// The dimensions this threshold hangs off.
     #[must_use]
     pub fn dimensions(&self) -> ThresholdDimensions {
         ThresholdDimensions {
@@ -146,10 +142,6 @@ impl QueryThreshold {
         self.parameters.is_none() && self.metric.is_none()
     }
 
-    /// The threshold on exactly these dimensions, if there is one.
-    ///
-    /// The dimensions are already canonical, so the two nullable columns are matched
-    /// against the values they actually hold and never against a spelling of them.
     pub fn find_by_dimensions(
         conn: &mut DbConnection,
         dimensions: &ThresholdDimensions,
@@ -483,10 +475,6 @@ impl InsertThreshold {
         dimensions: ThresholdDimensions,
         model: Model,
     ) -> Result<ThresholdId, HttpError> {
-        // Check for an existing threshold with the same unique key before writing.
-        // The key is every dimension together: a threshold that checks `p99`, or that
-        // checks only some variants, sits beside the bare one rather than colliding
-        // with it.
         if let Some(existing) = QueryThreshold::find_by_dimensions(auth_conn!(context), &dimensions)
             .map_err(|e| {
                 crate::error::issue_error(
@@ -642,8 +630,6 @@ impl InsertThreshold {
                 &branch_start_point.branch
             ))?
             .into_iter()
-            // A branch may hold several thresholds on one (testbed, measure) now, so
-            // the key a clone matches on is every dimension but the branch.
             .map(|threshold| (threshold.dimensions(), threshold))
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
@@ -666,8 +652,6 @@ impl InsertThreshold {
             ))?
             .into_iter()
             .map(|(threshold, model)| {
-                // Keyed on the branch the clone lands on, so the two sides match on
-                // everything but the branch they came from.
                 (
                     threshold.dimensions().on_branch(query_branch.id),
                     (threshold, model.map(QueryModel::into_model)),
@@ -748,8 +732,6 @@ impl InsertThreshold {
             return Ok(());
         }
 
-        // The map a report carries names a measure and a model and nothing else, so
-        // the only threshold it can address, or reset, is the bare one.
         let mut current_thresholds = schema::threshold::table
             .filter(schema::threshold::project_id.eq(project_id))
             .filter(schema::threshold::branch_id.eq(branch_id))

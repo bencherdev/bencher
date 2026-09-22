@@ -685,8 +685,6 @@ impl ReportComment {
         !self.alerts().is_empty()
     }
 
-    /// The alert the deprecated singular fields describe, which is the only one this
-    /// table can draw limits for.
     pub fn find_alert(
         &self,
         result: &JsonReportResult,
@@ -911,7 +909,6 @@ impl Measure {
     }
 }
 
-/// Whether any threshold checked this measure, named or filtered or bare.
 fn is_checked(report_measure: &JsonReportMeasure) -> bool {
     report_measure.threshold.is_some()
         || report_measure

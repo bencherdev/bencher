@@ -61,9 +61,6 @@ pub struct ReportResults {
     pub benchmark_cache: HashMap<BenchmarkNameId, BenchmarkId>,
     pub variant_cache: HashMap<(BenchmarkId, ParameterSet), VariantId>,
     pub measure_cache: HashMap<MeasureNameId, MeasureId>,
-    /// Every threshold of this report's (branch, testbed) that runs a model, grouped
-    /// by measure. Read once per report and matched in memory, so a variant that
-    /// several thresholds check costs no extra query.
     pub threshold_cache: HashMap<MeasureId, Vec<Threshold>>,
 }
 
@@ -128,9 +125,6 @@ impl ReportResults {
         #[cfg(feature = "otel")]
         let process_start = context.clock.now();
 
-        // Every threshold that could check anything this report ingests, read once.
-        // The report's own threshold models have already been written, so a
-        // threshold this report creates checks this report.
         self.threshold_cache =
             Threshold::load(auth_conn!(context), self.branch_id, self.testbed_id).map_err(|e| {
                 issue_error(
@@ -370,8 +364,6 @@ impl ReportResults {
             let measure_id = self.measure_id(context, measure_key).await?;
             let named = metric.inner;
 
-            // Every matching threshold runs, so a row several of them check earns a
-            // boundary from each and, on a regression, an alert from each.
             let mut detections: HashMap<MetricName, Vec<PreparedDetection>> = HashMap::new();
             for threshold in self.threshold_cache.get(&measure_id).into_iter().flatten() {
                 let Some(value) = named.get(&threshold.metric).copied() else {
@@ -511,9 +503,6 @@ fn write_variant(
             mut detections,
         } = prepared_measure;
 
-        // A checked row goes in on its own so that `last_insert_rowid` names the row
-        // its boundaries attach to. Every other row rides the batch, which is where
-        // all but the checked name has always ridden.
         let mut insert_named = Vec::with_capacity(named.len());
         for (name, value) in named {
             let insert_metric = InsertMetric::named(
@@ -530,8 +519,6 @@ fn write_variant(
                 .values(&insert_metric)
                 .execute(conn)?;
             let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
-            // Every threshold that checked this row writes its own boundary and, on
-            // a breach, its own alert.
             for prepared_detection in prepared_detections {
                 prepared_detection.write(conn, metric_id)?;
             }
@@ -552,9 +539,6 @@ struct PreparedMeasure {
     measure_id: MeasureId,
     /// Every metric the measure reported, in lexicographic order.
     named: NamedMap,
-    /// The detections prepared for this measure's metrics, keyed by the name each
-    /// checked. A name no threshold checked has no entry; a name several thresholds
-    /// checked has one detection per threshold.
     detections: HashMap<MetricName, Vec<PreparedDetection>>,
 }
 

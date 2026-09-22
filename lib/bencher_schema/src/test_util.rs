@@ -256,7 +256,6 @@ pub fn create_measure(
         .expect("Failed to get measure id")
 }
 
-/// Create a bare threshold for testing: the `value` name of every variant.
 pub fn create_threshold(
     conn: &mut SqliteConnection,
     project_id: ProjectId,
@@ -277,8 +276,6 @@ pub fn create_threshold(
     )
 }
 
-/// Create a threshold that checks a filtered set of variants, a named metric, or
-/// both. `None` for either is the default: every variant, and the `value` name.
 #[expect(
     clippy::too_many_arguments,
     reason = "a threshold is every dimension it hangs off"

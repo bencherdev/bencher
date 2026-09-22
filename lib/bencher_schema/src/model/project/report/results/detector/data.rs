@@ -49,8 +49,6 @@ pub fn metrics_data(
         benchmark_id,
         variant_id,
         measure_id: detector.measure_id,
-        // A threshold checks one name, and the sample it checks against is that
-        // name's history and nothing else. A bare threshold names `value`.
         metric_name: detector.threshold.metric.clone(),
         spec_id: detector.spec_id,
         start_time,
@@ -62,11 +60,6 @@ pub fn metrics_data(
     Ok(MetricsData { data })
 }
 
-// The sample is one variant's history of the one metric name a threshold checks,
-// never pooled variants or the other names stored beside it. A head's version
-// numbers rise with its version ids, so walking the head's index newest first keeps
-// version order and stops once the limit is met, and pinning the benchmark index
-// keeps each report from scanning all of its results.
 struct HistoryQuery {
     head_id: HeadId,
     testbed_id: TestbedId,

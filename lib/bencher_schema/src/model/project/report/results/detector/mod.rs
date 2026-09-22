@@ -22,10 +22,6 @@ pub use prepared::PreparedDetection;
 use data::metrics_data;
 pub use threshold::Threshold;
 
-/// One threshold running against one metric row.
-///
-/// Several thresholds may check one row, and each is its own detector: its own
-/// sample, its own boundary row, and its own alert on a breach.
 #[derive(Debug, Clone)]
 pub struct Detector {
     pub head_id: HeadId,

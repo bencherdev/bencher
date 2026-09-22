@@ -23,11 +23,9 @@ use crate::{
     schema,
 };
 
-/// One threshold that may check a metric row: what it checks, and the model it runs.
 #[derive(Debug, Clone)]
 pub struct Threshold {
     pub id: ThresholdId,
-    /// The UUID, which is what orders the candidates.
     pub uuid: ThresholdUuid,
     /// The variants this threshold checks. `None` checks every variant.
     pub parameters: Option<ParameterFilter>,
@@ -49,11 +47,6 @@ pub struct ThresholdModel {
 }
 
 impl Threshold {
-    /// Every threshold of one (branch, testbed) that has a model, grouped by measure.
-    ///
-    /// A report reads this once and matches every metric row it ingests against it in
-    /// memory, so however many thresholds check a series, ingest asks the threshold
-    /// table one question per report.
     pub fn load(
         conn: &mut DbConnection,
         branch_id: BranchId,
@@ -111,17 +104,12 @@ impl Threshold {
                 },
             });
         }
-        // UUID order, which is the order the boundaries a metric row earns are written
-        // in and read back in.
         for candidates in by_measure.values_mut() {
             candidates.sort_by_key(|candidate| candidate.uuid);
         }
         Ok(by_measure)
     }
 
-    /// Whether this threshold checks a variant.
-    ///
-    /// The name is matched by the caller, which reads it straight off `metric`.
     pub fn checks(&self, variant: &ParameterSet) -> bool {
         self.parameters
             .as_ref()

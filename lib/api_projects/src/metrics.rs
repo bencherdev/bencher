@@ -177,8 +177,6 @@ fn metric_query(
             schema::report::spec_id,
             QueryMetric::as_select(),
             (
-                // The column order is `QueryThreshold`'s field order, because that is
-                // what a tuple selection deserializes into, positionally.
                 (
                     schema::threshold::id,
                     schema::threshold::uuid,
@@ -227,13 +225,10 @@ fn metric_query(
             )
                 .nullable(),
         ))
-        // The bare threshold's row first, then one row, because the deprecated check
-        // this response reports is the bare threshold's. See `boundary_json`.
         .order(bare_threshold_first())
         .limit(1)
 }
 
-/// Sort the bare threshold's row first, because that is the one row this query keeps.
 type BareThresholdFirst = diesel::dsl::Desc<
     diesel::dsl::And<
         diesel::dsl::IsNull<schema::threshold::parameters>,
@@ -265,8 +260,6 @@ type MetricQuery = (
     Option<PerfBoundary>,
 );
 
-/// The check this response reports: the bare threshold's, and no other's.
-/// See [`QueryThreshold::is_bare`].
 fn boundary_json(
     project: &QueryProject,
     perf_boundary: Option<PerfBoundary>,

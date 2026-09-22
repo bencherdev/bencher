@@ -314,9 +314,6 @@ pub async fn post_inner(
     let measure_id =
         QueryMeasure::from_name_id(auth_conn!(context), project_id, &json_threshold.measure)?.id;
 
-    // Create the new threshold. Its nullable dimensions are canonicalized here, so an
-    // explicit `value` and an absent metric are one threshold, and so are an empty
-    // filter and an absent one.
     let dimensions = ThresholdDimensions::new(
         branch_id,
         testbed_id,

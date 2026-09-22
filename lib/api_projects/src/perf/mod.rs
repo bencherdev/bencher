@@ -725,8 +725,6 @@ fn perf_query(
             schema::version::hash,
             QueryMetric::as_select(),
             (
-                // The column order is `QueryThreshold`'s field order, because that is
-                // what a tuple selection deserializes into, positionally.
                 (
                     schema::threshold::id,
                     schema::threshold::uuid,
@@ -882,9 +880,6 @@ struct PendingMetric {
     /// The identifier the deprecated metric triple carries.
     value_uuid: Option<MetricUuid>,
     metrics: BTreeMap<MetricName, JsonMetricEntry>,
-    /// The bare threshold's check on this point, if a bare threshold checked it:
-    /// what the deprecated singular `threshold`, `boundary`, and `alert` fields
-    /// carry.
     bare_check: Option<JsonPerfBoundary>,
 }
 
@@ -992,7 +987,6 @@ type DeprecatedCheck = (
     Option<JsonPerfAlert>,
 );
 
-/// The deprecated singular check: the bare threshold's, and no other's.
 fn deprecated_check(bare_check: Option<JsonPerfBoundary>) -> DeprecatedCheck {
     let Some(JsonPerfBoundary {
         threshold,

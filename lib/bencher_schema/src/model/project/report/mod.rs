@@ -722,8 +722,6 @@ fn report_results_query(
         QueryMeasure::as_select(),
         QueryMetric::as_select(),
         (
-            // The column order is `QueryThreshold`'s field order, because that is
-            // what a tuple selection deserializes into, positionally.
             (
                 schema::threshold::id,
                 schema::threshold::uuid,
@@ -809,7 +807,6 @@ fn into_report_results_json(
     report_results
 }
 
-/// Fold one row of the results query into the iteration being built.
 fn push_result_row(
     project: &QueryProject,
     report_iteration: &mut Vec<PendingResult>,
@@ -818,8 +815,6 @@ fn push_result_row(
     let (iteration, query_benchmark, query_variant, query_measure, query_metric, report_boundary) =
         row;
 
-    // A result is one variant: the same benchmark with different parameters
-    // is a different result.
     let benchmark_uuid = query_benchmark.uuid;
     let variant_uuid = query_variant.uuid;
     if report_iteration.last().is_none_or(|result| {
@@ -854,7 +849,6 @@ fn push_result_row(
         return;
     };
 
-    // One metric repeats across rows only when several thresholds checked it.
     let QueryMetric {
         id: _,
         uuid,
@@ -877,7 +871,6 @@ fn push_result_row(
     }
 
     if let Some((query_threshold, query_model, query_boundary)) = report_boundary {
-        // The deprecated singular fields carry the bare threshold's boundary only.
         let is_bare = query_threshold.is_bare();
         let report_boundary = JsonReportBoundary {
             threshold: query_threshold.into_threshold_model_json_for_project(project, query_model),
@@ -911,8 +904,6 @@ struct PendingResult {
 struct PendingMeasure {
     measure: JsonMeasure,
     metrics: Vec<JsonReportMetric>,
-    /// The bare threshold's check on this measure, if a bare threshold checked it:
-    /// what the deprecated singular `threshold` and `boundary` fields carry.
     bare_check: Option<(JsonThresholdModel, JsonBoundary)>,
 }
 

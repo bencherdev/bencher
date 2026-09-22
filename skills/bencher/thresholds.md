@@ -87,7 +87,7 @@ bencher run \
 | `--threshold-min-sample-size <n>` | Minimum historical samples required |
 | `--threshold-max-sample-size <n>` | Maximum historical samples to consider |
 | `--threshold-window <secs>` | Time window in seconds for historical data |
-| `--thresholds-reset` | Reset the unspecified thresholds for the branch and testbed that carry no parameters filter and no metric name |
+| `--thresholds-reset` | Reset all unspecified thresholds for the branch and testbed |
 
 Use `_` as a value to explicitly ignore a parameter (leave it unset).
 
