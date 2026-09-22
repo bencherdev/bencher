@@ -25,9 +25,8 @@ use bencher_schema::{
     schema,
 };
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
-    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
-    query_dsl::methods::LoadQuery,
+    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableHelper as _, query_dsl::methods::LoadQuery,
 };
 use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
@@ -101,7 +100,10 @@ pub async fn get_one_inner(
 
     actor_conn!(context, api_actor, |conn| {
         metric_query(query_project.id, path_params.metric)
-            .get_result::<MetricQuery>(conn)
+            .load::<MetricQuery>(conn)
+            .and_then(|metric_queries| {
+                bare_threshold_row(metric_queries).ok_or(diesel::result::Error::NotFound)
+            })
             .map_err(resource_not_found_err!(
                 Metric,
                 (&query_project, &path_params.metric)
@@ -225,22 +227,25 @@ fn metric_query(
             )
                 .nullable(),
         ))
-        .order(bare_threshold_first())
-        .limit(1)
 }
 
-type BareThresholdFirst = diesel::dsl::Desc<
-    diesel::dsl::And<
-        diesel::dsl::IsNull<schema::threshold::parameters>,
-        diesel::dsl::IsNull<schema::threshold::metric>,
-    >,
->;
+/// The row the deprecated singular fields come from: the bare threshold's, if any.
+///
+/// The join repeats the metric once per threshold that checked it, and every column
+/// but the check is the same in each, so any row answers for the metric itself.
+fn bare_threshold_row(metric_queries: Vec<MetricQuery>) -> Option<MetricQuery> {
+    let mut metric_queries = metric_queries.into_iter();
+    let first = metric_queries.next()?;
+    if is_bare(&first) {
+        return Some(first);
+    }
+    Some(metric_queries.find(is_bare).unwrap_or(first))
+}
 
-fn bare_threshold_first() -> BareThresholdFirst {
-    schema::threshold::parameters
-        .is_null()
-        .and(schema::threshold::metric.is_null())
-        .desc()
+fn is_bare((.., perf_boundary): &MetricQuery) -> bool {
+    perf_boundary
+        .as_ref()
+        .is_some_and(|(query_threshold, ..)| query_threshold.is_bare())
 }
 
 type MetricQuery = (

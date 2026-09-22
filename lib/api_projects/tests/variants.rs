@@ -3603,10 +3603,9 @@ async fn metric_row(
 // The metrics endpoint's deprecated singular check is the bare threshold's, under a
 // variant that a bare threshold and a filtered one both check.
 //
-// This is the one surface that picks the bare check in SQL rather than in Rust, so it
-// is the one that could lose the bare threshold silently. The filtered threshold is
-// created first on purpose: it takes the lower identifier, so it is the row the
-// outer join reaches first and the row a query with no order would keep.
+// The filtered threshold is created first on purpose: it takes the lower identifier,
+// so it is the row the outer join reaches first, and a reader that kept that row
+// would lose the bare threshold silently.
 #[tokio::test]
 async fn metric_row_singular_check_is_the_bare_one() {
     let server = TestServer::new().await;
