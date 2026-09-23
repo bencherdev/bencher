@@ -154,7 +154,7 @@ pub struct CliReportThresholds {
     #[clap(long, requires = "threshold_test")]
     pub threshold_upper_boundary: Vec<ElidedOption<Boundary>>,
 
-    /// Reset all unspecified Thresholds for the `branch` and `testbed`
+    /// Reset the unspecified Thresholds of the `branch` and `testbed` that carry no parameters filter and no metric name
     /// If a Threshold already exists and is not specified, its current Model will be removed.
     #[clap(long)]
     pub thresholds_reset: bool,

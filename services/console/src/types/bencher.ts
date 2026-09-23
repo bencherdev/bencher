@@ -324,7 +324,17 @@ export interface JsonThreshold {
 	project: Uuid;
 	branch: JsonBranch;
 	testbed: JsonTestbed;
+	/**
+	 * The variants this threshold checks, in canonical order.
+	 * Absent when the threshold checks every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
 	measure: JsonMeasure;
+	/**
+	 * The name of the metric this threshold checks.
+	 * Absent when the threshold checks the conventional `value` name.
+	 */
+	metric?: string;
 	model?: JsonModel;
 	created: string;
 	modified: string;
@@ -362,7 +372,18 @@ export interface JsonAlert {
 	 * them apart.
 	 */
 	variant: JsonVariant;
-	metric: JsonMetricTriple;
+	/**
+	 * The value the alert fired on.
+	 * 
+	 * The name that value was reported under is the threshold's, at
+	 * `threshold.metric`, because that is the name the threshold checks.
+	 */
+	value: number;
+	/**
+	 * Deprecated. The metric triple, present only when the checked row is a
+	 * `value` row.
+	 */
+	metric?: JsonMetricTriple;
 	threshold: JsonThreshold;
 	boundary: JsonBoundary;
 	limit: BoundaryLimit;
@@ -382,6 +403,16 @@ export interface JsonReportVariant {
 export interface JsonThresholdModel {
 	uuid: Uuid;
 	project: Uuid;
+	/**
+	 * The variants this threshold checks, in canonical order.
+	 * Absent when the threshold checks every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
+	/**
+	 * The name of the metric this threshold checks.
+	 * Absent when the threshold checks the conventional `value` name.
+	 */
+	metric?: string;
 	model: JsonModel;
 	created: string;
 }
@@ -398,8 +429,9 @@ export interface JsonReportMetric {
 	name: string;
 	value: number;
 	/**
-	 * Every threshold that checked this metric, with the boundary it produced.
-	 * Length 0 or 1 until threshold predicates ship.
+	 * Every threshold that checked this metric, with the boundary it produced,
+	 * in UUID order: creation order for a `UUIDv7` and deterministic for all.
+	 * The order is not a ranking, and the first entry is not a winner.
 	 */
 	boundaries: JsonReportBoundary[];
 }
@@ -646,7 +678,9 @@ export interface JsonMetricEntry {
 	value: number;
 	/**
 	 * Every threshold that checked this metric, with the boundary it produced
-	 * and any alert that boundary raised. Absent when nothing checked it.
+	 * and any alert that boundary raised, in UUID order: creation order for a
+	 * `UUIDv7` and deterministic for all. Absent when nothing checked it.
+	 * The order is not a ranking, and the first entry is not a winner.
 	 */
 	boundaries?: JsonPerfBoundary[];
 }

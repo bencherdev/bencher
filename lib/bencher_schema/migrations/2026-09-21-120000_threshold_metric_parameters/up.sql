@@ -1,0 +1,187 @@
+PRAGMA foreign_keys = off;
+-- threshold
+-- A threshold gains the variants it checks and the name it checks.
+--
+-- `parameters` is the filter over variants: the SQLite JSONB encoding of a JSON
+-- array of partial parameters, OR across the array and subset match within each entry.
+-- NULL is match all, which is what every threshold that predates this migration does.
+-- It is declared `BLOB` to match the SQLite representation of the `Jsonb` SQL type,
+-- the same as `variant.parameters`.
+--
+-- `metric` is the `metric.name` this threshold checks. NULL is the conventional
+-- `value` name, which again is what every existing row checks, so every existing row
+-- carries NULL and nothing about it moves.
+--
+-- The table is recreated rather than altered because the identity it enforces
+-- changes. `UNIQUE(branch_id, testbed_id, measure_id)` is backed by an automatic
+-- index that no statement can drop, so the only way off it is a new table.
+--
+-- The table is declared without its unique keys. They are built below, once the
+-- copy has landed, as named indexes.
+CREATE TABLE up_threshold (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL,
+    project_id INTEGER NOT NULL,
+    branch_id INTEGER NOT NULL,
+    testbed_id INTEGER NOT NULL,
+    parameters BLOB,
+    measure_id INTEGER NOT NULL,
+    metric TEXT,
+    model_id INTEGER,
+    created BIGINT NOT NULL,
+    modified BIGINT NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES project (id) ON DELETE CASCADE,
+    FOREIGN KEY (branch_id) REFERENCES branch (id),
+    FOREIGN KEY (testbed_id) REFERENCES testbed (id),
+    FOREIGN KEY (measure_id) REFERENCES measure (id),
+    FOREIGN KEY (model_id) REFERENCES model (id)
+);
+INSERT INTO up_threshold(
+        id,
+        uuid,
+        project_id,
+        branch_id,
+        testbed_id,
+        parameters,
+        measure_id,
+        metric,
+        model_id,
+        created,
+        modified
+    )
+SELECT id,
+    uuid,
+    project_id,
+    branch_id,
+    testbed_id,
+    NULL,
+    measure_id,
+    NULL,
+    model_id,
+    created,
+    modified
+FROM threshold;
+DROP TABLE threshold;
+ALTER TABLE up_threshold
+    RENAME TO threshold;
+CREATE UNIQUE INDEX index_threshold_uuid ON threshold(uuid);
+-- The identity of a threshold, under the null semantics the two new columns carry.
+--
+-- A SQLite unique index treats NULLs as distinct, so a plain unique key over the
+-- five columns would let two bare thresholds sit on one (branch, testbed, measure)
+-- and would let an explicit `value` sit beside an absent one. The index is declared
+-- over the effective values instead: NULL parameters reads as the empty blob, which
+-- is a value no stored filter can take because a filter that matches everything is
+-- stored as NULL, and NULL metric reads as `value`.
+CREATE UNIQUE INDEX index_threshold_dimensions ON threshold(
+    branch_id,
+    testbed_id,
+    COALESCE(parameters, x''),
+    measure_id,
+    COALESCE(metric, 'value')
+);
+CREATE INDEX index_threshold_project_created ON threshold(project_id, created);
+-- Ingest loads every threshold of one (branch, testbed) once per report, so the
+-- branch is the leading column of the load.
+CREATE INDEX index_threshold_branch ON threshold(branch_id);
+-- Deleting a model checks for a threshold that still points at it, which seeks here.
+CREATE INDEX index_threshold_model ON threshold(model_id);
+-- boundary
+-- Several thresholds may check one metric row now, and each computes its own
+-- boundary against its own sample, so `UNIQUE(metric_id)` becomes
+-- `UNIQUE(metric_id, threshold_id)`.
+--
+-- `metric_boundary` is a view over `boundary`, so it is dropped before the swap and
+-- recreated unchanged after it.
+DROP VIEW IF EXISTS metric_boundary;
+CREATE TABLE up_boundary (
+    id INTEGER PRIMARY KEY NOT NULL,
+    uuid TEXT NOT NULL,
+    metric_id INTEGER NOT NULL,
+    threshold_id INTEGER NOT NULL,
+    model_id INTEGER NOT NULL,
+    baseline DOUBLE,
+    lower_limit DOUBLE,
+    upper_limit DOUBLE,
+    FOREIGN KEY (metric_id) REFERENCES metric (id) ON DELETE CASCADE,
+    FOREIGN KEY (threshold_id) REFERENCES threshold (id),
+    FOREIGN KEY (model_id) REFERENCES model (id)
+);
+INSERT INTO up_boundary(
+        id,
+        uuid,
+        metric_id,
+        threshold_id,
+        model_id,
+        baseline,
+        lower_limit,
+        upper_limit
+    )
+SELECT id,
+    uuid,
+    metric_id,
+    threshold_id,
+    model_id,
+    baseline,
+    lower_limit,
+    upper_limit
+FROM boundary;
+DROP TABLE boundary;
+ALTER TABLE up_boundary
+    RENAME TO boundary;
+-- The two unique keys the table was declared without, built now that every row is
+-- in place, which sorts each key once rather than maintaining it across the copy.
+CREATE UNIQUE INDEX index_boundary_uuid ON boundary(uuid);
+CREATE UNIQUE INDEX index_boundary_metric_threshold ON boundary(metric_id, threshold_id);
+-- Deleting a threshold reads the boundaries that point at it, then cascades to its
+-- models and reads the boundaries that point at each of those, so without these two
+-- indexes both foreign key checks walk the whole table.
+CREATE INDEX index_boundary_threshold ON boundary(threshold_id);
+CREATE INDEX index_boundary_model ON boundary(model_id);
+-- metric_boundary
+-- Recreated exactly as it stood. It now repeats a metric row once per boundary, and
+-- no reader reaches a boundary through it, but it stays for the migration that pins
+-- its column list.
+CREATE VIEW metric_boundary AS
+SELECT metric.id AS metric_id,
+    metric.uuid AS metric_uuid,
+    metric.report_benchmark_id,
+    metric.measure_id,
+    metric.value,
+    lower_metric.value AS lower_value,
+    upper_metric.value AS upper_value,
+    boundary.id AS boundary_id,
+    boundary.uuid AS boundary_uuid,
+    boundary.threshold_id,
+    boundary.model_id,
+    boundary.baseline,
+    boundary.lower_limit,
+    boundary.upper_limit
+FROM metric
+    LEFT OUTER JOIN metric AS lower_metric ON (
+        lower_metric.report_benchmark_id = metric.report_benchmark_id
+        AND lower_metric.measure_id = metric.measure_id
+        AND lower_metric.name = 'lower_value'
+    )
+    LEFT OUTER JOIN metric AS upper_metric ON (
+        upper_metric.report_benchmark_id = metric.report_benchmark_id
+        AND upper_metric.measure_id = metric.measure_id
+        AND upper_metric.name = 'upper_value'
+    )
+    LEFT OUTER JOIN boundary ON (boundary.metric_id = metric.id)
+WHERE metric.name = 'value';
+-- report_benchmark
+-- Detection reads the history of one variant, so it seeks that variant's own reports
+-- rather than every variant of the benchmark.
+CREATE INDEX index_report_benchmark_variant_report ON report_benchmark(variant_id, report_id);
+-- Redundant with index_report_benchmark_variant_report(variant_id, report_id)
+DROP INDEX IF EXISTS index_report_benchmark_variant;
+-- head_version
+-- Deleting a version cascades to its head_version rows and first reads which heads
+-- hold it, so both seek by version rather than walk the table.
+CREATE INDEX index_head_version_version ON head_version(version_id);
+-- head
+-- Deleting a head_version row clears the start point of every head that names it, so
+-- that lookup seeks rather than walks the table.
+CREATE INDEX index_head_start_point ON head(start_point_id);
+PRAGMA foreign_keys = on;

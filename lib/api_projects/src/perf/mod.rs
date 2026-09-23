@@ -729,9 +729,11 @@ fn perf_query(
                     schema::threshold::id,
                     schema::threshold::uuid,
                     schema::threshold::project_id,
-                    schema::threshold::measure_id,
                     schema::threshold::branch_id,
                     schema::threshold::testbed_id,
+                    schema::threshold::parameters,
+                    schema::threshold::measure_id,
+                    schema::threshold::metric,
                     schema::threshold::model_id,
                     schema::threshold::created,
                     schema::threshold::modified,
@@ -834,6 +836,7 @@ fn into_perf_lines(
                 },
                 value_uuid: None,
                 metrics: BTreeMap::new(),
+                bare_check: None,
             });
         }
         let Some(pending) = line.last_mut() else {
@@ -877,6 +880,7 @@ struct PendingMetric {
     /// The identifier the deprecated metric triple carries.
     value_uuid: Option<MetricUuid>,
     metrics: BTreeMap<MetricName, JsonMetricEntry>,
+    bare_check: Option<JsonPerfBoundary>,
 }
 
 impl PendingMetric {
@@ -899,21 +903,32 @@ impl PendingMetric {
             self.value_uuid = Some(uuid);
         }
 
+        let perf_boundary = perf_boundary.map(
+            |(query_threshold, query_model, query_boundary, query_alert)| {
+                let is_bare = query_threshold.is_bare();
+                let perf_boundary = JsonPerfBoundary {
+                    threshold: query_threshold
+                        .into_threshold_model_json_for_project(project, query_model),
+                    boundary: query_boundary.into_json(),
+                    alert: query_alert.map(QueryAlert::into_perf_json),
+                };
+                (is_bare, perf_boundary)
+            },
+        );
+        if let Some((true, perf_boundary)) = perf_boundary.as_ref() {
+            self.bare_check = Some(perf_boundary.clone());
+        }
+
         // A metric repeats across rows only when several thresholds checked it.
         let entry = self.metrics.entry(name).or_insert(JsonMetricEntry {
             value: value.into(),
             boundaries: None,
         });
-        if let Some((query_threshold, query_model, query_boundary, query_alert)) = perf_boundary {
+        if let Some((_, perf_boundary)) = perf_boundary {
             entry
                 .boundaries
                 .get_or_insert_with(Vec::new)
-                .push(JsonPerfBoundary {
-                    threshold: query_threshold
-                        .into_threshold_model_json_for_project(project, query_model),
-                    boundary: query_boundary.into_json(),
-                    alert: query_alert.map(QueryAlert::into_perf_json),
-                });
+                .push(perf_boundary);
         }
     }
 
@@ -928,8 +943,15 @@ impl PendingMetric {
             end_time,
             version,
             value_uuid,
-            metrics,
+            mut metrics,
+            bare_check,
         } = self;
+
+        for entry in metrics.values_mut() {
+            if let Some(boundaries) = entry.boundaries.as_mut() {
+                boundaries.sort_by_key(|check| check.threshold.uuid);
+            }
+        }
 
         let value = metrics.get(&MetricName::value());
         let metric = value_uuid.zip(value).map(|(uuid, value)| JsonMetricTriple {
@@ -942,8 +964,7 @@ impl PendingMetric {
                 .get(&MetricName::upper_value())
                 .map(|entry| entry.value),
         });
-        // The deprecated check is the one that checked the `value` row.
-        let (threshold, boundary, alert) = value.map_or((None, None, None), deprecated_check);
+        let (threshold, boundary, alert) = deprecated_check(bare_check);
 
         JsonPerfMetrics {
             report,
@@ -966,18 +987,14 @@ type DeprecatedCheck = (
     Option<JsonPerfAlert>,
 );
 
-fn deprecated_check(value: &JsonMetricEntry) -> DeprecatedCheck {
-    let Some(perf_boundary) = value
-        .boundaries
-        .as_ref()
-        .and_then(|boundaries| boundaries.first())
-    else {
-        return (None, None, None);
-    };
-    let JsonPerfBoundary {
+fn deprecated_check(bare_check: Option<JsonPerfBoundary>) -> DeprecatedCheck {
+    let Some(JsonPerfBoundary {
         threshold,
         boundary,
         alert,
-    } = perf_boundary;
-    (Some(threshold.clone()), Some(*boundary), alert.clone())
+    }) = bare_check
+    else {
+        return (None, None, None);
+    };
+    (Some(threshold), Some(boundary), alert)
 }

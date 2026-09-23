@@ -10,7 +10,7 @@
 //! so no concurrent INSERT can interleave between the INSERT and the `last_insert_rowid()` call.
 
 use bencher_json::{
-    DateTime, MetricName, ParameterSet, VariantUuid,
+    DateTime, MetricName, ParameterFilter, ParameterSet, VariantUuid,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
@@ -256,7 +256,6 @@ pub fn create_measure(
         .expect("Failed to get measure id")
 }
 
-/// Create a threshold for testing.
 pub fn create_threshold(
     conn: &mut SqliteConnection,
     project_id: ProjectId,
@@ -265,13 +264,41 @@ pub fn create_threshold(
     measure_id: MeasureId,
     threshold_uuid: &str,
 ) -> ThresholdId {
+    create_threshold_with_dimensions(
+        conn,
+        project_id,
+        branch_id,
+        testbed_id,
+        None,
+        measure_id,
+        None,
+        threshold_uuid,
+    )
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a threshold is every dimension it hangs off"
+)]
+pub fn create_threshold_with_dimensions(
+    conn: &mut SqliteConnection,
+    project_id: ProjectId,
+    branch_id: BranchId,
+    testbed_id: TestbedId,
+    parameters: Option<ParameterFilter>,
+    measure_id: MeasureId,
+    metric: Option<MetricName>,
+    threshold_uuid: &str,
+) -> ThresholdId {
     diesel::insert_into(schema::threshold::table)
         .values((
             schema::threshold::uuid.eq(threshold_uuid),
             schema::threshold::project_id.eq(project_id),
             schema::threshold::branch_id.eq(branch_id),
             schema::threshold::testbed_id.eq(testbed_id),
+            schema::threshold::parameters.eq(parameters),
             schema::threshold::measure_id.eq(measure_id),
+            schema::threshold::metric.eq(metric),
             schema::threshold::created.eq(DateTime::TEST),
             schema::threshold::modified.eq(DateTime::TEST),
         ))

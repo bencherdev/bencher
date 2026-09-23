@@ -18,7 +18,7 @@ use super::{
 };
 use crate::{
     context::DbConnection,
-    error::{issue_error, resource_not_found_err},
+    error::resource_not_found_err,
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     model::{
         project::{
@@ -235,19 +235,9 @@ impl QueryAlert {
             version_id,
             spec_id,
         )?;
-        // A boundary hanging off anything but a `value` row has no triple to build, so
-        // it is refused rather than answered with numbers the alert does not name.
-        if query_metric.name != MetricName::value() {
-            return Err(issue_error(
-                "Failed to build the alert metric triple",
-                &format!(
-                    "Alert ({uuid}) fired on a metric row named `{name}`, which is not a point estimate.",
-                    name = query_metric.name
-                ),
-                "the boundary's metric row is not a `value` row",
-            ));
-        }
-        let json_metric = query_metric.triple_with(lower_value, upper_value);
+        let value = query_metric.value.into();
+        let json_metric = (query_metric.name == MetricName::value())
+            .then(|| query_metric.triple_with(lower_value, upper_value));
         let json_variant = query_variant.into_json_for_benchmark(&query_benchmark);
         Ok(JsonAlert {
             uuid,
@@ -255,6 +245,7 @@ impl QueryAlert {
             iteration,
             benchmark: query_benchmark.into_json_for_project(project),
             variant: json_variant,
+            value,
             metric: json_metric,
             threshold,
             boundary: query_boundary.into_json(),

@@ -698,7 +698,7 @@ async fn metrics_get_value_row_is_unchanged_but_for_the_additions() {
     assert_eq!(metric["boundary"], serde_json::Value::Null);
     assert_eq!(metric["alert"], serde_json::Value::Null);
 
-    // The additions: the addressed row's own name and scalar, and the variant it was
+    // The additions: the addressed row's own name and value, and the variant it was
     // measured under.
     assert_eq!(metric["name"], serde_json::json!("value"));
     assert_eq!(metric["value"], serde_json::json!(42.0));
@@ -865,9 +865,13 @@ async fn metrics_get_checked_value_row() {
     let alert = &alerts.0[0];
     assert_eq!(metric["alert"]["uuid"], serde_json::json!(alert.uuid));
     assert_eq!(metric["boundary"], serde_json::json!(alert.boundary));
+    let alert_metric = alert
+        .metric
+        .as_ref()
+        .expect("the alert checked a `value` row, so it carries the triple");
     assert_eq!(
         metric["metric"]["uuid"],
-        serde_json::json!(alert.metric.uuid),
+        serde_json::json!(alert_metric.uuid),
         "the alert is on the addressed row",
     );
 

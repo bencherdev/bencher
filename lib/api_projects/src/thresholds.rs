@@ -23,7 +23,10 @@ use bencher_schema::{
             branch::QueryBranch,
             measure::QueryMeasure,
             testbed::QueryTestbed,
-            threshold::{InsertThreshold, QueryThreshold, ThresholdSpec, model::QueryModel},
+            threshold::{
+                InsertThreshold, QueryThreshold, ThresholdDimensions, ThresholdSpec,
+                model::QueryModel,
+            },
         },
         user::{
             actor::{ApiActor, PubProjectBearerToken},
@@ -247,7 +250,11 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 /// Create a threshold for a project.
 /// The user must have `create` permissions for the project,
 /// or provide a valid project key for the project.
-/// There can only be one threshold for any unique combination of: branch, testbed, and measure.
+/// There can only be one threshold for any unique combination of:
+/// branch, testbed, parameters filter, measure, and metric name.
+/// A threshold with no parameters filter checks every variant,
+/// and a threshold that names no metric checks the conventional `value` name.
+/// Every threshold that matches a metric row runs: there is no winner among them.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/thresholds",
@@ -307,16 +314,15 @@ pub async fn post_inner(
     let measure_id =
         QueryMeasure::from_name_id(auth_conn!(context), project_id, &json_threshold.measure)?.id;
 
-    // Create the new threshold
-    let threshold_id = InsertThreshold::from_model(
-        context,
-        project_id,
+    let dimensions = ThresholdDimensions::new(
         branch_id,
         testbed_id,
+        json_threshold.parameters.clone(),
         measure_id,
-        json_threshold.model,
-    )
-    .await?;
+        json_threshold.metric.clone(),
+    );
+    let threshold_id =
+        InsertThreshold::from_model(context, project_id, dimensions, json_threshold.model).await?;
 
     // Get the new threshold with the new model
     auth_conn!(context, |conn| {

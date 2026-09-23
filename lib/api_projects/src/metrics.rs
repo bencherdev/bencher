@@ -100,7 +100,10 @@ pub async fn get_one_inner(
 
     actor_conn!(context, api_actor, |conn| {
         metric_query(query_project.id, path_params.metric)
-            .get_result::<MetricQuery>(conn)
+            .load::<MetricQuery>(conn)
+            .and_then(|metric_queries| {
+                bare_threshold_row(metric_queries).ok_or(diesel::result::Error::NotFound)
+            })
             .map_err(resource_not_found_err!(
                 Metric,
                 (&query_project, &path_params.metric)
@@ -180,9 +183,11 @@ fn metric_query(
                     schema::threshold::id,
                     schema::threshold::uuid,
                     schema::threshold::project_id,
-                    schema::threshold::measure_id,
                     schema::threshold::branch_id,
                     schema::threshold::testbed_id,
+                    schema::threshold::parameters,
+                    schema::threshold::measure_id,
+                    schema::threshold::metric,
                     schema::threshold::model_id,
                     schema::threshold::created,
                     schema::threshold::modified,
@@ -222,11 +227,25 @@ fn metric_query(
             )
                 .nullable(),
         ))
-        // At most one row can match: the UUID is unique, every join lands on a
-        // primary key or a unique column, and a boundary raises at most one alert.
-        // The limit is what `first` renders, kept here because the query is built
-        // apart from its run.
-        .limit(1)
+}
+
+/// The row the deprecated singular fields come from: the bare threshold's, if any.
+///
+/// The join repeats the metric once per threshold that checked it, and every column
+/// but the check is the same in each, so any row answers for the metric itself.
+fn bare_threshold_row(metric_queries: Vec<MetricQuery>) -> Option<MetricQuery> {
+    let mut metric_queries = metric_queries.into_iter();
+    let first = metric_queries.next()?;
+    if is_bare(&first) {
+        return Some(first);
+    }
+    Some(metric_queries.find(is_bare).unwrap_or(first))
+}
+
+fn is_bare((.., perf_boundary): &MetricQuery) -> bool {
+    perf_boundary
+        .as_ref()
+        .is_some_and(|(query_threshold, ..)| query_threshold.is_bare())
 }
 
 type MetricQuery = (
@@ -246,8 +265,6 @@ type MetricQuery = (
     Option<PerfBoundary>,
 );
 
-/// The check on the addressed row, if any: the threshold that checked it, the
-/// boundary it produced, and any alert that boundary raised.
 fn boundary_json(
     project: &QueryProject,
     perf_boundary: Option<PerfBoundary>,
@@ -256,15 +273,16 @@ fn boundary_json(
     Option<JsonBoundary>,
     Option<JsonPerfAlert>,
 ) {
-    if let Some((query_threshold, query_model, query_boundary, query_alert)) = perf_boundary {
-        let threshold =
-            Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
-        let boundary = Some(query_boundary.into_json());
-        let alert = query_alert.map(QueryAlert::into_perf_json);
-        (threshold, boundary, alert)
-    } else {
-        (None, None, None)
-    }
+    let Some((query_threshold, query_model, query_boundary, query_alert)) =
+        perf_boundary.filter(|(query_threshold, _, _, _)| query_threshold.is_bare())
+    else {
+        return (None, None, None);
+    };
+    let threshold =
+        Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
+    let boundary = Some(query_boundary.into_json());
+    let alert = query_alert.map(QueryAlert::into_perf_json);
+    (threshold, boundary, alert)
 }
 
 /// The metric triple, for a `value` row and for nothing else.

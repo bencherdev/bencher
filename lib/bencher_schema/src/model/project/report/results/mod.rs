@@ -41,7 +41,7 @@ use crate::{
 
 pub mod detector;
 
-use detector::{Detector, PreparedDetection};
+use detector::{Detector, PreparedDetection, Threshold};
 
 use super::ReportId;
 
@@ -61,7 +61,7 @@ pub struct ReportResults {
     pub benchmark_cache: HashMap<BenchmarkNameId, BenchmarkId>,
     pub variant_cache: HashMap<(BenchmarkId, ParameterSet), VariantId>,
     pub measure_cache: HashMap<MeasureNameId, MeasureId>,
-    pub detector_cache: HashMap<MeasureId, Option<Detector>>,
+    pub threshold_cache: HashMap<MeasureId, Vec<Threshold>>,
 }
 
 /// The report context the active-series cache write needs: the owning organization
@@ -97,7 +97,7 @@ impl ReportResults {
             benchmark_cache: HashMap::new(),
             variant_cache: HashMap::new(),
             measure_cache: HashMap::new(),
-            detector_cache: HashMap::new(),
+            threshold_cache: HashMap::new(),
         }
     }
 
@@ -124,6 +124,15 @@ impl ReportResults {
     ) -> Result<(), HttpError> {
         #[cfg(feature = "otel")]
         let process_start = context.clock.now();
+
+        self.threshold_cache =
+            Threshold::load(auth_conn!(context), self.branch_id, self.testbed_id).map_err(|e| {
+                issue_error(
+                    "Failed to load report thresholds",
+                    "Failed to load the thresholds for a report:",
+                    e,
+                )
+            })?;
 
         let adapter_settings = AdapterSettings::new(settings.average, bmf_version);
         let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
@@ -343,7 +352,9 @@ impl ReportResults {
     ) -> Result<PreparedVariant, HttpError> {
         // Resolved here in Phase 1, alongside the benchmark and the measures, so the
         // Phase 2 write transaction stays read free and never nests a transaction.
-        let variant_id = self.variant_id(context, benchmark_id, parameters).await?;
+        let variant_id = self
+            .variant_id(context, benchmark_id, parameters.clone())
+            .await?;
 
         let insert_report_benchmark =
             InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id, variant_id);
@@ -353,28 +364,37 @@ impl ReportResults {
             let measure_id = self.measure_id(context, measure_key).await?;
             let named = metric.inner;
 
-            // A bare threshold checks the conventional `value` series, of every
-            // variant under its measure, and nothing else. That is exactly what
-            // a measure level threshold over flat benchmarks has always done, so no
-            // project's alert volume moves.
-            let value = named.get(&MetricName::value()).copied();
-            let detector = self.detector(context, measure_id).await?;
-            let detection = match (value, detector) {
-                (Some(value), Some(detector)) => Some(detector.prepare_detection(
+            let mut detections: HashMap<MetricName, Vec<PreparedDetection>> = HashMap::new();
+            for threshold in self.threshold_cache.get(&measure_id).into_iter().flatten() {
+                let Some(value) = named.get(&threshold.metric).copied() else {
+                    continue;
+                };
+                if !threshold.checks(&parameters) {
+                    continue;
+                }
+                let name = threshold.metric.clone();
+                let detector = Detector {
+                    head_id: self.head_id,
+                    testbed_id: self.testbed_id,
+                    spec_id: self.spec_id,
+                    measure_id,
+                    threshold: threshold.clone(),
+                };
+                let detection = detector.prepare_detection(
                     log,
                     auth_conn!(context),
                     benchmark_id,
                     variant_id,
                     value.into_inner(),
                     ignore_benchmark,
-                )?),
-                _ => None,
-            };
+                )?;
+                detections.entry(name).or_default().push(detection);
+            }
 
             prepared_measures.push(PreparedMeasure {
                 measure_id,
                 named,
-                detection,
+                detections,
             });
         }
 
@@ -432,29 +452,6 @@ impl ReportResults {
             measure_id
         })
     }
-
-    async fn detector(
-        &mut self,
-        context: &ApiContext,
-        measure_id: MeasureId,
-    ) -> Result<Option<Detector>, HttpError> {
-        Ok(
-            if let Some(detector) = self.detector_cache.get(&measure_id) {
-                detector.clone()
-            } else {
-                let detector = Detector::new(
-                    auth_conn!(context),
-                    self.branch_id,
-                    self.head_id,
-                    self.testbed_id,
-                    self.spec_id,
-                    measure_id,
-                );
-                self.detector_cache.insert(measure_id, detector.clone());
-                detector
-            },
-        )
-    }
 }
 
 /// Pre-computed data for a single variant within a report iteration.
@@ -502,38 +499,31 @@ fn write_variant(
     for prepared_measure in measures {
         let PreparedMeasure {
             measure_id,
-            mut named,
-            detection,
+            named,
+            mut detections,
         } = prepared_measure;
 
-        // The point estimate goes in first so that `last_insert_rowid` still names
-        // the row a boundary attaches to. Detection has only ever checked the `value`
-        // scalar. A BMF v1 measure may name no `value` at all, in which case there
-        // is nothing to check.
-        if let Some(value) = named.remove(&MetricName::value()) {
+        let mut insert_named = Vec::with_capacity(named.len());
+        for (name, value) in named {
             let insert_metric = InsertMetric::named(
                 report_benchmark_id,
                 measure_id,
-                MetricName::value(),
+                name.clone(),
                 value.into_inner(),
             );
+            let Some(prepared_detections) = detections.remove(&name) else {
+                insert_named.push(insert_metric);
+                continue;
+            };
             diesel::insert_into(schema::metric::table)
                 .values(&insert_metric)
                 .execute(conn)?;
-
-            // If there's a prepared detection, write boundary + optional alert
-            if let Some(prepared_detection) = detection {
-                let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
+            let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
+            for prepared_detection in prepared_detections {
                 prepared_detection.write(conn, metric_id)?;
             }
         }
 
-        let insert_named = named
-            .into_iter()
-            .map(|(name, value)| {
-                InsertMetric::named(report_benchmark_id, measure_id, name, value.into_inner())
-            })
-            .collect::<Vec<_>>();
         if !insert_named.is_empty() {
             diesel::insert_into(schema::metric::table)
                 .values(&insert_named)
@@ -549,9 +539,7 @@ struct PreparedMeasure {
     measure_id: MeasureId,
     /// Every metric the measure reported, in lexicographic order.
     named: NamedMap,
-    /// The detection prepared for the `value` scalar. `None` when no threshold
-    /// covers the measure, or when the measure named no point estimate.
-    detection: Option<PreparedDetection>,
+    detections: HashMap<MetricName, Vec<PreparedDetection>>,
 }
 
 fn strip_ignore_suffix(benchmark: BenchmarkNameId) -> (BenchmarkNameId, bool) {

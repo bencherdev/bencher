@@ -49,7 +49,7 @@ pub fn metrics_data(
         benchmark_id,
         variant_id,
         measure_id: detector.measure_id,
-        metric_name: MetricName::value(),
+        metric_name: detector.threshold.metric.clone(),
         spec_id: detector.spec_id,
         start_time,
         max_sample_size: model.max_sample_size.map(i64::from),
@@ -60,10 +60,6 @@ pub fn metrics_data(
     Ok(MetricsData { data })
 }
 
-// The sample is one variant's `value` scalars, never pooled variants or the bounds
-// stored beside them. A head's version numbers rise with its version ids, so walking
-// the head's index newest first keeps version order and stops once the limit is met,
-// and pinning the benchmark index keeps each report from scanning all of its results.
 struct HistoryQuery {
     head_id: HeadId,
     testbed_id: TestbedId,
@@ -105,7 +101,7 @@ impl QueryFragment<Sqlite> for HistoryQuery {
         pass.push_sql(
             "SELECT metric.value FROM head_version \
              CROSS JOIN report \
-             CROSS JOIN report_benchmark INDEXED BY index_report_benchmark_benchmark_report \
+             CROSS JOIN report_benchmark INDEXED BY index_report_benchmark_variant_report \
              CROSS JOIN metric \
              WHERE head_version.head_id = ",
         );
@@ -146,7 +142,9 @@ impl QueryFragment<Sqlite> for HistoryQuery {
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, MetricName, ModelTest, ParameterSet, SampleSize, Window};
+    use bencher_json::{
+        DateTime, MetricName, ModelTest, ParameterSet, SampleSize, ThresholdUuid, Window,
+    };
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SqliteConnection};
     use pretty_assertions::assert_eq;
 
@@ -382,6 +380,9 @@ mod tests {
             measure_id: fixture.measure,
             threshold: Threshold {
                 id: ThresholdId::default(),
+                uuid: ThresholdUuid::default(),
+                parameters: None,
+                metric: MetricName::value(),
                 model: ThresholdModel {
                     id: ModelId::default(),
                     test: ModelTest::TTest,

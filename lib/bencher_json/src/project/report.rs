@@ -68,7 +68,8 @@ pub struct JsonReportThresholds {
     /// Map of measure UUID, slug, or name to the threshold model to use.
     /// If a measure name or slug is provided, the measure will be created if it does not exist.
     pub models: Option<HashMap<MeasureNameId, Model>>,
-    /// Reset all thresholds for the branch and testbed.
+    /// Reset the thresholds of the branch and testbed that the `models` map can address,
+    /// the ones with no parameters filter and no metric name.
     /// Any models present in the `models` field will still be updated accordingly.
     /// If a threshold already exists and is not present in the `models` field,
     /// its current model will be removed.
@@ -478,8 +479,9 @@ pub struct JsonReportMetric {
     pub uuid: MetricUuid,
     pub name: MetricName,
     pub value: OrderedFloat<f64>,
-    /// Every threshold that checked this metric, with the boundary it produced.
-    /// Length 0 or 1 until threshold predicates ship.
+    /// Every threshold that checked this metric, with the boundary it produced,
+    /// in UUID order: creation order for a `UUIDv7` and deterministic for all.
+    /// The order is not a ranking, and the first entry is not a winner.
     pub boundaries: Vec<JsonReportBoundary>,
 }
 

@@ -61,7 +61,12 @@ impl From<Create> for JsonNewThreshold {
         Self {
             branch: branch.into(),
             testbed: testbed.into(),
+            // The CLI creates the bare threshold: the conventional `value` name of
+            // every variant. A threshold that checks a name or only some variants
+            // is created through the API.
+            parameters: None,
             measure: measure.into(),
+            metric: None,
             test,
             min_sample_size,
             max_sample_size,

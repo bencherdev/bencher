@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, Model};
+use bencher_valid::{DateTime, MetricName, Model};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -9,8 +9,8 @@ use serde::{
 };
 
 use crate::{
-    BranchNameId, JsonBranch, JsonMeasure, JsonModel, JsonTestbed, MeasureNameId, ProjectUuid,
-    TestbedNameId,
+    BranchNameId, JsonBranch, JsonMeasure, JsonModel, JsonTestbed, MeasureNameId, ParameterFilter,
+    ProjectUuid, TestbedNameId,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -23,8 +23,18 @@ pub struct JsonNewThreshold {
     pub branch: BranchNameId,
     /// The UUID, slug, or name of the threshold testbed.
     pub testbed: TestbedNameId,
+    /// The variants this threshold checks, as a parameters filter.
+    /// A variant matches when any entry in the filter is a subset of its parameters.
+    /// If not set, or set to an empty list, the threshold checks every variant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     /// The UUID, slug, or name of the threshold measure.
     pub measure: MeasureNameId,
+    /// The name of the metric this threshold checks.
+    /// If not set, the threshold checks the conventional `value` name.
+    /// A threshold always checks exactly one name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<MetricName>,
     #[serde(flatten)]
     pub model: Model,
 }
@@ -43,7 +53,15 @@ pub struct JsonThreshold {
     pub project: ProjectUuid,
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,
+    /// The variants this threshold checks, in canonical order.
+    /// Absent when the threshold checks every variant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     pub measure: JsonMeasure,
+    /// The name of the metric this threshold checks.
+    /// Absent when the threshold checks the conventional `value` name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<MetricName>,
     pub model: Option<JsonModel>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -55,6 +73,14 @@ pub struct JsonThreshold {
 pub struct JsonThresholdModel {
     pub uuid: ThresholdUuid,
     pub project: ProjectUuid,
+    /// The variants this threshold checks, in canonical order.
+    /// Absent when the threshold checks every variant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
+    /// The name of the metric this threshold checks.
+    /// Absent when the threshold checks the conventional `value` name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<MetricName>,
     pub model: JsonModel,
     pub created: DateTime,
 }

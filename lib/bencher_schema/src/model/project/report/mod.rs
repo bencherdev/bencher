@@ -3,8 +3,9 @@ use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
 use std::collections::HashSet;
 
 use bencher_json::{
-    BmfVersion, DateTime, JsonBenchmark, JsonMeasure, JsonMetricTriple, JsonNewReport, JsonReport,
-    JsonReportAlertsCounts, JsonReportCounts, JsonReportIterationCounts, MetricName, ReportUuid,
+    BmfVersion, DateTime, JsonBenchmark, JsonBoundary, JsonMeasure, JsonMetricTriple,
+    JsonNewReport, JsonReport, JsonReportAlertsCounts, JsonReportCounts, JsonReportIterationCounts,
+    MetricName, ReportUuid,
     project::{
         alert::AlertStatus,
         report::{
@@ -12,6 +13,7 @@ use bencher_json::{
             JsonReportMetric, JsonReportResult, JsonReportResults, JsonReportSettings,
             JsonReportVariant, ReportIdempotencyKey,
         },
+        threshold::JsonThresholdModel,
     },
 };
 use diesel::OptionalExtension as _;
@@ -724,9 +726,11 @@ fn report_results_query(
                 schema::threshold::id,
                 schema::threshold::uuid,
                 schema::threshold::project_id,
-                schema::threshold::measure_id,
                 schema::threshold::branch_id,
                 schema::threshold::testbed_id,
+                schema::threshold::parameters,
+                schema::threshold::measure_id,
+                schema::threshold::metric,
                 schema::threshold::model_id,
                 schema::threshold::created,
                 schema::threshold::modified,
@@ -767,9 +771,8 @@ fn into_report_results_json(
     let mut report_iteration: Vec<PendingResult> = Vec::new();
     let mut prev_iteration: Option<Iteration> = None;
 
-    for (iteration, query_benchmark, query_variant, query_measure, query_metric, report_boundary) in
-        results
-    {
+    for row in results {
+        let iteration = row.0;
         // If onto a new iteration, then add the report iteration list to the report results list.
         if let Some(prev_iteration) = prev_iteration.take()
             && iteration != prev_iteration
@@ -781,74 +784,7 @@ fn into_report_results_json(
         }
         prev_iteration = Some(iteration);
 
-        // A result is one variant: the same benchmark with different parameters
-        // is a different result.
-        let benchmark_uuid = query_benchmark.uuid;
-        let variant_uuid = query_variant.uuid;
-        if report_iteration.last().is_none_or(|result| {
-            result.benchmark.uuid != benchmark_uuid || result.variant.uuid != variant_uuid
-        }) {
-            report_iteration.push(PendingResult {
-                iteration,
-                benchmark: query_benchmark.into_json_for_project(project),
-                variant: query_variant.into_report_json(),
-                measures: Vec::new(),
-            });
-        }
-        let Some(report_result) = report_iteration.last_mut() else {
-            debug_assert!(false, "the report result was just pushed");
-            continue;
-        };
-
-        let measure_uuid = query_measure.uuid;
-        if report_result
-            .measures
-            .last()
-            .is_none_or(|report_measure| report_measure.measure.uuid != measure_uuid)
-        {
-            report_result.measures.push(PendingMeasure {
-                measure: query_measure.into_json_for_project(project),
-                metrics: Vec::new(),
-            });
-        }
-        let Some(report_measure) = report_result.measures.last_mut() else {
-            debug_assert!(false, "the report measure was just pushed");
-            continue;
-        };
-
-        // One metric repeats across rows only when several thresholds checked it.
-        let QueryMetric {
-            id: _,
-            uuid,
-            report_benchmark_id: _,
-            measure_id: _,
-            name,
-            value,
-        } = query_metric;
-        if report_measure
-            .metrics
-            .last()
-            .is_none_or(|report_metric| report_metric.uuid != uuid)
-        {
-            report_measure.metrics.push(JsonReportMetric {
-                uuid,
-                name,
-                value: value.into(),
-                boundaries: Vec::new(),
-            });
-        }
-        let Some(report_metric) = report_measure.metrics.last_mut() else {
-            debug_assert!(false, "the report metric was just pushed");
-            continue;
-        };
-
-        if let Some((query_threshold, query_model, query_boundary)) = report_boundary {
-            report_metric.boundaries.push(JsonReportBoundary {
-                threshold: query_threshold
-                    .into_threshold_model_json_for_project(project, query_model),
-                boundary: query_boundary.into_json(),
-            });
-        }
+        push_result_row(project, &mut report_iteration, row);
     }
 
     // Save from the last iteration
@@ -871,6 +807,87 @@ fn into_report_results_json(
     report_results
 }
 
+fn push_result_row(
+    project: &QueryProject,
+    report_iteration: &mut Vec<PendingResult>,
+    row: ResultsQuery,
+) {
+    let (iteration, query_benchmark, query_variant, query_measure, query_metric, report_boundary) =
+        row;
+
+    let benchmark_uuid = query_benchmark.uuid;
+    let variant_uuid = query_variant.uuid;
+    if report_iteration.last().is_none_or(|result| {
+        result.benchmark.uuid != benchmark_uuid || result.variant.uuid != variant_uuid
+    }) {
+        report_iteration.push(PendingResult {
+            iteration,
+            benchmark: query_benchmark.into_json_for_project(project),
+            variant: query_variant.into_report_json(),
+            measures: Vec::new(),
+        });
+    }
+    let Some(report_result) = report_iteration.last_mut() else {
+        debug_assert!(false, "the report result was just pushed");
+        return;
+    };
+
+    let measure_uuid = query_measure.uuid;
+    if report_result
+        .measures
+        .last()
+        .is_none_or(|report_measure| report_measure.measure.uuid != measure_uuid)
+    {
+        report_result.measures.push(PendingMeasure {
+            measure: query_measure.into_json_for_project(project),
+            metrics: Vec::new(),
+            bare_check: None,
+        });
+    }
+    let Some(report_measure) = report_result.measures.last_mut() else {
+        debug_assert!(false, "the report measure was just pushed");
+        return;
+    };
+
+    let QueryMetric {
+        id: _,
+        uuid,
+        report_benchmark_id: _,
+        measure_id: _,
+        name,
+        value,
+    } = query_metric;
+    if report_measure
+        .metrics
+        .last()
+        .is_none_or(|report_metric| report_metric.uuid != uuid)
+    {
+        report_measure.metrics.push(JsonReportMetric {
+            uuid,
+            name,
+            value: value.into(),
+            boundaries: Vec::new(),
+        });
+    }
+
+    if let Some((query_threshold, query_model, query_boundary)) = report_boundary {
+        let is_bare = query_threshold.is_bare();
+        let report_boundary = JsonReportBoundary {
+            threshold: query_threshold.into_threshold_model_json_for_project(project, query_model),
+            boundary: query_boundary.into_json(),
+        };
+        if is_bare {
+            report_measure.bare_check =
+                Some((report_boundary.threshold.clone(), report_boundary.boundary));
+        }
+        let Some(report_metric) = report_measure.metrics.last_mut() else {
+            debug_assert!(false, "the report metric was just pushed");
+            return;
+        };
+        report_metric.boundaries.push(report_boundary);
+    }
+}
+
 /// One report result under construction.
 ///
 /// The deprecated metric triple is reconstructed from a measure's `value` row and its
@@ -887,6 +904,7 @@ struct PendingResult {
 struct PendingMeasure {
     measure: JsonMeasure,
     metrics: Vec<JsonReportMetric>,
+    bare_check: Option<(JsonThresholdModel, JsonBoundary)>,
 }
 
 impl PendingResult {
@@ -920,7 +938,17 @@ impl PendingMeasure {
     /// three deprecated fields are absent. Only a BMF v1 payload can report that
     /// shape, and its metrics are stored, billed, and returned like any other.
     fn into_json(self) -> JsonReportMeasure {
-        let Self { measure, metrics } = self;
+        let Self {
+            measure,
+            mut metrics,
+            bare_check,
+        } = self;
+
+        for report_metric in &mut metrics {
+            report_metric
+                .boundaries
+                .sort_by_key(|check| check.threshold.uuid);
+        }
 
         let named = |name: &MetricName| -> Option<&JsonReportMetric> {
             metrics
@@ -934,15 +962,9 @@ impl PendingMeasure {
             lower_value: named(&MetricName::lower_value()).map(|metric| metric.value),
             upper_value: named(&MetricName::upper_value()).map(|metric| metric.value),
         });
-        let (threshold, boundary) = value.and_then(|value| value.boundaries.first()).map_or(
-            (None, None),
-            |report_boundary| {
-                (
-                    Some(report_boundary.threshold.clone()),
-                    Some(report_boundary.boundary),
-                )
-            },
-        );
+        let (threshold, boundary) = bare_check.map_or((None, None), |(threshold, boundary)| {
+            (Some(threshold), Some(boundary))
+        });
 
         JsonReportMeasure {
             measure,

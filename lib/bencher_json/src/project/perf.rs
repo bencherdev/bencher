@@ -476,7 +476,9 @@ pub struct JsonPerfMetrics {
 pub struct JsonMetricEntry {
     pub value: OrderedFloat<f64>,
     /// Every threshold that checked this metric, with the boundary it produced
-    /// and any alert that boundary raised. Absent when nothing checked it.
+    /// and any alert that boundary raised, in UUID order: creation order for a
+    /// `UUIDv7` and deterministic for all. Absent when nothing checked it.
+    /// The order is not a ranking, and the first entry is not a winner.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub boundaries: Option<Vec<JsonPerfBoundary>>,
 }
