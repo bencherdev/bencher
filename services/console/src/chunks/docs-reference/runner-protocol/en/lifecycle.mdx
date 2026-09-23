@@ -22,12 +22,10 @@ Each Job moves through a fixed set of states as it is claimed, executed, and pro
 | completed | processed   | The server successfully processes the results                          |
 | completed | failed      | The server fails to process the results                                |
 | completed | unknown     | At startup, the server finds the stored results were lost              |
-| failed    | completed   | The Runner resends `completed`, overriding a `failed` status           |
 
-`processed` and `canceled` are terminal.
-`completed` and `failed` are quasi-terminal:
-`completed` transitions to `processed` once the results are parsed,
-and `failed` transitions to `completed` if the Runner resends `completed`.
+`processed`, `failed`, and `canceled` are terminal: a `failed` or `canceled` Job never changes state again.
+`completed` is quasi-terminal:
+`completed` transitions to `processed` once the results are parsed, to `failed` if they cannot be processed, or to `unknown` if the server finds at startup that they were lost.
 `unknown` means the server has lost contact with the Runner and does not yet know the outcome.
 It is resolved when the Runner speaks again, with the result it sends,
 or as `canceled` when the Job's deadline passes.

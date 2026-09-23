@@ -39,7 +39,8 @@ and resending a terminal `completed`, `failed`, or `canceled` message is always 
 Terminal messages carry the Job UUID and receive an `ack`;
 if the connection drops before the `ack` arrives,
 the Runner stores the result and resends it on the next connection before going idle.
-A Runner's actual `completed` result resolves an `unknown` Job, and can even override a `failed` status.
+A Runner's result resolves an `unknown` Job.
+A `failed` or `canceled` Job never changes state again: a late result is acknowledged, so the Runner stops resending it, and discarded.
 
 ### No Automatic Retry
 

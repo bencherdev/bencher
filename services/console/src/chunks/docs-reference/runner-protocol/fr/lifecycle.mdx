@@ -22,12 +22,10 @@ Chaque Job traverse un ensemble fixe d'états au fur et à mesure qu'il est réc
 | completed | processed   | Le serveur traite les résultats avec succès                            |
 | completed | failed      | Le serveur ne parvient pas à traiter les résultats                     |
 | completed | unknown     | Au démarrage, le serveur constate que les résultats stockés ont été perdus |
-| failed    | completed   | Le Runner renvoie `completed`, écrasant un statut `failed`             |
 
-`processed` et `canceled` sont terminaux.
-`completed` et `failed` sont quasi terminaux :
-`completed` passe à `processed` une fois les résultats analysés,
-et `failed` passe à `completed` si le Runner renvoie `completed`.
+`processed`, `failed` et `canceled` sont terminaux : un Job `failed` ou `canceled` ne change plus jamais d'état.
+`completed` est quasi terminal :
+`completed` passe à `processed` une fois les résultats analysés, à `failed` s'ils ne peuvent pas être traités, ou à `unknown` si le serveur constate au démarrage qu'ils ont été perdus.
 `unknown` signifie que le serveur a perdu le contact avec le Runner et ne connaît pas encore le résultat.
 Il est résolu lorsque le Runner se manifeste à nouveau, avec le résultat qu'il envoie,
 ou en `canceled` lorsque l'échéance du Job est passée.

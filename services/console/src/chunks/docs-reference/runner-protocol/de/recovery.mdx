@@ -39,7 +39,8 @@ und das erneute Senden einer terminalen `completed`-, `failed`- oder `canceled`-
 Terminale Nachrichten tragen die Job-UUID und erhalten ein `ack`;
 bricht die Verbindung ab, bevor das `ack` eintrifft,
 speichert der Runner das Ergebnis und sendet es bei der nächsten Verbindung erneut, bevor er in den Leerlauf geht.
-Das tatsächliche `completed`-Ergebnis eines Runner löst einen `unknown`-Job auf und kann sogar einen `failed`-Status überschreiben.
+Das Ergebnis eines Runner löst einen `unknown`-Job auf.
+Ein `failed`- oder `canceled`-Job ändert seinen Zustand nie wieder: Ein verspätetes Ergebnis wird bestätigt, damit der Runner es nicht erneut sendet, und verworfen.
 
 ### Kein automatischer erneuter Versuch
 

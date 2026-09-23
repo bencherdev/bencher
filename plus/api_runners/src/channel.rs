@@ -634,13 +634,11 @@ async fn handle_completed(
 
     let update = UpdateJob::terminate(JobStatus::Completed, now);
 
-    // Allow Failed → Completed so a resent Completed still overrides a Failed
-    // status. Losing contact marks a job Unknown, not Failed, so a heartbeat
-    // timeout no longer leads here.
-    let updated = update.execute_if_any_status(
+    let updated = update.execute_if_either_status(
         write_conn!(context),
         job.id,
-        &[JobStatus::Running, JobStatus::Unknown, JobStatus::Failed],
+        JobStatus::Running,
+        JobStatus::Unknown,
     )?;
 
     // Re-read job to get fresh timestamps (started, claimed) set during execution.
@@ -652,8 +650,8 @@ async fn handle_completed(
             slog::debug!(log, "Job already completed (idempotent duplicate)"; "job_id" => ?job.id);
             return Ok(());
         }
-        if job.status == JobStatus::Canceled {
-            slog::warn!(log, "Job already canceled, completion report lost"; "job_id" => ?job.id);
+        if matches!(job.status, JobStatus::Failed | JobStatus::Canceled) {
+            discard_late_result(log, job.id, job.status);
             return Ok(());
         }
         return Err(ChannelError::InvalidStateTransition {
@@ -750,7 +748,7 @@ async fn handle_failed(
             return Ok(());
         }
         if current_job.status.has_run() {
-            slog::warn!(log, "Job already in terminal state, failure report lost"; "job_id" => ?job.id, "current_status" => ?current_job.status);
+            discard_late_result(log, job.id, current_job.status);
             return Ok(());
         }
         return Err(ChannelError::InvalidStateTransition {
@@ -777,6 +775,14 @@ async fn handle_failed(
     Ok(())
 }
 
+/// A runner result for a job that already has an outcome is acknowledged,
+/// so the runner stops resending it, and discarded.
+fn discard_late_result(log: &slog::Logger, job_id: JobId, status: JobStatus) {
+    slog::warn!(log, "Discarding late runner result"; "job_id" => ?job_id, "status" => %status);
+    #[cfg(feature = "otel")]
+    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerLateResultDiscarded);
+}
+
 /// Store job output in blob storage.
 async fn store_job_output(
     context: &ApiContext,
@@ -794,7 +800,8 @@ async fn store_job_output(
 /// Handle a Canceled message: runner acknowledges cancellation, ensure job is in Canceled state.
 ///
 /// Uses a status filter on the UPDATE to avoid TOCTOU races. If zero rows updated,
-/// re-reads to check whether the job is already Canceled (idempotent success).
+/// re-reads to check whether the job is already Canceled (idempotent success)
+/// or already has another outcome (acknowledged and discarded).
 async fn handle_canceled(
     log: &slog::Logger,
     context: &ApiContext,
@@ -827,6 +834,10 @@ async fn handle_canceled(
 
     if job.status == JobStatus::Canceled {
         slog::debug!(log, "Job already canceled"; "job_id" => ?job_id);
+        return Ok(());
+    }
+    if job.status.has_run() {
+        discard_late_result(log, job_id, job.status);
         return Ok(());
     }
 

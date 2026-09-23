@@ -39,7 +39,8 @@ Runner가 재연결하여 heartbeat를 재개했다면 Job은 계속됩니다.
 종단 메시지는 Job UUID를 담아 `ack`를 받습니다.
 `ack`가 도착하기 전에 연결이 끊기면,
 Runner는 결과를 저장하고 유휴 상태로 돌아가기 전에 다음 연결에서 다시 전송합니다.
-Runner의 실제 `completed` 결과는 `unknown` Job을 해결하며, `failed` 상태를 재정의할 수도 있습니다.
+Runner의 결과는 `unknown` Job을 해결합니다.
+`failed` 또는 `canceled` Job의 상태는 다시는 바뀌지 않습니다. 늦게 도착한 결과는 Runner가 재전송을 멈추도록 `ack`를 받은 뒤 폐기됩니다.
 
 ### 자동 재시도 없음
 

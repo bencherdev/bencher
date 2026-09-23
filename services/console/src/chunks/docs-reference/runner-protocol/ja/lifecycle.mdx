@@ -22,12 +22,10 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 | completed | processed   | サーバーが結果を正常に処理する                                          |
 | completed | failed      | サーバーが結果の処理に失敗する                                                        |
 | completed | unknown     | 起動時に、保存された結果が失われていたことをサーバーが検出する                                        |
-| failed    | completed   | Runner が `completed` を再送し、`failed` ステータスを上書きする                         |
 
-`processed` と `canceled` は終端状態です。
-`completed` と `failed` は準終端状態です。
-`completed` は結果が解析されると `processed` に遷移し、
-`failed` は Runner が `completed` を再送すると `completed` に遷移します。
+`processed`、`failed`、`canceled` は終端状態です。`failed` または `canceled` の Job の状態が変わることは二度とありません。
+`completed` は準終端状態です。
+`completed` は結果が解析されると `processed` に、処理できなかった場合は `failed` に、起動時に結果が失われていたことをサーバーが検出した場合は `unknown` に遷移します。
 `unknown` は、サーバーが Runner との接続を失い、結果をまだ把握していないことを意味します。
 Runner が再び応答すると、その送信した結果によって解決され、
 Job の期限を過ぎると `canceled` として解決されます。

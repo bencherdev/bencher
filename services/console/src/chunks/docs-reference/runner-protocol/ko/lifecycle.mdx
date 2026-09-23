@@ -22,12 +22,10 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 | completed | processed   | 서버가 결과를 성공적으로 처리합니다                                    |
 | completed | failed      | 서버가 결과 처리에 실패합니다                                                       |
 | completed | unknown     | 시작 시 서버가 저장된 결과가 유실된 것을 발견합니다                                          |
-| failed    | completed   | Runner가 `completed`를 재전송하여 `failed` 상태를 재정의합니다                         |
 
-`processed`와 `canceled`는 종단(terminal) 상태입니다.
-`completed`와 `failed`는 준종단(quasi-terminal) 상태입니다:
-`completed`는 결과가 파싱되면 `processed`로 전환되고,
-`failed`는 Runner가 `completed`를 재전송하면 `completed`로 전환됩니다.
+`processed`, `failed`, `canceled`는 종단(terminal) 상태입니다. `failed` 또는 `canceled` Job의 상태는 다시는 바뀌지 않습니다.
+`completed`는 준종단(quasi-terminal) 상태입니다:
+`completed`는 결과가 파싱되면 `processed`로, 처리할 수 없으면 `failed`로, 시작 시 서버가 결과가 유실된 것을 발견하면 `unknown`으로 전환됩니다.
 `unknown`은 서버가 Runner와의 연결을 잃어 아직 결과를 알지 못한다는 뜻입니다.
 Runner가 다시 응답하면 보낸 결과로 해결되고,
 Job의 기한이 지나면 `canceled`로 해결됩니다.

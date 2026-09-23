@@ -70,6 +70,17 @@ async fn setup_claimed_job(
     (ws, runner.uuid, runner_key, job_uuid)
 }
 
+/// Whether result processing recorded a job duration for the report.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn job_duration_recorded(server: &TestServer, report_id: i32) -> bool {
+    let count: i64 = schema::job_duration_by_report::table
+        .filter(schema::job_duration_by_report::report_id.eq(report_id))
+        .count()
+        .get_result(&mut server.db_conn())
+        .expect("Failed to count job durations");
+    count > 0
+}
+
 /// Read the job status directly from the database.
 #[expect(clippy::expect_used, reason = "test helper")]
 fn get_job_status(server: &TestServer, job_uuid: JobUuid) -> JobStatus {
@@ -1018,44 +1029,14 @@ async fn channel_completed_with_output() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
-/// Completed overrides a heartbeat-timeout-induced Failed status.
-///
-/// Race scenario:
-/// 1. Runner finishes benchmark, sends Completed
-/// 2. Connection drops before ACK
-/// 3. Server heartbeat timeout fires → marks job Failed
-/// 4. Runner reconnects, resends Completed with actual results
-/// 5. Results should win over the heartbeat-timeout-induced Failed
+/// A Failed job is final: a runner that resends Completed after reconnecting
+/// gets an Ack, so it stops retrying, and its results are discarded.
 #[tokio::test]
-async fn channel_completed_overrides_failed() {
+async fn channel_completed_during_idle_discarded_for_failed() {
     let server = TestServer::new().await;
-    let admin = server.signup("Admin", "ws-comp-override@example.com").await;
-    let org = server.create_org(&admin, "Ws comp-override").await;
-    let project = server
-        .create_project(&admin, &org, "Ws comp-override proj")
-        .await;
+    let (mut ws, job_uuid, report_id) =
+        setup_reconnect_with_job_in(&server, "idle-late-failed", JobStatus::Failed).await;
 
-    let runner = create_runner(&server, &admin.token, "Runner comp-override").await;
-    let runner_key = runner.key.to_string();
-
-    let project_id = get_project_id(&server, project.slug.as_ref());
-    let report_id = create_test_report(&server, project_id);
-    let (_, spec_id) = insert_test_spec(&server);
-    let job_uuid = insert_test_job(&server, report_id, spec_id);
-
-    let runner_id = get_runner_id(&server, runner.uuid);
-    associate_runner_spec(&server, runner_id, spec_id);
-
-    // Simulate: job was Running but heartbeat timeout marked it Failed
-    set_job_status(&server, job_uuid, JobStatus::Running);
-    set_job_runner_id(&server, job_uuid, runner_id);
-    set_job_status(&server, job_uuid, JobStatus::Failed);
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
-
-    // Runner reconnects and resends Completed during Idle (retry after reconnect)
-    let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
-
-    // Send Completed before Ready (terminal message retry during Idle)
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
@@ -1071,12 +1052,83 @@ async fn channel_completed_overrides_failed() {
     .await;
     let resp = recv_msg(&mut ws).await;
     assert!(
-        matches!(resp, ServerMessage::Ack { .. }),
-        "Expected Ack for retried Completed, got: {resp:?}"
+        matches!(resp, ServerMessage::Ack { job: Some(job) } if job == job_uuid),
+        "Expected Ack for a late Completed, got: {resp:?}"
     );
 
-    // Results should have been processed — job transitions to Processed
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+    assert!(
+        !job_duration_recorded(&server, report_id),
+        "A discarded result must not be processed"
+    );
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// A runner that resends `canceled` for a job that already has an outcome gets an Ack,
+/// so it stops retrying, and the job keeps its status.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn assert_late_canceled_discarded(suffix: &str, status: JobStatus) {
+    let server = TestServer::new().await;
+    let (mut ws, job_uuid, _report_id) = setup_reconnect_with_job_in(&server, suffix, status).await;
+
+    send_msg(&mut ws, &RunnerMessage::Canceled { job: job_uuid }).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack { job: Some(job) } if job == job_uuid),
+        "Expected Ack for a late Canceled on a {status} job, got: {resp:?}"
+    );
+    assert_eq!(
+        get_job_status(&server, job_uuid),
+        status,
+        "A late Canceled must not change the job's status"
+    );
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+#[tokio::test]
+async fn channel_canceled_during_idle_discarded_for_failed() {
+    assert_late_canceled_discarded("idle-late-cancel-failed", JobStatus::Failed).await;
+}
+
+#[tokio::test]
+async fn channel_canceled_during_idle_discarded_for_processed() {
+    assert_late_canceled_discarded("idle-late-cancel-processed", JobStatus::Processed).await;
+}
+
+/// A Canceled job is final: a runner that resends Completed after reconnecting
+/// gets an Ack, so it stops retrying, and its results are discarded.
+#[tokio::test]
+async fn channel_completed_during_idle_discarded_for_canceled() {
+    let server = TestServer::new().await;
+    let (mut ws, job_uuid, report_id) =
+        setup_reconnect_with_job_in(&server, "idle-late-canceled", JobStatus::Canceled).await;
+
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            job: job_uuid,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack { job: Some(job) } if job == job_uuid),
+        "Expected Ack for a late Completed, got: {resp:?}"
+    );
+
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+    assert!(
+        !job_duration_recorded(&server, report_id),
+        "A discarded result must not be processed"
+    );
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }
@@ -1619,8 +1671,8 @@ async fn channel_completed_after_concurrent_cancel() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
-/// Completed message after job was concurrently failed (by timeout) should override
-/// the Failed status — actual results from the runner win over heartbeat-timeout-induced failure.
+/// Completed message after the job was concurrently marked Failed is acknowledged
+/// and discarded: a Failed job is final.
 #[tokio::test]
 async fn channel_completed_after_concurrent_failure() {
     let server = TestServer::new().await;
@@ -1633,10 +1685,10 @@ async fn channel_completed_after_concurrent_failure() {
     assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Running);
 
-    // Mark job Failed in DB (simulating heartbeat timeout on a different connection)
+    // Mark job Failed in DB (simulating a concurrent failure)
     set_job_status(&server, job_uuid, JobStatus::Failed);
 
-    // Send Completed — should override the heartbeat-timeout-induced Failed status
+    // Send Completed: acknowledged, but the job stays Failed
     send_msg(
         &mut ws,
         &RunnerMessage::Completed {
@@ -1656,8 +1708,16 @@ async fn channel_completed_after_concurrent_failure() {
         "Expected Ack for Completed after concurrent failure, got: {resp:?}"
     );
 
-    // Results win: job transitions through Completed to Processed
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+    let report_id: i32 = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::report_id)
+        .first(&mut server.db_conn())
+        .expect("Failed to get job report");
+    assert!(
+        !job_duration_recorded(&server, report_id),
+        "A discarded result must not be processed"
+    );
 
     // Connection stays open. Close from client side.
     ws.close(None).await.expect("Failed to close WebSocket");
@@ -2432,7 +2492,7 @@ async fn setup_reconnect_with_job_in(
 #[tokio::test]
 async fn channel_completed_during_idle_resolves_unknown() {
     let server = TestServer::new().await;
-    let (mut ws, job_uuid, _report_id) =
+    let (mut ws, job_uuid, report_id) =
         setup_reconnect_with_job_in(&server, "idle-unknown-done", JobStatus::Unknown).await;
 
     send_msg(
@@ -2454,6 +2514,7 @@ async fn channel_completed_during_idle_resolves_unknown() {
         "Expected Ack for Completed on an Unknown job, got: {resp:?}"
     );
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+    assert!(job_duration_recorded(&server, report_id));
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }

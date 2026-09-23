@@ -22,12 +22,10 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 | completed | processed   | 服务器成功处理结果                          |
 | completed | failed      | 服务器处理结果失败                                                              |
 | completed | unknown     | 启动时，服务器发现已存储的结果丢失                                                      |
-| failed    | completed   | Runner 重新发送 `completed`，覆盖 `failed` 状态                                 |
 
-`processed` 和 `canceled` 是终止状态。
-`completed` 和 `failed` 是准终止状态：
-`completed` 在结果被解析后转换为 `processed`，
-而 `failed` 在 Runner 重新发送 `completed` 时转换为 `completed`。
+`processed`、`failed` 和 `canceled` 是终止状态：`failed` 或 `canceled` 的 Job 永远不会再改变状态。
+`completed` 是准终止状态：
+`completed` 在结果被解析后转换为 `processed`，在结果无法处理时转换为 `failed`，在服务器启动时发现结果丢失时转换为 `unknown`。
 `unknown` 表示服务器已与 Runner 失去联系，尚不知道结果。
 当 Runner 再次通信时，它会以 Runner 发送的结果解决；
 当 Job 的截止时间过去时，它会以 `canceled` 解决。
