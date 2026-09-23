@@ -9,7 +9,7 @@ Tant que la connexion est ouverte, un délai d'attente de lecture détecte un Ru
 Seuls les messages de protocole valides réinitialisent le minuteur ;
 le JSON invalide, les trames ping/pong et les messages binaires ne le font pas.
 À l'expiration, un Job qui s'est exécuté plus longtemps que son délai d'attente plus un délai de grâce est marqué `canceled`,
-et sinon marqué `failed` (le contact avec le Runner a été perdu).
+et sinon marqué `unknown` (le contact avec le Runner a été perdu).
 
 ### Délai d'attente strict du Job
 
@@ -17,16 +17,19 @@ Le serveur impose une durée d'exécution maximale stricte, indépendante du com
 de sorte qu'un Runner bogué ou compromis ne puisse pas s'exécuter indéfiniment en envoyant des heartbeats.
 Lorsque la limite (le délai d'attente du Job plus un délai de grâce) est dépassée,
 le Job est marqué `canceled` et le Runner reçoit un message `cancel`.
+La limite court à partir du démarrage du Job, ou de sa réclamation s'il n'a jamais démarré, et s'applique aussi à un Job `unknown`.
 
 ### Récupération après déconnexion
 
 Si la connexion tombe alors qu'un Job est encore en cours,
 le serveur planifie une vérification après le délai d'attente du heartbeat.
 Si le Runner s'est reconnecté et a repris ses heartbeats, le Job continue ;
-sinon, le Job est marqué `failed`, ou `canceled` s'il avait dépassé le délai d'attente strict.
-Au démarrage, le serveur récupère également les Jobs `claimed` orphelins,
-replanifie les délais d'attente des Jobs en cours,
-et retraite les Jobs `completed` dont les résultats ont été stockés mais pas encore analysés.
+sinon, le Job est marqué `unknown`, ou `canceled` s'il avait dépassé le délai d'attente strict.
+Le serveur vérifie à nouveau un Job `unknown` à son échéance.
+Au démarrage, le serveur marque également les Jobs `claimed` orphelins comme `unknown`,
+replanifie les délais d'attente des Jobs en cours et `unknown`,
+et retraite les Jobs `completed` dont les résultats ont été stockés mais pas encore analysés ;
+un Job `completed` dont les résultats ont été perdus est marqué `unknown` afin que le Runner puisse les renvoyer.
 
 ### Reconnexion & livraison des résultats
 
@@ -36,7 +39,7 @@ et renvoyer un message terminal `completed`, `failed` ou `canceled` est toujours
 Les messages terminaux transportent l'UUID du Job et reçoivent un `ack` ;
 si la connexion tombe avant l'arrivée de l'`ack`,
 le Runner stocke le résultat et le renvoie lors de la prochaine connexion avant de redevenir inactif.
-Le résultat `completed` réel d'un Runner peut même écraser un statut `failed` dû à l'expiration du heartbeat.
+Le résultat `completed` réel d'un Runner résout un Job `unknown`, et peut même écraser un statut `failed`.
 
 ### Aucune nouvelle tentative automatique
 

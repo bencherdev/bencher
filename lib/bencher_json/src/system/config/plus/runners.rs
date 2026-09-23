@@ -27,7 +27,7 @@ static DEFAULT_JOB_TIMEOUT_GRACE_PERIOD: LazyLock<GracePeriod> = LazyLock::new(|
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonRunners {
-    /// Time in seconds without a heartbeat before marking a job as failed.
+    /// Time in seconds without a heartbeat before marking a job as unknown.
     /// Defaults to 90 seconds.
     #[serde(default = "default_heartbeat_timeout")]
     pub heartbeat_timeout: HeartbeatTimeout,

@@ -9,7 +9,7 @@ Während die Verbindung offen ist, erkennt ein Read-Timeout einen Runner, der ve
 Nur gültige Protokollnachrichten setzen den Timer zurück;
 ungültiges JSON, Ping/Pong-Frames und Binärnachrichten tun dies nicht.
 Bei einem Timeout wird ein Job, der länger als sein Timeout plus eine Karenzzeit gelaufen ist, als `canceled` markiert,
-andernfalls als `failed` (der Kontakt zum Runner ging verloren).
+andernfalls als `unknown` (der Kontakt zum Runner ging verloren).
 
 ### Hartes Job-Timeout
 
@@ -17,16 +17,19 @@ Der Server erzwingt unabhängig vom Verhalten des Runner eine harte maximale Aus
 sodass ein fehlerhafter oder kompromittierter Runner nicht durch das Senden von Heartbeats unbegrenzt laufen kann.
 Wird das Limit (das Job-Timeout plus eine Karenzzeit) überschritten,
 wird der Job als `canceled` markiert und der Runner erhält eine `cancel`-Nachricht.
+Das Limit zählt ab dem Start des Jobs, oder ab seiner Beanspruchung, falls er nie gestartet ist, und gilt auch für einen `unknown`-Job.
 
 ### Wiederherstellung bei Verbindungsabbruch
 
 Bricht die Verbindung ab, während ein Job noch in Bearbeitung ist,
 plant der Server nach dem Heartbeat-Timeout eine Prüfung ein.
 Hat sich der Runner erneut verbunden und die Heartbeats wieder aufgenommen, läuft der Job weiter;
-andernfalls wird der Job als `failed` markiert, oder als `canceled`, falls er das harte Timeout überschritten hatte.
-Beim Start stellt der Server außerdem verwaiste `claimed`-Jobs wieder her,
-plant Timeouts für in Bearbeitung befindliche Jobs neu
-und verarbeitet `completed`-Jobs erneut, deren Ergebnisse gespeichert, aber noch nicht geparst wurden.
+andernfalls wird der Job als `unknown` markiert, oder als `canceled`, falls er das harte Timeout überschritten hatte.
+Einen `unknown`-Job prüft der Server bei Ablauf seiner Frist erneut.
+Beim Start markiert der Server außerdem verwaiste `claimed`-Jobs als `unknown`,
+plant Timeouts für in Bearbeitung befindliche und `unknown`-Jobs neu
+und verarbeitet `completed`-Jobs erneut, deren Ergebnisse gespeichert, aber noch nicht geparst wurden;
+ein `completed`-Job, dessen Ergebnisse verloren gingen, wird als `unknown` markiert, damit der Runner sie erneut senden kann.
 
 ### Wiederverbindung & Ergebniszustellung
 
@@ -36,7 +39,7 @@ und das erneute Senden einer terminalen `completed`-, `failed`- oder `canceled`-
 Terminale Nachrichten tragen die Job-UUID und erhalten ein `ack`;
 bricht die Verbindung ab, bevor das `ack` eintrifft,
 speichert der Runner das Ergebnis und sendet es bei der nächsten Verbindung erneut, bevor er in den Leerlauf geht.
-Das tatsächliche `completed`-Ergebnis eines Runner kann sogar einen `failed`-Status durch Heartbeat-Timeout überschreiben.
+Das tatsächliche `completed`-Ergebnis eines Runner löst einen `unknown`-Job auf und kann sogar einen `failed`-Status überschreiben.
 
 ### Kein automatischer erneuter Versuch
 

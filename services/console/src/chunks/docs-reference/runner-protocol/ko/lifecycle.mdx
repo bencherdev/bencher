@@ -9,18 +9,28 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 | pending   | claimed     | Runner가 Job을 청구합니다                                              |
 | pending   | canceled    | 사용자가 Job을 취소합니다                                              |
 | claimed   | running     | Runner가 `running`을 보냅니다                                          |
-| claimed   | failed      | Runner가 `failed`를 보내거나, heartbeat가 타임아웃됩니다              |
+| claimed   | failed      | Runner가 `failed`를 보냅니다                                                 |
+| claimed   | unknown     | 서버가 Runner와의 연결을 잃습니다                                                  |
 | claimed   | canceled    | 사용자가 Job을 취소합니다                                              |
 | running   | completed   | Runner가 `completed`를 보냅니다                                        |
-| running   | failed      | Runner가 `failed`를 보내거나, heartbeat가 타임아웃됩니다              |
+| running   | failed      | Runner가 `failed`를 보냅니다                                                 |
+| running   | unknown     | 서버가 Runner와의 연결을 잃습니다                                                  |
 | running   | canceled    | 사용자가 Job을 취소하거나, 강제(hard) Job 타임아웃을 초과합니다       |
+| unknown   | completed   | Runner가 `completed`를 보냅니다                                              |
+| unknown   | failed      | Runner가 `failed`를 보냅니다                                                 |
+| unknown   | canceled    | 사용자가 Job을 취소하거나, 강제(hard) Job 타임아웃을 초과합니다                              |
 | completed | processed   | 서버가 결과를 성공적으로 처리합니다                                    |
-| failed    | completed   | Runner가 `completed`를 재전송하여 heartbeat 타임아웃 실패를 재정의합니다 |
+| completed | failed      | 서버가 결과 처리에 실패합니다                                                       |
+| completed | unknown     | 시작 시 서버가 저장된 결과가 유실된 것을 발견합니다                                          |
+| failed    | completed   | Runner가 `completed`를 재전송하여 `failed` 상태를 재정의합니다                         |
 
 `processed`와 `canceled`는 종단(terminal) 상태입니다.
 `completed`와 `failed`는 준종단(quasi-terminal) 상태입니다:
 `completed`는 결과가 파싱되면 `processed`로 전환되고,
 `failed`는 Runner가 `completed`를 재전송하면 `completed`로 전환됩니다.
+`unknown`은 서버가 Runner와의 연결을 잃어 아직 결과를 알지 못한다는 뜻입니다.
+Runner가 다시 응답하면 보낸 결과로 해결되고,
+Job의 기한이 지나면 `canceled`로 해결됩니다.
 모든 전환은 데이터베이스 업데이트에 상태 필터를 사용하므로,
 동시에 수정된 Job은 덮어쓰지 않고 다시 읽습니다.
 

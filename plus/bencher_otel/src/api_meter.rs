@@ -442,7 +442,7 @@ impl ApiCounter {
                 "Counts the number of runner minutes billed failures"
             },
             Self::RunnerHeartbeatTimeout => {
-                "Counts the number of jobs failed due to heartbeat timeout"
+                "Counts the number of jobs marked unknown due to heartbeat timeout"
             },
             Self::RunnerJobTimeout => {
                 "Counts the number of jobs canceled due to exceeding job timeout"

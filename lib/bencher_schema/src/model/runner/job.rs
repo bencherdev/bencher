@@ -67,6 +67,12 @@ impl QueryJob {
     fn_get_uuid!(job, JobId, JobUuid);
     fn_from_uuid!(job, JobUuid, Job);
 
+    /// When the job's deadline clock starts: when it started running,
+    /// or when it was claimed if it never started.
+    pub fn deadline_start(&self) -> Option<DateTime> {
+        self.started.or(self.claimed)
+    }
+
     #[cfg(feature = "plus")]
     pub fn runner_minutes_usage(
         conn: &mut DbConnection,
@@ -943,28 +949,48 @@ impl UpdateJob {
         .set(self)
         .execute(conn)
     }
+
+    /// Apply this changeset to a job, filtering on any of the expected statuses.
+    ///
+    /// Returns the number of rows updated (0 if the job was not in any expected status).
+    pub fn execute_if_any_status(
+        &self,
+        conn: &mut DbConnection,
+        job_id: JobId,
+        expected_statuses: &[JobStatus],
+    ) -> QueryResult<usize> {
+        diesel::update(
+            schema::job::table
+                .filter(schema::job::id.eq(job_id))
+                .filter(schema::job::status.eq_any(expected_statuses)),
+        )
+        .set(self)
+        .execute(conn)
+    }
 }
 
-/// Spawn a background task that marks a job as failed if no heartbeat is received
-/// within the timeout period. This handles both "disconnected runner" recovery
+/// Spawn a background task that marks a job as unknown if no heartbeat is received
+/// within the heartbeat timeout. This handles both "disconnected runner" recovery
 /// and startup recovery for in-flight jobs.
 ///
 /// Also enforces job timeout: if the job has been running longer than its configured
 /// `timeout` plus `job_timeout_grace_period`, it is marked as Canceled so the runner
-/// receives a Cancel event on its next heartbeat.
+/// receives a Cancel event on its next heartbeat. An unknown job hears no heartbeats,
+/// so the task then waits for the job's deadline and checks again.
 pub fn spawn_heartbeat_timeout(
     log: Logger,
-    timeout: std::time::Duration,
+    heartbeat_timeout: std::time::Duration,
     connection: Arc<Mutex<DbConnection>>,
     job_id: JobId,
     heartbeat_tasks: &crate::context::HeartbeatTasks,
     job_timeout_grace_period: std::time::Duration,
     clock: bencher_json::Clock,
 ) {
-    let join_handle = tokio::spawn({
-        let heartbeat_tasks = heartbeat_tasks.clone();
-        async move {
-            tokio::time::sleep(timeout).await;
+    let join_handle = tokio::spawn(async move {
+        let heartbeat_timeout_secs = i64::try_from(heartbeat_timeout.as_secs()).unwrap_or(i64::MAX);
+        let mut wait = heartbeat_timeout;
+        loop {
+            tokio::time::sleep(wait).await;
 
             let mut conn = connection.lock().await;
 
@@ -990,74 +1016,78 @@ pub fn spawn_heartbeat_timeout(
                 return;
             }
 
-            // If the runner reconnected and sent a recent heartbeat, don't fail the job
+            let now = clock.now();
+
+            // If the runner reconnected and sent a recent heartbeat, check again once it could be stale
             if let Some(last_heartbeat) = job.last_heartbeat {
-                let now = clock.now();
                 let elapsed = (now.timestamp() - last_heartbeat.timestamp()).max(0);
-                if elapsed < i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) {
-                    // Heartbeat is recent, runner reconnected — schedule another timeout
-                    let remaining = std::cmp::max(
-                        std::time::Duration::from_secs(
-                            u64::try_from(
-                                i64::try_from(timeout.as_secs()).unwrap_or(i64::MAX) - elapsed,
-                            )
-                            .unwrap_or(0),
-                        ),
-                        std::time::Duration::from_secs(1),
-                    );
-                    drop(conn);
-                    let connection_clone = connection.clone();
-                    spawn_heartbeat_timeout(
-                        log,
-                        remaining,
-                        connection_clone,
-                        job_id,
-                        &heartbeat_tasks,
-                        job_timeout_grace_period,
-                        clock,
-                    );
-                    return;
+                if elapsed < heartbeat_timeout_secs {
+                    let secs = u64::try_from(heartbeat_timeout_secs - elapsed).unwrap_or(0);
+                    wait = std::time::Duration::from_secs(secs.max(1));
+                    continue;
                 }
             }
 
-            // Mark the job as failed
-            slog::warn!(log, "Heartbeat timeout, marking job as failed"; "job_id" => ?job_id);
-            let now = clock.now();
-            let update = UpdateJob::terminate(JobStatus::Failed, now);
-
-            match update.execute_if_either_status(
-                &mut conn,
-                job_id,
-                JobStatus::Claimed,
-                JobStatus::Running,
-            ) {
-                Ok(0) => {
-                    slog::info!(log, "Heartbeat timeout: job already in terminal state"; "job_id" => ?job_id);
-                },
-                Ok(_) => {
-                    #[cfg(feature = "otel")]
-                    bencher_otel::ApiMeter::increment(
-                        bencher_otel::ApiCounter::RunnerHeartbeatTimeout,
-                    );
-                },
-                Err(e) => {
-                    slog::error!(log, "Failed to mark job as failed"; "job_id" => ?job_id, "error" => %e);
-                },
+            if matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
+                slog::warn!(log, "Heartbeat timeout, marking job as unknown"; "job_id" => ?job_id);
+                let update = UpdateJob::set_status(JobStatus::Unknown, now);
+                match update.execute_if_either_status(
+                    &mut conn,
+                    job_id,
+                    JobStatus::Claimed,
+                    JobStatus::Running,
+                ) {
+                    Ok(0) => {
+                        slog::info!(log, "Heartbeat timeout: job already changed state"; "job_id" => ?job_id);
+                    },
+                    Ok(_) => {
+                        #[cfg(feature = "otel")]
+                        {
+                            bencher_otel::ApiMeter::increment(
+                                bencher_otel::ApiCounter::RunnerHeartbeatTimeout,
+                            );
+                            bencher_otel::ApiMeter::increment(
+                                bencher_otel::ApiCounter::RunnerJobUpdate(
+                                    bencher_otel::JobStatusKind::Unknown,
+                                ),
+                            );
+                        }
+                    },
+                    Err(e) => {
+                        slog::error!(log, "Failed to mark job as unknown"; "job_id" => ?job_id, "error" => %e);
+                    },
+                }
             }
+
+            let Some(until) = until_deadline(&job, job_timeout_grace_period, now) else {
+                slog::warn!(log, "Job has neither a claimed nor a started timestamp, not scheduling its deadline"; "job_id" => ?job_id);
+                return;
+            };
+            wait = until;
         }
     });
 
     heartbeat_tasks.insert(job_id, join_handle.abort_handle());
 }
 
-/// Recover jobs stuck in `Claimed` status that were claimed longer ago than the
-/// heartbeat timeout. These are orphaned: the runner claimed them but never
+/// Load the jobs startup recovery arms heartbeat timeouts for.
+pub fn in_flight_jobs(conn: &mut DbConnection) -> QueryResult<Vec<QueryJob>> {
+    schema::job::table
+        .filter(schema::job::status.eq_any([
+            JobStatus::Claimed,
+            JobStatus::Running,
+            JobStatus::Unknown,
+        ]))
+        .load(conn)
+}
+
+/// Mark jobs stuck in `Claimed` status that were claimed longer ago than the
+/// heartbeat timeout as `Unknown`. These are orphaned: the runner claimed them but never
 /// transitioned them to `Running` (e.g., the runner crashed after claiming).
-/// If a job is marked `Failed` too early, the runner can still override with
-/// `Completed` when it sends results, since `Failed → Completed` is allowed.
+/// An `Unknown` job still accepts the runner's result, and its deadline ends it otherwise.
 ///
-/// Returns the number of jobs recovered (transitioned to `Failed`).
-pub fn recover_orphaned_claimed_jobs(
+/// Returns the number of jobs marked `Unknown`.
+pub fn mark_orphaned_claimed_jobs_unknown(
     log: &Logger,
     conn: &mut DbConnection,
     heartbeat_timeout: std::time::Duration,
@@ -1084,35 +1114,39 @@ pub fn recover_orphaned_claimed_jobs(
         },
     };
 
-    let mut recovered = 0;
+    let mut marked = 0;
     for job in &orphaned_jobs {
         if job.claimed.is_none() {
-            // Claimed but no timestamp — should not happen, fail it anyway
+            // Claimed but no timestamp should not happen; mark it anyway
             slog::warn!(log, "Claimed job has no claimed timestamp"; "job_id" => ?job.id);
         }
 
-        slog::warn!(log, "Recovering orphaned claimed job"; "job_id" => ?job.id);
+        slog::warn!(log, "Marking orphaned claimed job as unknown"; "job_id" => ?job.id);
         let now = clock.now();
-        let update = UpdateJob::terminate(JobStatus::Failed, now);
+        let update = UpdateJob::set_status(JobStatus::Unknown, now);
 
         match update.execute_if_status(conn, job.id, JobStatus::Claimed) {
             Ok(0) => {
                 slog::info!(log, "Orphaned job already changed state"; "job_id" => ?job.id);
             },
             Ok(_) => {
-                recovered += 1;
+                marked += 1;
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+                    bencher_otel::JobStatusKind::Unknown,
+                ));
             },
             Err(e) => {
-                slog::error!(log, "Failed to recover orphaned job"; "job_id" => ?job.id, "error" => %e);
+                slog::error!(log, "Failed to mark orphaned job as unknown"; "job_id" => ?job.id, "error" => %e);
             },
         }
     }
 
-    if recovered > 0 {
-        slog::info!(log, "Recovered orphaned claimed jobs"; "count" => recovered);
+    if marked > 0 {
+        slog::info!(log, "Marked orphaned claimed jobs as unknown"; "count" => marked);
     }
 
-    recovered
+    marked
 }
 
 /// Check if a job has exceeded its timeout + grace period.
@@ -1124,28 +1158,20 @@ fn check_job_timeout(
     conn: &mut DbConnection,
     clock: &bencher_json::Clock,
 ) -> bool {
-    let Some(started) = job.started else {
+    let now = clock.now();
+    let Some((elapsed, limit)) = deadline_elapsed(job, job_timeout_grace_period, now) else {
         return false;
     };
-    let now = clock.now();
-    let elapsed = (now.timestamp() - started.timestamp()).max(0);
-    #[expect(
-        clippy::cast_possible_wrap,
-        reason = "timeout max i32::MAX + grace period fits in i64"
-    )]
-    let limit =
-        u64::from(u32::from(job.timeout)) as i64 + job_timeout_grace_period.as_secs() as i64;
     if elapsed <= limit {
         return false;
     }
     slog::warn!(log, "Job timeout exceeded, marking as canceled"; "job_id" => ?job.id, "elapsed" => elapsed, "limit" => limit);
     let cancel_update = UpdateJob::terminate(JobStatus::Canceled, now);
     // Use status filter to avoid TOCTOU race
-    match cancel_update.execute_if_either_status(
+    match cancel_update.execute_if_any_status(
         conn,
         job.id,
-        JobStatus::Claimed,
-        JobStatus::Running,
+        &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
     ) {
         Ok(updated) if updated > 0 => {
             #[cfg(feature = "otel")]
@@ -1159,33 +1185,72 @@ fn check_job_timeout(
     true
 }
 
-/// Mark an orphaned Completed job as Failed.
+/// Seconds elapsed since the job's deadline clock started, and the limit: its timeout plus
+/// the grace period. `None` for a job with neither a claimed nor a started timestamp.
+fn deadline_elapsed(
+    job: &QueryJob,
+    job_timeout_grace_period: std::time::Duration,
+    now: DateTime,
+) -> Option<(i64, i64)> {
+    let start = job.deadline_start()?;
+    let elapsed = (now.timestamp() - start.timestamp()).max(0);
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "timeout max i32::MAX + grace period fits in i64"
+    )]
+    let limit =
+        u64::from(u32::from(job.timeout)) as i64 + job_timeout_grace_period.as_secs() as i64;
+    Some((elapsed, limit))
+}
+
+/// Time left until the job is past its deadline, and at least one second.
+fn until_deadline(
+    job: &QueryJob,
+    job_timeout_grace_period: std::time::Duration,
+    now: DateTime,
+) -> Option<std::time::Duration> {
+    let (elapsed, limit) = deadline_elapsed(job, job_timeout_grace_period, now)?;
+    let secs = u64::try_from(limit.saturating_sub(elapsed).saturating_add(1)).unwrap_or(1);
+    Some(std::time::Duration::from_secs(secs.max(1)))
+}
+
+/// Mark an orphaned Completed job as Unknown and arm its heartbeat timeout.
 ///
 /// Called when a Completed job has no stored output in OCI storage,
-/// meaning its results were lost. Transitions to Failed, preserving the original completed timestamp.
+/// meaning its results were lost. Transitions to Unknown, preserving the original completed timestamp.
 ///
-/// **Why Failed instead of leaving as Completed?**
+/// **Why Unknown instead of leaving as Completed?**
 /// If the job stays in Completed, the runner's retry of the Completed message
 /// is silently dropped by `handle_completed()` as an "idempotent duplicate"
-/// (it sees Completed status and returns `Ok`). By marking as Failed, the
-/// runner's retry triggers a Failed→Completed transition, which goes through
+/// (it sees Completed status and returns `Ok`). By marking as Unknown, the
+/// runner's retry triggers an Unknown→Completed transition, which goes through
 /// the full processing path (store output → process results → Processed).
-async fn mark_orphaned_completed_as_failed(log: &Logger, context: &ApiContext, job: &QueryJob) {
+/// If no retry arrives, the job's deadline ends it.
+async fn mark_orphaned_completed_unknown(log: &Logger, context: &ApiContext, job: &QueryJob) {
     let now = context.clock.now();
-    let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
-    match failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
+    let unknown_update = UpdateJob::set_status(JobStatus::Unknown, now);
+    match unknown_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
         Ok(updated) if updated > 0 => {
-            slog::info!(log, "Marked orphaned completed job as Failed"; "job_id" => ?job.id);
+            slog::info!(log, "Marked orphaned completed job as Unknown"; "job_id" => ?job.id);
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
-                bencher_otel::JobStatusKind::Failed,
+                bencher_otel::JobStatusKind::Unknown,
             ));
+            spawn_heartbeat_timeout(
+                log.clone(),
+                context.heartbeat_timeout,
+                context.database.connection.clone(),
+                job.id,
+                &context.heartbeat_tasks,
+                context.job_timeout_grace_period,
+                context.clock.clone(),
+            );
         },
         Ok(_) => {
             slog::info!(log, "Job already changed state during orphan recovery"; "job_id" => ?job.id);
         },
         Err(e) => {
-            slog::error!(log, "Failed to mark orphaned completed job as Failed"; "job_id" => ?job.id, "error" => %e);
+            slog::error!(log, "Failed to mark orphaned completed job as Unknown"; "job_id" => ?job.id, "error" => %e);
         },
     }
 }
@@ -1232,19 +1297,15 @@ async fn reprocess_single_completed_job(log: &Logger, context: &ApiContext, job:
     {
         Ok(Some(output)) => output,
         Ok(None) => {
-            // Mark as Failed so the runner's retry (if still pending) triggers the
-            // Failed→Completed path in handle_completed() rather than being silently
-            // dropped as a duplicate. See mark_orphaned_completed_as_failed doc comment.
-            slog::warn!(log, "No stored output for completed job, marking as Failed"; "job_id" => ?job.id);
-            mark_orphaned_completed_as_failed(log, context, job).await;
+            // See mark_orphaned_completed_unknown doc comment.
+            slog::warn!(log, "No stored output for completed job, marking as Unknown"; "job_id" => ?job.id);
+            mark_orphaned_completed_unknown(log, context, job).await;
             return;
         },
         Err(e) => {
-            // Mark as Failed so the runner's retry (if still pending) triggers the
-            // Failed→Completed path in handle_completed() rather than being silently
-            // dropped as a duplicate. See mark_orphaned_completed_as_failed doc comment.
-            slog::error!(log, "Failed to fetch job output for reprocessing, marking as Failed"; "job_id" => ?job.id, "error" => %e);
-            mark_orphaned_completed_as_failed(log, context, job).await;
+            // See mark_orphaned_completed_unknown doc comment.
+            slog::error!(log, "Failed to fetch job output for reprocessing, marking as Unknown"; "job_id" => ?job.id, "error" => %e);
+            mark_orphaned_completed_unknown(log, context, job).await;
             return;
         },
     };
