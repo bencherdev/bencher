@@ -9223,7 +9223,7 @@
           "runners"
         ],
         "summary": "Add a spec to a runner",
-        "description": "➕ Bencher Plus: Associate a hardware spec with a runner. The user must be an admin to use this endpoint.",
+        "description": "➕ Bencher Plus: Associate a hardware spec with a runner. The user must be an admin to use this endpoint. Returns the runner with its updated specs.",
         "operationId": "runner_specs_post",
         "parameters": [
           {
@@ -9289,7 +9289,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonSpec"
+                  "$ref": "#/components/schemas/JsonRunner"
                 }
               }
             }
