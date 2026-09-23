@@ -8,13 +8,13 @@ use base64::{
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use serde::{Deserialize, Serialize};
 
-use crate::ValidError;
+use crate::{ValidError, secret::SANITIZED_SECRET};
 
 #[cfg(debug_assertions)]
 // Valid until 2159-12-06T18:53:44Z
@@ -41,7 +41,7 @@ static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
 });
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
@@ -50,6 +50,12 @@ pub struct Jwt(String);
 
 #[cfg(feature = "db")]
 crate::typed_string!(Jwt);
+
+impl fmt::Debug for Jwt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Jwt").field(&SANITIZED_SECRET).finish()
+    }
+}
 
 impl TryFrom<String> for Jwt {
     type Error = ValidError;
@@ -194,5 +200,26 @@ mod tests {
         assert_eq!(json, json_str);
 
         serde_json::from_str::<Jwt>("\"not-a-jwt\"").unwrap_err();
+    }
+
+    #[test]
+    fn jwt_debug_redacted() {
+        let jwt: Jwt = format!("{HEADER}.{PAYLOAD}.{SIGNATURE}").parse().unwrap();
+
+        let debug = format!("{jwt:?}");
+        assert_eq!(debug, r#"Jwt("************")"#);
+        for part in [HEADER, PAYLOAD, SIGNATURE] {
+            assert!(!debug.contains(part), "{debug}");
+        }
+
+        let pretty = format!("{jwt:#?}");
+        assert!(!pretty.contains(SIGNATURE), "{pretty}");
+    }
+
+    #[test]
+    fn jwt_display_raw() {
+        let jwt_str = format!("{HEADER}.{PAYLOAD}.{SIGNATURE}");
+        let jwt: Jwt = jwt_str.parse().unwrap();
+        assert_eq!(jwt.to_string(), jwt_str);
     }
 }
