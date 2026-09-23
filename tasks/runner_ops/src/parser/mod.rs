@@ -26,6 +26,8 @@ pub enum TaskSub {
     Stop(TaskStop),
     /// View runner service logs
     Logs(TaskLogs),
+    /// Check a runner's health and compare it against a reference runner (read-only)
+    Audit(TaskAudit),
 }
 
 #[derive(Parser, Debug)]
@@ -200,4 +202,26 @@ pub struct TaskLogs {
     /// Follow logs in real-time
     #[clap(long)]
     pub follow: bool,
+}
+
+#[derive(Parser, Debug)]
+pub struct TaskAudit {
+    /// Runner slug or UUID (for runners.json lookup)
+    pub runner: Option<RunnerResourceId>,
+
+    /// IP address or hostname of the server
+    #[clap(long, required_unless_present = "runner")]
+    pub server: Option<String>,
+
+    /// Path to SSH private key
+    #[clap(long, required_unless_present = "runner")]
+    pub ssh: Option<Utf8PathBuf>,
+
+    /// SSH user
+    #[clap(long)]
+    pub user: Option<String>,
+
+    /// Reference runner slug or UUID to compare against (from runners.json)
+    #[clap(long)]
+    pub against: Option<RunnerResourceId>,
 }

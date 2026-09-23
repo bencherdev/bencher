@@ -98,7 +98,7 @@ impl Isolate {
 
 /// Whether the kernel cmdline already has CPU isolation boot args.
 /// Mirrors the runner preflight check: either arg counts as isolation.
-fn is_isolated(cmdline: &str) -> bool {
+pub fn is_isolated(cmdline: &str) -> bool {
     cmdline.contains("isolcpus=") || cmdline.contains("nohz_full=")
 }
 
