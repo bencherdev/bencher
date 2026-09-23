@@ -48,6 +48,7 @@ pub enum CliJobStatus {
     Completed,
     Failed,
     Canceled,
+    Unknown,
 }
 
 #[derive(Parser, Debug)]

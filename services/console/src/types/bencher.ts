@@ -72,6 +72,7 @@ export enum JobStatus {
 	Processed = "processed",
 	Failed = "failed",
 	Canceled = "canceled",
+	Unknown = "unknown",
 }
 
 export type ResourceName = string;
