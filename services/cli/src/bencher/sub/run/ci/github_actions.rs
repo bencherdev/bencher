@@ -1,12 +1,21 @@
 use bencher_comment::{BENCHER_REPORT_TITLE, ReportComment};
-use bencher_json::ResourceName;
+#[cfg(feature = "plus")]
+use bencher_json::{GitHash, JsonNewCallback, ValidError, runner::CallbackError};
+use bencher_json::{ResourceName, Secret};
 use octocrab::{
     Octocrab,
     models::{CheckRunId, CommentId},
     params::checks::{CheckRunConclusion, CheckRunOutput, CheckRunStatus},
 };
+#[cfg(feature = "plus")]
+use serde::Deserialize as _;
 
 use crate::{cli_eprintln_quietable, cli_println_quietable};
+
+#[cfg(feature = "plus")]
+use super::super::job::CALLBACK_SKIPPED;
+#[cfg(feature = "plus")]
+use super::JobFailure;
 
 const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
 const GITHUB_EVENT_PATH: &str = "GITHUB_EVENT_PATH";
@@ -17,6 +26,17 @@ const GITHUB_STEP_SUMMARY: &str = "GITHUB_STEP_SUMMARY";
 
 const PULL_REQUEST: &str = "pull_request";
 const PULL_REQUEST_TARGET: &str = "pull_request_target";
+#[cfg(feature = "plus")]
+const REPOSITORY_DISPATCH: &str = "repository_dispatch";
+
+#[cfg(feature = "plus")]
+const DEFAULT_GITHUB_API_URL: &str = "https://api.github.com";
+// The `repository_dispatch` that a detached run's callback sends, and that its attach reads.
+// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#create-a-repository-dispatch-event
+#[cfg(feature = "plus")]
+const DISPATCH_EVENT_TYPE: &str = "bencher_run";
+#[cfg(feature = "plus")]
+const GITHUB_API_VERSION: &str = "2022-11-28";
 
 const FULL_NAME: &str = "full_name";
 
@@ -54,13 +74,18 @@ const MAX_ID_LEN: usize = MAX_NAME_LEN - BENCHER_REPORT.len() - NAME_FORMAT_LEN;
 )]
 #[derive(Debug)]
 pub struct GitHubActions {
-    pub token: String,
+    pub token: Secret,
     pub ci_only_thresholds: bool,
     pub ci_only_on_alert: bool,
     pub ci_public_links: bool,
     pub ci_id: Option<String>,
     pub ci_number: Option<u64>,
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
+    #[cfg(feature = "plus")]
+    pub callback_token: Option<Secret>,
+    /// What the attach took over from the `repository_dispatch` of a detached run.
+    #[cfg(feature = "plus")]
+    pub dispatch: Option<Dispatched>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -129,6 +154,16 @@ pub enum GitHubError {
     UpdateCheck(octocrab::Error),
     #[error("{}", permissions_help("checks", "base-branch", _0))]
     BadCheckPermissions(octocrab::Error),
+
+    #[cfg(feature = "plus")]
+    #[error("GitHub head SHA is not a commit hash: {0}")]
+    BadSha(ValidError),
+    #[cfg(feature = "plus")]
+    #[error("Failed to compose the GitHub `repository_dispatch` callback: {0}")]
+    DispatchCallback(CallbackError),
+    #[cfg(feature = "plus")]
+    #[error("`--ci-id` cannot contain `{{{{ report }}}}`: the attach reads `--ci-id` as text")]
+    CiIdReport,
 }
 
 // https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
@@ -235,7 +270,11 @@ impl GitHubActions {
         let (event_str, event) = github_event()?;
         let full_name = repository_full_name(&event_str, &event)?;
         let (owner, repo) = split_full_name(full_name)?;
-        let head_sha = resolve_head_sha(&event, std::env::var(GITHUB_SHA).ok())?;
+        let head_sha = head_sha(
+            &event,
+            #[cfg(feature = "plus")]
+            self.dispatch.as_ref(),
+        )?;
         let check = self
             .github_client(log)?
             .checks(owner, repo)
@@ -256,6 +295,7 @@ impl GitHubActions {
         &self,
         check: Option<CheckRunHandle>,
         report_comment: &ReportComment,
+        #[cfg(feature = "plus")] failure: Option<JobFailure>,
         log: bool,
     ) -> Result<(), GitHubError> {
         if !is_github_actions() {
@@ -278,7 +318,15 @@ impl GitHubActions {
         // `--ci-only-on-alert` so that a `success`/`failure` conclusion is always
         // reported and the check can be used as a required status check.
         if let Err(err) = self
-            .complete_github_check(check, report_comment, log, &event_str, &event)
+            .complete_github_check(
+                check,
+                report_comment,
+                #[cfg(feature = "plus")]
+                failure,
+                log,
+                &event_str,
+                &event,
+            )
             .await
         {
             cli_eprintln_quietable!(log, "Failed to complete GitHub Check\n{err}");
@@ -290,21 +338,15 @@ impl GitHubActions {
             return Ok(());
         }
 
-        let issue_number = if let Some(issue_number) = self.ci_number {
-            issue_number
-        } else if let Ok(event_name @ (PULL_REQUEST | PULL_REQUEST_TARGET)) =
-            // The name of the event that triggered the workflow. For example, `workflow_dispatch`.
-            std::env::var(GITHUB_EVENT_NAME).as_deref()
-        {
-            // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
-            // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
-            // https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
-            event
-                .get("number")
-                .ok_or_else(|| GitHubError::NoPRNumber(event_str.clone(), event_name.into()))?
-                .as_u64()
-                .ok_or_else(|| GitHubError::BadPRNumber(event_str.clone(), event_name.into()))?
-        } else {
+        let Some(issue_number) = self.issue_number(&event_str, &event)? else {
+            #[cfg(feature = "plus")]
+            if self.dispatch.is_some() {
+                cli_println_quietable!(
+                    log,
+                    "The `repository_dispatch` payload has no pull request number and `--ci-number` was not set. Skipping PR comment."
+                );
+                return Ok(());
+            }
             cli_println_quietable!(
                 log,
                 "Not running as a GitHub Action pull request event (`pull_request` or `pull_request_target`) and the `--ci-number` option was not set. Skipping PR comment.\n{}",
@@ -315,6 +357,31 @@ impl GitHubActions {
 
         self.create_pull_request_comment(report_comment, log, &event_str, &event, issue_number)
             .await
+    }
+
+    /// `--ci-number`, else the number of the pull request the event is for.
+    fn issue_number(
+        &self,
+        event_str: &str,
+        event: &serde_json::Value,
+    ) -> Result<Option<u64>, GitHubError> {
+        if let Some(issue_number) = self.ci_number {
+            return Ok(Some(issue_number));
+        }
+        // The name of the event that triggered the workflow. For example, `workflow_dispatch`.
+        let event_name = std::env::var(GITHUB_EVENT_NAME).ok();
+        let Some(event_name @ (PULL_REQUEST | PULL_REQUEST_TARGET)) = event_name.as_deref() else {
+            return Ok(None);
+        };
+        // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request
+        // https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
+        // https://docs.github.com/en/webhooks/webhook-events-and-payloads#pull_request
+        event
+            .get("number")
+            .ok_or_else(|| GitHubError::NoPRNumber(event_str.to_owned(), event_name.into()))?
+            .as_u64()
+            .ok_or_else(|| GitHubError::BadPRNumber(event_str.to_owned(), event_name.into()))
+            .map(Some)
     }
 
     fn create_job_summary(&self, report_comment: &ReportComment, log: bool) {
@@ -334,6 +401,7 @@ impl GitHubActions {
         &self,
         check: Option<CheckRunHandle>,
         report_comment: &ReportComment,
+        #[cfg(feature = "plus")] failure: Option<JobFailure>,
         log: bool,
         event_str: &str,
         event: &serde_json::Value,
@@ -344,7 +412,11 @@ impl GitHubActions {
             MAX_LENGTH,
         );
         let output = check_run_output(summary);
-        let conclusion = check_conclusion(report_comment.has_alert());
+        let conclusion = check_conclusion(
+            report_comment.has_alert(),
+            #[cfg(feature = "plus")]
+            failure,
+        );
         // The Report always names its Project, so the completed check is always
         // named for it, even when the pre-run lookup could not name the
         // in-progress check. Required status checks match by exact name, so the
@@ -372,7 +444,11 @@ impl GitHubActions {
             // so fall back to creating the check with a conclusion.
             let full_name = repository_full_name(event_str, event)?;
             let (owner, repo) = split_full_name(full_name)?;
-            let head_sha = resolve_head_sha(event, std::env::var(GITHUB_SHA).ok())?;
+            let head_sha = head_sha(
+                event,
+                #[cfg(feature = "plus")]
+                self.dispatch.as_ref(),
+            )?;
             self.github_client(log)?
                 .checks(owner, repo)
                 .create_check_run(name, head_sha)
@@ -395,26 +471,196 @@ impl GitHubActions {
     /// failed to resolve the Project name and errored before posting results
     /// reports under the bare `Bencher Report` name.
     pub async fn fail_check(&self, handle: &CheckRunHandle, log: bool) {
-        if let Err(err) = self.try_fail_check(handle, log).await {
-            cli_eprintln_quietable!(log, "Failed to fail GitHub Check\n{err}");
+        self.finish_check(
+            handle.clone(),
+            CheckRunConclusion::Failure,
+            FAILED_SUMMARY,
+            None,
+            log,
+        )
+        .await;
+    }
+
+    /// Best-effort: complete a started check without results, renamed if `name` is given.
+    /// Failures are logged, never fatal.
+    async fn finish_check(
+        &self,
+        handle: CheckRunHandle,
+        conclusion: CheckRunConclusion,
+        summary: &str,
+        name: Option<String>,
+        log: bool,
+    ) {
+        let CheckRunHandle { owner, repo, id } = handle;
+        let finished = async {
+            let github_client = self.github_client(log)?;
+            let checks = github_client.checks(owner, repo);
+            let update = checks
+                .update_check_run(id)
+                .output(check_run_output(branded_summary(summary)))
+                .conclusion(conclusion);
+            let update = match name {
+                Some(name) => update.name(name),
+                None => update,
+            };
+            update
+                .send()
+                .await
+                .map(drop)
+                .map_err(|e| check_error(e, GitHubError::UpdateCheck))
+        }
+        .await;
+        if let Err(err) = finished {
+            cli_eprintln_quietable!(log, "Failed to complete GitHub Check\n{err}");
         }
     }
 
-    async fn try_fail_check(&self, handle: &CheckRunHandle, log: bool) -> Result<(), GitHubError> {
-        let CheckRunHandle { owner, repo, id } = handle;
-        self.github_client(log)?
-            .checks(owner.clone(), repo.clone())
-            .update_check_run(*id)
-            .output(check_run_output(branded_summary(FAILED_SUMMARY)))
-            .conclusion(CheckRunConclusion::Failure)
-            .send()
-            .await
-            .map(|_| ())
-            .map_err(|e| check_error(e, GitHubError::UpdateCheck))
+    /// The `repository_dispatch` that a detached run's callback sends, so its attach can complete the check.
+    #[cfg(feature = "plus")]
+    pub fn dispatch_callback(
+        &self,
+        check: Option<&CheckRunHandle>,
+        sub_adapter: &bencher_comment::SubAdapter,
+        log: bool,
+    ) -> Result<Option<JsonNewCallback>, GitHubError> {
+        let Some(token) = &self.callback_token else {
+            return Ok(None);
+        };
+        if !is_github_actions() {
+            cli_println_quietable!(
+                log,
+                "Not running as a GitHub Action. Skipping CI integration.\n{}",
+                docker_env(GITHUB_ACTIONS)
+            );
+            return Ok(None);
+        }
+        let (event_str, event) = github_event()?;
+        let full_name = repository_full_name(&event_str, &event)?;
+        let payload = self.dispatch_payload(&event_str, &event, check, sub_adapter)?;
+        let api_url = github_api_url(log).unwrap_or_else(|| DEFAULT_GITHUB_API_URL.to_owned());
+        dispatch_request(&api_url, full_name, token, &payload).map(Some)
+    }
+
+    /// `--ci-id`, the pull request, the comment tag's flags, the head SHA the check was started at, and the check.
+    #[cfg(feature = "plus")]
+    fn dispatch_payload(
+        &self,
+        event_str: &str,
+        event: &serde_json::Value,
+        check: Option<&CheckRunHandle>,
+        sub_adapter: &bencher_comment::SubAdapter,
+    ) -> Result<DispatchPayload, GitHubError> {
+        let bencher_comment::SubAdapter {
+            build_time,
+            file_size,
+        } = *sub_adapter;
+        Ok(DispatchPayload {
+            bencher: BencherPayload {
+                ci_id: self.ci_id.clone(),
+                ci_number: self.issue_number(event_str, event)?,
+                build_time,
+                file_size,
+            },
+            github: GitHubPayload {
+                sha: head_sha(event, self.dispatch.as_ref())?
+                    .parse()
+                    .map_err(GitHubError::BadSha)?,
+                check: check.map(|handle| handle.id),
+            },
+        })
+    }
+
+    /// On a `repository_dispatch`, the attach continues the detached run whose callback sent it,
+    /// and returns that run's comment tag flags. A payload that does not parse is passed over with a warning.
+    #[cfg(feature = "plus")]
+    pub fn read_dispatch(&mut self, log: bool) -> Option<bencher_comment::SubAdapter> {
+        if !is_github_actions()
+            || std::env::var(GITHUB_EVENT_NAME).as_deref() != Ok(REPOSITORY_DISPATCH)
+        {
+            return None;
+        }
+        let dispatch = github_event()
+            .and_then(|(event_str, event)| {
+                let full_name = repository_full_name(&event_str, &event)?;
+                let (owner, repo) = split_full_name(full_name)?;
+                Ok((owner.to_owned(), repo.to_owned(), event))
+            })
+            .map_err(PayloadError::Event)
+            .and_then(|(owner, repo, event)| {
+                DispatchPayload::from_event(&event)
+                    .map(|payload| (owner, repo, payload))
+                    .map_err(PayloadError::Json)
+            });
+        match dispatch {
+            Ok((owner, repo, payload)) => Some(self.adopt(owner, repo, payload)),
+            Err(err) => {
+                cli_eprintln_quietable!(
+                    log,
+                    "Warning: failed to read the `repository_dispatch` payload, so it is ignored: {err}"
+                );
+                None
+            },
+        }
+    }
+
+    /// The payload stands in for `--ci-id` and `--ci-number` where they are not given.
+    #[cfg(feature = "plus")]
+    fn adopt(
+        &mut self,
+        owner: String,
+        repo: String,
+        payload: DispatchPayload,
+    ) -> bencher_comment::SubAdapter {
+        let DispatchPayload {
+            bencher:
+                BencherPayload {
+                    ci_id,
+                    ci_number,
+                    build_time,
+                    file_size,
+                },
+            github: GitHubPayload { sha, check },
+        } = payload;
+        self.ci_id = self.ci_id.take().or(ci_id);
+        self.ci_number = self.ci_number.or(ci_number);
+        self.dispatch = Some(Dispatched {
+            sha,
+            check: check.map(|id| CheckRunHandle { owner, repo, id }),
+        });
+        bencher_comment::SubAdapter {
+            build_time,
+            file_size,
+        }
+    }
+
+    /// The check the detached run started, which the attach completes instead of starting one.
+    #[cfg(feature = "plus")]
+    pub fn adopted_check(&self) -> Option<CheckRunHandle> {
+        self.dispatch.as_ref()?.check.clone()
+    }
+
+    /// Best-effort: a callback that will never fire cannot hand the detached run's check to an attach,
+    /// so the check is completed as neutral with the notice.
+    #[cfg(feature = "plus")]
+    pub async fn complete_unfired_check(
+        &self,
+        handle: CheckRunHandle,
+        project_name: &ResourceName,
+        log: bool,
+    ) {
+        let name = check_run_name(check_run_id(self.ci_id.as_deref(), Some(project_name)));
+        self.finish_check(
+            handle,
+            CheckRunConclusion::Neutral,
+            &format!("<p>{CALLBACK_SKIPPED}</p>"),
+            Some(name),
+            log,
+        )
+        .await;
     }
 
     fn github_client(&self, log: bool) -> Result<Octocrab, GitHubError> {
-        let mut builder = Octocrab::builder().user_access_token(self.token.clone());
+        let mut builder = Octocrab::builder().user_access_token(self.token.as_ref().to_owned());
         if let Some(url) = github_api_url(log) {
             builder = builder.base_uri(url).map_err(GitHubError::BaseUri)?;
         }
@@ -432,7 +678,7 @@ impl GitHubActions {
         let full_name = repository_full_name(event_str, event)?;
         let (owner, repo) = split_full_name(full_name)?;
 
-        let mut builder = Octocrab::builder().user_access_token(self.token.clone());
+        let mut builder = Octocrab::builder().user_access_token(self.token.as_ref().to_owned());
         if let Some(url) = github_api_url(log) {
             builder = builder.base_uri(url).map_err(GitHubError::BaseUri)?;
         }
@@ -484,7 +730,7 @@ impl GitHubActions {
 
 /// A GitHub Check created with an `in_progress` status before the benchmark runs.
 /// The check is completed with a conclusion once the results are ready.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CheckRunHandle {
     owner: String,
     repo: String,
@@ -567,6 +813,19 @@ fn resolve_head_sha(
     }
 }
 
+// The head SHA a `repository_dispatch` names wins, since `GITHUB_SHA` on a dispatch
+// is the head of the default branch.
+fn head_sha(
+    event: &serde_json::Value,
+    #[cfg(feature = "plus")] dispatch: Option<&Dispatched>,
+) -> Result<String, GitHubError> {
+    #[cfg(feature = "plus")]
+    if let Some(dispatch) = dispatch {
+        return Ok(dispatch.sha.clone().into());
+    }
+    resolve_head_sha(event, std::env::var(GITHUB_SHA).ok())
+}
+
 // An explicit `--ci-id` names the check instead of the Project, and outside of
 // GitHub Actions no check is created at all, so neither needs the lookup.
 // The environment is read by the caller so this stays deterministic in tests.
@@ -606,7 +865,17 @@ fn truncate_id(id: &str) -> &str {
         .unwrap_or_default()
 }
 
-fn check_conclusion(has_alert: bool) -> CheckRunConclusion {
+// A job that ended without results fails the check whatever its report shows.
+fn check_conclusion(
+    has_alert: bool,
+    #[cfg(feature = "plus")] failure: Option<JobFailure>,
+) -> CheckRunConclusion {
+    #[cfg(feature = "plus")]
+    match failure {
+        Some(JobFailure::Failed) => return CheckRunConclusion::Failure,
+        Some(JobFailure::Canceled) => return CheckRunConclusion::Cancelled,
+        None => {},
+    }
     if has_alert {
         CheckRunConclusion::Failure
     } else {
@@ -695,6 +964,115 @@ fn github_api_url(log: bool) -> Option<String> {
             docker_env(GITHUB_API_URL)
         );
         None
+    }
+}
+
+/// What a detached run's `repository_dispatch` carries to its attach. The composed body also
+/// names the job and the project under `bencher`, which only the workflow reads.
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+struct DispatchPayload {
+    bencher: BencherPayload,
+    github: GitHubPayload,
+}
+
+/// The `bencher run` options that the attach takes from the detached run.
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+struct BencherPayload {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ci_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ci_number: Option<u64>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    build_time: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    file_size: bool,
+}
+
+/// The head SHA the detached run started its check at, and the check.
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+struct GitHubPayload {
+    sha: GitHash,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    check: Option<CheckRunId>,
+}
+
+/// The composed body's `bencher` object.
+#[cfg(feature = "plus")]
+#[derive(serde::Serialize)]
+struct ComposedBencher<'a> {
+    project: &'static str,
+    job: &'static str,
+    #[serde(flatten)]
+    payload: &'a BencherPayload,
+}
+
+/// A `repository_dispatch` payload the attach reads past with a warning.
+#[cfg(feature = "plus")]
+#[derive(Debug, thiserror::Error)]
+enum PayloadError {
+    #[error("{0}")]
+    Event(GitHubError),
+    #[error("{0}")]
+    Json(serde_json::Error),
+}
+
+/// The check and head SHA the attach takes over from the `repository_dispatch` of a detached run.
+#[cfg(feature = "plus")]
+#[derive(Debug)]
+pub struct Dispatched {
+    sha: GitHash,
+    check: Option<CheckRunHandle>,
+}
+
+#[cfg(feature = "plus")]
+impl DispatchPayload {
+    fn from_event(event: &serde_json::Value) -> serde_json::Result<Self> {
+        Self::deserialize(
+            event
+                .get("client_payload")
+                .unwrap_or(&serde_json::Value::Null),
+        )
+    }
+}
+
+/// The `repository_dispatch` request, validated as any other callback.
+#[cfg(feature = "plus")]
+fn dispatch_request(
+    api_url: &str,
+    full_name: &str,
+    token: &Secret,
+    payload: &DispatchPayload,
+) -> Result<JsonNewCallback, GitHubError> {
+    let url = format!(
+        "{api_url}/repos/{full_name}/dispatches",
+        api_url = api_url.trim_end_matches('/')
+    );
+    let headers = [
+        ("Accept", "application/vnd.github+json".to_owned()),
+        ("Authorization", format!("Bearer {}", token.as_ref())),
+        ("X-GitHub-Api-Version", GITHUB_API_VERSION.to_owned()),
+    ]
+    .map(|(name, value)| (name.to_owned(), value));
+    let DispatchPayload { bencher, github } = payload;
+    let body = serde_json::json!({
+        "event_type": DISPATCH_EVENT_TYPE,
+        "client_payload": {
+            "bencher": ComposedBencher {
+                project: "{{ project.slug }}",
+                job: "{{ job.uuid }}",
+                payload: bencher,
+            },
+            "github": github,
+        },
+    });
+    // `--ci-id` is the only text in the body that can hold the report.
+    match JsonNewCallback::new(&url, headers, Some(body)) {
+        Ok(callback) if callback.sends_report() => Err(GitHubError::CiIdReport),
+        Err(CallbackError::ReportInText) => Err(GitHubError::CiIdReport),
+        composed => composed.map_err(GitHubError::DispatchCallback),
     }
 }
 
@@ -819,7 +1197,11 @@ mod tests {
     #[test]
     fn check_conclusion_alert() {
         assert!(matches!(
-            check_conclusion(true),
+            check_conclusion(
+                true,
+                #[cfg(feature = "plus")]
+                None
+            ),
             CheckRunConclusion::Failure
         ));
     }
@@ -827,7 +1209,11 @@ mod tests {
     #[test]
     fn check_conclusion_no_alert() {
         assert!(matches!(
-            check_conclusion(false),
+            check_conclusion(
+                false,
+                #[cfg(feature = "plus")]
+                None
+            ),
             CheckRunConclusion::Success
         ));
     }
@@ -1003,6 +1389,251 @@ mod tests {
         assert!(
             parsed.is_ok(),
             "octocrab PullRequest must accept GitHub's minimal check-run payload: {parsed:?}"
+        );
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "plus")]
+mod dispatch_tests {
+    use bencher_json::{
+        CallbackContext, JobStatus, JsonNewCallback, ProjectUuid, ReportUuid, runner::CallbackError,
+    };
+    use octocrab::models::CheckRunId;
+    use serde_json::{Value, json};
+
+    use octocrab::params::checks::CheckRunConclusion;
+
+    use super::{
+        BencherPayload, CheckRunHandle, DEFAULT_GITHUB_API_URL, DispatchPayload, GitHubActions,
+        GitHubError, GitHubPayload, JobFailure, check_conclusion, dispatch_request,
+    };
+    use bencher_json::Secret;
+
+    const API_URL: &str = "https://api.github.com";
+    const FULL_NAME: &str = "owner/repo";
+    const TOKEN: &str = "github_pat_token-marker";
+    const SHA: &str = "f1e2d3c4b5a697887766554433221100ffeeddcc";
+    const JOB: &str = "8d2b6c4e-5f3a-4b1c-9e7d-0a1b2c3d4e5f";
+    const REPORT: &str = "4f6d1b2a-3c5e-4d7f-8a9b-0c1d2e3f4a5b";
+    const PROJECT: &str = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+
+    fn payload(ci_number: Option<u64>, check: Option<u64>, ci_id: Option<&str>) -> DispatchPayload {
+        DispatchPayload {
+            bencher: BencherPayload {
+                ci_id: ci_id.map(ToOwned::to_owned),
+                ci_number,
+                build_time: false,
+                file_size: false,
+            },
+            github: GitHubPayload {
+                sha: SHA.parse().unwrap(),
+                check: check.map(CheckRunId::from),
+            },
+        }
+    }
+
+    fn compose(payload: &DispatchPayload) -> JsonNewCallback {
+        dispatch_request(
+            API_URL,
+            FULL_NAME,
+            &TOKEN.parse::<Secret>().unwrap(),
+            payload,
+        )
+        .unwrap()
+    }
+
+    /// The body the server would send.
+    fn rendered(callback: &JsonNewCallback) -> Value {
+        let context = CallbackContext {
+            project_uuid: PROJECT.parse::<ProjectUuid>().unwrap(),
+            project_name: "My Project".parse().unwrap(),
+            project_slug: "my-project".parse().unwrap(),
+            report_uuid: REPORT.parse::<ReportUuid>().unwrap(),
+            job_uuid: JOB.parse().unwrap(),
+            job_status: JobStatus::Processed,
+        };
+        serde_json::from_str(&callback.render(&context, None).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn dispatch_follows_the_api_url() {
+        let callback = dispatch_request(
+            "https://github.example.com/api/v3/",
+            FULL_NAME,
+            &TOKEN.parse::<Secret>().unwrap(),
+            &payload(None, None, None),
+        )
+        .unwrap();
+        assert_eq!(
+            callback.url().as_str(),
+            "https://github.example.com/api/v3/repos/owner/repo/dispatches"
+        );
+    }
+
+    /// The server sends github.com's dispatch on every plan only when it recognizes the composed URL.
+    #[test]
+    fn the_default_api_url_composes_the_github_dispatch() {
+        let callback = dispatch_request(
+            DEFAULT_GITHUB_API_URL,
+            FULL_NAME,
+            &TOKEN.parse::<Secret>().unwrap(),
+            &payload(None, None, None),
+        )
+        .unwrap();
+        assert!(callback.is_github_dispatch(), "{}", callback.url());
+    }
+
+    #[test]
+    fn composed_payload_reads_back() {
+        let mut flags = payload(Some(7), Some(4242), Some("suite"));
+        flags.bencher.build_time = true;
+        flags.bencher.file_size = true;
+        for dispatch in [flags, payload(None, None, None)] {
+            let body = rendered(&compose(&dispatch));
+            assert_eq!(
+                DispatchPayload::from_event(&body).unwrap(),
+                dispatch,
+                "{body}"
+            );
+        }
+    }
+
+    /// The workflow reads the job and the project, and an absent option is no key at all.
+    #[test]
+    fn composed_payload_shape() {
+        let mut flags = payload(Some(7), Some(4242), Some("suite"));
+        flags.bencher.build_time = true;
+        assert_eq!(
+            rendered(&compose(&flags)),
+            json!({
+                "event_type": "bencher_run",
+                "client_payload": {
+                    "bencher": {
+                        "project": "my-project",
+                        "job": JOB,
+                        "ci_id": "suite",
+                        "ci_number": 7,
+                        "build_time": true,
+                    },
+                    "github": { "sha": SHA, "check": 4242 },
+                },
+            })
+        );
+        assert_eq!(
+            rendered(&compose(&payload(None, None, None)))["client_payload"],
+            json!({
+                "bencher": { "project": "my-project", "job": JOB },
+                "github": { "sha": SHA },
+            })
+        );
+    }
+
+    /// A `--ci-id` is a string in the body, so a placeholder anywhere in it is replaced, and one
+    /// with an unknown name fails the composition, and with it the run.
+    #[test]
+    fn a_ci_id_takes_a_placeholder_anywhere() {
+        let body = rendered(&compose(&payload(None, None, Some("suite-{{ job.uuid }}"))));
+        assert_eq!(
+            body["client_payload"]["bencher"]["ci_id"],
+            format!("suite-{JOB}")
+        );
+        let err = dispatch_request(
+            API_URL,
+            FULL_NAME,
+            &TOKEN.parse::<Secret>().unwrap(),
+            &payload(None, None, Some("suite-{{ job.id }}")),
+        )
+        .unwrap_err();
+        assert!(
+            matches!(&err, GitHubError::DispatchCallback(CallbackError::UnknownPlaceholder(placeholder)) if placeholder == "{{ job.id }}"),
+            "{err}"
+        );
+    }
+
+    /// The attach reads `--ci-id` as text, so the report is refused there, whole or inside text.
+    #[test]
+    fn a_ci_id_refuses_the_report() {
+        for ci_id in ["{{ report }}", "{{report}}", "suite-{{ report }}"] {
+            let err = dispatch_request(
+                API_URL,
+                FULL_NAME,
+                &TOKEN.parse::<Secret>().unwrap(),
+                &payload(None, None, Some(ci_id)),
+            )
+            .unwrap_err();
+            assert!(matches!(err, GitHubError::CiIdReport), "{ci_id}: {err}");
+            assert!(!err.to_string().contains("suite"), "{err}");
+        }
+    }
+
+    fn github_actions(ci_id: Option<&str>, ci_number: Option<u64>) -> GitHubActions {
+        GitHubActions {
+            token: "token".parse().unwrap(),
+            ci_only_thresholds: false,
+            ci_only_on_alert: false,
+            ci_public_links: false,
+            ci_id: ci_id.map(ToOwned::to_owned),
+            ci_number,
+            ci_i_am_vulnerable_to_pwn_requests: false,
+            callback_token: None,
+            dispatch: None,
+        }
+    }
+
+    #[test]
+    fn a_job_failure_sets_the_conclusion_whatever_the_alerts() {
+        for has_alert in [true, false] {
+            assert!(
+                matches!(
+                    check_conclusion(has_alert, Some(JobFailure::Failed)),
+                    CheckRunConclusion::Failure
+                ),
+                "{has_alert}"
+            );
+            assert!(
+                matches!(
+                    check_conclusion(has_alert, Some(JobFailure::Canceled)),
+                    CheckRunConclusion::Cancelled
+                ),
+                "{has_alert}"
+            );
+        }
+        assert!(matches!(
+            check_conclusion(true, None),
+            CheckRunConclusion::Failure
+        ));
+        assert!(matches!(
+            check_conclusion(false, None),
+            CheckRunConclusion::Success
+        ));
+    }
+
+    #[test]
+    fn the_payload_names_the_started_check() {
+        let github_actions = github_actions(Some("suite"), Some(7));
+        // The pull request's head wins over `GITHUB_SHA`, so the environment plays no part.
+        let event = json!({ "pull_request": { "head": { "sha": SHA } } });
+        let handle = CheckRunHandle {
+            owner: "owner".to_owned(),
+            repo: "repo".to_owned(),
+            id: CheckRunId::from(4242),
+        };
+        let no_flags = bencher_comment::SubAdapter {
+            build_time: false,
+            file_size: false,
+        };
+        assert_eq!(
+            github_actions
+                .dispatch_payload("", &event, Some(&handle), &no_flags)
+                .unwrap(),
+            payload(Some(7), Some(4242), Some("suite"))
+        );
+        assert_eq!(
+            github_actions
+                .dispatch_payload("", &event, None, &no_flags)
+                .unwrap(),
+            payload(Some(7), None, Some("suite"))
         );
     }
 }

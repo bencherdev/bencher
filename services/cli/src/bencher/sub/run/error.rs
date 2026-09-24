@@ -28,6 +28,9 @@ pub enum RunError {
     #[cfg(feature = "plus")]
     #[error("Failed to convert the callback for the API client")]
     ClientCallback,
+    #[cfg(feature = "plus")]
+    #[error("`--detach` with `--github-actions` requires `--ci-callback-token`")]
+    DetachNeedsCallback,
 
     #[error("{0}")]
     Branch(#[from] super::branch::BranchError),

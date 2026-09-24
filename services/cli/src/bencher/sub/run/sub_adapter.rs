@@ -30,3 +30,16 @@ impl From<SubAdapter> for bencher_comment::SubAdapter {
         }
     }
 }
+
+impl From<bencher_comment::SubAdapter> for SubAdapter {
+    fn from(sub_adapter: bencher_comment::SubAdapter) -> Self {
+        let bencher_comment::SubAdapter {
+            build_time,
+            file_size,
+        } = sub_adapter;
+        Self {
+            build_time,
+            file_size,
+        }
+    }
+}

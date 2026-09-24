@@ -57,6 +57,49 @@ as PR comments.
 | `--ci-public-links` | Use public URLs (no login required to view) |
 | `--ci-id <id>` | Custom identifier for the CI comment, used in place of the project name in the GitHub Check name (`Bencher Report (<id>)`) |
 | `--ci-number <n>` | Issue/PR number to post on |
+| `--ci-callback-token <token>` | Fine-grained personal access token with contents write on the repository, for the `repository_dispatch` a detached bare metal run sends (requires `--github-actions` and `--detach`) |
+
+### Bare Metal Without a Waiting Runner (Bencher Plus)
+
+`--detach` with `--github-actions` starts the GitHub Check, submits the job, and exits.
+When the job finishes, Bencher sends a `repository_dispatch` (event type `bencher_run`) with
+`--ci-callback-token`, and a second workflow on the default branch attaches to the job and
+completes the check and the PR comment:
+
+```yaml
+# Workflow 1, on pull_request
+- uses: bencherdev/bencher@main
+- run: |
+    bencher run \
+      --project my-project \
+      --branch "${{ github.head_ref }}" \
+      --image my-bench:latest \
+      --detach \
+      --github-actions "${{ secrets.GITHUB_TOKEN }}" \
+      --ci-callback-token "${{ secrets.BENCHER_CALLBACK_TOKEN }}"
+  env:
+    BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+```
+
+```yaml
+# Workflow 2, on repository_dispatch with types [bencher_run]
+# permissions: pull-requests: write, checks: write
+- uses: bencherdev/bencher@main
+- run: |
+    bencher run \
+      --project my-project \
+      --job "$JOB_UUID" \
+      --github-actions "${{ secrets.GITHUB_TOKEN }}" \
+      --error-on-alert
+  env:
+    BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+    JOB_UUID: ${{ github.event.client_payload.bencher.job }}
+```
+
+The payload's `bencher` object holds the Job UUID (`job`) and the Project slug (`project`), and the attach reads the rest of it.
+`--detach` with `--github-actions` requires `--ci-callback-token`, and `--callback-url` conflicts with `--github-actions`.
+Give each detached job of one PR its own `--ci-id`, so each keeps its own comment.
+The dispatch to `api.github.com` works on every plan. On GitHub Enterprise Server it needs a Bencher Plus plan, and without one the callback is skipped and the check completes as neutral.
 
 ### On-the-Fly Project Creation
 
