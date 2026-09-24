@@ -555,10 +555,12 @@ impl Run {
                 // `Completed` means the runner finished execution and sent results,
                 // but the server hasn't finished processing them into metrics/alerts yet.
                 // It transitions to `Processed` (or `Failed`) once processing completes.
+                // `Unknown` means the server lost contact with the runner and is waiting to hear back.
                 JobStatus::Pending
                 | JobStatus::Claimed
                 | JobStatus::Running
-                | JobStatus::Completed => {},
+                | JobStatus::Completed
+                | JobStatus::Unknown => {},
             }
         }
     }

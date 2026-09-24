@@ -9,6 +9,7 @@ const COMPLETED_INT: i32 = 3;
 const PROCESSED_INT: i32 = 4;
 const FAILED_INT: i32 = 5;
 const CANCELED_INT: i32 = 6;
+const UNKNOWN_INT: i32 = 7;
 
 /// Job status
 #[typeshare::typeshare]
@@ -27,6 +28,7 @@ pub enum JobStatus {
     Processed = PROCESSED_INT,
     Failed = FAILED_INT,
     Canceled = CANCELED_INT,
+    Unknown = UNKNOWN_INT,
 }
 
 impl JobStatus {
@@ -48,6 +50,7 @@ impl std::fmt::Display for JobStatus {
             Self::Processed => write!(f, "Processed"),
             Self::Failed => write!(f, "Failed"),
             Self::Canceled => write!(f, "Canceled"),
+            Self::Unknown => write!(f, "Unknown"),
         }
     }
 }
@@ -56,7 +59,7 @@ impl std::fmt::Display for JobStatus {
 mod job_status_db {
     use super::{
         CANCELED_INT, CLAIMED_INT, COMPLETED_INT, FAILED_INT, JobStatus, PENDING_INT,
-        PROCESSED_INT, RUNNING_INT,
+        PROCESSED_INT, RUNNING_INT, UNKNOWN_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -82,6 +85,7 @@ mod job_status_db {
                 Self::Processed => PROCESSED_INT.to_sql(out),
                 Self::Failed => FAILED_INT.to_sql(out),
                 Self::Canceled => CANCELED_INT.to_sql(out),
+                Self::Unknown => UNKNOWN_INT.to_sql(out),
             }
         }
     }
@@ -100,6 +104,7 @@ mod job_status_db {
                 PROCESSED_INT => Ok(Self::Processed),
                 FAILED_INT => Ok(Self::Failed),
                 CANCELED_INT => Ok(Self::Canceled),
+                UNKNOWN_INT => Ok(Self::Unknown),
                 value => Err(Box::new(JobStatusError::Invalid(value))),
             }
         }
@@ -132,6 +137,7 @@ mod tests {
         assert!(JobStatus::Processed.has_run());
         assert!(JobStatus::Failed.has_run());
         assert!(JobStatus::Canceled.has_run());
+        assert!(!JobStatus::Unknown.has_run());
     }
 
     #[test]
@@ -143,5 +149,6 @@ mod tests {
         assert_eq!(JobStatus::Processed.to_string(), "Processed");
         assert_eq!(JobStatus::Failed.to_string(), "Failed");
         assert_eq!(JobStatus::Canceled.to_string(), "Canceled");
+        assert_eq!(JobStatus::Unknown.to_string(), "Unknown");
     }
 }

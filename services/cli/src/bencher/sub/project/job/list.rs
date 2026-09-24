@@ -73,6 +73,7 @@ impl From<CliJobStatus> for JobStatus {
             CliJobStatus::Completed => Self::Completed,
             CliJobStatus::Failed => Self::Failed,
             CliJobStatus::Canceled => Self::Canceled,
+            CliJobStatus::Unknown => Self::Unknown,
         }
     }
 }

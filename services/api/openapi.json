@@ -12624,7 +12624,8 @@
           "completed",
           "processed",
           "failed",
-          "canceled"
+          "canceled",
+          "unknown"
         ]
       },
       "JobUuid": {

@@ -638,7 +638,8 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
             bencher_json::JobStatus::Pending
             | bencher_json::JobStatus::Claimed
             | bencher_json::JobStatus::Running
-            | bencher_json::JobStatus::Completed => {},
+            | bencher_json::JobStatus::Completed
+            | bencher_json::JobStatus::Unknown => {},
         }
     }
 

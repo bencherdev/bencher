@@ -679,6 +679,7 @@ pub enum JobStatusKind {
     Processed,
     Failed,
     Canceled,
+    Unknown,
 }
 
 impl fmt::Display for JobStatusKind {
@@ -689,6 +690,7 @@ impl fmt::Display for JobStatusKind {
             Self::Processed => write!(f, "processed"),
             Self::Failed => write!(f, "failed"),
             Self::Canceled => write!(f, "canceled"),
+            Self::Unknown => write!(f, "unknown"),
         }
     }
 }
