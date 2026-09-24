@@ -10,9 +10,10 @@ publish = false
 default = []
 # Required due to feature unification
 # https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
-plus = ["bencher_json/plus", "dep:opentelemetry", "dep:uuid"]
+plus = ["bencher_callback/plus", "bencher_json/plus", "dep:opentelemetry", "dep:uuid"]
 
 [dependencies]
+bencher_callback = { workspace = true, optional = true }
 bencher_json = { workspace = true, optional = true }
 opentelemetry = { workspace = true, optional = true }
 uuid = { workspace = true, optional = true }

@@ -41,6 +41,14 @@ impl Callbacks {
         shutdown: CancellationToken,
         clock: Clock,
     ) -> Self {
+        // Counted at each export, on a connection only if one is free, so a busy pool skips a point.
+        #[cfg(feature = "otel")]
+        {
+            let reader = reader.clone();
+            bencher_otel::ApiMeter::observe(bencher_otel::ApiGauge::CallbackPending, move || {
+                QueryJobCallback::count_pending(&mut *reader.try_get()?).ok()
+            });
+        }
         Self {
             delivery: Arc::new(Delivery::new(
                 connection, reader, key, sender, shutdown, clock,

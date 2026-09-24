@@ -3,6 +3,7 @@
 mod api_gauge;
 mod api_histogram;
 mod api_meter;
+mod callback;
 
 pub use api_gauge::{ApiGauge, RunnerStateKind};
 pub use api_histogram::{ApiHistogram, Priority};
