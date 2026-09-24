@@ -29,6 +29,8 @@ pub mod runner;
 mod sub_adapter;
 
 use branch::Branch;
+#[cfg(feature = "plus")]
+use ci::JobFailure;
 use ci::{Ci, CiCheck};
 pub use error::RunError;
 use format::Format;
@@ -142,6 +144,16 @@ impl TryFrom<CliRun> for Run {
         #[cfg(not(feature = "plus"))]
         let has_image_project = false;
 
+        let ci: Option<Ci> = ci.try_into().map_err(RunError::Ci)?;
+        // The attach continues the detached run whose callback started its workflow.
+        #[cfg(feature = "plus")]
+        let ci = ci.map(|mut ci| {
+            if matches!(job, Some(Job::Attach(_))) {
+                ci.read_dispatch(!quiet);
+            }
+            ci
+        });
+
         Ok(Self {
             project: resolve_project(project, backend.key.as_ref(), has_image_project)?,
             branch: branch.try_into().map_err(RunError::Branch)?,
@@ -159,7 +171,7 @@ impl TryFrom<CliRun> for Run {
             error_on_alert,
             format: format.into(),
             log: !quiet,
-            ci: ci.try_into().map_err(RunError::Ci)?,
+            ci,
             runner,
             dry_run,
             #[cfg(feature = "plus")]
@@ -177,6 +189,27 @@ impl SubCmd for Run {
 
 impl Run {
     async fn exec_inner(&self) -> Result<(), RunError> {
+        // The attach takes over the check its detached run started before anything can fail,
+        // so that an error from here on fails that check too.
+        #[cfg(feature = "plus")]
+        let mut ci_check = self.ci.as_ref().and_then(Ci::adopted_check);
+        #[cfg(not(feature = "plus"))]
+        let mut ci_check = None;
+
+        let result = self.check_and_run(&mut ci_check).await;
+        // Every path that posts results, or hands the check to a callback, consumes the handle,
+        // so an unconsumed handle means the check was never completed.
+        // Best-effort: mark it as failed rather than leave it in progress forever.
+        // Today only error paths leave the handle unconsumed. Any future path
+        // that returns `Ok` without posting results will mark the check as
+        // failed here, which is still better than an eternally pending check.
+        if let (Some(ci), Some(check)) = (&self.ci, ci_check.take()) {
+            ci.fail(&check, self.log).await;
+        }
+        result
+    }
+
+    async fn check_and_run(&self, ci_check: &mut Option<CiCheck>) -> Result<(), RunError> {
         if let Some(mismatch) = self
             .backend
             .check_version()
@@ -193,29 +226,19 @@ impl Run {
         // Start the in-progress CI check before the benchmark runs,
         // so a rerun immediately clears the stale conclusion left by a previous run.
         // Dry runs never post results, so they never start a check.
-        let mut ci_check = match &self.ci {
-            Some(ci) if !self.dry_run => {
-                let project_name = if ci.needs_project_name() {
-                    self.project_name().await
-                } else {
-                    None
-                };
-                ci.start(project_name.as_ref(), self.log).await
-            },
-            _ => None,
-        };
-
-        let result = self.run_and_report(&mut ci_check).await;
-        // Every path that posts results consumes the check handle,
-        // so an unconsumed handle means the check was never completed.
-        // Best-effort: mark it as failed rather than leave it in progress forever.
-        // Today only error paths leave the handle unconsumed. Any future path
-        // that returns `Ok` without posting results will mark the check as
-        // failed here, which is still better than an eternally pending check.
-        if let (Some(ci), Some(check)) = (&self.ci, ci_check.take()) {
-            ci.fail(&check, self.log).await;
+        if let Some(ci) = &self.ci
+            && ci_check.is_none()
+            && !self.dry_run
+        {
+            let project_name = if ci.needs_project_name() {
+                self.project_name().await
+            } else {
+                None
+            };
+            *ci_check = ci.start(project_name.as_ref(), self.log).await;
         }
-        result
+
+        self.run_and_report(ci_check).await
     }
 
     /// Best-effort: look up the Project name so the CI check can be named for it.
@@ -253,9 +276,12 @@ impl Run {
             return self.wait_for_job(project, *uuid, *wait, ci_check).await;
         }
 
-        // The one callback the run sends, prints, and reads back.
+        // The one callback the run sends, prints, and reads back:
+        // the `--callback-*` flags, else the `repository_dispatch` a detached GitHub Actions run composes.
         #[cfg(feature = "plus")]
-        let callback = self.callback();
+        let composed = self.dispatch_callback(ci_check.as_ref())?;
+        #[cfg(feature = "plus")]
+        let callback = self.callback().or(composed.as_ref());
 
         let Some(json_new_run) = self
             .generate_report(
@@ -293,16 +319,44 @@ impl Run {
         #[cfg(feature = "plus")]
         if let Some(job_uuid) = json_report.job {
             if self.submit_job().is_some_and(|job| job.detach) {
-                cli_eprintln_quietable!(self.log, "Remote job submitted successfully: {job_uuid}");
-                if callback.is_some() {
-                    self.callback_notice(&json_report, job_uuid).await;
-                }
-                return self.display_and_check_alerts(json_report, ci_check).await;
+                return self
+                    .detached(json_report, job_uuid, callback.is_some(), ci_check)
+                    .await;
             }
             return self.poll_job(json_report, job_uuid, ci_check).await;
         }
 
         self.display_and_check_alerts(json_report, ci_check).await
+    }
+
+    /// A detached run on GitHub Actions posts nothing: the check it started waits for the attach,
+    /// unless the one read after submit shows that the callback will never fire.
+    #[cfg(feature = "plus")]
+    async fn detached(
+        &self,
+        json_report: JsonReport,
+        job_uuid: JobUuid,
+        has_callback: bool,
+        ci_check: &mut Option<CiCheck>,
+    ) -> Result<(), RunError> {
+        cli_eprintln_quietable!(self.log, "Remote job submitted successfully: {job_uuid}");
+        let notice = if has_callback {
+            self.callback_notice(&json_report, job_uuid, ci_check.as_ref())
+                .await
+        } else {
+            None
+        };
+        let Some(ci) = &self.ci else {
+            return self.display_and_check_alerts(json_report, ci_check).await;
+        };
+        // The callback hands the check to the attach. Without one the handle stays,
+        // so the check is failed rather than left in progress.
+        let check = if has_callback { ci_check.take() } else { None };
+        if let (Some(check), Some(notice)) = (check, notice) {
+            ci.complete_unfired(check, notice, &json_report.project.name, self.log)
+                .await;
+        }
+        self.display_report(json_report).await.map(drop)
     }
 
     async fn generate_report(
@@ -496,17 +550,45 @@ impl Run {
         self.submit_job()?.callback.as_deref()
     }
 
-    /// Read the detached job once, and say so if the server skipped its callback.
-    /// The job was submitted either way, so a failed read prints no notice.
+    /// The `repository_dispatch` a detached run composes when no `--callback-url` is given.
     #[cfg(feature = "plus")]
-    async fn callback_notice(&self, json_report: &JsonReport, job_uuid: JobUuid) {
+    fn dispatch_callback(
+        &self,
+        ci_check: Option<&CiCheck>,
+    ) -> Result<Option<JsonNewCallback>, RunError> {
+        match (&self.ci, self.submit_job()) {
+            (Some(ci), Some(job)) if job.detach && job.callback.is_none() => ci
+                .dispatch_callback(ci_check, self.log)
+                .map_err(RunError::Ci),
+            _ => Ok(None),
+        }
+    }
+
+    /// Read the detached job once, and say so if the server skipped its callback.
+    /// The job was submitted either way, so a failed read prints no notice, only a warning for a started check.
+    #[cfg(feature = "plus")]
+    async fn callback_notice(
+        &self,
+        json_report: &JsonReport,
+        job_uuid: JobUuid,
+        ci_check: Option<&CiCheck>,
+    ) -> Option<CallbackNotice> {
         let project = ProjectResourceId::Slug(json_report.project.slug.clone());
         let Ok(json_job) = self.get_job(&project, job_uuid).await else {
-            return;
+            // The callback is most likely pending, and its attach completes the check.
+            if ci_check.is_some() {
+                cli_eprintln_quietable!(
+                    self.log,
+                    "Warning: failed to read the callback state, so the GitHub Check stays in progress until the callback's receiver completes it"
+                );
+            }
+            return None;
         };
-        if let Some(notice) = CallbackNotice::new(&json_job) {
+        let notice = CallbackNotice::new(&json_job);
+        if let Some(notice) = notice {
             cli_eprintln_quietable!(self.log, "{notice}");
         }
+        notice
     }
 
     #[cfg(feature = "plus")]
@@ -547,7 +629,13 @@ impl Run {
             .await?;
         self.log_job_output(output.as_ref());
         if let Err(err) = result {
-            self.best_effort_display_report(project, report, ci_check)
+            // Anything but a cancel counts as a failure, so an error never completes a check as a success.
+            let failure = if matches!(err, RunError::JobCanceled(_)) {
+                JobFailure::Canceled
+            } else {
+                JobFailure::Failed
+            };
+            self.best_effort_display_report(project, report, failure, ci_check)
                 .await;
             return Err(err);
         }
@@ -584,8 +672,34 @@ impl Run {
         json_report: JsonReport,
         ci_check: &mut Option<CiCheck>,
     ) -> Result<(), RunError> {
+        self.post_results(
+            json_report,
+            #[cfg(feature = "plus")]
+            None,
+            ci_check,
+        )
+        .await
+    }
+
+    /// Display the report and post it to CI, with the failure of a job that ended without results.
+    async fn post_results(
+        &self,
+        json_report: JsonReport,
+        #[cfg(feature = "plus")] failure: Option<JobFailure>,
+        ci_check: &mut Option<CiCheck>,
+    ) -> Result<(), RunError> {
         let alerts_count = usize::try_from(json_report.counts.alerts.total).unwrap_or(usize::MAX);
-        self.display_results(json_report, ci_check).await?;
+        let report_comment = self.display_report(json_report).await?;
+        if let Some(ci) = &self.ci {
+            ci.run(
+                ci_check.take(),
+                &report_comment,
+                #[cfg(feature = "plus")]
+                failure,
+                self.log,
+            )
+            .await?;
+        }
         if self.error_on_alert && alerts_count > 0 {
             Err(RunError::Alerts(alerts_count))
         } else {
@@ -638,11 +752,12 @@ impl Run {
         &self,
         project: &ProjectResourceId,
         report_uuid: bencher_json::ReportUuid,
+        failure: JobFailure,
         ci_check: &mut Option<CiCheck>,
     ) {
         match self.fetch_report(project, report_uuid).await {
             Ok(report) => {
-                if let Err(err) = self.display_and_check_alerts(report, ci_check).await {
+                if let Err(err) = self.post_results(report, Some(failure), ci_check).await {
                     cli_eprintln_quietable!(self.log, "Warning: failed to display report: {err}");
                 }
             },
@@ -652,11 +767,7 @@ impl Run {
         }
     }
 
-    async fn display_results(
-        &self,
-        json_report: JsonReport,
-        ci_check: &mut Option<CiCheck>,
-    ) -> Result<(), RunError> {
+    async fn display_report(&self, json_report: JsonReport) -> Result<ReportComment, RunError> {
         let console_url = self
             .backend
             .get_console_url()
@@ -676,12 +787,7 @@ impl Run {
         };
         let newline_prefix = if self.log { "\n" } else { "" };
         cli_println!("{newline_prefix}{report_str}");
-
-        if let Some(ci) = &self.ci {
-            ci.run(ci_check.take(), &report_comment, self.log).await?;
-        }
-
-        Ok(())
+        Ok(report_comment)
     }
 }
 
