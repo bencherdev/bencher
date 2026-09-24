@@ -85,6 +85,9 @@
 | `--job-timeout <secs>` | Maximum execution time |
 | `--job-poll-interval <secs>` | Poll interval |
 | `--detach` | Submit without waiting (conflicts with `--job-poll-interval`) |
+| `--callback-url <url>` | `https` URL that Bencher sends one request to when the detached job finishes, Bencher Plus plans only (requires `--image` and `--detach`) |
+| `--callback-header '<NAME: VALUE>'` | Callback request header, quoted as one argument (repeatable, requires `--callback-url`) |
+| `--callback-body '<json>'` | Callback JSON body, quoted as one argument: a string that is exactly `{{ job.uuid }}`, `{{ job.status }}`, `{{ report.uuid }}`, `{{ project.uuid }}`, `{{ project.slug }}`, or `{{ report }}` (the whole report) becomes that value; optional, and without it the body is the report (requires `--callback-url`) |
 | `--job <uuid>` | Wait for a submitted job, then post its results (requires `--project`; `--job-timeout` is the wait budget; refuses report options, including from `BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, and `BENCHER_CMD`) |
 
 ### Backend

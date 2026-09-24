@@ -1,11 +1,13 @@
-#[cfg(feature = "plus")]
-use bencher_json::SpecResourceId;
 use bencher_json::{
     BranchNameId, DateTime, GitHash, ProjectResourceId, TestbedNameId, project::report::Iteration,
 };
 #[cfg(feature = "plus")]
+use bencher_json::{Secret, SpecResourceId};
+#[cfg(feature = "plus")]
 use bencher_parser::check_env;
 use camino::Utf8PathBuf;
+#[cfg(feature = "plus")]
+use clap::ArgAction;
 use clap::{ArgGroup, Args, Parser, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -322,6 +324,9 @@ pub struct CliRunJob {
             "entrypoint",
             "env",
             "detach",
+            "callback_url",
+            "callback_header",
+            "callback_body",
         ]
     )]
     pub job: Option<bencher_json::JobUuid>,
@@ -352,15 +357,45 @@ pub struct CliRunJob {
     /// Detach after submitting the remote job, without waiting for completion (requires: --image).
     #[clap(long, requires = "image", conflicts_with = "job_poll_interval")]
     pub detach: bool,
+
+    /// Callback `https` URL that Bencher sends one request to when the detached job finishes (requires: --image and --detach)
+    #[clap(long, value_name = "URL", requires = "image", requires = "detach")]
+    pub callback_url: Option<Secret>,
+
+    /// Callback header in `NAME: VALUE` format, repeatable (requires: --callback-url)
+    #[clap(long, value_name = "NAME: VALUE", action = ArgAction::Append, requires = "callback_url")]
+    pub callback_header: Option<Vec<Secret>>,
+
+    /// Callback JSON body, in which a string that is exactly a placeholder, like `{{ job.uuid }}` or `{{ report }}`, becomes its value; without it, the body is the report (requires: --callback-url)
+    #[clap(long, value_name = "JSON", requires = "callback_url", value_parser = parse_callback_body)]
+    pub callback_body: Option<serde_json::Value>,
+}
+
+#[cfg(feature = "plus")]
+fn parse_callback_body(body: &str) -> Result<serde_json::Value, String> {
+    serde_json::from_str(body).map_err(|err| format!("not valid JSON: {err}"))
+}
+
+/// The name and value around a `--callback-header`'s first colon, trimmed; `None` without a colon or a name.
+/// The flag is split after parsing because clap quotes a value it refuses.
+#[cfg(feature = "plus")]
+pub fn split_callback_header(header: &str) -> Option<(String, String)> {
+    let (name, value) = header.split_once(':')?;
+    let name = name.trim_ascii();
+    (!name.is_empty()).then(|| (name.to_owned(), value.trim_ascii().to_owned()))
 }
 
 #[cfg(all(test, feature = "plus"))]
 mod tests {
-    use clap::{CommandFactory as _, Parser as _, error::ErrorKind};
+    use clap::{
+        CommandFactory as _, Parser as _,
+        error::{ContextKind, ContextValue, ErrorKind},
+    };
 
-    use super::CliRun;
+    use super::{CliRun, split_callback_header};
 
     const JOB: &str = "8d2b6c4e-5f3a-4b1c-9e7d-0a1b2c3d4e5f";
+    const CALLBACK_URL: &str = "https://receiver.example/hooks";
     const HASH: &str = "0123456789abcdef0123456789abcdef01234567";
     const PROJECT_KEY: &str = "bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
     const JWT: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhdXRoIiwiZXhwIjoxNjY5Mjk5NjExLCJpYXQiOjE2NjkyOTc4MTEsImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoiYUBhLmNvIiwib3JnIjpudWxsfQ.jJmb_nCVJYLD5InaIxsQfS7x87fUsnCYpQK9SrWrKTc";
@@ -424,6 +459,9 @@ mod tests {
         ("entrypoint", &["--entrypoint", "sh"]),
         ("env", &["--env", "KEY=VALUE"]),
         ("detach", &["--detach"]),
+        ("callback_url", &["--callback-url", CALLBACK_URL]),
+        ("callback_header", &["--callback-header", "X-Token: token"]),
+        ("callback_body", &["--callback-body", "{}"]),
     ];
 
     // Every `bencher run` argument that works beside `--job`.
@@ -553,6 +591,116 @@ mod tests {
                 .collect::<Vec<_>>();
             let err = parse(&args).unwrap_err();
             assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument, "{err}");
+        }
+    }
+
+    fn parse_callback(args: &[&str]) -> Result<CliRun, clap::Error> {
+        let args = ["run", "--project", "my-project"]
+            .into_iter()
+            .chain(args.iter().copied())
+            .collect::<Vec<_>>();
+        parse(&args)
+    }
+
+    fn assert_missing(err: &clap::Error, missing: &[&str]) {
+        assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument, "{err}");
+        // The usage line names every required argument, so read the list of missing ones.
+        let not_provided =
+            if let Some(ContextValue::Strings(args)) = err.get(ContextKind::InvalidArg) {
+                args.join(" ")
+            } else {
+                String::new()
+            };
+        for missing in missing {
+            assert!(
+                not_provided.contains(missing),
+                "{missing} not in {not_provided:?}: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn callback_url_requires_image_and_detach() {
+        assert_missing(
+            &parse_callback(&["--image", "alpine:3.18", "--callback-url", CALLBACK_URL])
+                .unwrap_err(),
+            &["--detach"],
+        );
+        assert_missing(
+            &parse_callback(&["--callback-url", CALLBACK_URL, "bencher", "mock"]).unwrap_err(),
+            &["--image", "--detach"],
+        );
+    }
+
+    #[test]
+    fn callback_header_and_body_require_callback_url() {
+        for args in [
+            ["--callback-header", "X-Token: token"],
+            ["--callback-body", "{}"],
+        ] {
+            let args = ["--image", "alpine:3.18", "--detach"]
+                .into_iter()
+                .chain(args)
+                .collect::<Vec<_>>();
+            assert_missing(&parse_callback(&args).unwrap_err(), &["--callback-url"]);
+        }
+    }
+
+    #[test]
+    fn callback_body_is_json() {
+        let callback_body = |body| {
+            parse_callback(&[
+                "--image",
+                "alpine:3.18",
+                "--detach",
+                "--callback-url",
+                CALLBACK_URL,
+                "--callback-body",
+                body,
+            ])
+            .map(|run| run.job.callback_body)
+        };
+        assert_eq!(
+            callback_body(r#" {"job": "{{ job.uuid }}", "n": [1, null]} "#).unwrap(),
+            Some(serde_json::json!({ "job": "{{ job.uuid }}", "n": [1, null] }))
+        );
+        for (body, at) in [
+            ("{{ job.uuid }}", "at line 1 column 2"),
+            ("{\n\"job\": 1,\n}", "at line 3 column 1"),
+        ] {
+            let err = callback_body(body).unwrap_err();
+            assert_eq!(err.kind(), ErrorKind::ValueValidation, "{err}");
+            let err = err.to_string();
+            assert!(err.contains("not valid JSON: "), "{err}");
+            assert!(err.contains(at), "{body}: {err}");
+        }
+    }
+
+    #[test]
+    fn callback_header_splits_at_the_first_colon_and_trims() {
+        for (header, name, value) in [
+            ("Authorization: Bearer a:b", "Authorization", "Bearer a:b"),
+            ("  X-Key :  value  ", "X-Key", "value"),
+            ("X-Tab:\tvalue\t", "X-Tab", "value"),
+            ("X-Empty:", "X-Empty", ""),
+            (
+                "X-Unicode: \u{a0}value\u{a0}",
+                "X-Unicode",
+                "\u{a0}value\u{a0}",
+            ),
+        ] {
+            assert_eq!(
+                split_callback_header(header),
+                Some((name.to_owned(), value.to_owned())),
+                "{header}"
+            );
+        }
+    }
+
+    #[test]
+    fn callback_header_needs_a_colon_and_a_name() {
+        for header in ["X-Token token", ": value", "  : value", ""] {
+            assert_eq!(split_callback_header(header), None, "{header}");
         }
     }
 }
