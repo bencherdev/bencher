@@ -14,8 +14,12 @@ use super::DbConnection;
 use crate::model::runner::{JobId, QueryJobCallback};
 
 mod delivery;
+#[cfg(feature = "otel")]
+mod metrics;
 
 use delivery::Delivery;
+#[cfg(feature = "otel")]
+pub use metrics::callback_sealed;
 
 /// Claims job callbacks and owns the tasks that deliver them, so shutdown can await every one.
 #[derive(Clone)]
@@ -82,6 +86,15 @@ impl Callbacks {
             Ok(0) => {},
             Ok(count) => slog::info!(log, "Reset {count} delivering job callback(s) to pending"),
             Err(e) => slog::error!(log, "Failed to reset delivering job callbacks: {e}"),
+        }
+    }
+
+    /// Start the gauge of sealed callbacks at the stored count, before this process can seal or settle one.
+    #[cfg(feature = "otel")]
+    pub async fn start_sealed_gauge(&self, log: &Logger) {
+        match QueryJobCallback::count_sealed(&mut *self.delivery.connection().lock().await) {
+            Ok(count) => metrics::sealed_at_start(count),
+            Err(e) => slog::error!(log, "Failed to count sealed job callbacks: {e}"),
         }
     }
 

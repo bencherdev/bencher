@@ -3,30 +3,37 @@ use core::fmt;
 #[derive(Debug, Clone, Copy)]
 pub enum ApiGauge {
     RunnerState(RunnerStateKind),
+    CallbackSealed,
 }
 
 impl ApiGauge {
     pub(crate) fn name(self) -> &'static str {
         match self {
             Self::RunnerState(_) => "runner.state",
+            Self::CallbackSealed => "callback.sealed",
         }
     }
 
     pub(crate) fn description(self) -> &'static str {
         match self {
             Self::RunnerState(_) => "Current number of runners in each state",
+            Self::CallbackSealed => {
+                "Current number of callbacks holding a sealed request, pending or delivering"
+            },
         }
     }
 
     pub(crate) fn unit(self) -> &'static str {
         match self {
             Self::RunnerState(_) => "{runner}",
+            Self::CallbackSealed => "{callback}",
         }
     }
 
     pub(crate) fn attributes(self) -> Vec<opentelemetry::KeyValue> {
         match self {
             Self::RunnerState(state) => vec![state.into()],
+            Self::CallbackSealed => Vec::new(),
         }
     }
 }

@@ -1,6 +1,9 @@
+use bencher_callback::CallbackFinish;
 use opentelemetry::KeyValue;
 
 pub use bencher_json::Priority;
+
+use crate::callback::finish_attributes;
 
 #[derive(Debug, Clone, Copy)]
 pub enum ApiHistogram {
@@ -16,6 +19,10 @@ pub enum ApiHistogram {
     ReportProcessDuration,
     /// Time spent in the batched DB write transaction per iteration.
     ReportWriteDuration,
+    /// Time from a callback's claim to its final outcome.
+    CallbackFinishDuration(CallbackFinish),
+    /// Attempts a callback made over its life, recorded at its final outcome.
+    CallbackFinishAttempts(CallbackFinish),
 }
 
 impl ApiHistogram {
@@ -27,6 +34,8 @@ impl ApiHistogram {
             Self::ReportCreateDuration => "report.create.duration",
             Self::ReportProcessDuration => "report.process.duration",
             Self::ReportWriteDuration => "report.write.duration",
+            Self::CallbackFinishDuration(_) => "callback.finish.duration",
+            Self::CallbackFinishAttempts(_) => "callback.finish.attempts",
         }
     }
 
@@ -46,6 +55,10 @@ impl ApiHistogram {
             Self::ReportWriteDuration => {
                 "Time spent in the batched DB write transaction per iteration"
             },
+            Self::CallbackFinishDuration(_) => "Time from a callback's claim to its final outcome",
+            Self::CallbackFinishAttempts(_) => {
+                "Attempts a callback made over its life, recorded at its final outcome"
+            },
         }
     }
 
@@ -56,7 +69,9 @@ impl ApiHistogram {
             | Self::JobCompleteDuration(_)
             | Self::ReportCreateDuration
             | Self::ReportProcessDuration
-            | Self::ReportWriteDuration => "s",
+            | Self::ReportWriteDuration
+            | Self::CallbackFinishDuration(_) => "s",
+            Self::CallbackFinishAttempts(_) => "{attempt}",
         }
     }
 
@@ -68,6 +83,26 @@ impl ApiHistogram {
             Self::ReportCreateDuration
             | Self::ReportProcessDuration
             | Self::ReportWriteDuration => Vec::new(),
+            Self::CallbackFinishDuration(finish) | Self::CallbackFinishAttempts(finish) => {
+                finish_attributes(finish)
+            },
+        }
+    }
+
+    /// Boundaries for values that the SDK's defaults, sized for milliseconds, would lump into one or two buckets.
+    pub(crate) fn boundaries(self) -> Option<&'static [f64]> {
+        match self {
+            Self::JobQueueDuration(_)
+            | Self::JobRunDuration(_)
+            | Self::JobCompleteDuration(_)
+            | Self::ReportCreateDuration
+            | Self::ReportProcessDuration
+            | Self::ReportWriteDuration => None,
+            // Three attempts of up to 10 s, 4 s and 16 s apart.
+            Self::CallbackFinishDuration(_) => {
+                Some(&[0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 20.0, 30.0, 60.0])
+            },
+            Self::CallbackFinishAttempts(_) => Some(&[0.0, 1.0, 2.0, 3.0]),
         }
     }
 }
