@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use bencher_json::{
     BmfVersion, DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority,
-    Timeout, project::report::JsonReportSettings, runner::JsonIterationOutput,
+    ReportUuid, Timeout, project::report::JsonReportSettings, runner::JsonIterationOutput,
     runner::job::JsonNewRunJob,
 };
 use diesel::{
@@ -251,8 +251,13 @@ impl QueryJob {
         Ok(())
     }
 
-    /// Convert to JSON for public API (config is not included).
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonJob, HttpError> {
+    /// Convert to JSON for public API (config is not included); the caller selects `report_uuid`
+    /// in the same query as the job, so a list needs no lookup per job.
+    pub fn into_json(
+        self,
+        conn: &mut DbConnection,
+        report_uuid: ReportUuid,
+    ) -> Result<JsonJob, HttpError> {
         let runner_uuid = if let Some(runner_id) = self.runner_id {
             Some(QueryRunner::get(conn, runner_id)?.uuid)
         } else {
@@ -263,9 +268,11 @@ impl QueryJob {
 
         Ok(JsonJob {
             uuid: self.uuid,
-            status: self.status,
+            report: report_uuid,
             spec: json_spec,
             config: None,
+            timeout: self.timeout,
+            status: self.status,
             runner: runner_uuid,
             claimed: self.claimed,
             started: self.started,

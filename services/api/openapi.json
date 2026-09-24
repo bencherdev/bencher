@@ -13438,6 +13438,9 @@
               }
             ]
           },
+          "report": {
+            "$ref": "#/components/schemas/ReportUuid"
+          },
           "runner": {
             "nullable": true,
             "allOf": [
@@ -13465,6 +13468,14 @@
           "status": {
             "$ref": "#/components/schemas/JobStatus"
           },
+          "timeout": {
+            "description": "Maximum execution time in seconds",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Timeout"
+              }
+            ]
+          },
           "uuid": {
             "$ref": "#/components/schemas/JobUuid"
           }
@@ -13472,8 +13483,10 @@
         "required": [
           "created",
           "modified",
+          "report",
           "spec",
           "status",
+          "timeout",
           "uuid"
         ]
       },

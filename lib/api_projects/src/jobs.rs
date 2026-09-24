@@ -2,7 +2,8 @@
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk, TotalCount};
 use bencher_json::{
-    JobStatus, JobUuid, JsonDirection, JsonJob, JsonPagination, ProjectResourceId, runner::JsonJobs,
+    JobStatus, JobUuid, JsonDirection, JsonJob, JsonPagination, ProjectResourceId, ReportUuid,
+    runner::JsonJobs,
 };
 use bencher_schema::{
     actor_conn,
@@ -111,7 +112,7 @@ pub async fn get_ls_inner(
     let jobs = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<QueryJob>(actor_conn!(context, api_actor))
+        .load::<(QueryJob, ReportUuid)>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
             Job,
             (&query_project, &pagination_params, &query_params)
@@ -119,7 +120,7 @@ pub async fn get_ls_inner(
 
     let json_jobs = actor_conn!(context, api_actor, |conn| {
         jobs.into_iter()
-            .map(|job| job.into_json(conn))
+            .map(|(job, report_uuid)| job.into_json(conn, report_uuid))
             .collect::<Result<Vec<_>, _>>()?
     });
 
@@ -143,7 +144,7 @@ fn get_ls_query<'q>(
     let mut query = schema::job::table
         .inner_join(schema::report::table)
         .filter(schema::report::project_id.eq(query_project.id))
-        .select(QueryJob::as_select())
+        .select((QueryJob::as_select(), schema::report::uuid))
         .into_boxed();
 
     if let Some(status) = query_params.status {
@@ -161,7 +162,10 @@ fn get_ls_query<'q>(
 // TODO refactor out internal types
 type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
     'q,
-    diesel::helper_types::AsSelect<QueryJob, diesel::sqlite::Sqlite>,
+    (
+        diesel::helper_types::AsSelect<QueryJob, diesel::sqlite::Sqlite>,
+        diesel::helper_types::SqlTypeOf<schema::report::uuid>,
+    ),
     diesel::internal::table_macro::FromClause<
         diesel::helper_types::InnerJoinQuerySource<schema::job::table, schema::report::table>,
     >,
@@ -233,16 +237,16 @@ pub async fn get_one_inner(
 
     let job_uuid = path_params.job;
 
-    let query_job: QueryJob = schema::job::table
+    let (query_job, report_uuid): (QueryJob, ReportUuid) = schema::job::table
         .inner_join(schema::report::table)
         .filter(schema::report::project_id.eq(query_project.id))
         .filter(schema::job::uuid.eq(job_uuid))
-        .select(QueryJob::as_select())
+        .select((QueryJob::as_select(), schema::report::uuid))
         .first(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(Job, (&query_project, job_uuid)))?;
 
     let has_run = query_job.status.has_run();
-    let mut job = query_job.into_json(actor_conn!(context, api_actor))?;
+    let mut job = query_job.into_json(actor_conn!(context, api_actor), report_uuid)?;
 
     // Fetch output from blob storage for terminal jobs only when authenticated
     if has_run && api_actor.is_auth() {
