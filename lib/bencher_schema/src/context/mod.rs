@@ -20,6 +20,8 @@ use url::Url;
 #[cfg(feature = "plus")]
 use crate::model::project::QueryProject;
 
+#[cfg(feature = "plus")]
+mod callbacks;
 mod database;
 #[cfg(feature = "plus")]
 mod heartbeat_tasks;
@@ -36,6 +38,8 @@ mod stats;
 
 #[cfg(feature = "plus")]
 use bencher_recaptcha::RecaptchaClient;
+#[cfg(feature = "plus")]
+pub use callbacks::Callbacks;
 pub use database::{DataStore, DataStoreError, Database, DbConnection};
 #[cfg(feature = "plus")]
 pub use heartbeat_tasks::HeartbeatTasks;
@@ -96,6 +100,8 @@ pub struct ApiContext {
     pub heartbeat_tasks: HeartbeatTasks,
     #[cfg(feature = "plus")]
     pub callback_key: CallbackKey,
+    #[cfg(feature = "plus")]
+    pub callbacks: Callbacks,
     /// Runner self-update URL construction and cloud channel checksum cache.
     #[cfg(feature = "plus")]
     pub runner_update: RunnerUpdate,

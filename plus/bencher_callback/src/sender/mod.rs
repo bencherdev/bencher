@@ -64,6 +64,66 @@ pub enum CallbackBlock {
     },
 }
 
+/// The class of one attempt's outcome.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display)]
+pub enum CallbackAttemptClass {
+    #[display("2xx")]
+    Success,
+    #[display("3xx")]
+    Redirection,
+    #[display("4xx")]
+    ClientError,
+    #[display("5xx")]
+    ServerError,
+    /// A status outside 200 to 599.
+    #[display("other")]
+    OtherStatus,
+    #[display("timeout")]
+    Timeout,
+    #[display("connection")]
+    Connection,
+    #[display("blocked")]
+    Blocked(CallbackBlockReason),
+}
+
+/// Why the address policy refused a callback, without the refused address.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display)]
+pub enum CallbackBlockReason {
+    #[display("not_https")]
+    NotHttps,
+    #[display("{_0}")]
+    Address(AddressClass),
+}
+
+/// How a claimed callback ends.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display)]
+pub enum CallbackFinish {
+    #[display("delivered")]
+    Delivered,
+    #[display("failed")]
+    Failed(CallbackFailure),
+}
+
+/// Why a callback failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display)]
+pub enum CallbackFailure {
+    /// Every attempt was a timeout, a connection error, 408, 429, or a 5xx.
+    #[display("exhausted")]
+    Exhausted,
+    /// The receiver answered with a status no retry can change.
+    #[display("refused")]
+    Refused,
+    #[display("blocked")]
+    Blocked(CallbackBlockReason),
+    /// The sealed request does not open, as after a change of the secret key.
+    #[display("open")]
+    Open,
+    /// The opened request no longer validates, its headers do not build, or the job's report
+    /// does not build.
+    #[display("render")]
+    Render,
+}
+
 /// Why an attempt failed before the receiver answered.
 #[derive(Debug, thiserror::Error)]
 pub enum CallbackConnectionError {
@@ -131,6 +191,21 @@ impl fmt::Debug for RequestDebug<'_> {
 }
 
 impl CallbackAttempt {
+    pub fn class(&self) -> CallbackAttemptClass {
+        match self {
+            Self::Delivered(_) => CallbackAttemptClass::Success,
+            Self::Refused(status) => match status.as_u16() {
+                300..=399 => CallbackAttemptClass::Redirection,
+                400..=499 => CallbackAttemptClass::ClientError,
+                500..=599 => CallbackAttemptClass::ServerError,
+                _ => CallbackAttemptClass::OtherStatus,
+            },
+            Self::TimedOut => CallbackAttemptClass::Timeout,
+            Self::Connection(_) => CallbackAttemptClass::Connection,
+            Self::Blocked(block) => CallbackAttemptClass::Blocked(block.reason()),
+        }
+    }
+
     fn answered(status: StatusCode) -> Self {
         if status.is_success() {
             Self::Delivered(status)
@@ -150,6 +225,15 @@ impl CallbackAttempt {
             Self::TimedOut
         } else {
             Self::Connection(CallbackConnectionError::Send(error.without_url()))
+        }
+    }
+}
+
+impl CallbackBlock {
+    pub fn reason(self) -> CallbackBlockReason {
+        match self {
+            Self::NotHttps => CallbackBlockReason::NotHttps,
+            Self::Address { address: _, class } => CallbackBlockReason::Address(class),
         }
     }
 }

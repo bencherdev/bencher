@@ -6,7 +6,7 @@ use std::{
 };
 
 #[cfg(feature = "plus")]
-use bencher_callback::CallbackKey;
+use bencher_callback::{CallbackClient, CallbackKey, error_chain};
 use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
 use bencher_json::system::config::{
@@ -23,9 +23,9 @@ use bencher_rbac::init_rbac;
 use bencher_schema::context::{ApiContext, Database, DbConnection};
 #[cfg(feature = "plus")]
 use bencher_schema::{
-    context::RateLimiting,
+    context::{Callbacks, RateLimiting},
     model::{
-        runner::job::{reprocess_completed_jobs, spawn_heartbeat_timeout},
+        runner::{JobTimeout, job::reprocess_completed_jobs},
         server::QueryServer,
     },
     write_conn,
@@ -160,19 +160,26 @@ impl ConfigTx {
         )
         .map_err(ConfigTxError::Register)?;
 
-        let server = dropshot::HttpServerStarter::new_with_tls(
+        #[cfg(feature = "plus")]
+        let callbacks = context.callbacks.clone();
+        let starter = dropshot::HttpServerStarter::new_with_tls(
             &config_dropshot,
             api_description,
             context,
             log,
             tls,
         )
-        .map_err(ConfigTxError::CreateServer)?
-        .start();
+        .map_err(ConfigTxError::CreateServer)?;
+        // The port is bound, so a second server on it has already failed, and nothing accepts a
+        // connection until `start`, so every callback left delivering is a previous process's.
+        #[cfg(feature = "plus")]
+        callbacks.reset_delivering(log).await;
+        let server = starter.start();
 
-        // The server is already accepting connections. Requests may arrive before
-        // job recovery completes; this is safe because recovery only affects heartbeat
-        // timeout scheduling, not request handling correctness.
+        // The server is already accepting connections. Requests may arrive before job recovery
+        // completes: recovery schedules heartbeat timeouts, reprocesses completed jobs, and fires
+        // pending callbacks, and a callback's claim keeps a runner's resent result and recovery
+        // from sending it twice.
         #[cfg(feature = "plus")]
         spawn_job_recovery(log, server.app_private()).await;
 
@@ -352,6 +359,11 @@ async fn into_context(
             shutdown.clone(),
         ));
 
+    let clock = bencher_json::Clock::System;
+
+    #[cfg(feature = "plus")]
+    let callbacks = new_callbacks(log, &database, &callback_key, &shutdown, &clock);
+
     debug!(log, "Creating API context");
     Ok(ApiContext {
         console_url,
@@ -384,7 +396,7 @@ async fn into_context(
         registry_url,
         #[cfg(feature = "plus")]
         oci_storage,
-        clock: bencher_json::Clock::System,
+        clock,
         #[cfg(feature = "plus")]
         heartbeat_timeout,
         #[cfg(feature = "plus")]
@@ -394,10 +406,40 @@ async fn into_context(
         #[cfg(feature = "plus")]
         callback_key,
         #[cfg(feature = "plus")]
+        callbacks,
+        #[cfg(feature = "plus")]
         runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
         #[cfg(feature = "plus")]
         shutdown,
     })
+}
+
+#[cfg(feature = "plus")]
+fn new_callbacks(
+    log: &Logger,
+    database: &Database,
+    callback_key: &CallbackKey,
+    shutdown: &bencher_schema::context::CancellationToken,
+    clock: &bencher_json::Clock,
+) -> Callbacks {
+    // `main` installed the TLS crypto provider the client builds with.
+    let callback_client = CallbackClient::new();
+    // A server that cannot send callbacks still serves everything else.
+    if let Some(build_error) = callback_client.build_error() {
+        error!(
+            log,
+            "Job callbacks cannot be sent: {}",
+            error_chain(build_error)
+        );
+    }
+    Callbacks::new(
+        Arc::clone(&database.connection),
+        database.auth_pool.clone(),
+        callback_key.clone(),
+        Arc::new(callback_client),
+        shutdown.clone(),
+        clock.clone(),
+    )
 }
 
 // Set the diesel `DATABASE_URL` env var to the database path
@@ -581,7 +623,7 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
 }
 
 #[cfg(feature = "plus")]
-async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
+pub async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
     use bencher_schema::model::runner::{in_flight_jobs, mark_orphaned_claimed_jobs_unknown};
 
     let in_flight_jobs = {
@@ -596,7 +638,7 @@ async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
             Ok(jobs) => jobs,
             Err(e) => {
                 error!(log, "Failed to query in-flight jobs for recovery: {e}");
-                return;
+                Vec::new()
             },
         }
     };
@@ -610,19 +652,26 @@ async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
     }
 
     for job in in_flight_jobs {
-        spawn_heartbeat_timeout(
+        JobTimeout {
+            heartbeat: context.heartbeat_timeout,
+            grace_period: context.job_timeout_grace_period,
+        }
+        .spawn_heartbeat_timeout(
             log.clone(),
-            context.heartbeat_timeout,
             context.database.connection.clone(),
             job.id,
             &context.heartbeat_tasks,
-            context.job_timeout_grace_period,
             context.clock.clone(),
+            context.callbacks.clone(),
         );
     }
 
-    // Finally, reprocess any jobs stuck in Completed (output stored but results not parsed).
+    // Then reprocess any jobs stuck in Completed (output stored but results not parsed).
     reprocess_completed_jobs(log, context).await;
+
+    // Finally, fire the callbacks a previous process left pending on terminal jobs. The fires above
+    // and those of runners that reconnect meanwhile claim first, so each callback is sent once.
+    context.callbacks.fire_pending(log).await;
 }
 
 #[cfg(feature = "plus")]

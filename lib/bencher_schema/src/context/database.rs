@@ -50,7 +50,7 @@ impl Database {
         }
     }
 
-    async fn get_conn(
+    pub(crate) async fn get_conn(
         pool: Pool<ConnectionManager<DbConnection>>,
     ) -> Result<PooledConnection<ConnectionManager<DbConnection>>, HttpError> {
         tokio::task::spawn_blocking(move || {

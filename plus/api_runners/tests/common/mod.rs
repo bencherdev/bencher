@@ -12,15 +12,18 @@
 //! Runner-specific helpers live here.
 
 use api_runners::{RunnerMessage, ServerMessage};
-use bencher_api_tests::TestServer;
 pub use bencher_api_tests::helpers::{
     base_timestamp, create_test_report, get_project_id, set_job_status,
 };
+use bencher_api_tests::{CallbackRequest, TestServer, TestUser};
 use bencher_json::{
-    DateTime, JobStatus, JobUuid, JsonClaimedJob, JsonRunnerKey, PollTimeout, Priority, RunnerUuid,
-    SpecUuid, runner::JsonRunnerMetadata,
+    DateTime, JobStatus, JobUuid, JsonClaimedJob, JsonNewCallback, JsonRunnerKey, PollTimeout,
+    Priority, ProjectSlug, ReportUuid, RunnerUuid, SpecUuid, runner::JsonRunnerMetadata,
 };
-use bencher_schema::schema;
+use bencher_schema::{
+    model::runner::{CallbackState, InsertJobCallback, JobId, QueryJobCallback},
+    schema,
+};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
 use tokio_tungstenite::tungstenite::{Message, client::IntoClientRequest as _};
@@ -642,4 +645,186 @@ pub async fn assert_ws_closed(ws: &mut WsStream) {
         Err(_) | Ok(None | Some(Ok(Message::Close(_)) | Err(_))) => {},
         Ok(Some(Ok(other))) => panic!("Expected WS to be closed, got message: {other:?}"),
     }
+}
+
+// =============================================================================
+// Callback Helpers
+// =============================================================================
+
+pub const CALLBACK_URL: &str = "https://receiver.example/bencher/hook";
+pub const CALLBACK_AUTHORIZATION: &str = "Bearer callback-token";
+/// Store a pending callback whose body has all five values, so a test sees the status each site
+/// fires with, sealed with the server's key the way a submit does.
+pub fn insert_pending_callback(server: &TestServer, job_uuid: JobUuid) {
+    insert_pending_callback_with_body(
+        server,
+        job_uuid,
+        Some(serde_json::json!({
+            "job": { "uuid": "{{ job.uuid }}", "status": "{{ job.status }}" },
+            "report": { "uuid": "{{ report.uuid }}" },
+            "project": { "uuid": "{{ project.uuid }}", "slug": "{{ project.slug }}" },
+        })),
+    );
+}
+
+/// Store a pending callback with `body`, or with none, so it sends the report.
+#[expect(clippy::expect_used, reason = "test helper")]
+pub fn insert_pending_callback_with_body(
+    server: &TestServer,
+    job_uuid: JobUuid,
+    body: Option<serde_json::Value>,
+) {
+    let callback = JsonNewCallback::new(
+        CALLBACK_URL,
+        [(
+            "Authorization".to_owned(),
+            CALLBACK_AUTHORIZATION.to_owned(),
+        )],
+        body,
+    )
+    .expect("Invalid callback");
+    let plaintext = serde_json::to_vec(&callback).expect("Failed to serialize the callback");
+    let sealed = server
+        .context()
+        .callback_key
+        .seal(job_uuid, &plaintext)
+        .expect("Failed to seal the callback");
+    InsertJobCallback::pending(job_id(server, job_uuid), sealed, base_timestamp())
+        .insert(&mut server.db_conn())
+        .expect("Failed to insert the callback");
+}
+
+/// The stored state of a job's callback.
+#[expect(clippy::expect_used, reason = "test helper")]
+pub fn callback_state(server: &TestServer, job_uuid: JobUuid) -> CallbackState {
+    QueryJobCallback::get(&mut server.db_conn(), job_id(server, job_uuid))
+        .expect("Failed to get the callback")
+        .state
+}
+
+/// Wait for every delivery, then assert the receiver got exactly one request: this job's
+/// callback in `status`, with all five values rendered and the delivery headers.
+#[expect(clippy::expect_used, reason = "test helper")]
+pub async fn assert_one_callback(server: &TestServer, job_uuid: JobUuid, status: &str) {
+    let request = one_delivered_callback(server, job_uuid).await;
+    let (report_uuid, project_uuid, project_slug): (
+        ReportUuid,
+        bencher_json::ProjectUuid,
+        ProjectSlug,
+    ) = schema::job::table
+        .inner_join(schema::report::table.inner_join(schema::project::table))
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select((
+            schema::report::uuid,
+            schema::project::uuid,
+            schema::project::slug,
+        ))
+        .first(&mut server.db_conn())
+        .expect("Failed to get the job's report and project");
+    let body: serde_json::Value =
+        serde_json::from_str(&request.body).expect("The callback body is JSON");
+    assert_eq!(
+        body,
+        serde_json::json!({
+            "job": { "uuid": job_uuid, "status": status },
+            "report": { "uuid": report_uuid },
+            "project": { "uuid": project_uuid, "slug": project_slug },
+        }),
+        "the rendered body"
+    );
+}
+
+/// Wait for every delivery, then assert the receiver got exactly one request: this job's
+/// callback with the delivery headers and, as its body, the job's report exactly as the report
+/// endpoint returns it to `user`. Returns that report.
+#[expect(clippy::expect_used, reason = "test helper")]
+pub async fn assert_one_report_callback(
+    server: &TestServer,
+    user: &TestUser,
+    job_uuid: JobUuid,
+) -> serde_json::Value {
+    let request = one_delivered_callback(server, job_uuid).await;
+    let (report_uuid, project_slug): (ReportUuid, ProjectSlug) = schema::job::table
+        .inner_join(schema::report::table.inner_join(schema::project::table))
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select((schema::report::uuid, schema::project::slug))
+        .first(&mut server.db_conn())
+        .expect("Failed to get the job's report and project");
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{project_slug}/reports/{report_uuid}"
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), http::StatusCode::OK, "get the report");
+    let report: serde_json::Value = resp.json().await.expect("Failed to parse the report");
+    let body: serde_json::Value =
+        serde_json::from_str(&request.body).expect("The callback body is JSON");
+    assert_eq!(body, report, "the body is the report");
+    report
+}
+
+/// Wait for every delivery, then return the one request the receiver got, after asserting its
+/// URL and headers and that the callback is delivered.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn one_delivered_callback(server: &TestServer, job_uuid: JobUuid) -> CallbackRequest {
+    server.drain_callbacks().await;
+    let requests = server.callback_requests();
+    assert_eq!(requests.len(), 1, "one callback for {job_uuid}");
+    let request = requests.into_iter().next().expect("one callback");
+    assert_eq!(request.url.as_str(), CALLBACK_URL, "the callback URL");
+    let header = |name: &str| {
+        request
+            .headers
+            .get(name)
+            .and_then(|value| value.to_str().ok())
+            .map(ToOwned::to_owned)
+    };
+    assert_eq!(
+        header("content-type").as_deref(),
+        Some("application/json"),
+        "the default content type"
+    );
+    assert_eq!(
+        header("user-agent"),
+        Some(format!("bencher/{}", bencher_json::BENCHER_API_VERSION)),
+        "the server's user agent"
+    );
+    assert_eq!(
+        header("authorization").as_deref(),
+        Some(CALLBACK_AUTHORIZATION),
+        "the customer's header"
+    );
+    assert_eq!(
+        callback_state(server, job_uuid),
+        CallbackState::Delivered,
+        "the callback is delivered"
+    );
+    request
+}
+
+/// Wait for every delivery, then assert the receiver got nothing and the callback still waits.
+pub async fn assert_no_callback(server: &TestServer, job_uuid: JobUuid) {
+    server.drain_callbacks().await;
+    assert_eq!(server.callback_requests().len(), 0, "no callback is sent");
+    assert_eq!(
+        callback_state(server, job_uuid),
+        CallbackState::Pending,
+        "the callback still waits"
+    );
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn job_id(server: &TestServer, job_uuid: JobUuid) -> JobId {
+    schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::id)
+        .first(&mut server.db_conn())
+        .expect("Failed to get job ID")
 }
