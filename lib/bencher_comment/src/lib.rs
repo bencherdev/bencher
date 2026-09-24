@@ -15,6 +15,10 @@ use bencher_json::{
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
+        measure::built_in::{
+            BuiltInMeasure as _,
+            json::{BuildTime, FileSize},
+        },
         plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
         report::{JsonReportIteration, JsonReportMeasure, JsonReportResult},
     },
@@ -47,6 +51,24 @@ pub struct ReportComment {
 pub struct SubAdapter {
     pub build_time: bool,
     pub file_size: bool,
+}
+
+impl From<&JsonReport> for SubAdapter {
+    fn from(json_report: &JsonReport) -> Self {
+        let has_measure = |slug: &str| {
+            json_report
+                .results
+                .iter()
+                .flatten()
+                .flatten()
+                .flat_map(|result| &result.measures)
+                .any(|measure| AsRef::<str>::as_ref(&measure.measure.slug) == slug)
+        };
+        Self {
+            build_time: has_measure(BuildTime::SLUG_STR),
+            file_size: has_measure(FileSize::SLUG_STR),
+        }
+    }
 }
 
 impl ReportComment {

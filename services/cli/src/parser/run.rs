@@ -265,13 +265,66 @@ pub struct CliRunCi {
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
 }
 
-/// OCI image and remote runner options (Bencher Plus).
+/// Remote runner options: submit a job with `--image` or attach to one with `--job` (Bencher Plus).
 #[cfg(feature = "plus")]
 #[derive(Args, Debug)]
+#[clap(group(
+    ArgGroup::new("remote_job")
+        .multiple(false)
+        .args(["image", "job"]),
+))]
 pub struct CliRunJob {
     /// OCI image reference for remote runner execution (e.g. "alpine:3.18", "ghcr.io/owner/repo:v1")
     #[clap(long)]
     pub image: Option<bencher_json::ImageReference>,
+
+    /// Attach to a submitted remote job: wait for it, then post its results (requires: --project).
+    /// It refuses the report options, including from `BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, and `BENCHER_CMD`.
+    #[clap(
+        long,
+        value_name = "UUID",
+        requires = "project",
+        conflicts_with_all = [
+            "ci_on_the_fly",
+            "branch",
+            "hash",
+            "start_point",
+            "start_point_hash",
+            "start_point_max_versions",
+            "start_point_clone_thresholds",
+            "start_point_reset",
+            "deprecated",
+            "testbed",
+            "spec_reset",
+            "adapter",
+            "average",
+            "iter",
+            "fold",
+            "backdate",
+            "allow_failure",
+            "threshold_measure",
+            "threshold_test",
+            "threshold_min_sample_size",
+            "threshold_max_sample_size",
+            "threshold_window",
+            "threshold_lower_boundary",
+            "threshold_upper_boundary",
+            "thresholds_reset",
+            "build_time",
+            "file",
+            "file_size",
+            "shell",
+            "flag",
+            "exec",
+            "command",
+            "dry_run",
+            "spec",
+            "entrypoint",
+            "env",
+            "detach",
+        ]
+    )]
+    pub job: Option<bencher_json::JobUuid>,
 
     /// Hardware spec slug or UUID (requires: --image)
     #[clap(long, requires = "image")]
@@ -287,16 +340,219 @@ pub struct CliRunJob {
     #[clap(long, requires = "image", value_parser = check_env)]
     pub env: Option<Vec<String>>,
 
-    /// Maximum job execution time in seconds (requires: --image)
-    #[clap(long, requires = "image")]
+    /// Maximum job execution time in seconds, or with `--job` the maximum seconds to wait (requires: --image or --job)
+    #[clap(long, requires = "remote_job")]
     pub job_timeout: Option<bencher_json::Timeout>,
 
-    /// Poll interval in seconds when waiting for remote job completion (requires: --image)
+    /// Poll interval in seconds when waiting for remote job completion (requires: --image or --job)
     // TODO remove in due time
-    #[clap(long, alias = "poll-interval", requires = "image")]
+    #[clap(long, alias = "poll-interval", requires = "remote_job")]
     pub job_poll_interval: Option<bencher_json::PollTimeout>,
 
     /// Detach after submitting the remote job, without waiting for completion (requires: --image).
     #[clap(long, requires = "image", conflicts_with = "job_poll_interval")]
     pub detach: bool,
+}
+
+#[cfg(all(test, feature = "plus"))]
+mod tests {
+    use clap::{CommandFactory as _, Parser as _, error::ErrorKind};
+
+    use super::CliRun;
+
+    const JOB: &str = "8d2b6c4e-5f3a-4b1c-9e7d-0a1b2c3d4e5f";
+    const HASH: &str = "0123456789abcdef0123456789abcdef01234567";
+    const PROJECT_KEY: &str = "bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
+    const JWT: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhdXRoIiwiZXhwIjoxNjY5Mjk5NjExLCJpYXQiOjE2NjkyOTc4MTEsImlzcyI6ImJlbmNoZXIuZGV2Iiwic3ViIjoiYUBhLmNvIiwib3JnIjpudWxsfQ.jJmb_nCVJYLD5InaIxsQfS7x87fUsnCYpQK9SrWrKTc";
+
+    // Every `bencher run` argument that shapes a new report, or runs or submits a benchmark,
+    // with a value that parses on its own.
+    const CONFLICTING: &[(&str, &[&str])] = &[
+        ("ci_on_the_fly", &["--ci-on-the-fly"]),
+        ("branch", &["--branch", "main"]),
+        ("hash", &["--hash", HASH]),
+        ("start_point", &["--start-point", "main"]),
+        ("start_point_hash", &["--start-point-hash", HASH]),
+        (
+            "start_point_max_versions",
+            &["--start-point-max-versions", "8"],
+        ),
+        (
+            "start_point_clone_thresholds",
+            &["--start-point-clone-thresholds"],
+        ),
+        ("start_point_reset", &["--start-point-reset"]),
+        ("deprecated", &["--else-branch"]),
+        ("testbed", &["--testbed", "base"]),
+        ("spec_reset", &["--spec-reset"]),
+        ("adapter", &["--adapter", "json"]),
+        ("average", &["--average", "median"]),
+        ("iter", &["--iter", "3"]),
+        ("fold", &["--fold", "min"]),
+        ("backdate", &["--backdate", "1700000000"]),
+        ("allow_failure", &["--allow-failure"]),
+        ("threshold_measure", &["--threshold-measure", "latency"]),
+        ("threshold_test", &["--threshold-test", "t_test"]),
+        (
+            "threshold_min_sample_size",
+            &["--threshold-min-sample-size", "2"],
+        ),
+        (
+            "threshold_max_sample_size",
+            &["--threshold-max-sample-size", "64"],
+        ),
+        ("threshold_window", &["--threshold-window", "60"]),
+        (
+            "threshold_lower_boundary",
+            &["--threshold-lower-boundary", "0.95"],
+        ),
+        (
+            "threshold_upper_boundary",
+            &["--threshold-upper-boundary", "0.99"],
+        ),
+        ("thresholds_reset", &["--thresholds-reset"]),
+        ("build_time", &["--build-time"]),
+        ("file", &["--file", "results.json"]),
+        ("file_size", &["--file-size", "binary"]),
+        ("shell", &["--shell", "sh"]),
+        ("flag", &["--flag", "-c"]),
+        ("exec", &["--exec"]),
+        ("command", &["bencher", "mock"]),
+        ("dry_run", &["--dry-run"]),
+        ("image", &["--image", "alpine:3.18"]),
+        ("spec", &["--spec", "test-spec"]),
+        ("entrypoint", &["--entrypoint", "sh"]),
+        ("env", &["--env", "KEY=VALUE"]),
+        ("detach", &["--detach"]),
+    ];
+
+    // Every `bencher run` argument that works beside `--job`.
+    const ACCEPTED: &[(&str, &[&str])] = &[
+        ("project", &[]),
+        ("job", &[]),
+        ("error_on_alert", &["--error-on-alert"]),
+        ("format", &["--format", "json"]),
+        ("quiet", &["--quiet"]),
+        ("github_actions", &["--github-actions", "token"]),
+        (
+            "ci_only_thresholds",
+            &["--github-actions", "token", "--ci-only-thresholds"],
+        ),
+        (
+            "ci_only_on_alert",
+            &["--github-actions", "token", "--ci-only-on-alert"],
+        ),
+        (
+            "ci_public_links",
+            &["--github-actions", "token", "--ci-public-links"],
+        ),
+        ("ci_id", &["--github-actions", "token", "--ci-id", "suite"]),
+        (
+            "ci_number",
+            &["--github-actions", "token", "--ci-number", "7"],
+        ),
+        (
+            "ci_i_am_vulnerable_to_pwn_requests",
+            &[
+                "--github-actions",
+                "token",
+                "--ci-i-am-vulnerable-to-pwn-requests",
+            ],
+        ),
+        ("job_timeout", &["--job-timeout", "7"]),
+        ("job_poll_interval", &["--job-poll-interval", "3"]),
+        ("host", &["--host", "http://localhost:61016"]),
+        ("token", &["--token", JWT]),
+        ("key", &["--key", PROJECT_KEY]),
+        ("insecure_host", &["--insecure-host"]),
+        ("native_tls", &["--native-tls"]),
+        ("timeout", &["--timeout", "30"]),
+        ("attempts", &["--attempts", "3"]),
+        ("retry_after", &["--retry-after", "2"]),
+        ("max_retry_after", &["--max-retry-after", "4"]),
+        ("strict", &["--strict"]),
+    ];
+
+    fn parse(args: &[&str]) -> Result<CliRun, clap::Error> {
+        CliRun::try_parse_from(args)
+    }
+
+    fn parse_job(args: &[&str]) -> Result<CliRun, clap::Error> {
+        let args = ["run", "--project", "my-project", "--job", JOB]
+            .into_iter()
+            .chain(args.iter().copied())
+            .collect::<Vec<_>>();
+        parse(&args)
+    }
+
+    #[test]
+    fn job_classifies_every_argument() {
+        let ids = CliRun::command()
+            .get_arguments()
+            .map(|arg| arg.get_id().as_str().to_owned())
+            .collect::<Vec<_>>();
+        for id in &ids {
+            let conflicting = CONFLICTING.iter().any(|(c, _)| c == id);
+            let accepted = ACCEPTED.iter().any(|(a, _)| a == id);
+            assert!(
+                conflicting ^ accepted,
+                "`{id}` must be either accepted or conflicting beside `--job`"
+            );
+        }
+        for (id, _) in CONFLICTING.iter().chain(ACCEPTED) {
+            assert!(ids.iter().any(|arg| arg == id), "`{id}` is not an argument");
+        }
+    }
+
+    #[test]
+    fn job_conflicts() {
+        for (id, args) in CONFLICTING {
+            let err = parse_job(args).expect_err(id);
+            assert_eq!(err.kind(), ErrorKind::ArgumentConflict, "{id}: {err}");
+        }
+    }
+
+    #[test]
+    fn job_accepts() {
+        for (id, args) in ACCEPTED {
+            let run = parse_job(args).unwrap_or_else(|err| panic!("{id}: {err}"));
+            assert_eq!(
+                run.job.job.map(|job| job.to_string()).as_deref(),
+                Some(JOB),
+                "{id}"
+            );
+            assert!(run.cmd.command.is_none(), "{id}");
+        }
+    }
+
+    // Assumes `BENCHER_PROJECT` is unset.
+    #[test]
+    fn job_requires_project() {
+        let err = parse(&["run", "--job", JOB]).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument, "{err}");
+    }
+
+    #[test]
+    fn job_ignores_defaults() {
+        let run = parse_job(&[]).unwrap();
+        assert!(matches!(run.adapter, super::CliReportAdapter::Magic));
+        assert_eq!(run.iter.as_usize(), 1);
+        for explicit in [["--adapter", "magic"], ["--iter", "1"]] {
+            let err = parse_job(&explicit).unwrap_err();
+            assert_eq!(err.kind(), ErrorKind::ArgumentConflict, "{err}");
+        }
+    }
+
+    #[test]
+    fn job_wait_options_require_image_or_job() {
+        for args in [["--job-timeout", "7"], ["--job-poll-interval", "3"]] {
+            let args = ["run", "--project", "my-project"]
+                .into_iter()
+                .chain(args)
+                .chain(["bencher", "mock"])
+                .collect::<Vec<_>>();
+            let err = parse(&args).unwrap_err();
+            assert_eq!(err.kind(), ErrorKind::MissingRequiredArgument, "{err}");
+        }
+    }
 }

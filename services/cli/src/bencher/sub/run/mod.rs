@@ -1,18 +1,15 @@
 use std::{future::Future, pin::Pin};
 
 #[cfg(feature = "plus")]
-use std::collections::HashMap;
-
-#[cfg(feature = "plus")]
 use bencher_client::types::JsonNewRunJob;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings};
 use bencher_comment::ReportComment;
-#[cfg(feature = "plus")]
-use bencher_json::SpecResourceId;
 use bencher_json::{
     DateTime, JsonProject, JsonReport, ProjectResourceId, ResourceName, RunContext, TestbedNameId,
     project::report::Iteration,
 };
+#[cfg(feature = "plus")]
+use bencher_json::{JobUuid, JsonJob};
 
 use crate::{
     CliError,
@@ -25,6 +22,8 @@ mod branch;
 mod ci;
 mod error;
 mod format;
+#[cfg(feature = "plus")]
+mod job;
 mod project;
 pub mod runner;
 mod sub_adapter;
@@ -33,6 +32,8 @@ use branch::Branch;
 use ci::{Ci, CiCheck};
 pub use error::RunError;
 use format::Format;
+#[cfg(feature = "plus")]
+use job::{AttachJob, DEFAULT_POLL_INTERVAL, FinishedJob, Job, JobWait, SubmitJob};
 use project::resolve_project;
 use runner::Runner;
 use sub_adapter::SubAdapter;
@@ -75,33 +76,6 @@ pub struct Run {
     backend: PubBackend,
 }
 
-#[cfg(feature = "plus")]
-#[expect(
-    clippy::expect_used,
-    reason = "constant 5 is always a valid PollTimeout"
-)]
-static DEFAULT_POLL_INTERVAL: std::sync::LazyLock<bencher_json::PollTimeout> =
-    std::sync::LazyLock::new(|| {
-        bencher_json::PollTimeout::try_from(5).expect("5 is a valid PollTimeout")
-    });
-#[cfg(feature = "plus")]
-const DEFAULT_JOB_TIMEOUT: u64 = bencher_json::Timeout::PLUS_DEFAULT.as_secs();
-#[cfg(feature = "plus")]
-const CLI_TIMEOUT_MULTIPLE: u64 = 2;
-
-#[cfg(feature = "plus")]
-#[derive(Debug)]
-struct Job {
-    image: bencher_json::ImageReference,
-    spec: Option<SpecResourceId>,
-    entrypoint: Option<String>,
-    env: Option<HashMap<String, String>>,
-    timeout: Option<bencher_json::Timeout>,
-    build_time: bool,
-    poll_interval: bencher_json::PollTimeout,
-    detach: bool,
-}
-
 impl TryFrom<CliRun> for Run {
     type Error = CliError;
 
@@ -131,20 +105,7 @@ impl TryFrom<CliRun> for Run {
         #[cfg(feature = "plus")]
         let build_time = cmd.build_time;
         #[cfg(feature = "plus")]
-        let job = if let Some(image) = job.image {
-            Some(Job {
-                image,
-                spec: job.spec,
-                entrypoint: job.entrypoint,
-                env: job.env.map(bencher_parser::parse_env),
-                timeout: job.job_timeout,
-                build_time,
-                poll_interval: job.job_poll_interval.unwrap_or(*DEFAULT_POLL_INTERVAL),
-                detach: job.detach,
-            })
-        } else {
-            None
-        };
+        let job = Job::new(job, project.project.as_ref(), build_time)?;
         #[cfg(feature = "plus")]
         if build_time && job.is_none() && cmd.command.is_none() {
             return Err(RunError::BuildTimeNoCommandOrImage.into());
@@ -155,18 +116,14 @@ impl TryFrom<CliRun> for Run {
         }
         let sub_adapter: SubAdapter = (&cmd).into();
         #[cfg(feature = "plus")]
-        let runner = if job.is_some() {
-            if cmd.has_local_input() {
-                match cmd.try_into() {
-                    Ok(runner) => Some(runner),
-                    Err(RunError::NoCommand) => None,
-                    Err(e) => return Err(e.into()),
-                }
-            } else {
-                None
-            }
-        } else {
-            Some(cmd.try_into()?)
+        let runner = match job {
+            Some(Job::Submit(_)) if cmd.has_local_input() => match cmd.try_into() {
+                Ok(runner) => Some(runner),
+                Err(RunError::NoCommand) => None,
+                Err(e) => return Err(e.into()),
+            },
+            Some(Job::Submit(_) | Job::Attach(_)) => None,
+            None => Some(cmd.try_into()?),
         };
         #[cfg(not(feature = "plus"))]
         let runner = Some(cmd.try_into()?);
@@ -175,11 +132,10 @@ impl TryFrom<CliRun> for Run {
         // (`[{registry}/]{project}:{tag}`) when `--project` is not specified.
         // Mirror that derivation here to relax the `--project` requirements.
         #[cfg(feature = "plus")]
-        let has_image_project = job.as_ref().is_some_and(|job| {
-            job.image
-                .project_repository()
-                .is_some_and(|repository| repository.parse::<ProjectResourceId>().is_ok())
-        });
+        let has_image_project = matches!(&job, Some(Job::Submit(job)) if job
+            .image
+            .project_repository()
+            .is_some_and(|repository| repository.parse::<ProjectResourceId>().is_ok()));
         #[cfg(not(feature = "plus"))]
         let has_image_project = false;
 
@@ -284,6 +240,16 @@ impl Run {
     }
 
     async fn run_and_report(&self, ci_check: &mut Option<CiCheck>) -> Result<(), RunError> {
+        #[cfg(feature = "plus")]
+        if let Some(Job::Attach(AttachJob {
+            project,
+            uuid,
+            wait,
+        })) = &self.job
+        {
+            return self.wait_for_job(project, *uuid, *wait, ci_check).await;
+        }
+
         let Some(json_new_run) = self.generate_report().await? else {
             return Ok(());
         };
@@ -309,7 +275,7 @@ impl Run {
 
         #[cfg(feature = "plus")]
         if let Some(job_uuid) = json_report.job {
-            if self.job.as_ref().is_some_and(|j| j.detach) {
+            if self.submit_job().is_some_and(|job| job.detach) {
                 cli_eprintln_quietable!(self.log, "Remote job submitted successfully: {job_uuid}");
                 return self.display_and_check_alerts(json_report, ci_check).await;
             }
@@ -321,7 +287,7 @@ impl Run {
 
     async fn generate_report(&self) -> Result<Option<JsonNewRun>, RunError> {
         #[cfg(feature = "plus")]
-        if let Some(job) = &self.job {
+        if let Some(job) = self.submit_job() {
             return Ok(Some(self.generate_remote_report(job)));
         }
 
@@ -390,7 +356,7 @@ impl Run {
     }
 
     #[cfg(feature = "plus")]
-    fn generate_remote_report(&self, job: &Job) -> JsonNewRun {
+    fn generate_remote_report(&self, job: &SubmitJob) -> JsonNewRun {
         let cmd = self.runner.as_ref().and_then(Runner::cmd_args);
         let file_paths = self
             .runner
@@ -437,6 +403,27 @@ impl Run {
         }
     }
 
+    /// The attach cannot see the submitting run's `--build-time` and `--file-size`,
+    /// so its comment tag follows the built-in measures of the report instead.
+    fn comment_sub_adapter(&self, json_report: &JsonReport) -> bencher_comment::SubAdapter {
+        if self.is_attach() {
+            json_report.into()
+        } else {
+            self.sub_adapter.into()
+        }
+    }
+
+    fn is_attach(&self) -> bool {
+        #[cfg(feature = "plus")]
+        {
+            matches!(self.job, Some(Job::Attach(_)))
+        }
+        #[cfg(not(feature = "plus"))]
+        {
+            false
+        }
+    }
+
     fn spec_reset(&self) -> Option<bool> {
         #[cfg(feature = "plus")]
         {
@@ -449,120 +436,82 @@ impl Run {
     }
 
     #[cfg(feature = "plus")]
+    fn submit_job(&self) -> Option<&SubmitJob> {
+        if let Some(Job::Submit(job)) = &self.job {
+            Some(job)
+        } else {
+            None
+        }
+    }
+
+    #[cfg(feature = "plus")]
     async fn poll_job(
         &self,
         json_report: JsonReport,
-        job_uuid: bencher_json::JobUuid,
+        job_uuid: JobUuid,
         ci_check: &mut Option<CiCheck>,
     ) -> Result<(), RunError> {
-        use bencher_json::JobStatus;
+        let wait = self.submit_job().map_or_else(
+            || JobWait::submitted(*DEFAULT_POLL_INTERVAL, None),
+            |job| job.wait,
+        );
+        let project = ProjectResourceId::Slug(json_report.project.slug);
+        self.wait_for_job(&project, job_uuid, wait, ci_check).await
+    }
 
-        let poll_interval = self
-            .job
-            .as_ref()
-            .map_or(*DEFAULT_POLL_INTERVAL, |j| j.poll_interval);
-        let job_timeout = self
-            .job
-            .as_ref()
-            .and_then(|j| j.timeout)
-            .map_or(DEFAULT_JOB_TIMEOUT, |t| u64::from(u32::from(t)));
-        // CLI-side timeout is 2x the job timeout to allow for queue time
-        let cli_timeout = job_timeout.saturating_mul(CLI_TIMEOUT_MULTIPLE);
-
-        let project_resource_id = ProjectResourceId::Slug(json_report.project.slug.clone());
-
+    #[cfg(feature = "plus")]
+    async fn wait_for_job(
+        &self,
+        project: &ProjectResourceId,
+        job_uuid: JobUuid,
+        wait: JobWait,
+        ci_check: &mut Option<CiCheck>,
+    ) -> Result<(), RunError> {
         cli_eprintln_quietable!(self.log, "Waiting for remote job {job_uuid} to complete...");
         cli_eprintln_quietable!(
             self.log,
             "Note: If you interrupt (Ctrl+C), the remote job will continue running."
         );
 
-        let mut last_status: Option<JobStatus> = None;
-        let start = std::time::Instant::now();
-
-        loop {
-            tokio::time::sleep(std::time::Duration::from_secs(u64::from(u32::from(
-                poll_interval,
-            ))))
-            .await;
-
-            if start.elapsed().as_secs() > cli_timeout {
-                return Err(RunError::JobTimeout(cli_timeout));
-            }
-
-            let json_job: bencher_json::JsonJob = self
-                .backend
-                .send_with(|client| {
-                    let project_resource_id = project_resource_id.clone();
-                    async move {
-                        client
-                            .proj_job_get()
-                            .project(project_resource_id)
-                            .job(job_uuid)
-                            .send()
-                            .await
-                    }
-                })
-                .await
-                .map_err(RunError::PollJob)?;
-
-            let status = json_job.status;
-
-            // Print status changes
-            if !last_status.is_some_and(|ls| ls == status) {
-                cli_eprintln_quietable!(self.log, "Job status: {status}");
-                last_status = Some(status);
-            }
-
-            match status {
-                JobStatus::Processed => {
-                    self.log_job_output(json_job.output.as_ref());
-                    let report = self
-                        .fetch_report(&project_resource_id, json_report.uuid)
-                        .await
-                        .map_err(RunError::FetchReport)?;
-                    return self.display_and_check_alerts(report, ci_check).await;
-                },
-                JobStatus::Failed => {
-                    self.log_job_output(json_job.output.as_ref());
-                    let error_msg = json_job
-                        .output
-                        .and_then(|o| o.error)
-                        .unwrap_or_else(|| "Unknown error".to_owned());
-                    self.best_effort_display_report(
-                        &project_resource_id,
-                        json_report.uuid,
-                        ci_check,
-                    )
-                    .await;
-                    return Err(RunError::JobFailed(error_msg));
-                },
-                JobStatus::Canceled => {
-                    self.log_job_output(json_job.output.as_ref());
-                    let error_msg = json_job
-                        .output
-                        .and_then(|o| o.error)
-                        .unwrap_or_else(|| "Job was canceled".to_owned());
-                    self.best_effort_display_report(
-                        &project_resource_id,
-                        json_report.uuid,
-                        ci_check,
-                    )
-                    .await;
-                    return Err(RunError::JobCanceled(error_msg));
-                },
-                // Non-terminal states: keep polling.
-                // `Completed` means the runner finished execution and sent results,
-                // but the server hasn't finished processing them into metrics/alerts yet.
-                // It transitions to `Processed` (or `Failed`) once processing completes.
-                // `Unknown` means the server lost contact with the runner and is waiting to hear back.
-                JobStatus::Pending
-                | JobStatus::Claimed
-                | JobStatus::Running
-                | JobStatus::Completed
-                | JobStatus::Unknown => {},
-            }
+        let FinishedJob {
+            report,
+            output,
+            result,
+        } = wait
+            .until_finished(self.log, || self.get_job(project, job_uuid))
+            .await?;
+        self.log_job_output(output.as_ref());
+        if let Err(err) = result {
+            self.best_effort_display_report(project, report, ci_check)
+                .await;
+            return Err(err);
         }
+        let report = self
+            .fetch_report(project, report)
+            .await
+            .map_err(RunError::FetchReport)?;
+        self.display_and_check_alerts(report, ci_check).await
+    }
+
+    #[cfg(feature = "plus")]
+    async fn get_job(
+        &self,
+        project: &ProjectResourceId,
+        job_uuid: JobUuid,
+    ) -> Result<JsonJob, crate::BackendError> {
+        self.backend
+            .send_with(|client| {
+                let project = project.clone();
+                async move {
+                    client
+                        .proj_job_get()
+                        .project(project)
+                        .job(job_uuid)
+                        .send()
+                        .await
+                }
+            })
+            .await
     }
 
     async fn display_and_check_alerts(
@@ -652,8 +601,8 @@ impl Run {
             .ci
             .as_ref()
             .map_or_else(|| "cli".to_owned(), Ci::source);
-        let report_comment =
-            ReportComment::new(console_url, json_report, self.sub_adapter.into(), source);
+        let sub_adapter = self.comment_sub_adapter(&json_report);
+        let report_comment = ReportComment::new(console_url, json_report, sub_adapter, source);
 
         let report_str = match self.format {
             Format::Human => report_comment.human(),
@@ -773,6 +722,199 @@ mod tests {
                     Err(CliError::Run(RunError::ProjectKeyRequiresProject))
                 ),
                 "{result:?}"
+            );
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    mod attach {
+        use bencher_json::{JobUuid, JsonReport, PollTimeout, ProjectResourceId, Timeout};
+        use clap::Parser as _;
+
+        use super::super::{AttachJob, Job, JobWait, Run};
+        use crate::parser::run::CliRun;
+
+        const JOB: &str = "8d2b6c4e-5f3a-4b1c-9e7d-0a1b2c3d4e5f";
+        const UUID: &str = "4f6d1b2a-3c5e-4d7f-8a9b-0c1d2e3f4a5b";
+        const TIME: &str = "2026-01-01T00:00:00Z";
+
+        fn parse_run(args: &[&str]) -> CliRun {
+            CliRun::try_parse_from(std::iter::once("run").chain(args.iter().copied()))
+                .expect("Failed to parse args")
+        }
+
+        /// A report with one iteration, holding one result per list of measure slugs.
+        fn json_report(results: &[&[&str]]) -> JsonReport {
+            let results = results
+                .iter()
+                .map(|slugs| {
+                    let measures = slugs
+                        .iter()
+                        .map(|slug| {
+                            serde_json::json!({
+                                "measure": {
+                                    "uuid": UUID,
+                                    "project": UUID,
+                                    "name": slug,
+                                    "slug": slug,
+                                    "units": "units",
+                                    "created": TIME,
+                                    "modified": TIME
+                                },
+                                "metrics": [],
+                                "threshold": null,
+                                "boundary": null
+                            })
+                        })
+                        .collect::<Vec<_>>();
+                    serde_json::json!({
+                        "iteration": 0,
+                        "benchmark": {
+                            "uuid": UUID,
+                            "project": UUID,
+                            "name": "bench",
+                            "slug": "bench",
+                            "created": TIME,
+                            "modified": TIME
+                        },
+                        "variant": { "uuid": UUID, "parameters": {} },
+                        "measures": measures
+                    })
+                })
+                .collect::<Vec<_>>();
+            serde_json::from_value(serde_json::json!({
+                "uuid": UUID,
+                "project": {
+                    "uuid": UUID,
+                    "organization": UUID,
+                    "name": "Project",
+                    "slug": "project",
+                    "visibility": "public",
+                    "bmf_version": 0,
+                    "created": TIME,
+                    "modified": TIME
+                },
+                "branch": {
+                    "uuid": UUID,
+                    "project": UUID,
+                    "name": "main",
+                    "slug": "main",
+                    "head": {
+                        "uuid": UUID,
+                        "version": { "number": 1 },
+                        "created": TIME
+                    },
+                    "created": TIME,
+                    "modified": TIME
+                },
+                "testbed": {
+                    "uuid": UUID,
+                    "project": UUID,
+                    "name": "base",
+                    "slug": "base",
+                    "created": TIME,
+                    "modified": TIME
+                },
+                "start_time": TIME,
+                "end_time": TIME,
+                "adapter": "magic",
+                "results": [results],
+                "created": TIME
+            }))
+            .unwrap()
+        }
+
+        #[test]
+        fn attach_job() {
+            let run = Run::try_from(parse_run(&[
+                "--project",
+                "my-project",
+                "--job",
+                JOB,
+                "--job-timeout",
+                "7",
+                "--job-poll-interval",
+                "3",
+            ]))
+            .expect("`--job` with `--project` should be accepted");
+            let Some(Job::Attach(AttachJob {
+                project,
+                uuid,
+                wait,
+            })) = run.job
+            else {
+                panic!("{:?}", run.job);
+            };
+            assert_eq!(project, "my-project".parse::<ProjectResourceId>().unwrap());
+            assert_eq!(uuid, JOB.parse::<JobUuid>().unwrap());
+            assert_eq!(
+                wait,
+                JobWait::attach(
+                    PollTimeout::try_from(3).unwrap(),
+                    Some(Timeout::try_from(7).unwrap())
+                )
+            );
+            // The attach neither runs a command nor reads stdin.
+            assert!(run.runner.is_none());
+        }
+
+        #[test]
+        fn submit_job_wait() {
+            let run = Run::try_from(parse_run(&[
+                "--project",
+                "my-project",
+                "--image",
+                "alpine:3.18",
+                "--job-timeout",
+                "7",
+                "--job-poll-interval",
+                "3",
+            ]))
+            .expect("`--image` should be accepted");
+            let Some(Job::Submit(job)) = run.job else {
+                panic!("{:?}", run.job);
+            };
+            assert_eq!(
+                job.wait,
+                JobWait::submitted(
+                    PollTimeout::try_from(3).unwrap(),
+                    Some(Timeout::try_from(7).unwrap())
+                )
+            );
+        }
+
+        #[test]
+        fn attach_comment_sub_adapter_follows_the_report() {
+            let run = Run::try_from(parse_run(&["--project", "my-project", "--job", JOB])).unwrap();
+            for (results, expected) in [
+                (&[&["build-time"][..]][..], (true, false)),
+                (&[&["file-size"][..]][..], (false, true)),
+                (&[&["latency"][..]][..], (false, false)),
+                (
+                    &[&["latency"][..], &["file-size"], &["build-time"]][..],
+                    (true, true),
+                ),
+                (&[&["build-time", "file-size"][..]][..], (true, true)),
+            ] {
+                let sub_adapter = run.comment_sub_adapter(&json_report(results));
+                assert_eq!((sub_adapter.build_time, sub_adapter.file_size), expected);
+            }
+        }
+
+        #[test]
+        fn submit_comment_sub_adapter_follows_the_flags() {
+            let run = Run::try_from(parse_run(&[
+                "--project",
+                "my-project",
+                "--image",
+                "alpine:3.18",
+                "--build-time",
+            ]))
+            .unwrap();
+            let sub_adapter = run.comment_sub_adapter(&json_report(&[&["file-size"]]));
+            assert_eq!(
+                (sub_adapter.build_time, sub_adapter.file_size),
+                (true, false)
             );
         }
     }
