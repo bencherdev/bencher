@@ -3,9 +3,19 @@
 <br />
 
 Detach after submitting the Bare Metal [Job][job], without waiting for completion.
+`bencher run` prints the Job UUID (ie `Remote job submitted successfully: <UUID>`) and exits.
+With `--quiet`, that line is not printed, but the Report that `--format json` prints still holds the Job UUID as `job`.
+To post the results later, [attach to the Job with `bencher run --job`][job option],
+or have Bencher send [a callback][callback url] when the Job finishes, so that its receiver can attach.
+`--detach` with `--github-actions` requires [the `--ci-callback-token` option][ci callback token] or a `--callback-url`,
+so that [a second workflow][pull requests on bare metal] can complete the GitHub Check.
 This option requires [the `--image` option][image] to be set.
 This option conflicts with [the `--job-poll-interval` option][job poll interval].
 
 [job]: /docs/explanation/bare-metal/#job
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[job option]: #--job-uuid
+[callback url]: #--callback-url-url
+[ci callback token]: /docs/explanation/bencher-run/#--ci-callback-token-token
+[pull requests on bare metal]: /docs/how-to/github-actions/#pull-requests-on-bare-metal

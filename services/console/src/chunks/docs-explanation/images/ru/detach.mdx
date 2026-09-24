@@ -3,8 +3,18 @@
 <br />
 
 Отсоединиться после отправки удалённого Job, не ожидая его завершения.
+`bencher run` выводит UUID Job (например, `Remote job submitted successfully: <UUID>`) и завершается.
+С `--quiet` эта строка не выводится, но отчет, который выводит `--format json`, по-прежнему содержит UUID Job в поле `job`.
+Чтобы опубликовать результаты позже, [подключитесь к Job с помощью `bencher run --job`][job option]
+или попросите Bencher отправить [callback][callback url], когда Job завершится, чтобы к нему мог подключиться получатель.
+`--detach` вместе с `--github-actions` требует [опцию `--ci-callback-token`][ci callback token] или `--callback-url`,
+чтобы [второй workflow][pull requests on bare metal] мог завершить проверку GitHub.
 Эта опция требует, чтобы была задана [опция `--image`][image].
 Эта опция конфликтует с [опцией `--job-poll-interval`][job poll interval].
 
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[job option]: #--job-uuid
+[callback url]: #--callback-url-url
+[ci callback token]: /ru/docs/explanation/bencher-run/#--ci-callback-token-token
+[pull requests on bare metal]: /ru/docs/how-to/github-actions/#pull-requests-на-выделенном-оборудовании

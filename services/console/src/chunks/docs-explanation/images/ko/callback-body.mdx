@@ -1,0 +1,43 @@
+import CallbackBodyExample from "../callback-body-example.mdx";
+
+### `--callback-body <JSON>`
+
+<br />
+
+선택 사항: 콜백 요청의 JSON 본문을 설정합니다.
+이 옵션은 [`--callback-url` 옵션](#--callback-url-url)이 설정되어 있어야 합니다.
+`--callback-body`가 없으면 본문은 Job의 보고서이며, `GET /v0/projects/{project}/reports/{report}`가 반환하는 것과 같은 JSON입니다.
+보고서는 Job을 UUID(`job`)로 가리키지만 Job의 상태는 담지 않습니다.
+Job이 실패했는지 알려면 수신 측에서 `GET /v0/projects/{project}/jobs/{job}`로 Job을 읽거나, 본문에 `{{ job.status }}`를 보내세요.
+비공개 프로젝트에서는 이 보고서에 프로젝트의 비공개 결과가 담기므로, 신뢰할 수 있는 수신 측에만 보내세요.
+
+본문의 문자열 값이 다음 플레이스홀더 중 하나와 정확히 같으면 그 값으로 전송됩니다:
+
+| 플레이스홀더         | 값                                                     |
+| -------------------- | ------------------------------------------------------ |
+| `{{ job.uuid }}`     | Job UUID                                               |
+| `{{ job.status }}`   | Job의 종료 상태: `processed`, `failed` 또는 `canceled` |
+| `{{ report.uuid }}`  | 보고서 UUID                                            |
+| `{{ project.uuid }}` | 프로젝트 UUID                                          |
+| `{{ project.slug }}` | 프로젝트 슬러그                                        |
+| `{{ report }}`       | 보고서 전체                                            |
+
+중괄호 안의 공백은 선택 사항이므로 `"{{job.uuid}}"`도 됩니다.
+각 값은 JSON 문자열이지만 `{{ report }}`는 보고서 자체이며,
+`--callback-body`가 없을 때의 본문과 같은 JSON이고 같은 비공개 결과를 담습니다.
+따라서 `"{{ report }}"`만 있는 본문은 `--callback-body`가 없는 것과 같고,
+`{"event": "bencher", "report": "{{ report }}"}`는 보고서를 직접 만든 봉투로 감쌉니다.
+`{{ report }}`는 본문에 한 번만 넣을 수 있습니다.
+그 밖의 모든 문자열, 모든 키, 그 밖의 모든 값은 그대로 전송됩니다.
+더 긴 문자열 안의 플레이스홀더(예: `"Job {{ job.uuid }}"`)는 일반 텍스트이고 분기도 없으므로,
+결과가 필요한 수신 측은 `{{ job.status }}`를 읽습니다.
+`{{`로 시작하고 `}}`로 끝나지만 다른 이름을 가리키는 문자열은 빈 문자열이 되지 않고 오류가 됩니다.
+본문은 최대 64 KiB이며, 각 플레이스홀더는 가장 긴 값으로, `{{ report }}`는 0으로 계산합니다.
+Job을 제출하기 전에 `bencher run`이 본문을 검사하고, 서버도 다시 검사합니다.
+
+예를 들어, URL에 비밀 값이 담긴 Slack 수신 웹훅에 메시지를 게시하려면:
+
+<CallbackBodyExample />
+
+본문은 전체가 출력되고 절대 가려지지 않으므로, 비밀 값을 넣지 마세요.
+비밀 값은 대신 [헤더](#--callback-header-name-value)나 URL에 넣으세요.

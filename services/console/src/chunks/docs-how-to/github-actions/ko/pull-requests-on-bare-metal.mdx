@@ -1,0 +1,180 @@
+import PullRequestsOnBareMetalSubmitCode from "../pull-requests-on-bare-metal-submit-code.mdx";
+import PullRequestsOnBareMetalAttachCode from "../pull-requests-on-bare-metal-attach-code.mdx";
+
+## 베어 메탈에서의 Pull Requests
+
+`bencher run`은 Job이 끝날 때까지 기다리므로, [베어 메탈][bare metal] 실행은 벤치마크가 실행되는 내내 GitHub Actions 러너를 점유합니다.
+러너를 해제하려면, 첫 번째 워크플로가 [`--detach` 플래그][detach option]로 Job을 제출하고 종료합니다.
+Job이 끝나면 Bencher는 저장소에 [`repository_dispatch`][github repository_dispatch] 이벤트를 보내고,
+두 번째 워크플로가 [Job에 연결][job option]하여, 분리하지 않은 실행과 똑같이 결과를 GitHub Check와 pull request 댓글로 게시합니다.
+콜백을 사용하려면 [Bencher Plus 플랜][pricing]이 필요합니다.
+
+> ⚠️ 이 솔루션은 모든 PR이 **동일한** 저장소에서 온 경우에만 작동합니다!
+> 첫 번째 워크플로에는 저장소 시크릿이 필요합니다.
+> 위의 [포크에서의 Pull Requests][pull requests from forks]를 참조하세요.
+
+Bencher는 보통 첫 번째 워크플로의 `GITHUB_TOKEN`이 이미 만료된 뒤에 이벤트를 보내므로, 이벤트에는 그 워크플로보다 오래 유효한 토큰이 필요합니다.
+그 하나의 저장소에 대해 `Contents` `Read and write` 권한을 가진 [fine-grained personal access token][github fine-grained token]을 만들고,
+`BENCHER_CALLBACK_TOKEN`이라는 이름의 **레포지토리** 시크릿으로 추가하세요.
+`Contents` `write` 권한이 있으면 토큰으로 그 저장소에 커밋을 푸시할 수도 있으므로, 다른 저장소에는 절대 접근 권한을 주지 마세요.
+두 워크플로 모두 여전히 자신의 `GITHUB_TOKEN`을 `--github-actions`에 전달합니다.
+GitHub Check를 만들거나 업데이트할 수 있는 것은 GitHub App뿐이며,
+두 워크플로는 GitHub Actions 앱을 공유하므로, 두 번째 워크플로가 첫 번째가 시작한 GitHub Check를 완료할 수 있습니다.
+전체 개요는 [`--ci-callback-token` 문서][ci callback token option]를 참조하세요.
+
+<PullRequestsOnBareMetalSubmitCode />
+
+1. 첫 번째 GitHub Actions `workflow` 파일을 생성합니다.
+   (예: `.github/workflows/pr_bare_metal_benchmarks.yml`)
+2. 위의 [Pull Requests][pull requests]처럼 `pull_request` 이벤트에서 실행합니다.
+   (예: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+3. GitHub Actions `job`을 생성합니다.
+   (예: `jobs: submit_pr_benchmarks`)
+4. pull request가 동일한 저장소에서 온 경우에만 `pull_request` 이벤트에서 실행합니다.
+   ⚠️ 이 라인을 제거하지 마십시오!
+   포크 PR 처리에 관해서는 위의 [포크에서의 Pull Requests][pull requests from forks]를 참조하세요.
+   (예: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+5. `GITHUB_TOKEN`의 [권한을 설정][github token permissions]하여 `checks`에 `write`를 부여합니다.
+   첫 번째 워크플로는 GitHub Check를 시작하고 댓글은 게시하지 않습니다.
+   (예: `permissions: checks: write`)
+6. 작업을 실행할 머신의 유형을 설정합니다.
+   Job을 제출하기만 하므로 작은 머신으로 충분합니다.
+   (예: `runs-on: ubuntu-latest`)
+7. PR 브랜치의 소스 코드를 체크아웃합니다.
+   (예: `uses: actions/checkout@v6`)
+8. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
+   (예: `uses: bencherdev/bencher@main`)
+9. PR 브랜치 벤치마크를 제출하기 위해 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용합니다.
+   전체 개요는 [`bencher run` CLI 서브커맨드][bencher run]를 참조하세요.
+   (예: `bencher run`)
+10. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+    더 많은 세부 사항은 [`--project` 문서][project option]를 참조하세요.
+    (예: `--project project-abc4567-wxyz123456789`)
+11. `--key` 옵션을 `BENCHER_API_KEY` **레포지토리** 시크릿으로 설정합니다.
+    더 많은 세부 사항은 [`--key` 문서][key option]를 참조하세요.
+    (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
+12. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
+    전체 개요는 [`--branch` 문서][branch option]를 참조하세요.
+    (예: `--branch "$GITHUB_HEAD_REF"`)
+13. 위의 [Pull Requests][pull requests]처럼 PR 브랜치의 시작점을 설정합니다.
+    전체 개요는 [`--start-point` 문서][start point]를 참조하세요.
+    (예: `--start-point "$GITHUB_BASE_REF"`)
+14. `--adapter` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>이 생성하는 [Bencher Metric Format JSON (`json`)][bmf]으로 설정합니다.
+    전체 개요는 [벤치마크 하니스 어댑터][adapter json]를 참조하세요.
+    (예: `--adapter json`)
+15. `--image` 옵션을 베어 메탈 이미지로 설정합니다.
+    전체 개요는 [`--image` 문서][image option]를 참조하세요.
+    (예: `--image project-abc4567-wxyz123456789:latest`)
+16. Job을 제출하자마자 종료하도록 `--detach` 플래그를 설정합니다.
+    더 많은 세부 사항은 [`--detach` 문서][detach option]를 참조하세요.
+    (예: `--detach`)
+17. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 GitHub Check를 시작할 GitHub API 인증 토큰으로 `--github-actions` 옵션을 설정합니다.
+    더 많은 세부 사항은 [`--github-actions` 문서][github actions option]를 참조하세요.
+    (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+18. Job이 끝났을 때 Bencher가 `repository_dispatch` 이벤트를 보낼 수 있도록 `--ci-callback-token` 옵션을 `BENCHER_CALLBACK_TOKEN` **레포지토리** 시크릿으로 설정합니다.
+    더 많은 세부 사항은 [`--ci-callback-token` 문서][ci callback token option]를 참조하세요.
+    (예: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
+19. 이미지 안에서 실행할 벤치마크 명령을 지정합니다.
+    이미지에 엔트리포인트가 있으면 명령은 그 엔트리포인트에 전달됩니다([`--entrypoint` 옵션][entrypoint option] 참조).
+    전체 개요는 [벤치마크 명령][command argument]을 참조하세요.
+    (예: `bencher mock`)
+
+<PullRequestsOnBareMetalAttachCode />
+
+1. 기본 브랜치에 두 번째 GitHub Actions `workflow` 파일을 생성합니다.
+   GitHub는 `repository_dispatch` 워크플로를 기본 브랜치에서만 실행하므로,
+   이 파일이 그곳에 있기 전까지는 첫 번째 워크플로가 시작한 GitHub Check가 진행 중으로 남습니다.
+   (예: `.github/workflows/pr_bare_metal_benchmarks_attach.yml`)
+2. `bencher_run` 유형의 `repository_dispatch` 이벤트에서 실행합니다.
+   전체 개요는 [GitHub Actions `on` 문서][github actions on] 및 [GitHub Actions `repository_dispatch` 문서][github repository_dispatch]를 참조하세요.
+   (예: `on: repository_dispatch: types: [bencher_run]`)
+3. GitHub Actions `job`을 생성합니다.
+   (예: `jobs: attach_pr_benchmarks`)
+4. `GITHUB_TOKEN`의 [권한을 설정][github token permissions]하여 `checks` 및 `pull-requests`에 `write`를 부여합니다.
+   (예: `permissions: checks: write pull-requests: write`)
+5. 작업을 실행할 머신의 유형을 설정합니다.
+   Job은 이미 끝났으므로 이 작업은 결과를 게시하기만 합니다.
+   (예: `runs-on: ubuntu-latest`)
+6. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
+   체크아웃은 필요하지 않습니다.
+   (예: `uses: bencherdev/bencher@main`)
+7. GitHub의 스크립트 인젝션 가이드에 따라, 이벤트의 Job UUID는 `run:`에 직접 넣지 말고 [중간 환경 변수][github intermediate environment variable]를 통해 전달합니다.
+   (예: `env: JOB_UUID: ${{ github.event.client_payload.job }}`)
+8. Job에 연결하기 위해 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용합니다.
+   전체 개요는 [`bencher run` CLI 서브커맨드][bencher run]를 참조하세요.
+   (예: `bencher run`)
+9. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+   저장소에 프로젝트가 둘 이상이면 `github.event.client_payload.project`도 같은 방식으로 환경 변수를 통해 전달하고 따옴표로 감싸세요(예: `--project "$PROJECT_SLUG"`).
+   더 많은 세부 사항은 [`--project` 문서][project option]를 참조하세요.
+   (예: `--project project-abc4567-wxyz123456789`)
+10. `--key` 옵션을 `BENCHER_API_KEY` **레포지토리** 시크릿으로 설정합니다.
+    더 많은 세부 사항은 [`--key` 문서][key option]를 참조하세요.
+    (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
+11. `--job` 옵션을 따옴표로 감싼 Job UUID로 설정합니다.
+    전체 개요는 [`--job` 문서][job option]를 참조하세요.
+    (예: `--job "$JOB_UUID"`)
+12. 경고가 생성되면 명령이 실패하도록 `--error-on-alert` 플래그를 설정합니다.
+    이벤트는 데이터만 전달하므로, `--ci-only-on-alert`와 `--ci-public-links`처럼 결과를 게시하는 방식을 정하는 옵션도 여기, 두 번째 워크플로에 둡니다.
+    전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
+    (예: `--error-on-alert`)
+13. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 결과를 GitHub Check와 pull request 댓글로 게시할 GitHub API 인증 토큰으로 `--github-actions` 옵션을 설정합니다.
+    pull request 번호, 헤드 커밋, GitHub Check, `--ci-id`는 모두 이벤트에서 가져오며,
+    여기에서 명시적으로 지정한 `--ci-number` 또는 `--ci-id`가 이벤트보다 우선합니다.
+    더 많은 세부 사항은 [`--github-actions` 문서][github actions option]를 참조하세요.
+    (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+
+첫 번째 워크플로의 두 작업(예를 들어 `matrix`의 항목들)이 하나의 pull request에서 프로젝트, 브랜치, 테스트베드, 어댑터를 공유한다면,
+각 작업에 고유한 `--ci-id`를 지정하세요(예: `--ci-id '${{ matrix.suite }}'`).
+이벤트가 `--ci-id`를 두 번째 워크플로로 전달합니다.
+지정하지 않으면 그 `--job` 실행들이 하나의 댓글에 게시할 수 있습니다.
+`bencher run --job`은 `--build-time` 또는 `--file-size` Job을 결과로 구별하는데, 실패한 Job에는 결과가 없습니다.
+`--ci-id`가 콜백 본문 플레이스홀더(예: `{{ job.uuid }}`)와 정확히 같으면 그 값으로 전달되고, 플레이스홀더 형태로 다른 이름을 감싸면(예: `{{ x }}`) 실행이 실패합니다.
+
+첫 번째 워크플로가 시작한 GitHub Check가 어떻게 되는지는 다음 규칙으로 정해집니다:
+
+- `--github-actions`와 함께 쓰는 `--detach`에는 `--ci-callback-token` 또는 명시적인 `--callback-url`이 필요하며, 둘 다 없으면 `bencher run`이 인수를 해석하는 단계에서 거부합니다.
+  설정되지 않은 저장소 시크릿처럼 비어 있는 토큰도 거부됩니다.
+- 두 워크플로 모두 `--ci-callback-token`과 `--job`을 지원하는 `bencher` CLI가 필요합니다.
+  `bencherdev/bencher@main`은 `version` 입력으로 다른 버전을 고정하지 않는 한 최신 릴리스를 설치합니다.
+- 두 번째 워크플로의 명령줄에 철자가 틀린 플래그 같은 오류가 있으면, GitHub Check에 도달하기 전에 중단됩니다.
+  따라서 첫 번째 워크플로가 시작한 GitHub Check는 두 번째 워크플로가 수정되어 다시 실행될 때까지 진행 중으로 남습니다.
+- fine-grained personal access token은 만료됩니다.
+  `BENCHER_CALLBACK_TOKEN`이 만료되면 모든 콜백이 `401`로 실패하고 첫 번째 워크플로가 시작하는 모든 GitHub Check가 진행 중으로 남습니다.
+  각 Job은 제출될 때의 토큰을 그대로 사용하므로, 만료되기 한참 전에 토큰을 교체하고, 이전 토큰으로 제출된 모든 Job이 끝날 때까지 이전 토큰을 유효하게 유지하세요.
+- Job이 실패했거나 취소된 경우, 두 번째 워크플로는 GitHub Check를 `failure` 또는 `cancelled`로 완료하고 평소 규칙에 따라 pull request 댓글을 게시합니다(따라서 `--ci-only-on-alert`는 여전히 첫 댓글을 건너뜁니다).
+  Job의 오류는 GitHub Check가 아니라 두 번째 워크플로의 로그에 있습니다.
+- 조직이 Bencher Plus 플랜을 사용하지 않으면 콜백은 건너뛰어집니다.
+  첫 번째 워크플로가 그 이유와 함께 GitHub Check를 `neutral`로 완료합니다(예: `callback skipped: requires a Bencher Plus plan`).
+- 첫 번째 워크플로가 제출 후 Job을 다시 읽지 못하면, 경고를 출력하고 두 번째 워크플로가 완료할 수 있도록 GitHub Check를 진행 중으로 둡니다.
+- GitHub Actions 밖에서는 `--ci-callback-token`이 무시됩니다.
+- GitHub Enterprise Server에서는 콜백을 보내는 Bencher 서버가 API URL(`GITHUB_API_URL`)에 공개 주소의 `https`로 접근할 수 있어야 합니다.
+
+[github actions on]: https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github repository_dispatch]: https://docs.github.com/ko/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[github token permissions]: https://docs.github.com/ko/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github fine-grained token]: https://docs.github.com/ko/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github default environment variables]: https://docs.github.com/ko/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
+[github token]: https://docs.github.com/ko/actions/security-guides/automatic-token-authentication
+[github intermediate environment variable]: https://docs.github.com/ko/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+
+[bare metal]: /ko/docs/explanation/bare-metal/
+[pricing]: /pricing
+[bencher run]: /ko/docs/explanation/bencher-run/
+[project option]: /ko/docs/explanation/bencher-run/#--project-project
+[key option]: /ko/docs/explanation/bencher-run/#--key-key
+[branch option]: /ko/docs/explanation/branches/#--branch-branch
+[start point]: /ko/docs/explanation/branches/#--start-point-branch
+[bmf]: /ko/docs/reference/bencher-metric-format/
+[adapter json]: /ko/docs/explanation/adapters/#-json
+[image option]: /ko/docs/explanation/images/#--image-image
+[entrypoint option]: /ko/docs/explanation/images/#--entrypoint-entrypoint
+[detach option]: /ko/docs/explanation/images/#--detach
+[github actions option]: /ko/docs/explanation/bencher-run/#--github-actions-github_token
+[ci callback token option]: /ko/docs/explanation/bencher-run/#--ci-callback-token-token
+[job option]: /ko/docs/explanation/images/#--job-uuid
+[alert err]: /ko/docs/explanation/thresholds/#--error-on-alert
+[command argument]: /ko/docs/explanation/bencher-run/#벤치마크-명령
+
+[pull requests]: #pull-requests
+[pull requests from forks]: #포크로부터의-풀-리퀘스트

@@ -4,7 +4,9 @@
 
 Jobの最大実行時間を秒単位で設定します。
 詳細については[Jobドキュメント][job]を参照してください。
-このオプションは、[`--image`オプション][image]が設定されている必要があります。
+[`--job`オプション][job option]と一緒に指定した場合は、代わりにJobを待つ時間を設定します。
+このオプションは、[`--image`オプション][image]または[`--job`オプション][job option]のいずれかが設定されている必要があります。
 
 [job]: /ja/docs/explanation/bare-metal/#job
 [image]: #--image-image
+[job option]: #--job-uuid

@@ -1,0 +1,33 @@
+```yaml title=".github/workflows/pr_bare_metal_benchmarks.yml"
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+
+jobs:
+  submit_pr_benchmarks:
+    name: Submit PR Benchmarks to Bencher Bare Metal
+    # DO NOT REMOVE: For handling Fork PRs see Pull Requests from Forks
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: bencherdev/bencher@main
+      - name: Submit PR Benchmarks with Bencher
+        run: |
+          bencher run \
+          --project project-abc4567-wxyz123456789 \
+          --key '${{ secrets.BENCHER_API_KEY }}' \
+          --branch "$GITHUB_HEAD_REF" \
+          --start-point "$GITHUB_BASE_REF" \
+          --start-point-hash '${{ github.event.pull_request.base.sha }}' \
+          --start-point-clone-thresholds \
+          --start-point-reset \
+          --adapter json \
+          --image project-abc4567-wxyz123456789:latest \
+          --detach \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          --ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}' \
+          bencher mock
+```

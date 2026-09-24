@@ -12,8 +12,10 @@ However, the following Job timeouts are always enforced with the provided concur
 | Team            | Unlimited (default: 60 minutes) | Unlimited          |
 | Enterprise      | Unlimited (default: 60 minutes) | Unlimited          |
 
-This option requires [the `--image` option][image] to be set.
+Beside [the `--job` option][job option], it sets how long to wait for the Job instead.
+This option requires either [the `--image` option][image] or [the `--job` option][job option] to be set.
 
 [job]: /docs/explanation/bare-metal/#job
 [pricing]: /pricing
 [image]: #--image-image
+[job option]: #--job-uuid

@@ -1,0 +1,32 @@
+### `--job <UUID>`
+
+<br />
+
+Opcional: Conecta-se a um [Job em hardware dedicado][job] já enviado, por exemplo um enviado com [a flag `--detach`][detach].
+O `bencher run` aguarda o Job terminar e então publica seus resultados exatamente como um `bencher run --image` sem desanexar teria feito:
+o relatório na saída padrão, a Verificação do GitHub e o comentário no pull request da [opção `--github-actions`](/pt/docs/explanation/bencher-run/#--github-actions-github_token),
+e [a flag `--error-on-alert`][error on alert].
+Use o UUID do Job que a execução desanexada exibiu (ou seja, `Remote job submitted successfully: <UUID>`).
+Esta opção requer que [a opção `--project`](/pt/docs/explanation/bencher-run/#--project-project) esteja definida com o Projeto do Job.
+Um Job que já terminou retorna imediatamente.
+Se o Job falhou ou foi cancelado, o `bencher run` ainda publica o seu relatório, conclui a Verificação do GitHub como `failure` ou `cancelled` e termina com um erro.
+
+Junto com `--job`, [a opção `--job-timeout`][job timeout] é a espera total em segundos, sem ser dobrada como acontece junto com `--image`.
+Sem ela, a espera é o dobro do tempo limite do próprio Job.
+O `--job` também aceita `--format`, `--quiet`, `--error-on-alert`, `--github-actions`, `--ci-only-thresholds`, `--ci-only-on-alert`, `--ci-public-links`, `--ci-id`, `--ci-number`, `--job-poll-interval` e as opções de conexão como `--host`.
+
+O relatório já existe, então uma opção de relatório junto com `--job` é um erro,
+seja digitada, como `--branch`, `--testbed`, `--adapter` ou um comando de benchmark,
+ou definida pela sua variável de ambiente (`BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER` ou `BENCHER_CMD`).
+Por isso, [o workflow que se conecta][pull requests on bare metal] não deve definir nenhuma dessas variáveis.
+
+No GitHub Actions, quando o `--job` é executado no evento `repository_dispatch` que [a opção `--ci-callback-token`](/pt/docs/explanation/bencher-run/#--ci-callback-token-token) envia,
+ele lê o número do pull request, o commit head, a Verificação do GitHub e o `--ci-id` do `client_payload` do evento,
+e conclui a Verificação do GitHub que a execução desanexada iniciou.
+Um `--ci-number` ou `--ci-id` explícito tem prioridade sobre o payload.
+
+[job]: /pt/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[error on alert]: /pt/docs/explanation/thresholds/#--error-on-alert
+[job timeout]: #--job-timeout-seconds
+[pull requests on bare metal]: /pt/docs/how-to/github-actions/#pull-requests-em-hardware-dedicado

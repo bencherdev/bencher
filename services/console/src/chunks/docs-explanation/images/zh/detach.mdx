@@ -3,8 +3,18 @@
 <br />
 
 在提交远程 Job 后分离，而不等待其完成。
+`bencher run` 会打印 Job UUID（即 `Remote job submitted successfully: <UUID>`）并退出。
+使用 `--quiet` 时不会打印这一行，但 `--format json` 打印的报告仍会在 `job` 中包含该 Job UUID。
+要在之后发布结果，请[使用 `bencher run --job` 连接到该 Job][job option]，
+或让 Bencher 在 Job 完成时发送[回调][callback url]，以便其接收方进行连接。
+与 `--github-actions` 一起使用的 `--detach` 需要 [`--ci-callback-token` 选项][ci callback token]或 `--callback-url`，
+以便[第二个工作流][pull requests on bare metal]能够完成 GitHub 检查。
 此选项要求设置 [`--image` 选项][image]。
 此选项与 [`--job-poll-interval` 选项][job poll interval]冲突。
 
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[job option]: #--job-uuid
+[callback url]: #--callback-url-url
+[ci callback token]: /zh/docs/explanation/bencher-run/#--ci-callback-token-token
+[pull requests on bare metal]: /zh/docs/how-to/github-actions/#裸机上的-pull-requests

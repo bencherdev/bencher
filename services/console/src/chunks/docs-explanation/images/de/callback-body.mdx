@@ -1,0 +1,44 @@
+import CallbackBodyExample from "../callback-body-example.mdx";
+
+### `--callback-body <JSON>`
+
+<br />
+
+Optional: Legt den JSON-Text der Callback-Anfrage fest.
+Diese Option erfordert, dass [die Option `--callback-url`](#--callback-url-url) gesetzt ist.
+Ohne `--callback-body` ist der Text der Bericht des Jobs,
+dasselbe JSON, das `GET /v0/projects/{project}/reports/{report}` zurückgibt.
+Der Bericht nennt seinen Job per UUID (`job`), aber nicht den Zustand des Jobs.
+Um zu erfahren, ob der Job fehlgeschlagen ist, lassen Sie den Empfänger den Job mit `GET /v0/projects/{project}/jobs/{job}` lesen, oder senden Sie `{{ job.status }}` im Text.
+Bei einem privaten Projekt enthält dieser Bericht die privaten Ergebnisse des Projekts, senden Sie ihn also nur an einen Empfänger, dem Sie vertrauen.
+
+Ein String-Wert im Text, der genau einer dieser Platzhalter ist, wird als dessen Wert gesendet:
+
+| Platzhalter          | Wert                                                           |
+| -------------------- | -------------------------------------------------------------- |
+| `{{ job.uuid }}`     | Die Job-UUID                                                   |
+| `{{ job.status }}`   | Der Endzustand des Jobs: `processed`, `failed` oder `canceled` |
+| `{{ report.uuid }}`  | Die Berichts-UUID                                              |
+| `{{ project.uuid }}` | Die Projekt-UUID                                               |
+| `{{ project.slug }}` | Der Projekt-Slug                                               |
+| `{{ report }}`       | Der ganze Bericht                                              |
+
+Leerzeichen innerhalb der Klammern sind optional, also funktioniert auch `"{{job.uuid}}"`.
+Jeder Wert ist ein JSON-String, außer `{{ report }}`, das der Bericht selbst ist,
+dasselbe JSON wie der Text ohne `--callback-body` und mit denselben privaten Ergebnissen.
+Ein Text `"{{ report }}"` ist also dasselbe wie kein `--callback-body`,
+und `{"event": "bencher", "report": "{{ report }}"}` verpackt den Bericht in einen eigenen Umschlag.
+Ein Text darf `{{ report }}` nur einmal enthalten.
+Jeder andere String, jeder Schlüssel und jeder andere Wert wird unverändert gesendet.
+Ein Platzhalter innerhalb eines längeren Strings (d.h. `"Job {{ job.uuid }}"`) ist einfacher Text, und es gibt keine Verzweigungen,
+also liest ein Empfänger, der das Ergebnis braucht, `{{ job.status }}`.
+Ein String, der mit `{{` beginnt und mit `}}` endet, aber etwas anderes nennt, ist ein Fehler, niemals eine leere Zeichenkette.
+Der Text darf höchstens 64 KiB groß sein, wobei jeder Platzhalter mit seinem längsten Wert und `{{ report }}` mit nichts zählt.
+Bevor `bencher run` den Job einreicht, prüft es den Text, und der Server prüft ihn erneut.
+
+Zum Beispiel, um eine Nachricht an einen eingehenden Slack-Webhook zu senden, dessen URL sein Geheimnis enthält:
+
+<CallbackBodyExample />
+
+Der Body wird vollständig ausgegeben und nie maskiert, also legen Sie niemals ein Geheimnis darin ab.
+Legen Sie ein Geheimnis stattdessen in [einen Header](#--callback-header-name-value) oder in die URL.

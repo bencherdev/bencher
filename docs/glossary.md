@@ -100,8 +100,13 @@ Glossary of terms for Bencher concepts.
   claims Jobs that match its Specs, executes them, and reports back results.
 - **Job**:
   Tracks the lifecycle of a remote benchmark execution request.
-  A Job moves through: pending, claimed, and running then completed, failed, or canceled.
+  A Job moves through: pending, claimed, and running, then completed and processed.
+  It can end failed or canceled instead, and it is unknown while the server has lost contact with its Runner.
   A completed Job's results are processed into a Report.
+  Processed, failed, and canceled are terminal.
+- **Unknown**:
+  The Job state in which the server has lost contact with the Runner and does not yet know the outcome.
+  It resolves when the Runner speaks again or when the Job's deadline passes.
 - **Claim**:
   A Runner claims a pending Job.
   A Job declares the Spec it needs, and a Runner only claims Jobs for Specs it supports.
@@ -113,3 +118,8 @@ Glossary of terms for Bencher concepts.
   Non-sandboxed Jobs must be trusted and run directly on the host.
 - **Host Tuning**:
   Changes made to the Runner's bare metal server to achieve consistent benchmark results.
+- **Callback**:
+  An HTTP request Bencher sends once when a bare metal Job reaches a terminal state, supplied with the Run.
+  A Callback operates like a per-Run webhook.
+- **Attach**:
+  `bencher run --job`, which waits for a submitted Job and posts its results as the submitting Run would have.

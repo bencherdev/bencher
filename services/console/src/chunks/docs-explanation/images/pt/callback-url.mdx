@@ -1,0 +1,54 @@
+### `--callback-url <URL>`
+
+<br />
+
+Opcional: Define uma URL `https` para a qual o Bencher envia uma única requisição HTTP `POST`, um callback, quando um [Job em hardware dedicado][job] desanexado termina.
+O callback permite que o `bencher run` envie o Job e termine, em vez de manter um runner de CI aberto enquanto os benchmarks são executados,
+e o seu receptor pode depois [se conectar ao Job com `--job`](#--job-uuid) para publicar os resultados.
+No GitHub Actions, [a opção `--ci-callback-token`](/pt/docs/explanation/bencher-run/#--ci-callback-token-token) escreve o callback inteiro para você.
+Esta opção requer que [a opção `--image`][image] e [a flag `--detach`][detach] estejam definidas.
+
+O Bencher envia o callback quando o Job atinge um estado final: `processed`, `failed` ou `canceled`.
+O Job já está nesse estado quando a requisição chega, então o receptor pode ler o Job e o seu relatório imediatamente.
+O corpo da requisição é o relatório do Job ou o JSON da [opção `--callback-body`](#--callback-body-json) com os seus marcadores substituídos, e os cabeçalhos da requisição são:
+
+- `Content-Type: application/json`
+- `User-Agent: bencher/<VERSION>`, com a versão do servidor da API do Bencher
+- `Accept: */*`
+- Cada cabeçalho da [opção `--callback-header`](#--callback-header-name-value), que substitui um cabeçalho padrão com o mesmo nome
+
+A URL pode ter no máximo 2048 bytes.
+Toda exibição do callback, incluindo o eco `Bencher New Report` e `--dry-run`,
+mostra apenas a origem da URL (seu esquema, host e porta) e mascara cada valor de cabeçalho como `************`.
+O corpo é exibido por completo, então coloque um segredo em um cabeçalho ou na URL, nunca no corpo.
+
+Somente Organizações com um [plano Bencher Plus][pricing] enviam callbacks, e no Bencher Self-Hosted isso significa uma licença Team ou Enterprise.
+Para qualquer outra Organização, incluindo um Projeto público gratuito no Bencher Cloud ou uma Organização do Bencher Self-Hosted sem essa licença,
+o Job é executado mesmo assim, o seu callback é marcado como `skipped` e o `bencher run` exibe `callback skipped: requires a Bencher Plus plan`.
+[A flag `--quiet`](/pt/docs/explanation/bencher-run/#--quiet) oculta este aviso.
+
+O Bencher espera até 10 segundos por uma resposta, não segue redirecionamentos e não lê o corpo da resposta.
+Qualquer status `2xx` conta como entregue.
+Um tempo limite esgotado, um erro de conexão, um `408`, um `429` ou qualquer `5xx` é repetido, primeiro após 4 segundos e depois após 16 segundos, em no máximo três tentativas.
+Qualquer outro status é definitivo.
+Para ver o resultado, execute `bencher job view <PROJECT> <JOB>`:
+o campo `callback` do Job mostra `pending`, `delivered`, `failed` ou `skipped`, junto com o último status HTTP.
+A API nunca retorna a URL nem os cabeçalhos de um callback, mas em um Projeto público qualquer pessoa que possa ver o Job pode ver o estado do seu `callback` e o último status HTTP.
+
+> 🐰 Um receptor pode receber o mesmo callback mais de uma vez, por exemplo quando a sua resposta se perde ou o Bencher reinicia enquanto o envia.
+> Elimine duplicatas pelo UUID do Job.
+
+O Bencher só envia um callback para a internet pública.
+A URL deve usar `https` e, quando o Bencher envia o callback, ele recusa o host se algum dos seus endereços não for público, como um endereço privado, de loopback, link-local, local único ou de metadados de nuvem.
+Um endereço recusado faz o callback falhar sem nova tentativa.
+O Bencher Self-Hosted aplica as mesmas regras, e nenhuma configuração as flexibiliza.
+No Bencher Self-Hosted, os callbacks se conectam diretamente, nunca por meio de um proxy,
+e alterar [o `security.secret_key`][secret key] descarta todos os callbacks pendentes: cada um termina como `failed` sem ser enviado.
+As regras de endereço não podem conhecer o próprio endereço público do servidor,
+então em um host cujo endereço público está em uma das suas interfaces de rede locais, um callback pode alcançar um serviço vinculado a esse endereço.
+
+[job]: /pt/docs/explanation/bare-metal/#job
+[image]: #--image-image
+[detach]: #--detach
+[pricing]: /pricing
+[secret key]: /pt/docs/reference/server-config/#security

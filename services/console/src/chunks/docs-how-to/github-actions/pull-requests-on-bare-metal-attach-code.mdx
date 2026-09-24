@@ -1,0 +1,25 @@
+```yaml title=".github/workflows/pr_bare_metal_benchmarks_attach.yml"
+on:
+  repository_dispatch:
+    types: [bencher_run]
+
+jobs:
+  attach_pr_benchmarks:
+    name: Post PR Benchmark Results from Bencher Bare Metal
+    permissions:
+      checks: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: bencherdev/bencher@main
+      - name: Post PR Benchmark Results with Bencher
+        env:
+          JOB_UUID: ${{ github.event.client_payload.job }}
+        run: |
+          bencher run \
+          --project project-abc4567-wxyz123456789 \
+          --key '${{ secrets.BENCHER_API_KEY }}' \
+          --job "$JOB_UUID" \
+          --error-on-alert \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}'
+```

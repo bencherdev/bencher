@@ -8,6 +8,7 @@
 결과가 `Bencher Report (<프로젝트 이름>)`이라는 이름의 GitHub Check로 헤드 커밋에 추가됩니다(`--ci-id`가 설정된 경우 `Bencher Report (<ID>)`).
 따라서 동일한 커밋에 대한 서로 다른 프로젝트의 실행은 각각 고유한 GitHub Check를 갖게 됩니다.
 경고가 생성되면 GitHub Check가 실패하므로, 브랜치 보호에서 필수 상태 검사로 사용할 수 있습니다.
+베어 메탈 Job이 실패해도 실패하며, Job이 취소되면 `cancelled`로 완료됩니다.
 프로젝트 이름을 변경하면 GitHub Check 이름도 변경되므로, 직접 관리하는 이름이 필요하면 `--ci-id`를 사용하세요.
 GitHub Check는 벤치마크가 시작되기 전에 `in_progress` 상태로 생성되며, 벤치마크가 끝나면 결과와 함께 완료됩니다.
 이를 위해서는 벤치마크가 시작되기 전에 프로젝트 이름을 확인해야 하며, 이는 `--project`가 설정되어 있고 프로젝트가 이미 존재하는 경우에만 가능합니다. 그렇지 않으면 진행 중인 GitHub Check의 이름은 결과가 게시될 때까지 `Bencher Report`가 됩니다.
@@ -18,6 +19,8 @@ GitHub Check를 생성할 수 없는 경우, `bencher run`은 경고를 기록�
 결과가 pull request에도 댓글로 추가됩니다.
 이 경우 토큰에 [`write` 권한을 가진 `pull-requests` 범위가 필요합니다][github token permissions].
 결과는 항상 작업 요약에도 추가됩니다.
+[`--detach` 플래그](/ko/docs/explanation/images/#--detach)를 사용하면 분리된 실행은 댓글을 게시하지 않고 작업 요약도 작성하지 않으며, [`--job` 연결](/ko/docs/explanation/images/#--job-uuid)이 시작된 GitHub Check를 완료합니다([`--ci-callback-token` 옵션](#--ci-callback-token-token) 참조).
+설정되지 않은 시크릿처럼 비어 있는 토큰은 실행이 시작되기 전에 거부됩니다.
 
 [github token]: https://docs.github.com/ko/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/ko/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token

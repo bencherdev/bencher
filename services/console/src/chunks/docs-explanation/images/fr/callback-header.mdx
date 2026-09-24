@@ -1,0 +1,21 @@
+### `--callback-header <NAME: VALUE>`
+
+<br />
+
+Optionnel : Ajoute un en-tête à la requête du callback au format `NAME: VALUE`.
+Peut être spécifié plusieurs fois, pour au plus 16 en-têtes.
+Mettez chaque en-tête entre guillemets pour que le shell le transmette comme un seul argument (c'est-à-dire `--callback-header "Authorization: Bearer $RECEIVER_TOKEN"`).
+Sans guillemets, tout ce qui suit l'espace ferait plutôt partie de la commande de benchmark.
+Les noms d'en-tête ne sont pas sensibles à la casse, et un en-tête ultérieur remplace un en-tête antérieur du même nom.
+Un en-tête nommé `Content-Type`, `User-Agent` ou `Accept` remplace celui par défaut de Bencher.
+Les en-têtes de cadrage et de connexion, qui appartiennent au client HTTP, sont refusés :
+`Host`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Keep-Alive`, `Proxy-Connection`, `TE`, `Trailer` et `Upgrade`.
+Un nom d'en-tête peut faire au plus 256 octets, et une valeur d'en-tête au plus 8 Kio.
+Les valeurs d'en-tête sont masquées en `************` dans chaque affichage, donc un en-tête est l'endroit où placer un secret.
+Cette option nécessite que [l'option `--callback-url`](#--callback-url-url) soit définie.
+
+> 🐰 `bencher run` considère le premier argument qu'il ne reconnaît pas comme le début de la commande de benchmark.
+> Une option mal orthographiée, comme `--callback-ur`, fait partie de la commande avec chaque argument qui la suit :
+> elle est envoyée avec le Job et affichée en entier, secret compris.
+> Avant la première vraie soumission, exécutez la commande une fois avec `--dry-run` juste après `bencher run`, avant toute autre option,
+> et vérifiez le `cmd` dans l'écho `Bencher New Report`.

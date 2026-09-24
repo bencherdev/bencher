@@ -1,0 +1,40 @@
+### `--ci-callback-token <TOKEN>`
+
+<br />
+
+Opcional: Establece el token de GitHub para el callback de un [Job en hardware dedicado][job] desacoplado, para que un segundo workflow pueda publicar sus resultados.
+Con [la bandera `--detach`][detach] y [la opción `--github-actions`](#--github-actions-github_token),
+`bencher run` inicia la Verificación de GitHub en curso, envía el Job, no publica nada más y termina.
+Escribe [el callback](/es/docs/explanation/images/#--callback-url-url) por sí mismo:
+un evento [`repository_dispatch`][github repository dispatch] de tipo `bencher_run`, enviado al repositorio con este token.
+El `client_payload` del evento contiene el UUID del Job (`job`), el slug del Proyecto (`project`),
+el número de la pull request (`number`, ausente salvo que el workflow se ejecute en un evento `pull_request` o `pull_request_target` o establezca `--ci-number`), el commit de encabezado (`sha`),
+el ID de la Verificación de GitHub (`check`, ausente cuando falló el inicio de la Verificación de GitHub, en cuyo caso `bencher run --job` la crea en `sha`) y el `--ci-id` (`ci_id`, ausente cuando no está establecido).
+Un segundo workflow que se ejecuta con ese evento [se conecta al Job con `--job`](/es/docs/explanation/images/#--job-uuid)
+y completa la Verificación de GitHub y el comentario en la pull request.
+Consulte [Pull Requests en hardware dedicado en GitHub Actions][pull requests on bare metal] para ver ambos workflows.
+
+Bencher normalmente envía el evento después de que el workflow desacoplado ha terminado, y el `GITHUB_TOKEN` de ese workflow caduca con él.
+Por eso esta opción toma un [token de acceso personal de grano fino][github fine-grained token] para ese único repositorio con el permiso `Contents` `write`,
+lo mínimo que acepta `repository_dispatch`.
+El token se enmascara en cada impresión.
+Mantenga `--github-actions` con el propio `GITHUB_TOKEN` del workflow en ambos workflows:
+solo una GitHub App puede crear o actualizar una Verificación de GitHub, así que un token de acceso personal ahí nunca produce una,
+y ambos workflows comparten la app de GitHub Actions, lo que permite que el segundo complete la Verificación de GitHub que inició el primero.
+
+`--detach` con `--github-actions` requiere `--ci-callback-token` o [`--callback-url`](/es/docs/explanation/images/#--callback-url-url),
+ya que nada más completaría nunca la Verificación de GitHub que inicia.
+Un token vacío, como un secreto de repositorio sin definir, también se rechaza.
+Un `--callback-url` explícito reemplaza el callback `repository_dispatch`, para un receptor propio.
+La Verificación de GitHub se inicia igualmente, y completarla queda entonces en manos de ese receptor.
+Si el callback se omite porque la Organización no tiene un plan Bencher Plus,
+`bencher run` completa la Verificación de GitHub como `neutral` con ese aviso.
+Si `bencher run` no puede leer el estado del callback después del envío, imprime una advertencia y deja la Verificación de GitHub en curso para que la complete la conexión con `--job`.
+Fuera de GitHub Actions, esta opción se ignora.
+Esta opción requiere que [la opción `--github-actions`](#--github-actions-github_token) y [la bandera `--detach`][detach] estén establecidas.
+
+[job]: /es/docs/explanation/bare-metal/#job
+[detach]: /es/docs/explanation/images/#--detach
+[github repository dispatch]: https://docs.github.com/es/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[github fine-grained token]: https://docs.github.com/es/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[pull requests on bare metal]: /es/docs/how-to/github-actions/#pull-requests-en-hardware-dedicado

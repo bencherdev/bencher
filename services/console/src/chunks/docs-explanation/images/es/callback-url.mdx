@@ -1,0 +1,54 @@
+### `--callback-url <URL>`
+
+<br />
+
+Opcional: Establece una URL `https` a la que Bencher envía una única petición HTTP `POST`, un callback, cuando termina un [Job en hardware dedicado][job] desacoplado.
+El callback permite que `bencher run` envíe el Job y termine, en lugar de mantener abierto un runner de CI mientras se ejecutan los benchmarks,
+y su receptor puede luego [conectarse al Job con `--job`](#--job-uuid) para publicar los resultados.
+En GitHub Actions, [la opción `--ci-callback-token`](/es/docs/explanation/bencher-run/#--ci-callback-token-token) escribe todo el callback por usted.
+Esta opción requiere que [la opción `--image`][image] y [la bandera `--detach`][detach] estén establecidas.
+
+Bencher envía el callback cuando el Job alcanza un estado final: `processed`, `failed` o `canceled`.
+El Job ya está en ese estado cuando llega la petición, así que el receptor puede leer el Job y su informe de inmediato.
+El cuerpo de la petición es el informe del Job o el JSON de [la opción `--callback-body`](#--callback-body-json) con sus marcadores de posición sustituidos, y los encabezados de la petición son:
+
+- `Content-Type: application/json`
+- `User-Agent: bencher/<VERSION>`, con la versión del servidor de la API de Bencher
+- `Accept: */*`
+- Cada encabezado de [la opción `--callback-header`](#--callback-header-name-value), que reemplaza a un encabezado predeterminado con el mismo nombre
+
+La URL puede tener como máximo 2048 bytes.
+Cada impresión del callback, incluido el eco `Bencher New Report` y `--dry-run`,
+muestra solo el origen de la URL (su esquema, host y puerto) y enmascara cada valor de encabezado como `************`.
+El cuerpo se imprime completo, así que ponga un secreto en un encabezado o en la URL, nunca en el cuerpo.
+
+Solo las Organizaciones con un [plan Bencher Plus][pricing] envían callbacks, y en Bencher Self-Hosted eso significa una licencia Team o Enterprise.
+Para cualquier otra Organización, incluido un Proyecto público gratuito en Bencher Cloud o una Organización de Bencher Self-Hosted sin esa licencia,
+el Job se ejecuta igualmente, su callback se marca como `skipped` y `bencher run` imprime `callback skipped: requires a Bencher Plus plan`.
+[La bandera `--quiet`](/es/docs/explanation/bencher-run/#--quiet) oculta este aviso.
+
+Bencher espera hasta 10 segundos una respuesta, no sigue redirecciones y no lee el cuerpo de la respuesta.
+Cualquier estado `2xx` cuenta como entregado.
+Un tiempo de espera agotado, un error de conexión, un `408`, un `429` o cualquier `5xx` se reintenta, primero tras 4 segundos y luego tras 16 segundos, con un máximo de tres intentos.
+Cualquier otro estado es definitivo.
+Para ver el resultado, ejecute `bencher job view <PROJECT> <JOB>`:
+el campo `callback` del Job muestra `pending`, `delivered`, `failed` o `skipped`, junto con el último estado HTTP.
+La API nunca devuelve la URL ni los encabezados de un callback, pero en un Proyecto público cualquiera que pueda ver el Job puede ver el estado de su `callback` y el último estado HTTP.
+
+> 🐰 Un receptor puede recibir el mismo callback más de una vez, por ejemplo cuando se pierde su respuesta o Bencher se reinicia mientras lo envía.
+> Deduplique por el UUID del Job.
+
+Bencher solo envía un callback a la internet pública.
+La URL debe usar `https`, y cuando Bencher envía el callback, rechaza el host si alguna de sus direcciones no es pública, como una dirección privada, de loopback, de enlace local, local única o de metadatos de la nube.
+Una dirección rechazada hace fallar el callback sin reintento.
+Bencher Self-Hosted aplica las mismas reglas, y ninguna configuración las relaja.
+En Bencher Self-Hosted, los callbacks se conectan directamente, nunca a través de un proxy,
+y cambiar [el `security.secret_key`][secret key] descarta todos los callbacks pendientes: cada uno termina como `failed` sin enviarse.
+Las reglas de direcciones no pueden conocer la propia dirección pública del servidor,
+así que en un host cuya dirección pública está en una de sus interfaces de red locales, un callback puede llegar a un servicio vinculado a esa dirección.
+
+[job]: /es/docs/explanation/bare-metal/#job
+[image]: #--image-image
+[detach]: #--detach
+[pricing]: /pricing
+[secret key]: /es/docs/reference/server-config/#security

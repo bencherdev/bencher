@@ -1,0 +1,32 @@
+### `--job <UUID>`
+
+<br />
+
+Opcional: Se conecta a un [Job en hardware dedicado][job] ya enviado, por ejemplo uno enviado con [la bandera `--detach`][detach].
+`bencher run` espera a que el Job termine y luego publica sus resultados exactamente como lo habría hecho un `bencher run --image` sin desacoplar:
+el informe en la salida estándar, la Verificación de GitHub y el comentario en la pull request de [la opción `--github-actions`](/es/docs/explanation/bencher-run/#--github-actions-github_token),
+y [la bandera `--error-on-alert`][error on alert].
+Use el UUID del Job que imprimió la ejecución desacoplada (es decir, `Remote job submitted successfully: <UUID>`).
+Esta opción requiere que [la opción `--project`](/es/docs/explanation/bencher-run/#--project-project) esté establecida con el Proyecto del Job.
+Un Job que ya ha terminado regresa de inmediato.
+Si el Job falló o fue cancelado, `bencher run` publica igualmente su informe, completa la Verificación de GitHub como `failure` o `cancelled` y termina con un error.
+
+Junto a `--job`, [la opción `--job-timeout`][job timeout] es la espera completa en segundos, sin duplicarse como ocurre junto a `--image`.
+Sin ella, la espera es el doble del tiempo límite del propio Job.
+`--job` también acepta `--format`, `--quiet`, `--error-on-alert`, `--github-actions`, `--ci-only-thresholds`, `--ci-only-on-alert`, `--ci-public-links`, `--ci-id`, `--ci-number`, `--job-poll-interval` y las opciones de conexión como `--host`.
+
+El informe ya existe, así que una opción de informe junto a `--job` es un error,
+ya sea escrita, como `--branch`, `--testbed`, `--adapter` o un comando de benchmark,
+o establecida por su variable de entorno (`BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER` o `BENCHER_CMD`).
+Por eso, [el workflow que se conecta][pull requests on bare metal] no debe establecer ninguna de estas variables.
+
+En GitHub Actions, cuando `--job` se ejecuta en el evento `repository_dispatch` que envía [la opción `--ci-callback-token`](/es/docs/explanation/bencher-run/#--ci-callback-token-token),
+lee el número de la pull request, el commit de encabezado, la Verificación de GitHub y el `--ci-id` del `client_payload` del evento,
+y completa la Verificación de GitHub que inició la ejecución desacoplada.
+Un `--ci-number` o `--ci-id` explícito tiene prioridad sobre el payload.
+
+[job]: /es/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[error on alert]: /es/docs/explanation/thresholds/#--error-on-alert
+[job timeout]: #--job-timeout-seconds
+[pull requests on bare metal]: /es/docs/how-to/github-actions/#pull-requests-en-hardware-dedicado
