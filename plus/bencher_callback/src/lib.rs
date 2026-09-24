@@ -7,6 +7,6 @@ mod sender;
 pub use key::{CallbackKey, CallbackKeyError};
 pub use sealed_request::SealedRequest;
 pub use sender::{
-    AddressClass, CallbackAttempt, CallbackBlock, CallbackClient, CallbackRequest, CallbackSender,
-    error_chain,
+    AddressClass, CallbackAttempt, CallbackAttemptClass, CallbackBlock, CallbackBlockReason,
+    CallbackClient, CallbackFailure, CallbackFinish, CallbackRequest, CallbackSender, error_chain,
 };

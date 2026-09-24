@@ -9,6 +9,7 @@ publish = false
 [features]
 default = ["plus", "sentry", "otel"]
 plus = [
+    "dep:async-trait",
     "bencher_api/plus",
     "bencher_callback/plus",
     "bencher_config/plus",
@@ -25,6 +26,7 @@ sentry = ["bencher_api/sentry"]
 otel = ["bencher_api/otel"]
 
 [dependencies]
+async-trait = { workspace = true, optional = true }
 bencher_api.workspace = true
 bencher_callback = { workspace = true, optional = true }
 bencher_config.workspace = true

@@ -18,6 +18,8 @@ use url::Url;
 mod config_tx;
 mod plus;
 
+#[cfg(feature = "plus")]
+pub use config_tx::spawn_job_recovery;
 pub use config_tx::{ConfigTx, ConfigTxError};
 #[cfg(feature = "plus")]
 pub use plus::{Plus, PlusError};

@@ -13,13 +13,16 @@ use bencher_schema::{
 use bencher_token::{DEFAULT_SECRET_KEY, TokenKey};
 use diesel::{
     Connection as _,
-    r2d2::{ConnectionManager, Pool},
+    connection::SimpleConnection as _,
+    r2d2::{ConnectionManager, CustomizeConnection, Pool},
 };
 use dropshot::{ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpServer};
 use tempfile::NamedTempFile;
 use tokio::sync::Mutex;
 
 const ISSUER: &str = "http://localhost:3000";
+/// How long a connection waits out another's lock, as the server's own connections do.
+const BUSY_TIMEOUT_MS: u32 = 5_000;
 
 /// A test server for running API integration tests.
 #[expect(
@@ -39,6 +42,9 @@ pub struct TestServer {
     db_path: String,
     /// Keep the temp file alive for the duration of the test
     db_file: NamedTempFile,
+    /// Receives every callback the server sends
+    #[cfg(feature = "plus")]
+    callback_sender: Arc<crate::RecordingSender>,
 }
 
 impl TestServer {
@@ -125,17 +131,12 @@ impl TestServer {
         // Establish connection and run migrations
         let mut conn =
             DbConnection::establish(&db_path).expect("Failed to establish database connection");
+        set_busy_timeout(&mut conn).expect("Failed to set the busy timeout");
         run_migrations(&mut conn).expect("Failed to run migrations");
 
         // Create connection pools
-        let public_pool = Pool::builder()
-            .max_size(2)
-            .build(ConnectionManager::<DbConnection>::new(&db_path))
-            .expect("Failed to create public pool");
-        let auth_pool = Pool::builder()
-            .max_size(2)
-            .build(ConnectionManager::<DbConnection>::new(&db_path))
-            .expect("Failed to create auth pool");
+        let public_pool = connection_pool(&db_path);
+        let auth_pool = connection_pool(&db_path);
 
         // Build minimal ApiContext
         let token_key = TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
@@ -143,7 +144,7 @@ impl TestServer {
 
         let database = Database {
             path: PathBuf::from(&db_path),
-            busy_timeout: 5_000,
+            busy_timeout: BUSY_TIMEOUT_MS,
             public_pool,
             auth_pool,
             connection: Arc::new(Mutex::new(conn)),
@@ -153,6 +154,20 @@ impl TestServer {
         let request_body_max_bytes = max_body_size.map_or(DEFAULT_MAX_BODY_SIZE, |s| {
             usize::try_from(s).expect("max_body_size exceeds usize")
         });
+        let clock = clock.unwrap_or(bencher_json::Clock::System);
+        let callback_key = bencher_callback::CallbackKey::new(&DEFAULT_SECRET_KEY)
+            .expect("Failed to derive callback key");
+        let shutdown = bencher_schema::context::CancellationToken::new();
+        // Callbacks go to the recording sender, never through the real client.
+        let callback_sender = Arc::new(crate::RecordingSender::default());
+        let callbacks = bencher_schema::context::Callbacks::new(
+            Arc::clone(&database.connection),
+            database.auth_pool.clone(),
+            callback_key.clone(),
+            callback_sender.clone(),
+            shutdown.clone(),
+            clock.clone(),
+        );
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
             request_body_max_bytes,
@@ -173,7 +188,7 @@ impl TestServer {
             licensor: bencher_license::Licensor::self_hosted().expect("Failed to create licensor"),
             recaptcha_client: None,
             is_bencher_cloud: false,
-            clock: clock.clone().unwrap_or(bencher_json::Clock::System),
+            clock: clock.clone(),
             registry_url: bencher_json::LOCALHOST_BENCHER_REGISTRY_URL.clone(),
             oci_storage: bencher_oci_storage::OciStorage::try_from_config(
                 log.clone(),
@@ -181,26 +196,25 @@ impl TestServer {
                 std::path::Path::new(&db_path),
                 upload_timeout,
                 max_body_size,
-                clock,
+                Some(clock),
             )
             .expect("Failed to create OCI storage"),
             heartbeat_timeout: std::time::Duration::from_secs(5),
             job_timeout_grace_period: std::time::Duration::from_mins(1),
             heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
-            callback_key: bencher_callback::CallbackKey::new(&DEFAULT_SECRET_KEY)
-                .expect("Failed to derive callback key"),
+            callback_key,
+            callbacks,
             runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
-            shutdown: bencher_schema::context::CancellationToken::new(),
+            shutdown,
         };
 
-        Self::start_server(context, &log, token_key, db_path, db_file)
+        Self::start_server(context, &log, token_key, db_path, db_file, callback_sender)
     }
 
     #[cfg(not(feature = "plus"))]
     #[expect(
         clippy::expect_used,
         clippy::unused_async,
-        clippy::too_many_lines,
         reason = "test server setup with fallible init; async for API parity"
     )]
     async fn build(
@@ -225,17 +239,12 @@ impl TestServer {
         // Establish connection and run migrations
         let mut conn =
             DbConnection::establish(&db_path).expect("Failed to establish database connection");
+        set_busy_timeout(&mut conn).expect("Failed to set the busy timeout");
         run_migrations(&mut conn).expect("Failed to run migrations");
 
         // Create connection pools
-        let public_pool = Pool::builder()
-            .max_size(2)
-            .build(ConnectionManager::<DbConnection>::new(&db_path))
-            .expect("Failed to create public pool");
-        let auth_pool = Pool::builder()
-            .max_size(2)
-            .build(ConnectionManager::<DbConnection>::new(&db_path))
-            .expect("Failed to create auth pool");
+        let public_pool = connection_pool(&db_path);
+        let auth_pool = connection_pool(&db_path);
 
         // Build minimal ApiContext
         let token_key = TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
@@ -243,7 +252,7 @@ impl TestServer {
 
         let database = Database {
             path: PathBuf::from(&db_path),
-            busy_timeout: 5_000,
+            busy_timeout: BUSY_TIMEOUT_MS,
             public_pool,
             auth_pool,
             connection: Arc::new(Mutex::new(conn)),
@@ -271,6 +280,7 @@ impl TestServer {
         token_key: TokenKey,
         db_path: String,
         db_file: NamedTempFile,
+        #[cfg(feature = "plus")] callback_sender: Arc<crate::RecordingSender>,
     ) -> Self {
         // Create API description and register endpoints
         let mut api_description = ApiDescription::new();
@@ -317,6 +327,8 @@ impl TestServer {
             token_key,
             db_path,
             db_file,
+            #[cfg(feature = "plus")]
+            callback_sender,
         }
     }
 
@@ -347,8 +359,52 @@ impl TestServer {
         format!("{}{}", self.url, path)
     }
 
+    /// The callbacks the server has sent, in the order it sent them.
+    #[cfg(feature = "plus")]
+    pub fn callback_requests(&self) -> Vec<crate::CallbackRequest> {
+        self.callback_sender.requests()
+    }
+
+    /// Wait for every callback delivery to settle; the server claims no callback afterwards.
+    #[cfg(feature = "plus")]
+    pub async fn drain_callbacks(&self) {
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+        self.context().callbacks.drain(&log).await;
+    }
+
     /// Shut down the server gracefully
     pub async fn close(self) {
+        #[cfg(feature = "plus")]
+        let callbacks = self.context().callbacks.clone();
+        #[cfg(feature = "plus")]
+        self.context().shutdown.cancel();
         drop(self.server.close().await);
+        #[cfg(feature = "plus")]
+        callbacks
+            .drain(&slog::Logger::root(slog::Discard, slog::o!()))
+            .await;
     }
+}
+
+/// Waits out a lock instead of failing at once, as the server's own pools do.
+#[derive(Debug)]
+struct BusyTimeout;
+
+impl CustomizeConnection<DbConnection, diesel::r2d2::Error> for BusyTimeout {
+    fn on_acquire(&self, conn: &mut DbConnection) -> Result<(), diesel::r2d2::Error> {
+        set_busy_timeout(conn).map_err(diesel::r2d2::Error::QueryError)
+    }
+}
+
+fn set_busy_timeout(conn: &mut DbConnection) -> diesel::QueryResult<()> {
+    conn.batch_execute(&format!("PRAGMA busy_timeout = {BUSY_TIMEOUT_MS}"))
+}
+
+#[expect(clippy::expect_used, reason = "test server setup with fallible init")]
+fn connection_pool(db_path: &str) -> Pool<ConnectionManager<DbConnection>> {
+    Pool::builder()
+        .max_size(2)
+        .connection_customizer(Box::new(BusyTimeout))
+        .build(ConnectionManager::<DbConnection>::new(db_path))
+        .expect("Failed to create a connection pool")
 }
