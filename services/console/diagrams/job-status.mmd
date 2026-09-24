@@ -4,12 +4,19 @@ stateDiagram-v2
     pending --> claimed: runner claims
     pending --> canceled: user cancels
     claimed --> running: running
-    claimed --> failed: failed / timeout
+    claimed --> failed: failed
+    claimed --> unknown: lost contact
     claimed --> canceled: user cancels
     running --> completed: completed
-    running --> failed: failed / timeout
+    running --> failed: failed
+    running --> unknown: lost contact
     running --> canceled: cancel / hard timeout
+    unknown --> completed: completed
+    unknown --> failed: failed
+    unknown --> canceled: cancel / hard timeout
     failed --> completed: results recovered
     completed --> processed: results parsed
+    completed --> failed: processing failed
+    completed --> unknown: results lost
     processed --> [*]
     canceled --> [*]

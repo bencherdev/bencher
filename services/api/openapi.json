@@ -17371,7 +17371,7 @@
         "type": "object",
         "properties": {
           "heartbeat_timeout": {
-            "description": "Time in seconds without a heartbeat before marking a job as failed. Defaults to 90 seconds.",
+            "description": "Time in seconds without a heartbeat before marking a job as unknown. Defaults to 90 seconds.",
             "default": 90,
             "allOf": [
               {

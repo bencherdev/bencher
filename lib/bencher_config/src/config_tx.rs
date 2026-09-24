@@ -34,8 +34,6 @@ use diesel::{
     connection::SimpleConnection as _,
     r2d2::{ConnectionManager, Pool},
 };
-#[cfg(feature = "plus")]
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
     ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingIfExists, ConfigLoggingLevel,
     ConfigTls, HttpServer,
@@ -574,29 +572,17 @@ fn into_if_exists(if_exists: &IfExists) -> ConfigLoggingIfExists {
 
 #[cfg(feature = "plus")]
 async fn spawn_job_recovery(log: &Logger, context: &ApiContext) {
-    use bencher_json::JobStatus;
-    use bencher_schema::{
-        model::runner::{QueryJob, recover_orphaned_claimed_jobs},
-        schema,
-    };
-    use diesel::BoolExpressionMethods as _;
+    use bencher_schema::model::runner::{in_flight_jobs, mark_orphaned_claimed_jobs_unknown};
 
     let in_flight_jobs = {
         let conn = &mut *context.database.connection.lock().await;
 
-        // First, fail any claimed jobs that have been orphaned (claimed longer ago
-        // than the heartbeat timeout without transitioning to Running).
-        recover_orphaned_claimed_jobs(log, conn, context.heartbeat_timeout, &context.clock);
+        // First, mark any claimed jobs that have been orphaned (claimed longer ago
+        // than the heartbeat timeout without transitioning to Running) as Unknown.
+        mark_orphaned_claimed_jobs_unknown(log, conn, context.heartbeat_timeout, &context.clock);
 
         // Then schedule heartbeat timeouts for remaining in-flight jobs.
-        match schema::job::table
-            .filter(
-                schema::job::status
-                    .eq(JobStatus::Claimed)
-                    .or(schema::job::status.eq(JobStatus::Running)),
-            )
-            .load::<QueryJob>(conn)
-        {
+        match in_flight_jobs(conn) {
             Ok(jobs) => jobs,
             Err(e) => {
                 error!(log, "Failed to query in-flight jobs for recovery: {e}");

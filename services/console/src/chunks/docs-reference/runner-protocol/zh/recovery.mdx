@@ -9,7 +9,7 @@
 只有有效的协议消息才会重置计时器；
 无效的 JSON、ping/pong 帧和二进制消息不会。
 超时时，运行时间超过其超时加宽限期的 Job 会被标记为 `canceled`，
-否则被标记为 `failed`（与 Runner 的联系已丢失）。
+否则被标记为 `unknown`（与 Runner 的联系已丢失）。
 
 ### 硬性 Job 超时
 
@@ -17,16 +17,19 @@
 因此有缺陷或被攻陷的 Runner 无法通过发送心跳而无限运行。
 当超过限制（Job 超时加宽限期）时，
 Job 会被标记为 `canceled`，且 Runner 会收到一条 `cancel` 消息。
+该限制从 Job 开始运行时算起，如果它从未开始，则从它被认领时算起，并且同样适用于 `unknown` Job。
 
 ### 断连恢复
 
 如果在 Job 仍在进行中时连接断开，
 服务器会在心跳超时之后安排一次检查。
 如果 Runner 已重连并恢复心跳，则 Job 继续；
-否则该 Job 会被标记为 `failed`，如果它已超过硬性超时则标记为 `canceled`。
-在启动时，服务器还会恢复孤立的 `claimed` Job、
-为进行中的 Job 重新安排超时，
-并重新处理那些结果已存储但尚未解析的 `completed` Job。
+否则该 Job 会被标记为 `unknown`，如果它已超过硬性超时则标记为 `canceled`。
+服务器会在 `unknown` Job 的截止时间再次检查它。
+在启动时，服务器还会将孤立的 `claimed` Job 标记为 `unknown`、
+为进行中和 `unknown` 的 Job 重新安排超时，
+并重新处理那些结果已存储但尚未解析的 `completed` Job；
+结果已丢失的 `completed` Job 会被标记为 `unknown`，以便 Runner 重新发送结果。
 
 ### 重连与结果交付
 
@@ -36,7 +39,7 @@ Job 会被标记为 `canceled`，且 Runner 会收到一条 `cancel` 消息。
 终止性消息携带 Job UUID 并会收到 `ack`；
 如果在 `ack` 到达之前连接断开，
 Runner 会存储结果，并在下次连接时、进入空闲之前重新发送它。
-Runner 实际的 `completed` 结果甚至可以覆盖心跳超时导致的 `failed` 状态。
+Runner 实际的 `completed` 结果会解决 `unknown` Job，甚至可以覆盖 `failed` 状态。
 
 ### 不自动重试
 

@@ -9,7 +9,7 @@ While the connection is open, a read timeout detects a Runner that is connected 
 Only valid protocol messages reset the timer;
 invalid JSON, ping/pong frames, and binary messages do not.
 On timeout, a Job that has run longer than its timeout plus a grace period is marked `canceled`,
-and otherwise marked `failed` (contact with the Runner was lost).
+and otherwise marked `unknown` (contact with the Runner was lost).
 
 ### Hard Job Timeout
 
@@ -17,16 +17,19 @@ The server enforces a hard maximum execution duration independent of Runner beha
 so a buggy or compromised Runner cannot run indefinitely by sending heartbeats.
 When the limit (the Job timeout plus a grace period) is exceeded,
 the Job is marked `canceled` and the Runner receives a `cancel` message.
+The limit counts from when the Job started running, or from when it was claimed if it never started, and it applies to an `unknown` Job too.
 
 ### Disconnect Recovery
 
 If the connection drops while a Job is still in flight,
 the server schedules a check after the heartbeat timeout.
 If the Runner has reconnected and resumed heartbeats, the Job continues;
-otherwise the Job is marked `failed`, or `canceled` if it had exceeded the hard timeout.
-On startup, the server also recovers orphaned `claimed` Jobs,
-reschedules timeouts for in-flight Jobs,
-and re-processes `completed` Jobs whose results were stored but not yet parsed.
+otherwise the Job is marked `unknown`, or `canceled` if it had exceeded the hard timeout.
+The server checks an `unknown` Job again at its deadline.
+On startup, the server also marks orphaned `claimed` Jobs `unknown`,
+reschedules timeouts for in-flight and `unknown` Jobs,
+and re-processes `completed` Jobs whose results were stored but not yet parsed;
+a `completed` Job whose results were lost is marked `unknown` so the Runner can resend them.
 
 ### Reconnection & Result Delivery
 
@@ -36,7 +39,7 @@ and resending a terminal `completed`, `failed`, or `canceled` message is always 
 Terminal messages carry the Job UUID and receive an `ack`;
 if the connection drops before the `ack` arrives,
 the Runner stores the result and resends it on the next connection before going idle.
-A Runner's actual `completed` result can even override a heartbeat-timeout `failed` status.
+A Runner's actual `completed` result resolves an `unknown` Job, and can even override a `failed` status.
 
 ### No Automatic Retry
 

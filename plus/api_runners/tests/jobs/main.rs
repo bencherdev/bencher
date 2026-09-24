@@ -13,7 +13,10 @@
 mod common;
 mod websocket;
 
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicI64, Ordering},
+};
 
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
@@ -21,7 +24,8 @@ use bencher_json::{DateTime, JobStatus, JsonJob, PollTimeout, Priority};
 use bencher_schema::{
     context::HeartbeatTasks,
     model::runner::{
-        JobId, recover_orphaned_claimed_jobs, reprocess_completed_jobs, spawn_heartbeat_timeout,
+        JobId, in_flight_jobs, mark_orphaned_claimed_jobs_unknown, reprocess_completed_jobs,
+        spawn_heartbeat_timeout,
     },
     schema,
 };
@@ -29,9 +33,10 @@ use common::{
     assert_ws_closed, associate_runner_spec, base_timestamp, claim_via_channel, connect_channel_ws,
     create_runner, create_test_report, get_job_priority, get_project_id, get_runner_id,
     insert_test_job, insert_test_job_full, insert_test_job_with_bmf_version,
-    insert_test_job_with_invalid_config, insert_test_job_with_project, insert_test_spec,
-    insert_test_spec_full, recv_server_msg as recv_msg, send_runner_msg as send_msg,
-    set_job_runner_id, set_job_status, try_connect_channel_ws, ws_url,
+    insert_test_job_with_invalid_config, insert_test_job_with_project,
+    insert_test_job_with_timeout, insert_test_spec, insert_test_spec_full,
+    recv_server_msg as recv_msg, send_runner_msg as send_msg, set_job_runner_id, set_job_status,
+    try_connect_channel_ws, ws_url,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::{SinkExt as _, StreamExt as _};
@@ -2237,10 +2242,10 @@ async fn claim_no_pending_jobs_succeeds() {
 // Recovery Tests
 // =============================================================================
 
-/// Test that `recover_orphaned_claimed_jobs` marks orphaned Claimed jobs as Failed.
+/// Test that `mark_orphaned_claimed_jobs_unknown` marks orphaned Claimed jobs as Unknown.
 /// A job is "orphaned" when it's been in Claimed state longer than the heartbeat timeout.
 #[tokio::test]
-async fn recover_orphaned_claimed_jobs_marks_as_failed() {
+async fn mark_orphaned_claimed_jobs_unknown_marks_as_unknown() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "recover-orphan@example.com").await;
     let org = server.create_org(&admin, "Recover Orphan").await;
@@ -2268,19 +2273,19 @@ async fn recover_orphaned_claimed_jobs_marks_as_failed() {
             .expect("Failed to set job to claimed");
     }
 
-    // Call recover_orphaned_claimed_jobs with a 5-second timeout
+    // Call mark_orphaned_claimed_jobs_unknown with a 5-second timeout
     let log = slog::Logger::root(slog::Discard, slog::o!());
     let heartbeat_timeout = std::time::Duration::from_secs(5);
     let mut conn = server.db_conn();
-    let recovered = recover_orphaned_claimed_jobs(
+    let marked = mark_orphaned_claimed_jobs_unknown(
         &log,
         &mut conn,
         heartbeat_timeout,
         &bencher_json::Clock::System,
     );
-    assert_eq!(recovered, 1, "Expected 1 orphaned job to be recovered");
+    assert_eq!(marked, 1, "Expected 1 orphaned job to be marked Unknown");
 
-    // Verify job is now Failed
+    // Verify job is now Unknown
     let status: JobStatus = schema::job::table
         .filter(schema::job::uuid.eq(job_uuid))
         .select(schema::job::status)
@@ -2288,16 +2293,16 @@ async fn recover_orphaned_claimed_jobs_marks_as_failed() {
         .expect("Failed to get job status");
     assert_eq!(
         status,
-        JobStatus::Failed,
-        "Orphaned claimed job should be Failed"
+        JobStatus::Unknown,
+        "Orphaned claimed job should be Unknown"
     );
 }
 
-/// Test that `recover_orphaned_claimed_jobs` does NOT fail recently-claimed jobs.
+/// Test that `mark_orphaned_claimed_jobs_unknown` spares recently-claimed jobs.
 /// A job claimed within the heartbeat timeout should survive into
-/// Phase 2 (`spawn_heartbeat_timeout`) rather than being prematurely failed.
+/// Phase 2 (`spawn_heartbeat_timeout`) rather than being marked early.
 #[tokio::test]
-async fn recover_orphaned_claimed_jobs_spares_recently_claimed() {
+async fn mark_orphaned_claimed_jobs_unknown_spares_recently_claimed() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "recover-recent@example.com").await;
     let org = server.create_org(&admin, "Recover Recent").await;
@@ -2333,10 +2338,10 @@ async fn recover_orphaned_claimed_jobs_spares_recently_claimed() {
     let log = slog::Logger::root(slog::Discard, slog::o!());
     let heartbeat_timeout = std::time::Duration::from_secs(5);
     let mut conn = server.db_conn();
-    let recovered = recover_orphaned_claimed_jobs(&log, &mut conn, heartbeat_timeout, &clock);
+    let marked = mark_orphaned_claimed_jobs_unknown(&log, &mut conn, heartbeat_timeout, &clock);
     assert_eq!(
-        recovered, 0,
-        "Recently claimed job should NOT be recovered (within heartbeat timeout)"
+        marked, 0,
+        "Recently claimed job should NOT be marked (within heartbeat timeout)"
     );
 
     // Verify job is still Claimed
@@ -2352,15 +2357,15 @@ async fn recover_orphaned_claimed_jobs_spares_recently_claimed() {
     );
 }
 
-/// Test that `spawn_heartbeat_timeout` marks a Running job as Failed after timeout.
+/// Test that `spawn_heartbeat_timeout` marks a Running job as Unknown after timeout.
 /// Simulates what `spawn_job_recovery` does for in-flight jobs on server restart.
 ///
 /// Uses `tokio::time::pause()` / `advance()` to make the test deterministic
-/// without wall-clock waits. The `last_heartbeat` is cleared to `None` so
+/// without wall-clock waits. The `last_heartbeat` is left `None` so
 /// the freshness check inside `spawn_heartbeat_timeout` is skipped, and the
 /// main `tokio::time::sleep(timeout)` respects virtual time.
 #[tokio::test]
-async fn spawn_heartbeat_timeout_fails_running_job() {
+async fn spawn_heartbeat_timeout_marks_running_job_unknown() {
     let server = TestServer::new().await;
     let admin = server.signup("Admin", "hb-running@example.com").await;
     let org = server.create_org(&admin, "Hb Running").await;
@@ -2373,16 +2378,14 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
 
     // Set job to Running via direct DB update (last_heartbeat stays NULL)
     set_job_status(&server, job_uuid, JobStatus::Running);
+    set_job_times(
+        &server,
+        job_uuid,
+        Some(base_timestamp()),
+        Some(base_timestamp()),
+    );
 
-    // Get the JobId for spawn_heartbeat_timeout
-    let job_id: JobId = {
-        let mut conn = server.db_conn();
-        schema::job::table
-            .filter(schema::job::uuid.eq(job_uuid))
-            .select(schema::job::id)
-            .first(&mut conn)
-            .expect("Failed to get job ID")
-    };
+    let job_id = get_job_id(&server, job_uuid);
 
     // Create the infrastructure spawn_heartbeat_timeout needs
     let connection = Arc::new(Mutex::new(server.db_conn()));
@@ -2390,6 +2393,7 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
     let log = slog::Logger::root(slog::Discard, slog::o!());
     let timeout = std::time::Duration::from_secs(5);
     let grace_period = std::time::Duration::from_mins(1);
+    let now = at_offset(6);
 
     // Pause time before spawning so the sleep timer is registered in virtual time
     tokio::time::pause();
@@ -2401,7 +2405,7 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
         job_id,
         &heartbeat_tasks,
         grace_period,
-        bencher_json::Clock::System,
+        bencher_json::Clock::Custom(Arc::new(move || now)),
     );
 
     // Let the spawned task start and register its sleep(5s) timer
@@ -2412,18 +2416,231 @@ async fn spawn_heartbeat_timeout_fails_running_job() {
     tokio::task::yield_now().await;
     tokio::time::resume();
 
-    // Verify the job is now Failed
-    let mut conn = server.db_conn();
-    let status: JobStatus = schema::job::table
-        .filter(schema::job::uuid.eq(job_uuid))
-        .select(schema::job::status)
-        .first(&mut conn)
-        .expect("Failed to get job status");
     assert_eq!(
-        status,
-        JobStatus::Failed,
-        "Running job should be Failed after heartbeat timeout"
+        get_status(&server, job_uuid),
+        JobStatus::Unknown,
+        "Running job should be Unknown after heartbeat timeout"
     );
+}
+
+/// A runner that keeps heartbeating keeps its job Running: each check measures the last
+/// heartbeat against the full heartbeat timeout, so the job is marked Unknown only once
+/// its last heartbeat is 5s old.
+#[tokio::test]
+async fn spawn_heartbeat_timeout_keeps_full_limit_between_heartbeats() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "hb-fresh@example.com").await;
+    let org = server.create_org(&admin, "Hb Fresh").await;
+    let project = server.create_project(&admin, &org, "Hb Fresh proj").await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+    set_job_status(&server, job_uuid, JobStatus::Running);
+    set_job_times(
+        &server,
+        job_uuid,
+        Some(base_timestamp()),
+        Some(base_timestamp()),
+    );
+    set_job_last_heartbeat(&server, job_uuid, base_timestamp());
+
+    let (clock, mock_time) = mock_clock(0);
+    let heartbeat_tasks = HeartbeatTasks::new();
+
+    tokio::time::pause();
+    spawn_heartbeat_timeout(
+        slog::Logger::root(slog::Discard, slog::o!()),
+        std::time::Duration::from_secs(5),
+        Arc::new(Mutex::new(server.db_conn())),
+        get_job_id(&server, job_uuid),
+        &heartbeat_tasks,
+        std::time::Duration::from_mins(1),
+        clock,
+    );
+    tokio::task::yield_now().await;
+
+    // Each step moves the fake clock to `t`, then tokio time just past `t`, so a timer
+    // due at `t` fires and its task reads `t` before scheduling its next check.
+    let mut elapsed = 0;
+    for (t, heartbeat, expected) in [
+        (3, true, JobStatus::Running),
+        // First check: last heartbeat 2s old, next check due at t=8
+        (5, false, JobStatus::Running),
+        (7, true, JobStatus::Running),
+        // Last heartbeat 1s old, so the next check waits the full limit, until t=12
+        (8, false, JobStatus::Running),
+        (9, false, JobStatus::Running),
+        (11, false, JobStatus::Running),
+        // Last heartbeat 5s old
+        (12, false, JobStatus::Unknown),
+    ] {
+        mock_time.store(at_offset(t).timestamp(), Ordering::Relaxed);
+        if heartbeat {
+            set_job_last_heartbeat(&server, job_uuid, at_offset(t));
+        }
+        let step = u64::try_from(t - elapsed).unwrap_or_default();
+        tokio::time::advance(
+            std::time::Duration::from_secs(step) + std::time::Duration::from_millis(1),
+        )
+        .await;
+        tokio::task::yield_now().await;
+        elapsed = t;
+        assert_eq!(get_status(&server, job_uuid), expected, "at t={t}");
+    }
+    tokio::time::resume();
+}
+
+/// A Running job that loses contact is marked Unknown at the heartbeat timeout,
+/// then Canceled once its deadline (started + timeout + grace period) passes,
+/// even though no heartbeat ever arrives to trigger the check.
+#[tokio::test]
+async fn spawn_heartbeat_timeout_cancels_unknown_job_at_deadline_from_started() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "hb-deadline@example.com").await;
+    let org = server.create_org(&admin, "Hb Deadline").await;
+    let project = server
+        .create_project(&admin, &org, "Hb Deadline proj")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    // Deadline: started + 10s timeout + 60s grace period = base + 70s
+    let job_uuid = insert_test_job_with_timeout(&server, report_id, spec_id, 10);
+    set_job_status(&server, job_uuid, JobStatus::Running);
+    set_job_times(
+        &server,
+        job_uuid,
+        Some(base_timestamp()),
+        Some(base_timestamp()),
+    );
+    set_job_last_heartbeat(&server, job_uuid, base_timestamp());
+
+    let (clock, mock_time) = mock_clock(6);
+    let heartbeat_tasks = HeartbeatTasks::new();
+
+    tokio::time::pause();
+    spawn_heartbeat_timeout(
+        slog::Logger::root(slog::Discard, slog::o!()),
+        std::time::Duration::from_secs(5),
+        Arc::new(Mutex::new(server.db_conn())),
+        get_job_id(&server, job_uuid),
+        &heartbeat_tasks,
+        std::time::Duration::from_mins(1),
+        clock,
+    );
+    tokio::task::yield_now().await;
+    tokio::time::advance(std::time::Duration::from_secs(6)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(get_status(&server, job_uuid), JobStatus::Unknown);
+
+    // Marked at base + 6s, so the deadline check is due 65s later.
+    mock_time.store(at_offset(71).timestamp(), Ordering::Relaxed);
+    tokio::time::advance(std::time::Duration::from_mins(1)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(get_status(&server, job_uuid), JobStatus::Unknown);
+
+    tokio::time::advance(std::time::Duration::from_secs(6)).await;
+    tokio::task::yield_now().await;
+    tokio::time::resume();
+    assert_eq!(get_status(&server, job_uuid), JobStatus::Canceled);
+}
+
+/// An Unknown job that was claimed but never started has its deadline counted from
+/// `claimed`, so it cannot stay Unknown forever.
+#[tokio::test]
+async fn spawn_heartbeat_timeout_cancels_unknown_job_at_deadline_from_claimed() {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin", "hb-deadline-claimed@example.com")
+        .await;
+    let org = server.create_org(&admin, "Hb Deadline Claimed").await;
+    let project = server
+        .create_project(&admin, &org, "Hb Deadline Claimed proj")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    // Deadline: claimed + 10s timeout + 60s grace period = base + 70s
+    let job_uuid = insert_test_job_with_timeout(&server, report_id, spec_id, 10);
+    set_job_status(&server, job_uuid, JobStatus::Unknown);
+    set_job_times(&server, job_uuid, Some(base_timestamp()), None);
+
+    let (clock, mock_time) = mock_clock(6);
+    let heartbeat_tasks = HeartbeatTasks::new();
+
+    tokio::time::pause();
+    spawn_heartbeat_timeout(
+        slog::Logger::root(slog::Discard, slog::o!()),
+        std::time::Duration::from_secs(5),
+        Arc::new(Mutex::new(server.db_conn())),
+        get_job_id(&server, job_uuid),
+        &heartbeat_tasks,
+        std::time::Duration::from_mins(1),
+        clock,
+    );
+    tokio::task::yield_now().await;
+    tokio::time::advance(std::time::Duration::from_secs(6)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(get_status(&server, job_uuid), JobStatus::Unknown);
+
+    // Checked at base + 6s, so the deadline check is due 65s later.
+    mock_time.store(at_offset(71).timestamp(), Ordering::Relaxed);
+    tokio::time::advance(std::time::Duration::from_mins(1)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(get_status(&server, job_uuid), JobStatus::Unknown);
+
+    tokio::time::advance(std::time::Duration::from_secs(6)).await;
+    tokio::task::yield_now().await;
+    tokio::time::resume();
+    assert_eq!(get_status(&server, job_uuid), JobStatus::Canceled);
+}
+
+/// The query startup recovery arms heartbeat timeouts from returns every job
+/// still in flight, including one whose outcome is Unknown, and no other job.
+#[tokio::test]
+async fn in_flight_jobs_include_unknown() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "in-flight@example.com").await;
+    let org = server.create_org(&admin, "In Flight").await;
+    let project = server.create_project(&admin, &org, "In Flight proj").await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+
+    let mut expected = Vec::new();
+    for status in [
+        JobStatus::Pending,
+        JobStatus::Claimed,
+        JobStatus::Running,
+        JobStatus::Completed,
+        JobStatus::Processed,
+        JobStatus::Failed,
+        JobStatus::Canceled,
+        JobStatus::Unknown,
+    ] {
+        let job_uuid = insert_test_job(&server, report_id, spec_id);
+        set_job_status(&server, job_uuid, status);
+        if matches!(
+            status,
+            JobStatus::Claimed | JobStatus::Running | JobStatus::Unknown
+        ) {
+            expected.push(job_uuid);
+        }
+    }
+
+    let mut in_flight: Vec<_> = in_flight_jobs(&mut server.db_conn())
+        .expect("Failed to query in-flight jobs")
+        .into_iter()
+        .map(|job| job.uuid)
+        .collect();
+    in_flight.sort_unstable();
+    expected.sort_unstable();
+    assert_eq!(in_flight, expected);
 }
 
 /// Claiming a job with invalid config (missing required fields) fails gracefully.
@@ -2562,17 +2779,11 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     tokio::task::yield_now().await;
     tokio::time::resume();
 
-    // Verify the job is now Failed (heartbeat timeout, no further interaction)
-    let mut conn = server.db_conn();
-    let status: JobStatus = schema::job::table
-        .filter(schema::job::uuid.eq(job_uuid))
-        .select(schema::job::status)
-        .first(&mut conn)
-        .expect("Failed to get job status");
+    // Verify the job is now Unknown (heartbeat timeout, no further interaction)
     assert_eq!(
-        status,
-        JobStatus::Failed,
-        "Claimed job should be Failed after heartbeat timeout without WS"
+        get_status(&server, job_uuid),
+        JobStatus::Unknown,
+        "Claimed job should be Unknown after heartbeat timeout without WS"
     );
 }
 
@@ -2626,8 +2837,8 @@ async fn reprocess_completed_job_success() {
     );
 }
 
-/// Test that `reprocess_completed_jobs` marks a Completed job as Failed when no
-/// output is stored (orphaned job recovery).
+/// Test that `reprocess_completed_jobs` marks a Completed job as Unknown when no
+/// output is stored (orphaned job recovery), so the runner's resent result can land.
 #[tokio::test]
 async fn reprocess_completed_job_no_output() {
     let server = TestServer::new().await;
@@ -2649,18 +2860,54 @@ async fn reprocess_completed_job_no_output() {
     let log = slog::Logger::root(slog::Discard, slog::o!());
     reprocess_completed_jobs(&log, server.context()).await;
 
-    // Verify job transitioned to Failed (orphaned completed job)
-    let mut conn = server.db_conn();
-    let status: JobStatus = schema::job::table
-        .filter(schema::job::uuid.eq(job_uuid))
-        .select(schema::job::status)
-        .first(&mut conn)
-        .expect("Failed to get job status");
+    // Verify job transitioned to Unknown (orphaned completed job)
     assert_eq!(
-        status,
-        JobStatus::Failed,
-        "Completed job without stored output should be marked as Failed"
+        get_status(&server, job_uuid),
+        JobStatus::Unknown,
+        "Completed job without stored output should be marked as Unknown"
     );
+}
+
+/// An orphaned Completed job marked Unknown gets a heartbeat timeout of its own,
+/// so a job whose deadline has already passed is Canceled rather than left Unknown.
+#[tokio::test]
+async fn reprocess_completed_job_no_output_arms_deadline() {
+    // Deadline: started + 3600s timeout + 60s grace period = base + 3660s
+    let server = TestServer::new_at(at_offset(3700)).await;
+    let admin = server
+        .signup("Admin", "reprocess-deadline@example.com")
+        .await;
+    let org = server.create_org(&admin, "Reprocess Deadline Org").await;
+    let project = server
+        .create_project(&admin, &org, "Reprocess deadline proj")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job_with_project(&server, report_id, project.uuid, spec_id);
+
+    // Started before the server's clock by more than its timeout plus grace period.
+    set_job_status(&server, job_uuid, JobStatus::Completed);
+    set_job_times(
+        &server,
+        job_uuid,
+        Some(base_timestamp()),
+        Some(base_timestamp()),
+    );
+
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    reprocess_completed_jobs(&log, server.context()).await;
+    assert_eq!(get_status(&server, job_uuid), JobStatus::Unknown);
+
+    // Let the armed timeout register its sleep, then advance past the 5s heartbeat timeout
+    tokio::time::pause();
+    tokio::task::yield_now().await;
+    tokio::time::advance(std::time::Duration::from_secs(6)).await;
+    tokio::task::yield_now().await;
+    tokio::time::resume();
+
+    assert_eq!(get_status(&server, job_uuid), JobStatus::Canceled);
 }
 
 /// Complete a job whose config declares `bmf_version` with BMF v1 stdout, then
@@ -2857,4 +3104,62 @@ async fn reprocess_completed_jobs_malformed_output() {
         JobStatus::Failed,
         "Completed job with malformed output should be marked as Failed"
     );
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn get_job_id(server: &TestServer, job_uuid: bencher_json::JobUuid) -> JobId {
+    schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::id)
+        .first(&mut server.db_conn())
+        .expect("Failed to get job ID")
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn get_status(server: &TestServer, job_uuid: bencher_json::JobUuid) -> JobStatus {
+    schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::status)
+        .first(&mut server.db_conn())
+        .expect("Failed to get job status")
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn set_job_times(
+    server: &TestServer,
+    job_uuid: bencher_json::JobUuid,
+    claimed: Option<DateTime>,
+    started: Option<DateTime>,
+) {
+    diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
+        .set((
+            schema::job::claimed.eq(claimed),
+            schema::job::started.eq(started),
+        ))
+        .execute(&mut server.db_conn())
+        .expect("Failed to set job times");
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn set_job_last_heartbeat(server: &TestServer, job_uuid: bencher_json::JobUuid, at: DateTime) {
+    diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
+        .set(schema::job::last_heartbeat.eq(Some(at)))
+        .execute(&mut server.db_conn())
+        .expect("Failed to set last heartbeat");
+}
+
+/// `base_timestamp()` plus `secs`.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn at_offset(secs: i64) -> DateTime {
+    DateTime::try_from(base_timestamp().timestamp() + secs).expect("Invalid timestamp")
+}
+
+/// A clock starting at `base_timestamp()` plus `secs`, and the handle that moves it.
+fn mock_clock(secs: i64) -> (bencher_json::Clock, Arc<AtomicI64>) {
+    let mock_time = Arc::new(AtomicI64::new(at_offset(secs).timestamp()));
+    let time_ref = mock_time.clone();
+    let clock = bencher_json::Clock::Custom(Arc::new(move || {
+        DateTime::try_from(time_ref.load(Ordering::Relaxed)).unwrap_or_else(|_| base_timestamp())
+    }));
+    (clock, mock_time)
 }

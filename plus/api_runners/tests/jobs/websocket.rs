@@ -527,7 +527,7 @@ async fn channel_invalid_json() {
 }
 
 /// Heartbeat timeout: open channel, claim job, send Running, then go silent.
-/// The server should mark the job as Failed after the heartbeat timeout.
+/// The server should mark the job as Unknown after the heartbeat timeout.
 /// Uses tokio time manipulation to avoid waiting real wall-clock time.
 #[tokio::test]
 async fn channel_heartbeat_timeout() {
@@ -543,8 +543,8 @@ async fn channel_heartbeat_timeout() {
 
     // Pause tokio time and advance past the heartbeat timeout (5s in tests).
     // advance() fires all pending timers and processes resulting tasks, so the
-    // server's timeout handler runs during the advance — marking the job as
-    // Failed and closing the connection — without any real wall-clock wait.
+    // server's timeout handler runs during the advance (marking the job as
+    // Unknown and closing the connection) without any real wall-clock wait.
     tokio::time::pause();
     tokio::time::advance(std::time::Duration::from_secs(6)).await;
     tokio::time::resume();
@@ -559,8 +559,8 @@ async fn channel_heartbeat_timeout() {
         },
     }
 
-    // Verify job is marked as Failed (already done inline by the WS timeout handler)
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+    // Verify job is marked as Unknown (already done inline by the WS timeout handler)
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Unknown);
 }
 
 /// Ping frame receives a Pong response.
@@ -733,7 +733,7 @@ async fn channel_large_message() {
 
 /// Verify that Ping frames do NOT reset the heartbeat timeout.
 /// Send Running (valid), then only send Ping frames. The job should eventually
-/// be marked Failed because Ping does NOT count as a valid heartbeat message.
+/// be marked Unknown because Ping does NOT count as a valid heartbeat message.
 /// Uses tokio time manipulation: pause after Running, advance past the timeout.
 #[tokio::test]
 async fn channel_ping_does_not_reset_heartbeat_timeout() {
@@ -772,8 +772,8 @@ async fn channel_ping_does_not_reset_heartbeat_timeout() {
         },
     }
 
-    // Job should be Failed because no valid protocol message was sent after Running
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+    // Job should be Unknown because no valid protocol message was sent after Running
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Unknown);
 }
 
 // =============================================================================
@@ -2016,9 +2016,9 @@ async fn channel_heartbeat_no_false_timeout() {
 }
 
 /// Heartbeat timeout check before job has started (no `started` timestamp).
-/// Jobs in Claimed state have no `started`, so the timeout check should be skipped.
+/// A Claimed job's deadline counts from `claimed`, so a job that never starts still ends.
 #[tokio::test]
-async fn channel_heartbeat_timeout_skipped_before_running() {
+async fn channel_heartbeat_timeout_counts_from_claimed_before_running() {
     use std::sync::{
         Arc,
         atomic::{AtomicI64, Ordering},
@@ -2061,19 +2061,25 @@ async fn channel_heartbeat_timeout_skipped_before_running() {
     let response = recv_msg(&mut ws).await;
     assert!(matches!(response, ServerMessage::Job(_)));
 
-    // Advance clock well past the timeout, but don't send Running (no `started` timestamp)
-    mock_time.fetch_add(500, Ordering::Relaxed);
-
-    // Heartbeat should still return Ack because job has no `started` timestamp
+    // Within the timeout (1s) plus grace period (60s) of the claim: still Claimed
+    mock_time.fetch_add(30, Ordering::Relaxed);
     send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
     let resp = recv_msg(&mut ws).await;
     assert!(
         matches!(resp, ServerMessage::Ack { .. }),
-        "Expected Ack when job has no started timestamp, got: {resp:?}"
+        "Expected Ack within the deadline, got: {resp:?}"
     );
-
-    // Job should still be Claimed
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Claimed);
+
+    // Past the deadline without ever sending Running (no `started` timestamp)
+    mock_time.fetch_add(470, Ordering::Relaxed);
+    send_msg(&mut ws, &RunnerMessage::Heartbeat).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Cancel),
+        "Expected Cancel past the deadline counted from the claim, got: {resp:?}"
+    );
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
 
     ws.close(None).await.expect("Failed to close WebSocket");
 }
@@ -2388,6 +2394,114 @@ async fn channel_failed_during_idle() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
+/// Put a job owned by a fresh runner in `status`, then connect that runner's channel
+/// without sending Ready, as a runner reconnecting with an unacknowledged result would.
+/// Returns `(ws, job_uuid, report_id)`.
+async fn setup_reconnect_with_job_in(
+    server: &TestServer,
+    suffix: &str,
+    status: JobStatus,
+) -> (WsStream, JobUuid, i32) {
+    let admin = server
+        .signup("Admin", &format!("ws-{suffix}@example.com"))
+        .await;
+    let org = server.create_org(&admin, &format!("Ws {suffix}")).await;
+    let project = server
+        .create_project(&admin, &org, &format!("Ws {suffix} proj"))
+        .await;
+
+    let runner = create_runner(server, &admin.token, &format!("Runner {suffix}")).await;
+    let runner_key = runner.key.to_string();
+
+    let project_id = get_project_id(server, project.slug.as_ref());
+    let report_id = create_test_report(server, project_id);
+    let (_, spec_id) = insert_test_spec(server);
+    let job_uuid = insert_test_job(server, report_id, spec_id);
+
+    let runner_id = get_runner_id(server, runner.uuid);
+    associate_runner_spec(server, runner_id, spec_id);
+    set_job_runner_id(server, job_uuid, runner_id);
+    set_job_status(server, job_uuid, status);
+
+    let ws = connect_channel(server, runner.uuid, &runner_key).await;
+    (ws, job_uuid, report_id)
+}
+
+/// A job whose runner went silent is Unknown; the runner's resent `completed` resolves it
+/// and the results are processed.
+#[tokio::test]
+async fn channel_completed_during_idle_resolves_unknown() {
+    let server = TestServer::new().await;
+    let (mut ws, job_uuid, _report_id) =
+        setup_reconnect_with_job_in(&server, "idle-unknown-done", JobStatus::Unknown).await;
+
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            job: job_uuid,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack { job: Some(job) } if job == job_uuid),
+        "Expected Ack for Completed on an Unknown job, got: {resp:?}"
+    );
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// The runner's resent `failed` resolves an Unknown job to Failed.
+#[tokio::test]
+async fn channel_failed_during_idle_resolves_unknown() {
+    let server = TestServer::new().await;
+    let (mut ws, job_uuid, _report_id) =
+        setup_reconnect_with_job_in(&server, "idle-unknown-fail", JobStatus::Unknown).await;
+
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Failed {
+            job: job_uuid,
+            results: Vec::new(),
+            error: "benchmark exited non-zero".to_owned(),
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack { job: Some(job) } if job == job_uuid),
+        "Expected Ack for Failed on an Unknown job, got: {resp:?}"
+    );
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// The runner's resent `canceled` resolves an Unknown job to Canceled.
+#[tokio::test]
+async fn channel_canceled_during_idle_resolves_unknown() {
+    let server = TestServer::new().await;
+    let (mut ws, job_uuid, _report_id) =
+        setup_reconnect_with_job_in(&server, "idle-unknown-cancel", JobStatus::Unknown).await;
+
+    send_msg(&mut ws, &RunnerMessage::Canceled { job: job_uuid }).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack { job: Some(job) } if job == job_uuid),
+        "Expected Ack for Canceled on an Unknown job, got: {resp:?}"
+    );
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Canceled);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
 // =============================================================================
 // Phase 7 Tests — Review Findings
 // =============================================================================
@@ -2614,7 +2728,7 @@ async fn channel_close_reason_on_heartbeat_timeout() {
     tokio::time::advance(std::time::Duration::from_secs(6)).await;
     tokio::time::resume();
 
-    // The connection should be closed; job should be Failed
+    // The connection should be closed; job should be Unknown
     match ws.next().await {
         None | Some(Ok(Message::Close(_)) | Err(_)) => {
             // Connection closed as expected
@@ -2624,7 +2738,7 @@ async fn channel_close_reason_on_heartbeat_timeout() {
         },
     }
 
-    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Unknown);
 }
 
 // =============================================================================

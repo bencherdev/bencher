@@ -80,6 +80,8 @@ Otherwise, you will see:
 use of undeclared type `Regex`
 ```
 
+`bencher_otel` has no tests, so nextest needs `--no-tests pass` (`cargo nextest run -p bencher_otel --no-tests pass`). With `--all-features` it also needs `--features bencher_json/server`, since its `plus` feature reaches `bencher_valid` through `bencher_json` without picking a side.
+
 ## Formatting
 
 ```bash
@@ -132,6 +134,7 @@ The clippy script will install the target automatically and warn if no cross-com
 - Prefer structured concurrency: every spawned task has an owner that holds its `JoinHandle` and awaits it at shutdown. Where cancel-on-drop semantics make sense, use a `JoinSet`, which aborts its tasks when the owner drops. Do **NOT** detach a task by dropping its handle without explicit justification. A detached task is unsupervised, its panics are silent, and shutdown cannot order itself against it
 - All time-based tests should be deterministic and use time manipulation not real wall-clock time
 - Use `bencher_json::Clock::Custom` (behind the `test-clock` feature) to inject a fake clock in tests instead of calling `DateTime::now()` directly. `Clock` is available on `ApiContext`.
+- With `tokio::time::pause()`, call `tokio::task::yield_now().await` before `tokio::time::advance()` when the code under test spawns a task that sleeps: a task is not polled until the test yields, so an advance issued first moves the clock before the sleep is registered, and the timer then fires that much later in virtual time, after the test has already asserted
 - For unit tests without access to `ApiContext`/`Clock`, use `bencher_json::DateTime::TEST` (a fixed deterministic const). Enable `test-clock` in `bencher_json` dev-dependencies to access it.
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
 - Always pass strong types (`MyTypeId`, `MyTypeUuid`, etc) into a function instead of its stringly typed equivalent, even in tests

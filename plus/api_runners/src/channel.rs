@@ -54,12 +54,12 @@ fn job_timeout_limit(timeout: bencher_json::Timeout, grace: Duration) -> i64 {
 /// Decide job status and close reason when a heartbeat times out.
 ///
 /// If the job has run longer than its timeout limit, it is canceled (timeout exceeded).
-/// Otherwise it is failed (lost contact with runner).
+/// Otherwise its outcome is unknown (lost contact with runner).
 fn timeout_decision(elapsed_secs: i64, limit_secs: i64) -> (JobStatus, CloseReason) {
     if elapsed_secs > limit_secs {
         (JobStatus::Canceled, CloseReason::JobTimeoutExceeded)
     } else {
-        (JobStatus::Failed, CloseReason::HeartbeatTimeout)
+        (JobStatus::Unknown, CloseReason::HeartbeatTimeout)
     }
 }
 
@@ -114,7 +114,7 @@ enum ChannelError {
 /// Handle a heartbeat timeout by reading the job and deciding the right status.
 ///
 /// If the job has exceeded its configured timeout + grace period, it is marked `Canceled`
-/// (ran too long). Otherwise it is marked `Failed` (lost contact with runner).
+/// (ran too long). Otherwise it is marked `Unknown` (lost contact with runner).
 /// Returns the [`CloseReason`] for the WebSocket close frame.
 async fn handle_timeout(
     log: &slog::Logger,
@@ -132,24 +132,38 @@ async fn handle_timeout(
 
     let now = context.clock.now();
 
-    let (status, reason) = if let Some(started) = job.started {
-        let elapsed = (now.timestamp() - started.timestamp()).max(0);
+    let (status, reason) = if let Some(start) = job.deadline_start() {
+        let elapsed = (now.timestamp() - start.timestamp()).max(0);
         let limit = job_timeout_limit(job.timeout, context.job_timeout_grace_period);
         timeout_decision(elapsed, limit)
     } else {
-        (JobStatus::Failed, CloseReason::HeartbeatTimeout)
+        (JobStatus::Unknown, CloseReason::HeartbeatTimeout)
     };
 
     slog::warn!(log, "Marking job"; "job_id" => ?job_id, "status" => ?status, "reason" => ?reason);
-    let update = UpdateJob::terminate(status, now);
-    let updated = update.execute_if_either_status(
-        write_conn!(context),
-        job_id,
-        JobStatus::Claimed,
-        JobStatus::Running,
-    )?;
+    let updated = if status == JobStatus::Unknown {
+        let updated = UpdateJob::set_status(status, now).execute_if_either_status(
+            write_conn!(context),
+            job_id,
+            JobStatus::Claimed,
+            JobStatus::Running,
+        )?;
+        #[cfg(feature = "otel")]
+        if updated > 0 {
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
+                bencher_otel::JobStatusKind::Unknown,
+            ));
+        }
+        updated
+    } else {
+        UpdateJob::terminate(status, now).execute_if_any_status(
+            write_conn!(context),
+            job_id,
+            &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
+        )?
+    };
     if updated == 0 {
-        slog::info!(log, "Timeout: job already in terminal state"; "job_id" => ?job_id);
+        slog::info!(log, "Timeout: job already changed state"; "job_id" => ?job_id);
     }
     Ok(reason)
 }
@@ -309,18 +323,17 @@ async fn handle_heartbeat(
     }
 
     // Check if job has exceeded its timeout
-    if let Some(started) = job.started {
-        let elapsed = (now.timestamp() - started.timestamp()).max(0);
+    if let Some(start) = job.deadline_start() {
+        let elapsed = (now.timestamp() - start.timestamp()).max(0);
         let limit = job_timeout_limit(job.timeout, context.job_timeout_grace_period);
         let (status, _reason) = timeout_decision(elapsed, limit);
         if status == JobStatus::Canceled {
             slog::warn!(log, "Job timeout exceeded during heartbeat"; "job_id" => ?job_id, "elapsed" => elapsed, "limit" => limit);
             let cancel_update = UpdateJob::terminate(JobStatus::Canceled, now);
-            let updated = cancel_update.execute_if_either_status(
+            let updated = cancel_update.execute_if_any_status(
                 write_conn!(context),
                 job_id,
-                JobStatus::Claimed,
-                JobStatus::Running,
+                &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
             )?;
             if updated > 0 {
                 #[cfg(feature = "otel")]
@@ -345,7 +358,11 @@ async fn handle_heartbeat(
             None => UpdateJob::heartbeat(now),
         };
 
-        update.execute_if_either_status(conn, job_id, JobStatus::Claimed, JobStatus::Running)?;
+        update.execute_if_any_status(
+            conn,
+            job_id,
+            &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
+        )?;
 
         billing
     };
@@ -578,7 +595,7 @@ async fn bill_final_minutes_inner(
 
         let update_job = UpdateJob::final_billing(billing.minutes, now);
         // No status filter needed here (unlike `handle_heartbeat` which uses
-        // `execute_if_either_status`): the write lock held since `write_conn!`
+        // `execute_if_any_status`): the write lock held since `write_conn!`
         // prevents concurrent heartbeats from advancing `last_billed_minute`
         // between our read and write, and `UpdateJob::final_billing` only
         // touches `last_billed_minute`/`modified` — not status — so it is safe
@@ -603,7 +620,7 @@ async fn bill_final_minutes_inner(
     Ok(())
 }
 
-/// Handle a Completed message: transition job from Running to Completed,
+/// Handle a Completed message: transition job from Running or Unknown to Completed,
 /// store output, and process benchmark results into the report.
 ///
 /// Uses a status filter on the UPDATE to avoid TOCTOU races.
@@ -617,15 +634,13 @@ async fn handle_completed(
 
     let update = UpdateJob::terminate(JobStatus::Completed, now);
 
-    // Allow Failed → Completed: a runner that finishes successfully after the
-    // server marked the job Failed (e.g., heartbeat timeout fired while the
-    // runner was still completing) should be permitted to override the status.
-    // The runner is the authority on whether the benchmark actually succeeded.
-    let updated = update.execute_if_either_status(
+    // Allow Failed → Completed so a resent Completed still overrides a Failed
+    // status. Losing contact marks a job Unknown, not Failed, so a heartbeat
+    // timeout no longer leads here.
+    let updated = update.execute_if_any_status(
         write_conn!(context),
         job.id,
-        JobStatus::Running,
-        JobStatus::Failed,
+        &[JobStatus::Running, JobStatus::Unknown, JobStatus::Failed],
     )?;
 
     // Re-read job to get fresh timestamps (started, claimed) set during execution.
@@ -703,7 +718,7 @@ async fn handle_completed(
     Ok(())
 }
 
-/// Handle a Failed message: transition job from Claimed or Running to Failed.
+/// Handle a Failed message: transition job from Claimed, Running, or Unknown to Failed.
 ///
 /// Uses a status filter on the UPDATE to avoid TOCTOU races.
 async fn handle_failed(
@@ -717,11 +732,10 @@ async fn handle_failed(
 
     let update = UpdateJob::terminate(JobStatus::Failed, now);
 
-    let updated = update.execute_if_either_status(
+    let updated = update.execute_if_any_status(
         write_conn!(context),
         job.id,
-        JobStatus::Claimed,
-        JobStatus::Running,
+        &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
     )?;
 
     if updated == 0 {
@@ -788,14 +802,13 @@ async fn handle_canceled(
 ) -> Result<(), ChannelError> {
     let now = context.clock.now();
 
-    // Try to transition from Claimed or Running to Canceled
+    // Try to transition from Claimed, Running, or Unknown to Canceled
     let update = UpdateJob::terminate(JobStatus::Canceled, now);
 
-    let updated = update.execute_if_either_status(
+    let updated = update.execute_if_any_status(
         write_conn!(context),
         job_id,
-        JobStatus::Claimed,
-        JobStatus::Running,
+        &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
     )?;
 
     if updated > 0 {
@@ -1901,16 +1914,16 @@ mod tests {
     }
 
     #[test]
-    fn within_timeout_fails_job() {
+    fn within_timeout_marks_job_unknown() {
         let (status, reason) = timeout_decision(100, 300);
-        assert_eq!(status, JobStatus::Failed);
+        assert_eq!(status, JobStatus::Unknown);
         assert_eq!(reason, CloseReason::HeartbeatTimeout);
     }
 
     #[test]
-    fn exactly_at_limit_fails_job() {
+    fn exactly_at_limit_marks_job_unknown() {
         let (status, reason) = timeout_decision(300, 300);
-        assert_eq!(status, JobStatus::Failed);
+        assert_eq!(status, JobStatus::Unknown);
         assert_eq!(reason, CloseReason::HeartbeatTimeout);
     }
 

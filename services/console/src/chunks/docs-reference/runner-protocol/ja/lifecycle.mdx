@@ -9,18 +9,28 @@ import LifecycleDiagram from "../lifecycle-diagram.mdx";
 | pending   | claimed     | Runner が Job を要求する                                                |
 | pending   | canceled    | ユーザーが Job をキャンセルする                                         |
 | claimed   | running     | Runner が `running` を送信する                                          |
-| claimed   | failed      | Runner が `failed` を送信する、またはハートビートがタイムアウトする     |
+| claimed   | failed      | Runner が `failed` を送信する                                                |
+| claimed   | unknown     | サーバーが Runner との接続を失う                                                   |
 | claimed   | canceled    | ユーザーが Job をキャンセルする                                         |
 | running   | completed   | Runner が `completed` を送信する                                        |
-| running   | failed      | Runner が `failed` を送信する、またはハートビートがタイムアウトする     |
-| running   | canceled    | ユーザーが Job をキャンセルする、またはハードな Job タイムアウトを超過する |
+| running   | failed      | Runner が `failed` を送信する                                                |
+| running   | unknown     | サーバーが Runner との接続を失う                                                   |
+| running   | canceled    | ユーザーが Job をキャンセルする、またはハードな Job タイムアウトを超過する                             |
+| unknown   | completed   | Runner が `completed` を送信する                                             |
+| unknown   | failed      | Runner が `failed` を送信する                                                |
+| unknown   | canceled    | ユーザーが Job をキャンセルする、またはハードな Job タイムアウトを超過する                             |
 | completed | processed   | サーバーが結果を正常に処理する                                          |
-| failed    | completed   | Runner が `completed` を再送し、ハートビートタイムアウトによる失敗を上書きする |
+| completed | failed      | サーバーが結果の処理に失敗する                                                        |
+| completed | unknown     | 起動時に、保存された結果が失われていたことをサーバーが検出する                                        |
+| failed    | completed   | Runner が `completed` を再送し、`failed` ステータスを上書きする                         |
 
 `processed` と `canceled` は終端状態です。
 `completed` と `failed` は準終端状態です。
 `completed` は結果が解析されると `processed` に遷移し、
 `failed` は Runner が `completed` を再送すると `completed` に遷移します。
+`unknown` は、サーバーが Runner との接続を失い、結果をまだ把握していないことを意味します。
+Runner が再び応答すると、その送信した結果によって解決され、
+Job の期限を過ぎると `canceled` として解決されます。
 すべての遷移は、データベース更新時にステータスフィルターを使用するため、
 並行して変更された Job は上書きされるのではなく、再読み込みされます。
 

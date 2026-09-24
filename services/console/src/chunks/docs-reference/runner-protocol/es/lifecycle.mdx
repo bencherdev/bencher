@@ -9,18 +9,28 @@ Cada Job recorre un conjunto fijo de estados a medida que es reclamado, ejecutad
 | pending   | claimed     | Un Runner reclama el Job                                                |
 | pending   | canceled    | Un usuario cancela el Job                                               |
 | claimed   | running     | El Runner envía `running`                                               |
-| claimed   | failed      | El Runner envía `failed`, o el heartbeat agota su tiempo               |
+| claimed   | failed      | El Runner envía `failed`                                               |
+| claimed   | unknown     | El servidor pierde el contacto con el Runner                           |
 | claimed   | canceled    | Un usuario cancela el Job                                               |
 | running   | completed   | El Runner envía `completed`                                             |
-| running   | failed      | El Runner envía `failed`, o el heartbeat agota su tiempo               |
+| running   | failed      | El Runner envía `failed`                                               |
+| running   | unknown     | El servidor pierde el contacto con el Runner                           |
 | running   | canceled    | Un usuario cancela el Job, o se excede el tiempo de espera duro del Job |
+| unknown   | completed   | El Runner envía `completed`                                            |
+| unknown   | failed      | El Runner envía `failed`                                               |
+| unknown   | canceled    | Un usuario cancela el Job, o se excede el tiempo de espera duro del Job |
 | completed | processed   | El servidor procesa correctamente los resultados                       |
-| failed    | completed   | El Runner reenvía `completed`, anulando un fallo por timeout de heartbeat |
+| completed | failed      | El servidor no logra procesar los resultados                           |
+| completed | unknown     | Al arrancar, el servidor descubre que los resultados almacenados se perdieron |
+| failed    | completed   | El Runner reenvía `completed`, anulando un estado `failed`             |
 
 `processed` y `canceled` son terminales.
 `completed` y `failed` son cuasi-terminales:
 `completed` pasa a `processed` una vez que se analizan los resultados,
 y `failed` pasa a `completed` si el Runner reenvía `completed`.
+`unknown` significa que el servidor perdió el contacto con el Runner y aún no conoce el resultado.
+Se resuelve cuando el Runner vuelve a comunicarse, con el resultado que envía,
+o como `canceled` cuando vence el plazo del Job.
 Cada transición usa un filtro de estado en su actualización de base de datos,
 de modo que un Job que fue modificado de forma concurrente se vuelve a leer en lugar de sobrescribirse.
 
