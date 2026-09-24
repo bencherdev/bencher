@@ -399,6 +399,7 @@ impl Run {
                 iter: Some(self.iter.into()),
                 allow_failure: self.allow_failure.then_some(true),
                 backdate: self.backdate.map(Into::into),
+                callback: None,
             }),
         }
     }

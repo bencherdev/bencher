@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
+use bencher_callback::{CallbackKey, SealedRequest};
 use bencher_json::{
     BmfVersion, DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority,
-    ReportUuid, Timeout, project::report::JsonReportSettings, runner::JsonIterationOutput,
-    runner::job::JsonNewRunJob,
+    ReportUuid, Timeout,
+    project::report::JsonReportSettings,
+    runner::{JsonIterationOutput, JsonNewCallback, job::JsonNewRunJob},
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -18,14 +20,17 @@ use crate::{
     auth_conn,
     context::{ApiContext, Callbacks, DbConnection},
     error::{bad_request_error, issue_error, resource_not_found_err},
-    macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
+    macros::{
+        fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
+        sql::last_insert_rowid,
+    },
     model::{
         organization::{OrganizationId, plan::PlanKind},
         project::{
             QueryProject,
             report::{QueryReport, ReportId},
         },
-        runner::{QueryJobCallbackView, QueryRunner, RunnerId, SourceIp},
+        runner::{InsertJobCallback, QueryJobCallbackView, QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
         user::{actor::ApiActor, public::PublicUser},
     },
@@ -308,6 +313,7 @@ impl InsertJob {
         reason = "job creation has many dimensions"
     )]
     fn new(
+        uuid: JobUuid,
         report_id: ReportId,
         organization_id: OrganizationId,
         source_ip: SourceIp,
@@ -318,7 +324,7 @@ impl InsertJob {
         now: DateTime,
     ) -> Self {
         Self {
-            uuid: JobUuid::new(),
+            uuid,
             report_id,
             organization_id,
             source_ip,
@@ -339,12 +345,14 @@ impl InsertJob {
 /// the actual database insert, allowing callers to validate the job *before*
 /// inserting the report — making report + job creation atomic.
 pub struct PendingInsertJob {
+    uuid: JobUuid,
     organization_id: OrganizationId,
     source_ip: SourceIp,
     spec_id: SpecId,
     config: JsonJobConfig,
     timeout: Timeout,
     priority: Priority,
+    callback: Option<PendingCallback>,
 }
 
 impl PendingInsertJob {
@@ -363,57 +371,84 @@ impl PendingInsertJob {
         settings: &JsonReportSettings,
         bmf_version: BmfVersion,
     ) -> Result<Self, HttpError> {
+        let JsonNewRunJob {
+            image,
+            // The spec was resolved to `spec_id` with the testbed.
+            spec: _,
+            entrypoint,
+            cmd,
+            env,
+            timeout,
+            file_paths,
+            build_time,
+            file_size,
+            iter,
+            allow_failure,
+            backdate,
+            callback,
+        } = new_run_job;
+
         // 1. Validate registry and resolve image digest
         let registry_url = context.registry_url();
         let registry_host = registry_url.host_str().ok_or_else(|| {
             bad_request_error(format!("Registry URL has no host: {registry_url}"))
         })?;
-        new_run_job
-            .image
+        image
             .validate_registry(registry_host, registry_url.port_or_known_default())
             .map_err(|e| bad_request_error(e.to_string()))?;
         let registry_url: bencher_json::Url = registry_url.clone().into();
-        let digest = resolve_digest(
-            &new_run_job.image,
-            &query_project.uuid,
-            context.oci_storage(),
-        )
-        .await?;
+        let digest = resolve_digest(&image, &query_project.uuid, context.oci_storage()).await?;
 
         // 2. Determine priority
         let priority = plan_kind.priority(is_claimed);
 
         // 3. Resolve timeout (clamped by plan tier)
-        let timeout = resolve_timeout(new_run_job.timeout, plan_kind, is_claimed);
+        let timeout = resolve_timeout(timeout, plan_kind, is_claimed);
 
         // 4. Build config
         let config = JsonJobConfig {
             registry: registry_url,
             project: query_project.uuid,
             digest,
-            image: Some(new_run_job.image),
-            entrypoint: new_run_job.entrypoint,
-            cmd: new_run_job.cmd,
-            env: new_run_job.env,
+            image: Some(image),
+            entrypoint,
+            cmd,
+            env,
             timeout,
-            file_paths: new_run_job.file_paths,
-            build_time: new_run_job.build_time,
-            file_size: new_run_job.file_size,
+            file_paths,
+            build_time,
+            file_size,
             average: settings.average,
-            iter: new_run_job.iter,
+            iter,
             fold: settings.fold,
             bmf_version: Some(bmf_version),
-            allow_failure: new_run_job.allow_failure,
-            backdate: new_run_job.backdate,
+            allow_failure,
+            backdate,
         };
 
+        // 5. Seal the callback to the job now, so no crypto runs while the writer lock is held
+        let uuid = JobUuid::new();
+        let callback = callback
+            .map(|callback| PendingCallback::new(&context.callback_key, uuid, plan_kind, &callback))
+            .transpose()?;
+
         Ok(Self {
+            uuid,
             organization_id: query_project.organization_id,
             source_ip,
             spec_id,
             config,
             timeout,
             priority,
+            callback,
+        })
+    }
+
+    /// Whether the run's callback, if it has one, is sealed or skipped.
+    pub fn callback_submission(&self) -> Option<CallbackSubmission> {
+        self.callback.as_ref().map(|callback| match callback {
+            PendingCallback::Sealed(_) => CallbackSubmission::Sealed,
+            PendingCallback::Skipped => CallbackSubmission::Skipped,
         })
     }
 
@@ -427,21 +462,82 @@ impl PendingInsertJob {
         report_id: ReportId,
         now: DateTime,
     ) -> QueryResult<()> {
+        let Self {
+            uuid,
+            organization_id,
+            source_ip,
+            spec_id,
+            config,
+            timeout,
+            priority,
+            callback,
+        } = self;
         let insert_job = InsertJob::new(
+            uuid,
             report_id,
-            self.organization_id,
-            self.source_ip,
-            self.spec_id,
-            self.config,
-            self.timeout,
-            self.priority,
+            organization_id,
+            source_ip,
+            spec_id,
+            config,
+            timeout,
+            priority,
             now,
         );
         diesel::insert_into(schema::job::table)
             .values(&insert_job)
             .execute(conn)?;
-        Ok(())
+
+        let Some(callback) = callback else {
+            return Ok(());
+        };
+        let job_id = diesel::select(last_insert_rowid()).get_result::<JobId>(conn)?;
+        match callback {
+            PendingCallback::Sealed(sealed) => InsertJobCallback::pending(job_id, sealed, now),
+            PendingCallback::Skipped => InsertJobCallback::skipped(job_id, now),
+        }
+        .insert(conn)
     }
+}
+
+/// A run's callback: sealed to its job for an organization with a paid plan, or skipped for any other.
+enum PendingCallback {
+    Sealed(SealedRequest),
+    Skipped,
+}
+
+impl PendingCallback {
+    fn new(
+        key: &CallbackKey,
+        job: JobUuid,
+        plan_kind: &PlanKind,
+        callback: &JsonNewCallback,
+    ) -> Result<Self, HttpError> {
+        if plan_kind.is_paid() {
+            let plaintext = serde_json::to_vec(callback).map_err(|e| {
+                issue_error(
+                    "Failed to serialize job callback",
+                    &format!("Failed to serialize the callback for job ({job})."),
+                    e,
+                )
+            })?;
+            key.seal(job, &plaintext).map(Self::Sealed).map_err(|e| {
+                issue_error(
+                    "Failed to seal job callback",
+                    &format!("Failed to seal the callback for job ({job})."),
+                    e,
+                )
+            })
+        } else {
+            Ok(Self::Skipped)
+        }
+    }
+}
+
+/// Whether a run's callback was sealed or skipped, for the metrics recorded once its job commits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CallbackSubmission {
+    Sealed,
+    Skipped,
 }
 
 async fn resolve_digest(
@@ -818,6 +914,119 @@ mod tests {
             .expect("Failed to read job duration");
         // First write wins
         assert_eq!(duration, 100);
+    }
+
+    // --- callback tests ---
+
+    fn callback() -> JsonNewCallback {
+        JsonNewCallback::new(
+            "https://receiver.example/hooks",
+            [("Authorization".to_owned(), "Bearer token".to_owned())],
+            None,
+        )
+        .unwrap()
+    }
+
+    fn callback_key() -> CallbackKey {
+        CallbackKey::new(&"callback-test-secret".parse().unwrap()).unwrap()
+    }
+
+    #[test]
+    fn a_paid_plan_seals_the_callback_to_its_job() {
+        let key = callback_key();
+        let job = JobUuid::new();
+        for plan_kind in [
+            metered_plan(),
+            licensed_plan(PlanLevel::Pro),
+            licensed_plan(PlanLevel::Team),
+            licensed_plan(PlanLevel::Enterprise),
+        ] {
+            let PendingCallback::Sealed(sealed) =
+                PendingCallback::new(&key, job, &plan_kind, &callback()).unwrap()
+            else {
+                panic!("a paid plan seals its callback");
+            };
+            assert_eq!(
+                key.open(job, &sealed).unwrap(),
+                serde_json::to_vec(&callback()).unwrap(),
+                "the sealed plaintext is the request as JSON"
+            );
+            assert!(
+                key.open(JobUuid::new(), &sealed).is_err(),
+                "the seal binds the job"
+            );
+        }
+    }
+
+    #[test]
+    fn an_unpaid_plan_skips_the_callback() {
+        for plan_kind in [PlanKind::None, licensed_plan(PlanLevel::Free)] {
+            let pending =
+                PendingCallback::new(&callback_key(), JobUuid::new(), &plan_kind, &callback())
+                    .unwrap();
+            assert!(
+                matches!(pending, PendingCallback::Skipped),
+                "an unpaid plan seals nothing"
+            );
+        }
+    }
+
+    #[test]
+    fn a_callback_is_stored_for_the_job_inserted_beside_it() {
+        use crate::{
+            model::runner::{CallbackState, QueryJobCallback},
+            test_util::{create_job, create_job_fixture},
+        };
+
+        let mut conn = setup_test_db();
+        let fixture = create_job_fixture(&mut conn);
+        // An earlier job, so a new job's ID differs from its report's.
+        create_job(&mut conn, fixture, JobStatus::Pending);
+        let key = callback_key();
+        let config: JsonJobConfig = serde_json::from_value(serde_json::json!({
+            "registry": "https://registry.bencher.dev",
+            "project": "00000000-0000-0000-0000-000000000002",
+            "digest": format!("sha256:{}", "0".repeat(64)),
+            "timeout": 3600
+        }))
+        .unwrap();
+        for (plan_kind, state) in [
+            (metered_plan(), CallbackState::Pending),
+            (PlanKind::None, CallbackState::Skipped),
+        ] {
+            let uuid = JobUuid::new();
+            let pending_job = PendingInsertJob {
+                uuid,
+                organization_id: fixture.organization_id,
+                source_ip: SourceIp::new(std::net::Ipv4Addr::LOCALHOST.into()),
+                spec_id: fixture.spec_id,
+                config: config.clone(),
+                timeout: Timeout::PLUS_DEFAULT,
+                priority: Priority::Plus,
+                callback: Some(PendingCallback::new(&key, uuid, &plan_kind, &callback()).unwrap()),
+            };
+            conn.immediate_transaction(|conn| {
+                pending_job.insert(conn, fixture.report_id, DateTime::TEST)
+            })
+            .unwrap();
+
+            let job = QueryJob::from_uuid(&mut conn, uuid).unwrap();
+            assert_ne!(
+                i32::from(job.id),
+                i32::from(fixture.report_id),
+                "the job and report IDs differ"
+            );
+            let stored = QueryJobCallback::get(&mut conn, job.id).unwrap();
+            assert_eq!(stored.state, state, "the callback row is the job's");
+        }
+        assert_eq!(
+            schema::job_callback::table
+                .count()
+                .get_result::<i64>(&mut conn)
+                .unwrap(),
+            2,
+            "one row per callback"
+        );
     }
 }
 

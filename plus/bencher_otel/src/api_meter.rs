@@ -172,6 +172,8 @@ pub enum ApiCounter {
     RunnerSelfUpdateCheckFailed(UpdateChannelKind),
 
     // Callback metrics
+    CallbackSubmit(PlanKind),
+    CallbackSkip(PlanKind),
     CallbackAttempt(CallbackAttemptClass),
     CallbackFinish(CallbackFinish),
 
@@ -247,7 +249,9 @@ impl ApiCounter {
             Self::RunnerDisconnect => "{disconnect}",
             Self::RunnerSelfUpdateSent(_) => "{update}",
 
-            Self::CallbackFinish(_) => "{callback}",
+            Self::CallbackSubmit(_) | Self::CallbackSkip(_) | Self::CallbackFinish(_) => {
+                "{callback}"
+            },
         }
     }
 
@@ -344,6 +348,8 @@ impl ApiCounter {
             Self::RunnerSelfUpdateCheckFailed(_) => "runner.self_update.check.failed",
 
             // Callback metrics
+            Self::CallbackSubmit(_) => "callback.submit",
+            Self::CallbackSkip(_) => "callback.skip",
             Self::CallbackAttempt(_) => "callback.attempt",
             Self::CallbackFinish(_) => "callback.finish",
 
@@ -484,6 +490,10 @@ impl ApiCounter {
             },
 
             // Callback metrics
+            Self::CallbackSubmit(_) => "Counts the number of callbacks submitted with a run",
+            Self::CallbackSkip(_) => {
+                "Counts the number of callbacks skipped because the organization has no paid plan"
+            },
             Self::CallbackAttempt(_) => "Counts the number of callback delivery attempts",
             Self::CallbackFinish(_) => {
                 "Counts the number of callbacks that reached a final outcome"
@@ -562,6 +572,9 @@ impl ApiCounter {
             Self::RunnerSelfUpdateSent(update_channel_kind)
             | Self::RunnerSelfUpdateCheckFailed(update_channel_kind) => {
                 vec![update_channel_kind.into()]
+            },
+            Self::CallbackSubmit(plan_kind) | Self::CallbackSkip(plan_kind) => {
+                vec![plan_kind.into()]
             },
             Self::CallbackAttempt(class) => attempt_attributes(class),
             Self::CallbackFinish(finish) => finish_attributes(finish),
@@ -740,6 +753,33 @@ impl From<JobStatusKind> for opentelemetry::KeyValue {
 
 impl JobStatusKind {
     const KEY: &str = "job.status";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum PlanKind {
+    Metered,
+    Licensed,
+    None,
+}
+
+impl fmt::Display for PlanKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Metered => write!(f, "metered"),
+            Self::Licensed => write!(f, "licensed"),
+            Self::None => write!(f, "none"),
+        }
+    }
+}
+
+impl From<PlanKind> for opentelemetry::KeyValue {
+    fn from(plan_kind: PlanKind) -> Self {
+        opentelemetry::KeyValue::new(PlanKind::KEY, plan_kind.to_string())
+    }
+}
+
+impl PlanKind {
+    const KEY: &str = "plan.kind";
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -9,7 +9,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::RunnerUuid;
-use super::callback::JsonJobCallback;
+use super::callback::{JsonJobCallback, JsonNewCallback};
 use super::job_status::JobStatus;
 use crate::ProjectUuid;
 use crate::project::report::{Iteration, JsonAverage, JsonFold, ReportUuid};
@@ -101,6 +101,7 @@ struct JsonUncheckedNewRunJob {
     pub iter: Option<Iteration>,
     pub allow_failure: Option<bool>,
     pub backdate: Option<DateTime>,
+    pub callback: Option<JsonNewCallback>,
 }
 
 impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
@@ -120,6 +121,7 @@ impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
             iter,
             allow_failure,
             backdate,
+            callback,
         } = unchecked;
         validate_collection_sizes(
             entrypoint.as_ref(),
@@ -140,6 +142,7 @@ impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
             iter,
             allow_failure,
             backdate,
+            callback,
         })
     }
 }
@@ -190,6 +193,9 @@ pub struct JsonNewRunJob {
     /// Backdate the report start time
     #[serde(skip_serializing_if = "Option::is_none")]
     pub backdate: Option<DateTime>,
+    /// An HTTP request to send once the job finishes, for an organization with a Bencher Plus plan
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub callback: Option<JsonNewCallback>,
 }
 
 /// Default poll timeout in seconds for job claiming long-poll.

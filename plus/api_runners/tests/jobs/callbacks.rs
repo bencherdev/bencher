@@ -8,11 +8,13 @@ use std::sync::{
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::{TestOrg, TestServer, TestUser};
 use bencher_config::spawn_job_recovery;
-use bencher_json::{JobStatus, JobUuid, PollTimeout, runner::JsonIterationOutput};
+use bencher_json::{JobStatus, JobUuid, PlanLevel, PollTimeout, runner::JsonIterationOutput};
 use bencher_schema::{
     context::HeartbeatTasks,
     model::runner::{CallbackState, JobTimeout, QueryJobCallback, reprocess_completed_jobs},
+    schema,
 };
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use futures::StreamExt as _;
 use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
@@ -531,4 +533,273 @@ async fn the_startup_fire_delivers_only_on_terminal_jobs() {
 
     assert_one_callback(&server, terminal, "failed").await;
     assert_eq!(callback_state(&server, running), CallbackState::Pending);
+}
+
+const SUBMIT_URL: &str = "https://receiver.example/hooks/URLPATH-7c1d?key=URLQUERY-2b9e";
+const SUBMIT_AUTHORIZATION: &str = "Bearer HEADERVALUE-5e3a";
+const SUBMIT_MARKERS: [&str; 4] = [
+    "URLPATH-7c1d",
+    "URLQUERY-2b9e",
+    "HEADERVALUE-5e3a",
+    "BODYTEXT-8f04",
+];
+
+fn submit_body() -> serde_json::Value {
+    serde_json::json!({
+        "note": "BODYTEXT-8f04",
+        "job": "{{ job.uuid }}",
+        "status": "{{ job.status }}",
+        "report": "{{ report.uuid }}",
+        "project": { "uuid": "{{ project.uuid }}", "slug": "{{ project.slug }}" },
+    })
+}
+
+/// A run submitted through the API with a callback, on a job only the returned runner can claim.
+struct Submitted {
+    server: TestServer,
+    admin: TestUser,
+    runner: bencher_json::JsonRunnerKey,
+    job: JobUuid,
+    report: bencher_json::ReportUuid,
+    project: bencher_api_tests::TestProject,
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn submit_with_callback(
+    suffix: &str,
+    licensed: bool,
+    body: Option<serde_json::Value>,
+) -> Submitted {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin", &format!("submit-{suffix}@example.com"))
+        .await;
+    let org = server.create_org(&admin, &format!("Submit {suffix}")).await;
+    if licensed {
+        server
+            .license_org(&admin, &org, PlanLevel::Enterprise)
+            .await;
+    }
+    let project = server
+        .create_project(&admin, &org, &format!("Submit {suffix} proj"))
+        .await;
+    let runner = create_runner(&server, &admin.token, &format!("Runner {suffix}")).await;
+    let (spec_uuid, spec_id) = insert_test_spec(&server);
+    associate_runner_spec(&server, get_runner_id(&server, runner.uuid), spec_id);
+
+    let project_slug: &str = project.slug.as_ref();
+    let mut callback = serde_json::json!({
+        "url": SUBMIT_URL,
+        "headers": { "Authorization": SUBMIT_AUTHORIZATION },
+    });
+    if let Some(body) = body
+        && let Some(callback) = callback.as_object_mut()
+    {
+        callback.insert("body".to_owned(), body);
+    }
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [],
+        "job": {
+            "image": format!("localhost/{project_slug}@sha256:{}", "a".repeat(64)),
+            "spec": spec_uuid,
+            "callback": callback,
+        },
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), http::StatusCode::CREATED, "submit the run");
+    let report: bencher_json::JsonReport = resp.json().await.expect("Failed to parse the report");
+    let job = schema::job::table
+        .inner_join(schema::report::table)
+        .filter(schema::report::uuid.eq(report.uuid))
+        .select(schema::job::uuid)
+        .first(&mut server.db_conn())
+        .expect("Failed to get the run's job");
+    Submitted {
+        server,
+        admin,
+        runner,
+        job,
+        report: report.uuid,
+        project,
+    }
+}
+
+/// The runner claims the submitted job, which never carries the callback, and runs it to Processed.
+#[expect(clippy::expect_used, clippy::panic, reason = "test helper")]
+async fn process_submitted(submitted: &Submitted) {
+    let Submitted {
+        server,
+        runner,
+        job,
+        ..
+    } = submitted;
+    let mut ws = connect_channel_ws(server, runner.uuid, runner.key.as_ref()).await;
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Ready {
+            poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+            runner: Some(runner_metadata()),
+        },
+    )
+    .await;
+    let claimed = match ws.next().await {
+        Some(Ok(Message::Text(text))) => text.to_string(),
+        other => panic!("Expected the claimed job, got: {other:?}"),
+    };
+    for marker in SUBMIT_MARKERS {
+        assert!(!claimed.contains(marker), "the runner's job holds {marker}");
+    }
+    assert!(
+        matches!(
+            serde_json::from_str(&claimed).expect("Failed to parse the claimed job"),
+            ServerMessage::Job(claimed) if claimed.uuid == *job
+        ),
+        "the runner claims the submitted job"
+    );
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    ack(&mut ws).await;
+    send_msg(&mut ws, &completed(*job, None)).await;
+    ack(&mut ws).await;
+    assert_eq!(
+        get_status(server, *job),
+        JobStatus::Processed,
+        "the job is processed"
+    );
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+// A run submitted with a callback for a paid organization delivers it, rendered, when its job is processed.
+#[tokio::test]
+async fn a_submitted_callback_is_delivered_when_the_job_is_processed() {
+    let submitted = submit_with_callback("paid", true, Some(submit_body())).await;
+    assert_eq!(
+        callback_state(&submitted.server, submitted.job),
+        CallbackState::Pending
+    );
+
+    process_submitted(&submitted).await;
+
+    let Submitted {
+        server,
+        job,
+        report,
+        project,
+        ..
+    } = &submitted;
+    server.drain_callbacks().await;
+    let requests = server.callback_requests();
+    assert_eq!(requests.len(), 1, "one callback");
+    let request = requests.first().expect("one callback");
+    assert_eq!(request.url.as_str(), SUBMIT_URL, "the callback URL");
+    assert_eq!(
+        request
+            .headers
+            .get("authorization")
+            .and_then(|value| value.to_str().ok()),
+        Some(SUBMIT_AUTHORIZATION),
+        "the customer's header"
+    );
+    assert_eq!(
+        request
+            .headers
+            .get("content-type")
+            .and_then(|value| value.to_str().ok()),
+        Some("application/json"),
+        "the default content type"
+    );
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(&request.body).expect("The body is JSON"),
+        serde_json::json!({
+            "note": "BODYTEXT-8f04",
+            "job": job,
+            "status": "processed",
+            "report": report,
+            "project": { "uuid": project.uuid, "slug": project.slug },
+        }),
+        "the rendered body"
+    );
+    assert_eq!(callback_state(server, *job), CallbackState::Delivered);
+}
+
+// A run submitted with a callback and no paid plan is accepted, and nothing is sent when its job is processed.
+#[tokio::test]
+async fn a_skipped_callback_sends_nothing_when_the_job_is_processed() {
+    let submitted = submit_with_callback("free", false, Some(submit_body())).await;
+    assert_eq!(
+        callback_state(&submitted.server, submitted.job),
+        CallbackState::Skipped
+    );
+
+    process_submitted(&submitted).await;
+
+    let Submitted { server, job, .. } = &submitted;
+    server.drain_callbacks().await;
+    assert_eq!(server.callback_requests().len(), 0, "no callback is sent");
+    assert_eq!(callback_state(server, *job), CallbackState::Skipped);
+}
+
+// A run submitted with a callback and no body delivers the job's report, exactly as the
+// report endpoint returns it.
+#[tokio::test]
+async fn a_submitted_callback_without_a_body_delivers_the_report() {
+    let submitted = submit_with_callback("report", true, None).await;
+
+    process_submitted(&submitted).await;
+
+    let Submitted {
+        server,
+        admin,
+        job,
+        report,
+        project,
+        ..
+    } = &submitted;
+    server.drain_callbacks().await;
+    let requests = server.callback_requests();
+    assert_eq!(requests.len(), 1, "one callback");
+    let request = requests.first().expect("one callback");
+    assert_eq!(request.url.as_str(), SUBMIT_URL, "the callback URL");
+    assert_eq!(
+        request
+            .headers
+            .get("authorization")
+            .and_then(|value| value.to_str().ok()),
+        Some(SUBMIT_AUTHORIZATION),
+        "the customer's header"
+    );
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/reports/{report}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), http::StatusCode::OK, "get the report");
+    let expected: serde_json::Value = resp.json().await.expect("Failed to parse the report");
+    assert_eq!(expected["job"], serde_json::json!(job));
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(&request.body).expect("The body is JSON"),
+        expected,
+        "the body is the report"
+    );
+    assert_eq!(callback_state(server, *job), CallbackState::Delivered);
 }

@@ -12,7 +12,9 @@ use bencher_api_tests::TestServer;
 use bencher_api_tests::oci::compute_digest;
 use bencher_json::{BmfVersion, JsonReport, JsonReports};
 #[cfg(feature = "plus")]
-use bencher_json::{JsonJob, JsonRunners, JsonSpec, runner::JsonJobs};
+use bencher_json::{JsonJob, JsonRunners, JsonSpec, PlanLevel, runner::JsonJobs};
+#[cfg(feature = "plus")]
+use bencher_schema::model::runner::{CallbackState, QueryJobCallback};
 use http::StatusCode;
 
 // POST /v0/run - create a run with authentication
@@ -2455,4 +2457,612 @@ async fn run_post_no_idempotency_key_creates_new_reports() {
 
     // Without idempotency key, each submission creates a new report
     assert_ne!(report1.uuid, report2.uuid);
+}
+
+// --- Job callbacks ---
+
+#[cfg(feature = "plus")]
+const URL_PATH_MARKER: &str = "URLPATH-7c1d";
+#[cfg(feature = "plus")]
+const URL_QUERY_MARKER: &str = "URLQUERY-2b9e";
+#[cfg(feature = "plus")]
+const HEADER_MARKER: &str = "HEADERVALUE-5e3a";
+#[cfg(feature = "plus")]
+const BODY_MARKER: &str = "BODYTEXT-8f04";
+#[cfg(feature = "plus")]
+const CALLBACK_MARKERS: [&str; 4] = [
+    URL_PATH_MARKER,
+    URL_QUERY_MARKER,
+    HEADER_MARKER,
+    BODY_MARKER,
+];
+
+/// A callback whose URL path, URL query, header value, and body each carry a distinct marker.
+#[cfg(feature = "plus")]
+fn marked_callback() -> serde_json::Value {
+    serde_json::json!({
+        "url": format!("https://receiver.example/hooks/{URL_PATH_MARKER}?key={URL_QUERY_MARKER}"),
+        "headers": { "Authorization": format!("Bearer {HEADER_MARKER}") },
+        "body": { "note": BODY_MARKER, "job": "{{ job.uuid }}", "status": "{{ job.status }}" },
+    })
+}
+
+/// A job on an image named by digest, which the registry resolves without a push.
+#[cfg(feature = "plus")]
+fn digest_job(project_slug: &str, callback: Option<serde_json::Value>) -> serde_json::Value {
+    let image = format!("localhost/{project_slug}@sha256:{}", "a".repeat(64));
+    match callback {
+        Some(callback) => serde_json::json!({ "image": image, "callback": callback }),
+        None => serde_json::json!({ "image": image }),
+    }
+}
+
+/// Submit a run of `job` and return the response status and body.
+#[cfg(feature = "plus")]
+async fn post_job_run(
+    server: &TestServer,
+    user: &bencher_api_tests::TestUser,
+    project_slug: &str,
+    job: serde_json::Value,
+) -> (StatusCode, String) {
+    let body = format!(
+        r#"{{"project":"{project_slug}","branch":"main","testbed":"localhost","start_time":"2024-01-01T00:00:00Z","end_time":"2024-01-01T00:01:00Z","results":[],"job":{job}}}"#
+    );
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .header(http::header::CONTENT_TYPE, "application/json")
+        .body(body)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    (
+        status,
+        resp.text().await.expect("Failed to read the response"),
+    )
+}
+
+/// GET a path as `user` and return the raw body.
+#[cfg(feature = "plus")]
+async fn get_text(server: &TestServer, user: &bencher_api_tests::TestUser, path: &str) -> String {
+    let resp = server
+        .client
+        .get(server.api_url(path))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET {path}");
+    resp.text().await.expect("Failed to read the response")
+}
+
+#[cfg(feature = "plus")]
+fn job_count(server: &TestServer) -> i64 {
+    use bencher_schema::schema;
+    use diesel::{QueryDsl as _, RunQueryDsl as _};
+    schema::job::table
+        .count()
+        .get_result(&mut server.db_conn())
+        .expect("Failed to count jobs")
+}
+
+#[cfg(feature = "plus")]
+fn job_callback_count(server: &TestServer) -> i64 {
+    use bencher_schema::schema;
+    use diesel::{QueryDsl as _, RunQueryDsl as _};
+    schema::job_callback::table
+        .count()
+        .get_result(&mut server.db_conn())
+        .expect("Failed to count job callbacks")
+}
+
+/// The stored callback of a job.
+#[cfg(feature = "plus")]
+fn stored_callback(server: &TestServer, job_uuid: bencher_json::JobUuid) -> QueryJobCallback {
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    let mut conn = server.db_conn();
+    let job_id = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::id)
+        .first(&mut conn)
+        .expect("Failed to get the job");
+    QueryJobCallback::get(&mut conn, job_id).expect("Failed to get the job's callback")
+}
+
+#[cfg(feature = "plus")]
+fn assert_no_marker(text: &str, what: &str) {
+    for marker in CALLBACK_MARKERS {
+        assert!(!text.contains(marker), "{what} holds {marker}: {text}");
+    }
+}
+
+// A licensed organization's plan resolves through the production path, so its jobs run at Plus priority
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_priority_plus_for_a_licensed_org() {
+    use bencher_schema::schema;
+    use diesel::{QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_licensed@example.com")
+        .await;
+    let org = server.create_org(&user, "Licensed Org").await;
+    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    let project = server.create_project(&user, &org, "Licensed Project").await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let (status, body) =
+        post_job_run(&server, &user, project_slug, digest_job(project_slug, None)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert_eq!(jobs.len(), 1, "one job");
+    let priority: bencher_json::Priority = schema::job::table
+        .select(schema::job::priority)
+        .first(&mut server.db_conn())
+        .expect("Failed to query job priority");
+    assert_eq!(priority, bencher_json::Priority::Plus, "a licensed plan");
+}
+
+// POST /v0/run with a callback for a paid organization seals it to the job
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_callback_is_sealed_for_a_paid_org() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_paid@example.com")
+        .await;
+    let org = server.create_org(&user, "Callback Paid Org").await;
+    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    let project = server
+        .create_project(&user, &org, "Callback Paid Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let (status, body) = post_job_run(
+        &server,
+        &user,
+        project_slug,
+        digest_job(project_slug, Some(marked_callback())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert_eq!(jobs.len(), 1, "one job");
+    let job = jobs.first().expect("one job");
+    assert_eq!(
+        serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
+        serde_json::json!({ "state": "pending", "status": null }),
+        "the job shows its callback pending"
+    );
+
+    let stored = stored_callback(&server, job.uuid);
+    assert_eq!(stored.state, CallbackState::Pending, "a pending row");
+    let sealed = stored
+        .request
+        .expect("a pending callback holds its sealed request");
+    let key = &server.context().callback_key;
+    let expected: bencher_json::JsonNewCallback =
+        serde_json::from_value(marked_callback()).expect("Invalid callback");
+    assert_eq!(
+        key.open(job.uuid, &sealed)
+            .expect("It opens for its own job"),
+        serde_json::to_vec(&expected).expect("Failed to serialize the callback"),
+        "the sealed plaintext is the request as JSON"
+    );
+    assert!(
+        key.open(bencher_json::JobUuid::new(), &sealed).is_err(),
+        "the seal binds the job"
+    );
+}
+
+// POST /v0/run with a callback and no plan accepts the run and skips the callback
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_callback_is_skipped_without_a_plan() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_skip@example.com")
+        .await;
+    let org = server.create_org(&user, "Callback Skip Org").await;
+    let project = server
+        .create_project(&user, &org, "Callback Skip Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let (status, body) = post_job_run(
+        &server,
+        &user,
+        project_slug,
+        digest_job(project_slug, Some(marked_callback())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert_eq!(jobs.len(), 1, "one job");
+    let job = jobs.first().expect("one job");
+    assert_eq!(
+        serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
+        serde_json::json!({ "state": "skipped", "status": null }),
+        "the job shows its callback skipped"
+    );
+    let stored = stored_callback(&server, job.uuid);
+    assert_eq!(stored.state, CallbackState::Skipped, "a skipped row");
+    assert!(
+        stored.request.is_none(),
+        "nothing is sealed for a skipped callback"
+    );
+}
+
+// POST /v0/run with a callback for an organization licensed at the Free level skips it, as its job runs at Free priority
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_callback_is_skipped_for_a_free_license() {
+    use bencher_schema::schema;
+    use diesel::{QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_free_license@example.com")
+        .await;
+    let org = server.create_org(&user, "Callback Free License Org").await;
+    server.license_org(&user, &org, PlanLevel::Free).await;
+    let project = server
+        .create_project(&user, &org, "Callback Free License Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let (status, body) = post_job_run(
+        &server,
+        &user,
+        project_slug,
+        digest_job(project_slug, Some(marked_callback())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let jobs = list_project_jobs(&server, &user, project_slug).await;
+    assert_eq!(jobs.len(), 1, "one job");
+    let job = jobs.first().expect("one job");
+    assert_eq!(
+        serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
+        serde_json::json!({ "state": "skipped", "status": null }),
+        "the job shows its callback skipped"
+    );
+    let stored = stored_callback(&server, job.uuid);
+    assert_eq!(stored.state, CallbackState::Skipped, "a skipped row");
+    assert!(
+        stored.request.is_none(),
+        "nothing is sealed for a skipped callback"
+    );
+    let priority: bencher_json::Priority = schema::job::table
+        .select(schema::job::priority)
+        .first(&mut server.db_conn())
+        .expect("Failed to query job priority");
+    assert_eq!(
+        priority,
+        bencher_json::Priority::Free,
+        "the gate and the priority agree"
+    );
+}
+
+// A callback row that fails to insert rolls back the report and the job with it
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_callback_row_failure_creates_nothing() {
+    use diesel::RunQueryDsl as _;
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_rollback@example.com")
+        .await;
+    let org = server.create_org(&user, "Callback Rollback Org").await;
+    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    let project = server
+        .create_project(&user, &org, "Callback Rollback Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+    diesel::sql_query(
+        "CREATE TRIGGER block_job_callback BEFORE INSERT ON job_callback \
+         BEGIN SELECT RAISE(ABORT, 'blocked'); END",
+    )
+    .execute(&mut server.db_conn())
+    .expect("Failed to create trigger");
+
+    let project_slug: &str = project.slug.as_ref();
+    let (status, body) = post_job_run(
+        &server,
+        &user,
+        project_slug,
+        digest_job(project_slug, Some(marked_callback())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    assert_no_marker(&body, "the conflict body");
+    assert_eq!(
+        report_count(&server, &user, project_slug).await,
+        0,
+        "no report"
+    );
+    assert_eq!(job_count(&server), 0, "no job");
+    assert_eq!(job_callback_count(&server), 0, "no callback");
+}
+
+// POST /v0/run with an invalid callback is refused and creates nothing
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_invalid_callback_creates_nothing() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_invalid@example.com")
+        .await;
+    let org = server.create_org(&user, "Callback Invalid Org").await;
+    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    let project = server
+        .create_project(&user, &org, "Callback Invalid Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    for (callback, message) in [
+        (
+            serde_json::json!({ "url": "http://receiver.example/hooks" }),
+            "callback URL must use https",
+        ),
+        (
+            serde_json::json!({
+                "url": "https://receiver.example/hooks",
+                "body": { "job": "{{ job.id }}" },
+            }),
+            "names an unknown value",
+        ),
+    ] {
+        let (status, body) = post_job_run(
+            &server,
+            &user,
+            project_slug,
+            digest_job(project_slug, Some(callback)),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        assert!(body.contains(message), "{body}");
+    }
+    assert_eq!(
+        report_count(&server, &user, project_slug).await,
+        0,
+        "no report"
+    );
+    assert_eq!(job_count(&server), 0, "no job");
+    assert_eq!(job_callback_count(&server), 0, "no callback");
+}
+
+// POST /v0/run with an image and no callback stores no callback
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_without_callback_stores_none() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_none@example.com")
+        .await;
+    let org = server.create_org(&user, "Callback None Org").await;
+    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    let project = server
+        .create_project(&user, &org, "Callback None Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let (status, body) =
+        post_job_run(&server, &user, project_slug, digest_job(project_slug, None)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    assert_eq!(job_count(&server), 1, "one job");
+    assert_eq!(job_callback_count(&server), 0, "no callback");
+    let jobs: serde_json::Value = serde_json::from_str(
+        &get_text(&server, &user, &format!("/v0/projects/{project_slug}/jobs")).await,
+    )
+    .expect("Failed to parse the jobs");
+    let job = jobs.get(0).expect("one job");
+    assert!(job.get("callback").is_none(), "no callback key: {job}");
+}
+
+// The stored callback holds no plaintext: not in its row, the job's config, or anywhere in the database
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_callback_stores_no_plaintext() {
+    use bencher_schema::schema;
+    use diesel::{QueryDsl as _, RunQueryDsl as _};
+
+    type RawRow = (i32, Option<Vec<u8>>, i32, i32, Option<i32>, i64, i64);
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_plain@example.com")
+        .await;
+    create_fallback_spec(&server, &user).await;
+    // One organization seals its callback, the other skips it.
+    for (name, licensed) in [("Plaintext Paid", true), ("Plaintext Free", false)] {
+        let org = server.create_org(&user, &format!("{name} Org")).await;
+        if licensed {
+            server.license_org(&user, &org, PlanLevel::Enterprise).await;
+        }
+        let project = server
+            .create_project(&user, &org, &format!("{name} Project"))
+            .await;
+        let project_slug: &str = project.slug.as_ref();
+        let (status, body) = post_job_run(
+            &server,
+            &user,
+            project_slug,
+            digest_job(project_slug, Some(marked_callback())),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+    }
+    assert_eq!(job_callback_count(&server), 2, "a sealed and a skipped row");
+
+    let mut conn = server.db_conn();
+    let rows: Vec<RawRow> = schema::job_callback::table
+        .select((
+            schema::job_callback::job_id,
+            schema::job_callback::request,
+            schema::job_callback::state,
+            schema::job_callback::attempts,
+            schema::job_callback::status,
+            schema::job_callback::created,
+            schema::job_callback::modified,
+        ))
+        .load(&mut conn)
+        .expect("Failed to read the raw rows");
+    assert_eq!(rows.len(), 2, "two rows");
+    for row in &rows {
+        let (_, sealed, ..) = row;
+        let text = format!("{row:?}");
+        assert_no_marker(&text, "a job_callback row");
+        if let Some(sealed) = sealed {
+            assert_no_marker(&String::from_utf8_lossy(sealed), "the sealed bytes");
+        }
+    }
+    let configs: Vec<String> = schema::job::table
+        .select(schema::job::config)
+        .load(&mut conn)
+        .expect("Failed to read the job configs");
+    for config in &configs {
+        assert_no_marker(config, "a job config");
+    }
+    drop(conn);
+
+    let db_path = server.db_path().to_owned();
+    for suffix in ["", "-wal", "-journal"] {
+        let mut path = db_path.clone().into_os_string();
+        path.push(suffix);
+        if let Ok(bytes) = std::fs::read(&path) {
+            assert_no_marker(&String::from_utf8_lossy(&bytes), "the database file");
+        }
+    }
+}
+
+// A callback never reaches the run response, the job, the report, or the server log
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_callback_is_never_echoed() {
+    let capture = bencher_api_tests::LogCapture::default();
+    let server = TestServer::new_with_log(capture.logger()).await;
+    let user = server
+        .signup("Job User", "runjob_cb_echo@example.com")
+        .await;
+    let org = server.create_org(&user, "Callback Echo Org").await;
+    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    let project = server
+        .create_project(&user, &org, "Callback Echo Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let (status, body) = post_job_run(
+        &server,
+        &user,
+        project_slug,
+        digest_job(project_slug, Some(marked_callback())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    assert_no_marker(&body, "the run response");
+    let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+
+    let list_text = get_text(&server, &user, &format!("/v0/projects/{project_slug}/jobs")).await;
+    assert_no_marker(&list_text, "the job list");
+    let jobs: JsonJobs = serde_json::from_str(&list_text).expect("Failed to parse the jobs");
+    let job = jobs.0.first().expect("one job");
+    let job_text = get_text(
+        &server,
+        &user,
+        &format!("/v0/projects/{project_slug}/jobs/{}", job.uuid),
+    )
+    .await;
+    assert_no_marker(&job_text, "the job");
+    let report_text = get_text(
+        &server,
+        &user,
+        &format!("/v0/projects/{project_slug}/reports/{}", report.uuid),
+    )
+    .await;
+    assert_no_marker(&report_text, "the report");
+
+    let log = capture.lines().join("\n");
+    assert!(
+        log.contains("request completed") && log.contains("/v0/run"),
+        "the capture holds the server's request log: {log}"
+    );
+    assert_no_marker(&log, "the server log");
+}
+
+// A wrongly shaped callback is refused with a message that echoes none of it, in the response or the log
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_misshapen_callback_echoes_nothing() {
+    let capture = bencher_api_tests::LogCapture::default();
+    let server = TestServer::new_with_log(capture.logger()).await;
+    let user = server
+        .signup("Job User", "runjob_cb_shape@example.com")
+        .await;
+    let org = server.create_org(&user, "Callback Shape Org").await;
+    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    let project = server
+        .create_project(&user, &org, "Callback Shape Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    for (callback, message) in [
+        (
+            serde_json::json!(format!(
+                "https://receiver.example/hooks/{URL_PATH_MARKER}?key={URL_QUERY_MARKER}"
+            )),
+            "callback must be an object",
+        ),
+        (
+            serde_json::json!({
+                "url": "https://receiver.example/hooks",
+                "headers": format!("Authorization: Bearer {HEADER_MARKER}"),
+            }),
+            "callback headers must be a map of names to values",
+        ),
+    ] {
+        let (status, body) = post_job_run(
+            &server,
+            &user,
+            project_slug,
+            digest_job(project_slug, Some(callback)),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        assert!(body.contains(message), "{body}");
+        assert_no_marker(&body, "the refusal");
+    }
+
+    let log = capture.lines().join("\n");
+    assert!(
+        log.contains("callback must be an object")
+            && log.contains("callback headers must be a map of names to values"),
+        "the capture holds every refusal: {log}"
+    );
+    assert_no_marker(&log, "the server log");
+    assert_eq!(job_callback_count(&server), 0, "no callback");
 }
