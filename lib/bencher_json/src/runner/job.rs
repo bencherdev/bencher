@@ -9,6 +9,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::RunnerUuid;
+use super::callback::JsonJobCallback;
 use super::job_status::JobStatus;
 use crate::ProjectUuid;
 use crate::project::report::{Iteration, JsonAverage, JsonFold, ReportUuid};
@@ -43,6 +44,9 @@ pub struct JsonJob {
     pub claimed: Option<DateTime>,
     pub started: Option<DateTime>,
     pub completed: Option<DateTime>,
+    /// Present only for a job submitted with a callback
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub callback: Option<JsonJobCallback>,
     pub created: DateTime,
     pub modified: DateTime,
     /// Job output (stdout, stderr, files) from blob storage, included for terminal jobs.

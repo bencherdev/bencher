@@ -3,7 +3,7 @@ use serde::{Serialize, Serializer};
 use serde_json::Value;
 use uuid::fmt::Hyphenated;
 
-use super::{CallbackError, MAX_CALLBACK_BODY_LEN};
+use super::{CALLBACK_JOB_STATUSES, CallbackError, MAX_CALLBACK_BODY_LEN};
 use crate::runner::{JobStatus, JobUuid};
 use crate::{JsonReport, ProjectSlug, ProjectUuid, ReportUuid, Slug};
 
@@ -192,7 +192,7 @@ impl Placeholder {
     fn longest(self) -> usize {
         match self {
             Self::JobUuid | Self::ReportUuid | Self::ProjectUuid => Hyphenated::LENGTH + QUOTES,
-            Self::JobStatus => [JobStatus::Processed, JobStatus::Failed, JobStatus::Canceled]
+            Self::JobStatus => CALLBACK_JOB_STATUSES
                 .iter()
                 .map(|status| serde_json::json!(status).to_string().len())
                 .max()

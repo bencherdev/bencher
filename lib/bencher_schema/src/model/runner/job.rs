@@ -25,7 +25,7 @@ use crate::{
             QueryProject,
             report::{QueryReport, ReportId},
         },
-        runner::{QueryRunner, RunnerId, SourceIp},
+        runner::{QueryJobCallbackView, QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
         user::{actor::ApiActor, public::PublicUser},
     },
@@ -252,11 +252,12 @@ impl QueryJob {
     }
 
     /// Convert to JSON for public API (config is not included); the caller selects `report_uuid`
-    /// in the same query as the job, so a list needs no lookup per job.
+    /// and `callback` in the same query as the job, so a list needs no lookup per job.
     pub fn into_json(
         self,
         conn: &mut DbConnection,
         report_uuid: ReportUuid,
+        callback: Option<QueryJobCallbackView>,
     ) -> Result<JsonJob, HttpError> {
         let runner_uuid = if let Some(runner_id) = self.runner_id {
             Some(QueryRunner::get(conn, runner_id)?.uuid)
@@ -277,6 +278,7 @@ impl QueryJob {
             claimed: self.claimed,
             started: self.started,
             completed: self.completed,
+            callback: callback.map(Into::into),
             created: self.created,
             modified: self.modified,
             output: None,
