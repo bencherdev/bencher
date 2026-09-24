@@ -259,6 +259,10 @@ impl QueryReport {
         // Capture whether this is a job-based run before the transaction moves pending_job.
         #[cfg(feature = "plus")]
         let is_job_run = pending_job.is_some();
+        #[cfg(all(feature = "plus", feature = "otel"))]
+        let callback_skipped = pending_job
+            .as_ref()
+            .and_then(PendingInsertJob::callback_skipped);
 
         // Capture the current time before acquiring the write lock.
         // This is used for the report created timestamp and the job insert timestamp.
@@ -322,6 +326,20 @@ impl QueryReport {
             diesel::QueryResult::Ok(insert_report.uuid)
         })
         .map_err(resource_conflict_err!(Report, &json_report))?;
+
+        // The callback is counted only once its row has committed.
+        #[cfg(all(feature = "plus", feature = "otel"))]
+        if let Some(skipped) = callback_skipped {
+            let otel_plan_kind = bencher_otel::PlanKind::from(&plan_kind);
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::CallbackSubmit(
+                otel_plan_kind,
+            ));
+            if skipped {
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::CallbackSkip(
+                    otel_plan_kind,
+                ));
+            }
+        }
 
         // Read full report via public_conn (outside write lock)
         let query_report = schema::report::table

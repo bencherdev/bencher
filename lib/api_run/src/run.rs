@@ -298,7 +298,14 @@ async fn create_run_report(
         job,
     };
 
-    QueryReport::create(log, context, query_project, new_run_report, api_actor).await
+    Box::pin(QueryReport::create(
+        log,
+        context,
+        query_project,
+        new_run_report,
+        api_actor,
+    ))
+    .await
 }
 
 /// The project that a run targets.

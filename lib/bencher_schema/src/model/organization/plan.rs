@@ -255,17 +255,25 @@ pub enum PlanKindError {
 }
 
 impl PlanKind {
+    pub fn is_paid(&self) -> bool {
+        match self {
+            Self::Metered(_) => true,
+            Self::Licensed(license_usage) => match license_usage.level {
+                PlanLevel::Free => false,
+                PlanLevel::Pro | PlanLevel::Team | PlanLevel::Enterprise => true,
+            },
+            Self::None => false,
+        }
+    }
+
     pub fn priority(&self, is_claimed: bool) -> Priority {
         if !is_claimed {
             return Priority::Unclaimed;
         }
-        match self {
-            Self::None => Priority::Free,
-            Self::Metered(_) => Priority::Plus,
-            Self::Licensed(license_usage) => match license_usage.level {
-                PlanLevel::Free => Priority::Free,
-                PlanLevel::Pro | PlanLevel::Team | PlanLevel::Enterprise => Priority::Plus,
-            },
+        if self.is_paid() {
+            Priority::Plus
+        } else {
+            Priority::Free
         }
     }
 
@@ -466,6 +474,17 @@ impl PlanKind {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(feature = "otel")]
+impl From<&PlanKind> for bencher_otel::PlanKind {
+    fn from(plan_kind: &PlanKind) -> Self {
+        match plan_kind {
+            PlanKind::Metered(_) => Self::Metered,
+            PlanKind::Licensed(_) => Self::Licensed,
+            PlanKind::None => Self::None,
+        }
     }
 }
 

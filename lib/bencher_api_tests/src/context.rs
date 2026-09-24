@@ -50,13 +50,26 @@ pub struct TestServer {
 impl TestServer {
     /// Create a new test server with default settings.
     pub async fn new() -> Self {
-        Self::build(None, None, None, None, None).await
+        Self::build(None, None, None, None, None, None).await
+    }
+
+    /// Create a new test server that logs to `log` instead of stderr.
+    pub async fn new_with_log(log: slog::Logger) -> Self {
+        Self::build(None, None, None, None, None, Some(log)).await
     }
 
     /// Create a new test server with custom upload timeout and max body size.
     #[cfg(feature = "plus")]
     pub async fn new_with_limits(upload_timeout: u64, max_body_size: u64) -> Self {
-        Self::build(Some(upload_timeout), Some(max_body_size), None, None, None).await
+        Self::build(
+            Some(upload_timeout),
+            Some(max_body_size),
+            None,
+            None,
+            None,
+            None,
+        )
+        .await
     }
 
     /// Create a new test server with custom upload timeout, max body size, and injectable clock.
@@ -72,6 +85,7 @@ impl TestServer {
             Some(clock),
             None,
             None,
+            None,
         )
         .await
     }
@@ -80,13 +94,13 @@ impl TestServer {
     #[cfg(feature = "plus")]
     pub async fn new_at(now: bencher_json::DateTime) -> Self {
         let clock = bencher_json::Clock::Custom(Arc::new(move || now));
-        Self::build(None, None, Some(clock), None, None).await
+        Self::build(None, None, Some(clock), None, None, None).await
     }
 
     /// Create a new test server with a custom runner self-update base URL.
     #[cfg(feature = "plus")]
     pub async fn new_with_runner_update_base_url(base_url: url::Url) -> Self {
-        Self::build(None, None, None, Some(base_url), None).await
+        Self::build(None, None, None, Some(base_url), None, None).await
     }
 
     /// Create a new test server with custom creation rate limits.
@@ -100,7 +114,7 @@ impl TestServer {
             unclaimed_limit,
             claimed_limit,
         );
-        Self::build(None, None, None, None, Some(rate_limiting)).await
+        Self::build(None, None, None, None, Some(rate_limiting), None).await
     }
 
     #[cfg(feature = "plus")]
@@ -115,14 +129,10 @@ impl TestServer {
         clock: Option<bencher_json::Clock>,
         runner_update_base_url: Option<url::Url>,
         rate_limiting: Option<bencher_schema::context::RateLimiting>,
+        log: Option<slog::Logger>,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
-        let log_config = ConfigLogging::StderrTerminal {
-            level: ConfigLoggingLevel::Warn,
-        };
-        let log = log_config
-            .to_logger("bencher_api_tests")
-            .expect("Failed to create logger");
+        let log = log.unwrap_or_else(stderr_logger);
 
         // Create a temporary database file
         let db_file = NamedTempFile::new().expect("Failed to create temp db file");
@@ -223,14 +233,9 @@ impl TestServer {
         _clock: Option<()>,
         _runner_update_base_url: Option<url::Url>,
         _rate_limiting: Option<()>,
+        log: Option<slog::Logger>,
     ) -> Self {
-        // Create logger early so it can be used for OCI storage
-        let log_config = ConfigLogging::StderrTerminal {
-            level: ConfigLoggingLevel::Warn,
-        };
-        let log = log_config
-            .to_logger("bencher_api_tests")
-            .expect("Failed to create logger");
+        let log = log.unwrap_or_else(stderr_logger);
 
         // Create a temporary database file
         let db_file = NamedTempFile::new().expect("Failed to create temp db file");
@@ -407,4 +412,13 @@ fn connection_pool(db_path: &str) -> Pool<ConnectionManager<DbConnection>> {
         .connection_customizer(Box::new(BusyTimeout))
         .build(ConnectionManager::<DbConnection>::new(db_path))
         .expect("Failed to create a connection pool")
+}
+
+#[expect(clippy::expect_used, reason = "test server setup with fallible init")]
+fn stderr_logger() -> slog::Logger {
+    ConfigLogging::StderrTerminal {
+        level: ConfigLoggingLevel::Warn,
+    }
+    .to_logger("bencher_api_tests")
+    .expect("Failed to create logger")
 }
