@@ -22,6 +22,7 @@ plus = [
     "dep:tokio-util",
     "bencher_adapter/plus",
     "bencher_billing/plus",
+    "bencher_callback/plus",
     "bencher_json/plus",
     "bencher_license/plus",
     "bencher_otel?/plus",
@@ -39,6 +40,7 @@ aws-sdk-s3.workspace = true
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
 bencher_bing_index = { workspace = true, optional = true }
+bencher_callback = { workspace = true, optional = true }
 bencher_boundary.workspace = true
 bencher_github_client = { workspace = true, optional = true }
 bencher_google_client = { workspace = true, optional = true }

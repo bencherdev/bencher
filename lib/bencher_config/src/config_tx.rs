@@ -5,6 +5,8 @@ use std::{
     sync::Arc,
 };
 
+#[cfg(feature = "plus")]
+use bencher_callback::CallbackKey;
 use bencher_endpoint::Registrar;
 #[cfg(feature = "plus")]
 use bencher_json::system::config::{
@@ -88,6 +90,9 @@ pub enum ConfigTxError {
     #[cfg(feature = "plus")]
     #[error("Failed to spawn stats: {0}")]
     SpawnStats(dropshot::HttpError),
+    #[cfg(feature = "plus")]
+    #[error("{0}")]
+    CallbackKey(bencher_callback::CallbackKeyError),
 }
 
 impl ConfigTx {
@@ -271,6 +276,9 @@ async fn into_context(
         security.issuer.unwrap_or_else(|| console_url.to_string()),
         &security.secret_key,
     );
+    #[cfg(feature = "plus")]
+    let callback_key =
+        CallbackKey::new(&security.secret_key).map_err(ConfigTxError::CallbackKey)?;
 
     #[cfg(feature = "plus")]
     let rate_limiting = plus.as_ref().and_then(|plus| plus.rate_limiting);
@@ -383,6 +391,8 @@ async fn into_context(
         job_timeout_grace_period,
         #[cfg(feature = "plus")]
         heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
+        #[cfg(feature = "plus")]
+        callback_key,
         #[cfg(feature = "plus")]
         runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
         #[cfg(feature = "plus")]

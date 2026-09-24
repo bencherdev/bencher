@@ -1137,6 +1137,7 @@ name = "bencher_api_tests"
 version = "0.6.12"
 dependencies = [
  "bencher_api",
+ "bencher_callback",
  "bencher_config",
  "bencher_endpoint",
  "bencher_json",
@@ -1206,6 +1207,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_callback"
+version = "0.6.12"
+dependencies = [
+ "aws-lc-rs",
+ "bencher_json",
+ "diesel",
+ "pretty_assertions",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
 name = "bencher_cli"
 version = "0.6.12"
 dependencies = [
@@ -1272,6 +1285,7 @@ name = "bencher_config"
 version = "0.6.12"
 dependencies = [
  "bencher_billing",
+ "bencher_callback",
  "bencher_endpoint",
  "bencher_github_client",
  "bencher_google_client",
@@ -1632,6 +1646,7 @@ dependencies = [
  "bencher_billing",
  "bencher_bing_index",
  "bencher_boundary",
+ "bencher_callback",
  "bencher_github_client",
  "bencher_google_client",
  "bencher_google_index",
