@@ -1,12 +1,17 @@
 use std::process::Command;
 
 use assert_cmd::cargo::CommandCargoExt as _;
-use bencher_json::{JsonProjectKeyCreated, JsonUserKeyCreated, Jwt, Url};
+use bencher_json::{
+    Entitlements, JobUuid, JsonJob, JsonOrganization, JsonProjectKeyCreated, JsonUserKeyCreated,
+    Jwt, OrganizationUuid, PlanLevel, Secret, Url,
+    runner::{JobCallbackState, JsonJobCallback},
+};
+use bencher_license::Licensor;
 use pretty_assertions::assert_eq;
 
 use crate::parser::TaskRunner;
 use crate::task::test::seed_test::{
-    BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, TOKEN_ARG, USER_EMAIL, USER_SLUG,
+    BENCHER_CMD, CLI_DIR, HOST_ARG, ORG_SLUG, PROJECT_SLUG, TOKEN_ARG, USER_EMAIL, USER_SLUG,
 };
 use crate::task::{is_dev, unwrap_admin_token, unwrap_url, unwrap_user_token};
 
@@ -15,6 +20,16 @@ const DOCKER_IMAGE: &str = "ghcr.io/bencherdev/bencher:latest";
 const IMAGE_TAG: &str = "runner-test";
 const MOCK_IMAGE_TAG: &str = "runner-test-mock";
 
+// GitHub answers a `repository_dispatch` without a token with 401, or with 403 or 429 under its rate limit.
+const CALLBACK_URL: &str = "https://api.github.com/repos/bencherdev/bencher/dispatches";
+const CALLBACK_HEADER_VALUE: &str = "callback-smoke-header-value";
+const CALLBACK_SKIPPED: &str = "callback skipped: requires a Bencher Plus plan";
+const JOB_SUBMITTED: &str = "Remote job submitted successfully: ";
+// Debug builds of the API server trust this key's public half for self-hosted licenses.
+const TEST_LICENSE_KEY: &str =
+    include_str!("../../../../../plus/bencher_license/src/test/private.pem");
+const TEST_LICENSE_ENTITLEMENTS: u32 = 1_000_000;
+
 #[derive(Debug)]
 pub struct RunnerTest {
     url: Url,
@@ -22,6 +37,7 @@ pub struct RunnerTest {
     username: String,
     token: Jwt,
     with_daemon: bool,
+    is_bencher_cloud: bool,
 }
 
 impl TryFrom<TaskRunner> for RunnerTest {
@@ -34,6 +50,7 @@ impl TryFrom<TaskRunner> for RunnerTest {
             username,
             token,
             with_daemon,
+            is_bencher_cloud,
         } = runner;
 
         let is_dev = is_dev(url.as_ref());
@@ -49,6 +66,7 @@ impl TryFrom<TaskRunner> for RunnerTest {
             username,
             token,
             with_daemon,
+            is_bencher_cloud,
         })
     }
 }
@@ -272,8 +290,27 @@ impl RunnerTest {
             Ok(())
         };
 
+        // Run the callback runner test on an organization without a plan
+        let callback_skipped_result = if detach_failed_result.is_ok() {
+            run_callback_skipped_runner_test(&self.url, &self.token)
+        } else {
+            Ok(())
+        };
+
+        // Run the callback runner test on a licensed organization
+        let callback_settled_result = if callback_skipped_result.is_err() {
+            Ok(())
+        } else if self.is_bencher_cloud {
+            println!(
+                "Skipping settled callback runner test: Bencher Cloud gives a paid plan only through Stripe"
+            );
+            Ok(())
+        } else {
+            run_callback_settled_runner_test(&self.url, &self.token)
+        };
+
         // Run a test using a user key for authentication
-        let user_key_result = if detach_failed_result.is_ok() {
+        let user_key_result = if callback_settled_result.is_ok() {
             run_user_key_runner_test(&self.url, &self.username, &self.token, spec)
         } else {
             Ok(())
@@ -309,6 +346,8 @@ impl RunnerTest {
         no_sandbox_result?;
         detach_result?;
         detach_failed_result?;
+        callback_skipped_result?;
+        callback_settled_result?;
         user_key_result?;
         project_key_result?;
         image_only_result?;
@@ -601,9 +640,14 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {json:?}"))?;
 
     attach_detached_job(host, token, json.uuid, job_uuid)?;
+    wait_for_processed_job(host, token, job_uuid)?;
 
-    // Poll `bencher job view` until the job reaches a terminal state
-    let job_uuid_str = job_uuid.to_string();
+    println!("Detach runner smoke test passed!");
+    Ok(())
+}
+
+/// Poll `bencher job view` until the job reaches a terminal state, and return the processed job.
+fn wait_for_processed_job(host: &str, token: &Jwt, job_uuid: JobUuid) -> anyhow::Result<JsonJob> {
     let start = std::time::Instant::now();
     let timeout = std::time::Duration::from_mins(4);
 
@@ -614,31 +658,11 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
             anyhow::bail!("Timed out waiting for detached job {job_uuid} to complete");
         }
 
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "job",
-            "view",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token.as_ref(),
-            PROJECT_SLUG,
-            &job_uuid_str,
-        ])
-        .current_dir(CLI_DIR);
-        let output = cmd.output()?;
-        anyhow::ensure!(
-            output.status.success(),
-            "bencher job view failed:\nstdout: {}\nstderr: {}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-
-        let job: bencher_json::JsonJob = serde_json::from_slice(&output.stdout)?;
+        let job = view_job(host, token, job_uuid)?;
         match job.status {
             bencher_json::JobStatus::Processed => {
                 println!("Detached job {job_uuid} processed successfully");
-                break;
+                return Ok(job);
             },
             bencher_json::JobStatus::Failed => {
                 anyhow::bail!("Detached job {job_uuid} failed: {job:?}");
@@ -653,9 +677,30 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
             | bencher_json::JobStatus::Unknown => {},
         }
     }
+}
 
-    println!("Detach runner smoke test passed!");
-    Ok(())
+fn view_job(host: &str, token: &Jwt, job_uuid: JobUuid) -> anyhow::Result<JsonJob> {
+    let job_uuid_str = job_uuid.to_string();
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "job",
+        "view",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        PROJECT_SLUG,
+        &job_uuid_str,
+    ])
+    .current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher job view failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    Ok(serde_json::from_slice(&output.stdout)?)
 }
 
 /// Attach to a detached job with `bencher run --job`,
@@ -664,7 +709,7 @@ fn attach_detached_job(
     host: &str,
     token: &Jwt,
     report_uuid: bencher_json::ReportUuid,
-    job_uuid: bencher_json::JobUuid,
+    job_uuid: JobUuid,
 ) -> anyhow::Result<()> {
     let job_uuid_str = job_uuid.to_string();
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -791,6 +836,259 @@ fn run_detach_failed_attach_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     );
 
     println!("Failed detach runner smoke test passed!");
+    Ok(())
+}
+
+/// Run a skipped callback runner smoke test: submit a detached job with a callback
+/// on an organization without a plan, and verify the CLI says the callback was skipped
+/// and the processed job still shows it skipped.
+fn run_callback_skipped_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running skipped callback runner smoke test against: {host}");
+
+    let submitted = submit_callback_job(host, token, None)?;
+    if !submitted
+        .stderr
+        .lines()
+        .any(|line| line == CALLBACK_SKIPPED)
+    {
+        let callback = view_job(host, token, submitted.job).map(|job| job.callback);
+        anyhow::bail!(
+            "Expected the callback of job {} to be skipped, and the job shows {callback:?}:\nstdout: {}\nstderr: {}",
+            submitted.job,
+            submitted.stdout,
+            submitted.stderr
+        );
+    }
+
+    let job = wait_for_processed_job(host, token, submitted.job)?;
+    anyhow::ensure!(
+        job.callback
+            == Some(JsonJobCallback {
+                state: JobCallbackState::Skipped,
+                status: None,
+            }),
+        "Expected job {} to show a skipped callback: {:?}",
+        submitted.job,
+        job.callback
+    );
+
+    println!("Skipped callback runner smoke test passed!");
+    Ok(())
+}
+
+/// Run a settled callback runner smoke test: license the organization,
+/// submit a detached job with a callback to a real `https` receiver,
+/// and verify the callback settles with the receiver's answer.
+fn run_callback_settled_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running settled callback runner smoke test against: {host}");
+
+    let organization = view_organization(host, token)?;
+    let license = test_license(organization.uuid)?;
+    let result = update_organization_license(host, token, Some(&license))
+        .and_then(|()| settle_callback(host, token));
+    // Leave the organization without a plan for the tests that follow.
+    let unlicensed = update_organization_license(host, token, None);
+    result?;
+    unlicensed?;
+
+    println!("Settled callback runner smoke test passed!");
+    Ok(())
+}
+
+fn settle_callback(host: &str, token: &Jwt) -> anyhow::Result<()> {
+    let header = format!("X-Bencher-Smoke: {CALLBACK_HEADER_VALUE}");
+    let submitted = submit_callback_job(host, token, Some(&header))?;
+    anyhow::ensure!(
+        !submitted
+            .stderr
+            .lines()
+            .any(|line| line == CALLBACK_SKIPPED),
+        "Expected the server to take the callback of job {}:\nstdout: {}\nstderr: {}",
+        submitted.job,
+        submitted.stdout,
+        submitted.stderr
+    );
+    // The `bencher` binary shares this build's profile, and only a release build redacts its printouts.
+    anyhow::ensure!(
+        (cfg!(debug_assertions) || !submitted.stdout.contains(CALLBACK_HEADER_VALUE))
+            && !submitted.stderr.contains(CALLBACK_HEADER_VALUE),
+        "Expected the CLI to redact the callback header value of job {}:\nstdout: {}\nstderr: {}",
+        submitted.job,
+        submitted.stdout,
+        submitted.stderr
+    );
+
+    wait_for_processed_job(host, token, submitted.job)?;
+    let callback = wait_for_settled_callback(host, token, submitted.job)?;
+    anyhow::ensure!(
+        callback.state == JobCallbackState::Failed
+            && callback
+                .status
+                .is_some_and(|status| (400..500).contains(&status)),
+        "Expected the callback of job {} to fail with the receiver's 4xx: {callback:?}",
+        submitted.job
+    );
+    println!("Callback of job {} settled: {callback:?}", submitted.job);
+    Ok(())
+}
+
+struct SubmittedCallbackJob {
+    job: JobUuid,
+    stdout: String,
+    stderr: String,
+}
+
+/// Submit a detached job with a callback and the default body.
+/// Without `--quiet`, since that hides the notice about the callback.
+fn submit_callback_job(
+    host: &str,
+    token: &Jwt,
+    header: Option<&str>,
+) -> anyhow::Result<SubmittedCallbackJob> {
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
+    cmd.args([
+        "run",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--project",
+        PROJECT_SLUG,
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        "no-sandbox-spec",
+        "--format",
+        "json",
+        "--job-timeout",
+        "120",
+        "--detach",
+        "--callback-url",
+        CALLBACK_URL,
+    ]);
+    if let Some(header) = header {
+        cmd.args(["--callback-header", header]);
+    }
+    cmd.args(["--exec", "mock"]).current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run --detach --callback-url failed:\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    let job = stderr
+        .lines()
+        .find_map(|line| line.strip_prefix(JOB_SUBMITTED))
+        .ok_or_else(|| {
+            anyhow::anyhow!("Expected a submitted job:\nstdout: {stdout}\nstderr: {stderr}")
+        })?
+        .parse()?;
+    Ok(SubmittedCallbackJob {
+        job,
+        stdout,
+        stderr,
+    })
+}
+
+/// Poll `bencher job view` until the job's callback settles.
+fn wait_for_settled_callback(
+    host: &str,
+    token: &Jwt,
+    job_uuid: JobUuid,
+) -> anyhow::Result<JsonJobCallback> {
+    // A final answer settles at once. A retried one takes up to three 10 s attempts
+    // and the 4 s and 16 s waits between them.
+    let timeout = std::time::Duration::from_secs(90);
+    let start = std::time::Instant::now();
+
+    loop {
+        let job = view_job(host, token, job_uuid)?;
+        let Some(callback) = job.callback else {
+            anyhow::bail!("Expected job {job_uuid} to have a callback: {job:?}");
+        };
+        if callback.state != JobCallbackState::Pending {
+            return Ok(callback);
+        }
+        if start.elapsed() > timeout {
+            anyhow::bail!(
+                "Timed out waiting for the callback of job {job_uuid} to settle: {callback:?}"
+            );
+        }
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+}
+
+fn view_organization(host: &str, token: &Jwt) -> anyhow::Result<JsonOrganization> {
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "organization",
+        "view",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        ORG_SLUG,
+    ])
+    .current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher organization view failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    Ok(serde_json::from_slice(&output.stdout)?)
+}
+
+/// An Enterprise license for the organization, signed with the committed test key.
+fn test_license(organization: OrganizationUuid) -> anyhow::Result<Jwt> {
+    let key: Secret = TEST_LICENSE_KEY.parse()?;
+    let entitlements = Entitlements::try_from(TEST_LICENSE_ENTITLEMENTS)?;
+    Ok(Licensor::bencher_cloud(&key)?.new_annual_license(
+        organization,
+        PlanLevel::Enterprise,
+        entitlements,
+    )?)
+}
+
+/// Set the organization's license, or remove it with `None`.
+fn update_organization_license(
+    host: &str,
+    token: &Jwt,
+    license: Option<&Jwt>,
+) -> anyhow::Result<()> {
+    // An underscore removes the license.
+    let license = license.map_or("_", AsRef::as_ref);
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "organization",
+        "update",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--license",
+        license,
+        ORG_SLUG,
+    ])
+    .current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher organization update --license failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
     Ok(())
 }
 
