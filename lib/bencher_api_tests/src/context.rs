@@ -187,6 +187,8 @@ impl TestServer {
             heartbeat_timeout: std::time::Duration::from_secs(5),
             job_timeout_grace_period: std::time::Duration::from_mins(1),
             heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
+            callback_key: bencher_callback::CallbackKey::new(&DEFAULT_SECRET_KEY)
+                .expect("Failed to derive callback key"),
             runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
             shutdown: bencher_schema::context::CancellationToken::new(),
         };

@@ -58,6 +58,7 @@ api_runners = { path = "plus/api_runners" }
 api_specs = { path = "plus/api_specs" }
 bencher_billing = { path = "plus/bencher_billing" }
 bencher_bing_index = { path = "plus/bencher_bing_index" }
+bencher_callback = { path = "plus/bencher_callback" }
 bencher_github_client = { path = "plus/bencher_github_client" }
 bencher_google_client = { path = "plus/bencher_google_client" }
 bencher_google_index = { path = "plus/bencher_google_index" }
@@ -88,6 +89,7 @@ async-stripe-shared = "1.0.0-rc.6"
 async-stripe-types = "1.0.0-rc.6"
 async-trait = "0.1"
 aws-credential-types = "1.2"
+aws-lc-rs = { version = "1.18", default-features = false, features = ["aws-lc-sys"] }
 aws-sdk-s3 = { version = "1.126", default-features = false, features = ["behavior-version-latest", "sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
 base64 = "0.22"
 bollard = "0.21"
