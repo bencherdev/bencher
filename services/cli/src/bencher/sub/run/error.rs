@@ -19,6 +19,15 @@ pub enum RunError {
     #[cfg(feature = "plus")]
     #[error("Attaching to a remote job with `--job` requires `--project`/`BENCHER_PROJECT`.")]
     JobRequiresProject,
+    #[cfg(feature = "plus")]
+    #[error("Invalid `--callback-header` {0}: expected `NAME: VALUE`")]
+    CallbackHeader(usize),
+    #[cfg(feature = "plus")]
+    #[error("{0}")]
+    Callback(bencher_json::runner::CallbackError),
+    #[cfg(feature = "plus")]
+    #[error("Failed to convert the callback for the API client")]
+    ClientCallback,
 
     #[error("{0}")]
     Branch(#[from] super::branch::BranchError),

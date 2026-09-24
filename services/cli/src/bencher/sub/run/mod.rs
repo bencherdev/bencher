@@ -9,7 +9,7 @@ use bencher_json::{
     project::report::Iteration,
 };
 #[cfg(feature = "plus")]
-use bencher_json::{JobUuid, JsonJob};
+use bencher_json::{JobUuid, JsonJob, JsonNewCallback, sanitize_json};
 
 use crate::{
     CliError,
@@ -33,7 +33,10 @@ use ci::{Ci, CiCheck};
 pub use error::RunError;
 use format::Format;
 #[cfg(feature = "plus")]
-use job::{AttachJob, FinishedJob, Job, JobOutcome, JobWait, SubmitJob};
+use job::{
+    AttachJob, CALLBACK_SKIPPED, FinishedJob, Job, JobOutcome, JobWait, SubmitJob,
+    callback_skipped, client_callback,
+};
 use project::resolve_project;
 use runner::Runner;
 use sub_adapter::SubAdapter;
@@ -250,6 +253,10 @@ impl Run {
             return self.wait_for_job(project, *uuid, *wait, ci_check).await;
         }
 
+        // The one callback the run sends, prints, and reads back.
+        #[cfg(feature = "plus")]
+        let callback = self.callback();
+
         let Some(json_new_run) = self.generate_report().await? else {
             return Ok(());
         };
@@ -258,7 +265,11 @@ impl Run {
         cli_println_quietable!(
             self.log,
             "{}",
-            serde_json::to_string_pretty(&json_new_run).map_err(RunError::SerializeReport)?
+            Self::new_report_echo(
+                &json_new_run,
+                #[cfg(feature = "plus")]
+                callback,
+            )?
         );
 
         // If performing a dry run, don't actually send the report
@@ -266,6 +277,12 @@ impl Run {
             return Ok(());
         }
 
+        #[cfg(feature = "plus")]
+        let mut json_new_run = json_new_run;
+        #[cfg(feature = "plus")]
+        if let (Some(job), Some(callback)) = (&mut json_new_run.job, callback) {
+            job.callback = Some(client_callback(callback)?);
+        }
         let sender = run_sender(json_new_run);
         let json_report: JsonReport = self
             .backend
@@ -277,6 +294,9 @@ impl Run {
         if let (Some(job_uuid), Some(job)) = (json_report.job, self.submit_job()) {
             if job.detach {
                 cli_eprintln_quietable!(self.log, "Remote job submitted successfully: {job_uuid}");
+                if callback.is_some() {
+                    self.callback_notice(&json_report, job_uuid).await;
+                }
                 return self.display_and_check_alerts(json_report, ci_check).await;
             }
             let project = ProjectResourceId::Slug(json_report.project.slug);
@@ -407,6 +427,25 @@ impl Run {
         }
     }
 
+    /// The new report as printed, with the callback, which can hold secrets, through `sanitize_json`.
+    fn new_report_echo(
+        json_new_run: &JsonNewRun,
+        #[cfg(feature = "plus")] callback: Option<&JsonNewCallback>,
+    ) -> Result<String, RunError> {
+        #[cfg(feature = "plus")]
+        if let Some(callback) = callback {
+            let mut echo = serde_json::to_value(json_new_run).map_err(RunError::SerializeReport)?;
+            if let Some(job) = echo
+                .get_mut("job")
+                .and_then(serde_json::Value::as_object_mut)
+            {
+                job.insert("callback".to_owned(), sanitize_json(callback));
+            }
+            return serde_json::to_string_pretty(&echo).map_err(RunError::SerializeReport);
+        }
+        serde_json::to_string_pretty(json_new_run).map_err(RunError::SerializeReport)
+    }
+
     fn spec_reset(&self) -> Option<bool> {
         #[cfg(feature = "plus")]
         {
@@ -424,6 +463,24 @@ impl Run {
             Some(job)
         } else {
             None
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    fn callback(&self) -> Option<&JsonNewCallback> {
+        self.submit_job()?.callback.as_deref()
+    }
+
+    /// Read the detached job once, and say so if the server skipped its callback.
+    /// The job was submitted either way, so a failed read prints no notice.
+    #[cfg(feature = "plus")]
+    async fn callback_notice(&self, json_report: &JsonReport, job_uuid: JobUuid) {
+        let project = ProjectResourceId::Slug(json_report.project.slug.clone());
+        let Ok(json_job) = self.get_job(&project, job_uuid).await else {
+            return;
+        };
+        if callback_skipped(&json_job) {
+            cli_eprintln_quietable!(self.log, "{CALLBACK_SKIPPED}");
         }
     }
 
@@ -775,6 +832,165 @@ mod tests {
                     Some(Timeout::try_from(7).unwrap())
                 )
             );
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    mod callback {
+        use bencher_json::JsonNewCallback;
+        use clap::Parser as _;
+
+        use super::super::{Run, client_callback};
+        use crate::CliError;
+        use crate::bencher::sub::RunError;
+        use crate::parser::run::CliRun;
+
+        const URL: &str = "https://user-marker:pass-marker@receiver.example:8443/path-marker/hooks?query=query-marker#fragment-marker";
+        const MARKERS: [&str; 7] = [
+            "user-marker",
+            "pass-marker",
+            "path-marker",
+            "query-marker",
+            "fragment-marker",
+            "token-marker",
+            "key-marker",
+        ];
+
+        fn parse_run(args: &[&str]) -> CliRun {
+            CliRun::try_parse_from(std::iter::once("run").chain(args.iter().copied()))
+                .expect("Failed to parse args")
+        }
+
+        fn callback_run(args: &[&str]) -> Result<Run, CliError> {
+            let args = [
+                "--project",
+                "my-project",
+                "--image",
+                "alpine:3.18",
+                "--detach",
+            ]
+            .iter()
+            .chain(args)
+            .copied()
+            .collect::<Vec<_>>();
+            Run::try_from(parse_run(&args))
+        }
+
+        fn secret_run() -> Run {
+            callback_run(&[
+                "--callback-url",
+                URL,
+                "--callback-header",
+                "Authorization: Bearer token-marker",
+                "--callback-header",
+                "X-Key: first-marker",
+                "--callback-header",
+                "x-key: key-marker",
+            ])
+            .unwrap()
+        }
+
+        fn assert_no_marker(printed: &str) {
+            for marker in MARKERS.iter().chain(&["first-marker"]) {
+                assert!(!printed.contains(marker), "{marker} in {printed}");
+            }
+        }
+
+        #[test]
+        fn invalid_callback_fails_before_submitting() {
+            for (args, expected) in [
+                (
+                    &["--callback-url", "http://receiver.example/hooks"][..],
+                    "callback URL must use https",
+                ),
+                (
+                    &[
+                        "--callback-url",
+                        "https://receiver.example/hooks",
+                        "--callback-body",
+                        r#"{"job":"{{ job.id }}"}"#,
+                    ][..],
+                    r#"callback body placeholder "{{ job.id }}" names an unknown value"#,
+                ),
+                (
+                    &[
+                        "--callback-url",
+                        "https://receiver.example/hooks",
+                        "--callback-header",
+                        "X Token: value-marker",
+                    ][..],
+                    "invalid name for callback header 1",
+                ),
+                (
+                    &[
+                        "--callback-url",
+                        "https://receiver.example/hooks",
+                        "--callback-header",
+                        "Host: receiver.example",
+                    ][..],
+                    "callback header host is set by the HTTP client",
+                ),
+            ] {
+                let Err(CliError::Run(RunError::Callback(err))) = callback_run(args) else {
+                    panic!("{args:?} must fail validation");
+                };
+                let err = err.to_string();
+                assert!(err.contains(expected), "{err}");
+                assert!(!err.contains("value-marker"), "{err}");
+            }
+        }
+
+        #[test]
+        fn malformed_callback_header_names_the_flag_not_the_value() {
+            let result = callback_run(&[
+                "--callback-url",
+                "https://receiver.example/hooks",
+                "--callback-header",
+                "X-Key: key",
+                "--callback-header",
+                "Authorization Bearer token-marker",
+            ]);
+            let Err(CliError::Run(err @ RunError::CallbackHeader(2))) = result else {
+                panic!("{result:?}");
+            };
+            let err = err.to_string();
+            assert!(err.contains("`--callback-header` 2"), "{err}");
+            assert_no_marker(&err);
+        }
+
+        #[test]
+        fn empty_callback_header_value_is_sent_empty() {
+            for header in ["X-Empty:", "X-Empty:   "] {
+                let run = callback_run(&[
+                    "--callback-url",
+                    "https://receiver.example/hooks",
+                    "--callback-header",
+                    header,
+                ])
+                .unwrap();
+                let sent = client_callback(run.callback().unwrap()).unwrap();
+                assert_eq!(
+                    serde_json::to_value(&sent).unwrap()["headers"],
+                    serde_json::json!({ "x-empty": "" }),
+                    "{header}"
+                );
+            }
+        }
+
+        #[test]
+        fn callback_takes_the_headers_in_flag_order() {
+            let callback = secret_run().callback().cloned().unwrap();
+            let expected = JsonNewCallback::new(
+                URL,
+                [
+                    ("authorization", "Bearer token-marker"),
+                    ("x-key", "key-marker"),
+                ]
+                .map(|(name, value)| (name.to_owned(), value.to_owned())),
+                None,
+            )
+            .unwrap();
+            assert_eq!(callback, expected);
         }
     }
 }
