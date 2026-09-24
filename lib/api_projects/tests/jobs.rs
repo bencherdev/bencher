@@ -15,6 +15,7 @@ use bencher_api_tests::{
     helpers::{base_timestamp, create_test_report, get_project_id, set_job_status},
 };
 use bencher_json::runner::JsonJobs;
+use bencher_schema::model::runner::{CallbackOutcome, JobId};
 use http::StatusCode;
 
 // GET /v0/projects/{project}/jobs - list jobs (empty)
@@ -1148,4 +1149,261 @@ async fn job_get_running_no_output() {
     assert_eq!(job.status, bencher_json::JobStatus::Running);
     // Running is non-terminal, so output should not be fetched
     assert!(job.output.is_none());
+}
+
+// =============================================================================
+// Job callback tests
+// =============================================================================
+
+/// Sealed into every callback request below, so a response that leaks the request shows it.
+const CALLBACK_MARKER: &str = "MARKER-3e8a61c4";
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn get_job_id(server: &TestServer, job_uuid: bencher_json::JobUuid) -> JobId {
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::id)
+        .first(&mut server.db_conn())
+        .expect("Failed to get job ID")
+}
+
+/// Helper: store a pending callback, sealed with the server's key, the way a submit does.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn insert_pending_callback(server: &TestServer, job_uuid: bencher_json::JobUuid) -> JobId {
+    use bencher_schema::model::runner::InsertJobCallback;
+
+    let job_id = get_job_id(server, job_uuid);
+    let request = serde_json::json!({
+        "url": format!("https://example.com/{CALLBACK_MARKER}"),
+        "headers": { "authorization": format!("Bearer {CALLBACK_MARKER}") },
+        "body": format!("{{\"marker\": \"{CALLBACK_MARKER}\"}}"),
+    });
+    let sealed = server
+        .context()
+        .callback_key
+        .seal(job_uuid, request.to_string().as_bytes())
+        .expect("Failed to seal the callback request");
+    InsertJobCallback::pending(job_id, sealed, base_timestamp())
+        .insert(&mut server.db_conn())
+        .expect("Failed to insert the pending callback");
+    job_id
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn insert_skipped_callback(server: &TestServer, job_uuid: bencher_json::JobUuid) {
+    use bencher_schema::model::runner::InsertJobCallback;
+
+    InsertJobCallback::skipped(get_job_id(server, job_uuid), base_timestamp())
+        .insert(&mut server.db_conn())
+        .expect("Failed to insert the skipped callback");
+}
+
+/// Helper: record one attempt on a pending callback, as a delivery does; with an outcome, it settles.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn attempt_callback(
+    server: &TestServer,
+    job_id: JobId,
+    status: StatusCode,
+    outcome: Option<CallbackOutcome>,
+) {
+    use bencher_schema::model::runner::QueryJobCallback;
+
+    assert!(
+        QueryJobCallback::record_attempt(
+            &mut server.db_conn(),
+            job_id,
+            Some(status),
+            outcome,
+            base_timestamp()
+        )
+        .expect("Failed to record the attempt"),
+        "the attempt is recorded"
+    );
+}
+
+/// Helper: GET one job, returning the raw body.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn get_job_body(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    job_uuid: bencher_json::JobUuid,
+) -> String {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "the job is found");
+    resp.text().await.expect("Failed to read response")
+}
+
+/// Assert a job's `callback`, both on the wire and as the client parses it.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn assert_callback(job: &serde_json::Value, expected: Option<serde_json::Value>) {
+    assert_eq!(
+        job.get("callback"),
+        expected.as_ref(),
+        "the callback in {job}"
+    );
+    let parsed: bencher_json::JsonJob =
+        serde_json::from_value(job.clone()).expect("Failed to parse the job");
+    let expected = expected.map(|callback| {
+        serde_json::from_value::<bencher_json::runner::JsonJobCallback>(callback)
+            .expect("Failed to parse the expected callback")
+    });
+    assert_eq!(parsed.callback, expected, "the client parses the callback");
+}
+
+// GET /v0/projects/{project}/jobs/{job} - the callback's state, and never its request
+#[tokio::test]
+async fn job_get_callback() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "jobcallback@example.com").await;
+    let org = server.create_org(&user, "Job Callback Org").await;
+    let project = server
+        .create_project(&user, &org, "Job Callback Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let now = base_timestamp();
+    let project_slug: &str = project.slug.as_ref();
+
+    let none = insert_test_job(&server, report_id, project.uuid, now);
+    let pending = insert_test_job(&server, report_id, project.uuid, now);
+    insert_pending_callback(&server, pending);
+    let retrying = insert_test_job(&server, report_id, project.uuid, now);
+    let retrying_id = insert_pending_callback(&server, retrying);
+    attempt_callback(&server, retrying_id, StatusCode::BAD_GATEWAY, None);
+    let skipped = insert_test_job(&server, report_id, project.uuid, now);
+    insert_skipped_callback(&server, skipped);
+
+    for (job_uuid, expected) in [
+        (none, None),
+        (
+            pending,
+            Some(serde_json::json!({ "state": "pending", "status": null })),
+        ),
+        // A callback waiting to retry shows as pending, with the status of its last attempt.
+        (
+            retrying,
+            Some(serde_json::json!({ "state": "pending", "status": 502 })),
+        ),
+        (
+            skipped,
+            Some(serde_json::json!({ "state": "skipped", "status": null })),
+        ),
+    ] {
+        let body = get_job_body(&server, &user.token, project_slug, job_uuid).await;
+        assert!(
+            !body.contains(CALLBACK_MARKER),
+            "the response holds nothing of the sealed request: {body}"
+        );
+        let job: serde_json::Value = serde_json::from_str(&body).expect("Failed to parse job");
+        assert_eq!(job["uuid"], serde_json::json!(job_uuid));
+        assert_callback(&job, expected);
+    }
+}
+
+// GET /v0/projects/{project}/jobs - each job carries its own callback
+#[tokio::test]
+async fn jobs_list_callbacks() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "jobscallback@example.com").await;
+    let org = server.create_org(&user, "Jobs Callback Org").await;
+    let project = server
+        .create_project(&user, &org, "Jobs Callback Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_a = create_test_report(&server, project_id);
+    let report_b = create_sibling_report(&server, report_a);
+    let now = base_timestamp();
+
+    let delivered = insert_test_job(&server, report_b, project.uuid, now);
+    let failed = insert_test_job(&server, report_a, project.uuid, now);
+    let none = insert_test_job(&server, report_b, project.uuid, now);
+    let pending = insert_test_job(&server, report_a, project.uuid, now);
+    let skipped = insert_test_job(&server, report_b, project.uuid, now);
+
+    // Inserted out of job order, so no callback lines up with its job by row order.
+    insert_skipped_callback(&server, skipped);
+    insert_pending_callback(&server, pending);
+    let failed_id = insert_pending_callback(&server, failed);
+    attempt_callback(
+        &server,
+        failed_id,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Some(CallbackOutcome::Failed),
+    );
+    let delivered_id = insert_pending_callback(&server, delivered);
+    attempt_callback(
+        &server,
+        delivered_id,
+        StatusCode::NO_CONTENT,
+        Some(CallbackOutcome::Delivered),
+    );
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let total_count = resp
+        .headers()
+        .get("X-Total-Count")
+        .expect("X-Total-Count header")
+        .to_str()
+        .expect("X-Total-Count is text")
+        .to_owned();
+    assert_eq!(total_count, "5", "the callback join adds no rows");
+    let body = resp.text().await.expect("Failed to read response");
+    assert!(
+        !body.contains(CALLBACK_MARKER),
+        "the response holds nothing of a sealed request: {body}"
+    );
+    let jobs: Vec<serde_json::Value> = serde_json::from_str(&body).expect("Failed to parse jobs");
+    assert_eq!(jobs.len(), 5);
+
+    for (job_uuid, expected) in [
+        (
+            delivered,
+            Some(serde_json::json!({ "state": "delivered", "status": 204 })),
+        ),
+        (
+            failed,
+            Some(serde_json::json!({ "state": "failed", "status": 500 })),
+        ),
+        (none, None),
+        (
+            pending,
+            Some(serde_json::json!({ "state": "pending", "status": null })),
+        ),
+        (
+            skipped,
+            Some(serde_json::json!({ "state": "skipped", "status": null })),
+        ),
+    ] {
+        let job = jobs
+            .iter()
+            .find(|job| job["uuid"] == serde_json::json!(job_uuid))
+            .expect("the job is listed");
+        assert_callback(job, expected);
+    }
 }

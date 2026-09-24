@@ -17,10 +17,14 @@ use bencher_json::{
         plot::{XAxis, YAxis},
     },
 };
+#[cfg(feature = "plus")]
+use bencher_json::{JobStatus, JobUuid, Priority};
 use diesel::{
     Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SqliteConnection,
 };
 
+#[cfg(feature = "plus")]
+use crate::model::runner::JobId;
 use crate::{
     macros::sql::last_insert_rowid,
     model::{
@@ -874,4 +878,100 @@ pub fn get_plot_measures(conn: &mut SqliteConnection, plot_id: PlotId) -> Vec<Me
         .select(schema::plot_measure::measure_id)
         .load(conn)
         .expect("Failed to get plot measures")
+}
+
+/// IDs a job row needs: its organization, report, and spec.
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone, Copy)]
+pub struct JobFixture {
+    pub organization_id: OrganizationId,
+    pub report_id: ReportId,
+    pub spec_id: SpecId,
+}
+
+/// Create the base entities, a report, and a spec for jobs to run on.
+#[cfg(feature = "plus")]
+pub fn create_job_fixture(conn: &mut SqliteConnection) -> JobFixture {
+    let base = create_base_entities(conn);
+    let branch = create_branch_with_head(
+        conn,
+        base.project_id,
+        "00000000-0000-0000-0000-000000000010",
+        "main",
+        "main",
+        "00000000-0000-0000-0000-000000000011",
+    );
+    let testbed_id = create_testbed(
+        conn,
+        base.project_id,
+        "00000000-0000-0000-0000-000000000020",
+        "localhost",
+        "localhost",
+    );
+    let version_id = create_version(
+        conn,
+        base.project_id,
+        "00000000-0000-0000-0000-000000000030",
+        0,
+        None,
+    );
+    create_head_version(conn, branch.head_id, version_id);
+    let report_id = create_report(
+        conn,
+        "00000000-0000-0000-0000-000000000040",
+        base.project_id,
+        branch.head_id,
+        version_id,
+        testbed_id,
+    );
+    let spec_id = create_spec(
+        conn,
+        CreateSpecArgs {
+            uuid: "00000000-0000-0000-0000-000000000050",
+            name: "Test Spec",
+            slug: "test-spec",
+            os: "linux",
+            architecture: "x86_64",
+            cpu: 2,
+            memory: 0x0001_0000_0000,
+            disk: 0x0002_8000_0000,
+            network: false,
+        },
+    );
+    JobFixture {
+        organization_id: base.organization_id,
+        report_id,
+        spec_id,
+    }
+}
+
+/// Create a job in the given status.
+#[cfg(feature = "plus")]
+pub fn create_job(conn: &mut SqliteConnection, fixture: JobFixture, status: JobStatus) -> JobId {
+    let config = serde_json::json!({
+        "registry": "https://registry.bencher.dev",
+        "project": "00000000-0000-0000-0000-000000000002",
+        "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "timeout": 3600
+    });
+    diesel::insert_into(schema::job::table)
+        .values((
+            schema::job::uuid.eq(JobUuid::new()),
+            schema::job::report_id.eq(fixture.report_id),
+            schema::job::organization_id.eq(fixture.organization_id),
+            schema::job::source_ip.eq("127.0.0.1"),
+            schema::job::spec_id.eq(fixture.spec_id),
+            schema::job::config.eq(config.to_string()),
+            schema::job::timeout.eq(3600),
+            schema::job::priority.eq(Priority::Plus),
+            schema::job::status.eq(status),
+            schema::job::created.eq(DateTime::TEST),
+            schema::job::modified.eq(DateTime::TEST),
+        ))
+        .execute(conn)
+        .expect("Failed to insert job");
+
+    diesel::select(last_insert_rowid())
+        .get_result(conn)
+        .expect("Failed to get job id")
 }
