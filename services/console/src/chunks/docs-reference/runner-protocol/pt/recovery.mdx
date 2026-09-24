@@ -39,7 +39,8 @@ e reenviar uma mensagem terminal `completed`, `failed` ou `canceled` é sempre s
 Mensagens terminais carregam o UUID do Job e recebem um `ack`;
 se a conexão cair antes de o `ack` chegar,
 o Runner armazena o resultado e o reenvia na próxima conexão antes de ficar ocioso.
-O resultado `completed` real de um Runner resolve um Job `unknown`, e pode até sobrepor um status `failed`.
+O resultado de um Runner resolve um Job `unknown`.
+Um Job `failed` ou `canceled` nunca muda de estado novamente: um resultado tardio é confirmado, para que o Runner pare de reenviá-lo, e descartado.
 
 ### Sem Retentativa Automática
 

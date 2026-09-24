@@ -39,7 +39,8 @@ Job 会被标记为 `canceled`，且 Runner 会收到一条 `cancel` 消息。
 终止性消息携带 Job UUID 并会收到 `ack`；
 如果在 `ack` 到达之前连接断开，
 Runner 会存储结果，并在下次连接时、进入空闲之前重新发送它。
-Runner 实际的 `completed` 结果会解决 `unknown` Job，甚至可以覆盖 `failed` 状态。
+Runner 的结果会解决 `unknown` Job。
+`failed` 或 `canceled` 的 Job 永远不会再改变状态：迟到的结果会被确认，以便 Runner 停止重新发送，然后被丢弃。
 
 ### 不自动重试
 

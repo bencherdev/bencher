@@ -155,6 +155,7 @@ pub enum ApiCounter {
     RunnerMinutesBilledFailed,
     RunnerHeartbeatTimeout,
     RunnerJobTimeout,
+    RunnerLateResultDiscarded,
     RunnerDisconnect,
     RunnerSelfUpdateSent(UpdateChannelKind),
     RunnerSelfUpdateCheckFailed(UpdateChannelKind),
@@ -226,6 +227,7 @@ impl ApiCounter {
             Self::RunnerJobClaim | Self::RunnerJobUpdate(_) => "{job}",
             Self::RunnerMinutesBilled | Self::RunnerMinutesBilledFailed => "{minute}",
             Self::RunnerHeartbeatTimeout | Self::RunnerJobTimeout => "{timeout}",
+            Self::RunnerLateResultDiscarded => "{result}",
             Self::RunnerDisconnect => "{disconnect}",
             Self::RunnerSelfUpdateSent(_) => "{update}",
         }
@@ -318,6 +320,7 @@ impl ApiCounter {
             Self::RunnerMinutesBilledFailed => "runner.minutes.billed.failed",
             Self::RunnerHeartbeatTimeout => "runner.heartbeat.timeout",
             Self::RunnerJobTimeout => "runner.job.timeout",
+            Self::RunnerLateResultDiscarded => "runner.late_result.discarded",
             Self::RunnerDisconnect => "runner.disconnect",
             Self::RunnerSelfUpdateSent(_) => "runner.self_update.sent",
             Self::RunnerSelfUpdateCheckFailed(_) => "runner.self_update.check.failed",
@@ -447,6 +450,9 @@ impl ApiCounter {
             Self::RunnerJobTimeout => {
                 "Counts the number of jobs canceled due to exceeding job timeout"
             },
+            Self::RunnerLateResultDiscarded => {
+                "Counts the number of late runner results discarded because the job already had an outcome"
+            },
             Self::RunnerDisconnect => "Counts the number of runner disconnections",
             Self::RunnerSelfUpdateSent(_) => {
                 "Counts the number of runner self-update directives sent"
@@ -506,6 +512,7 @@ impl ApiCounter {
             | Self::RunnerMinutesBilledFailed
             | Self::RunnerHeartbeatTimeout
             | Self::RunnerJobTimeout
+            | Self::RunnerLateResultDiscarded
             | Self::RunnerDisconnect => Vec::new(),
             Self::Run(priority)
             | Self::MetricsCreate(priority)

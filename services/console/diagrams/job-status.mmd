@@ -14,9 +14,9 @@ stateDiagram-v2
     unknown --> completed: completed
     unknown --> failed: failed
     unknown --> canceled: cancel / hard timeout
-    failed --> completed: results recovered
     completed --> processed: results parsed
     completed --> failed: processing failed
     completed --> unknown: results lost
     processed --> [*]
+    failed --> [*]
     canceled --> [*]
