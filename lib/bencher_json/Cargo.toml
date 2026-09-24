@@ -15,7 +15,7 @@ schema = ["dep:schemars", "bencher_context/schema", "ordered-float/schemars"]
 # `diesel/sqlite`: the parameter set encoder is SQLite's JSONB format,
 # so its `ToSql` and `FromSql` are written against the SQLite backend.
 db = ["dep:diesel", "diesel/sqlite", "dep:serde_yaml", "bencher_valid/db"]
-plus = ["dep:camino", "bencher_valid/plus"]
+plus = ["dep:camino", "dep:http", "bencher_valid/plus"]
 test-clock = ["bencher_valid/test-clock"]
 
 [dependencies]
@@ -24,6 +24,7 @@ bencher_valid = { workspace = true, features = ["schema"] }
 camino = { workspace = true, features = ["serde1"], optional = true }
 derive_more.workspace = true
 diesel = { workspace = true, optional = true }
+http = { workspace = true, optional = true }
 ordered-float = { workspace = true, features = ["serde"] }
 percent-encoding.workspace = true
 ryu-js.workspace = true
