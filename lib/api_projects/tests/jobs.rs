@@ -311,12 +311,29 @@ async fn private_project_jobs_denied_unauthenticated() {
 
 /// Helper: insert a test job into the database with a specific created timestamp.
 /// Returns the job UUID.
-#[expect(clippy::expect_used, reason = "test helper")]
 fn insert_test_job(
     server: &TestServer,
     report_id: i32,
     project_uuid: bencher_json::ProjectUuid,
     created: bencher_json::DateTime,
+) -> bencher_json::JobUuid {
+    insert_test_job_with_timeout(
+        server,
+        report_id,
+        project_uuid,
+        created,
+        bencher_json::Timeout::PLUS_DEFAULT,
+    )
+}
+
+/// Helper: insert a test job with a specific timeout. Returns the job UUID.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn insert_test_job_with_timeout(
+    server: &TestServer,
+    report_id: i32,
+    project_uuid: bencher_json::ProjectUuid,
+    created: bencher_json::DateTime,
+    timeout: bencher_json::Timeout,
 ) -> bencher_json::JobUuid {
     use bencher_json::{JobStatus, JobUuid, Priority, SpecUuid};
     use bencher_schema::schema;
@@ -366,7 +383,7 @@ fn insert_test_job(
         "registry": "https://registry.bencher.dev",
         "project": project_uuid,
         "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-        "timeout": 3600
+        "timeout": timeout
     });
 
     diesel::insert_into(schema::job::table)
@@ -378,7 +395,7 @@ fn insert_test_job(
             schema::job::status.eq(JobStatus::Pending),
             schema::job::spec_id.eq(spec_id),
             schema::job::config.eq(config.to_string()),
-            schema::job::timeout.eq(3600),
+            schema::job::timeout.eq(timeout),
             schema::job::priority.eq(Priority::Unclaimed),
             schema::job::created.eq(&created),
             schema::job::modified.eq(&created),
@@ -393,6 +410,62 @@ fn insert_test_job(
         .expect("Failed to set report spec_id");
 
     job_uuid
+}
+
+/// Helper: insert another report on the same head, version, and testbed as `report_id`.
+/// `create_test_report` cannot run twice in one project: its testbed and branch names are unique.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn create_sibling_report(server: &TestServer, report_id: i32) -> i32 {
+    use bencher_json::ReportUuid;
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let mut conn = server.db_conn();
+    let (project_id, head_id, version_id, testbed_id): (i32, i32, i32, i32) = schema::report::table
+        .filter(schema::report::id.eq(report_id))
+        .select((
+            schema::report::project_id,
+            schema::report::head_id,
+            schema::report::version_id,
+            schema::report::testbed_id,
+        ))
+        .first(&mut conn)
+        .expect("Failed to get report");
+
+    let now = base_timestamp();
+    let report_uuid = ReportUuid::new();
+    diesel::insert_into(schema::report::table)
+        .values((
+            schema::report::uuid.eq(&report_uuid),
+            schema::report::project_id.eq(project_id),
+            schema::report::head_id.eq(head_id),
+            schema::report::version_id.eq(version_id),
+            schema::report::testbed_id.eq(testbed_id),
+            schema::report::adapter.eq(0),
+            schema::report::start_time.eq(&now),
+            schema::report::end_time.eq(&now),
+            schema::report::created.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert report");
+
+    schema::report::table
+        .filter(schema::report::uuid.eq(&report_uuid))
+        .select(schema::report::id)
+        .first(&mut conn)
+        .expect("Failed to get report ID")
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn get_report_uuid(server: &TestServer, report_id: i32) -> bencher_json::ReportUuid {
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    schema::report::table
+        .filter(schema::report::id.eq(report_id))
+        .select(schema::report::uuid)
+        .first(&mut server.db_conn())
+        .expect("Failed to get report UUID")
 }
 
 // GET /v0/projects/{project}/jobs - list returns inserted jobs
@@ -426,6 +499,59 @@ async fn jobs_list_with_data() {
     assert_eq!(resp.status(), StatusCode::OK);
     let jobs: JsonJobs = resp.json().await.expect("Failed to parse response");
     assert_eq!(jobs.0.len(), 3);
+}
+
+// GET /v0/projects/{project}/jobs - each job carries its own report and timeout
+#[tokio::test]
+async fn jobs_list_report_and_timeout() {
+    use bencher_json::Timeout;
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "joblistreport@example.com")
+        .await;
+    let org = server.create_org(&user, "Job ListReport Org").await;
+    let project = server
+        .create_project(&user, &org, "Job ListReport Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_a = create_test_report(&server, project_id);
+    let report_b = create_sibling_report(&server, report_a);
+    let now = base_timestamp();
+
+    let job_b =
+        insert_test_job_with_timeout(&server, report_b, project.uuid, now, Timeout::FREE_MAX);
+    let job_a =
+        insert_test_job_with_timeout(&server, report_a, project.uuid, now, Timeout::UNCLAIMED_MAX);
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let jobs: JsonJobs = resp.json().await.expect("Failed to parse response");
+    assert_eq!(jobs.0.len(), 2);
+    for (job_uuid, report_id, timeout) in [
+        (job_a, report_a, Timeout::UNCLAIMED_MAX),
+        (job_b, report_b, Timeout::FREE_MAX),
+    ] {
+        let job = jobs
+            .0
+            .iter()
+            .find(|job| job.uuid == job_uuid)
+            .expect("Job missing from list");
+        assert_eq!(job.report, get_report_uuid(&server, report_id));
+        assert_eq!(job.timeout, timeout);
+    }
 }
 
 // GET /v0/projects/{project}/jobs - pagination with data
@@ -777,6 +903,47 @@ async fn job_get_pending_no_output() {
     assert_eq!(job.status, bencher_json::JobStatus::Pending);
     // Pending jobs should not have output fetched
     assert!(job.output.is_none());
+}
+
+// GET /v0/projects/{project}/jobs/{job} - the job's report and its own timeout
+#[tokio::test]
+async fn job_get_report_and_timeout() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "jobgetreport@example.com").await;
+    let org = server.create_org(&user, "Job GetReport Org").await;
+    let project = server
+        .create_project(&user, &org, "Job GetReport Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_a = create_test_report(&server, project_id);
+    let report_b = create_sibling_report(&server, report_a);
+    let now = base_timestamp();
+    let job_uuid = insert_test_job_with_timeout(
+        &server,
+        report_b,
+        project.uuid,
+        now,
+        bencher_json::Timeout::FREE_MAX,
+    );
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let job: bencher_json::JsonJob = resp.json().await.expect("Failed to parse response");
+    assert_eq!(job.uuid, job_uuid);
+    assert_eq!(job.report, get_report_uuid(&server, report_b));
+    assert_eq!(job.timeout, bencher_json::Timeout::FREE_MAX);
 }
 
 // GET /v0/projects/{project}/jobs/{job} - completed job with stored output
