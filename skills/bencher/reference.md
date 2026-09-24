@@ -85,6 +85,7 @@
 | `--job-timeout <secs>` | Maximum execution time |
 | `--job-poll-interval <secs>` | Poll interval |
 | `--detach` | Submit without waiting (conflicts with `--job-poll-interval`) |
+| `--job <uuid>` | Wait for a submitted job, then post its results (requires `--project`; `--job-timeout` is the wait budget; refuses report options, including from `BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, and `BENCHER_CMD`) |
 
 ### Backend
 

@@ -265,8 +265,15 @@ impl RunnerTest {
             Ok(())
         };
 
+        // Run the detach runner test with a failing benchmark
+        let detach_failed_result = if detach_result.is_ok() {
+            run_detach_failed_attach_test(&self.url, &self.token)
+        } else {
+            Ok(())
+        };
+
         // Run a test using a user key for authentication
-        let user_key_result = if detach_result.is_ok() {
+        let user_key_result = if detach_failed_result.is_ok() {
             run_user_key_runner_test(&self.url, &self.username, &self.token, spec)
         } else {
             Ok(())
@@ -301,6 +308,7 @@ impl RunnerTest {
         image_project_result?;
         no_sandbox_result?;
         detach_result?;
+        detach_failed_result?;
         user_key_result?;
         project_key_result?;
         image_only_result?;
@@ -542,6 +550,7 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 
 /// Run a detach runner smoke test: submit a job with `--detach` and verify
 /// it returns immediately with a `JsonReport` containing a job UUID,
+/// attach to the job with `bencher run --job` and verify it prints the processed report,
 /// then poll `bencher job view` until the job reaches a terminal state.
 fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     let host = url.as_ref();
@@ -549,47 +558,13 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     println!("Running detach runner smoke test against: {host}");
 
     // Submit the job with --detach (returns immediately)
-    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
-    let args = [
-        "run",
-        HOST_ARG,
-        host,
-        TOKEN_ARG,
-        token.as_ref(),
-        "--project",
-        PROJECT_SLUG,
-        "--branch",
-        "master",
-        "--testbed",
-        "base",
-        "--image",
-        &image_ref,
-        "--spec",
-        "no-sandbox-spec",
-        "--format",
-        "json",
-        "--quiet",
-        "--job-timeout",
-        "120",
-        "--detach",
-        "--exec",
-        "mock",
-    ];
-    cmd.args(args).current_dir(CLI_DIR);
-    let output = cmd.output()?;
-    anyhow::ensure!(
-        output.status.success(),
-        "bencher run --detach failed:\nstdout: {}\nstderr: {}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-
-    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    let json = submit_detached(host, token, &["--exec", "mock"])?;
     assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
     let job_uuid = json
         .job
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {json:?}"))?;
+
+    attach_detached_job(host, token, json.uuid, job_uuid)?;
 
     // Poll `bencher job view` until the job reaches a terminal state
     let job_uuid_str = job_uuid.to_string();
@@ -645,6 +620,140 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 
     println!("Detach runner smoke test passed!");
     Ok(())
+}
+
+/// Attach to a detached job with `bencher run --job`,
+/// and verify it waits for the job and prints its processed report.
+fn attach_detached_job(
+    host: &str,
+    token: &Jwt,
+    report_uuid: bencher_json::ReportUuid,
+    job_uuid: bencher_json::JobUuid,
+) -> anyhow::Result<()> {
+    let output = attach_job(host, token, job_uuid)?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run --job failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let attached: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    anyhow::ensure!(
+        attached.uuid == report_uuid && attached.job == Some(job_uuid),
+        "Expected the attach to print report {report_uuid} for job {job_uuid}: {attached:?}"
+    );
+    anyhow::ensure!(
+        attached
+            .results
+            .as_ref()
+            .is_some_and(|iterations| iterations.iter().any(|results| !results.is_empty())),
+        "Expected the attach to print the processed results: {attached:?}"
+    );
+    Ok(())
+}
+
+/// Run a failed detach runner smoke test: submit a job with `--detach` whose benchmark fails,
+/// then attach to the job with `bencher run --job` and verify it prints the report
+/// and exits with the job failed error.
+fn run_detach_failed_attach_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running failed detach runner smoke test against: {host}");
+
+    let json = submit_detached(host, token, &["--exec", "mock", "--fail"])?;
+    let job_uuid = json
+        .job
+        .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {json:?}"))?;
+
+    let output = attach_job(host, token, job_uuid)?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    anyhow::ensure!(
+        !output.status.success() && stderr.contains("Remote job failed"),
+        "Expected bencher run --job to fail for job {job_uuid}:\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    // `--quiet` leaves only the report, displayed best effort before the error.
+    let attached: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    anyhow::ensure!(
+        attached.uuid == json.uuid && attached.job == Some(job_uuid),
+        "Expected the attach to print report {} for job {job_uuid}: {attached:?}",
+        json.uuid
+    );
+
+    println!("Failed detach runner smoke test passed!");
+    Ok(())
+}
+
+/// Submit a job with `--detach` and return the report it prints. `extra` follows `--detach`,
+/// and ends with the command.
+fn submit_detached(
+    host: &str,
+    token: &Jwt,
+    extra: &[&str],
+) -> anyhow::Result<bencher_json::JsonReport> {
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
+    cmd.args([
+        "run",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--project",
+        PROJECT_SLUG,
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        "no-sandbox-spec",
+        "--format",
+        "json",
+        "--quiet",
+        "--job-timeout",
+        "120",
+        "--detach",
+    ])
+    .args(extra)
+    .current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run --detach failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    Ok(serde_json::from_slice(&output.stdout)?)
+}
+
+/// Attach to a submitted job with `bencher run --job`, which waits for the job and prints its report.
+fn attach_job(
+    host: &str,
+    token: &Jwt,
+    job_uuid: bencher_json::JobUuid,
+) -> anyhow::Result<std::process::Output> {
+    let job_uuid = job_uuid.to_string();
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "run",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--project",
+        PROJECT_SLUG,
+        "--job",
+        &job_uuid,
+        "--format",
+        "json",
+        "--quiet",
+        "--job-poll-interval",
+        "1",
+    ])
+    .current_dir(CLI_DIR);
+    Ok(cmd.output()?)
 }
 
 /// Run the runner smoke test with user key authentication.
