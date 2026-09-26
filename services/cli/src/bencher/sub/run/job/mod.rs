@@ -1,13 +1,16 @@
 use std::collections::HashMap;
 
-use bencher_json::{JobUuid, ProjectResourceId, SpecResourceId};
+use bencher_json::{JobUuid, JsonNewCallback, ProjectResourceId, SpecResourceId};
 
 use crate::parser::run::CliRunJob;
 
 use super::RunError;
 
+mod callback;
 mod job_wait;
 
+use callback::new_callback;
+pub use callback::{CallbackNotice, client_callback, echo_callback};
 pub use job_wait::{FinishedJob, JobWait};
 
 #[expect(
@@ -37,6 +40,7 @@ pub struct SubmitJob {
     pub build_time: bool,
     pub wait: JobWait,
     pub detach: bool,
+    pub callback: Option<Box<JsonNewCallback>>,
 }
 
 #[derive(Debug)]
@@ -61,6 +65,9 @@ impl Job {
             job_timeout,
             job_poll_interval,
             detach,
+            callback_url,
+            callback_header,
+            callback_body,
         } = cli_job;
         let poll_interval = job_poll_interval.unwrap_or(*DEFAULT_POLL_INTERVAL);
         if let Some(uuid) = job {
@@ -70,6 +77,7 @@ impl Job {
                 wait: JobWait::attach(poll_interval, job_timeout),
             })));
         }
+        let callback = new_callback(callback_url, callback_header, callback_body)?.map(Box::new);
         Ok(image.map(|image| {
             Self::Submit(SubmitJob {
                 image,
@@ -80,6 +88,7 @@ impl Job {
                 build_time,
                 wait: JobWait::submitted(poll_interval, job_timeout),
                 detach,
+                callback,
             })
         }))
     }
