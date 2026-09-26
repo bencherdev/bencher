@@ -16,7 +16,7 @@ use slog::Logger;
 
 use crate::{
     auth_conn,
-    context::{ApiContext, DbConnection},
+    context::{ApiContext, Callbacks, DbConnection},
     error::{bad_request_error, issue_error, resource_not_found_err},
     macros::fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
     model::{
@@ -978,105 +978,126 @@ impl UpdateJob {
     }
 }
 
-/// Spawn a background task that marks a job as unknown if no heartbeat is received
-/// within the heartbeat timeout. This handles both "disconnected runner" recovery
-/// and startup recovery for in-flight jobs.
-///
-/// Also enforces job timeout: if the job has been running longer than its configured
-/// `timeout` plus `job_timeout_grace_period`, it is marked as Canceled so the runner
-/// receives a Cancel event on its next heartbeat. An unknown job hears no heartbeats,
-/// so the task then waits for the job's deadline and checks again.
-pub fn spawn_heartbeat_timeout(
-    log: Logger,
-    heartbeat_timeout: std::time::Duration,
-    connection: Arc<Mutex<DbConnection>>,
-    job_id: JobId,
-    heartbeat_tasks: &crate::context::HeartbeatTasks,
-    job_timeout_grace_period: std::time::Duration,
-    clock: bencher_json::Clock,
-) {
-    let join_handle = tokio::spawn(async move {
-        let heartbeat_timeout_secs = i64::try_from(heartbeat_timeout.as_secs()).unwrap_or(i64::MAX);
-        let mut wait = heartbeat_timeout;
-        loop {
-            tokio::time::sleep(wait).await;
+/// How long a job may go without a heartbeat, and how long past its own timeout it may run.
+#[derive(Debug, Clone, Copy)]
+pub struct JobTimeout {
+    pub heartbeat: std::time::Duration,
+    pub grace_period: std::time::Duration,
+}
 
-            let mut conn = connection.lock().await;
+impl JobTimeout {
+    /// Spawn a background task that marks a job as unknown if no heartbeat is received
+    /// within the heartbeat timeout. This handles both "disconnected runner" recovery
+    /// and startup recovery for in-flight jobs.
+    ///
+    /// Also enforces job timeout: if the job has been running longer than its configured
+    /// `timeout` plus `job_timeout_grace_period`, it is marked as Canceled so the runner
+    /// receives a Cancel event on its next heartbeat. An unknown job hears no heartbeats,
+    /// so the task then waits for the job's deadline and checks again.
+    pub fn spawn_heartbeat_timeout(
+        self,
+        log: Logger,
+        connection: Arc<Mutex<DbConnection>>,
+        job_id: JobId,
+        heartbeat_tasks: &crate::context::HeartbeatTasks,
+        clock: bencher_json::Clock,
+        callbacks: Callbacks,
+    ) {
+        let Self {
+            heartbeat: heartbeat_timeout,
+            grace_period: job_timeout_grace_period,
+        } = self;
+        let join_handle = tokio::spawn(async move {
+            let heartbeat_timeout_secs =
+                i64::try_from(heartbeat_timeout.as_secs()).unwrap_or(i64::MAX);
+            let mut wait = heartbeat_timeout;
+            loop {
+                tokio::time::sleep(wait).await;
 
-            // Read the current job state
-            let job: QueryJob = match schema::job::table
-                .filter(schema::job::id.eq(job_id))
-                .first(&mut *conn)
-            {
-                Ok(job) => job,
-                Err(e) => {
-                    slog::error!(log, "Failed to read job for heartbeat timeout"; "job_id" => ?job_id, "error" => %e);
-                    return;
-                },
-            };
+                let mut conn = connection.lock().await;
 
-            // If the job is already in a terminal state, nothing to do
-            if job.status.has_run() {
-                return;
-            }
-
-            // Check job timeout: if running longer than timeout + grace period, cancel it
-            if check_job_timeout(&log, &job, job_timeout_grace_period, &mut conn, &clock) {
-                return;
-            }
-
-            let now = clock.now();
-
-            // If the runner reconnected and sent a recent heartbeat, check again once it could be stale
-            if let Some(last_heartbeat) = job.last_heartbeat {
-                let elapsed = (now.timestamp() - last_heartbeat.timestamp()).max(0);
-                if elapsed < heartbeat_timeout_secs {
-                    let secs = u64::try_from(heartbeat_timeout_secs - elapsed).unwrap_or(0);
-                    wait = std::time::Duration::from_secs(secs.max(1));
-                    continue;
-                }
-            }
-
-            if matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
-                slog::warn!(log, "Heartbeat timeout, marking job as unknown"; "job_id" => ?job_id);
-                let update = UpdateJob::set_status(JobStatus::Unknown, now);
-                match update.execute_if_either_status(
-                    &mut conn,
-                    job_id,
-                    JobStatus::Claimed,
-                    JobStatus::Running,
-                ) {
-                    Ok(0) => {
-                        slog::info!(log, "Heartbeat timeout: job already changed state"; "job_id" => ?job_id);
-                    },
-                    Ok(_) => {
-                        #[cfg(feature = "otel")]
-                        {
-                            bencher_otel::ApiMeter::increment(
-                                bencher_otel::ApiCounter::RunnerHeartbeatTimeout,
-                            );
-                            bencher_otel::ApiMeter::increment(
-                                bencher_otel::ApiCounter::RunnerJobUpdate(
-                                    bencher_otel::JobStatusKind::Unknown,
-                                ),
-                            );
-                        }
-                    },
+                // Read the current job state
+                let job: QueryJob = match schema::job::table
+                    .filter(schema::job::id.eq(job_id))
+                    .first(&mut *conn)
+                {
+                    Ok(job) => job,
                     Err(e) => {
-                        slog::error!(log, "Failed to mark job as unknown"; "job_id" => ?job_id, "error" => %e);
+                        slog::error!(log, "Failed to read job for heartbeat timeout"; "job_id" => ?job_id, "error" => %e);
+                        return;
                     },
+                };
+
+                // If the job is already in a terminal state, nothing to do
+                if job.status.has_run() {
+                    return;
                 }
+
+                // Check job timeout: if running longer than timeout + grace period, cancel it
+                if check_job_timeout(
+                    &log,
+                    &job,
+                    job_timeout_grace_period,
+                    &mut conn,
+                    &clock,
+                    &callbacks,
+                ) {
+                    return;
+                }
+
+                let now = clock.now();
+
+                // If the runner reconnected and sent a recent heartbeat, check again once it could be stale
+                if let Some(last_heartbeat) = job.last_heartbeat {
+                    let elapsed = (now.timestamp() - last_heartbeat.timestamp()).max(0);
+                    if elapsed < heartbeat_timeout_secs {
+                        let secs = u64::try_from(heartbeat_timeout_secs - elapsed).unwrap_or(0);
+                        wait = std::time::Duration::from_secs(secs.max(1));
+                        continue;
+                    }
+                }
+
+                if matches!(job.status, JobStatus::Claimed | JobStatus::Running) {
+                    slog::warn!(log, "Heartbeat timeout, marking job as unknown"; "job_id" => ?job_id);
+                    let update = UpdateJob::set_status(JobStatus::Unknown, now);
+                    match update.execute_if_either_status(
+                        &mut conn,
+                        job_id,
+                        JobStatus::Claimed,
+                        JobStatus::Running,
+                    ) {
+                        Ok(0) => {
+                            slog::info!(log, "Heartbeat timeout: job already changed state"; "job_id" => ?job_id);
+                        },
+                        Ok(_) => {
+                            #[cfg(feature = "otel")]
+                            {
+                                bencher_otel::ApiMeter::increment(
+                                    bencher_otel::ApiCounter::RunnerHeartbeatTimeout,
+                                );
+                                bencher_otel::ApiMeter::increment(
+                                    bencher_otel::ApiCounter::RunnerJobUpdate(
+                                        bencher_otel::JobStatusKind::Unknown,
+                                    ),
+                                );
+                            }
+                        },
+                        Err(e) => {
+                            slog::error!(log, "Failed to mark job as unknown"; "job_id" => ?job_id, "error" => %e);
+                        },
+                    }
+                }
+
+                let Some(until) = until_deadline(&job, job_timeout_grace_period, now) else {
+                    slog::warn!(log, "Job has neither a claimed nor a started timestamp, not scheduling its deadline"; "job_id" => ?job_id);
+                    return;
+                };
+                wait = until;
             }
+        });
 
-            let Some(until) = until_deadline(&job, job_timeout_grace_period, now) else {
-                slog::warn!(log, "Job has neither a claimed nor a started timestamp, not scheduling its deadline"; "job_id" => ?job_id);
-                return;
-            };
-            wait = until;
-        }
-    });
-
-    heartbeat_tasks.insert(job_id, join_handle.abort_handle());
+        heartbeat_tasks.insert(job_id, join_handle.abort_handle());
+    }
 }
 
 /// Load the jobs startup recovery arms heartbeat timeouts for.
@@ -1166,6 +1187,7 @@ fn check_job_timeout(
     job_timeout_grace_period: std::time::Duration,
     conn: &mut DbConnection,
     clock: &bencher_json::Clock,
+    callbacks: &Callbacks,
 ) -> bool {
     let now = clock.now();
     let Some((elapsed, limit)) = deadline_elapsed(job, job_timeout_grace_period, now) else {
@@ -1183,6 +1205,7 @@ fn check_job_timeout(
         &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
     ) {
         Ok(updated) if updated > 0 => {
+            callbacks.fire(log, conn, job.id, JobStatus::Canceled);
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobTimeout);
         },
@@ -1245,14 +1268,17 @@ async fn mark_orphaned_completed_unknown(log: &Logger, context: &ApiContext, job
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
                 bencher_otel::JobStatusKind::Unknown,
             ));
-            spawn_heartbeat_timeout(
+            JobTimeout {
+                heartbeat: context.heartbeat_timeout,
+                grace_period: context.job_timeout_grace_period,
+            }
+            .spawn_heartbeat_timeout(
                 log.clone(),
-                context.heartbeat_timeout,
                 context.database.connection.clone(),
                 job.id,
                 &context.heartbeat_tasks,
-                context.job_timeout_grace_period,
                 context.clock.clone(),
+                context.callbacks.clone(),
             );
         },
         Ok(_) => {
@@ -1323,9 +1349,11 @@ async fn reprocess_single_completed_job(log: &Logger, context: &ApiContext, job:
     if let Err(e) = job.process_results(log, context, output.results, now).await {
         slog::warn!(log, "Failed to reprocess job results, marking as Failed"; "job_id" => ?job.id, "error" => %e);
         let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
-        match failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
+        let conn = write_conn!(context);
+        match failed_update.execute_if_status(conn, job.id, JobStatus::Completed) {
             Ok(updated) if updated > 0 => {
                 slog::info!(log, "Marked failed reprocessing job as Failed"; "job_id" => ?job.id);
+                context.callbacks.fire(log, conn, job.id, JobStatus::Failed);
                 #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
                     bencher_otel::JobStatusKind::Failed,
@@ -1342,9 +1370,13 @@ async fn reprocess_single_completed_job(log: &Logger, context: &ApiContext, job:
     }
 
     let processed_update = UpdateJob::set_status(JobStatus::Processed, now);
-    match processed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
+    let conn = write_conn!(context);
+    match processed_update.execute_if_status(conn, job.id, JobStatus::Completed) {
         Ok(updated) if updated > 0 => {
             slog::info!(log, "Reprocessed completed job"; "job_id" => ?job.id);
+            context
+                .callbacks
+                .fire(log, conn, job.id, JobStatus::Processed);
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
                 bencher_otel::JobStatusKind::Processed,

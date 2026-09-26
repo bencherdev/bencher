@@ -18,7 +18,7 @@ use bencher_schema::{
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         organization::OrganizationId,
-        runner::{JobId, QueryJob, RunnerId, UpdateJob, job::spawn_heartbeat_timeout},
+        runner::{JobId, JobTimeout, QueryJob, RunnerId, UpdateJob},
         spec::QuerySpec,
     },
     schema, write_conn,
@@ -156,11 +156,16 @@ async fn handle_timeout(
         }
         updated
     } else {
-        UpdateJob::terminate(status, now).execute_if_any_status(
-            write_conn!(context),
+        let conn = write_conn!(context);
+        let updated = UpdateJob::terminate(status, now).execute_if_any_status(
+            conn,
             job_id,
             &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
-        )?
+        )?;
+        if updated > 0 {
+            context.callbacks.fire(log, conn, job_id, status);
+        }
+        updated
     };
     if updated == 0 {
         slog::info!(log, "Timeout: job already changed state"; "job_id" => ?job_id);
@@ -330,12 +335,16 @@ async fn handle_heartbeat(
         if status == JobStatus::Canceled {
             slog::warn!(log, "Job timeout exceeded during heartbeat"; "job_id" => ?job_id, "elapsed" => elapsed, "limit" => limit);
             let cancel_update = UpdateJob::terminate(JobStatus::Canceled, now);
+            let conn = write_conn!(context);
             let updated = cancel_update.execute_if_any_status(
-                write_conn!(context),
+                conn,
                 job_id,
                 &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
             )?;
             if updated > 0 {
+                context
+                    .callbacks
+                    .fire(log, conn, job_id, JobStatus::Canceled);
                 #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
                     bencher_otel::JobStatusKind::Canceled,
@@ -690,7 +699,10 @@ async fn handle_completed(
         slog::error!(log, "Failed to process job results"; "job_id" => ?job.id, "error" => %e);
         // Transition to Failed so startup recovery doesn't retry forever
         let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
-        failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed)?;
+        let conn = write_conn!(context);
+        if failed_update.execute_if_status(conn, job.id, JobStatus::Completed)? > 0 {
+            context.callbacks.fire(log, conn, job.id, JobStatus::Failed);
+        }
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerJobUpdate(
             bencher_otel::JobStatusKind::Failed,
@@ -700,10 +712,14 @@ async fn handle_completed(
 
     // Transition to Processed on success
     let processed_update = UpdateJob::set_status(JobStatus::Processed, now);
-    let updated =
-        processed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed)?;
+    let conn = write_conn!(context);
+    let updated = processed_update.execute_if_status(conn, job.id, JobStatus::Completed)?;
     if updated == 0 {
         slog::info!(log, "Job already changed state during Processed transition"; "job_id" => ?job.id);
+    } else {
+        context
+            .callbacks
+            .fire(log, conn, job.id, JobStatus::Processed);
     }
 
     #[cfg(feature = "otel")]
@@ -772,6 +788,11 @@ async fn handle_failed(
         slog::error!(log, "Failed to store job output"; "job_id" => ?job.id, "error" => %e);
     }
 
+    // Fired after the output is stored, so a receiver that reads the job finds it.
+    context
+        .callbacks
+        .fire(log, write_conn!(context), job.id, JobStatus::Failed);
+
     Ok(())
 }
 
@@ -812,11 +833,20 @@ async fn handle_canceled(
     // Try to transition from Claimed, Running, or Unknown to Canceled
     let update = UpdateJob::terminate(JobStatus::Canceled, now);
 
-    let updated = update.execute_if_any_status(
-        write_conn!(context),
-        job_id,
-        &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
-    )?;
+    let updated = {
+        let conn = write_conn!(context);
+        let updated = update.execute_if_any_status(
+            conn,
+            job_id,
+            &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
+        )?;
+        if updated > 0 {
+            context
+                .callbacks
+                .fire(log, conn, job_id, JobStatus::Canceled);
+        }
+        updated
+    };
 
     if updated > 0 {
         #[cfg(feature = "otel")]
@@ -1037,14 +1067,17 @@ async fn spawn_inflight_heartbeat_timeout(
     let job = QueryJob::get(auth_conn!(context), job_id)?;
     if !job.status.has_run() {
         slog::info!(log, "Channel ended ({reason}) for in-flight job, spawning heartbeat timeout"; "job_id" => ?job.id);
-        spawn_heartbeat_timeout(
+        JobTimeout {
+            heartbeat: heartbeat_timeout,
+            grace_period: context.job_timeout_grace_period,
+        }
+        .spawn_heartbeat_timeout(
             log.clone(),
-            heartbeat_timeout,
             context.database.connection.clone(),
             job.id,
             &context.heartbeat_tasks,
-            context.job_timeout_grace_period,
             context.clock.clone(),
+            context.callbacks.clone(),
         );
     }
     Ok(())

@@ -24,8 +24,8 @@ pub mod runner_spec;
 mod source_ip;
 
 pub use job::{
-    InsertJob, JobId, PendingInsertJob, QueryJob, UpdateJob, in_flight_jobs,
-    mark_orphaned_claimed_jobs_unknown, reprocess_completed_jobs, spawn_heartbeat_timeout,
+    InsertJob, JobId, JobTimeout, PendingInsertJob, QueryJob, UpdateJob, in_flight_jobs,
+    mark_orphaned_claimed_jobs_unknown, reprocess_completed_jobs,
 };
 pub use job_callback::{
     CallbackOutcome, CallbackState, HttpStatus, InsertJobCallback, QueryJobCallback,

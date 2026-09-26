@@ -291,6 +291,7 @@ version = "0.6.12"
 dependencies = [
  "bencher_api_tests",
  "bencher_billing",
+ "bencher_config",
  "bencher_endpoint",
  "bencher_json",
  "bencher_oci_storage",
@@ -1136,6 +1137,7 @@ dependencies = [
 name = "bencher_api_tests"
 version = "0.6.12"
 dependencies = [
+ "async-trait",
  "bencher_api",
  "bencher_callback",
  "bencher_config",

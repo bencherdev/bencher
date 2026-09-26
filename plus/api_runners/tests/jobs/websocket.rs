@@ -24,7 +24,7 @@ use tokio_tungstenite::tungstenite::{
 /// send Ready, and receive Job.
 /// Returns `(ws, runner_uuid, runner_key, job_uuid)`.
 #[expect(clippy::expect_used, clippy::panic, reason = "test helper")]
-async fn setup_claimed_job(
+pub(super) async fn setup_claimed_job(
     server: &TestServer,
     suffix: &str,
 ) -> (WsStream, RunnerUuid, String, JobUuid) {
@@ -2457,7 +2457,7 @@ async fn channel_failed_during_idle() {
 /// Put a job owned by a fresh runner in `status`, then connect that runner's channel
 /// without sending Ready, as a runner reconnecting with an unacknowledged result would.
 /// Returns `(ws, job_uuid, report_id)`.
-async fn setup_reconnect_with_job_in(
+pub(super) async fn setup_reconnect_with_job_in(
     server: &TestServer,
     suffix: &str,
     status: JobStatus,

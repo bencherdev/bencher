@@ -35,6 +35,8 @@ use libsqlite3_sys as _;
 // Needed for plus feature propagation
 use bencher_config as _;
 
+#[cfg(feature = "plus")]
+mod callbacks;
 mod context;
 #[cfg(feature = "plus")]
 pub mod helpers;
@@ -42,6 +44,10 @@ pub mod helpers;
 pub mod oci;
 mod seed;
 
+#[cfg(feature = "plus")]
+pub use bencher_callback::CallbackRequest;
+#[cfg(feature = "plus")]
+pub use callbacks::RecordingSender;
 pub use context::TestServer;
 #[cfg(feature = "plus")]
 pub use seed::TestProjectKey;
