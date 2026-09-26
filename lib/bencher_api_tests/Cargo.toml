@@ -10,6 +10,7 @@ publish = false
 default = ["plus", "sentry", "otel"]
 plus = [
     "bencher_api/plus",
+    "bencher_callback/plus",
     "bencher_config/plus",
     "bencher_oci_storage/plus",
     "bencher_schema/plus",
@@ -25,6 +26,7 @@ otel = ["bencher_api/otel"]
 
 [dependencies]
 bencher_api.workspace = true
+bencher_callback = { workspace = true, optional = true }
 bencher_config.workspace = true
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }

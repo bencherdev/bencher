@@ -1,6 +1,8 @@
 #[cfg(feature = "plus")]
 use bencher_billing::Biller;
 #[cfg(feature = "plus")]
+use bencher_callback::CallbackKey;
+#[cfg(feature = "plus")]
 use bencher_github_client::GitHubClient;
 #[cfg(feature = "plus")]
 use bencher_google_client::GoogleClient;
@@ -92,6 +94,8 @@ pub struct ApiContext {
     pub job_timeout_grace_period: std::time::Duration,
     #[cfg(feature = "plus")]
     pub heartbeat_tasks: HeartbeatTasks,
+    #[cfg(feature = "plus")]
+    pub callback_key: CallbackKey,
     /// Runner self-update URL construction and cloud channel checksum cache.
     #[cfg(feature = "plus")]
     pub runner_update: RunnerUpdate,

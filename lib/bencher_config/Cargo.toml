@@ -13,6 +13,7 @@ plus = [
     "dep:bencher_google_client",
     "dep:bencher_oci_storage",
     "bencher_billing/plus",
+    "bencher_callback/plus",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_license/plus",
@@ -25,6 +26,7 @@ otel = ["bencher_endpoint/otel", "bencher_recaptcha?/otel"]
 
 [dependencies]
 bencher_billing = { workspace = true, optional = true }
+bencher_callback = { workspace = true, optional = true }
 bencher_endpoint.workspace = true
 bencher_github_client = { workspace = true, optional = true }
 bencher_google_client = { workspace = true, optional = true }
