@@ -1,0 +1,21 @@
+### `--callback-header <NAME: VALUE>`
+
+<br />
+
+可选：以 `NAME: VALUE` 格式为回调请求添加一个请求头。
+可以多次指定，最多 16 个请求头。
+请用引号括起每个请求头，使 shell 将其作为一个参数传递（即 `--callback-header "Authorization: Bearer $RECEIVER_TOKEN"`）。
+如果不加引号，空格之后的所有内容都会变成基准测试命令的一部分。
+请求头名称不区分大小写，后出现的请求头会替换之前同名的请求头。
+名为 `Content-Type`、`User-Agent` 或 `Accept` 的请求头会替换 Bencher 的默认值。
+由 HTTP 客户端掌管的分帧和连接请求头会被拒绝：
+`Host`、`Content-Length`、`Transfer-Encoding`、`Connection`、`Keep-Alive`、`Proxy-Connection`、`TE`、`Trailer` 和 `Upgrade`。
+请求头名称最多 256 字节，请求头的值最多 8 KiB。
+请求头的值在每次打印输出中都会被遮盖为 `************`，因此密钥应放在请求头中。
+此选项要求设置 [`--callback-url` 选项](#--callback-url-url)。
+
+> 🐰 `bencher run` 会把它无法识别的第一个参数当作基准测试命令的开始。
+> 拼写错误的选项，例如 `--callback-ur`，会连同其后的所有参数一起成为命令的一部分：
+> 它会随 Job 一起发送，并被完整打印出来，包括其中的密钥。
+> 在第一次真正提交之前，请先运行一次命令，将 `--dry-run` 紧跟在 `bencher run` 之后、放在所有其他选项之前，
+> 并检查 `Bencher New Report` 回显中的 `cmd`。

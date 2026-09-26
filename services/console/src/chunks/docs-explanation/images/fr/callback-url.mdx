@@ -1,0 +1,54 @@
+### `--callback-url <URL>`
+
+<br />
+
+Optionnel : Définit une URL `https` à laquelle Bencher envoie une seule requête HTTP `POST`, un callback, lorsqu'un [Job sur matériel dédié][job] détaché se termine.
+Le callback permet à `bencher run` de soumettre le Job et de se terminer, au lieu de garder un runner de CI ouvert pendant l'exécution des benchmarks,
+et son destinataire peut ensuite [se rattacher au Job avec `--job`](#--job-uuid) pour publier les résultats.
+Dans GitHub Actions, [l'option `--ci-callback-token`](/fr/docs/explanation/bencher-run/#--ci-callback-token-token) écrit tout le callback pour vous.
+Cette option nécessite que [l'option `--image`][image] et [le drapeau `--detach`][detach] soient définis.
+
+Bencher envoie le callback lorsque le Job atteint un état final : `processed`, `failed` ou `canceled`.
+Le Job est déjà dans cet état lorsque la requête arrive, donc le destinataire peut lire le Job et son Rapport tout de suite.
+Le corps de la requête est le Rapport du Job ou le JSON de [l'option `--callback-body`](#--callback-body-json) avec ses marqueurs remplacés, et les en-têtes de la requête sont :
+
+- `Content-Type: application/json`
+- `User-Agent: bencher/<VERSION>`, avec la version du serveur API Bencher
+- `Accept: */*`
+- Chaque en-tête de [l'option `--callback-header`](#--callback-header-name-value), qui remplace un en-tête par défaut du même nom
+
+L'URL peut faire au plus 2048 octets.
+Chaque affichage du callback, y compris l'écho `Bencher New Report` et `--dry-run`,
+ne montre que l'origine de l'URL (son schéma, son hôte et son port) et masque chaque valeur d'en-tête en `************`.
+Le corps est affiché en entier, donc placez un secret dans un en-tête ou dans l'URL, jamais dans le corps.
+
+Seules les Organisations disposant d'un [plan Bencher Plus][pricing] envoient des callbacks, et sur Bencher Self-Hosted cela signifie une licence Team ou Enterprise.
+Pour toute autre Organisation, y compris un Projet public gratuit sur Bencher Cloud ou une Organisation Bencher Self-Hosted sans une telle licence,
+le Job s'exécute quand même, son callback est marqué `skipped`, et `bencher run` affiche `callback skipped: requires a Bencher Plus plan`.
+[Le drapeau `--quiet`](/fr/docs/explanation/bencher-run/#--quiet) masque cet avis.
+
+Bencher attend une réponse jusqu'à 10 secondes, ne suit pas les redirections et ne lit pas le corps de la réponse.
+Tout statut `2xx` compte comme livré.
+Un délai dépassé, une erreur de connexion, un `408`, un `429` ou tout `5xx` est retenté, d'abord après 4 secondes puis après 16 secondes, pour au plus trois tentatives.
+Tout autre statut est définitif.
+Pour voir le résultat, exécutez `bencher job view <PROJECT> <JOB>` :
+le champ `callback` du Job indique `pending`, `delivered`, `failed` ou `skipped`, avec le dernier statut HTTP.
+L'API ne renvoie jamais l'URL ni les en-têtes d'un callback, mais sur un Projet public, toute personne qui peut voir le Job peut voir l'état de son `callback` et le dernier statut HTTP.
+
+> 🐰 Un destinataire peut recevoir le même callback plus d'une fois, par exemple lorsque sa réponse se perd ou que Bencher redémarre pendant l'envoi.
+> Dédoublonnez sur l'UUID du Job.
+
+Bencher n'envoie un callback que vers l'internet public.
+L'URL doit utiliser `https`, et lorsque Bencher envoie le callback, il refuse l'hôte si l'une de ses adresses n'est pas publique, comme une adresse privée, de bouclage, de lien local, locale unique ou de métadonnées cloud.
+Une adresse refusée fait échouer le callback sans nouvelle tentative.
+Bencher Self-Hosted applique les mêmes règles, et aucun paramètre ne les assouplit.
+Sur Bencher Self-Hosted, les callbacks se connectent directement, jamais via un proxy,
+et changer [le `security.secret_key`][secret key] abandonne chaque callback en attente : chacun se termine en `failed` sans être envoyé.
+Les règles d'adresses ne peuvent pas connaître l'adresse publique du serveur lui-même,
+donc sur un hôte dont l'adresse publique se trouve sur l'une de ses interfaces réseau locales, un callback peut atteindre un service lié à cette adresse.
+
+[job]: /fr/docs/explanation/bare-metal/#job
+[image]: #--image-image
+[detach]: #--detach
+[pricing]: /pricing
+[secret key]: /fr/docs/reference/server-config/#security

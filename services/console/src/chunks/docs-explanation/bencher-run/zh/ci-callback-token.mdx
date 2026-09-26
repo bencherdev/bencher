@@ -1,0 +1,40 @@
+### `--ci-callback-token <TOKEN>`
+
+<br />
+
+可选：为分离的[裸机 Job][job]的回调设置 GitHub 令牌，以便第二个工作流可以发布其结果。
+使用 [`--detach` 标志][detach]和 [`--github-actions` 选项](#--github-actions-github_token)时，
+`bencher run` 会启动进行中的 GitHub 检查，提交 Job，不发布其他任何内容，然后退出。
+它会自行编写[回调](/zh/docs/explanation/images/#--callback-url-url)：
+一个类型为 `bencher_run` 的 [`repository_dispatch`][github repository dispatch] 事件，使用此令牌发送到仓库。
+事件的 `client_payload` 包含 Job UUID（`job`）、项目 slug（`project`）、
+拉取请求编号（`number`，除非工作流在 `pull_request` 或 `pull_request_target` 事件上运行或设置了 `--ci-number`，否则不存在）、头提交（`sha`）、
+GitHub 检查 ID（`check`，启动 GitHub 检查失败时不存在，此时 `bencher run --job` 会在 `sha` 上创建它）以及 `--ci-id`（`ci_id`，未设置时不存在）。
+在该事件上运行的第二个工作流会[使用 `--job` 连接到该 Job](/zh/docs/explanation/images/#--job-uuid)，
+并完成 GitHub 检查和拉取请求评论。
+有关这两个工作流，请参见 [GitHub Actions 中裸机上的 Pull Requests][pull requests on bare metal]。
+
+Bencher 通常在分离的工作流完成之后才发送该事件，而该工作流的 `GITHUB_TOKEN` 会随之过期。
+因此，此选项接受一个针对该单一仓库、具有 `Contents` `write` 权限的[细粒度个人访问令牌][github fine-grained token]，
+这是 `repository_dispatch` 接受的最低权限。
+该令牌在每次打印输出中都会被遮盖。
+请在两个工作流中都将 `--github-actions` 保持为工作流自身的 `GITHUB_TOKEN`：
+只有 GitHub App 才能创建或更新 GitHub 检查，因此在那里使用个人访问令牌永远不会产生检查，
+而两个工作流共享 GitHub Actions 应用，这使第二个工作流能够完成第一个工作流启动的 GitHub 检查。
+
+与 `--github-actions` 一起使用的 `--detach` 需要 `--ci-callback-token` 或 [`--callback-url`](/zh/docs/explanation/images/#--callback-url-url) 之一，
+因为否则没有任何东西会完成它所启动的 GitHub 检查。
+空令牌（例如未设置的仓库密钥）也会被拒绝。
+显式指定的 `--callback-url` 会替换 `repository_dispatch` 回调，供您自己的接收方使用。
+GitHub 检查仍会启动，而完成它的工作则交由该接收方负责。
+如果回调因组织没有 Bencher Plus 计划而被跳过，
+`bencher run` 会以该提示将 GitHub 检查完成为 `neutral`。
+如果 `bencher run` 在提交后无法读取回调的状态，它会打印一条警告，并让 GitHub 检查保持进行中，由 `--job` 连接来完成。
+在 GitHub Actions 之外，此选项会被忽略。
+此选项要求设置 [`--github-actions` 选项](#--github-actions-github_token)和 [`--detach` 标志][detach]。
+
+[job]: /zh/docs/explanation/bare-metal/#job
+[detach]: /zh/docs/explanation/images/#--detach
+[github repository dispatch]: https://docs.github.com/zh/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[github fine-grained token]: https://docs.github.com/zh/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[pull requests on bare metal]: /zh/docs/how-to/github-actions/#裸机上的-pull-requests

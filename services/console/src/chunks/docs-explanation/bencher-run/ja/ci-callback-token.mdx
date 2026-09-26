@@ -1,0 +1,40 @@
+### `--ci-callback-token <TOKEN>`
+
+<br />
+
+オプション: デタッチした[ベアメタルJob][job]のコールバック用のGitHubトークンを設定し、2つ目のワークフローがその結果を投稿できるようにします。
+[`--detach`フラグ][detach]と[`--github-actions`オプション](#--github-actions-github_token)を指定すると、
+`bencher run`は実行中のGitHubチェックを開始し、Jobを送信し、それ以外は何も投稿せずに終了します。
+[コールバック](/ja/docs/explanation/images/#--callback-url-url)は`bencher run`自身が作成します。
+これは`bencher_run`タイプの[`repository_dispatch`][github repository dispatch]イベントで、このトークンを使ってリポジトリに送信されます。
+イベントの`client_payload`には、JobのUUID（`job`）、プロジェクトのスラッグ（`project`）、
+プルリクエスト番号（`number`、ワークフローが`pull_request`または`pull_request_target`イベントで実行されず、`--ci-number`も設定しない場合は省略）、ヘッドコミット（`sha`）、
+GitHubチェックのID（`check`、GitHubチェックの開始に失敗した場合は省略され、その場合は`bencher run --job`が`sha`にGitHubチェックを作成）、`--ci-id`（`ci_id`、未設定の場合は省略）が含まれます。
+そのイベントで実行される2つ目のワークフローは、[`--job`でJobにアタッチ](/ja/docs/explanation/images/#--job-uuid)し、
+GitHubチェックとプルリクエストのコメントを完了します。
+両方のワークフローについては、[GitHub Actionsでのベアメタル上のプルリクエスト][pull requests on bare metal]を参照してください。
+
+Bencherは通常、デタッチしたワークフローの終了後にイベントを送信し、そのワークフローの`GITHUB_TOKEN`はワークフローとともに期限切れになります。
+そのため、このオプションには、その1つのリポジトリに対する`Contents`の`write`権限を持つ[Fine-grained personal access token][github fine-grained token]を指定します。
+これは`repository_dispatch`が受け付ける最小限の権限です。
+トークンはすべての出力でマスクされます。
+両方のワークフローで、`--github-actions`にはワークフロー自身の`GITHUB_TOKEN`を設定したままにしてください。
+GitHubチェックを作成または更新できるのはGitHub Appだけなので、そこにpersonal access tokenを指定してもGitHubチェックは作成されません。
+また、両方のワークフローはGitHub Actionsアプリを共有しているため、2つ目のワークフローが1つ目の開始したGitHubチェックを完了できます。
+
+`--github-actions`付きの`--detach`には、`--ci-callback-token`または[`--callback-url`](/ja/docs/explanation/images/#--callback-url-url)のいずれかが必要です。
+そうでなければ、開始したGitHubチェックを完了するものが何もないためです。
+未設定のリポジトリシークレットのような空のトークンも拒否されます。
+明示的な`--callback-url`は、独自の受信側のために`repository_dispatch`コールバックを置き換えます。
+その場合もGitHubチェックは開始され、その完了はその受信側に委ねられます。
+組織がBencher Plusプランでないためにコールバックがスキップされた場合、
+`bencher run`はその通知とともにGitHubチェックを`neutral`として完了します。
+送信後にコールバックの状態を読み取れない場合、`bencher run`は警告を出力し、`--job`によるアタッチが完了できるようにGitHubチェックを実行中のままにします。
+GitHub Actionsの外では、このオプションは無視されます。
+このオプションは、[`--github-actions`オプション](#--github-actions-github_token)と[`--detach`フラグ][detach]が設定されている必要があります。
+
+[job]: /ja/docs/explanation/bare-metal/#job
+[detach]: /ja/docs/explanation/images/#--detach
+[github repository dispatch]: https://docs.github.com/ja/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[github fine-grained token]: https://docs.github.com/ja/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[pull requests on bare metal]: /ja/docs/how-to/github-actions/#ベアメタル上のプルリクエスト

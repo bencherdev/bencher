@@ -1,0 +1,54 @@
+### `--callback-url <URL>`
+
+<br />
+
+Optional: Set an `https` URL that Bencher sends one HTTP `POST` request to, a callback, when a detached [Bare Metal Job][job] finishes.
+The callback lets `bencher run` submit the Job and exit instead of holding a CI runner open while the benchmarks run,
+and its receiver can then [attach to the Job with `--job`](#--job-uuid) to post the results.
+On GitHub Actions, [the `--ci-callback-token` option](/docs/explanation/bencher-run/#--ci-callback-token-token) writes the whole callback for you.
+This option requires [the `--image` option][image] and [the `--detach` flag][detach] to be set.
+
+Bencher sends the callback when the Job reaches a terminal state: `processed`, `failed`, or `canceled`.
+The Job is already in that state when the request arrives, so the receiver can read the Job and its Report right away.
+The request body is the Job's Report, or the JSON of [the `--callback-body` option](#--callback-body-json) with its placeholders filled in, and the request headers are:
+
+- `Content-Type: application/json`
+- `User-Agent: bencher/<VERSION>`, with the version of the Bencher API server
+- `Accept: */*`
+- Each header from [the `--callback-header` option](#--callback-header-name-value), which replaces a default header of the same name
+
+The URL can be at most 2048 bytes.
+Every printout of the callback, including the `Bencher New Report` echo and `--dry-run`,
+shows only the URL's origin (its scheme, host, and port) and masks every header value as `************`.
+The body is printed in full, so put a secret in a header or in the URL, never in the body.
+
+Only Organizations on a [Bencher Plus plan][pricing] send callbacks, and on Bencher Self-Hosted that means a Team or Enterprise license.
+For any other Organization, including a free public Project on Bencher Cloud or a Bencher Self-Hosted Organization without such a license,
+the Job still runs, its callback is marked `skipped`, and `bencher run` prints `callback skipped: requires a Bencher Plus plan`.
+[The `--quiet` flag](/docs/explanation/bencher-run/#--quiet) hides this notice.
+
+Bencher waits up to 10 seconds for a response, does not follow redirects, and does not read the response body.
+Any `2xx` status counts as delivered.
+A timeout, a connection error, a `408`, a `429`, or any `5xx` is retried, first after 4 seconds and then after 16 seconds, for at most three attempts.
+Any other status is final.
+To see the outcome, run `bencher job view <PROJECT> <JOB>`:
+the Job's `callback` shows `pending`, `delivered`, `failed`, or `skipped`, along with the last HTTP status.
+The API never returns a callback's URL or headers, but on a public Project anyone who can view the Job can see its `callback` state and last HTTP status.
+
+> 🐰 A receiver can get the same callback more than once, for example when its response is lost or Bencher restarts while sending it.
+> Dedupe on the Job UUID.
+
+Bencher refuses to send a callback anywhere but the public internet.
+The URL must use `https`, and when Bencher sends the callback, it refuses the host if any of its addresses is not public, such as a private, loopback, link-local, unique local, or cloud metadata address.
+A refused address fails the callback without a retry.
+Bencher Self-Hosted applies the same rules, and no setting relaxes them.
+On Bencher Self-Hosted, callbacks connect directly, never through a proxy,
+and changing [the `security.secret_key`][secret key] drops every pending callback: each one ends `failed` without being sent.
+The address rules cannot know the server's own public address,
+so on a host whose public address sits on one of its local network interfaces, a callback can reach a service bound to that address.
+
+[job]: /docs/explanation/bare-metal/#job
+[image]: #--image-image
+[detach]: #--detach
+[pricing]: /pricing
+[secret key]: /docs/reference/server-config/#security

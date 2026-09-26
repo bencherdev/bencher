@@ -1,0 +1,44 @@
+import CallbackBodyExample from "../callback-body-example.mdx";
+
+### `--callback-body <JSON>`
+
+<br />
+
+Optional: Set the JSON body of the callback request.
+This option requires [the `--callback-url` option](#--callback-url-url) to be set.
+Without `--callback-body`, the body is the Job's Report,
+the same JSON that `GET /v0/projects/{project}/reports/{report}` returns.
+The Report names its Job by UUID (`job`) but not the Job's state,
+so to learn whether the Job failed, have the receiver read the Job with `GET /v0/projects/{project}/jobs/{job}`, or send `{{ job.status }}` in the body.
+On a private Project, that Report holds the Project's private results, so send it only to a receiver you trust.
+
+A string value in the body that is exactly one of these placeholders is sent as its value:
+
+| Placeholder          | Value                                                          |
+| -------------------- | -------------------------------------------------------------- |
+| `{{ job.uuid }}`     | The Job UUID                                                   |
+| `{{ job.status }}`   | The Job's terminal state: `processed`, `failed`, or `canceled` |
+| `{{ report.uuid }}`  | The Report UUID                                                |
+| `{{ project.uuid }}` | The Project UUID                                               |
+| `{{ project.slug }}` | The Project slug                                               |
+| `{{ report }}`       | The whole Report                                               |
+
+Whitespace inside the braces is optional, so `"{{job.uuid}}"` works too.
+Each value is a JSON string, except `{{ report }}`, which is the Report itself,
+the same JSON as the body without `--callback-body` and with the same private results.
+So a body of `"{{ report }}"` is the same as no `--callback-body`,
+and `{"event": "bencher", "report": "{{ report }}"}` wraps the Report in an envelope of your own.
+A body can hold `{{ report }}` only once.
+Every other string, every key, and every other value is sent as it is.
+A placeholder inside a longer string (ie `"Job {{ job.uuid }}"`) is plain text, and there is no branching,
+so a receiver that needs the outcome reads `{{ job.status }}`.
+A string that starts with `{{` and ends with `}}` but names anything else is an error, never an empty string.
+The body can be at most 64 KiB, counting each placeholder at its longest value and `{{ report }}` as nothing.
+Before it submits the Job, `bencher run` checks the body, and the server checks it again.
+
+For example, to post a message to a Slack incoming webhook, whose URL holds its secret:
+
+<CallbackBodyExample />
+
+The body is printed in full and never masked, so never put a secret in it.
+Put a secret in [a header](#--callback-header-name-value) or in the URL instead.

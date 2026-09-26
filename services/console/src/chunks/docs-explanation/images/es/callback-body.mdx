@@ -1,0 +1,44 @@
+import CallbackBodyExample from "../callback-body-example.mdx";
+
+### `--callback-body <JSON>`
+
+<br />
+
+Opcional: Establece el cuerpo JSON de la petición del callback.
+Esta opción requiere que [la opción `--callback-url`](#--callback-url-url) esté establecida.
+Sin `--callback-body`, el cuerpo es el informe del Job,
+el mismo JSON que devuelve `GET /v0/projects/{project}/reports/{report}`.
+El informe nombra a su Job por UUID (`job`), pero no indica el estado del Job,
+así que para saber si el Job falló, haga que el receptor lea el Job con `GET /v0/projects/{project}/jobs/{job}`, o envíe `{{ job.status }}` en el cuerpo.
+En un Proyecto privado, ese informe contiene los resultados privados del Proyecto, así que envíelo solo a un receptor de confianza.
+
+Un valor de cadena del cuerpo que sea exactamente uno de estos marcadores de posición se envía como su valor:
+
+| Marcador             | Valor                                                       |
+| -------------------- | ----------------------------------------------------------- |
+| `{{ job.uuid }}`     | El UUID del Job                                             |
+| `{{ job.status }}`   | El estado final del Job: `processed`, `failed` o `canceled` |
+| `{{ report.uuid }}`  | El UUID del informe                                         |
+| `{{ project.uuid }}` | El UUID del Proyecto                                        |
+| `{{ project.slug }}` | El slug del Proyecto                                        |
+| `{{ report }}`       | El informe completo                                         |
+
+Los espacios dentro de las llaves son opcionales, así que `"{{job.uuid}}"` también funciona.
+Cada valor es una cadena JSON, excepto `{{ report }}`, que es el propio informe,
+el mismo JSON que el cuerpo sin `--callback-body` y con los mismos resultados privados.
+Así, un cuerpo `"{{ report }}"` equivale a no usar `--callback-body`,
+y `{"event": "bencher", "report": "{{ report }}"}` envuelve el informe en un sobre propio.
+Un cuerpo solo puede contener `{{ report }}` una vez.
+Cualquier otra cadena, clave o valor se envía tal cual.
+Un marcador dentro de una cadena más larga (es decir, `"Job {{ job.uuid }}"`) es texto literal, y no hay ramificaciones,
+así que un receptor que necesite el resultado lee `{{ job.status }}`.
+Una cadena que empieza con `{{` y termina con `}}` pero nombra otra cosa es un error, nunca una cadena vacía.
+El cuerpo puede tener como máximo 64 KiB, contando cada marcador con su valor más largo y `{{ report }}` como nada.
+Antes de enviar el Job, `bencher run` comprueba el cuerpo, y el servidor lo vuelve a comprobar.
+
+Por ejemplo, para publicar un mensaje en un webhook entrante de Slack, cuya URL contiene su secreto:
+
+<CallbackBodyExample />
+
+El cuerpo se imprime completo y nunca se enmascara, así que nunca ponga un secreto en él.
+Ponga un secreto en [un encabezado](#--callback-header-name-value) o en la URL.

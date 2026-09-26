@@ -1,0 +1,54 @@
+### `--callback-url <URL>`
+
+<br />
+
+オプション: デタッチした[ベアメタルJob][job]が終了したときに、BencherがHTTP `POST`リクエストを1回送信する`https` URL、つまりコールバックを設定します。
+コールバックにより、`bencher run`はベンチマークの実行中にCIランナーを保持し続けることなく、Jobを送信して終了できます。
+その受信側は、[`--job`でJobにアタッチ](#--job-uuid)して結果を投稿できます。
+GitHub Actionsでは、[`--ci-callback-token`オプション](/ja/docs/explanation/bencher-run/#--ci-callback-token-token)がコールバック全体を自動で作成します。
+このオプションは、[`--image`オプション][image]と[`--detach`フラグ][detach]が設定されている必要があります。
+
+BencherはJobが終了状態（`processed`、`failed`、または`canceled`）に達したときにコールバックを送信します。
+リクエストが届いた時点でJobはすでにその状態にあるため、受信側はJobとそのレポートをすぐに読み取れます。
+リクエストボディはJobのレポート、またはプレースホルダーに値を入れた[`--callback-body`オプション](#--callback-body-json)のJSONで、リクエストヘッダーは次のとおりです。
+
+- `Content-Type: application/json`
+- `User-Agent: bencher/<VERSION>`（Bencher APIサーバーのバージョン）
+- `Accept: */*`
+- [`--callback-header`オプション](#--callback-header-name-value)の各ヘッダー（同じ名前のデフォルトヘッダーを置き換えます）
+
+URLは最大2048バイトです。
+`Bencher New Report`のエコーや`--dry-run`を含むコールバックのすべての出力は、
+URLのオリジン（スキーム、ホスト、ポート）のみを表示し、すべてのヘッダー値を`************`としてマスクします。
+ボディは完全に出力されるため、シークレットはボディではなく、ヘッダーまたはURLに入れてください。
+
+コールバックを送信するのは、[Bencher Plusプラン][pricing]の組織だけです。Bencher Self-Hostedでは、TeamまたはEnterpriseのライセンスがあることを意味します。
+Bencher Cloud上の無料の公開プロジェクトや、そのようなライセンスを持たないBencher Self-Hostedの組織を含むそれ以外の組織では、
+Jobはそのまま実行され、そのコールバックは`skipped`としてマークされ、`bencher run`は`callback skipped: requires a Bencher Plus plan`を出力します。
+[`--quiet`フラグ](/ja/docs/explanation/bencher-run/#--quiet)はこの通知を非表示にします。
+
+Bencherはレスポンスを最大10秒間待ち、リダイレクトには従わず、レスポンスボディは読み取りません。
+`2xx`ステータスはすべて配信済みとみなされます。
+タイムアウト、接続エラー、`408`、`429`、または任意の`5xx`は、まず4秒後、次に16秒後に再試行され、最大3回試行されます。
+それ以外のステータスは最終的なものです。
+結果を確認するには、`bencher job view <PROJECT> <JOB>`を実行します。
+Jobの`callback`には、`pending`、`delivered`、`failed`、または`skipped`が、最後のHTTPステータスとともに表示されます。
+APIがコールバックのURLやヘッダーを返すことはありませんが、公開プロジェクトでは、Jobを閲覧できる人なら誰でもその`callback`の状態と最後のHTTPステータスを見ることができます。
+
+> 🐰 受信側は同じコールバックを複数回受け取ることがあります。たとえば、そのレスポンスが失われた場合や、送信中にBencherが再起動した場合です。
+> JobのUUIDで重複を排除してください。
+
+Bencherはパブリックなインターネット以外にはコールバックを送信しません。
+URLは`https`を使用する必要があり、Bencherはコールバックの送信時に、ホストのアドレスのいずれかがパブリックでない場合（たとえばプライベート、ループバック、リンクローカル、ユニークローカル、またはクラウドのメタデータアドレス）、そのホストを拒否します。
+拒否されたアドレスでは、コールバックは再試行されずに失敗します。
+Bencher Self-Hostedでも同じルールが適用され、それを緩める設定はありません。
+Bencher Self-Hostedでは、コールバックはプロキシを経由せず直接接続します。
+また、[`security.secret_key`][secret key]を変更すると、保留中のすべてのコールバックが破棄され、それぞれ送信されないまま`failed`になります。
+アドレスのルールはサーバー自身のパブリックアドレスを知ることができません。
+そのため、パブリックアドレスがローカルのネットワークインターフェースのいずれかにあるホストでは、コールバックがそのアドレスにバインドされたサービスに到達する可能性があります。
+
+[job]: /ja/docs/explanation/bare-metal/#job
+[image]: #--image-image
+[detach]: #--detach
+[pricing]: /pricing
+[secret key]: /ja/docs/reference/server-config/#security

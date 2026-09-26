@@ -8,6 +8,7 @@ Quando esta opção é definida e `bencher run` é usado no GitHub Actions,
 os resultados serão adicionados ao commit head como uma Verificação do GitHub chamada `Bencher Report (<NOME DO PROJETO>)` (ou `Bencher Report (<ID>)` se `--ci-id` estiver definido),
 de modo que execuções de Projetos diferentes no mesmo commit recebam cada uma a sua própria Verificação do GitHub.
 A Verificação do GitHub falhará se um Alerta for gerado, então ela pode ser usada como uma verificação de status obrigatória na proteção de branch.
+Ela também falha se um Job em hardware dedicado falhar, e é concluída como `cancelled` se o Job for cancelado.
 Observe que renomear o Projeto também renomeia a Verificação do GitHub, então use `--ci-id` se precisar de um nome que só você controle.
 A Verificação do GitHub é criada com um status `in_progress` antes do início dos benchmarks e é concluída com os resultados assim que eles terminam.
 Isso requer que o nome do Projeto seja resolvido antes do início dos benchmarks, o que só é possível se `--project` estiver definido e o Projeto já existir. Caso contrário, a Verificação do GitHub em andamento é chamada `Bencher Report` até que os resultados sejam publicados.
@@ -18,6 +19,8 @@ Quando `bencher run` é usado como parte de um pull request,
 os resultados também serão adicionados ao pull request como um comentário.
 Isso requer que o token tenha [o escopo de `pull-requests` com permissões de `write`][github token permissions].
 Os resultados também serão sempre adicionados ao resumo do trabalho.
+Com [a flag `--detach`](/pt/docs/explanation/images/#--detach), a execução desanexada não publica nenhum comentário nem escreve o resumo do trabalho, e [a conexão com `--job`](/pt/docs/explanation/images/#--job-uuid) conclui a Verificação do GitHub que ela iniciou (veja [a opção `--ci-callback-token`](#--ci-callback-token-token)).
+Um token vazio, como um segredo não definido, é recusado antes de a execução começar.
 
 [github token]: https://docs.github.com/pt/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/pt/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token

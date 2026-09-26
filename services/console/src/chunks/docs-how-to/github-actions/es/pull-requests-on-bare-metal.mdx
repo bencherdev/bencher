@@ -1,0 +1,193 @@
+import PullRequestsOnBareMetalSubmitCode from "../pull-requests-on-bare-metal-submit-code.mdx";
+import PullRequestsOnBareMetalAttachCode from "../pull-requests-on-bare-metal-attach-code.mdx";
+
+## Pull Requests en hardware dedicado
+
+Una ejecución en [hardware dedicado][bare metal] ocupa su runner de GitHub Actions durante todo el tiempo que duran los benchmarks,
+ya que `bencher run` espera a que el Job termine.
+Para liberar el runner, un primer workflow envía el Job con [la bandera `--detach`][detach option] y termina.
+Cuando el Job termina, Bencher envía un evento [`repository_dispatch`][github repository_dispatch] a tu repositorio,
+y un segundo workflow [se conecta al Job][job option] y publica los resultados como una Verificación de GitHub y un comentario en la pull request,
+exactamente como lo habría hecho una ejecución sin desacoplar.
+Usar callbacks requiere un [plan Bencher Plus][pricing].
+
+> ⚠️ ¡Esta solución solo funciona si todas las PRs son del **mismo** repositorio!
+> El primer workflow necesita los secretos de tu repositorio.
+> Consulta [Pull Requests desde Forks][pull requests from forks] más arriba.
+
+El evento necesita un token que sobreviva al primer workflow, ya que Bencher normalmente lo envía cuando el `GITHUB_TOKEN` de ese workflow ya ha caducado.
+Crea un [token de acceso personal de grano fino][github fine-grained token] para ese único repositorio con el permiso `Contents` `Read and write`,
+y agrégalo como un secreto de **Repository** llamado `BENCHER_CALLBACK_TOKEN`.
+El permiso `Contents` `write` también permite al token hacer push de commits a ese repositorio, así que nunca le des acceso a ningún otro.
+Ambos workflows siguen pasando su propio `GITHUB_TOKEN` a `--github-actions`:
+solo una GitHub App puede crear o actualizar una Verificación de GitHub,
+y ambos workflows comparten la app de GitHub Actions, lo que permite que el segundo complete la Verificación de GitHub que inició el primero.
+Consulta [los documentos de `--ci-callback-token`][ci callback token option] para una visión completa.
+
+<PullRequestsOnBareMetalSubmitCode />
+
+1. Crea un primer archivo de `workflow` de GitHub Actions.
+   (ej: `.github/workflows/pr_bare_metal_benchmarks.yml`)
+2. Ejecuta en eventos de `pull_request`, como en [Pull Requests][pull requests] más arriba.
+   (ej: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
+3. Crea un `job` de GitHub Actions.
+   (ej: `jobs: submit_pr_benchmarks`)
+4. Ejecuta en eventos de `pull_request` si y solo si la pull request es del mismo repositorio.
+   ⚠️ ¡NO ELIMINES ESTA LÍNEA!
+   Para manejar PRs de Forks, consulta [Pull Requests desde Forks][pull requests from forks] más arriba.
+   (ej: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
+5. Establece [los permisos para el `GITHUB_TOKEN`][github token permissions]
+   en `write` para `checks`.
+   El primer workflow inicia la Verificación de GitHub y no publica ningún comentario.
+   (ej: `permissions: checks: write`)
+6. Establece el tipo de máquina en la que se ejecutará el trabajo.
+   Solo envía el Job, así que basta con una máquina pequeña.
+   (ej: `runs-on: ubuntu-latest`)
+7. Clona el código fuente de la rama PR.
+   (ej: `uses: actions/checkout@v6`)
+8. Instala el Bencher CLI usando [la GitHub Action][bencher cli github action].
+   (ej: `uses: bencherdev/bencher@main`)
+9. Usa el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+   para enviar tus benchmarks de la rama de la pull request.
+   Consulta [el subcomando CLI `bencher run`][bencher run] para una visión completa.
+   (ej: `bencher run`)
+10. Establece la opción `--project` al slug del Proyecto.
+    Consulta [los documentos de `--project`][project option] para más detalles.
+    (ej: `--project project-abc4567-wxyz123456789`)
+11. Establece la opción `--key` al secreto **Repository** `BENCHER_API_KEY`.
+    Consulta [los documentos de `--key`][key option] para más detalles.
+    (ej: `--key '${{ secrets.BENCHER_API_KEY }}'`)
+12. Establece la opción `--branch` al nombre de la rama PR
+    usando [la variable de entorno predeterminada `GITHUB_HEAD_REF` de GitHub Actions][github default environment variables].
+    Consulta [los documentos de `--branch`][branch option] para una visión completa.
+    (ej: `--branch "$GITHUB_HEAD_REF"`)
+13. Establece el Punto de Inicio para la Rama PR, como en [Pull Requests][pull requests] más arriba.
+    Consulta [los documentos de `--start-point`][start point] para una visión completa.
+    (ej: `--start-point "$GITHUB_BASE_REF"`)
+14. Establece la opción `--adapter` al [Formato de Métrica Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+    Consulta [adaptadores de harness de benchmark][adapter json] para una visión completa.
+    (ej: `--adapter json`)
+15. Establece la opción `--image` a tu imagen para hardware dedicado.
+    Consulta [los documentos de `--image`][image option] para una visión completa.
+    (ej: `--image project-abc4567-wxyz123456789:latest`)
+16. Establece la bandera `--detach` para terminar en cuanto se envíe el Job.
+    Consulta [los documentos de `--detach`][detach option] para más detalles.
+    (ej: `--detach`)
+17. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para iniciar la Verificación de GitHub usando
+    [la variable de entorno `GITHUB_TOKEN` de GitHub Actions][github token].
+    Consulta [los documentos de `--github-actions`][github actions option] para más detalles.
+    (ej: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+18. Establece la opción `--ci-callback-token` al secreto **Repository** `BENCHER_CALLBACK_TOKEN`,
+    para que Bencher pueda enviar el evento `repository_dispatch` cuando el Job termine.
+    Consulta [los documentos de `--ci-callback-token`][ci callback token option] para más detalles.
+    (ej: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
+19. Especifica el comando de benchmark que se ejecuta en la imagen.
+    El comando se pasa al entrypoint de la imagen, si tiene uno (consulta [la opción `--entrypoint`][entrypoint option]).
+    Consulta [comando de benchmark][command argument] para una visión completa.
+    (ej: `bencher mock`)
+
+<PullRequestsOnBareMetalAttachCode />
+
+1. Crea un segundo archivo de `workflow` de GitHub Actions en tu rama predeterminada.
+   GitHub solo ejecuta un workflow de `repository_dispatch` desde la rama predeterminada,
+   así que hasta que este archivo esté allí, la Verificación de GitHub que inicia el primer workflow permanece en curso.
+   (ej: `.github/workflows/pr_bare_metal_benchmarks_attach.yml`)
+2. Ejecuta en eventos de `repository_dispatch` del tipo `bencher_run`.
+   Consulta la [documentación de GitHub Actions `on`][github actions on]
+   y la [documentación de GitHub Actions `repository_dispatch`][github repository_dispatch] para una visión completa.
+   (ej: `on: repository_dispatch: types: [bencher_run]`)
+3. Crea un `job` de GitHub Actions.
+   (ej: `jobs: attach_pr_benchmarks`)
+4. Establece [los permisos para el `GITHUB_TOKEN`][github token permissions]
+   en `write` para `checks` y `pull-requests`.
+   (ej: `permissions: checks: write pull-requests: write`)
+5. Establece el tipo de máquina en la que se ejecutará el trabajo.
+   El Job ya ha terminado, así que este trabajo solo publica los resultados.
+   (ej: `runs-on: ubuntu-latest`)
+6. Instala el Bencher CLI usando [la GitHub Action][bencher cli github action].
+   No hace falta clonar el código.
+   (ej: `uses: bencherdev/bencher@main`)
+7. Pasa el UUID del Job del evento a través de [una variable de entorno intermedia][github intermediate environment variable],
+   nunca directamente en `run:`, como indica la guía de GitHub sobre inyección de scripts.
+   (ej: `env: JOB_UUID: ${{ github.event.client_payload.job }}`)
+8. Usa el subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+   para conectarte al Job.
+   Consulta [el subcomando CLI `bencher run`][bencher run] para una visión completa.
+   (ej: `bencher run`)
+9. Establece la opción `--project` al slug del Proyecto.
+   Si el repositorio tiene más de un Proyecto, pasa `github.event.client_payload.project` por una variable de entorno de la misma forma
+   y ponla entre comillas (ej: `--project "$PROJECT_SLUG"`).
+   Consulta [los documentos de `--project`][project option] para más detalles.
+   (ej: `--project project-abc4567-wxyz123456789`)
+10. Establece la opción `--key` al secreto **Repository** `BENCHER_API_KEY`.
+    Consulta [los documentos de `--key`][key option] para más detalles.
+    (ej: `--key '${{ secrets.BENCHER_API_KEY }}'`)
+11. Establece la opción `--job` al UUID del Job entre comillas.
+    Consulta [los documentos de `--job`][job option] para una visión completa.
+    (ej: `--job "$JOB_UUID"`)
+12. Establece la bandera `--error-on-alert` para fallar el comando si se genera una Alerta.
+    El evento solo lleva datos, así que las opciones que deciden cómo se publican los resultados, como `--ci-only-on-alert` y `--ci-public-links`, también van aquí, en el segundo workflow.
+    Consulta [los documentos de `--error-on-alert`][alert err] para una visión completa.
+    (ej: `--error-on-alert`)
+13. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como una Verificación de GitHub y un comentario en la Pull Request usando
+    [la variable de entorno `GITHUB_TOKEN` de GitHub Actions][github token].
+    El número de la pull request, el commit de encabezado, la Verificación de GitHub y el `--ci-id` vienen todos del evento,
+    y un `--ci-number` o `--ci-id` explícito aquí tiene prioridad sobre el evento.
+    Consulta [los documentos de `--github-actions`][github actions option] para más detalles.
+    (ej: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
+
+Da a cada trabajo del primer workflow su propio `--ci-id` siempre que dos de ellos, como las entradas de una `matrix`,
+compartan un Proyecto, una Rama, un Testbed y un Adaptador en una misma pull request (ej: `--ci-id '${{ matrix.suite }}'`).
+El evento lleva el `--ci-id` al segundo workflow.
+Sin él, sus ejecuciones con `--job` pueden publicar en un mismo comentario:
+`bencher run --job` distingue un Job de `--build-time` o `--file-size` por sus resultados, y un Job fallido no tiene ninguno.
+Un `--ci-id` que sea exactamente un marcador de posición del cuerpo del callback, como `{{ job.uuid }}`, llega como su valor, y uno con la forma de un marcador alrededor de cualquier otro nombre, como `{{ x }}`, hace fallar la ejecución.
+
+Algunas reglas deciden qué pasa con la Verificación de GitHub que inicia el primer workflow:
+
+- `--detach` con `--github-actions` necesita `--ci-callback-token` o un `--callback-url` explícito, y sin uno de ellos `bencher run` lo rechaza al analizar la línea de comandos.
+  Un token vacío, como un secreto de repositorio sin definir, también se rechaza.
+- Ambos workflows necesitan un CLI `bencher` que tenga `--ci-callback-token` y `--job`.
+  `bencherdev/bencher@main` instala la última versión, salvo que su entrada `version` fije otra.
+- Un error en la línea de comandos del segundo workflow, como una bandera mal escrita, lo detiene antes de llegar a la Verificación de GitHub,
+  así que la Verificación de GitHub que inició el primer workflow permanece en curso hasta que el segundo workflow se corrija y se vuelva a ejecutar.
+- Un token de acceso personal de grano fino caduca.
+  Cuando `BENCHER_CALLBACK_TOKEN` caduca, cada callback falla con un `401` y cada Verificación de GitHub que inicia el primer workflow permanece en curso.
+  Cada Job conserva el token con el que se envió, así que renueva el token con bastante antelación y mantén válido el token anterior hasta que termine cada Job enviado con él.
+- Si el Job falló o fue cancelado, el segundo workflow completa la Verificación de GitHub como `failure` o `cancelled` y publica el comentario en la pull request según las reglas habituales (así que `--ci-only-on-alert` sigue omitiendo un primer comentario).
+  El error del Job está en el log del segundo workflow, no en la Verificación de GitHub.
+- Si la Organización no tiene un plan Bencher Plus, el callback se omite.
+  El primer workflow completa la Verificación de GitHub como `neutral` con el motivo (ej: `callback skipped: requires a Bencher Plus plan`).
+- Si el primer workflow no puede volver a leer el Job después de enviarlo, imprime una advertencia y deja la Verificación de GitHub en curso para que la complete el segundo workflow.
+- Fuera de GitHub Actions, `--ci-callback-token` se ignora.
+- En GitHub Enterprise Server, la URL de la API (`GITHUB_API_URL`) debe ser accesible por `https`, en una dirección pública, desde el servidor de Bencher que envía el callback.
+
+[github actions on]: https://docs.github.com/es/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github repository_dispatch]: https://docs.github.com/es/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[github token permissions]: https://docs.github.com/es/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github fine-grained token]: https://docs.github.com/es/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github default environment variables]: https://docs.github.com/es/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
+[github token]: https://docs.github.com/es/actions/security-guides/automatic-token-authentication
+[github intermediate environment variable]: https://docs.github.com/es/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+
+[bare metal]: /es/docs/explanation/bare-metal/
+[pricing]: /pricing
+[bencher run]: /es/docs/explanation/bencher-run/
+[project option]: /es/docs/explanation/bencher-run/#--project-project
+[key option]: /es/docs/explanation/bencher-run/#--key-key
+[branch option]: /es/docs/explanation/branches/#--branch-branch
+[start point]: /es/docs/explanation/branches/#--start-point-branch
+[bmf]: /es/docs/reference/bencher-metric-format/
+[adapter json]: /es/docs/explanation/adapters/#-json
+[image option]: /es/docs/explanation/images/#--image-image
+[entrypoint option]: /es/docs/explanation/images/#--entrypoint-entrypoint
+[detach option]: /es/docs/explanation/images/#--detach
+[github actions option]: /es/docs/explanation/bencher-run/#--github-actions-github_token
+[ci callback token option]: /es/docs/explanation/bencher-run/#--ci-callback-token-token
+[job option]: /es/docs/explanation/images/#--job-uuid
+[alert err]: /es/docs/explanation/thresholds/#--error-on-alert
+[command argument]: /es/docs/explanation/bencher-run/#comando-de-benchmark
+
+[pull requests]: #pull-requests
+[pull requests from forks]: #pull-requests-desde-forks

@@ -1,0 +1,32 @@
+### `--job <UUID>`
+
+<br />
+
+Необязательно: Подключиться к уже отправленному [Job на выделенном оборудовании][job], например к Job, отправленному с [флагом `--detach`][detach].
+`bencher run` ждет завершения Job, а затем публикует его результаты точно так же, как это сделал бы неотсоединенный `bencher run --image`:
+отчет в стандартный вывод, проверку GitHub и комментарий к pull request от [опции `--github-actions`](/ru/docs/explanation/bencher-run/#--github-actions-github_token),
+а также [флаг `--error-on-alert`][error on alert].
+Используйте UUID Job, который вывел отсоединенный запуск (например, `Remote job submitted successfully: <UUID>`).
+Эта опция требует, чтобы [опция `--project`](/ru/docs/explanation/bencher-run/#--project-project) была задана на Проект этого Job.
+Уже завершенный Job возвращается сразу.
+Если Job завершился неудачей или был отменен, `bencher run` все равно публикует его отчет, завершает проверку GitHub как `failure` или `cancelled` и завершается с ошибкой.
+
+Вместе с `--job` [опция `--job-timeout`][job timeout] задает все время ожидания в секундах и не удваивается, как вместе с `--image`.
+Без нее время ожидания равно удвоенному тайм-ауту самого Job.
+`--job` также принимает `--format`, `--quiet`, `--error-on-alert`, `--github-actions`, `--ci-only-thresholds`, `--ci-only-on-alert`, `--ci-public-links`, `--ci-id`, `--ci-number`, `--job-poll-interval` и опции подключения, такие как `--host`.
+
+Отчет уже существует, поэтому опция отчета вместе с `--job` является ошибкой,
+независимо от того, указана ли она явно, например `--branch`, `--testbed`, `--adapter` или команда бенчмарка,
+или задана через свою переменную окружения (`BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER` или `BENCHER_CMD`).
+Следовательно, [подключающийся workflow][pull requests on bare metal] не должен задавать ни одну из этих переменных.
+
+В GitHub Actions, когда `--job` запускается по событию `repository_dispatch`, которое отправляет [опция `--ci-callback-token`](/ru/docs/explanation/bencher-run/#--ci-callback-token-token),
+он читает номер pull request, head-коммит, проверку GitHub и `--ci-id` из `client_payload` события
+и завершает проверку GitHub, которую запустил отсоединенный запуск.
+Явно заданные `--ci-number` или `--ci-id` имеют приоритет над payload.
+
+[job]: /ru/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[error on alert]: /ru/docs/explanation/thresholds/#--error-on-alert
+[job timeout]: #--job-timeout-seconds
+[pull requests on bare metal]: /ru/docs/how-to/github-actions/#pull-requests-на-выделенном-оборудовании

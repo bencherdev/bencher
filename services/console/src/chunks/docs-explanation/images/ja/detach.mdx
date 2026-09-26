@@ -3,8 +3,18 @@
 <br />
 
 リモートJobを送信した後、完了を待たずにデタッチします。
+`bencher run`はJobのUUIDを出力して（例：`Remote job submitted successfully: <UUID>`）終了します。
+`--quiet`を指定するとこの行は出力されませんが、`--format json`が出力するレポートには引き続き`job`としてJobのUUIDが含まれます。
+後で結果を投稿するには、[`bencher run --job`でJobにアタッチ][job option]するか、
+Jobの終了時にBencherに[コールバック][callback url]を送信させ、その受信側がアタッチできるようにします。
+`--github-actions`付きの`--detach`には[`--ci-callback-token`オプション][ci callback token]または`--callback-url`が必要です。
+これにより、[2つ目のワークフロー][pull requests on bare metal]がGitHubチェックを完了できます。
 このオプションは、[`--image`オプション][image]が設定されている必要があります。
 このオプションは、[`--job-poll-interval`オプション][job poll interval]と競合します。
 
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[job option]: #--job-uuid
+[callback url]: #--callback-url-url
+[ci callback token]: /ja/docs/explanation/bencher-run/#--ci-callback-token-token
+[pull requests on bare metal]: /ja/docs/how-to/github-actions/#ベアメタル上のプルリクエスト

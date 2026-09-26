@@ -1,0 +1,32 @@
+### `--job <UUID>`
+
+<br />
+
+Optionnel : Se rattache à un [Job sur matériel dédié][job] déjà soumis, par exemple un Job soumis avec [le drapeau `--detach`][detach].
+`bencher run` attend la fin du Job, puis publie ses résultats exactement comme l'aurait fait un `bencher run --image` non détaché :
+le Rapport sur la sortie standard, la vérification GitHub et le commentaire sur la pull request de [l'option `--github-actions`](/fr/docs/explanation/bencher-run/#--github-actions-github_token),
+ainsi que [le drapeau `--error-on-alert`][error on alert].
+Utilisez l'UUID du Job affiché par l'exécution détachée (c'est-à-dire `Remote job submitted successfully: <UUID>`).
+Cette option nécessite que [l'option `--project`](/fr/docs/explanation/bencher-run/#--project-project) soit définie sur le Projet du Job.
+Un Job déjà terminé revient immédiatement.
+Si le Job a échoué ou a été annulé, `bencher run` publie quand même son Rapport, complète la vérification GitHub en `failure` ou `cancelled` et se termine avec une erreur.
+
+À côté de `--job`, [l'option `--job-timeout`][job timeout] est l'attente totale en secondes, sans être doublée comme elle l'est à côté de `--image`.
+Sans elle, l'attente est le double du délai d'expiration propre au Job.
+`--job` accepte aussi `--format`, `--quiet`, `--error-on-alert`, `--github-actions`, `--ci-only-thresholds`, `--ci-only-on-alert`, `--ci-public-links`, `--ci-id`, `--ci-number`, `--job-poll-interval` et les options de connexion comme `--host`.
+
+Le Rapport existe déjà, donc une option de Rapport à côté de `--job` est une erreur,
+qu'elle soit saisie, comme `--branch`, `--testbed`, `--adapter` ou une commande de benchmark,
+ou définie par sa variable d'environnement (`BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER` ou `BENCHER_CMD`).
+[Le workflow qui se rattache][pull requests on bare metal] ne doit donc définir aucune de ces variables.
+
+Dans GitHub Actions, lorsque `--job` s'exécute sur l'événement `repository_dispatch` envoyé par [l'option `--ci-callback-token`](/fr/docs/explanation/bencher-run/#--ci-callback-token-token),
+il lit le numéro de la pull request, le commit de tête, la vérification GitHub et le `--ci-id` dans le `client_payload` de l'événement,
+et il complète la vérification GitHub que l'exécution détachée a démarrée.
+Un `--ci-number` ou un `--ci-id` explicite a priorité sur le payload.
+
+[job]: /fr/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[error on alert]: /fr/docs/explanation/thresholds/#--error-on-alert
+[job timeout]: #--job-timeout-seconds
+[pull requests on bare metal]: /fr/docs/how-to/github-actions/#pull-requests-sur-matériel-dédié

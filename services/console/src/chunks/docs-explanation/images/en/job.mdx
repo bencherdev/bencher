@@ -1,0 +1,32 @@
+### `--job <UUID>`
+
+<br />
+
+Optional: Attach to a submitted [Bare Metal Job][job], such as one from [the `--detach` flag][detach].
+`bencher run` waits for the Job to finish, then posts its results exactly as an attached `bencher run --image` would have:
+the Report to standard out, the GitHub Check and the pull request comment from [the `--github-actions` option](/docs/explanation/bencher-run/#--github-actions-github_token),
+and [the `--error-on-alert` flag][error on alert].
+Use the Job UUID that the detached run printed (ie `Remote job submitted successfully: <UUID>`).
+This option requires [the `--project` option](/docs/explanation/bencher-run/#--project-project) to be set to the Job's Project.
+A Job that has already finished returns at once.
+If the Job failed or was canceled, `bencher run` still posts its Report, completes the GitHub Check as `failure` or `cancelled`, and exits with an error.
+
+Beside `--job`, [the `--job-timeout` option][job timeout] is the whole wait in seconds, not doubled as it is beside `--image`.
+Without it, the wait is twice the Job's own timeout.
+`--job` also accepts `--format`, `--quiet`, `--error-on-alert`, `--github-actions`, `--ci-only-thresholds`, `--ci-only-on-alert`, `--ci-public-links`, `--ci-id`, `--ci-number`, `--job-poll-interval`, and the connection options such as `--host`.
+
+The Report already exists, so a Report option beside `--job` is an error,
+whether it is typed, such as `--branch`, `--testbed`, `--adapter`, or a benchmark command,
+or set by its environment variable (`BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, or `BENCHER_CMD`).
+So [the workflow that attaches][pull requests on bare metal] must not set any of these variables.
+
+On GitHub Actions, when `--job` runs on the `repository_dispatch` event that [the `--ci-callback-token` option](/docs/explanation/bencher-run/#--ci-callback-token-token) sends,
+it reads the pull request number, the head commit, the GitHub Check, and the `--ci-id` from the event's `client_payload`,
+and it completes the GitHub Check that the detached run started.
+An explicit `--ci-number` or `--ci-id` takes precedence over the payload.
+
+[job]: /docs/explanation/bare-metal/#job
+[detach]: #--detach
+[error on alert]: /docs/explanation/thresholds/#--error-on-alert
+[job timeout]: #--job-timeout-seconds
+[pull requests on bare metal]: /docs/how-to/github-actions/#pull-requests-on-bare-metal

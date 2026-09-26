@@ -1,0 +1,21 @@
+### `--callback-header <NAME: VALUE>`
+
+<br />
+
+Optional: Fügt der Callback-Anfrage einen Header im Format `NAME: VALUE` hinzu.
+Kann mehrfach angegeben werden, für höchstens 16 Header.
+Setzen Sie jeden Header in Anführungszeichen, damit die Shell ihn als ein einziges Argument übergibt (d.h. `--callback-header "Authorization: Bearer $RECEIVER_TOKEN"`).
+Ohne Anführungszeichen würde alles nach dem Leerzeichen stattdessen Teil des Benchmark-Befehls werden.
+Header-Namen unterscheiden nicht zwischen Groß- und Kleinschreibung, und ein späterer Header ersetzt einen früheren mit demselben Namen.
+Ein Header namens `Content-Type`, `User-Agent` oder `Accept` ersetzt den Standard von Bencher.
+Die Framing- und Verbindungs-Header, die dem HTTP-Client gehören, werden abgelehnt:
+`Host`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Keep-Alive`, `Proxy-Connection`, `TE`, `Trailer` und `Upgrade`.
+Ein Header-Name darf höchstens 256 Byte und ein Header-Wert höchstens 8 KiB lang sein.
+Header-Werte werden in jeder Ausgabe als `************` maskiert, daher ist ein Header der richtige Ort für ein Geheimnis.
+Diese Option erfordert, dass [die Option `--callback-url`](#--callback-url-url) gesetzt ist.
+
+> 🐰 `bencher run` behandelt das erste Argument, das es nicht erkennt, als Beginn des Benchmark-Befehls.
+> Eine falsch geschriebene Option wie `--callback-ur` wird zusammen mit jedem folgenden Argument Teil des Befehls:
+> Sie wird mit dem Job gesendet und vollständig ausgegeben, samt Geheimnis.
+> Führen Sie den Befehl vor der ersten echten Einreichung einmal mit `--dry-run` direkt nach `bencher run` aus, vor allen anderen Optionen,
+> und prüfen Sie das `cmd` im Echo `Bencher New Report`.

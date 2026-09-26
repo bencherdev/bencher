@@ -1,0 +1,54 @@
+### `--callback-url <URL>`
+
+<br />
+
+可选：设置一个 `https` URL，当分离的[裸机 Job][job]完成时，Bencher 会向其发送一次 HTTP `POST` 请求，即回调。
+回调让 `bencher run` 可以提交 Job 后退出，而不必在基准测试运行期间一直占用 CI 运行器，
+其接收方随后可以[使用 `--job` 连接到该 Job](#--job-uuid)以发布结果。
+在 GitHub Actions 中，[`--ci-callback-token` 选项](/zh/docs/explanation/bencher-run/#--ci-callback-token-token)会为您编写整个回调。
+此选项要求设置 [`--image` 选项][image]和 [`--detach` 标志][detach]。
+
+当 Job 到达终止状态 `processed`、`failed` 或 `canceled` 时，Bencher 会发送回调。
+请求到达时 Job 已经处于该状态，因此接收方可以立即读取 Job 及其报告。
+请求正文是该 Job 的报告，或 [`--callback-body` 选项](#--callback-body-json)的 JSON（占位符替换为其值），请求头为：
+
+- `Content-Type: application/json`
+- `User-Agent: bencher/<VERSION>`，其中包含 Bencher API 服务器的版本
+- `Accept: */*`
+- [`--callback-header` 选项](#--callback-header-name-value)中的每个请求头，它会替换同名的默认请求头
+
+URL 最多 2048 字节。
+回调的每一次打印输出，包括 `Bencher New Report` 回显和 `--dry-run`，
+都只显示 URL 的源（其协议、主机和端口），并将每个请求头的值遮盖为 `************`。
+正文会被完整打印，因此请将密钥放在请求头或 URL 中，切勿放在正文中。
+
+只有使用 [Bencher Plus 计划][pricing]的组织才会发送回调，在 Bencher Self-Hosted 上，这意味着拥有 Team 或 Enterprise 许可证。
+对于任何其他组织，包括 Bencher Cloud 上的免费公开项目，或没有此类许可证的 Bencher Self-Hosted 组织，
+Job 仍会运行，其回调被标记为 `skipped`，`bencher run` 会打印 `callback skipped: requires a Bencher Plus plan`。
+[`--quiet` 标志](/zh/docs/explanation/bencher-run/#--quiet)会隐藏此提示。
+
+Bencher 最多等待 10 秒的响应，不跟随重定向，也不读取响应正文。
+任何 `2xx` 状态都视为已送达。
+超时、连接错误、`408`、`429` 或任何 `5xx` 都会重试，先在 4 秒后重试，再在 16 秒后重试，最多尝试三次。
+其他任何状态都是最终结果。
+要查看结果，请运行 `bencher job view <PROJECT> <JOB>`：
+Job 的 `callback` 会显示 `pending`、`delivered`、`failed` 或 `skipped`，以及最后一次的 HTTP 状态。
+API 永远不会返回回调的 URL 或请求头，但在公开项目中，任何可以查看该 Job 的人都能看到其 `callback` 状态和最后一次的 HTTP 状态。
+
+> 🐰 接收方可能会多次收到同一个回调，例如其响应丢失，或 Bencher 在发送过程中重启。
+> 请按 Job 的 UUID 去重。
+
+Bencher 只会将回调发送到公共互联网。
+URL 必须使用 `https`，并且在发送回调时，如果主机的任何一个地址不是公网地址，例如私有、环回、链路本地、唯一本地或云元数据地址，Bencher 会拒绝该主机。
+被拒绝的地址会使回调失败且不会重试。
+Bencher Self-Hosted 也适用相同的规则，并且没有任何设置可以放宽这些规则。
+在 Bencher Self-Hosted 上，回调直接连接，从不经过代理，
+并且更改 [`security.secret_key`][secret key] 会丢弃所有待处理的回调：每个回调都会以 `failed` 结束且不会被发送。
+地址规则无法知道服务器自身的公网地址，
+因此在公网地址位于其某个本地网络接口上的主机上，回调可能会到达绑定在该地址上的服务。
+
+[job]: /zh/docs/explanation/bare-metal/#job
+[image]: #--image-image
+[detach]: #--detach
+[pricing]: /pricing
+[secret key]: /zh/docs/reference/server-config/#security

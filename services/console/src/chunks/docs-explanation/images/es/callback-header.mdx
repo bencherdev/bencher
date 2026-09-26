@@ -1,0 +1,21 @@
+### `--callback-header <NAME: VALUE>`
+
+<br />
+
+Opcional: Agrega un encabezado a la petición del callback en formato `NAME: VALUE`.
+Se puede especificar varias veces, hasta un máximo de 16 encabezados.
+Ponga cada encabezado entre comillas para que la shell lo pase como un solo argumento (es decir, `--callback-header "Authorization: Bearer $RECEIVER_TOKEN"`).
+Sin comillas, todo lo que va después del espacio pasaría a formar parte del comando de benchmark.
+Los nombres de encabezado no distinguen mayúsculas de minúsculas, y un encabezado posterior reemplaza a uno anterior con el mismo nombre.
+Un encabezado llamado `Content-Type`, `User-Agent` o `Accept` reemplaza al predeterminado de Bencher.
+Los encabezados de framing y de conexión, que controla el cliente HTTP, se rechazan:
+`Host`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Keep-Alive`, `Proxy-Connection`, `TE`, `Trailer` y `Upgrade`.
+Un nombre de encabezado puede tener como máximo 256 bytes, y un valor de encabezado como máximo 8 KiB.
+Los valores de encabezado se enmascaran como `************` en cada impresión, así que un encabezado es el lugar para un secreto.
+Esta opción requiere que [la opción `--callback-url`](#--callback-url-url) esté establecida.
+
+> 🐰 `bencher run` toma el primer argumento que no reconoce como el inicio del comando de benchmark.
+> Una opción mal escrita, como `--callback-ur`, pasa a formar parte del comando junto con cada argumento posterior:
+> se envía con el Job y se imprime completa, con el secreto incluido.
+> Antes del primer envío real, ejecute el comando una vez con `--dry-run` justo después de `bencher run`, antes de cualquier otra opción,
+> y revise el `cmd` en el eco `Bencher New Report`.

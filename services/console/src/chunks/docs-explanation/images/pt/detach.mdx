@@ -3,8 +3,18 @@
 <br />
 
 Desanexa após enviar o job remoto, sem aguardar a sua conclusão.
+O `bencher run` exibe o UUID do Job (ou seja, `Remote job submitted successfully: <UUID>`) e termina.
+Com `--quiet`, essa linha não é exibida, mas o relatório que o `--format json` exibe continua contendo o UUID do Job como `job`.
+Para publicar os resultados depois, [conecte-se ao Job com `bencher run --job`][job option],
+ou faça o Bencher enviar [um callback][callback url] quando o Job terminar, para que o seu receptor possa se conectar.
+`--detach` com `--github-actions` requer [a opção `--ci-callback-token`][ci callback token] ou um `--callback-url`,
+para que [um segundo workflow][pull requests on bare metal] possa concluir a Verificação do GitHub.
 Esta opção requer que [a opção `--image`][image] esteja definida.
 Esta opção entra em conflito com [a opção `--job-poll-interval`][job poll interval].
 
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[job option]: #--job-uuid
+[callback url]: #--callback-url-url
+[ci callback token]: /pt/docs/explanation/bencher-run/#--ci-callback-token-token
+[pull requests on bare metal]: /pt/docs/how-to/github-actions/#pull-requests-em-hardware-dedicado

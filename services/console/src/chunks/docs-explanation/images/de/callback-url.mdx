@@ -1,0 +1,54 @@
+### `--callback-url <URL>`
+
+<br />
+
+Optional: Legt eine `https`-URL fest, an die Bencher eine einzige HTTP-`POST`-Anfrage sendet, einen Callback, wenn ein abgelöster [Job auf dedizierter Hardware][job] beendet ist.
+Mit dem Callback kann `bencher run` den Job einreichen und sich beenden, statt einen CI-Runner offen zu halten, während die Benchmarks laufen,
+und sein Empfänger kann sich anschließend [mit `--job` mit dem Job verbinden](#--job-uuid), um die Ergebnisse zu veröffentlichen.
+In GitHub Actions schreibt [die Option `--ci-callback-token`](/de/docs/explanation/bencher-run/#--ci-callback-token-token) den gesamten Callback für Sie.
+Diese Option erfordert, dass [die Option `--image`][image] und [das Flag `--detach`][detach] gesetzt sind.
+
+Bencher sendet den Callback, wenn der Job einen Endzustand erreicht: `processed`, `failed` oder `canceled`.
+Der Job befindet sich bereits in diesem Zustand, wenn die Anfrage eintrifft, sodass der Empfänger den Job und seinen Bericht sofort lesen kann.
+Der Anfragetext ist der Bericht des Jobs oder das JSON, das [die Option `--callback-body`](#--callback-body-json) mit eingesetzten Platzhaltern sendet, und die Anfrage-Header sind:
+
+- `Content-Type: application/json`
+- `User-Agent: bencher/<VERSION>`, mit der Version des Bencher API-Servers
+- `Accept: */*`
+- Jeder Header aus [der Option `--callback-header`](#--callback-header-name-value), der einen Standard-Header mit demselben Namen ersetzt
+
+Die URL darf höchstens 2048 Byte lang sein.
+Jede Ausgabe des Callbacks, einschließlich des Echos `Bencher New Report` und `--dry-run`,
+zeigt nur den Ursprung der URL (ihr Schema, ihren Host und ihren Port) und maskiert jeden Header-Wert als `************`.
+Der Body wird vollständig ausgegeben, also gehört ein Geheimnis in einen Header oder in die URL, niemals in den Body.
+
+Nur Organisationen mit einem [Bencher Plus-Plan][pricing] senden Callbacks, und unter Bencher Self-Hosted bedeutet das eine Team- oder Enterprise-Lizenz.
+Bei jeder anderen Organisation, einschließlich eines kostenlosen öffentlichen Projekts auf Bencher Cloud oder einer Bencher Self-Hosted Organisation ohne eine solche Lizenz,
+läuft der Job trotzdem, sein Callback wird als `skipped` markiert, und `bencher run` gibt `callback skipped: requires a Bencher Plus plan` aus.
+[Das Flag `--quiet`](/de/docs/explanation/bencher-run/#--quiet) blendet diesen Hinweis aus.
+
+Bencher wartet bis zu 10 Sekunden auf eine Antwort, folgt keinen Weiterleitungen und liest den Antworttext nicht.
+Jeder `2xx`-Status gilt als zugestellt.
+Ein Timeout, ein Verbindungsfehler, ein `408`, ein `429` oder ein beliebiger `5xx` wird wiederholt, zuerst nach 4 Sekunden und dann nach 16 Sekunden, für höchstens drei Versuche.
+Jeder andere Status ist endgültig.
+Um das Ergebnis zu sehen, führen Sie `bencher job view <PROJECT> <JOB>` aus:
+Das Feld `callback` des Jobs zeigt `pending`, `delivered`, `failed` oder `skipped` zusammen mit dem letzten HTTP-Status.
+Die API gibt die URL oder die Header eines Callbacks nie zurück, aber bei einem öffentlichen Projekt kann jeder, der den Job sehen kann, den Zustand von `callback` und den letzten HTTP-Status sehen.
+
+> 🐰 Ein Empfänger kann denselben Callback mehr als einmal erhalten, zum Beispiel wenn seine Antwort verloren geht oder Bencher während des Sendens neu startet.
+> Deduplizieren Sie anhand der UUID des Jobs.
+
+Bencher sendet einen Callback ausschließlich in das öffentliche Internet.
+Die URL muss `https` verwenden, und wenn Bencher den Callback sendet, lehnt es den Host ab, wenn eine seiner Adressen nicht öffentlich ist, etwa eine private, Loopback-, Link-Local-, Unique-Local- oder Cloud-Metadatenadresse.
+Eine abgelehnte Adresse lässt den Callback ohne Wiederholung fehlschlagen.
+Bencher Self-Hosted wendet dieselben Regeln an, und keine Einstellung lockert sie.
+Unter Bencher Self-Hosted verbinden sich Callbacks direkt, niemals über einen Proxy,
+und eine Änderung [von `security.secret_key`][secret key] verwirft jeden ausstehenden Callback: Jeder endet als `failed`, ohne gesendet zu werden.
+Die Adressregeln können die eigene öffentliche Adresse des Servers nicht kennen,
+daher kann ein Callback auf einem Host, dessen öffentliche Adresse auf einer seiner lokalen Netzwerkschnittstellen liegt, einen Dienst erreichen, der an diese Adresse gebunden ist.
+
+[job]: /de/docs/explanation/bare-metal/#job
+[image]: #--image-image
+[detach]: #--detach
+[pricing]: /pricing
+[secret key]: /de/docs/reference/server-config/#security

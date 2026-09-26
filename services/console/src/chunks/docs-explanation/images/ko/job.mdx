@@ -1,0 +1,31 @@
+### `--job <UUID>`
+
+<br />
+
+선택 사항: 제출된 [베어 메탈 Job][job]에 연결합니다. 예를 들어 [`--detach` 플래그][detach]로 제출한 Job입니다.
+`bencher run`은 Job이 끝날 때까지 기다린 다음, 분리하지 않은 `bencher run --image`와 똑같이 결과를 게시합니다.
+즉, 보고서를 표준 출력으로, [`--github-actions` 옵션](/ko/docs/explanation/bencher-run/#--github-actions-github_token)의 GitHub Check와 pull request 댓글을 게시하고,
+[`--error-on-alert` 플래그][error on alert]도 적용합니다.
+분리된 실행이 출력한 Job UUID를 사용하세요(예: `Remote job submitted successfully: <UUID>`).
+이 옵션은 [`--project` 옵션](/ko/docs/explanation/bencher-run/#--project-project)이 Job의 프로젝트로 설정되어 있어야 합니다.
+이미 끝난 Job은 즉시 반환됩니다.
+Job이 실패했거나 취소된 경우에도 `bencher run`은 보고서를 게시하고 GitHub Check를 `failure` 또는 `cancelled`로 완료한 뒤 오류로 종료됩니다.
+
+`--job`과 함께 사용하면 [`--job-timeout` 옵션][job timeout]은 전체 대기 시간(초)이며, `--image`와 함께 사용할 때처럼 두 배가 되지 않습니다.
+이 옵션이 없으면 대기 시간은 Job 자체 타임아웃의 두 배입니다.
+`--job`은 `--format`, `--quiet`, `--error-on-alert`, `--github-actions`, `--ci-only-thresholds`, `--ci-only-on-alert`, `--ci-public-links`, `--ci-id`, `--ci-number`, `--job-poll-interval`, 그리고 `--host` 같은 연결 옵션도 받습니다.
+
+보고서가 이미 존재하므로, `--job`과 함께 지정한 보고서 옵션은 오류입니다.
+`--branch`, `--testbed`, `--adapter` 또는 벤치마크 명령처럼 직접 입력한 경우든, 해당 환경 변수(`BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, `BENCHER_CMD`)로 설정한 경우든 마찬가지입니다.
+따라서 [연결하는 워크플로][pull requests on bare metal]에서는 이 변수를 하나도 설정하면 안 됩니다.
+
+GitHub Actions에서 [`--ci-callback-token` 옵션](/ko/docs/explanation/bencher-run/#--ci-callback-token-token)이 보내는 `repository_dispatch` 이벤트로 `--job`이 실행되면,
+이벤트의 `client_payload`에서 pull request 번호, 헤드 커밋, GitHub Check, `--ci-id`를 읽고,
+분리된 실행이 시작한 GitHub Check를 완료합니다.
+명시적인 `--ci-number` 또는 `--ci-id`가 페이로드보다 우선합니다.
+
+[job]: /ko/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[error on alert]: /ko/docs/explanation/thresholds/#--error-on-alert
+[job timeout]: #--job-timeout-seconds
+[pull requests on bare metal]: /ko/docs/how-to/github-actions/#베어-메탈에서의-pull-requests

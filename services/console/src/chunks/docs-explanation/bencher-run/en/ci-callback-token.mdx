@@ -1,0 +1,40 @@
+### `--ci-callback-token <TOKEN>`
+
+<br />
+
+Optional: Set the GitHub token for the callback of a detached [Bare Metal Job][job], so that a second workflow can post its results.
+With [the `--detach` flag][detach] and [the `--github-actions` option](#--github-actions-github_token),
+`bencher run` starts the in-progress GitHub Check, submits the Job, posts nothing else, and exits.
+It writes [the callback](/docs/explanation/images/#--callback-url-url) itself:
+a [`repository_dispatch`][github repository dispatch] event of type `bencher_run`, sent to the repository with this token.
+The event's `client_payload` holds the Job UUID (`job`), the Project slug (`project`),
+the pull request number (`number`, absent unless the workflow runs on a `pull_request` or `pull_request_target` event or sets `--ci-number`), the head commit (`sha`),
+the GitHub Check ID (`check`, absent when starting the GitHub Check failed, in which case the attach creates it at `sha`), and the `--ci-id` (`ci_id`, absent when not set).
+A second workflow that runs on that event [attaches to the Job with `--job`](/docs/explanation/images/#--job-uuid)
+and completes the GitHub Check and the pull request comment.
+See [Pull Requests on Bare Metal in GitHub Actions][pull requests on bare metal] for both workflows.
+
+Bencher usually sends the event after the detached workflow has finished, and that workflow's `GITHUB_TOKEN` expires with it.
+So this option takes a [fine-grained personal access token][github fine-grained token] for the one repository with `Contents` `write` permission,
+the least that `repository_dispatch` accepts.
+The token is masked in every printout.
+Keep `--github-actions` set to the workflow's own `GITHUB_TOKEN` in both workflows:
+only a GitHub App can create or update a GitHub Check, so a personal access token there never produces one,
+and both workflows share the GitHub Actions app, which lets the second complete the GitHub Check that the first started.
+
+`--detach` with `--github-actions` requires either `--ci-callback-token` or [`--callback-url`](/docs/explanation/images/#--callback-url-url),
+since nothing else would ever complete the GitHub Check that it starts.
+An empty token, such as an unset repository secret, is refused too.
+An explicit `--callback-url` replaces the `repository_dispatch` callback, for a receiver of your own.
+The GitHub Check still starts, and completing it is then up to that receiver.
+If the callback is skipped because the Organization is not on a Bencher Plus plan,
+then `bencher run` completes the GitHub Check as `neutral` with that notice.
+If `bencher run` cannot read the callback's state after submitting, it prints a warning and leaves the GitHub Check in progress for the attach to complete.
+Outside GitHub Actions, this option is ignored.
+This option requires [the `--github-actions` option](#--github-actions-github_token) and [the `--detach` flag][detach] to be set.
+
+[job]: /docs/explanation/bare-metal/#job
+[detach]: /docs/explanation/images/#--detach
+[github repository dispatch]: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[github fine-grained token]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[pull requests on bare metal]: /docs/how-to/github-actions/#pull-requests-on-bare-metal

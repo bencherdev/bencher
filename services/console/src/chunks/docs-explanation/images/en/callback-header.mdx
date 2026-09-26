@@ -1,0 +1,21 @@
+### `--callback-header <NAME: VALUE>`
+
+<br />
+
+Optional: Add a header to the callback request in `NAME: VALUE` format.
+May be specified multiple times, for at most 16 headers.
+Quote each header so that the shell passes it as one argument (ie `--callback-header "Authorization: Bearer $RECEIVER_TOKEN"`).
+Unquoted, everything after the space would become part of the benchmark command instead.
+Header names are case-insensitive, and a later header replaces an earlier one with the same name.
+A header named `Content-Type`, `User-Agent`, or `Accept` replaces Bencher's default.
+The framing and connection headers, which the HTTP client owns, are refused:
+`Host`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Keep-Alive`, `Proxy-Connection`, `TE`, `Trailer`, and `Upgrade`.
+A header name can be at most 256 bytes, and a header value at most 8 KiB.
+Header values are masked as `************` in every printout, so a header is the place for a secret.
+This option requires [the `--callback-url` option](#--callback-url-url) to be set.
+
+> 🐰 `bencher run` takes the first argument it does not recognize as the start of the benchmark command.
+> A mistyped option, such as `--callback-ur`, becomes part of the command along with every argument after it:
+> it is sent with the Job and printed in full, secret and all.
+> Before the first real submit, run the command once with `--dry-run` right after `bencher run`, ahead of every other option,
+> and check the `cmd` in the `Bencher New Report` echo.

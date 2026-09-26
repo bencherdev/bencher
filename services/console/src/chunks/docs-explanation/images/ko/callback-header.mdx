@@ -1,0 +1,21 @@
+### `--callback-header <NAME: VALUE>`
+
+<br />
+
+선택 사항: `NAME: VALUE` 형식으로 콜백 요청에 헤더를 추가합니다.
+여러 번 지정할 수 있으며, 헤더는 최대 16개입니다.
+셸이 하나의 인수로 전달하도록 각 헤더를 따옴표로 감싸세요(예: `--callback-header "Authorization: Bearer $RECEIVER_TOKEN"`).
+따옴표가 없으면 공백 뒤의 모든 내용이 대신 벤치마크 명령의 일부가 됩니다.
+헤더 이름은 대소문자를 구분하지 않으며, 나중 헤더가 같은 이름의 이전 헤더를 대체합니다.
+`Content-Type`, `User-Agent` 또는 `Accept`라는 이름의 헤더는 Bencher의 기본값을 대체합니다.
+HTTP 클라이언트가 관리하는 프레이밍 및 연결 헤더는 거부됩니다:
+`Host`, `Content-Length`, `Transfer-Encoding`, `Connection`, `Keep-Alive`, `Proxy-Connection`, `TE`, `Trailer`, `Upgrade`.
+헤더 이름은 최대 256바이트, 헤더 값은 최대 8 KiB입니다.
+헤더 값은 모든 출력에서 `************`로 가려지므로, 비밀 값은 헤더에 넣으세요.
+이 옵션은 [`--callback-url` 옵션](#--callback-url-url)이 설정되어 있어야 합니다.
+
+> 🐰 `bencher run`은 인식하지 못하는 첫 번째 인수를 벤치마크 명령의 시작으로 처리합니다.
+> `--callback-ur`처럼 철자가 틀린 옵션은 그 뒤의 모든 인수와 함께 명령의 일부가 되어,
+> Job과 함께 전송되고 비밀 값까지 포함해 전체가 출력됩니다.
+> 처음 실제로 제출하기 전에 `bencher run` 바로 뒤, 다른 모든 옵션보다 앞에 `--dry-run`을 붙여 한 번 실행하고,
+> `Bencher New Report` 에코의 `cmd`를 확인하세요.

@@ -1,0 +1,43 @@
+import CallbackBodyExample from "../callback-body-example.mdx";
+
+### `--callback-body <JSON>`
+
+<br />
+
+可选：设置回调请求的 JSON 正文。
+此选项要求设置 [`--callback-url` 选项](#--callback-url-url)。
+如果不设置 `--callback-body`，正文是该 Job 的报告，与 `GET /v0/projects/{project}/reports/{report}` 返回的 JSON 相同。
+报告通过 UUID（`job`）指明其 Job，但不包含 Job 的状态，
+因此要了解 Job 是否失败，请让接收方通过 `GET /v0/projects/{project}/jobs/{job}` 读取该 Job，或在正文中发送 `{{ job.status }}`。
+对于私有项目，该报告包含项目的私有结果，因此只应将其发送给你信任的接收方。
+
+正文中恰好等于以下某个占位符的字符串值，会以其值发送：
+
+| 占位符               | 值                                                  |
+| -------------------- | --------------------------------------------------- |
+| `{{ job.uuid }}`     | Job UUID                                            |
+| `{{ job.status }}`   | Job 的终止状态：`processed`、`failed` 或 `canceled` |
+| `{{ report.uuid }}`  | 报告 UUID                                           |
+| `{{ project.uuid }}` | 项目 UUID                                           |
+| `{{ project.slug }}` | 项目 slug                                           |
+| `{{ report }}`       | 整个报告                                            |
+
+花括号内的空白是可选的，因此 `"{{job.uuid}}"` 也可以。
+每个值都是 JSON 字符串，但 `{{ report }}` 是报告本身，
+与不设置 `--callback-body` 时的正文是相同的 JSON，并包含相同的私有结果。
+因此只有 `"{{ report }}"` 的正文与不设置 `--callback-body` 相同，
+而 `{"event": "bencher", "report": "{{ report }}"}` 会把报告包在你自己的信封中。
+正文中 `{{ report }}` 只能出现一次。
+其他所有字符串、所有键和其他所有值都按原样发送。
+较长字符串中的占位符（即 `"Job {{ job.uuid }}"`）是普通文本，也没有分支，
+因此需要结果的接收方应读取 `{{ job.status }}`。
+以 `{{` 开头、以 `}}` 结尾但指明其他名称的字符串会报错，而绝不会变成空字符串。
+正文最多 64 KiB，计算时每个占位符按其最长的值计，`{{ report }}` 不计。
+在提交 Job 之前，`bencher run` 会检查正文，服务器也会再次检查。
+
+例如，要向 URL 中包含密钥的 Slack 传入 Webhook 发布一条消息：
+
+<CallbackBodyExample />
+
+正文会被完整打印且从不遮盖，因此切勿在其中放入密钥。
+请改为将密钥放在[请求头](#--callback-header-name-value)或 URL 中。

@@ -1,0 +1,31 @@
+### `--job <UUID>`
+
+<br />
+
+オプション: 送信済みの[ベアメタルJob][job]にアタッチします。たとえば[`--detach`フラグ][detach]で送信したJobです。
+`bencher run`はJobの終了を待ち、デタッチしない`bencher run --image`とまったく同じように結果を投稿します。
+つまり、レポートを標準出力に、[`--github-actions`オプション](/ja/docs/explanation/bencher-run/#--github-actions-github_token)によるGitHubチェックとプルリクエストのコメントを投稿し、
+[`--error-on-alert`フラグ][error on alert]も適用します。
+デタッチした実行が出力したJobのUUIDを使用してください（例：`Remote job submitted successfully: <UUID>`）。
+このオプションは、[`--project`オプション](/ja/docs/explanation/bencher-run/#--project-project)がJobのプロジェクトに設定されている必要があります。
+すでに終了したJobはすぐに戻ります。
+Jobが失敗またはキャンセルされた場合も、`bencher run`はそのレポートを投稿し、GitHubチェックを`failure`または`cancelled`として完了してから、エラーで終了します。
+
+`--job`と一緒に指定した場合、[`--job-timeout`オプション][job timeout]は待機時間全体の秒数であり、`--image`と一緒の場合のように2倍にはなりません。
+指定しない場合、待機時間はJob自体のタイムアウトの2倍です。
+`--job`は、`--format`、`--quiet`、`--error-on-alert`、`--github-actions`、`--ci-only-thresholds`、`--ci-only-on-alert`、`--ci-public-links`、`--ci-id`、`--ci-number`、`--job-poll-interval`、および`--host`などの接続オプションも受け付けます。
+
+レポートはすでに存在するため、`--job`と一緒に指定したレポートオプションはエラーになります。
+`--branch`、`--testbed`、`--adapter`、ベンチマークコマンドのように入力した場合も、その環境変数（`BENCHER_BRANCH`、`BENCHER_TESTBED`、`BENCHER_ADAPTER`、`BENCHER_CMD`）で設定した場合も同じです。
+そのため、[アタッチするワークフロー][pull requests on bare metal]では、これらの変数をいずれも設定しないでください。
+
+GitHub Actionsで、[`--ci-callback-token`オプション](/ja/docs/explanation/bencher-run/#--ci-callback-token-token)が送信する`repository_dispatch`イベントで`--job`を実行すると、
+イベントの`client_payload`からプルリクエスト番号、ヘッドコミット、GitHubチェック、`--ci-id`を読み取り、
+デタッチした実行が開始したGitHubチェックを完了します。
+明示的な`--ci-number`または`--ci-id`はペイロードより優先されます。
+
+[job]: /ja/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[error on alert]: /ja/docs/explanation/thresholds/#--error-on-alert
+[job timeout]: #--job-timeout-seconds
+[pull requests on bare metal]: /ja/docs/how-to/github-actions/#ベアメタル上のプルリクエスト

@@ -1,0 +1,181 @@
+import PullRequestsOnBareMetalSubmitCode from "../pull-requests-on-bare-metal-submit-code.mdx";
+import PullRequestsOnBareMetalAttachCode from "../pull-requests-on-bare-metal-attach-code.mdx";
+
+## 裸机上的 Pull Requests
+
+由于 `bencher run` 会等待 Job 完成，[裸机][bare metal]运行会在基准测试持续期间一直占用其 GitHub Actions 运行器。
+为了释放运行器，第一个工作流使用 [`--detach` 标志][detach option]提交 Job 后退出。
+当 Job 完成时，Bencher 会向您的仓库发送一个 [`repository_dispatch`][github repository_dispatch] 事件，
+第二个工作流会[连接到该 Job][job option]，并像未分离的运行一样，将结果发布为 GitHub 检查和拉取请求评论。
+使用回调需要 [Bencher Plus 计划][pricing]。
+
+> ⚠️ 此解决方案仅在所有 PR 都来自**同一**仓库时有效！
+> 第一个工作流需要您的仓库密钥。
+> 请参见上面的[来自 Fork 的拉取请求][pull requests from forks]。
+
+由于 Bencher 通常在第一个工作流的 `GITHUB_TOKEN` 已经过期之后才发送该事件，因此事件需要一个比该工作流存活更久的令牌。
+为该单一仓库创建一个具有 `Contents` `Read and write` 权限的[细粒度个人访问令牌][github fine-grained token]，
+并将其添加为名为 `BENCHER_CALLBACK_TOKEN` 的**仓库**密钥。
+`Contents` `write` 权限还允许该令牌向该仓库推送提交，因此切勿授予它访问任何其他仓库的权限。
+两个工作流仍然将各自的 `GITHUB_TOKEN` 传给 `--github-actions`：
+只有 GitHub App 才能创建或更新 GitHub 检查，
+而两个工作流共享 GitHub Actions 应用，这使第二个工作流能够完成第一个工作流启动的 GitHub 检查。
+查看 [`--ci-callback-token` 文档][ci callback token option] 以获取完整概览。
+
+<PullRequestsOnBareMetalSubmitCode />
+
+1. 创建第一个 GitHub Actions `workflow` 文件。
+   （例如：`.github/workflows/pr_bare_metal_benchmarks.yml`）
+2. 像上面的[拉取请求][pull requests]一样，在 `pull_request` 事件上运行。
+   （例如：`on: pull_request: types: [opened, reopened, edited, synchronize]`）
+3. 创建一个 GitHub Actions `job`。
+   （例如：`jobs: submit_pr_benchmarks`）
+4. 如果且仅当拉取请求来自同一仓库时，在 `pull_request` 事件上运行。
+   ⚠️ 不要删除此行！
+   处理 Fork PR 请参见上面的[来自 Fork 的拉取请求][pull requests from forks]。
+   （例如：`if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`）
+5. 将 [`GITHUB_TOKEN` 的权限][github token permissions] 设置为 `write` 以用于 `checks`。
+   第一个工作流会启动 GitHub 检查，但不会发布评论。
+   （例如：`permissions: checks: write`）
+6. 设置运行作业的机器类型。
+   它只提交 Job，因此一台小型机器就足够了。
+   （例如：`runs-on: ubuntu-latest`）
+7. 检出 PR 分支的源代码。
+   （例如：`uses: actions/checkout@v6`）
+8. 使用 [GitHub Action][bencher cli github action] 安装 Bencher CLI。
+   （例如：`uses: bencherdev/bencher@main`）
+9. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令提交您的拉取请求分支基准测试。
+   查看 [`bencher run` CLI 子命令][bencher run] 以获取完整概览。
+   （例如：`bencher run`）
+10. 将 `--project` 选项设置为项目 slug。
+    查看 [`--project` 文档][project option] 以获取详细信息。
+    （例如：`--project project-abc4567-wxyz123456789`）
+11. 将 `--key` 选项设置为 `BENCHER_API_KEY` **仓库**密钥。
+    查看 [`--key` 文档][key option] 以获取详细信息。
+    （例如：`--key '${{ secrets.BENCHER_API_KEY }}'`）
+12. 使用 [GitHub Actions `GITHUB_HEAD_REF` 默认环境变量][github default environment variables] 设置 `--branch` 选项为 PR 分支名称。
+    查看 [`--branch` 文档][branch option] 以获取完整概览。
+    （例如：`--branch "$GITHUB_HEAD_REF"`）
+13. 像上面的[拉取请求][pull requests]一样，设置 PR 分支的起点。
+    查看 [`--start-point` 文档][start point] 以获取完整概览。
+    （例如：`--start-point "$GITHUB_BASE_REF"`）
+14. 将 `--adapter` 选项设置为由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 [Bencher Metric Format JSON (`json`)][bmf]。
+    查看 [基准测试工具适配器][adapter json] 以获取完整概览。
+    （例如：`--adapter json`）
+15. 将 `--image` 选项设置为您的裸机镜像。
+    查看 [`--image` 文档][image option] 以获取完整概览。
+    （例如：`--image project-abc4567-wxyz123456789:latest`）
+16. 设置 `--detach` 标志，以便在 Job 提交后立即退出。
+    查看 [`--detach` 文档][detach option] 以获取详细信息。
+    （例如：`--detach`）
+17. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以启动 GitHub 检查。
+    查看 [`--github-actions` 文档][github actions option] 以获取详细信息。
+    （例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`）
+18. 将 `--ci-callback-token` 选项设置为 `BENCHER_CALLBACK_TOKEN` **仓库**密钥，
+    以便 Bencher 能在 Job 完成时发送 `repository_dispatch` 事件。
+    查看 [`--ci-callback-token` 文档][ci callback token option] 以获取详细信息。
+    （例如：`--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`）
+19. 指定在镜像中运行的基准测试命令。
+    如果镜像有入口点，该命令会传给该入口点（参见 [`--entrypoint` 选项][entrypoint option]）。
+    查看 [基准测试命令][command argument] 以获取完整概览。
+    （例如：`bencher mock`）
+
+<PullRequestsOnBareMetalAttachCode />
+
+1. 在默认分支上创建第二个 GitHub Actions `workflow` 文件。
+   GitHub 只会从默认分支运行 `repository_dispatch` 工作流，
+   因此在该文件出现在默认分支之前，第一个工作流启动的 GitHub 检查会一直保持进行中。
+   （例如：`.github/workflows/pr_bare_metal_benchmarks_attach.yml`）
+2. 在类型为 `bencher_run` 的 `repository_dispatch` 事件上运行。
+   查看 [GitHub Actions `on` 文档][github actions on] 和 [GitHub Actions `repository_dispatch` 文档][github repository_dispatch] 以获取完整概览。
+   （例如：`on: repository_dispatch: types: [bencher_run]`）
+3. 创建一个 GitHub Actions `job`。
+   （例如：`jobs: attach_pr_benchmarks`）
+4. 将 [`GITHUB_TOKEN` 的权限][github token permissions] 设置为 `write` 以用于 `checks` 和 `pull-requests`。
+   （例如：`permissions: checks: write pull-requests: write`）
+5. 设置运行作业的机器类型。
+   Job 已经完成，因此该作业只发布结果。
+   （例如：`runs-on: ubuntu-latest`）
+6. 使用 [GitHub Action][bencher cli github action] 安装 Bencher CLI。
+   不需要检出代码。
+   （例如：`uses: bencherdev/bencher@main`）
+7. 按照 GitHub 关于脚本注入的指导，通过[中间环境变量][github intermediate environment variable]传递事件中的 Job UUID，切勿直接写在 `run:` 中。
+   （例如：`env: JOB_UUID: ${{ github.event.client_payload.job }}`）
+8. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令连接到该 Job。
+   查看 [`bencher run` CLI 子命令][bencher run] 以获取完整概览。
+   （例如：`bencher run`）
+9. 将 `--project` 选项设置为项目 slug。
+   如果仓库有多个项目，请以同样的方式通过环境变量传递 `github.event.client_payload.project`，并用引号括起来（例如：`--project "$PROJECT_SLUG"`）。
+   查看 [`--project` 文档][project option] 以获取详细信息。
+   （例如：`--project project-abc4567-wxyz123456789`）
+10. 将 `--key` 选项设置为 `BENCHER_API_KEY` **仓库**密钥。
+    查看 [`--key` 文档][key option] 以获取详细信息。
+    （例如：`--key '${{ secrets.BENCHER_API_KEY }}'`）
+11. 将 `--job` 选项设置为加上引号的 Job UUID。
+    查看 [`--job` 文档][job option] 以获取完整概览。
+    （例如：`--job "$JOB_UUID"`）
+12. 设置 `--error-on-alert` 标志，以便在生成警报时使命令失败。
+    事件只携带数据，因此决定结果如何发布的选项，例如 `--ci-only-on-alert` 和 `--ci-public-links`，也放在这里，即第二个工作流中。
+    查看 [`--error-on-alert` 文档][alert err] 以获取完整概览。
+    （例如：`--error-on-alert`）
+13. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以将结果发布为 GitHub 检查和拉取请求评论。
+    拉取请求编号、头提交、GitHub 检查和 `--ci-id` 都来自事件，
+    而在这里显式指定的 `--ci-number` 或 `--ci-id` 优先于事件。
+    查看 [`--github-actions` 文档][github actions option] 以获取详细信息。
+    （例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`）
+
+如果第一个工作流中的两个作业（例如 `matrix` 的各个条目）在同一个拉取请求上共用相同的项目、分支、测试平台和适配器，
+请为每个作业设置各自的 `--ci-id`（例如：`--ci-id '${{ matrix.suite }}'`）。
+事件会将 `--ci-id` 传递给第二个工作流。
+如果不设置，它们的 `--job` 运行可能会发布到同一条评论中：
+`bencher run --job` 通过结果来区分 `--build-time` 或 `--file-size` Job，而失败的 Job 没有任何结果。
+如果 `--ci-id` 恰好是回调正文的占位符（例如 `{{ job.uuid }}`），则会以其值送达；如果它是包着其他名称的占位符形式（例如 `{{ x }}`），运行会失败。
+
+以下规则决定第一个工作流启动的 GitHub 检查会怎样：
+
+- 与 `--github-actions` 一起使用的 `--detach` 需要 `--ci-callback-token` 或显式的 `--callback-url`，两者都没有时，`bencher run` 会在解析参数时拒绝。
+  空令牌（例如未设置的仓库密钥）也会被拒绝。
+- 两个工作流都需要支持 `--ci-callback-token` 和 `--job` 的 `bencher` CLI。
+  除非其 `version` 输入固定了其他版本，否则 `bencherdev/bencher@main` 会安装最新版本。
+- 第二个工作流命令行中的错误，例如拼写错误的标志，会使其在到达 GitHub 检查之前就停止，
+  因此第一个工作流启动的 GitHub 检查会一直保持进行中，直到第二个工作流被修复并再次运行。
+- 细粒度个人访问令牌会过期。
+  当 `BENCHER_CALLBACK_TOKEN` 过期时，每个回调都会以 `401` 失败，第一个工作流启动的每个 GitHub 检查都会保持进行中。
+  每个 Job 都保留提交时使用的令牌，因此请在令牌过期之前尽早轮换，并在使用旧令牌提交的每个 Job 完成之前保持旧令牌有效。
+- 如果 Job 失败或被取消，第二个工作流会将 GitHub 检查完成为 `failure` 或 `cancelled`，并按常规规则发布拉取请求评论（因此 `--ci-only-on-alert` 仍会跳过第一条评论）。
+  Job 的错误记录在第二个工作流的日志中，而不在 GitHub 检查中。
+- 如果组织没有 Bencher Plus 计划，回调会被跳过。
+  第一个工作流会附上原因将 GitHub 检查完成为 `neutral`（例如：`callback skipped: requires a Bencher Plus plan`）。
+- 如果第一个工作流在提交后无法读回该 Job，它会打印一条警告，并让 GitHub 检查保持进行中，由第二个工作流来完成。
+- 在 GitHub Actions 之外，`--ci-callback-token` 会被忽略。
+- 在 GitHub Enterprise Server 上，发送回调的 Bencher 服务器必须能够通过 `https` 在公网地址上访问 API URL（`GITHUB_API_URL`）。
+
+[github actions on]: https://docs.github.com/zh/actions/using-workflows/workflow-syntax-for-github-actions#on
+[github repository_dispatch]: https://docs.github.com/zh/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[github token permissions]: https://docs.github.com/zh/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
+[github fine-grained token]: https://docs.github.com/zh/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
+[github default environment variables]: https://docs.github.com/zh/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables
+[github token]: https://docs.github.com/zh/actions/security-guides/automatic-token-authentication
+[github intermediate environment variable]: https://docs.github.com/zh/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+
+[bare metal]: /zh/docs/explanation/bare-metal/
+[pricing]: /pricing
+[bencher run]: /zh/docs/explanation/bencher-run/
+[project option]: /zh/docs/explanation/bencher-run/#--project-project
+[key option]: /zh/docs/explanation/bencher-run/#--key-key
+[branch option]: /zh/docs/explanation/branches/#--branch-branch
+[start point]: /zh/docs/explanation/branches/#--start-point-branch
+[bmf]: /zh/docs/reference/bencher-metric-format/
+[adapter json]: /zh/docs/explanation/adapters/#-json
+[image option]: /zh/docs/explanation/images/#--image-image
+[entrypoint option]: /zh/docs/explanation/images/#--entrypoint-entrypoint
+[detach option]: /zh/docs/explanation/images/#--detach
+[github actions option]: /zh/docs/explanation/bencher-run/#--github-actions-github_token
+[ci callback token option]: /zh/docs/explanation/bencher-run/#--ci-callback-token-token
+[job option]: /zh/docs/explanation/images/#--job-uuid
+[alert err]: /zh/docs/explanation/thresholds/#--error-on-alert
+[command argument]: /zh/docs/explanation/bencher-run/#基准命令
+
+[pull requests]: #pull-requests
+[pull requests from forks]: #从-fork-中的拉取请求

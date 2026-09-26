@@ -4,6 +4,10 @@
 - **BREAKING CHANGE** Mark a Bare Metal job `unknown` instead of `failed` when the server loses contact with its runner
 - Fix rate limit windows counting up to twice their length
 - Write API server logs to stderr as JSON, one log record per line, so a logged value cannot forge a log line
+- Add callbacks for detached Bare Metal jobs: `bencher run --image ... --detach --callback-url <URL>` has Bencher send one HTTP request when the job finishes (requires a Bencher Plus plan), `bencher run --job <UUID>` attaches to a submitted job and posts its results, and on GitHub Actions `--ci-callback-token` hands the GitHub Check to [a second workflow](/docs/how-to/github-actions/#pull-requests-on-bare-metal) (idea credit to [jkaczman](https://github.com/jkaczman): [#1046](https://github.com/bencherdev/bencher/issues/1046))
+- **BREAKING CHANGE** `--detach` with `--github-actions` now requires `--ci-callback-token` or `--callback-url`, and no longer posts a comment or completes the GitHub Check before the job has run
+- **BREAKING CHANGE** An empty `--github-actions` token, such as an unset secret, is now refused before the run starts, instead of being ignored outside GitHub Actions, only warning on an event other than a pull request, or failing a pull request's run after the results were uploaded
+- Complete the GitHub Check as `failure` when a Bare Metal job fails and as `cancelled` when it is canceled, instead of `success`
 
 ## `0.6.12`
 - Support Gungraun JSON format (Thank you [gamma0987](https://github.com/gamma0987))

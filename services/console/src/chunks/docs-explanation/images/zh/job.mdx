@@ -1,0 +1,32 @@
+### `--job <UUID>`
+
+<br />
+
+可选：连接到一个已提交的[裸机 Job][job]，例如使用 [`--detach` 标志][detach]提交的 Job。
+`bencher run` 会等待 Job 完成，然后完全像未分离的 `bencher run --image` 那样发布其结果：
+将报告输出到标准输出，通过 [`--github-actions` 选项](/zh/docs/explanation/bencher-run/#--github-actions-github_token)发布 GitHub 检查和拉取请求评论，
+并应用 [`--error-on-alert` 标志][error on alert]。
+请使用分离运行所打印的 Job UUID（即 `Remote job submitted successfully: <UUID>`）。
+此选项要求将 [`--project` 选项](/zh/docs/explanation/bencher-run/#--project-project)设置为该 Job 所属的项目。
+已经完成的 Job 会立即返回。
+如果 Job 失败或被取消，`bencher run` 仍会发布其报告，将 GitHub 检查完成为 `failure` 或 `cancelled`，然后以错误退出。
+
+与 `--job` 一起使用时，[`--job-timeout` 选项][job timeout]是以秒为单位的全部等待时间，不会像与 `--image` 一起使用时那样加倍。
+如果不设置，等待时间为 Job 自身超时时间的两倍。
+`--job` 还接受 `--format`、`--quiet`、`--error-on-alert`、`--github-actions`、`--ci-only-thresholds`、`--ci-only-on-alert`、`--ci-public-links`、`--ci-id`、`--ci-number`、`--job-poll-interval`，以及 `--host` 等连接选项。
+
+报告已经存在，因此与 `--job` 一起使用的报告选项都会报错，
+无论是直接输入的，例如 `--branch`、`--testbed`、`--adapter` 或基准测试命令，
+还是通过其环境变量（`BENCHER_BRANCH`、`BENCHER_TESTBED`、`BENCHER_ADAPTER` 或 `BENCHER_CMD`）设置的。
+因此，[连接工作流][pull requests on bare metal]不得设置其中任何一个变量。
+
+在 GitHub Actions 中，当 `--job` 在 [`--ci-callback-token` 选项](/zh/docs/explanation/bencher-run/#--ci-callback-token-token)发送的 `repository_dispatch` 事件上运行时，
+它会从事件的 `client_payload` 中读取拉取请求编号、头提交、GitHub 检查和 `--ci-id`，
+并完成分离运行所启动的 GitHub 检查。
+显式指定的 `--ci-number` 或 `--ci-id` 优先于 payload。
+
+[job]: /zh/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[error on alert]: /zh/docs/explanation/thresholds/#--error-on-alert
+[job timeout]: #--job-timeout-seconds
+[pull requests on bare metal]: /zh/docs/how-to/github-actions/#裸机上的-pull-requests
