@@ -63,18 +63,6 @@ export type Index = number;
 
 export type Iteration = number;
 
-/** Job status */
-export enum JobStatus {
-	Pending = "pending",
-	Claimed = "claimed",
-	Running = "running",
-	Completed = "completed",
-	Processed = "processed",
-	Failed = "failed",
-	Canceled = "canceled",
-	Unknown = "unknown",
-}
-
 export type ResourceName = string;
 
 export enum OperatingSystem {
@@ -162,6 +150,18 @@ export interface JsonJobConfig {
 	backdate?: string;
 }
 
+/** Job status */
+export enum JobStatus {
+	Pending = "pending",
+	Claimed = "claimed",
+	Running = "running",
+	Completed = "completed",
+	Processed = "processed",
+	Failed = "failed",
+	Canceled = "canceled",
+	Unknown = "unknown",
+}
+
 /** Output from a single benchmark iteration. */
 export interface JsonIterationOutput {
 	/** Exit code from the benchmark command */
@@ -185,11 +185,14 @@ export interface JsonJobOutput {
 /** A benchmark job */
 export interface JsonJob {
 	uuid: Uuid;
-	status: JobStatus;
+	report: Uuid;
 	/** Resource spec for this job */
 	spec: JsonSpec;
 	/** Job configuration (only included when claimed by a runner) */
 	config?: JsonJobConfig;
+	/** Maximum execution time in seconds */
+	timeout: Timeout;
+	status: JobStatus;
 	runner?: Uuid;
 	claimed?: string;
 	started?: string;
