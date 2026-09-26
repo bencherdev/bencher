@@ -1409,7 +1409,7 @@ where
                         .await?;
                     },
                     RunnerMessage::Running | RunnerMessage::Heartbeat => {
-                        slog::warn!(log, "Unexpected message in Idle state, expected Ready"; "msg" => ?runner_msg);
+                        slog::warn!(log, "Unexpected message in Idle state, expected Ready"; "runner_msg" => ?runner_msg);
                     },
                 }
             },

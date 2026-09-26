@@ -534,9 +534,9 @@ fn into_config_dropshot(server: JsonServer) -> ConfigDropshot {
 fn into_log(logging: JsonLogging) -> Result<Logger, ConfigTxError> {
     let JsonLogging { name, log } = logging;
     match log {
-        ServerLog::StderrTerminal { level } => ConfigLogging::StderrTerminal {
-            level: into_level(&level),
-        },
+        ServerLog::StderrTerminal { level } => Ok(bencher_logger::server_logger(
+            slog::Level::from(&into_level(&level)),
+        )),
         ServerLog::File {
             level,
             path,
@@ -545,10 +545,10 @@ fn into_log(logging: JsonLogging) -> Result<Logger, ConfigTxError> {
             level: into_level(&level),
             path: path.into(),
             if_exists: into_if_exists(&if_exists),
-        },
+        }
+        .to_logger(name)
+        .map_err(ConfigTxError::CreateLogger),
     }
-    .to_logger(name)
-    .map_err(ConfigTxError::CreateLogger)
 }
 
 fn into_level(log_level: &LogLevel) -> ConfigLoggingLevel {
