@@ -29,6 +29,8 @@ use slog::Logger;
 
 #[cfg(feature = "plus")]
 use crate::macros::sql::last_insert_rowid;
+#[cfg(all(feature = "plus", feature = "otel"))]
+use crate::model::runner::CallbackSubmission;
 use crate::model::spec::SpecId;
 #[cfg(feature = "plus")]
 use crate::model::{
@@ -259,6 +261,10 @@ impl QueryReport {
         // Capture whether this is a job-based run before the transaction moves pending_job.
         #[cfg(feature = "plus")]
         let is_job_run = pending_job.is_some();
+        #[cfg(feature = "plus")]
+        let callback_submission = pending_job
+            .as_ref()
+            .and_then(PendingInsertJob::callback_submission);
 
         // Capture the current time before acquiring the write lock.
         // This is used for the report created timestamp and the job insert timestamp.
@@ -322,6 +328,23 @@ impl QueryReport {
             diesel::QueryResult::Ok(insert_report.uuid)
         })
         .map_err(resource_conflict_err!(Report, &json_report))?;
+
+        // The callback is counted only once its row has committed.
+        #[cfg(all(feature = "plus", feature = "otel"))]
+        if let Some(callback_submission) = callback_submission {
+            let otel_plan_kind = bencher_otel::PlanKind::from(&plan_kind);
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::CallbackSubmit(
+                otel_plan_kind,
+            ));
+            match callback_submission {
+                CallbackSubmission::Sealed => crate::context::callback_sealed(),
+                CallbackSubmission::Skipped => bencher_otel::ApiMeter::increment(
+                    bencher_otel::ApiCounter::CallbackSkip(otel_plan_kind),
+                ),
+            }
+        }
+        #[cfg(all(feature = "plus", not(feature = "otel")))]
+        let _ = callback_submission;
 
         // Read full report via public_conn (outside write lock)
         let query_report = schema::report::table

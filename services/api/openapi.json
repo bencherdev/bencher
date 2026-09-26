@@ -14123,6 +14123,31 @@
           "name"
         ]
       },
+      "JsonNewCallback": {
+        "description": "An HTTP request Bencher sends once, when a job reaches a terminal state. Its body is JSON with placeholders or, without one, the job's report.",
+        "type": "object",
+        "properties": {
+          "body": {
+            "nullable": true,
+            "description": "The JSON request body. A string value that is exactly `{{ job.uuid }}`, `{{ job.status }}`, `{{ report.uuid }}`, `{{ project.uuid }}`, or `{{ project.slug }}` becomes that value, and one that is exactly `{{ report }}` becomes the job's report, which a body can send only once. Whitespace inside the braces is optional. Every other string, every key, and every other value is sent as it is. Without a body, the body is the job's report, as the report endpoint returns it."
+          },
+          "headers": {
+            "description": "Request headers. Names are case-insensitive, and a later duplicate replaces an earlier one. A header named `Content-Type` or `User-Agent` replaces Bencher's default.",
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Secret"
+            }
+          },
+          "url": {
+            "description": "The `https` URL to send the request to",
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
       "JsonNewCheckout": {
         "type": "object",
         "properties": {
@@ -14719,6 +14744,15 @@
             "nullable": true,
             "description": "Track the build time of the benchmark command",
             "type": "boolean"
+          },
+          "callback": {
+            "nullable": true,
+            "description": "An HTTP request to send once the job finishes, for an organization with a Bencher Plus plan",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonNewCallback"
+              }
+            ]
           },
           "cmd": {
             "nullable": true,

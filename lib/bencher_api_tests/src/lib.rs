@@ -41,6 +41,9 @@ mod context;
 #[cfg(feature = "plus")]
 pub mod helpers;
 #[cfg(feature = "plus")]
+mod license;
+mod log;
+#[cfg(feature = "plus")]
 pub mod oci;
 mod seed;
 
@@ -49,6 +52,7 @@ pub use bencher_callback::CallbackRequest;
 #[cfg(feature = "plus")]
 pub use callbacks::RecordingSender;
 pub use context::TestServer;
+pub use log::LogCapture;
 #[cfg(feature = "plus")]
 pub use seed::TestProjectKey;
 pub use seed::{TestOrg, TestProject, TestUser};
