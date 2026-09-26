@@ -6,7 +6,7 @@ use std::{
 
 use dashmap::DashMap;
 
-use crate::epoch_bucket;
+use crate::Buckets;
 use crate::snapshot::{EpochBucket, RateLimiterSnapshot, WindowSnapshot};
 
 pub const MINUTE: Duration = Duration::from_mins(1);
@@ -97,7 +97,7 @@ where
 }
 
 struct Window<K> {
-    duration: Duration,
+    buckets: Buckets,
     limit: usize,
     event_map: DashMap<K, BucketedEvents>,
 }
@@ -108,31 +108,24 @@ where
 {
     fn new(duration: Duration, limit: usize) -> Self {
         Self {
-            duration,
+            buckets: Buckets::new(duration),
             limit,
             event_map: DashMap::new(),
         }
-    }
-
-    fn now_and_cutoff(&self) -> (u64, u64) {
-        Self::now_and_cutoff_at(self.duration, SystemTime::now())
-    }
-
-    fn now_and_cutoff_at(duration: Duration, now: SystemTime) -> (u64, u64) {
-        let now_secs = now
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs());
-        let bucket_secs = duration.as_secs();
-        let now_bucket = epoch_bucket(now_secs, bucket_secs);
-        let cutoff_bucket = epoch_bucket(now_secs.saturating_sub(bucket_secs), bucket_secs);
-        (now_bucket, cutoff_bucket)
     }
 
     fn snapshot(&self) -> WindowSnapshot<K>
     where
         K: Clone,
     {
-        let (_, cutoff) = self.now_and_cutoff();
+        self.snapshot_at(SystemTime::now())
+    }
+
+    fn snapshot_at(&self, now: SystemTime) -> WindowSnapshot<K>
+    where
+        K: Clone,
+    {
+        let cutoff = self.buckets.cutoff_bucket(now);
         let mut events = HashMap::new();
         for entry in &self.event_map {
             let buckets: Vec<(EpochBucket, u32)> = entry
@@ -150,7 +143,11 @@ where
     }
 
     fn restore(&self, snapshot: WindowSnapshot<K>) {
-        let (_, cutoff) = self.now_and_cutoff();
+        self.restore_at(snapshot, SystemTime::now());
+    }
+
+    fn restore_at(&self, snapshot: WindowSnapshot<K>, now: SystemTime) {
+        let cutoff = self.buckets.cutoff_bucket(now);
         for (key, buckets) in snapshot.events {
             let filtered: VecDeque<(u64, u32)> = buckets
                 .into_iter()
@@ -174,7 +171,7 @@ where
     /// Returns the number of evicted keys. The count is advisory: concurrent traffic can add or
     /// remove keys while the pass runs, so it is only ever used for reporting.
     fn prune(&self) -> usize {
-        let (_, cutoff) = self.now_and_cutoff();
+        let cutoff = self.buckets.cutoff_bucket(SystemTime::now());
         let before = self.event_map.len();
         self.event_map.retain(|_, events| {
             events.prune(cutoff);
@@ -184,7 +181,12 @@ where
     }
 
     fn check(&self, key: K) -> bool {
-        let (now_bucket, cutoff) = self.now_and_cutoff();
+        self.check_at(key, SystemTime::now())
+    }
+
+    fn check_at(&self, key: K, now: SystemTime) -> bool {
+        let now_bucket = self.buckets.now_bucket(now);
+        let cutoff = self.buckets.cutoff_bucket(now);
 
         let mut entry = self
             .event_map
@@ -361,54 +363,106 @@ mod tests {
         assert!(snapshot2.minute.events.contains_key(&2u32));
     }
 
+    /// Whether an event recorded at `event` still counts against a limit of one at `probe`.
+    fn counted_at(window: Duration, event: SystemTime, probe: SystemTime) -> bool {
+        let window = Window::new(window, 1);
+        assert!(window.check_at(1u32, event));
+        !window.check_at(1, probe)
+    }
+
+    // `test_now()` is a multiple of every bucket size used, so `event - offset` starts a bucket.
     #[test]
-    fn restore_filters_expired() {
-        let limiter = RateLimiter::new(RateLimits {
-            minute: 100,
-            hour: 1000,
-            day: 10000,
-        });
+    fn event_counts_for_the_window_and_at_most_one_bucket_more() {
+        for (window, bucket) in [
+            (MINUTE, Duration::from_secs(5)),
+            (HOUR, Duration::from_mins(5)),
+            (DAY, Duration::from_hours(2)),
+        ] {
+            for offset in [
+                Duration::ZERO,
+                Duration::from_secs(1),
+                bucket.saturating_sub(Duration::from_secs(1)),
+            ] {
+                let event = test_now() + offset;
+                assert!(counted_at(
+                    window,
+                    event,
+                    event + window - Duration::from_secs(1)
+                ));
+                assert!(counted_at(
+                    window,
+                    event,
+                    event + window + bucket - Duration::from_secs(1) - offset
+                ));
+                assert!(!counted_at(window, event, event + window + bucket));
+            }
+        }
+    }
 
-        let old_bucket = epoch_bucket(
-            test_now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                - 120,
-            60,
-        );
-        let snapshot = RateLimiterSnapshot {
-            minute: WindowSnapshot {
-                events: HashMap::from([(1u32, vec![(old_bucket, 5)])]),
-            },
-            hour: WindowSnapshot {
-                events: HashMap::new(),
-            },
-            day: WindowSnapshot {
-                events: HashMap::new(),
-            },
+    #[test]
+    fn day_limit_reached_in_the_evening_releases_before_the_next_day_boundary() {
+        let evening = test_now() + Duration::from_hours(20);
+        let limited_at = |probe| {
+            let window = Window::new(DAY, 100);
+            for _ in 0..100 {
+                assert!(window.check_at(1u32, evening));
+            }
+            !window.check_at(1, probe)
         };
-        limiter.restore(snapshot);
+        assert!(limited_at(evening + DAY - Duration::from_secs(1)));
+        assert!(!limited_at(evening + DAY + Duration::from_hours(2)));
+    }
 
-        let snapshot2 = limiter.snapshot();
-        assert!(snapshot2.minute.events.is_empty());
+    #[test]
+    fn rejected_check_evicts_the_oldest_and_records() {
+        let window = Window::new(MINUTE, 2);
+        let start = test_now();
+        assert!(window.check_at(1u32, start));
+        assert!(window.check_at(1, start));
+        let rejected = start + Duration::from_secs(30);
+        for _ in 0..3 {
+            assert!(!window.check_at(1, rejected));
+        }
+        // No check result can observe the eviction: it only keeps the total at the limit.
+        assert_eq!(window.event_map.get(&1).unwrap().total, 2);
+
+        assert!(!window.check_at(1, start + MINUTE + Duration::from_secs(5)));
+    }
+
+    #[test]
+    fn snapshot_round_trip_keeps_the_limit() {
+        let now = test_now();
+        let window = Window::new(MINUTE, 2);
+        assert!(window.check_at(1u32, now - Duration::from_secs(50)));
+        assert!(window.check_at(1, now));
+
+        let restored = Window::new(MINUTE, 2);
+        restored.restore_at(window.snapshot_at(now), now);
+        assert!(!restored.check_at(1, now));
+    }
+
+    #[test]
+    fn restore_after_time_advances_drops_expired_buckets() {
+        let now = test_now();
+        let window = Window::new(MINUTE, 2);
+        assert!(window.check_at(1u32, now - Duration::from_secs(50)));
+        assert!(window.check_at(1, now));
+        let snapshot = window.snapshot_at(now);
+
+        let later = now + Duration::from_secs(15);
+        let restored = Window::new(MINUTE, 2);
+        restored.restore_at(snapshot, later);
+        assert!(restored.check_at(1, later));
+        assert!(!restored.check_at(1, later));
     }
 
     #[test]
     fn prune_removes_stale_keys() {
         let window: Window<u32> = Window::new(Duration::from_mins(1), 100);
-        let old_bucket = epoch_bucket(
-            test_now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                - 120,
-            60,
-        );
         window.event_map.insert(
             1,
             BucketedEvents {
-                buckets: VecDeque::from([(old_bucket, 3)]),
+                buckets: VecDeque::from([(stale_bucket(MINUTE), 3)]),
                 total: 3,
             },
         );
@@ -418,20 +472,13 @@ mod tests {
         assert!(!window.event_map.contains_key(&1));
     }
 
-    fn stale_bucket(bucket_secs: u64) -> u64 {
-        epoch_bucket(
-            test_now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                - 120,
-            bucket_secs,
-        )
+    fn stale_bucket(window: Duration) -> EpochBucket {
+        Buckets::new(window).now_bucket(test_now() - Duration::from_mins(2))
     }
 
-    fn stale_events(bucket_secs: u64) -> BucketedEvents {
+    fn stale_events(window: Duration) -> BucketedEvents {
         BucketedEvents {
-            buckets: VecDeque::from([(stale_bucket(bucket_secs), 3)]),
+            buckets: VecDeque::from([(stale_bucket(window), 3)]),
             total: 3,
         }
     }
@@ -445,8 +492,8 @@ mod tests {
     #[test]
     fn prune_returns_evicted_count() {
         let window: Window<u32> = Window::new(Duration::from_mins(1), 100);
-        window.event_map.insert(1, stale_events(60));
-        window.event_map.insert(2, stale_events(60));
+        window.event_map.insert(1, stale_events(MINUTE));
+        window.event_map.insert(2, stale_events(MINUTE));
 
         assert_eq!(window.prune(), 2);
         assert!(window.event_map.is_empty());
@@ -455,7 +502,7 @@ mod tests {
     #[test]
     fn prune_does_not_count_live_keys() {
         let window: Window<u32> = Window::new(Duration::from_mins(1), 100);
-        window.event_map.insert(1, stale_events(60));
+        window.event_map.insert(1, stale_events(MINUTE));
         assert!(window.check(2));
 
         assert_eq!(window.prune(), 1);
@@ -480,10 +527,10 @@ mod tests {
             hour: 1000,
             day: 10000,
         });
-        limiter.minute.event_map.insert(1, stale_events(60));
-        limiter.hour.event_map.insert(1, stale_events(3600));
-        limiter.hour.event_map.insert(2, stale_events(3600));
-        limiter.day.event_map.insert(1, stale_events(86400));
+        limiter.minute.event_map.insert(1, stale_events(MINUTE));
+        limiter.hour.event_map.insert(1, stale_events(HOUR));
+        limiter.hour.event_map.insert(2, stale_events(HOUR));
+        limiter.day.event_map.insert(1, stale_events(DAY));
 
         assert_eq!(limiter.prune(), 4);
     }

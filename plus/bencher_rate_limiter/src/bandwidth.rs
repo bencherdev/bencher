@@ -6,11 +6,11 @@ use std::{
 
 use dashmap::DashMap;
 
-use crate::epoch_bucket;
+use crate::Buckets;
 use crate::snapshot::{BandwidthSnapshot, EpochBucket};
 
 pub struct BandwidthLimiter<K> {
-    window: Duration,
+    buckets: Buckets,
     event_map: DashMap<K, BucketedBandwidth>,
 }
 
@@ -20,26 +20,9 @@ where
 {
     pub fn new(window: Duration) -> Self {
         Self {
-            window,
+            buckets: Buckets::new(window),
             event_map: DashMap::new(),
         }
-    }
-
-    fn cutoff_bucket(&self, now: SystemTime) -> u64 {
-        let now_secs = now
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs());
-        epoch_bucket(
-            now_secs.saturating_sub(self.window.as_secs()),
-            self.window.as_secs(),
-        )
-    }
-
-    fn now_bucket(&self, now: SystemTime) -> u64 {
-        let now_secs = now
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs());
-        epoch_bucket(now_secs, self.window.as_secs())
     }
 
     pub fn check(&self, key: &K, limit: u64) -> bool {
@@ -47,7 +30,7 @@ where
     }
 
     pub fn check_at(&self, key: &K, limit: u64, now: SystemTime) -> bool {
-        let cutoff = self.cutoff_bucket(now);
+        let cutoff = self.buckets.cutoff_bucket(now);
 
         let total_bytes = if let Some(mut bw) = self.event_map.get_mut(key) {
             bw.prune(cutoff);
@@ -67,7 +50,7 @@ where
         if bytes == 0 {
             return;
         }
-        let now_bucket = self.now_bucket(now);
+        let now_bucket = self.buckets.now_bucket(now);
         self.event_map
             .entry(key)
             .or_default()
@@ -79,7 +62,7 @@ where
     /// Returns the number of evicted keys. The count is advisory: concurrent traffic can add or
     /// remove keys while the pass runs, so it is only ever used for reporting.
     pub fn prune(&self) -> usize {
-        let cutoff = self.cutoff_bucket(SystemTime::now());
+        let cutoff = self.buckets.cutoff_bucket(SystemTime::now());
         let before = self.event_map.len();
         self.event_map.retain(|_, bw| {
             bw.prune(cutoff);
@@ -89,7 +72,11 @@ where
     }
 
     pub fn snapshot(&self) -> BandwidthSnapshot<K> {
-        let cutoff = self.cutoff_bucket(SystemTime::now());
+        self.snapshot_at(SystemTime::now())
+    }
+
+    fn snapshot_at(&self, now: SystemTime) -> BandwidthSnapshot<K> {
+        let cutoff = self.buckets.cutoff_bucket(now);
         let mut events = HashMap::new();
         for entry in &self.event_map {
             let buckets: Vec<(EpochBucket, u64)> = entry
@@ -107,7 +94,11 @@ where
     }
 
     pub fn restore(&self, snapshot: BandwidthSnapshot<K>) {
-        let cutoff = self.cutoff_bucket(SystemTime::now());
+        self.restore_at(snapshot, SystemTime::now());
+    }
+
+    fn restore_at(&self, snapshot: BandwidthSnapshot<K>, now: SystemTime) {
+        let cutoff = self.buckets.cutoff_bucket(now);
         for (key, buckets) in snapshot.events {
             let filtered: VecDeque<(u64, u64)> = buckets
                 .into_iter()
@@ -203,7 +194,7 @@ mod tests {
     fn window_cleanup() {
         let limiter = BandwidthLimiter::new(DAY);
         let now = test_now();
-        let old = now - Duration::from_hours(25);
+        let old = now - (DAY + Duration::from_hours(2));
         limiter.record_at(1u32, 500, old);
         assert!(limiter.check_at(&1, 100, now));
     }
@@ -216,42 +207,85 @@ mod tests {
         assert!(!limiter.event_map.contains_key(&1));
     }
 
-    #[test]
-    fn snapshot_round_trip() {
-        let limiter = BandwidthLimiter::new(DAY);
-        limiter.record(1u32, 1024);
-        limiter.record(1, 2048);
+    /// Whether one byte recorded at `event` still counts against a one byte limit at `probe`.
+    fn counted_at(window: Duration, event: SystemTime, probe: SystemTime) -> bool {
+        let limiter = BandwidthLimiter::new(window);
+        limiter.record_at(1u32, 1, event);
+        !limiter.check_at(&1, 1, probe)
+    }
 
-        let snapshot = limiter.snapshot();
-        let entries = &snapshot.events[&1];
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].1, 3072);
-
-        let limiter2 = BandwidthLimiter::new(DAY);
-        limiter2.restore(snapshot);
-
-        let snapshot2 = limiter2.snapshot();
-        let entries2 = &snapshot2.events[&1];
-        assert_eq!(entries2.len(), 1);
-        assert_eq!(entries2[0].1, 3072);
+    // `test_now()` is a multiple of every bucket size used, so `event - offset` starts a bucket.
+    fn assert_window_bound(window: Duration, bucket: Duration) {
+        for offset in [
+            Duration::ZERO,
+            Duration::from_secs(1),
+            bucket.saturating_sub(Duration::from_secs(1)),
+        ] {
+            let event = test_now() + offset;
+            assert!(counted_at(
+                window,
+                event,
+                event + window - Duration::from_secs(1)
+            ));
+            assert!(counted_at(
+                window,
+                event,
+                event + window + bucket - Duration::from_secs(1) - offset
+            ));
+            assert!(!counted_at(window, event, event + window + bucket));
+        }
     }
 
     #[test]
-    fn restore_filters_expired() {
-        let limiter = BandwidthLimiter::<u32>::new(DAY);
-        let old_bucket = epoch_bucket(
-            (test_now() - Duration::from_hours(25))
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            DAY.as_secs(),
-        );
-        let snapshot = BandwidthSnapshot {
-            events: HashMap::from([(1u32, vec![(old_bucket, 500)])]),
-        };
-        limiter.restore(snapshot);
-        let snapshot2 = limiter.snapshot();
-        assert!(snapshot2.events.is_empty());
+    fn event_counts_for_the_window_and_at_most_one_bucket_more() {
+        assert_window_bound(DAY, Duration::from_hours(2));
+    }
+
+    #[test]
+    fn window_not_divisible_by_twelve() {
+        assert_window_bound(Duration::from_secs(100), Duration::from_secs(8));
+    }
+
+    #[test]
+    fn window_shorter_than_twelve_seconds() {
+        assert_window_bound(Duration::from_secs(5), Duration::from_secs(1));
+    }
+
+    #[test]
+    fn limit_reached_in_the_evening_releases_before_the_next_day_boundary() {
+        let limiter = BandwidthLimiter::new(DAY);
+        let evening = test_now() + Duration::from_hours(20);
+        limiter.record_at(1u32, 1000, evening);
+        assert!(!limiter.check_at(&1, 1000, evening + DAY - Duration::from_secs(1)));
+        assert!(limiter.check_at(&1, 1000, evening + DAY + Duration::from_hours(2)));
+    }
+
+    #[test]
+    fn snapshot_round_trip_keeps_the_limit() {
+        let now = test_now();
+        let limiter = BandwidthLimiter::new(DAY);
+        limiter.record_at(1u32, 1024, now - Duration::from_hours(20));
+        limiter.record_at(1, 2048, now);
+
+        let restored = BandwidthLimiter::new(DAY);
+        restored.restore_at(limiter.snapshot_at(now), now);
+        assert!(restored.check_at(&1, 3073, now));
+        assert!(!restored.check_at(&1, 3072, now));
+    }
+
+    #[test]
+    fn restore_after_time_advances_drops_expired_buckets() {
+        let now = test_now();
+        let limiter = BandwidthLimiter::new(DAY);
+        limiter.record_at(1u32, 500, now - Duration::from_hours(20));
+        limiter.record_at(1, 200, now);
+        let snapshot = limiter.snapshot_at(now);
+
+        let later = now + Duration::from_hours(6);
+        let restored = BandwidthLimiter::new(DAY);
+        restored.restore_at(snapshot, later);
+        assert!(restored.check_at(&1, 201, later));
+        assert!(!restored.check_at(&1, 200, later));
     }
 
     #[test]
@@ -307,10 +341,11 @@ mod tests {
     #[test]
     fn bucket_merging() {
         let limiter = BandwidthLimiter::new(DAY);
-        limiter.record(1u32, 100);
-        limiter.record(1, 200);
+        let now = test_now();
+        limiter.record_at(1u32, 100, now);
+        limiter.record_at(1, 200, now);
 
-        let snapshot = limiter.snapshot();
+        let snapshot = limiter.snapshot_at(now);
         let entries = &snapshot.events[&1];
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].1, 300);

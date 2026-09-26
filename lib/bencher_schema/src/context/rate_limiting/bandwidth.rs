@@ -215,7 +215,7 @@ mod tests {
         let org_uuid = org_uuid();
         let org = org();
 
-        let old = now - Duration::from_hours(25);
+        let old = now - (DAY + Duration::from_hours(2));
         limiter.record_at(org_uuid, 500, old);
 
         limiter

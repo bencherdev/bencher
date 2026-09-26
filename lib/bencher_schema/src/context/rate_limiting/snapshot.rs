@@ -232,6 +232,129 @@ mod tests {
         assert!(snap.public.requests.hour.events.is_empty());
     }
 
+    /// Every window over any limit, indexed in buckets the size of the whole window.
+    fn window_sized_limiter_snapshot<K: Eq + Hash + Copy>(
+        key: K,
+        now_secs: u64,
+    ) -> GenericRateLimiterSnapshot<K> {
+        let window = |window: std::time::Duration| WindowSnapshot {
+            events: HashMap::from([(
+                key,
+                vec![(
+                    bencher_rate_limiter::epoch_bucket(now_secs, window.as_secs()),
+                    u32::MAX,
+                )],
+            )]),
+        };
+        GenericRateLimiterSnapshot {
+            minute: window(bencher_rate_limiter::MINUTE),
+            hour: window(bencher_rate_limiter::HOUR),
+            day: window(bencher_rate_limiter::DAY),
+        }
+    }
+
+    #[test]
+    fn load_drops_window_sized_buckets() {
+        use crate::context::RateLimiting;
+
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("bencher.db");
+        let snapshot_path = dir.path().join("rate_limiting.json");
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+
+        let now_secs = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let ip: IpAddr = "10.0.0.1".parse().unwrap();
+        let user = UserUuid::from(uuid::Uuid::nil());
+        let project = ProjectUuid::from(uuid::Uuid::nil());
+        let runner = RunnerUuid::from(uuid::Uuid::nil());
+        let organization = OrganizationUuid::from(uuid::Uuid::nil());
+
+        let snapshot = RateLimitingSnapshot {
+            public: PublicRateLimiterSnapshot {
+                requests: window_sized_limiter_snapshot(ip, now_secs),
+                attempts: window_sized_limiter_snapshot(ip, now_secs),
+                runs: window_sized_limiter_snapshot(ip, now_secs),
+            },
+            user: UserRateLimiterSnapshot {
+                requests: window_sized_limiter_snapshot(user, now_secs),
+                attempts: window_sized_limiter_snapshot(user, now_secs),
+                credentials: window_sized_limiter_snapshot(user, now_secs),
+                organizations: window_sized_limiter_snapshot(user, now_secs),
+                invites: window_sized_limiter_snapshot(user, now_secs),
+                runs: window_sized_limiter_snapshot(user, now_secs),
+            },
+            project: ProjectRateLimiterSnapshot {
+                requests: window_sized_limiter_snapshot(project, now_secs),
+                runs: window_sized_limiter_snapshot(project, now_secs),
+            },
+            runner: RunnerRateLimiterSnapshot {
+                requests: window_sized_limiter_snapshot(runner, now_secs),
+            },
+            bandwidth: BandwidthSnapshot {
+                events: HashMap::from([(
+                    organization,
+                    vec![(
+                        bencher_rate_limiter::epoch_bucket(
+                            now_secs,
+                            bencher_rate_limiter::DAY.as_secs(),
+                        ),
+                        u64::MAX,
+                    )],
+                )]),
+            },
+        };
+        std::fs::write(&snapshot_path, serde_json::to_string(&snapshot).unwrap()).unwrap();
+
+        let limiter = RateLimiting::default();
+        limiter.load(&db_path, &log).unwrap();
+
+        limiter.save(&db_path, &log).unwrap();
+        let empty = RateLimitingSnapshot {
+            public: PublicRateLimiterSnapshot {
+                requests: empty_limiter_snapshot(),
+                attempts: empty_limiter_snapshot(),
+                runs: empty_limiter_snapshot(),
+            },
+            user: UserRateLimiterSnapshot {
+                requests: empty_limiter_snapshot(),
+                attempts: empty_limiter_snapshot(),
+                credentials: empty_limiter_snapshot(),
+                organizations: empty_limiter_snapshot(),
+                invites: empty_limiter_snapshot(),
+                runs: empty_limiter_snapshot(),
+            },
+            project: ProjectRateLimiterSnapshot {
+                requests: empty_limiter_snapshot(),
+                runs: empty_limiter_snapshot(),
+            },
+            runner: RunnerRateLimiterSnapshot {
+                requests: empty_limiter_snapshot(),
+            },
+            bandwidth: BandwidthSnapshot {
+                events: HashMap::new(),
+            },
+        };
+        let saved: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&snapshot_path).unwrap()).unwrap();
+        assert_eq!(saved, serde_json::to_value(&empty).unwrap());
+
+        limiter.public_request(ip).unwrap();
+        limiter.public_auth_attempt(ip).unwrap();
+        limiter.unclaimed_run(ip).unwrap();
+        limiter.user_request(user).unwrap();
+        limiter.auth_attempt(user).unwrap();
+        limiter.create_credential(user).unwrap();
+        limiter.create_organization(user).unwrap();
+        limiter.user_invite(user).unwrap();
+        limiter.claimed_run(user).unwrap();
+        limiter.project_request(project).unwrap();
+        limiter.project_run(project).unwrap();
+        limiter.runner_request(runner).unwrap();
+    }
+
     #[test]
     fn load_missing_file() {
         use crate::context::RateLimiting;
