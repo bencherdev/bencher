@@ -1,11 +1,13 @@
 use core::fmt;
 use std::sync::LazyLock;
 
+use bencher_callback::{CallbackAttemptClass, CallbackFinish};
 use opentelemetry::metrics::Meter;
 use uuid::Uuid;
 
 use crate::api_gauge::ApiGauge;
 use crate::api_histogram::{ApiHistogram, Priority, priority_attribute};
+use crate::callback::{attempt_attributes, finish_attributes};
 
 static METER: LazyLock<Meter> = LazyLock::new(|| opentelemetry::global::meter(ApiMeter::NAME));
 
@@ -44,6 +46,11 @@ impl ApiMeter {
         Self::adjust(api_gauge, -1);
     }
 
+    /// Raise a gauge by `value`, as when it starts from a stored count.
+    pub fn up_by(api_gauge: ApiGauge, value: u64) {
+        Self::adjust(api_gauge, i64::try_from(value).unwrap_or(i64::MAX));
+    }
+
     fn adjust(api_gauge: ApiGauge, value: i64) {
         let counter = METER
             .i64_up_down_counter(api_gauge.name())
@@ -59,11 +66,15 @@ impl ApiMeter {
     /// The `OTel` SDK deduplicates instruments by (name, description, unit),
     /// so re-building on every call is cheap and returns the same instrument.
     pub fn record(api_histogram: ApiHistogram, value: f64) {
-        let histogram = METER
+        let builder = METER
             .f64_histogram(api_histogram.name())
             .with_description(api_histogram.description())
-            .with_unit(api_histogram.unit())
-            .build();
+            .with_unit(api_histogram.unit());
+        let histogram = match api_histogram.boundaries() {
+            Some(boundaries) => builder.with_boundaries(boundaries.to_vec()),
+            None => builder,
+        }
+        .build();
         let attributes = api_histogram.attributes();
         histogram.record(value, &attributes);
     }
@@ -160,6 +171,10 @@ pub enum ApiCounter {
     RunnerSelfUpdateSent(UpdateChannelKind),
     RunnerSelfUpdateCheckFailed(UpdateChannelKind),
 
+    // Callback metrics
+    CallbackAttempt(CallbackAttemptClass),
+    CallbackFinish(CallbackFinish),
+
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
     SelfHostedServerStats(Uuid),
@@ -210,7 +225,8 @@ impl ApiCounter {
             | Self::UserKeyViewBlocked
             | Self::UserKeyUpdateBlocked
             | Self::UserKeyRevokeBlocked
-            | Self::OrganizationPlanUpdateBlocked => "{attempt}",
+            | Self::OrganizationPlanUpdateBlocked
+            | Self::CallbackAttempt(_) => "{attempt}",
             Self::UserCredentialMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
             Self::UserKeyCreate | Self::UserKeyRevoke | Self::RunnerKeyRotate => "{key}",
             Self::ProjectKeyAuthFailed(_) | Self::UserKeyAuthFailed(_) => "{auth_failure}",
@@ -230,6 +246,8 @@ impl ApiCounter {
             Self::RunnerLateResultDiscarded => "{result}",
             Self::RunnerDisconnect => "{disconnect}",
             Self::RunnerSelfUpdateSent(_) => "{update}",
+
+            Self::CallbackFinish(_) => "{callback}",
         }
     }
 
@@ -324,6 +342,10 @@ impl ApiCounter {
             Self::RunnerDisconnect => "runner.disconnect",
             Self::RunnerSelfUpdateSent(_) => "runner.self_update.sent",
             Self::RunnerSelfUpdateCheckFailed(_) => "runner.self_update.check.failed",
+
+            // Callback metrics
+            Self::CallbackAttempt(_) => "callback.attempt",
+            Self::CallbackFinish(_) => "callback.finish",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
@@ -461,6 +483,12 @@ impl ApiCounter {
                 "Counts the number of runner self-update checksum fetch failures"
             },
 
+            // Callback metrics
+            Self::CallbackAttempt(_) => "Counts the number of callback delivery attempts",
+            Self::CallbackFinish(_) => {
+                "Counts the number of callbacks that reached a final outcome"
+            },
+
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
             Self::SelfHostedServerStats(_) => "Counts the number of self-hosted server stats sent",
@@ -535,6 +563,8 @@ impl ApiCounter {
             | Self::RunnerSelfUpdateCheckFailed(update_channel_kind) => {
                 vec![update_channel_kind.into()]
             },
+            Self::CallbackAttempt(class) => attempt_attributes(class),
+            Self::CallbackFinish(finish) => finish_attributes(finish),
             Self::RunnerRequestMax(interval_kind)
             | Self::RunUnclaimedMax(interval_kind)
             | Self::RunClaimedMax(interval_kind)

@@ -174,6 +174,8 @@ impl ConfigTx {
         // connection until `start`, so every callback left delivering is a previous process's.
         #[cfg(feature = "plus")]
         callbacks.reset_delivering(log).await;
+        #[cfg(all(feature = "plus", feature = "otel"))]
+        callbacks.start_sealed_gauge(log).await;
         let server = starter.start();
 
         // The server is already accepting connections. Requests may arrive before job recovery

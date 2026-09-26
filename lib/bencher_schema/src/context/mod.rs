@@ -40,6 +40,8 @@ mod stats;
 use bencher_recaptcha::RecaptchaClient;
 #[cfg(feature = "plus")]
 pub use callbacks::Callbacks;
+#[cfg(all(feature = "plus", feature = "otel"))]
+pub use callbacks::callback_sealed;
 pub use database::{DataStore, DataStoreError, Database, DbConnection};
 #[cfg(feature = "plus")]
 pub use heartbeat_tasks::HeartbeatTasks;

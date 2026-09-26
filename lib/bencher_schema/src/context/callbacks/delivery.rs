@@ -356,6 +356,8 @@ impl Delivery {
                 attempt
             };
             log_attempt(log, &claim, request, number, &attempt, started.elapsed());
+            #[cfg(feature = "otel")]
+            super::metrics::attempted(attempt.class());
             let status = response_status(&attempt);
             let finish = match verdict(&attempt) {
                 Verdict::Delivered => CallbackFinish::Delivered,
@@ -406,7 +408,13 @@ impl Delivery {
                 }
                 QueryJobCallback::finish(conn, claim.job_id, finish.into(), now)
             });
-        let latency_ms = millis(claim.claimed.elapsed());
+        let latency = claim.claimed.elapsed();
+        let latency_ms = millis(latency);
+        // Only a settle that committed dropped the sealed request.
+        #[cfg(feature = "otel")]
+        if matches!(finished, Ok(true)) {
+            super::metrics::finished(finish, claim.attempts, latency);
+        }
         match (finished, finish) {
             (Ok(true), CallbackFinish::Delivered) => {
                 slog::info!(log, "Callback delivered"; "job" => %claim.job_uuid, "organization" => %claim.organization, "project" => %claim.project, "attempts" => claim.attempts, "latency_ms" => latency_ms);
