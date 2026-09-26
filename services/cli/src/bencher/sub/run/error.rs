@@ -16,6 +16,9 @@ pub enum RunError {
         "A project-scoped API key (`bencher_run_*`) requires `--project`/`BENCHER_PROJECT` or an `--image` named after the project (`[{{registry}}/]{{project}}:{{tag}}`). The key is scoped to a single existing project and cannot auto-create one. Use a user-scoped API key (`bencher_user_*`) or a user JWT token to create projects on the fly."
     )]
     ProjectKeyRequiresProject,
+    #[cfg(feature = "plus")]
+    #[error("Attaching to a remote job with `--job` requires `--project`/`BENCHER_PROJECT`.")]
+    JobRequiresProject,
 
     #[error("{0}")]
     Branch(#[from] super::branch::BranchError),
