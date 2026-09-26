@@ -136,6 +136,7 @@ The clippy script will install the target automatically and warn if no cross-com
 - Use `bencher_json::Clock::Custom` (behind the `test-clock` feature) to inject a fake clock in tests instead of calling `DateTime::now()` directly. `Clock` is available on `ApiContext`.
 - With `tokio::time::pause()`, call `tokio::task::yield_now().await` before `tokio::time::advance()` when the code under test spawns a task that sleeps: a task is not polled until the test yields, so an advance issued first moves the clock before the sleep is registered, and the timer then fires that much later in virtual time, after the test has already asserted
 - For unit tests without access to `ApiContext`/`Clock`, use `bencher_json::DateTime::TEST` (a fixed deterministic const). Enable `test-clock` in `bencher_json` dev-dependencies to access it.
+- No tautological tests. Every test must fail for some realistic bug: do not assert a constant, a `Display` or label string, a derive, a mapping against a copy of its own table, or anything the type system already guarantees.
 - Most wire type definitions are in the `bencher_valid` or `bencher_json` crate
 - Always pass strong types (`MyTypeId`, `MyTypeUuid`, etc) into a function instead of its stringly typed equivalent, even in tests
 - Do **NOT** use shared, global mutable state
