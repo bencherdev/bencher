@@ -23,4 +23,8 @@ pub struct TaskRunner {
     /// Start a runner daemon locally for the test
     #[clap(long)]
     pub with_daemon: bool,
+
+    /// Is Bencher Cloud
+    #[clap(long, requires = "with_daemon")]
+    pub is_bencher_cloud: bool,
 }

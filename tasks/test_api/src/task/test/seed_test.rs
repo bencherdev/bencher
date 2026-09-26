@@ -13,7 +13,7 @@ pub(crate) const BENCHER_CMD: &str = "bencher";
 pub(crate) const HOST_ARG: &str = "--host";
 pub(crate) const TOKEN_ARG: &str = "--token";
 const KEY_ARG: &str = "--key";
-const ORG_SLUG: &str = "muriel-bagge";
+pub(crate) const ORG_SLUG: &str = "muriel-bagge";
 /// Muriel's personal org slug doubles as her user slug.
 #[cfg(feature = "plus")]
 pub(crate) const USER_SLUG: &str = ORG_SLUG;

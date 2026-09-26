@@ -8309,6 +8309,7 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "bencher_json",
+ "bencher_license",
  "camino",
  "clap",
  "pretty_assertions",

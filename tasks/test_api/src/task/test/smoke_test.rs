@@ -246,6 +246,7 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
                 let runner_test = runner::RunnerTest::try_from(TaskRunner {
                     url: Some(api_url.clone()),
                     with_daemon: true,
+                    is_bencher_cloud: true,
                     ..Default::default()
                 })?;
                 runner_test.exec()?;
