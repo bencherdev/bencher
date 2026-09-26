@@ -99,7 +99,7 @@ impl NewRunJob {
 
 use super::{
     branch::{BranchId, QueryBranch, head::HeadId, version::VersionId},
-    threshold::{InsertThreshold, boundary::QueryBoundary},
+    threshold::{InsertThreshold, boundary::QueryBoundary, check_report_thresholds_shape},
 };
 
 pub mod report_benchmark;
@@ -181,6 +181,10 @@ impl QueryReport {
             return existing.into_json(log, actor_conn!(context, api_actor), ReportMode::Full);
         }
 
+        // Checked before the report creates anything, so a refused payload leaves nothing behind.
+        let bmf_version = json_report.bmf_version.unwrap_or(query_project.bmf_version);
+        check_report_thresholds_shape(bmf_version, json_report.thresholds.as_ref())?;
+
         #[cfg(all(feature = "plus", not(feature = "otel")))]
         let _ = is_claimed;
         #[cfg(all(feature = "plus", feature = "otel"))]
@@ -226,13 +230,13 @@ impl QueryReport {
             project_id,
             branch_id,
             testbed_id,
+            bmf_version,
             json_report.thresholds.take(),
         )
         .await?;
 
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default().normalize();
-        let bmf_version = json_report.bmf_version.unwrap_or(query_project.bmf_version);
 
         // Validate job before inserting report so that report + job creation is atomic:
         // if OCI resolution fails, neither the report nor the job is created.

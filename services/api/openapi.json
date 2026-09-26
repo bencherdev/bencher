@@ -4508,7 +4508,7 @@
           "variants"
         ],
         "summary": "Delete a variant",
-        "description": "Delete a variant for a benchmark. The user must have `delete` permissions for the project. All reports that use this variant must be deleted first!\n\nA benchmark's empty variant cannot be deleted. The empty variant is structural: every benchmark is born with exactly one, and report ingest treats a missing empty variant as data corruption rather than a variant to mint. Deleting it would manufacture exactly that corruption, so the request is refused. Archiving the empty variant stays allowed, because a later report revives it the same way it revives any other archived variant.",
+        "description": "Delete a variant for a benchmark. The user must have `delete` permissions for the project. All reports that use this variant must be deleted first! All thresholds that use this variant must be deleted first!\n\nA threshold uses a variant when its `parameters` filter names that exact set of parameters. A filter that merely matches the variant, because the variant pins every key the filter names and more besides, is a predicate over values rather than a reference to this row, and it does not stand in the way.\n\nA benchmark's empty variant cannot be deleted. The empty variant is structural: every benchmark is born with exactly one, and report ingest treats a missing empty variant as data corruption rather than a variant to mint. Deleting it would manufacture exactly that corruption, so the request is refused. Archiving the empty variant stays allowed, because a later report revives it the same way it revives any other archived variant.",
         "operationId": "proj_variant_delete",
         "parameters": [
           {
@@ -17067,20 +17067,86 @@
           }
         }
       },
-      "JsonReportThresholds": {
+      "JsonReportThresholdEntry": {
+        "description": "One threshold a BMF version 1 report declares.\n\nThe fields are the dimensions a threshold hangs off that the report does not already state, in their canonical order, and the model to check with.",
         "type": "object",
         "properties": {
-          "models": {
+          "measure": {
+            "description": "Measure UUID, slug, or name. If a measure name or slug is provided, the measure will be created if it does not exist.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NameId"
+              }
+            ]
+          },
+          "metric": {
             "nullable": true,
-            "description": "Map of measure UUID, slug, or name to the threshold model to use. If a measure name or slug is provided, the measure will be created if it does not exist.",
+            "description": "The name of the metric this threshold checks. If not set, the threshold checks the conventional `value` name. A threshold always checks exactly one name.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricName"
+              }
+            ]
+          },
+          "model": {
+            "description": "The threshold model to use.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Model"
+              }
+            ]
+          },
+          "parameters": {
+            "nullable": true,
+            "description": "The variants this threshold checks, as a parameters filter. A variant matches when any entry in the filter is a subset of its parameters. If not set, or set to an empty list, the threshold checks every variant.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParameterFilter"
+              }
+            ]
+          }
+        },
+        "required": [
+          "measure",
+          "model"
+        ]
+      },
+      "JsonReportThresholdModels": {
+        "description": "The thresholds a report declares, in the shape its BMF version spells them.\n\nThe report's BMF version says which shape is expected, and the other shape is a bad request.",
+        "oneOf": [
+          {
+            "title": "Map",
+            "description": "BMF version 0: a map of measure to model. A map key names a measure and nothing else, so the threshold it addresses is the bare one: the conventional `value` name of every variant.",
             "type": "object",
             "additionalProperties": {
               "$ref": "#/components/schemas/Model"
             }
           },
+          {
+            "title": "List",
+            "description": "BMF version 1: a list of entries. An entry names everything a threshold checks, so one measure may carry several of them.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonReportThresholdEntry"
+            }
+          }
+        ]
+      },
+      "JsonReportThresholds": {
+        "type": "object",
+        "properties": {
+          "models": {
+            "nullable": true,
+            "description": "The thresholds to create or update for the report's branch and testbed. At BMF version 0 this is a map of measure UUID, slug, or name to the threshold model to use. At BMF version 1 this is a list of threshold entries. If a measure name or slug is provided, the measure will be created if it does not exist.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReportThresholdModels"
+              }
+            ]
+          },
           "reset": {
             "nullable": true,
-            "description": "Reset the thresholds of the branch and testbed that the `models` map can address, the ones with no parameters filter and no metric name. Any models present in the `models` field will still be updated accordingly. If a threshold already exists and is not present in the `models` field, its current model will be removed.",
+            "description": "Reset the thresholds of the branch and testbed that the `models` field can address. Any thresholds present in the `models` field will still be updated accordingly. If a threshold already exists and is not present in the `models` field, its current model will be removed. The thresholds the `models` field can address are, at the report's BMF version 0, those with no parameters filter and no metric name, and at version 1, every threshold of the branch and testbed.",
             "type": "boolean"
           }
         }

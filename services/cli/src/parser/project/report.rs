@@ -154,7 +154,10 @@ pub struct CliReportThresholds {
     #[clap(long, requires = "threshold_test")]
     pub threshold_upper_boundary: Vec<ElidedOption<Boundary>>,
 
-    /// Reset the unspecified Thresholds of the `branch` and `testbed` that carry no parameters filter and no metric name
+    /// Reset the unspecified Thresholds of the `branch` and `testbed`, as far as the report can address them:
+    /// only the Thresholds with no parameters filter and no metric name for a BMF version 0 report,
+    /// and every Threshold of the branch and testbed for a BMF version 1 report.
+    /// A report that declares no version is read at the project's `bmf_version`.
     /// If a Threshold already exists and is not specified, its current Model will be removed.
     #[clap(long)]
     pub thresholds_reset: bool,
