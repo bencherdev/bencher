@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
 use bencher_json::{BENCHER_API_URL_STR, BencherKey, Jwt, Url};
+#[cfg(feature = "plus")]
+use clap::CommandFactory as _;
 use clap::{ArgGroup, Args, Parser, Subcommand, ValueEnum};
 
 pub mod compose;
@@ -38,6 +40,26 @@ pub struct CliBencher {
     /// Bencher subcommands
     #[clap(subcommand)]
     pub sub: CliSub,
+}
+
+impl CliBencher {
+    /// Parse like `Parser::parse`, then refuse what clap cannot express: the options a detached run
+    /// needs together.
+    pub fn parse_checked() -> Self {
+        let cli = Self::parse();
+        #[cfg(feature = "plus")]
+        if let CliSub::Run(run) = &cli.sub
+            && let Err(err) = run::check_detach_callback(run)
+        {
+            let mut cmd = Self::command();
+            // Building names the subcommand `bencher run` in the usage line.
+            cmd.build();
+            if let Some(run_cmd) = cmd.find_subcommand_mut("run") {
+                err.format(run_cmd).exit();
+            }
+        }
+        cli
+    }
 }
 
 #[derive(Subcommand, Debug)]

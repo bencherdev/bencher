@@ -1,5 +1,3 @@
-use clap::Parser as _;
-
 use crate::{CliError, parser::CliBencher};
 
 pub mod backend;
@@ -25,7 +23,7 @@ impl TryFrom<CliBencher> for Bencher {
 
 impl Bencher {
     pub fn new() -> Result<Self, CliError> {
-        CliBencher::parse().try_into()
+        CliBencher::parse_checked().try_into()
     }
 }
 

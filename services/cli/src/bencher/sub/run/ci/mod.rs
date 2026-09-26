@@ -1,7 +1,12 @@
 use bencher_comment::ReportComment;
+#[cfg(feature = "plus")]
+use bencher_json::JsonNewCallback;
 use bencher_json::ResourceName;
 
 use crate::parser::run::CliRunCi;
+
+#[cfg(feature = "plus")]
+use super::job::CallbackNotice;
 
 mod github_actions;
 
@@ -17,6 +22,14 @@ pub enum Ci {
 #[derive(Debug)]
 pub enum CiCheck {
     GitHubActions(CheckRunHandle),
+}
+
+/// How a remote job ended without results.
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JobFailure {
+    Failed,
+    Canceled,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -37,6 +50,8 @@ impl TryFrom<CliRunCi> for Option<Ci> {
             ci_id,
             ci_number,
             ci_i_am_vulnerable_to_pwn_requests,
+            #[cfg(feature = "plus")]
+            ci_callback_token,
         } = ci;
         Ok(github_actions.map(|token| {
             Ci::GitHubActions(GitHubActions {
@@ -47,6 +62,10 @@ impl TryFrom<CliRunCi> for Option<Ci> {
                 ci_id,
                 ci_number,
                 ci_i_am_vulnerable_to_pwn_requests,
+                #[cfg(feature = "plus")]
+                callback_token: ci_callback_token,
+                #[cfg(feature = "plus")]
+                dispatch: None,
             })
         }))
     }
@@ -82,15 +101,72 @@ impl Ci {
         &self,
         check: Option<CiCheck>,
         report_comment: &ReportComment,
+        #[cfg(feature = "plus")] failure: Option<JobFailure>,
         log: bool,
     ) -> Result<(), CiError> {
         match self {
             Self::GitHubActions(github_actions) => {
                 let check = check.map(|CiCheck::GitHubActions(handle)| handle);
                 github_actions
-                    .run(check, report_comment, log)
+                    .run(
+                        check,
+                        report_comment,
+                        #[cfg(feature = "plus")]
+                        failure,
+                        log,
+                    )
                     .await
                     .map_err(Into::into)
+            },
+        }
+    }
+
+    /// The callback a detached run sends, so that its attach can complete the check.
+    #[cfg(feature = "plus")]
+    pub fn dispatch_callback(
+        &self,
+        check: Option<&CiCheck>,
+        log: bool,
+    ) -> Result<Option<JsonNewCallback>, CiError> {
+        match self {
+            Self::GitHubActions(github_actions) => github_actions
+                .dispatch_callback(check.map(|CiCheck::GitHubActions(handle)| handle), log)
+                .map_err(Into::into),
+        }
+    }
+
+    /// The attach continues the detached run whose callback started it.
+    #[cfg(feature = "plus")]
+    pub fn read_dispatch(&mut self, log: bool) {
+        match self {
+            Self::GitHubActions(github_actions) => github_actions.read_dispatch(log),
+        }
+    }
+
+    /// The check a detached run started, for its attach to complete.
+    #[cfg(feature = "plus")]
+    pub fn adopted_check(&self) -> Option<CiCheck> {
+        match self {
+            Self::GitHubActions(github_actions) => {
+                github_actions.adopted_check().map(CiCheck::GitHubActions)
+            },
+        }
+    }
+
+    /// Best-effort: complete a detached run's check whose callback will never fire.
+    #[cfg(feature = "plus")]
+    pub async fn complete_unfired(
+        &self,
+        check: CiCheck,
+        notice: CallbackNotice,
+        project_name: &ResourceName,
+        log: bool,
+    ) {
+        match (self, check) {
+            (Self::GitHubActions(github_actions), CiCheck::GitHubActions(handle)) => {
+                github_actions
+                    .complete_unfired_check(handle, notice, project_name, log)
+                    .await;
             },
         }
     }

@@ -72,6 +72,7 @@
 | `--ci-public-links` | Use public URLs |
 | `--ci-id <id>` | Custom CI comment identifier, replaces the project name in the GitHub Check name |
 | `--ci-number <n>` | Issue/PR number |
+| `--ci-callback-token <token>` | Fine-grained personal access token with contents write on the repository, for the `repository_dispatch` a detached run sends (requires `--github-actions` and `--detach`) |
 
 ### Bare Metal (Bencher Plus)
 
