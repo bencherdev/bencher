@@ -22,6 +22,7 @@ plus = [
     "dep:tokio-util",
     "bencher_adapter/plus",
     "bencher_billing/plus",
+    "bencher_callback/db",
     "bencher_callback/plus",
     "bencher_json/plus",
     "bencher_license/plus",

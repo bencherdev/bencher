@@ -162,6 +162,21 @@ export enum JobStatus {
 	Unknown = "unknown",
 }
 
+/** Job callback state */
+export enum JobCallbackState {
+	Pending = "pending",
+	Delivered = "delivered",
+	Failed = "failed",
+	Skipped = "skipped",
+}
+
+/** The delivery of a job's callback */
+export interface JsonJobCallback {
+	state: JobCallbackState;
+	/** The HTTP status of the last response, if any attempt got one */
+	status?: number;
+}
+
 /** Output from a single benchmark iteration. */
 export interface JsonIterationOutput {
 	/** Exit code from the benchmark command */
@@ -197,6 +212,8 @@ export interface JsonJob {
 	claimed?: string;
 	started?: string;
 	completed?: string;
+	/** Present only for a job submitted with a callback */
+	callback?: JsonJobCallback;
 	created: string;
 	modified: string;
 	/** Job output (stdout, stderr, files) from blob storage, included for terminal jobs. */

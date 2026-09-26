@@ -94,6 +94,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    job_callback (job_id) {
+        job_id -> Integer,
+        request -> Nullable<Binary>,
+        state -> Integer,
+        attempts -> Integer,
+        status -> Nullable<Integer>,
+        created -> BigInt,
+        modified -> BigInt,
+    }
+}
+
+diesel::table! {
     job_duration_by_report (report_id) {
         report_id -> Integer,
         job_duration -> Integer,
@@ -480,6 +492,7 @@ diesel::joinable!(job -> organization (organization_id));
 diesel::joinable!(job -> report (report_id));
 diesel::joinable!(job -> runner (runner_id));
 diesel::joinable!(job -> spec (spec_id));
+diesel::joinable!(job_callback -> job (job_id));
 diesel::joinable!(job_duration_by_report -> report (report_id));
 diesel::joinable!(measure -> project (project_id));
 diesel::joinable!(metric -> measure (measure_id));
@@ -538,6 +551,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     head,
     head_version,
     job,
+    job_callback,
     job_duration_by_report,
     measure,
     metric,

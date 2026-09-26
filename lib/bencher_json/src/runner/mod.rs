@@ -10,7 +10,10 @@ pub mod job;
 pub mod job_status;
 pub mod websocket;
 
-pub use callback::{CallbackContext, CallbackError, CallbackRenderError, JsonNewCallback};
+pub use callback::{
+    CALLBACK_JOB_STATUSES, CallbackContext, CallbackError, CallbackRenderError, JobCallbackState,
+    JsonJobCallback, JsonNewCallback,
+};
 pub use job::{
     DEFAULT_POLL_TIMEOUT, JobUuid, JsonClaimJob, JsonClaimedJob, JsonIterationOutput, JsonJob,
     JsonJobConfig, JsonJobOutput, JsonJobs, JsonNewRunJob, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT,

@@ -12614,6 +12614,16 @@
         "format": "uint32",
         "minimum": 0
       },
+      "JobCallbackState": {
+        "description": "Job callback state",
+        "type": "string",
+        "enum": [
+          "pending",
+          "delivered",
+          "failed",
+          "skipped"
+        ]
+      },
       "JobStatus": {
         "description": "Job status",
         "type": "string",
@@ -13398,6 +13408,15 @@
         "description": "A benchmark job",
         "type": "object",
         "properties": {
+          "callback": {
+            "nullable": true,
+            "description": "Present only for a job submitted with a callback",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonJobCallback"
+              }
+            ]
+          },
           "claimed": {
             "nullable": true,
             "allOf": [
@@ -13488,6 +13507,25 @@
           "status",
           "timeout",
           "uuid"
+        ]
+      },
+      "JsonJobCallback": {
+        "description": "The delivery of a job's callback",
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/JobCallbackState"
+          },
+          "status": {
+            "nullable": true,
+            "description": "The HTTP status of the last response, if any attempt got one",
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "state"
         ]
       },
       "JsonJobConfig": {
