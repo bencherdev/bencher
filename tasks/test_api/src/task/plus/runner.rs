@@ -1,7 +1,10 @@
 use std::process::Command;
 
 use assert_cmd::cargo::CommandCargoExt as _;
-use bencher_json::{JsonProjectKeyCreated, JsonUserKeyCreated, Jwt, Url};
+use bencher_json::{
+    JobStatus, JobUuid, JsonJob, JsonProjectKeyCreated, JsonUserKeyCreated, Jwt, Url,
+    runner::{JobCallbackState, JsonJobCallback},
+};
 use pretty_assertions::assert_eq;
 
 use crate::parser::TaskRunner;
@@ -14,6 +17,12 @@ const KEY_ARG: &str = "--key";
 const DOCKER_IMAGE: &str = "ghcr.io/bencherdev/bencher:latest";
 const IMAGE_TAG: &str = "runner-test";
 const MOCK_IMAGE_TAG: &str = "runner-test-mock";
+
+// Every plan sends the GitHub Actions dispatch. GitHub answers one without a token with 401,
+// or with 403 or 429 under its rate limit.
+const DISPATCH_CALLBACK_URL: &str = "https://api.github.com/repos/bencherdev/bencher/dispatches";
+// An organization without a plan skips any other callback, so this one is never sent.
+const SKIPPED_CALLBACK_URL: &str = "https://receiver.example/bencher/callback";
 
 #[derive(Debug)]
 pub struct RunnerTest {
@@ -293,6 +302,13 @@ impl RunnerTest {
             Ok(())
         };
 
+        // Run the callback runner test
+        let callback_result = if image_only_result.is_ok() {
+            run_callback_runner_test(&self.url, &self.token)
+        } else {
+            Ok(())
+        };
+
         // Always kill runner daemons, even if the test failed
         if let Some((mut runner_child, reader_handle)) = runner_child_and_handle {
             let _kill = runner_child.kill();
@@ -312,6 +328,7 @@ impl RunnerTest {
         user_key_result?;
         project_key_result?;
         image_only_result?;
+        callback_result?;
         println!("=== Runner Daemon Test Passed ===");
         Ok(())
     }
@@ -551,7 +568,7 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 /// Run a detach runner smoke test: submit a job with `--detach` and verify
 /// it returns immediately with a `JsonReport` containing a job UUID,
 /// attach to the job with `bencher run --job` and verify it prints the processed report,
-/// then poll `bencher job view` until the job reaches a terminal state.
+/// then read the job once with `bencher job view`.
 fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     let host = url.as_ref();
 
@@ -565,61 +582,38 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {json:?}"))?;
 
     attach_detached_job(host, token, json.uuid, job_uuid)?;
-
-    // Poll `bencher job view` until the job reaches a terminal state
-    let job_uuid_str = job_uuid.to_string();
-    let start = std::time::Instant::now();
-    let timeout = std::time::Duration::from_mins(4);
-
-    loop {
-        std::thread::sleep(std::time::Duration::from_secs(1));
-
-        if start.elapsed() > timeout {
-            anyhow::bail!("Timed out waiting for detached job {job_uuid} to complete");
-        }
-
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "job",
-            "view",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token.as_ref(),
-            PROJECT_SLUG,
-            &job_uuid_str,
-        ])
-        .current_dir(CLI_DIR);
-        let output = cmd.output()?;
-        anyhow::ensure!(
-            output.status.success(),
-            "bencher job view failed:\nstdout: {}\nstderr: {}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-
-        let job: bencher_json::JsonJob = serde_json::from_slice(&output.stdout)?;
-        match job.status {
-            bencher_json::JobStatus::Processed => {
-                println!("Detached job {job_uuid} processed successfully");
-                break;
-            },
-            bencher_json::JobStatus::Failed => {
-                anyhow::bail!("Detached job {job_uuid} failed: {job:?}");
-            },
-            bencher_json::JobStatus::Canceled => {
-                anyhow::bail!("Detached job {job_uuid} was canceled: {job:?}");
-            },
-            bencher_json::JobStatus::Pending
-            | bencher_json::JobStatus::Claimed
-            | bencher_json::JobStatus::Running
-            | bencher_json::JobStatus::Completed
-            | bencher_json::JobStatus::Unknown => {},
-        }
-    }
+    let job = view_job(host, token, job_uuid)?;
+    anyhow::ensure!(
+        job.status == JobStatus::Processed,
+        "Expected detached job {job_uuid} to be processed: {job:?}"
+    );
 
     println!("Detach runner smoke test passed!");
     Ok(())
+}
+
+fn view_job(host: &str, token: &Jwt, job_uuid: JobUuid) -> anyhow::Result<JsonJob> {
+    let job_uuid_str = job_uuid.to_string();
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "job",
+        "view",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        PROJECT_SLUG,
+        &job_uuid_str,
+    ])
+    .current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher job view failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    Ok(serde_json::from_slice(&output.stdout)?)
 }
 
 /// Attach to a detached job with `bencher run --job`,
@@ -628,7 +622,7 @@ fn attach_detached_job(
     host: &str,
     token: &Jwt,
     report_uuid: bencher_json::ReportUuid,
-    job_uuid: bencher_json::JobUuid,
+    job_uuid: JobUuid,
 ) -> anyhow::Result<()> {
     let output = attach_job(host, token, job_uuid)?;
     anyhow::ensure!(
@@ -729,11 +723,7 @@ fn submit_detached(
 }
 
 /// Attach to a submitted job with `bencher run --job`, which waits for the job and prints its report.
-fn attach_job(
-    host: &str,
-    token: &Jwt,
-    job_uuid: bencher_json::JobUuid,
-) -> anyhow::Result<std::process::Output> {
+fn attach_job(host: &str, token: &Jwt, job_uuid: JobUuid) -> anyhow::Result<std::process::Output> {
     let job_uuid = job_uuid.to_string();
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
@@ -754,6 +744,87 @@ fn attach_job(
     ])
     .current_dir(CLI_DIR);
     Ok(cmd.output()?)
+}
+
+/// Run the callback runner smoke test on an organization without a plan: a custom callback is
+/// skipped, and the GitHub Actions dispatch settles with the answer of its real `https` receiver.
+fn run_callback_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+    let host = url.as_ref();
+
+    println!("Running callback runner smoke test against: {host}");
+
+    let job_uuid = submit_callback_job(host, token, SKIPPED_CALLBACK_URL)?;
+    let job = view_job(host, token, job_uuid)?;
+    anyhow::ensure!(
+        job.callback
+            == Some(JsonJobCallback {
+                state: JobCallbackState::Skipped,
+                status: None,
+            }),
+        "Expected job {job_uuid} to show a skipped callback: {:?}",
+        job.callback
+    );
+    println!("Custom callback of job {job_uuid} skipped without a plan");
+
+    let job_uuid = submit_callback_job(host, token, DISPATCH_CALLBACK_URL)?;
+    let callback = wait_for_settled_callback(host, token, job_uuid)?;
+    anyhow::ensure!(
+        callback.state == JobCallbackState::Failed
+            && callback
+                .status
+                .is_some_and(|status| (400..500).contains(&status)),
+        "Expected the callback of job {job_uuid} to fail with the receiver's 4xx: {callback:?}"
+    );
+    println!("Callback of job {job_uuid} settled with the receiver's answer: {callback:?}");
+    Ok(())
+}
+
+/// Submit a detached job with a callback and the default body, and wait for it through the attach.
+fn submit_callback_job(host: &str, token: &Jwt, callback_url: &str) -> anyhow::Result<JobUuid> {
+    let report = submit_detached(
+        host,
+        token,
+        &["--callback-url", callback_url, "--exec", "mock"],
+    )?;
+    let job_uuid = report
+        .job
+        .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {report:?}"))?;
+    let output = attach_job(host, token, job_uuid)?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run --job failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    Ok(job_uuid)
+}
+
+/// Poll `bencher job view` until the job's callback settles.
+fn wait_for_settled_callback(
+    host: &str,
+    token: &Jwt,
+    job_uuid: JobUuid,
+) -> anyhow::Result<JsonJobCallback> {
+    // A final answer settles at once. A retried one takes up to three 10 s attempts
+    // and the 4 s and 16 s waits between them.
+    let timeout = std::time::Duration::from_secs(90);
+    let start = std::time::Instant::now();
+
+    loop {
+        let job = view_job(host, token, job_uuid)?;
+        let Some(callback) = job.callback else {
+            anyhow::bail!("Expected job {job_uuid} to have a callback: {job:?}");
+        };
+        if callback.state != JobCallbackState::Pending {
+            return Ok(callback);
+        }
+        if start.elapsed() > timeout {
+            anyhow::bail!(
+                "Timed out waiting for the callback of job {job_uuid} to settle: {callback:?}"
+            );
+        }
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
 }
 
 /// Run the runner smoke test with user key authentication.
