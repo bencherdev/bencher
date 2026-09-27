@@ -197,6 +197,7 @@ pub fn insert_test_job_with_timeout(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::project_id.eq(project_id),
             schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
@@ -230,6 +231,7 @@ pub fn insert_test_job_full(
     priority: Priority,
     spec_id: i32,
 ) -> JobUuid {
+    let project_id = get_project_id_from_report(server, report_id);
     let mut conn = server.db_conn();
     let now = base_timestamp();
     let job_uuid = JobUuid::new();
@@ -246,6 +248,7 @@ pub fn insert_test_job_full(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::project_id.eq(project_id),
             schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(source_ip),
             schema::job::status.eq(JobStatus::Pending),
@@ -299,6 +302,7 @@ pub fn insert_test_job_with_bmf_version(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::project_id.eq(project_id),
             schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
@@ -354,6 +358,7 @@ pub fn insert_test_job_with_optional_fields(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::project_id.eq(project_id),
             schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
@@ -398,6 +403,7 @@ pub fn insert_test_job_with_invalid_config(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::project_id.eq(project_id),
             schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(TEST_SOURCE_IP),
             schema::job::status.eq(JobStatus::Pending),
@@ -473,6 +479,7 @@ pub fn insert_test_job_with_timestamp(
     created: DateTime,
     spec_id: i32,
 ) -> JobUuid {
+    let project_id = get_project_id_from_report(server, report_id);
     let mut conn = server.db_conn();
     let job_uuid = JobUuid::new();
 
@@ -487,6 +494,7 @@ pub fn insert_test_job_with_timestamp(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::project_id.eq(project_id),
             schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq(source_ip),
             schema::job::status.eq(JobStatus::Pending),

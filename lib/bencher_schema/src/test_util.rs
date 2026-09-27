@@ -884,6 +884,7 @@ pub fn get_plot_measures(conn: &mut SqliteConnection, plot_id: PlotId) -> Vec<Me
 #[cfg(feature = "plus")]
 #[derive(Debug, Clone, Copy)]
 pub struct JobFixture {
+    pub project_id: ProjectId,
     pub organization_id: OrganizationId,
     pub report_id: ReportId,
     pub spec_id: SpecId,
@@ -939,6 +940,7 @@ pub fn create_job_fixture(conn: &mut SqliteConnection) -> JobFixture {
         },
     );
     JobFixture {
+        project_id: base.project_id,
         organization_id: base.organization_id,
         report_id,
         spec_id,
@@ -958,6 +960,7 @@ pub fn create_job(conn: &mut SqliteConnection, fixture: JobFixture, status: JobS
         .values((
             schema::job::uuid.eq(JobUuid::new()),
             schema::job::report_id.eq(fixture.report_id),
+            schema::job::project_id.eq(fixture.project_id),
             schema::job::organization_id.eq(fixture.organization_id),
             schema::job::source_ip.eq("127.0.0.1"),
             schema::job::spec_id.eq(fixture.spec_id),

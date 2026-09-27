@@ -172,6 +172,7 @@ fn attach_job_with_spec(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::project_id.eq(project_id),
             schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq("127.0.0.1"),
             schema::job::status.eq(JobStatus::Pending),
