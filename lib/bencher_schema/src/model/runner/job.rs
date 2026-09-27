@@ -1328,13 +1328,17 @@ impl JobTimeout {
 }
 
 /// Load the jobs startup recovery arms heartbeat timeouts for.
+///
+/// Written as `OR`, not `eq_any`: a bound `IN` list never matches a partial index,
+/// so `eq_any` scans `job` instead of searching `index_job_in_flight`.
 pub fn in_flight_jobs(conn: &mut DbConnection) -> QueryResult<Vec<QueryJob>> {
     schema::job::table
-        .filter(schema::job::status.eq_any([
-            JobStatus::Claimed,
-            JobStatus::Running,
-            JobStatus::Unknown,
-        ]))
+        .filter(
+            schema::job::status
+                .eq(JobStatus::Claimed)
+                .or(schema::job::status.eq(JobStatus::Running))
+                .or(schema::job::status.eq(JobStatus::Unknown)),
+        )
         .load(conn)
 }
 
