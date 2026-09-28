@@ -1,0 +1,21 @@
+### `--callback-header <NAME: VALUE>`
+
+<br />
+
+Opcional: Adiciona um cabeçalho à requisição do callback no formato `NAME: VALUE`.
+O `NAME` do cabeçalho tem um tamanho máximo de 256 bytes, e o `VALUE` do cabeçalho tem um tamanho máximo de 8 KiB.
+Esta opção pode ser especificada várias vezes (no máximo 16).
+
+Os seguintes cabeçalhos não são suportados:
+
+- `Connection`
+- `Content-Length`
+- `Host`
+- `Keep-Alive`
+- `Proxy-Connection`
+- `TE`
+- `Trailer`
+- `Transfer-Encoding`
+- `Upgrade`
+
+Esta opção requer que [a opção `--callback-url`](#--callback-url-url) esteja definida.

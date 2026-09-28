@@ -1,0 +1,32 @@
+import CallbackBodyExample from "../callback-body-example.mdx";
+
+### `--callback-body <JSON>`
+
+<br />
+
+Opcional: Define o corpo JSON da requisição do callback.
+Este valor JSON pode usar qualquer uma das seguintes variáveis de template em uma string:
+
+| Variável             | Expande como | Valor                                                    |
+| -------------------- | ------------ | -------------------------------------------------------- |
+| `{{ project.uuid }}` | String       | UUID do Projeto                                          |
+| `{{ project.name }}` | String       | Nome do Projeto                                          |
+| `{{ project.slug }}` | String       | Slug do Projeto                                          |
+| `{{ report }}`       | Objeto       | Relatório (limite de 1)                                  |
+| `{{ report.uuid }}`  | String       | UUID do relatório                                        |
+| `{{ job.uuid }}`     | String       | UUID do Job                                              |
+| `{{ job.status }}`   | String       | Estado final do Job: `processed`, `failed` ou `canceled` |
+
+O tamanho máximo deste template de valor JSON é 64 KiB.
+A expansão do template é feita em uma única passagem,
+e qualquer variável de template desconhecida fará a expansão falhar.
+
+Esta opção requer que [a opção `--callback-url`](#--callback-url-url) esteja definida.
+Se a opção `--callback-body` não for especificada, o corpo da resposta do [endpoint da API][run post] do `bencher run`
+(`"{{ report }}"`) é usado por padrão.
+
+Por exemplo, para publicar uma mensagem em um webhook de entrada do Slack:
+
+<CallbackBodyExample />
+
+[run post]: /pt/docs/api/run/run/#post-v0run

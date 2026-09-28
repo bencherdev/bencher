@@ -1,0 +1,16 @@
+### `--job <UUID>`
+
+<br />
+
+Необязательно: Подключиться к [Job на выделенном оборудовании][job].
+Чаще всего эта опция используется, когда отдельный вызов `bencher run`
+уже использовал [флаг `--detach`][detach].
+Ряд других опций `bencher run` при этом вступает в силу и работает так, как если бы вы никогда не отсоединялись.
+Это позволяет асинхронно ожидать Job на выделенном оборудовании с помощью callback
+(вебхуков для каждого отдельного вызова `bencher run`).
+
+См. [Pull Requests на выделенном оборудовании][pull requests on bare metal] для примера с GitHub Actions.
+
+[job]: /ru/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[pull requests on bare metal]: /ru/docs/how-to/github-actions/#pull-requests-на-выделенном-оборудовании

@@ -1,0 +1,16 @@
+### `--job <UUID>`
+
+<br />
+
+オプション: [ベアメタルJob][job]にアタッチします。
+ほとんどの場合、このオプションは、
+別の`bencher run`の呼び出しですでに[`--detach`フラグ][detach]を使っているときに使用します。
+ほかのいくつかの`bencher run`オプションもこの呼び出しで有効になり、デタッチしなかった場合と同じように機能します。
+これにより、コールバック（`bencher run`の呼び出しごとのWebhook）を使用して、
+ベアメタルJobを非同期に待機できます。
+
+GitHub Actionsを使用した例については、[ベアメタル上のプルリクエスト][pull requests on bare metal]を参照してください。
+
+[job]: /ja/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[pull requests on bare metal]: /ja/docs/how-to/github-actions/#ベアメタル上のプルリクエスト

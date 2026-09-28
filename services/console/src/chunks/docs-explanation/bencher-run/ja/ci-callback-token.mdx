@@ -1,0 +1,18 @@
+### `--ci-callback-token <TOKEN>`
+
+<br />
+
+オプション: デタッチした[ベアメタルJob][job]のコールバックで使用する認証トークンを設定します。
+
+[`--detach`フラグ][detach]と[`--github-actions`オプション](#--github-actions-github_token)を使用する場合、
+このオプションには、そのリポジトリに対して少なくとも`contents: write`権限を持つ[Fine-grained personal access token][github fine-grained token]を設定してください。
+これにより、Bencher APIサーバーはそのトークンを使用して[`repository_dispatch`][github repository dispatch]ワークフローをトリガーできます。
+全体を把握するために[GitHub Actionsでのベアメタル上のプルリクエスト][pull requests on bare metal]を参照してください。
+
+> 🐰 `GITHUB_TOKEN`は現在のワークフローが終了するとすぐに期限切れになるため、ここで`GITHUB_TOKEN`をそのまま使用することはできません！
+
+[job]: /ja/docs/explanation/bare-metal/#job
+[detach]: /ja/docs/explanation/images/#--detach
+[github fine-grained token]: https://docs.github.com/ja/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[github repository dispatch]: https://docs.github.com/ja/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[pull requests on bare metal]: /ja/docs/how-to/github-actions/#ベアメタル上のプルリクエスト

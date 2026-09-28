@@ -1,0 +1,22 @@
+### `--callback-url <URL>`
+
+<br />
+
+Optional: Specify a callback URL for a detached [Bare Metal Job][job].
+The URL must use `https`.
+The organization for this project must have an active [Bencher Plus plan][pricing].
+
+To specify request headers, use [the `--callback-header` option](#--callback-header-name-value).
+To specify the request body, use [the `--callback-body` option](#--callback-body-json).
+Otherwise, the `bencher run` [API endpoint][run post] response body is used by default.
+
+This option requires [the `--image` option][image] and [the `--detach` flag][detach] to be set.
+This option conflicts with [the `--github-actions` option](/docs/explanation/bencher-run/#--github-actions-github_token).
+
+[job]: /docs/explanation/bare-metal/#job
+[run post]: /docs/api/run/run/#post-v0run
+[pricing]: /pricing
+[image]: #--image-image
+[detach]: #--detach
+
+[github repository dispatch]: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch

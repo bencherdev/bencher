@@ -1,0 +1,19 @@
+### `--ci-callback-token <TOKEN>`
+
+<br />
+
+Optional: Set the authentication token used by a detached [Bare Metal Job][job] callback.
+
+When using [the `--detach` flag][detach] and [the `--github-actions` option](#--github-actions-github_token),
+this option should be set to a [fine-grained personal access token][github fine-grained token]
+for the repository with at least the `contents: write` permission.
+This will allow the Bencher API server to trigger a [`repository_dispatch`][github repository dispatch] workflow using the token.
+See [Pull Requests on Bare Metal in GitHub Actions][pull requests on bare metal] for a full overview.
+
+> 🐰 You cannot just use the `GITHUB_TOKEN` here as it expires as soon as the current workflow finishes!
+
+[job]: /docs/explanation/bare-metal/#job
+[detach]: /docs/explanation/images/#--detach
+[github fine-grained token]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[github repository dispatch]: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[pull requests on bare metal]: /docs/how-to/github-actions/#pull-requests-on-bare-metal

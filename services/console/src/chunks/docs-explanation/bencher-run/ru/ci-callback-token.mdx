@@ -1,0 +1,19 @@
+### `--ci-callback-token <TOKEN>`
+
+<br />
+
+Необязательно: Задает токен аутентификации, который использует callback отсоединенного [Job на выделенном оборудовании][job].
+
+При использовании [флага `--detach`][detach] и [опции `--github-actions`](#--github-actions-github_token)
+в этой опции следует указать [детализированный персональный токен доступа][github fine-grained token]
+для репозитория как минимум с разрешением `contents: write`.
+Это позволит API-серверу Bencher запустить workflow [`repository_dispatch`][github repository dispatch] с помощью этого токена.
+См. [Pull Requests на выделенном оборудовании в GitHub Actions][pull requests on bare metal] для полного обзора.
+
+> 🐰 Здесь нельзя просто использовать `GITHUB_TOKEN`, так как срок его действия истекает сразу после завершения текущего workflow!
+
+[job]: /ru/docs/explanation/bare-metal/#job
+[detach]: /ru/docs/explanation/images/#--detach
+[github fine-grained token]: https://docs.github.com/ru/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[github repository dispatch]: https://docs.github.com/ru/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[pull requests on bare metal]: /ru/docs/how-to/github-actions/#pull-requests-на-выделенном-оборудовании

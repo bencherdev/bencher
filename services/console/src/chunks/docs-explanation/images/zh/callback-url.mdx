@@ -1,0 +1,22 @@
+### `--callback-url <URL>`
+
+<br />
+
+可选：为分离的[裸机 Job][job]指定回调 URL。
+URL 必须使用 `https`。
+该项目所属的组织必须拥有有效的 [Bencher Plus 计划][pricing]。
+
+要指定请求头，请使用 [`--callback-header` 选项](#--callback-header-name-value)。
+要指定请求正文，请使用 [`--callback-body` 选项](#--callback-body-json)。
+否则，默认使用 `bencher run` [API 端点][run post]的响应正文。
+
+此选项要求设置 [`--image` 选项][image]和 [`--detach` 标志][detach]。
+此选项与 [`--github-actions` 选项](/zh/docs/explanation/bencher-run/#--github-actions-github_token)冲突。
+
+[job]: /zh/docs/explanation/bare-metal/#job
+[run post]: /zh/docs/api/run/run/#post-v0run
+[pricing]: /pricing
+[image]: #--image-image
+[detach]: #--detach
+
+[github repository dispatch]: https://docs.github.com/zh/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch

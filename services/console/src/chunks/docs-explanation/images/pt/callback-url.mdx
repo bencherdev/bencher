@@ -1,0 +1,22 @@
+### `--callback-url <URL>`
+
+<br />
+
+Opcional: Especifica uma URL de callback para um [Job em hardware dedicado][job] desanexado.
+A URL deve usar `https`.
+A Organização deste Projeto deve ter um [plano Bencher Plus][pricing] ativo.
+
+Para especificar os cabeçalhos da requisição, use [a opção `--callback-header`](#--callback-header-name-value).
+Para especificar o corpo da requisição, use [a opção `--callback-body`](#--callback-body-json).
+Caso contrário, o corpo da resposta do [endpoint da API][run post] do `bencher run` é usado por padrão.
+
+Esta opção requer que [a opção `--image`][image] e [a flag `--detach`][detach] estejam definidas.
+Esta opção entra em conflito com [a opção `--github-actions`](/pt/docs/explanation/bencher-run/#--github-actions-github_token).
+
+[job]: /pt/docs/explanation/bare-metal/#job
+[run post]: /pt/docs/api/run/run/#post-v0run
+[pricing]: /pricing
+[image]: #--image-image
+[detach]: #--detach
+
+[github repository dispatch]: https://docs.github.com/pt/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch

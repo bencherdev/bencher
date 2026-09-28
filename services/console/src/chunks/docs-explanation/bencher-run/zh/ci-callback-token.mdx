@@ -1,0 +1,19 @@
+### `--ci-callback-token <TOKEN>`
+
+<br />
+
+可选：设置分离的[裸机 Job][job]回调所使用的身份认证令牌。
+
+使用 [`--detach` 标志][detach]和 [`--github-actions` 选项](#--github-actions-github_token)时，
+应将此选项设置为一个[细粒度个人访问令牌][github fine-grained token]，
+并且该令牌对该仓库至少具有 `contents: write` 权限。
+这将允许 Bencher API 服务器使用该令牌触发 [`repository_dispatch`][github repository dispatch] 工作流。
+有关完整概述，请参见 [GitHub Actions 中裸机上的 Pull Requests][pull requests on bare metal]。
+
+> 🐰 这里不能直接使用 `GITHUB_TOKEN`，因为它会在当前工作流结束时立即过期！
+
+[job]: /zh/docs/explanation/bare-metal/#job
+[detach]: /zh/docs/explanation/images/#--detach
+[github fine-grained token]: https://docs.github.com/zh/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[github repository dispatch]: https://docs.github.com/zh/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[pull requests on bare metal]: /zh/docs/how-to/github-actions/#裸机上的-pull-requests

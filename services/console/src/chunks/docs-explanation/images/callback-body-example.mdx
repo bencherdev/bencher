@@ -1,0 +1,9 @@
+```bash
+bencher run \
+  --project project-abc4567-wxyz123456789 \
+  --image project-abc4567-wxyz123456789:latest \
+  --detach \
+  --callback-url "$SLACK_WEBHOOK_URL" \
+  --callback-body '{"text": "{{ project.name }}: Bencher Job {{ job.status }}", "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": "*{{ project.name }}*: Bencher Job {{ job.status }}\n<https://bencher.dev/console/projects/{{ project.slug }}/reports/{{ report.uuid }}|View the report>"}}]}' \
+  bencher mock
+```

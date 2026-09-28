@@ -1,0 +1,19 @@
+### `--ci-callback-token <TOKEN>`
+
+<br />
+
+선택 사항: 분리된 [베어 메탈 Job][job]의 콜백에 사용할 인증 토큰을 설정합니다.
+
+[`--detach` 플래그][detach]와 [`--github-actions` 옵션](#--github-actions-github_token)을 사용할 때는,
+이 옵션을 해당 저장소에 대해 최소한 `contents: write` 권한을 가진
+[fine-grained personal access token][github fine-grained token]으로 설정해야 합니다.
+이렇게 하면 Bencher API 서버가 이 토큰을 사용하여 [`repository_dispatch`][github repository dispatch] 워크플로를 트리거할 수 있습니다.
+전체 개요는 [GitHub Actions의 베어 메탈에서의 Pull Requests][pull requests on bare metal]를 참조하세요.
+
+> 🐰 `GITHUB_TOKEN`은 현재 워크플로가 끝나는 즉시 만료되므로 여기에 그대로 사용할 수 없습니다!
+
+[job]: /ko/docs/explanation/bare-metal/#job
+[detach]: /ko/docs/explanation/images/#--detach
+[github fine-grained token]: https://docs.github.com/ko/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+[github repository dispatch]: https://docs.github.com/ko/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
+[pull requests on bare metal]: /ko/docs/how-to/github-actions/#베어-메탈에서의-pull-requests

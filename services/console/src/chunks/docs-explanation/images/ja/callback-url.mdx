@@ -1,0 +1,22 @@
+### `--callback-url <URL>`
+
+<br />
+
+オプション: デタッチした[ベアメタルJob][job]のコールバックURLを指定します。
+URLは`https`を使用する必要があります。
+このプロジェクトの組織には、有効な[Bencher Plusプラン][pricing]が必要です。
+
+リクエストヘッダーを指定するには、[`--callback-header`オプション](#--callback-header-name-value)を使用します。
+リクエストボディを指定するには、[`--callback-body`オプション](#--callback-body-json)を使用します。
+指定しない場合は、`bencher run`の[APIエンドポイント][run post]のレスポンスボディがデフォルトで使用されます。
+
+このオプションは、[`--image`オプション][image]と[`--detach`フラグ][detach]が設定されている必要があります。
+このオプションは、[`--github-actions`オプション](/ja/docs/explanation/bencher-run/#--github-actions-github_token)と競合します。
+
+[job]: /ja/docs/explanation/bare-metal/#job
+[run post]: /ja/docs/api/run/run/#post-v0run
+[pricing]: /pricing
+[image]: #--image-image
+[detach]: #--detach
+
+[github repository dispatch]: https://docs.github.com/ja/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch
