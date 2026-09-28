@@ -1,8 +1,9 @@
-use bencher_json::{
-    BranchNameId, DateTime, GitHash, ProjectResourceId, TestbedNameId, project::report::Iteration,
-};
 #[cfg(feature = "plus")]
-use bencher_json::{Secret, SpecResourceId};
+use bencher_json::SpecResourceId;
+use bencher_json::{
+    BranchNameId, DateTime, GitHash, ProjectResourceId, Secret, TestbedNameId,
+    project::report::Iteration,
+};
 #[cfg(feature = "plus")]
 use bencher_parser::check_env;
 use camino::Utf8PathBuf;
@@ -245,8 +246,8 @@ pub enum CliRunFormat {
 ))]
 pub struct CliRunCi {
     /// GitHub API authentication token for GitHub Actions to create a GitHub Check and comment on PRs (ie `--github-actions ${{ secrets.GITHUB_TOKEN }}`)
-    #[clap(long)]
-    pub github_actions: Option<String>,
+    #[clap(long, value_parser = parse_token)]
+    pub github_actions: Option<Secret>,
     /// Only post results to CI if a Threshold exists for the Branch, Testbed, and Measure (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd")]
     pub ci_only_thresholds: bool,
@@ -265,6 +266,17 @@ pub struct CliRunCi {
     /// CAUTION: Override safety checks and accept that you are vulnerable to pwn requests (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd", hide = true)]
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
+    /// Fine-grained personal access token with contents write on this repository, for the `repository_dispatch` that a detached job's callback sends (requires: `--github-actions` and `--detach`).
+    /// Bencher sends it after this workflow's `GITHUB_TOKEN` has expired, so it cannot be that token.
+    #[cfg(feature = "plus")]
+    #[clap(
+        long,
+        value_name = "TOKEN",
+        requires = "ci_cd",
+        requires = "detach",
+        value_parser = parse_token
+    )]
+    pub ci_callback_token: Option<Secret>,
 }
 
 /// Remote runner options: submit a job with `--image` or attach to one with `--job` (Bencher Plus).
@@ -327,6 +339,7 @@ pub struct CliRunJob {
             "callback_url",
             "callback_header",
             "callback_body",
+            "ci_callback_token",
         ]
     )]
     pub job: Option<bencher_json::JobUuid>,
@@ -358,8 +371,14 @@ pub struct CliRunJob {
     #[clap(long, requires = "image", conflicts_with = "job_poll_interval")]
     pub detach: bool,
 
-    /// Callback `https` URL that Bencher sends one request to when the detached job finishes (requires: --image and --detach)
-    #[clap(long, value_name = "URL", requires = "image", requires = "detach")]
+    /// Callback `https` URL that Bencher sends one request to when the detached job finishes (requires: --image and --detach; conflicts with: --github-actions)
+    #[clap(
+        long,
+        value_name = "URL",
+        requires = "image",
+        requires = "detach",
+        conflicts_with = "github_actions"
+    )]
     pub callback_url: Option<Secret>,
 
     /// Callback header in `NAME: VALUE` format, repeatable (requires: --callback-url)
@@ -374,6 +393,16 @@ pub struct CliRunJob {
 #[cfg(feature = "plus")]
 fn parse_callback_body(body: &str) -> Result<serde_json::Value, String> {
     serde_json::from_str(body).map_err(|err| format!("not valid JSON: {err}"))
+}
+
+/// A credential flag's value; an unset secret expands to an empty argument.
+fn parse_token(token: &str) -> Result<Secret, &'static str> {
+    const EMPTY: &str =
+        "the token is empty, so it could never authenticate: check that the secret it reads is set";
+    if token.trim_ascii().is_empty() {
+        return Err(EMPTY);
+    }
+    token.parse().or(Err(EMPTY))
 }
 
 /// The name and value around a `--callback-header`'s first colon, trimmed; `None` without a colon or a name.
@@ -462,6 +491,7 @@ mod tests {
         ("callback_url", &["--callback-url", CALLBACK_URL]),
         ("callback_header", &["--callback-header", "X-Token: token"]),
         ("callback_body", &["--callback-body", "{}"]),
+        ("ci_callback_token", &["--ci-callback-token", "token"]),
     ];
 
     // Every `bencher run` argument that works beside `--job`.
@@ -701,6 +731,83 @@ mod tests {
     fn callback_header_needs_a_colon_and_a_name() {
         for header in ["X-Token token", ": value", "  : value", ""] {
             assert_eq!(split_callback_header(header), None, "{header}");
+        }
+    }
+
+    #[test]
+    fn ci_callback_token_requires_github_actions_and_detach() {
+        assert_missing(
+            &parse_callback(&[
+                "--image",
+                "alpine:3.18",
+                "--detach",
+                "--ci-callback-token",
+                "token",
+            ])
+            .unwrap_err(),
+            &["--github-actions"],
+        );
+        assert_missing(
+            &parse_callback(&[
+                "--image",
+                "alpine:3.18",
+                "--github-actions",
+                "token",
+                "--ci-callback-token",
+                "token",
+            ])
+            .unwrap_err(),
+            &["--detach"],
+        );
+    }
+
+    #[test]
+    fn callback_url_conflicts_with_github_actions() {
+        let err = parse_callback(&[
+            "--image",
+            "alpine:3.18",
+            "--detach",
+            "--github-actions",
+            "token",
+            "--callback-url",
+            CALLBACK_URL,
+        ])
+        .unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::ArgumentConflict, "{err}");
+    }
+
+    const EMPTY_TOKEN: &str =
+        "the token is empty, so it could never authenticate: check that the secret it reads is set";
+
+    #[test]
+    fn empty_ci_callback_token_is_refused() {
+        const DETACH_TOKEN: [&str; 6] = [
+            "--image",
+            "alpine:3.18",
+            "--detach",
+            "--github-actions",
+            "token",
+            "--ci-callback-token",
+        ];
+        // An unset repository secret expands to an empty argument.
+        for token in ["", "   "] {
+            let args = DETACH_TOKEN.into_iter().chain([token]).collect::<Vec<_>>();
+            let err = parse_callback(&args).unwrap_err();
+            assert_eq!(err.kind(), ErrorKind::ValueValidation, "{args:?}: {err}");
+            let message = err.to_string();
+            assert!(message.contains("--ci-callback-token"), "{message}");
+            assert!(message.contains(EMPTY_TOKEN), "{message}");
+        }
+    }
+
+    #[test]
+    fn empty_github_actions_token_is_refused() {
+        for token in ["", "   "] {
+            let err = parse_callback(&["--github-actions", token, "bencher", "mock"]).unwrap_err();
+            assert_eq!(err.kind(), ErrorKind::ValueValidation, "{token:?}: {err}");
+            let message = err.to_string();
+            assert!(message.contains("--github-actions"), "{message}");
+            assert!(message.contains(EMPTY_TOKEN), "{message}");
         }
     }
 }

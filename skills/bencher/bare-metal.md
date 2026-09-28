@@ -91,9 +91,10 @@ bencher run \
 | `--job-timeout <secs>` | Maximum execution time |
 | `--job-poll-interval <secs>` | How often to check for completion |
 | `--detach` | Submit without waiting for results (conflicts with `--job-poll-interval`) |
-| `--callback-url <url>` | `https` URL that Bencher sends one request to when the detached job finishes, Bencher Plus plans only, except that a callback to exactly `https://api.github.com/repos/<OWNER>/<REPO>/dispatches` goes out on every plan (requires `--image` and `--detach`) |
+| `--callback-url <url>` | `https` URL that Bencher sends one request to when the detached job finishes, Bencher Plus plans only, except that a callback to exactly `https://api.github.com/repos/<OWNER>/<REPO>/dispatches` goes out on every plan (requires `--image` and `--detach`, conflicts with `--github-actions`) |
 | `--callback-header '<NAME: VALUE>'` | Callback request header, quoted as one argument (repeatable, requires `--callback-url`) |
 | `--callback-body '<json>'` | Callback JSON body, quoted as one argument: `{{ job.uuid }}`, `{{ job.status }}`, `{{ report.uuid }}`, `{{ project.uuid }}`, `{{ project.name }}`, and `{{ project.slug }}` are replaced anywhere inside a string, a string that is exactly `{{ report }}` becomes the whole report (once per body), and any other name in braces is refused; optional, and without it the body is the report (requires `--callback-url`) |
+| `--ci-callback-token <token>` | With `--detach` and `--github-actions`, the token for the `repository_dispatch` the CLI composes in place of `--callback-*` (see `ci.md`) |
 | `--job <uuid>` | Wait for a submitted job, then post its results (requires `--project`; `--job-timeout` is the wait budget; refuses report options, including from `BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, and `BENCHER_CMD`) |
 
 ## Build Time and File Size Tracking
@@ -104,12 +105,15 @@ bencher run --image my-bench:latest --build-time "cargo build --release"
 bencher run --image my-bench:latest --file-size /app/target/release/my-binary
 ```
 
-## Fire-and-Forget
+## Detached Runs
 
 Submit the job and exit immediately (useful in CI where you check results later):
 ```bash
 bencher run --image my-bench:latest --detach "cargo bench"
 ```
+
+On GitHub Actions, `--detach` with `--github-actions` requires `--ci-callback-token`, so a second
+workflow can attach with `bencher run --job` and complete the GitHub Check (see `ci.md`).
 
 ## Environment Variables
 
