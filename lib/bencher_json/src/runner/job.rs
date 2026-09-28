@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::RunnerUuid;
 use super::job_status::JobStatus;
 use crate::ProjectUuid;
-use crate::project::report::{Iteration, JsonAverage, JsonFold};
+use crate::project::report::{Iteration, JsonAverage, JsonFold, ReportUuid};
 use crate::spec::{JsonSpec, SpecResourceId};
 
 crate::typed_uuid::typed_uuid!(JobUuid);
@@ -30,12 +30,15 @@ crate::from_vec!(JsonJobs[JsonJob]);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonJob {
     pub uuid: JobUuid,
-    pub status: JobStatus,
+    pub report: ReportUuid,
     /// Resource spec for this job
     pub spec: JsonSpec,
     /// Job configuration (only included when claimed by a runner)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<JsonJobConfig>,
+    /// Maximum execution time in seconds
+    pub timeout: Timeout,
+    pub status: JobStatus,
     pub runner: Option<RunnerUuid>,
     pub claimed: Option<DateTime>,
     pub started: Option<DateTime>,
