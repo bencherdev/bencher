@@ -19,12 +19,16 @@ use crate::{
 };
 
 pub mod job;
+pub mod job_callback;
 pub mod runner_spec;
 mod source_ip;
 
 pub use job::{
     InsertJob, JobId, PendingInsertJob, QueryJob, UpdateJob, in_flight_jobs,
     mark_orphaned_claimed_jobs_unknown, reprocess_completed_jobs, spawn_heartbeat_timeout,
+};
+pub use job_callback::{
+    CallbackOutcome, HttpStatus, InsertJobCallback, QueryJobCallback, QueryJobCallbackView,
 };
 pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};
 pub use source_ip::SourceIp;

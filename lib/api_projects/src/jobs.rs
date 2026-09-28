@@ -9,7 +9,11 @@ use bencher_schema::{
     actor_conn,
     context::ApiContext,
     error::{resource_not_found_err, with_auth_hint},
-    model::{project::QueryProject, runner::QueryJob, user::actor::ApiActor},
+    model::{
+        project::QueryProject,
+        runner::{QueryJob, QueryJobCallbackView},
+        user::actor::ApiActor,
+    },
     schema,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
@@ -112,7 +116,9 @@ pub async fn get_ls_inner(
     let jobs = get_ls_query(&query_project, &pagination_params, &query_params)
         .offset(pagination_params.offset())
         .limit(pagination_params.limit())
-        .load::<(QueryJob, ReportUuid)>(actor_conn!(context, api_actor))
+        .load::<(QueryJob, ReportUuid, Option<QueryJobCallbackView>)>(actor_conn!(
+            context, api_actor
+        ))
         .map_err(resource_not_found_err!(
             Job,
             (&query_project, &pagination_params, &query_params)
@@ -120,7 +126,7 @@ pub async fn get_ls_inner(
 
     let json_jobs = actor_conn!(context, api_actor, |conn| {
         jobs.into_iter()
-            .map(|(job, report_uuid)| job.into_json(conn, report_uuid))
+            .map(|(job, report_uuid, callback)| job.into_json(conn, report_uuid, callback))
             .collect::<Result<Vec<_>, _>>()?
     });
 
@@ -143,8 +149,13 @@ fn get_ls_query<'q>(
 ) -> BoxedQuery<'q> {
     let mut query = schema::job::table
         .inner_join(schema::report::table)
+        .left_join(schema::job_callback::table)
         .filter(schema::report::project_id.eq(query_project.id))
-        .select((QueryJob::as_select(), schema::report::uuid))
+        .select((
+            QueryJob::as_select(),
+            schema::report::uuid,
+            Option::<QueryJobCallbackView>::as_select(),
+        ))
         .into_boxed();
 
     if let Some(status) = query_params.status {
@@ -165,9 +176,13 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
     (
         diesel::helper_types::AsSelect<QueryJob, diesel::sqlite::Sqlite>,
         diesel::helper_types::SqlTypeOf<schema::report::uuid>,
+        diesel::helper_types::AsSelect<Option<QueryJobCallbackView>, diesel::sqlite::Sqlite>,
     ),
     diesel::internal::table_macro::FromClause<
-        diesel::helper_types::InnerJoinQuerySource<schema::job::table, schema::report::table>,
+        diesel::helper_types::LeftJoinQuerySource<
+            diesel::helper_types::InnerJoinQuerySource<schema::job::table, schema::report::table>,
+            schema::job_callback::table,
+        >,
     >,
     diesel::sqlite::Sqlite,
 >;
@@ -237,16 +252,22 @@ pub async fn get_one_inner(
 
     let job_uuid = path_params.job;
 
-    let (query_job, report_uuid): (QueryJob, ReportUuid) = schema::job::table
-        .inner_join(schema::report::table)
-        .filter(schema::report::project_id.eq(query_project.id))
-        .filter(schema::job::uuid.eq(job_uuid))
-        .select((QueryJob::as_select(), schema::report::uuid))
-        .first(actor_conn!(context, api_actor))
-        .map_err(resource_not_found_err!(Job, (&query_project, job_uuid)))?;
+    let (query_job, report_uuid, callback): (QueryJob, ReportUuid, Option<QueryJobCallbackView>) =
+        schema::job::table
+            .inner_join(schema::report::table)
+            .left_join(schema::job_callback::table)
+            .filter(schema::report::project_id.eq(query_project.id))
+            .filter(schema::job::uuid.eq(job_uuid))
+            .select((
+                QueryJob::as_select(),
+                schema::report::uuid,
+                Option::<QueryJobCallbackView>::as_select(),
+            ))
+            .first(actor_conn!(context, api_actor))
+            .map_err(resource_not_found_err!(Job, (&query_project, job_uuid)))?;
 
     let has_run = query_job.status.has_run();
-    let mut job = query_job.into_json(actor_conn!(context, api_actor), report_uuid)?;
+    let mut job = query_job.into_json(actor_conn!(context, api_actor), report_uuid, callback)?;
 
     // Fetch output from blob storage for terminal jobs only when authenticated
     if has_run && api_actor.is_auth() {

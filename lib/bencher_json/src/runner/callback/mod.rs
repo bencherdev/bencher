@@ -8,18 +8,25 @@ use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use url::Url;
 
+use crate::runner::JobStatus;
 use crate::{JsonReport, Sanitize, Secret};
 
 mod body;
+mod state;
 
 pub use body::CallbackContext;
 use body::{sends_report, validate_body};
+pub use state::{JobCallbackState, JsonJobCallback};
 
 pub const MAX_CALLBACK_URL_LEN: usize = 2048;
 pub const MAX_CALLBACK_HEADERS: usize = 16;
 pub const MAX_CALLBACK_HEADER_NAME_LEN: usize = 256;
 pub const MAX_CALLBACK_HEADER_VALUE_LEN: usize = 8 << 10;
 pub const MAX_CALLBACK_BODY_LEN: usize = 64 << 10;
+
+/// The job statuses a callback fires on, and so the values `{{ job.status }}` can take.
+pub const CALLBACK_JOB_STATUSES: [JobStatus; 3] =
+    [JobStatus::Processed, JobStatus::Failed, JobStatus::Canceled];
 
 // The HTTP client owns message framing and the connection, so these are never the customer's.
 const REFUSED_HEADERS: [&str; 9] = [
