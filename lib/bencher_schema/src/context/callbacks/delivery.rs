@@ -336,6 +336,10 @@ impl Delivery {
                 return;
             };
             log_attempt(log, &claim, request, number, &attempt, started.elapsed());
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::CallbackAttempt(
+                attempt.class(),
+            ));
             claim.attempts = number;
             let finish = match verdict(&attempt) {
                 Verdict::Delivered => Some(CallbackFinish::Delivered),
@@ -376,7 +380,20 @@ fn settled(
     written: QueryResult<bool>,
     finish: Option<CallbackFinish>,
 ) -> bool {
-    let latency_ms = millis(claim.claimed.elapsed());
+    let latency = claim.claimed.elapsed();
+    // Only a settle that committed ended the delivery.
+    #[cfg(feature = "otel")]
+    if let (Ok(true), Some(finish)) = (&written, finish) {
+        bencher_otel::ApiMeter::record(
+            bencher_otel::ApiHistogram::CallbackFinishDuration(finish),
+            latency.as_secs_f64(),
+        );
+        bencher_otel::ApiMeter::record(
+            bencher_otel::ApiHistogram::CallbackFinishAttempts(finish),
+            f64::from(claim.attempts),
+        );
+    }
+    let latency_ms = millis(latency);
     match (written, finish) {
         (Ok(true), None) => return true,
         (Ok(true), Some(CallbackFinish::Delivered)) => {
