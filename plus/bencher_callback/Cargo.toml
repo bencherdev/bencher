@@ -10,18 +10,37 @@ publish = false
 default = []
 # Required due to feature unification
 # https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
-plus = ["dep:aws-lc-rs", "dep:bencher_json", "dep:thiserror", "dep:uuid"]
+plus = [
+    "dep:async-trait",
+    "dep:aws-lc-rs",
+    "dep:bencher_json",
+    "dep:derive_more",
+    "dep:http",
+    "dep:reqwest",
+    "dep:thiserror",
+    "dep:tokio",
+    "dep:url",
+    "dep:uuid",
+]
 db = ["dep:diesel", "diesel/sqlite"]
 
 [dependencies]
+async-trait = { workspace = true, optional = true }
 aws-lc-rs = { workspace = true, optional = true }
 bencher_json = { workspace = true, optional = true, features = ["plus", "server"] }
+derive_more = { workspace = true, optional = true }
 diesel = { workspace = true, optional = true }
+http = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true, features = ["rustls-no-provider"] }
 thiserror = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["net"] }
+url = { workspace = true, optional = true }
 uuid = { workspace = true, optional = true }
 
 [dev-dependencies]
 pretty_assertions.workspace = true
+tokio = { workspace = true, features = ["io-util", "macros", "net", "test-util"] }
+tokio-rustls.workspace = true
 
 [lints]
 workspace = true
