@@ -1,0 +1,16 @@
+### `--job <UUID>`
+
+<br />
+
+Optional: Verbindet sich mit einem [Job auf dedizierter Hardware][job].
+Meistens wird diese Option verwendet, wenn ein separater Aufruf von `bencher run`
+bereits [das Flag `--detach`][detach] verwendet hat.
+Mehrere andere Optionen von `bencher run` werden hier übernommen und funktionieren so, als wäre der Lauf nie abgelöst worden.
+Damit können Sie mithilfe von Callbacks asynchron auf Jobs auf dedizierter Hardware warten
+(Webhooks pro Aufruf von `bencher run`).
+
+Siehe [Pull Requests auf dedizierter Hardware][pull requests on bare metal] für ein Beispiel mit GitHub Actions.
+
+[job]: /de/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[pull requests on bare metal]: /de/docs/how-to/github-actions/#pull-requests-auf-dedizierter-hardware

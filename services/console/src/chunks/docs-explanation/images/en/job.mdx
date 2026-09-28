@@ -1,0 +1,16 @@
+### `--job <UUID>`
+
+<br />
+
+Optional: Attach to a [Bare Metal Job][job].
+The majority of the time, this option is used when a separate `bencher run` invocation
+has already used [the `--detach` flag][detach].
+Several other `bencher run` options pick up and function as though you had never detached.
+This allows you to await Bare Metal Jobs asynchronously using callbacks
+(per `bencher run` invocation webhooks).
+
+See [Pull Requests on Bare Metal][pull requests on bare metal] for an example using GitHub Actions.
+
+[job]: /docs/explanation/bare-metal/#job
+[detach]: #--detach
+[pull requests on bare metal]: /docs/how-to/github-actions/#pull-requests-on-bare-metal

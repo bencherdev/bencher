@@ -1,0 +1,16 @@
+### `--job <UUID>`
+
+<br />
+
+Optionnel : Se rattache à un [Job sur matériel dédié][job].
+La plupart du temps, cette option est utilisée lorsqu'une invocation distincte de `bencher run`
+a déjà utilisé [le drapeau `--detach`][detach].
+Plusieurs autres options de `bencher run` sont prises en compte et fonctionnent comme si vous ne vous étiez jamais détaché.
+Cela vous permet d'attendre les Jobs sur matériel dédié de manière asynchrone à l'aide de callbacks
+(des webhooks propres à chaque invocation de `bencher run`).
+
+Voir [Pull Requests sur matériel dédié][pull requests on bare metal] pour un exemple utilisant GitHub Actions.
+
+[job]: /fr/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[pull requests on bare metal]: /fr/docs/how-to/github-actions/#pull-requests-sur-matériel-dédié

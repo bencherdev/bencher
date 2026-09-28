@@ -1,0 +1,32 @@
+import CallbackBodyExample from "../callback-body-example.mdx";
+
+### `--callback-body <JSON>`
+
+<br />
+
+可选：设置回调请求的 JSON 正文。
+此 JSON 值可以在字符串中使用以下任意模板变量：
+
+| 变量                 | 展开为 | 值                                                  |
+| -------------------- | ------ | --------------------------------------------------- |
+| `{{ project.uuid }}` | 字符串 | 项目 UUID                                           |
+| `{{ project.name }}` | 字符串 | 项目名称                                            |
+| `{{ project.slug }}` | 字符串 | 项目 slug                                           |
+| `{{ report }}`       | 对象   | 报告（最多使用 1 次）                               |
+| `{{ report.uuid }}`  | 字符串 | 报告 UUID                                           |
+| `{{ job.uuid }}`     | 字符串 | Job UUID                                            |
+| `{{ job.status }}`   | 字符串 | Job 的终止状态：`processed`、`failed` 或 `canceled` |
+
+此 JSON 值模板的最大大小为 64 KiB。
+模板展开只进行一遍，
+任何未知的模板变量都会导致展开失败。
+
+此选项要求设置 [`--callback-url` 选项](#--callback-url-url)。
+如果未指定 `--callback-body` 选项，
+则默认使用 `bencher run` [API 端点][run post]的响应正文（`"{{ report }}"`）。
+
+例如，要向 Slack 传入 Webhook 发布一条消息：
+
+<CallbackBodyExample />
+
+[run post]: /zh/docs/api/run/run/#post-v0run

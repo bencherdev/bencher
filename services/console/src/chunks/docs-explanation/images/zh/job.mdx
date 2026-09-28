@@ -1,0 +1,16 @@
+### `--job <UUID>`
+
+<br />
+
+可选：连接到一个[裸机 Job][job]。
+大多数情况下，此选项用于另一个单独的 `bencher run`
+调用已经使用了 [`--detach` 标志][detach]的情况。
+其他几个 `bencher run` 选项会照常接手并生效，就像您从未分离过一样。
+这使您可以使用回调异步等待裸机 Job
+（即每次 `bencher run` 调用各自的 Webhook）。
+
+有关使用 GitHub Actions 的示例，请参见[裸机上的 Pull Requests][pull requests on bare metal]。
+
+[job]: /zh/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[pull requests on bare metal]: /zh/docs/how-to/github-actions/#裸机上的-pull-requests

@@ -1,0 +1,22 @@
+### `--callback-url <URL>`
+
+<br />
+
+Необязательно: Задает URL callback для отсоединенного [Job на выделенном оборудовании][job].
+URL должен использовать `https`.
+У организации этого проекта должен быть активный [план Bencher Plus][pricing].
+
+Чтобы задать заголовки запроса, используйте [опцию `--callback-header`](#--callback-header-name-value).
+Чтобы задать тело запроса, используйте [опцию `--callback-body`](#--callback-body-json).
+В противном случае по умолчанию используется тело ответа [эндпоинта API][run post] `bencher run`.
+
+Эта опция требует, чтобы были заданы [опция `--image`][image] и [флаг `--detach`][detach].
+Эта опция конфликтует с [опцией `--github-actions`](/ru/docs/explanation/bencher-run/#--github-actions-github_token).
+
+[job]: /ru/docs/explanation/bare-metal/#job
+[run post]: /ru/docs/api/run/run/#post-v0run
+[pricing]: /pricing
+[image]: #--image-image
+[detach]: #--detach
+
+[github repository dispatch]: https://docs.github.com/ru/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch

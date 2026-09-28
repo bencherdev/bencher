@@ -1,0 +1,22 @@
+### `--callback-url <URL>`
+
+<br />
+
+선택 사항: 분리된 [베어 메탈 Job][job]의 콜백 URL을 지정합니다.
+URL은 `https`를 사용해야 합니다.
+이 프로젝트가 속한 조직에는 활성화된 [Bencher Plus 플랜][pricing]이 있어야 합니다.
+
+요청 헤더를 지정하려면 [`--callback-header` 옵션](#--callback-header-name-value)을 사용하세요.
+요청 본문을 지정하려면 [`--callback-body` 옵션](#--callback-body-json)을 사용하세요.
+그렇지 않으면 `bencher run` [API 엔드포인트][run post]의 응답 본문이 기본으로 사용됩니다.
+
+이 옵션은 [`--image` 옵션][image]과 [`--detach` 플래그][detach]가 설정되어 있어야 합니다.
+이 옵션은 [`--github-actions` 옵션](/ko/docs/explanation/bencher-run/#--github-actions-github_token)과 충돌합니다.
+
+[job]: /ko/docs/explanation/bare-metal/#job
+[run post]: /ko/docs/api/run/run/#post-v0run
+[pricing]: /pricing
+[image]: #--image-image
+[detach]: #--detach
+
+[github repository dispatch]: https://docs.github.com/ko/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#repository_dispatch

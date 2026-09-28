@@ -1,0 +1,21 @@
+### `--callback-header <NAME: VALUE>`
+
+<br />
+
+Optional: Fügt der Callback-Anfrage einen Header im Format `NAME: VALUE` hinzu.
+Der `NAME` des Headers darf höchstens 256 Byte groß sein und der `VALUE` des Headers höchstens 8 KiB.
+Diese Option kann mehrfach angegeben werden (höchstens 16).
+
+Die folgenden Header werden nicht unterstützt:
+
+- `Connection`
+- `Content-Length`
+- `Host`
+- `Keep-Alive`
+- `Proxy-Connection`
+- `TE`
+- `Trailer`
+- `Transfer-Encoding`
+- `Upgrade`
+
+Diese Option erfordert, dass [die Option `--callback-url`](#--callback-url-url) gesetzt ist.

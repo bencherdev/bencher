@@ -1,0 +1,16 @@
+### `--job <UUID>`
+
+<br />
+
+선택 사항: [베어 메탈 Job][job]에 연결합니다.
+대부분의 경우 이 옵션은 별도의 `bencher run` 호출에서
+이미 [`--detach` 플래그][detach]를 사용했을 때 사용합니다.
+그 밖의 여러 `bencher run` 옵션도 그대로 이어받아, 분리한 적이 없는 것처럼 작동합니다.
+이를 통해 베어 메탈 Job을 콜백
+(`bencher run` 호출별 웹훅)을 사용하여 비동기적으로 기다릴 수 있습니다.
+
+GitHub Actions를 사용하는 예시는 [베어 메탈에서의 Pull Requests][pull requests on bare metal]를 참조하세요.
+
+[job]: /ko/docs/explanation/bare-metal/#job
+[detach]: #--detach
+[pull requests on bare metal]: /ko/docs/how-to/github-actions/#베어-메탈에서의-pull-requests

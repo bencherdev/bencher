@@ -1,0 +1,32 @@
+import CallbackBodyExample from "../callback-body-example.mdx";
+
+### `--callback-body <JSON>`
+
+<br />
+
+Optionnel : Définit le corps JSON de la requête du callback.
+Cette valeur JSON peut utiliser n'importe laquelle des variables de modèle suivantes dans une chaîne :
+
+| Variable             | Se développe en | Valeur                                                  |
+| -------------------- | --------------- | ------------------------------------------------------- |
+| `{{ project.uuid }}` | Chaîne          | UUID du Projet                                          |
+| `{{ project.name }}` | Chaîne          | Nom du Projet                                           |
+| `{{ project.slug }}` | Chaîne          | Slug du Projet                                          |
+| `{{ report }}`       | Objet           | Rapport (limite de 1)                                   |
+| `{{ report.uuid }}`  | Chaîne          | UUID du Rapport                                         |
+| `{{ job.uuid }}`     | Chaîne          | UUID du Job                                             |
+| `{{ job.status }}`   | Chaîne          | État final du Job : `processed`, `failed` ou `canceled` |
+
+La taille maximale de ce modèle de valeur JSON est de 64 Kio.
+Le développement du modèle se fait en une seule passe,
+et toute variable de modèle inconnue fera échouer le développement.
+
+Cette option nécessite que [l'option `--callback-url`](#--callback-url-url) soit définie.
+Si l'option `--callback-body` n'est pas spécifiée, le corps de la réponse du [point de terminaison de l'API][run post] de `bencher run`
+(`"{{ report }}"`) est utilisé par défaut.
+
+Par exemple, pour publier un message sur un webhook entrant Slack :
+
+<CallbackBodyExample />
+
+[run post]: /fr/docs/api/run/run/#post-v0run

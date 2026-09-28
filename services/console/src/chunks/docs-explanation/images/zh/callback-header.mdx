@@ -1,0 +1,21 @@
+### `--callback-header <NAME: VALUE>`
+
+<br />
+
+可选：以 `NAME: VALUE` 格式为回调请求添加一个请求头。
+请求头 `NAME` 的最大大小为 256 字节，请求头 `VALUE` 的最大大小为 8 KiB。
+此选项可以多次指定（最多 16 次）。
+
+以下请求头不受支持：
+
+- `Connection`
+- `Content-Length`
+- `Host`
+- `Keep-Alive`
+- `Proxy-Connection`
+- `TE`
+- `Trailer`
+- `Transfer-Encoding`
+- `Upgrade`
+
+此选项要求设置 [`--callback-url` 选项](#--callback-url-url)。

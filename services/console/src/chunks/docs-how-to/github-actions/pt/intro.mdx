@@ -3,6 +3,7 @@ Dependendo do seu caso de uso, você pode configurar [Benchmarking Contínuo][co
 - [Branch Base][base branch]
 - [Pull Requests][pull requests]
 - [Pull Requests de Forks][fork pull requests]
+- [Pull Requests em hardware dedicado][pull requests on bare metal]
 
 Certifique-se de criar uma chave de API de projeto e configurá-la como um segredo de **Repositório** chamado `BENCHER_API_KEY` antes de continuar! Navegue até `Seu Repositório -> Configurações -> Segredos e variáveis -> Ações -> Novo segredo de repositório`. Nomeie o segredo como `BENCHER_API_KEY` e defina o valor do segredo para a sua chave de API de projeto.
 
@@ -15,3 +16,4 @@ No GitHub Actions, [segredos não são passados para o runner quando um workflow
 [base branch]: #base-branch
 [pull requests]: #pull-requests
 [fork pull requests]: #pull-requests-from-forks
+[pull requests on bare metal]: #pull-requests-em-hardware-dedicado
