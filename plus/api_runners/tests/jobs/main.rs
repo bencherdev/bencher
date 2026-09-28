@@ -9,6 +9,7 @@
 //! Since jobs are tied to reports, which require projects and other setup,
 //! some tests may be marked as ignored until full integration is available.
 
+mod callbacks;
 #[path = "../common/mod.rs"]
 mod common;
 mod websocket;
@@ -24,8 +25,8 @@ use bencher_json::{DateTime, JobStatus, JsonJob, PollTimeout, Priority};
 use bencher_schema::{
     context::HeartbeatTasks,
     model::runner::{
-        JobId, in_flight_jobs, mark_orphaned_claimed_jobs_unknown, reprocess_completed_jobs,
-        spawn_heartbeat_timeout,
+        JobId, JobTimeout, in_flight_jobs, mark_orphaned_claimed_jobs_unknown,
+        reprocess_completed_jobs,
     },
     schema,
 };
@@ -2300,7 +2301,7 @@ async fn mark_orphaned_claimed_jobs_unknown_marks_as_unknown() {
 
 /// Test that `mark_orphaned_claimed_jobs_unknown` spares recently-claimed jobs.
 /// A job claimed within the heartbeat timeout should survive into
-/// Phase 2 (`spawn_heartbeat_timeout`) rather than being marked early.
+/// Phase 2 (`JobTimeout::spawn`) rather than being marked early.
 #[tokio::test]
 async fn mark_orphaned_claimed_jobs_unknown_spares_recently_claimed() {
     let server = TestServer::new().await;
@@ -2357,12 +2358,12 @@ async fn mark_orphaned_claimed_jobs_unknown_spares_recently_claimed() {
     );
 }
 
-/// Test that `spawn_heartbeat_timeout` marks a Running job as Unknown after timeout.
+/// Test that `JobTimeout::spawn` marks a Running job as Unknown after timeout.
 /// Simulates what `spawn_job_recovery` does for in-flight jobs on server restart.
 ///
 /// Uses `tokio::time::pause()` / `advance()` to make the test deterministic
 /// without wall-clock waits. The `last_heartbeat` is left `None` so
-/// the freshness check inside `spawn_heartbeat_timeout` is skipped, and the
+/// the freshness check inside `JobTimeout::spawn` is skipped, and the
 /// main `tokio::time::sleep(timeout)` respects virtual time.
 #[tokio::test]
 async fn spawn_heartbeat_timeout_marks_running_job_unknown() {
@@ -2387,7 +2388,7 @@ async fn spawn_heartbeat_timeout_marks_running_job_unknown() {
 
     let job_id = get_job_id(&server, job_uuid);
 
-    // Create the infrastructure spawn_heartbeat_timeout needs
+    // Create the infrastructure JobTimeout::spawn needs
     let connection = Arc::new(Mutex::new(server.db_conn()));
     let heartbeat_tasks = HeartbeatTasks::new();
     let log = slog::Logger::root(slog::Discard, slog::o!());
@@ -2398,14 +2399,17 @@ async fn spawn_heartbeat_timeout_marks_running_job_unknown() {
     // Pause time before spawning so the sleep timer is registered in virtual time
     tokio::time::pause();
 
-    spawn_heartbeat_timeout(
+    JobTimeout {
+        heartbeat: timeout,
+        grace_period,
+    }
+    .spawn(
         log,
-        timeout,
         connection,
         job_id,
         &heartbeat_tasks,
-        grace_period,
         bencher_json::Clock::Custom(Arc::new(move || now)),
+        server.context().callbacks.clone(),
     );
 
     // Let the spawned task start and register its sleep(5s) timer
@@ -2450,14 +2454,17 @@ async fn spawn_heartbeat_timeout_keeps_full_limit_between_heartbeats() {
     let heartbeat_tasks = HeartbeatTasks::new();
 
     tokio::time::pause();
-    spawn_heartbeat_timeout(
+    JobTimeout {
+        heartbeat: std::time::Duration::from_secs(5),
+        grace_period: std::time::Duration::from_mins(1),
+    }
+    .spawn(
         slog::Logger::root(slog::Discard, slog::o!()),
-        std::time::Duration::from_secs(5),
         Arc::new(Mutex::new(server.db_conn())),
         get_job_id(&server, job_uuid),
         &heartbeat_tasks,
-        std::time::Duration::from_mins(1),
         clock,
+        server.context().callbacks.clone(),
     );
     tokio::task::yield_now().await;
 
@@ -2522,14 +2529,17 @@ async fn spawn_heartbeat_timeout_cancels_unknown_job_at_deadline_from_started() 
     let heartbeat_tasks = HeartbeatTasks::new();
 
     tokio::time::pause();
-    spawn_heartbeat_timeout(
+    JobTimeout {
+        heartbeat: std::time::Duration::from_secs(5),
+        grace_period: std::time::Duration::from_mins(1),
+    }
+    .spawn(
         slog::Logger::root(slog::Discard, slog::o!()),
-        std::time::Duration::from_secs(5),
         Arc::new(Mutex::new(server.db_conn())),
         get_job_id(&server, job_uuid),
         &heartbeat_tasks,
-        std::time::Duration::from_mins(1),
         clock,
+        server.context().callbacks.clone(),
     );
     tokio::task::yield_now().await;
     tokio::time::advance(std::time::Duration::from_secs(6)).await;
@@ -2573,14 +2583,17 @@ async fn spawn_heartbeat_timeout_cancels_unknown_job_at_deadline_from_claimed() 
     let heartbeat_tasks = HeartbeatTasks::new();
 
     tokio::time::pause();
-    spawn_heartbeat_timeout(
+    JobTimeout {
+        heartbeat: std::time::Duration::from_secs(5),
+        grace_period: std::time::Duration::from_mins(1),
+    }
+    .spawn(
         slog::Logger::root(slog::Discard, slog::o!()),
-        std::time::Duration::from_secs(5),
         Arc::new(Mutex::new(server.db_conn())),
         get_job_id(&server, job_uuid),
         &heartbeat_tasks,
-        std::time::Duration::from_mins(1),
         clock,
+        server.context().callbacks.clone(),
     );
     tokio::task::yield_now().await;
     tokio::time::advance(std::time::Duration::from_secs(6)).await;
@@ -2732,7 +2745,7 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     let claimed = claimed.expect("Expected to claim a job");
     assert_eq!(claimed.uuid, job_uuid);
 
-    // Get the JobId for spawn_heartbeat_timeout
+    // Get the JobId for JobTimeout::spawn
     let job_id: JobId = {
         let mut conn = server.db_conn();
         schema::job::table
@@ -2761,14 +2774,17 @@ async fn heartbeat_timeout_claimed_job_without_ws() {
     // Pause time before spawning so the sleep timer is registered in virtual time
     tokio::time::pause();
 
-    spawn_heartbeat_timeout(
+    JobTimeout {
+        heartbeat: timeout,
+        grace_period,
+    }
+    .spawn(
         log,
-        timeout,
         connection,
         job_id,
         &heartbeat_tasks,
-        grace_period,
         bencher_json::Clock::System,
+        server.context().callbacks.clone(),
     );
 
     // Let the spawned task start and register its sleep(5s) timer
