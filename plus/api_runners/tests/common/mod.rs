@@ -654,18 +654,18 @@ pub async fn assert_ws_closed(ws: &mut WsStream) {
 
 pub const CALLBACK_URL: &str = "https://receiver.example/bencher/hook";
 pub const CALLBACK_AUTHORIZATION: &str = "Bearer callback-token";
-/// Store a pending callback whose body has all five values, so a test sees the status each site
-/// fires with, sealed with the server's key the way a submit does.
+/// A callback body with all five values, so a test sees the status each site fires with.
+pub fn callback_body() -> serde_json::Value {
+    serde_json::json!({
+        "job": { "uuid": "{{ job.uuid }}", "status": "{{ job.status }}" },
+        "report": { "uuid": "{{ report.uuid }}" },
+        "project": { "uuid": "{{ project.uuid }}", "slug": "{{ project.slug }}" },
+    })
+}
+
+/// Store a pending callback with `callback_body`, sealed with the server's key the way a submit does.
 pub fn insert_pending_callback(server: &TestServer, job_uuid: JobUuid) {
-    insert_pending_callback_with_body(
-        server,
-        job_uuid,
-        Some(serde_json::json!({
-            "job": { "uuid": "{{ job.uuid }}", "status": "{{ job.status }}" },
-            "report": { "uuid": "{{ report.uuid }}" },
-            "project": { "uuid": "{{ project.uuid }}", "slug": "{{ project.slug }}" },
-        })),
-    );
+    insert_pending_callback_with_body(server, job_uuid, Some(callback_body()));
 }
 
 /// Store a pending callback with `body`, or with none, so it sends the report.

@@ -909,6 +909,12 @@ export interface JsonNewRunJob {
 	allow_failure?: boolean;
 	/** Backdate the report start time */
 	backdate?: string;
+	/**
+	 * An HTTP request to send once the job finishes: the GitHub Actions dispatch to
+	 * `https://api.github.com/repos/{owner}/{repo}/dispatches` on every plan, and any other request
+	 * only for an organization with a Bencher Plus plan
+	 */
+	callback?: JsonNewCallback;
 }
 
 /** Create a new runner */
