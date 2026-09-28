@@ -34,6 +34,7 @@ RUN cargo init --lib api_runners
 RUN cargo init --lib api_specs
 RUN cargo init --lib bencher_billing
 RUN cargo init --lib bencher_bing_index
+RUN cargo init --lib bencher_callback
 RUN cargo init --lib bencher_github_client
 RUN cargo init --lib bencher_google_client
 RUN cargo init --lib bencher_google_index
