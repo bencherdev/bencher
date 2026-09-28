@@ -689,6 +689,30 @@ export interface JsonMetricEntry {
 	boundaries?: JsonPerfBoundary[];
 }
 
+/**
+ * An HTTP request Bencher sends once, when a job reaches a terminal state.
+ * Its body is JSON with placeholders or, without one, the job's report.
+ */
+export interface JsonNewCallback {
+	/** The `https` URL to send the request to */
+	url: Url;
+	/**
+	 * Request headers. Names are case-insensitive: send each name once; if one repeats in
+	 * different case, only one is kept.
+	 * A header named `Content-Type` or `User-Agent` replaces Bencher's default.
+	 */
+	headers?: Record<string, string>;
+	/**
+	 * The JSON request body. Anywhere inside a string value, `{{ job.uuid }}`, `{{ job.status }}`,
+	 * `{{ report.uuid }}`, `{{ project.uuid }}`, `{{ project.name }}`, and `{{ project.slug }}` become
+	 * their values, and a string that is exactly `{{ report }}` becomes the job's report, which a
+	 * body can send only once. Whitespace inside the braces is optional, and any other name inside
+	 * them is refused. Keys and every other value are sent as they are.
+	 * Without a body, the body is the job's report, as the report endpoint returns it.
+	 */
+	body?: unknown;
+}
+
 export interface JsonNewCheckout {
 	organization: OrganizationResourceId;
 	level: PlanLevel;

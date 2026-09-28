@@ -1394,6 +1394,7 @@ dependencies = [
  "camino",
  "derive_more",
  "diesel",
+ "http 1.4.1",
  "ordered-float",
  "percent-encoding",
  "pretty_assertions",
