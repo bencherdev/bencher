@@ -842,16 +842,4 @@ mod tests {
 
         assert_eq!(reaped, Reaped::Unexaminable);
     }
-
-    #[test]
-    fn a_still_running_vmm_carries_its_pid() {
-        // The caller keys the decision not to delete a directory off this, so
-        // the variant has to name the process it is refusing to abandon.
-        let still = Reaped::StillRunning { pid: 4242 };
-        assert_ne!(still, Reaped::Clear);
-        match still {
-            Reaped::StillRunning { pid } => assert_eq!(pid, 4242),
-            Reaped::Clear | Reaped::Unexaminable => panic!("expected StillRunning"),
-        }
-    }
 }

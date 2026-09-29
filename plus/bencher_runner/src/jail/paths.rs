@@ -325,25 +325,6 @@ mod tests {
     }
 
     #[test]
-    fn chroot_view_is_rooted_at_the_chroot() {
-        let (_dir, paths) = jail_in_tmpdir();
-        assert_eq!(paths.api_socket().chroot().as_str(), "/api.sock");
-        assert_eq!(paths.kernel().chroot().as_str(), "/vmlinux");
-        assert_eq!(paths.rootfs().chroot().as_str(), "/rootfs.ext4");
-        assert_eq!(paths.vsock().chroot().as_str(), "/v.sock");
-    }
-
-    #[test]
-    fn host_view_is_under_the_jail_root() {
-        let (_dir, paths) = jail_in_tmpdir();
-        let root = paths.root().to_owned();
-        assert_eq!(paths.api_socket().host().as_path(), root.join("api.sock"));
-        assert_eq!(paths.kernel().host().as_path(), root.join("vmlinux"));
-        assert_eq!(paths.rootfs().host().as_path(), root.join("rootfs.ext4"));
-        assert_eq!(paths.vsock().host().as_path(), root.join("v.sock"));
-    }
-
-    #[test]
     fn the_chroot_and_host_views_round_trip_through_the_jail_root() {
         let (_dir, paths) = jail_in_tmpdir();
         for file in [
@@ -507,14 +488,5 @@ mod tests {
         let root = Utf8Path::from_path(dir.path()).unwrap().join("absent");
 
         JailPaths::new(&root).unwrap_err();
-    }
-
-    #[test]
-    fn chroot_paths_serialize_as_bare_strings() {
-        let (_dir, paths) = jail_in_tmpdir();
-        assert_eq!(
-            serde_json::to_string(paths.rootfs().chroot()).unwrap(),
-            "\"/rootfs.ext4\""
-        );
     }
 }

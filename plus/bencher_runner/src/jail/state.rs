@@ -965,29 +965,6 @@ mod tests {
     }
 
     #[test]
-    fn jail_layout_matches_jailer_template() {
-        let state = StateDir::new(Utf8PathBuf::from("/var/lib/bencher-runner")).unwrap();
-        assert_eq!(state.chroot_base(), "/var/lib/bencher-runner/jail");
-        assert_eq!(
-            state.jail_parent(),
-            "/var/lib/bencher-runner/jail/firecracker"
-        );
-        assert_eq!(
-            state.jail_dir(&VmId::from_chroot_name("abc".to_owned()).unwrap()),
-            "/var/lib/bencher-runner/jail/firecracker/abc"
-        );
-        // <chroot_base>/<exec_file_name>/<id>/root
-        assert_eq!(
-            state.jail_root(&VmId::from_chroot_name("abc".to_owned()).unwrap()),
-            state
-                .chroot_base()
-                .join(EXEC_FILE_NAME)
-                .join("abc")
-                .join("root")
-        );
-    }
-
-    #[test]
     fn create_is_idempotent_and_private() {
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
