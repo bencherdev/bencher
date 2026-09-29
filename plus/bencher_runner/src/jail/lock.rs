@@ -76,6 +76,16 @@ impl JailLock {
     /// The state directory must already exist: the lock guards the contents,
     /// so creating the directory is not something it can protect.
     pub fn acquire(state_dir: &Utf8Path) -> Result<Self, JailError> {
+        Self::acquire_with(state_dir, |path| {
+            println!("  Waiting for another bencher runner to release {path}...");
+        })
+    }
+
+    /// Take the jail lock, with what is said when it is contended supplied.
+    fn acquire_with<C: FnOnce(&Utf8Path)>(
+        state_dir: &Utf8Path,
+        contended: C,
+    ) -> Result<Self, JailError> {
         let path = state_dir.join(LOCK_FILE);
         let file = OpenOptions::new()
             .create(true)
@@ -92,7 +102,7 @@ impl JailLock {
         if flock_nonblocking(&file).is_ok() {
             return Ok(Self { _file: file });
         }
-        println!("  Waiting for another bencher runner to release {path}...");
+        contended(&path);
 
         // Nothing here gives up: the wait is signal proof and has no bound, so
         // the announcement is the only thing that distinguishes it from a hang.
@@ -212,6 +222,7 @@ fn flock(file: &File, operation: libc::c_int) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::mpsc;
 
     use camino::Utf8PathBuf;
 
@@ -241,49 +252,61 @@ mod tests {
         JailLock::acquire(&state).unwrap();
     }
 
+    /// A bound only a broken wait reaches, so a failure is a failure and not a
+    /// hang.
+    const NEVER: Duration = Duration::from_secs(30);
+
     #[test]
     fn a_held_lock_makes_a_second_runner_wait() {
         // `flock` is per open file description, so a second `acquire` in this
-        // process contends exactly as another process would. The waiter is
-        // released only once the holder drops, which is what keeps a sweep
-        // from running while another runner has a job in flight.
+        // process contends exactly as another process would. The waiter says it
+        // is waiting while the lock is held, and what it returns holds the
+        // lock, which no waiter that proceeded without it could: that is what
+        // keeps a sweep from running while another runner has a job in flight.
         let (_dir, state) = state_in_tmpdir();
         let held = JailLock::acquire(&state).unwrap();
+        let (contended, waiting) = mpsc::channel();
 
         let waiter = {
             let state = state.clone();
-            std::thread::spawn(move || JailLock::acquire(&state))
+            std::thread::spawn(move || {
+                JailLock::acquire_with(&state, move |_path| contended.send(()).unwrap())
+            })
         };
-
-        // The waiter must still be blocked while the lock is held.
-        std::thread::sleep(Duration::from_millis(200));
-        assert!(
-            !waiter.is_finished(),
-            "a second runner must wait rather than proceed to sweep"
-        );
-
+        let announced = waiting.recv_timeout(NEVER);
         drop(held);
-        waiter.join().unwrap().unwrap();
+        let taken = waiter.join().unwrap().unwrap();
+
+        announced.expect("a contended lock is announced before the wait");
+        let probe = OpenOptions::new()
+            .write(true)
+            .open(state.join(LOCK_FILE))
+            .unwrap();
+        assert!(
+            flock_nonblocking(&probe).is_err(),
+            "the waiter must hold the lock it returned with"
+        );
+        drop(taken);
+        flock_nonblocking(&probe).unwrap();
     }
 
     #[test]
     fn a_wait_that_outlives_the_interval_is_announced_again() {
         // One line and then silence for as long as the holder's job lasts is
-        // what makes an honest wait read as a wedged runner.
-        let announced = AtomicUsize::new(0);
+        // what makes an honest wait read as a wedged runner. The wait ends only
+        // once it has been announced twice.
+        let (announce, announced) = mpsc::channel();
 
         while_waiting(
-            Duration::from_millis(20),
+            Duration::from_millis(1),
+            || announce.send(()).unwrap(),
             || {
-                announced.fetch_add(1, Ordering::Relaxed);
+                for _ in 0..2 {
+                    announced
+                        .recv_timeout(NEVER)
+                        .expect("a wait that outlives the interval is announced again");
+                }
             },
-            || std::thread::sleep(Duration::from_millis(250)),
-        );
-
-        let announced = announced.load(Ordering::Relaxed);
-        assert!(
-            announced >= 2,
-            "a wait of several intervals must keep saying so, said it {announced} times"
         );
     }
 
