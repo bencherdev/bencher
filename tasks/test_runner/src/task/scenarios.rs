@@ -2779,10 +2779,10 @@ CMD ["echo", "JAIL_REFUSED_a7f3b2c9"]"#,
         Scenario {
             name: "jail_sweep_reclaims_orphan",
             description: "A chroot orphaned by a runner that never unwound is swept by the next job",
-            // Likewise a token the runner cannot print: "swept" sits one
-            // refactor away from colliding with the sweep's own reporting.
+            // The next job's guest. The orphan runs `ORPHAN_DOCKERFILE`, which
+            // outlives it by far.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo JAIL_SWEEP_a7f3b2c9 && sleep 10"]"#,
+CMD ["echo", "JAIL_SWEEP_a7f3b2c9"]"#,
             cancel_after_secs: None,
             probe: None,
             orphan_then_rerun: true,
@@ -3376,15 +3376,10 @@ fn run_runner_after_orphan(
     runner_bin: &Utf8Path,
 ) -> Result<ScenarioOutput> {
     let parent = jail_parent(state_dir);
+    let orphan_image = build_test_image("jail_orphan", ORPHAN_DOCKERFILE)
+        .context("Failed to build the orphan's image")?;
 
-    let mut child = Command::new(runner_bin.as_str())
-        .arg("run")
-        .arg("--image")
-        .arg(image_path.as_str())
-        .args(args)
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()?;
+    let mut child = spawn_runner(&orphan_image, args, runner_bin)?;
 
     // Drain both pipes for the same reason the probe path does. This polls for
     // up to three minutes while the runner pulls an image, unpacks it, and
@@ -3445,14 +3440,25 @@ fn run_runner_after_orphan(
     // that a hand-reap guards against is exactly what the sweep now exists to
     // prevent, so if the sweep fails this scenario has to go red.
     let cgroup = stale_cgroup(&vm_id);
-    let cgroup_existed = cgroup
-        .try_exists()
-        .with_context(|| format!("Failed to check whether {cgroup} was created"))?;
-    println!(
-        "  orphaned jail {vm_id} (VMM pid {vmm_pid}, cgroup present: {cgroup_existed}), running a second job..."
+    anyhow::ensure!(
+        cgroup
+            .try_exists()
+            .with_context(|| format!("Failed to check whether {cgroup} was created"))?,
+        "No cgroup at {cgroup}, so the reap is only half exercised. The runner creates one whenever its CPU layout offers isolation."
     );
+    println!("  orphaned jail {vm_id} (VMM pid {vmm_pid}), running a second job...");
 
     let output = run_runner(image_path, args, runner_bin)?;
+
+    // The orphan's guest outlives this job by far, so a VMM that is gone below
+    // could only have been killed, and this says who killed it.
+    if !output.stderr.contains(&reaped_line(vmm_pid)) {
+        bail!(
+            "The next job never reaped the orphaned VMM (pid {vmm_pid}).\nstdout: {}\nstderr: {}",
+            output.stdout,
+            output.stderr
+        );
+    }
 
     // `try_exists`, not `exists`: the latter reports false for an error as well
     // as for absence, which would pass this assertion for the wrong reason.
@@ -3467,13 +3473,9 @@ fn run_runner_after_orphan(
             "The orphaned VMM (pid {vmm_pid}) is still running after the next job, so the sweep never reaped it. It still holds the benchmark cores."
         );
     }
-    // Only meaningful where a cgroup was created at all: a host with no CPU
-    // isolation never makes one, and asserting its absence would pass for the
-    // wrong reason.
-    if cgroup_existed
-        && cgroup
-            .try_exists()
-            .with_context(|| format!("Failed to check whether {cgroup} survived"))?
+    if cgroup
+        .try_exists()
+        .with_context(|| format!("Failed to check whether {cgroup} survived"))?
     {
         bail!(
             "The orphaned cgroup {cgroup} survived the next job, so the sweep never removed it. Stale cgroups accumulate, and one that will not go away usually means its VMM is still running."
