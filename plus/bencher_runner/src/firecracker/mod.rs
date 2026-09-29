@@ -141,45 +141,7 @@ pub fn run_firecracker(
     let cgroup = if let Some(layout) = &config.cpu_layout {
         if layout.has_isolation() {
             match cgroup_for_run(CgroupManager::new(vm_id, config.cgroup_survived.clone()))? {
-                Some(cg) => {
-                    // A cgroup that exists but does not confine the VMM to the
-                    // benchmark cores would report a number measured somewhere
-                    // other than where it claims, so a rejected cpuset is
-                    // fatal. A controller the host does not delegate is a
-                    // different thing: there is no isolation to be had, which
-                    // is a declared limitation, so the cgroup is dropped and
-                    // the job runs without one exactly as on a host that could
-                    // not create it at all.
-                    match cg
-                        .apply_cpuset(layout)
-                        .map_err(|e| FirecrackerError::CpusetFailed(Box::new(e)))?
-                    {
-                        Cpuset::Applied => {
-                            println!(
-                                "CPU isolation: Firecracker pinned to cores {}",
-                                layout.benchmark_cpuset()
-                            );
-                            // Keep VM memory resident: swap adds run-to-run variance
-                            if let Err(e) = cg.disable_swap() {
-                                eprintln!("Warning: failed to disable swap for VM cgroup: {e}");
-                            }
-                            Some(cg)
-                        },
-                        Cpuset::Unavailable(reason) => {
-                            // Precise about what is lost. The vCPU threads are
-                            // still pinned to the benchmark cores further
-                            // down, which is gated on the layout and not on
-                            // the cgroup, so what goes is the cgroup's hard
-                            // confinement (nothing stops other work being
-                            // scheduled onto those cores) along with its
-                            // metrics and swap control.
-                            eprintln!(
-                                "Warning: this run has no cgroup cpuset ({reason}), so nothing keeps other work off the benchmark cores and its numbers carry more variance; vCPU threads are still pinned to them"
-                            );
-                            None
-                        },
-                    }
-                },
+                Some(cg) => Some(confine(cg, layout)?),
                 None => None,
             }
         } else {
@@ -383,6 +345,34 @@ fn cgroup_for_run(
     }
 }
 
+/// Confine a run's cgroup to the benchmark cores, and keep its memory resident.
+///
+/// A rejected cpuset is fatal: the cgroup would exist without confining the VMM
+/// to the cores the number claims. A cpuset the host does not delegate is a
+/// declared limitation instead, and the cgroup is kept for placement, swap, and
+/// metrics.
+fn confine(cgroup: CgroupManager, layout: &CpuLayout) -> Result<CgroupManager, FirecrackerError> {
+    match cgroup
+        .apply_cpuset(layout)
+        .map_err(|e| FirecrackerError::CpusetFailed(Box::new(e)))?
+    {
+        Cpuset::Applied => println!(
+            "CPU isolation: Firecracker pinned to cores {}",
+            layout.benchmark_cpuset()
+        ),
+        // The vCPU threads are still pinned further down, which is gated on
+        // the layout rather than on the cgroup.
+        Cpuset::Unavailable(reason) => eprintln!(
+            "Warning: this run has no cgroup cpuset ({reason}), so nothing keeps other work off the benchmark cores and its numbers carry more variance; vCPU threads are still pinned to them"
+        ),
+    }
+    // Keep VM memory resident: swap adds run-to-run variance
+    if let Err(e) = cgroup.disable_swap() {
+        eprintln!("Warning: failed to disable swap for VM cgroup: {e}");
+    }
+    Ok(cgroup)
+}
+
 /// Open the descriptor the VMM will be placed through, if there is a cgroup.
 ///
 /// Placement is conditional on the cgroup existing, not unconditional: a host
@@ -496,6 +486,28 @@ mod tests {
             cgroup.map(|cg| cg.path().to_owned()),
             Some(root),
             "a cgroup that was created is kept"
+        );
+    }
+
+    #[test]
+    fn a_cgroup_without_a_cpuset_still_keeps_memory_resident() {
+        // Only the cpuset is missing, so the cgroup is kept: dropping it would
+        // let guest memory swap again on a host that delegates `memory` but not
+        // `cpuset`, and lose the metrics with it.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        let cgroup = confine(
+            CgroupManager::detached(root.clone()),
+            &CpuLayout::with_core_count(8),
+        )
+        .unwrap();
+
+        assert_eq!(cgroup.path(), root, "the cgroup is kept");
+        assert_eq!(
+            std::fs::read_to_string(root.join("memory.swap.max")).unwrap(),
+            "0",
+            "swap is off without a cpuset too"
         );
     }
 
