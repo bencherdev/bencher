@@ -229,15 +229,15 @@ impl std::fmt::Display for VmId {
     }
 }
 
-/// A per-runner latch rather than a global, so nothing else can observe or
-/// reset it and each test gets its own.
+/// Per runner rather than global, so nothing else can observe or reset it and
+/// each test gets its own.
 #[derive(Debug, Default)]
 pub struct HostPreparation {
     #[cfg_attr(
         not(target_os = "linux"),
         expect(dead_code, reason = "host preparation is Linux-only")
     )]
-    prepared: bool,
+    warned_jail_user: bool,
 }
 
 /// Set when this job's cgroup outlives teardown, so the chroot is kept: its
@@ -262,8 +262,9 @@ impl HostPreparation {
         Self::default()
     }
 
-    /// Runs lazily before the first jail, never at startup, so a runner serving
-    /// only non-sandboxed Specs can start without root.
+    /// Runs before every jail, never at startup, so a runner serving only
+    /// non-sandboxed Specs can start without root and a state directory removed
+    /// between jobs is rebuilt.
     #[cfg(target_os = "linux")]
     pub fn ensure(
         &mut self,
@@ -282,11 +283,14 @@ impl HostPreparation {
         state_dir: &camino::Utf8Path,
         jail_user: JailUser,
     ) -> Result<(), crate::error::JailError> {
-        if self.prepared {
-            return Ok(());
+        // First, so a non-root runner is told about root rather than hitting a
+        // bare EPERM from a later step.
+        check_root(euid)?;
+        StateDir::new(state_dir.to_owned())?.create()?;
+        if !self.warned_jail_user {
+            warn_on_named_account(jail_user);
+            self.warned_jail_user = true;
         }
-        prepare_host(euid, state_dir, jail_user)?;
-        self.prepared = true;
         Ok(())
     }
 
@@ -299,26 +303,6 @@ impl HostPreparation {
     ) -> Result<(), crate::error::JailError> {
         Ok(())
     }
-}
-
-/// The sweep and the network namespace are per job rather than here, since a
-/// sibling runner can leave orphans after this one prepared and the namespace
-/// handle lives on a shared tmpfs.
-#[cfg(target_os = "linux")]
-fn prepare_host(
-    euid: u32,
-    state_dir: &camino::Utf8Path,
-    jail_user: JailUser,
-) -> Result<(), crate::error::JailError> {
-    // First, so a non-root runner is told about root rather than hitting a bare
-    // EPERM from a later step.
-    check_root(euid)?;
-
-    StateDir::new(state_dir.to_owned())?.create()?;
-
-    // Last, so it is given once: only a preparation that succeeds latches.
-    warn_on_named_account(jail_user);
-    Ok(())
 }
 
 #[cfg(target_os = "linux")]
@@ -433,9 +417,9 @@ mod tests {
     }
 
     #[test]
-    fn preparation_is_lazy_and_happens_at_most_once() {
-        // Preparation must wait for the first job, happen once per
-        // `HostPreparation`, and never be shared with another runner's.
+    fn a_state_directory_removed_between_jobs_is_rebuilt() {
+        // Nothing is prepared before the first job, and a tree removed between
+        // jobs must come back rather than fail every later job until a restart.
         let dir = tempfile::tempdir().unwrap();
         let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let state_dir = root.join("state");
@@ -449,15 +433,9 @@ mod tests {
         std::fs::remove_dir_all(&state_dir).unwrap();
         host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
             .unwrap();
-        assert!(!state_dir.exists(), "preparation happens at most once");
-
-        let mut other = HostPreparation::new();
-        other
-            .ensure_as(ROOT_EUID, &state_dir, JailUser::default())
-            .unwrap();
         assert!(
-            state_dir.join("jail").is_dir(),
-            "a fresh token prepares again"
+            state_dir.join("jail").join("firecracker").is_dir(),
+            "a removed tree is rebuilt"
         );
     }
 
