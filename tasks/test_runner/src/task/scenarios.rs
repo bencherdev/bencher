@@ -93,6 +93,9 @@ struct Scenario {
     /// The orphan appears after that process has already built a jail, so only
     /// a sweep that runs on every job can reap it.
     orphan_between_jobs: bool,
+    /// Hold a stand-in process in another cgroup under the runner's base, as a
+    /// runner with another state directory would, while the job runs.
+    occupied_cgroup: bool,
     /// Point the runner at a state directory it has to refuse, and assert it
     /// failed the job rather than running the VMM outside a jail.
     unusable_state_dir: bool,
@@ -113,6 +116,7 @@ impl Default for Scenario {
             tuning: false,
             orphan_then_rerun: false,
             orphan_between_jobs: false,
+            occupied_cgroup: false,
             unusable_state_dir: false,
             // Sandboxed is the interesting case and the overwhelming majority,
             // so the handful of non-sandboxed scenarios opt out rather than
@@ -395,6 +399,8 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
         run_runner_after_orphan(&image_path, &args, &state_dir, runner_bin)
     } else if scenario.orphan_between_jobs {
         run_runner_beside_sibling_orphan(&image_path, &args, &state_dir, runner_bin)
+    } else if scenario.occupied_cgroup {
+        run_runner_beside_occupied_cgroup(&image_path, &args, runner_bin)
     } else if let Some(probe) = scenario.probe {
         run_runner_with_probe(&image_path, &args, probe, &state_dir, runner_bin)
     } else if scenario.tuning {
@@ -2712,7 +2718,7 @@ fn jail_parent(state_dir: &Utf8Path) -> Utf8PathBuf {
 
 /// Scenarios covering the confinement of the VMM itself.
 fn jail_scenarios() -> Vec<Scenario> {
-    vec![
+    let mut scenarios = vec![
         Scenario {
             name: "jail_confinement",
             description: "A jailed job succeeds with the VMM unprivileged, off the host network, and in its cgroup",
@@ -2802,6 +2808,14 @@ CMD ["echo", "JAIL_SWEEP_a7f3b2c9"]"#,
             },
             ..Scenario::default()
         },
+    ];
+    scenarios.extend(jail_contention_scenarios());
+    scenarios
+}
+
+/// Scenarios where another job or its orphan contends for the benchmark cores.
+fn jail_contention_scenarios() -> Vec<Scenario> {
+    vec![
         Scenario {
             name: "jail_sweep_reclaims_sibling_orphan",
             description: "An orphan a sibling runner process leaves between two jobs is reaped by the second",
@@ -2821,6 +2835,25 @@ CMD ["sh", "-c", "echo JAIL_SIBLING_a7f3b2c9 && sleep 10"]"#,
                     output.stderr
                 );
                 assert_no_chroot_remains(&scenario_state_dir())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "jail_occupied_cgroup_fails_the_job",
+            description: "A process in another Bencher cgroup fails the job rather than share its cores",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "JAIL_OCCUPIED_a7f3b2c9"]"#,
+            occupied_cgroup: true,
+            extra_args: JAIL_ARGS,
+            validate: |output| {
+                anyhow::ensure!(
+                    output.exit_code != 0 && guest_printed(output, "JAIL_OCCUPIED_a7f3b2c9") == 0,
+                    "Expected the job to fail before its guest ran, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
             },
             ..Scenario::default()
         },
@@ -3703,6 +3736,63 @@ fn orphan_sibling(
         "No cgroup at {cgroup}, so the reap is only half exercised. The runner creates one whenever its CPU layout offers isolation."
     );
     Ok((jail_root, pid, cgroup))
+}
+
+/// The cgroup the occupancy scenario holds a stand-in process in.
+const OCCUPIED_CGROUP: &str = "/sys/fs/cgroup/bencher/scenario-occupant";
+
+/// Run a job while another cgroup under the runner's base holds a process, and
+/// check the refusal names both.
+fn run_runner_beside_occupied_cgroup(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let occupant = Occupant::start()?;
+    let output = run_runner(image_path, args, runner_bin)?;
+    let pid = occupant.child.id().to_string();
+    drop(occupant);
+
+    anyhow::ensure!(
+        output.stderr.contains(OCCUPIED_CGROUP) && output.stderr.contains(&pid),
+        "Expected the refusal to name {OCCUPIED_CGROUP} and pid {pid}.\nstdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    );
+    Ok(output)
+}
+
+/// A stand-in for another runner's job: a process held in its own cgroup under
+/// the runner's base, killed and removed on drop.
+struct Occupant {
+    child: std::process::Child,
+    cgroup: Utf8PathBuf,
+}
+
+impl Occupant {
+    fn start() -> Result<Self> {
+        let cgroup = Utf8PathBuf::from(OCCUPIED_CGROUP);
+        fs::create_dir_all(&cgroup).with_context(|| format!("Failed to create {cgroup}"))?;
+        let child = Command::new("sleep")
+            .arg("600")
+            .spawn()
+            .context("Failed to start the stand-in process")?;
+        let occupant = Self { child, cgroup };
+        fs::write(
+            occupant.cgroup.join("cgroup.procs"),
+            occupant.child.id().to_string(),
+        )
+        .with_context(|| format!("Failed to move the stand-in into {}", occupant.cgroup))?;
+        Ok(occupant)
+    }
+}
+
+impl Drop for Occupant {
+    fn drop(&mut self) {
+        drop(self.child.kill());
+        drop(self.child.wait());
+        drop(fs::remove_dir(&self.cgroup));
+    }
 }
 
 /// Start the runner on an image with its output piped.

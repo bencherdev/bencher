@@ -577,6 +577,80 @@ pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
     remove_stale_cgroup_at(vm_cgroup(vm_id.as_str()))
 }
 
+/// Refuse to measure while another Bencher cgroup holds a process.
+///
+/// Every job's cgroup and every local run's sits under one base on the same
+/// benchmark cores, whichever runner or state directory it belongs to, so
+/// runners sharing a host take turns rather than share the cores. Called before
+/// this job's own cgroup exists, so every cgroup it finds is somebody else's.
+pub(crate) fn refuse_occupied_cgroups() -> Result<(), JailError> {
+    refuse_occupied_cgroups_at(&Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE))
+}
+
+/// The refusal, against the base it is given.
+fn refuse_occupied_cgroups_at(base: &Utf8Path) -> Result<(), JailError> {
+    let read_failed = |source| JailError::ReadCgroup {
+        path: base.to_owned(),
+        source,
+    };
+    let entries = match fs::read_dir(base) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(read_failed(e)),
+    };
+    for entry in entries {
+        let entry = entry.map_err(read_failed)?;
+        if !entry.file_type().map_err(read_failed)?.is_dir() {
+            continue;
+        }
+        let cgroup = entry.path();
+        let pids = subtree_pids(&cgroup)?;
+        if !pids.is_empty() {
+            return Err(JailError::CgroupOccupied {
+                cgroup: Utf8PathBuf::from(cgroup.to_string_lossy().into_owned()),
+                pids: pids
+                    .iter()
+                    .map(u32::to_string)
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Every pid in a cgroup and the cgroups below it.
+///
+/// A cgroup gone since it was listed holds nothing.
+fn subtree_pids(cgroup: &std::path::Path) -> Result<Vec<u32>, JailError> {
+    let read_failed = |source| JailError::ReadCgroup {
+        path: Utf8PathBuf::from(cgroup.to_string_lossy().into_owned()),
+        source,
+    };
+    let procs = match fs::read_to_string(cgroup.join("cgroup.procs")) {
+        Ok(procs) => procs,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(read_failed(e)),
+    };
+    let mut pids = procs
+        .lines()
+        .map(|line| line.trim().parse::<u32>())
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| read_failed(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?;
+    let entries = match fs::read_dir(cgroup) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(pids),
+        Err(e) => return Err(read_failed(e)),
+    };
+    for entry in entries {
+        let entry = entry.map_err(read_failed)?;
+        if entry.file_type().map_err(read_failed)?.is_dir() {
+            pids.extend(subtree_pids(&entry.path())?);
+        }
+    }
+    Ok(pids)
+}
+
 /// The cgroup a VM id names.
 ///
 /// The cgroup and the chroot are named by the same id by construction, so
@@ -982,6 +1056,55 @@ mod tests {
         remove_stale_cgroup_at(stale.clone()).unwrap();
 
         assert!(!stale.exists());
+    }
+
+    /// A stand-in cgroup base: each `(cgroup, procs)` gets a directory and a
+    /// `cgroup.procs`.
+    fn cgroup_base(cgroups: &[(&str, &str)]) -> (tempfile::TempDir, Utf8PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let base = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        for (cgroup, procs) in cgroups {
+            let path = base.join(cgroup);
+            fs::create_dir_all(&path).unwrap();
+            fs::write(path.join("cgroup.procs"), procs).unwrap();
+        }
+        (dir, base)
+    }
+
+    #[test]
+    fn a_process_in_another_bencher_cgroup_fails_the_job() {
+        // Another runner's job, or its orphan, on the same cores: measuring
+        // beside it reports contended numbers, whichever state directory it
+        // came from. Nested cgroups count too.
+        for (cgroup, pid) in [("vm-a", "vm-a"), ("vm-a/nested", "vm-a")] {
+            let (_dir, base) = cgroup_base(&[("vm-a", ""), (cgroup, "4242\n")]);
+
+            let err = refuse_occupied_cgroups_at(&base).unwrap_err().to_string();
+
+            assert!(err.contains(pid), "names the cgroup: {err}");
+            assert!(err.contains("4242"), "names the pid: {err}");
+        }
+    }
+
+    #[test]
+    fn the_base_itself_and_empty_cgroups_do_not_fail_the_job() {
+        // The base's own `cgroup.procs` is not a job, and a cgroup a job has
+        // left empty is not contention.
+        let (_dir, base) = cgroup_base(&[("vm-b", ""), ("local-c", "")]);
+        fs::write(base.join("cgroup.procs"), "1\n").unwrap();
+
+        refuse_occupied_cgroups_at(&base).unwrap();
+        refuse_occupied_cgroups_at(&base.join("absent")).unwrap();
+    }
+
+    #[test]
+    fn a_base_that_cannot_be_listed_is_not_an_empty_one() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let not_a_dir = root.join("bencher");
+        fs::write(&not_a_dir, b"in the way").unwrap();
+
+        refuse_occupied_cgroups_at(&not_a_dir).unwrap_err();
     }
 
     #[test]
