@@ -26,6 +26,7 @@ bollard.workspace = true
 camino.workspace = true
 chrono = { workspace = true, features = ["clock"] }
 clap = { workspace = true, features = ["env"] }
+futures-concurrency.workspace = true
 futures-util.workspace = true
 literally.workspace = true
 octocrab.workspace = true

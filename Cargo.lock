@@ -1241,6 +1241,7 @@ dependencies = [
  "camino",
  "chrono",
  "clap",
+ "futures-concurrency",
  "futures-util",
  "literally",
  "octocrab",
