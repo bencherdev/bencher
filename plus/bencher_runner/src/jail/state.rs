@@ -118,20 +118,22 @@ impl StateDir {
     }
 
     /// A `nodev` or `noexec` mount would otherwise fail only once the guest is
-    /// booting, blaming something else.
+    /// booting, blaming something else. Checked where the chroots live, which
+    /// may be a mount of its own below the root.
     pub fn refuse_unusable_mount(&self) -> Result<(), JailError> {
         use nix::sys::statvfs::{FsFlags, statvfs};
 
-        let flags = statvfs(self.root.as_std_path())
+        let jail_parent = self.jail_parent();
+        let flags = statvfs(jail_parent.as_std_path())
             .map_err(|e| JailError::ReadStateDir {
-                path: self.root.clone(),
+                path: jail_parent.clone(),
                 source: e.into(),
             })?
             .flags();
         for (flag, option) in [(FsFlags::ST_NODEV, "nodev"), (FsFlags::ST_NOEXEC, "noexec")] {
             if flags.contains(flag) {
                 return Err(JailError::StateDirMountOption {
-                    path: self.root.clone(),
+                    path: jail_parent,
                     option,
                 });
             }
@@ -1261,6 +1263,21 @@ mod tests {
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
         state.refuse_unusable_mount().unwrap();
+
+        // A `nodev` mount below a usable root is where the chroots would live.
+        let _below = Tmpfs::mount(&state.chroot_base(), "nodev,size=1m");
+        state.create().unwrap();
+        let err = state.refuse_unusable_mount().unwrap_err();
+        assert!(
+            matches!(
+                err,
+                JailError::StateDirMountOption {
+                    option: "nodev",
+                    ..
+                }
+            ),
+            "a nodev mount below the root must be refused: {err}"
+        );
     }
 
     #[test]
