@@ -59,6 +59,7 @@
 //! | [`HostPreparation::ensure`]: the root check | fails the job |
 //! | [`HostPreparation::ensure`]: creating the state directory | fails the job |
 //! | [`HostPreparation::ensure`]: reading `/etc/passwd`, `/etc/group` | ignored: the check is advisory and cannot see a directory service anyway |
+//! | `StateDir::refuse_unusable_mount`: the mount options cannot be read, or include `nodev` or `noexec` | fails the job |
 //! | `vm_execute`: taking the jail lock | fails the job |
 //! | `StateDir::sweep`: a sweep that returns an error | fails the job |
 //! | `sweep_jails`: the jail parent is absent | nothing to sweep |

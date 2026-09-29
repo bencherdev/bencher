@@ -220,6 +220,34 @@ impl StateDir {
         Ok(())
     }
 
+    /// Refuse a filesystem the jail cannot run from.
+    ///
+    /// The chroot's `/dev/kvm` and the VMM binary live on the state directory's
+    /// filesystem, so a `nodev` mount leaves the VMM unable to open KVM and a
+    /// `noexec` one leaves it unable to exec, and either fails only once the
+    /// guest is booting, blaming something else. Not part of [`Self::create`],
+    /// whose tests build state directories wherever the host keeps its
+    /// temporary files.
+    pub fn refuse_unusable_mount(&self) -> Result<(), JailError> {
+        use nix::sys::statvfs::{FsFlags, statvfs};
+
+        let flags = statvfs(self.root.as_std_path())
+            .map_err(|e| JailError::ReadStateDir {
+                path: self.root.clone(),
+                source: e.into(),
+            })?
+            .flags();
+        for (flag, option) in [(FsFlags::ST_NODEV, "nodev"), (FsFlags::ST_NOEXEC, "noexec")] {
+            if flags.contains(flag) {
+                return Err(JailError::StateDirMountOption {
+                    path: self.root.clone(),
+                    option,
+                });
+            }
+        }
+        Ok(())
+    }
+
     /// Reclaim every jail a previous job left behind.
     ///
     /// Run by every job, under the job lock it takes as proof, before it builds
@@ -866,6 +894,7 @@ where
 #[cfg(test)]
 mod tests {
     use std::os::unix::fs::symlink;
+    use std::process::Command;
 
     use super::*;
 
@@ -1608,6 +1637,58 @@ mod tests {
             victim.join("someone-elses-data").is_dir(),
             "the link target must not be swept"
         );
+    }
+
+    /// A tmpfs mounted over a directory, unmounted on drop.
+    struct Tmpfs(Utf8PathBuf);
+
+    impl Tmpfs {
+        fn mount(at: &Utf8Path, options: &str) -> Self {
+            let status = Command::new("mount")
+                .args(["-t", "tmpfs", "-o", options, "tmpfs", at.as_str()])
+                .status()
+                .unwrap();
+            assert!(status.success(), "mount -o {options} {at} failed");
+            Self(at.to_owned())
+        }
+    }
+
+    impl Drop for Tmpfs {
+        fn drop(&mut self) {
+            drop(Command::new("umount").arg(self.0.as_str()).status());
+        }
+    }
+
+    #[test]
+    fn a_filesystem_the_jail_cannot_run_from_is_refused_by_its_mount_option() {
+        // Otherwise the job fails at boot with KVM blaming its ACL, and `/tmp`,
+        // `/dev/shm`, and `/run` are commonly mounted `nodev`. Mounting needs
+        // root, so this runs in the elevated environment.
+        if crate::jail::current_euid() != 0 {
+            eprintln!(
+                "skipped a_filesystem_the_jail_cannot_run_from_is_refused_by_its_mount_option: mounting needs root"
+            );
+            return;
+        }
+        for option in ["nodev", "noexec"] {
+            let (_dir, root) = temp_root();
+            let _mount = Tmpfs::mount(&root, &format!("{option},size=1m"));
+            let state = StateDir::new(root.join("state")).unwrap();
+            state.create().unwrap();
+
+            let err = state.refuse_unusable_mount().unwrap_err();
+
+            assert!(
+                matches!(err, JailError::StateDirMountOption { option: refused, .. } if refused == option),
+                "{option} must be refused by name: {err}"
+            );
+        }
+
+        let (_dir, root) = temp_root();
+        let _mount = Tmpfs::mount(&root, "size=1m");
+        let state = StateDir::new(root.join("state")).unwrap();
+        state.create().unwrap();
+        state.refuse_unusable_mount().unwrap();
     }
 
     #[test]

@@ -44,6 +44,7 @@ daher braucht dieses Verzeichnis echte Kapazität für ein Jail.
 Ein eigenes Dateisystem oder ein `tmpfs`-Mount wird unterstützt und empfohlen:
 es hält diese Schreiblast von der Systemplatte fern,
 und ein neu erstelltes Dateisystem wird akzeptiert, auch wenn es ein `lost+found`-Verzeichnis mitbringt.
+Das Dateisystem darf nicht mit `nodev` oder `noexec` eingehängt sein, wie es `/tmp`, `/dev/shm` und `/run` oft sind; hängen Sie dafür also ein `tmpfs` ohne diese Optionen ein.
 Das Zustandsverzeichnis selbst darf ein von root angelegter symbolischer Link auf ein solches Dateisystem sein,
 etwa `/var/lib/bencher-runner` auf eine eigene Platte.
 Dem Link wird nur gefolgt, wenn das Verzeichnis, das ihn enthält, nur von root beschreibbar ist,
