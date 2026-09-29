@@ -61,6 +61,8 @@ struct Scenario {
     /// SIGTERM a booted run twice, then run the image again in the same state
     /// directory, whose output `validate` sees.
     cancelled_twice: bool,
+    /// SIGTERM the runner once it starts parsing its image, well before its jail.
+    cancelled_while_preparing: bool,
     /// Whether to use `--sandbox firecracker` (default: true).
     sandboxed: bool,
     setup: Option<fn() -> Result<()>>,
@@ -95,6 +97,7 @@ impl Default for Scenario {
             extra_args: &[],
             cancel_after_secs: None,
             cancelled_twice: false,
+            cancelled_while_preparing: false,
             setup: None,
             teardown: None,
             probe: None,
@@ -482,6 +485,8 @@ fn run_and_validate(
         )
     } else if scenario.cancelled_twice {
         run_runner_cancelled_twice(image_path, &args, state_dir, runner_bin)
+    } else if scenario.cancelled_while_preparing {
+        run_runner_cancelled_while_preparing(image_path, &args, runner_bin)
     } else if scenario.orphan_then_rerun {
         run_runner_after_orphan(image_path, &args, state_dir, runner_bin)
     } else if scenario.orphan_between_jobs {
@@ -1232,6 +1237,34 @@ CMD ["echo", "CANCELLED_TWICE_a7f3b2c9"]"#,
             validate: |output| {
                 assert_job_succeeded(output, "CANCELLED_TWICE_a7f3b2c9")?;
                 assert_no_chroot_remains(&scenario_state_dir())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "job_cancelled_before_its_jail",
+            description: "SIGTERM while the image is prepared ends the job before its jail is built",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "CANCELLED_EARLY_a7f3b2c9"]"#,
+            cancelled_while_preparing: true,
+            extra_args: &["--timeout", "120"],
+            validate: |output| {
+                anyhow::ensure!(
+                    output.exit_code != 0 && output.stderr.contains("Job cancelled"),
+                    "Expected the job to end cancelled, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                anyhow::ensure!(
+                    !output
+                        .stdout
+                        .lines()
+                        .any(|line| line.trim_start().starts_with("Jail: ")),
+                    "The job built its jail after the cancel, so no stage before it honored the cancel.\nstdout: {}\nstderr: {}",
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
             },
             ..Scenario::default()
         },
@@ -2699,6 +2732,52 @@ fn run_runner_cancelled_twice(
     );
     Ok(output)
 }
+
+/// The jail comes tens of milliseconds after the parse line, far longer than
+/// the signal takes to land.
+fn run_runner_cancelled_while_preparing(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let mut child = spawn_runner(image_path, args, runner_bin)?;
+    let mut streamed = StreamedOutput::start(&mut child);
+    let parsing = streamed.wait_for(|line| line.starts_with("Parsing OCI image config"));
+    kill_pid(
+        child.id(),
+        if parsing.is_ok() {
+            libc::SIGTERM
+        } else {
+            libc::SIGKILL
+        },
+    );
+    let deadline = std::time::Instant::now() + CANCEL_GRACE;
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break Some(status);
+        }
+        if std::time::Instant::now() >= deadline {
+            kill_pid(child.id(), libc::SIGKILL);
+            child.wait()?;
+            break None;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    };
+    let (stdout, stderr) = streamed.join();
+    parsing.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
+    let status = status.with_context(|| {
+        format!(
+            "The runner did not exit within {CANCEL_GRACE:?} of the SIGTERM.\nstdout: {stdout}\nstderr: {stderr}"
+        )
+    })?;
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.code().unwrap_or(-1),
+    })
+}
+
+const CANCEL_GRACE: Duration = Duration::from_secs(30);
 
 /// Standard signals do not queue, so the second is sent only once the first
 /// has been delivered, which resets its handler.
