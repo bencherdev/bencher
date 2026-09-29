@@ -11,7 +11,7 @@ use camino::Utf8Path;
 use crate::firecracker::client::FirecrackerClient;
 use crate::firecracker::config::{Action, ActionType};
 use crate::firecracker::error::{FirecrackerError, PreExec};
-use crate::jail::{JailFile, JailUser, VmId};
+use crate::jail::{JailFile, JailUser, PinnedSocket, VmId};
 
 /// How long to wait for the Firecracker API socket to appear.
 ///
@@ -58,6 +58,17 @@ pub struct JailedSpawn<'a> {
 
 /// A running, jailed Firecracker process.
 pub struct FirecrackerProcess {
+    jailed: JailedChild,
+    /// Pinned before any guest code ran, so every API call after that reaches
+    /// Firecracker's own socket whatever the jail has done to its name.
+    api: PinnedSocket,
+}
+
+/// The jailer's child, killed and reaped when dropped.
+///
+/// Guards the child from the moment it exists, before its API socket is there
+/// to pin.
+struct JailedChild {
     child: Child,
     api_socket: JailFile,
     stderr_thread: Option<std::thread::JoinHandle<()>>,
@@ -141,19 +152,19 @@ impl FirecrackerProcess {
         })?;
 
         // The guard takes the child the moment the child exists, so every
-        // fallible step below is covered by this type's own `Drop`, which
-        // kills and reaps. `Child::drop` does neither, so an error returned
-        // between the spawn and this construction would leave the jailer, or
-        // the VMM it has become, running with nothing armed to reap it, while
-        // the jail teardown removes the chroot out from under it.
-        let mut process = Self {
+        // fallible step below is covered by its `Drop`, which kills and reaps.
+        // `Child::drop` does neither, so an error returned between the spawn
+        // and this construction would leave the jailer, or the VMM it has
+        // become, running with nothing armed to reap it, while the jail
+        // teardown removes the chroot out from under it.
+        let mut jailed = JailedChild {
             child,
             api_socket: api_socket.clone(),
             stderr_thread: None,
         };
 
         // Spawn a thread to read stderr line-by-line
-        let stderr = process.child.stderr.take().ok_or(FirecrackerError::Stdio(
+        let stderr = jailed.child.stderr.take().ok_or(FirecrackerError::Stdio(
             "stderr was piped but not available",
         ))?;
         let stderr_thread = std::thread::spawn(move || {
@@ -171,13 +182,56 @@ impl FirecrackerProcess {
                 }
             }
         });
-        process.stderr_thread = Some(stderr_thread);
+        jailed.stderr_thread = Some(stderr_thread);
 
-        process.wait_for_ready(API_SOCKET_TIMEOUT)?;
+        jailed.wait_for_ready(API_SOCKET_TIMEOUT)?;
+        // Now, while only Firecracker has run: readiness proves it bound this
+        // socket, and no guest code runs before `InstanceStart`.
+        let api = PinnedSocket::pin(api_socket.socket()).map_err(FirecrackerError::PinApiSocket)?;
 
-        Ok(process)
+        Ok(Self { jailed, api })
     }
 
+    /// Get a client for the Firecracker REST API.
+    pub fn client(&self) -> FirecrackerClient<'_> {
+        FirecrackerClient::new(self.api.path())
+    }
+
+    /// Get the PID of the Firecracker process.
+    pub fn pid(&self) -> u32 {
+        self.jailed.child.id()
+    }
+
+    /// Send Ctrl+Alt+Del and wait for graceful shutdown, then SIGKILL.
+    pub fn kill_after_grace_period(&mut self, grace: Duration) {
+        // Try graceful shutdown via API
+        let action = Action {
+            action_type: ActionType::SendCtrlAltDel,
+        };
+        drop(self.client().put_action(&action));
+
+        // Wait for the process to exit gracefully
+        let start = std::time::Instant::now();
+        let poll_interval = Duration::from_millis(100);
+        while start.elapsed() < grace {
+            if let Ok(Some(_)) = self.jailed.child.try_wait() {
+                self.jailed.join_stderr_thread();
+                return;
+            }
+            std::thread::sleep(poll_interval);
+        }
+
+        // Force kill if still running. Unlike the readiness wait below, a child
+        // that exits during the final sleep is not a missed case here: nothing
+        // was reaped, so the pid is still reserved by the child and cannot have
+        // been recycled, `kill` sends a signal that a zombie simply ignores, and
+        // `kill` then reaps it and joins the reader. That is precisely what the
+        // loop would have done, so there is no verdict to get wrong.
+        self.jailed.kill();
+    }
+}
+
+impl JailedChild {
     /// Wait for the API socket, giving up the moment the jailer dies.
     ///
     /// Watching the child is what keeps a jailer that failed outright from
@@ -191,7 +245,7 @@ impl FirecrackerProcess {
         let poll_interval = Duration::from_millis(50);
 
         while start.elapsed() < timeout {
-            if self.client().try_ready()? {
+            if FirecrackerClient::new(self.api_socket.socket()).try_ready()? {
                 return Ok(());
             }
             if let Some(status) = self.exited() {
@@ -228,46 +282,8 @@ impl FirecrackerProcess {
         self.child.try_wait().unwrap_or(None)
     }
 
-    /// Get a client for the Firecracker REST API.
-    pub fn client(&self) -> FirecrackerClient {
-        FirecrackerClient::new(self.api_socket.socket())
-    }
-
-    /// Get the PID of the Firecracker process.
-    pub fn pid(&self) -> u32 {
-        self.child.id()
-    }
-
-    /// Send Ctrl+Alt+Del and wait for graceful shutdown, then SIGKILL.
-    pub fn kill_after_grace_period(&mut self, grace: Duration) {
-        // Try graceful shutdown via API
-        let action = Action {
-            action_type: ActionType::SendCtrlAltDel,
-        };
-        drop(self.client().put_action(&action));
-
-        // Wait for the process to exit gracefully
-        let start = std::time::Instant::now();
-        let poll_interval = Duration::from_millis(100);
-        while start.elapsed() < grace {
-            if let Ok(Some(_)) = self.child.try_wait() {
-                self.join_stderr_thread();
-                return;
-            }
-            std::thread::sleep(poll_interval);
-        }
-
-        // Force kill if still running. Unlike the readiness wait above, a child
-        // that exits during the final sleep is not a missed case here: nothing
-        // was reaped, so the pid is still reserved by the child and cannot have
-        // been recycled, `kill` sends a signal that a zombie simply ignores, and
-        // `kill` then reaps it and joins the reader. That is precisely what the
-        // loop would have done, so there is no verdict to get wrong.
-        self.kill();
-    }
-
     /// Force-kill the Firecracker process.
-    pub fn kill(&mut self) {
+    fn kill(&mut self) {
         drop(self.child.kill());
         drop(self.child.wait());
         self.join_stderr_thread();
@@ -284,7 +300,7 @@ impl FirecrackerProcess {
     /// reordering could close that descriptor first, and where the failure
     /// would not be an error but the deletion of whatever file inherited the
     /// number.
-    pub fn cleanup(&self) {
+    fn cleanup(&self) {
         drop(std::fs::remove_file(self.api_socket.host().as_path()));
     }
 
@@ -296,7 +312,7 @@ impl FirecrackerProcess {
     }
 }
 
-impl Drop for FirecrackerProcess {
+impl Drop for JailedChild {
     fn drop(&mut self) {
         self.kill();
         self.cleanup();
@@ -415,12 +431,12 @@ mod tests {
         (dir, jail)
     }
 
-    /// A process around a plain child, for the readiness verdict.
+    /// A guard around a plain child, for the readiness verdict.
     ///
-    /// The jail is what the socket view names, so it has to outlive the process
+    /// The jail is what the socket view names, so it has to outlive the guard
     /// this returns.
-    fn process_around(child: Child, jail: &JailPaths) -> FirecrackerProcess {
-        FirecrackerProcess {
+    fn process_around(child: Child, jail: &JailPaths) -> JailedChild {
+        JailedChild {
             child,
             api_socket: jail.api_socket().clone(),
             stderr_thread: None,
@@ -500,6 +516,65 @@ mod tests {
         assert!(
             !args.iter().any(|arg| arg.contains(jail_root)),
             "no host-side jail path may reach the jailed process: {args:?}"
+        );
+    }
+
+    #[test]
+    fn a_swapped_api_socket_name_is_never_followed() {
+        // Once guest code has run, the jail user can replace `api.sock` with a
+        // link to any host socket, and the runner must not follow it as root.
+        use std::io::{Read as _, Write as _};
+        use std::os::unix::fs::symlink;
+        use std::os::unix::net::{UnixListener, UnixStream};
+
+        let (dir, jail) = jail_in_tmpdir();
+        let api_sock = jail.api_socket().host().as_path();
+        let vmm = UnixListener::bind(api_sock).unwrap();
+        let trap_path = Utf8Path::from_path(dir.path()).unwrap().join("trap.sock");
+        let trap = UnixListener::bind(&trap_path).unwrap();
+        trap.set_nonblocking(true).unwrap();
+        let child = Command::new("/bin/sh")
+            .args(["-c", "sleep 30"])
+            .spawn()
+            .unwrap();
+        let process = FirecrackerProcess {
+            jailed: process_around(child, &jail),
+            api: PinnedSocket::pin(jail.api_socket().socket()).unwrap(),
+        };
+
+        std::fs::remove_file(api_sock).unwrap();
+        symlink(&trap_path, api_sock).unwrap();
+
+        let request = std::thread::scope(|scope| {
+            let answered = scope.spawn(|| {
+                let (mut stream, _) = vmm.accept().unwrap();
+                let mut request = [0u8; 512];
+                let read = stream.read(&mut request).unwrap();
+                if read > 0 {
+                    stream
+                        .write_all(b"HTTP/1.1 204 No Content\r\n\r\n")
+                        .unwrap();
+                }
+                String::from_utf8_lossy(request.get(..read).unwrap_or_default()).into_owned()
+            });
+            let sent = process.client().put_action(&Action {
+                action_type: ActionType::SendCtrlAltDel,
+            });
+            // A request that went elsewhere left the VMM's side waiting.
+            if sent.is_err() {
+                drop(UnixStream::connect(process.api.path().as_str()));
+            }
+            answered.join().unwrap()
+        });
+
+        assert!(
+            request.starts_with("PUT /actions "),
+            "the request must reach the socket that was pinned, got: {request:?}"
+        );
+        assert_eq!(
+            trap.accept().map(|_| ()).unwrap_err().kind(),
+            std::io::ErrorKind::WouldBlock,
+            "nothing may connect through the swapped name"
         );
     }
 

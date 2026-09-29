@@ -200,6 +200,10 @@ pub enum FirecrackerError {
     #[error("Failed to confine Firecracker to the benchmark cores: {0}")]
     CpusetFailed(#[source] Box<crate::error::RunnerError>),
 
+    /// The API socket could not be pinned once Firecracker was answering on it.
+    #[error("Failed to pin the Firecracker API socket: {0}")]
+    PinApiSocket(#[source] crate::error::JailError),
+
     /// A jail artifact could not be handed to the jail uid and gid.
     #[error("Jail ownership failed: {0}")]
     Chown(#[source] crate::error::JailError),

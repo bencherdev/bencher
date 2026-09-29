@@ -156,7 +156,7 @@ pub use chroot::JailDir;
 #[cfg(target_os = "linux")]
 pub use lock::JailLock;
 #[cfg(target_os = "linux")]
-pub use paths::{ChrootPath, HostPath, JailFile, JailPaths, SocketPath};
+pub use paths::{ChrootPath, HostPath, JailFile, JailPaths, PinnedSocket, SocketPath};
 #[cfg(target_os = "linux")]
 pub use state::StateDir;
 
