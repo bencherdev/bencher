@@ -111,9 +111,7 @@ impl FirecrackerProcess {
             cgroup_procs,
         } = spawn;
 
-        let mut command = jailer_command(jailer_bin, &args);
-
-        // Remembered before the descriptor is moved into the closure, because
+        // Remembered before the descriptor is moved into the command, because
         // a spawn that failed cannot say whether it was the exec or the write
         // that ran first, and this is what tells the operator to look at the
         // cgroup at all.
@@ -123,28 +121,7 @@ impl FirecrackerProcess {
             PreExec::Nothing
         };
 
-        if let Some(procs) = cgroup_procs {
-            // Cgroup membership is inherited across `fork` and survives
-            // `execve`, so writing to the pre-opened descriptor here places
-            // the child before it execs the jailer, and Firecracker inherits
-            // the membership through the jailer's own exec. Doing it here
-            // rather than after spawn also means the VMM never boots its API
-            // or touches memory on the wrong cores first.
-            #[expect(
-                unsafe_code,
-                reason = "cgroup placement must happen between fork and exec"
-            )]
-            // SAFETY: the closure runs in the forked child before `execve`,
-            // where only async-signal-safe work is permitted. It performs a
-            // single `write` of a fixed one-byte buffer on a descriptor that
-            // was opened before the fork: no allocation, no path resolution,
-            // and no locks. A failed write is reported to the parent over the
-            // CLOEXEC pipe and surfaces as a failed `spawn`.
-            unsafe {
-                command.pre_exec(move || place_in_cgroup(&procs));
-            }
-        }
-
+        let mut command = jailer_command(jailer_bin, &args, cgroup_procs);
         let child = command.spawn().map_err(|e| FirecrackerError::Spawn {
             path: jailer_bin.to_owned(),
             pre_exec,
@@ -369,7 +346,11 @@ fn jailer_args(spawn: &JailedSpawn<'_>) -> Vec<String> {
 /// The bundled jailer scrubs the environment itself, but the runner falls back
 /// to whatever `jailer` the host has installed and checks no version, so
 /// confinement cannot depend on which binary was found.
-fn jailer_command(jailer_bin: &Utf8Path, args: &[String]) -> Command {
+///
+/// With a cgroup, the child joins it before it execs the jailer, and Firecracker
+/// inherits the membership through the jailer's own exec, so the VMM never
+/// boots its API or touches memory on the wrong cores first.
+fn jailer_command(jailer_bin: &Utf8Path, args: &[String], cgroup_procs: Option<File>) -> Command {
     let mut command = Command::new(jailer_bin);
     command
         .args(args)
@@ -377,6 +358,21 @@ fn jailer_command(jailer_bin: &Utf8Path, args: &[String]) -> Command {
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::piped());
+    if let Some(procs) = cgroup_procs {
+        #[expect(
+            unsafe_code,
+            reason = "cgroup placement must happen between fork and exec"
+        )]
+        // SAFETY: the closure runs in the forked child before `execve`, where
+        // only async-signal-safe work is permitted. It performs a single
+        // `write` of a fixed one-byte buffer on a descriptor that was opened
+        // before the fork: no allocation, no path resolution, and no locks. A
+        // failed write is reported to the parent over the CLOEXEC pipe and
+        // surfaces as a failed `spawn`.
+        unsafe {
+            command.pre_exec(move || place_in_cgroup(&procs));
+        }
+    }
     command
 }
 
@@ -392,7 +388,7 @@ fn place_in_cgroup(mut procs: &File) -> std::io::Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use camino::Utf8Path;
+    use camino::{Utf8Path, Utf8PathBuf};
 
     use super::*;
     use crate::jail::JailPaths;
@@ -628,7 +624,7 @@ mod tests {
             "the test process has no environment to inherit, so nothing here is proven"
         );
 
-        let cleared = jailer_command(env_bin, &[])
+        let cleared = jailer_command(env_bin, &[], None)
             .stdout(std::process::Stdio::piped())
             .output()
             .unwrap();
@@ -638,6 +634,76 @@ mod tests {
             "the jailed process must inherit nothing, got: {}",
             String::from_utf8_lossy(&cleared.stdout)
         );
+    }
+
+    #[test]
+    fn the_vmm_is_in_its_cgroup_before_it_execs() {
+        // A child placed only once it runs has already started on the wrong
+        // cores. The stand-in jailer reports the cgroup it started in and
+        // exits, so the start fails its readiness wait before any placement
+        // made after the exec could land.
+        use std::os::unix::fs::PermissionsExt as _;
+
+        if crate::jail::current_euid() != 0 {
+            eprintln!("skipped the_vmm_is_in_its_cgroup_before_it_execs: a cgroup needs root");
+            return;
+        }
+        let scratch = ScratchCgroup::new();
+        let (dir, jail) = jail_in_tmpdir();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let reported = root.join("cgroup");
+        let stand_in = root.join("jailer");
+        std::fs::write(
+            &stand_in,
+            format!("#!/bin/sh\n/bin/cat /proc/self/cgroup > {reported}\n"),
+        )
+        .unwrap();
+        std::fs::set_permissions(&stand_in, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let vm_id = vm_id();
+        let mut spawn = spawn_for(&jail, &vm_id);
+        spawn.jailer_bin = &stand_in;
+        spawn.cgroup_procs = Some(
+            std::fs::OpenOptions::new()
+                .write(true)
+                .open(scratch.0.join("cgroup.procs"))
+                .unwrap(),
+        );
+
+        let Err(err) = FirecrackerProcess::start(spawn) else {
+            panic!("the stand-in serves no API");
+        };
+
+        assert!(
+            matches!(err, FirecrackerError::JailedProcessExited { .. }),
+            "{err}"
+        );
+        let relative = scratch.0.strip_prefix(CGROUP_ROOT).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(&reported).unwrap().trim_end(),
+            format!("0::/{relative}"),
+            "the child must start in its cgroup"
+        );
+    }
+
+    /// Where the scratch cgroup is made.
+    const CGROUP_ROOT: &str = "/sys/fs/cgroup";
+
+    /// A throwaway cgroup directly under the cgroup root, removed on drop.
+    struct ScratchCgroup(Utf8PathBuf);
+
+    impl ScratchCgroup {
+        fn new() -> Self {
+            let path = Utf8Path::new(CGROUP_ROOT)
+                .join(format!("bencher-runner-test-{}", std::process::id()));
+            std::fs::create_dir(&path).unwrap();
+            Self(path)
+        }
+    }
+
+    impl Drop for ScratchCgroup {
+        fn drop(&mut self) {
+            drop(std::fs::remove_dir(&self.0));
+        }
     }
 
     #[test]
