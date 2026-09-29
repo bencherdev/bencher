@@ -130,6 +130,9 @@ pub enum FirecrackerError {
     #[error("Failed to pin the Firecracker API socket: {0}")]
     PinApiSocket(#[source] crate::error::JailError),
 
+    #[error(transparent)]
+    CoresOccupied(crate::error::JailError),
+
     #[error("Jail ownership failed: {0}")]
     Chown(#[source] crate::error::JailError),
 }

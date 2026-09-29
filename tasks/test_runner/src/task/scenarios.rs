@@ -73,6 +73,9 @@ struct Scenario {
     /// Hold a stand-in process in another cgroup under the runner's base, as a
     /// runner with another state directory would.
     occupied_cgroup: bool,
+    /// The same stand-in, placed once the runner has built its jail and before
+    /// its VMM exists, so only the check after placement can see it.
+    occupied_mid_build: bool,
     unusable_state_dir: bool,
     validate: fn(&ScenarioOutput) -> Result<()>,
 }
@@ -92,6 +95,7 @@ impl Default for Scenario {
             orphan_then_rerun: false,
             orphan_between_jobs: false,
             occupied_cgroup: false,
+            occupied_mid_build: false,
             unusable_state_dir: false,
             // Most scenarios are sandboxed, so the few that are not opt out.
             sandboxed: true,
@@ -368,6 +372,8 @@ fn run_and_validate(
         run_runner_beside_sibling_orphan(image_path, &args, state_dir, runner_bin)
     } else if scenario.occupied_cgroup {
         run_runner_beside_occupied_cgroup(image_path, &args, runner_bin)
+    } else if scenario.occupied_mid_build {
+        run_runner_occupied_mid_build(image_path, &args, runner_bin)
     } else if let Some(probe) = scenario.probe {
         run_runner_with_probe(image_path, &args, probe, state_dir, runner_bin)
     } else if scenario.tuning {
@@ -2728,19 +2734,31 @@ CMD ["sh", "-c", "echo JAIL_SIBLING_a7f3b2c9 && sleep 10"]"#,
 CMD ["echo", "JAIL_OCCUPIED_a7f3b2c9"]"#,
             occupied_cgroup: true,
             extra_args: JAIL_ARGS,
-            validate: |output| {
-                anyhow::ensure!(
-                    output.exit_code != 0 && guest_printed(output, "JAIL_OCCUPIED_a7f3b2c9") == 0,
-                    "Expected the job to fail before its guest ran, got exit code {}.\nstdout: {}\nstderr: {}",
-                    output.exit_code,
-                    output.stdout,
-                    output.stderr
-                );
-                Ok(())
-            },
+            validate: |output| assert_refused_before_guest(output, "JAIL_OCCUPIED_a7f3b2c9"),
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "jail_occupied_mid_build_fails_the_job",
+            description: "A process that joins another Bencher cgroup while the jail is built fails the job before its guest runs",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "JAIL_OCCUPIED_MID_a7f3b2c9"]"#,
+            occupied_mid_build: true,
+            extra_args: JAIL_ARGS,
+            validate: |output| assert_refused_before_guest(output, "JAIL_OCCUPIED_MID_a7f3b2c9"),
             ..Scenario::default()
         },
     ]
+}
+
+fn assert_refused_before_guest(output: &ScenarioOutput, marker: &str) -> Result<()> {
+    anyhow::ensure!(
+        output.exit_code != 0 && guest_printed(output, marker) == 0,
+        "Expected the job to fail before its guest ran, got exit code {}.\nstdout: {}\nstderr: {}",
+        output.exit_code,
+        output.stdout,
+        output.stderr
+    );
+    Ok(())
 }
 
 /// The runner prints this only once the cgroup exists and its cpuset reads back,
@@ -3453,6 +3471,47 @@ fn run_runner_beside_occupied_cgroup(
         output.stderr
     );
     Ok(output)
+}
+
+/// The stand-in joins after the check before the jail and before the VMM
+/// exists, so the refusal can only come from the check after placement.
+fn run_runner_occupied_mid_build(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let mut child = spawn_runner(image_path, args, runner_bin)?;
+    let mut streamed = StreamedOutput::start(&mut child);
+    let occupant = occupy_mid_build(&mut streamed);
+    let status = child.wait()?;
+    let (stdout, stderr) = streamed.join();
+    let occupant = occupant.with_context(|| {
+        format!("No occupant was placed mid build.\nstdout: {stdout}\nstderr: {stderr}")
+    })?;
+    let pid = occupant.child.id().to_string();
+    drop(occupant);
+
+    anyhow::ensure!(
+        stderr.contains(OCCUPIED_CGROUP) && stderr.contains(&pid),
+        "Expected the refusal to name {OCCUPIED_CGROUP} and pid {pid}.\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.code().unwrap_or(-1),
+    })
+}
+
+fn occupy_mid_build(streamed: &mut StreamedOutput) -> Result<Occupant> {
+    let jail_line = streamed.wait_for(|line| line.trim_start().starts_with("Jail: "))?;
+    let jail_root = Utf8PathBuf::from(jail_line.trim_start().trim_start_matches("Jail: "));
+    let occupant = Occupant::start()?;
+    // A VMM not yet in its jail has not reached the check after placement.
+    anyhow::ensure!(
+        find_jailed_vmm(&jail_root)?.is_none(),
+        "The VMM was already up when the stand-in arrived, so the check after placement went untested"
+    );
+    Ok(occupant)
 }
 
 struct Occupant {
