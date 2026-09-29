@@ -61,10 +61,9 @@ pub(super) const ANNOUNCE_EVERY: Duration = Duration::from_secs(30);
 ///
 /// `flock` is per open file description, not per process, so a second
 /// `acquire` on the same path from a process that already holds it opens a new
-/// description and blocks on itself forever. Nothing nests today: host
-/// preparation takes and releases this lock before a job takes it, and the
-/// network namespace uses a different lock file. Any new caller has to keep it
-/// that way.
+/// description and blocks on itself forever. Nothing nests today: a job takes
+/// it once and sweeps under it, and the network namespace uses a different lock
+/// file. Any new caller has to keep it that way.
 #[derive(Debug)]
 pub struct JailLock {
     /// The locked file, held only for its `flock`.

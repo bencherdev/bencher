@@ -23,13 +23,14 @@
 //!   could not establish that nothing is, and wherever a confinement it applied
 //!   could not be read back. Recoverable by construction: nothing latches, so
 //!   the next job tries the whole thing again.
-//! - **Arms the retry, or declares the absence.** For teardown that is
-//!   [`ReclaimFailed`], read by [`HostPreparation::ensure`], used where the cost
-//!   is disk rather than a contended benchmark and where the code has no caller
-//!   to report to at all, which is every step reached from a `Drop`. For
-//!   measurement it is `Cpuset::Unavailable` or an absent metric: isolation the
-//!   host cannot offer is reported as isolation this run did not have, loudly,
-//!   and never as a number.
+//! - **Leaves it to the next sweep, or declares the absence.** For teardown,
+//!   every job sweeps under the jail lock before it builds its own jail, so
+//!   what a teardown could not remove is retried by the next job. Used where
+//!   the cost is disk rather than a contended benchmark and where the code has
+//!   no caller to report to at all, which is every step reached from a `Drop`.
+//!   For measurement it is `Cpuset::Unavailable` or an absent metric: isolation
+//!   the host cannot offer is reported as isolation this run did not have,
+//!   loudly, and never as a number.
 //! - **Ignored.** Only where the failure is itself the answer, or where a later
 //!   step is guaranteed to catch it. Each one below says which.
 //!
@@ -58,9 +59,8 @@
 //! | [`HostPreparation::ensure`]: the root check | fails the job |
 //! | [`HostPreparation::ensure`]: creating the state directory | fails the job |
 //! | [`HostPreparation::ensure`]: reading `/etc/passwd`, `/etc/group` | ignored: the check is advisory and cannot see a directory service anyway |
-//! | [`HostPreparation::ensure`]: taking the jail lock | fails the job |
-//! | [`HostPreparation::ensure`]: a sweep that returns an error | fails the job |
-//! | [`HostPreparation::ensure`]: a sweep that leaves a chroot behind | arms the retry |
+//! | `vm_execute`: taking the jail lock | fails the job |
+//! | `StateDir::sweep`: a sweep that returns an error | fails the job |
 //! | `sweep_jails`: the jail parent is absent | nothing to sweep |
 //! | `sweep_jails`: the jail parent cannot be read | fails the job |
 //! | `sweep_jails`: an entry cannot be read | fails the job |
@@ -70,7 +70,7 @@
 //! | `sweep_jails`: the reap reports a live VMM | fails the job |
 //! | `sweep_jails`: the reap could not examine the jail | fails the job |
 //! | `sweep_jails`: removing the cgroup | fails the job, and the chroot is kept because its name is the cgroup's only handle |
-//! | `sweep_jails`: removing the chroot | arms the retry |
+//! | `sweep_jails`: removing the chroot | left to the next job's sweep |
 //! | `reap_jailed_vmm`: the jail root is absent | clear: nothing can be chrooted into a directory that is not there |
 //! | `reap_jailed_vmm`: the jail root cannot be stat'ed | reported unexaminable, which fails the job |
 //! | `reap_jailed_vmm`: `/proc` cannot be listed | reported unexaminable |
@@ -85,10 +85,10 @@
 //! | `JailDir::create`: the state tree fails its re-check at job time | fails the job: the chroot would otherwise be built through a component swapped since preparation |
 //! | `JailDir::create`: a step that fails once the tree exists | fails the job, and the guard that already took the tree reclaims it |
 //! | `JailDir` teardown: the chroot is already gone | ignored: that is the goal state |
-//! | `JailDir` teardown: removing the chroot | arms the retry |
+//! | `JailDir` teardown: removing the chroot | left to the next job's sweep |
 //! | `JailDir` teardown: this job's own cgroup survived | keeps the chroot, since its name is the cgroup's only handle |
-//! | `CgroupManager` teardown: the cgroup cannot be stat'ed | arms the retry: it is treated as still there |
-//! | `CgroupManager` teardown: `rmdir` of the cgroup | arms the retry, this job's and the runner's both |
+//! | `CgroupManager` teardown: the cgroup cannot be stat'ed | keeps the chroot for the next job's sweep: it is treated as still there |
+//! | `CgroupManager` teardown: `rmdir` of the cgroup | keeps the chroot for the next job's sweep |
 //! | `CgroupManager` creation: the cgroup cannot be stat'ed | fails the job: this decides whether `Drop` may remove it |
 //! | `remove_stale_cgroup`: the cgroup cannot be stat'ed | fails the job: the caller deletes the chroot on an `Ok` here |
 //! | `StateDir::create`: the chroot tree cannot be stat'ed | fails the job: the 0700 chmod follows |
@@ -125,7 +125,8 @@
 //! `CgroupManager::kill_all` is deliberately not in either table.
 //! Nothing on the jailed path calls it: the VMM is killed with a grace period
 //! before its cgroup is torn down, and anything that somehow survives is caught
-//! by the `rmdir` above, which arms the retry. The non-sandboxed path calls it
+//! by the `rmdir` above, which keeps the chroot for the next job's sweep. The
+//! non-sandboxed path calls it
 //! explicitly on timeout or cancellation, where a failure is warned and then
 //! caught the same way. A row saying teardown kills survivors described a step
 //! that does not exist, which is worse than no row at all: this table is read as
@@ -357,81 +358,19 @@ impl std::fmt::Display for VmId {
 /// by anything else. Tests get their own.
 #[derive(Debug, Default)]
 pub struct HostPreparation {
-    /// Whether the jail user warning has already been given.
-    ///
-    /// Advisory and unchanging, so it is worth saying once and not once a job.
-    /// Set where the warning is printed, so a preparation that fails afterwards
-    /// does not earn the operator the same advice again.
-    #[cfg_attr(
-        not(target_os = "linux"),
-        expect(dead_code, reason = "host preparation is Linux-only")
-    )]
-    warned_jail_user: bool,
     /// Only the jail reads this, and the jail is Linux-only.
     #[cfg_attr(
         not(target_os = "linux"),
         expect(dead_code, reason = "host preparation is Linux-only")
     )]
     prepared: bool,
-    /// Set when a job's teardown could not reclaim its chroot.
-    reclaim_failed: ReclaimFailed,
-}
-
-/// Shared signal that a jail could not be reclaimed.
-///
-/// `Drop` has nowhere to report a failure, and a chroot that outlives its job
-/// holds a copy of the VMM binary and a full guest rootfs. Because the sweep
-/// otherwise runs once per process, a long-lived daemon would carry that leak
-/// until a restart. Setting this makes the next job sweep again, which is the
-/// mechanism that already exists for exactly this.
-///
-/// Owned by the runner's [`HostPreparation`] and cloned into each jail, never
-/// global.
-#[derive(Debug, Clone, Default)]
-pub struct ReclaimFailed(Arc<AtomicBool>);
-
-impl ReclaimFailed {
-    /// Record that a jail could not be reclaimed.
-    pub fn set(&self) {
-        self.0.store(true, Ordering::SeqCst);
-    }
-
-    /// Consume the signal.
-    ///
-    /// Deliberately not one swap together with [`Self::is_set`]. The signal asks
-    /// for a sweep, so it is spent only once a sweep has actually finished:
-    /// spending it up front would let a sweep that failed clear the one thing
-    /// that makes a later job try again. Jobs are serial, so nothing can raise
-    /// it between the sweep finishing and this call.
-    ///
-    /// Only the jail reads it, and the jail is Linux-only.
-    #[cfg(target_os = "linux")]
-    fn clear(&self) {
-        self.0.store(false, Ordering::SeqCst);
-    }
-
-    /// Whether the signal is set, without consuming it.
-    ///
-    /// Read by the chroot teardown, which must not remove a directory whose
-    /// cgroup is still there: the directory name is the only handle a later
-    /// sweep has for finding that cgroup again.
-    #[cfg(target_os = "linux")]
-    #[must_use]
-    pub(crate) fn is_set(&self) -> bool {
-        self.0.load(Ordering::SeqCst)
-    }
 }
 
 /// Whether this job's own cgroup outlived its teardown.
 ///
-/// Job-scoped, where [`ReclaimFailed`] is runner-scoped, and that distinction is
-/// the point. The chroot has to be kept when *this* job's cgroup could not be
-/// removed, because the directory name is the only handle a later sweep has for
-/// finding that cgroup. A runner-wide signal cannot say that: it is also raised
-/// by an unrelated stale jail the sweep could not reclaim, and reading it made
-/// the current job hold a chroot whose own cgroup came down cleanly. Two
-/// questions on one flag is also what made the earlier ordering bugs easy to
-/// write.
+/// The chroot has to be kept when this job's cgroup could not be removed,
+/// because the directory name is the only handle the next job's sweep has for
+/// finding that cgroup.
 #[derive(Debug, Clone, Default)]
 pub struct CgroupSurvived(Arc<AtomicBool>);
 
@@ -450,87 +389,11 @@ impl CgroupSurvived {
     }
 }
 
-/// The signals one job's teardown raises.
-///
-/// Carried together because every teardown step needs both: a cgroup that will
-/// not go away has to hold this job's chroot *and* earn the next job a sweep.
-/// Keeping them in one value with two names is what stops the two being confused
-/// for each other again.
-#[derive(Debug, Clone)]
-pub struct JailSignals {
-    /// Runner-wide: a later job owes another sweep.
-    ///
-    /// Only the jail raises and reads these, and the jail is Linux-only.
-    #[cfg_attr(
-        not(target_os = "linux"),
-        expect(dead_code, reason = "the jail is Linux-only")
-    )]
-    reclaim_failed: ReclaimFailed,
-    /// This job only: its cgroup outlived its teardown.
-    #[cfg_attr(
-        not(target_os = "linux"),
-        expect(dead_code, reason = "the jail is Linux-only")
-    )]
-    cgroup_survived: CgroupSurvived,
-}
-
-impl JailSignals {
-    /// The signals for one job, sharing the runner's reclaim signal.
-    #[must_use]
-    pub fn for_job(reclaim_failed: ReclaimFailed) -> Self {
-        Self {
-            reclaim_failed,
-            cgroup_survived: CgroupSurvived::default(),
-        }
-    }
-
-    /// Signals nothing reads, for a cgroup no sweep can find again.
-    ///
-    /// A non-sandboxed run has no chroot to hold and no directory the sweep
-    /// walks, so there is no handle for a later sweep to work from and nothing a
-    /// raised signal could change. Named rather than defaulted so the call site
-    /// says which of the two it is.
-    #[cfg(target_os = "linux")]
-    #[must_use]
-    pub fn unwatched() -> Self {
-        Self::for_job(ReclaimFailed::default())
-    }
-
-    /// Record that this job's cgroup could not be removed.
-    ///
-    /// Both signals, because both are true: the chroot that names this cgroup
-    /// has to stay, and the next job has to sweep for it.
-    #[cfg(target_os = "linux")]
-    pub fn cgroup_survived(&self) {
-        self.cgroup_survived.set();
-        self.reclaim_failed.set();
-    }
-
-    /// Record that this job's chroot could not be removed.
-    #[cfg(target_os = "linux")]
-    pub fn chroot_survived(&self) {
-        self.reclaim_failed.set();
-    }
-
-    /// Whether this job's cgroup is still there, so its chroot must stay.
-    #[cfg(target_os = "linux")]
-    #[must_use]
-    pub(crate) fn must_keep_chroot(&self) -> bool {
-        self.cgroup_survived.is_set()
-    }
-}
-
 impl HostPreparation {
     /// A runner process that has not prepared the host yet.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// A handle each jail uses to report that it could not be reclaimed.
-    #[must_use]
-    pub fn reclaim_signal(&self) -> ReclaimFailed {
-        self.reclaim_failed.clone()
     }
 
     /// Prepare the host for jailed execution, at most once.
@@ -545,9 +408,7 @@ impl HostPreparation {
     /// Failure is fatal. Untrusted code never runs with silently degraded
     /// confinement, so a host that cannot be prepared does not execute a job.
     /// A failure is not remembered, so the next job retries rather than
-    /// needing a restart. That matters most for a sweep that could not reclaim
-    /// a stale cgroup: the orphan may simply not have exited yet, and a
-    /// latched failure would leave every later job failing with no retry.
+    /// needing a restart.
     ///
     /// Requires root, and says so by name rather than letting the operator
     /// infer it from a permission error several layers down.
@@ -562,9 +423,9 @@ impl HostPreparation {
 
     /// Prepare the host, with the effective uid supplied.
     ///
-    /// The uid is a parameter for the same reason the sweep's reap is one: the
-    /// check refuses every uid but root, so a test that had to be root to reach
-    /// anything past it would be exercising the harness rather than this.
+    /// The uid is a parameter because the check refuses every uid but root, so
+    /// a test that had to be root to reach anything past it would be exercising
+    /// the harness rather than this.
     #[cfg(target_os = "linux")]
     fn ensure_as(
         &mut self,
@@ -572,28 +433,10 @@ impl HostPreparation {
         state_dir: &camino::Utf8Path,
         jail_user: JailUser,
     ) -> Result<(), crate::error::JailError> {
-        // A jail that could not be reclaimed earns another sweep, whatever
-        // this process has already done.
-        if self.prepared && !self.reclaim_failed.is_set() {
+        if self.prepared {
             return Ok(());
         }
-        // The flag is passed in rather than set after, because preparation can
-        // fail at a step past the warning: recording it here would repeat the
-        // advice on every job of a host whose sweep keeps failing, and recording
-        // it only on success would do the same.
-        let swept = prepare_host(euid, state_dir, jail_user, &mut self.warned_jail_user)?;
-        // Spent only on a sweep that finished, and armed by one that did not.
-        // Spending it any earlier disarms the mechanism precisely when it is
-        // needed: the signal would be gone, this process would still count as
-        // prepared, and every later job would return early while the jail nobody
-        // could reclaim sat there. That is true of a sweep that failed outright,
-        // which never reaches here, and equally of one that returned `Ok` having
-        // left a chroot on disk.
-        if swept.is_complete() {
-            self.reclaim_failed.clear();
-        } else {
-            self.reclaim_failed.set();
-        }
+        prepare_host(euid, state_dir, jail_user)?;
         self.prepared = true;
         Ok(())
     }
@@ -611,53 +454,31 @@ impl HostPreparation {
     }
 }
 
-/// Create the state directory and reclaim what a previous runner left behind.
+/// Check for root, create the state directory, and warn about the jail user.
 ///
-/// The sweep is taken under the jail lock: it removes every chroot it finds on
-/// the reasoning that jobs are serial, so it must not run while another runner
-/// has one in flight. Running before any jail exists in this process is what
-/// the sweep's purpose actually requires.
+/// The sweep is deliberately not here: it runs per job, under the job lock, so
+/// it also reaches an orphan a sibling runner process left after this one
+/// prepared. See [`StateDir::sweep`].
 ///
-/// The network namespace is deliberately not built here. It is a process-
-/// global object on a tmpfs, so it is rebuilt per job rather than once per
-/// daemon lifetime.
+/// The network namespace is deliberately not built here either. It is a
+/// process-global object on a tmpfs, so it is rebuilt per job rather than once
+/// per daemon lifetime.
 #[cfg(target_os = "linux")]
-#[expect(clippy::print_stdout, reason = "host preparation reports what it did")]
 fn prepare_host(
     euid: u32,
     state_dir: &camino::Utf8Path,
     jail_user: JailUser,
-    jail_user_announced: &mut bool,
-) -> Result<state::Swept, crate::error::JailError> {
+) -> Result<(), crate::error::JailError> {
     // Checked first, and by name. Without it the most likely upgrade failure
     // surfaces as a permission error on a directory, or a bare EPERM out of
     // `unshare`, neither of which mentions root or the flag that avoids it.
     check_root(euid)?;
 
-    let state = StateDir::new(state_dir.to_owned())?;
-    state.create()?;
+    StateDir::new(state_dir.to_owned())?.create()?;
 
-    // Once per runner, not once per job, and recorded at the moment it is given
-    // rather than at the end of a preparation that may not reach one. This runs
-    // again whenever a sweep is owed, and a host that keeps failing to reclaim a
-    // jail would otherwise repeat the advice until an operator stopped reading
-    // any of it.
-    if !*jail_user_announced {
-        warn_on_named_account(jail_user);
-        *jail_user_announced = true;
-    }
-
-    let _lock = JailLock::acquire(state.path())?;
-    let swept = state::sweep_jails(&state.jail_parent())?;
-    if swept.reclaimed() > 0 {
-        // Each one held a copy of the VMM binary and a full guest rootfs
-        // image, so an operator should hear about it.
-        println!(
-            "  Reclaimed {} stale jail(s) from {state_dir}",
-            swept.reclaimed()
-        );
-    }
-    Ok(swept)
+    // Last, so it is given once: only a preparation that succeeds latches.
+    warn_on_named_account(jail_user);
+    Ok(())
 }
 
 /// Refuse to build a jail without the privileges building one needs.
@@ -877,93 +698,6 @@ mod tests {
         host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
             .unwrap();
         assert!(state_dir.join("jail").is_dir());
-    }
-
-    #[test]
-    fn a_jail_that_could_not_be_reclaimed_earns_another_sweep() {
-        // The sweep otherwise runs once per process, so a teardown that failed
-        // in a long-lived daemon would leak a chroot holding a VMM copy and a
-        // full guest rootfs until a restart. Drop has nowhere to report, so it
-        // raises this instead.
-        let dir = tempfile::tempdir().unwrap();
-        let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let state_dir = root.join("state");
-
-        let mut host = HostPreparation::new();
-        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
-            .unwrap();
-
-        // Already prepared: a second job does not redo the work.
-        std::fs::remove_dir_all(&state_dir).unwrap();
-        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
-            .unwrap();
-        assert!(!state_dir.exists(), "preparation happens at most once");
-
-        // A jail that could not be reclaimed changes that.
-        host.reclaim_signal().set();
-        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
-            .unwrap();
-        assert!(
-            state_dir.join("jail").is_dir(),
-            "a failed teardown must earn another sweep"
-        );
-
-        // And the signal is consumed, not sticky.
-        std::fs::remove_dir_all(&state_dir).unwrap();
-        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
-            .unwrap();
-        assert!(!state_dir.exists(), "the signal is consumed once");
-    }
-
-    #[test]
-    fn a_sweep_that_failed_does_not_disarm_the_next_one() {
-        // The signal is spent on a sweep that finished, never on one that was
-        // merely attempted. Consuming it up front costs nothing on the first
-        // failure and everything on the second: this process still counts as
-        // prepared, so with the signal gone every later job returns early and
-        // the jail that could not be reclaimed is never swept again for the
-        // lifetime of the daemon. If the reason it could not be reclaimed is a
-        // VMM still in its cgroup, that orphan holds the benchmark cores while
-        // every later job measures through it and reports clean.
-        let dir = tempfile::tempdir().unwrap();
-        let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let state_dir = root.join("state");
-
-        let mut host = HostPreparation::new();
-        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
-            .unwrap();
-
-        // A teardown that could not reclaim its jail asks for another sweep.
-        host.reclaim_signal().set();
-
-        // Preparation now fails, twice, with the signal still outstanding.
-        std::fs::remove_dir_all(&state_dir).unwrap();
-        std::fs::create_dir_all(state_dir.join("someone-elses-data")).unwrap();
-        for attempt in 1..=2 {
-            host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
-                .unwrap_err();
-            assert!(
-                host.reclaim_signal().is_set(),
-                "attempt {attempt} failed, so the sweep it asked for is still owed"
-            );
-        }
-
-        // Remove the cause: the next job must still sweep rather than return
-        // early on the strength of a signal an earlier failure ate.
-        std::fs::remove_dir_all(&state_dir).unwrap();
-        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
-            .unwrap();
-        assert!(
-            state_dir.join("jail").is_dir(),
-            "the owed sweep must survive every failed attempt at it"
-        );
-
-        // And it is spent now that one has finished.
-        assert!(!host.reclaim_signal().is_set());
-        std::fs::remove_dir_all(&state_dir).unwrap();
-        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
-            .unwrap();
-        assert!(!state_dir.exists(), "a finished sweep spends the signal");
     }
 
     #[test]

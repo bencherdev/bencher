@@ -40,7 +40,7 @@ Par défaut, `55` est utilisé.
 Le répertoire d'état persistant du Runner.
 Il doit s'agir d'un chemin absolu.
 La prison qui confine le bac à sable est créée dans ce répertoire,
-et les prisons laissées par un arrêt brutal en sont supprimées avant le premier Job avec bac à sable.
+et les prisons laissées par un arrêt brutal en sont supprimées avant chaque Job avec bac à sable.
 Chaque prison contient un système de fichiers racine invité complet et une copie du binaire de la microVM,
 et les Jobs qui partagent un répertoire d'état s'exécutent un par un,
 ce répertoire a donc besoin d'une capacité réelle pour une prison.

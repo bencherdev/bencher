@@ -9,7 +9,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::RunnerError;
 use crate::cpu::CpuLayout;
 use crate::error::JailError;
-use crate::jail::{JailSignals, VmId};
+use crate::jail::{CgroupSurvived, VmId};
 
 /// Default cgroup v2 mount point.
 const CGROUP_ROOT: &str = "/sys/fs/cgroup";
@@ -22,8 +22,8 @@ pub struct CgroupManager {
     cgroup_path: Utf8PathBuf,
     created: bool,
     /// Raised when this cgroup could not be removed, which holds the chroot that
-    /// names it and earns a later job another sweep.
-    signals: JailSignals,
+    /// names it for the next job's sweep.
+    cgroup_survived: CgroupSurvived,
     /// What asking the parent to delegate `cpuset` established, which is what
     /// separates an absent `cpuset.cpus` this runner may report as a host
     /// limitation from one it may not.
@@ -37,7 +37,7 @@ impl CgroupManager {
     /// cannot be removed has to keep that directory alive, because the
     /// directory name is the only handle a later sweep has for finding this
     /// cgroup again.
-    pub fn new(vm_id: &VmId, signals: JailSignals) -> Result<Self, RunnerError> {
+    pub fn new(vm_id: &VmId, cgroup_survived: CgroupSurvived) -> Result<Self, RunnerError> {
         let cgroup_path = vm_cgroup(vm_id.as_str());
 
         // Unconditional, because `create_dir_all` on a directory that is
@@ -86,7 +86,7 @@ impl CgroupManager {
         Ok(Self {
             cgroup_path,
             created,
-            signals,
+            cgroup_survived,
             cpuset_control,
         })
     }
@@ -105,7 +105,7 @@ impl CgroupManager {
         Self {
             cgroup_path,
             created: false,
-            signals: JailSignals::unwatched(),
+            cgroup_survived: CgroupSurvived::default(),
             cpuset_control: CpusetControl::Answered,
         }
     }
@@ -390,7 +390,8 @@ impl CgroupManager {
     ///
     /// Best effort is sound here only because something else catches it:
     /// whatever this fails to kill is exactly what makes [`Self::cleanup`]'s
-    /// `rmdir` fail, and that arms the reclaim signal. See [`crate::jail`].
+    /// `rmdir` fail, which keeps the chroot for the next job's sweep. See
+    /// [`crate::jail`].
     pub fn kill_all(&self) {
         if let Err(e) = self.write_file("cgroup.kill", "1") {
             eprintln!("Warning: failed to kill cgroup subtree: {e}");
@@ -399,10 +400,10 @@ impl CgroupManager {
 
     /// Clean up the cgroup.
     ///
-    /// A `rmdir` the kernel refuses is raised on the reclaim signal, not just
-    /// logged: it means something is still in this cgroup, and the only way to
-    /// get to it later is through the chroot of the same id, so the signal both
-    /// holds that directory and earns the next job a sweep.
+    /// A `rmdir` the kernel refuses is raised on the signal, not just logged: it
+    /// means something is still in this cgroup, and the only way to get to it
+    /// later is through the chroot of the same id, so the signal holds that
+    /// directory for the next job's sweep.
     ///
     /// Returns nothing, because the signal is where a failure goes. A `Result`
     /// here would be a channel with nothing in it that every caller, `Drop`
@@ -412,8 +413,8 @@ impl CgroupManager {
             return;
         }
         // A stat that failed is not a cgroup that is gone. Reading it as one
-        // would skip both the removal and the signal, so nothing would be armed
-        // and nothing would ever come back for it.
+        // would skip both the removal and the signal, and the chroot that is
+        // the only handle for finding it again would go.
         match self.cgroup_path.try_exists() {
             Ok(false) => self.created = false,
             Ok(true) => {
@@ -422,7 +423,7 @@ impl CgroupManager {
                         "Warning: failed to remove cgroup {}: {e}. Something is still in it, so the next job sweeps it along with the jail that names it.",
                         self.cgroup_path
                     );
-                    self.signals.cgroup_survived();
+                    self.cgroup_survived.set();
                 } else {
                     self.created = false;
                 }
@@ -432,7 +433,7 @@ impl CgroupManager {
                     "Warning: cannot tell whether cgroup {} is still there: {e}. It is treated as still there, so the next job sweeps it along with the jail that names it.",
                     self.cgroup_path
                 );
-                self.signals.cgroup_survived();
+                self.cgroup_survived.set();
             },
         }
     }
@@ -619,8 +620,8 @@ fn remove_stale_cgroup_at(path: Utf8PathBuf) -> Result<(), JailError> {
             // reap that has just landed is about to clear. Every other refusal
             // is settled before the first retry and stays settled, and spending
             // the budget on it costs the full five seconds on every job rather
-            // than once: a failure here keeps the chroot, which re-arms the
-            // sweep, which fails here again.
+            // than once: a failure here keeps the chroot, which the next job's
+            // sweep finds, which fails here again.
             Err(e) if !is_contended(&e) || std::time::Instant::now() >= deadline => {
                 // Reported rather than warned, because failing here means the
                 // next job sweeps again rather than inheriting a host nobody
@@ -788,7 +789,7 @@ mod tests {
         let manager = CgroupManager {
             cgroup_path: root,
             created: false,
-            signals: JailSignals::unwatched(),
+            cgroup_survived: CgroupSurvived::default(),
             cpuset_control: CpusetControl::Unanswered(std::io::Error::from_raw_os_error(
                 libc::EROFS,
             )),
@@ -909,13 +910,13 @@ mod tests {
         let ours = CgroupManager {
             cgroup_path: root.join("ours"),
             created: true,
-            signals: JailSignals::unwatched(),
+            cgroup_survived: CgroupSurvived::default(),
             cpuset_control: CpusetControl::Answered,
         };
         let theirs = CgroupManager {
             cgroup_path: root.join("theirs"),
             created: false,
-            signals: JailSignals::unwatched(),
+            cgroup_survived: CgroupSurvived::default(),
             cpuset_control: CpusetControl::Answered,
         };
         fs::create_dir_all(ours.path()).unwrap();
@@ -944,8 +945,7 @@ mod tests {
     fn a_removal_that_will_never_succeed_does_not_spend_the_budget() {
         // A `rmdir` refused for anything but contention is refused the same way
         // five seconds later, and the failure keeps the chroot that names the
-        // cgroup, which earns the next job another sweep that fails the same
-        // way. Retrying every error kind costs the whole budget per job on a
+        // cgroup, so the next job's sweep fails the same way. Retrying every error kind costs the whole budget per job on a
         // host where nothing is going to change. A non-empty ordinary directory
         // refuses with `ENOTEMPTY`, the way a read-only or unwritable parent
         // refuses with `EROFS` or `EPERM`.
@@ -995,18 +995,18 @@ mod tests {
     }
 
     #[test]
-    fn a_cgroup_that_will_not_go_away_raises_the_reclaim_signal() {
+    fn a_cgroup_that_will_not_go_away_holds_its_chroot() {
         // The kernel refuses `rmdir` while a cgroup still holds a process, and
         // a non-empty ordinary directory refuses it the same way. Warning alone
         // would let the chroot that names this cgroup be removed, leaving
         // nothing for a later sweep to find it by.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let signals = JailSignals::unwatched();
+        let survived = CgroupSurvived::default();
         let mut manager = CgroupManager {
             cgroup_path: root.join("stuck"),
             created: true,
-            signals: signals.clone(),
+            cgroup_survived: survived.clone(),
             cpuset_control: CpusetControl::Answered,
         };
         fs::create_dir_all(manager.path()).unwrap();
@@ -1015,7 +1015,7 @@ mod tests {
         manager.cleanup();
 
         assert!(
-            signals.must_keep_chroot(),
+            survived.is_set(),
             "a cgroup that outlives its job holds the chroot that names it"
         );
         assert!(manager.path().exists());
@@ -1025,11 +1025,11 @@ mod tests {
     fn a_removed_cgroup_leaves_the_signal_alone() {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let signals = JailSignals::unwatched();
+        let survived = CgroupSurvived::default();
         let mut manager = CgroupManager {
             cgroup_path: root.join("gone"),
             created: true,
-            signals: signals.clone(),
+            cgroup_survived: survived.clone(),
             cpuset_control: CpusetControl::Answered,
         };
         fs::create_dir_all(manager.path()).unwrap();
@@ -1038,7 +1038,7 @@ mod tests {
 
         assert!(!manager.path().exists());
         assert!(
-            !signals.must_keep_chroot(),
+            !survived.is_set(),
             "a clean teardown must not hold the chroot back"
         );
     }
