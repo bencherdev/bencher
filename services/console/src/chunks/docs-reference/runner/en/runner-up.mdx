@@ -44,7 +44,7 @@ and jails left behind by an unclean exit are swept from it before each sandboxed
 Each jail holds a full guest root filesystem and a copy of the microVM binary,
 and Jobs sharing one state directory run one at a time,
 so this directory needs real capacity for one jail.
-A sandboxed Job also fails at once, rather than waiting its turn, if another Job is running in a Bencher cgroup on the same host, whichever Runner or state directory it belongs to.
+A sandboxed Job also fails at once, rather than waiting its turn, if a Job of a Runner with another state directory, or a non-sandboxed Job, is running in a Bencher cgroup on the same host.
 A Job runs in such a cgroup only when its Runner can isolate CPU cores, so the Jobs of a Runner that cannot are not seen.
 A dedicated filesystem or a `tmpfs` mount is supported and recommended:
 it keeps that write traffic off the system disk,

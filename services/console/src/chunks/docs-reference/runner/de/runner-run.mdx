@@ -41,7 +41,7 @@ und Jails, die durch eine unsaubere Beendigung zurückgeblieben sind, werden vor
 Jedes Jail enthält ein vollständiges Gast-Root-Dateisystem und eine Kopie der microVM-Binärdatei,
 und Jobs, die sich ein Zustandsverzeichnis teilen, laufen nacheinander,
 daher braucht dieses Verzeichnis echte Kapazität für ein Jail.
-Ein Sandbox-Job schlägt außerdem sofort fehl, statt zu warten, wenn auf demselben Host ein anderer Job in einer Bencher-Cgroup läuft, gleich zu welchem Runner oder Zustandsverzeichnis er gehört.
+Ein Sandbox-Job schlägt außerdem sofort fehl, statt zu warten, wenn auf demselben Host ein Job eines Runners mit einem anderen Zustandsverzeichnis oder ein Job ohne Sandbox in einer Bencher-Cgroup läuft.
 Ein Job läuft nur dann in einer solchen Cgroup, wenn sein Runner CPU-Kerne isolieren kann, daher werden die Jobs eines Runners, der das nicht kann, nicht erkannt.
 Ein eigenes Dateisystem oder ein `tmpfs`-Mount wird unterstützt und empfohlen:
 es hält diese Schreiblast von der Systemplatte fern,
