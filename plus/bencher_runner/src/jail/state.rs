@@ -615,6 +615,26 @@ where
     R: Fn(&Utf8Path) -> Reaped,
     C: Fn(&VmId) -> Result<(), JailError>,
 {
+    sweep_jails_removing(jail_parent, reap, remove_cgroup, |jail_dir: &Utf8Path| {
+        fs::remove_dir_all(jail_dir)
+    })
+}
+
+/// The sweep, with the chroot removal injectable as well.
+///
+/// Root removes any directory a test can make, so a removal that fails has to
+/// be supplied for the test to hold whatever the privilege it runs with.
+fn sweep_jails_removing<R, C, D>(
+    jail_parent: &Utf8Path,
+    reap: R,
+    remove_cgroup: C,
+    remove_chroot: D,
+) -> Result<usize, JailError>
+where
+    R: Fn(&Utf8Path) -> Reaped,
+    C: Fn(&VmId) -> Result<(), JailError>,
+    D: Fn(&Utf8Path) -> std::io::Result<()>,
+{
     // Absence is the only reading that means there is nothing to sweep. Every
     // other failure is reported, because "could not look" must not reach the
     // caller as "nothing was there" in the one function whose job is finding
@@ -659,7 +679,7 @@ where
                     super::lock::while_waiting(
                         super::lock::ANNOUNCE_EVERY,
                         || println!("  Still reclaiming stale jail {jail_dir}..."),
-                        || reclaim_one(&jail_dir, &vm_id, &reap, &remove_cgroup),
+                        || reclaim_one(&jail_dir, &vm_id, &reap, &remove_cgroup, &remove_chroot),
                     )
                 },
                 // Not a jail, or not ours: nothing owed either way.
@@ -767,10 +787,17 @@ fn jail_id(jail_parent: &Utf8Path, entry: &fs::DirEntry) -> Result<Option<VmId>,
 }
 
 /// Reap, then unwind one stale jail: its cgroup first, then its chroot.
-fn reclaim_one<R, C>(jail_dir: &Utf8Path, vm_id: &VmId, reap: &R, remove_cgroup: &C) -> Reclamation
+fn reclaim_one<R, C, D>(
+    jail_dir: &Utf8Path,
+    vm_id: &VmId,
+    reap: &R,
+    remove_cgroup: &C,
+    remove_chroot: &D,
+) -> Reclamation
 where
     R: Fn(&Utf8Path) -> Reaped,
     C: Fn(&VmId) -> Result<(), JailError>,
+    D: Fn(&Utf8Path) -> std::io::Result<()>,
 {
     // Reap before removing, and only remove once the jail is clear. Deleting the
     // tree under a live VMM would not stop it, and it would destroy the only
@@ -825,7 +852,7 @@ where
     // A chroot that will not go away costs disk, not fidelity: the VMM is gone
     // and the cgroup with it, so the job may run, and the next job's sweep tries
     // again.
-    match fs::remove_dir_all(jail_dir) {
+    match remove_chroot(jail_dir) {
         Ok(()) => Reclamation::Reclaimed,
         Err(e) => {
             eprintln!(
@@ -1790,20 +1817,14 @@ mod tests {
         state.create().unwrap();
         let stuck = VmId::from_chroot_name("stuck".to_owned()).unwrap();
         fs::create_dir_all(state.jail_root(&stuck)).unwrap();
-        // A jail directory that `remove_dir_all` cannot finish: the tree is
-        // unsearchable, so the walk inside it fails.
-        fs::set_permissions(state.jail_dir(&stuck), fs::Permissions::from_mode(0o000)).unwrap();
 
-        let reclaimed = sweep_jails_with(
+        let reclaimed = sweep_jails_removing(
             &state.jail_parent(),
             |_jail_root| Reaped::Clear,
             |_vm_id| Ok(()),
+            |_jail_dir| Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied)),
         )
         .unwrap();
-
-        // Restored before the assertions so the temp directory can be cleaned
-        // up whichever way they go.
-        fs::set_permissions(state.jail_dir(&stuck), fs::Permissions::from_mode(0o700)).unwrap();
 
         assert_eq!(reclaimed, 0);
     }

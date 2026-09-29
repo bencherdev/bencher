@@ -56,6 +56,21 @@ jobs:
           sudo systemctl restart docker
       - name: Build scenario binaries
         run: cargo test-runner scenarios --build-only
+      - name: Build runner unit tests
+        id: runner_unit_tests
+        run: |
+          set -o pipefail
+          bin=$(cargo test -p bencher_runner --features plus --no-run --message-format=json \
+            | jq -r 'select(.reason == "compiler-artifact" and .profile.test == true and .executable != null) | .executable')
+          test "$(printf '%s\n' "$bin" | grep -c .)" -eq 1
+          echo "bin=$bin" >> "$GITHUB_OUTPUT"
+      - name: Run runner unit tests as root
+        # The tests that need root skip themselves everywhere else in CI. Some
+        # create and remove directories directly under /, which is fine on this
+        # throwaway runner and is why this step must not move to a persistent host.
+        env:
+          RUNNER_UNIT_TESTS: ${{ steps.runner_unit_tests.outputs.bin }}
+        run: sudo "$RUNNER_UNIT_TESTS"
       - name: Run scenarios
         # The scenarios run as root. The sandbox is built by dropping
         # privilege rather than by starting without it: the jailer creates the
@@ -64,8 +79,8 @@ jobs:
         # /dev/kvm usable by an unprivileged process, which is necessary but
         # not sufficient.
         #
-        # Only this step is elevated. The build above stays as the CI user, so
-        # cargo's cache and target directory are not left root-owned, and
+        # Only the test runs are elevated. The builds above stay as the CI user,
+        # so cargo's cache and target directory are not left root-owned, and
         # BENCHER_RUNNER_BIN keeps cargo out of the elevated step entirely.
         run: sudo BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios
 
