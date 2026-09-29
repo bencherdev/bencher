@@ -2660,18 +2660,27 @@ const PROBE_INTERVAL: Duration = Duration::from_millis(100);
 
 /// The uid the jail scenarios hand the runner with `--jail-uid`.
 ///
-/// Asked for by name rather than left to the runner's default, and asserted as
-/// this number rather than as whatever the chroot turns out to be owned by. The
-/// chown of the chroot and the setuid of the VMM are made from one config, so
-/// they agree with each other on a runner that ignores the flag and the default
-/// alike, and a uid the operator never chose would pass unnoticed.
-const SCENARIO_JAIL_UID: u32 = 61017;
+/// Asked for by name rather than left to the runner's default (61016), and
+/// asserted as this number rather than as whatever the chroot turns out to be
+/// owned by. The chown of the chroot and the setuid of the VMM are made from one
+/// config, so they agree with each other on a runner that ignores the flag and
+/// the default alike, and a uid the operator never chose would pass unnoticed.
+const SCENARIO_JAIL_UID: &str = "61017";
 
-/// [`SCENARIO_JAIL_UID`] as the scenarios spell it on the command line.
+/// The gid the jail scenarios hand the runner with `--jail-gid`.
 ///
-/// Written twice because a scenario's arguments are `&'static str`. A test keeps
-/// the two from drifting apart.
-const SCENARIO_JAIL_UID_ARG: &str = "61017";
+/// Distinct from the uid, so a gid taken from the uid cannot pass.
+const SCENARIO_JAIL_GID: &str = "61018";
+
+/// The arguments every jail scenario passes.
+const JAIL_ARGS: &[&str] = &[
+    "--timeout",
+    "120",
+    "--jail-uid",
+    SCENARIO_JAIL_UID,
+    "--jail-gid",
+    SCENARIO_JAIL_GID,
+];
 
 /// The network namespace handle the runner builds for the jailed VMM.
 ///
@@ -2719,7 +2728,7 @@ CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
             cancel_after_secs: None,
             probe: Some(probe_confinement),
             orphan_then_rerun: false,
-            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            extra_args: JAIL_ARGS,
             validate: |output| {
                 // The job has to have actually run before anything the probe
                 // saw means anything. Every confinement property the probe
@@ -2739,7 +2748,7 @@ CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
 CMD ["echo", "JAIL_NETNS_a7f3b2c9"]"#,
             setup: Some(stack_netns_mounts),
             teardown: Some(unstack_netns_mounts),
-            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            extra_args: JAIL_ARGS,
             validate: |output| assert_job_succeeded(output, "JAIL_NETNS_a7f3b2c9"),
             ..Scenario::default()
         },
@@ -2751,7 +2760,7 @@ CMD ["echo", "JAIL_NETNS_a7f3b2c9"]"#,
             dockerfile: r#"FROM busybox
 CMD ["echo", "JAIL_REFUSED_a7f3b2c9"]"#,
             unusable_state_dir: true,
-            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            extra_args: JAIL_ARGS,
             validate: |output| {
                 // Failing the job is the invariant, and the runner is free to
                 // reword why: nothing here reads the message. That no VMM was
@@ -2786,7 +2795,7 @@ CMD ["echo", "JAIL_SWEEP_a7f3b2c9"]"#,
             cancel_after_secs: None,
             probe: None,
             orphan_then_rerun: true,
-            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            extra_args: JAIL_ARGS,
             validate: |output| {
                 assert_job_succeeded(output, "JAIL_SWEEP_a7f3b2c9")?;
                 assert_no_chroot_remains(&scenario_state_dir())
@@ -2801,7 +2810,7 @@ CMD ["echo", "JAIL_SWEEP_a7f3b2c9"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo JAIL_SIBLING_a7f3b2c9 && sleep 10"]"#,
             orphan_between_jobs: true,
-            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            extra_args: JAIL_ARGS,
             validate: |output| {
                 assert_job_succeeded(output, "JAIL_SIBLING_a7f3b2c9")?;
                 let jobs = guest_printed(output, "JAIL_SIBLING_a7f3b2c9");
@@ -3114,7 +3123,7 @@ fn probe_confinement(state_dir: &Utf8Path) -> Result<bool> {
         return Ok(false);
     };
 
-    if !check_unprivileged(pid, &jail_root, SCENARIO_JAIL_UID)? {
+    if !check_unprivileged(pid, &jail_root, JailIds::scenario()?)? {
         return Ok(false);
     }
     if !check_netns(pid)? {
@@ -3202,7 +3211,8 @@ fn find_jailed_vmm(jail_root: &Utf8Path) -> Result<Option<u32>> {
 /// against the VMM as well as against the chroot. Both of those come from one
 /// config, so a runner that used a uid of its own for the chown and the setuid
 /// alike would satisfy them against each other while honoring neither
-/// `--jail-uid` nor the default.
+/// `--jail-uid` nor the default. The gid is checked the same way, and the VMM
+/// must hold no supplementary groups, which would carry privilege past the drop.
 ///
 /// Returns `Ok(false)` while the observation is premature rather than wrong.
 /// The jailer `pivot_root`s before it drops privilege, so there is a window in
@@ -3210,29 +3220,38 @@ fn find_jailed_vmm(jail_root: &Utf8Path) -> Result<Option<u32>> {
 /// root and the jail root is still root-owned. Treating that as a violation
 /// would fail the run for catching the jailer mid-flight; the probe's timeout
 /// is what catches a VMM that genuinely never drops.
-fn check_unprivileged(pid: u32, jail_root: &Utf8Path, expected_uid: u32) -> Result<bool> {
+fn check_unprivileged(pid: u32, jail_root: &Utf8Path, expected: JailIds) -> Result<bool> {
     let status = fs::read_to_string(format!("/proc/{pid}/status"))
         .with_context(|| format!("Failed to read the status of the VMM (pid {pid})"))?;
-    let uid_line = status
-        .lines()
-        .find_map(|line| line.strip_prefix("Uid:"))
-        .context("No Uid line in the VMM's /proc status")?;
-    let vmm_uid: u32 = uid_line
-        .split_whitespace()
-        .next()
-        .context("Empty Uid line in the VMM's /proc status")?
-        .parse()
-        .context("Unparsable uid in the VMM's /proc status")?;
+    let uids = status_ids(&status, "Uid:")?;
 
-    if vmm_uid == 0 {
+    if uids.contains(&0) {
         return Ok(false);
     }
 
-    // Unprivileged is not enough: it has to be the uid that was asked for.
-    if vmm_uid != expected_uid {
+    // Unprivileged is not enough: it has to be the uid that was asked for, in
+    // every slot.
+    if uids.iter().any(|uid| *uid != expected.uid) {
         bail!(
-            "The VMM (pid {pid}) runs as uid {vmm_uid}, but the runner was handed --jail-uid {expected_uid}"
+            "The VMM (pid {pid}) runs as uids {uids:?}, but the runner was handed --jail-uid {}",
+            expected.uid
         );
+    }
+    // The gid drop precedes the uid drop, so it has landed by now.
+    let gids = status_ids(&status, "Gid:")?;
+    if gids.iter().any(|gid| *gid != expected.gid) {
+        bail!(
+            "The VMM (pid {pid}) runs as gids {gids:?}, but the runner was handed --jail-gid {}",
+            expected.gid
+        );
+    }
+    let groups = status
+        .lines()
+        .find_map(|line| line.strip_prefix("Groups:"))
+        .context("No Groups line in the VMM's /proc status")?
+        .trim();
+    if !groups.is_empty() {
+        bail!("The VMM (pid {pid}) still holds supplementary groups: {groups}");
     }
 
     // The jailer chowns the chroot root to the jail uid, so the two must
@@ -3241,11 +3260,54 @@ fn check_unprivileged(pid: u32, jail_root: &Utf8Path, expected_uid: u32) -> Resu
     let Some(jail_uid) = jail_root_uid(jail_root) else {
         return Ok(false);
     };
-    if vmm_uid != jail_uid {
-        bail!("The VMM (pid {pid}) runs as uid {vmm_uid} but its jail is owned by uid {jail_uid}");
+    if expected.uid != jail_uid {
+        bail!(
+            "The VMM (pid {pid}) runs as uid {} but its jail is owned by uid {jail_uid}",
+            expected.uid
+        );
     }
 
     Ok(true)
+}
+
+/// The ids the jail scenarios hand the runner, as the probe demands them.
+#[derive(Debug, Clone, Copy)]
+struct JailIds {
+    uid: u32,
+    gid: u32,
+}
+
+impl JailIds {
+    /// The ids the scenarios pass on the command line.
+    fn scenario() -> Result<Self> {
+        Ok(Self {
+            uid: SCENARIO_JAIL_UID
+                .parse()
+                .context("The scenario jail uid is not a number")?,
+            gid: SCENARIO_JAIL_GID
+                .parse()
+                .context("The scenario jail gid is not a number")?,
+        })
+    }
+}
+
+/// The real, effective, saved, and filesystem ids on one `/proc/<pid>/status`
+/// line.
+fn status_ids(status: &str, field: &str) -> Result<Vec<u32>> {
+    let line = status
+        .lines()
+        .find_map(|line| line.strip_prefix(field))
+        .with_context(|| format!("No {field} line in the VMM's /proc status"))?;
+    let ids = line
+        .split_whitespace()
+        .map(str::parse)
+        .collect::<Result<Vec<u32>, _>>()
+        .with_context(|| format!("Unparsable {field} line in the VMM's /proc status: {line}"))?;
+    anyhow::ensure!(
+        ids.len() == 4,
+        "Expected four ids on the VMM's {field} line, got: {line}"
+    );
+    Ok(ids)
 }
 
 /// The uid the jailer handed the chroot root to, once it has handed it over.
@@ -4574,25 +4636,6 @@ mod tests {
         assert_eq!(mounts_on(mountinfo, "/run/netns/bencher-jail"), 2);
         assert_eq!(mounts_on(mountinfo, "/run/netns/bencher-jail-other"), 1);
         assert_eq!(mounts_on(mountinfo, "/run/netns/absent"), 0);
-    }
-
-    #[test]
-    fn the_uid_the_scenarios_pass_is_the_uid_the_probe_demands() {
-        // The flag is a string and the assertion is a number, so the value is
-        // written twice. A scenario handing the runner one uid while the probe
-        // demanded another would fail every jail scenario for a reason that has
-        // nothing to do with the runner.
-        assert_eq!(
-            SCENARIO_JAIL_UID_ARG.parse::<u32>().unwrap(),
-            SCENARIO_JAIL_UID
-        );
-        // The product's `DEFAULT_JAIL_UID`, spelled out because the harness does
-        // not depend on the runner library. Asking for the default would leave
-        // the probe unable to tell `--jail-uid` being honored from it being
-        // ignored, which is the whole point of asking for one.
-        assert_ne!(SCENARIO_JAIL_UID, 61016);
-        // And root is no jail: the runner refuses this one at the command line.
-        assert_ne!(SCENARIO_JAIL_UID, 0);
     }
 
     #[test]
