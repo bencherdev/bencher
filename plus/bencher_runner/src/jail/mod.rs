@@ -18,6 +18,8 @@
 //! | [`HostPreparation::ensure`]: reading `/etc/passwd`, `/etc/group` | ignored: the check is advisory and cannot see a directory service anyway |
 //! | `StateDir::refuse_unusable_mount`: the mount options cannot be read, or include `nodev` or `noexec` | fails the job |
 //! | `vm_execute`: taking the jail lock | fails the job |
+//! | `JailLock::acquire`: a cancel while waiting | fails the job without the lock |
+//! | `vm_execute` and `run_firecracker`: a cancel at a stage boundary before `InstanceStart` | fails the job before the next stage |
 //! | `StateDir::sweep`: a sweep that returns an error | fails the job |
 //! | `refuse_occupied_cgroups`: the cgroup base is absent | nothing to check |
 //! | `refuse_occupied_cgroups`: the base, an entry, or a `cgroup.procs` cannot be read or parsed | fails the job |
