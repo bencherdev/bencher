@@ -43,7 +43,7 @@ Runner 的持久状态目录。
 每个 jail 都保存着完整的客户机根文件系统和一份 microVM 二进制文件副本，
 而共享同一状态目录的 Job 一次只运行一个，
 因此该目录只需为一个 jail 准备真实的容量。
-如果同一主机上的 Bencher cgroup 中正在运行其他 Job，无论它属于哪个 Runner 或状态目录，沙箱 Job 都会立即失败，而不会排队等待。
+如果同一主机上的 Bencher cgroup 中正在运行使用其他状态目录的 Runner 的 Job，或未使用沙箱的 Job，沙箱 Job 会立即失败，而不会排队等待。
 只有当 Runner 能够隔离 CPU 核心时，Job 才会在这样的 cgroup 中运行，因此无法隔离的 Runner 的 Job 不会被发现。
 支持并推荐使用专用文件系统或 `tmpfs` 挂载：
 这能让写入负载远离系统磁盘，
