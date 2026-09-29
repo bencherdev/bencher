@@ -133,6 +133,7 @@ impl StateDir {
         for (flag, option) in [(FsFlags::ST_NODEV, "nodev"), (FsFlags::ST_NOEXEC, "noexec")] {
             if flags.contains(flag) {
                 return Err(JailError::StateDirMountOption {
+                    state_dir: self.root.clone(),
                     path: jail_parent,
                     option,
                 });

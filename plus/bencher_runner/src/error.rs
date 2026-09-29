@@ -81,9 +81,10 @@ pub enum JailError {
 
     #[cfg(target_os = "linux")]
     #[error(
-        "The state directory {path} is on a filesystem mounted {option}, which the jail cannot run from: the VMM opens a /dev/kvm node and executes its own binary there. Remount it without {option}, or point --state-dir at another filesystem; /tmp, /dev/shm, and /run are often mounted this way."
+        "The chroots of the state directory {state_dir} live in {path}, on a filesystem mounted {option}, which the jail cannot run from: the VMM opens a /dev/kvm node and executes its own binary there. Remount that filesystem without {option}, or point --state-dir at another filesystem; /tmp, /dev/shm, and /run are often mounted this way."
     )]
     StateDirMountOption {
+        state_dir: Utf8PathBuf,
         path: Utf8PathBuf,
         option: &'static str,
     },
