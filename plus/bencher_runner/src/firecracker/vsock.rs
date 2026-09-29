@@ -12,7 +12,6 @@
 use std::io::Read as _;
 use std::os::fd::AsFd as _;
 use std::os::unix::net::UnixListener;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
@@ -133,7 +132,7 @@ impl VsockListener {
         &self,
         timeout: Duration,
         max_data_size: usize,
-        cancel_flag: Option<&Arc<AtomicBool>>,
+        cancel_flag: Option<&AtomicBool>,
         grace_period: Duration,
     ) -> Result<VsockResults, FirecrackerError> {
         let start = std::time::Instant::now();
@@ -700,7 +699,7 @@ mod tests {
         let (_dir, _jail, listener) = listener_in_tmpdir();
 
         // Set the cancel flag before collecting
-        let cancel_flag = Arc::new(AtomicBool::new(true));
+        let cancel_flag = AtomicBool::new(true);
 
         let result = listener.collect_results(
             Duration::from_secs(5),
