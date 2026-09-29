@@ -9,7 +9,7 @@
 #![expect(clippy::print_stderr, reason = "chroot teardown prints diagnostics")]
 
 use std::fs;
-use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _, chown};
+use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _, lchown};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -178,8 +178,11 @@ pub fn grant_jail_read(path: &Utf8Path) -> Result<(), JailError> {
 /// has to be handed over explicitly, and getting it wrong produces an opaque
 /// boot failure, so each one is checked. Anything it only reads gets
 /// [`grant_jail_read`] instead.
+///
+/// `lchown`, which is `fchownat` with `AT_SYMLINK_NOFOLLOW`: a link is handed
+/// over itself, never its target, whatever runs before this.
 pub fn chown_to_jail(path: &Utf8Path, jail_user: JailUser) -> Result<(), JailError> {
-    chown(path, Some(jail_user.uid()), Some(jail_user.gid())).map_err(|e| JailError::ChownJail {
+    lchown(path, Some(jail_user.uid()), Some(jail_user.gid())).map_err(|e| JailError::ChownJail {
         path: path.to_owned(),
         source: e,
     })
@@ -322,6 +325,36 @@ mod tests {
             state.jail_dir(&vm_id()).exists(),
             "the chroot names the cgroup that still has to be removed"
         );
+    }
+
+    #[test]
+    fn a_link_is_handed_over_without_its_target() {
+        // Root chowning through a link would hand the jail user whatever the
+        // link points at. Chowning to another user needs root, so this runs in
+        // the elevated environment.
+        use std::os::unix::fs::{MetadataExt as _, symlink};
+
+        if crate::jail::current_euid() != 0 {
+            eprintln!("skipped a_link_is_handed_over_without_its_target: the chown needs root");
+            return;
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let target = root.join("host-file");
+        fs::write(&target, b"host").unwrap();
+        let link = root.join("rootfs.ext4");
+        symlink(&target, &link).unwrap();
+
+        chown_to_jail(&link, JailUser::new(4242, 4243).unwrap()).unwrap();
+
+        let target = fs::metadata(&target).unwrap();
+        assert_eq!(
+            (target.uid(), target.gid()),
+            (0, 0),
+            "the target must stay root's"
+        );
+        let link = fs::symlink_metadata(&link).unwrap();
+        assert_eq!((link.uid(), link.gid()), (4242, 4243));
     }
 
     #[test]
