@@ -16,7 +16,7 @@ consulte a [Visão Geral de Bare Metal][bare metal].
 
 > 🐰 O sandboxing com Firecracker requer Linux com [KVM][kvm] habilitado,
 > e o Runner precisa ser executado como `root`.
-> Cada Job com sandbox fica confinado em um chroot como usuário sem privilégios,
+> O processo do Firecracker por trás de cada Job com sandbox fica confinado em um chroot como usuário sem privilégios,
 > e construir esse confinamento exige permissões que habilitar o KVM sozinho não concede.
 > Um Runner que atende apenas Specs sem sandbox pode rodar em qualquer host suportado.
 

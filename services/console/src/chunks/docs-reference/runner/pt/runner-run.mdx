@@ -58,6 +58,7 @@ Também pode ser definido com a variável de ambiente `BENCHER_STATE_DIR`.
 
 O ID de usuário sem privilégios para o qual o processo do sandbox muda.
 Por padrão, `61016` é usado.
+Não pode ser `0`.
 Um processo no host que seja dono desse ID de usuário pode enviar sinais ao sandbox,
 portanto defina um ID que o host não destine a mais nada.
 Também pode ser definido com a variável de ambiente `BENCHER_JAIL_UID`.
@@ -66,6 +67,7 @@ Também pode ser definido com a variável de ambiente `BENCHER_JAIL_UID`.
 
 O ID de grupo sem privilégios para o qual o processo do sandbox muda.
 Por padrão, `61016` é usado.
+Não pode ser `0`.
 Também pode ser definido com a variável de ambiente `BENCHER_JAIL_GID`.
 
 ### `--iter <ITER>`

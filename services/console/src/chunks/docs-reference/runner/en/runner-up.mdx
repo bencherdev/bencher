@@ -61,6 +61,7 @@ Can also be set with the `BENCHER_STATE_DIR` environment variable.
 
 The unprivileged user ID the sandbox process drops to.
 By default, `61016` is used.
+It cannot be `0`.
 A process on the host that owns this user ID can signal the sandbox,
 so set it to an ID the host does not allocate to anything else.
 Can also be set with the `BENCHER_JAIL_UID` environment variable.
@@ -69,6 +70,7 @@ Can also be set with the `BENCHER_JAIL_UID` environment variable.
 
 The unprivileged group ID the sandbox process drops to.
 By default, `61016` is used.
+It cannot be `0`.
 Can also be set with the `BENCHER_JAIL_GID` environment variable.
 
 ### `--danger-allow-no-sandbox`
