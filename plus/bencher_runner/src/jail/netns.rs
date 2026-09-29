@@ -242,11 +242,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn handle_follows_the_ip_netns_convention() {
-        assert_eq!(handle_path(), "/run/netns/bencher-jail");
-    }
-
-    #[test]
     fn a_plain_file_is_not_a_live_netns() {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();

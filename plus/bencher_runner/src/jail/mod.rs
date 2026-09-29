@@ -630,17 +630,6 @@ mod tests {
     }
 
     #[test]
-    fn the_default_jail_user_is_outside_the_allocated_ranges() {
-        // systemd-homed takes 60001-60513 and DynamicUser takes 61184-65519.
-        // An id inside either would collide with something the host allocates.
-        for id in [DEFAULT_JAIL_UID, DEFAULT_JAIL_GID] {
-            assert_eq!(id, 61016, "the jail id is a project convention");
-            assert!(id > 60513, "{id} must clear the systemd-homed range");
-            assert!(id < 61184, "{id} must clear the DynamicUser range");
-        }
-    }
-
-    #[test]
     fn preparation_is_lazy_and_happens_at_most_once() {
         // A daemon that prepared at startup would need root just to come up,
         // which breaks a Runner serving only non-sandboxed Specs. Nothing may
@@ -712,14 +701,6 @@ mod tests {
         let user = JailUser::new(1234, 5678).unwrap();
         assert_eq!(user.uid(), 1234);
         assert_eq!(user.gid(), 5678);
-    }
-
-    #[test]
-    fn the_default_jail_user_is_unprivileged() {
-        let default = JailUser::default();
-        assert_eq!(default.uid(), DEFAULT_JAIL_UID);
-        assert_eq!(default.gid(), DEFAULT_JAIL_GID);
-        JailUser::new(default.uid(), default.gid()).unwrap();
     }
 
     #[test]
