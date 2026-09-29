@@ -158,12 +158,8 @@ struct SavedSetting {
 #[cfg(target_os = "linux")]
 pub struct TuningGuard {
     saved: Vec<SavedSetting>,
-    /// Cgroups to remove once every setting has been restored.
-    ///
-    /// Removed rather than reset, because an empty cgroup carrying a stale
-    /// cpuset is residue the runner owns and nothing else reads. `rmdir` is
-    /// self-guarding: it succeeds only when the cgroup is empty, so a concurrent
-    /// runner's job or a task this one could not reclaim leaves it in place.
+    /// Removed rather than reset, because an empty cgroup left carrying a stale
+    /// cpuset is residue nothing else reads.
     remove_if_empty: Vec<Utf8PathBuf>,
     /// File descriptors held open for the lifetime of the guard
     /// (e.g., the PM `QoS` constraint on `/dev/cpu_dma_latency`).
@@ -182,7 +178,6 @@ impl TuningGuard {
         self.saved.push(SavedSetting { path, value, label });
     }
 
-    /// Record a cgroup to remove once the settings have been restored.
     pub(crate) fn remove_when_empty(&mut self, path: Utf8PathBuf) {
         self.remove_if_empty.push(path);
     }
@@ -194,21 +189,16 @@ impl Drop for TuningGuard {
         for setting in self.saved.iter().rev() {
             restore(&setting.path, &setting.value, &setting.label);
         }
-        // After the settings, because a cgroup that is about to be removed still
-        // has to have its values put back for the case where the removal cannot
-        // happen.
+        // After the settings, so a cgroup whose removal fails still has its
+        // values put back.
         for path in &self.remove_if_empty {
             remove_empty_cgroup(path);
         }
     }
 }
 
-/// Remove a cgroup the runner is done with, if nothing is left in it.
-///
-/// The whole point is that this can fail and that failing is correct. A cgroup
-/// still holding a task, or a concurrent runner's job, refuses `rmdir` with
-/// `EBUSY`, and the alternative to leaving it is tearing a cgroup out from under
-/// something that is using it.
+/// Failing is correct here: `rmdir` refuses with `EBUSY` while a task or a
+/// concurrent runner's job still uses the cgroup.
 #[cfg(target_os = "linux")]
 #[expect(clippy::print_stdout, reason = "tuning reports what it unwound")]
 fn remove_empty_cgroup(path: &Utf8Path) {

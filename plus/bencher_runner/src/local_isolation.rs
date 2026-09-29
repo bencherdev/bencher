@@ -59,14 +59,14 @@ impl LocalIsolation {
         let benchmark = layout.benchmark.clone();
         let run_id = crate::jail::VmId::for_local_run();
 
-        // No chroot names this cgroup, and no sweep walks it, so a teardown it
-        // cannot finish has nothing to hand the work to.
+        // No chroot names this cgroup and no sweep walks it, so nothing can
+        // finish a teardown it leaves undone.
         let unwatched = crate::jail::CgroupSurvived::default();
         let cgroup = match crate::jail::CgroupManager::new(&run_id, unwatched) {
             Ok(cgroup) => {
-                // Best effort here, unlike the sandboxed path: a local run
-                // makes no confinement claim to begin with, so losing the
-                // cpuset degrades its numbers rather than falsifying them.
+                // Best effort, unlike the sandboxed path: a local run claims no
+                // confinement, so a lost cpuset degrades its numbers rather
+                // than falsifying them.
                 match cgroup.apply_cpuset(layout) {
                     Ok(crate::jail::Cpuset::Applied) => {},
                     Ok(crate::jail::Cpuset::Unavailable(reason)) => {

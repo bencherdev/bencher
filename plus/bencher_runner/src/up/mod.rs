@@ -61,9 +61,7 @@ pub struct UpConfig {
     pub update_channel: bencher_valid::UpdateChannel,
     /// Maximum download size in bytes for self-update binaries.
     pub max_download_size: Option<u64>,
-    /// The runner's persistent state directory.
     pub state_dir: camino::Utf8PathBuf,
-    /// The unprivileged uid and gid the jailed VMM drops to.
     pub jail_user: crate::jail::JailUser,
 }
 
@@ -102,11 +100,8 @@ impl Up {
         // Warn about host conditions that limit benchmark accuracy (Linux only)
         preflight::print_host_warnings();
 
-        // The host is deliberately NOT prepared here. A Runner that serves
-        // only non-sandboxed Specs is a supported configuration and must come
-        // up without root, and the daemon learns its Specs from the server, so
-        // it cannot know at startup whether it will ever build a jail.
-        // Preparation happens on demand, before the first job that does.
+        // The host is prepared on demand, not here, because a runner serving
+        // only non-sandboxed specs must come up without root.
         println!("  State directory: {}", self.config.state_dir);
 
         // Serialize host-global tuning across runner processes. Declared
@@ -178,8 +173,6 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
     {
         println!("  Update channel: {channel}");
     }
-    // Owned by the daemon loop. The latch belongs to this runner process, and
-    // a failure is deliberately not remembered so the next job retries.
     let mut host = crate::jail::HostPreparation::new();
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
     let mut effects: VecDeque<Effect> =

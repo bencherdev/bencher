@@ -304,10 +304,8 @@ fn build_metric_output(
 ///
 /// CPU layout from the up config is passed through for core isolation.
 ///
-/// The up config is destructured rather than read field by field: every
-/// runner-level setting has to reach the job, and a field that is added but
-/// never passed through is silently ignored at runtime. Destructuring makes
-/// that a build error instead.
+/// The up config is destructured so a new runner-level setting is a build error
+/// until it is passed through here, rather than silently ignored at runtime.
 fn build_config_from_job(
     up_config: &UpConfig,
     job: &JsonClaimedJob,
@@ -323,7 +321,6 @@ fn build_config_from_job(
         update_channel: _,
         max_download_size: _,
         allow_no_sandbox: _,
-        // Run settings, every one of which must reach the config below.
         cpu_layout,
         max_output_size,
         max_file_count,
@@ -370,8 +367,6 @@ fn build_config_from_job(
     // Pass all file paths through for multi-file output extraction
     runner_config = runner_config.with_file_paths_opt(config.file_paths.clone());
 
-    // Pass through the runner's state directory: the jail chroot for the
-    // job is built under it.
     runner_config = runner_config.with_state_dir(state_dir.clone());
     runner_config = runner_config.with_jail_user(*jail_user);
 
@@ -820,9 +815,8 @@ mod tests {
 
     #[test]
     fn state_dir_passed_through() {
-        // The daemon prepares and sweeps the state directory it was given, so
-        // a job that builds its jail somewhere else leaks a chroot on every
-        // unclean exit and creates the real tree outside the swept location.
+        // A job that builds its jail outside the daemon's swept state directory
+        // leaks a chroot on every unclean exit.
         let mut up_config = test_up_config();
         up_config.state_dir = Utf8PathBuf::from("/mnt/fast/runner-state");
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
@@ -847,9 +841,8 @@ mod tests {
 
     #[test]
     fn jail_user_passed_through() {
-        // A host that allocates ids in the default range needs the override to
-        // reach the job, or the VMM shares a uid with a local account that can
-        // signal it.
+        // Without the override, the VMM can share a uid with a local account
+        // that can signal it.
         let mut up_config = test_up_config();
         up_config.jail_user = crate::jail::JailUser::new(4242, 4243).unwrap();
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);

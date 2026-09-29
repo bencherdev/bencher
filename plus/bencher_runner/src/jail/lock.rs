@@ -1,23 +1,5 @@
-//! Advisory lock serializing the jail lifecycle across runner processes.
-//!
-//! The sweep reclaims every chroot it finds, on the reasoning that jobs are
-//! serial and so anything left is stale. That reasoning is only sound while it
-//! is enforced: a one-shot `runner run` started on a host where the `runner up`
-//! daemon has a job in flight would otherwise `remove_dir_all` the live chroot
-//! out from under a running VMM. The same lock closes the race on the network
-//! namespace handle, where two processes clearing and rebinding it at once can
-//! stack mounts.
-//!
-//! Unlike the host tuning lock, which degrades to skipping tuning when it is
-//! contended, this one waits. A runner that proceeded without it would destroy
-//! another runner's work, so declining to hold it is not an option.
-//!
-//! The wait is therefore unbounded, and says so on a schedule. A holder is
-//! entitled to the lock for a whole benchmark job, so any timeout would fail
-//! honest waits, which leaves the operator with nothing to read: one line and
-//! then silence for as long as the holder lasts is indistinguishable from a
-//! hang. Repeating the line is what a bound would really have bought, without
-//! the cost.
+//! Advisory lock serializing the jail lifecycle across runner processes, so a
+//! sweep never reclaims a chroot another runner's VMM is still using.
 
 #![expect(clippy::print_stdout, reason = "prints why the runner is waiting")]
 
@@ -30,58 +12,30 @@ use camino::Utf8Path;
 
 use crate::error::JailError;
 
-/// Lock file name inside the state directory.
-///
-/// It lives beside the chroot base rather than inside it, so the sweep (which
-/// only removes directories under `<state_dir>/jail/firecracker`) can never
-/// reach it.
-///
-/// Spelled here, where the lock is created, and read by the state directory
-/// guard through this constant rather than a literal of its own. The guard
-/// tolerates this name in a root that holds nothing else, so that the runner's
-/// own lock cannot disown the runner's own directory, but it never treats the
-/// name as proof of ownership: that is what once let a populated system
-/// directory pass the guard, and the tree is what proves ownership now. See
-/// [`crate::jail::state`].
+/// Beside the chroot base rather than inside it, so the sweep can never remove
+/// it.
 pub(super) const LOCK_FILE: &str = ".lock";
 
-/// How often an announced wait repeats itself.
-///
-/// Long enough that a job handing the lock to the next runner prints nothing
-/// beyond the first line, short enough that an operator watching a runner that
-/// has said nothing else knows within half a minute whether it is waiting or
-/// wedged. The sweep announces a long reclamation on the same cadence, for the
-/// same reason: it runs under this lock, so its silence reads the same way.
+/// Long enough that a lock handed straight over prints one line, short enough
+/// that an operator can tell a wait from a wedge within half a minute.
 pub(super) const ANNOUNCE_EVERY: Duration = Duration::from_secs(30);
 
-/// Holds the jail lock for as long as it is alive.
-///
-/// The kernel releases a `flock` when the holder exits or dies, so a crashed
-/// runner cannot wedge future runs.
-///
-/// `flock` is per open file description, not per process, so a second
-/// `acquire` on the same path from a process that already holds it opens a new
-/// description and blocks on itself forever. Nothing nests today: a job takes
-/// it once and sweeps under it, and the network namespace uses a different lock
-/// file. Any new caller has to keep it that way.
+/// Not reentrant: `flock` is per open file description, so a second `acquire`
+/// in a process that already holds the lock blocks on itself forever.
 #[derive(Debug)]
 pub struct JailLock {
-    /// The locked file, held only for its `flock`.
     _file: File,
 }
 
 impl JailLock {
-    /// Take the jail lock, waiting for whichever runner holds it.
-    ///
-    /// The state directory must already exist: the lock guards the contents,
-    /// so creating the directory is not something it can protect.
+    /// The state directory must already exist, since the lock guards its
+    /// contents and cannot also guard its creation.
     pub fn acquire(state_dir: &Utf8Path) -> Result<Self, JailError> {
         Self::acquire_with(state_dir, |path| {
             println!("  Waiting for another bencher runner to release {path}...");
         })
     }
 
-    /// Take the jail lock, with what is said when it is contended supplied.
     fn acquire_with<C: FnOnce(&Utf8Path)>(
         state_dir: &Utf8Path,
         contended: C,
@@ -104,8 +58,8 @@ impl JailLock {
         }
         contended(&path);
 
-        // Nothing here gives up: the wait is signal proof and has no bound, so
-        // the announcement is the only thing that distinguishes it from a hang.
+        // Unbounded, because a holder is entitled to the lock for a whole job,
+        // so repeating the announcement is what tells this wait from a hang.
         while_waiting(
             ANNOUNCE_EVERY,
             || println!("  Still waiting for another bencher runner to release {path}..."),
@@ -120,31 +74,17 @@ impl JailLock {
     }
 }
 
-/// Run `wait`, calling `announce` every `interval` until it returns.
-///
-/// The repetition is a companion thread rather than a poll, because a poll
-/// cannot see inside the wait: the lock blocks in the kernel, and the sweep's
-/// reclamation of one jail is a single long call. Polling for the lock would
-/// also hand it over up to an interval late, and the point of holding the jail
-/// serially is that the next job starts as soon as the last one is done with
-/// it. The thread is scoped, so it is joined before this returns and cannot
-/// outlive the wait it describes.
+/// Announces from a companion thread rather than polling, because the wait
+/// blocks in a single call a poll cannot see inside.
 pub(super) fn while_waiting<T, A: Fn() + Sync, W: FnOnce() -> T>(
     interval: Duration,
     announce: A,
     wait: W,
 ) -> T {
-    /// Flips the predicate and wakes the announcer, on unwind as well as on
-    /// return.
-    ///
-    /// The scope joins the announcer on the way out of either, and its loop
-    /// runs until the predicate flips, so flipping it only after `wait`
-    /// returns would turn a panic in the wait into a join that never
-    /// finishes: the process hangs in place of propagating the panic.
+    /// A drop guard, so the predicate also flips on unwind and a panicking
+    /// `wait` propagates rather than hanging the scope's join.
     struct Done<'scope> {
-        /// The announcer's predicate.
         done: &'scope Mutex<bool>,
-        /// What the announcer sleeps on.
         woken: &'scope Condvar,
     }
     impl Drop for Done<'_> {
@@ -170,8 +110,7 @@ pub(super) fn while_waiting<T, A: Fn() + Sync, W: FnOnce() -> T>(
                     .unwrap_or_else(PoisonError::into_inner);
                 finished = guard;
                 // Only a full interval with the wait still running is worth a
-                // line. A spurious wakeup has nothing new to say, and neither
-                // does the wakeup that means the lock was just taken.
+                // line, not a spurious wakeup or the one that ends the wait.
                 if !*finished && timed_out.timed_out() {
                     announce();
                 }
@@ -186,20 +125,14 @@ pub(super) fn while_waiting<T, A: Fn() + Sync, W: FnOnce() -> T>(
     })
 }
 
-/// Take an exclusive `flock`, waiting for whichever holder has it.
 pub(super) fn flock_exclusive(file: &File) -> std::io::Result<()> {
     flock(file, libc::LOCK_EX)
 }
 
-/// Try for an exclusive `flock` without waiting.
-///
-/// Shared with the network namespace lock so both locks announce a wait the same
-/// way: an unexplained pause is the worst thing either of them can do.
 pub(super) fn flock_nonblocking(file: &File) -> std::io::Result<()> {
     flock(file, libc::LOCK_EX | libc::LOCK_NB)
 }
 
-/// Apply `flock` to a file, retrying if a signal interrupts the wait.
 fn flock(file: &File, operation: libc::c_int) -> std::io::Result<()> {
     loop {
         #[expect(
@@ -258,11 +191,8 @@ mod tests {
 
     #[test]
     fn a_held_lock_makes_a_second_runner_wait() {
-        // `flock` is per open file description, so a second `acquire` in this
-        // process contends exactly as another process would. The waiter says it
-        // is waiting while the lock is held, and what it returns holds the
-        // lock, which no waiter that proceeded without it could: that is what
-        // keeps a sweep from running while another runner has a job in flight.
+        // A contended runner must announce its wait and return holding the
+        // lock, or a sweep could run while another runner has a job in flight.
         let (_dir, state) = state_in_tmpdir();
         let held = JailLock::acquire(&state).unwrap();
         let (contended, waiting) = mpsc::channel();
@@ -292,9 +222,8 @@ mod tests {
 
     #[test]
     fn a_wait_that_outlives_the_interval_is_announced_again() {
-        // One line and then silence for as long as the holder's job lasts is
-        // what makes an honest wait read as a wedged runner. The wait ends only
-        // once it has been announced twice.
+        // A wait announced once and then silent for a whole job reads as a
+        // wedged runner.
         let (announce, announced) = mpsc::channel();
 
         while_waiting(
@@ -312,8 +241,8 @@ mod tests {
 
     #[test]
     fn a_wait_shorter_than_the_interval_says_nothing_more() {
-        // The usual case is a lock handed straight over. A runner that narrated
-        // that too would teach an operator to skip the line that matters.
+        // A lock handed straight over must not repeat its line, or operators
+        // learn to skip the one that matters.
         let announced = AtomicUsize::new(0);
 
         while_waiting(
@@ -333,12 +262,8 @@ mod tests {
 
     #[test]
     fn a_wait_that_panics_still_propagates_the_panic() {
-        // The scope joins the announcer before the panic leaves it, and the
-        // announcer runs until the predicate flips. A predicate flipped only
-        // after `wait` returns never flips on the unwind path, so the join
-        // blocks forever and the process hangs instead of panicking. Nothing
-        // waited on can panic today; the function is generic over the wait,
-        // so the guarantee belongs to it rather than to today's caller.
+        // A predicate flipped only after `wait` returns never flips on unwind,
+        // so a panicking wait would hang the scope's join instead of panicking.
         let unwound = std::panic::catch_unwind(|| {
             while_waiting(Duration::from_secs(30), || {}, || panic!("wait failed"));
         });

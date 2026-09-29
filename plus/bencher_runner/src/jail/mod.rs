@@ -1,58 +1,15 @@
-//! Confinement for Firecracker microVMs.
-//!
-//! Managed runners execute arbitrary code submitted by anyone, so the VMM must
-//! not inherit the runner's root. This module owns everything that confines it:
-//! the persistent state directory the chroots are built under, the empty
-//! network namespace the VMM joins, and the cgroup that both places it on the
-//! benchmark cores and bounds its resources.
+//! Confinement for Firecracker microVMs, which run code submitted by anyone and
+//! so must not inherit the runner's root.
 //!
 //! # What a failing step does
 //!
-//! Teardown is where this module is easiest to get wrong, because every step of
-//! it runs after the thing it is cleaning up already happened, so a failure has
-//! no obvious caller to tell. Measurement is easiest to get wrong for the
-//! mirror-image reason: a read that fails still leaves a value in hand, and a
-//! plausible one. Several separate defects here were the same mistake in those
-//! two dresses, a fallible step whose failure either never reached the mechanism
-//! built to retry it or was reported as a state that had been observed. So every
-//! fallible step does exactly one of three things, and adding a step means
-//! choosing which, rather than reaching for `eprintln!` or a fallback value:
-//!
-//! - **Fails the job.** The host cannot be trusted to measure. Used wherever
-//!   something may still be running on the benchmark cores, wherever the runner
-//!   could not establish that nothing is, and wherever a confinement it applied
-//!   could not be read back. Recoverable by construction: nothing latches, so
-//!   the next job tries the whole thing again.
-//! - **Leaves it to the next sweep, or declares the absence.** For teardown,
-//!   every job sweeps under the jail lock before it builds its own jail, so
-//!   what a teardown could not remove is retried by the next job. Used where
-//!   the cost is disk rather than a contended benchmark and where the code has
-//!   no caller to report to at all, which is every step reached from a `Drop`.
-//!   For measurement it is `Cpuset::Unavailable` or an absent metric: isolation
-//!   the host cannot offer is reported as isolation this run did not have,
-//!   loudly, and never as a number.
-//! - **Ignored.** Only where the failure is itself the answer, or where a later
-//!   step is guaranteed to catch it. Each one below says which.
-//!
-//! What no step does is answer a question it could not ask. An unreadable file is
-//! not an empty one, an unstattable path is not an absent one, and a field that
-//! was never read is not zero.
-//!
-//! That covers reads which produce a value. It covers reads which gate an action
-//! just as strictly, and those are the easier ones to miss: an `exists` before a
-//! destructive step is a read whose failure authorizes destruction, and it does
-//! not look like a measurement at all. A stat that fails before a `remove_dir`
-//! is the same defect as a metric that fabricates a zero, and costs more.
-//!
-//! The rows below were found by grepping this crate for every idiom that can
-//! turn a failure into an answer, rather than by reasoning about which functions
-//! looked relevant. Reasoning missed instances three times running.
-//!
-//! Nothing enforces this table, deliberately. It is a specification a person
-//! reads, and its value is that adding a step means picking a column and writing
-//! the reason down next to the others. A checker that proved the code matched it
-//! would be worth having, and is not worth building here: the gap is a decision,
-//! not an oversight.
+//! - **Fails the job.** The host cannot be trusted to measure, and since nothing
+//!   latches, the next job tries the whole thing again.
+//! - **Leaves it to the next sweep, or declares the absence.** What teardown
+//!   could not remove is retried by the next job's sweep, and isolation or a
+//!   metric the host cannot provide is reported as absent, never as a number.
+//! - **Ignored.** Only where the failure is itself the answer or a later step is
+//!   guaranteed to catch it, and each row says which.
 //!
 //! | Step | On failure |
 //! |---|---|
@@ -127,15 +84,9 @@
 //! | `FirecrackerClient`: a status line that cannot be parsed | fails the request: no status is invented for a response Firecracker did not send |
 //! | `find_binary`: a candidate path that cannot be stat'ed | ignored: the search is a list of guesses, and finding nothing is reported by name |
 //!
-//! `CgroupManager::kill_all` is deliberately not in either table.
-//! Nothing on the jailed path calls it: the VMM is killed with a grace period
-//! before its cgroup is torn down, and anything that somehow survives is caught
-//! by the `rmdir` above, which keeps the chroot for the next job's sweep. The
-//! non-sandboxed path calls it
-//! explicitly on timeout or cancellation, where a failure is warned and then
-//! caught the same way. A row saying teardown kills survivors described a step
-//! that does not exist, which is worse than no row at all: this table is read as
-//! a specification.
+//! `CgroupManager::kill_all` is in neither table: the jailed path never calls
+//! it, and where the non-sandboxed path does, a failure is warned and any
+//! survivor is caught by the cgroup `rmdir` above.
 
 #[cfg(target_os = "linux")]
 mod cgroup;
@@ -168,56 +119,17 @@ pub use state::StateDir;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Default location of the runner's persistent state directory.
 pub const DEFAULT_STATE_DIR: &str = "/var/lib/bencher-runner";
 
-/// Default unprivileged uid the jailed Firecracker VMM runs as.
-///
-/// One dedicated id, not one per job: jobs run serially and each gets a fresh
-/// chroot that is swept, so a per-job allocator adds a scheme without closing
-/// a live vector.
-///
-/// Serially per runner, which is what the jail lock enforces. Two runners with
-/// different `--state-dir` values hold different locks and can therefore have
-/// jobs in flight at the same time, as the same uid, and that is a supported
-/// configuration: the network namespace module is built around it. Two VMMs
-/// sharing a uid can signal each other and, where `ptrace_scope` permits, trace
-/// each other, which is the hazard [`JailUser`] describes. A per-runner id would
-/// close it, and is not attempted here: the ids would have to be allocated
-/// without coordination between runners that by construction do not know about
-/// each other, which trades a known hazard for an unknown one. An operator
-/// running two runners on one host should give them different `--jail-uid`
-/// values, which is what that flag is for.
-///
-/// The number is Bencher's historic default self-hosted API server port,
-/// retired in favor of the IANA-registered 6610, so it reads as a project
-/// convention rather than an arbitrary pick. It also lands in the unallocated
-/// gap between the ids `systemd-homed` claims (60001-60513) and the
-/// `DynamicUser` range (61184-65519), clear of both the regular user range and
-/// `nobody` (65534). No passwd entry is needed: the jailer sets the numeric id
-/// directly.
-///
-/// This is a default rather than a fixed constant because self-hosted runners
-/// land on hardware whose id allocation Bencher does not control. See
-/// `--jail-uid`.
+/// In the unallocated gap between `systemd-homed` ids (60001-60513) and the
+/// `DynamicUser` range (61184-65519); two runners on one host should each pass
+/// their own `--jail-uid`, since VMMs sharing a uid can signal each other.
 pub const DEFAULT_JAIL_UID: u32 = 61016;
 
-/// Default unprivileged gid the jailed Firecracker VMM runs as.
-///
-/// See [`DEFAULT_JAIL_UID`].
 pub const DEFAULT_JAIL_GID: u32 = 61016;
 
-/// The unprivileged uid and gid the jailed Firecracker VMM drops to.
-///
-/// A host process owning this uid can signal the VMM and, depending on the
-/// `ptrace` scope, trace it, so it must not be an id the host allocates to
-/// anything else.
-///
-/// The fields are private because `0` must never reach them. The whole
-/// sandbox is built by dropping privilege, so a jail user of root is not a
-/// weaker jail, it is no jail at all: untrusted code would run against a root
-/// VMM, which is the one thing the confinement exists to prevent. An operator
-/// hitting a permission error is exactly the person most likely to try it.
+/// The fields are private so `0` never reaches them: a jail user of root is no
+/// jail at all.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct JailUser {
     uid: u32,
@@ -225,7 +137,6 @@ pub struct JailUser {
 }
 
 impl JailUser {
-    /// Build a jail user, rejecting root.
     pub fn new(uid: u32, gid: u32) -> Result<Self, crate::error::JailError> {
         if uid == 0 {
             return Err(crate::error::JailError::PrivilegedJailUser { field: "uid" });
@@ -236,13 +147,11 @@ impl JailUser {
         Ok(Self { uid, gid })
     }
 
-    /// The uid the VMM drops to.
     #[must_use]
     pub fn uid(self) -> u32 {
         self.uid
     }
 
-    /// The gid the VMM drops to.
     #[must_use]
     pub fn gid(self) -> u32 {
         self.gid
@@ -258,18 +167,9 @@ impl Default for JailUser {
     }
 }
 
-/// Require an absolute state directory.
-///
-/// The invariant belongs to the library, not to one command line. The path
-/// reaches the jailer as `--chroot-base-dir`, which the jailer resolves against
-/// its own working directory rather than the runner's, so a relative value
-/// builds the chroot somewhere the runner does not look: the sweep never reaches
-/// it and the lock does not protect it. Every caller that hands this crate a
-/// state directory is exposed to that, and the CLI is only one of them.
-///
-/// Shared with the argument parser rather than restated there, so the rule has
-/// one implementation and the operator still hears about it before the runner
-/// starts.
+/// The jailer resolves `--chroot-base-dir` against its own working directory,
+/// so a relative state directory builds chroots the sweep never reaches and the
+/// lock never protects.
 pub fn check_absolute_state_dir(path: &camino::Utf8Path) -> Result<(), crate::error::JailError> {
     if path.is_absolute() {
         Ok(())
@@ -280,53 +180,27 @@ pub fn check_absolute_state_dir(path: &camino::Utf8Path) -> Result<(), crate::er
     }
 }
 
-/// The identity of one microVM.
-///
-/// The same string is the jailer's `--id`, the name of the chroot directory,
-/// and the name of the cgroup, by construction. Naming it once keeps the three
-/// from drifting, and keeps a bare directory name read off the filesystem from
-/// being mistaken for an identity that was minted.
+/// One string serves as the jailer's `--id`, the chroot directory name, and the
+/// cgroup name, so the three cannot drift.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VmId(String);
 
 impl VmId {
-    /// Mint a fresh identity for a job.
     #[must_use]
     pub fn new() -> Self {
         Self(uuid::Uuid::new_v4().to_string())
     }
 
-    /// Mint an identity for a non-sandboxed run.
-    ///
-    /// There is no microVM and no chroot here, only the cgroup a local run is
-    /// placed in, and this names it. Minted rather than recovered, because
-    /// nothing on this path writes the name to the filesystem for anything to
-    /// read back: the prefix is what tells an operator looking at the cgroup
-    /// base which of the two kinds of run put it there.
-    ///
-    /// Only the local path mints one, and that path is Linux-only.
+    /// The `local-` prefix tells an operator reading the cgroup base which kind
+    /// of run left a cgroup there.
     #[cfg(target_os = "linux")]
     #[must_use]
     pub(crate) fn for_local_run() -> Self {
         Self(format!("local-{}", uuid::Uuid::new_v4()))
     }
 
-    /// Recover the identity of a jail from its chroot directory name.
-    ///
-    /// The sweep works backwards from the filesystem, and the directory name
-    /// is the identity that created it.
-    ///
-    /// `None` for a name this runner could not have minted, which is what keeps
-    /// the type's purpose true in code rather than only in this comment. Every
-    /// id it makes is a UUID, or a UUID behind a fixed prefix, while what comes
-    /// back off the filesystem is whatever is sitting there: an empty name, one
-    /// carrying a `/` or a `..`, or one starting with a dot is not a jail of
-    /// ours, and the id is joined into both a chroot path and a
-    /// `/sys/fs/cgroup` path by callers that have no way to tell. Nothing
-    /// reaches this with such a name today. The check is so that nothing can.
-    ///
-    /// In-crate, because the sweep is the only thing that works backwards from
-    /// a directory name and it lives here. The jail is Linux-only, and so is it.
+    /// `None` for a name this runner could not have minted, since callers join
+    /// the id into both a chroot path and a `/sys/fs/cgroup` path.
     #[cfg(target_os = "linux")]
     #[must_use]
     pub(crate) fn from_chroot_name(name: String) -> Option<Self> {
@@ -337,7 +211,6 @@ impl VmId {
         minted.then_some(Self(name))
     }
 
-    /// The identity as a string.
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
@@ -356,14 +229,10 @@ impl std::fmt::Display for VmId {
     }
 }
 
-/// Tracks whether this runner process has prepared the host.
-///
-/// Owned and threaded through the callers rather than kept in a global,
-/// so that the latch belongs to one runner and cannot be observed, or reset,
-/// by anything else. Tests get their own.
+/// A per-runner latch rather than a global, so nothing else can observe or
+/// reset it and each test gets its own.
 #[derive(Debug, Default)]
 pub struct HostPreparation {
-    /// Only the jail reads this, and the jail is Linux-only.
     #[cfg_attr(
         not(target_os = "linux"),
         expect(dead_code, reason = "host preparation is Linux-only")
@@ -371,23 +240,16 @@ pub struct HostPreparation {
     prepared: bool,
 }
 
-/// Whether this job's own cgroup outlived its teardown.
-///
-/// The chroot has to be kept when this job's cgroup could not be removed,
-/// because the directory name is the only handle the next job's sweep has for
-/// finding that cgroup.
+/// Set when this job's cgroup outlives teardown, so the chroot is kept: its
+/// name is the next sweep's only handle on that cgroup.
 #[derive(Debug, Clone, Default)]
 pub struct CgroupSurvived(Arc<AtomicBool>);
 
 impl CgroupSurvived {
-    /// Record that this job's cgroup could not be removed.
     pub fn set(&self) {
         self.0.store(true, Ordering::SeqCst);
     }
 
-    /// Whether this job's cgroup is still there.
-    ///
-    /// Only the chroot teardown reads it, and the jail is Linux-only.
     #[cfg(target_os = "linux")]
     fn is_set(&self) -> bool {
         self.0.load(Ordering::SeqCst)
@@ -395,28 +257,13 @@ impl CgroupSurvived {
 }
 
 impl HostPreparation {
-    /// A runner process that has not prepared the host yet.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Prepare the host for jailed execution, at most once.
-    ///
-    /// Called on demand, immediately before the first job builds a jail, never
-    /// at startup. The daemon learns which Specs it serves from the server, so
-    /// at startup it cannot know whether it will ever need a jail, and a
-    /// Runner that serves only non-sandboxed Specs is a supported
-    /// configuration that must come up on a host where the runner is not root.
-    /// Preparing eagerly would make `runner up` require root just to start.
-    ///
-    /// Failure is fatal. Untrusted code never runs with silently degraded
-    /// confinement, so a host that cannot be prepared does not execute a job.
-    /// A failure is not remembered, so the next job retries rather than
-    /// needing a restart.
-    ///
-    /// Requires root, and says so by name rather than letting the operator
-    /// infer it from a permission error several layers down.
+    /// Runs lazily before the first jail, never at startup, so a runner serving
+    /// only non-sandboxed Specs can start without root.
     #[cfg(target_os = "linux")]
     pub fn ensure(
         &mut self,
@@ -426,11 +273,8 @@ impl HostPreparation {
         self.ensure_as(current_euid(), state_dir, jail_user)
     }
 
-    /// Prepare the host, with the effective uid supplied.
-    ///
-    /// The uid is a parameter because the check refuses every uid but root, so
-    /// a test that had to be root to reach anything past it would be exercising
-    /// the harness rather than this.
+    /// The uid is a parameter so tests reach past the root check without
+    /// running as root.
     #[cfg(target_os = "linux")]
     fn ensure_as(
         &mut self,
@@ -446,9 +290,7 @@ impl HostPreparation {
         Ok(())
     }
 
-    /// Prepare the host for jailed execution, at most once.
-    ///
-    /// The jail is Linux-only, as is the VM executor it protects.
+    /// A no-op, since the VM executor this jail protects is Linux-only.
     #[cfg(not(target_os = "linux"))]
     pub fn ensure(
         &mut self,
@@ -459,24 +301,17 @@ impl HostPreparation {
     }
 }
 
-/// Check for root, create the state directory, and warn about the jail user.
-///
-/// The sweep is deliberately not here: it runs per job, under the job lock, so
-/// it also reaches an orphan a sibling runner process left after this one
-/// prepared. See [`StateDir::sweep`].
-///
-/// The network namespace is deliberately not built here either. It is a
-/// process-global object on a tmpfs, so it is rebuilt per job rather than once
-/// per daemon lifetime.
+/// The sweep and the network namespace are per job rather than here, since a
+/// sibling runner can leave orphans after this one prepared and the namespace
+/// handle lives on a shared tmpfs.
 #[cfg(target_os = "linux")]
 fn prepare_host(
     euid: u32,
     state_dir: &camino::Utf8Path,
     jail_user: JailUser,
 ) -> Result<(), crate::error::JailError> {
-    // Checked first, and by name. Without it the most likely upgrade failure
-    // surfaces as a permission error on a directory, or a bare EPERM out of
-    // `unshare`, neither of which mentions root or the flag that avoids it.
+    // First, so a non-root runner is told about root rather than hitting a bare
+    // EPERM from a later step.
     check_root(euid)?;
 
     StateDir::new(state_dir.to_owned())?.create()?;
@@ -486,11 +321,6 @@ fn prepare_host(
     Ok(())
 }
 
-/// Refuse to build a jail without the privileges building one needs.
-///
-/// The failure an operator actually hits on upgrade is this one, so it says
-/// what the release notes say rather than leaving them to infer it from a
-/// permission error several layers down.
 #[cfg(target_os = "linux")]
 fn check_root(euid: u32) -> Result<(), crate::error::JailError> {
     if euid == 0 {
@@ -500,25 +330,18 @@ fn check_root(euid: u32) -> Result<(), crate::error::JailError> {
     }
 }
 
-/// The effective uid of this process.
 #[cfg(target_os = "linux")]
 #[expect(
     unsafe_code,
     reason = "geteuid has no std wrapper and cannot fail or touch memory"
 )]
 pub(crate) fn current_euid() -> u32 {
-    // SAFETY: `geteuid` takes no arguments, returns a plain integer, and is
-    // documented as always succeeding.
+    // SAFETY: `geteuid` takes no arguments and always succeeds.
     unsafe { libc::geteuid() }
 }
 
-/// Warn when the jail uid or gid belongs to a named account.
-///
-/// The jailer needs no passwd entry, so a name resolving here is the cheap
-/// signal that the host allocates ids in this range: whatever owns that
-/// account can signal the VMM and may be able to trace it. A warning rather
-/// than a refusal, because an operator who deliberately created the account is
-/// a legitimate setup and only they can tell the two apart.
+/// A warning rather than a refusal, because only the operator can tell a
+/// deliberately created account from an id the host allocated elsewhere.
 #[cfg(target_os = "linux")]
 #[expect(clippy::print_stderr, reason = "host preparation prints diagnostics")]
 fn warn_on_named_account(jail_user: JailUser) {
@@ -535,28 +358,18 @@ fn warn_on_named_account(jail_user: JailUser) {
     }
 }
 
-/// The account name for a uid, read from `/etc/passwd`.
-///
-/// Best effort, and blind to anything the local files do not know about: a
-/// host backed by LDAP, Active Directory, or SSSD allocates ids that never
-/// appear here, and those are the hosts most likely to allocate in this range
-/// at all. Deliberately not a `getpwuid` call even so, because the runner
-/// ships as a self-contained binary and NSS would make it depend on the host's
-/// resolver configuration. This catches the cheap case; it is not a guarantee
-/// that the id is unallocated.
+/// Not `getpwuid`, since NSS would tie the self-contained binary to the host's
+/// resolver, at the cost of missing ids from LDAP or SSSD.
 #[cfg(target_os = "linux")]
 fn passwd_name(uid: u32) -> Option<String> {
     lookup_name("/etc/passwd", uid)
 }
 
-/// The group name for a gid, read from `/etc/group`.
 #[cfg(target_os = "linux")]
 fn group_name(gid: u32) -> Option<String> {
     lookup_name("/etc/group", gid)
 }
 
-/// Find the name whose record carries `id` in a colon-separated database.
-///
 /// Both `/etc/passwd` and `/etc/group` put the name first and the numeric id
 /// third.
 #[cfg(target_os = "linux")]
@@ -565,7 +378,6 @@ fn lookup_name(path: &str, id: u32) -> Option<String> {
     lookup_name_in(&database, id)
 }
 
-/// Find the name whose record carries `id`, given the database contents.
 #[cfg(target_os = "linux")]
 fn lookup_name_in(database: &str, id: u32) -> Option<String> {
     database.lines().find_map(|line| {
@@ -576,29 +388,21 @@ fn lookup_name_in(database: &str, id: u32) -> Option<String> {
     })
 }
 
-// Everything the jail prepares is Linux-only, and so is every test of it.
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::*;
 
-    /// The only uid that can build a jail.
-    ///
-    /// Supplied rather than inherited from the test process, which is usually
-    /// not root and would otherwise never reach the preparation being tested.
     const ROOT_EUID: u32 = 0;
 
     #[test]
     fn a_runner_that_is_not_root_is_refused_by_name() {
-        // The upgrade failure an operator actually hits. Without this it
-        // surfaces as a permission error on a directory, or a bare EPERM out of
-        // `unshare`, neither of which mentions root or the flag that avoids it.
+        // A non-root runner must be told about root and both subcommands'
+        // escape hatches on every job, not left with a bare EPERM.
         let dir = tempfile::tempdir().unwrap();
         let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let state_dir = root.join("state");
 
         let mut host = HostPreparation::new();
-        // Nothing latches, so every job says it again rather than only the
-        // first one.
         for attempt in 1..=3 {
             let err = host
                 .ensure_as(1000, &state_dir, JailUser::default())
@@ -612,11 +416,6 @@ mod tests {
                 message.contains("root"),
                 "attempt {attempt} must name root: {message}"
             );
-            // Both escapes, because both subcommands reach this error and each
-            // has only one of them: `--danger-allow-no-sandbox` exists on
-            // `runner up`, and a one-shot `runner run` gives up the sandbox by
-            // omitting `--sandbox`. Naming only the daemon's flag sends a
-            // `runner run` operator to an argument it does not accept.
             assert!(
                 message.contains("--danger-allow-no-sandbox"),
                 "attempt {attempt} must name the daemon's escape hatch: {message}"
@@ -635,9 +434,8 @@ mod tests {
 
     #[test]
     fn preparation_is_lazy_and_happens_at_most_once() {
-        // A daemon that prepared at startup would need root just to come up,
-        // which breaks a Runner serving only non-sandboxed Specs. Nothing may
-        // touch the state directory until a job actually builds a jail.
+        // Preparation must wait for the first job, happen once per
+        // `HostPreparation`, and never be shared with another runner's.
         let dir = tempfile::tempdir().unwrap();
         let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let state_dir = root.join("state");
@@ -648,15 +446,11 @@ mod tests {
             .unwrap();
         assert!(state_dir.join("jail").is_dir(), "the first job prepares");
 
-        // A second job must not redo it: proven by removing the tree and
-        // seeing that it is not rebuilt. Owning the token is what makes this
-        // independent of every other test in the process.
         std::fs::remove_dir_all(&state_dir).unwrap();
         host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
             .unwrap();
         assert!(!state_dir.exists(), "preparation happens at most once");
 
-        // A different runner prepares its own host.
         let mut other = HostPreparation::new();
         other
             .ensure_as(ROOT_EUID, &state_dir, JailUser::default())
@@ -669,13 +463,11 @@ mod tests {
 
     #[test]
     fn a_failure_is_not_latched_and_self_heals() {
-        // Fatal to the job, not to the runner. A host that cannot be prepared
-        // has to fail every job that needs a jail, and recover on its own the
-        // moment the cause goes away, rather than wedging until a restart.
+        // A failed preparation must not latch: every job fails while the state
+        // directory holds foreign data, and the next succeeds once it is gone.
         let dir = tempfile::tempdir().unwrap();
         let root = camino::Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let state_dir = root.join("state");
-        // A populated directory the runner did not create is refused.
         std::fs::create_dir_all(state_dir.join("someone-elses-data")).unwrap();
 
         let mut host = HostPreparation::new();
@@ -687,7 +479,6 @@ mod tests {
             );
         }
 
-        // Remove the cause and the very next job succeeds, with no restart.
         std::fs::remove_dir(state_dir.join("someone-elses-data")).unwrap();
         host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
             .unwrap();
@@ -709,11 +500,8 @@ mod tests {
 
     #[test]
     fn a_name_that_could_not_have_been_minted_is_not_an_identity() {
-        // The id is joined into the jail's chroot path and into its cgroup's
-        // path by callers that cannot tell a directory name read off the
-        // filesystem from one this runner made, so a name that walks out of
-        // either is refused where it is recovered rather than everywhere it is
-        // used.
+        // A recovered name that walks out of the chroot or cgroup base must be
+        // refused, while every minted id still round-trips.
         for name in ["", ".", "..", "../../etc", "jail/../..", "a/b", ".hidden"] {
             assert!(
                 VmId::from_chroot_name(name.to_owned()).is_none(),
@@ -721,8 +509,6 @@ mod tests {
             );
         }
 
-        // What a sweep actually finds is still recovered, whichever kind of run
-        // left it there.
         let jail = VmId::new();
         assert_eq!(
             VmId::from_chroot_name(jail.as_str().to_owned()),
@@ -738,9 +524,8 @@ mod tests {
 
     #[test]
     fn a_local_run_mints_an_id_rather_than_recovering_one() {
-        // Nothing on this path has a chroot to recover a name from, and the
-        // cgroups two local runs make are siblings under one base, so the ids
-        // have to be unique on their own.
+        // Two local runs' cgroups are siblings under one base, so their ids
+        // must be unique and say they are local.
         let one = VmId::for_local_run();
         let two = VmId::for_local_run();
 

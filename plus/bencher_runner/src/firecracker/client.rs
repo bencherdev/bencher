@@ -15,33 +15,18 @@ use crate::jail::SocketPath;
 
 /// Client for the Firecracker REST API.
 pub struct FirecrackerClient<'a> {
-    /// Held as a [`SocketPath`], not a string. The type is the proof that this
-    /// path fits `sun_path`, and this is the one place the limit is actually
-    /// enforced by the kernel, so downgrading it here would discard the
-    /// guarantee exactly where it is worth having.
-    ///
-    /// Borrowed, so the client cannot outlive the descriptor the view names.
+    /// Borrowed, so the client cannot outlive the descriptor this path names.
     socket_path: &'a SocketPath,
 }
 
 impl<'a> FirecrackerClient<'a> {
-    /// Create a new client for the API socket.
-    ///
-    /// The runner reaches the socket from outside the chroot, so this is the
-    /// socket view; the jailed VMM binds the chroot view of the same file.
+    /// Takes the socket view, since the runner connects from outside the chroot.
     pub fn new(socket_path: &'a SocketPath) -> Self {
         Self { socket_path }
     }
 
-    /// Try the API socket once.
-    ///
-    /// `Ok(true)` once Firecracker is answering, `Ok(false)` while it is not
-    /// listening yet, and an error when the address itself cannot be used.
-    /// Only failures a not-yet-listening VMM actually produces are worth
-    /// retrying: an unusable path never becomes usable, and retrying it for a
-    /// whole timeout turns a precise error into one that points at Firecracker
-    /// instead of at the cause. An over-long socket path is rejected by the
-    /// standard library before any syscall, which is exactly that case.
+    /// `Ok(false)` while Firecracker is not listening yet, and an error for an
+    /// address that waiting cannot fix.
     pub fn try_ready(&self) -> Result<bool, FirecrackerError> {
         match UnixStream::connect(self.socket_path.as_str()) {
             Ok(mut stream) => {
@@ -148,13 +133,6 @@ impl<'a> FirecrackerClient<'a> {
         Ok(())
     }
 
-    /// The address itself could not be used.
-    ///
-    /// The same treatment the readiness path gives it, for the same reason. The
-    /// socket lives at a `/proc/self/fd/N` view of a chroot the operator cannot
-    /// guess, so a bare `No such file or directory` names nothing to go and
-    /// look at, and reaching this after readiness means the address stopped
-    /// working mid-job rather than never having worked.
     fn unusable(&self, source: std::io::Error) -> FirecrackerError {
         FirecrackerError::SocketUnusable {
             path: self.socket_path.clone(),
@@ -166,9 +144,8 @@ impl<'a> FirecrackerClient<'a> {
     ///
     /// Returns the HTTP status code and response body.
     fn http_put(&self, path: &str, json_body: &str) -> Result<(u16, String), FirecrackerError> {
-        // Connecting and the timeouts are about the socket, so they carry it.
-        // What happens after, on a stream that was established, is about the
-        // conversation and stays a plain I/O error.
+        // Only failures about the socket itself name it; errors on an
+        // established stream stay plain I/O.
         let mut stream =
             UnixStream::connect(self.socket_path.as_str()).map_err(|e| self.unusable(e))?;
         stream
@@ -242,11 +219,7 @@ impl<'a> FirecrackerClient<'a> {
     }
 }
 
-/// Whether an error means the VMM has simply not started listening yet.
-///
-/// The socket file not existing, or existing with nothing accepting on it, is
-/// the normal state during boot. Every other error describes the address
-/// itself and will not change by waiting.
+/// The errors a booting VMM produces; any other describes the address itself.
 fn is_not_listening_yet(error: &std::io::Error) -> bool {
     matches!(
         error.kind(),
@@ -297,9 +270,6 @@ fn parse_http_response(data: &[u8]) -> Result<(u16, String), FirecrackerError> {
         .next()
         .ok_or(FirecrackerError::MalformedResponse("empty HTTP response"))?;
 
-    // No invented status. A status line the runner could not parse is a
-    // malformed response, and reporting 500 would attribute a server error to
-    // Firecracker that Firecracker never sent.
     let status_code: u16 = status_line
         .split_whitespace()
         .nth(1)
@@ -325,16 +295,9 @@ mod tests {
     use crate::firecracker::config::ActionType;
     use crate::jail::JailPaths;
 
-    // --- an unusable address is named, whenever it is reached ---
-
     #[test]
     fn an_api_call_that_cannot_reach_the_socket_names_it() {
-        // The failure this prevents: the VMM is gone by the time the runner
-        // sends the next request, and the operator reads "IO error: No such
-        // file or directory" with no path in it. The socket is a
-        // `/proc/self/fd/N` view of a chroot nobody can guess, and the
-        // readiness path already reports it by name; a call one step later is
-        // the same question about the same address.
+        // Prevents a call after readiness failing as a bare I/O error that never names the socket.
         let dir = tempfile::tempdir().unwrap();
         let jail = JailPaths::new(Utf8Path::from_path(dir.path()).unwrap()).unwrap();
         let client = FirecrackerClient::new(jail.api_socket().socket());
@@ -446,10 +409,7 @@ mod tests {
 
     #[test]
     fn a_status_line_without_a_status_is_malformed_not_a_500() {
-        // These two asserted a default of 500 until the rule was written down.
-        // A response the runner could not parse is a malformed response; calling
-        // it a 500 attributes a server error to Firecracker that Firecracker
-        // never sent, and sends whoever reads the log looking at the VMM.
+        // Prevents an unparseable status being reported as a 500 Firecracker never sent.
         let data = b"HTTP/1.1\r\n\r\n";
 
         let err = parse_http_response(data).unwrap_err();

@@ -70,9 +70,7 @@ pub struct RunArgs {
     pub sandbox_log_level: crate::SandboxLogLevel,
     /// Sandbox mode for benchmark execution.
     pub sandbox: Option<bencher_json::Sandbox>,
-    /// The runner's persistent state directory.
     pub state_dir: Utf8PathBuf,
-    /// The unprivileged uid and gid the jailed VMM drops to.
     pub jail_user: crate::jail::JailUser,
 }
 
@@ -142,8 +140,8 @@ fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::er
     )
 )]
 pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
-    // A signal cancels the job through its teardown, as a server cancel does
-    // in `runner up`, rather than killing the runner and stranding the VMM.
+    // A signal cancels the job through its teardown rather than killing the
+    // runner and stranding the VMM.
     crate::signal::install_handlers();
 
     // Warn about host conditions that limit benchmark accuracy (Linux only)
@@ -180,8 +178,6 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         }
     }
 
-    // Owned by this invocation rather than shared: the latch belongs to one
-    // runner process and nothing else can observe or reset it.
     let mut host = crate::jail::HostPreparation::new();
 
     let iter_count = args.iter.as_usize();
