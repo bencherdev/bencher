@@ -473,8 +473,20 @@ fn download_and_extract_tgz(
         entry
             .read_to_end(&mut bytes)
             .map_err(|e| format!("Failed to read entry data: {e}"))?;
-        fs::write(dest, &bytes)
-            .map_err(|e| format!("Failed to write to {}: {e}", dest.display()))?;
+        // Written aside and renamed into place, because the cache trusts any
+        // file at the pin-keyed name to be whole.
+        let mut partial = dest.clone().into_os_string();
+        partial.push(".partial");
+        let partial = PathBuf::from(partial);
+        fs::write(&partial, &bytes)
+            .map_err(|e| format!("Failed to write to {}: {e}", partial.display()))?;
+        fs::rename(&partial, dest).map_err(|e| {
+            format!(
+                "Failed to move {} to {}: {e}",
+                partial.display(),
+                dest.display()
+            )
+        })?;
         eprintln!("Extracted '{path}' to: {}", dest.display());
         outstanding.retain(|name| *name != path);
         if outstanding.is_empty() {
