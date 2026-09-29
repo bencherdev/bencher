@@ -105,9 +105,8 @@ fn main() {
     }
 
     // --- firecracker and jailer ---
-    // Both ship in the same release archive, so a single download under a
-    // single hash check yields both. Bundling them together also keeps the
-    // VMM and its jailer at the same version across a runner self-update.
+    // One hash-checked release archive holds both, which keeps the VMM and its
+    // jailer at the same version across a runner self-update.
     let (firecracker_path, jailer_path) = find_or_download_firecracker_release(&out_dir);
     for (name, path) in [("firecracker", firecracker_path), ("jailer", jailer_path)] {
         if is_release {
@@ -212,18 +211,8 @@ fn find_init_binary() -> Option<PathBuf> {
     None
 }
 
-/// Find or download the `firecracker` and `jailer` binaries.
-///
-/// Checks the `BENCHER_FIRECRACKER_PATH` and `BENCHER_JAILER_PATH` env vars
-/// first, then downloads the `.tgz` release archive from GitHub once and
-/// extracts every binary that is not overridden into `OUT_DIR`.
-///
-/// The cache is all or nothing across the two, because Firecracker and its
-/// jailer are a matched pair: whenever either is missing, both come out of the
-/// one archive that was just hash checked, rather than one being filled in
-/// beside whatever the build directory already held.
-///
-/// Returns `(firecracker, jailer)`.
+/// Find or download `(firecracker, jailer)`, extracting both from one
+/// hash-checked archive whenever either is missing, since they are a matched pair.
 fn find_or_download_firecracker_release(out_dir: &Path) -> (Option<PathBuf>, Option<PathBuf>) {
     let firecracker_override = binary_path_override("firecracker", "BENCHER_FIRECRACKER_PATH");
     let jailer_override = binary_path_override("jailer", "BENCHER_JAILER_PATH");
@@ -243,8 +232,6 @@ fn find_or_download_firecracker_release(out_dir: &Path) -> (Option<PathBuf>, Opt
         _ => unreachable!(),
     };
 
-    // The binaries inside the tgz are at:
-    // release-{version}-{arch}/{name}-{version}-{arch}
     let wanted: Vec<(String, PathBuf)> = ["firecracker", "jailer"]
         .into_iter()
         .zip([&firecracker_override, &jailer_override])
@@ -287,29 +274,18 @@ fn find_or_download_firecracker_release(out_dir: &Path) -> (Option<PathBuf>, Opt
     )
 }
 
-/// Where an extracted release binary is cached inside `OUT_DIR`.
-///
-/// The name carries the release it came out of: the pinned version and the head
-/// of the pinned archive hash. `OUT_DIR` outlives an edit to either, so a fixed
-/// name is a cache that cannot be invalidated, and bumping
-/// `DEFAULT_FIRECRACKER_VERSION` in an incremental build directory shipped the
-/// binaries of the previous pin without a word. Keying the name to the pin makes
-/// a version or hash change a cache miss by construction, rather than by a
-/// freshness check someone has to remember to write.
+/// Keyed to the pinned version and archive hash, because `OUT_DIR` outlives an
+/// edit to either and a fixed name would keep serving the previous pin.
 fn cached_binary(out_dir: &Path, name: &str, arch: &str, archive_sha256: &str) -> PathBuf {
     let key = hash_key(archive_sha256);
     out_dir.join(format!("{name}-{DEFAULT_FIRECRACKER_VERSION}-{arch}-{key}"))
 }
 
-/// The part of a pinned SHA256 that goes in a cache name.
-///
-/// Enough of it to distinguish the pins this repository will ever hold, and
-/// short enough to leave the name readable.
+/// Enough of a pinned SHA256 to tell pins apart while keeping a cache name readable.
 fn hash_key(sha256: &str) -> &str {
     sha256.get(..16).unwrap_or(sha256)
 }
 
-/// Resolve a build-time binary path override from an env var.
 fn binary_path_override(name: &str, var: &str) -> Option<PathBuf> {
     let path = PathBuf::from(env::var(var).ok()?);
     if path.exists() {
@@ -356,9 +332,7 @@ fn find_or_download_kernel(out_dir: &Path) -> Option<PathBuf> {
         _ => unreachable!(),
     };
 
-    // Keyed to the kernel it holds, for the reason [`cached_binary`] gives: a
-    // new `DEFAULT_KERNEL_URL_*` has to miss the cache rather than hand back
-    // whatever the last one downloaded.
+    // Keyed to the kernel hash, so a new `DEFAULT_KERNEL_URL_*` misses the cache.
     let dest = out_dir.join(format!("vmlinux-{}", hash_key(expected_hash)));
     if dest.exists() {
         eprintln!("Using cached vmlinux at: {}", dest.display());
@@ -448,12 +422,8 @@ fn download_and_extract_tgz(
     let gz = flate2::read::GzDecoder::new(archive_bytes.as_slice());
     let mut archive = tar::Archive::new(gz);
 
-    // The names still to be found, not a count of them. A tar archive may
-    // legally carry the same path more than once, and counting extractions down
-    // gets that wrong in both directions: a third match against two wanted
-    // entries underflows and panics with a message that says nothing about the
-    // archive, and two matches on the same entry reach zero and report success
-    // while the other is still missing.
+    // Names rather than a count, because a tar archive may carry the same path
+    // more than once.
     let mut outstanding: Vec<&str> = wanted.iter().map(|(name, _)| name.as_str()).collect();
     for entry in archive
         .entries()
@@ -494,10 +464,6 @@ fn download_and_extract_tgz(
         }
     }
 
-    // Named from what the archive walk itself failed to find. A destination
-    // left by an earlier partial run in the same OUT_DIR still exists on disk,
-    // so consulting `dest.exists()` here would report an empty missing list
-    // for an archive that no longer carries the entry.
     let missing = outstanding.join(", ");
     Err(format!("Entries not found in archive: {missing}"))
 }

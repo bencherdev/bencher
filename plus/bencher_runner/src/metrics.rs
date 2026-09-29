@@ -47,21 +47,8 @@ pub struct CgroupMetrics {
 /// Read cgroup metrics from the given cgroup path.
 ///
 /// Reads `cpu.stat` and `memory.peak` from the cgroup directory.
-/// Returns `None` when there is no cgroup to read.
-///
-/// Every field is optional, and a field that could not be read stays absent
-/// rather than becoming a number. These are reported to an operator as measured
-/// values, so a zero standing in for a failed read is the plainest form of the
-/// one thing measurement is never allowed to do. Absence is already how this
-/// reports "no cgroup at all", so it costs nothing to be honest per field.
-///
-/// That is also why the stat below is the one gating read in this crate that may
-/// stay: it can only withhold a reading, never invent one. Nothing here can
-/// answer with a number it did not read, so a failure reaches the operator as a
-/// field that is not there. A stat that fails does not suppress the reads either,
-/// which is the one thing worth tightening: only a stat that succeeded and said
-/// absent means there is nothing to read, and anything else goes on to ask the
-/// files themselves, since they report what they can and nothing more.
+/// Returns `None` only when the cgroup is confirmed absent, and a field that
+/// could not be read stays `None` rather than reading as a measured zero.
 pub fn read_cgroup_metrics(cgroup_path: &Utf8Path) -> Option<CgroupMetrics> {
     if cgroup_path.try_exists().is_ok_and(|exists| !exists) {
         return None;
@@ -86,11 +73,6 @@ pub fn format_metrics(metrics: &RunMetrics) -> Option<String> {
     Some(format!("---BENCHER_METRICS:{json}---"))
 }
 
-/// The three fields of `cpu.stat` this runner reports.
-///
-/// Each one is what the file said, or nothing. A field the file did not carry, or
-/// carried unparseably, is not zero usage: zero is a measurement, and this never
-/// measured it.
 #[derive(Default)]
 #[expect(
     clippy::struct_field_names,
@@ -150,8 +132,6 @@ mod tests {
 
     #[test]
     fn a_field_the_file_did_not_carry_is_absent_not_zero() {
-        // Zero is a measurement. A field that was never read has to reach the
-        // operator as missing, which is what the reported type already allows.
         let dir = tempfile::tempdir().unwrap();
         let path = tempdir_utf8(&dir);
         fs::write(path.join("cpu.stat"), "usage_usec 100\n").unwrap();
@@ -278,9 +258,7 @@ mod tests {
 
     #[test]
     fn a_cgroup_whose_files_cannot_be_read_reports_no_numbers() {
-        // The property that makes this module's gating stat harmless: every
-        // failure here withholds a field, and none of them invents one. An empty
-        // reading is honest; a zero would not be.
+        // A failed read that became zero would report a measurement never taken.
         let dir = tempfile::tempdir().unwrap();
         let path = tempdir_utf8(&dir);
 

@@ -13,42 +13,24 @@ use crate::firecracker::config::{Action, ActionType};
 use crate::firecracker::error::{FirecrackerError, PreExec};
 use crate::jail::{JailFile, JailUser, PinnedSocket, VmId};
 
-/// How long to wait for the Firecracker API socket to appear.
-///
-/// This budget used to cover Firecracker starting up on its own. It now also
-/// has to cover the jailer building a chroot, copying a multi-megabyte exec
-/// file into it, creating device nodes, chowning, `pivot_root`, and `setns`,
-/// on a host that may be busy running someone else's benchmark. Five seconds
-/// left no margin for that.
-///
-/// Widening costs nothing on the failure path: a jailer that dies is detected
-/// the moment it exits rather than at the deadline, so the only thing this
-/// affects is how patient the runner is with a slow host.
+/// Generous because it covers the jailer building the chroot on a busy host; a
+/// jailer that dies is caught when it exits, not at this deadline.
 const API_SOCKET_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// Everything needed to spawn the VMM under the jailer.
 #[derive(Debug)]
 pub struct JailedSpawn<'a> {
     /// The jailer binary, which runs as root and execs Firecracker in place.
     pub jailer_bin: &'a Utf8Path,
-    /// The staged Firecracker binary, outside the jail.
-    ///
-    /// The jailer copies this into the chroot itself, and refuses to write
-    /// over a multiply linked destination, so it is neither placed in the
-    /// chroot by hand nor hardlinked there. Its base name determines the
-    /// chroot layout, so it is fixed rather than incidental.
+    /// Outside the jail, since the jailer copies it in itself and refuses a
+    /// hardlinked destination.
     pub exec_file: &'a Utf8Path,
     /// The jailer `--id`, which is also the chroot name and the cgroup name.
     pub vm_id: &'a VmId,
-    /// The unprivileged uid and gid the VMM drops to.
     pub jail_user: JailUser,
-    /// The jailer `--chroot-base-dir`.
     pub chroot_base_dir: &'a Utf8Path,
     /// Handle of the empty network namespace the VMM joins.
     pub netns: &'a Utf8Path,
-    /// The REST API socket, in both views.
     pub api_socket: &'a JailFile,
-    /// Firecracker process log level.
     pub log_level: &'a str,
     /// Cores the stderr reader thread is pinned to.
     pub housekeeping_cores: Vec<usize>,
@@ -64,10 +46,8 @@ pub struct FirecrackerProcess {
     api: PinnedSocket,
 }
 
-/// The jailer's child, killed and reaped when dropped.
-///
-/// Guards the child from the moment it exists, before its API socket is there
-/// to pin.
+/// Kills and reaps the jailer's child on drop, guarding it before there is an
+/// API socket to pin.
 struct JailedChild {
     child: Child,
     api_socket: JailFile,
@@ -76,23 +56,6 @@ struct JailedChild {
 
 impl FirecrackerProcess {
     /// Start Firecracker under the jailer and wait for its API socket.
-    ///
-    /// The jailer builds the chroot, creates `/dev/kvm`, drops to the
-    /// unprivileged jail uid, joins the empty network namespace, and execs
-    /// Firecracker. Neither `--daemonize` nor `--new-pid-ns` is passed:
-    /// both make the jailer fork, which would break the pid identity that
-    /// [`Self::pid`] and [`Self::kill_after_grace_period`] rely on. Without
-    /// them the jailer execs in place and the child pid stays the VMM.
-    ///
-    /// No cgroup flags are passed either. The runner owns the cgroup end to
-    /// end because it has to create, verify, read metrics from, and remove it,
-    /// and the cpuset partition specifically needs read-back verification that
-    /// the jailer's write-once interface cannot provide.
-    ///
-    /// A background thread reads stderr and prints lines prefixed with
-    /// `[firecracker]`. The jailer inherits that stdio and its own diagnostics
-    /// appear under the same prefix. It inherits no environment: see
-    /// `jailer_command`.
     pub fn start(spawn: JailedSpawn<'_>) -> Result<Self, FirecrackerError> {
         let args = jailer_args(&spawn);
 
@@ -111,10 +74,6 @@ impl FirecrackerProcess {
             cgroup_procs,
         } = spawn;
 
-        // Remembered before the descriptor is moved into the command, because
-        // a spawn that failed cannot say whether it was the exec or the write
-        // that ran first, and this is what tells the operator to look at the
-        // cgroup at all.
         let pre_exec = if cgroup_procs.is_some() {
             PreExec::CgroupPlacement
         } else {
@@ -128,12 +87,8 @@ impl FirecrackerProcess {
             source: e,
         })?;
 
-        // The guard takes the child the moment the child exists, so every
-        // fallible step below is covered by its `Drop`, which kills and reaps.
-        // `Child::drop` does neither, so an error returned between the spawn
-        // and this construction would leave the jailer, or the VMM it has
-        // become, running with nothing armed to reap it, while the jail
-        // teardown removes the chroot out from under it.
+        // Guarded at once, since `Child::drop` neither kills nor reaps and any
+        // error below would otherwise leave the VMM running.
         let mut jailed = JailedChild {
             child,
             api_socket: api_socket.clone(),
@@ -198,25 +153,14 @@ impl FirecrackerProcess {
             std::thread::sleep(poll_interval);
         }
 
-        // Force kill if still running. Unlike the readiness wait below, a child
-        // that exits during the final sleep is not a missed case here: nothing
-        // was reaped, so the pid is still reserved by the child and cannot have
-        // been recycled, `kill` sends a signal that a zombie simply ignores, and
-        // `kill` then reaps it and joins the reader. That is precisely what the
-        // loop would have done, so there is no verdict to get wrong.
+        // Force kill if still running
         self.jailed.kill();
     }
 }
 
 impl JailedChild {
-    /// Wait for the API socket, giving up the moment the jailer dies.
-    ///
-    /// Watching the child is what keeps a jailer that failed outright from
-    /// presenting as a socket timeout. A bad `--netns`, an unwritable
-    /// `--chroot-base-dir`, or a refused `mknod` makes it exit immediately,
-    /// and polling for a socket that will never appear would report
-    /// `SocketNotReady` and point at Firecracker instead of at the jailer's
-    /// own diagnostics, which are already on stderr.
+    /// Gives up the moment the jailer dies, so its failure is not reported as a
+    /// socket timeout.
     fn wait_for_ready(&mut self, timeout: Duration) -> Result<(), FirecrackerError> {
         let start = std::time::Instant::now();
         let poll_interval = Duration::from_millis(50);
@@ -231,11 +175,8 @@ impl JailedChild {
             std::thread::sleep(poll_interval);
         }
 
-        // Once more before giving up. The loop sleeps between polls, so a
-        // process that exits during the last sleep would otherwise be reported
-        // as a socket that never became ready, which points at Firecracker
-        // taking too long when the truth is that it is gone. That confusion is
-        // the entire reason this error exists.
+        // Once more, since a process that exited during the last sleep would
+        // otherwise be reported as a timeout.
         if let Some(status) = self.exited() {
             return Err(FirecrackerError::JailedProcessExited { status });
         }
@@ -243,19 +184,9 @@ impl JailedChild {
         Err(FirecrackerError::SocketNotReady(timeout))
     }
 
-    /// The status of the jailed process, if it has already exited.
-    ///
-    /// `try_wait` can fail in its own right, and that failure is dropped on
-    /// purpose. The question is only whether the process is already gone, and a
-    /// question that could not be answered is not a death: reporting
-    /// [`FirecrackerError::JailedProcessExited`] would name a status nobody
-    /// read, and reporting the `try_wait` error itself would replace a verdict
-    /// about the VMM with one about the runner's own bookkeeping. Treating an
-    /// unpollable child as still running costs nothing, because every caller
-    /// asks inside a bounded loop that ends in its own error.
+    /// A failed `try_wait` counts as still running, since every caller polls in
+    /// a bounded loop that ends in its own error.
     fn exited(&mut self) -> Option<std::process::ExitStatus> {
-        // No status, rather than no answer: the distinction is the doc comment
-        // above, and it is a decision rather than a discarded `Result`.
         self.child.try_wait().unwrap_or(None)
     }
 
@@ -268,15 +199,8 @@ impl JailedChild {
 
     /// Clean up socket files.
     ///
-    /// The chroot itself is reclaimed wholesale by the jail teardown; this
-    /// only keeps the socket from outliving the process within a job.
-    ///
-    /// Unlinks through the host view. Unlinking has no `sun_path` limit, so
-    /// the socket view buys nothing here and costs a dependency on a
-    /// descriptor still being open. This runs from `Drop`, where a future
-    /// reordering could close that descriptor first, and where the failure
-    /// would not be an error but the deletion of whatever file inherited the
-    /// number.
+    /// Unlinks through the host view, since from `Drop` the socket view may name
+    /// a closed descriptor and delete an unrelated file.
     fn cleanup(&self) {
         drop(std::fs::remove_file(self.api_socket.host().as_path()));
     }
@@ -296,12 +220,7 @@ impl Drop for JailedChild {
     }
 }
 
-/// Build the jailer's argument vector.
-///
-/// Split out from the spawn so it can be asserted without a host that can
-/// boot a VM. Getting this wrong fails every job at startup and, before the
-/// VM boots, produces errors that point at Firecracker rather than at the
-/// command line that caused them.
+/// Split out from the spawn so it can be tested without a host that boots VMs.
 fn jailer_args(spawn: &JailedSpawn<'_>) -> Vec<String> {
     vec![
         "--id".to_owned(),
@@ -316,40 +235,20 @@ fn jailer_args(spawn: &JailedSpawn<'_>) -> Vec<String> {
         spawn.chroot_base_dir.to_string(),
         "--netns".to_owned(),
         spawn.netns.to_string(),
-        // No cgroup flags of any kind, and neither --daemonize nor
-        // --new-pid-ns: see `FirecrackerProcess::start`.
+        // No cgroup flags, since the runner owns the cgroup, and no --daemonize
+        // or --new-pid-ns, since both fork and break the pid identity.
         "--".to_owned(),
-        // `--id` is deliberately not forwarded: the jailer already passes it
-        // to Firecracker, which rejects the duplicate with DuplicateArgument
-        // and fails every job at startup.
+        // `--id` is not forwarded: the jailer already passes it, and
+        // Firecracker rejects the duplicate.
         "--api-sock".to_owned(),
-        // The chroot view. Firecracker binds this after it has been confined,
-        // so the host path would name a directory it cannot reach.
         spawn.api_socket.chroot().as_str().to_owned(),
         "--level".to_owned(),
         spawn.log_level.to_owned(),
     ]
 }
 
-/// Build the jailer invocation, with the environment the VMM is entitled to.
-///
-/// Which is none of it. Everything either binary needs arrives as an argument:
-/// the exec file, the chroot base, the netns handle, the uid and gid, the API
-/// socket, and the log level. Neither reads `PATH` (the jailer is named by a
-/// path here, and it execs `--exec-file` by path inside the chroot), a locale,
-/// `TMPDIR`, or `RUST_LOG`, so an empty environment costs nothing.
-///
-/// What it buys is that the runner's own environment stops at this line. The
-/// runner takes its API key from `BENCHER_RUNNER_KEY`, and the VMM writes to
-/// vsock channels the guest reads, so a Firecracker that inherited the
-/// environment would hold a credential inside the sandbox with a way back out.
-/// The bundled jailer scrubs the environment itself, but the runner falls back
-/// to whatever `jailer` the host has installed and checks no version, so
-/// confinement cannot depend on which binary was found.
-///
-/// With a cgroup, the child joins it before it execs the jailer, and Firecracker
-/// inherits the membership through the jailer's own exec, so the VMM never
-/// boots its API or touches memory on the wrong cores first.
+/// Clears the environment so `BENCHER_RUNNER_KEY` never reaches the VMM,
+/// whichever jailer binary was found.
 fn jailer_command(jailer_bin: &Utf8Path, args: &[String], cgroup_procs: Option<File>) -> Command {
     let mut command = Command::new(jailer_bin);
     command
@@ -363,12 +262,8 @@ fn jailer_command(jailer_bin: &Utf8Path, args: &[String], cgroup_procs: Option<F
             unsafe_code,
             reason = "cgroup placement must happen between fork and exec"
         )]
-        // SAFETY: the closure runs in the forked child before `execve`, where
-        // only async-signal-safe work is permitted. It performs a single
-        // `write` of a fixed one-byte buffer on a descriptor that was opened
-        // before the fork: no allocation, no path resolution, and no locks. A
-        // failed write is reported to the parent over the CLOEXEC pipe and
-        // surfaces as a failed `spawn`.
+        // SAFETY: between fork and exec the closure only writes a fixed byte to
+        // a descriptor opened before the fork, which is async-signal-safe.
         unsafe {
             command.pre_exec(move || place_in_cgroup(&procs));
         }
@@ -376,10 +271,8 @@ fn jailer_command(jailer_bin: &Utf8Path, args: &[String], cgroup_procs: Option<F
     command
 }
 
-/// Join the calling task to the cgroup behind a pre-opened `cgroup.procs`.
-///
-/// The kernel reads `0` as the calling task, which is why no pid has to be
-/// formatted (and no allocation performed) inside the forked child.
+/// Writes `0`, which the kernel reads as the calling task, so nothing is
+/// formatted or allocated in the forked child.
 fn place_in_cgroup(mut procs: &File) -> std::io::Result<()> {
     use std::io::Write as _;
 
@@ -414,7 +307,6 @@ mod tests {
         jailer_args(&spawn_for(&jail, &vm_id()))
     }
 
-    /// A stand-in identity for tests.
     fn vm_id() -> VmId {
         VmId::from_chroot_name("vm-1".to_owned()).unwrap()
     }
@@ -427,10 +319,8 @@ mod tests {
         (dir, jail)
     }
 
-    /// A guard around a plain child, for the readiness verdict.
-    ///
-    /// The jail is what the socket view names, so it has to outlive the guard
-    /// this returns.
+    /// The jail has to outlive the guard this returns, since the socket view
+    /// names its descriptor.
     fn process_around(child: Child, jail: &JailPaths) -> JailedChild {
         JailedChild {
             child,
@@ -439,7 +329,6 @@ mod tests {
         }
     }
 
-    /// The value following `flag`, if the flag is present.
     fn value_of<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
         let index = args.iter().position(|arg| arg == flag)?;
         args.get(index + 1).map(String::as_str)
@@ -465,9 +354,7 @@ mod tests {
 
     #[test]
     fn id_appears_exactly_once() {
-        // The jailer passes `--id` to Firecracker itself. Forwarding it again
-        // after the separator makes Firecracker reject the duplicate and fail
-        // every job at startup.
+        // Prevents forwarding `--id`, which Firecracker rejects as a duplicate, failing every job.
         let args = args();
 
         assert_eq!(
@@ -501,9 +388,7 @@ mod tests {
 
     #[test]
     fn the_api_socket_is_the_chroot_view() {
-        // Firecracker binds the socket after it has been confined, so it must
-        // receive the path as it will exist inside the chroot. The host view
-        // names a directory the jailed process cannot reach.
+        // Prevents passing the host view, which the confined Firecracker cannot reach.
         let (_dir, jail) = jail_in_tmpdir();
         let args = jailer_args(&spawn_for(&jail, &vm_id()));
 
@@ -517,8 +402,8 @@ mod tests {
 
     #[test]
     fn a_swapped_api_socket_name_is_never_followed() {
-        // Once guest code has run, the jail user can replace `api.sock` with a
-        // link to any host socket, and the runner must not follow it as root.
+        // Prevents the runner, as root, following an `api.sock` swapped for a
+        // link to a host socket.
         use std::io::{Read as _, Write as _};
         use std::os::unix::fs::symlink;
         use std::os::unix::net::{UnixListener, UnixStream};
@@ -556,7 +441,6 @@ mod tests {
             let sent = process.client().put_action(&Action {
                 action_type: ActionType::SendCtrlAltDel,
             });
-            // A request that went elsewhere left the VMM's side waiting.
             if sent.is_err() {
                 drop(UnixStream::connect(process.api.path().as_str()));
             }
@@ -576,9 +460,7 @@ mod tests {
 
     #[test]
     fn a_child_that_is_still_running_is_not_reported_exited() {
-        // The readiness wait gives up the moment this says the process is gone,
-        // so an inverted verdict turns every slow boot into
-        // `JailedProcessExited`.
+        // Prevents an inverted verdict that turns every slow boot into `JailedProcessExited`.
         let (_dir, jail) = jail_in_tmpdir();
         let child = Command::new("/bin/sh")
             .args(["-c", "sleep 30"])
@@ -588,7 +470,6 @@ mod tests {
         let mut process = process_around(child, &jail);
 
         assert!(process.exited().is_none());
-        // `Drop` kills and reaps the child.
     }
 
     #[test]
@@ -607,16 +488,7 @@ mod tests {
 
     #[test]
     fn the_jailed_process_inherits_no_environment() {
-        // The failure this prevents: the runner takes its API key from
-        // `BENCHER_RUNNER_KEY`, so an inherited environment puts that key in
-        // Firecracker's own `environ`, and a compromised VMM writes it out over
-        // the vsock channels it is supposed to write results to. The bundled
-        // jailer scrubs the environment itself; a jailer found on the host is
-        // taken without a version check, so this cannot rely on it.
-        //
-        // `/usr/bin/env` stands in for the jailer: it prints the environment it
-        // was given, and its own run with the environment left alone is the
-        // control that keeps this from passing on a binary that prints nothing.
+        // Prevents `BENCHER_RUNNER_KEY` reaching a VMM that could write it out over vsock.
         let env_bin = Utf8Path::new("/usr/bin/env");
         let inherited = Command::new(env_bin).output().unwrap();
         assert!(
@@ -638,10 +510,7 @@ mod tests {
 
     #[test]
     fn the_vmm_is_in_its_cgroup_before_it_execs() {
-        // A child placed only once it runs has already started on the wrong
-        // cores. The stand-in jailer reports the cgroup it started in and
-        // exits, so the start fails its readiness wait before any placement
-        // made after the exec could land.
+        // Prevents placing the VMM after it execs, when it has already started on the wrong cores.
         use std::os::unix::fs::PermissionsExt as _;
 
         if crate::jail::current_euid() != 0 {
@@ -685,10 +554,8 @@ mod tests {
         );
     }
 
-    /// Where the scratch cgroup is made.
     const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 
-    /// A throwaway cgroup directly under the cgroup root, removed on drop.
     struct ScratchCgroup(Utf8PathBuf);
 
     impl ScratchCgroup {
@@ -708,9 +575,8 @@ mod tests {
 
     #[test]
     fn no_cgroup_or_forking_flags_are_passed() {
-        // The runner owns the cgroup end to end, and both --daemonize and
-        // --new-pid-ns make the jailer fork, which breaks the pid identity the
-        // process management relies on.
+        // Prevents handing the cgroup to the jailer, or a fork that breaks the
+        // pid the runner tracks.
         let args = args();
 
         for forbidden in [

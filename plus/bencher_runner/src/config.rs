@@ -152,16 +152,11 @@ pub struct Config {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<Sandbox>,
 
-    /// The runner's persistent state directory.
-    ///
-    /// The jail chroot for each sandboxed run is built under this directory.
-    /// This field is not serialized.
+    /// The runner's persistent state directory, under which each sandboxed
+    /// run's jail chroot is built.
     #[serde(skip, default = "default_state_dir")]
     pub state_dir: Utf8PathBuf,
 
-    /// The unprivileged uid and gid the jailed VMM drops to.
-    ///
-    /// This field is not serialized.
     #[serde(skip)]
     pub jail_user: crate::jail::JailUser,
 }
@@ -464,14 +459,12 @@ impl Config {
         self
     }
 
-    /// Set the runner's persistent state directory.
     #[must_use]
     pub fn with_state_dir(mut self, state_dir: Utf8PathBuf) -> Self {
         self.state_dir = state_dir;
         self
     }
 
-    /// Set the unprivileged uid and gid the jailed VMM drops to.
     #[must_use]
     pub fn with_jail_user(mut self, jail_user: crate::jail::JailUser) -> Self {
         self.jail_user = jail_user;
@@ -554,9 +547,6 @@ mod tests {
         reason = "one assertion per field is the point: the exhaustive destructure and its assertions belong together"
     )]
     fn config_serde_round_trip() {
-        // Every `#[serde(skip)]` field is set away from its default before the
-        // trip, so what serialization does to each is pinned here rather than
-        // assumed: they vanish from the JSON and arrive as defaults.
         let mut config = Config::new("ghcr.io/test/bench:v1")
             .with_vcpus(Cpu::try_from(2).unwrap())
             .with_memory(Memory::from_mib(1024).unwrap())
@@ -573,12 +563,8 @@ mod tests {
         let json = serde_json::to_string(&config).unwrap();
         let parsed: Config = serde_json::from_str(&json).unwrap();
 
-        // Destructured rather than read field by field, so a field added to
-        // `Config` does not compile until a line here decides whether it
-        // crosses a serde boundary. Nothing serializes a `Config` across a
-        // process boundary today; anything that ever does (a daemon handoff, a
-        // self-update) has to carry the skipped fields beside the JSON or lose
-        // them, and this is where that shows.
+        // Destructured, so a new `Config` field does not compile until this test
+        // pins whether it survives serde or arrives as its default.
         let Config {
             oci_image,
             kernel,
@@ -608,7 +594,6 @@ mod tests {
             jail_user,
         } = parsed;
 
-        // What was serialized survives.
         assert_eq!(oci_image, "ghcr.io/test/bench:v1");
         assert_eq!(vcpus, Cpu::try_from(2).unwrap());
         assert_eq!(memory, Memory::from_mib(1024).unwrap());
@@ -631,7 +616,6 @@ mod tests {
         assert!(!build_time);
         assert!(!file_size);
 
-        // What was skipped arrives as the default, not as what was set.
         assert!(matches!(registry_scheme, RegistryScheme::Https));
         assert!(cpu_layout.is_none());
         assert!(matches!(sandbox_log_level, SandboxLogLevel::Warning));

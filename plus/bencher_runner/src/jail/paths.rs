@@ -1,18 +1,5 @@
-//! The views of every file inside the jail chroot.
-//!
-//! Once Firecracker is jailed, every path it receives resolves inside the
-//! chroot, while the runner reaches the same file from outside. The views are
-//! different types rather than strings, so handing Firecracker a host path (or
-//! the runner a chroot path) is a compile error instead of a boot that hangs
-//! waiting for a socket that will never appear.
-//!
-//! There is a third view because of a hard kernel limit. `sockaddr_un.sun_path`
-//! is 108 bytes, and the limit applies to the string handed to `bind` and
-//! `connect`, before any resolution. A jail deep under an operator's
-//! `--state-dir` blows that limit long before it comes near `PATH_MAX`, so the
-//! runner addresses the jail's sockets through a descriptor it holds open on
-//! the chroot. Resolution happens after the length check, so a short string
-//! naming a long directory is exactly what is needed.
+//! Each jail file's host, chroot, and socket paths as distinct types, so
+//! handing one view where another belongs fails to compile.
 
 use std::fs::File;
 use std::os::fd::AsRawFd as _;
@@ -26,22 +13,12 @@ use crate::error::JailError;
 /// Size of `sockaddr_un.sun_path` on Linux.
 const SUN_PATH_LEN: usize = 108;
 
-/// Longest path a socket name may occupy, leaving room for the NUL.
-///
-/// Linux accepts a full 108 unterminated bytes when `addrlen` says so, but
-/// `unix(7)` warns against relying on it and the standard library rejects
-/// anything that does not leave room for the terminator.
+/// Leaves room for the NUL, which the standard library requires even though
+/// Linux accepts 108 unterminated bytes.
 const MAX_SOCKET_PATH: usize = SUN_PATH_LEN - 1;
 
-/// Room reserved after every socket path for a `_<port>` suffix.
-///
-/// Sized for the widest port a `u32` can print rather than for the ports in
-/// use, so adding a port can never silently eat the margin. Reserved on every
-/// socket path rather than on the vsock base alone, because that is what makes
-/// [`SocketPath::with_port`] infallible: the widest suffix it can produce is
-/// the one every base was already checked with room for. The socket views name
-/// a descriptor rather than the operator's state directory, so the eleven bytes
-/// come out of a margin nothing is ever close to spending.
+/// Room for the widest `_<port>` suffix a `u32` prints, reserved on every
+/// socket path so [`SocketPath::with_port`] cannot exceed the limit.
 const PORT_SUFFIX_RESERVE: usize = "_4294967295".len();
 
 /// A path as the runner sees it: the host filesystem, outside the chroot.
@@ -49,13 +26,11 @@ const PORT_SUFFIX_RESERVE: usize = "_4294967295".len();
 pub struct HostPath(Utf8PathBuf);
 
 impl HostPath {
-    /// The path as a [`Utf8Path`].
     #[must_use]
     pub fn as_path(&self) -> &Utf8Path {
         &self.0
     }
 
-    /// The path as a string.
     #[must_use]
     pub fn as_str(&self) -> &str {
         self.0.as_str()
@@ -69,15 +44,11 @@ impl std::fmt::Display for HostPath {
 }
 
 /// A path as the jailed Firecracker process sees it, rooted at the chroot.
-///
-/// Serializes as the bare path, since these are what the Firecracker API
-/// request bodies carry.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(transparent)]
 pub struct ChrootPath(Utf8PathBuf);
 
 impl ChrootPath {
-    /// The path as a string.
     #[must_use]
     pub fn as_str(&self) -> &str {
         self.0.as_str()
@@ -90,38 +61,14 @@ impl std::fmt::Display for ChrootPath {
     }
 }
 
-/// A path the runner may hand to `bind` or `connect`.
-///
-/// The value names a descriptor held open by the [`JailPaths`] it came from,
-/// and it is only valid while that value is alive. That invariant is upheld by
-/// ordering rather than by the compiler: `SocketPath` could borrow, which would
-/// make a use-after-drop impossible, but the lifetime would ripple through
-/// [`JailFile`], the Firecracker job config, the jailer spawn, and everything
-/// that owns them. It is deliberately not enforced, not overlooked, and it is
-/// a reasonable follow-up.
-///
-/// Two things hold the line in the meantime. Only `bind` and `connect` take
-/// this view, because they are the only callers subject to the length limit;
-/// everything else, unlinking above all, takes the host view, which cannot go
-/// stale. And a test drops the paths, claims the released descriptor number
-/// with another directory, and asserts the same string no longer names the
-/// jail, so the hazard is at least pinned.
-///
-/// The type makes the length limit unforgeable: every value has been checked
-/// against `sun_path` with room for the port it may later take, so a path that
-/// would not fit is reported when the jail is built, naming the limit and the
-/// offending string, rather than surfacing later as a socket that never becomes
-/// ready. Growing one is [`Self::with_port`], which cannot spend more than was
-/// reserved, so the check holds for every string this type hands out.
+/// A path for `bind` or `connect` only, naming a descriptor its [`JailPaths`]
+/// holds open, so it silently names something else once that value is dropped.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SocketPath(String);
 
 impl SocketPath {
-    /// Check a path against the `sun_path` limit.
-    ///
-    /// Checked with [`PORT_SUFFIX_RESERVE`] in hand, so a base that fits only
-    /// while it is bare is rejected rather than admitted and then grown past
-    /// the limit by [`Self::with_port`].
+    /// Check a path against the `sun_path` limit with [`PORT_SUFFIX_RESERVE`]
+    /// already spent, so [`Self::with_port`] can never exceed it.
     fn new(path: String) -> Result<Self, JailError> {
         let length = path.len() + PORT_SUFFIX_RESERVE;
         if length > MAX_SOCKET_PATH {
@@ -134,22 +81,12 @@ impl SocketPath {
         Ok(Self(path))
     }
 
-    /// The path as a string.
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
-    /// This path with a vsock port appended.
-    ///
-    /// The runner binds `{base}_{port}` for each vsock port. A port is the only
-    /// thing this type will append, and every base was checked with room for
-    /// the widest one a `u32` can print, so the result is within the limit by
-    /// construction rather than by a promise the caller has to keep. A free
-    /// `&str` suffix could make no such claim: nothing held it to the reserve,
-    /// so an over-long one would fit under a shallow state directory and fail
-    /// at `bind` under a deep one, which is a defect that shows up on some
-    /// hosts only.
+    /// This path with a vsock port appended, within the limit by construction.
     #[must_use]
     pub fn with_port(&self, port: u32) -> String {
         format!("{}_{port}", self.0)
@@ -162,12 +99,8 @@ impl std::fmt::Display for SocketPath {
     }
 }
 
-/// A socket inode held open, so a later swap of its name is never followed.
-///
-/// The jailer hands the chroot root to the jail user, so once guest code has run
-/// a compromised VMM can replace a socket's name with a link to any host socket.
-/// Pinned while only Firecracker has run, the view this holds names the inode
-/// that was there then, whatever the name comes to point at.
+/// A socket inode held open, so a compromised VMM that later swaps the name
+/// for a link to a host socket is never followed.
 #[derive(Debug)]
 pub struct PinnedSocket {
     /// Held for as long as `path` names it.
@@ -195,14 +128,12 @@ impl PinnedSocket {
         Ok(Self { _file: file, path })
     }
 
-    /// The view that reaches the pinned socket.
     #[must_use]
     pub fn path(&self) -> &SocketPath {
         &self.path
     }
 }
 
-/// One file in the jail, in every view that reaches it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JailFile {
     host: HostPath,
@@ -211,35 +142,27 @@ pub struct JailFile {
 }
 
 impl JailFile {
-    /// The path the runner uses to create, read, and own the file.
     #[must_use]
     pub fn host(&self) -> &HostPath {
         &self.host
     }
 
-    /// The path Firecracker receives.
     #[must_use]
     pub fn chroot(&self) -> &ChrootPath {
         &self.chroot
     }
 
-    /// The path the runner binds or connects to.
     #[must_use]
     pub fn socket(&self) -> &SocketPath {
         &self.socket
     }
 }
 
-/// Every file the runner places in, or reaches inside, a jail chroot.
 #[derive(Debug)]
 pub struct JailPaths {
     root: Utf8PathBuf,
-    /// Held open for the life of the job.
-    ///
     /// The socket views name this descriptor by number, so closing it would
-    /// leave them addressing whatever directory the kernel hands that number
-    /// to next. `O_PATH` because the runner never reads or writes through it:
-    /// it exists only to be named.
+    /// leave them addressing whatever the kernel reuses that number for.
     _dir: File,
     api_socket: JailFile,
     kernel: JailFile,
@@ -259,9 +182,8 @@ impl JailPaths {
                 source: e,
             })?;
 
-        // Naming the directory by descriptor keeps the string short however
-        // deep the operator's state directory is. The descriptor also pins the
-        // directory's identity for the whole job.
+        // A descriptor keeps socket paths within the 108-byte `sun_path` however
+        // deep the operator's state directory is.
         let dir_path = format!("/proc/self/fd/{}", dir.as_raw_fd());
 
         let file = |name: &str| -> Result<JailFile, JailError> {
@@ -288,19 +210,16 @@ impl JailPaths {
         &self.root
     }
 
-    /// The Firecracker REST API socket.
     #[must_use]
     pub fn api_socket(&self) -> &JailFile {
         &self.api_socket
     }
 
-    /// The guest kernel image, which Firecracker reads.
     #[must_use]
     pub fn kernel(&self) -> &JailFile {
         &self.kernel
     }
 
-    /// The guest rootfs image, which Firecracker reads and writes.
     #[must_use]
     pub fn rootfs(&self) -> &JailFile {
         &self.rootfs
@@ -346,8 +265,7 @@ mod tests {
 
     #[test]
     fn the_socket_view_resolves_to_the_same_file_as_the_host_view() {
-        // The whole point: a short string naming the same inode. If this ever
-        // stops holding, the runner and Firecracker stop meeting.
+        // If the views diverge, the runner and Firecracker stop meeting.
         let (_dir, paths) = jail_in_tmpdir();
         std::fs::write(paths.rootfs().host().as_path(), b"guest").unwrap();
 
@@ -358,11 +276,8 @@ mod tests {
 
     #[test]
     fn the_socket_view_stops_naming_the_jail_once_the_paths_are_dropped() {
-        // This is why `bind` and `connect` are the only callers of the socket
-        // view: the descriptor number is reused the moment it is released, and
-        // the identical string then resolves to a different directory with no
-        // error at all. Anything that only needs a path, unlinking above all,
-        // uses the host view, which cannot go stale.
+        // Pins the use-after-drop hazard: a released descriptor number is
+        // reused, so the same string silently names another directory.
         let jail = tempfile::tempdir().unwrap();
         let jail_root = Utf8Path::from_path(jail.path()).unwrap();
         std::fs::write(jail_root.join("rootfs.ext4"), b"the jail").unwrap();
@@ -374,7 +289,6 @@ mod tests {
             view
         };
 
-        // Claim the number the jail's descriptor just released.
         let impostor = tempfile::tempdir().unwrap();
         let impostor_root = Utf8Path::from_path(impostor.path()).unwrap();
         std::fs::write(impostor_root.join("rootfs.ext4"), b"somewhere else").unwrap();
@@ -384,8 +298,6 @@ mod tests {
             .open(impostor_root)
             .unwrap();
 
-        // The same string no longer names the jail. It either names the
-        // impostor or fails; what it must never do is still work.
         let stale = std::fs::read(&socket_view);
         assert_ne!(
             stale.unwrap_or_default(),
@@ -396,10 +308,8 @@ mod tests {
 
     #[test]
     fn every_socket_view_fits_the_sun_path_limit_with_its_widest_port() {
-        // The reserve is what makes `with_port` infallible, and it is kept on
-        // every socket path rather than only the one that grows today: a base
-        // admitted without it would take a port and fit under a shallow state
-        // directory while failing at `bind` under a deep one.
+        // A base admitted without the reserve would fit bare and fail at `bind`
+        // once it took a port.
         let (_dir, paths) = jail_in_tmpdir();
         for file in [
             paths.api_socket(),
@@ -419,8 +329,8 @@ mod tests {
 
     #[test]
     fn the_socket_view_survives_a_jail_root_far_past_the_limit() {
-        // A deep state directory is exactly the case that produced a five
-        // second timeout pointing at Firecracker instead of at the path.
+        // Fails if the socket view is built from the host path rather than the
+        // descriptor.
         let dir = tempfile::tempdir().unwrap();
         let mut root = Utf8Path::from_path(dir.path()).unwrap().to_owned();
         for _ in 0..8 {
@@ -448,10 +358,8 @@ mod tests {
 
     #[test]
     fn a_base_that_fits_only_while_it_is_bare_is_refused() {
-        // The port suffix counts against the limit at construction, because
-        // that is the only place a caller is left with anywhere to go. Admitted
-        // bare, the same path would be over the limit the moment it took the
-        // port it exists to take.
+        // Admitted bare, this base would be over the limit the moment it took
+        // a port.
         let widest = MAX_SOCKET_PATH - PORT_SUFFIX_RESERVE;
         let fits = "/a".repeat(48);
         assert_eq!(fits.len(), widest);
@@ -462,8 +370,7 @@ mod tests {
 
     #[test]
     fn a_socket_swapped_for_a_link_is_not_pinned() {
-        // The pin is what later API calls trust, so a link where the socket
-        // should be is refused rather than resolved to wherever it points.
+        // Later API calls trust the pin, so a link must be refused, not followed.
         use std::os::unix::fs::symlink;
         use std::os::unix::net::UnixListener;
 

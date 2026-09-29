@@ -76,14 +76,9 @@ impl BencherPartition {
             return PartitionLevel::Member;
         }
 
-        // Removed on the way out, once the values have been restored. An empty
-        // `bencher` cgroup left carrying this run's cpuset is residue: nothing
-        // else reads that cgroup, the next job recreates it on demand, and
-        // clearing `cpuset.cpus` back to inherit-everything is refused with
-        // `EIO` while any task remains in a descendant, so the restore alone
-        // cannot always undo what this does. Registered whoever created the
-        // directory, because the residue is the same either way and `rmdir`
-        // refuses while anything is still inside.
+        // Removed on the way out whoever created it, because clearing
+        // `cpuset.cpus` is refused with `EIO` while a descendant holds a task,
+        // so the restore alone cannot always undo this.
         guard.remove_when_empty(self.path.clone());
 
         // A partition needs explicit cpus and mems. Mems mirror the
@@ -97,10 +92,8 @@ impl BencherPartition {
         ) {
             return PartitionLevel::Member;
         }
-        // A node set that could not be read is not node 0. Degrading to member
-        // is the declared, loud absence of isolation; writing a guessed node set
-        // would confine the benchmark's memory on the strength of a read that
-        // did not happen.
+        // An unreadable node set degrades to member rather than guessing one,
+        // which would confine the benchmark's memory on a read that never happened.
         let mems = match effective_mems(&self.root) {
             Ok(mems) => mems,
             Err(e) => {

@@ -33,17 +33,12 @@ pub fn vm_execute(
 
     let state_dir = StateDir::new(config.state_dir.clone())?;
 
-    // Prepare the host on demand, before the first jail this process builds.
-    // It is the cheap check, so a host that cannot jail at all fails here
-    // rather than after pulling an image.
+    // Before the image pull, so a host that cannot jail at all fails fast.
     host.ensure(state_dir.path(), config.jail_user)?;
     state_dir.refuse_unusable_mount()?;
 
-    // Everything that does not touch the jail happens before the lock. The
-    // image pull and unpack are the slow part of a job and need nothing from
-    // the chroot, so holding an exclusive per-state-directory lock across them
-    // would serialize concurrent `runner run` invocations on the download
-    // rather than on the jail.
+    // Pulled and unpacked before the jail lock, so concurrent runs serialize on
+    // the jail rather than on the download.
     let workspace = prepare_oci_workspace(config)?;
     let work_dir = &workspace.work_dir;
     let unpack_dir = &workspace.unpack_dir;
@@ -68,14 +63,11 @@ pub fn vm_execute(
     println!("Installing init binary...");
     install_init_binary(unpack_dir)?;
 
-    // Held from here to the end of the job. Another runner's sweep removes
-    // every chroot it finds, so it must not run while this one is live.
-    // Declared before the jail guard so the lock outlives the teardown it
-    // protects.
+    // Declared before the jail guard so it outlives the teardown, because
+    // another runner's sweep removes every chroot it finds.
     let lock = JailLock::acquire(state_dir.path())?;
-    // Every job, not once per process: a sibling runner process sharing this
-    // state directory can leave an orphan at any time, and this job would
-    // otherwise measure beside it.
+    // Every job, not once per process: a sibling runner sharing this state
+    // directory can leave an orphan at any time.
     state_dir.sweep(&lock)?;
     // Runners with other state directories share these cores but not this lock.
     crate::jail::refuse_occupied_cgroups()?;
@@ -84,10 +76,8 @@ pub fn vm_execute(
     // on a tmpfs and is operator visible, so it has to be self-healing.
     let netns = netns::ensure()?;
 
-    // The jail root is a function of the VM id, and the job's artifacts are
-    // built inside it rather than copied in afterwards, so the id is minted
-    // before any of them exist. Dropping this guard removes the chroot tree,
-    // which is what the workspace temp directory used to cover.
+    // Minted before any artifact exists, because the jail root is a function of
+    // the VM id and the artifacts are built inside it.
     let vm_id = VmId::new();
     // Shared by this job's cgroup and chroot: a cgroup that outlives its
     // teardown keeps the chroot that names it.
@@ -97,8 +87,7 @@ pub fn vm_execute(
     println!("  Jail: {}", jail.root());
 
     // Everything Firecracker reads has to be inside the chroot, so the kernel
-    // lands in the jail root whatever its source: bundled, supplied by the
-    // job, or found on the host.
+    // lands in the jail root whatever its source.
     let kernel_dest = jail.kernel().host().as_path();
     if let Some(kernel) = &config.kernel {
         println!("  Copying the job's kernel into the jail...");
@@ -119,11 +108,9 @@ pub fn vm_execute(
     );
     bencher_rootfs::create_ext4_with_size(unpack_dir, rootfs_dest, config.disk.to_mib())?;
 
-    // The jailer chowns the chroot root and the device nodes it creates, but
-    // not what the runner placed inside, so each artifact is handed over
-    // explicitly. The rootfs is written by Firecracker and is given away; the
-    // kernel is only read, so it stays owned by root and merely becomes
-    // readable.
+    // The jailer does not chown what the runner placed in the chroot: the
+    // rootfs is written by Firecracker so it is given away, while the kernel is
+    // only read so it stays root-owned.
     chroot::chown_to_jail(rootfs_dest, config.jail_user)?;
     chroot::grant_jail_read(kernel_dest)?;
 
@@ -153,10 +140,9 @@ fn build_firecracker_config(
     netns: Utf8PathBuf,
     cgroup_survived: CgroupSurvived,
 ) -> Result<crate::firecracker::FirecrackerJobConfig, RunnerError> {
-    // The jailer copies `--exec-file` into the chroot itself and rejects a
-    // multiply linked file, so Firecracker is staged outside the jail and is
-    // never placed in the chroot by hand or hardlinked. Its base name is what
-    // the jailer derives the chroot layout from, so it is fixed.
+    // Staged outside the jail under a fixed name: the jailer copies
+    // `--exec-file` in itself, rejects a hardlinked one, and derives the chroot
+    // layout from its base name.
     let firecracker_bin = work_dir.join(state::EXEC_FILE_NAME);
     if crate::firecracker_bin::FIRECRACKER_BUNDLED {
         crate::firecracker_bin::write_firecracker_to_file(&firecracker_bin)?;
@@ -212,11 +198,6 @@ fn build_firecracker_config(
     })
 }
 
-/// Copy a file the job needs to a path the runner controls.
-///
-/// Used both for artifacts placed inside the chroot and for binaries staged
-/// outside it, so the message says where the copy landed rather than claiming
-/// a destination it does not know about.
 fn copy_file(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
     std::fs::copy(src, dest).map_err(|e| crate::error::ConfigError::CopyFile {
         src: src.to_owned(),
@@ -227,11 +208,8 @@ fn copy_file(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
     Ok(())
 }
 
-/// Stage an executable found on the host, as mode 0755.
-///
-/// The mode is set rather than preserved: `fs::copy` already carries the
-/// source's over, and what is staged has to be executable however the host
-/// happened to permission the copy this found.
+/// Forces mode 0755, because `fs::copy` carries over whatever mode the host
+/// gave the source.
 fn copy_binary(src: &Utf8Path, dest: &Utf8Path) -> Result<(), RunnerError> {
     use std::os::unix::fs::PermissionsExt as _;
 
@@ -312,10 +290,8 @@ fn install_init_binary(rootfs: &Utf8Path) -> Result<(), RunnerError> {
     Ok(())
 }
 
-/// Where a bundled binary is looked for when it was not bundled in.
-///
 /// Beside the runner first, so a self-contained install finds its own copy
-/// before anything the host happens to have.
+/// before the host's.
 fn binary_candidates(name: &str) -> impl Iterator<Item = Utf8PathBuf> {
     [
         std::env::current_exe()
@@ -329,15 +305,8 @@ fn binary_candidates(name: &str) -> impl Iterator<Item = Utf8PathBuf> {
     .flatten()
 }
 
-/// Find a binary on disk, for when it was not bundled into the runner.
-///
-/// One function for all three, because three copies of the same search differing
-/// only in a name and a hint is three places for the search to drift.
-///
-/// A candidate that cannot be stat'ed is passed over rather than reported, and
-/// that is the whole of the failure handling this needs: the search is a list of
-/// guesses, and the one thing it can conclude, that nothing was found, is
-/// reported by name with what to do about it.
+/// A candidate that cannot be stat'ed is passed over, since the search is a
+/// list of guesses and only finding nothing is worth reporting.
 fn find_binary(name: &str, hint: &str) -> Result<Utf8PathBuf, RunnerError> {
     binary_candidates(name)
         .find(|candidate| candidate.exists())
@@ -350,7 +319,6 @@ fn find_binary(name: &str, hint: &str) -> Result<Utf8PathBuf, RunnerError> {
         })
 }
 
-/// Where to get Firecracker and its jailer, which ship together.
 const FIRECRACKER_RELEASES: &str =
     "Install from: https://github.com/firecracker-microvm/firecracker/releases";
 
@@ -364,7 +332,6 @@ fn find_firecracker_binary() -> Result<Utf8PathBuf, RunnerError> {
     find_binary("firecracker", FIRECRACKER_RELEASES)
 }
 
-/// Find the jailer binary on the system (fallback when not bundled).
 fn find_jailer_binary() -> Result<Utf8PathBuf, RunnerError> {
     find_binary("jailer", FIRECRACKER_RELEASES)
 }

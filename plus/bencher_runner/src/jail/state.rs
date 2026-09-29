@@ -1,8 +1,5 @@
-//! The runner's persistent state directory.
-//!
 //! Everything the jail needs that must outlive a single job hangs off one
-//! directory: the chroot base the jailer builds under, and the sweep that
-//! reclaims chroots left behind by a runner that exited without unwinding.
+//! state directory.
 
 #![expect(clippy::print_stderr, reason = "host preparation prints diagnostics")]
 #![expect(
@@ -20,111 +17,39 @@ use crate::jail::lock::LOCK_FILE;
 use crate::jail::reap::Reaped;
 use crate::jail::{JailLock, VmId};
 
-/// Subdirectory of the state directory used as the jailer's chroot base.
 const CHROOT_BASE: &str = "jail";
 
-/// The chroot directory inside a jail, which the jailer makes `/`.
 const JAIL_ROOT: &str = "root";
 
-/// The `--exec-file` base name the jailer derives the chroot layout from.
-///
 /// The jailer builds `<chroot_base>/<exec_file_name>/<id>/root`, so the
-/// staged Firecracker binary must be named exactly this for the runner and
-/// the jailer to agree on where the chroot lives.
+/// staged binary must carry exactly this name for the runner and the jailer
+/// to agree on the chroot.
 pub(crate) const EXEC_FILE_NAME: &str = "firecracker";
 
-/// The runner's persistent state directory.
-///
-/// Created at mode 0700 owned by root: it holds every job's chroot, which
-/// contains the guest rootfs and the copied VMM binary.
+/// Root-owned at mode 0700, since it holds every job's chroot with a guest
+/// rootfs and a copy of the VMM binary.
 #[derive(Debug, Clone)]
 pub struct StateDir {
     root: Utf8PathBuf,
 }
 
 impl StateDir {
-    /// Create a handle for the state directory rooted at `root`.
-    ///
-    /// Absolute, checked here so the type carries the invariant: a relative root
-    /// reaches the jailer as a `--chroot-base-dir` it resolves against its own
-    /// working directory, and every path this type hands out would then name a
-    /// different file for the runner than for the jailer. See
-    /// [`crate::jail::check_absolute_state_dir`].
-    ///
-    /// A root that is an operator-controlled symlink is resolved here, so the
-    /// concrete target becomes the root every later step names. Doing it in the
-    /// constructor is what keeps two handles built from the same `--state-dir`
-    /// agreeing: the job path builds a [`StateDir`] without calling
-    /// [`Self::create`], host preparation builds a separate one that does, and
-    /// this is their only common point. See [`resolve_symlinked_root`].
+    /// The absolute check and the symlink resolution live here, not in
+    /// [`Self::create`], because the job path builds its handle without ever
+    /// calling it.
     pub fn new(root: Utf8PathBuf) -> Result<Self, JailError> {
         crate::jail::check_absolute_state_dir(&root)?;
         let root = resolve_symlinked_root(root)?;
         Ok(Self { root })
     }
 
-    /// The state directory itself.
     #[must_use]
     pub fn path(&self) -> &Utf8Path {
         &self.root
     }
 
-    /// Refuse a state directory that belongs to the host rather than to us.
-    ///
-    /// A path that does not exist, or exists and is empty, is ours to take. A
-    /// populated one is ours on either of two showings: it carries
-    /// `jail/firecracker`, which is a path only this runner builds, or nothing
-    /// in it is somebody else's. Without this, `--state-dir /var/lib` would be
-    /// chmodded to 0700 and take the host down with it.
-    ///
-    /// A read that fails for any reason other than absence is refused rather
-    /// than treated as an empty directory. It is not evidence that the
-    /// directory is empty, and the chmod that follows is the thing this guard
-    /// exists to keep off a directory that is not the runner's: a path that is
-    /// really a file, one whose contents cannot be listed, or a listing that
-    /// breaks off partway would otherwise be taken on the strength of a failed
-    /// check. A listing that ends early is the same failure as one that never
-    /// started, so it is reported rather than dropped.
-    ///
-    /// What the filesystem itself put there is not somebody else's data. See
-    /// [`BENIGN_ENTRIES`]. Neither is what the runner put there itself. See
-    /// [`OUR_ROOT_ENTRIES`].
-    ///
-    /// Ownership is proven by the tree, never by a name. An entry called `jail`
-    /// proves nothing: `/var/lib` on a host running this runner has one, and so
-    /// does any directory somebody happened to name that way, and matching on
-    /// the name alone let a populated system directory pass this guard and be
-    /// chmodded 0700, which is the whole hazard it exists for.
-    /// `jail/firecracker` is a path only this runner builds, so a directory
-    /// there settles it on its own.
-    ///
-    /// Short of that, the tree is read as far as it got. [`Self::create`] makes
-    /// the three directories one at a time, so a runner killed partway leaves
-    /// `jail` without `jail/firecracker`, and an operator who runs
-    /// `rm -rf <state_dir>/jail` to reclaim disk leaves neither, keeping only
-    /// the lock file beside them. Refusing either would latch: a state
-    /// directory the runner has been using for months would be declared
-    /// somebody else's, on every job, until a person deleted it by hand. So a
-    /// root holding nothing but the runner's own entries is the runner's, and a
-    /// `jail` holding nothing but `firecracker` is the runner's. Somebody
-    /// else's data under either name is still refused, which is the direction
-    /// the guard is for.
-    ///
-    /// Every interior component is examined without following symlinks, and one
-    /// that is a link is refused rather than resolved. See [`real_dir`]. The root
-    /// itself is handled a step earlier, in [`StateDir::new`]: a link there is
-    /// followed only when three showings prove it the operator's own choice (its
-    /// parent root-only-writable, a single hop to an absolute canonical target,
-    /// and that target's whole ancestry root-only-writable), and refused
-    /// otherwise, so what this sees at the root is either the resolved target or a
-    /// link that gets refused here the same as any other. See
-    /// [`resolve_symlinked_root`].
-    ///
-    /// Run per job by [`crate::jail::JailDir::create`], not only at host
-    /// preparation, which runs once per process. On an intact tree it is the
-    /// fast path above: three `lstat`s and out. What the per-job run buys is
-    /// that a component swapped for a link after preparation is refused before
-    /// the job's `create_dir_all` would follow it. See [`crate::jail::JailDir`].
+    /// Refuse a root that is not provably the runner's, since chmodding
+    /// something like `--state-dir /var/lib` to 0700 takes the host down.
     pub(crate) fn check_root_is_ours(&self) -> Result<(), JailError> {
         let chroot_base = self.chroot_base();
         let jail_parent = self.jail_parent();
@@ -142,11 +67,8 @@ impl StateDir {
                 entry,
             });
         }
-        // Reached only with `jail/firecracker` absent, so a `jail` of ours is
-        // empty by the time this runs. Written as the rule the tree has to
-        // satisfy rather than as that consequence, since the rule is what holds
-        // and the consequence is only what the order of these checks makes of
-        // it today.
+        // `firecracker` cannot be here yet, but tolerating it states the tree's
+        // rule rather than leaning on the order of these checks.
         if base_exists && let Some(entry) = first_foreign_entry(&chroot_base, &[EXEC_FILE_NAME])? {
             return Err(JailError::ForeignStateDir {
                 path: self.root.clone(),
@@ -162,9 +84,7 @@ impl StateDir {
         self.root.join(CHROOT_BASE)
     }
 
-    /// The directory holding one subdirectory per jailed VMM.
-    ///
-    /// This is the level the sweep operates on.
+    /// One subdirectory per jailed VMM, the level the sweep operates on.
     #[must_use]
     pub fn jail_parent(&self) -> Utf8PathBuf {
         self.chroot_base().join(EXEC_FILE_NAME)
@@ -182,32 +102,9 @@ impl StateDir {
         self.jail_dir(vm_id).join(JAIL_ROOT)
     }
 
-    /// Create the state directory tree, root-owned at mode 0700.
-    ///
-    /// Idempotent. The owner and the mode are applied on every call so a
-    /// directory created laxer, or left owned by whoever made it before the
-    /// runner was pointed at it, is taken on upgrade. That taking is why the
-    /// root has to be one the runner owns: pointed at a populated system
-    /// directory it would otherwise chown and chmod that directory and break
-    /// the host.
-    ///
-    /// One directory at a time, and the guard is written to expect that: a
-    /// runner killed between two of these calls leaves a tree that is half
-    /// built, which is the runner's own and has to be finishable on the next
-    /// job. See [`Self::check_root_is_ours`].
-    ///
-    /// The order closes the loop's own window. `create_dir_all` resolves its
-    /// path, so a component swapped for a link underneath it is followed, and
-    /// what keeps that from mattering is that each level is taken before the
-    /// next is created: once [`make_private`] has run on a level, nobody but
-    /// root can plant anything in it for the next iteration to follow. The one
-    /// unowned moment is the root itself before its own take, under a parent
-    /// the operator chose. A link planted there fails the `O_NOFOLLOW` open in
-    /// [`make_private`], so an owner or a mode is never applied through a link.
-    /// A real directory swapped in does take the chown and the 0700, and
-    /// harmlessly: the swap puts there only a directory the attacker already
-    /// owned, and neither the chown nor the chmod is recursive, so the take
-    /// lands on that directory alone and hands root nothing of anybody else's.
+    /// Each level is taken for root before the next is created, so a link
+    /// planted below a taken level is never followed, and one at the root
+    /// fails the `O_NOFOLLOW` open in `make_private`.
     pub fn create(&self) -> Result<(), JailError> {
         self.check_root_is_ours()?;
         for dir in [&self.root, &self.chroot_base(), &self.jail_parent()] {
@@ -220,14 +117,8 @@ impl StateDir {
         Ok(())
     }
 
-    /// Refuse a filesystem the jail cannot run from.
-    ///
-    /// The chroot's `/dev/kvm` and the VMM binary live on the state directory's
-    /// filesystem, so a `nodev` mount leaves the VMM unable to open KVM and a
-    /// `noexec` one leaves it unable to exec, and either fails only once the
-    /// guest is booting, blaming something else. Not part of [`Self::create`],
-    /// whose tests build state directories wherever the host keeps its
-    /// temporary files.
+    /// A `nodev` or `noexec` mount would otherwise fail only once the guest is
+    /// booting, blaming something else.
     pub fn refuse_unusable_mount(&self) -> Result<(), JailError> {
         use nix::sys::statvfs::{FsFlags, statvfs};
 
@@ -248,47 +139,21 @@ impl StateDir {
         Ok(())
     }
 
-    /// Reclaim every jail a previous job left behind.
-    ///
-    /// Run by every job, under the job lock it takes as proof, before it builds
-    /// its own jail: anything found then is stale, whichever runner process
-    /// left it.
+    /// Run under the job lock before the job builds its own jail, so anything
+    /// found is stale whichever runner process left it.
     pub fn sweep(&self, _lock: &JailLock) -> Result<(), JailError> {
         let reclaimed = sweep_jails(&self.jail_parent())?;
         if reclaimed > 0 {
-            // Each one held a copy of the VMM binary and a full guest rootfs
-            // image, so an operator should hear about it.
+            // Each held a VMM binary and a full guest rootfs, so an operator
+            // should hear about it.
             println!("  Reclaimed {reclaimed} stale jail(s) from {}", self.root);
         }
         Ok(())
     }
 }
 
-/// Whether one component of the tree is there, as a directory of its own.
-///
-/// `symlink_metadata`, so a link is seen as a link rather than as whatever it
-/// points at, and a link is refused rather than resolved. Everything this guard
-/// authorizes follows a path: the 0700 chmod, and the sweep that
-/// `remove_dir_all`s what is under it. With a state directory under a parent an
-/// unprivileged user can write to, planting `jail` or `jail/firecracker` as a
-/// link to a directory of the host's would have the guard answer for one
-/// directory and root act on another. The runner cannot tell which of the two
-/// the operator meant, so it takes neither.
-///
-/// The root is the one component this may be handed already resolved: a symlinked
-/// root is followed in [`StateDir::new`] only when it proves the operator's own
-/// choice, and then what reaches here is the real target rather than the link.
-/// That proof is three showings, not one, since `canonicalize` collapses a whole
-/// chain: the link's parent is writable by nobody but root, the link is a single
-/// hop to an absolute canonical target, and that target's whole ancestry is
-/// writable by nobody but root. A link still at the root here is one that failed
-/// any of those, or one planted after [`StateDir::new`] ran, and it is refused
-/// the same as any interior link. See [`resolve_symlinked_root`].
-///
-/// A component that exists and is not a directory is refused the same way a
-/// path that cannot be read is: the tree the runner builds is directories the
-/// whole way down, and something else in the way is not evidence that this is
-/// the runner's own.
+/// A link is refused rather than resolved, so the guard never answers for one
+/// directory while the chmod and the sweep act on another.
 fn real_dir(path: &Utf8Path) -> Result<bool, JailError> {
     match fs::symlink_metadata(path) {
         Ok(metadata) if metadata.file_type().is_symlink() => Err(JailError::SymlinkedStateDir {
@@ -365,15 +230,8 @@ fn resolve_symlinked_root(root: Utf8PathBuf) -> Result<Utf8PathBuf, JailError> {
     resolve_symlinked_root_with(root, operator_controlled)
 }
 
-/// The resolution, with the judgment of one directory injectable.
-///
-/// The accept path needs a link and a target whose whole ancestry only root
-/// can write, which only root can arrange on a real filesystem, so exercising
-/// it end to end takes the elevated environment. The three showings are
-/// decision logic all the same, so the judgment is a parameter and the unit
-/// tests supply one for trees they own, the same way [`sweep_jails_with`]
-/// takes the reap. [`operator_controlled`] is the real judgment, and the
-/// euid-gated tests prove the whole path against it.
+/// The judgment is injectable because only root can build a root-only-writable
+/// ancestry, so the unit tests stub it to reach the accept path.
 fn resolve_symlinked_root_with<P>(
     root: Utf8PathBuf,
     is_operator_controlled: P,
@@ -387,36 +245,24 @@ where
     if !metadata.file_type().is_symlink() {
         return Ok(root);
     }
-    // (1) Only root could have created the link itself.
     if !parent_is_operator_controlled(&root, &is_operator_controlled)? {
         return Ok(root);
     }
-    // (2) A single hop to an absolute, already-canonical target. An unreadable
-    // link, or a dangling or otherwise unresolvable target, lands here too and is
-    // refused rather than followed.
+    // Showing (2): a single hop to an absolute, already-canonical target.
     let (Ok(target), Ok(resolved)) = (root.read_link_utf8(), root.canonicalize_utf8()) else {
         return Ok(root);
     };
     if target != resolved {
         return Ok(root);
     }
-    // (3) The resolved target and its whole ancestry are writable by nobody but
-    // root.
     if !ancestry_is_operator_controlled(&resolved, &is_operator_controlled)? {
         return Ok(root);
     }
     Ok(resolved)
 }
 
-/// Whether one directory is writable by nobody but root, read from the
-/// filesystem.
-///
-/// The judgment [`resolve_symlinked_root`] applies to the link's parent and to
-/// every ancestor of the resolved target. The path's own symlinks are followed
-/// by the `metadata` read: for the parent that is deliberate, since its
-/// ancestors are the operator's system layout, and for the ancestry walk it is
-/// moot, since `canonicalize` already left no symlink components to follow.
-/// See [`owner_only_writable`].
+/// Follows symlinks deliberately, since a parent's ancestors are the operator's
+/// system layout and the ancestry walk is already canonical.
 fn operator_controlled(dir: &Utf8Path) -> Result<bool, JailError> {
     let metadata = dir.metadata().map_err(|source| JailError::ReadStateDir {
         path: dir.to_owned(),
@@ -425,12 +271,6 @@ fn operator_controlled(dir: &Utf8Path) -> Result<bool, JailError> {
     Ok(owner_only_writable(metadata.uid(), metadata.mode()))
 }
 
-/// Whether the directory that holds `root` proves the operator made a link there.
-///
-/// What decides this is who can write the one directory the entry lives in,
-/// which is the judgment's to answer. See [`operator_controlled`]. The
-/// resolved target's own ancestry is vetted separately, in
-/// [`ancestry_is_operator_controlled`].
 fn parent_is_operator_controlled<P>(
     root: &Utf8Path,
     is_operator_controlled: &P,
@@ -439,20 +279,15 @@ where
     P: Fn(&Utf8Path) -> Result<bool, JailError>,
 {
     let Some(parent) = root.parent() else {
-        // Unreachable in practice: the root is absolute, so only `/` has no
-        // parent, and `/` is never a symlink. Refuse rather than assume.
+        // Only `/` has no parent and it is never a symlink, so refuse rather
+        // than assume.
         return Ok(false);
     };
     is_operator_controlled(parent)
 }
 
-/// Whether `dir` and every ancestor up to `/` is writable by nobody but root.
-///
-/// `dir` is a canonicalized path, so every component is a real directory and the
-/// walk judges real directories rather than following any link. A single group-
-/// or other-writable directory anywhere on the way to `/` is a place an
-/// unprivileged user could have arranged what the path resolves to, so the whole
-/// resolved root is refused. See [`operator_controlled`].
+/// `dir` must be canonical, so the walk judges real directories rather than
+/// following a link.
 fn ancestry_is_operator_controlled<P>(
     dir: &Utf8Path,
     is_operator_controlled: &P,
@@ -468,23 +303,12 @@ where
     Ok(true)
 }
 
-/// Whether a directory with this owner and mode is writable by nobody but root.
-///
-/// uid 0 and neither the group nor the other write bit set. No unprivileged user
-/// can then create, rename, or delete an entry in it, so any symlink found there
-/// was placed by root. The sticky bit is deliberately not consulted: it stops
-/// one user removing another's entries but not their creating their own, so it
-/// does not make an other-writable directory safe, and `/tmp` at 0o1777 is
-/// exactly the other-writable parent this must reject.
+/// The sticky bit is deliberately ignored, since it stops removing another
+/// user's entries but not creating one's own, so `/tmp` at 0o1777 is rejected.
 fn owner_only_writable(uid: u32, mode: u32) -> bool {
     uid == 0 && mode & 0o022 == 0
 }
 
-/// The first entry in `dir` that neither the runner nor the filesystem made.
-///
-/// Stops there. The answer is already decided, and what the operator needs is
-/// the name of something that tripped the guard rather than every name that
-/// would have.
 fn first_foreign_entry(dir: &Utf8Path, ours: &[&str]) -> Result<Option<String>, JailError> {
     let entries = match fs::read_dir(dir) {
         Ok(entries) => entries,
@@ -511,39 +335,16 @@ fn first_foreign_entry(dir: &Utf8Path, ours: &[&str]) -> Result<Option<String>, 
         {
             continue;
         }
-        // Lossy, and only ever shown to a person: this name is the operator's
-        // handle on what tripped the guard, and nothing rebuilds a path from
-        // it. The sweep, which does rebuild paths, skips such a name instead.
+        // Lossy is safe here because the name is only shown to a person, never
+        // rebuilt into a path.
         return Ok(Some(name.to_string_lossy().into_owned()));
     }
     Ok(None)
 }
 
-/// Take one directory of the tree for root: owner 0:0, mode 0700, no link
-/// followed.
-///
-/// `fchown` and `fchmod` on a descriptor opened `O_NOFOLLOW`, rather than the
-/// path forms: those resolve a link, so a component swapped for one between the
-/// guard and this call would have root claim a directory of somebody else's
-/// choosing. The open fails instead.
-///
-/// Ownership is taken, not assumed. The guard proves the tree is the runner's
-/// to use, but a directory that already existed keeps the owner it came with,
-/// and mode alone does not shut that owner out: 0700 is a setting the owner can
-/// change back. A root handed over at `--state-dir /home/op/state` would stay
-/// op's to reopen and to plant links in, between jobs, under everything the
-/// runner then builds inside. Chowned before the chmod, so there is never a
-/// tightened directory whose owner can still loosen it.
-///
-/// An `EPERM` from the chown is tolerated, and only that: it refuses exactly a
-/// process without the privilege, and no jail is ever built by one, since the
-/// jailed path checks for root by name before any of this runs (see
-/// [`crate::jail::HostPreparation::ensure`]). What does run unprivileged is the
-/// unit tests, which build state trees in directories they already own. The
-/// other place root itself can draw `EPERM` is a filesystem that maps root
-/// away, and tolerating it there leaves the tree exactly as tight as the chmod
-/// alone made it, which is what every setup had before ownership was taken at
-/// all.
+/// An `EPERM` from the chown is tolerated because no jail is ever built
+/// without root (see [`crate::jail::HostPreparation::ensure`]), and the chmod
+/// alone still tightens the tree.
 fn make_private(dir: &Utf8Path) -> Result<(), JailError> {
     let opened = fs::OpenOptions::new()
         .read(true)
@@ -571,50 +372,16 @@ fn make_private(dir: &Utf8Path) -> Result<(), JailError> {
         })
 }
 
-/// Entries that do not make a directory somebody else's.
-///
-/// A dedicated filesystem is the natural home for the chroots, since each holds
-/// a copy of the VMM binary and a full guest rootfs, and moving that traffic
-/// off the system disk is the recommended answer to its effect on a run. A
-/// freshly created ext4 volume already contains `lost+found` at its mount
-/// point, so counting that as somebody else's data would refuse the exact setup
-/// the state directory exists to support, and would do it with an error saying
-/// the directory was not created by the runner.
-///
-/// Only what the filesystem itself creates belongs here. Anything a person or
-/// another program put there is what the guard is for.
+/// Only what a filesystem creates itself belongs here, since anything a person
+/// or program put there is what the guard exists to refuse.
 const BENIGN_ENTRIES: [&str; 1] = ["lost+found"];
 
-/// Entries in the state directory root that the runner makes itself.
-///
-/// The chroot base, and the lock file taken beside it. [`LOCK_FILE`] is the
-/// constant [`crate::jail::lock`] creates the lock from, reused here rather than
-/// respelled, so the guard that tolerates the name and the module that writes it
-/// cannot drift apart. A test still takes the real lock and asks the guard about
-/// the root it landed in, so a move that broke the pairing would fail rather
-/// than pass quietly.
-///
-/// Not proof of ownership, which is the distinction that matters: matching a
-/// name is how a populated system directory once passed this guard, and a root
-/// carrying one of these alongside anything else is refused exactly as it was.
-/// What these buy is the other direction, that the runner's own leftovers
-/// cannot disown the runner's own directory. An operator who runs
-/// `rm -rf <state_dir>/jail` to reclaim disk leaves the lock file behind, and a
-/// root that counted that as somebody else's data would refuse to rebuild the
-/// tree it had just lost, with an error telling the operator their state
-/// directory was not created by the runner.
+/// Never proof of ownership, only tolerated so the runner's own leftovers, such
+/// as the lock after `rm -rf <state_dir>/jail`, cannot disown its root.
 const OUR_ROOT_ENTRIES: [&str; 2] = [CHROOT_BASE, LOCK_FILE];
 
-/// Remove every jail directory under `jail_parent`, returning how many went.
-///
-/// Jobs run serially, so anything found here is stale by construction. The
-/// runner disappears without unwinding in several ordinary ways, including
-/// SIGKILL, a crash, and the `exec` in a self-update, and `Drop` runs in
-/// none of them. Each leftover chroot holds a copy of the VMM binary and a
-/// full guest rootfs image, so leaving them is not an option.
-///
-/// Non-directory entries are left alone: the jailer only ever creates
-/// directories here, so anything else was put there by someone else.
+/// Needed because `Drop` never runs on SIGKILL, a crash, or a self-update's
+/// `exec`, and jobs run serially, so anything here is stale.
 fn sweep_jails(jail_parent: &Utf8Path) -> Result<usize, JailError> {
     sweep_jails_with(
         jail_parent,
@@ -623,17 +390,8 @@ fn sweep_jails(jail_parent: &Utf8Path) -> Result<usize, JailError> {
     )
 }
 
-/// The sweep, with the reap and the cgroup removal injectable.
-///
-/// The branch that refuses to remove a directory is the one preventing a
-/// destructive action, and it only runs when a real VMM survives a real kill.
-/// Manufacturing that would be testing fault injection rather than this code,
-/// so the reap is a parameter and the tests supply the answer.
-///
-/// The cgroup removal is a parameter for a different reason: it reaches into
-/// `/sys/fs/cgroup` on the machine running the tests, and a unit test that
-/// passes only because a given id happens not to exist on a dev box is
-/// reading host state, not this code.
+/// Injectable because a test cannot make a VMM survive a real kill, and the
+/// real cgroup removal would read the host's `/sys/fs/cgroup`.
 fn sweep_jails_with<R, C>(
     jail_parent: &Utf8Path,
     reap: R,
@@ -648,10 +406,8 @@ where
     })
 }
 
-/// The sweep, with the chroot removal injectable as well.
-///
-/// Root removes any directory a test can make, so a removal that fails has to
-/// be supplied for the test to hold whatever the privilege it runs with.
+/// The chroot removal is injectable because root can remove any directory a
+/// test makes, so a failing removal has to be supplied.
 fn sweep_jails_removing<R, C, D>(
     jail_parent: &Utf8Path,
     reap: R,
@@ -663,11 +419,8 @@ where
     C: Fn(&VmId) -> Result<(), JailError>,
     D: Fn(&Utf8Path) -> std::io::Result<()>,
 {
-    // Absence is the only reading that means there is nothing to sweep. Every
-    // other failure is reported, because "could not look" must not reach the
-    // caller as "nothing was there" in the one function whose job is finding
-    // what a previous runner left behind. The rule `check_root_is_ours`
-    // follows, one level up.
+    // Only absence means nothing to sweep, since "could not look" must never
+    // reach the caller as "nothing was there".
     let entries = match fs::read_dir(jail_parent) {
         Ok(entries) => entries,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(0),
@@ -679,29 +432,20 @@ where
         },
     };
 
-    // The whole listing is read before anything is removed. `reclaim_one`
-    // deletes the entry the iterator just yielded, and directory offsets are
-    // not stable under mutation, so a `read_dir` walked live across the
-    // removals can skip a neighbor, and a skipped jail may hold a live VMM
-    // this job would then measure beside.
+    // Collected first because directory offsets are not stable under removal,
+    // and a skipped neighbor may hold a live VMM.
     let entries: Vec<_> = entries.collect();
 
     let mut reclaimed = 0;
-    // The first failure is remembered but does not abandon the rest: one jail
-    // whose cgroup will not go away must not leave every other stale jail
-    // unreaped, with its chroot and cgroup still in place.
+    // One failing jail must not leave every other stale jail unreaped, so the
+    // first failure is kept and the sweep goes on.
     let mut failure = None;
 
     for entry in entries {
         let outcome = match entry {
             Ok(entry) => match jail_id(jail_parent, &entry) {
-                // One jail's reclamation can legitimately run for minutes, all
-                // of it under the jail lock: the reap is a bounded rescan with
-                // a kill timeout per pass, and the cgroup removal waits out its
-                // own timeout besides. Silence for that long is
-                // indistinguishable from a wedge, so it gets the same
-                // treatment as waiting on the lock itself: a line on a
-                // schedule, changing nothing about the work it describes.
+                // One reclamation can run for minutes under the lock, and
+                // silence that long looks like a wedge.
                 Ok(Some(vm_id)) => {
                     let jail_dir = jail_parent.join(vm_id.as_str());
                     super::lock::while_waiting(
@@ -710,14 +454,11 @@ where
                         || reclaim_one(&jail_dir, &vm_id, &reap, &remove_cgroup, &remove_chroot),
                     )
                 },
-                // Not a jail, or not ours: nothing owed either way.
                 Ok(None) => continue,
                 Err(e) => Reclamation::Failed(e),
             },
             // A listing that breaks off partway leaves jails unexamined, so it
-            // is remembered like any other failure rather than passing for a
-            // sweep that found nothing. What the listing did yield is still
-            // worth reaping.
+            // fails the sweep rather than passing for one that found nothing.
             Err(e) => {
                 eprintln!(
                     "Warning: failed to read an entry under {jail_parent}: {e}. Jails there may not have been examined."
@@ -741,12 +482,8 @@ where
     }
 
     match failure {
-        // The reclamations happened whether or not the sweep finished, and only
-        // a sweep that returns `Ok` reaches the caller that reports them, so a
-        // failure would otherwise swallow the news that a VMM binary and a full
-        // guest rootfs went away for each of them. Said here rather than by
-        // handing the count back beside the error: the error is what the
-        // caller acts on, so a failed sweep still fails the job.
+        // Only an `Ok` sweep reaches the caller that reports reclamations, so a
+        // failed one announces its own.
         Some(e) => {
             if reclaimed > 0 {
                 eprintln!(
@@ -759,25 +496,20 @@ where
     }
 }
 
-/// What became of one stale jail.
-///
 /// The three variants are the three columns of the table in [`crate::jail`], so
 /// a step added to [`reclaim_one`] has to pick one.
 enum Reclamation {
     /// The cgroup and the chroot are both gone.
     Reclaimed,
-    /// Still on disk. Costs disk rather than fidelity, so the job may run, and
-    /// the next job's sweep tries again.
+    /// Costs disk rather than fidelity, so the job may run and the next sweep
+    /// tries again.
     LeftBehind,
     /// The host cannot be trusted to measure until this is resolved.
     Failed(JailError),
 }
 
-/// The identity of the jail an entry names, if it is one of ours.
-///
-/// `Ok(None)` is an entry that is not a jail. An entry whose kind cannot be read
-/// is not one of those: it may be a jail, so skipping it silently would leave a
-/// live VMM unexamined while still reporting a sweep that found nothing wrong.
+/// An entry whose kind cannot be read is an error, not `Ok(None)`, since it may
+/// be a jail holding a live VMM.
 fn jail_id(jail_parent: &Utf8Path, entry: &fs::DirEntry) -> Result<Option<VmId>, JailError> {
     match entry.file_type() {
         Ok(file_type) if file_type.is_dir() => {},
@@ -794,13 +526,8 @@ fn jail_id(jail_parent: &Utf8Path, entry: &fs::DirEntry) -> Result<Option<VmId>,
         },
     }
 
-    // Skipped rather than lossily converted. A lossy name rebuilds into a
-    // path naming a different file, and everything downstream then works
-    // on the wrong one: the reap stats a path that does not exist and
-    // reports the jail clear, so a live VMM is neither reaped nor
-    // mentioned, and the cgroup removal targets a name nobody created.
-    // The runner only ever creates UTF-8 names here, so anything else is
-    // not ours to touch.
+    // Skipped rather than lossily converted, since a lossy name rebuilds into a
+    // path that does not exist, and the reap would report a live VMM clear.
     let file_name = entry.file_name();
     let Some(name) = file_name.to_str() else {
         eprintln!(
@@ -808,13 +535,11 @@ fn jail_id(jail_parent: &Utf8Path, entry: &fs::DirEntry) -> Result<Option<VmId>,
         );
         return Ok(None);
     };
-    // And skipped for the same reason if it is a name this runner could not
-    // have minted: the id is joined into a chroot path and into a cgroup path,
-    // so one that walks out of either was not created here either.
+    // A name this runner could not have minted is skipped too, since the id is
+    // joined into both a chroot path and a cgroup path.
     Ok(VmId::from_chroot_name(name.to_owned()))
 }
 
-/// Reap, then unwind one stale jail: its cgroup first, then its chroot.
 fn reclaim_one<R, C, D>(
     jail_dir: &Utf8Path,
     vm_id: &VmId,
@@ -827,19 +552,8 @@ where
     C: Fn(&VmId) -> Result<(), JailError>,
     D: Fn(&Utf8Path) -> std::io::Result<()>,
 {
-    // Reap before removing, and only remove once the jail is clear. Deleting the
-    // tree under a live VMM would not stop it, and it would destroy the only
-    // handle for identifying that process later: without the directory the next
-    // sweep never sees this id, never removes its cgroup, and the cgroup leaks
-    // for good.
-    //
-    // Fatal to the job, not to the runner, whether the VMM was found alive or
-    // could not be looked for at all. A stray VMM runs untrusted guest code on
-    // the benchmark cores, and nothing downstream catches it: these cgroups
-    // claim no exclusive cpuset, so the next job's cpuset applies and verifies
-    // cleanly while being contended the whole time. Refusing to measure is the
-    // only honest answer, and a jail that could not be examined has not earned a
-    // better one.
+    // Fatal to the job because a stray VMM contends the benchmark cores and,
+    // with no exclusive cpuset on these cgroups, nothing downstream notices.
     match reap(&jail_dir.join(JAIL_ROOT)) {
         Reaped::Clear => {},
         Reaped::StillRunning { pid } => {
@@ -861,15 +575,8 @@ where
         },
     }
 
-    // The cgroup goes first, and the chroot only once the cgroup is gone. The
-    // two are named by the same id, and the directory is the only handle a later
-    // sweep has for finding the cgroup again, so removing the directory while the
-    // cgroup survives strands that cgroup for good: the next sweep never sees the
-    // id, never retries the removal, and something may still be running on the
-    // benchmark cores under it. A leftover cgroup claims nothing, since these
-    // cgroups set no exclusive cpuset, but a removal that fails usually means
-    // something is still in it, which is why it is reported rather than
-    // swallowed.
+    // The chroot outlives the cgroup because its name is the only handle a
+    // later sweep has for finding that cgroup again.
     if let Err(e) = remove_cgroup(vm_id) {
         eprintln!(
             "Warning: leaving stale jail {jail_dir} in place because its cgroup could not be removed: {e}"
@@ -877,9 +584,6 @@ where
         return Reclamation::Failed(e);
     }
 
-    // A chroot that will not go away costs disk, not fidelity: the VMM is gone
-    // and the cgroup with it, so the job may run, and the next job's sweep tries
-    // again.
     match remove_chroot(jail_dir) {
         Ok(()) => Reclamation::Reclaimed,
         Err(e) => {
@@ -904,21 +608,9 @@ mod tests {
         (dir, root)
     }
 
-    /// A throwaway directory with a root-only-writable ancestry all the way to
-    /// `/`, removed on drop.
-    ///
-    /// The accept-path tests need a resolved target whose every ancestor is
-    /// owned by root and not group- or other-writable, which rules out anything
-    /// under `/tmp` (0o1777). The only place that holds without special mounts is
-    /// directly under `/`, which is root-owned. Creating there needs root, so the
-    /// tests that use this are gated on euid and skipped on an unprivileged box.
-    ///
-    /// Which means a test run with the privilege, and `cargo nextest` as root
-    /// inside a container is a common one, deliberately creates and removes
-    /// entries in the filesystem root. That is the point, not an accident:
-    /// nothing under a tempdir can provide the ancestry the accept path
-    /// demands. The names are pid- and counter-scoped so concurrent and
-    /// repeated runs cannot collide, and the drop takes the directory with it.
+    /// Made directly under `/`, the only root-only-writable ancestry short of
+    /// special mounts, so an elevated test run really writes to the filesystem
+    /// root.
     struct RootOnlyBase(Utf8PathBuf);
 
     impl Drop for RootOnlyBase {
@@ -941,14 +633,8 @@ mod tests {
         RootOnlyBase(base)
     }
 
-    /// A single-hop, already-canonical link to a real directory, for driving
-    /// [`resolve_symlinked_root_with`] under a stubbed judgment.
-    ///
-    /// Returns the tempdir keeping it alive, then the link, its parent, and
-    /// its target. The tempdir path is canonicalized first: the link must
-    /// store the same string `canonicalize` returns, or an ancestor the
-    /// platform symlinked would trip showing (2) in every test aimed at (1)
-    /// or (3).
+    /// The tempdir is canonicalized first, or an ancestor the platform symlinks
+    /// would trip showing (2) in every test aimed at (1) or (3).
     fn linked_root() -> (tempfile::TempDir, Utf8PathBuf, Utf8PathBuf, Utf8PathBuf) {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf())
@@ -993,13 +679,8 @@ mod tests {
 
     #[test]
     fn create_takes_ownership_of_a_directory_it_was_handed() {
-        // A pre-existing directory keeps the owner it came with, and mode alone
-        // does not shut that owner out: 0700 is a setting the owner can change
-        // back, and would leave that owner able to plant links under everything
-        // the runner builds inside. Chown needs the privilege, so this runs in
-        // the elevated environment and is skipped on an unprivileged box, where
-        // `create` tolerates the `EPERM` and leaves the owner alone, which
-        // every other test in this module already exercises.
+        // A handed-over directory's owner could chmod the 0700 back and plant
+        // links, so it must be chowned to root.
         use std::os::unix::fs::chown;
         if crate::jail::current_euid() != 0 {
             eprintln!(
@@ -1026,8 +707,7 @@ mod tests {
 
     #[test]
     fn a_populated_foreign_directory_is_refused() {
-        // The mode tightening would otherwise chmod a system directory to
-        // 0700: `--state-dir /var/lib` must not take the host down.
+        // `--state-dir /var/lib` must not chmod a system directory to 0700.
         let (_dir, root) = temp_root();
         let foreign = root.join("var-lib");
         fs::create_dir_all(foreign.join("dpkg")).unwrap();
@@ -1044,10 +724,8 @@ mod tests {
 
     #[test]
     fn a_root_that_cannot_be_read_is_not_assumed_to_be_ours() {
-        // A failed read is not an empty directory. A file where the state
-        // directory should be reads back `ENOTDIR`, the same way an unlistable
-        // directory reads back `EACCES`, and neither says the path is the
-        // runner's to chmod.
+        // A failed read, such as `ENOTDIR` from a file in the way, must not pass
+        // for an empty directory.
         let (_dir, root) = temp_root();
         let not_a_dir = root.join("state");
         fs::write(&not_a_dir, b"operator note").unwrap();
@@ -1062,10 +740,8 @@ mod tests {
 
     #[test]
     fn a_dedicated_filesystem_is_ours_to_take() {
-        // A freshly created ext4 volume mounted at the state directory holds
-        // `lost+found`, which the filesystem made, not an operator. Refusing it
-        // would block the recommended setup with an error blaming the operator
-        // for a directory they did not populate.
+        // A fresh ext4 volume's `lost+found` must not refuse the recommended
+        // dedicated-filesystem setup.
         let (_dir, root) = temp_root();
         let volume = root.join("volume");
         fs::create_dir_all(volume.join("lost+found")).unwrap();
@@ -1117,12 +793,8 @@ mod tests {
 
     #[test]
     fn a_directory_named_like_ours_is_not_ours() {
-        // The hazard this guard exists for, and what a name match let through:
-        // `/var/lib` on a host running this runner holds a directory called
-        // `jail`, and so does anything anyone happened to name that way, and
-        // the lock file's name is worth no more. The names the runner uses are
-        // tolerated in a root that holds nothing else; they never stand in for
-        // the tree.
+        // The runner's entry names are tolerated only in a root holding nothing
+        // else, never taken as proof of ownership.
         let (_dir, root) = temp_root();
         let foreign = root.join("var-lib");
         fs::create_dir_all(foreign.join("jail")).unwrap();
@@ -1144,10 +816,8 @@ mod tests {
 
     #[test]
     fn a_foreign_jail_directory_is_not_our_tree() {
-        // A root whose only entry is `jail` is tolerated only while that `jail`
-        // is one of ours: empty, or holding the chroots. Somebody else's jails
-        // under that name are exactly what the guard is for, and the tree they
-        // sit in must come away untouched.
+        // Somebody else's entries under a `jail` of that name must be refused
+        // and left untouched.
         let (_dir, root) = temp_root();
         let foreign = root.join("var-lib");
         fs::create_dir_all(foreign.join("jail").join("mail-server")).unwrap();
@@ -1171,9 +841,8 @@ mod tests {
 
     #[test]
     fn the_tree_is_what_proves_the_directory_is_ours() {
-        // A state directory the runner has used carries `jail/firecracker`,
-        // which is a path only this runner builds. Anything the operator put
-        // there afterwards does not disown it.
+        // `jail/firecracker` proves the root is the runner's, whatever the
+        // operator added beside it.
         let (_dir, root) = temp_root();
         let state = root.join("state");
         fs::create_dir_all(state.join("jail").join("firecracker")).unwrap();
@@ -1187,11 +856,8 @@ mod tests {
 
     #[test]
     fn a_half_built_tree_is_ours() {
-        // The tree is made one directory at a time, so a runner killed between
-        // two of them leaves `jail` there and `jail/firecracker` not. Refusing
-        // that latches: the state directory would be declared somebody else's
-        // on every job from then on, and only a person deleting it by hand
-        // would clear it.
+        // A runner killed between two levels of `create` must not latch its
+        // state directory as somebody else's.
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         fs::create_dir_all(state.chroot_base()).unwrap();
@@ -1206,13 +872,8 @@ mod tests {
 
     #[test]
     fn a_root_holding_only_the_lock_is_ours() {
-        // The realistic way a half-built tree happens is not a crash: an
-        // operator reclaiming disk with `rm -rf <state_dir>/jail` leaves the
-        // lock file and nothing else, and a root that read that as somebody
-        // else's data would refuse to rebuild the tree it had just lost.
-        //
-        // The real lock is taken here rather than a file named like it, so the
-        // guard and the lock module cannot drift apart without this failing.
+        // The real lock left by `rm -rf <state_dir>/jail` must not stop a
+        // rebuild, which also pins the guard to the lock module's file name.
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
@@ -1226,19 +887,11 @@ mod tests {
 
     #[test]
     fn a_symlinked_component_is_refused() {
-        // Under a state directory whose parent an unprivileged user can write
-        // to, a component planted as a link has the guard answer for one
-        // directory and root act on another: the 0700 chmod lands on the
-        // target, and the sweep `remove_dir_all`s what is under it. Every
-        // component is checked, since a link at any of them resolves the ones
-        // below it too.
+        // A link at any component, under a world-writable base so the result
+        // holds whatever the euid, must be refused before the chmod or the sweep
+        // reaches its target.
         for component in ["state", "state/jail", "state/jail/firecracker"] {
             let (_dir, root) = temp_root();
-            // Make the base world-writable so the refusal holds whatever the
-            // euid: a link at `state` then has a parent none of the three
-            // showings in `resolve_symlinked_root` can pass, whether the tests
-            // run as root or not, rather than resolving to a `ForeignStateDir`
-            // when root happens to own the tempdir.
             fs::set_permissions(&root, fs::Permissions::from_mode(0o777)).unwrap();
             let victim = root.join("victim");
             fs::create_dir_all(victim.join("someone-elses-data")).unwrap();
@@ -1275,16 +928,12 @@ mod tests {
 
     #[test]
     fn owner_only_writable_gates_on_uid_and_write_bits() {
-        // Root-owned and closed to everyone else is the one accepted shape:
-        // nobody but root can then have planted a link in such a directory.
+        // Only a root-owned directory closed to group and other writes passes,
+        // whatever its file-type or sticky bits.
         assert!(owner_only_writable(0, 0o755));
         assert!(owner_only_writable(0, 0o700));
         assert!(owner_only_writable(0, 0o711));
-        // The file-type bits `metadata.mode()` also carries are ignored: only
-        // the owner and the write bits decide.
         assert!(owner_only_writable(0, 0o040_755));
-        // Group- or other-writable, even owned by root, is not accepted:
-        // somebody else could have planted the link.
         assert!(!owner_only_writable(0, 0o775), "group-writable");
         assert!(!owner_only_writable(0, 0o757), "other-writable");
         assert!(!owner_only_writable(0, 0o777), "group- and other-writable");
@@ -1292,21 +941,15 @@ mod tests {
             !owner_only_writable(0, 0o1777),
             "sticky does not launder /tmp"
         );
-        // Not owned by root is never accepted, however tight the mode.
         assert!(!owner_only_writable(1000, 0o755));
         assert!(!owner_only_writable(1000, 0o700));
     }
 
     #[test]
     fn ancestry_is_operator_controlled_walks_the_whole_path() {
-        // `/` is root-owned and not group- or other-writable, so the walk
-        // accepts it. Reading its metadata needs no privilege, so this exercises
-        // the accept branch even on an unprivileged box.
+        // A loose directory anywhere on the path must fail the walk, while `/`
+        // itself passes.
         assert!(ancestry_is_operator_controlled(Utf8Path::new("/"), &operator_controlled).unwrap());
-        // A directory anyone can write anywhere on the path fails the walk. Under
-        // an unprivileged box the leaf itself is not root-owned, and either way
-        // the point is that a loose directory on the way to `/` is refused, which
-        // is what catches an attacker-writable intermediate.
         let (_dir, root) = temp_root();
         let open = root.join("open");
         fs::create_dir(&open).unwrap();
@@ -1321,13 +964,8 @@ mod tests {
 
     #[test]
     fn a_link_passing_every_showing_resolves_to_its_target() {
-        // The accept path: the parent passes (1), the link is a single hop to
-        // its already-canonical target so (2) holds, and every ancestor of the
-        // target passes (3). The resolved target, not the link, comes back as
-        // the root. The judgment is stubbed because a really root-only-writable
-        // ancestry is root's to build;
-        // `an_operator_controlled_symlinked_root_is_resolved` proves the same
-        // path against the real one.
+        // A link passing all three showings must resolve to its target rather
+        // than stay the link.
         let (_dir, link, _parent, target) = linked_root();
 
         let resolved = resolve_symlinked_root_with(link, |_: &Utf8Path| Ok(true)).unwrap();
@@ -1337,9 +975,8 @@ mod tests {
 
     #[test]
     fn a_parent_the_judgment_refuses_leaves_the_link_unresolved() {
-        // Showing (1): the directory holding the link is what proves root made
-        // the link itself. Showings (2) and (3) both hold here, so a resolution
-        // would mean (1) was not required.
+        // Showings (2) and (3) both hold here, so a resolution would mean (1)
+        // was not required.
         let (_dir, link, parent, _target) = linked_root();
 
         let unresolved =
@@ -1351,10 +988,8 @@ mod tests {
 
     #[test]
     fn a_second_hop_leaves_the_link_unresolved_whatever_the_judgment() {
-        // Showing (2): `canonicalize` collapses a whole chain, so the stored
-        // target differing from the resolved path is the one evidence that the
-        // walk passed through a hop neither of the other showings names. Even a
-        // judgment that accepts every directory must not resolve it.
+        // A second hop must be refused by showing (2) even when the judgment
+        // accepts every directory.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf())
             .unwrap()
@@ -1377,9 +1012,8 @@ mod tests {
 
     #[test]
     fn a_relative_target_leaves_the_link_unresolved_whatever_the_judgment() {
-        // The other refusal (2) makes: a relative or `..`-laden stored target
-        // never equals its canonical resolution, even when both name the same
-        // real directory a single absolute hop would have named.
+        // A relative stored target must be refused by showing (2) even though it
+        // lands on the right directory.
         let (_dir, link, _parent, target) = linked_root();
         fs::remove_file(&link).unwrap();
         symlink(Utf8Path::new("../target"), &link).unwrap();
@@ -1397,9 +1031,8 @@ mod tests {
 
     #[test]
     fn a_target_the_judgment_refuses_leaves_the_link_unresolved() {
-        // Showing (3) begins at the resolved target itself: a judgment that
-        // refuses it must refuse the resolution even though the parent passed
-        // (1) and the hop is canonical (2).
+        // Showing (3) must judge the resolved target itself, not only its
+        // ancestors.
         let (_dir, link, _parent, target) = linked_root();
 
         let unresolved =
@@ -1411,11 +1044,8 @@ mod tests {
 
     #[test]
     fn the_ancestry_walk_reaches_the_filesystem_root() {
-        // Showing (3) is the whole ancestry, not the target alone: a loose
-        // directory anywhere on the way up is a place an unprivileged user
-        // could have arranged what the path resolves to. `/` is an ancestor of
-        // every target, so a judgment refusing only `/` proves the walk goes
-        // all the way.
+        // A judgment refusing only `/` proves showing (3) walks the whole
+        // ancestry.
         let (_dir, link, _parent, _target) = linked_root();
 
         let unresolved = resolve_symlinked_root_with(link.clone(), |dir: &Utf8Path| {
@@ -1428,9 +1058,8 @@ mod tests {
 
     #[test]
     fn a_real_directory_root_is_used_verbatim() {
-        // A real-directory root is never canonicalized: the runner and the
-        // jailer share the one string, and its ancestors are the operator's own
-        // system layout the guard already trusts.
+        // Only a symlink at the root is resolved, so a real directory's
+        // ancestor symlinks, the operator's own layout, must survive.
         let (_dir, root) = temp_root();
         let real = root.join("real");
         fs::create_dir(&real).unwrap();
@@ -1441,8 +1070,8 @@ mod tests {
 
     #[test]
     fn a_nonexistent_root_is_left_as_given() {
-        // A path not there yet is the first-run case: nothing to resolve, and
-        // `create` makes it. It must come back exactly as handed in.
+        // The first-run case: a missing root must come back as given for
+        // `create` to make.
         let (_dir, root) = temp_root();
         let missing = root.join("not-here-yet");
 
@@ -1454,10 +1083,8 @@ mod tests {
 
     #[test]
     fn a_symlinked_root_under_a_writable_parent_is_refused() {
-        // The relaxation for a symlinked root reaches only a parent none but
-        // root can write. A parent anyone else can write, even with the sticky
-        // bit `/tmp` carries, leaves the link unfollowed and `real_dir` refuses
-        // it, so the target is neither chmodded nor swept.
+        // A parent others can write, even with the sticky bit `/tmp` carries,
+        // must leave the link refused and its target neither chmodded nor swept.
         let (_dir, root) = temp_root();
         let parent = root.join("open");
         fs::create_dir(&parent).unwrap();
@@ -1487,31 +1114,16 @@ mod tests {
 
     #[test]
     fn a_symlink_resolving_through_a_writable_ancestor_is_refused() {
-        // The widening the guard must not have: `--state-dir /var/lib/rs` where
-        // `/var/lib/rs -> /mnt/x/runner`, `/var/lib` is root-only-writable, but
-        // `/mnt/x` is world-writable and an attacker has planted
-        // `/mnt/x/runner -> /victim`. `canonicalize` would collapse the whole
-        // chain to the victim, so a check on only the link's own parent would
-        // follow a hop through a directory it never vetted. It must be refused,
-        // and the victim neither chmodded nor swept.
-        //
-        // Refused whatever the euid: unprivileged, the first link's parent is not
-        // root-owned; as root, the second hop makes the link's stored target
-        // differ from what it canonicalizes to, and the intermediate under
-        // `/tmp` fails the ancestry walk besides.
+        // A link whose second hop an attacker planted in a world-writable
+        // intermediate must not be followed to the victim.
         let (_dir, root) = temp_root();
-        // The world-writable intermediate, standing in for `/mnt/x`.
         let intermediate = root.join("intermediate");
         fs::create_dir(&intermediate).unwrap();
         fs::set_permissions(&intermediate, fs::Permissions::from_mode(0o777)).unwrap();
-        // The directory the attacker redirects the chain at.
         let victim = root.join("victim");
         fs::create_dir_all(victim.join("someone-elses-data")).unwrap();
-        // The second hop, the one an attacker plants in the writable intermediate.
         let second = intermediate.join("runner");
         symlink(&victim, &second).unwrap();
-        // The first hop, the state directory the operator names, pointing through
-        // the intermediate.
         let link = root.join("state");
         symlink(&second, &link).unwrap();
 
@@ -1531,13 +1143,8 @@ mod tests {
 
     #[test]
     fn an_operator_controlled_symlinked_root_is_resolved() {
-        // The accept path needs a resolved target whose whole ancestry is
-        // root-only-writable, which only root can arrange, so it runs in the
-        // elevated environment and is skipped on an unprivileged box, where such
-        // a tree cannot be created and the link would instead be refused. Written
-        // so an elevated run exercises the resolution rather than only compiling
-        // it. This is the recommended setup: a root-owned symlink to a root-owned
-        // dedicated directory.
+        // The recommended setup, a root-owned link to a root-owned dedicated
+        // directory, must resolve and build under the target.
         if crate::jail::current_euid() != 0 {
             eprintln!(
                 "skipped an_operator_controlled_symlinked_root_is_resolved: a root-only-writable ancestry needs root to build"
@@ -1546,12 +1153,9 @@ mod tests {
         }
         let base = root_only_base();
         let base = &base.0;
-        // A parent only root can write, holding the operator's link.
         let parent = base.join("operator");
         fs::create_dir(&parent).unwrap();
         fs::set_permissions(&parent, fs::Permissions::from_mode(0o755)).unwrap();
-        // The real dedicated directory the operator points the link at, reached
-        // through root-only-writable directories all the way to `/`.
         let target = base.join("target");
         fs::create_dir(&target).unwrap();
 
@@ -1559,8 +1163,6 @@ mod tests {
         symlink(&target, &link).unwrap();
 
         let state = StateDir::new(link).unwrap();
-        // The resolved target, not the link, is the effective root every later
-        // step names.
         let resolved = target.canonicalize_utf8().unwrap();
         assert_eq!(state.path(), resolved, "the target becomes the root");
 
@@ -1575,11 +1177,7 @@ mod tests {
 
     #[test]
     fn an_interior_symlink_is_refused_even_under_a_resolved_root() {
-        // A resolved root does not lower the bar for what sits inside it: an
-        // interior component planted as a link is still refused, so the chmod and
-        // the sweep never follow it. Needs a root-only-writable tree to reach the
-        // resolution in the first place, so it is gated like the accept-path test
-        // above.
+        // A resolved root must not lower the bar for an interior link.
         if crate::jail::current_euid() != 0 {
             eprintln!(
                 "skipped an_interior_symlink_is_refused_even_under_a_resolved_root: a root-only-writable ancestry needs root to build"
@@ -1594,7 +1192,6 @@ mod tests {
         let target = base.join("target");
         fs::create_dir(&target).unwrap();
 
-        // `jail` inside the resolved target planted as a link to somebody's data.
         let victim = base.join("victim");
         fs::create_dir_all(victim.join("someone-elses-data")).unwrap();
         symlink(&victim, target.join("jail")).unwrap();
@@ -1616,7 +1213,6 @@ mod tests {
         );
     }
 
-    /// A tmpfs mounted over a directory, unmounted on drop.
     struct Tmpfs(Utf8PathBuf);
 
     impl Tmpfs {
@@ -1638,9 +1234,8 @@ mod tests {
 
     #[test]
     fn a_filesystem_the_jail_cannot_run_from_is_refused_by_its_mount_option() {
-        // Otherwise the job fails at boot with KVM blaming its ACL, and `/tmp`,
-        // `/dev/shm`, and `/run` are commonly mounted `nodev`. Mounting needs
-        // root, so this runs in the elevated environment.
+        // A `nodev` or `noexec` state filesystem would otherwise fail the job at
+        // boot with KVM blaming its ACL.
         if crate::jail::current_euid() != 0 {
             eprintln!(
                 "skipped a_filesystem_the_jail_cannot_run_from_is_refused_by_its_mount_option: mounting needs root"
@@ -1670,9 +1265,8 @@ mod tests {
 
     #[test]
     fn a_relative_state_directory_is_refused() {
-        // The invariant lives on the type: the jailer resolves the path it is
-        // handed against its own working directory, so a relative one names a
-        // different place for the jailer than for the runner.
+        // The jailer resolves a relative path against its own working
+        // directory, so it would name a different place than the runner's.
         StateDir::new(Utf8PathBuf::from("bencher-runner")).unwrap_err();
         StateDir::new(Utf8PathBuf::from("./bencher-runner")).unwrap_err();
         StateDir::new(Utf8PathBuf::from("/var/lib/bencher-runner")).unwrap();
@@ -1684,7 +1278,6 @@ mod tests {
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
 
-        // Two stale jails, one with a nested chroot tree.
         fs::create_dir_all(state.jail_root(&VmId::from_chroot_name("one".to_owned()).unwrap()))
             .unwrap();
         fs::write(
@@ -1716,12 +1309,8 @@ mod tests {
 
     #[test]
     fn one_sweep_reclaims_every_jail_however_many_there_are() {
-        // Removing an entry mutates the directory, and directory offsets are
-        // not stable under mutation, so a listing walked live across the
-        // removals can skip a neighbor, which may hold a live VMM this job
-        // would then measure beside. Enough jails that the listing cannot fit
-        // one kernel batch, so a walk that mutated under itself would have
-        // something to skip.
+        // Enough jails to span several kernel batches, so a listing walked live
+        // across the removals could skip one.
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
@@ -1806,8 +1395,7 @@ mod tests {
     #[test]
     fn a_surviving_vmm_fails_every_attempt_not_just_the_first() {
         // A host that can never clear a jail has to tell the operator on every
-        // job, not once. Nothing latches, so the sweep is re-attempted and
-        // reports again.
+        // job, not once.
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
@@ -1827,10 +1415,8 @@ mod tests {
 
     #[test]
     fn a_jail_whose_cgroup_survives_keeps_the_chroot_that_names_it() {
-        // The chroot name is the only handle a later sweep has for finding the
-        // cgroup, so a directory removed while its cgroup survives strands
-        // that cgroup for good: nothing ever sees the id again. One stuck
-        // cgroup must still not abandon the rest of the sweep.
+        // The chroot is the only handle for its cgroup, and one stuck cgroup
+        // must not abandon the rest of the sweep.
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
@@ -1868,8 +1454,8 @@ mod tests {
 
     #[test]
     fn a_chroot_that_will_not_go_away_does_not_fail_the_job() {
-        // Disk, not fidelity: the VMM is gone and the cgroup with it, so the job
-        // runs, and the next job's sweep tries again.
+        // A chroot that will not go away costs disk, not fidelity, so it must
+        // not fail the job.
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
@@ -1889,9 +1475,8 @@ mod tests {
 
     #[test]
     fn a_jail_that_could_not_be_examined_is_left_in_place() {
-        // The reap could not establish whether a VMM is in there. Removing the
-        // tree on that would be the same destructive step as removing it under a
-        // VMM known to be alive, so it gets the same answer.
+        // An unexaminable jail must get the same answer as one known to hold a
+        // live VMM.
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
@@ -1935,10 +1520,8 @@ mod tests {
 
     #[test]
     fn a_jail_parent_that_cannot_be_read_is_not_an_empty_one() {
-        // The sweep exists to find what a previous runner left behind, so a
-        // read it could not perform must not reach the caller as a clean host.
-        // A file where the jail parent should be reads back `ENOTDIR`, the same
-        // way an unlistable directory reads back `EACCES`.
+        // A read the sweep could not perform must not reach the caller as a
+        // clean host.
         let (_dir, root) = temp_root();
         let not_a_dir = root.join("firecracker");
         fs::write(&not_a_dir, b"in the way").unwrap();

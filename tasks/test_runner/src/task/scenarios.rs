@@ -38,20 +38,14 @@ fn extract_json_substr(line: &str) -> &str {
     &line[start..end]
 }
 
-/// A host-side check run while the runner is still executing.
-///
-/// Some confinement invariants only exist while the VMM is alive and cannot
-/// be recovered from the runner's output afterwards. The probe receives the
-/// runner's state directory and returns `Ok(false)` while the VMM has not
-/// appeared yet, `Ok(true)` once the invariant has been observed to hold, and
-/// `Err` once it has been observed to be violated.
+/// A host-side check run while the runner executes: `Ok(false)` until the VMM
+/// appears, `Ok(true)` once the invariant holds, and `Err` once it is violated.
 type Probe = fn(&Utf8Path) -> Result<bool>;
 
 /// Test scenario definition.
 ///
 /// Build one with `..Scenario::default()` so a scenario names only what it
-/// actually varies, and so adding a field does not have to be written out
-/// across every scenario in this file.
+/// varies.
 #[expect(
     clippy::struct_excessive_bools,
     reason = "each flag switches one independent property of a run on"
@@ -65,39 +59,20 @@ struct Scenario {
     cancel_after_secs: Option<u64>,
     /// Whether to use `--sandbox firecracker` (default: true).
     sandboxed: bool,
-    /// If set, run before the runner starts, to put the host in some state.
     setup: Option<fn() -> Result<()>>,
-    /// If set, run once the scenario is over, to take that state back off.
-    ///
-    /// Whatever the outcome, and whatever a `setup` managed to do before
-    /// failing. What a setup touches is global to the machine, so anything left
-    /// behind reaches every scenario that follows and any real runner on the
-    /// box.
+    /// Runs whatever the outcome, including after a `setup` that failed part way.
     teardown: Option<fn() -> Result<()>>,
-    /// If set, a host-side check run while the runner is executing.
     probe: Option<Probe>,
-    /// Run with host tuning enabled and assert it applies and is restored.
-    ///
-    /// Every other scenario passes `--no-tuning`, so this is the only one that
-    /// can leave the machine changed, and the harness undoes it itself.
     tuning: bool,
-    /// Kill the runner once its VMM is up so nothing unwinds, then run the
-    /// image again and report the second run.
-    ///
-    /// SIGKILL is the point: it is the exit that never unwinds, so `Drop`
-    /// cannot reclaim the chroot and only the sweep can.
+    /// Kill the runner once its VMM is up, then rerun the image; `validate` sees
+    /// the second run.
     orphan_then_rerun: bool,
-    /// Leave a sibling runner's orphan between the two jobs of one runner
-    /// process, and report that process.
-    ///
-    /// The orphan appears after that process has already built a jail, so only
-    /// a sweep that runs on every job can reap it.
+    /// Leave a sibling's orphan between the two jobs of one runner process,
+    /// whose output `validate` sees.
     orphan_between_jobs: bool,
     /// Hold a stand-in process in another cgroup under the runner's base, as a
-    /// runner with another state directory would, while the job runs.
+    /// runner with another state directory would.
     occupied_cgroup: bool,
-    /// Point the runner at a state directory it has to refuse, and assert it
-    /// failed the job rather than running the VMM outside a jail.
     unusable_state_dir: bool,
     validate: fn(&ScenarioOutput) -> Result<()>,
 }
@@ -118,9 +93,7 @@ impl Default for Scenario {
             orphan_between_jobs: false,
             occupied_cgroup: false,
             unusable_state_dir: false,
-            // Sandboxed is the interesting case and the overwhelming majority,
-            // so the handful of non-sandboxed scenarios opt out rather than
-            // every other scenario opting in.
+            // Most scenarios are sandboxed, so the few that are not opt out.
             sandboxed: true,
             validate: |_output| Ok(()),
         }
@@ -169,13 +142,10 @@ impl Scenarios {
             return Ok(());
         }
 
-        // Check prerequisites.
+        // Check prerequisites
         //
-        // Root is one of them. The jailer creates the chroot's device nodes
-        // with mknod, chowns the tree to the jail user, pivot_roots, and joins
-        // a network namespace, none of which an unprivileged process can do.
-        // A udev rule that makes /dev/kvm world accessible is enough to *use*
-        // KVM without root but not to build the jail around it.
+        // A world-accessible /dev/kvm is enough to use KVM without root, but not
+        // to build the jail around it.
         if !is_root() {
             bail!(
                 "The scenarios must run as root: the sandbox is built by dropping privilege, not by starting without it.\n\
@@ -208,9 +178,8 @@ impl Scenarios {
         let mut scenarios = all_scenarios();
         scenarios.extend(jail_scenarios());
         scenarios.extend(nosandbox_scenarios());
-        // Last, always. It is the only scenario that tunes the machine, so
-        // nothing it leaves behind can reach the others, and if the suite is
-        // killed part way through it is the least likely to have started.
+        // Last, as the only scenario that tunes the machine, so nothing it leaves
+        // behind can reach the others.
         scenarios.extend(tuning_scenarios());
 
         let result = if let Some(name) = &self.scenario {
@@ -225,29 +194,18 @@ impl Scenarios {
             run_all_scenarios(&scenarios, &runner_bin)
         };
 
-        // Whatever the outcome. Everything the run wrote is only root-owned
-        // because the scenarios had to be, and it sits inside the repo tree.
+        // Whatever the outcome, since a red run is what leaves the tree behind.
         return_work_dir_to_invoker();
 
         result
     }
 }
 
-/// Hand everything the elevated run wrote back to whoever invoked `sudo`.
-///
-/// The scenarios must run as root, so the whole tree under the crate's target
-/// directory comes out root-owned: the runner's state directory at 0700, the
-/// docker build contexts, and the unpacked OCI layouts, whose per-scenario
-/// cleanup a scenario that returns early never reaches. CI throws that tree
-/// away, so it costs nothing there, but on a developer's machine one red
-/// scenario leaves directories the next unprivileged `cargo`, `rm -rf` or
-/// `git clean` can neither read nor remove. `SUDO_UID` names who to give it back
-/// to; with no one to give it back to, or a `chown` that will not run, the path
-/// is printed with the command that clears it rather than left to be discovered.
+/// Without this, one red scenario leaves root-owned directories that the next
+/// unprivileged `cargo` or `git clean` cannot remove.
 fn return_work_dir_to_invoker() {
-    // The crate's target directory rather than the work directory inside it.
-    // This run creates both, and a root-owned parent is one the invoker cannot
-    // remove the work directory from, however the tree below it is owned.
+    // The parent too, since this run creates it and a root-owned parent keeps
+    // the invoker from removing the work directory.
     let work_dir = super::work_dir();
     let returned = work_dir.parent().unwrap_or(&work_dir).to_owned();
     if !returned.exists() {
@@ -267,7 +225,6 @@ fn return_work_dir_to_invoker() {
     println!("Note: {returned} is left owned by root. Remove it with: sudo rm -rf {returned}");
 }
 
-/// The uid and gid that invoked `sudo`, when one did.
 fn invoking_user() -> Option<(u32, u32)> {
     let uid = std::env::var("SUDO_UID").ok()?.parse().ok()?;
     let gid = std::env::var("SUDO_GID").ok()?.parse().ok()?;
@@ -333,18 +290,14 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     let image_path = build_test_image(scenario.name, scenario.dockerfile)
         .with_context(|| format!("Failed to build image for {}", scenario.name))?;
 
-    // Armed before the setup runs, so a setup that fails part way through is
-    // unwound too, and held to the end of the scenario, so nothing the
-    // assertions do with `?` can skip it.
+    // Armed before the setup, so a setup that fails part way is unwound too.
     let _teardown = ScenarioTeardown::armed(scenario);
     if let Some(setup) = scenario.setup {
         setup().with_context(|| format!("Setup failed for {}", scenario.name))?;
     }
 
-    // One state directory for the suite, wiped before each scenario, so jail
-    // assertions see only this scenario's jails and never touch a real runner's
-    // state. Reclaimed before the wipe, because the wipe is the one thing the
-    // runner's own sweep refuses to do.
+    // The suite's own state directory, wiped per scenario, so jail assertions
+    // see only this scenario's jails and never a real runner's.
     let state_dir = scenario_state_dir();
     reclaim_stranded_jails(&state_dir)
         .with_context(|| format!("Failed to reclaim jails stranded before {}", scenario.name))?;
@@ -352,7 +305,7 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
 
     let outcome = run_and_validate(scenario, &image_path, &state_dir, runner_bin);
     // Whatever the scenario's own verdict, anything it left running fails it
-    // here, rather than being reclaimed quietly before the next one.
+    // here rather than being reclaimed quietly before the next one.
     let stranded = reclaim_stranded_jails(&state_dir)
         .with_context(|| format!("Failed to reclaim what {} stranded", scenario.name))?;
     outcome?;
@@ -371,16 +324,14 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     Ok(())
 }
 
-/// Run the runner as the scenario asks, and validate what it printed.
 fn run_and_validate(
     scenario: &Scenario,
     image_path: &Utf8Path,
     state_dir: &Utf8Path,
     runner_bin: &Utf8Path,
 ) -> Result<()> {
-    // The one scenario that sabotages the jail is pointed somewhere else
-    // entirely: a path the runner has to refuse, planted beside the suite's own
-    // state directory so nothing outside the harness's tree is ever named.
+    // The sabotaged path sits in the harness's own tree, so nothing outside it
+    // is ever named.
     let state_arg = if scenario.unusable_state_dir {
         unusable_state_dir().with_context(|| {
             format!(
@@ -392,23 +343,12 @@ fn run_and_validate(
         state_dir.to_owned()
     };
 
-    // Prepend --sandbox firecracker for sandboxed scenarios.
-    //
-    // `--no-tuning` everywhere except the one scenario that exists to test
-    // tuning. Elevated, the knobs really apply, and a suite that tuned the
-    // machine twenty-five times would offline SMT siblings on a two-vCPU hosted
-    // runner, changing the core count under itself. The tuning scenario turns
-    // them back on for one job, keeps SMT and IRQ steering out of it, and the
-    // harness undoes everything itself afterwards.
+    // `--no-tuning` everywhere but the tuning scenario, since an elevated run
+    // really tunes the host and would offline SMT siblings under the suite.
     let mut args: Vec<&str> = vec!["--state-dir", state_arg.as_str()];
     if scenario.tuning {
-        // The two knobs this scenario deliberately does not exercise. `--smt`
-        // keeps hyper-threading on: offlining a sibling changes `nproc` for
-        // everything that follows in the CI job, and the harness cannot put a
-        // CPU back if the runner is killed before its guard runs. IRQ steering
-        // is skipped because a hand-restore of it is unavoidably partial, since
-        // an unmovable IRQ rejects the write with EIO, and the rule for this
-        // scenario is that the harness can undo anything it turned on.
+        // Left out because the harness cannot fully undo them: an offlined SMT
+        // sibling, and IRQ affinities an unmovable IRQ refuses with EIO.
         args.extend(["--smt", "--no-irq-steering"]);
     } else {
         args.push("--no-tuning");
@@ -418,7 +358,6 @@ fn run_and_validate(
     }
     args.extend(scenario.extra_args);
 
-    // Run the runner (with optional cancellation or host-side probe)
     let output = if scenario.unusable_state_dir {
         run_runner_without_unjailed_vmm(image_path, &args, runner_bin)
     } else if let Some(secs) = scenario.cancel_after_secs {
@@ -441,19 +380,12 @@ fn run_and_validate(
     (scenario.validate)(&output).with_context(|| format!("Validation failed for {}", scenario.name))
 }
 
-/// Runs a scenario's teardown when it goes out of scope.
-///
-/// A guard rather than a call at the end, for the same reason `RestoreTuning` is
-/// one: everything between the setup and the end of the scenario reports failure
-/// with `?`, and a scenario that goes red is exactly when the host state a setup
-/// put in place has to come away.
 struct ScenarioTeardown {
     name: &'static str,
     teardown: Option<fn() -> Result<()>>,
 }
 
 impl ScenarioTeardown {
-    /// Arm the teardown a scenario declared, if it declared one.
     fn armed(scenario: &Scenario) -> Self {
         Self {
             name: scenario.name,
@@ -467,10 +399,8 @@ impl Drop for ScenarioTeardown {
         let Some(teardown) = self.teardown else {
             return;
         };
-        // Said out loud rather than swallowed. The scenario has already
-        // reported its own outcome by the time this runs, but what a teardown
-        // could not undo is on the machine, not in this run, so the next person
-        // to touch the host needs to hear about it.
+        // Printed rather than swallowed, since what a teardown could not undo is
+        // left on the machine.
         if let Err(e) = teardown() {
             println!("  teardown of {} did not finish: {e:#}", self.name);
         }
@@ -1153,9 +1083,7 @@ CMD ["echo", "transport_test"]"#,
         Scenario {
             name: "job_cancelled",
             description: "SIGTERM cancels a running VM cleanly",
-            // SIGTERM after 5 seconds, while the guest sleeps. The runner has to
-            // exit promptly, non-zero, through the job's teardown: the harness
-            // fails any scenario that leaves a VMM or its cgroup behind.
+            // The harness fails any scenario that leaves a VMM or its cgroup behind.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             cancel_after_secs: Some(5),
@@ -2425,12 +2353,6 @@ fn kvm_available() -> bool {
     Path::new("/dev/kvm").exists()
 }
 
-/// The cargo target directory the builds above land in.
-///
-/// `CARGO_TARGET_DIR` is honored rather than assumed away: a caller that
-/// redirects it would otherwise have the binaries built in one place and
-/// looked for in another, and the harness would report a missing binary
-/// immediately after reporting a successful build.
 fn target_dir() -> Result<Utf8PathBuf> {
     resolve_target_dir(
         std::env::var_os("CARGO_TARGET_DIR").as_deref(),
@@ -2438,19 +2360,8 @@ fn target_dir() -> Result<Utf8PathBuf> {
     )
 }
 
-/// Where a build run from `workspace_root` puts its output.
-///
-/// A relative `CARGO_TARGET_DIR` is resolved against the workspace root rather
-/// than carried through as it stands. Cargo resolves it against the working
-/// directory of the build, which is the workspace root the builds above hand to
-/// `current_dir`, so a harness invoked from anywhere else would look for the
-/// binaries under its own working directory instead. That is the same missing
-/// binary immediately after a successful build that honoring the variable at all
-/// exists to prevent.
-///
-/// A value that is not UTF-8 is refused rather than converted lossily: the
-/// replacement characters would name a different directory again, and would do
-/// it while reporting a path that looks like the one that was asked for.
+/// A relative `CARGO_TARGET_DIR` is joined to the workspace root, since cargo
+/// resolves it against the build's working directory, not the harness's.
 fn resolve_target_dir(
     dir: Option<&std::ffi::OsStr>,
     workspace_root: &Utf8Path,
@@ -2471,7 +2382,6 @@ fn resolve_target_dir(
     })
 }
 
-/// Whether this process is running as root.
 fn is_root() -> bool {
     #[expect(
         unsafe_code,
@@ -2600,9 +2510,8 @@ fn run_runner_with_cancel(
 /// Build bencher-init for the musl target and the runner CLI with `BENCHER_INIT_PATH`,
 /// then return the path to the runner binary.
 fn ensure_runner_bin() -> Result<Utf8PathBuf> {
-    // The elevated run must not invoke cargo: doing so as root leaves the
-    // target directory and cargo's cache root-owned, which then breaks the
-    // unprivileged steps around it. CI builds first and points here.
+    // CI builds unprivileged first and points here, so the elevated run never
+    // invokes cargo.
     if let Some(path) = std::env::var_os(RUNNER_BIN_ENV) {
         let path = Utf8PathBuf::from(path.to_string_lossy().into_owned());
         if !path.exists() {
@@ -2612,11 +2521,6 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
         return Ok(path);
     }
 
-    // Falling through to cargo as root is the exact outcome the
-    // build-then-elevate split exists to prevent: it leaves the target
-    // directory and the cargo cache owned by root, and it does so silently.
-    // Sudo does pass the variable through on both runner images, so this is
-    // belt and braces, but a loud failure beats a root-owned cache.
     anyhow::ensure!(
         !is_root(),
         "Running as root without {RUNNER_BIN_ENV} set. Building here would run cargo as root and \
@@ -2668,33 +2572,21 @@ fn ensure_runner_bin() -> Result<Utf8PathBuf> {
 // Jail confinement
 // ---------------------------------------------------------------------------
 
-/// Environment variable naming a pre-built runner binary.
 const RUNNER_BIN_ENV: &str = "BENCHER_RUNNER_BIN";
 
-/// How long to wait for the jailed VMM to appear before giving up.
-///
 /// Generous: the runner pulls and unpacks the image and builds the rootfs
 /// before the VMM is spawned.
 const PROBE_TIMEOUT: Duration = Duration::from_mins(3);
 
-/// How often to look for the jailed VMM.
 const PROBE_INTERVAL: Duration = Duration::from_millis(100);
 
-/// The uid the jail scenarios hand the runner with `--jail-uid`.
-///
-/// Asked for by name rather than left to the runner's default (61016), and
-/// asserted as this number rather than as whatever the chroot turns out to be
-/// owned by. The chown of the chroot and the setuid of the VMM are made from one
-/// config, so they agree with each other on a runner that ignores the flag and
-/// the default alike, and a uid the operator never chose would pass unnoticed.
+/// Not the runner's default (61016), so a runner that ignores `--jail-uid`
+/// cannot pass.
 const SCENARIO_JAIL_UID: &str = "61017";
 
-/// The gid the jail scenarios hand the runner with `--jail-gid`.
-///
 /// Distinct from the uid, so a gid taken from the uid cannot pass.
 const SCENARIO_JAIL_GID: &str = "61018";
 
-/// The arguments every jail scenario passes.
 const JAIL_ARGS: &[&str] = &[
     "--timeout",
     "120",
@@ -2704,47 +2596,30 @@ const JAIL_ARGS: &[&str] = &[
     SCENARIO_JAIL_GID,
 ];
 
-/// The network namespace handle the runner builds for the jailed VMM.
-///
-/// Global to the host and named by the `ip netns` convention, which is the
-/// product's own reasoning: an operator has to be able to see it. Spelled here
-/// rather than read from the runner, since the harness deliberately depends on
-/// nothing the product could redefine underneath it.
+/// Spelled here rather than read from the runner, so the product cannot redefine
+/// it underneath the harness.
 const NETNS_HANDLE: &str = "/run/netns/bencher-jail";
 
 /// The harness's own network namespace, which is the host's.
 const HARNESS_NETNS: &str = "/proc/self/ns/net";
 
-/// How many stacked mounts the teardown unwinds before giving up.
-///
-/// Bounded, and bounded at the same number the runner's own unwind uses: a path
-/// that keeps reporting a successful unmount forever is a kernel fault, and the
-/// count taken afterwards reports the real state either way.
+/// The same bound the runner's own unwind uses.
 const MAX_NETNS_UNWIND: usize = 32;
 
-/// The state directory scenarios run against.
 fn scenario_state_dir() -> Utf8PathBuf {
     super::work_dir().join("state")
 }
 
-/// The directory holding one chroot per jailed VMM.
 fn jail_parent(state_dir: &Utf8Path) -> Utf8PathBuf {
     state_dir.join("jail").join("firecracker")
 }
 
-/// Scenarios covering the confinement of the VMM itself.
 fn jail_scenarios() -> Vec<Scenario> {
     let mut scenarios = vec![
         Scenario {
             name: "jail_confinement",
             description: "A jailed job succeeds with the VMM unprivileged, off the host network, and in its cgroup",
-            // The guest sleeps so the VMM is alive long enough to be observed
-            // by a probe that polls every 100ms.
-            //
-            // The marker is a token the runner's own output cannot contain.
-            // "jailed" collided with the runner announcing "Launching jailed
-            // Firecracker microVM...", so the check passed on the runner
-            // saying it was about to start a VM that then never booted.
+            // The guest sleeps so the VMM lives long enough for the probe to see.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
             cancel_after_secs: None,
@@ -2752,11 +2627,8 @@ CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
             orphan_then_rerun: false,
             extra_args: JAIL_ARGS,
             validate: |output| {
-                // The job has to have actually run before anything the probe
-                // saw means anything. Every confinement property the probe
-                // checks is equally true of a VMM that started and then never
-                // booted a guest, so without this the scenario stays green
-                // while the product is broken.
+                // Everything the probe checks also holds for a VMM that never
+                // booted a guest.
                 assert_job_succeeded(output, "JAIL_CONFINEMENT_a7f3b2c9")?;
                 assert_cpu_isolation_applied(output)?;
                 assert_no_chroot_remains(&scenario_state_dir())
@@ -2784,11 +2656,8 @@ CMD ["echo", "JAIL_REFUSED_a7f3b2c9"]"#,
             unusable_state_dir: true,
             extra_args: JAIL_ARGS,
             validate: |output| {
-                // Failing the job is the invariant, and the runner is free to
-                // reword why: nothing here reads the message. That no VMM was
-                // left running is asserted against the host's own processes, in
-                // `run_runner_without_unjailed_vmm`; that none ran at all is the
-                // marker check below.
+                // That no VMM was left running is asserted in
+                // `run_runner_without_unjailed_vmm`.
                 if output.exit_code == 0 {
                     bail!(
                         "Expected the job to fail when the jail could not be built, got exit code 0.\nstdout: {}\nstderr: {}",
@@ -2810,8 +2679,7 @@ CMD ["echo", "JAIL_REFUSED_a7f3b2c9"]"#,
         Scenario {
             name: "jail_sweep_reclaims_orphan",
             description: "A chroot orphaned by a runner that never unwound is swept by the next job",
-            // The next job's guest. The orphan runs `ORPHAN_DOCKERFILE`, which
-            // outlives it by far.
+            // The next job's guest; the orphan runs `ORPHAN_DOCKERFILE`.
             dockerfile: r#"FROM busybox
 CMD ["echo", "JAIL_SWEEP_a7f3b2c9"]"#,
             cancel_after_secs: None,
@@ -2829,7 +2697,6 @@ CMD ["echo", "JAIL_SWEEP_a7f3b2c9"]"#,
     scenarios
 }
 
-/// Scenarios where another job or its orphan contends for the benchmark cores.
 fn jail_contention_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
@@ -2876,12 +2743,8 @@ CMD ["echo", "JAIL_OCCUPIED_a7f3b2c9"]"#,
     ]
 }
 
-/// Assert the runner reported that it confined the VMM to the benchmark cores.
-///
-/// The runner prints this only after creating the cgroup, writing the cpuset,
-/// and reading the effective set back, so it is the runner's own statement
-/// that a cgroup exists for the probe to have checked membership against.
-/// Without it the probe could pass on a host where no cgroup was ever made.
+/// The runner prints this only once the cgroup exists and its cpuset reads back,
+/// so the probe cannot pass on a host where no cgroup was made.
 fn assert_cpu_isolation_applied(output: &ScenarioOutput) -> Result<()> {
     const PINNED: &str = "CPU isolation: Firecracker pinned to cores";
     if output.stdout.contains(PINNED) {
@@ -2895,14 +2758,8 @@ fn assert_cpu_isolation_applied(output: &ScenarioOutput) -> Result<()> {
     )
 }
 
-/// Stack extra bind mounts on the network namespace handle.
-///
-/// Recreating the handle bind mounts over it, and a bind mount over a file
-/// reports no error, so mounts stack. Against a stacked handle a single
-/// detach leaves one behind, the unlink then fails with EBUSY, and creating
-/// the placeholder fails with EPERM even as root: every sandboxed job on the
-/// host fails until an operator loops `umount` by hand. The unwind loop exists
-/// for exactly this, and nothing else exercises it.
+/// A stacked handle fails every sandboxed job on the host unless the runner's
+/// unwind loop clears it, and nothing else exercises that loop.
 fn stack_netns_mounts() -> Result<()> {
     let handle = NETNS_HANDLE;
     fs::create_dir_all("/run/netns").context("Failed to create the netns directory")?;
@@ -2928,23 +2785,12 @@ fn stack_netns_mounts() -> Result<()> {
     Ok(())
 }
 
-/// The state directory the sabotage scenario points the runner at.
 fn unusable_state_dir() -> Result<Utf8PathBuf> {
     plant_unusable_state_dir(&super::work_dir())
 }
 
-/// Plant a state directory the runner has to refuse, under `root`.
-///
-/// A symlinked component, because that is refused rather than resolved: under a
-/// state directory whose parent an unprivileged user can write to, following a
-/// link would have root chmod and sweep a directory of somebody else's choosing.
-/// It is the cheapest sabotage that is certainly fatal and never names anything
-/// outside the harness's own tree. An unwritable directory would not do, since
-/// these scenarios run as root and root writes anyway.
-///
-/// The link points at a directory of the harness's own, so a runner that
-/// resolved it instead of refusing it would be caught by the scenario rather
-/// than by an operator noticing a system directory at 0700.
+/// A symlinked component, which the runner refuses rather than resolves; an
+/// unwritable directory would not do, since root writes anyway.
 fn plant_unusable_state_dir(root: &Utf8Path) -> Result<Utf8PathBuf> {
     use std::os::unix::fs::symlink;
 
@@ -2962,20 +2808,8 @@ fn plant_unusable_state_dir(root: &Utf8Path) -> Result<Utf8PathBuf> {
     Ok(planted)
 }
 
-/// Run the runner and prove it left no VMM running.
-///
-/// The pair is the invariant: a runner that cannot build the jail has to fail
-/// the job rather than fall back to an unjailed VMM. Asserted against the
-/// processes on the host, never against what the runner printed, so a reworded
-/// error stays green and a guest running outside a jail does not.
-///
-/// Left running is all the comparison can establish. The snapshots bracket the
-/// runner's lifetime, so a VMM that launched and exited inside it leaves the
-/// difference empty. That case is the scenario's own marker assertion, which
-/// fails on a guest that got far enough to print anything at all.
-///
-/// A set difference rather than a count, since the machine is shared: what
-/// matters is whether this run added a Firecracker, not what was already there.
+/// Asserted on the host's processes rather than the runner's output, so a
+/// reworded error stays green and an unjailed guest does not.
 fn run_runner_without_unjailed_vmm(
     image_path: &Utf8Path,
     args: &[&str],
@@ -2997,7 +2831,6 @@ fn run_runner_without_unjailed_vmm(
     Ok(output)
 }
 
-/// Every Firecracker running on the host right now, by pid.
 fn firecracker_pids() -> Result<std::collections::BTreeSet<u32>> {
     let mut pids = std::collections::BTreeSet::new();
     for entry in fs::read_dir("/proc").context("Failed to read /proc")? {
@@ -3012,20 +2845,8 @@ fn firecracker_pids() -> Result<std::collections::BTreeSet<u32>> {
     Ok(pids)
 }
 
-/// Take the stacked mounts back off the network namespace handle.
-///
-/// Nothing else will. The handle is global to the host and shared with any real
-/// runner on it, and the runner only unwinds it while it is building a jail of
-/// its own, so a scenario that fails before it gets that far would leave the
-/// stack on the host: the wedged state this scenario exists to prove the runner
-/// recovers from, inflicted on everything that comes after it.
-///
-/// One detach at a time, exactly as the runner's own unwind does, since a bind
-/// mount over a file stacks rather than reporting `EBUSY` and a single `umount`
-/// leaves the rest. The handle itself goes too, rather than being left as the
-/// single mount a successful run finishes with: an absent handle is what a host
-/// that never ran this scenario looks like, and the runner clears and rebinds
-/// the handle at the start of every job either way.
+/// The handle goes too, since absence is what a host that never ran this
+/// scenario looks like, and the runner rebinds it at the start of every job.
 fn unstack_netns_mounts() -> Result<()> {
     let handle = Utf8Path::new(NETNS_HANDLE);
     for _ in 0..MAX_NETNS_UNWIND {
@@ -3060,18 +2881,14 @@ fn unstack_netns_mounts() -> Result<()> {
     Ok(())
 }
 
-/// How many mounts are stacked on the network namespace handle right now.
 fn stacked_netns_mounts() -> Result<usize> {
     let mountinfo =
         fs::read_to_string("/proc/self/mountinfo").context("Failed to read mountinfo")?;
     Ok(mounts_on(&mountinfo, NETNS_HANDLE))
 }
 
-/// How many mounts `mountinfo` shows at exactly `mount_point`.
-///
-/// The whole field, delimited by the spaces around it, never a substring: the
-/// mount point sits in the middle of the line, and a plain `contains` counts a
-/// mount on any path this one is a prefix of.
+/// Matched as the whole space-delimited field, since a plain substring also
+/// matches every path this one prefixes.
 fn mounts_on(mountinfo: &str, mount_point: &str) -> usize {
     mountinfo
         .lines()
@@ -3079,16 +2896,8 @@ fn mounts_on(mountinfo: &str, mount_point: &str) -> usize {
         .count()
 }
 
-/// Assert the runner actually completed the job.
-///
-/// A confinement scenario that asserts only confinement passes vacuously when
-/// the VM never boots: the VMM process exists, is unprivileged, and is in its
-/// cgroup either way. Success of the job itself is the precondition for any of
-/// that meaning anything.
-///
-/// `marker` has to be a line the guest prints on its own. This captures the
-/// runner's stdout, not the guest's, and the runner echoes the image's command,
-/// marker and all, before it boots anything.
+/// `marker` must be a line the guest prints on its own, since the runner echoes
+/// the image's command, marker and all, before it boots anything.
 fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
     if output.exit_code != 0 {
         bail!(
@@ -3108,7 +2917,6 @@ fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
     Ok(())
 }
 
-/// How many times the guest printed `marker` as a line of its own.
 fn guest_printed(output: &ScenarioOutput, marker: &str) -> usize {
     output
         .stdout
@@ -3117,17 +2925,11 @@ fn guest_printed(output: &ScenarioOutput, marker: &str) -> usize {
         .count()
 }
 
-/// Assert every chroot has been reclaimed.
-///
-/// The jailer cleans up nothing by design, so a leftover here means the
-/// runner's teardown did not run: each one holds a copy of the VMM binary and
-/// a full guest rootfs image.
+/// The jailer cleans up nothing by design, so a leftover means the runner's
+/// teardown did not run.
 fn assert_no_chroot_remains(state_dir: &Utf8Path) -> Result<()> {
     let parent = jail_parent(state_dir);
-    // A read that failed is not an empty directory. An assertion that could not
-    // look has not passed, it has not run, and a vacuous pass here would hide the
-    // exact leak it exists to catch. Absence is the one reading that does mean
-    // nothing was left behind: the runner creates this tree on demand.
+    // Only absence reads as clean, since the runner creates this tree on demand.
     let entries = match fs::read_dir(&parent) {
         Ok(entries) => entries,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
@@ -3153,16 +2955,6 @@ fn assert_no_chroot_remains(state_dir: &Utf8Path) -> Result<()> {
     Ok(())
 }
 
-/// Check that the jailed VMM is unprivileged, off the host network, and
-/// already in its cgroup.
-///
-/// Every one of these disappears with the process, so none can be recovered
-/// from the runner's output. The network namespace is the one with nothing else
-/// watching it: the guest has no NIC either way, so a VMM launched without
-/// `--netns` still runs a guest with no network and still satisfies every other
-/// scenario in this suite. Cgroup membership in particular must already hold the
-/// first time the VMM is seen: it is established before the exec, not after the
-/// VM is running.
 fn probe_confinement(state_dir: &Utf8Path) -> Result<bool> {
     let parent = jail_parent(state_dir);
     let Some((vm_id, jail_root)) = find_jail(&parent)? else {
@@ -3178,20 +2970,13 @@ fn probe_confinement(state_dir: &Utf8Path) -> Result<bool> {
     if !check_netns(pid)? {
         return Ok(false);
     }
-    // Placement happens in `pre_exec`, before the jailer itself starts, so
-    // membership already holds the first time the process is observable.
-    // There is no not-ready-yet window for it.
     check_cgroup_membership(&vm_id, pid)?;
 
     Ok(true)
 }
 
-/// Find the single chroot under the jail parent, if one exists yet.
-///
-/// `Ok(None)` is "not yet", which the parent not existing also means: the runner
-/// creates it on demand. Every other failure is an error, because this drives a
-/// poll loop whose only other outcome is a timeout, and a timeout would report
-/// that no VMM ever appeared when the truth is that nobody could look.
+/// Every failure but absence is an error, or the poll loop would report a
+/// timeout when the truth is that nobody could look.
 fn find_jail(parent: &Utf8Path) -> Result<Option<(String, Utf8PathBuf)>> {
     let entries = match fs::read_dir(parent) {
         Ok(entries) => entries,
@@ -3216,19 +3001,6 @@ fn find_jail(parent: &Utf8Path) -> Result<Option<(String, Utf8PathBuf)>> {
     Ok(None)
 }
 
-/// Find the pid of the VMM confined to `jail_root`, if it is running yet.
-///
-/// The jailer pivots into a private mount namespace, so the process's root
-/// path reads back as `/` and is useless as an identifier. Its identity is
-/// compared instead: the bind mount the jailer pivots onto preserves the
-/// device and inode of the chroot directory, so stat'ing through
-/// `/proc/<pid>/root` and stat'ing the jail root agree for exactly the VMM
-/// confined to this jail and for no other process on the host.
-///
-/// `Ok(None)` is "not running yet", which a jail root that does not exist also
-/// means. A jail root that cannot be stat'ed, or a `/proc` that cannot be listed,
-/// is neither: it would surface as a probe timeout blaming the runner for
-/// something the harness could not see.
 fn find_jailed_vmm(jail_root: &Utf8Path) -> Result<Option<u32>> {
     let jail = match fs::metadata(jail_root) {
         Ok(jail) => jail,
@@ -3240,10 +3012,8 @@ fn find_jailed_vmm(jail_root: &Utf8Path) -> Result<Option<u32>> {
         let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
             continue;
         };
-        // Following the magic symlink crosses into the process's own mount
-        // namespace, which a privileged reader is allowed to do. A read that
-        // fails is a process that has exited or is not this jail's, which is the
-        // one failure here that is genuinely an answer.
+        // A failed read is a process that has exited or is not this jail's, which
+        // is an answer rather than an error.
         let Ok(root) = fs::metadata(format!("/proc/{pid}/root")) else {
             continue;
         };
@@ -3254,21 +3024,8 @@ fn find_jailed_vmm(jail_root: &Utf8Path) -> Result<Option<u32>> {
     Ok(None)
 }
 
-/// Check the VMM dropped root and runs as the user the jail was handed to.
-///
-/// `expected_uid` is the uid the scenario asked for by name, and it is checked
-/// against the VMM as well as against the chroot. Both of those come from one
-/// config, so a runner that used a uid of its own for the chown and the setuid
-/// alike would satisfy them against each other while honoring neither
-/// `--jail-uid` nor the default. The gid is checked the same way, and the VMM
-/// must hold no supplementary groups, which would carry privilege past the drop.
-///
-/// Returns `Ok(false)` while the observation is premature rather than wrong.
-/// The jailer `pivot_root`s before it drops privilege, so there is a window in
-/// which the process root already matches the jail while the process is still
-/// root and the jail root is still root-owned. Treating that as a violation
-/// would fail the run for catching the jailer mid-flight; the probe's timeout
-/// is what catches a VMM that genuinely never drops.
+/// `Ok(false)` while the jailer has `pivot_root`ed but not yet dropped
+/// privilege, which is premature rather than wrong.
 fn check_unprivileged(pid: u32, jail_root: &Utf8Path, expected: JailIds) -> Result<bool> {
     let status = fs::read_to_string(format!("/proc/{pid}/status"))
         .with_context(|| format!("Failed to read the status of the VMM (pid {pid})"))?;
@@ -3278,8 +3035,6 @@ fn check_unprivileged(pid: u32, jail_root: &Utf8Path, expected: JailIds) -> Resu
         return Ok(false);
     }
 
-    // Unprivileged is not enough: it has to be the uid that was asked for, in
-    // every slot.
     if uids.iter().any(|uid| *uid != expected.uid) {
         bail!(
             "The VMM (pid {pid}) runs as uids {uids:?}, but the runner was handed --jail-uid {}",
@@ -3319,7 +3074,6 @@ fn check_unprivileged(pid: u32, jail_root: &Utf8Path, expected: JailIds) -> Resu
     Ok(true)
 }
 
-/// The ids the jail scenarios hand the runner, as the probe demands them.
 #[derive(Debug, Clone, Copy)]
 struct JailIds {
     uid: u32,
@@ -3327,7 +3081,6 @@ struct JailIds {
 }
 
 impl JailIds {
-    /// The ids the scenarios pass on the command line.
     fn scenario() -> Result<Self> {
         Ok(Self {
             uid: SCENARIO_JAIL_UID
@@ -3359,10 +3112,6 @@ fn status_ids(status: &str, field: &str) -> Result<Vec<u32>> {
     Ok(ids)
 }
 
-/// The uid the jailer handed the chroot root to, once it has handed it over.
-///
-/// `None` while the root is still owned by root, which is the same
-/// not-ready-yet window `check_unprivileged` documents.
 fn jail_root_uid(jail_root: &Utf8Path) -> Option<u32> {
     use std::os::unix::fs::MetadataExt as _;
 
@@ -3370,27 +3119,8 @@ fn jail_root_uid(jail_root: &Utf8Path) -> Option<u32> {
     (uid != 0).then_some(uid)
 }
 
-/// Check the VMM joined the jail's network namespace.
-///
-/// Nothing else in the suite can see this. The guest has no network device in
-/// either case, so a VMM launched without `--netns` leaves every other scenario
-/// green while the VMM process itself keeps the host network reach the empty
-/// namespace exists to remove.
-///
-/// Compared by identity rather than by path, the same way the chroot is: every
-/// namespace inode lives on the single kernel `nsfs`, and `/proc/<pid>/ns/net`
-/// names the namespace a process is in, so device and inode agree for exactly
-/// the processes in one namespace. Two readings are needed, because either one
-/// alone can be satisfied by an accident: matching the handle without differing
-/// from the harness would hold if the handle were the host's own namespace, and
-/// differing from the harness without matching the handle would hold for any
-/// namespace at all.
-///
-/// There is no not-ready-yet window. The handle lives at an absolute path
-/// outside the chroot, so the jailer has to join before it chroots, and the
-/// probe sees the process only once its root is the jail. `Ok(false)` is only
-/// for a process that has gone, which is the probe's own race and not a
-/// violation.
+/// Compared against both the handle and the harness's own namespace, since
+/// either reading alone can pass by accident.
 fn check_netns(pid: u32) -> Result<bool> {
     let handle = Utf8Path::new(NETNS_HANDLE);
     let expected = fs::metadata(handle).with_context(|| {
@@ -3400,9 +3130,7 @@ fn check_netns(pid: u32) -> Result<bool> {
     })?;
     let own = fs::metadata(HARNESS_NETNS)
         .context("Failed to stat the harness's own network namespace")?;
-    // A read that fails is a VMM that has exited, which is the one failure here
-    // that is an answer rather than a blind spot: the pid came from a listing
-    // taken moments ago.
+    // A failed read means the VMM has exited, since the pid was listed moments ago.
     let Ok(joined) = fs::metadata(format!("/proc/{pid}/ns/net")) else {
         return Ok(false);
     };
@@ -3423,37 +3151,25 @@ fn check_netns(pid: u32) -> Result<bool> {
     Ok(true)
 }
 
-/// How a namespace is named when the comparison fails.
 fn namespace_id(metadata: &fs::Metadata) -> String {
     use std::os::unix::fs::MetadataExt as _;
 
     format!("{}:{}", metadata.dev(), metadata.ino())
 }
 
-/// Whether two readings name the same file, namespace, or directory.
-///
-/// Device and inode, which is the only identity that survives the jail: the
-/// jailer pivots into a private mount namespace, so paths read back as
-/// something else on both sides of it, and namespaces have no path of their own
-/// at all.
+/// Device and inode, the only identity that survives the jail's private mount
+/// namespace.
 fn same_object(left: &fs::Metadata, right: &fs::Metadata) -> bool {
     use std::os::unix::fs::MetadataExt as _;
 
     left.dev() == right.dev() && left.ino() == right.ino()
 }
 
-/// Check the VMM is in its cgroup.
-///
-/// Placement happens before the exec, so the pid is already a member the
-/// first time the process is observable.
 fn check_cgroup_membership(vm_id: &str, pid: u32) -> Result<()> {
     let procs_path = format!("/sys/fs/cgroup/bencher/{vm_id}/cgroup.procs");
 
-    // A missing cgroup is a failure, not a note. Placement before exec is the
-    // centrepiece of the jail: it is what fixed the cpuset being applied after
-    // the VMM was already running. Letting its absence pass quietly is how a
-    // scenario named for confinement ends up asserting only the uid half of
-    // it, which is a green that means less than it looks like.
+    // A failure, not a note, or a confinement scenario would assert only the uid
+    // half.
     let procs = fs::read_to_string(&procs_path).with_context(|| {
         format!(
             "No cgroup at {procs_path}, so cgroup placement was not exercised at all. \
@@ -3473,11 +3189,8 @@ fn check_cgroup_membership(vm_id: &str, pid: u32) -> Result<()> {
     }
 }
 
-/// Orphan a jail by killing the runner, then prove the next job sweeps it.
-///
-/// SIGKILL, because SIGTERM cancels the job through its teardown, and the point
-/// is an exit that never unwinds: `Drop` cannot reclaim the chroot, so if the
-/// next job finds a clean tree it can only be because the sweep reclaimed it.
+/// SIGKILL, because it never unwinds: `Drop` cannot reclaim the chroot, so only
+/// the sweep can.
 fn run_runner_after_orphan(
     image_path: &Utf8Path,
     args: &[&str],
@@ -3490,11 +3203,6 @@ fn run_runner_after_orphan(
 
     let mut child = spawn_runner(&orphan_image, args, runner_bin)?;
 
-    // Drain both pipes for the same reason the probe path does. This polls for
-    // up to three minutes while the runner pulls an image, unpacks it, and
-    // builds an ext4, which is more than enough output to fill a 64 KiB pipe
-    // and block the runner. It would surface as "No jailed VMM appeared",
-    // which points at the sweep rather than at the pipe.
     let readers = drain_output(&mut child);
 
     // Wait for a real orphan: a chroot with a VMM running in it, not just an
@@ -3513,12 +3221,6 @@ fn run_runner_after_orphan(
     };
 
     let Some((vm_id, jail_root, vmm_pid)) = orphan else {
-        // Killed before the wait. A probe that timed out leaves the runner still
-        // going, so waiting on it first would sit there until the runner's own
-        // timeout expired and report the failure minutes late, which is exactly
-        // when somebody is watching. Only if it has not already been reaped:
-        // `try_wait` in the loop above reaps it, and signalling a reaped pid can
-        // reach whatever inherited the number.
         if child.try_wait()?.is_none() {
             kill_pid(child.id(), libc::SIGKILL);
         }
@@ -3542,12 +3244,8 @@ fn run_runner_after_orphan(
         );
     }
 
-    // Deliberately NOT reaping the VMM here. Killing it by hand would leave
-    // the next job's sweep with nothing to find, so the reap, the pidfd
-    // handling, and the cgroup removal would all be skipped and the scenario
-    // would prove only that a directory can be deleted. The stray Firecracker
-    // that a hand-reap guards against is exactly what the sweep now exists to
-    // prevent, so if the sweep fails this scenario has to go red.
+    // Deliberately not reaping the VMM here, or the next job's sweep would have
+    // nothing to find.
     let cgroup = stale_cgroup(&vm_id);
     anyhow::ensure!(
         cgroup
@@ -3559,8 +3257,6 @@ fn run_runner_after_orphan(
 
     let output = run_runner(image_path, args, runner_bin)?;
 
-    // The orphan's guest outlives this job by far, so a VMM that is gone below
-    // could only have been killed, and this says who killed it.
     if !output.stderr.contains(&reaped_line(vmm_pid)) {
         bail!(
             "The next job never reaped the orphaned VMM (pid {vmm_pid}).\nstdout: {}\nstderr: {}",
@@ -3569,8 +3265,7 @@ fn run_runner_after_orphan(
         );
     }
 
-    // `try_exists`, not `exists`: the latter reports false for an error as well
-    // as for absence, which would pass this assertion for the wrong reason.
+    // `try_exists`, since `exists` reads an error as absence and would pass this.
     if jail_root
         .try_exists()
         .with_context(|| format!("Failed to check whether {jail_root} survived"))?
@@ -3594,32 +3289,21 @@ fn run_runner_after_orphan(
     Ok(output)
 }
 
-/// The cgroup a jail leaves behind, which shares the jail's name.
 fn stale_cgroup(vm_id: &str) -> Utf8PathBuf {
     Utf8PathBuf::from("/sys/fs/cgroup/bencher").join(vm_id)
 }
 
-/// The guest an orphan runs.
-///
-/// It outlives every job that follows it by far, so an orphan that is gone
-/// afterwards was reaped rather than merely finished.
+/// Outlives every job that follows it, so an orphan that is gone afterwards was
+/// reaped rather than finished.
 const ORPHAN_DOCKERFILE: &str = r#"FROM busybox
 CMD ["sh", "-c", "echo JAIL_ORPHAN_a7f3b2c9 && sleep 600"]"#;
 
-/// What the runner's sweep says when it kills an orphaned VMM.
 fn reaped_line(pid: u32) -> String {
     format!("Reaped orphaned VMM (pid {pid})")
 }
 
-/// Leave a sibling runner's orphan between two jobs of one runner, and prove the
-/// second job reaps it.
-///
-/// The first runner runs two jobs. A sibling started during the first job waits
-/// on the jail lock that job holds, and takes it as the first job releases it,
-/// while the second job is still unpacking its image. The sibling is killed once
-/// its VMM is up, so the orphan appears after the first runner has already built
-/// a jail, and only a sweep on every job reaps it before the second job
-/// measures.
+/// A sibling queued on the jail lock takes it between the first runner's two
+/// jobs and is killed once its VMM is up, so only a per-job sweep can reap it.
 fn run_runner_beside_sibling_orphan(
     image_path: &Utf8Path,
     args: &[&str],
@@ -3704,10 +3388,8 @@ fn run_runner_beside_sibling_orphan(
     })
 }
 
-/// Wait for the sibling to be blocked behind the first job, then for its VMM.
-///
-/// Returns the orphan's jail root, pid, and cgroup. The sibling names its own
-/// jail on stdout, since the first job's may still be on disk beside it.
+/// The sibling's jail is read from its stdout, since the first job's may still
+/// be on disk beside it.
 fn orphan_sibling(
     sibling: &mut StreamedOutput,
     first_jail_root: &Utf8Path,
@@ -3752,11 +3434,8 @@ fn orphan_sibling(
     Ok((jail_root, pid, cgroup))
 }
 
-/// The cgroup the occupancy scenario holds a stand-in process in.
 const OCCUPIED_CGROUP: &str = "/sys/fs/cgroup/bencher/scenario-occupant";
 
-/// Run a job while another cgroup under the runner's base holds a process, and
-/// check the refusal names both.
 fn run_runner_beside_occupied_cgroup(
     image_path: &Utf8Path,
     args: &[&str],
@@ -3776,8 +3455,6 @@ fn run_runner_beside_occupied_cgroup(
     Ok(output)
 }
 
-/// A stand-in for another runner's job: a process held in its own cgroup under
-/// the runner's base, killed and removed on drop.
 struct Occupant {
     child: std::process::Child,
     cgroup: Utf8PathBuf,
@@ -3809,7 +3486,6 @@ impl Drop for Occupant {
     }
 }
 
-/// Start the runner on an image with its output piped.
 fn spawn_runner(
     image_path: &Utf8Path,
     args: &[&str],
@@ -3825,7 +3501,6 @@ fn spawn_runner(
         .spawn()?)
 }
 
-/// A child's stdout, line by line as it is printed, with its stderr drained.
 struct StreamedOutput {
     lines: mpsc::Receiver<String>,
     seen: Vec<String>,
@@ -3834,7 +3509,6 @@ struct StreamedOutput {
 }
 
 impl StreamedOutput {
-    /// Start reading, so neither pipe can fill.
     fn start(child: &mut std::process::Child) -> Self {
         let (tx, lines) = mpsc::channel();
         let stdout = child.stdout.take();
@@ -3870,7 +3544,6 @@ impl StreamedOutput {
         }
     }
 
-    /// The first line from here on that `wanted` accepts.
     fn wait_for(&mut self, wanted: impl Fn(&str) -> bool) -> Result<String> {
         let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
         loop {
@@ -3900,15 +3573,8 @@ impl StreamedOutput {
     }
 }
 
-/// Whether a pid is a running Firecracker.
-///
-/// Checking the command as well as the pid keeps a recycled pid from reading
-/// as a VMM that was never reaped.
-///
-/// A process that is gone has no `comm` to read, and that is the answer the
-/// caller wants. Any other read failure is not: the assertion that uses this
-/// passes when it returns false, so swallowing an error would pass it for the
-/// wrong reason.
+/// Checks the command as well as the pid, so a recycled pid does not read as an
+/// unreaped VMM.
 fn is_firecracker(pid: u32) -> Result<bool> {
     match fs::read_to_string(format!("/proc/{pid}/comm")) {
         Ok(comm) => Ok(comm.trim() == "firecracker"),
@@ -3921,14 +3587,12 @@ fn is_firecracker(pid: u32) -> Result<bool> {
     }
 }
 
-/// Reader threads draining a child's piped output.
 struct DrainedOutput {
     stdout: std::thread::JoinHandle<String>,
     stderr: std::thread::JoinHandle<String>,
 }
 
 impl DrainedOutput {
-    /// Wait for both readers and return what they collected.
     fn join(self) -> (String, String) {
         let stdout = self.stdout.join().unwrap_or_default();
         let stderr = self.stderr.join().unwrap_or_default();
@@ -3936,7 +3600,6 @@ impl DrainedOutput {
     }
 }
 
-/// Start reading a child's stdout and stderr so neither pipe can fill.
 fn drain_output(child: &mut std::process::Child) -> DrainedOutput {
     fn reader<R: std::io::Read + Send + 'static>(
         stream: Option<R>,
@@ -3956,27 +3619,18 @@ fn drain_output(child: &mut std::process::Child) -> DrainedOutput {
     }
 }
 
-/// Send a signal to a process, ignoring the result.
 fn kill_pid(pid: u32, signal: libc::c_int) {
     #[expect(
         unsafe_code,
         clippy::cast_possible_wrap,
         reason = "libc::kill requires unsafe; PID fits in i32"
     )]
-    // SAFETY: `kill` takes plain integers and touches no memory. A signal to a
-    // pid that has already exited fails harmlessly with ESRCH.
+    // SAFETY: `kill` takes plain integers and touches no memory.
     unsafe {
         libc::kill(pid as i32, signal);
     }
 }
 
-/// The host settings the tuning scenario watches, and what the runner sets them
-/// to.
-///
-/// Only settings whose whole value the runner rewrites. The bracketed sysfs
-/// files (`transparent_hugepage/*`) and the cpuset partition are handled
-/// separately below, and the knobs this scenario deliberately leaves alone are
-/// listed with the arguments that switch them off.
 const TUNED_SETTINGS: &[(&str, &str)] = &[
     ("/proc/sys/kernel/randomize_va_space", "0"),
     ("/proc/sys/kernel/nmi_watchdog", "0"),
@@ -3988,57 +3642,37 @@ const TUNED_SETTINGS: &[(&str, &str)] = &[
     ("/sys/kernel/mm/ksm/run", "0"),
 ];
 
-/// The transparent hugepage settings, whose files list every mode and bracket
-/// the selected one.
 const TUNED_THP: &[&str] = &[
     "/sys/kernel/mm/transparent_hugepage/enabled",
     "/sys/kernel/mm/transparent_hugepage/defrag",
 ];
 
-/// What the runner sets the transparent hugepage mode to.
 const THP_TARGET: &str = "never";
 
-/// The cpuset partition files, which the tuning writes and the guard restores.
 const TUNED_PARTITION: &[&str] = &[
     "/sys/fs/cgroup/bencher/cpuset.cpus",
     "/sys/fs/cgroup/bencher/cpuset.mems",
     "/sys/fs/cgroup/bencher/cpuset.cpus.partition",
 ];
 
-/// One host setting the scenario expects the runner to change.
 #[derive(Debug, Clone)]
 struct TunedSetting {
     path: Utf8PathBuf,
-    /// What it held before the runner started, and what it must hold after.
     original: String,
-    /// What the runner should set it to while the Job runs, when this host
-    /// lets it. `None` for a setting that is present and writable but already
-    /// holds the target, which the runner leaves alone and reports as such.
+    /// `None` when this host will not let the runner change it, or it already
+    /// holds the target.
     expected: Option<String>,
-    /// Whether the value is the bracketed kind (`always [madvise] never`).
     bracketed: bool,
 }
 
-/// Every host setting the tuning scenario touches, as it stood before it ran.
-///
 /// The harness restores from this itself rather than trusting the mechanism it
-/// is testing. A test of a restore path has to be safe when the restore path is
-/// broken, which is the whole reason this scenario can be allowed to run in CI
-/// at all.
+/// is testing.
 #[derive(Debug)]
 struct TuningSnapshot {
     settings: Vec<TunedSetting>,
 }
 
 impl TuningSnapshot {
-    /// Read every setting, and work out which of them this host will let the
-    /// runner change.
-    ///
-    /// Writability is established by writing the current value back, which
-    /// changes nothing and is the only honest way to know: a file that exists
-    /// may still be read-only, and a scenario that waited for a change the
-    /// kernel was never going to make would fail for the host's reasons rather
-    /// than the runner's.
     fn take() -> Self {
         let mut settings = Vec::new();
 
@@ -4071,10 +3705,8 @@ impl TuningSnapshot {
                 println!("  tuning: {path} is not present on this host");
                 continue;
             };
-            // Probed with the mode the file already selects, never with a
-            // fallback: writing `never` to a file whose selection could not be
-            // parsed would change the very setting this is only supposed to
-            // measure.
+            // Never probed with a fallback, since writing `never` would change the
+            // very setting being measured.
             let Some(selected) = bracketed_value(&original) else {
                 println!("  tuning: {path} does not read as a mode listing: '{original}'");
                 continue;
@@ -4099,14 +3731,12 @@ impl TuningSnapshot {
         Self { settings }
     }
 
-    /// The settings this host should show changed while the Job runs.
     fn expected(&self) -> impl Iterator<Item = &TunedSetting> {
         self.settings
             .iter()
             .filter(|setting| setting.expected.is_some())
     }
 
-    /// Whether every expected setting currently holds its tuned value.
     fn all_applied(&self) -> bool {
         self.expected().all(|setting| {
             let Some(current) = readable_setting(&setting.path) else {
@@ -4123,7 +3753,6 @@ impl TuningSnapshot {
         })
     }
 
-    /// Which expected settings are not showing their tuned value.
     fn missing(&self) -> Vec<String> {
         self.expected()
             .filter(|setting| {
@@ -4148,7 +3777,6 @@ impl TuningSnapshot {
             .collect()
     }
 
-    /// Which settings are not back to what they were.
     fn unrestored(&self) -> Vec<String> {
         self.settings
             .iter()
@@ -4164,11 +3792,6 @@ impl TuningSnapshot {
             .collect()
     }
 
-    /// Put everything back, whatever the runner did or failed to do.
-    ///
-    /// Reports what it had to undo: anything here means the guard under test did
-    /// not do its job, and the scenario has already failed for that reason, but
-    /// the machine still has to be left as it was found.
     fn restore(&self) {
         for setting in &self.settings {
             let Some(current) = readable_setting(&setting.path) else {
@@ -4196,11 +3819,6 @@ impl TuningSnapshot {
     }
 }
 
-/// Restores the host tuning when it goes out of scope.
-///
-/// A guard rather than a call at the end, so a panic or an early return in the
-/// scenario cannot leave the machine tuned. Nothing survives the harness itself
-/// being killed, which is why the scenario runs last.
 struct RestoreTuning(TuningSnapshot);
 
 impl Drop for RestoreTuning {
@@ -4209,12 +3827,10 @@ impl Drop for RestoreTuning {
     }
 }
 
-/// Read a host setting, trimmed, if it is there at all.
 fn readable_setting(path: &Utf8Path) -> Option<String> {
     fs::read_to_string(path).ok().map(|v| v.trim().to_owned())
 }
 
-/// Whether a setting can be written, established by writing back what it holds.
 fn writable_setting(path: &Utf8Path, current: &str) -> bool {
     fs::write(path, current).is_ok()
 }
@@ -4226,12 +3842,6 @@ fn bracketed_value(listing: &str) -> Option<&str> {
     Some(selected)
 }
 
-/// The cpuset partition files that exist, with what they hold.
-///
-/// Read separately from the rest because the partition is created by the tuning
-/// itself: the files do not exist before the first tuned run on a fresh host, so
-/// there is nothing to snapshot and their absence afterwards is the restored
-/// state.
 fn partition_state() -> Vec<(Utf8PathBuf, String)> {
     TUNED_PARTITION
         .iter()
@@ -4240,10 +3850,8 @@ fn partition_state() -> Vec<(Utf8PathBuf, String)> {
         .collect()
 }
 
-/// Reap and report what a scenario's jails left behind.
-///
-/// Reported so the scenario that stranded it fails, and reaped before the wipe,
-/// which would destroy the chroot the runner's own sweep finds the VMM by.
+/// Must run before the state directory is wiped, which destroys the chroot a
+/// stranded VMM is found by.
 fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<Vec<String>> {
     let parent = jail_parent(state_dir);
     let entries = match fs::read_dir(&parent) {
@@ -4280,8 +3888,8 @@ fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<Vec<String>> {
             );
         }
 
-        // The cgroup shares the jail's name, and nothing else will come looking
-        // for it once the directory below is gone.
+        // Nothing else will come looking for the cgroup once its jail directory
+        // is wiped.
         let cgroup = stale_cgroup(&vm_id);
         if cgroup.exists() {
             stranded.push(format!("cgroup {cgroup}"));
@@ -4303,11 +3911,8 @@ fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<Vec<String>> {
     Ok(stranded)
 }
 
-/// What the `bencher` cgroup looks like, for when the partition assertion fails.
-///
-/// Clearing a parent's `cpuset.cpus` is refused with `EIO` while any task remains
-/// in a descendant, so the useful question after a failed restore is what is
-/// still in there. Without this the answer costs a CI round.
+/// Clearing a parent's `cpuset.cpus` fails with `EIO` while a descendant holds a
+/// task, so a failed restore reports what is still in the `bencher` cgroup.
 fn partition_diagnosis() -> String {
     let root = Utf8Path::new("/sys/fs/cgroup/bencher");
     if !root.exists() {
@@ -4328,8 +3933,7 @@ fn partition_diagnosis() -> String {
         .map(|child| {
             let tasks =
                 fs::read_to_string(root.join(child).join("cgroup.procs")).unwrap_or_default();
-            // Named, not numbered. A bare pid costs a round trip to identify,
-            // and what the process is decides whose bug it is.
+            // Named, because what the process is decides whose bug it is.
             let named: Vec<String> = tasks
                 .split_whitespace()
                 .map(|pid| {
@@ -4347,16 +3951,6 @@ fn partition_diagnosis() -> String {
     )
 }
 
-/// Run the runner with host tuning on, and assert it both applies and unwinds.
-///
-/// The assertion that matters is the pair. Applying is what the runner is for;
-/// restoring is what keeps a benchmark host from drifting a knob at a time
-/// across every Job it ever runs, and `TuningGuard` restoring on `Drop` had
-/// never once executed in CI before this scenario existed.
-/// Read the host, and work out what this run should change.
-///
-/// Separated so the scenario itself stays readable: everything here happens
-/// before the runner starts and decides whether there is anything to test.
 fn plan_tuning() -> Result<(TuningSnapshot, Vec<String>)> {
     let snapshot = TuningSnapshot::take();
     let expected: Vec<String> = snapshot
@@ -4370,10 +3964,6 @@ fn plan_tuning() -> Result<(TuningSnapshot, Vec<String>)> {
         })
         .collect();
 
-    // A scenario that finds nothing to change would pass without testing
-    // anything, which is the failure this suite has spent the most effort
-    // removing. If a host really offers none of these, that is a fact worth a
-    // red build rather than a green one.
     anyhow::ensure!(
         !expected.is_empty(),
         "No tuning knob on this host can be exercised, so the scenario would pass vacuously. Settings considered: {:?}",
@@ -4399,10 +3989,6 @@ fn run_runner_with_tuning(
     let (snapshot, expected) = plan_tuning()?;
     let partition_before = partition_state();
 
-    // Taken before the runner starts, so the machine is put back even if the
-    // scenario panics, the assertions fail, or the runner dies without
-    // unwinding. The point of the scenario is that the guard under test might
-    // not work.
     let restore = RestoreTuning(snapshot);
 
     let mut child = Command::new(runner_bin.as_str())
@@ -4415,9 +4001,7 @@ fn run_runner_with_tuning(
         .spawn()?;
     let readers = drain_output(&mut child);
 
-    // Watch for the tuning to land while the Job runs. The runner applies it
-    // before it pulls the image, so this is looking at a window that lasts the
-    // whole run.
+    // The runner tunes before it pulls the image, so this window lasts the whole run.
     let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
     let mut applied = false;
     loop {
@@ -4445,10 +4029,6 @@ fn run_runner_with_tuning(
         );
     }
 
-    // The Job has to have succeeded as well. A scenario that only watched the
-    // knobs would pass on a runner that tuned the host and then failed to run
-    // anything, which is the vacuous half of a confinement assertion in another
-    // dress.
     if status.code() != Some(0) {
         bail!(
             "Tuning applied but the Job failed with exit code {:?}.\nstdout: {stdout}\nstderr: {stderr}",
@@ -4456,7 +4036,6 @@ fn run_runner_with_tuning(
         );
     }
 
-    // And it has to be gone now that the runner has exited.
     let unrestored = restore.0.unrestored();
     if !unrestored.is_empty() {
         bail!(
@@ -4464,10 +4043,8 @@ fn run_runner_with_tuning(
         );
     }
 
-    // Only the files that were there to change. The partition creates its own
-    // cgroup, so a file that did not exist before the run has no previous value
-    // to be restored to, and asserting on its appearance would fail the scenario
-    // for the tuning having worked.
+    // Only files that existed before: the partition creates its own, which have
+    // nothing to be restored to.
     let partition_after = partition_state();
     let partition_unrestored: Vec<String> = partition_before
         .iter()
@@ -4501,7 +4078,6 @@ fn run_runner_with_tuning(
     })
 }
 
-/// Scenarios covering host tuning, which every other scenario switches off.
 fn tuning_scenarios() -> Vec<Scenario> {
     vec![Scenario {
         name: "host_tuning",
@@ -4510,14 +4086,12 @@ fn tuning_scenarios() -> Vec<Scenario> {
 CMD ["echo", "tuned run complete"]"#,
         extra_args: &["--timeout", "60"],
         tuning: true,
-        // The Job's own output as well as the knobs. A run that tuned the host
-        // and then never booted a VM would otherwise satisfy this scenario.
+        // Otherwise a run that tuned the host but never booted a VM would pass.
         validate: |output| assert_job_succeeded(output, "tuned run complete"),
         ..Scenario::default()
     }]
 }
 
-/// Run the runner while checking a host-side invariant.
 fn run_runner_with_probe(
     image_path: &Utf8Path,
     args: &[&str],
@@ -4534,9 +4108,8 @@ fn run_runner_with_probe(
         .stderr(std::process::Stdio::piped())
         .spawn()?;
 
-    // Drain both pipes while the probe runs. Nothing reads them during the
-    // loop otherwise, so a runner chatty enough to fill the 64 KiB pipe buffer
-    // blocks on its own output until the probe times out.
+    // Undrained, a runner that fills the 64 KiB pipe buffer blocks until the probe
+    // times out.
     let readers = drain_output(&mut child);
 
     let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
@@ -4553,20 +4126,14 @@ fn run_runner_with_probe(
                 break;
             },
         }
-        // Stop looking once the runner is gone or the wait is hopeless: the
-        // output is collected either way so the failure can be explained.
         if child.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
             break;
         }
         std::thread::sleep(PROBE_INTERVAL);
     }
 
-    // A probe that ended without observing the VMM leaves the runner going, and
-    // waiting on it would sit there until the runner's own timeout expired,
-    // reporting the failure minutes late. Only a run that observed what it came
-    // for is allowed to finish, since its output is the result being collected.
-    // Guarded on the reap, because `try_wait` above reaps and signalling a reaped
-    // pid can reach whatever inherited the number.
+    // Kill a run the probe gave up on rather than wait out its own timeout, and
+    // only while unreaped: a reaped pid may already belong to something else.
     if !matches!(observed, Some(Ok(()))) && child.try_wait()?.is_none() {
         kill_pid(child.id(), libc::SIGKILL);
     }
@@ -4614,11 +4181,6 @@ mod tests {
 
     #[test]
     fn a_relative_target_dir_is_resolved_against_the_workspace_root() {
-        // Cargo resolves a relative value against the working directory of the
-        // build, which is the workspace root the builds are handed. Carrying it
-        // through as it stands would have the harness look under its own
-        // working directory and report a missing binary immediately after
-        // building it there.
         assert_eq!(
             resolve_target_dir(Some(OsStr::new("build-alt")), Utf8Path::new("/workspace")).unwrap(),
             "/workspace/build-alt"
@@ -4648,9 +4210,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn a_target_dir_that_is_not_utf8_is_refused() {
-        // Converting it lossily would name a directory nobody asked for, which
-        // is the missing binary this resolution exists to prevent, reported
-        // against a path that reads like the one that was given.
+        // A lossy conversion would name a directory nobody asked for.
         use std::os::unix::ffi::OsStrExt as _;
 
         resolve_target_dir(
@@ -4662,11 +4222,6 @@ mod tests {
 
     #[test]
     fn the_sabotaged_state_directory_is_one_the_runner_refuses() {
-        // The scenario only means something while the planted path is one the
-        // runner cannot take: a plain empty directory would be accepted, the
-        // job would run, and the scenario would assert a failure that never
-        // came. A link is refused rather than resolved, and it is refused at
-        // the first thing the runner does with a state directory.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8Path::from_path(dir.path()).unwrap();
 
@@ -4690,9 +4245,7 @@ mod tests {
 
     #[test]
     fn one_object_read_twice_is_the_same_object() {
-        // The identity the netns and chroot checks are built on. Two readings
-        // of one path agree, and that is what makes a differing reading mean
-        // the VMM is somewhere else rather than that the reading is noisy.
+        // A noisy identity would make the netns and chroot checks report an escape.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8Path::from_path(dir.path()).unwrap();
         let path = root.join("ns");
@@ -4706,9 +4259,7 @@ mod tests {
 
     #[test]
     fn two_objects_are_not_one() {
-        // Neighbors on one filesystem, so the device matches and only the inode
-        // separates them: a comparison that dropped the inode would call the
-        // VMM's namespace the jail's.
+        // Same device, so a comparison that dropped the inode would call them one.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8Path::from_path(dir.path()).unwrap();
         fs::write(root.join("host"), "").unwrap();
@@ -4722,10 +4273,6 @@ mod tests {
 
     #[test]
     fn a_stacked_handle_is_counted_by_its_own_mount_point() {
-        // The mount point is a field in the middle of the line, so counting
-        // lines that merely contain the path counts mounts on every path it is
-        // a prefix of. Both readings matter: the setup asserts it stacked what
-        // it meant to, and the teardown asserts it unwound all of it.
         let mountinfo = "\
 25 1 0:23 / /run rw,nosuid,nodev shared:2 - tmpfs tmpfs rw
 71 25 0:4 net:[4026532290] /run/netns/bencher-jail rw shared:3 - nsfs nsfs rw
@@ -4740,11 +4287,7 @@ mod tests {
 
     #[test]
     fn the_run_writes_nothing_outside_the_tree_it_hands_back() {
-        // The chown has to reach the docker build contexts and the unpacked OCI
-        // layouts as well as the state directory. Their per-scenario cleanup is
-        // skipped by any early return, so on a red run they are left behind
-        // root-owned, and a tree that is handed back short of them is one the
-        // invoker still cannot remove.
+        // A red run skips the image trees' cleanup, so the chown must reach them.
         let work_dir = crate::task::work_dir();
         let returned = work_dir.parent().expect("the work directory has a parent");
 
@@ -4757,10 +4300,7 @@ mod tests {
 
     #[test]
     fn the_selected_mode_is_the_bracketed_one() {
-        // What the kernel prints for a transparent hugepage setting: every mode
-        // it offers, with the live one in brackets. Comparing the whole line
-        // against "never" would never match, and asserting on a substring would
-        // match a mode that is merely offered.
+        // A substring match would accept a mode that is offered but not selected.
         assert_eq!(
             bracketed_value("always [madvise] never"),
             Some("madvise"),
@@ -4803,11 +4343,8 @@ mod tests {
 
     #[test]
     fn writability_is_established_by_writing_what_is_already_there() {
-        // The probe that decides whether a knob can be exercised on this host.
-        // A file that exists may still refuse writes, which is not something a
-        // stat can answer: `/proc/sys/kernel/nmi_watchdog` is exactly that on a
-        // kernel without a hardware watchdog, and waiting for it to change would
-        // fail the scenario for the host's reasons rather than the runner's.
+        // A stat cannot tell that an existing file refuses writes, as
+        // `/proc/sys/kernel/nmi_watchdog` does without a hardware watchdog.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8Path::from_path(dir.path()).unwrap();
         let path = root.join("knob");
@@ -4820,8 +4357,6 @@ mod tests {
             "the probe writes back what was there, so it changes nothing"
         );
 
-        // Root ignores the permission bits, and the scenarios run as root, so
-        // this half only means anything unprivileged.
         if !is_root() {
             let mut perms = fs::metadata(&path).unwrap().permissions();
             perms.set_readonly(true);

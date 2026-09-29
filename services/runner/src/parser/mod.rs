@@ -148,12 +148,8 @@ pub struct CliRun {
     pub sandbox_log_level: bencher_runner::SandboxLogLevel,
 }
 
-/// Require an absolute state directory, before the runner starts.
-///
-/// The rule itself lives in the library, on the type that holds the path, since
-/// every caller that hands it a state directory is exposed to the same thing.
-/// This is the same check run early, so an operator hears about it at the
-/// command line rather than when the first sandboxed Job builds its jail.
+/// The library's state directory check, run at the command line rather than
+/// when the first sandboxed job builds its jail.
 #[cfg(feature = "plus")]
 fn absolute_state_dir(arg: &str) -> Result<Utf8PathBuf, String> {
     let path = Utf8PathBuf::from(arg);
@@ -161,18 +157,8 @@ fn absolute_state_dir(arg: &str) -> Result<Utf8PathBuf, String> {
     Ok(path)
 }
 
-/// Require an unprivileged jail uid, before the runner starts.
-///
-/// The same arrangement as [`absolute_state_dir`], and for a second reason
-/// besides having one implementation of the rule. A `range(1..)` value parser
-/// rejects `0` just as reliably and answers `0 is not in 1..`, so the sentence
-/// [`bencher_runner::JailUser`] carries, that the sandbox is built by dropping
-/// privilege and a jail user of root is no jail at all, was reachable only by a
-/// library caller. The operator most likely to try `--jail-uid 0` is the one
-/// staring at a permission error, and is exactly who that sentence is for.
-///
-/// The environment is covered by the same parser: clap runs it on
-/// `BENCHER_JAIL_UID` as well as on the flag.
+/// The library's jail user check rather than a `range(1..)` parser, so
+/// `--jail-uid 0` is told why root is refused and not just that it is.
 #[cfg(feature = "plus")]
 fn unprivileged_jail_uid(arg: &str) -> Result<u32, String> {
     let uid = arg
@@ -185,8 +171,6 @@ fn unprivileged_jail_uid(arg: &str) -> Result<u32, String> {
     Ok(uid)
 }
 
-/// Require an unprivileged jail gid, before the runner starts.
-///
 /// See [`unprivileged_jail_uid`].
 #[cfg(feature = "plus")]
 fn unprivileged_jail_gid(arg: &str) -> Result<u32, String> {
@@ -217,9 +201,8 @@ mod tests {
 
     #[test]
     fn a_root_jail_user_is_refused_with_the_library_reason() {
-        // A `range(1..)` value parser refuses 0 just as well and says "0 is not
-        // in 1..". What the operator has to read is why, and only the library's
-        // own check says it.
+        // A `range(1..)` parser would also refuse 0, but only the library's
+        // check says why.
         assert_eq!(unprivileged_jail_uid("61016").unwrap(), 61016);
         assert_eq!(unprivileged_jail_gid("61016").unwrap(), 61016);
 

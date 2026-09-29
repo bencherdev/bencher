@@ -153,9 +153,8 @@ mod tests {
 
     #[test]
     fn a_root_jail_user_is_refused_at_the_command_line() {
-        // The flag is where an operator meets this, so the flag is where the
-        // reason has to surface, rather than a clap range message that says
-        // nothing about why root is not an option.
+        // The reason root is refused has to surface at the flag, not as a clap
+        // range message.
         let uid = parse(&["--jail-uid", "0"]).unwrap_err().to_string();
         assert!(uid.contains("no jail at all"), "{uid}");
 

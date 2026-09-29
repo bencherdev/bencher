@@ -4,9 +4,8 @@
 //! Instead of a custom VMM, we use Firecracker as an external process controlled
 //! via its REST API over a Unix domain socket.
 //!
-//! The VMM is never a plain child of the runner. It runs under the Firecracker
-//! jailer, in a chroot as an unprivileged user with no host network, and is
-//! placed in its cgroup before it execs. See [`crate::jail`].
+//! The VMM always runs under the Firecracker jailer, chrooted as an unprivileged
+//! user with no host network; see [`crate::jail`].
 
 #![expect(
     clippy::print_stdout,
@@ -59,23 +58,17 @@ use vsock::VsockListener;
 pub struct FirecrackerJobConfig {
     /// Path to the staged Firecracker binary, outside the jail.
     pub firecracker_bin: Utf8PathBuf,
-    /// Path to the jailer binary.
     pub jailer_bin: Utf8PathBuf,
-    /// Identity of this microVM: the jailer id, the chroot name, and the
-    /// cgroup name. Minted before the job's artifacts, because the jail root
-    /// they are built in is a function of it.
+    /// The jailer id, chroot name, and cgroup name, minted before the job's
+    /// artifacts because the jail root is derived from it.
     pub vm_id: VmId,
-    /// Both views of every file inside the jail chroot.
     pub jail: JailPaths,
-    /// The unprivileged uid and gid the VMM drops to.
     pub jail_user: JailUser,
-    /// The jailer's `--chroot-base-dir`.
     pub chroot_base_dir: Utf8PathBuf,
     /// Handle of the empty network namespace the VMM joins.
     pub netns: Utf8PathBuf,
-    /// Shared with the chroot guard of the same id: a cgroup this job cannot
-    /// remove has to hold that chroot, which is the only handle a later sweep
-    /// has for finding the cgroup again.
+    /// Shared with the chroot guard of the same id, so a cgroup this job cannot
+    /// remove keeps the chroot a later sweep finds it by.
     pub cgroup_survived: CgroupSurvived,
     /// Number of vCPUs.
     pub vcpus: u8,
@@ -111,17 +104,6 @@ pub struct FirecrackerJobConfig {
 /// 7. Collects results via vsock
 /// 8. Cleans up (including cgroup)
 ///
-/// The cgroup is a fidelity mechanism, so its absence degrades: no CPU layout,
-/// no isolation, or a cgroup that cannot be created means the job proceeds with
-/// a warning. The absence has to be declared to count, though: a cgroup this
-/// runner could not read is a question that failed rather than a host with no
-/// isolation to give, and it fails the job. See `cgroup_for_run`.
-///
-/// Placement and verification are conditional on the cgroup existing, but when
-/// it does they are hard requirements: a host that cannot isolate is a declared
-/// limitation, while a cgroup that exists but does not contain the VMM is a
-/// silent lie about where the benchmark ran.
-///
 /// Returns the benchmark output including exit code and stdout.
 #[expect(
     clippy::too_many_lines,
@@ -151,11 +133,6 @@ pub fn run_firecracker(
     };
 
     // Step 1: Start the jailed Firecracker process.
-    //
-    // The cgroup descriptor is opened before the fork so the placement inside
-    // `pre_exec` is a bare write on an existing descriptor. Placing the VMM
-    // before it execs, rather than after it is already running, keeps it from
-    // booting its API and touching memory on the wrong cores first.
     println!("Starting jailed Firecracker process...");
     let housekeeping_cores = config
         .cpu_layout
@@ -176,11 +153,8 @@ pub fn run_firecracker(
         cgroup_procs,
     })?;
 
-    // Step 1b: Verify the placement landed.
-    //
-    // `spawn` returns only after `pre_exec` and the exec have completed, so
-    // this read is race free. A failed write already surfaced as a failed
-    // spawn; this catches a write that succeeded against the wrong cgroup.
+    // Step 1b: Verify the placement landed, which is race free because `spawn`
+    // returns only after the exec, and catches a write to the wrong cgroup.
     verify_placement(cgroup.as_ref(), fc_process.pid())?;
 
     let client = fc_process.client();
@@ -194,8 +168,6 @@ pub fn run_firecracker(
         smt: false,
     })?;
 
-    // Every path in an API body is the chroot view: these resolve inside the
-    // jail, not on the host filesystem the runner sees.
     client.put_boot_source(&BootSource {
         kernel_image_path: jail.kernel().chroot().clone(),
         boot_args: config.boot_args.clone(),
@@ -216,8 +188,6 @@ pub fn run_firecracker(
     // Step 3: Create vsock listeners (must be before boot)
     println!("Setting up vsock listeners...");
     let vsock_listener = VsockListener::new(jail.vsock())?;
-    // Firecracker connects out to these as the unprivileged jail user, so it
-    // needs write access to the inodes. After bind and before InstanceStart.
     vsock_listener
         .chown_to_jail(config.jail_user)
         .map_err(FirecrackerError::Chown)?;
@@ -314,21 +284,8 @@ pub fn run_firecracker(
     })
 }
 
-/// The cgroup this run gets, or the reason it gets none.
-///
-/// `Ok(None)` is a declared absence. The host does not delegate the controllers,
-/// or the cgroup could not be created at all: either way the host has answered,
-/// there is no isolation to be had, and the job runs without a cgroup exactly as
-/// on a host with no CPU layout.
-///
-/// An error is a question that failed, and the two are not the same claim about
-/// the host. [`CgroupManager::new`] reads twice, and a read that failed decides
-/// nothing: `cgroup.subtree_control` that cannot be read is not an empty
-/// controller list, and this run's cgroup that cannot be stat'ed is what decides
-/// whether `Drop` may remove it. Degrading on either would run the benchmark
-/// with nothing keeping other work off its cores and report a host limitation
-/// nobody observed, which is the worst of the outcomes available here. See the
-/// failure policy table in [`crate::jail`].
+/// Only a declared absence degrades to `Ok(None)`; a cgroup that could not be
+/// read fails the job, per the failure policy table in [`crate::jail`].
 fn cgroup_for_run(
     cgroup: Result<CgroupManager, crate::RunnerError>,
 ) -> Result<Option<CgroupManager>, FirecrackerError> {
@@ -344,12 +301,8 @@ fn cgroup_for_run(
     }
 }
 
-/// Confine a run's cgroup to the benchmark cores, and keep its memory resident.
-///
-/// A rejected cpuset is fatal: the cgroup would exist without confining the VMM
-/// to the cores the number claims. A cpuset the host does not delegate is a
-/// declared limitation instead, and the cgroup is kept for placement, swap, and
-/// metrics.
+/// A rejected cpuset is fatal, but an undelegated one only warns and keeps the
+/// cgroup for placement, swap, and metrics.
 fn confine(cgroup: CgroupManager, layout: &CpuLayout) -> Result<CgroupManager, FirecrackerError> {
     match cgroup
         .apply_cpuset(layout)
@@ -372,12 +325,6 @@ fn confine(cgroup: CgroupManager, layout: &CpuLayout) -> Result<CgroupManager, F
     Ok(cgroup)
 }
 
-/// Open the descriptor the VMM will be placed through, if there is a cgroup.
-///
-/// Placement is conditional on the cgroup existing, not unconditional: a host
-/// with no CPU layout or no isolation gets no cgroup, and therefore no
-/// placement, which is the existing degrade behavior. When the cgroup does
-/// exist, failing to open it aborts the job.
 fn placement_target(
     cgroup: Option<&CgroupManager>,
 ) -> Result<Option<std::fs::File>, FirecrackerError> {
@@ -387,12 +334,6 @@ fn placement_target(
         .map_err(FirecrackerError::CgroupPlacement)
 }
 
-/// Confirm the VMM landed in its cgroup, if there is one.
-///
-/// Skipped, not failed, when no cgroup exists. When one does, a pid that is
-/// not a member aborts the job: a cgroup that exists but does not contain the
-/// VMM is a silent lie about which cores the benchmark ran on, which is worse
-/// than a declared absence of isolation.
 fn verify_placement(cgroup: Option<&CgroupManager>, pid: u32) -> Result<(), FirecrackerError> {
     let Some(cgroup) = cgroup else {
         return Ok(());
@@ -431,12 +372,9 @@ fn parse_exit_code(s: &str) -> i32 {
 mod tests {
     use super::*;
 
-    // --- only a declared absence degrades ---
-
     #[test]
     fn a_host_that_delegates_no_controllers_degrades() {
-        // There is no isolation to be had and the host said so, which is a
-        // limitation an operator can read. The job runs without a cgroup.
+        // Prevents a host that declares no controllers from failing the job.
         let degraded = cgroup_for_run(Err(JailError::MissingController {
             controller: "cpuset".to_owned(),
             path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/cgroup.subtree_control"),
@@ -453,11 +391,7 @@ mod tests {
 
     #[test]
     fn a_cgroup_that_could_not_be_read_fails_the_job() {
-        // The failure this prevents: the stat that decides whether `Drop` may
-        // remove this cgroup errors, the job shrugs and runs with no cgroup at
-        // all, and the benchmark reports numbers taken with nothing keeping
-        // other work off its cores, under a warning that blames the host for a
-        // limitation nobody observed.
+        // Prevents an unreadable cgroup degrading into a run with no core confinement.
         let read_failed = Err(JailError::ReadCgroup {
             path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/vm-1"),
             source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
@@ -490,9 +424,7 @@ mod tests {
 
     #[test]
     fn a_cgroup_without_a_cpuset_still_keeps_memory_resident() {
-        // Only the cpuset is missing, so the cgroup is kept: dropping it would
-        // let guest memory swap again on a host that delegates `memory` but not
-        // `cpuset`, and lose the metrics with it.
+        // Prevents dropping the cgroup over a missing `cpuset`, which lets guest memory swap.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
@@ -510,12 +442,9 @@ mod tests {
         );
     }
 
-    // --- placement is conditional on the cgroup existing ---
-
     #[test]
     fn no_cgroup_skips_placement() {
-        // A host that cannot isolate is a declared limitation, so the job
-        // proceeds without a cgroup rather than failing.
+        // Prevents a host with no cgroup from failing the job at placement.
         assert!(
             placement_target(None).unwrap().is_none(),
             "no cgroup means nothing to place through"

@@ -2,12 +2,7 @@
 //!
 //! Firecracker's vsock implementation uses Unix domain sockets on the host side.
 //! When the guest connects to CID 2 (host) on port N, Firecracker connects to
-//! `{uds_path}_{N}`. The runner binds those sockets, from outside the chroot,
-//! before VM boot; Firecracker reaches the same inodes at the chroot view of
-//! the path and creates the base `uds_path` itself.
-//!
-//! Unix domain sockets are scoped by the filesystem, not by the network
-//! namespace, so the empty namespace the VMM joins does not affect them.
+//! `{uds_path}_{N}`, which the runner binds from outside the chroot before VM boot.
 
 use std::io::Read as _;
 use std::os::fd::AsFd as _;
@@ -39,13 +34,9 @@ mod ports {
     pub const EXIT_CODE: u32 = 5002;
     pub const OUTPUT_FILES: u32 = 5005;
 
-    /// Every port the runner listens on.
     pub const ALL: [u32; 4] = [STDOUT, STDERR, EXIT_CODE, OUTPUT_FILES];
 
-    /// The stream a port carries, for errors that name what failed.
-    ///
-    /// A port number alone sends an operator to this table; the stream name is
-    /// the handle they already have.
+    /// Names the stream in errors, since a port alone sends an operator here.
     pub const fn stream(port: u32) -> &'static str {
         match port {
             STDOUT => "stdout",
@@ -72,11 +63,8 @@ pub struct VsockResults {
 
 /// Host-side vsock listener that accepts connections from Firecracker.
 pub struct VsockListener {
-    /// Both views of the vsock base path.
-    ///
-    /// Binding needs the socket view, because of the `sun_path` limit.
-    /// Everything else uses the host view, which carries no dependency on a
-    /// descriptor staying open.
+    /// Binding needs the socket view for `sun_path`; everything else uses the
+    /// host view, which needs no open descriptor.
     vsock: JailFile,
     /// Listeners for each port.
     stdout_listener: UnixListener,
@@ -88,17 +76,7 @@ pub struct VsockListener {
 impl VsockListener {
     /// Create vsock listeners for all expected ports.
     ///
-    /// Creates Unix listeners at `{vsock}_{port}` for each port. Binding uses
-    /// the socket view, which is the only view short enough for `sun_path`;
-    /// unlinking and ownership use the host view, which does not depend on a
-    /// descriptor staying open. These must be created before the VM boots.
-    ///
-    /// Nothing is unlinked first. Every job binds inside a chroot named by an
-    /// id this runner just minted, so there is no stale socket of ours to
-    /// clear, and a bind that finds one anyway is a surprise worth reporting
-    /// rather than a file to delete. The removal that used to run here named
-    /// the socket view, which is the one view that can go stale, so it was also
-    /// the one step that contradicted the rule above.
+    /// Binds `{vsock}_{port}` for each port, and must run before the VM boots.
     pub fn new(vsock: &JailFile) -> Result<Self, FirecrackerError> {
         let stdout_listener = bind_nonblocking(vsock, ports::STDOUT)?;
         let stderr_listener = bind_nonblocking(vsock, ports::STDERR)?;
@@ -266,13 +244,8 @@ impl VsockListener {
         })
     }
 
-    /// Hand the listener sockets to the jail uid and gid.
-    ///
-    /// Firecracker connects out to these sockets as the unprivileged jail
-    /// user, so it needs write permission on the inodes. After `pivot_root`
-    /// the only directory it traverses is `/`, which the jailer chowns itself,
-    /// so the inodes are all that is left to hand over. Must run after bind
-    /// and before `InstanceStart`.
+    /// Firecracker connects to these as the jail user, so this must run after
+    /// the bind and before `InstanceStart`.
     pub fn chown_to_jail(&self, jail_user: JailUser) -> Result<(), crate::error::JailError> {
         for port in ports::ALL {
             chown_to_jail(Utf8Path::new(&self.host_path(port)), jail_user)?;
@@ -282,18 +255,14 @@ impl VsockListener {
 
     /// Remove all socket files created by this listener.
     ///
-    /// Unlinks through the host view, for the same reason as the API socket's
-    /// cleanup in [`crate::firecracker::process`]: unlinking
-    /// has no `sun_path` limit, and this runs from `Drop`, where naming a
-    /// descriptor that may already be closed would delete an unrelated file
-    /// rather than fail.
+    /// Unlinks through the host view, since from `Drop` the socket view may name
+    /// a closed descriptor and delete an unrelated file.
     pub fn cleanup(&self) {
         for port in ports::ALL {
             drop(std::fs::remove_file(self.host_path(port)));
         }
     }
 
-    /// The host path of the listener socket for a port.
     fn host_path(&self, port: u32) -> String {
         format!("{}_{port}", self.vsock.host())
     }
@@ -305,12 +274,6 @@ impl Drop for VsockListener {
     }
 }
 
-/// Bind one port's listener at the socket view and make it non-blocking.
-///
-/// The socket view is the only view short enough for `sun_path`; see
-/// [`VsockListener::new`]. Non-blocking is set here rather than in a second
-/// pass, so no listener ever exists in a state the collection loop cannot
-/// poll.
 fn bind_nonblocking(vsock: &JailFile, port: u32) -> Result<UnixListener, FirecrackerError> {
     let path = vsock.socket().with_port(port);
     let listener = UnixListener::bind(&path).map_err(|source| FirecrackerError::BindVsock {
@@ -379,12 +342,7 @@ mod tests {
     /// Short grace period for tests to avoid slowing down the test suite.
     const TEST_GRACE_PERIOD: Duration = Duration::from_millis(50);
 
-    /// Helper: a jail whose descriptor stays open for the whole test.
-    ///
-    /// The socket view names an open descriptor by number, so the `JailPaths`
-    /// has to outlive every path derived from it. Dropping it early leaves the
-    /// paths addressing whatever the kernel hands that number to next, which
-    /// is exactly the failure this binding prevents.
+    /// Returns the `JailPaths` too, since the socket view names its descriptor.
     fn jail_in_tmpdir() -> (tempfile::TempDir, JailPaths) {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8Path::from_path(dir.path()).unwrap();
@@ -423,13 +381,8 @@ mod tests {
 
     #[test]
     fn a_path_already_taken_is_reported_not_deleted() {
-        // The failure this prevents: `new` used to unlink each socket path
-        // before binding it, and it did so through the socket view, which names
-        // an open descriptor by number. Every other unlink in this crate takes
-        // the host view precisely because a stale number deletes whatever
-        // inherited it, and that deletion looks like success. Nothing at these
-        // paths is ever ours to remove anyway: the chroot is named by a freshly
-        // minted id.
+        // Prevents `new` unlinking a taken path, which through a stale socket
+        // view deletes an unrelated file.
         let (_dir, jail) = jail_in_tmpdir();
         let occupied = format!("{}_{}", jail.vsock().host(), ports::STDOUT);
         std::fs::write(&occupied, b"not ours").unwrap();

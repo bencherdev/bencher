@@ -2,20 +2,16 @@
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Set once SIGINT or SIGTERM arrives.
 static STOP: AtomicBool = AtomicBool::new(false);
 
-/// The flag the handlers set, for a job to poll as its cancel flag.
 pub(crate) fn stop_flag() -> &'static AtomicBool {
     &STOP
 }
 
-/// Whether SIGINT or SIGTERM has arrived.
 pub(crate) fn stop_requested() -> bool {
     STOP.load(Ordering::SeqCst)
 }
 
-/// Install handlers for SIGINT and SIGTERM that only set the flag.
 #[cfg(target_os = "linux")]
 pub(crate) fn install_handlers() {
     use nix::sys::signal::{SaFlags, SigAction, SigHandler, SigSet, Signal, sigaction};
@@ -36,8 +32,6 @@ pub(crate) fn install_handlers() {
     }
 }
 
-/// Install handlers for SIGINT and SIGTERM that only set the flag.
-///
 /// Uses `libc::signal()` directly since `nix` is not available on macOS.
 #[cfg(not(target_os = "linux"))]
 pub(crate) fn install_handlers() {

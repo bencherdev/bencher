@@ -1,10 +1,5 @@
-//! The per-job chroot the jailer confines Firecracker to.
-//!
-//! The runner builds the job's artifacts directly inside the chroot rather
-//! than copying them in afterwards, which is legal because the jailer uses
-//! `create_dir_all` for the chroot and does nothing if the path already
-//! exists. Because the artifacts no longer live in a `TempDir`, this type
-//! carries the cleanup responsibility that `TempDir` used to.
+//! The per-job chroot, which the runner fills before the jailer runs because
+//! the jailer's `create_dir_all` accepts a path that already exists.
 
 #![expect(clippy::print_stderr, reason = "chroot teardown prints diagnostics")]
 
@@ -16,15 +11,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::error::JailError;
 use crate::jail::{CgroupSurvived, JailUser, StateDir, VmId};
 
-/// A job's chroot tree, removed when this value is dropped.
-///
-/// The jailer cleans up nothing by design, so teardown is the runner's job.
-/// `Drop` covers completion, timeout, cancellation, and every error return;
-/// the next job's sweep covers the exits that never unwind.
-///
-/// The cgroup's teardown runs first, which is what makes its signal meaningful
-/// here: `run_firecracker` owns this job's cgroup and returns before this guard
-/// is dropped.
+/// A job's chroot tree, removed on drop because the jailer cleans up nothing.
 #[derive(Debug)]
 pub struct JailDir {
     dir: Utf8PathBuf,
@@ -42,14 +29,8 @@ impl JailDir {
         Self::create_with(state, vm_id, cgroup_survived, make_private)
     }
 
-    /// The creation, with the mode tightening supplied.
-    ///
-    /// The step is a parameter for the same reason the sweep's reap is one: it
-    /// is the one that fails with the tree already on disk, and a chmod of a
-    /// directory the test process itself just created does not fail on a host
-    /// worth testing on. What has to be proven is that such a failure is torn
-    /// down rather than left behind, and manufacturing it any other way would
-    /// be exercising the harness.
+    /// `create` with the mode tightening injectable, so a test can fail it with
+    /// the tree already on disk.
     fn create_with<P>(
         state: &StateDir,
         vm_id: &VmId,
@@ -59,15 +40,8 @@ impl JailDir {
     where
         P: Fn(&Utf8Path) -> Result<(), JailError>,
     {
-        // Re-proven at job time, not only at host preparation, which runs once
-        // per process. This is the path every later job takes, and the
-        // `create_dir_all` below resolves an existing component that is a
-        // link, so a `jail` or `jail/firecracker` swapped for one after
-        // preparation would aim this job's chroot, its guest rootfs, and every
-        // chown that follows at a directory somebody else chose. The check
-        // refuses a symlinked component outright, and the state tree is
-        // root-owned 0700 from preparation on, so between this check and the
-        // create nobody but root can swap one in.
+        // Re-checked per job because `create_dir_all` follows a component
+        // swapped for a link after host preparation.
         state.check_root_is_ours()?;
 
         let dir = state.jail_dir(vm_id);
@@ -77,16 +51,14 @@ impl JailDir {
             path: root.clone(),
             source: e,
         })?;
-        // The guard takes the tree the moment the tree exists, so every step
-        // below it is covered by this type's own teardown.
+        // Built before `make_private` so a failure below is torn down by `Drop`.
         let jail = Self {
             dir,
             root,
             cgroup_survived,
         };
-        // The jailer eventually sets the chroot root to 0700 owned by the jail
-        // user, but only once it runs. The runner builds the guest rootfs in
-        // here before that, so the tree is private from the moment it exists.
+        // Private now, because the runner builds the guest rootfs here before
+        // the jailer tightens the root itself.
         make_private(&jail.dir)?;
         make_private(&jail.root)?;
 
@@ -102,11 +74,8 @@ impl JailDir {
 
 impl Drop for JailDir {
     fn drop(&mut self) {
-        // A cgroup *this job* could not remove keeps the chroot alive. The two
-        // are named by the same id, and this directory is the only handle a
-        // later sweep has for finding that cgroup again, so removing it here
-        // would strand the cgroup for good with whatever is still in it. The
-        // next job's sweep reclaims both in the right order.
+        // The chroot's name is a later sweep's only handle on a cgroup this job
+        // could not remove, so it stays for the next job to reclaim both.
         if self.cgroup_survived.is_set() {
             eprintln!(
                 "Warning: leaving jail {} in place because its cgroup could not be removed. The directory names that cgroup, so the next job sweeps both.",
@@ -126,16 +95,8 @@ impl Drop for JailDir {
     }
 }
 
-/// Tighten one directory of the chroot tree to 0700, without following a link.
-///
-/// `fchmod` on a descriptor opened `O_NOFOLLOW`, the same form as
-/// [`crate::jail::state`]'s namesake and for the same reason: the path form
-/// resolves a link, so a component swapped for one between the creation above
-/// and this call would have root tighten a directory of somebody else's
-/// choosing. These paths sit under a state tree the guard re-checks at job time
-/// and holds root-owned at 0700, so only root could swap one in; not following
-/// it here is what keeps that from being an invariant this function has to
-/// trust rather than a second fence behind its own.
+/// Tighten one directory to 0700 through an `O_NOFOLLOW` descriptor, so a
+/// component swapped for a link never has root chmod the link's target.
 fn make_private(path: &Utf8Path) -> Result<(), JailError> {
     let opened = fs::OpenOptions::new()
         .read(true)
@@ -153,34 +114,17 @@ fn make_private(path: &Utf8Path) -> Result<(), JailError> {
         })
 }
 
-/// Let the jailed VMM read a file without giving it away.
-///
-/// Firecracker only ever reads the kernel image, so it gets read permission
-/// and nothing more: the file stays owned by root, which means the VMM cannot
-/// write it and cannot chmod it into something it can write. The mode is set
-/// explicitly rather than inherited, because a bundled write or a copy from
-/// the host can land at 0600 and leave the VMM unable to read its own kernel.
+/// Let the jailed VMM read a file that stays owned by root, so the VMM can
+/// never write it or chmod it into something it can write.
 pub fn grant_jail_read(path: &Utf8Path) -> Result<(), JailError> {
-    // Reported as a mode failure, not an ownership one. This function
-    // deliberately leaves the file owned by root, so an operator sent looking
-    // at ownership would be chasing the opposite of what went wrong.
     fs::set_permissions(path, fs::Permissions::from_mode(0o644)).map_err(|e| JailError::ChmodJail {
         path: path.to_owned(),
         source: e,
     })
 }
 
-/// Hand a file the runner placed inside the chroot to the jail uid and gid.
-///
-/// The jailer chowns the chroot root and the device nodes it makes, but that
-/// chown is not recursive: files the runner placed inside keep the ownership
-/// they were created with, which is root. Every artifact Firecracker *writes*
-/// has to be handed over explicitly, and getting it wrong produces an opaque
-/// boot failure, so each one is checked. Anything it only reads gets
-/// [`grant_jail_read`] instead.
-///
-/// `lchown`, which is `fchownat` with `AT_SYMLINK_NOFOLLOW`: a link is handed
-/// over itself, never its target, whatever runs before this.
+/// Hand a file Firecracker writes to the jail user without following a link,
+/// since the jailer's chown of the chroot root is not recursive.
 pub fn chown_to_jail(path: &Utf8Path, jail_user: JailUser) -> Result<(), JailError> {
     lchown(path, Some(jail_user.uid()), Some(jail_user.gid())).map_err(|e| JailError::ChownJail {
         path: path.to_owned(),
@@ -192,7 +136,6 @@ pub fn chown_to_jail(path: &Utf8Path, jail_user: JailUser) -> Result<(), JailErr
 mod tests {
     use super::*;
 
-    /// A stand-in identity for tests.
     fn vm_id() -> VmId {
         VmId::from_chroot_name("vm-1".to_owned()).unwrap()
     }
@@ -246,11 +189,8 @@ mod tests {
 
     #[test]
     fn a_component_swapped_for_a_link_after_preparation_is_refused() {
-        // Host preparation proves the tree once per process, and every job
-        // after it comes through here. A `jail/firecracker` swapped for a link
-        // in between would otherwise be followed by the chroot creation,
-        // aiming this job's guest rootfs and every chown that follows at the
-        // link's target.
+        // Fails if a job stops re-checking the state tree, letting a
+        // `jail/firecracker` swapped for a link aim the chroot at its target.
         use std::os::unix::fs::symlink;
         let (_dir, state) = state_in_tmpdir();
         let victim = state.path().parent().unwrap().join("victim");
@@ -276,11 +216,9 @@ mod tests {
 
     #[test]
     fn an_unbuildable_chroot_is_an_error_not_a_warning() {
-        // A chroot that cannot be built is a confinement failure, so it has
-        // to abort the job rather than degrade into an unjailed run.
+        // Fails if a chroot that cannot be built degrades into an unjailed run
+        // instead of aborting the job.
         let (_dir, state) = state_in_tmpdir();
-        // A file where the jail directory has to go makes the tree
-        // impossible to create.
         fs::write(state.jail_dir(&vm_id()), b"in the way").unwrap();
 
         JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap_err();
@@ -288,9 +226,8 @@ mod tests {
 
     #[test]
     fn a_chroot_that_could_not_be_finished_is_not_left_behind() {
-        // Every step after `create_dir_all` runs with the tree already on disk,
-        // so a failure there has to hand the tree to the same teardown a
-        // finished job gets rather than waiting on the next job's sweep.
+        // Fails if a step after `create_dir_all` leaks the tree instead of
+        // handing it to `Drop`.
         let (_dir, state) = state_in_tmpdir();
 
         JailDir::create_with(&state, &vm_id(), CgroupSurvived::default(), |path| {
@@ -310,9 +247,8 @@ mod tests {
 
     #[test]
     fn a_surviving_cgroup_holds_the_chroot_that_names_it() {
-        // The cgroup is torn down first, and a removal it could not finish
-        // raises this. Removing the chroot anyway would leave nothing for a
-        // later sweep to find the cgroup by.
+        // Fails if `Drop` removes the chroot while its cgroup survives, leaving
+        // a later sweep nothing to find the cgroup by.
         let (_dir, state) = state_in_tmpdir();
         let cgroup_survived = CgroupSurvived::default();
         let jail = JailDir::create(&state, &vm_id(), cgroup_survived.clone()).unwrap();
@@ -329,9 +265,7 @@ mod tests {
 
     #[test]
     fn a_link_is_handed_over_without_its_target() {
-        // Root chowning through a link would hand the jail user whatever the
-        // link points at. Chowning to another user needs root, so this runs in
-        // the elevated environment.
+        // Fails if the chown follows a link, handing the jail user its target.
         use std::os::unix::fs::{MetadataExt as _, symlink};
 
         if crate::jail::current_euid() != 0 {
