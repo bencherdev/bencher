@@ -16,6 +16,7 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use std::sync::mpsc;
 use std::time::Duration;
 
 use anyhow::{Context as _, Result, bail};
@@ -86,6 +87,12 @@ struct Scenario {
     /// SIGKILL is the point: it is the exit that never unwinds, so `Drop`
     /// cannot reclaim the chroot and only the sweep can.
     orphan_then_rerun: bool,
+    /// Leave a sibling runner's orphan between the two jobs of one runner
+    /// process, and report that process.
+    ///
+    /// The orphan appears after that process has already built a jail, so only
+    /// a sweep that runs on every job can reap it.
+    orphan_between_jobs: bool,
     /// Point the runner at a state directory it has to refuse, and assert it
     /// failed the job rather than running the VMM outside a jail.
     unusable_state_dir: bool,
@@ -105,6 +112,7 @@ impl Default for Scenario {
             probe: None,
             tuning: false,
             orphan_then_rerun: false,
+            orphan_between_jobs: false,
             unusable_state_dir: false,
             // Sandboxed is the interesting case and the overwhelming majority,
             // so the handful of non-sandboxed scenarios opt out rather than
@@ -385,6 +393,8 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
         run_runner_with_cancel(&image_path, &args, Duration::from_secs(secs), runner_bin)
     } else if scenario.orphan_then_rerun {
         run_runner_after_orphan(&image_path, &args, &state_dir, runner_bin)
+    } else if scenario.orphan_between_jobs {
+        run_runner_beside_sibling_orphan(&image_path, &args, &state_dir, runner_bin)
     } else if let Some(probe) = scenario.probe {
         run_runner_with_probe(&image_path, &args, probe, &state_dir, runner_bin)
     } else if scenario.tuning {
@@ -2783,6 +2793,28 @@ CMD ["sh", "-c", "echo JAIL_SWEEP_a7f3b2c9 && sleep 10"]"#,
             },
             ..Scenario::default()
         },
+        Scenario {
+            name: "jail_sweep_reclaims_sibling_orphan",
+            description: "An orphan a sibling runner process leaves between two jobs is reaped by the second",
+            // Long enough that the sibling reaches the jail lock while the first
+            // job still holds it.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo JAIL_SIBLING_a7f3b2c9 && sleep 10"]"#,
+            orphan_between_jobs: true,
+            extra_args: &["--timeout", "120", "--jail-uid", SCENARIO_JAIL_UID_ARG],
+            validate: |output| {
+                assert_job_succeeded(output, "JAIL_SIBLING_a7f3b2c9")?;
+                let jobs = guest_printed(output, "JAIL_SIBLING_a7f3b2c9");
+                anyhow::ensure!(
+                    jobs == 2,
+                    "Expected both jobs to run, but the guest ran {jobs} time(s).\nstdout: {}\nstderr: {}",
+                    output.stdout,
+                    output.stderr
+                );
+                assert_no_chroot_remains(&scenario_state_dir())
+            },
+            ..Scenario::default()
+        },
     ]
 }
 
@@ -2996,9 +3028,9 @@ fn mounts_on(mountinfo: &str, mount_point: &str) -> usize {
 /// cgroup either way. Success of the job itself is the precondition for any of
 /// that meaning anything.
 ///
-/// `marker` has to be a token the runner's own progress output cannot contain.
-/// This captures the runner's stdout, not the guest's, and the runner prints
-/// plenty about jails and sweeps on its way to launching a VM.
+/// `marker` has to be a line the guest prints on its own. This captures the
+/// runner's stdout, not the guest's, and the runner echoes the image's command,
+/// marker and all, before it boots anything.
 fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
     if output.exit_code != 0 {
         bail!(
@@ -3008,7 +3040,7 @@ fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
             output.stderr
         );
     }
-    if !output.stdout.contains(marker) {
+    if guest_printed(output, marker) == 0 {
         bail!(
             "Expected '{marker}' in the guest output, so the VM booted and ran.\nstdout: {}\nstderr: {}",
             output.stdout,
@@ -3016,6 +3048,15 @@ fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
         );
     }
     Ok(())
+}
+
+/// How many times the guest printed `marker` as a line of its own.
+fn guest_printed(output: &ScenarioOutput, marker: &str) -> usize {
+    output
+        .stdout
+        .lines()
+        .filter(|line| line.trim() == marker)
+        .count()
 }
 
 /// Assert every chroot has been reclaimed.
@@ -3445,6 +3486,250 @@ fn run_runner_after_orphan(
 /// The cgroup a jail leaves behind, which shares the jail's name.
 fn stale_cgroup(vm_id: &str) -> Utf8PathBuf {
     Utf8PathBuf::from("/sys/fs/cgroup/bencher").join(vm_id)
+}
+
+/// The guest an orphan runs.
+///
+/// It outlives every job that follows it by far, so an orphan that is gone
+/// afterwards was reaped rather than merely finished.
+const ORPHAN_DOCKERFILE: &str = r#"FROM busybox
+CMD ["sh", "-c", "echo JAIL_ORPHAN_a7f3b2c9 && sleep 600"]"#;
+
+/// What the runner's sweep says when it kills an orphaned VMM.
+fn reaped_line(pid: u32) -> String {
+    format!("Reaped orphaned VMM (pid {pid})")
+}
+
+/// Leave a sibling runner's orphan between two jobs of one runner, and prove the
+/// second job reaps it.
+///
+/// The first runner runs two jobs. A sibling started during the first job waits
+/// on the jail lock that job holds, and takes it as the first job releases it,
+/// while the second job is still unpacking its image. The sibling is killed once
+/// its VMM is up, so the orphan appears after the first runner has already built
+/// a jail, and only a sweep on every job reaps it before the second job
+/// measures.
+fn run_runner_beside_sibling_orphan(
+    image_path: &Utf8Path,
+    args: &[&str],
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let orphan_image = build_test_image("jail_sibling_orphan", ORPHAN_DOCKERFILE)
+        .context("Failed to build the orphan's image")?;
+    let parent = jail_parent(state_dir);
+
+    let mut first_args = args.to_vec();
+    first_args.extend(["--iter", "2"]);
+    let mut first = spawn_runner(image_path, &first_args, runner_bin)?;
+    let first_output = drain_output(&mut first);
+
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let first_vmm = loop {
+        if let Some((_, jail_root)) = find_jail(&parent)?
+            && let Some(pid) = find_jailed_vmm(&jail_root)?
+        {
+            break Some((jail_root, pid));
+        }
+        if first.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
+            break None;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    };
+    let Some((first_jail_root, first_pid)) = first_vmm else {
+        if first.try_wait()?.is_none() {
+            kill_pid(first.id(), libc::SIGKILL);
+        }
+        drop(first.wait());
+        let (stdout, stderr) = first_output.join();
+        bail!(
+            "The first job's VMM never appeared within {PROBE_TIMEOUT:?}.\nstdout: {stdout}\nstderr: {stderr}"
+        );
+    };
+
+    let mut sibling = spawn_runner(&orphan_image, args, runner_bin)?;
+    let mut sibling_output = StreamedOutput::start(&mut sibling);
+    let orphan = orphan_sibling(&mut sibling_output, &first_jail_root, first_pid, &mut first);
+    kill_pid(sibling.id(), libc::SIGKILL);
+    drop(sibling.wait());
+    let (sibling_stdout, sibling_stderr) = sibling_output.join();
+
+    let status = first.wait()?;
+    let (stdout, stderr) = first_output.join();
+    let (orphan_root, orphan_pid, cgroup) = orphan.with_context(|| {
+        format!(
+            "No orphan was left between the jobs.\nfirst stdout: {stdout}\nfirst stderr: {stderr}\nsibling stdout: {sibling_stdout}\nsibling stderr: {sibling_stderr}"
+        )
+    })?;
+    println!("  sibling orphaned VMM pid {orphan_pid} between the jobs");
+
+    if !stderr.contains(&reaped_line(orphan_pid)) {
+        bail!(
+            "The second job never reaped the sibling's orphaned VMM (pid {orphan_pid}), so it measured beside it.\nstdout: {stdout}\nstderr: {stderr}"
+        );
+    }
+    if is_firecracker(orphan_pid)? {
+        bail!(
+            "The sibling's orphaned VMM (pid {orphan_pid}) is still running after the second job, so the sweep never killed it."
+        );
+    }
+    if orphan_root
+        .try_exists()
+        .with_context(|| format!("Failed to check whether {orphan_root} survived"))?
+    {
+        bail!("The sibling's orphaned chroot {orphan_root} survived the second job");
+    }
+    if cgroup
+        .try_exists()
+        .with_context(|| format!("Failed to check whether {cgroup} survived"))?
+    {
+        bail!("The sibling's orphaned cgroup {cgroup} survived the second job");
+    }
+
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.code().unwrap_or(-1),
+    })
+}
+
+/// Wait for the sibling to be blocked behind the first job, then for its VMM.
+///
+/// Returns the orphan's jail root, pid, and cgroup. The sibling names its own
+/// jail on stdout, since the first job's may still be on disk beside it.
+fn orphan_sibling(
+    sibling: &mut StreamedOutput,
+    first_jail_root: &Utf8Path,
+    first_pid: u32,
+    first: &mut std::process::Child,
+) -> Result<(Utf8PathBuf, u32, Utf8PathBuf)> {
+    sibling.wait_for(|line| line.contains("Waiting for another bencher runner"))?;
+    anyhow::ensure!(
+        find_jailed_vmm(first_jail_root)? == Some(first_pid),
+        "The first job's VMM (pid {first_pid}) was gone by the time the sibling waited on the jail lock, so the sibling may be queued behind the second job instead of between the two"
+    );
+
+    let jail_line = sibling.wait_for(|line| line.trim_start().starts_with("Jail: "))?;
+    let jail_root = Utf8PathBuf::from(jail_line.trim_start().trim_start_matches("Jail: "));
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let pid = loop {
+        if let Some(pid) = find_jailed_vmm(&jail_root)? {
+            break pid;
+        }
+        anyhow::ensure!(
+            std::time::Instant::now() < deadline,
+            "The sibling's VMM never appeared in {jail_root} within {PROBE_TIMEOUT:?}"
+        );
+        std::thread::sleep(PROBE_INTERVAL);
+    };
+    anyhow::ensure!(
+        first.try_wait()?.is_none(),
+        "The first runner finished before the sibling's VMM came up, so its second job ran before the orphan existed"
+    );
+
+    let vm_id = jail_root
+        .parent()
+        .and_then(Utf8Path::file_name)
+        .with_context(|| format!("{jail_root} does not name a jail"))?;
+    let cgroup = stale_cgroup(vm_id);
+    anyhow::ensure!(
+        cgroup
+            .try_exists()
+            .with_context(|| format!("Failed to check whether {cgroup} was created"))?,
+        "No cgroup at {cgroup}, so the reap is only half exercised. The runner creates one whenever its CPU layout offers isolation."
+    );
+    Ok((jail_root, pid, cgroup))
+}
+
+/// Start the runner on an image with its output piped.
+fn spawn_runner(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<std::process::Child> {
+    Ok(Command::new(runner_bin.as_str())
+        .arg("run")
+        .arg("--image")
+        .arg(image_path.as_str())
+        .args(args)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?)
+}
+
+/// A child's stdout, line by line as it is printed, with its stderr drained.
+struct StreamedOutput {
+    lines: mpsc::Receiver<String>,
+    seen: Vec<String>,
+    stdout: std::thread::JoinHandle<()>,
+    stderr: std::thread::JoinHandle<String>,
+}
+
+impl StreamedOutput {
+    /// Start reading, so neither pipe can fill.
+    fn start(child: &mut std::process::Child) -> Self {
+        let (tx, lines) = mpsc::channel();
+        let stdout = child.stdout.take();
+        let stdout = std::thread::spawn(move || {
+            use std::io::BufRead as _;
+
+            let Some(stdout) = stdout else {
+                return;
+            };
+            for line in std::io::BufReader::new(stdout).lines() {
+                let Ok(line) = line else {
+                    break;
+                };
+                // Keep draining once nobody is listening, or the child blocks.
+                drop(tx.send(line));
+            }
+        });
+        let stderr = child.stderr.take();
+        let stderr = std::thread::spawn(move || {
+            use std::io::Read as _;
+
+            let mut buffer = String::new();
+            if let Some(mut stderr) = stderr {
+                drop(stderr.read_to_string(&mut buffer));
+            }
+            buffer
+        });
+        Self {
+            lines,
+            seen: Vec::new(),
+            stdout,
+            stderr,
+        }
+    }
+
+    /// The first line from here on that `wanted` accepts.
+    fn wait_for(&mut self, wanted: impl Fn(&str) -> bool) -> Result<String> {
+        let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+        loop {
+            let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+            match self.lines.recv_timeout(remaining) {
+                Ok(line) => {
+                    let found = wanted(&line);
+                    self.seen.push(line.clone());
+                    if found {
+                        return Ok(line);
+                    }
+                },
+                Err(e) => bail!(
+                    "The line the scenario waits for never came ({e}).\nstdout so far:\n{}",
+                    self.seen.join("\n")
+                ),
+            }
+        }
+    }
+
+    /// Wait for both readers, once the child has exited.
+    fn join(mut self) -> (String, String) {
+        drop(self.stdout.join());
+        self.seen.extend(self.lines.try_iter());
+        let stderr = self.stderr.join().unwrap_or_default();
+        (self.seen.join("\n"), stderr)
+    }
 }
 
 /// Whether a pid is a running Firecracker.

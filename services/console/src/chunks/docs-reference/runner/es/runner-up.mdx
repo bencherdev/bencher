@@ -40,7 +40,7 @@ Por defecto, se usa `55`.
 El directorio de estado persistente del Runner.
 Debe ser una ruta absoluta.
 La jaula que confina el sandbox se crea dentro de este directorio,
-y las jaulas que quedaron tras una salida no limpia se eliminan de él antes del primer Job con sandbox.
+y las jaulas que quedaron tras una salida no limpia se eliminan de él antes de cada Job con sandbox.
 Cada jaula contiene un sistema de archivos raíz completo del huésped y una copia del binario de la microVM,
 y los Jobs que comparten un directorio de estado se ejecutan de uno en uno,
 por lo que este directorio necesita capacidad real para una jaula.

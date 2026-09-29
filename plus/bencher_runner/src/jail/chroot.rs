@@ -14,29 +14,32 @@ use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _, chown};
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::JailError;
-use crate::jail::{JailSignals, JailUser, StateDir, VmId};
+use crate::jail::{CgroupSurvived, JailUser, StateDir, VmId};
 
 /// A job's chroot tree, removed when this value is dropped.
 ///
 /// The jailer cleans up nothing by design, so teardown is the runner's job.
 /// `Drop` covers completion, timeout, cancellation, and every error return;
-/// the sweep in `prepare_host` covers the exits that never unwind.
+/// the next job's sweep covers the exits that never unwind.
 ///
 /// The cgroup's teardown runs first, which is what makes its signal meaningful
 /// here: `run_firecracker` owns this job's cgroup and returns before this guard
-/// is dropped. The signal read is this job's own, not the runner-wide one a
-/// stale jail elsewhere can raise.
+/// is dropped.
 #[derive(Debug)]
 pub struct JailDir {
     dir: Utf8PathBuf,
     root: Utf8PathBuf,
-    signals: JailSignals,
+    cgroup_survived: CgroupSurvived,
 }
 
 impl JailDir {
     /// Create the chroot tree for `vm_id` at mode 0700.
-    pub fn create(state: &StateDir, vm_id: &VmId, signals: JailSignals) -> Result<Self, JailError> {
-        Self::create_with(state, vm_id, signals, make_private)
+    pub fn create(
+        state: &StateDir,
+        vm_id: &VmId,
+        cgroup_survived: CgroupSurvived,
+    ) -> Result<Self, JailError> {
+        Self::create_with(state, vm_id, cgroup_survived, make_private)
     }
 
     /// The creation, with the mode tightening supplied.
@@ -50,7 +53,7 @@ impl JailDir {
     fn create_with<P>(
         state: &StateDir,
         vm_id: &VmId,
-        signals: JailSignals,
+        cgroup_survived: CgroupSurvived,
         make_private: P,
     ) -> Result<Self, JailError>
     where
@@ -75,12 +78,12 @@ impl JailDir {
             source: e,
         })?;
         // The guard takes the tree the moment the tree exists, so every step
-        // below it is covered by this type's own teardown. Returning an error
-        // before constructing it left the chroot on disk with nothing armed to
-        // reclaim it: `Drop` never ran, the signals were dropped unused, and the
-        // next job returned early from a host this process had already prepared,
-        // so the orphan sat there until a restart.
-        let jail = Self { dir, root, signals };
+        // below it is covered by this type's own teardown.
+        let jail = Self {
+            dir,
+            root,
+            cgroup_survived,
+        };
         // The jailer eventually sets the chroot root to 0700 owned by the jail
         // user, but only once it runs. The runner builds the guest rootfs in
         // here before that, so the tree is private from the moment it exists.
@@ -103,13 +106,8 @@ impl Drop for JailDir {
         // are named by the same id, and this directory is the only handle a
         // later sweep has for finding that cgroup again, so removing it here
         // would strand the cgroup for good with whatever is still in it. The
-        // same failure already earned the next job a sweep, which reclaims both
-        // in the right order.
-        //
-        // This job's cgroup, and nothing else: the runner-wide reclaim signal is
-        // also raised by a stale jail some sweep could not reclaim, which is no
-        // reason to keep a chroot whose own cgroup came down cleanly.
-        if self.signals.must_keep_chroot() {
+        // next job's sweep reclaims both in the right order.
+        if self.cgroup_survived.is_set() {
             eprintln!(
                 "Warning: leaving jail {} in place because its cgroup could not be removed. The directory names that cgroup, so the next job sweeps both.",
                 self.dir
@@ -124,7 +122,6 @@ impl Drop for JailDir {
                 "Warning: failed to remove jail {}: {e}. It holds a VMM binary and a full guest rootfs; the next job will sweep it.",
                 self.dir
             );
-            self.signals.chroot_survived();
         }
     }
 }
@@ -209,7 +206,7 @@ mod tests {
     fn create_builds_a_private_chroot_tree() {
         let (_dir, state) = state_in_tmpdir();
 
-        let jail = JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap();
+        let jail = JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap();
 
         assert_eq!(jail.root(), state.jail_root(&vm_id()));
         assert!(jail.root().is_dir());
@@ -224,7 +221,7 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
         fs::create_dir_all(state.jail_root(&vm_id())).unwrap();
 
-        JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap();
+        JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap();
     }
 
     #[test]
@@ -232,7 +229,7 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
 
         {
-            let jail = JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap();
+            let jail = JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap();
             fs::write(jail.root().join("rootfs.ext4"), b"guest").unwrap();
             fs::create_dir_all(jail.root().join("dev")).unwrap();
         }
@@ -258,7 +255,7 @@ mod tests {
         fs::remove_dir_all(state.jail_parent()).unwrap();
         symlink(&victim, state.jail_parent()).unwrap();
 
-        let err = JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap_err();
+        let err = JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap_err();
 
         assert!(
             matches!(err, JailError::SymlinkedStateDir { .. }),
@@ -283,21 +280,17 @@ mod tests {
         // impossible to create.
         fs::write(state.jail_dir(&vm_id()), b"in the way").unwrap();
 
-        JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap_err();
+        JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap_err();
     }
 
     #[test]
     fn a_chroot_that_could_not_be_finished_is_not_left_behind() {
         // Every step after `create_dir_all` runs with the tree already on disk,
         // so a failure there has to hand the tree to the same teardown a
-        // finished job gets. Returning the error before the guard was built
-        // leaked a chroot holding a VMM binary and a full guest rootfs with
-        // nothing armed to reclaim it: `Drop` never ran, the signals were
-        // dropped unused, and the next job returned early from a host this
-        // process had already prepared.
+        // finished job gets rather than waiting on the next job's sweep.
         let (_dir, state) = state_in_tmpdir();
 
-        JailDir::create_with(&state, &vm_id(), JailSignals::unwatched(), |path| {
+        JailDir::create_with(&state, &vm_id(), CgroupSurvived::default(), |path| {
             Err(JailError::CreateJail {
                 path: path.to_owned(),
                 source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
@@ -318,11 +311,11 @@ mod tests {
         // raises this. Removing the chroot anyway would leave nothing for a
         // later sweep to find the cgroup by.
         let (_dir, state) = state_in_tmpdir();
-        let signals = JailSignals::unwatched();
-        let jail = JailDir::create(&state, &vm_id(), signals.clone()).unwrap();
+        let cgroup_survived = CgroupSurvived::default();
+        let jail = JailDir::create(&state, &vm_id(), cgroup_survived.clone()).unwrap();
         fs::write(jail.root().join("rootfs.ext4"), b"guest").unwrap();
 
-        signals.cgroup_survived();
+        cgroup_survived.set();
         drop(jail);
 
         assert!(
@@ -334,7 +327,7 @@ mod tests {
     #[test]
     fn drop_tolerates_an_already_removed_tree() {
         let (_dir, state) = state_in_tmpdir();
-        let jail = JailDir::create(&state, &vm_id(), JailSignals::unwatched()).unwrap();
+        let jail = JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap();
         fs::remove_dir_all(state.jail_dir(&vm_id())).unwrap();
         drop(jail);
     }

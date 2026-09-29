@@ -33,7 +33,7 @@ use camino::Utf8PathBuf;
 
 use crate::cpu::CpuLayout;
 use crate::error::JailError;
-use crate::jail::{CgroupManager, Cpuset, JailPaths, JailSignals, JailUser, VmId};
+use crate::jail::{CgroupManager, CgroupSurvived, Cpuset, JailPaths, JailUser, VmId};
 use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
@@ -77,7 +77,7 @@ pub struct FirecrackerJobConfig {
     /// Shared with the chroot guard of the same id: a cgroup this job cannot
     /// remove has to hold that chroot, which is the only handle a later sweep
     /// has for finding the cgroup again.
-    pub signals: JailSignals,
+    pub cgroup_survived: CgroupSurvived,
     /// Number of vCPUs.
     pub vcpus: u8,
     /// Memory size in MiB.
@@ -140,7 +140,7 @@ pub fn run_firecracker(
     // Step 0: Create cgroup with cpuset if CPU layout is provided
     let cgroup = if let Some(layout) = &config.cpu_layout {
         if layout.has_isolation() {
-            match cgroup_for_run(CgroupManager::new(vm_id, config.signals.clone()))? {
+            match cgroup_for_run(CgroupManager::new(vm_id, config.cgroup_survived.clone()))? {
                 Some(cg) => {
                     // A cgroup that exists but does not confine the VMM to the
                     // benchmark cores would report a number measured somewhere

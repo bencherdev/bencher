@@ -9,7 +9,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
 use crate::jail::{
-    HostPreparation, JailDir, JailLock, JailPaths, JailSignals, StateDir, VmId, chroot, netns,
+    CgroupSurvived, HostPreparation, JailDir, JailLock, JailPaths, StateDir, VmId, chroot, netns,
     state,
 };
 use crate::run::{RunOutput, prepare_oci_workspace};
@@ -35,10 +35,8 @@ pub fn vm_execute(
     let state_dir = StateDir::new(config.state_dir.clone())?;
 
     // Prepare the host on demand, before the first jail this process builds.
-    // Must come before the job lock is taken: preparation takes the same lock,
-    // and `flock` is per open file description, so nesting would block on
-    // itself. It is also the cheap check, so a host that cannot jail at all
-    // fails here rather than after pulling an image.
+    // It is the cheap check, so a host that cannot jail at all fails here
+    // rather than after pulling an image.
     host.ensure(state_dir.path(), config.jail_user)?;
 
     // Everything that does not touch the jail happens before the lock. The
@@ -74,7 +72,11 @@ pub fn vm_execute(
     // every chroot it finds, so it must not run while this one is live.
     // Declared before the jail guard so the lock outlives the teardown it
     // protects.
-    let _lock = JailLock::acquire(state_dir.path())?;
+    let lock = JailLock::acquire(state_dir.path())?;
+    // Every job, not once per process: a sibling runner process sharing this
+    // state directory can leave an orphan at any time, and this job would
+    // otherwise measure beside it.
+    state_dir.sweep(&lock)?;
 
     // Rebuilt per job rather than once per daemon lifetime: the handle lives
     // on a tmpfs and is operator visible, so it has to be self-healing.
@@ -85,11 +87,10 @@ pub fn vm_execute(
     // before any of them exist. Dropping this guard removes the chroot tree,
     // which is what the workspace temp directory used to cover.
     let vm_id = VmId::new();
-    // Minted per job, beside the id: the cgroup and the chroot of one job share
-    // these, and a stale jail some other sweep could not reclaim is not this
-    // job's business.
-    let signals = JailSignals::for_job(host.reclaim_signal());
-    let jail_dir = JailDir::create(&state_dir, &vm_id, signals.clone())?;
+    // Shared by this job's cgroup and chroot: a cgroup that outlives its
+    // teardown keeps the chroot that names it.
+    let cgroup_survived = CgroupSurvived::default();
+    let jail_dir = JailDir::create(&state_dir, &vm_id, cgroup_survived.clone())?;
     let jail = JailPaths::new(jail_dir.root())?;
     println!("  Jail: {}", jail.root());
 
@@ -125,8 +126,15 @@ pub fn vm_execute(
     chroot::grant_jail_read(kernel_dest)?;
 
     // Step 7-8: Build Firecracker config and run the microVM
-    let fc_config =
-        build_firecracker_config(config, work_dir, vm_id, &state_dir, jail, netns, signals)?;
+    let fc_config = build_firecracker_config(
+        config,
+        work_dir,
+        vm_id,
+        &state_dir,
+        jail,
+        netns,
+        cgroup_survived,
+    )?;
 
     let run_output = run_firecracker(&fc_config, cancel_flag)?;
 
@@ -141,7 +149,7 @@ fn build_firecracker_config(
     state_dir: &StateDir,
     jail: JailPaths,
     netns: Utf8PathBuf,
-    signals: JailSignals,
+    cgroup_survived: CgroupSurvived,
 ) -> Result<crate::firecracker::FirecrackerJobConfig, RunnerError> {
     // The jailer copies `--exec-file` into the chroot itself and rejects a
     // multiply linked file, so Firecracker is staged outside the jail and is
@@ -188,7 +196,7 @@ fn build_firecracker_config(
         jail_user: config.jail_user,
         chroot_base_dir: state_dir.chroot_base(),
         netns,
-        signals,
+        cgroup_survived,
         vcpus,
         memory_mib,
         boot_args: config.kernel_cmdline.clone(),
