@@ -24,7 +24,7 @@ mod vsock;
 use std::collections::HashMap;
 
 pub use crate::log_level::SandboxLogLevel;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use camino::Utf8PathBuf;
@@ -159,6 +159,7 @@ pub fn run_firecracker(
     // Placed now, so of two jobs that started together at least one sees the
     // other here, before either guest runs.
     crate::jail::refuse_occupied_cgroups(Some(vm_id)).map_err(FirecrackerError::CoresOccupied)?;
+    refuse_cancelled(cancel_flag)?;
 
     let client = fc_process.client();
 
@@ -302,6 +303,15 @@ fn cgroup_for_run(
             Ok(None)
         },
     }
+}
+
+/// Stop at a stage boundary once the job is cancelled, before anything later is
+/// built or booted.
+pub(crate) fn refuse_cancelled(cancel_flag: Option<&AtomicBool>) -> Result<(), FirecrackerError> {
+    if cancel_flag.is_some_and(|flag| flag.load(Ordering::SeqCst)) {
+        return Err(FirecrackerError::Cancelled);
+    }
+    Ok(())
 }
 
 /// A rejected cpuset is fatal, but an undelegated one only warns and keeps the

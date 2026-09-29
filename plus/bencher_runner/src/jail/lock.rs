@@ -5,8 +5,9 @@
 
 use std::fs::{File, OpenOptions};
 use std::os::fd::AsRawFd as _;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Condvar, Mutex, PoisonError};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use camino::Utf8Path;
 
@@ -20,6 +21,9 @@ pub(super) const LOCK_FILE: &str = ".lock";
 /// that an operator can tell a wait from a wedge within half a minute.
 pub(super) const ANNOUNCE_EVERY: Duration = Duration::from_secs(30);
 
+/// Short enough that a released lock and a cancel are both noticed at once.
+const RETRY_EVERY: Duration = Duration::from_millis(20);
+
 /// Not reentrant: `flock` is per open file description, so a second `acquire`
 /// in a process that already holds the lock blocks on itself forever.
 #[derive(Debug)]
@@ -29,15 +33,17 @@ pub struct JailLock {
 
 impl JailLock {
     /// The state directory must already exist, since the lock guards its
-    /// contents and cannot also guard its creation.
-    pub fn acquire(state_dir: &Utf8Path) -> Result<Self, JailError> {
-        Self::acquire_with(state_dir, |path| {
+    /// contents and cannot also guard its creation. A set `cancel` ends the wait
+    /// without the lock.
+    pub fn acquire(state_dir: &Utf8Path, cancel: Option<&AtomicBool>) -> Result<Self, JailError> {
+        Self::acquire_with(state_dir, cancel, |path| {
             println!("  Waiting for another bencher runner to release {path}...");
         })
     }
 
     fn acquire_with<C: FnOnce(&Utf8Path)>(
         state_dir: &Utf8Path,
+        cancel: Option<&AtomicBool>,
         contended: C,
     ) -> Result<Self, JailError> {
         let path = state_dir.join(LOCK_FILE);
@@ -51,26 +57,39 @@ impl JailLock {
                 source: e,
             })?;
 
-        // Try once without blocking, so waiting can be announced rather than
-        // looking like a hang.
-        if flock_nonblocking(&file).is_ok() {
+        if try_lock(&file, &path)? {
             return Ok(Self { _file: file });
         }
         contended(&path);
 
-        // Unbounded, because a holder is entitled to the lock for a whole job,
-        // so repeating the announcement is what tells this wait from a hang.
-        while_waiting(
-            ANNOUNCE_EVERY,
-            || println!("  Still waiting for another bencher runner to release {path}..."),
-            || flock_exclusive(&file),
-        )
-        .map_err(|e| JailError::JailLock {
-            path: path.clone(),
-            source: e,
-        })?;
+        // Polled rather than blocked on, so a cancel is seen whichever thread
+        // the signal landed on. Unbounded, because a holder is entitled to the
+        // lock for a whole job.
+        let mut announced = Instant::now();
+        loop {
+            if cancel.is_some_and(|cancel| cancel.load(Ordering::SeqCst)) {
+                return Err(JailError::JailLockCancelled { path });
+            }
+            std::thread::sleep(RETRY_EVERY);
+            if try_lock(&file, &path)? {
+                return Ok(Self { _file: file });
+            }
+            if announced.elapsed() >= ANNOUNCE_EVERY {
+                println!("  Still waiting for another bencher runner to release {path}...");
+                announced = Instant::now();
+            }
+        }
+    }
+}
 
-        Ok(Self { _file: file })
+fn try_lock(file: &File, path: &Utf8Path) -> Result<bool, JailError> {
+    match flock_nonblocking(file) {
+        Ok(()) => Ok(true),
+        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => Ok(false),
+        Err(e) => Err(JailError::JailLock {
+            path: path.to_owned(),
+            source: e,
+        }),
     }
 }
 
@@ -171,7 +190,7 @@ mod tests {
     fn the_lock_can_be_taken() {
         let (_dir, state) = state_in_tmpdir();
 
-        let lock = JailLock::acquire(&state).unwrap();
+        let lock = JailLock::acquire(&state, None).unwrap();
 
         assert!(state.join(LOCK_FILE).exists());
         drop(lock);
@@ -180,9 +199,9 @@ mod tests {
     #[test]
     fn a_released_lock_can_be_retaken() {
         let (_dir, state) = state_in_tmpdir();
-        drop(JailLock::acquire(&state).unwrap());
+        drop(JailLock::acquire(&state, None).unwrap());
 
-        JailLock::acquire(&state).unwrap();
+        JailLock::acquire(&state, None).unwrap();
     }
 
     /// A bound only a broken wait reaches, so a failure is a failure and not a
@@ -194,13 +213,15 @@ mod tests {
         // A contended runner must announce its wait and return holding the
         // lock, or a sweep could run while another runner has a job in flight.
         let (_dir, state) = state_in_tmpdir();
-        let held = JailLock::acquire(&state).unwrap();
+        let held = JailLock::acquire(&state, None).unwrap();
         let (contended, waiting) = mpsc::channel();
 
         let waiter = {
             let state = state.clone();
             std::thread::spawn(move || {
-                JailLock::acquire_with(&state, move |_path| contended.send(()).unwrap())
+                JailLock::acquire_with(&state, None, move |_path| {
+                    contended.send(()).unwrap();
+                })
             })
         };
         let announced = waiting.recv_timeout(NEVER);
@@ -275,6 +296,32 @@ mod tests {
     fn a_missing_state_directory_is_an_error() {
         let (_dir, state) = state_in_tmpdir();
 
-        JailLock::acquire(&state.join("absent")).unwrap_err();
+        JailLock::acquire(&state.join("absent"), None).unwrap_err();
+    }
+
+    #[test]
+    fn a_cancelled_wait_gives_up_without_the_lock() {
+        // A signal to a runner queued behind a long job must end the wait, not
+        // sit it out.
+        let (_dir, state) = state_in_tmpdir();
+        let held = JailLock::acquire(&state, None).unwrap();
+        let cancel = AtomicBool::new(false);
+        let (finished, outcome) = mpsc::channel();
+
+        std::thread::scope(|scope| {
+            scope.spawn(|| {
+                let waited = JailLock::acquire_with(&state, Some(&cancel), |_path| {
+                    cancel.store(true, Ordering::SeqCst);
+                });
+                finished.send(waited).unwrap();
+            });
+            let waited = outcome.recv_timeout(NEVER);
+            drop(held);
+            let waited = waited.expect("a cancelled wait ends while the lock is still held");
+            assert!(
+                matches!(waited, Err(JailError::JailLockCancelled { .. })),
+                "{waited:?}"
+            );
+        });
     }
 }

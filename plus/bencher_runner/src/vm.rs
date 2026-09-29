@@ -7,6 +7,7 @@ use std::sync::atomic::AtomicBool;
 use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::error::RunnerError;
+use crate::firecracker::refuse_cancelled;
 use crate::jail::{
     CgroupSurvived, HostPreparation, JailDir, JailLock, JailPaths, StateDir, VmId, chroot, netns,
     state,
@@ -36,6 +37,7 @@ pub fn vm_execute(
     // Before the image pull, so a host that cannot jail at all fails fast.
     host.ensure(state_dir.path(), config.jail_user)?;
     state_dir.refuse_unusable_mount()?;
+    refuse_cancelled(cancel_flag)?;
 
     // Pulled and unpacked before the jail lock, so concurrent runs serialize on
     // the jail rather than on the download.
@@ -62,15 +64,17 @@ pub fn vm_execute(
     // Step 5: Install init binary
     println!("Installing init binary...");
     install_init_binary(unpack_dir)?;
+    refuse_cancelled(cancel_flag)?;
 
     // Declared before the jail guard so it outlives the teardown, because
     // another runner's sweep removes every chroot it finds.
-    let lock = JailLock::acquire(state_dir.path())?;
+    let lock = JailLock::acquire(state_dir.path(), cancel_flag)?;
     // Every job, not once per process: a sibling runner sharing this state
     // directory can leave an orphan at any time.
     state_dir.sweep(&lock)?;
     // Runners with other state directories share these cores but not this lock.
     crate::jail::refuse_occupied_cgroups(None)?;
+    refuse_cancelled(cancel_flag)?;
 
     // Rebuilt per job rather than once per daemon lifetime: the handle lives
     // on a tmpfs and is operator visible, so it has to be self-healing.
@@ -125,6 +129,7 @@ pub fn vm_execute(
         cgroup_survived,
     )?;
 
+    refuse_cancelled(cancel_flag)?;
     let run_output = run_firecracker(&fc_config, cancel_flag)?;
 
     Ok(run_output)

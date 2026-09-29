@@ -55,7 +55,8 @@ struct Scenario {
     description: &'static str,
     dockerfile: &'static str,
     extra_args: &'static [&'static str],
-    /// If set, send SIGTERM to the runner after this many seconds.
+    /// If set, send SIGTERM to the runner this many seconds after its guest
+    /// boots, so the cancel exercises the VM's teardown.
     cancel_after_secs: Option<u64>,
     /// Whether to use `--sandbox firecracker` (default: true).
     sandboxed: bool,
@@ -365,7 +366,13 @@ fn run_and_validate(
     let output = if scenario.unusable_state_dir {
         run_runner_without_unjailed_vmm(image_path, &args, runner_bin)
     } else if let Some(secs) = scenario.cancel_after_secs {
-        run_runner_with_cancel(image_path, &args, Duration::from_secs(secs), runner_bin)
+        run_runner_with_cancel(
+            image_path,
+            &args,
+            Duration::from_secs(secs),
+            state_dir,
+            runner_bin,
+        )
     } else if scenario.orphan_then_rerun {
         run_runner_after_orphan(image_path, &args, state_dir, runner_bin)
     } else if scenario.orphan_between_jobs {
@@ -1092,7 +1099,7 @@ CMD ["echo", "transport_test"]"#,
             // The harness fails any scenario that leaves a VMM or its cgroup behind.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo started && sleep 3600"]"#,
-            cancel_after_secs: Some(5),
+            cancel_after_secs: Some(1),
             extra_args: &["--timeout", "120"],
             validate: |output| {
                 if output.exit_code == 0 {
@@ -2458,6 +2465,7 @@ fn run_runner_with_cancel(
     image_path: &Utf8Path,
     args: &[&str],
     delay: Duration,
+    state_dir: &Utf8Path,
     runner_bin: &Utf8Path,
 ) -> Result<ScenarioOutput> {
     let mut child = Command::new(runner_bin.as_str())
@@ -2471,7 +2479,15 @@ fn run_runner_with_cancel(
 
     let pid = child.id();
 
-    // Wait for the delay, then send SIGTERM
+    if !wait_for_booted_vmm(state_dir, &mut child)? {
+        drop(child.kill());
+        let output = child.wait_with_output()?;
+        bail!(
+            "The guest never booted within {PROBE_TIMEOUT:?}, so the cancel would not reach a running VM.\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+    }
     std::thread::sleep(delay);
 
     // Send SIGTERM to the runner process
@@ -2511,6 +2527,34 @@ fn run_runner_with_cancel(
         }
         std::thread::sleep(Duration::from_millis(100));
     }
+}
+
+/// Wait until a VMM in `state_dir` has booted its guest, which is when it has
+/// vCPU threads, or the runner has exited.
+fn wait_for_booted_vmm(state_dir: &Utf8Path, child: &mut std::process::Child) -> Result<bool> {
+    let parent = jail_parent(state_dir);
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    while std::time::Instant::now() < deadline && child.try_wait()?.is_none() {
+        if let Some((_, jail_root)) = find_jail(&parent)?
+            && let Some(pid) = find_jailed_vmm(&jail_root)?
+            && has_vcpu_threads(pid)
+        {
+            return Ok(true);
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    }
+    Ok(false)
+}
+
+/// Firecracker names each vCPU thread `fc_vcpu <n>` and starts them at
+/// `InstanceStart`.
+fn has_vcpu_threads(pid: u32) -> bool {
+    fs::read_dir(format!("/proc/{pid}/task")).is_ok_and(|tasks| {
+        tasks.flatten().any(|task| {
+            fs::read_to_string(task.path().join("comm"))
+                .is_ok_and(|comm| comm.starts_with("fc_vcpu"))
+        })
+    })
 }
 
 /// Build bencher-init for the musl target and the runner CLI with `BENCHER_INIT_PATH`,

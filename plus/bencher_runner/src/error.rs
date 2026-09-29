@@ -166,6 +166,10 @@ pub enum JailError {
     },
 
     #[cfg(target_os = "linux")]
+    #[error("Cancelled while waiting for the jail lock {path}")]
+    JailLockCancelled { path: Utf8PathBuf },
+
+    #[cfg(target_os = "linux")]
     #[error("Failed to open the network namespace lock {path}: {source}")]
     OpenNetnsLock {
         path: Utf8PathBuf,

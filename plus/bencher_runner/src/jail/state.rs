@@ -877,7 +877,7 @@ mod tests {
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
-        drop(JailLock::acquire(state.path()).unwrap());
+        drop(JailLock::acquire(state.path(), None).unwrap());
         fs::remove_dir_all(state.chroot_base()).unwrap();
 
         state.create().unwrap();
