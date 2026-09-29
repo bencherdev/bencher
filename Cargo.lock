@@ -8313,6 +8313,7 @@ dependencies = [
  "clap",
  "pretty_assertions",
  "serde_json",
+ "url",
 ]
 
 [[package]]
