@@ -46,6 +46,40 @@ async fn projects_list_authenticated() {
     assert_eq!(resp.status(), StatusCode::OK);
 }
 
+// GET /v0/projects - kills a u32 offset multiply, which wraps page 33554433 to page 1
+#[tokio::test]
+async fn projects_list_page_offset_does_not_wrap() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "projpageoffset@example.com")
+        .await;
+    let org = server.create_org(&user, "Page Offset Org").await;
+    server
+        .create_project(&user, &org, "Page Offset Project")
+        .await;
+
+    let resp = server
+        .client
+        .get(server.api_url("/v0/projects?per_page=128&page=1"))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let projects: JsonProjects = resp.json().await.expect("Failed to parse response");
+    assert!(!projects.0.is_empty(), "First page should list the project");
+
+    // (33554433 - 1) * 128 = 2^32
+    let resp = server
+        .client
+        .get(server.api_url("/v0/projects?per_page=128&page=33554433"))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let projects: JsonProjects = resp.json().await.expect("Failed to parse response");
+    assert!(projects.0.is_empty(), "Page past the end should be empty");
+}
+
 // GET /v0/projects/{project} - get a project
 #[tokio::test]
 async fn projects_get() {
