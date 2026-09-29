@@ -58,6 +58,7 @@ Kann auch mit der Umgebungsvariable `BENCHER_STATE_DIR` gesetzt werden.
 
 Die unprivilegierte Benutzer-ID, auf die der Sandbox-Prozess wechselt.
 Standardmäßig wird `61016` verwendet.
+Sie darf nicht `0` sein.
 Ein Prozess auf dem Host, dem diese Benutzer-ID gehört, kann Signale an die Sandbox senden,
 setzen Sie sie also auf eine ID, die der Host nichts anderem zuweist.
 Kann auch mit der Umgebungsvariable `BENCHER_JAIL_UID` gesetzt werden.
@@ -66,6 +67,7 @@ Kann auch mit der Umgebungsvariable `BENCHER_JAIL_UID` gesetzt werden.
 
 Die unprivilegierte Gruppen-ID, auf die der Sandbox-Prozess wechselt.
 Standardmäßig wird `61016` verwendet.
+Sie darf nicht `0` sein.
 Kann auch mit der Umgebungsvariable `BENCHER_JAIL_GID` gesetzt werden.
 
 ### `--iter <ITER>`

@@ -61,6 +61,7 @@ También se puede establecer con la variable de entorno `BENCHER_STATE_DIR`.
 
 El ID de usuario sin privilegios al que cambia el proceso del sandbox.
 Por defecto, se usa `61016`.
+No puede ser `0`.
 Un proceso del host que sea propietario de ese ID de usuario puede enviar señales al sandbox,
 así que asígnele un ID que el host no destine a ninguna otra cosa.
 También se puede establecer con la variable de entorno `BENCHER_JAIL_UID`.
@@ -69,6 +70,7 @@ También se puede establecer con la variable de entorno `BENCHER_JAIL_UID`.
 
 El ID de grupo sin privilegios al que cambia el proceso del sandbox.
 Por defecto, se usa `61016`.
+No puede ser `0`.
 También se puede establecer con la variable de entorno `BENCHER_JAIL_GID`.
 
 ### `--danger-allow-no-sandbox`

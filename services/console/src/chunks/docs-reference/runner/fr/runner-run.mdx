@@ -58,6 +58,7 @@ Peut également être défini avec la variable d'environnement `BENCHER_STATE_DI
 
 L'identifiant d'utilisateur non privilégié que le processus du bac à sable adopte.
 Par défaut, `61016` est utilisé.
+Il ne peut pas valoir `0`.
 Un processus de l'hôte possédant cet identifiant peut envoyer des signaux au bac à sable,
 choisissez donc un identifiant que l'hôte n'attribue à rien d'autre.
 Peut également être défini avec la variable d'environnement `BENCHER_JAIL_UID`.
@@ -66,6 +67,7 @@ Peut également être défini avec la variable d'environnement `BENCHER_JAIL_UID
 
 L'identifiant de groupe non privilégié que le processus du bac à sable adopte.
 Par défaut, `61016` est utilisé.
+Il ne peut pas valoir `0`.
 Peut également être défini avec la variable d'environnement `BENCHER_JAIL_GID`.
 
 ### `--iter <ITER>`
