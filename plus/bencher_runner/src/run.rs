@@ -142,7 +142,7 @@ fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::er
 pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     // A signal cancels the job through its teardown rather than killing the
     // runner and stranding the VMM.
-    crate::signal::install_handlers();
+    crate::signal::install_cancel_handlers();
 
     // Warn about host conditions that limit benchmark accuracy (Linux only)
     preflight::print_host_warnings();

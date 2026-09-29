@@ -58,6 +58,9 @@ struct Scenario {
     /// If set, send SIGTERM to the runner this many seconds after its guest
     /// boots, so the cancel exercises the VM's teardown.
     cancel_after_secs: Option<u64>,
+    /// SIGTERM a booted run twice, then run the image again in the same state
+    /// directory, whose output `validate` sees.
+    cancelled_twice: bool,
     /// Whether to use `--sandbox firecracker` (default: true).
     sandboxed: bool,
     setup: Option<fn() -> Result<()>>,
@@ -89,6 +92,7 @@ impl Default for Scenario {
             dockerfile: "",
             extra_args: &[],
             cancel_after_secs: None,
+            cancelled_twice: false,
             setup: None,
             teardown: None,
             probe: None,
@@ -373,6 +377,8 @@ fn run_and_validate(
             state_dir,
             runner_bin,
         )
+    } else if scenario.cancelled_twice {
+        run_runner_cancelled_twice(image_path, &args, state_dir, runner_bin)
     } else if scenario.orphan_then_rerun {
         run_runner_after_orphan(image_path, &args, state_dir, runner_bin)
     } else if scenario.orphan_between_jobs {
@@ -1109,6 +1115,19 @@ CMD ["sh", "-c", "echo started && sleep 3600"]"#,
                         output.stderr
                     )
                 }
+                assert_no_chroot_remains(&scenario_state_dir())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "job_cancelled_twice",
+            description: "A second SIGTERM kills the runner at once, and the next run reclaims what it left",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "CANCELLED_TWICE_a7f3b2c9"]"#,
+            cancelled_twice: true,
+            extra_args: &["--timeout", "120"],
+            validate: |output| {
+                assert_job_succeeded(output, "CANCELLED_TWICE_a7f3b2c9")?;
                 assert_no_chroot_remains(&scenario_state_dir())
             },
             ..Scenario::default()
@@ -2527,6 +2546,93 @@ fn run_runner_with_cancel(
         }
         std::thread::sleep(Duration::from_millis(100));
     }
+}
+
+/// SIGTERM a booted run twice, then prove the next run in the same state
+/// directory reclaims what the kill left.
+fn run_runner_cancelled_twice(
+    image_path: &Utf8Path,
+    args: &[&str],
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    use std::os::unix::process::ExitStatusExt as _;
+
+    let long_image = build_test_image("job_cancelled_twice_long", ORPHAN_DOCKERFILE)
+        .context("Failed to build the long guest's image")?;
+    let mut child = spawn_runner(&long_image, args, runner_bin)?;
+    let drained = drain_output(&mut child);
+    let signalled = signal_twice(state_dir, &mut child);
+    if child.try_wait()?.is_none() {
+        kill_pid(child.id(), libc::SIGKILL);
+    }
+    let status = child.wait()?;
+    let (stdout, stderr) = drained.join();
+    signalled.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
+    anyhow::ensure!(
+        status.signal() == Some(libc::SIGTERM),
+        "Expected the second SIGTERM to kill the runner, but it ended with {status}.\nstdout: {stdout}\nstderr: {stderr}"
+    );
+
+    let left = find_jail(&jail_parent(state_dir))?
+        .context("The kill left no jail, so the next run's reclaim went untested")?;
+    // It may still exit on its own, from the teardown the first signal began.
+    let vmm = find_jailed_vmm(&left.1)?;
+    let output = run_runner(image_path, args, runner_bin)?;
+    if let Some(pid) = vmm {
+        anyhow::ensure!(
+            !is_firecracker(pid)?,
+            "The VMM (pid {pid}) the kill left is still running after the next run.\nstdout: {}\nstderr: {}",
+            output.stdout,
+            output.stderr
+        );
+    }
+    anyhow::ensure!(
+        output.stdout.contains("Reclaimed 1 stale jail(s)"),
+        "The next run never reclaimed the jail {} the kill left.\nstdout: {}\nstderr: {}",
+        left.0,
+        output.stdout,
+        output.stderr
+    );
+    Ok(output)
+}
+
+/// Standard signals do not queue, so the second is sent only once the first
+/// has been delivered, which resets its handler.
+fn signal_twice(state_dir: &Utf8Path, child: &mut std::process::Child) -> Result<()> {
+    anyhow::ensure!(
+        wait_for_booted_vmm(state_dir, child)?,
+        "The guest never booted within {PROBE_TIMEOUT:?}"
+    );
+    let pid = child.id();
+    anyhow::ensure!(
+        catches(pid, libc::SIGTERM)?,
+        "The runner does not catch SIGTERM, so a first one would not cancel through the teardown"
+    );
+    kill_pid(pid, libc::SIGTERM);
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while catches(pid, libc::SIGTERM)? {
+        anyhow::ensure!(
+            std::time::Instant::now() < deadline,
+            "The first SIGTERM left its handler in place, so a second cannot kill the runner"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    kill_pid(pid, libc::SIGTERM);
+    Ok(())
+}
+
+/// Whether `pid` has a handler installed for `signal`, from its `SigCgt` mask.
+fn catches(pid: u32, signal: libc::c_int) -> Result<bool> {
+    let status = fs::read_to_string(format!("/proc/{pid}/status"))
+        .with_context(|| format!("Failed to read the status of pid {pid}"))?;
+    let mask = status
+        .lines()
+        .find_map(|line| line.strip_prefix("SigCgt:"))
+        .context("No SigCgt line in the runner's status")?;
+    let mask = u64::from_str_radix(mask.trim(), 16).context("Unparsable SigCgt mask")?;
+    let bit = u32::try_from(signal - 1).context("Not a signal number")?;
+    Ok(mask & (1 << bit) != 0)
 }
 
 /// Wait until a VMM in `state_dir` has booted its guest, which is when it has
