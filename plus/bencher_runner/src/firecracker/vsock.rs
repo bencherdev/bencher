@@ -283,8 +283,8 @@ impl VsockListener {
 
     /// Remove all socket files created by this listener.
     ///
-    /// Unlinks through the host view, for the same reason as
-    /// [`crate::firecracker::process::FirecrackerProcess::cleanup`]: unlinking
+    /// Unlinks through the host view, for the same reason as the API socket's
+    /// cleanup in [`crate::firecracker::process`]: unlinking
     /// has no `sun_path` limit, and this runs from `Drop`, where naming a
     /// descriptor that may already be closed would delete an unrelated file
     /// rather than fail.

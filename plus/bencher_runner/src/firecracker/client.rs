@@ -14,23 +14,23 @@ use crate::firecracker::error::FirecrackerError;
 use crate::jail::SocketPath;
 
 /// Client for the Firecracker REST API.
-pub struct FirecrackerClient {
+pub struct FirecrackerClient<'a> {
     /// Held as a [`SocketPath`], not a string. The type is the proof that this
     /// path fits `sun_path`, and this is the one place the limit is actually
     /// enforced by the kernel, so downgrading it here would discard the
     /// guarantee exactly where it is worth having.
-    socket_path: SocketPath,
+    ///
+    /// Borrowed, so the client cannot outlive the descriptor the view names.
+    socket_path: &'a SocketPath,
 }
 
-impl FirecrackerClient {
+impl<'a> FirecrackerClient<'a> {
     /// Create a new client for the API socket.
     ///
     /// The runner reaches the socket from outside the chroot, so this is the
     /// socket view; the jailed VMM binds the chroot view of the same file.
-    pub fn new(socket_path: &SocketPath) -> Self {
-        Self {
-            socket_path: socket_path.clone(),
-        }
+    pub fn new(socket_path: &'a SocketPath) -> Self {
+        Self { socket_path }
     }
 
     /// Try the API socket once.

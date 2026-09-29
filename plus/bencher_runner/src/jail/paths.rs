@@ -16,7 +16,7 @@
 
 use std::fs::File;
 use std::os::fd::AsRawFd as _;
-use std::os::unix::fs::OpenOptionsExt as _;
+use std::os::unix::fs::{FileTypeExt as _, OpenOptionsExt as _};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Serialize;
@@ -159,6 +159,46 @@ impl SocketPath {
 impl std::fmt::Display for SocketPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+/// A socket inode held open, so a later swap of its name is never followed.
+///
+/// The jailer hands the chroot root to the jail user, so once guest code has run
+/// a compromised VMM can replace a socket's name with a link to any host socket.
+/// Pinned while only Firecracker has run, the view this holds names the inode
+/// that was there then, whatever the name comes to point at.
+#[derive(Debug)]
+pub struct PinnedSocket {
+    /// Held for as long as `path` names it.
+    _file: File,
+    path: SocketPath,
+}
+
+impl PinnedSocket {
+    /// Pin the socket a view names, refusing anything that is not one, a link
+    /// included.
+    pub fn pin(view: &SocketPath) -> Result<Self, JailError> {
+        let pin_failed = |source| JailError::PinSocket {
+            path: view.clone(),
+            source,
+        };
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(libc::O_PATH | libc::O_NOFOLLOW)
+            .open(view.as_str())
+            .map_err(pin_failed)?;
+        if !file.metadata().map_err(pin_failed)?.file_type().is_socket() {
+            return Err(JailError::NotASocket { path: view.clone() });
+        }
+        let path = SocketPath::new(format!("/proc/self/fd/{}", file.as_raw_fd()))?;
+        Ok(Self { _file: file, path })
+    }
+
+    /// The view that reaches the pinned socket.
+    #[must_use]
+    pub fn path(&self) -> &SocketPath {
+        &self.path
     }
 }
 
@@ -437,6 +477,28 @@ mod tests {
 
         SocketPath::new(fits).unwrap();
         SocketPath::new(format!("{}b", "/a".repeat(48))).unwrap_err();
+    }
+
+    #[test]
+    fn a_socket_swapped_for_a_link_is_not_pinned() {
+        // The pin is what later API calls trust, so a link where the socket
+        // should be is refused rather than resolved to wherever it points.
+        use std::os::unix::fs::symlink;
+        use std::os::unix::net::UnixListener;
+
+        let (dir, paths) = jail_in_tmpdir();
+        let elsewhere = Utf8Path::from_path(dir.path())
+            .unwrap()
+            .join("elsewhere.sock");
+        let _listener = UnixListener::bind(&elsewhere).unwrap();
+        symlink(&elsewhere, paths.api_socket().host().as_path()).unwrap();
+
+        let err = PinnedSocket::pin(paths.api_socket().socket()).unwrap_err();
+
+        assert!(
+            matches!(err, JailError::NotASocket { .. }),
+            "a link is refused, not followed: {err}"
+        );
     }
 
     #[test]

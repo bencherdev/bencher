@@ -235,6 +235,19 @@ pub enum JailError {
     },
 
     #[cfg(target_os = "linux")]
+    #[error("Failed to pin the socket {path}: {source}")]
+    PinSocket {
+        path: crate::jail::SocketPath,
+        source: std::io::Error,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error(
+        "{path} is not a socket, so the runner will not connect through it: something replaced the socket before the guest started"
+    )]
+    NotASocket { path: crate::jail::SocketPath },
+
+    #[cfg(target_os = "linux")]
     #[error("Failed to create jail chroot {path}: {source}")]
     CreateJail {
         path: Utf8PathBuf,
