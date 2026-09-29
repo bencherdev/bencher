@@ -501,7 +501,7 @@ fn check_root(euid: u32) -> Result<(), crate::error::JailError> {
     unsafe_code,
     reason = "geteuid has no std wrapper and cannot fail or touch memory"
 )]
-fn current_euid() -> u32 {
+pub(crate) fn current_euid() -> u32 {
     // SAFETY: `geteuid` takes no arguments, returns a plain integer, and is
     // documented as always succeeding.
     unsafe { libc::geteuid() }
