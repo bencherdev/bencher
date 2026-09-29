@@ -81,6 +81,8 @@ struct Scenario {
     /// its VMM exists, so only the check after placement can see it.
     occupied_mid_build: bool,
     unusable_state_dir: bool,
+    /// Point the runner at a state directory on a `nodev` tmpfs.
+    nodev_state_dir: bool,
     validate: fn(&ScenarioOutput) -> Result<()>,
 }
 
@@ -102,6 +104,7 @@ impl Default for Scenario {
             occupied_cgroup: false,
             occupied_mid_build: false,
             unusable_state_dir: false,
+            nodev_state_dir: false,
             // Most scenarios are sandboxed, so the few that are not opt out.
             sandboxed: true,
             validate: |_output| Ok(()),
@@ -312,11 +315,20 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
         .with_context(|| format!("Failed to reclaim jails stranded before {}", scenario.name))?;
     drop(fs::remove_dir_all(&state_dir));
 
-    let outcome = run_and_validate(scenario, &image_path, &state_dir, runner_bin);
+    let (state_arg, _mount) = scenario_state_arg(scenario, &state_dir)?;
+    let running_before = stray_processes()?;
+    let outcome = run_and_validate(scenario, &image_path, &state_dir, &state_arg, runner_bin);
     // Whatever the scenario's own verdict, anything it left running fails it
     // here rather than being reclaimed quietly before the next one.
-    let stranded = reclaim_stranded_jails(&state_dir)
+    let mut stranded = reclaim_stranded_jails(&state_dir)
         .with_context(|| format!("Failed to reclaim what {} stranded", scenario.name))?;
+    if state_arg != state_dir {
+        stranded.extend(
+            reclaim_stranded_jails(&state_arg)
+                .with_context(|| format!("Failed to reclaim what {} stranded", scenario.name))?,
+        );
+    }
+    stranded.extend(reap_new_strays(&running_before)?);
     outcome?;
     anyhow::ensure!(
         stranded.is_empty(),
@@ -333,25 +345,116 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     Ok(())
 }
 
-fn run_and_validate(
+/// The state directory the runner is pointed at, and the mount it needs if any.
+///
+/// A path of the harness's own tree in every case, so nothing outside it is
+/// ever named.
+fn scenario_state_arg(
     scenario: &Scenario,
-    image_path: &Utf8Path,
     state_dir: &Utf8Path,
-    runner_bin: &Utf8Path,
-) -> Result<()> {
-    // The sabotaged path sits in the harness's own tree, so nothing outside it
-    // is ever named.
-    let state_arg = if scenario.unusable_state_dir {
-        unusable_state_dir().with_context(|| {
+) -> Result<(Utf8PathBuf, Option<Tmpfs>)> {
+    if scenario.unusable_state_dir {
+        let planted = unusable_state_dir().with_context(|| {
             format!(
                 "Failed to plant a state directory the runner must refuse for {}",
                 scenario.name
             )
-        })?
-    } else {
-        state_dir.to_owned()
-    };
+        })?;
+        return Ok((planted, None));
+    }
+    if scenario.nodev_state_dir {
+        let mount = Tmpfs::mount(&super::work_dir().join("nodev-state"), "nodev,size=4g")?;
+        return Ok((mount.0.join("state"), Some(mount)));
+    }
+    Ok((state_dir.to_owned(), None))
+}
 
+/// A tmpfs mounted over a harness directory, unmounted on drop.
+struct Tmpfs(Utf8PathBuf);
+
+impl Tmpfs {
+    fn mount(at: &Utf8Path, options: &str) -> Result<Self> {
+        fs::create_dir_all(at).with_context(|| format!("Failed to create {at}"))?;
+        let status = Command::new("mount")
+            .args(["-t", "tmpfs", "-o", options, "tmpfs", at.as_str()])
+            .status()
+            .context("Failed to run mount")?;
+        anyhow::ensure!(status.success(), "mount -o {options} {at} failed");
+        Ok(Self(at.to_owned()))
+    }
+}
+
+impl Drop for Tmpfs {
+    fn drop(&mut self) {
+        drop(Command::new("umount").arg(self.0.as_str()).status());
+    }
+}
+
+/// Every Firecracker, and every process in a Bencher cgroup, on the host.
+fn stray_processes() -> Result<std::collections::BTreeSet<u32>> {
+    let mut pids = firecracker_pids()?;
+    pids.extend(bencher_cgroup_pids(
+        Utf8Path::new("/sys/fs/cgroup/bencher"),
+        false,
+    )?);
+    Ok(pids)
+}
+
+fn bencher_cgroup_pids(cgroup: &Utf8Path, members: bool) -> Result<Vec<u32>> {
+    let mut pids = Vec::new();
+    if members {
+        match fs::read_to_string(cgroup.join("cgroup.procs")) {
+            Ok(procs) => pids.extend(
+                procs
+                    .lines()
+                    .filter_map(|line| line.trim().parse::<u32>().ok()),
+            ),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(pids),
+            Err(e) => {
+                return Err(e).with_context(|| format!("Failed to read {cgroup}/cgroup.procs"));
+            },
+        }
+    }
+    let entries = match fs::read_dir(cgroup) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(pids),
+        Err(e) => return Err(e).with_context(|| format!("Failed to read {cgroup}")),
+    };
+    for entry in entries {
+        let entry = entry.with_context(|| format!("Failed to read an entry under {cgroup}"))?;
+        if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+            let child = cgroup.join(entry.file_name().to_string_lossy().as_ref());
+            pids.extend(bencher_cgroup_pids(&child, true)?);
+        }
+    }
+    Ok(pids)
+}
+
+/// Kill and report what started during the scenario and is still running,
+/// leaving alone anything that was already there.
+fn reap_new_strays(before: &std::collections::BTreeSet<u32>) -> Result<Vec<String>> {
+    let strays: Vec<u32> = stray_processes()?.difference(before).copied().collect();
+    for pid in &strays {
+        kill_pid(*pid, libc::SIGKILL);
+    }
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while strays
+        .iter()
+        .any(|pid| Utf8Path::new(&format!("/proc/{pid}")).exists())
+        && std::time::Instant::now() < deadline
+    {
+        std::thread::sleep(PROBE_INTERVAL);
+    }
+    Ok(strays.iter().map(|pid| format!("process {pid}")).collect())
+}
+
+fn run_and_validate(
+    scenario: &Scenario,
+    image_path: &Utf8Path,
+    state_dir: &Utf8Path,
+    state_arg: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<()> {
     // `--no-tuning` everywhere but the tuning scenario, since an elevated run
     // really tunes the host and would offline SMT siblings under the suite.
     let mut args: Vec<&str> = vec!["--state-dir", state_arg.as_str()];
@@ -2828,6 +2931,26 @@ CMD ["echo", "JAIL_REFUSED_a7f3b2c9"]"#,
                         output.stderr
                     )
                 }
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "jail_nodev_state_dir_is_refused",
+            description: "A state directory on a nodev filesystem is refused by name before the jail is built",
+            dockerfile: r#"FROM busybox
+CMD ["echo", "JAIL_NODEV_a7f3b2c9"]"#,
+            nodev_state_dir: true,
+            extra_args: JAIL_ARGS,
+            validate: |output| {
+                assert_refused_before_guest(output, "JAIL_NODEV_a7f3b2c9")?;
+                // Without the check the job still fails, later, with KVM blaming
+                // its ACL.
+                anyhow::ensure!(
+                    output.stderr.contains("mounted nodev"),
+                    "Expected the refusal to name the nodev mount.\nstderr: {}",
+                    output.stderr
+                );
                 Ok(())
             },
             ..Scenario::default()
