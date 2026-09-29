@@ -25,7 +25,6 @@ mod vsock;
 use std::collections::HashMap;
 
 pub use crate::log_level::SandboxLogLevel;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::time::{Duration, Instant};
 
@@ -130,7 +129,7 @@ pub struct FirecrackerJobConfig {
 )]
 pub fn run_firecracker(
     config: &FirecrackerJobConfig,
-    cancel_flag: Option<&Arc<AtomicBool>>,
+    cancel_flag: Option<&AtomicBool>,
 ) -> Result<RunOutput, FirecrackerError> {
     let vm_id = &config.vm_id;
     let jail = &config.jail;

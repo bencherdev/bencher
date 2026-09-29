@@ -2,7 +2,6 @@
 
 #![expect(clippy::print_stdout, reason = "VM executor prints progress output")]
 
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -18,7 +17,7 @@ use crate::run::{RunOutput, prepare_oci_workspace};
 pub fn vm_execute(
     config: &crate::Config,
     host: &mut HostPreparation,
-    cancel_flag: Option<&Arc<AtomicBool>>,
+    cancel_flag: Option<&AtomicBool>,
 ) -> Result<RunOutput, RunnerError> {
     use crate::firecracker::run_firecracker;
 

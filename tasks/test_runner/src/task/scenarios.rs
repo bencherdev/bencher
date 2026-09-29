@@ -350,6 +350,34 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
         .with_context(|| format!("Failed to reclaim jails stranded before {}", scenario.name))?;
     drop(fs::remove_dir_all(&state_dir));
 
+    let outcome = run_and_validate(scenario, &image_path, &state_dir, runner_bin);
+    // Whatever the scenario's own verdict, anything it left running fails it
+    // here, rather than being reclaimed quietly before the next one.
+    let stranded = reclaim_stranded_jails(&state_dir)
+        .with_context(|| format!("Failed to reclaim what {} stranded", scenario.name))?;
+    outcome?;
+    anyhow::ensure!(
+        stranded.is_empty(),
+        "{} left behind: {}",
+        scenario.name,
+        stranded.join(", ")
+    );
+
+    // Cleanup
+    drop(fs::remove_dir_all(
+        image_path.parent().unwrap_or(&image_path),
+    ));
+
+    Ok(())
+}
+
+/// Run the runner as the scenario asks, and validate what it printed.
+fn run_and_validate(
+    scenario: &Scenario,
+    image_path: &Utf8Path,
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<()> {
     // The one scenario that sabotages the jail is pointed somewhere else
     // entirely: a path the runner has to refuse, planted beside the suite's own
     // state directory so nothing outside the harness's tree is ever named.
@@ -361,7 +389,7 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
             )
         })?
     } else {
-        state_dir.clone()
+        state_dir.to_owned()
     };
 
     // Prepend --sandbox firecracker for sandboxed scenarios.
@@ -392,34 +420,25 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
 
     // Run the runner (with optional cancellation or host-side probe)
     let output = if scenario.unusable_state_dir {
-        run_runner_without_unjailed_vmm(&image_path, &args, runner_bin)
+        run_runner_without_unjailed_vmm(image_path, &args, runner_bin)
     } else if let Some(secs) = scenario.cancel_after_secs {
-        run_runner_with_cancel(&image_path, &args, Duration::from_secs(secs), runner_bin)
+        run_runner_with_cancel(image_path, &args, Duration::from_secs(secs), runner_bin)
     } else if scenario.orphan_then_rerun {
-        run_runner_after_orphan(&image_path, &args, &state_dir, runner_bin)
+        run_runner_after_orphan(image_path, &args, state_dir, runner_bin)
     } else if scenario.orphan_between_jobs {
-        run_runner_beside_sibling_orphan(&image_path, &args, &state_dir, runner_bin)
+        run_runner_beside_sibling_orphan(image_path, &args, state_dir, runner_bin)
     } else if scenario.occupied_cgroup {
-        run_runner_beside_occupied_cgroup(&image_path, &args, runner_bin)
+        run_runner_beside_occupied_cgroup(image_path, &args, runner_bin)
     } else if let Some(probe) = scenario.probe {
-        run_runner_with_probe(&image_path, &args, probe, &state_dir, runner_bin)
+        run_runner_with_probe(image_path, &args, probe, state_dir, runner_bin)
     } else if scenario.tuning {
-        run_runner_with_tuning(&image_path, &args, runner_bin)
+        run_runner_with_tuning(image_path, &args, runner_bin)
     } else {
-        run_runner(&image_path, &args, runner_bin)
+        run_runner(image_path, &args, runner_bin)
     }
     .with_context(|| format!("Failed to run scenario {}", scenario.name))?;
 
-    // Validate the output
-    (scenario.validate)(&output)
-        .with_context(|| format!("Validation failed for {}", scenario.name))?;
-
-    // Cleanup
-    drop(fs::remove_dir_all(
-        image_path.parent().unwrap_or(&image_path),
-    ));
-
-    Ok(())
+    (scenario.validate)(&output).with_context(|| format!("Validation failed for {}", scenario.name))
 }
 
 /// Runs a scenario's teardown when it goes out of scope.
@@ -1134,17 +1153,14 @@ CMD ["echo", "transport_test"]"#,
         Scenario {
             name: "job_cancelled",
             description: "SIGTERM cancels a running VM cleanly",
-            // Start a long-running process, then send SIGTERM after 5 seconds.
-            // The runner should shut down the VM and exit without hanging.
+            // SIGTERM after 5 seconds, while the guest sleeps. The runner has to
+            // exit promptly, non-zero, through the job's teardown: the harness
+            // fails any scenario that leaves a VMM or its cgroup behind.
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             cancel_after_secs: Some(5),
             extra_args: &["--timeout", "120"],
             validate: |output| {
-                // The runner should exit with a non-zero code (killed by signal)
-                // and should NOT run for the full 120s timeout.
-                // The key property: the runner didn't hang — it exited promptly
-                // after receiving SIGTERM.
                 if output.exit_code == 0 {
                     bail!(
                         "Expected non-zero exit code after cancellation, got 0.\nstdout: {}\nstderr: {}",
@@ -1152,7 +1168,7 @@ CMD ["sh", "-c", "echo started && sleep 3600"]"#,
                         output.stderr
                     )
                 }
-                Ok(())
+                assert_no_chroot_remains(&scenario_state_dir())
             },
             ..Scenario::default()
         },
@@ -3459,11 +3475,9 @@ fn check_cgroup_membership(vm_id: &str, pid: u32) -> Result<()> {
 
 /// Orphan a jail by killing the runner, then prove the next job sweeps it.
 ///
-/// SIGKILL rather than SIGTERM, because SIGTERM on the one-shot path takes the
-/// default disposition too (signal handlers are installed only by the daemon),
-/// and either way nothing unwinds. That is the point: `Drop` cannot reclaim
-/// the chroot, so if the next job finds a clean tree it can only be because
-/// the sweep reclaimed it.
+/// SIGKILL, because SIGTERM cancels the job through its teardown, and the point
+/// is an exit that never unwinds: `Drop` cannot reclaim the chroot, so if the
+/// next job finds a clean tree it can only be because the sweep reclaimed it.
 fn run_runner_after_orphan(
     image_path: &Utf8Path,
     args: &[&str],
@@ -4226,28 +4240,19 @@ fn partition_state() -> Vec<(Utf8PathBuf, String)> {
         .collect()
 }
 
-/// Reap anything a previous scenario left running, before the wipe strands it.
+/// Reap and report what a scenario's jails left behind.
 ///
-/// A cancelled scenario SIGTERMs `runner run`, which installs no handler for it,
-/// so the process dies without unwinding: its VMM stays alive in its cgroup and
-/// its chroot stays on disk. That is the case the runner's sweep exists for, and
-/// the sweep finds the VMM by the chroot, comparing device and inode against
-/// `/proc/<pid>/root`. Wiping the state directory destroys that handle, so the
-/// next runner sweeps a directory that no longer names anything, reports the
-/// host clean, and the orphan runs on through every scenario that follows.
-///
-/// The product refuses to remove a chroot whose VMM is alive for exactly this
-/// reason. The harness has been doing it once per scenario, so it does the
-/// reclaiming the sweep would have done rather than leaving a live VMM with
-/// nothing pointing at it.
-fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<()> {
+/// Reported so the scenario that stranded it fails, and reaped before the wipe,
+/// which would destroy the chroot the runner's own sweep finds the VMM by.
+fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<Vec<String>> {
     let parent = jail_parent(state_dir);
     let entries = match fs::read_dir(&parent) {
         Ok(entries) => entries,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
         Err(e) => return Err(e).with_context(|| format!("Failed to read {parent}")),
     };
 
+    let mut stranded = Vec::new();
     for entry in entries {
         let entry = entry.with_context(|| format!("Failed to read an entry under {parent}"))?;
         if !entry
@@ -4259,8 +4264,10 @@ fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<()> {
         }
         let vm_id = entry.file_name().to_string_lossy().into_owned();
         let jail_root = parent.join(&vm_id).join("root");
+        stranded.push(format!("chroot {vm_id}"));
 
         if let Some(pid) = find_jailed_vmm(&jail_root)? {
+            stranded.push(format!("VMM pid {pid}"));
             println!("  reclaiming VMM (pid {pid}) stranded in {vm_id}");
             kill_pid(pid, libc::SIGKILL);
             let deadline = std::time::Instant::now() + Duration::from_secs(5);
@@ -4276,6 +4283,9 @@ fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<()> {
         // The cgroup shares the jail's name, and nothing else will come looking
         // for it once the directory below is gone.
         let cgroup = stale_cgroup(&vm_id);
+        if cgroup.exists() {
+            stranded.push(format!("cgroup {cgroup}"));
+        }
         let deadline = std::time::Instant::now() + Duration::from_secs(5);
         while cgroup.exists() {
             if fs::remove_dir(&cgroup).is_ok() {
@@ -4290,7 +4300,7 @@ fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(stranded)
 }
 
 /// What the `bencher` cgroup looks like, for when the partition assertion fails.

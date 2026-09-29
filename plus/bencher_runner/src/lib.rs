@@ -47,6 +47,8 @@ pub mod metrics;
 #[cfg(feature = "plus")]
 mod run;
 #[cfg(feature = "plus")]
+mod signal;
+#[cfg(feature = "plus")]
 pub mod tuning;
 #[cfg(feature = "plus")]
 pub mod units;

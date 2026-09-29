@@ -102,7 +102,7 @@ pub fn execute_job(
             job.uuid
         );
         let start = build_time.then(std::time::Instant::now);
-        let result = crate::execute(&job_config, host, Some(&cancel_flag));
+        let result = crate::execute(&job_config, host, Some(cancel_flag.as_ref()));
         let elapsed = start.map(|s| s.elapsed());
         match result {
             Ok(output) => {

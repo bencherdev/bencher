@@ -5,7 +5,6 @@
 )]
 
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -143,6 +142,10 @@ fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::er
     )
 )]
 pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
+    // A signal cancels the job through its teardown, as a server cancel does
+    // in `runner up`, rather than killing the runner and stranding the VMM.
+    crate::signal::install_handlers();
+
     // Warn about host conditions that limit benchmark accuracy (Linux only)
     preflight::print_host_warnings();
 
@@ -183,7 +186,12 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
 
     let iter_count = args.iter.as_usize();
     for iteration in 0..iter_count {
-        match execute(&config, &mut host, None) {
+        if crate::signal::stop_requested() {
+            return Err(
+                crate::error::ExecutionError::Canceled("run was canceled".to_owned()).into(),
+            );
+        }
+        match execute(&config, &mut host, Some(crate::signal::stop_flag())) {
             Ok(output) => {
                 println!("{}", output.stdout);
                 if !output.stderr.is_empty() {
@@ -194,7 +202,7 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
                 }
             },
             Err(e) => {
-                if args.allow_failure {
+                if args.allow_failure && !crate::signal::stop_requested() {
                     eprintln!(
                         "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
                         iteration + 1
@@ -416,7 +424,7 @@ pub fn resolve_oci_config(
 pub fn execute(
     config: &crate::Config,
     host: &mut crate::jail::HostPreparation,
-    cancel_flag: Option<&Arc<AtomicBool>>,
+    cancel_flag: Option<&AtomicBool>,
 ) -> Result<RunOutput, RunnerError> {
     match config.sandbox {
         Some(bencher_json::Sandbox::Firecracker) => {

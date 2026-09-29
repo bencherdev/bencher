@@ -1,5 +1,3 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use bencher_json::RunnerResourceId;
 use url::Url;
 
@@ -34,10 +32,6 @@ fn transient_retry_delay() -> Duration {
     let jitter = rand::rng().random_range(0..=TRANSIENT_RETRY_JITTER);
     TRANSIENT_RETRY_BASE + Duration::from_secs(jitter)
 }
-
-/// Global shutdown flag set by signal handler.
-/// Async-signal-safe: only uses `AtomicBool::store`.
-static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug)]
 pub struct UpConfig {
@@ -92,7 +86,7 @@ impl Up {
         )
     )]
     pub fn run(mut self) -> Result<(), UpError> {
-        install_signal_handlers();
+        crate::signal::install_handlers();
 
         println!(
             "Bencher Runner v{} starting...",
@@ -193,7 +187,7 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
     let mut ws: Option<Arc<Mutex<JobChannel>>> = None;
 
     while let Some(effect) = effects.pop_front() {
-        if SHUTDOWN.load(Ordering::SeqCst) {
+        if crate::signal::stop_requested() {
             println!("Shutdown signal received, exiting...");
             effects.clear();
             effects.extend(sm.step(Input::Shutdown));
@@ -207,7 +201,7 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
                 effects.extend(sm.step(input));
             },
             EffectResult::Exit => {
-                return if SHUTDOWN.load(Ordering::SeqCst) {
+                return if crate::signal::stop_requested() {
                     Err(UpError::Shutdown)
                 } else {
                     Ok(())
@@ -399,66 +393,6 @@ fn log_message(level: LogLevel, msg: &str) {
         LogLevel::Warn => eprintln!("Warning: {msg}"),
         LogLevel::Error => eprintln!("Error: {msg}"),
     }
-}
-
-/// Install signal handlers for SIGINT and SIGTERM.
-///
-/// The handler sets the global `SHUTDOWN` flag. `AtomicBool::store` is
-/// async-signal-safe, so this is safe to call from a signal handler context.
-#[cfg(target_os = "linux")]
-fn install_signal_handlers() {
-    use nix::sys::signal::{SaFlags, SigAction, SigHandler, SigSet, Signal, sigaction};
-
-    let handler = SigHandler::Handler(signal_handler);
-    let action = SigAction::new(handler, SaFlags::empty(), SigSet::empty());
-
-    #[expect(
-        unsafe_code,
-        clippy::multiple_unsafe_ops_per_block,
-        reason = "sigaction requires unsafe FFI"
-    )]
-    // SAFETY: `signal_handler` only performs `AtomicBool::store` with
-    // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
-    unsafe {
-        _ = sigaction(Signal::SIGINT, &action);
-        _ = sigaction(Signal::SIGTERM, &action);
-    }
-}
-
-/// Install signal handlers for SIGINT and SIGTERM (non-Linux POSIX).
-///
-/// Uses `libc::signal()` directly since `nix` is not available on macOS.
-#[cfg(not(target_os = "linux"))]
-fn install_signal_handlers() {
-    #[expect(
-        unsafe_code,
-        clippy::fn_to_numeric_cast_any,
-        reason = "libc::signal requires unsafe FFI and handler cast"
-    )]
-    // SAFETY: `signal_handler` only performs `AtomicBool::store` with
-    // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
-    unsafe {
-        libc::signal(
-            libc::SIGINT,
-            signal_handler as *const () as libc::sighandler_t,
-        );
-    }
-    #[expect(
-        unsafe_code,
-        clippy::fn_to_numeric_cast_any,
-        reason = "libc::signal requires unsafe FFI and handler cast"
-    )]
-    // SAFETY: Same as above — registering an async-signal-safe handler for SIGTERM.
-    unsafe {
-        libc::signal(
-            libc::SIGTERM,
-            signal_handler as *const () as libc::sighandler_t,
-        );
-    }
-}
-
-extern "C" fn signal_handler(_sig: libc::c_int) {
-    SHUTDOWN.store(true, Ordering::SeqCst);
 }
 
 const DEFAULT_MAX_DOWNLOAD_SIZE: u64 = 500 * 1024 * 1024;

@@ -19,7 +19,6 @@
 
 use std::collections::HashMap;
 use std::process::Command;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
@@ -36,7 +35,7 @@ use crate::run::{RunOutput, prepare_oci_workspace};
 /// `std::process::Command` from the unpacked rootfs. No sandboxing is applied.
 pub fn local_execute(
     config: &crate::Config,
-    cancel_flag: Option<&Arc<AtomicBool>>,
+    cancel_flag: Option<&AtomicBool>,
 ) -> Result<RunOutput, RunnerError> {
     println!("Executing benchmark run (non-sandboxed mode):");
     println!("  OCI image: {}", config.oci_image);
@@ -172,7 +171,7 @@ struct WaitOutput {
 fn wait_with_timeout(
     child: std::process::Child,
     timeout_secs: u64,
-    cancel_flag: Option<&Arc<AtomicBool>>,
+    cancel_flag: Option<&AtomicBool>,
 ) -> Result<WaitOutput, RunnerError> {
     let timeout = Duration::from_secs(timeout_secs);
     let start = Instant::now();
