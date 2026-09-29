@@ -97,18 +97,19 @@ gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-41131
 
 ## Subcommands Reference
 
-| Command                                         | Description                                            |
-| ----------------------------------------------- | ------------------------------------------------------ |
-| `cargo test-runner scenarios`                   | Run all integration test scenarios                     |
-| `cargo test-runner scenarios --scenario <name>` | Run a single scenario by name                          |
-| `cargo test-runner scenarios --list`            | List all available scenario names                      |
+| Command                                                                                                | Description                                           |
+| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `cargo test-runner scenarios --build-only`                                                             | Build `bencher-init`, the runner CLI, and the harness |
+| `sudo BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios`                   | Run all integration test scenarios, as root           |
+| `sudo BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios --scenario <name>` | Run a single scenario by name, as root                |
+| `cargo test-runner scenarios --list`                                                                   | List all available scenario names                     |
 
 ## Typical Workflow
 
 1. Make changes locally (to crates under `plus/bencher_runner/`, `plus/bencher_oci/`, `plus/bencher_init/`, `services/runner/`, `tasks/test_runner/`, etc.)
 2. Run local unit tests: `cargo test -p bencher_oci --features plus`, `cargo test -p bencher_runner --features plus`
 3. Transfer code to VM via patch (see above)
-4. Run scenarios: `cargo test-runner scenarios`
+4. Run scenarios: `cargo test-runner scenarios --build-only`, then `sudo BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios`
 5. If a specific scenario fails, re-run it individually with `--scenario <name>` to iterate faster
 6. Fix locally, re-patch, re-run
 
