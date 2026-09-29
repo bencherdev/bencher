@@ -386,7 +386,8 @@ mod tests {
             jailer_bin: Utf8Path::new("/tmp/work/jailer"),
             exec_file: Utf8Path::new("/tmp/work/firecracker"),
             vm_id,
-            jail_user: JailUser::default(),
+            // Distinct, so a gid fed from the uid cannot pass.
+            jail_user: JailUser::new(4242, 4243).unwrap(),
             chroot_base_dir: Utf8Path::new("/var/lib/bencher-runner/jail"),
             netns: Utf8Path::new("/run/netns/bencher-jail"),
             api_socket: jail.api_socket(),
@@ -441,8 +442,8 @@ mod tests {
             value_of(&args, "--exec-file"),
             Some("/tmp/work/firecracker")
         );
-        assert_eq!(value_of(&args, "--uid"), Some("61016"));
-        assert_eq!(value_of(&args, "--gid"), Some("61016"));
+        assert_eq!(value_of(&args, "--uid"), Some("4242"));
+        assert_eq!(value_of(&args, "--gid"), Some("4243"));
         assert_eq!(
             value_of(&args, "--chroot-base-dir"),
             Some("/var/lib/bencher-runner/jail")
