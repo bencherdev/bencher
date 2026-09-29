@@ -47,6 +47,7 @@ so this directory needs real capacity for one jail.
 A dedicated filesystem or a `tmpfs` mount is supported and recommended:
 it keeps that write traffic off the system disk,
 and a freshly created filesystem is accepted even though it arrives with a `lost+found` directory.
+The filesystem must not be mounted `nodev` or `noexec`, as `/tmp`, `/dev/shm`, and `/run` often are, so mount a `tmpfs` for it without those options.
 The state directory itself may be a root-owned symbolic link to such a filesystem,
 such as `/var/lib/bencher-runner` pointing at a dedicated disk.
 The link is followed only when the directory holding it is writable only by root,

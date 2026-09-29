@@ -79,6 +79,15 @@ pub enum JailError {
     )]
     SymlinkedStateDir { path: Utf8PathBuf },
 
+    #[cfg(target_os = "linux")]
+    #[error(
+        "The state directory {path} is on a filesystem mounted {option}, which the jail cannot run from: the VMM opens a /dev/kvm node and executes its own binary there. Remount it without {option}, or point --state-dir at another filesystem; /tmp, /dev/shm, and /run are often mounted this way."
+    )]
+    StateDirMountOption {
+        path: Utf8PathBuf,
+        option: &'static str,
+    },
+
     #[error("Failed to create runner state directory {path}: {source}")]
     CreateStateDir {
         path: Utf8PathBuf,

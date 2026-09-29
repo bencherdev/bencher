@@ -44,6 +44,7 @@ por lo que este directorio necesita capacidad real para una jaula.
 Se admite y se recomienda un sistema de archivos dedicado o un montaje `tmpfs`:
 mantiene esa carga de escritura fuera del disco del sistema,
 y se acepta un sistema de archivos recién creado aunque llegue con un directorio `lost+found`.
+El sistema de archivos no debe estar montado con `nodev` ni `noexec`, como suelen estarlo `/tmp`, `/dev/shm` y `/run`, así que monte para él un `tmpfs` sin esas opciones.
 El propio directorio de estado puede ser un enlace simbólico creado por root hacia un sistema de archivos así,
 como `/var/lib/bencher-runner` apuntando a un disco dedicado.
 El enlace solo se sigue cuando el directorio que lo contiene solo puede ser escrito por root,

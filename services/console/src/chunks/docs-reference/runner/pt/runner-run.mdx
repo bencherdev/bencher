@@ -44,6 +44,7 @@ portanto este diretório precisa de capacidade real para uma jail.
 Um sistema de arquivos dedicado ou uma montagem `tmpfs` é suportado e recomendado:
 mantém essa carga de escrita fora do disco do sistema,
 e um sistema de arquivos recém-criado é aceito mesmo que venha com um diretório `lost+found`.
+O sistema de arquivos não pode estar montado com `nodev` ou `noexec`, como `/tmp`, `/dev/shm` e `/run` costumam estar, então monte para ele um `tmpfs` sem essas opções.
 O próprio diretório de estado pode ser um link simbólico criado pelo root para um sistema de arquivos assim,
 como `/var/lib/bencher-runner` apontando para um disco dedicado.
 O link só é seguido quando o diretório que o contém só pode ser escrito pelo root,

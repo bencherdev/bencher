@@ -38,6 +38,7 @@ pub fn vm_execute(
     // It is the cheap check, so a host that cannot jail at all fails here
     // rather than after pulling an image.
     host.ensure(state_dir.path(), config.jail_user)?;
+    state_dir.refuse_unusable_mount()?;
 
     // Everything that does not touch the jail happens before the lock. The
     // image pull and unpack are the slow part of a job and need nothing from

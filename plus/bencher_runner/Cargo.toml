@@ -62,6 +62,7 @@ libc = { workspace = true }
 [target.'cfg(target_os = "linux")'.dependencies]
 nix = { workspace = true, features = [
     "feature",
+    "fs",
     "mount",
     "poll",
     "sched",
