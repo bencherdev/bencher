@@ -227,6 +227,12 @@ pub enum JailError {
     },
 
     #[cfg(target_os = "linux")]
+    #[error(
+        "The cgroup {cgroup} holds pid(s) {pids}: another Bencher Job, or a VMM a runner left behind, is on the benchmark cores, so this Job fails rather than measure beside it. Runners on one host run their Jobs one at a time."
+    )]
+    CgroupOccupied { cgroup: Utf8PathBuf, pids: String },
+
+    #[cfg(target_os = "linux")]
     #[error("Failed to open the jail chroot {path}: {source}")]
     OpenJailRoot {
         path: Utf8PathBuf,

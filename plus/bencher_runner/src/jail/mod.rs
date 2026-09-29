@@ -62,6 +62,10 @@
 //! | `StateDir::refuse_unusable_mount`: the mount options cannot be read, or include `nodev` or `noexec` | fails the job |
 //! | `vm_execute`: taking the jail lock | fails the job |
 //! | `StateDir::sweep`: a sweep that returns an error | fails the job |
+//! | `refuse_occupied_cgroups`: the cgroup base is absent | nothing to check |
+//! | `refuse_occupied_cgroups`: the base, an entry, or a `cgroup.procs` cannot be read or parsed | fails the job |
+//! | `refuse_occupied_cgroups`: a cgroup gone since it was listed | ignored: gone holds nothing |
+//! | `refuse_occupied_cgroups`: another cgroup holds a process | fails the job |
 //! | `sweep_jails`: the jail parent is absent | nothing to sweep |
 //! | `sweep_jails`: the jail parent cannot be read | fails the job |
 //! | `sweep_jails`: an entry cannot be read | fails the job |
@@ -149,7 +153,7 @@ pub mod reap;
 pub mod state;
 
 #[cfg(target_os = "linux")]
-pub(crate) use cgroup::{BENCHER_CGROUP_BASE, effective_mems};
+pub(crate) use cgroup::{BENCHER_CGROUP_BASE, effective_mems, refuse_occupied_cgroups};
 #[cfg(target_os = "linux")]
 pub use cgroup::{CgroupManager, Cpuset};
 #[cfg(target_os = "linux")]

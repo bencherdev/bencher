@@ -41,6 +41,7 @@ and jails left behind by an unclean exit are swept from it before each sandboxed
 Each jail holds a full guest root filesystem and a copy of the microVM binary,
 and Jobs sharing one state directory run one at a time,
 so this directory needs real capacity for one jail.
+A sandboxed Job also fails at once if any other Bencher Job is running on the host, whichever Runner or state directory it belongs to, so Runners sharing a host run their Jobs one at a time.
 A dedicated filesystem or a `tmpfs` mount is supported and recommended:
 it keeps that write traffic off the system disk,
 and a freshly created filesystem is accepted even though it arrives with a `lost+found` directory.
