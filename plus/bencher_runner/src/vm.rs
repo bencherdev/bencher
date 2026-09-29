@@ -70,7 +70,7 @@ pub fn vm_execute(
     // directory can leave an orphan at any time.
     state_dir.sweep(&lock)?;
     // Runners with other state directories share these cores but not this lock.
-    crate::jail::refuse_occupied_cgroups()?;
+    crate::jail::refuse_occupied_cgroups(None)?;
 
     // Rebuilt per job rather than once per daemon lifetime: the handle lives
     // on a tmpfs and is operator visible, so it has to be self-healing.

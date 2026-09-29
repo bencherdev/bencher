@@ -22,7 +22,7 @@
 //! | `refuse_occupied_cgroups`: the cgroup base is absent | nothing to check |
 //! | `refuse_occupied_cgroups`: the base, an entry, or a `cgroup.procs` cannot be read or parsed | fails the job |
 //! | `refuse_occupied_cgroups`: a cgroup gone since it was listed | ignored: gone holds nothing |
-//! | `refuse_occupied_cgroups`: another cgroup holds a process | fails the job |
+//! | `refuse_occupied_cgroups`, before the jail and again once the VMM is placed: another cgroup holds a process | fails the job, before the guest runs |
 //! | `sweep_jails`: the jail parent is absent | nothing to sweep |
 //! | `sweep_jails`: the jail parent cannot be read | fails the job |
 //! | `sweep_jails`: an entry cannot be read | fails the job |

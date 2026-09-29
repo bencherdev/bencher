@@ -429,13 +429,19 @@ pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
     remove_stale_cgroup_at(vm_cgroup(vm_id.as_str()))
 }
 
-/// Refuse to measure while any Bencher cgroup holds a process, called before
-/// this job's own cgroup exists so every one it finds is somebody else's.
-pub(crate) fn refuse_occupied_cgroups() -> Result<(), JailError> {
-    refuse_occupied_cgroups_at(&Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE))
+/// Refuse to measure while another Bencher cgroup holds a process.
+///
+/// Checked again once this job's VMM is placed, skipping `own`: each of two jobs
+/// that start together is placed before that check, so at least one sees the
+/// other.
+pub(crate) fn refuse_occupied_cgroups(own: Option<&VmId>) -> Result<(), JailError> {
+    refuse_occupied_cgroups_at(
+        &Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE),
+        own.map(VmId::as_str),
+    )
 }
 
-fn refuse_occupied_cgroups_at(base: &Utf8Path) -> Result<(), JailError> {
+fn refuse_occupied_cgroups_at(base: &Utf8Path, own: Option<&str>) -> Result<(), JailError> {
     let read_failed = |source| JailError::ReadCgroup {
         path: base.to_owned(),
         source,
@@ -447,7 +453,9 @@ fn refuse_occupied_cgroups_at(base: &Utf8Path) -> Result<(), JailError> {
     };
     for entry in entries {
         let entry = entry.map_err(read_failed)?;
-        if !entry.file_type().map_err(read_failed)?.is_dir() {
+        if !entry.file_type().map_err(read_failed)?.is_dir()
+            || own.is_some_and(|own| entry.file_name() == own)
+        {
             continue;
         }
         let cgroup = entry.path();
@@ -875,7 +883,9 @@ mod tests {
         for (cgroup, pid) in [("vm-a", "vm-a"), ("vm-a/nested", "vm-a")] {
             let (_dir, base) = cgroup_base(&[("vm-a", ""), (cgroup, "4242\n")]);
 
-            let err = refuse_occupied_cgroups_at(&base).unwrap_err().to_string();
+            let err = refuse_occupied_cgroups_at(&base, None)
+                .unwrap_err()
+                .to_string();
 
             assert!(err.contains(pid), "names the cgroup: {err}");
             assert!(err.contains("4242"), "names the pid: {err}");
@@ -887,8 +897,8 @@ mod tests {
         let (_dir, base) = cgroup_base(&[("vm-b", ""), ("local-c", "")]);
         fs::write(base.join("cgroup.procs"), "1\n").unwrap();
 
-        refuse_occupied_cgroups_at(&base).unwrap();
-        refuse_occupied_cgroups_at(&base.join("absent")).unwrap();
+        refuse_occupied_cgroups_at(&base, None).unwrap();
+        refuse_occupied_cgroups_at(&base.join("absent"), None).unwrap();
     }
 
     #[test]
@@ -898,7 +908,22 @@ mod tests {
         let not_a_dir = root.join("bencher");
         fs::write(&not_a_dir, b"in the way").unwrap();
 
-        refuse_occupied_cgroups_at(&not_a_dir).unwrap_err();
+        refuse_occupied_cgroups_at(&not_a_dir, None).unwrap_err();
+    }
+
+    #[test]
+    fn the_check_after_placement_skips_only_the_jobs_own_cgroup() {
+        // Skipping nothing refuses every job its own VMM; skipping more misses a
+        // job that started alongside this one.
+        let (_dir, base) = cgroup_base(&[("own", "7\n"), ("other", "")]);
+        refuse_occupied_cgroups_at(&base, Some("own")).unwrap();
+        refuse_occupied_cgroups_at(&base, None).unwrap_err();
+
+        fs::write(base.join("other").join("cgroup.procs"), "8\n").unwrap();
+        let err = refuse_occupied_cgroups_at(&base, Some("own"))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("other") && err.contains('8'), "{err}");
     }
 
     #[test]

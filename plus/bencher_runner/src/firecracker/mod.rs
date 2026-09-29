@@ -156,6 +156,9 @@ pub fn run_firecracker(
     // Step 1b: Verify the placement landed, which is race free because `spawn`
     // returns only after the exec, and catches a write to the wrong cgroup.
     verify_placement(cgroup.as_ref(), fc_process.pid())?;
+    // Placed now, so of two jobs that started together at least one sees the
+    // other here, before either guest runs.
+    crate::jail::refuse_occupied_cgroups(Some(vm_id)).map_err(FirecrackerError::CoresOccupied)?;
 
     let client = fc_process.client();
 
