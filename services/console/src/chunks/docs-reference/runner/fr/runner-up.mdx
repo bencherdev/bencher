@@ -44,7 +44,8 @@ et les prisons laissées par un arrêt brutal en sont supprimées avant chaque J
 Chaque prison contient un système de fichiers racine invité complet et une copie du binaire de la microVM,
 et les Jobs qui partagent un répertoire d'état s'exécutent un par un,
 ce répertoire a donc besoin d'une capacité réelle pour une prison.
-Un Job avec bac à sable échoue aussi immédiatement si un autre Job Bencher s'exécute sur l'hôte, quels que soient le Runner ou le répertoire d'état auxquels il appartient ; les Runners qui partagent un hôte exécutent donc leurs Jobs un par un.
+Un Job avec bac à sable échoue aussi immédiatement, au lieu d'attendre son tour, si un autre Job s'exécute dans un cgroup Bencher sur le même hôte, quels que soient le Runner ou le répertoire d'état auxquels il appartient.
+Un Job ne s'exécute dans un tel cgroup que lorsque son Runner peut isoler des cœurs de CPU ; les Jobs d'un Runner qui ne le peut pas ne sont donc pas détectés.
 Un système de fichiers dédié ou un montage `tmpfs` est pris en charge et recommandé :
 il maintient cette charge d'écriture hors du disque système,
 et un système de fichiers fraîchement créé est accepté même s'il arrive avec un répertoire `lost+found`.
