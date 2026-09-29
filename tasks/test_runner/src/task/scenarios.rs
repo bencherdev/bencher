@@ -323,15 +323,18 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
     let outcome = run_and_validate(scenario, &image_path, &state_dir, &state_arg, runner_bin);
     // Whatever the scenario's own verdict, anything it left running fails it
     // here rather than being reclaimed quietly before the next one.
-    let mut stranded = reclaim_stranded_jails(&state_dir)
-        .with_context(|| format!("Failed to reclaim what {} stranded", scenario.name))?;
+    let mut state_dirs = vec![state_dir.as_path()];
     if state_arg != state_dir {
+        state_dirs.push(&state_arg);
+    }
+    // Before the reclaim removes the jails that tell the scenario's strays apart.
+    let mut stranded = reap_new_strays(&running_before, &state_dirs)?;
+    for dir in state_dirs {
         stranded.extend(
-            reclaim_stranded_jails(&state_arg)
+            reclaim_stranded_jails(dir)
                 .with_context(|| format!("Failed to reclaim what {} stranded", scenario.name))?,
         );
     }
-    stranded.extend(reap_new_strays(&running_before)?);
     outcome?;
     anyhow::ensure!(
         stranded.is_empty(),
@@ -433,22 +436,96 @@ fn bencher_cgroup_pids(cgroup: &Utf8Path, members: bool) -> Result<Vec<u32>> {
     Ok(pids)
 }
 
-/// Kill and report what started during the scenario and is still running,
-/// leaving alone anything that was already there.
-fn reap_new_strays(before: &std::collections::BTreeSet<u32>) -> Result<Vec<String>> {
-    let strays: Vec<u32> = stray_processes()?.difference(before).copied().collect();
-    for pid in &strays {
-        kill_pid(*pid, libc::SIGKILL);
+/// Report what started during the scenario and is still running, killing only
+/// what runs in the scenario's own jails or cgroups, since the rest may be
+/// another runner's.
+fn reap_new_strays(
+    before: &std::collections::BTreeSet<u32>,
+    state_dirs: &[&Utf8Path],
+) -> Result<Vec<String>> {
+    let jails = scenario_jails(state_dirs)?;
+    let mut stranded = Vec::new();
+    let mut killed = Vec::new();
+    for pid in stray_processes()?.difference(before).copied() {
+        match belongs_to_scenario(pid, &jails)? {
+            Some(true) => {
+                kill_pid(pid, libc::SIGKILL);
+                killed.push(pid);
+                stranded.push(format!("process {pid}"));
+            },
+            Some(false) => stranded.push(format!(
+                "process {pid}, left running since it is in none of the scenario's jails or cgroups"
+            )),
+            None => {},
+        }
     }
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
-    while strays
+    while killed
         .iter()
         .any(|pid| Utf8Path::new(&format!("/proc/{pid}")).exists())
         && std::time::Instant::now() < deadline
     {
         std::thread::sleep(PROBE_INTERVAL);
     }
-    Ok(strays.iter().map(|pid| format!("process {pid}")).collect())
+    Ok(stranded)
+}
+
+struct ScenarioJail {
+    id: String,
+    root: Option<fs::Metadata>,
+}
+
+fn scenario_jails(state_dirs: &[&Utf8Path]) -> Result<Vec<ScenarioJail>> {
+    let mut jails = Vec::new();
+    for state_dir in state_dirs {
+        let parent = jail_parent(state_dir);
+        let entries = match fs::read_dir(&parent) {
+            Ok(entries) => entries,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(e).with_context(|| format!("Failed to read {parent}")),
+        };
+        for entry in entries {
+            let entry = entry.with_context(|| format!("Failed to read an entry under {parent}"))?;
+            if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+                let id = entry.file_name().to_string_lossy().into_owned();
+                let root = fs::metadata(parent.join(&id).join("root")).ok();
+                jails.push(ScenarioJail { id, root });
+            }
+        }
+    }
+    Ok(jails)
+}
+
+/// Rooted in one of the scenario's jails, or in its cgroup or the stand-in's;
+/// `None` once the process has exited.
+fn belongs_to_scenario(pid: u32, jails: &[ScenarioJail]) -> Result<Option<bool>> {
+    let listing = match fs::read_to_string(format!("/proc/{pid}/cgroup")) {
+        Ok(listing) => listing,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(e).with_context(|| format!("Failed to read the cgroup of pid {pid}")),
+    };
+    let cgroup = bencher_cgroup_name(&listing);
+    if cgroup.is_some() && cgroup == Utf8Path::new(OCCUPIED_CGROUP).file_name() {
+        return Ok(Some(true));
+    }
+    let root = fs::metadata(format!("/proc/{pid}/root")).ok();
+    Ok(Some(jails.iter().any(|jail| {
+        cgroup == Some(jail.id.as_str())
+            || root
+                .as_ref()
+                .zip(jail.root.as_ref())
+                .is_some_and(|(root, jail_root)| same_object(root, jail_root))
+    })))
+}
+
+/// The cgroup just below the Bencher base that a `/proc/<pid>/cgroup` listing
+/// places a process in or under.
+fn bencher_cgroup_name(listing: &str) -> Option<&str> {
+    listing
+        .lines()
+        .find_map(|line| line.strip_prefix("0::/bencher/"))?
+        .split('/')
+        .next()
 }
 
 fn run_and_validate(
@@ -4680,6 +4757,16 @@ mod tests {
         let jail = fs::metadata(root.join("jail")).unwrap();
 
         assert!(!same_object(&host, &jail));
+    }
+
+    #[test]
+    fn a_process_is_placed_by_the_cgroup_just_below_the_base() {
+        // The base itself, or a sibling of it, would claim a process the scenario
+        // never placed.
+        assert_eq!(bencher_cgroup_name("0::/bencher/abc\n"), Some("abc"));
+        assert_eq!(bencher_cgroup_name("0::/bencher/abc/nested\n"), Some("abc"));
+        assert_eq!(bencher_cgroup_name("0::/bencher\n"), None);
+        assert_eq!(bencher_cgroup_name("0::/bencher-other/abc\n"), None);
     }
 
     #[test]
