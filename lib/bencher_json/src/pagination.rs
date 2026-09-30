@@ -41,7 +41,7 @@ impl<S> JsonPagination<S> {
 
     pub fn offset(&self) -> i64 {
         match self.page {
-            Some(page @ 2u32..=u32::MAX) => i64::from((page - 1) * u32::from(self.per_page())),
+            Some(page @ 2u32..=u32::MAX) => i64::from(page - 1) * i64::from(self.per_page()),
             Some(0 | 1) | None => 0,
         }
     }
