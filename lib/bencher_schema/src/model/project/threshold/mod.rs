@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+#[cfg(feature = "plus")]
+use std::num::NonZeroU32;
 
 use bencher_json::{
     DateTime, MetricName, Model, ParameterFilter, ThresholdUuid,
@@ -685,8 +687,6 @@ impl InsertThreshold {
                     },
                 }
             } else if let Some(model) = start_point_model {
-                #[cfg(feature = "plus")]
-                Self::rate_limit(context, query_branch.project_id).await?;
                 actions.push(StartPointAction::Create(
                     start_point_dimensions.clone(),
                     *model,
@@ -694,6 +694,19 @@ impl InsertThreshold {
             } else {
                 actions.push(StartPointAction::NoChange);
             }
+        }
+
+        #[cfg(feature = "plus")]
+        if let Some(count) = NonZeroU32::new(
+            u32::try_from(
+                actions
+                    .iter()
+                    .filter(|action| matches!(action, StartPointAction::Create(..)))
+                    .count(),
+            )
+            .unwrap_or(u32::MAX),
+        ) {
+            Self::rate_limit_with_count(context, query_branch.project_id, count).await?;
         }
 
         // Remaining current thresholds are orphans to remove
@@ -715,9 +728,6 @@ impl InsertThreshold {
         testbed_id: TestbedId,
         json_thresholds: Option<JsonReportThresholds>,
     ) -> Result<(), HttpError> {
-        #[cfg(feature = "plus")]
-        Self::rate_limit(context, project_id).await?;
-
         let Some(json_thresholds) = json_thresholds else {
             slog::debug!(log, "No thresholds in report");
             return Ok(());
@@ -783,6 +793,19 @@ impl InsertThreshold {
                     actions.push(ThresholdAction::Create(measure_id, model));
                 }
             }
+        }
+
+        #[cfg(feature = "plus")]
+        if let Some(count) = NonZeroU32::new(
+            u32::try_from(
+                actions
+                    .iter()
+                    .filter(|action| matches!(action, ThresholdAction::Create(..)))
+                    .count(),
+            )
+            .unwrap_or(u32::MAX),
+        ) {
+            Self::rate_limit_with_count(context, project_id, count).await?;
         }
 
         // Collect orphan thresholds to reset

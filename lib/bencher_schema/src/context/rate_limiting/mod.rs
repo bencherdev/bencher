@@ -1,6 +1,7 @@
 use std::{
     io::Write as _,
     net::IpAddr,
+    num::NonZeroU32,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::Duration,
@@ -284,12 +285,41 @@ impl RateLimiting {
         FUn: FnOnce(u32) -> RateLimitingError,
         FCl: FnOnce(u32) -> RateLimitingError,
     {
+        self.check_claimable_limit_with_count(
+            is_claimed,
+            window_usage,
+            NonZeroU32::MIN,
+            unclaimed_error_fn,
+            claimed_error_fn,
+        )
+    }
+
+    pub fn check_claimable_limit_with_count<FUn, FCl>(
+        &self,
+        is_claimed: bool,
+        window_usage: u32,
+        count: NonZeroU32,
+        unclaimed_error_fn: FUn,
+        claimed_error_fn: FCl,
+    ) -> Result<(), HttpError>
+    where
+        FUn: FnOnce(u32) -> RateLimitingError,
+        FCl: FnOnce(u32) -> RateLimitingError,
+    {
         if is_claimed {
-            self.check_claimed_limit(window_usage, claimed_error_fn)
+            Self::check_inner(
+                self.claimed_limit,
+                window_usage,
+                count,
+                claimed_error_fn,
+                #[cfg(feature = "otel")]
+                AuthorizationKind::User,
+            )
         } else {
             Self::check_inner(
                 self.unclaimed_limit,
                 window_usage,
+                count,
                 unclaimed_error_fn,
                 #[cfg(feature = "otel")]
                 AuthorizationKind::Public,
@@ -304,6 +334,7 @@ impl RateLimiting {
         Self::check_inner(
             self.claimed_limit,
             window_usage,
+            NonZeroU32::MIN,
             error_fn,
             #[cfg(feature = "otel")]
             AuthorizationKind::User,
@@ -313,13 +344,17 @@ impl RateLimiting {
     fn check_inner<F>(
         limit: u32,
         window_usage: u32,
+        count: NonZeroU32,
         error_fn: F,
         #[cfg(feature = "otel")] authorization_kind: AuthorizationKind,
     ) -> Result<(), HttpError>
     where
         F: FnOnce(u32) -> RateLimitingError,
     {
-        if window_usage < limit {
+        if window_usage
+            .checked_add(count.get())
+            .is_some_and(|usage| usage <= limit)
+        {
             Ok(())
         } else {
             Err(too_many_requests(error_fn(limit)))

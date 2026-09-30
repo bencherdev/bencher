@@ -10,8 +10,22 @@
 )]
 //! Integration tests for project threshold endpoints.
 
+#[cfg(feature = "plus")]
+use bencher_api_tests::helpers::get_project_id;
 use bencher_api_tests::{TestServer, TestUser};
+#[cfg(feature = "plus")]
+use bencher_json::ThresholdUuid;
 use bencher_json::{JsonThreshold, JsonThresholds, ModelUuid};
+#[cfg(feature = "plus")]
+use bencher_schema::{
+    model::project::{
+        ProjectId,
+        threshold::{InsertThreshold, QueryThreshold},
+    },
+    schema,
+};
+#[cfg(feature = "plus")]
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
 // GET /v0/projects/{project}/thresholds - list thresholds
@@ -588,4 +602,233 @@ async fn create_threshold_iqr_max_sample_size_one_rejected() {
         "Expected 4xx, got: {}",
         resp.status()
     );
+}
+
+#[cfg(feature = "plus")]
+async fn post_json(
+    server: &TestServer,
+    user: &TestUser,
+    path: &str,
+    body: &serde_json::Value,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .post(server.api_url(path))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(body)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+/// A project with `usage` thresholds, seeded through the threshold endpoint so that no report is
+/// spent: one bare threshold, which a report can address, and the rest one per metric name.
+#[cfg(feature = "plus")]
+async fn project_with_thresholds(
+    server: &TestServer,
+    label: &str,
+    usage: usize,
+) -> (TestUser, String) {
+    let user = server
+        .signup("Test User", &format!("ceiling-{label}@example.com"))
+        .await;
+    let project_slug = create_project_with_branch_testbed_measure(
+        server,
+        &user,
+        &format!("Ceiling {label} Org"),
+        &format!("Ceiling {label} Project"),
+    )
+    .await;
+    for n in 0..usage {
+        let threshold = serde_json::json!({
+            "branch": "ssize-branch",
+            "testbed": "ssize-testbed",
+            "measure": "latency",
+            "metric": (n > 0).then(|| format!("p{n}")),
+            "test": "percentage",
+            "upper_boundary": 0.05,
+        });
+        let path = format!("/v0/projects/{project_slug}/thresholds");
+        let (status, body) = post_json(server, &user, &path, &threshold).await;
+        assert_eq!(status, StatusCode::CREATED, "seed threshold {n}: {body}");
+    }
+    (user, project_slug)
+}
+
+#[cfg(feature = "plus")]
+async fn post_report(
+    server: &TestServer,
+    user: &TestUser,
+    project_slug: &str,
+    thresholds: Option<serde_json::Value>,
+) -> (StatusCode, String) {
+    let report = serde_json::json!({
+        "branch": "ssize-branch",
+        "testbed": "ssize-testbed",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": ["{\"bench\": {\"latency\": {\"value\": 1.0}}}"],
+        "thresholds": thresholds,
+    });
+    let path = format!("/v0/projects/{project_slug}/reports");
+    post_json(server, user, &path, &report).await
+}
+
+/// Report thresholds that create one threshold on each of `count` new measures.
+#[cfg(feature = "plus")]
+fn new_thresholds(count: usize) -> serde_json::Value {
+    let models = (1..=count)
+        .map(|n| {
+            (
+                format!("measure-{n}"),
+                serde_json::json!({ "test": "percentage", "upper_boundary": 0.05 }),
+            )
+        })
+        .collect::<serde_json::Map<_, _>>();
+    serde_json::json!({ "models": models })
+}
+
+#[cfg(feature = "plus")]
+async fn threshold_count(
+    server: &TestServer,
+    user: &TestUser,
+    project_slug: &str,
+    query: &str,
+) -> usize {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/thresholds{query}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let thresholds: JsonThresholds = resp.json().await.expect("Failed to parse thresholds");
+    thresholds.0.len()
+}
+
+/// Every resource shares one limit, so the refusal has to name the threshold ceiling.
+#[cfg(feature = "plus")]
+fn assert_threshold_ceiling(status: StatusCode, body: &str) {
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+    assert!(
+        body.contains("for Threshold creation"),
+        "the threshold ceiling fired: {body}"
+    );
+}
+
+/// The API refuses a threshold past the ceiling, so this one goes straight into the database.
+#[cfg(feature = "plus")]
+fn insert_threshold_past_the_ceiling(server: &TestServer, project_slug: &str) {
+    let project_id =
+        ProjectId::try_from_raw(get_project_id(server, project_slug)).expect("valid project ID");
+    let mut conn = server.db_conn();
+    let QueryThreshold {
+        branch_id,
+        testbed_id,
+        parameters,
+        measure_id,
+        created,
+        modified,
+        ..
+    } = schema::threshold::table
+        .filter(schema::threshold::project_id.eq(project_id))
+        .first(&mut conn)
+        .expect("Failed to load a seed threshold");
+    diesel::insert_into(schema::threshold::table)
+        .values(InsertThreshold {
+            uuid: ThresholdUuid::new(),
+            project_id,
+            branch_id,
+            testbed_id,
+            parameters,
+            measure_id,
+            metric: Some("direct".parse().expect("valid metric name")),
+            model_id: None,
+            created,
+            modified,
+        })
+        .execute(&mut conn)
+        .expect("Failed to insert a threshold");
+}
+
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn threshold_ceiling_admits_a_report_that_creates_none() {
+    let server = TestServer::new_with_creation_limits(4, 4).await;
+    let (user, project_slug) = project_with_thresholds(&server, "none", 4).await;
+    insert_threshold_past_the_ceiling(&server, &project_slug);
+    assert_eq!(threshold_count(&server, &user, &project_slug, "").await, 5);
+
+    let (status, body) = post_report(&server, &user, &project_slug, None).await;
+    assert_eq!(status, StatusCode::CREATED, "no thresholds: {body}");
+
+    let changed_model = serde_json::json!({
+        "models": { "latency": { "test": "t_test", "upper_boundary": 0.99 } }
+    });
+    let (status, body) = post_report(&server, &user, &project_slug, Some(changed_model)).await;
+    assert_eq!(status, StatusCode::CREATED, "a changed model: {body}");
+}
+
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn threshold_ceiling_refuses_a_report_whose_creates_pass_it() {
+    let server = TestServer::new_with_creation_limits(4, 4).await;
+    let (user, project_slug) = project_with_thresholds(&server, "over", 2).await;
+
+    let (status, body) = post_report(&server, &user, &project_slug, Some(new_thresholds(3))).await;
+    assert_threshold_ceiling(status, &body);
+    assert_eq!(
+        threshold_count(&server, &user, &project_slug, "").await,
+        2,
+        "the refused report created no threshold"
+    );
+}
+
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn threshold_ceiling_admits_a_report_whose_creates_reach_it() {
+    let server = TestServer::new_with_creation_limits(4, 4).await;
+    let (user, project_slug) = project_with_thresholds(&server, "exact", 2).await;
+
+    let (status, body) = post_report(&server, &user, &project_slug, Some(new_thresholds(2))).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    assert_eq!(threshold_count(&server, &user, &project_slug, "").await, 4);
+}
+
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn threshold_ceiling_counts_a_start_point_clone() {
+    let server = TestServer::new_with_creation_limits(5, 5).await;
+    let (user, project_slug) = project_with_thresholds(&server, "clone", 2).await;
+    // A start point is a version, so the branch needs a report to be cloned from.
+    let (status, body) = post_report(&server, &user, &project_slug, None).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let path = format!("/v0/projects/{project_slug}/branches");
+    let clone = |name: &str| {
+        serde_json::json!({
+            "name": name,
+            "start_point": { "branch": "ssize-branch", "clone_thresholds": true }
+        })
+    };
+
+    let (status, body) = post_json(&server, &user, &path, &clone("fits")).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    assert_eq!(
+        threshold_count(&server, &user, &project_slug, "?branch=fits").await,
+        2
+    );
+
+    let (status, body) = post_json(&server, &user, &path, &clone("refused")).await;
+    assert_threshold_ceiling(status, &body);
 }

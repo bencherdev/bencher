@@ -7,6 +7,14 @@ macro_rules! fn_rate_limit {
             context: &ApiContext,
             project_id: ProjectId,
         ) -> Result<(), HttpError> {
+            Self::rate_limit_with_count(context, project_id, ::std::num::NonZeroU32::MIN).await
+        }
+
+        pub async fn rate_limit_with_count(
+            context: &ApiContext,
+            project_id: ProjectId,
+            count: ::std::num::NonZeroU32,
+        ) -> Result<(), HttpError> {
             let query_project = QueryProject::get($crate::auth_conn!(context), project_id)?;
             let query_organization = query_project.organization($crate::auth_conn!(context))?;
             let is_claimed = query_organization.is_claimed($crate::auth_conn!(context))?;
@@ -28,9 +36,10 @@ macro_rules! fn_rate_limit {
                     )}
                 )?;
 
-            context.rate_limiting.check_claimable_limit(
+            context.rate_limiting.check_claimable_limit_with_count(
                 is_claimed,
                 window_usage,
+                count,
                 |rate_limit| $crate::context::RateLimitingError::UnclaimedProject {
                     project: query_project.clone(),
                     resource: $crate::error::BencherResource::$resource,
