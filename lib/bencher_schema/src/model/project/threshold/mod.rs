@@ -6,13 +6,15 @@ use bencher_json::{
     BmfVersion, DateTime, MetricName, Model, ParameterFilter, ThresholdUuid,
     project::{
         report::{JsonReportThresholdEntry, JsonReportThresholdModels, JsonReportThresholds},
-        threshold::{JsonThreshold, JsonThresholdModel},
+        threshold::{JsonThreshold, JsonThresholdModel, MAX_ACTIVE_THRESHOLDS},
     },
 };
 use diesel::{
     BelongingToDsl as _, ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _,
     OptionalExtension as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
+#[cfg(feature = "plus")]
+use dropshot::ClientErrorStatusCode;
 use dropshot::HttpError;
 use model::UpdateModel;
 use slog::Logger;
@@ -217,7 +219,12 @@ impl QueryThreshold {
     ) -> Result<(), HttpError> {
         match Self::compute_model_action(auth_conn!(context), self.model_id, model)? {
             ThresholdModelAction::NoChange => Ok(()),
-            ThresholdModelAction::Update(model) => self.update_from_model(context, model).await,
+            ThresholdModelAction::Update(model) => {
+                if self.model_id.is_none() {
+                    Self::check_active_cap(auth_conn!(context), &self.dimensions())?;
+                }
+                self.update_from_model(context, model).await
+            },
             ThresholdModelAction::Remove => {
                 write_transaction!(context, |conn| self.remove_current_model(conn)).map_err(|e| {
                     crate::error::issue_error(
@@ -290,6 +297,37 @@ impl QueryThreshold {
                 .execute(conn)?;
         }
         Ok(())
+    }
+
+    /// Refuse one more threshold with a model on a branch, testbed, and measure at the cap.
+    fn check_active_cap(
+        conn: &mut DbConnection,
+        dimensions: &ThresholdDimensions,
+    ) -> Result<(), HttpError> {
+        let ThresholdDimensions {
+            branch_id,
+            testbed_id,
+            measure_id,
+            ..
+        } = *dimensions;
+        let active = schema::threshold::table
+            .filter(schema::threshold::branch_id.eq(branch_id))
+            .filter(schema::threshold::testbed_id.eq(testbed_id))
+            .filter(schema::threshold::measure_id.eq(measure_id))
+            .filter(schema::threshold::model_id.is_not_null())
+            .count()
+            .get_result::<i64>(conn)
+            .map_err(resource_not_found_err!(
+                Threshold,
+                (branch_id, testbed_id, measure_id)
+            ))?;
+        if usize::try_from(active).is_ok_and(|active| active < MAX_ACTIVE_THRESHOLDS) {
+            Ok(())
+        } else {
+            Err(bad_request_error(format!(
+                "This branch, testbed, and measure already have {MAX_ACTIVE_THRESHOLDS} thresholds with a model, which is the most they may have. Remove the model from one of them first."
+            )))
+        }
     }
 
     pub fn get_alert_json(
@@ -505,6 +543,7 @@ impl InsertThreshold {
             ));
         }
 
+        QueryThreshold::check_active_cap(auth_conn!(context), &dimensions)?;
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
         write_transaction!(context, |conn| {
@@ -635,14 +674,17 @@ impl InsertThreshold {
             .map(|threshold| (threshold.dimensions(), threshold))
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
+        let mut active = ActiveThresholds::new(&current_thresholds);
 
-        // Fetch start point thresholds with their models in a single JOIN query
+        // Fetch start point thresholds with their models in a single JOIN query, in the UUID
+        // order that decides which of them fit under the cap
         let start_point_thresholds = schema::threshold::table
             .left_join(
                 schema::model::table
                     .on(schema::model::id.nullable().eq(schema::threshold::model_id)),
             )
             .filter(schema::threshold::branch_id.eq(branch_start_point.branch.id))
+            .order(schema::threshold::uuid.asc())
             .select((
                 QueryThreshold::as_select(),
                 Option::<QueryModel>::as_select(),
@@ -659,7 +701,7 @@ impl InsertThreshold {
                     (threshold, model.map(QueryModel::into_model)),
                 )
             })
-            .collect::<HashMap<_, _>>();
+            .collect::<Vec<_>>();
         slog::debug!(log, "Start point thresholds: {start_point_thresholds:?}");
 
         // Pre-compute actions using read connections
@@ -683,6 +725,7 @@ impl InsertThreshold {
                         actions.push(StartPointAction::Update(current_threshold, model));
                     },
                     ThresholdModelAction::Remove => {
+                        active.release(&current_threshold);
                         actions.push(StartPointAction::Remove(current_threshold));
                     },
                 }
@@ -696,22 +739,32 @@ impl InsertThreshold {
             }
         }
 
-        #[cfg(feature = "plus")]
-        if let Some(count) = NonZeroU32::new(
-            u32::try_from(
-                actions
-                    .iter()
-                    .filter(|action| matches!(action, StartPointAction::Create(..)))
-                    .count(),
-            )
-            .unwrap_or(u32::MAX),
-        ) {
-            Self::rate_limit_with_count(context, query_branch.project_id, count).await?;
-        }
-
         // Remaining current thresholds are orphans to remove
         let orphans: Vec<QueryThreshold> = current_thresholds.into_values().collect();
         slog::debug!(log, "Orphan thresholds to remove: {orphans:?}");
+        for orphan in &orphans {
+            active.release(orphan);
+        }
+
+        actions.retain(|action| match action {
+            StartPointAction::Create(dimensions, _) => active.admit(log, dimensions),
+            StartPointAction::Update(threshold, _) if threshold.model_id.is_none() => {
+                active.admit(log, &threshold.dimensions())
+            },
+            StartPointAction::Update(..)
+            | StartPointAction::Remove(_)
+            | StartPointAction::NoChange => true,
+        });
+        #[cfg(feature = "plus")]
+        {
+            let creates = actions
+                .iter()
+                .filter(|action| matches!(action, StartPointAction::Create(..)))
+                .count();
+            if !Self::ceiling_admits(log, context, query_branch.project_id, creates).await? {
+                actions.retain(|action| !matches!(action, StartPointAction::Create(..)));
+            }
+        }
 
         Ok((actions, orphans))
     }
@@ -756,6 +809,7 @@ impl InsertThreshold {
             .map(|threshold| (threshold.dimensions(), threshold))
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
+        let mut active = ActiveThresholds::new(&current_thresholds);
 
         // Phase 1: Pre-resolve all measure IDs (may trigger get_or_create writes)
         // and read current model state.
@@ -797,25 +851,34 @@ impl InsertThreshold {
             }
         }
 
-        #[cfg(feature = "plus")]
-        if let Some(count) = NonZeroU32::new(
-            u32::try_from(
-                actions
-                    .iter()
-                    .filter(|action| matches!(action, ThresholdAction::Create(..)))
-                    .count(),
-            )
-            .unwrap_or(u32::MAX),
-        ) {
-            Self::rate_limit_with_count(context, project_id, count).await?;
-        }
-
         // Collect orphan thresholds to reset
         let orphans: Vec<QueryThreshold> = if reset_thresholds {
             current_thresholds.into_values().collect()
         } else {
             Vec::new()
         };
+        for orphan in &orphans {
+            active.release(orphan);
+        }
+
+        // Past the cap or the ceiling, a report skips what does not fit and keeps the rest.
+        actions.retain(|action| match action {
+            ThresholdAction::Create(dimensions, _) => active.admit(log, dimensions),
+            ThresholdAction::Update(threshold, _) if threshold.model_id.is_none() => {
+                active.admit(log, &threshold.dimensions())
+            },
+            ThresholdAction::Update(..) | ThresholdAction::NoChange => true,
+        });
+        #[cfg(feature = "plus")]
+        {
+            let creates = actions
+                .iter()
+                .filter(|action| matches!(action, ThresholdAction::Create(..)))
+                .count();
+            if !Self::ceiling_admits(log, context, project_id, creates).await? {
+                actions.retain(|action| !matches!(action, ThresholdAction::Create(..)));
+            }
+        }
 
         // Phase 2: Batch all threshold writes in a single write lock acquisition
         // wrapped in a transaction for atomicity.
@@ -926,6 +989,92 @@ impl InsertThreshold {
                 position.insert(declared.len());
                 declared.push((dimensions, model));
             },
+        }
+    }
+
+    /// Only the ceiling's own 429 is a `false`; every other error propagates.
+    #[cfg(feature = "plus")]
+    async fn ceiling_admits(
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        creates: usize,
+    ) -> Result<bool, HttpError> {
+        let Some(count) = NonZeroU32::new(u32::try_from(creates).unwrap_or(u32::MAX)) else {
+            return Ok(true);
+        };
+        match Self::rate_limit_with_count(context, project_id, count).await {
+            Ok(()) => Ok(true),
+            Err(error) if error.status_code == ClientErrorStatusCode::TOO_MANY_REQUESTS => {
+                slog::warn!(
+                    log,
+                    "Skipping {creates} threshold creation(s) past the daily ceiling: {error}"
+                );
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment_by(
+                    bencher_otel::ApiCounter::ThresholdCeilingSkip,
+                    u64::try_from(creates).unwrap_or(u64::MAX),
+                );
+                Ok(false)
+            },
+            Err(error) => Err(error),
+        }
+    }
+}
+
+/// How many thresholds with a model each branch, testbed, and measure has, for the cap.
+struct ActiveThresholds(HashMap<(BranchId, TestbedId, MeasureId), usize>);
+
+impl ActiveThresholds {
+    fn new(thresholds: &HashMap<ThresholdDimensions, QueryThreshold>) -> Self {
+        let mut active = HashMap::new();
+        for threshold in thresholds
+            .values()
+            .filter(|threshold| threshold.model_id.is_some())
+        {
+            *active
+                .entry((
+                    threshold.branch_id,
+                    threshold.testbed_id,
+                    threshold.measure_id,
+                ))
+                .or_default() += 1;
+        }
+        Self(active)
+    }
+
+    fn admit(&mut self, log: &Logger, dimensions: &ThresholdDimensions) -> bool {
+        let active = self
+            .0
+            .entry((
+                dimensions.branch_id,
+                dimensions.testbed_id,
+                dimensions.measure_id,
+            ))
+            .or_default();
+        if *active < MAX_ACTIVE_THRESHOLDS {
+            *active += 1;
+            true
+        } else {
+            slog::warn!(
+                log,
+                "Skipping a threshold past the cap of {MAX_ACTIVE_THRESHOLDS} with a model on its branch, testbed, and measure: {dimensions:?}"
+            );
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ThresholdCapSkip);
+            false
+        }
+    }
+
+    fn release(&mut self, threshold: &QueryThreshold) {
+        if threshold.model_id.is_some()
+            && let Some(active) = self.0.get_mut(&(
+                threshold.branch_id,
+                threshold.testbed_id,
+                threshold.measure_id,
+            ))
+        {
+            *active -= 1;
         }
     }
 }

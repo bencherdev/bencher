@@ -1294,6 +1294,101 @@ async fn projects_update_private_for_a_paid_org_past_its_daily_metrics_limit() {
     assert_eq!(status, StatusCode::OK, "{resp_body}");
 }
 
+// Each dimension of a plot names at most `MAX_DIMENSION_ENTRIES` entries, on create and on
+// update, and a refusal names the field and the cap.
+#[tokio::test]
+async fn plot_dimensions_are_capped() {
+    use bencher_api_tests::helpers::get_project_id;
+    use bencher_json::{BenchmarkUuid, JsonBenchmark, project::perf::MAX_DIMENSION_ENTRIES};
+
+    let server = TestServer::new().await;
+    let user = server.signup("Plot User Cap", "plotcap@example.com").await;
+    let org = server.create_org(&user, "Plot Org Cap").await;
+    let project = server.create_project(&user, &org, "Plot Project Cap").await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_id = get_project_id(&server, project_slug);
+    let dims = seed_plot_dimensions(&server, project_id);
+
+    let mut over = Vec::new();
+    for n in 0..=MAX_DIMENSION_ENTRIES {
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/projects/{project_slug}/benchmarks")))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&serde_json::json!({ "name": format!("capped-{n}") }))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let benchmark: JsonBenchmark = resp.json().await.expect("Failed to parse benchmark");
+        over.push(benchmark.uuid);
+    }
+    let at_cap = over
+        .iter()
+        .take(MAX_DIMENSION_ENTRIES)
+        .copied()
+        .collect::<Vec<_>>();
+    let new_plot = |benchmarks: &[BenchmarkUuid]| {
+        serde_json::json!({
+            "lower_value": true,
+            "upper_value": true,
+            "lower_boundary": false,
+            "upper_boundary": false,
+            "x_axis": "date_time",
+            "window": 2_592_000,
+            "branches": [dims.branch1.to_string()],
+            "testbeds": [dims.testbed.to_string()],
+            "benchmarks": benchmarks,
+            "measures": [dims.measure.to_string()],
+        })
+    };
+    let refusal = format!("at most {MAX_DIMENSION_ENTRIES} benchmarks");
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/plots")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&new_plot(&over))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = resp.text().await.expect("Failed to read the response");
+    assert!(body.contains(&refusal), "{body}");
+
+    let created = post_plot(&server, &user, project_slug, &new_plot(&at_cap)).await;
+    assert_eq!(created.benchmarks, at_cap);
+
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{project_slug}/plots/{}",
+            created.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "benchmarks": over }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let body = resp.text().await.expect("Failed to read the response");
+    assert!(body.contains(&refusal), "{body}");
+
+    let reversed = at_cap.iter().rev().copied().collect::<Vec<_>>();
+    let patch = serde_json::json!({ "benchmarks": reversed });
+    let updated = patch_plot(&server, &user, project_slug, created.uuid, &patch).await;
+    assert_eq!(updated.benchmarks, reversed);
+}
+
 // A plot's parameters filter is stored in its canonical form.
 #[tokio::test]
 async fn plot_parameters_round_trip_canonical() {

@@ -9,6 +9,7 @@
 use bencher_api_tests::{TestServer, helpers::get_project_id};
 use bencher_json::{
     BmfVersion, MeasureUuid, MetricName, ParameterFilter, ParameterSet, ProjectSlug, ThresholdUuid,
+    project::threshold::MAX_ACTIVE_THRESHOLDS,
 };
 use bencher_schema::{
     context::DbConnection,
@@ -1061,15 +1062,15 @@ async fn v0_map_with_reset_updates_what_it_names_and_strips_every_other_threshol
     assert_eq!(models, 2, "the map updated the model it named");
 }
 
-// The ceiling counts what a version 1 list creates, so a list whose creates would pass it is
-// refused whole.
+// The ceiling counts what a version 1 list creates, so a list whose creates would pass it creates
+// none of them, and the report and its results are still created.
 #[cfg(feature = "plus")]
 #[tokio::test]
-async fn a_v1_list_whose_creates_pass_the_ceiling_is_refused() {
+async fn a_v1_list_whose_creates_pass_the_ceiling_creates_none() {
     let server = TestServer::new_with_creation_limits(3, 3).await;
     let fixture = fixture(&server, "ceiling").await;
 
-    let (status, body) = try_report(
+    report(
         &server,
         &fixture,
         Post::new(1, vec![steady(0)]).thresholds(serde_json::json!({
@@ -1087,22 +1088,167 @@ async fn a_v1_list_whose_creates_pass_the_ceiling_is_refused() {
         })),
     )
     .await;
-    assert_eq!(
-        status,
-        StatusCode::TOO_MANY_REQUESTS,
-        "four creates over a ceiling of three: {body}"
-    );
-    assert!(
-        body.contains("for Threshold creation"),
-        "the threshold ceiling fired: {body}"
-    );
 
     let project_id = project_id(&server, &fixture);
     let mut conn = server.db_conn();
     assert!(
         thresholds(&mut conn, project_id).is_empty(),
-        "the refused report created no threshold"
+        "the report created no threshold"
     );
+    let results = schema::report_benchmark::table
+        .inner_join(schema::report::table)
+        .filter(schema::report::project_id.eq(project_id))
+        .count()
+        .get_result::<i64>(&mut conn)
+        .expect("Failed to count the results");
+    assert_eq!(results, 2, "the report kept a result for each variant");
+}
+
+// Past the cap on active thresholds for a measure, a report creates what fits in payload order
+// and skips the rest. The ceiling sits one past what fits, so checking it with every declared
+// create, before the cap, would skip them all.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn a_report_past_the_active_cap_creates_what_fits_in_payload_order() {
+    let fits = u32::try_from(MAX_ACTIVE_THRESHOLDS).expect("the cap fits a u32");
+    let server = TestServer::new_with_creation_limits(fits + 1, fits + 1).await;
+    let fixture = fixture(&server, "activecap").await;
+
+    let seeds = (1..MAX_ACTIVE_THRESHOLDS)
+        .map(|n| {
+            serde_json::json!({
+                "measure": "latency",
+                "metric": format!("seed-{n}"),
+                "model": model(),
+            })
+        })
+        .collect::<Vec<_>>();
+    report(
+        &server,
+        &fixture,
+        Post::new(1, vec![steady(0)]).thresholds(serde_json::json!({ "models": seeds })),
+    )
+    .await;
+    report(
+        &server,
+        &fixture,
+        Post::new(2, vec![steady(1)]).thresholds(serde_json::json!({
+            "models": [
+                { "measure": "latency", "metric": "first", "model": model() },
+                { "measure": "latency", "metric": "second", "model": model() },
+                { "measure": "latency", "metric": "third", "model": model() },
+            ]
+        })),
+    )
+    .await;
+
+    let project_id = project_id(&server, &fixture);
+    let mut conn = server.db_conn();
+    let thresholds = thresholds(&mut conn, project_id);
+    assert_eq!(thresholds.len(), MAX_ACTIVE_THRESHOLDS);
+    assert_eq!(
+        thresholds.last(),
+        Some(&("*".to_owned(), "first".to_owned(), true)),
+        "the first threshold the payload declared is the one that fits"
+    );
+}
+
+// A threshold with no model does not count toward the cap, and giving it a model back does, in
+// payload order like a create.
+#[tokio::test]
+async fn a_report_counts_giving_a_model_back_toward_the_active_cap() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "capback").await;
+    let seed = |n: usize| {
+        serde_json::json!({
+            "measure": "latency",
+            "metric": format!("seed-{n}"),
+            "model": model(),
+        })
+    };
+
+    let seeds = (1..=MAX_ACTIVE_THRESHOLDS).map(seed).collect::<Vec<_>>();
+    report(
+        &server,
+        &fixture,
+        Post::new(1, vec![steady(0)]).thresholds(serde_json::json!({ "models": seeds })),
+    )
+    .await;
+    let kept = (2..=MAX_ACTIVE_THRESHOLDS).map(seed).collect::<Vec<_>>();
+    report(
+        &server,
+        &fixture,
+        Post::new(2, vec![steady(1)])
+            .thresholds(serde_json::json!({ "models": kept, "reset": true })),
+    )
+    .await;
+    report(
+        &server,
+        &fixture,
+        Post::new(3, vec![steady(2)]).thresholds(serde_json::json!({
+            "models": [
+                seed(1),
+                { "measure": "latency", "metric": "past", "model": model() },
+            ]
+        })),
+    )
+    .await;
+
+    let project_id = project_id(&server, &fixture);
+    let mut conn = server.db_conn();
+    let thresholds = thresholds(&mut conn, project_id);
+    assert_eq!(thresholds.len(), MAX_ACTIVE_THRESHOLDS, "past was skipped");
+    assert_eq!(
+        thresholds.first(),
+        Some(&("*".to_owned(), "seed-1".to_owned(), true)),
+        "the stripped threshold got its model back"
+    );
+}
+
+// A report at the cap that resets and declares as many different thresholds swaps them all, since
+// the thresholds a reset strips make room for what the same report declares.
+#[tokio::test]
+async fn a_reset_report_at_the_active_cap_swaps_every_threshold() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "capreset").await;
+    let named = |prefix: &str| {
+        (1..=MAX_ACTIVE_THRESHOLDS)
+            .map(|n| {
+                serde_json::json!({
+                    "measure": "latency",
+                    "metric": format!("{prefix}-{n}"),
+                    "model": model(),
+                })
+            })
+            .collect::<Vec<_>>()
+    };
+
+    report(
+        &server,
+        &fixture,
+        Post::new(1, vec![steady(0)]).thresholds(serde_json::json!({ "models": named("old") })),
+    )
+    .await;
+    report(
+        &server,
+        &fixture,
+        Post::new(2, vec![steady(1)]).thresholds(serde_json::json!({
+            "models": named("new"),
+            "reset": true,
+        })),
+    )
+    .await;
+
+    let project_id = project_id(&server, &fixture);
+    let mut conn = server.db_conn();
+    let active = thresholds(&mut conn, project_id)
+        .into_iter()
+        .filter(|(_, _, has_model)| *has_model)
+        .collect::<Vec<_>>();
+    let new = (1..=MAX_ACTIVE_THRESHOLDS)
+        .map(|n| ("*".to_owned(), format!("new-{n}"), true))
+        .collect::<Vec<_>>();
+    assert_eq!(active, new);
 }
 
 // What a client is told when the thresholds it sent are malformed rather than the

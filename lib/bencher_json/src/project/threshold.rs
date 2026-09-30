@@ -16,6 +16,9 @@ use crate::{
 
 crate::typed_uuid::typed_uuid!(ThresholdUuid);
 
+/// The most thresholds with a model one branch, testbed, and measure may have.
+pub const MAX_ACTIVE_THRESHOLDS: usize = 64;
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewThreshold {

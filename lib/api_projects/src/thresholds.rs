@@ -255,6 +255,7 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 /// A threshold with no parameters filter checks every variant,
 /// and a threshold that names no metric checks the conventional `value` name.
 /// Every threshold that matches a metric row runs: there is no winner among them.
+/// A branch, testbed, and measure can have at most 64 thresholds with a model.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/thresholds",
@@ -450,6 +451,7 @@ pub async fn get_one_inner(
 /// or provide a valid project key for the project.
 /// The new model will be added to the threshold and used going forward.
 /// The old model will be replaced but still show up in the report history and alerts created when it was active.
+/// A threshold with no model can only be given one while its branch, testbed, and measure have fewer than 64 thresholds with a model.
 #[endpoint {
     method = PUT,
     path =  "/v0/projects/{project}/thresholds/{threshold}",
