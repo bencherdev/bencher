@@ -14,11 +14,24 @@ cognitive-complexity-threshold = 25
 
 disallowed-methods = [
     # https://docs.rs/futures/latest/futures/channel/mpsc/fn.unbounded.html
-    { path = "futures::channel::mpsc::unbounded", reason = "unbounded channels can lead to unbounded memory usage", replacement = "futures::channel::mpsc::channel" },
+    { path = "futures::channel::mpsc::unbounded", reason = "unbounded channels can lead to unbounded memory usage", replacement = "futures::channel::mpsc::channel", allow-invalid = true },
+    # https://docs.rs/futures-channel/latest/futures_channel/mpsc/fn.unbounded.html
+    { path = "futures_channel::mpsc::unbounded", reason = "unbounded channels can lead to unbounded memory usage", replacement = "futures_channel::mpsc::channel", allow-invalid = true },
+    # https://doc.rust-lang.org/std/sync/mpsc/fn.channel.html
+    { path = "std::sync::mpsc::channel", reason = "unbounded channels can lead to unbounded memory usage", replacement = "std::sync::mpsc::sync_channel", allow-invalid = true },
     # https://docs.rs/tokio/latest/tokio/sync/mpsc/fn.unbounded_channel.html
-    { path = "tokio::sync::mpsc::unbounded_channel", reason = "unbounded channels can lead to unbounded memory usage", replacement = "tokio::sync::mpsc::channel" },
+    { path = "tokio::sync::mpsc::unbounded_channel", reason = "unbounded channels can lead to unbounded memory usage", replacement = "tokio::sync::mpsc::channel", allow-invalid = true },
+]
+
+disallowed-macros = [
     # https://docs.rs/futures/latest/futures/macro.select.html
-    { path = "futures::select", reason = "the select! macro is a footgun", replacement = "futures_concurrency::stream::Merge::merge", allow-invalid = true },
+    { path = "futures::select", reason = "https://blog.yoshuawuyts.com/futures-concurrency-3", replacement = "futures_concurrency::stream::Merge::merge", allow-invalid = true },
+    # https://docs.rs/futures/latest/futures/macro.select_biased.html
+    { path = "futures::select_biased", reason = "https://blog.yoshuawuyts.com/futures-concurrency-3", replacement = "futures_concurrency::stream::Merge::merge", allow-invalid = true },
+    # https://docs.rs/futures-util/latest/futures_util/macro.select.html
+    { path = "futures_util::select", reason = "https://blog.yoshuawuyts.com/futures-concurrency-3", replacement = "futures_concurrency::stream::Merge::merge", allow-invalid = true },
+    # https://docs.rs/futures-util/latest/futures_util/macro.select_biased.html
+    { path = "futures_util::select_biased", reason = "https://blog.yoshuawuyts.com/futures-concurrency-3", replacement = "futures_concurrency::stream::Merge::merge", allow-invalid = true },
     # https://docs.rs/tokio/latest/tokio/macro.select.html
-    { path = "tokio::select", reason = "the select! macro is a footgun", replacement = "futures_concurrency::stream::Merge::merge", allow-invalid = true },
+    { path = "tokio::select", reason = "https://blog.yoshuawuyts.com/futures-concurrency-3", replacement = "futures_concurrency::stream::Merge::merge", allow-invalid = true },
 ]

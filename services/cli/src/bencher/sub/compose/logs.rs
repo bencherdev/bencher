@@ -1,10 +1,13 @@
+use std::pin::pin;
+
 use crate::{
     CliError,
     bencher::sub::SubCmd,
     parser::compose::{CliLogs, CliService},
 };
 use bollard::{Docker, container::LogOutput, query_parameters::LogsOptions};
-use futures_util::stream::StreamExt as _;
+use futures_concurrency::stream::Merge as _;
+use futures_util::stream::{self, StreamExt as _};
 
 use crate::{cli_eprintln, cli_println};
 
@@ -35,12 +38,12 @@ impl SubCmd for Logs {
 }
 
 pub(super) async fn tail_container_logs(docker: &Docker, service: CliService) {
-    let mut api_logs = if let CliService::All | CliService::Api = service {
+    let api_logs = if let CliService::All | CliService::Api = service {
         Some(container_logs(docker, Container::Api))
     } else {
         None
     };
-    let mut console_logs = if let CliService::All | CliService::Console = service {
+    let console_logs = if let CliService::All | CliService::Console = service {
         Some(container_logs(docker, Container::Console))
     } else {
         None
@@ -48,47 +51,36 @@ pub(super) async fn tail_container_logs(docker: &Docker, service: CliService) {
     cli_println!("🐰 Bencher Self-Hosted logs...");
     cli_println!("");
 
-    loop {
-        tokio::select! {
-            _ = tokio::signal::ctrl_c() => {
+    let ctrl_c = stream::once(tokio::signal::ctrl_c()).map(|_| LogEvent::CtrlC);
+    let api_logs = stream::iter(api_logs).flatten().map(LogEvent::Api);
+    let console_logs = stream::iter(console_logs).flatten().map(LogEvent::Console);
+    let mut events = pin!((ctrl_c, api_logs, console_logs).merge());
+    while let Some(event) = events.next().await {
+        match event {
+            LogEvent::CtrlC => {
                 cli_println!("");
                 cli_println!("🐰 Bencher Self-Hosted logs closed.");
                 break;
-            }
-            Some(log) = async {
-                if let Some(logs) = api_logs.as_mut() {
-                    logs.next().await
-                } else {
-                    None
-                }
-            } => {
-                match log {
-                    Ok(log) => cli_println!("{log}"),
-                    Err(err) => {
-                        cli_println!("");
-                        cli_eprintln!("🐰 Bencher Self-Hosted API logs closed: {err}");
-                        break;
-                    }
-                }
             },
-            Some(log) = async {
-                if let Some(logs) = console_logs.as_mut() {
-                    logs.next().await
-                } else {
-                    None
-                }
-            } => {
-                match log {
-                    Ok(log) => cli_println!("{log}"),
-                    Err(err) => {
-                        cli_println!("");
-                        cli_eprintln!("🐰 Bencher Self-Hosted UI logs closed: {err}");
-                        break;
-                    }
-                }
+            LogEvent::Api(Ok(log)) | LogEvent::Console(Ok(log)) => cli_println!("{log}"),
+            LogEvent::Api(Err(err)) => {
+                cli_println!("");
+                cli_eprintln!("🐰 Bencher Self-Hosted API logs closed: {err}");
+                break;
+            },
+            LogEvent::Console(Err(err)) => {
+                cli_println!("");
+                cli_eprintln!("🐰 Bencher Self-Hosted UI logs closed: {err}");
+                break;
             },
         }
     }
+}
+
+enum LogEvent {
+    CtrlC,
+    Api(Result<LogOutput, bollard::errors::Error>),
+    Console(Result<LogOutput, bollard::errors::Error>),
 }
 
 fn container_logs(
