@@ -214,7 +214,7 @@ mod tests {
         // lock, or a sweep could run while another runner has a job in flight.
         let (_dir, state) = state_in_tmpdir();
         let held = JailLock::acquire(&state, None).unwrap();
-        let (contended, waiting) = mpsc::channel();
+        let (contended, waiting) = mpsc::sync_channel(1);
 
         let waiter = {
             let state = state.clone();
@@ -245,11 +245,13 @@ mod tests {
     fn a_wait_that_outlives_the_interval_is_announced_again() {
         // A wait announced once and then silent for a whole job reads as a
         // wedged runner.
-        let (announce, announced) = mpsc::channel();
+        let (announce, announced) = mpsc::sync_channel(2);
 
         while_waiting(
             Duration::from_millis(1),
-            || announce.send(()).unwrap(),
+            // Dropped once two are queued: a blocked announcement would hold
+            // the lock the wait needs to end.
+            || announce.try_send(()).unwrap_or_default(),
             || {
                 for _ in 0..2 {
                     announced
@@ -306,7 +308,7 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
         let held = JailLock::acquire(&state, None).unwrap();
         let cancel = AtomicBool::new(false);
-        let (finished, outcome) = mpsc::channel();
+        let (finished, outcome) = mpsc::sync_channel(1);
 
         std::thread::scope(|scope| {
             scope.spawn(|| {

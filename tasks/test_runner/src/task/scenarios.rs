@@ -3989,30 +3989,37 @@ fn spawn_runner(
         .spawn()?)
 }
 
+/// Far more than a runner prints before any line a scenario waits for; past
+/// it only a waiter misses lines, never the output.
+const UNREAD_LINES: usize = 1024;
+
 struct StreamedOutput {
     lines: mpsc::Receiver<String>,
     seen: Vec<String>,
-    stdout: std::thread::JoinHandle<()>,
-    stderr: std::thread::JoinHandle<String>,
+    output: DrainedOutput,
 }
 
 impl StreamedOutput {
     fn start(child: &mut std::process::Child) -> Self {
-        let (tx, lines) = mpsc::channel();
+        let (tx, lines) = mpsc::sync_channel(UNREAD_LINES);
         let stdout = child.stdout.take();
         let stdout = std::thread::spawn(move || {
             use std::io::BufRead as _;
 
+            let mut output = Vec::new();
             let Some(stdout) = stdout else {
-                return;
+                return String::new();
             };
             for line in std::io::BufReader::new(stdout).lines() {
                 let Ok(line) = line else {
                     break;
                 };
-                // Keep draining once nobody is listening, or the child blocks.
-                drop(tx.send(line));
+                // Never blocks, so a caller that has stopped waiting cannot
+                // stall the child; the output itself is kept here in full.
+                drop(tx.try_send(line.clone()));
+                output.push(line);
             }
+            output.join("\n")
         });
         let stderr = child.stderr.take();
         let stderr = std::thread::spawn(move || {
@@ -4027,8 +4034,7 @@ impl StreamedOutput {
         Self {
             lines,
             seen: Vec::new(),
-            stdout,
-            stderr,
+            output: DrainedOutput { stdout, stderr },
         }
     }
 
@@ -4053,11 +4059,8 @@ impl StreamedOutput {
     }
 
     /// Wait for both readers, once the child has exited.
-    fn join(mut self) -> (String, String) {
-        drop(self.stdout.join());
-        self.seen.extend(self.lines.try_iter());
-        let stderr = self.stderr.join().unwrap_or_default();
-        (self.seen.join("\n"), stderr)
+    fn join(self) -> (String, String) {
+        self.output.join()
     }
 }
 
@@ -4757,6 +4760,33 @@ mod tests {
         let jail = fs::metadata(root.join("jail")).unwrap();
 
         assert!(!same_object(&host, &jail));
+    }
+
+    #[test]
+    fn output_past_the_unread_bound_neither_stalls_the_child_nor_goes_missing() {
+        // A reader that blocked on the full channel would stop draining the
+        // pipe once nobody waits, so the child could never finish writing.
+        let count = UNREAD_LINES * 64;
+        let mut child = Command::new("seq")
+            .arg(count.to_string())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut streamed = StreamedOutput::start(&mut child);
+        streamed.wait_for(|line| line == "1").unwrap();
+
+        let deadline = std::time::Instant::now() + Duration::from_secs(30);
+        while child.try_wait().unwrap().is_none() {
+            if std::time::Instant::now() > deadline {
+                drop(child.kill());
+                panic!("the child stalled behind a reader nobody drained");
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let (stdout, _stderr) = streamed.join();
+
+        assert_eq!(stdout.lines().count(), count);
     }
 
     #[test]
