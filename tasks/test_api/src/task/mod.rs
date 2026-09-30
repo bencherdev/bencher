@@ -84,8 +84,9 @@ impl Sub {
 
 fn is_dev(url: Option<&Url>) -> bool {
     url.is_some_and(|u| {
-        u.as_ref() == DEV_BENCHER_API_URL.as_ref()
-            || u.as_ref() == DEV_BENCHER_REGISTRY_URL.as_ref()
+        url::Url::try_from(u.clone()).is_ok_and(|parsed| {
+            parsed == *DEV_BENCHER_API_URL || parsed == *DEV_BENCHER_REGISTRY_URL
+        })
     })
 }
 
@@ -111,4 +112,30 @@ fn unwrap_user_token(user_token: Option<Jwt>, is_dev: bool) -> Jwt {
             Jwt::test_token()
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::{LOCALHOST_BENCHER_API_URL, Url};
+
+    use super::is_dev;
+
+    fn parse_url(url: &str) -> Url {
+        url.parse().unwrap()
+    }
+
+    #[test]
+    fn is_dev_normalizes_url() {
+        assert!(is_dev(Some(&parse_url("https://dev.api.bencher.dev"))));
+        assert!(is_dev(Some(&parse_url("https://dev.api.bencher.dev/"))));
+        assert!(is_dev(Some(&parse_url("https://DEV.api.bencher.dev"))));
+        assert!(is_dev(Some(&parse_url("https://dev.registry.bencher.dev"))));
+    }
+
+    #[test]
+    fn is_dev_rejects_non_dev() {
+        let localhost: Url = LOCALHOST_BENCHER_API_URL.clone().into();
+        assert!(!is_dev(Some(&localhost)));
+        assert!(!is_dev(None));
+    }
 }
