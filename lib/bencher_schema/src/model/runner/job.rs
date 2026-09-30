@@ -117,7 +117,6 @@ impl QueryJob {
     ///
     /// Looks up the report and branch, parses benchmark output via the adapter,
     /// creates metrics/alerts, checks plan usage, and updates the report timestamps.
-    #[expect(clippy::too_many_lines, reason = "sequential job processing steps")]
     pub async fn process_results(
         &self,
         log: &Logger,
@@ -143,14 +142,7 @@ impl QueryJob {
 
         // TODO: Add a RunnerKey variant to ApiActor so runner-authenticated requests use auth_conn
         let api_actor = ApiActor::Public(PublicUser::Public(None));
-        let plan_kind = PlanKind::new_for_project(
-            context,
-            context.biller.as_ref(),
-            &context.licensor,
-            &query_project,
-            &api_actor,
-        )
-        .await?;
+        let plan_kind = PlanKind::new_for_job_results(context, &query_project, &api_actor).await?;
 
         // Build results array from per-iteration output.
         // File output takes precedence (mirrors CLI CommandToFile mode):

@@ -8,12 +8,13 @@
 //! Shared test helpers for `api_runners` integration tests.
 //!
 //! Common helpers (`get_project_id`, `create_test_report`, `set_job_status`,
-//! `base_timestamp`) are re-exported from `bencher_api_tests::helpers`.
+//! `base_timestamp`, `plan_project`, `post_metrics`) are re-exported from
+//! `bencher_api_tests::helpers`.
 //! Runner-specific helpers live here.
 
 use api_runners::{RunnerMessage, ServerMessage};
 pub use bencher_api_tests::helpers::{
-    base_timestamp, create_test_report, get_project_id, set_job_status,
+    base_timestamp, create_test_report, get_project_id, plan_project, post_metrics, set_job_status,
 };
 use bencher_api_tests::{CallbackRequest, TestServer, TestUser};
 use bencher_json::{

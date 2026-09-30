@@ -110,10 +110,23 @@ impl TestServer {
     /// than a throttle on the requests that get it there.
     #[cfg(feature = "plus")]
     pub async fn new_with_creation_limits(unclaimed_limit: u32, claimed_limit: u32) -> Self {
-        let rate_limiting = bencher_schema::context::RateLimiting::max_with_creation_limits(
-            unclaimed_limit,
-            claimed_limit,
-        );
+        Self::new_with_creation_and_plus_limits(unclaimed_limit, claimed_limit, u32::MAX).await
+    }
+
+    /// [`Self::new_with_creation_limits`] with the daily metrics limit of a paid
+    /// organization set too.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_creation_and_plus_limits(
+        unclaimed_limit: u32,
+        claimed_limit: u32,
+        plus_limit: u32,
+    ) -> Self {
+        let rate_limiting =
+            bencher_schema::context::RateLimiting::max_with_creation_and_plus_limits(
+                unclaimed_limit,
+                claimed_limit,
+                plus_limit,
+            );
         Self::build(None, None, None, None, Some(rate_limiting), None).await
     }
 
