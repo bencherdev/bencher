@@ -18,7 +18,7 @@ use bencher_api_tests::{
 };
 use bencher_json::{
     AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, HeadUuid, JobStatus, JobUuid, JsonPerf,
-    JsonPerfQuery, MeasureUuid, MetricName, MetricUuid, ParameterSet, Priority,
+    JsonPerfQuery, MAX_PARAMETER_KEYS, MeasureUuid, MetricName, MetricUuid, ParameterSet, Priority,
     ReportBenchmarkUuid, ReportUuid, SpecUuid, TestbedUuid, VariantUuid, VersionUuid,
     project::{alert::AlertStatus, boundary::BoundaryLimit},
 };
@@ -1585,10 +1585,10 @@ async fn perf_private_project_wrong_user() {
 // =============================================================================
 
 #[tokio::test]
-async fn perf_line_limit_exact_256() {
+async fn perf_line_limit_exact_64() {
     let server = perf_server().await;
-    // `4` branches by `64` measures is exactly the budget.
-    let (user, project_slug, grid) = grid_project(&server, "limit256", 4, 1, 1, 64).await;
+    // `8` branches by `8` measures is exactly the budget.
+    let (user, project_slug, grid) = grid_project(&server, "limit64", 8, 1, 1, 8).await;
 
     let perf = get_perf(
         &server,
@@ -1597,16 +1597,16 @@ async fn perf_line_limit_exact_256() {
     )
     .await;
     let expected = grid.expected_lines();
-    assert_eq!(expected.len(), 256);
-    assert_eq!(perf.results.len(), 256);
+    assert_eq!(expected.len(), 64);
+    assert_eq!(perf.results.len(), 64);
     assert_eq!(response_lines(&perf), expected);
 }
 
 #[tokio::test]
-async fn perf_line_limit_truncated_past_256() {
+async fn perf_line_limit_truncated_past_64() {
     let server = perf_server().await;
-    // `5` branches by `64` measures is `320`.
-    let (user, project_slug, grid) = grid_project(&server, "limitpast", 5, 1, 1, 64).await;
+    // `5` branches by `2` benchmarks by `8` measures is `80`.
+    let (user, project_slug, grid) = grid_project(&server, "limitpast", 5, 1, 2, 8).await;
 
     let perf = get_perf(
         &server,
@@ -1615,9 +1615,9 @@ async fn perf_line_limit_truncated_past_256() {
     )
     .await;
     let mut expected = grid.expected_lines();
-    assert_eq!(expected.len(), 320);
-    expected.truncate(256);
-    assert_eq!(perf.results.len(), 256);
+    assert_eq!(expected.len(), 80);
+    expected.truncate(64);
+    assert_eq!(perf.results.len(), 64);
     assert_eq!(response_lines(&perf), expected);
 }
 
@@ -1625,7 +1625,7 @@ async fn perf_line_limit_truncated_past_256() {
 #[tokio::test]
 async fn perf_line_limit_holds_on_an_asymmetric_grid() {
     let server = perf_server().await;
-    let (user, project_slug, grid) = grid_project(&server, "asymmetric", 2, 2, 6, 21).await;
+    let (user, project_slug, grid) = grid_project(&server, "asymmetric", 2, 2, 3, 7).await;
 
     let perf = get_perf(
         &server,
@@ -1634,9 +1634,9 @@ async fn perf_line_limit_holds_on_an_asymmetric_grid() {
     )
     .await;
     let mut expected = grid.expected_lines();
-    assert_eq!(expected.len(), 504);
-    expected.truncate(256);
-    assert_eq!(perf.results.len(), 256);
+    assert_eq!(expected.len(), 84);
+    expected.truncate(64);
+    assert_eq!(perf.results.len(), 64);
     assert_eq!(response_lines(&perf), expected);
 }
 
@@ -1644,8 +1644,8 @@ async fn perf_line_limit_holds_on_an_asymmetric_grid() {
 async fn perf_line_limit_holds_within_one_benchmark() {
     let server = perf_server().await;
     let (user, project_slug, mut grid) = grid_project(&server, "variants", 1, 1, 1, 1).await;
-    // The empty variant, plus `299` more.
-    for size in 0..299 {
+    // The empty variant, plus `79` more.
+    for size in 0..79 {
         grid.add_variant(&server, 0, &format!(r#"{{"size_mb": {size}}}"#));
     }
 
@@ -1656,9 +1656,9 @@ async fn perf_line_limit_holds_within_one_benchmark() {
     )
     .await;
     let mut expected = grid.expected_lines();
-    assert_eq!(expected.len(), 300);
-    expected.truncate(256);
-    assert_eq!(perf.results.len(), 256);
+    assert_eq!(expected.len(), 80);
+    expected.truncate(64);
+    assert_eq!(perf.results.len(), 64);
     assert_eq!(response_lines(&perf), expected);
 }
 
@@ -1666,10 +1666,10 @@ async fn perf_line_limit_holds_within_one_benchmark() {
 async fn perf_line_limit_clips_a_fan_out() {
     let server = perf_server().await;
     let (user, project_slug, mut grid) = grid_project(&server, "clipped", 1, 1, 2, 1).await;
-    for size in 0..199 {
+    for size in 0..39 {
         grid.add_variant(&server, 0, &format!(r#"{{"size_mb": {size}}}"#));
     }
-    for size in 0..99 {
+    for size in 0..39 {
         grid.add_variant(&server, 1, &format!(r#"{{"size_mb": {size}}}"#));
     }
 
@@ -1680,19 +1680,19 @@ async fn perf_line_limit_clips_a_fan_out() {
     )
     .await;
     let mut expected = grid.expected_lines();
-    assert_eq!(expected.len(), 300);
-    expected.truncate(256);
-    assert_eq!(perf.results.len(), 256);
+    assert_eq!(expected.len(), 80);
+    expected.truncate(64);
+    assert_eq!(perf.results.len(), 64);
     assert_eq!(response_lines(&perf), expected);
 
-    // The first benchmark spent `200`, so `56` of the second's `100` variants are
-    // plotted, and they are the first `56`.
+    // The first benchmark spent `40`, so `24` of the second's `40` variants are
+    // plotted, and they are the first `24`.
     let clipped = perf
         .results
         .iter()
         .filter(|result| result.benchmark.uuid == grid.benchmarks[1].0)
         .count();
-    assert_eq!(clipped, 56);
+    assert_eq!(clipped, 24);
 }
 
 #[tokio::test]
@@ -1700,8 +1700,8 @@ async fn perf_line_limit_refunds_empty_permutations() {
     let server = perf_server().await;
     let (user, project_slug, mut grid) = empty_grid_project(&server, "refund", 3, 1, 1, 1).await;
     // Reported on the last branch only, so the two permutations before it hold
-    // nothing.
-    for size in 0..99 {
+    // nothing and the one line per variant spends the whole budget.
+    for size in 0..63 {
         grid.add_variant(&server, 0, &format!(r#"{{"size_mb": {size}}}"#));
     }
     grid.report(&server, 2, 0);
@@ -1713,17 +1713,16 @@ async fn perf_line_limit_refunds_empty_permutations() {
     )
     .await;
     let expected = grid.expected_lines();
-    assert_eq!(expected.len(), 100, "one line per variant, on one branch");
-    assert_eq!(perf.results.len(), 100);
+    assert_eq!(expected.len(), 64, "one line per variant, on one branch");
+    assert_eq!(perf.results.len(), 64);
     assert_eq!(response_lines(&perf), expected);
 }
 
 #[tokio::test]
 async fn perf_line_limit_bounds_the_permutations_queried() {
     let server = perf_server().await;
-    let (user, project_slug, mut grid) =
-        empty_grid_project(&server, "workbound", 5, 1, 1, 64).await;
-    // `192` permutations that hold nothing, leaving `64` of the `256` for the
+    let (user, project_slug, mut grid) = empty_grid_project(&server, "workbound", 5, 1, 2, 8).await;
+    // `48` permutations that hold nothing, leaving `16` of the `64` for the
     // branches that do.
     grid.report(&server, 3, 0);
     grid.report(&server, 4, 0);
@@ -1735,9 +1734,9 @@ async fn perf_line_limit_bounds_the_permutations_queried() {
     )
     .await;
     let mut expected = grid.expected_lines();
-    assert_eq!(expected.len(), 128, "the two branches that reported");
-    expected.truncate(64);
-    assert_eq!(perf.results.len(), 64);
+    assert_eq!(expected.len(), 32, "the two branches that reported");
+    expected.truncate(16);
+    assert_eq!(perf.results.len(), 16);
     assert_eq!(response_lines(&perf), expected);
 }
 
@@ -1746,15 +1745,15 @@ async fn perf_truncates_the_benchmarks_list() {
     let server = perf_server().await;
     let (user, project_slug, grid) = grid_project(&server, "benchmarklist", 1, 1, 8, 1).await;
 
-    // `60` benchmarks that do not exist, then the first `4` that do, then the
-    // last `4` past the `64`th entry.
+    // `4` benchmarks that do not exist, then the first `4` that do, then the
+    // last `4` past the `8`th entry.
     let mut query = grid.query();
     let mut benchmarks = std::iter::repeat_with(BenchmarkUuid::new)
-        .take(60)
+        .take(4)
         .collect::<Vec<_>>();
     benchmarks.extend(grid.benchmarks.iter().map(|(uuid, _)| *uuid));
     query.benchmarks = benchmarks;
-    assert_eq!(query.benchmarks.len(), 68);
+    assert_eq!(query.benchmarks.len(), 12);
 
     let perf = get_perf(&server, &user.token, &perf_query_url(&project_slug, &query)).await;
     let plotted = perf
@@ -1769,14 +1768,14 @@ async fn perf_truncates_the_benchmarks_list() {
             .take(4)
             .map(|(uuid, _)| *uuid)
             .collect::<Vec<_>>(),
-        "the four benchmarks inside the first sixty four entries"
+        "the four benchmarks inside the first eight entries"
     );
 }
 
 #[tokio::test]
 async fn perf_truncates_the_measures_list() {
     let server = perf_server().await;
-    let (user, project_slug, grid) = grid_project(&server, "measurelist", 1, 1, 1, 70).await;
+    let (user, project_slug, grid) = grid_project(&server, "measurelist", 1, 1, 1, 10).await;
 
     let perf = get_perf(
         &server,
@@ -1785,8 +1784,8 @@ async fn perf_truncates_the_measures_list() {
     )
     .await;
     let mut expected = grid.expected_lines();
-    assert_eq!(expected.len(), 70);
-    expected.truncate(64);
+    assert_eq!(expected.len(), 10);
+    expected.truncate(8);
     assert_eq!(response_lines(&perf), expected);
 }
 
@@ -3310,7 +3309,7 @@ fn perf_query_url(project_slug: &str, query: &JsonPerfQuery) -> String {
 fn fixture_query(
     data: &PerfTestData,
     benchmarks: Vec<BenchmarkUuid>,
-    parameters: &[&str],
+    parameters: Option<&[&str]>,
 ) -> JsonPerfQuery {
     JsonPerfQuery {
         branches: vec![data.branch_uuid],
@@ -3318,10 +3317,12 @@ fn fixture_query(
         testbeds: vec![data.testbed_uuid],
         specs: Vec::new(),
         benchmarks,
-        parameters: parameters
-            .iter()
-            .map(|parameters| parameters.parse().expect("parse parameters"))
-            .collect(),
+        parameters: parameters.map(|parameters| {
+            parameters
+                .iter()
+                .map(|parameters| parameters.parse().expect("parse parameters"))
+                .collect()
+        }),
         measures: vec![data.measure_uuid],
         start_time: None,
         end_time: None,
@@ -3383,7 +3384,7 @@ async fn perf_fans_out_one_line_per_variant() {
     let sixteen = create_variant(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
     let thirty_two = create_variant(&server, &data, data.benchmark_id, r#"{"size_mb": 32}"#, 2.0);
 
-    let query = fixture_query(&data, vec![data.benchmark_uuid], &[]);
+    let query = fixture_query(&data, vec![data.benchmark_uuid], None);
     let perf = get_perf(
         &server,
         &user.token,
@@ -3455,7 +3456,7 @@ async fn perf_parameters_filter_is_an_or_of_ands() {
     let query = fixture_query(
         &data,
         vec![data.benchmark_uuid],
-        &[r#"{"op": "read"}"#, r#"{"op": "write", "size_mb": 32}"#],
+        Some(&[r#"{"op": "read"}"#, r#"{"op": "write", "size_mb": 32}"#]),
     );
     let perf = get_perf(
         &server,
@@ -3475,7 +3476,7 @@ async fn perf_parameters_filter_is_an_or_of_ands() {
     );
 
     // The empty element is a subset of every variant's parameters, so it matches them all.
-    let query = fixture_query(&data, vec![data.benchmark_uuid], &["{}"]);
+    let query = fixture_query(&data, vec![data.benchmark_uuid], Some(&["{}"]));
     let perf = get_perf(
         &server,
         &user.token,
@@ -3510,7 +3511,7 @@ async fn perf_parameters_filter_matching_nothing_returns_no_lines() {
     let query = fixture_query(
         &data,
         vec![data.benchmark_uuid, sibling_uuid],
-        &[r#"{"op": "write"}"#],
+        Some(&[r#"{"op": "write"}"#]),
     );
     let perf = get_perf(
         &server,
@@ -3529,7 +3530,7 @@ async fn perf_parameters_filter_matching_nothing_returns_no_lines() {
     let query = fixture_query(
         &data,
         vec![data.benchmark_uuid, sibling_uuid],
-        &[r#"{"op": "trim"}"#],
+        Some(&[r#"{"op": "trim"}"#]),
     );
     let perf = get_perf(
         &server,
@@ -3624,6 +3625,120 @@ async fn perf_parameters_filter_empty_value_is_no_filter() {
     assert_eq!(perf.results.len(), 2);
 }
 
+/// The fixture's perf path, filtered on parameters blobs spelled exactly as given.
+fn raw_parameters_url(project_slug: &str, data: &PerfTestData, blobs: &[&str]) -> String {
+    format!(
+        "{}&parameters={}",
+        build_perf_url(
+            project_slug,
+            &[data.branch_uuid],
+            &[data.testbed_uuid],
+            &[data.benchmark_uuid],
+            &[data.measure_uuid],
+            "",
+        ),
+        raw_parameters_query(blobs)
+    )
+}
+
+/// A parameters entry with one key more than any variant may carry.
+fn too_many_keys() -> String {
+    let keys = (0..=MAX_PARAMETER_KEYS)
+        .map(|key| format!(r#""k{key}":{key}"#))
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("{{{keys}}}")
+}
+
+#[tokio::test]
+async fn perf_parameters_filter_drops_an_entry_with_too_many_keys() {
+    let server = perf_server().await;
+    let user = server
+        .signup("Test User", "perffilterkeys@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf Filter Keys Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Filter Keys Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+    create_variant(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
+    create_variant(&server, &data, data.benchmark_id, r#"{"size_mb": 32}"#, 2.0);
+
+    let url = raw_parameters_url(
+        project.slug.as_ref(),
+        &data,
+        &[&too_many_keys(), r#"{"size_mb":16}"#],
+    );
+    let perf = get_perf(&server, &user.token, &url).await;
+    assert_eq!(line_parameters(&perf), vec![r#"{"size_mb":16}"#.to_owned()]);
+}
+
+// A filter was given, so once every entry of it is dropped there is nothing left
+// to match, rather than no filter at all.
+#[tokio::test]
+async fn perf_parameters_filter_with_every_entry_dropped_returns_no_lines() {
+    let server = perf_server().await;
+    let user = server
+        .signup("Test User", "perffilterdropped@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf Filter Dropped Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Filter Dropped Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+    create_variant(&server, &data, data.benchmark_id, r#"{"size_mb": 16}"#, 1.0);
+
+    let unfiltered = raw_parameters_url(project.slug.as_ref(), &data, &[]);
+    let perf = get_perf(&server, &user.token, &unfiltered).await;
+    assert_eq!(perf.results.len(), 2, "every variant has a line to plot");
+
+    let url = raw_parameters_url(
+        project.slug.as_ref(),
+        &data,
+        &[&too_many_keys(), r#"{"size_mb":[16]}"#, r#"{"":16}"#],
+    );
+    let perf = get_perf(&server, &user.token, &url).await;
+    assert!(perf.results.is_empty(), "{:?}", line_parameters(&perf));
+}
+
+#[tokio::test]
+async fn perf_parameters_filter_with_a_dead_entry_filters_as_the_live_entry_alone() {
+    let server = perf_server().await;
+    let user = server
+        .signup("Test User", "perffiltermixed@example.com")
+        .await;
+    let org = server.create_org(&user, "Perf Filter Mixed Org").await;
+    let project = server
+        .create_project(&user, &org, "Perf Filter Mixed Project")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let data = create_perf_data(&server, project_id);
+    create_variant(&server, &data, data.benchmark_id, r#"{"op": "read"}"#, 1.0);
+    create_variant(&server, &data, data.benchmark_id, r#"{"op": "write"}"#, 2.0);
+
+    let live = r#"{"op":"read"}"#;
+    let alone = get_perf(
+        &server,
+        &user.token,
+        &raw_parameters_url(project.slug.as_ref(), &data, &[live]),
+    )
+    .await;
+    assert_eq!(line_parameters(&alone), vec![live.to_owned()]);
+
+    let mixed = get_perf(
+        &server,
+        &user.token,
+        &raw_parameters_url(project.slug.as_ref(), &data, &[live, r#"{"op":["write"]}"#]),
+    )
+    .await;
+    assert_eq!(line_parameters(&mixed), line_parameters(&alone));
+}
+
 // =============================================================================
 // Section: The metrics map
 // =============================================================================
@@ -3657,7 +3772,7 @@ async fn perf_metrics_map_carries_every_metric() {
     let (_, boundary_id) = create_threshold_and_boundary(&server, &data, project_id);
     let alert_uuid = create_alert(&server, boundary_id);
 
-    let query = fixture_query(&data, vec![data.benchmark_uuid], &[]);
+    let query = fixture_query(&data, vec![data.benchmark_uuid], None);
     let perf = get_perf(
         &server,
         &user.token,
@@ -3887,7 +4002,7 @@ async fn perf_point_without_a_value_name_keeps_its_line() {
         99.5,
     );
 
-    let query = fixture_query(&data, vec![data.benchmark_uuid], &[]);
+    let query = fixture_query(&data, vec![data.benchmark_uuid], None);
     let perf = get_perf(
         &server,
         &user.token,
@@ -3973,7 +4088,7 @@ fn grid_value(
     measure: usize,
 ) -> f64 {
     let cell = 10_000 * branch + 1_000 * testbed + 100 * benchmark + 10 * variant + measure;
-    f64::from(u16::try_from(cell).expect("the grid cell fits"))
+    f64::from(u32::try_from(cell).expect("the grid cell fits"))
 }
 
 impl PerfGrid {
@@ -4118,7 +4233,7 @@ impl PerfGrid {
             testbeds: self.testbeds.iter().map(|(uuid, _)| *uuid).collect(),
             specs: Vec::new(),
             benchmarks: self.benchmarks.iter().map(|(uuid, _)| *uuid).collect(),
-            parameters: Vec::new(),
+            parameters: None,
             measures: self.measures.iter().map(|(uuid, _)| *uuid).collect(),
             start_time: None,
             end_time: None,
@@ -4937,7 +5052,7 @@ async fn perf_img_parameters_filter_plots_the_queried_variants() {
     let filtered = fixture_query(
         &data,
         vec![data.benchmark_uuid],
-        &[r#"{"size_mb": 16}"#, r#"{"size_mb": 32}"#],
+        Some(&[r#"{"size_mb": 16}"#, r#"{"size_mb": 32}"#]),
     );
     let perf = get_perf(
         &server,
@@ -4968,7 +5083,7 @@ async fn perf_img_parameters_filter_plots_the_queried_variants() {
     assert_eq!(jpeg, plotted, "the image plots the query's own lines");
 
     // Without the filter the empty variant is a third line, so the image differs.
-    let unfiltered = fixture_query(&data, vec![data.benchmark_uuid], &[]);
+    let unfiltered = fixture_query(&data, vec![data.benchmark_uuid], None);
     let all_jpeg = get_perf_img(
         &server,
         &user.token,

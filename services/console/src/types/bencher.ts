@@ -1150,8 +1150,11 @@ export interface JsonPerfQuery {
 	testbeds: Uuid[];
 	specs: Uuid[];
 	benchmarks: Uuid[];
-	/** The parameters filter, OR across its elements. Empty matches every variant. */
-	parameters: Record<string, string | number | boolean>[];
+	/**
+	 * The parameters filter, OR across its elements. Absent matches every variant,
+	 * and an empty list, which has no query string form, matches none.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
 	measures: Uuid[];
 	start_time?: string;
 	end_time?: string;

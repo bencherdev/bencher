@@ -31,7 +31,7 @@ crate::typed_uuid::typed_uuid!(ReportBenchmarkUuid);
 
 /// Each dimension list is truncated to this as the query is read, so the product
 /// of the lists is bounded before anything is looked up.
-pub const MAX_DIMENSION_ENTRIES: usize = 64;
+pub const MAX_DIMENSION_ENTRIES: usize = 8;
 
 /// `JsonPerfQueryParams` is the actual query parameters accepted by the server.
 /// All query parameter values are therefore scalar values.
@@ -42,28 +42,30 @@ pub const MAX_DIMENSION_ENTRIES: usize = 64;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonPerfQueryParams {
     /// A comma separated list of branch UUIDs to query.
-    /// Only the first 64 branches are queried.
+    /// Only the first 8 branches are queried.
     pub branches: String,
     /// An optional comma separated list of branch head UUIDs.
     /// To not specify a particular branch head leave an empty entry in the list.
     pub heads: Option<String>,
     /// A comma separated list of testbed UUIDs to query.
-    /// Only the first 64 testbeds are queried.
+    /// Only the first 8 testbeds are queried.
     pub testbeds: String,
     /// An optional comma separated list of testbed spec UUIDs.
     /// To not specify a particular testbed spec leave an empty entry in the list.
     pub specs: Option<String>,
     /// A comma separated list of benchmark UUIDs to query.
-    /// Only the first 64 benchmarks are queried.
+    /// Only the first 8 benchmarks are queried.
     pub benchmarks: String,
     /// An optional comma separated list of URL encoded parameters to filter on.
     /// A variant is queried when at least one of them is a subset of its
     /// parameters: every key the filter names, with the same value.
     /// Leaving this off queries every variant.
-    /// Only the first 64 are queried.
+    /// Only the first 8 are read, and of those, any that is not a valid parameter set
+    /// is dropped, since no variant could match it.
+    /// When every entry is dropped, no variant is queried.
     pub parameters: Option<String>,
     /// A comma separated list of measure UUIDs to query.
-    /// Only the first 64 measures are queried.
+    /// Only the first 8 measures are queried.
     pub measures: String,
     /// Search for metrics after the given date time in milliseconds.
     /// Defaults to four weeks before the end time,
@@ -80,28 +82,30 @@ pub struct JsonPerfImgQueryParams {
     /// If not provided, the project name will be used.
     pub title: Option<String>,
     /// A comma separated list of branch UUIDs to query.
-    /// Only the first 64 branches are queried.
+    /// Only the first 8 branches are queried.
     pub branches: String,
     /// An optional comma separated list of branch head UUIDs.
     /// To not specify a particular branch head leave an empty entry in the list.
     pub heads: Option<String>,
     /// A comma separated list of testbed UUIDs to query.
-    /// Only the first 64 testbeds are queried.
+    /// Only the first 8 testbeds are queried.
     pub testbeds: String,
     /// An optional comma separated list of testbed spec UUIDs.
     /// To not specify a particular testbed spec leave an empty entry in the list.
     pub specs: Option<String>,
     /// A comma separated list of benchmark UUIDs to query.
-    /// Only the first 64 benchmarks are queried.
+    /// Only the first 8 benchmarks are queried.
     pub benchmarks: String,
     /// An optional comma separated list of URL encoded parameters to filter on.
     /// A variant is queried when at least one of them is a subset of its
     /// parameters: every key the filter names, with the same value.
     /// Leaving this off queries every variant.
-    /// Only the first 64 are queried.
+    /// Only the first 8 are read, and of those, any that is not a valid parameter set
+    /// is dropped, since no variant could match it.
+    /// When every entry is dropped, no variant is queried.
     pub parameters: Option<String>,
     /// A comma separated list of measure UUIDs to query.
-    /// Only the first 64 measures are queried.
+    /// Only the first 8 measures are queried.
     pub measures: String,
     /// Search for metrics after the given date time in milliseconds.
     /// Defaults to four weeks before the end time,
@@ -150,8 +154,9 @@ pub struct JsonPerfQuery {
     #[cfg(feature = "plus")]
     pub specs: Vec<Option<SpecUuid>>,
     pub benchmarks: Vec<BenchmarkUuid>,
-    /// The parameters filter, OR across its elements. Empty matches every variant.
-    pub parameters: Vec<ParameterSet>,
+    /// The parameters filter, OR across its elements. Absent matches every variant,
+    /// and an empty list, which has no query string form, matches none.
+    pub parameters: Option<Vec<ParameterSet>>,
     pub measures: Vec<MeasureUuid>,
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
@@ -209,11 +214,20 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
         let _specs = specs;
 
         // An empty string is not a list of one empty element, it is no filter.
-        let mut parameters = match parameters.as_deref() {
-            Some(parameters) if !parameters.is_empty() => from_urlencoded_list(parameters)?,
-            _ => Vec::new(),
+        let parameters = if let Some(parameters) = parameters.as_deref()
+            && !parameters.is_empty()
+        {
+            let mut entries: Vec<String> = from_urlencoded_list(parameters)?;
+            entries.truncate(MAX_DIMENSION_ENTRIES);
+            Some(
+                entries
+                    .iter()
+                    .filter_map(|entry| entry.parse().ok())
+                    .collect(),
+            )
+        } else {
+            None
         };
-        parameters.truncate(MAX_DIMENSION_ENTRIES);
 
         Ok(Self {
             branches,
@@ -352,11 +366,10 @@ impl JsonPerfQuery {
     /// Parameters spell commas, so the elements are encoded with the
     /// separator escaped rather than left literal the way a UUID may be.
     pub fn parameters(&self) -> Option<String> {
-        if self.parameters.is_empty() {
-            None
-        } else {
-            Some(to_urlencoded_element_list(&self.parameters))
-        }
+        self.parameters
+            .as_deref()
+            .filter(|parameters| !parameters.is_empty())
+            .map(to_urlencoded_element_list)
     }
 
     pub fn measures(&self) -> String {
@@ -525,7 +538,32 @@ mod tests {
         let query =
             JsonPerfQuery::try_from(query_params(parameters)).expect("Failed to read the params");
 
-        assert_eq!(query.parameters.len(), MAX_DIMENSION_ENTRIES);
+        assert_eq!(
+            query.parameters.map(|p| p.len()),
+            Some(MAX_DIMENSION_ENTRIES)
+        );
+    }
+
+    // A dead entry inside the cap still spends its place, so a live entry past the
+    // cap is never read.
+    #[test]
+    fn truncates_the_parameters_list_before_dropping_dead_entries() {
+        let parameters = std::iter::once(r#"{"n":0}"#)
+            .chain(std::iter::repeat_n(
+                r#"{"n":[0]}"#,
+                MAX_DIMENSION_ENTRIES - 1,
+            ))
+            .chain(std::iter::once(r#"{"n":1}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+
+        let query =
+            JsonPerfQuery::try_from(query_params(parameters)).expect("Failed to read the params");
+
+        assert_eq!(
+            query.parameters,
+            Some(vec![r#"{"n":0}"#.parse().expect("Failed to parse")])
+        );
     }
 }
 
