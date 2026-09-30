@@ -27,7 +27,7 @@ use crate::{
     model::{
         organization::{OrganizationId, plan::PlanKind},
         project::{
-            QueryProject,
+            ProjectId, QueryProject,
             report::{QueryReport, ReportId},
         },
         runner::{InsertJobCallback, QueryJobCallbackView, QueryRunner, RunnerId, SourceIp},
@@ -48,8 +48,9 @@ crate::macros::typed_id::typed_id!(JobId);
 pub struct QueryJob {
     pub id: JobId,
     pub uuid: JobUuid,
-    pub report_id: ReportId,
     pub organization_id: OrganizationId,
+    pub project_id: ProjectId,
+    pub report_id: ReportId,
     pub source_ip: SourceIp,
     pub spec_id: SpecId,
     pub config: JsonJobConfig,
@@ -295,8 +296,9 @@ impl QueryJob {
 #[diesel(table_name = job_table)]
 pub struct InsertJob {
     pub uuid: JobUuid,
-    pub report_id: ReportId,
     pub organization_id: OrganizationId,
+    pub project_id: ProjectId,
+    pub report_id: ReportId,
     pub source_ip: SourceIp,
     pub spec_id: SpecId,
     pub config: JsonJobConfig,
@@ -314,8 +316,9 @@ impl InsertJob {
     )]
     fn new(
         uuid: JobUuid,
-        report_id: ReportId,
         organization_id: OrganizationId,
+        project_id: ProjectId,
+        report_id: ReportId,
         source_ip: SourceIp,
         spec_id: SpecId,
         config: JsonJobConfig,
@@ -325,8 +328,9 @@ impl InsertJob {
     ) -> Self {
         Self {
             uuid,
-            report_id,
             organization_id,
+            project_id,
+            report_id,
             source_ip,
             spec_id,
             config,
@@ -347,6 +351,7 @@ impl InsertJob {
 pub struct PendingInsertJob {
     uuid: JobUuid,
     organization_id: OrganizationId,
+    project_id: ProjectId,
     source_ip: SourceIp,
     spec_id: SpecId,
     config: JsonJobConfig,
@@ -435,6 +440,7 @@ impl PendingInsertJob {
         Ok(Self {
             uuid,
             organization_id: query_project.organization_id,
+            project_id: query_project.id,
             source_ip,
             spec_id,
             config,
@@ -465,6 +471,7 @@ impl PendingInsertJob {
         let Self {
             uuid,
             organization_id,
+            project_id,
             source_ip,
             spec_id,
             config,
@@ -474,8 +481,9 @@ impl PendingInsertJob {
         } = self;
         let insert_job = InsertJob::new(
             uuid,
-            report_id,
             organization_id,
+            project_id,
+            report_id,
             source_ip,
             spec_id,
             config,
@@ -1016,6 +1024,7 @@ mod tests {
             let pending_job = PendingInsertJob {
                 uuid,
                 organization_id: fixture.organization_id,
+                project_id: fixture.project_id,
                 source_ip: SourceIp::new(std::net::Ipv4Addr::LOCALHOST.into()),
                 spec_id: fixture.spec_id,
                 config: config.clone(),
@@ -1044,6 +1053,233 @@ mod tests {
                 .unwrap(),
             2,
             "one row per callback"
+        );
+    }
+
+    /// Revert every migration down to and including the job project migration, so the
+    /// migrations above it are reverted first and `run_pending_migrations` restores them all.
+    fn revert_to_job_project_migration(conn: &mut DbConnection) {
+        use diesel_migrations::MigrationHarness as _;
+
+        const JOB_PROJECT_MIGRATION: &str = "20260927130000";
+
+        loop {
+            let version = conn
+                .revert_last_migration(crate::MIGRATIONS)
+                .expect("Failed to revert a migration");
+            if version.to_string() == JOB_PROJECT_MIGRATION {
+                break;
+            }
+        }
+    }
+
+    /// Revert to before the job project migration, run `between`, then run every migration again.
+    fn around_job_project_migration(
+        conn: &mut DbConnection,
+        between: impl FnOnce(&mut DbConnection),
+    ) {
+        use diesel::connection::SimpleConnection as _;
+        use diesel_migrations::MigrationHarness as _;
+
+        // Foreign keys cannot be toggled inside a transaction, and Diesel runs each
+        // migration in one, so they are disabled around the revert and re-apply.
+        conn.batch_execute("PRAGMA foreign_keys = OFF")
+            .expect("Failed to disable foreign keys");
+        revert_to_job_project_migration(conn);
+        between(conn);
+        conn.run_pending_migrations(crate::MIGRATIONS)
+            .expect("Failed to re-apply the migrations");
+        conn.batch_execute("PRAGMA foreign_keys = ON")
+            .expect("Failed to enable foreign keys");
+    }
+
+    /// A second project in the fixture's organization with one report, so that its ID
+    /// differs from the organization's and the report's differs from the job's.
+    fn create_second_project_report(conn: &mut DbConnection) -> (ProjectId, ReportId) {
+        use crate::test_util::{create_report, create_testbed};
+
+        diesel::sql_query(
+            "INSERT INTO project (uuid, organization_id, name, slug, visibility, bmf_version, created, modified)
+                VALUES ('00000000-0000-0000-0000-000000000060', 1, 'Second', 'second', 0, 0, 0, 0)",
+        )
+        .execute(conn)
+        .expect("Failed to insert the second project");
+        let project_id: ProjectId = diesel::select(last_insert_rowid())
+            .get_result(conn)
+            .expect("Failed to get the second project's ID");
+        let branch = create_branch_with_head(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000061",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000062",
+        );
+        let testbed_id = create_testbed(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000063",
+            "localhost",
+            "localhost",
+        );
+        let version_id = create_version(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000064",
+            0,
+            None,
+        );
+        create_head_version(conn, branch.head_id, version_id);
+        let report_id = create_report(
+            conn,
+            "00000000-0000-0000-0000-000000000065",
+            project_id,
+            branch.head_id,
+            version_id,
+            testbed_id,
+        );
+        (project_id, report_id)
+    }
+
+    /// Another report of the same project, head, version, and testbed as `report_id`.
+    fn create_sibling_report(conn: &mut DbConnection, report_id: ReportId) -> ReportId {
+        diesel::sql_query(
+            "INSERT INTO report (uuid, project_id, head_id, version_id, testbed_id, adapter,
+                    start_time, end_time, created)
+                SELECT lower(hex(randomblob(16))), project_id, head_id, version_id, testbed_id,
+                    adapter, start_time, end_time, created
+                FROM report WHERE id = ?",
+        )
+        .bind::<diesel::sql_types::Integer, _>(report_id)
+        .execute(conn)
+        .expect("Failed to insert a sibling report");
+        diesel::select(last_insert_rowid())
+            .get_result(conn)
+            .expect("Failed to get the sibling report's ID")
+    }
+
+    /// Every job's ID, report, project, and status, in ID order.
+    fn job_rows(conn: &mut DbConnection) -> Vec<(JobId, ReportId, ProjectId, JobStatus)> {
+        schema::job::table
+            .order(schema::job::id.asc())
+            .select((
+                schema::job::id,
+                schema::job::report_id,
+                schema::job::project_id,
+                schema::job::status,
+            ))
+            .load(conn)
+            .expect("Failed to load jobs")
+    }
+
+    /// Every column of every job, in ID order, as one JSON array per row.
+    fn job_rows_whole(conn: &mut DbConnection) -> Vec<String> {
+        #[derive(diesel::QueryableByName)]
+        struct Row {
+            #[diesel(sql_type = diesel::sql_types::Text)]
+            row: String,
+        }
+
+        diesel::sql_query(
+            "SELECT json_array(id, uuid, organization_id, project_id, report_id, source_ip, spec_id,
+                config, timeout, priority, status, runner_id, claimed, started, completed,
+                last_heartbeat, last_billed_minute, created, modified) AS row
+                FROM job ORDER BY id",
+        )
+        .load::<Row>(conn)
+        .expect("Failed to load jobs")
+        .into_iter()
+        .map(|row| row.row)
+        .collect()
+    }
+
+    #[test]
+    fn migration_backfills_each_jobs_project_from_its_report() {
+        use crate::test_util::create_job_fixture;
+
+        let mut conn = setup_test_db();
+        let fixture = create_job_fixture(&mut conn);
+        let (second_project_id, second_project_report_id) = create_second_project_report(&mut conn);
+        // Siblings, so that no job's report ID matches its project's ID or its own ID.
+        let second_report_id = create_sibling_report(&mut conn, second_project_report_id);
+        let first_report_id = create_sibling_report(&mut conn, fixture.report_id);
+
+        around_job_project_migration(&mut conn, |conn| {
+            // The job table as it stood before the migration, without `project_id`.
+            for report_id in [second_report_id, first_report_id] {
+                diesel::sql_query(
+                    "INSERT INTO job (uuid, report_id, organization_id, source_ip, spec_id, config, created, modified)
+                        VALUES (lower(hex(randomblob(16))), ?, ?, '127.0.0.1', ?, '{}', 0, 0)",
+                )
+                .bind::<diesel::sql_types::Integer, _>(report_id)
+                .bind::<diesel::sql_types::Integer, _>(fixture.organization_id)
+                .bind::<diesel::sql_types::Integer, _>(fixture.spec_id)
+                .execute(conn)
+                .expect("Failed to insert a job without a project");
+            }
+        });
+
+        let expected = vec![
+            (second_report_id, second_project_id),
+            (first_report_id, fixture.project_id),
+        ];
+        let rows = job_rows(&mut conn);
+        for ((job_id, _, _, _), (report_id, project_id)) in rows.iter().zip(&expected) {
+            let report_id = i32::from(*report_id);
+            assert_ne!(
+                report_id,
+                i32::from(*project_id),
+                "a report's ID is not its project's"
+            );
+            assert_ne!(
+                report_id,
+                i32::from(*job_id),
+                "a report's ID is not its job's"
+            );
+        }
+        let projects: Vec<(ReportId, ProjectId)> = rows
+            .into_iter()
+            .map(|(_, report_id, project_id, _)| (report_id, project_id))
+            .collect();
+        assert_eq!(projects, expected, "every job carries its report's project");
+    }
+
+    #[test]
+    fn migration_down_and_up_keeps_every_job() {
+        use crate::test_util::{JobFixture, create_job, create_job_fixture};
+
+        let mut conn = setup_test_db();
+        let fixture = create_job_fixture(&mut conn);
+        // A report whose ID is neither its project's nor either job's.
+        create_sibling_report(&mut conn, fixture.report_id);
+        let report_id = create_sibling_report(&mut conn, fixture.report_id);
+        let fixture = JobFixture {
+            report_id,
+            ..fixture
+        };
+        create_job(&mut conn, fixture, JobStatus::Pending);
+        create_job(&mut conn, fixture, JobStatus::Running);
+        // Every nullable column holds a value on one of the jobs.
+        diesel::sql_query(
+            "INSERT INTO runner (uuid, name, slug, key_hash, created, modified)
+                VALUES ('00000000-0000-0000-0000-000000000070', 'Runner', 'runner', 'hash', 0, 0)",
+        )
+        .execute(&mut conn)
+        .expect("Failed to insert a runner");
+        diesel::sql_query(
+            "UPDATE job SET runner_id = last_insert_rowid(), claimed = 1, started = 2,
+                completed = 3, last_heartbeat = 4, last_billed_minute = 5 WHERE status = 2",
+        )
+        .execute(&mut conn)
+        .expect("Failed to fill the running job");
+        let before = job_rows_whole(&mut conn);
+
+        around_job_project_migration(&mut conn, |_| {});
+
+        assert_eq!(
+            job_rows_whole(&mut conn),
+            before,
+            "down and up keep every column of every job"
         );
     }
 }

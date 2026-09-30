@@ -1901,7 +1901,11 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr};
 
     use bencher_json::{DateTime, Timeout};
-    use bencher_schema::model::{project::report::ReportId, runner::SourceIp, spec::SpecId};
+    use bencher_schema::model::{
+        project::{ProjectId, report::ReportId},
+        runner::SourceIp,
+        spec::SpecId,
+    };
 
     use super::*;
 
@@ -1909,8 +1913,9 @@ mod tests {
         QueryJob {
             id: JobId::try_from_raw(1).unwrap(),
             uuid: JobUuid::default(),
-            report_id: ReportId::try_from_raw(1).unwrap(),
             organization_id: OrganizationId::try_from_raw(1).unwrap(),
+            project_id: ProjectId::try_from_raw(1).unwrap(),
+            report_id: ReportId::try_from_raw(1).unwrap(),
             source_ip: SourceIp::new(IpAddr::V4(Ipv4Addr::LOCALHOST)),
             spec_id: SpecId::try_from_raw(1).unwrap(),
             config: serde_json::from_value(serde_json::json!({

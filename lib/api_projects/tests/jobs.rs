@@ -391,6 +391,7 @@ fn insert_test_job_with_timeout(
         .values((
             schema::job::uuid.eq(&job_uuid),
             schema::job::report_id.eq(report_id),
+            schema::job::project_id.eq(project_id),
             schema::job::organization_id.eq(organization_id),
             schema::job::source_ip.eq("127.0.0.1"),
             schema::job::status.eq(JobStatus::Pending),
@@ -651,6 +652,11 @@ async fn jobs_list_status_filter_with_data() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+        total_count(resp.headers()),
+        1,
+        "the count applies the status filter"
+    );
     let jobs: JsonJobs = resp.json().await.expect("Failed to parse response");
     assert_eq!(jobs.0.len(), 1);
     assert_eq!(jobs.0[0].status, bencher_json::JobStatus::Pending);
@@ -668,6 +674,11 @@ async fn jobs_list_status_filter_with_data() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+        total_count(resp.headers()),
+        1,
+        "the count applies the status filter"
+    );
     let jobs: JsonJobs = resp.json().await.expect("Failed to parse response");
     assert_eq!(jobs.0.len(), 1);
     assert_eq!(jobs.0[0].status, bencher_json::JobStatus::Running);
@@ -734,6 +745,148 @@ async fn jobs_list_ordering_with_data() {
     assert_eq!(jobs.0.len(), 3);
     assert_eq!(jobs.0[0].uuid, job1, "Oldest job should be first (asc)");
     assert_eq!(jobs.0[2].uuid, job3, "Most recent job should be last (asc)");
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn total_count(headers: &http::HeaderMap) -> u64 {
+    headers
+        .get("X-Total-Count")
+        .expect("X-Total-Count header missing")
+        .to_str()
+        .expect("X-Total-Count is not text")
+        .parse()
+        .expect("X-Total-Count is not a number")
+}
+
+/// The job UUIDs of one page of a project's jobs, and the total count.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn list_job_uuids(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    query: &str,
+) -> (Vec<bencher_json::JobUuid>, u64) {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs?{query}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "Failed to list jobs");
+    let total = total_count(resp.headers());
+    let jobs: JsonJobs = resp.json().await.expect("Failed to parse response");
+    (jobs.0.into_iter().map(|job| job.uuid).collect(), total)
+}
+
+// GET /v0/projects/{project}/jobs - jobs created in the same second are ordered by id,
+// newest first by default and oldest first ascending, and pages walk that order
+#[tokio::test]
+async fn jobs_list_same_second_by_id() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "jobtie@example.com").await;
+    let org = server.create_org(&user, "Job Tie Org").await;
+    let project = server.create_project(&user, &org, "Job Tie Project").await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let now = base_timestamp();
+    let earlier = bencher_json::DateTime::try_from(now.timestamp() - 1).unwrap();
+
+    let job0 = insert_test_job(&server, report_id, project.uuid, earlier);
+    let job1 = insert_test_job(&server, report_id, project.uuid, now);
+    let job2 = insert_test_job(&server, report_id, project.uuid, now);
+    let job3 = insert_test_job(&server, report_id, project.uuid, now);
+    let newest_first = vec![job3, job2, job1, job0];
+    let oldest_first = vec![job0, job1, job2, job3];
+
+    let project_slug: &str = project.slug.as_ref();
+    for (direction, expected) in [("desc", &newest_first), ("asc", &oldest_first)] {
+        let (all, total) = list_job_uuids(
+            &server,
+            &user.token,
+            project_slug,
+            &format!("direction={direction}"),
+        )
+        .await;
+        assert_eq!(
+            &all, expected,
+            "{direction}: ties in creation time go by id"
+        );
+        assert_eq!(total, 4);
+
+        let mut paged = Vec::new();
+        for page in 1..=4 {
+            let (uuids, _) = list_job_uuids(
+                &server,
+                &user.token,
+                project_slug,
+                &format!("direction={direction}&per_page=1&page={page}"),
+            )
+            .await;
+            paged.extend(uuids);
+        }
+        assert_eq!(
+            &paged, expected,
+            "{direction}: every job once, in order, across pages"
+        );
+    }
+}
+
+// GET /v0/projects/{project}/jobs - a project lists and counts only its own jobs,
+// even beside another project of the same organization
+#[tokio::test]
+async fn jobs_list_project_isolation() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "jobisolation@example.com").await;
+    let org = server.create_org(&user, "Job Isolation Org").await;
+    let project_a = server.create_project(&user, &org, "Job Isolation A").await;
+    let project_b = server.create_project(&user, &org, "Job Isolation B").await;
+
+    let report_a = create_test_report(&server, get_project_id(&server, project_a.slug.as_ref()));
+    let report_b = create_test_report(&server, get_project_id(&server, project_b.slug.as_ref()));
+    let now = base_timestamp();
+
+    let a1 = insert_test_job(&server, report_a, project_a.uuid, now);
+    let a2 = insert_test_job(&server, report_a, project_a.uuid, now);
+    let b1 = insert_test_job(&server, report_b, project_b.uuid, now);
+
+    let (uuids, total) = list_job_uuids(&server, &user.token, project_a.slug.as_ref(), "").await;
+    let mut expected = vec![a1, a2];
+    expected.sort();
+    let mut uuids = uuids;
+    uuids.sort();
+    assert_eq!(uuids, expected, "only the first project's jobs");
+    assert_eq!(total, 2, "only the first project's jobs are counted");
+
+    let (uuids, total) = list_job_uuids(&server, &user.token, project_b.slug.as_ref(), "").await;
+    assert_eq!(uuids, vec![b1], "only the second project's job");
+    assert_eq!(total, 1, "only the second project's job is counted");
+
+    for (project, status) in [
+        (&project_b, StatusCode::OK),
+        (&project_a, StatusCode::NOT_FOUND),
+    ] {
+        let project_slug: &str = project.slug.as_ref();
+        let resp = server
+            .client
+            .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{b1}")))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(
+            resp.status(),
+            status,
+            "a job is served only under its own project"
+        );
+    }
 }
 
 // GET /v0/projects/{project}/jobs - X-Total-Count with data

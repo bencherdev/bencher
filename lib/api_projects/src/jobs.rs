@@ -1,5 +1,7 @@
 #![cfg(feature = "plus")]
 
+use std::collections::HashMap;
+
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk, TotalCount};
 use bencher_json::{
     JobStatus, JobUuid, JsonDirection, JsonJob, JsonPagination, ProjectResourceId, ReportUuid,
@@ -11,7 +13,7 @@ use bencher_schema::{
     error::{resource_not_found_err, with_auth_hint},
     model::{
         project::QueryProject,
-        runner::{QueryJob, QueryJobCallbackView},
+        runner::{JobId, QueryJob, QueryJobCallbackView},
         user::actor::ApiActor,
     },
     schema,
@@ -113,24 +115,41 @@ pub async fn get_ls_inner(
         api_actor,
     )?;
 
-    let jobs = get_ls_query(&query_project, &pagination_params, &query_params)
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<(QueryJob, ReportUuid, Option<QueryJobCallbackView>)>(actor_conn!(
-            context, api_actor
-        ))
-        .map_err(resource_not_found_err!(
-            Job,
-            (&query_project, &pagination_params, &query_params)
-        ))?;
-
     let json_jobs = actor_conn!(context, api_actor, |conn| {
-        jobs.into_iter()
+        // The page is picked from the project's index alone, so an offset skips index
+        // entries, and only the page's jobs are joined to their report and callback.
+        let page = get_ls_query(&query_project, &pagination_params, &query_params)
+            .offset(pagination_params.offset())
+            .limit(pagination_params.limit())
+            .load::<JobId>(conn)
+            .map_err(resource_not_found_err!(
+                Job,
+                (&query_project, &pagination_params, &query_params)
+            ))?;
+        let mut jobs = schema::job::table
+            .inner_join(schema::report::table)
+            .left_join(schema::job_callback::table)
+            .filter(schema::job::id.eq_any(&page))
+            .select((
+                QueryJob::as_select(),
+                schema::report::uuid,
+                Option::<QueryJobCallbackView>::as_select(),
+            ))
+            .load::<(QueryJob, ReportUuid, Option<QueryJobCallbackView>)>(conn)
+            .map_err(resource_not_found_err!(
+                Job,
+                (&query_project, &pagination_params, &query_params)
+            ))?
+            .into_iter()
+            .map(|row| (row.0.id, row))
+            .collect::<HashMap<_, _>>();
+        page.iter()
+            .filter_map(|job_id| jobs.remove(job_id))
             .map(|(job, report_uuid, callback)| job.into_json(conn, report_uuid, callback))
             .collect::<Result<Vec<_>, _>>()?
     });
 
-    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
+    let total_count = get_ls_count_query(&query_project, &query_params)
         .count()
         .get_result::<i64>(actor_conn!(context, api_actor))
         .map_err(resource_not_found_err!(
@@ -146,46 +165,43 @@ fn get_ls_query<'q>(
     query_project: &'q QueryProject,
     pagination_params: &ProjJobsPagination,
     query_params: &'q ProjJobsQuery,
-) -> BoxedQuery<'q> {
+) -> schema::job::BoxedQuery<'q, diesel::sqlite::Sqlite, diesel::sql_types::Integer> {
     let mut query = schema::job::table
-        .inner_join(schema::report::table)
-        .left_join(schema::job_callback::table)
-        .filter(schema::report::project_id.eq(query_project.id))
-        .select((
-            QueryJob::as_select(),
-            schema::report::uuid,
-            Option::<QueryJobCallbackView>::as_select(),
-        ))
+        .filter(schema::job::project_id.eq(query_project.id))
+        .select(schema::job::id)
         .into_boxed();
 
     if let Some(status) = query_params.status {
         query = query.filter(schema::job::status.eq(status));
     }
 
+    // The id breaks ties in creation time, so paging in either direction is a total order.
     match pagination_params.order() {
         ProjJobsSort::Created => match pagination_params.direction {
-            Some(JsonDirection::Asc) => query.order(schema::job::created.asc()),
-            Some(JsonDirection::Desc) | None => query.order(schema::job::created.desc()),
+            Some(JsonDirection::Asc) => {
+                query.order((schema::job::created.asc(), schema::job::id.asc()))
+            },
+            Some(JsonDirection::Desc) | None => {
+                query.order((schema::job::created.desc(), schema::job::id.desc()))
+            },
         },
     }
 }
 
-// TODO refactor out internal types
-type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
-    'q,
-    (
-        diesel::helper_types::AsSelect<QueryJob, diesel::sqlite::Sqlite>,
-        diesel::helper_types::SqlTypeOf<schema::report::uuid>,
-        diesel::helper_types::AsSelect<Option<QueryJobCallbackView>, diesel::sqlite::Sqlite>,
-    ),
-    diesel::internal::table_macro::FromClause<
-        diesel::helper_types::LeftJoinQuerySource<
-            diesel::helper_types::InnerJoinQuerySource<schema::job::table, schema::report::table>,
-            schema::job_callback::table,
-        >,
-    >,
-    diesel::sqlite::Sqlite,
->;
+/// The count reads `job` alone, so it never visits a report or a callback.
+fn get_ls_count_query<'q>(
+    query_project: &'q QueryProject,
+    query_params: &'q ProjJobsQuery,
+) -> schema::job::BoxedQuery<'q, diesel::sqlite::Sqlite> {
+    let query = schema::job::table
+        .filter(schema::job::project_id.eq(query_project.id))
+        .into_boxed();
+    if let Some(status) = query_params.status {
+        query.filter(schema::job::status.eq(status))
+    } else {
+        query
+    }
+}
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjJobParams {
@@ -256,7 +272,7 @@ pub async fn get_one_inner(
         schema::job::table
             .inner_join(schema::report::table)
             .left_join(schema::job_callback::table)
-            .filter(schema::report::project_id.eq(query_project.id))
+            .filter(schema::job::project_id.eq(query_project.id))
             .filter(schema::job::uuid.eq(job_uuid))
             .select((
                 QueryJob::as_select(),
