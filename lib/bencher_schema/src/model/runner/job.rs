@@ -28,7 +28,7 @@ use crate::{
         organization::{OrganizationId, plan::PlanKind},
         project::{
             ProjectId, QueryProject,
-            report::{QueryReport, ReportId},
+            report::{QueryReport, ReportId, warning::ReportWarnings},
         },
         runner::{InsertJobCallback, QueryJobCallbackView, QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
@@ -186,6 +186,7 @@ impl QueryJob {
                 query_report.adapter,
                 settings,
                 self.config.bmf_version.unwrap_or_default(),
+                ReportWarnings::default(),
                 plan_kind,
                 #[cfg(feature = "otel")]
                 self.priority,

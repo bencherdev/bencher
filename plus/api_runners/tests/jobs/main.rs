@@ -21,7 +21,10 @@ use std::sync::{
 
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::TestServer;
-use bencher_json::{DateTime, JobStatus, JsonJob, PollTimeout, Priority};
+use bencher_json::{
+    DateTime, JobStatus, JsonJob, JsonReport, PollTimeout, Priority, ReportUuid,
+    project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
+};
 use bencher_schema::{
     context::HeartbeatTasks,
     model::runner::{
@@ -2985,6 +2988,81 @@ async fn reprocess_v1_output_at(bmf_version: Option<u8>, label: &str) -> (JobSta
         .get_result(&mut conn)
         .expect("Failed to count metrics");
     (status, metrics)
+}
+
+/// A job's results are processed after its run returns, and what they skip is stored on its report.
+#[tokio::test]
+async fn reprocess_completed_job_stores_its_warnings_on_its_report() {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin", "reprocess-warnings@example.com")
+        .await;
+    let org = server.create_org(&admin, "Reprocess Warnings Org").await;
+    let project = server
+        .create_project(&admin, &org, "Reprocess warnings")
+        .await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid =
+        insert_test_job_with_bmf_version(&server, report_id, project.uuid, spec_id, Some(1));
+    set_job_status(&server, job_uuid, JobStatus::Completed);
+
+    // Ten metric names on one measure, two past the per measure cap of eight.
+    let names = (1..=10)
+        .map(|n| (format!("p{n}"), serde_json::json!(n)))
+        .collect::<serde_json::Map<_, _>>();
+    let results = serde_json::json!({ "bench": [{ "measures": { "latency": names } }] });
+    let output = bencher_json::runner::JsonJobOutput {
+        results: vec![bencher_json::runner::JsonIterationOutput {
+            exit_code: 0,
+            stdout: Some(results.to_string()),
+            stderr: None,
+            output: None,
+        }],
+        error: None,
+    };
+    server
+        .context()
+        .oci_storage()
+        .job_output()
+        .put(project.uuid, job_uuid, &output)
+        .await
+        .expect("Failed to store job output");
+
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    reprocess_completed_jobs(&log, server.context()).await;
+    assert_eq!(get_status(&server, job_uuid), JobStatus::Processed);
+
+    let report_uuid: ReportUuid = schema::report::table
+        .filter(schema::report::id.eq(report_id))
+        .select(schema::report::uuid)
+        .first(&mut server.db_conn())
+        .expect("Failed to load the report uuid");
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/reports/{report_uuid}",
+            project.slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), http::StatusCode::OK);
+    let report: JsonReport = resp.json().await.expect("Failed to parse the report");
+    assert_eq!(
+        report.warnings,
+        Some(vec![JsonReportWarning {
+            resource: ReportWarningResource::Metric,
+            action: ReportWarningAction::Skip,
+            count: 2,
+        }])
+    );
 }
 
 /// A job declared at version 1 parses its v1 output under the contract.

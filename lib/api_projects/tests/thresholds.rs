@@ -12,10 +12,13 @@
 
 use bencher_api_tests::{TestServer, TestUser, helpers::get_project_id};
 #[cfg(feature = "plus")]
-use bencher_json::{JsonReport, JsonReportIterationCounts};
+use bencher_json::JsonReportIterationCounts;
 use bencher_json::{
-    JsonThreshold, JsonThresholds, MetricName, ModelUuid, ThresholdUuid,
-    project::threshold::MAX_ACTIVE_THRESHOLDS,
+    JsonReport, JsonThreshold, JsonThresholds, MetricName, ModelUuid, ThresholdUuid,
+    project::{
+        report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
+        threshold::MAX_ACTIVE_THRESHOLDS,
+    },
 };
 use bencher_schema::{
     model::project::{
@@ -1022,6 +1025,40 @@ async fn a_start_point_clone_past_the_active_cap_copies_what_fits_in_uuid_order(
     assert_eq!(copied, fits);
 }
 
+// A report's start point clone that passes the cap warns of what it skipped on that report, when the
+// report creates the branch and when it resets the branch's head.
+#[tokio::test]
+async fn a_report_whose_start_point_clone_passes_the_active_cap_warns_of_what_it_skipped() {
+    let server = TestServer::new().await;
+    let (user, project_slug) = project_with_thresholds(&server, "capclonewarn", 1).await;
+    insert_active_thresholds(&server, &project_slug, MAX_ACTIVE_THRESHOLDS + 3);
+    // A start point is a version, so the branch needs a report to be cloned from.
+    let (status, body) = post_report(&server, &user, &project_slug, None).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    // The seed and the inserted thresholds are four past the cap.
+    let skipped = Some(vec![JsonReportWarning {
+        resource: ReportWarningResource::Threshold,
+        action: ReportWarningAction::Skip,
+        count: 4,
+    }]);
+    let path = format!("/v0/projects/{project_slug}/reports");
+    for reset in [false, true] {
+        let report = serde_json::json!({
+            "branch": "feature",
+            "start_point": { "branch": "ssize-branch", "clone_thresholds": true, "reset": reset },
+            "testbed": "ssize-testbed",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": ["{\"bench\": {\"latency\": {\"value\": 1.0}}}"],
+        });
+        let (status, body) = send_json(&server, &user, Method::POST, &path, &report).await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+        assert_eq!(report.warnings, skipped, "reset: {reset}");
+    }
+}
+
 // A start point reset clones onto a branch that already has thresholds. What the clone strips
 // makes room under the cap, and a threshold it gives a model back counts toward it in UUID order.
 #[tokio::test]
@@ -1184,6 +1221,37 @@ async fn threshold_ceiling_admits_a_report_whose_creates_reach_it() {
     let (status, body) = post_report(&server, &user, &project_slug, Some(new_thresholds(2))).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     assert_eq!(threshold_count(&server, &user, &project_slug, "").await, 4);
+}
+
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn threshold_ceiling_warns_a_report_whose_start_point_clone_passes_it() {
+    let server = TestServer::new_with_creation_limits(4, 4).await;
+    let (user, project_slug) = project_with_thresholds(&server, "clonewarn", 3).await;
+    // A start point is a version, so the branch needs a report to be cloned from.
+    let (status, body) = post_report(&server, &user, &project_slug, None).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let report = serde_json::json!({
+        "branch": "feature",
+        "start_point": { "branch": "ssize-branch", "clone_thresholds": true },
+        "testbed": "ssize-testbed",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": ["{\"bench\": {\"latency\": {\"value\": 1.0}}}"],
+    });
+    let path = format!("/v0/projects/{project_slug}/reports");
+    let (status, body) = send_json(&server, &user, Method::POST, &path, &report).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+    assert_eq!(
+        report.warnings,
+        Some(vec![JsonReportWarning {
+            resource: ReportWarningResource::Threshold,
+            action: ReportWarningAction::Skip,
+            count: 3,
+        }])
+    );
 }
 
 #[cfg(feature = "plus")]

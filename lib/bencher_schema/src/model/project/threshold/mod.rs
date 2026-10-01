@@ -5,7 +5,10 @@ use std::num::NonZeroU32;
 use bencher_json::{
     BmfVersion, DateTime, MetricName, Model, ParameterFilter, ThresholdUuid,
     project::{
-        report::{JsonReportThresholdEntry, JsonReportThresholdModels, JsonReportThresholds},
+        report::{
+            JsonReportThresholdEntry, JsonReportThresholdModels, JsonReportThresholds,
+            ReportWarningResource,
+        },
         threshold::{JsonThreshold, JsonThresholdModel, MAX_ACTIVE_THRESHOLDS},
     },
 };
@@ -24,6 +27,7 @@ use super::{
     ProjectId, QueryProject,
     branch::{BranchId, QueryBranch, head::HeadId, start_point::StartPoint, version::VersionId},
     measure::{MeasureId, QueryMeasure},
+    report::warning::ReportWarnings,
     testbed::{QueryTestbed, TestbedId},
 };
 use crate::{
@@ -593,6 +597,7 @@ impl InsertThreshold {
         context: &ApiContext,
         query_branch: &QueryBranch,
         branch_start_point: &StartPoint,
+        warnings: &mut ReportWarnings,
     ) -> Result<(), HttpError> {
         let Some(true) = branch_start_point.clone_thresholds else {
             slog::debug!(
@@ -611,9 +616,14 @@ impl InsertThreshold {
         );
 
         // Phase 1: Read current and start point thresholds, pre-compute actions.
-        let (actions, orphans) =
-            Self::compute_start_point_actions(log, context, query_branch, branch_start_point)
-                .await?;
+        let (actions, orphans) = Self::compute_start_point_actions(
+            log,
+            context,
+            query_branch,
+            branch_start_point,
+            warnings,
+        )
+        .await?;
 
         // Phase 2: Batch all writes in a single write lock + transaction.
         let has_writes = actions
@@ -662,6 +672,7 @@ impl InsertThreshold {
         context: &ApiContext,
         query_branch: &QueryBranch,
         branch_start_point: &StartPoint,
+        warnings: &mut ReportWarnings,
     ) -> Result<(Vec<StartPointAction>, Vec<QueryThreshold>), HttpError> {
         let mut current_thresholds = schema::threshold::table
             .filter(schema::threshold::branch_id.eq(query_branch.id))
@@ -746,6 +757,7 @@ impl InsertThreshold {
             active.release(orphan);
         }
 
+        let planned = actions.len();
         actions.retain(|action| match action {
             StartPointAction::Create(dimensions, _) => active.admit(log, dimensions),
             StartPointAction::Update(threshold, _) if threshold.model_id.is_none() => {
@@ -765,6 +777,7 @@ impl InsertThreshold {
                 actions.retain(|action| !matches!(action, StartPointAction::Create(..)));
             }
         }
+        warnings.skip_with_count(ReportWarningResource::Threshold, planned - actions.len());
 
         Ok((actions, orphans))
     }
@@ -782,6 +795,7 @@ impl InsertThreshold {
         branch_id: BranchId,
         testbed_id: TestbedId,
         json_thresholds: Option<JsonReportThresholds>,
+        warnings: &mut ReportWarnings,
     ) -> Result<(), HttpError> {
         let Some(json_thresholds) = json_thresholds else {
             slog::debug!(log, "No thresholds in report");
@@ -862,6 +876,7 @@ impl InsertThreshold {
         }
 
         // Past the cap or the ceiling, a report skips what does not fit and keeps the rest.
+        let planned = actions.len();
         actions.retain(|action| match action {
             ThresholdAction::Create(dimensions, _) => active.admit(log, dimensions),
             ThresholdAction::Update(threshold, _) if threshold.model_id.is_none() => {
@@ -879,6 +894,7 @@ impl InsertThreshold {
                 actions.retain(|action| !matches!(action, ThresholdAction::Create(..)));
             }
         }
+        warnings.skip_with_count(ReportWarningResource::Threshold, planned - actions.len());
 
         // Phase 2: Batch all threshold writes in a single write lock acquisition
         // wrapped in a transaction for atomicity.

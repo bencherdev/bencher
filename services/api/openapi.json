@@ -16968,6 +16968,14 @@
           },
           "uuid": {
             "$ref": "#/components/schemas/ReportUuid"
+          },
+          "warnings": {
+            "nullable": true,
+            "description": "What the report skipped instead of ingesting, omitted when it skipped nothing and from the reports list endpoint.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonReportWarning"
+            }
           }
         },
         "required": [
@@ -17303,6 +17311,28 @@
         "required": [
           "parameters",
           "uuid"
+        ]
+      },
+      "JsonReportWarning": {
+        "description": "How many of one resource a report handled with one action.",
+        "type": "object",
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ReportWarningAction"
+          },
+          "count": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "resource": {
+            "$ref": "#/components/schemas/ReportWarningResource"
+          }
+        },
+        "required": [
+          "action",
+          "count",
+          "resource"
         ]
       },
       "JsonReports": {
@@ -19757,6 +19787,29 @@
       "ReportUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "ReportWarningAction": {
+        "description": "What a report did with the resources a warning counts.",
+        "oneOf": [
+          {
+            "description": "The report did not ingest them.",
+            "type": "string",
+            "enum": [
+              "skip"
+            ]
+          }
+        ]
+      },
+      "ReportWarningResource": {
+        "description": "The resource a report warning counts.",
+        "type": "string",
+        "enum": [
+          "benchmark",
+          "variant",
+          "measure",
+          "metric",
+          "threshold"
+        ]
       },
       "ResourceId": {
         "$ref": "#/components/schemas/Slug"

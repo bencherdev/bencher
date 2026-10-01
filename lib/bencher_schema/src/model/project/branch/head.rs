@@ -23,6 +23,7 @@ use crate::{
     macros::{fn_get::fn_get, sql::last_insert_rowid},
     model::project::{
         ProjectId,
+        report::warning::ReportWarnings,
         threshold::{InsertThreshold, alert::QueryAlert},
     },
     schema::{self, head as head_table},
@@ -184,6 +185,7 @@ impl InsertHead {
         context: &ApiContext,
         query_branch: QueryBranch,
         branch_start_point: Option<&StartPoint>,
+        warnings: &mut ReportWarnings,
     ) -> Result<(QueryBranch, QueryHead), HttpError> {
         // Phase 1: Rate limit (requires await)
         #[cfg(feature = "plus")]
@@ -249,7 +251,8 @@ impl InsertHead {
         slog::debug!(log, "Got updated branch: {query_branch:?}");
 
         if let Some(start_point) = branch_start_point {
-            InsertThreshold::from_start_point(log, context, &query_branch, start_point).await?;
+            InsertThreshold::from_start_point(log, context, &query_branch, start_point, warnings)
+                .await?;
         }
 
         Ok((query_branch, query_head))

@@ -1345,6 +1345,28 @@ export interface JsonReportCounts {
 	alerts: JsonReportAlertsCounts;
 }
 
+/** The resource a report warning counts. */
+export enum ReportWarningResource {
+	Benchmark = "benchmark",
+	Variant = "variant",
+	Measure = "measure",
+	Metric = "metric",
+	Threshold = "threshold",
+}
+
+/** What a report did with the resources a warning counts. */
+export enum ReportWarningAction {
+	/** The report did not ingest them. */
+	Skip = "skip",
+}
+
+/** How many of one resource a report handled with one action. */
+export interface JsonReportWarning {
+	resource: ReportWarningResource;
+	action: ReportWarningAction;
+	count: number;
+}
+
 export interface JsonReport {
 	uuid: Uuid;
 	user?: JsonPubUser;
@@ -1366,6 +1388,11 @@ export interface JsonReport {
 	alerts?: JsonReportAlerts;
 	/** The report counts. */
 	counts?: JsonReportCounts;
+	/**
+	 * What the report skipped instead of ingesting,
+	 * omitted when it skipped nothing and from the reports list endpoint.
+	 */
+	warnings?: JsonReportWarning[];
 	job?: Uuid;
 	created: string;
 }

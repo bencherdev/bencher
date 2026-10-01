@@ -150,7 +150,7 @@ pub async fn get_ls_inner(
         ))?;
 
     let mode = if query_params.expand.unwrap_or_default() {
-        ReportMode::Full
+        ReportMode::Expanded
     } else {
         ReportMode::Collapsed
     };
