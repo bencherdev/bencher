@@ -14132,7 +14132,7 @@
             "description": "The JSON request body. Anywhere inside a string value, `{{ job.uuid }}`, `{{ job.status }}`, `{{ report.uuid }}`, `{{ project.uuid }}`, `{{ project.name }}`, and `{{ project.slug }}` become their values, and a string that is exactly `{{ report }}` becomes the job's report, which a body can send only once. Whitespace inside the braces is optional, and any other name inside them is refused. Keys and every other value are sent as they are. Without a body, the body is the job's report, as the report endpoint returns it."
           },
           "headers": {
-            "description": "Request headers. Names are case-insensitive: send each name once; if one repeats in different case, only one is kept. A header named `Content-Type` or `User-Agent` replaces Bencher's default.",
+            "description": "Request headers. Names are case-insensitive: send each name once; if one repeats in different case, only one is kept. A header named `Content-Type` replaces Bencher's default, and a `User-Agent` follows Bencher's.",
             "type": "object",
             "additionalProperties": {
               "$ref": "#/components/schemas/Secret"
