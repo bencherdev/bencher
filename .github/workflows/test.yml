@@ -17,6 +17,8 @@ on:
         required: true
       BENCHER_API_KEY:
         required: true
+      BENCHER_CALLBACK_TOKEN:
+        required: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -201,6 +203,7 @@ jobs:
     uses: ./.github/workflows/track_benchmarks.yml
     secrets:
       BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+      BENCHER_CALLBACK_TOKEN: ${{ secrets.BENCHER_CALLBACK_TOKEN }}
 
   cargo_udeps:
     name: Cargo Unused Deps
