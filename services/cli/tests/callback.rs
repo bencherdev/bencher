@@ -40,7 +40,7 @@ const CALLBACK: [&str; 6] = [
     "X-Key: key-marker",
 ];
 const ECHO: &str = "Bencher New Report:\n";
-const SKIPPED: &str = "callback skipped: requires a Bencher Plus plan";
+const SKIPPED: &str = "callback skipped: claim this project to send a GitHub Actions dispatch or upgrade to Bencher Plus for custom callbacks";
 const SUBMITTED: &str = "Remote job submitted successfully";
 const JOB_PATH: &str = "/v0/projects/project/jobs/8d2b6c4e-5f3a-4b1c-9e7d-0a1b2c3d4e5f";
 const REPORT_PATH: &str = "/v0/projects/project/reports/4f6d1b2a-3c5e-4d7f-8a9b-0c1d2e3f4a5b";
