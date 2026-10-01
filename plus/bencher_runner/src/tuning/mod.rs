@@ -158,6 +158,9 @@ struct SavedSetting {
 #[cfg(target_os = "linux")]
 pub struct TuningGuard {
     saved: Vec<SavedSetting>,
+    /// Removed rather than reset, because an empty cgroup left carrying a stale
+    /// cpuset is residue nothing else reads.
+    remove_if_empty: Vec<Utf8PathBuf>,
     /// File descriptors held open for the lifetime of the guard
     /// (e.g., the PM `QoS` constraint on `/dev/cpu_dma_latency`).
     /// Dropped after the saved settings are restored.
@@ -174,6 +177,10 @@ impl TuningGuard {
     pub(crate) fn save_restore(&mut self, path: Utf8PathBuf, value: String, label: String) {
         self.saved.push(SavedSetting { path, value, label });
     }
+
+    pub(crate) fn remove_when_empty(&mut self, path: Utf8PathBuf) {
+        self.remove_if_empty.push(path);
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -182,6 +189,23 @@ impl Drop for TuningGuard {
         for setting in self.saved.iter().rev() {
             restore(&setting.path, &setting.value, &setting.label);
         }
+        // After the settings, so a cgroup whose removal fails still has its
+        // values put back.
+        for path in &self.remove_if_empty {
+            remove_empty_cgroup(path);
+        }
+    }
+}
+
+/// Failing is correct here: `rmdir` refuses with `EBUSY` while a task or a
+/// concurrent runner's job still uses the cgroup.
+#[cfg(target_os = "linux")]
+#[expect(clippy::print_stdout, reason = "tuning reports what it unwound")]
+fn remove_empty_cgroup(path: &Utf8Path) {
+    match std::fs::remove_dir(path) {
+        Ok(()) => println!("  Tuning: removed the cgroup {path}"),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {},
+        Err(e) => println!("  Tuning: left the cgroup {path} in place: {e}"),
     }
 }
 
@@ -191,6 +215,7 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
     let mut guard = TuningGuard {
         saved: Vec::new(),
         held_fds: Vec::new(),
+        remove_if_empty: Vec::new(),
     };
 
     if config.disable_aslr {
@@ -638,6 +663,7 @@ mod tests {
             let mut guard = TuningGuard {
                 saved: Vec::new(),
                 held_fds: Vec::new(),
+                remove_if_empty: Vec::new(),
             };
             guard.saved.push(SavedSetting {
                 path: file_path.clone(),
@@ -668,6 +694,7 @@ mod tests {
             let mut guard = TuningGuard {
                 saved: Vec::new(),
                 held_fds: Vec::new(),
+                remove_if_empty: Vec::new(),
             };
             guard.saved.push(SavedSetting {
                 path: path1.clone(),
@@ -691,6 +718,7 @@ mod tests {
         let mut guard = TuningGuard {
             saved: Vec::new(),
             held_fds: Vec::new(),
+            remove_if_empty: Vec::new(),
         };
         write_sysctl(&mut guard, "/nonexistent/path/value", "0", "test");
         assert!(
@@ -711,6 +739,7 @@ mod tests {
         let mut guard = TuningGuard {
             saved: Vec::new(),
             held_fds: Vec::new(),
+            remove_if_empty: Vec::new(),
         };
         write_sysctl(&mut guard, path.to_str().unwrap(), "0", "test");
         assert!(
@@ -750,6 +779,7 @@ mod tests {
         let mut guard = TuningGuard {
             saved: Vec::new(),
             held_fds: Vec::new(),
+            remove_if_empty: Vec::new(),
         };
         write_bracketed_sysctl(&mut guard, path.to_str().unwrap(), "never", "test");
 
@@ -770,6 +800,7 @@ mod tests {
         let mut guard = TuningGuard {
             saved: Vec::new(),
             held_fds: Vec::new(),
+            remove_if_empty: Vec::new(),
         };
         write_bracketed_sysctl(&mut guard, path.to_str().unwrap(), "never", "test");
 
@@ -793,6 +824,7 @@ mod tests {
         let mut guard = TuningGuard {
             saved: Vec::new(),
             held_fds: Vec::new(),
+            remove_if_empty: Vec::new(),
         };
         write_bracketed_sysctl(&mut guard, path.to_str().unwrap(), "never", "test");
 
@@ -812,6 +844,7 @@ mod tests {
         let mut guard = TuningGuard {
             saved: Vec::new(),
             held_fds: Vec::new(),
+            remove_if_empty: Vec::new(),
         };
         write_sysctl(&mut guard, path.to_str().unwrap(), "10", "test");
 

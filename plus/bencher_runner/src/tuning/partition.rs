@@ -71,12 +71,15 @@ impl BencherPartition {
             return PartitionLevel::Member;
         }
 
-        if !self.path.exists()
-            && let Err(e) = fs::create_dir_all(&self.path)
-        {
+        if let Err(e) = fs::create_dir_all(&self.path) {
             eprintln!("Warning: failed to create cgroup {}: {e}", self.path);
             return PartitionLevel::Member;
         }
+
+        // Removed on the way out whoever created it, because clearing
+        // `cpuset.cpus` is refused with `EIO` while a descendant holds a task,
+        // so the restore alone cannot always undo this.
+        guard.remove_when_empty(self.path.clone());
 
         // A partition needs explicit cpus and mems. Mems mirror the
         // root's effective nodes so multi-node NUMA hosts are not forced
@@ -89,10 +92,21 @@ impl BencherPartition {
         ) {
             return PartitionLevel::Member;
         }
+        // An unreadable node set degrades to member rather than guessing one,
+        // which would confine the benchmark's memory on a read that never happened.
+        let mems = match effective_mems(&self.root) {
+            Ok(mems) => mems,
+            Err(e) => {
+                eprintln!(
+                    "Warning: failed to read the cgroup root's effective memory nodes ({e}); no cpuset partition"
+                );
+                return PartitionLevel::Member;
+            },
+        };
         if !save_and_write(
             guard,
             &self.path.join("cpuset.mems"),
-            &effective_mems(&self.root),
+            &mems,
             "bencher cpuset.mems",
         ) {
             return PartitionLevel::Member;

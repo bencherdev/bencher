@@ -33,6 +33,8 @@ pub mod init;
 #[cfg(feature = "plus")]
 pub mod jail;
 #[cfg(all(feature = "plus", target_os = "linux"))]
+pub mod jailer_bin;
+#[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod kernel;
 #[cfg(feature = "plus")]
 mod local;
@@ -44,6 +46,8 @@ mod log_level;
 pub mod metrics;
 #[cfg(feature = "plus")]
 mod run;
+#[cfg(feature = "plus")]
+mod signal;
 #[cfg(feature = "plus")]
 pub mod tuning;
 #[cfg(feature = "plus")]
@@ -60,7 +64,10 @@ pub use config::Config;
 #[cfg(feature = "plus")]
 pub use error::{ConfigError, ExecutionError, JailError, RunnerError};
 #[cfg(feature = "plus")]
-pub use jail::ResourceLimits;
+pub use jail::{
+    DEFAULT_JAIL_GID, DEFAULT_JAIL_UID, DEFAULT_STATE_DIR, HostPreparation, JailUser,
+    check_absolute_state_dir,
+};
 #[cfg(feature = "plus")]
 pub use log_level::SandboxLogLevel;
 #[cfg(feature = "plus")]

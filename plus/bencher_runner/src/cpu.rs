@@ -17,6 +17,20 @@ use std::fs;
 #[cfg(target_os = "linux")]
 use std::io;
 
+#[cfg(target_os = "linux")]
+const ONLINE_CPUS: &str = "/sys/devices/system/cpu/online";
+
+#[cfg(target_os = "linux")]
+#[expect(
+    clippy::print_stderr,
+    reason = "a CPU layout the runner had to guess is announced"
+)]
+fn warn_guessed_layout(reason: &str) {
+    eprintln!(
+        "Warning: {reason}. The CPU layout falls back to a core count, which assumes cores are numbered 0..n; on a host whose online set has gaps the benchmark cores may be wrong."
+    );
+}
+
 /// CPU layout for the runner.
 ///
 /// Partitions available cores into housekeeping (for heartbeat, networking)
@@ -41,11 +55,12 @@ impl CpuLayout {
     #[must_use]
     pub fn detect() -> Self {
         #[cfg(target_os = "linux")]
-        if let Ok(online) = fs::read_to_string("/sys/devices/system/cpu/online")
-            && let Some(ids) = parse_cpu_id_list(&online)
-            && !ids.is_empty()
-        {
-            return Self::with_cpu_ids(ids);
+        match fs::read_to_string(ONLINE_CPUS) {
+            Ok(online) => match parse_cpu_id_list(&online).filter(|ids| !ids.is_empty()) {
+                Some(ids) => return Self::with_cpu_ids(ids),
+                None => warn_guessed_layout(&format!("{ONLINE_CPUS} reads as '{}'", online.trim())),
+            },
+            Err(e) => warn_guessed_layout(&format!("{ONLINE_CPUS} could not be read: {e}")),
         }
 
         Self::with_core_count(Self::available_cores())
@@ -487,6 +502,24 @@ mod tests {
     #[test]
     fn format_cpumask_third_word() {
         assert_eq!(format_cpumask(&[64, 1]), "1,00000000,00000002");
+    }
+
+    #[test]
+    fn two_cores_is_enough_for_isolation() {
+        // The scenario suite runs on two-vCPU runners, so without isolation at
+        // two cores its cgroup placement would silently go unexercised in CI.
+        let layout = CpuLayout::with_cpu_ids(vec![0, 1]);
+
+        assert!(layout.has_isolation());
+        assert_eq!(layout.housekeeping, vec![0]);
+        assert_eq!(layout.benchmark, vec![1]);
+    }
+
+    #[test]
+    fn one_core_offers_no_isolation() {
+        let layout = CpuLayout::with_cpu_ids(vec![0]);
+
+        assert!(!layout.has_isolation());
     }
 
     #[test]

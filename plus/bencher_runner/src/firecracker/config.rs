@@ -2,6 +2,8 @@
 
 use serde::Serialize;
 
+use crate::jail::ChrootPath;
+
 /// Machine configuration for Firecracker.
 #[derive(Debug, Serialize)]
 pub struct MachineConfig {
@@ -16,8 +18,7 @@ pub struct MachineConfig {
 /// Boot source configuration.
 #[derive(Debug, Serialize)]
 pub struct BootSource {
-    /// Path to the kernel image on the host.
-    pub kernel_image_path: String,
+    pub kernel_image_path: ChrootPath,
     /// Kernel boot arguments.
     pub boot_args: String,
 }
@@ -27,8 +28,8 @@ pub struct BootSource {
 pub struct Drive {
     /// Unique drive identifier.
     pub drive_id: String,
-    /// Path to the disk image on the host.
-    pub path_on_host: String,
+    /// The chroot view, despite Firecracker's name for the field.
+    pub path_on_host: ChrootPath,
     /// Whether this is the root device.
     pub is_root_device: bool,
     /// Whether the drive is read-only.
@@ -40,8 +41,7 @@ pub struct Drive {
 pub struct VsockConfig {
     /// Guest CID (must be >= 3 for Firecracker).
     pub guest_cid: u32,
-    /// Path to the Unix domain socket on the host.
-    pub uds_path: String,
+    pub uds_path: ChrootPath,
 }
 
 /// VM action request.

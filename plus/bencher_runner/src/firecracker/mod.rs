@@ -3,6 +3,9 @@
 //! This module manages Firecracker microVMs for running benchmarks in isolation.
 //! Instead of a custom VMM, we use Firecracker as an external process controlled
 //! via its REST API over a Unix domain socket.
+//!
+//! The VMM always runs under the Firecracker jailer, chrooted as an unprivileged
+//! user with no host network; see [`crate::jail`].
 
 #![expect(
     clippy::print_stdout,
@@ -21,13 +24,14 @@ mod vsock;
 use std::collections::HashMap;
 
 pub use crate::log_level::SandboxLogLevel;
-use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use camino::Utf8PathBuf;
 
 use crate::cpu::CpuLayout;
+use crate::error::JailError;
+use crate::jail::{CgroupManager, CgroupSurvived, Cpuset, JailPaths, JailUser, VmId};
 use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
@@ -46,18 +50,26 @@ const GUEST_CID: u32 = 3;
 use crate::run::RunOutput;
 
 use config::{Action, ActionType, BootSource, Drive, MachineConfig, VsockConfig};
-use process::FirecrackerProcess;
+use process::{FirecrackerProcess, JailedSpawn};
 use vsock::VsockListener;
 
 /// Configuration for a Firecracker-based benchmark run.
 #[derive(Debug)]
 pub struct FirecrackerJobConfig {
-    /// Path to the Firecracker binary.
+    /// Path to the staged Firecracker binary, outside the jail.
     pub firecracker_bin: Utf8PathBuf,
-    /// Path to the kernel image.
-    pub kernel_path: Utf8PathBuf,
-    /// Path to the ext4 rootfs image.
-    pub rootfs_path: Utf8PathBuf,
+    pub jailer_bin: Utf8PathBuf,
+    /// The jailer id, chroot name, and cgroup name, minted before the job's
+    /// artifacts because the jail root is derived from it.
+    pub vm_id: VmId,
+    pub jail: JailPaths,
+    pub jail_user: JailUser,
+    pub chroot_base_dir: Utf8PathBuf,
+    /// Handle of the empty network namespace the VMM joins.
+    pub netns: Utf8PathBuf,
+    /// Shared with the chroot guard of the same id, so a cgroup this job cannot
+    /// remove keeps the chroot a later sweep finds it by.
+    pub cgroup_survived: CgroupSurvived,
     /// Number of vCPUs.
     pub vcpus: u8,
     /// Memory size in MiB.
@@ -66,8 +78,6 @@ pub struct FirecrackerJobConfig {
     pub boot_args: String,
     /// Execution timeout in seconds.
     pub timeout_secs: u64,
-    /// Working directory for temporary files (API socket, vsock UDS).
-    pub work_dir: Utf8PathBuf,
     /// Optional CPU layout for core isolation via cpuset.
     pub cpu_layout: Option<CpuLayout>,
     /// Firecracker process log level.
@@ -82,16 +92,17 @@ pub struct FirecrackerJobConfig {
     pub grace_period: bencher_json::GracePeriod,
 }
 
-/// Run a benchmark inside a Firecracker microVM.
+/// Run a benchmark inside a jailed Firecracker microVM.
 ///
 /// This function:
 /// 1. Optionally creates a cgroup with cpuset for CPU isolation
-/// 2. Starts a Firecracker process (and moves it into the cgroup)
-/// 3. Configures the VM via REST API
-/// 4. Creates vsock listeners for result collection
-/// 5. Boots the VM
-/// 6. Collects results via vsock
-/// 7. Cleans up (including cgroup)
+/// 2. Starts Firecracker under the jailer, placed in the cgroup before exec
+/// 3. Verifies the placement landed
+/// 4. Configures the VM via REST API
+/// 5. Creates vsock listeners for result collection and hands them to the jail
+/// 6. Boots the VM
+/// 7. Collects results via vsock
+/// 8. Cleans up (including cgroup)
 ///
 /// Returns the benchmark output including exit code and stdout.
 #[expect(
@@ -100,38 +111,19 @@ pub struct FirecrackerJobConfig {
 )]
 pub fn run_firecracker(
     config: &FirecrackerJobConfig,
-    cancel_flag: Option<&Arc<AtomicBool>>,
+    cancel_flag: Option<&AtomicBool>,
 ) -> Result<RunOutput, FirecrackerError> {
-    let vm_id = uuid::Uuid::new_v4().to_string();
-    let api_socket_path = format!("{}/firecracker-{vm_id}.sock", config.work_dir);
-    let vsock_uds_path = format!("{}/vsock-{vm_id}.sock", config.work_dir);
+    let vm_id = &config.vm_id;
+    let jail = &config.jail;
 
     let start_time = Instant::now();
 
     // Step 0: Create cgroup with cpuset if CPU layout is provided
     let cgroup = if let Some(layout) = &config.cpu_layout {
         if layout.has_isolation() {
-            match crate::jail::CgroupManager::new(&vm_id) {
-                Ok(cg) => {
-                    // Apply cpuset to pin Firecracker to benchmark cores
-                    if let Err(e) = cg.apply_cpuset(layout) {
-                        eprintln!("Warning: failed to apply cpuset: {e}");
-                    } else {
-                        println!(
-                            "CPU isolation: Firecracker pinned to cores {}",
-                            layout.benchmark_cpuset()
-                        );
-                    }
-                    // Keep VM memory resident: swap adds run-to-run variance
-                    if let Err(e) = cg.disable_swap() {
-                        eprintln!("Warning: failed to disable swap for VM cgroup: {e}");
-                    }
-                    Some(cg)
-                },
-                Err(e) => {
-                    eprintln!("Warning: failed to create cgroup for CPU isolation: {e}");
-                    None
-                },
+            match cgroup_for_run(CgroupManager::new(vm_id, config.cgroup_survived.clone()))? {
+                Some(cg) => Some(confine(cg, layout)?),
+                None => None,
             }
         } else {
             None
@@ -140,27 +132,34 @@ pub fn run_firecracker(
         None
     };
 
-    // Step 1: Start Firecracker process
-    println!("Starting Firecracker process...");
+    // Step 1: Start the jailed Firecracker process.
+    println!("Starting jailed Firecracker process...");
     let housekeeping_cores = config
         .cpu_layout
         .as_ref()
         .map(|l| l.housekeeping.clone())
         .unwrap_or_default();
-    let mut fc_process = FirecrackerProcess::start(
-        config.firecracker_bin.as_str(),
-        &api_socket_path,
-        &vm_id,
-        config.log_level.as_str(),
+    let cgroup_procs = placement_target(cgroup.as_ref())?;
+    let mut fc_process = FirecrackerProcess::start(JailedSpawn {
+        jailer_bin: &config.jailer_bin,
+        exec_file: &config.firecracker_bin,
+        vm_id,
+        jail_user: config.jail_user,
+        chroot_base_dir: &config.chroot_base_dir,
+        netns: &config.netns,
+        api_socket: jail.api_socket(),
+        log_level: config.log_level.as_str(),
         housekeeping_cores,
-    )?;
+        cgroup_procs,
+    })?;
 
-    // Move Firecracker process into cgroup for CPU isolation
-    if let Some(cg) = &cgroup
-        && let Err(e) = cg.add_pid(fc_process.pid())
-    {
-        eprintln!("Warning: failed to add Firecracker to cgroup: {e}");
-    }
+    // Step 1b: Verify the placement landed, which is race free because `spawn`
+    // returns only after the exec, and catches a write to the wrong cgroup.
+    verify_placement(cgroup.as_ref(), fc_process.pid())?;
+    // Placed now, so of two jobs that started together at least one sees the
+    // other here, before either guest runs.
+    crate::jail::refuse_occupied_cgroups(Some(vm_id)).map_err(FirecrackerError::CoresOccupied)?;
+    refuse_cancelled(cancel_flag)?;
 
     let client = fc_process.client();
 
@@ -174,25 +173,28 @@ pub fn run_firecracker(
     })?;
 
     client.put_boot_source(&BootSource {
-        kernel_image_path: config.kernel_path.to_string(),
+        kernel_image_path: jail.kernel().chroot().clone(),
         boot_args: config.boot_args.clone(),
     })?;
 
     client.put_drive(&Drive {
         drive_id: "rootfs".to_owned(),
-        path_on_host: config.rootfs_path.to_string(),
+        path_on_host: jail.rootfs().chroot().clone(),
         is_root_device: true,
         is_read_only: false,
     })?;
 
     client.put_vsock(&VsockConfig {
         guest_cid: GUEST_CID,
-        uds_path: vsock_uds_path.clone(),
+        uds_path: jail.vsock().chroot().clone(),
     })?;
 
     // Step 3: Create vsock listeners (must be before boot)
     println!("Setting up vsock listeners...");
-    let vsock_listener = VsockListener::new(&vsock_uds_path)?;
+    let vsock_listener = VsockListener::new(jail.vsock())?;
+    vsock_listener
+        .chown_to_jail(config.jail_user)
+        .map_err(FirecrackerError::Chown)?;
 
     // Step 4: Boot the VM
     println!("Booting VM...");
@@ -286,6 +288,82 @@ pub fn run_firecracker(
     })
 }
 
+/// Only a declared absence degrades to `Ok(None)`; a cgroup that could not be
+/// read fails the job, per the failure policy table in [`crate::jail`].
+fn cgroup_for_run(
+    cgroup: Result<CgroupManager, crate::RunnerError>,
+) -> Result<Option<CgroupManager>, FirecrackerError> {
+    match cgroup {
+        Ok(cgroup) => Ok(Some(cgroup)),
+        Err(crate::RunnerError::Jail(unreadable @ JailError::ReadCgroup { .. })) => {
+            Err(FirecrackerError::CgroupUnreadable(unreadable))
+        },
+        Err(e) => {
+            eprintln!("Warning: failed to create cgroup for CPU isolation: {e}");
+            Ok(None)
+        },
+    }
+}
+
+/// Stop at a stage boundary once the job is cancelled, before anything later is
+/// built or booted.
+pub(crate) fn refuse_cancelled(cancel_flag: Option<&AtomicBool>) -> Result<(), FirecrackerError> {
+    if cancel_flag.is_some_and(|flag| flag.load(Ordering::SeqCst)) {
+        return Err(FirecrackerError::Cancelled);
+    }
+    Ok(())
+}
+
+/// A rejected cpuset is fatal, but an undelegated one only warns and keeps the
+/// cgroup for placement, swap, and metrics.
+fn confine(cgroup: CgroupManager, layout: &CpuLayout) -> Result<CgroupManager, FirecrackerError> {
+    match cgroup
+        .apply_cpuset(layout)
+        .map_err(|e| FirecrackerError::CpusetFailed(Box::new(e)))?
+    {
+        Cpuset::Applied => println!(
+            "CPU isolation: Firecracker pinned to cores {}",
+            layout.benchmark_cpuset()
+        ),
+        // The vCPU threads are still pinned further down, which is gated on
+        // the layout rather than on the cgroup.
+        Cpuset::Unavailable(reason) => eprintln!(
+            "Warning: this run has no cgroup cpuset ({reason}), so nothing keeps other work off the benchmark cores and its numbers carry more variance; vCPU threads are still pinned to them"
+        ),
+    }
+    // Keep VM memory resident: swap adds run-to-run variance
+    if let Err(e) = cgroup.disable_swap() {
+        eprintln!("Warning: failed to disable swap for VM cgroup: {e}");
+    }
+    Ok(cgroup)
+}
+
+fn placement_target(
+    cgroup: Option<&CgroupManager>,
+) -> Result<Option<std::fs::File>, FirecrackerError> {
+    cgroup
+        .map(CgroupManager::open_procs)
+        .transpose()
+        .map_err(FirecrackerError::CgroupPlacement)
+}
+
+fn verify_placement(cgroup: Option<&CgroupManager>, pid: u32) -> Result<(), FirecrackerError> {
+    let Some(cgroup) = cgroup else {
+        return Ok(());
+    };
+    let placed = cgroup
+        .contains_pid(pid)
+        .map_err(FirecrackerError::CgroupPlacement)?;
+    if placed {
+        Ok(())
+    } else {
+        Err(FirecrackerError::CgroupMissingPid {
+            pid,
+            cgroup: cgroup.path().to_owned(),
+        })
+    }
+}
+
 /// Decode the length-prefixed binary protocol for multiple output files.
 fn decode_output_files(
     data: &[u8],
@@ -293,7 +371,7 @@ fn decode_output_files(
     max_content_size: u64,
 ) -> Result<HashMap<Utf8PathBuf, Vec<u8>>, FirecrackerError> {
     let files = bencher_output_protocol::decode(data, max_file_count, max_content_size)
-        .map_err(|e| FirecrackerError::VsockCollection(format!("output files: {e}")))?;
+        .map_err(|source| FirecrackerError::DecodeOutputFiles { source })?;
     Ok(files.into_iter().collect())
 }
 
@@ -306,6 +384,115 @@ fn parse_exit_code(s: &str) -> i32 {
 #[expect(clippy::get_unwrap, reason = "test assertions")]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_host_that_delegates_no_controllers_degrades() {
+        // Prevents a host that declares no controllers from failing the job.
+        let degraded = cgroup_for_run(Err(JailError::MissingController {
+            controller: "cpuset".to_owned(),
+            path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/cgroup.subtree_control"),
+            enabled: "cpu memory pids".to_owned(),
+        }
+        .into()))
+        .unwrap();
+
+        assert!(
+            degraded.is_none(),
+            "a declared absence of isolation is not a failure"
+        );
+    }
+
+    #[test]
+    fn a_cgroup_that_could_not_be_read_fails_the_job() {
+        // Prevents an unreadable cgroup degrading into a run with no core confinement.
+        let read_failed = Err(JailError::ReadCgroup {
+            path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/vm-1"),
+            source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+        }
+        .into());
+
+        let Err(err) = cgroup_for_run(read_failed) else {
+            panic!("an errored question is not a declared absence");
+        };
+
+        assert!(
+            matches!(err, FirecrackerError::CgroupUnreadable(_)),
+            "the job must fail naming the read, got: {err}"
+        );
+    }
+
+    #[test]
+    fn a_cgroup_that_was_created_is_the_one_the_run_uses() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        let cgroup = cgroup_for_run(Ok(CgroupManager::detached(root.clone()))).unwrap();
+
+        assert_eq!(
+            cgroup.map(|cg| cg.path().to_owned()),
+            Some(root),
+            "a cgroup that was created is kept"
+        );
+    }
+
+    #[test]
+    fn a_cgroup_without_a_cpuset_still_keeps_memory_resident() {
+        // Prevents dropping the cgroup over a missing `cpuset`, which lets guest memory swap.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        let cgroup = confine(
+            CgroupManager::detached(root.clone()),
+            &CpuLayout::with_core_count(8),
+        )
+        .unwrap();
+
+        assert_eq!(cgroup.path(), root, "the cgroup is kept");
+        assert_eq!(
+            std::fs::read_to_string(root.join("memory.swap.max")).unwrap(),
+            "0",
+            "swap is off without a cpuset too"
+        );
+    }
+
+    #[test]
+    fn no_cgroup_skips_placement() {
+        // Prevents a host with no cgroup from failing the job at placement.
+        assert!(
+            placement_target(None).unwrap().is_none(),
+            "no cgroup means nothing to place through"
+        );
+    }
+
+    #[test]
+    fn no_cgroup_skips_verification() {
+        verify_placement(None, 1).unwrap();
+    }
+
+    #[test]
+    fn a_cgroup_without_the_pid_aborts() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        std::fs::write(root.join("cgroup.procs"), "999\n").unwrap();
+        let cgroup = CgroupManager::detached(root);
+
+        let err = verify_placement(Some(&cgroup), 123).unwrap_err();
+
+        assert!(
+            matches!(err, FirecrackerError::CgroupMissingPid { pid: 123, .. }),
+            "a cgroup that does not contain the VMM must abort, got: {err}"
+        );
+    }
+
+    #[test]
+    fn a_cgroup_holding_the_pid_verifies() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        std::fs::write(root.join("cgroup.procs"), "123\n456\n").unwrap();
+        let cgroup = CgroupManager::detached(root);
+
+        verify_placement(Some(&cgroup), 123).unwrap();
+    }
 
     #[test]
     fn parse_exit_code_zero() {

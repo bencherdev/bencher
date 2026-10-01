@@ -1,5 +1,3 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use bencher_json::RunnerResourceId;
 use url::Url;
 
@@ -35,10 +33,6 @@ fn transient_retry_delay() -> Duration {
     TRANSIENT_RETRY_BASE + Duration::from_secs(jitter)
 }
 
-/// Global shutdown flag set by signal handler.
-/// Async-signal-safe: only uses `AtomicBool::store`.
-static SHUTDOWN: AtomicBool = AtomicBool::new(false);
-
 #[derive(Debug)]
 pub struct UpConfig {
     pub host: Url,
@@ -67,6 +61,8 @@ pub struct UpConfig {
     pub update_channel: bencher_valid::UpdateChannel,
     /// Maximum download size in bytes for self-update binaries.
     pub max_download_size: Option<u64>,
+    pub state_dir: camino::Utf8PathBuf,
+    pub jail_user: crate::jail::JailUser,
 }
 
 pub struct Up {
@@ -88,7 +84,7 @@ impl Up {
         )
     )]
     pub fn run(mut self) -> Result<(), UpError> {
-        install_signal_handlers();
+        crate::signal::install_handlers();
 
         println!(
             "Bencher Runner v{} starting...",
@@ -103,6 +99,10 @@ impl Up {
 
         // Warn about host conditions that limit benchmark accuracy (Linux only)
         preflight::print_host_warnings();
+
+        // The host is prepared on demand, not here, because a runner serving
+        // only non-sandboxed specs must come up without root.
+        println!("  State directory: {}", self.config.state_dir);
 
         // Serialize host-global tuning across runner processes. Declared
         // before the guard so the lock releases only after restore completes.
@@ -173,27 +173,28 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
     {
         println!("  Update channel: {channel}");
     }
+    let mut host = crate::jail::HostPreparation::new();
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
     let mut effects: VecDeque<Effect> =
         ChannelStateMachine::initial_effects().into_iter().collect();
     let mut ws: Option<Arc<Mutex<JobChannel>>> = None;
 
     while let Some(effect) = effects.pop_front() {
-        if SHUTDOWN.load(Ordering::SeqCst) {
+        if crate::signal::stop_requested() {
             println!("Shutdown signal received, exiting...");
             effects.clear();
             effects.extend(sm.step(Input::Shutdown));
             continue;
         }
 
-        match execute_effect(effect, config, channel_url, key, &mut ws) {
+        match execute_effect(effect, config, channel_url, key, &mut ws, &mut host) {
             EffectResult::Continue => {},
             EffectResult::Input(input) => {
                 effects.clear();
                 effects.extend(sm.step(input));
             },
             EffectResult::Exit => {
-                return if SHUTDOWN.load(Ordering::SeqCst) {
+                return if crate::signal::stop_requested() {
                     Err(UpError::Shutdown)
                 } else {
                     Ok(())
@@ -225,6 +226,7 @@ fn execute_effect(
     channel_url: &Url,
     key: &str,
     ws: &mut Option<Arc<Mutex<JobChannel>>>,
+    host: &mut crate::jail::HostPreparation,
 ) -> EffectResult {
     match effect {
         Effect::Connect => match JobChannel::connect(channel_url, key) {
@@ -253,7 +255,7 @@ fn execute_effect(
                 eprintln!("Error: WS not connected during job execution");
                 return EffectResult::Input(Input::ConnectionFailed);
             };
-            let result = execute_job(config, &job, ws_ref);
+            let result = execute_job(config, &job, ws_ref, host);
             EffectResult::Input(Input::JobFinished(result))
         },
         Effect::SleepBeforeReconnect(reason) => {
@@ -384,66 +386,6 @@ fn log_message(level: LogLevel, msg: &str) {
         LogLevel::Warn => eprintln!("Warning: {msg}"),
         LogLevel::Error => eprintln!("Error: {msg}"),
     }
-}
-
-/// Install signal handlers for SIGINT and SIGTERM.
-///
-/// The handler sets the global `SHUTDOWN` flag. `AtomicBool::store` is
-/// async-signal-safe, so this is safe to call from a signal handler context.
-#[cfg(target_os = "linux")]
-fn install_signal_handlers() {
-    use nix::sys::signal::{SaFlags, SigAction, SigHandler, SigSet, Signal, sigaction};
-
-    let handler = SigHandler::Handler(signal_handler);
-    let action = SigAction::new(handler, SaFlags::empty(), SigSet::empty());
-
-    #[expect(
-        unsafe_code,
-        clippy::multiple_unsafe_ops_per_block,
-        reason = "sigaction requires unsafe FFI"
-    )]
-    // SAFETY: `signal_handler` only performs `AtomicBool::store` with
-    // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
-    unsafe {
-        _ = sigaction(Signal::SIGINT, &action);
-        _ = sigaction(Signal::SIGTERM, &action);
-    }
-}
-
-/// Install signal handlers for SIGINT and SIGTERM (non-Linux POSIX).
-///
-/// Uses `libc::signal()` directly since `nix` is not available on macOS.
-#[cfg(not(target_os = "linux"))]
-fn install_signal_handlers() {
-    #[expect(
-        unsafe_code,
-        clippy::fn_to_numeric_cast_any,
-        reason = "libc::signal requires unsafe FFI and handler cast"
-    )]
-    // SAFETY: `signal_handler` only performs `AtomicBool::store` with
-    // `Ordering::SeqCst`, which is async-signal-safe per POSIX.
-    unsafe {
-        libc::signal(
-            libc::SIGINT,
-            signal_handler as *const () as libc::sighandler_t,
-        );
-    }
-    #[expect(
-        unsafe_code,
-        clippy::fn_to_numeric_cast_any,
-        reason = "libc::signal requires unsafe FFI and handler cast"
-    )]
-    // SAFETY: Same as above — registering an async-signal-safe handler for SIGTERM.
-    unsafe {
-        libc::signal(
-            libc::SIGTERM,
-            signal_handler as *const () as libc::sighandler_t,
-        );
-    }
-}
-
-extern "C" fn signal_handler(_sig: libc::c_int) {
-    SHUTDOWN.store(true, Ordering::SeqCst);
 }
 
 const DEFAULT_MAX_DOWNLOAD_SIZE: u64 = 500 * 1024 * 1024;

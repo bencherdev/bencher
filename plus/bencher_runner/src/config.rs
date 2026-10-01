@@ -151,6 +151,14 @@ pub struct Config {
     /// directly on the host (non-sandboxed mode, any platform).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<Sandbox>,
+
+    /// The runner's persistent state directory, under which each sandboxed
+    /// run's jail chroot is built.
+    #[serde(skip, default = "default_state_dir")]
+    pub state_dir: Utf8PathBuf,
+
+    #[serde(skip)]
+    pub jail_user: crate::jail::JailUser,
 }
 
 fn default_vcpus() -> Cpu {
@@ -222,6 +230,10 @@ fn default_grace_period() -> GracePeriod {
     GracePeriod::MIN
 }
 
+fn default_state_dir() -> Utf8PathBuf {
+    Utf8PathBuf::from(crate::jail::DEFAULT_STATE_DIR)
+}
+
 impl Config {
     /// Create a new configuration with the bundled kernel.
     ///
@@ -255,6 +267,8 @@ impl Config {
             cpu_layout: None,
             sandbox_log_level: SandboxLogLevel::default(),
             sandbox: None,
+            state_dir: default_state_dir(),
+            jail_user: crate::jail::JailUser::default(),
         }
     }
 
@@ -445,6 +459,18 @@ impl Config {
         self
     }
 
+    #[must_use]
+    pub fn with_state_dir(mut self, state_dir: Utf8PathBuf) -> Self {
+        self.state_dir = state_dir;
+        self
+    }
+
+    #[must_use]
+    pub fn with_jail_user(mut self, jail_user: crate::jail::JailUser) -> Self {
+        self.jail_user = jail_user;
+        self
+    }
+
     /// Set the CPU layout for core isolation.
     ///
     /// When set, the Firecracker process will be pinned to benchmark cores
@@ -516,22 +542,86 @@ mod tests {
     }
 
     #[test]
+    #[expect(
+        clippy::cognitive_complexity,
+        reason = "one assertion per field is the point: the exhaustive destructure and its assertions belong together"
+    )]
     fn config_serde_round_trip() {
-        let config = Config::new("ghcr.io/test/bench:v1")
+        let mut config = Config::new("ghcr.io/test/bench:v1")
             .with_vcpus(Cpu::try_from(2).unwrap())
             .with_memory(Memory::from_mib(1024).unwrap())
-            .with_file_paths(vec![Utf8PathBuf::from("/output.json")]);
+            .with_file_paths(vec![Utf8PathBuf::from("/output.json")])
+            .with_registry_scheme(RegistryScheme::Http)
+            .with_cpu_layout(CpuLayout {
+                housekeeping: vec![0],
+                benchmark: vec![1],
+            })
+            .with_state_dir(Utf8PathBuf::from("/mnt/disk/runner"))
+            .with_jail_user(crate::jail::JailUser::new(1234, 1234).unwrap());
+        config.sandbox_log_level = SandboxLogLevel::Debug;
 
         let json = serde_json::to_string(&config).unwrap();
         let parsed: Config = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(parsed.oci_image, "ghcr.io/test/bench:v1");
-        assert_eq!(parsed.vcpus, Cpu::try_from(2).unwrap());
-        assert_eq!(parsed.memory, Memory::from_mib(1024).unwrap());
-        assert_eq!(
-            parsed.file_paths.unwrap(),
-            vec![Utf8PathBuf::from("/output.json")]
-        );
+        // Destructured, so a new `Config` field does not compile until this test
+        // pins whether it survives serde or arrives as its default.
+        let Config {
+            oci_image,
+            kernel,
+            token,
+            vcpus,
+            memory,
+            disk,
+            kernel_cmdline,
+            timeout_secs,
+            file_paths,
+            network,
+            entrypoint,
+            cmd,
+            env,
+            build_time,
+            file_size,
+            max_output_size,
+            max_file_count,
+            max_content_size,
+            max_symlinks,
+            grace_period,
+            registry_scheme,
+            cpu_layout,
+            sandbox_log_level,
+            sandbox,
+            state_dir,
+            jail_user,
+        } = parsed;
+
+        assert_eq!(oci_image, "ghcr.io/test/bench:v1");
+        assert_eq!(vcpus, Cpu::try_from(2).unwrap());
+        assert_eq!(memory, Memory::from_mib(1024).unwrap());
+        assert_eq!(file_paths.unwrap(), vec![Utf8PathBuf::from("/output.json")]);
+        assert_eq!(disk, Disk::from_mib(1024).unwrap());
+        assert_eq!(kernel_cmdline, default_kernel_cmdline());
+        assert_eq!(timeout_secs, default_timeout_secs());
+        assert_eq!(max_output_size, default_max_output_size());
+        assert_eq!(max_file_count, default_max_file_count());
+        assert_eq!(max_content_size, default_max_content_size());
+        assert_eq!(max_symlinks, default_max_symlinks());
+        assert_eq!(grace_period, default_grace_period());
+        assert!(kernel.is_none());
+        assert!(token.is_none());
+        assert!(entrypoint.is_none());
+        assert!(cmd.is_none());
+        assert!(env.is_none());
+        assert!(sandbox.is_none());
+        assert!(!network);
+        assert!(!build_time);
+        assert!(!file_size);
+
+        assert!(matches!(registry_scheme, RegistryScheme::Https));
+        assert!(cpu_layout.is_none());
+        assert!(matches!(sandbox_log_level, SandboxLogLevel::Warning));
+        assert_eq!(state_dir, default_state_dir());
+        assert_eq!(jail_user, crate::jail::JailUser::default());
+
         // Optional None fields should not appear in JSON
         assert!(!json.contains("\"token\""));
         assert!(!json.contains("\"kernel\""));

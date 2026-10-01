@@ -29,6 +29,10 @@ Por padrão, o Runner segue o [canal de atualização][update channel] `stable`
 e só atualiza para releases versionadas.
 O canal `canary`, por sua vez, acompanha o build canary contínuo implantado no Bencher Cloud.
 
+Um Runner que executa Jobs com sandbox precisa rodar como `root`,
+então os comandos acima são mostrados como o usuário `root` os executaria,
+ou sob um gerenciador de serviços que inicie o Runner como `root`.
+
 Por padrão, um Runner rejeita qualquer Job cuja Spec não tenha [Sandbox][sandbox].
 Para permitir que um Runner execute Jobs sem sandbox diretamente no host,
 inicie-o com [a flag `--danger-allow-no-sandbox`][danger allow no sandbox].
