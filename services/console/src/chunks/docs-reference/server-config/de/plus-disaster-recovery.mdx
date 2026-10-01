@@ -4,16 +4,9 @@ Dieser Abschnitt spezifiziert die Konfiguration der Notfallwiederherstellung.
 Bencher unterstützt das kontinuierliche Replizieren aller Datenbankänderungen.
 Für die Durchführung von bedarfs- oder zeitgesteuerten Backups siehe den Abschnitt `database.data_store` der Konfiguration.
 
-Es gibt drei Replikations-`scheme`s:
+Es gibt zwei Replikations-`scheme`s:
 - `file`: Replikation zu einem lokalen Dateipfad
     - `path`: Pfad, zu dem repliziert wird
-- `sftp`: Replikation über SFTP
-    - `host`: Zielsystem-Hostname
-    - `port`: Zielsystem-Portnummer
-    - `user`: Benutzername auf dem Zielsystem
-    - `password`: (Optional) Passwort auf dem Zielsystem
-    - `path`: (Optional) Pfad auf dem Zielsystem
-    - `key_path`: (Optional) Pfad zum SSH-Schlüssel
 - `s3`: Replikation zu einem S3-kompatiblen Blob-Speicher
     - `bucket`: Bucket-Name
     - `path`: (Optional) Pfad im Bucket
@@ -22,7 +15,7 @@ Es gibt drei Replikations-`scheme`s:
     - `access_key_id`: S3-Zugangsschlüssel
     - `secret_access_key`: S3-Geheimzugangsschlüssel
 
-Alle drei Replikations-`scheme`s haben die folgenden zusätzlichen Optionen:
+Beide Replikations-`scheme`s haben die folgenden zusätzlichen Optionen:
 
 - `snapshot.interval`: (Optional) Gibt an, wie oft neue Schnappschüsse erstellt werden. Dies wird verwendet, um die Zeit für die Wiederherstellung zu verkürzen, da neuere Schnappschüsse weniger WAL-Frames zum Anwenden haben. Die Aufbewahrung gilt auch für diese Schnappschüsse. Wenn Sie kein Schnappschussintervall festlegen, wird ein neuer Schnappschuss erstellt, wann immer die Aufbewahrung durchgeführt wird. Die Aufbewahrung erfolgt standardmäßig alle 24 Stunden.
 - `snapshot.retention`: (Optional) Die Dauer, die Schnappschuss- und WAL-Dateien aufbewahrt werden. Nach dem Ablauf der Aufbewahrungsfrist wird ein neuer Schnappschuss erstellt und der alte entfernt. WAL-Dateien, die vor dem ältesten Schnappschuss existieren, werden ebenfalls entfernt. Standardwert ist `24h`.
