@@ -795,10 +795,10 @@ const VIEW_COLUMNS: [&str; 14] = [
     "upper_limit",
 ];
 
-/// The indexes on `metric`. Both are named, built by the migration once its rows
+/// The unique indexes on `metric`. Both are named, built by the migration once its rows
 /// are in place rather than declared as constraints on the table.
 const METRIC_INDEXES_SQL: &str =
-    "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'metric' ORDER BY name";
+    r#"SELECT name FROM pragma_index_list('metric') WHERE "unique" ORDER BY name"#;
 /// The rebuilt view's columns, in declaration order.
 const VIEW_COLUMNS_SQL: &str = "SELECT name FROM pragma_table_info('metric_boundary') ORDER BY cid";
 
