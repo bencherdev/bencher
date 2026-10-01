@@ -2,9 +2,9 @@ import PullRequestsForkTrackCode from "../pull-requests-fork-track-code.mdx";
 
 <PullRequestsForkTrackCode />
 
-1. 最初の GitHub Actions `workflow` ファイルを作成します。
+1. 2つ目の GitHub Actions `workflow` ファイルを作成します。
    (例: `.github/workflows/fork_pr_benchmarks_track.yml`)
-2. このワークフローに名前を付けます。
+2. この2つ目のワークフローに名前を付けます。
    (例: `name: Track Benchmarks with Bencher`)
 3. [`workflow_run` イベント][github actions workflow_run]を使って2つのワークフローを連鎖させます。
    (例: `on: workflow_run: ...`)

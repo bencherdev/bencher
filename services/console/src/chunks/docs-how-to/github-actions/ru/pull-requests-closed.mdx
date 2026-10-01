@@ -6,34 +6,36 @@ import PullRequestsClosedCode from "../pull-requests-closed-code.mdx";
 
 1. Создайте файл `workflow` для GitHub Actions.
    (например, `.github/workflows/pr_benchmarks_closed.yml`)
-2. Запускать на событиях `pull_request`:
+2. Назовите этот workflow.
+   (например, `name: Archive Closed PR Branch with Bencher`)
+3. Запускать на событиях `pull_request`:
    - `closed` - запрос на включение изменений был закрыт.
 
    См. [документацию по GitHub Actions `on`][github actions on]
    и [документацию по GitHub Actions `pull_request`][github action pull_request] для полного обзора.
    (например, `on: pull_request: types: [closed]`)
-3. Создайте `job` для GitHub Actions.
+4. Создайте `job` для GitHub Actions.
    (например, `jobs: archive_pr_branch`)
-4. Запускайте на событиях `pull_request` только если запрос на включение изменений из того же репозитория.
+5. Запускайте на событиях `pull_request` только если запрос на включение изменений из того же репозитория.
    ⚠️ НЕ УДАЛЯЙТЕ ЭТУ СТРОКУ!
    Для обработки Fork PR см. ниже [Запросы на включение изменений из форков][pull requests from forks].
    (например, `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. Установите тип машины, на которой будет выполняться работа.
+6. Установите тип машины, на которой будет выполняться работа.
    См. [документацию по GitHub Actions `runs-on`][github actions runs-on] для полного обзора.
    (например, `runs-on: ubuntu-latest`)
-6. Выполните проверку исходного кода PR-ветки.
+7. Выполните проверку исходного кода PR-ветки.
    (например, `uses: actions/checkout@v6`)
-7. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
+8. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
    (например, `uses: bencherdev/bencher@main`)
-8. Используйте подкоманду CLI `bencher archive` для архивирования PR-ветки.
+9. Используйте подкоманду CLI `bencher archive` для архивирования PR-ветки.
    (например, `bencher archive`)
-9. Установите для опции `--project` значение идентификатора проекта (slug).
-   См. [документацию по `--project` опции][project option] для более подробной информации.
-   (например, `--project project-abc4567-wxyz123456789`)
-10. Установите для опции `--key` значение секрета **Репозитория** `BENCHER_API_KEY`.
+10. Установите для опции `--project` значение идентификатора проекта (slug).
+    См. [документацию по `--project` опции][project option] для более подробной информации.
+    (например, `--project project-abc4567-wxyz123456789`)
+11. Установите для опции `--key` значение секрета **Репозитория** `BENCHER_API_KEY`.
     См. [документацию по `--key` опции][key option] для более подробной информации.
     (например, `--key '${{ secrets.BENCHER_API_KEY }}'`)
-11. Установите для опции `--branch` значение имени PR-ветки, используя [переменную среды по умолчанию GitHub Actions `GITHUB_HEAD_REF`][github default environment variables].
+12. Установите для опции `--branch` значение имени PR-ветки, используя [переменную среды по умолчанию GitHub Actions `GITHUB_HEAD_REF`][github default environment variables].
     (например, `--branch "$GITHUB_HEAD_REF"`)
 
 

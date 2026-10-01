@@ -14,7 +14,9 @@ then you can simply create another workflow to run `on` `pull_request` events fr
 
 1. Create a GitHub Actions `workflow` file.
    (ex: `.github/workflows/pr_benchmarks.yml`)
-2. Run on `pull_request` events:
+2. Name this workflow.
+   (ex: `name: PR Benchmarks with Bencher`)
+3. Run on `pull_request` events:
    - `opened` - A pull request was created.
    - `reopened` - A previously closed pull request was reopened.
    - `edited` - The title or body of a pull request was edited, or the base branch of a pull request was changed.
@@ -24,13 +26,13 @@ then you can simply create another workflow to run `on` `pull_request` events fr
    See the [GitHub Actions `on` documentation][github actions on]
    and [GitHub Actions `pull_request` documentation][github action pull_request] for a full overview.
    (ex: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-3. Create a GitHub Actions `job`.
+4. Create a GitHub Actions `job`.
    (ex: `jobs: benchmark_pr_branch`)
-4. Run on `pull_request` events if and only if the pull request is from the same repository.
+5. Run on `pull_request` events if and only if the pull request is from the same repository.
    ⚠️ DO NOT REMOVE THIS LINE!
    For handling Fork PRs see [Pull Requests from Forks][pull requests from forks] below.
    (ex: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. Set [the permissions for the `GITHUB_TOKEN`][github token permissions]
+6. Set [the permissions for the `GITHUB_TOKEN`][github token permissions]
    to `write` for `checks` and `pull-requests`.
    Depending on your GitHub settings, this may not be required.
    But for all organizations and personal repos
@@ -39,29 +41,29 @@ then you can simply create another workflow to run `on` `pull_request` events fr
    See [the GitHub documentation][github token permissions security]
    for a full overview.
    (ex: `permissions: checks: write pull-requests: write`)
-6. Set the type of machine the job will run on.
+7. Set the type of machine the job will run on.
    See the [GitHub Actions `runs-on` documentation][github actions runs-on]
    for a full overview.
    (ex: `runs-on: ubuntu-latest`)
-7. Checkout the PR branch source code.
+8. Checkout the PR branch source code.
    (ex: `uses: actions/checkout@v6`)
-8. Install the Bencher CLI using [the GitHub Action][bencher cli github action].
+9. Install the Bencher CLI using [the GitHub Action][bencher cli github action].
    (ex: `uses: bencherdev/bencher@main`)
-9. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
-   to run your pull request branch benchmarks.
-   See [the `bencher run` CLI subcommand][bencher run] for a full overview.
-   (ex: `bencher run`)
-10. Set the `--project` option to the Project slug.
+10. Use the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand
+    to run your pull request branch benchmarks.
+    See [the `bencher run` CLI subcommand][bencher run] for a full overview.
+    (ex: `bencher run`)
+11. Set the `--project` option to the Project slug.
     See [the `--project` docs][project option] for more details.
     (ex: `--project project-abc4567-wxyz123456789`)
-11. Set the `--key` option to the `BENCHER_API_KEY` **Repository** secret.
+12. Set the `--key` option to the `BENCHER_API_KEY` **Repository** secret.
     See [the `--key` docs][key option] for more details.
     (ex: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-12. Set the `--branch` option to the PR branch name
+13. Set the `--branch` option to the PR branch name
     using [the GitHub Actions `GITHUB_HEAD_REF` default environment variable][github default environment variables].
     See [the `--branch` docs][branch option] for a full overview.
     (ex: `--branch "$GITHUB_HEAD_REF"`)
-13. Set the Start Point for the PR Branch:
+14. Set the Start Point for the PR Branch:
     1. Set the `--start-point` option to the PR Branch start point
     using [the GitHub Actions `GITHUB_BASE_REF` default environment variable][github default environment variables].
     See [the `--start-point` docs][start point] for a full overview.
@@ -77,21 +79,21 @@ then you can simply create another workflow to run `on` `pull_request` events fr
     This will prevent benchmark data drift.
     See [the `--start-point-reset` docs][start point reset] for a full overview.
     (ex: `--start-point-reset`)
-14. Set the `--testbed` option to the Testbed name.
+15. Set the `--testbed` option to the Testbed name.
     This should likely match the machine selected in `runs-on`.
     See [the `--tested` docs][testbed option] for more details.
     (ex: `--testbed ubuntu-latest`)
-15. Set the `--error-on-alert` flag to fail the command if an Alert is generated.
+16. Set the `--error-on-alert` flag to fail the command if an Alert is generated.
    See [the `--error-on-alert` docs][alert err] for a full overview.
    (ex: `--error-on-alert`)
-16. Set the `--adapter` option to [Bencher Metric Format JSON (`json`)][bmf] that is generated by <code><a href="/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+17. Set the `--adapter` option to [Bencher Metric Format JSON (`json`)][bmf] that is generated by <code><a href="/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    See [benchmark harness adapters][adapter json] for a full overview.
    (ex: `--adapter json`)
-17. Set the `--github-actions` option to the GitHub API authentication token to post results as a GitHub Check and a comment on the Pull Request using
+18. Set the `--github-actions` option to the GitHub API authentication token to post results as a GitHub Check and a comment on the Pull Request using
     [the GitHub Actions `GITHUB_TOKEN` environment variable][github token].
     See [the `--github-actions` docs][github actions option] for more details.
     (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-18. Specify the benchmark command arguments.
+19. Specify the benchmark command arguments.
     See [benchmark command][command argument] for a full overview.
     (ex: `bencher mock`)
 

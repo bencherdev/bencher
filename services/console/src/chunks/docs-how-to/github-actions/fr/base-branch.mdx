@@ -10,41 +10,43 @@ Cette base de référence historique peut alors être utilisée pour détecter l
 
 1. Créez un fichier `workflow` GitHub Actions.
    (ex: `.github/workflows/base_benchmarks.yml`)
-2. Exécutez sur les événements `push` vers la branche `main`.
+2. Nommez ce workflow.
+   (ex: `name: Base Branch Benchmarks with Bencher`)
+3. Exécutez sur les événements `push` vers la branche `main`.
    Consultez la [documentation GitHub Actions `on`][github actions on]
    et la [documentation GitHub Actions `push`][github actions push] pour un aperçu complet.
    (ex: `on: push: branches: main`)
-3. Créez un `job` GitHub Actions.
+4. Créez un `job` GitHub Actions.
    (ex: `jobs: benchmark_base_branch`)
-4. Définissez [les autorisations pour le `GITHUB_TOKEN`][github token permissions]
+5. Définissez [les autorisations pour le `GITHUB_TOKEN`][github token permissions]
    sur `write` pour `checks`.
    (ex : `permissions: checks: write`)
-5. Définissez le type de machine sur laquelle le job sera exécuté.
+6. Définissez le type de machine sur laquelle le job sera exécuté.
    Consultez la [documentation GitHub Actions `runs-on`][github actions runs-on]
    pour un aperçu complet.
    (ex: `runs-on: ubuntu-latest`)
-6. Récupérez le code source de votre branche de base.
+7. Récupérez le code source de votre branche de base.
    (ex: `uses: actions/checkout@v6`)
-7. Installez le Bencher CLI en utilisant [l'Action GitHub][bencher cli github action].
+8. Installez le Bencher CLI en utilisant [l'Action GitHub][bencher cli github action].
    (ex: `uses: bencherdev/bencher@main`)
-8. Utilisez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
+9. Utilisez la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
    pour exécuter vos benchmarks de la branche `main`.
    Consultez [la sous-commande CLI `bencher run`][bencher run] pour un aperçu complet.
    (ex: `bencher run`)
-9. Définissez l'option `--project` sur le slug du Projet.
-   Consultez [les documents `--project`][project option] pour plus de détails.
-   (ex: `--project project-abc4567-wxyz123456789`)
-10. Définissez l'option `--key` sur le secret **Repository** `BENCHER_API_KEY`.
+10. Définissez l'option `--project` sur le slug du Projet.
+    Consultez [les documents `--project`][project option] pour plus de détails.
+    (ex: `--project project-abc4567-wxyz123456789`)
+11. Définissez l'option `--key` sur le secret **Repository** `BENCHER_API_KEY`.
    Consultez [les documents `--key`][key option] pour plus de détails.
    (ex: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-11. Définissez l'option `--branch` sur le nom de la branche de base.
+12. Définissez l'option `--branch` sur le nom de la branche de base.
     Consultez [les documents `--branch`][branch option] pour un aperçu complet.
     (ex: `--branch main`)
-12. Réglez l'option `--testbed` sur le nom du Testbed.
+13. Réglez l'option `--testbed` sur le nom du Testbed.
     Cela devrait probablement correspondre à la machine sélectionnée dans `runs-on`.
     Consultez [les documents `--tested`][testbed option] pour plus de détails.
     (ex: `--testbed ubuntu-latest`)
-13. Définissez le seuil pour la Branche `main`, le Testbed `ubuntu-latest`, et la Mesure `latency`:
+14. Définissez le seuil pour la Branche `main`, le Testbed `ubuntu-latest`, et la Mesure `latency`:
     1. Définissez l'option `--threshold-measure` sur la Mesure intégrée `latency` générée par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     Consultez [les documents `--threshold-measure`][threshold measure option] pour plus de détails.
     (ex: `--threshold-measure latency`)
@@ -60,17 +62,17 @@ Cette base de référence historique peut alors être utilisée pour détecter l
     5. Réglez l'indicateur `--thresholds-reset` pour que seul le seuil spécifié soit actif.
     Consultez [les documents `--thresholds-reset`][thresholds reset] pour un aperçu complet.
     (ex: `--thresholds-reset`)
-14. Réglez l'indicateur `--error-on-alert` pour échouer la commande si une Alerte est générée.
+15. Réglez l'indicateur `--error-on-alert` pour échouer la commande si une Alerte est générée.
     Consultez [les documents `--error-on-alert`][alert err] pour un aperçu complet.
     (ex: `--error-on-alert`)
-15. Définissez l'option `--adapter` sur [Bencher Metric Format JSON (`json`)][bmf] qui est généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+16. Définissez l'option `--adapter` sur [Bencher Metric Format JSON (`json`)][bmf] qui est généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     Consultez [les adaptateurs de harnais de benchmark][adapter json] pour un aperçu complet.
     (ex: `--adapter json`)
-16. Réglez l'option `--github-actions` sur le jeton d'authentification API GitHub pour publier les résultats sous forme de commentaire de Vérifications GitHub en utilisant
+17. Réglez l'option `--github-actions` sur le jeton d'authentification API GitHub pour publier les résultats sous forme de commentaire de Vérifications GitHub en utilisant
     [la variable d'environnement `GITHUB_TOKEN` de GitHub Actions][github token].
     Consultez [les documents `--github-actions`][github actions option] pour plus de détails.
     (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-17. Spécifiez les arguments de la commande de benchmark.
+18. Spécifiez les arguments de la commande de benchmark.
     Consultez [la commande de benchmark][command argument] pour un aperçu complet.
     (ex: `bencher mock`)
 

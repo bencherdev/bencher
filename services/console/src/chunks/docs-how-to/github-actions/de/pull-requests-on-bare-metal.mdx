@@ -24,56 +24,58 @@ um Benchmarking auf dedizierter Hardware für Fork-PRs zu erhalten.
 
 1. Erstellen Sie eine erste GitHub Actions `workflow`-Datei.
    (z.B.: `.github/workflows/pr_bare_metal_benchmarks.yml`)
-2. Ausführung bei `pull_request`-Ereignissen, wie oben unter [Pull Requests][pull requests].
+2. Benennen Sie diesen Workflow.
+   (z.B.: `name: Bare Metal PR Benchmarks with Bencher`)
+3. Ausführung bei `pull_request`-Ereignissen, wie oben unter [Pull Requests][pull requests].
    (z.B.: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-3. Erstellen Sie einen GitHub Actions `job`.
+4. Erstellen Sie einen GitHub Actions `job`.
    (z.B.: `jobs: submit_pr_benchmarks`)
-4. Laufen Sie bei `pull_request`-Ereignissen, wenn und nur wenn der Pull Request aus demselben Repository stammt.
+5. Laufen Sie bei `pull_request`-Ereignissen, wenn und nur wenn der Pull Request aus demselben Repository stammt.
    ⚠️ ENTFERNEN SIE NICHT DIESE ZEILE!
    Für die Handhabung von Fork PRs siehe oben [Pull Requests aus Forks][pull requests from forks].
    (z.B.: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. Legen Sie [die Berechtigungen für das `GITHUB_TOKEN`][github token permissions] auf `write` für `checks` fest.
+6. Legen Sie [die Berechtigungen für das `GITHUB_TOKEN`][github token permissions] auf `write` für `checks` fest.
    Der erste Workflow startet die GitHub-Prüfung und veröffentlicht keinen Kommentar.
    (z.B.: `permissions: checks: write`)
-6. Legen Sie die Art der Maschine fest, auf der der Job läuft.
+7. Legen Sie die Art der Maschine fest, auf der der Job läuft.
    Er reicht nur den Job ein, daher genügt eine kleine Maschine.
    (z.B.: `runs-on: ubuntu-latest`)
-7. Checken Sie den Quellcode des PR-Branches aus.
+8. Checken Sie den Quellcode des PR-Branches aus.
    (z.B.: `uses: actions/checkout@v6`)
-8. Installieren Sie die Bencher CLI mithilfe [der GitHub Action][bencher cli github action].
+9. Installieren Sie die Bencher CLI mithilfe [der GitHub Action][bencher cli github action].
    (z.B.: `uses: bencherdev/bencher@main`)
-9. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl, um Ihre Pull Request-Branch-Benchmarks einzureichen.
-   Siehe den [`bencher run` CLI-Unterbefehl][bencher run] für einen vollständigen Überblick.
-   (z.B.: `bencher run`)
-10. Setzen Sie die `--project`-Option auf das Projekt-Slug.
+10. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl, um Ihre Pull Request-Branch-Benchmarks einzureichen.
+    Siehe den [`bencher run` CLI-Unterbefehl][bencher run] für einen vollständigen Überblick.
+    (z.B.: `bencher run`)
+11. Setzen Sie die `--project`-Option auf das Projekt-Slug.
     Siehe [die `--project` Dokumentation][project option] für weitere Details.
     (z.B.: `--project project-abc4567-wxyz123456789`)
-11. Setzen Sie die `--key`-Option auf das **Repository**-Geheimnis `BENCHER_API_KEY`.
+12. Setzen Sie die `--key`-Option auf das **Repository**-Geheimnis `BENCHER_API_KEY`.
     Siehe [die `--key` Dokumentation][key option] für weitere Details.
     (z.B.: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-12. Setzen Sie die `--branch`-Option auf den PR-Branch-Namen unter Verwendung [der GitHub Actions `GITHUB_HEAD_REF` Standard-Umgebungsvariable][github default environment variables].
+13. Setzen Sie die `--branch`-Option auf den PR-Branch-Namen unter Verwendung [der GitHub Actions `GITHUB_HEAD_REF` Standard-Umgebungsvariable][github default environment variables].
     Siehe [die `--branch` Dokumentation][branch option] für einen vollständigen Überblick.
     (z.B.: `--branch "$GITHUB_HEAD_REF"`)
-13. Setzen Sie den Startpunkt für den PR-Branch, wie oben unter [Pull Requests][pull requests].
+14. Setzen Sie den Startpunkt für den PR-Branch, wie oben unter [Pull Requests][pull requests].
     Siehe [die `--start-point` Dokumentation][start point] für einen vollständigen Überblick.
     (z.B.: `--start-point "$GITHUB_BASE_REF"`)
-14. Setzen Sie die `--adapter`-Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
+15. Setzen Sie die `--adapter`-Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
     Siehe [Benchmark-Harness-Adapter][adapter json] für einen vollständigen Überblick.
     (z.B.: `--adapter json`)
-15. Setzen Sie die `--image`-Option auf Ihr Image für dedizierte Hardware.
+16. Setzen Sie die `--image`-Option auf Ihr Image für dedizierte Hardware.
     Siehe [die `--image` Dokumentation][image option] für einen vollständigen Überblick.
     (z.B.: `--image project-abc4567-wxyz123456789:latest`)
-16. Setzen Sie das `--detach` Flag, um sich zu beenden, sobald der Job eingereicht ist.
+17. Setzen Sie das `--detach` Flag, um sich zu beenden, sobald der Job eingereicht ist.
     Siehe [die `--detach` Dokumentation][detach option] für weitere Details.
     (z.B.: `--detach`)
-17. Setzen Sie die `--github-actions`-Option auf das GitHub API-Authentifizierungstoken, um die GitHub-Prüfung zu starten, unter Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token].
+18. Setzen Sie die `--github-actions`-Option auf das GitHub API-Authentifizierungstoken, um die GitHub-Prüfung zu starten, unter Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token].
     Siehe [die `--github-actions` Dokumentation][github actions option] für mehr Details.
     (z.B.: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-18. Setzen Sie die `--ci-callback-token`-Option auf das **Repository**-Geheimnis `BENCHER_CALLBACK_TOKEN`,
+19. Setzen Sie die `--ci-callback-token`-Option auf das **Repository**-Geheimnis `BENCHER_CALLBACK_TOKEN`,
     damit Bencher das `repository_dispatch`-Ereignis senden kann, wenn der Job beendet ist.
     Siehe [die `--ci-callback-token` Dokumentation][ci callback token option] für weitere Details.
     (z.B.: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-19. Geben Sie den Benchmark-Befehl an, der im Image ausgeführt wird.
+20. Geben Sie den Benchmark-Befehl an, der im Image ausgeführt wird.
     Der Befehl wird an den Entrypoint des Images übergeben, falls es einen hat (siehe [die Option `--entrypoint`][entrypoint option]).
     Siehe [Benchmark Befehl][command argument] für einen vollständigen Überblick.
     (z.B.: `bencher mock`)
@@ -84,42 +86,44 @@ um Benchmarking auf dedizierter Hardware für Fork-PRs zu erhalten.
    GitHub führt einen `repository_dispatch`-Workflow nur vom Standard-Branch aus,
    daher bleibt die GitHub-Prüfung, die der erste Workflow startet, so lange in Bearbeitung, bis diese Datei dort liegt.
    (z.B.: `.github/workflows/pr_bare_metal_benchmarks_attach.yml`)
-2. Ausführung bei `repository_dispatch`-Ereignissen vom Typ `bencher_run`.
+2. Benennen Sie diesen Workflow.
+   (z.B.: `name: Attach Bare Metal PR Benchmarks with Bencher`)
+3. Ausführung bei `repository_dispatch`-Ereignissen vom Typ `bencher_run`.
    Siehe die [GitHub Actions `on` Dokumentation][github actions on]
    und die [GitHub Actions `repository_dispatch` Dokumentation][github repository_dispatch] für einen vollständigen Überblick.
    (z.B.: `on: repository_dispatch: types: [bencher_run]`)
-3. Erstellen Sie einen GitHub Actions `job`.
+4. Erstellen Sie einen GitHub Actions `job`.
    (z.B.: `jobs: attach_pr_benchmarks`)
-4. Legen Sie [die Berechtigungen für das `GITHUB_TOKEN`][github token permissions] auf `write` für `checks` und `pull-requests` fest.
+5. Legen Sie [die Berechtigungen für das `GITHUB_TOKEN`][github token permissions] auf `write` für `checks` und `pull-requests` fest.
    (z.B.: `permissions: checks: write pull-requests: write`)
-5. Legen Sie die Art der Maschine fest, auf der der Job läuft.
+6. Legen Sie die Art der Maschine fest, auf der der Job läuft.
    Der Job ist bereits beendet, daher veröffentlicht dieser Job nur die Ergebnisse.
    (z.B.: `runs-on: ubuntu-latest`)
-6. Installieren Sie die Bencher CLI mithilfe [der GitHub Action][bencher cli github action].
+7. Installieren Sie die Bencher CLI mithilfe [der GitHub Action][bencher cli github action].
    Ein Checkout ist nicht nötig.
    (z.B.: `uses: bencherdev/bencher@main`)
-7. Übergeben Sie die Job-UUID aus dem Ereignis über [eine Zwischen-Umgebungsvariable][github intermediate environment variable],
+8. Übergeben Sie die Job-UUID aus dem Ereignis über [eine Zwischen-Umgebungsvariable][github intermediate environment variable],
    niemals direkt in `run:`, wie es GitHubs Hinweise zu Script-Injection verlangen.
    (z.B.: `env: JOB_UUID: ${{ github.event.client_payload.bencher.job }}`)
-8. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl, um sich mit dem Job zu verbinden.
+9. Verwenden Sie den <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl, um sich mit dem Job zu verbinden.
    Siehe den [`bencher run` CLI-Unterbefehl][bencher run] für einen vollständigen Überblick.
    (z.B.: `bencher run`)
-9. Setzen Sie die `--project`-Option auf das Projekt-Slug.
-   Wenn das Repository mehr als ein Projekt hat, übergeben Sie `github.event.client_payload.bencher.project` auf dieselbe Weise über eine Umgebungsvariable
-   und setzen Sie sie in Anführungszeichen (z.B.: `--project "$PROJECT_SLUG"`).
-   Siehe [die `--project` Dokumentation][project option] für weitere Details.
-   (z.B.: `--project project-abc4567-wxyz123456789`)
-10. Setzen Sie die `--key`-Option auf das **Repository**-Geheimnis `BENCHER_API_KEY`.
+10. Setzen Sie die `--project`-Option auf das Projekt-Slug.
+    Wenn das Repository mehr als ein Projekt hat, übergeben Sie `github.event.client_payload.bencher.project` auf dieselbe Weise über eine Umgebungsvariable
+    und setzen Sie sie in Anführungszeichen (z.B.: `--project "$PROJECT_SLUG"`).
+    Siehe [die `--project` Dokumentation][project option] für weitere Details.
+    (z.B.: `--project project-abc4567-wxyz123456789`)
+11. Setzen Sie die `--key`-Option auf das **Repository**-Geheimnis `BENCHER_API_KEY`.
     Siehe [die `--key` Dokumentation][key option] für weitere Details.
     (z.B.: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-11. Setzen Sie die `--job`-Option auf die Job-UUID in Anführungszeichen.
+12. Setzen Sie die `--job`-Option auf die Job-UUID in Anführungszeichen.
     Siehe [die `--job` Dokumentation][job option] für einen vollständigen Überblick.
     (z.B.: `--job "$JOB_UUID"`)
-12. Setzen Sie das `--error-on-alert` Flag, um den Befehl zu beenden, wenn ein Alarm generiert wird.
+13. Setzen Sie das `--error-on-alert` Flag, um den Befehl zu beenden, wenn ein Alarm generiert wird.
     Das Ereignis trägt nur Daten, daher gehören Optionen, die festlegen, wie die Ergebnisse veröffentlicht werden, wie `--ci-only-on-alert` und `--ci-public-links`, ebenfalls hierher, in den zweiten Workflow.
     Siehe [die `--error-on-alert` Dokumentation][alert err] für einen vollständigen Überblick.
     (z.B.: `--error-on-alert`)
-13. Setzen Sie die `--github-actions`-Option auf das GitHub API-Authentifizierungstoken, um Ergebnisse als GitHub-Prüfung und als Kommentar im Pull Request zu posten, unter Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token].
+14. Setzen Sie die `--github-actions`-Option auf das GitHub API-Authentifizierungstoken, um Ergebnisse als GitHub-Prüfung und als Kommentar im Pull Request zu posten, unter Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token].
     Eine explizite `--ci-number` oder `--ci-id` an dieser Stelle hat Vorrang vor dem Ereignis.
     Siehe [die `--github-actions` Dokumentation][github actions option] für mehr Details.
     (z.B.: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

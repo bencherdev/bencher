@@ -23,55 +23,57 @@ GitHub ActionsがBencher Bare MetalのJobを非同期に待機できるように
 
 1. 1つ目のGitHub Actionsの`workflow`ファイルを作成します。
    (例: `.github/workflows/pr_bare_metal_benchmarks.yml`)
-2. 上記の[プルリクエスト][pull requests]と同じように、`pull_request`イベントに応じて実行します。
+2. このワークフローに名前を付けます。
+   (例: `name: Bare Metal PR Benchmarks with Bencher`)
+3. 上記の[プルリクエスト][pull requests]と同じように、`pull_request`イベントに応じて実行します。
    (例: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-3. GitHub Actionsの`job`を作成します。
+4. GitHub Actionsの`job`を作成します。
    (例: `jobs: submit_pr_benchmarks`)
-4. プルリクエストが同じリポジトリからの場合にのみ`pull_request`イベントを実行します。
+5. プルリクエストが同じリポジトリからの場合にのみ`pull_request`イベントを実行します。
    ⚠️この行を削除しないでください！
    フォークからのPRの処理については、上記の[フォークからのプルリクエスト][pull requests from forks]を参照してください。
    (例: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. [`GITHUB_TOKEN`の権限][github token permissions]を`checks`に対して`write`に設定します。
+6. [`GITHUB_TOKEN`の権限][github token permissions]を`checks`に対して`write`に設定します。
    1つ目のワークフローはGitHubチェックを開始し、コメントは投稿しません。
    (例: `permissions: checks: write`)
-6. ジョブが実行されるマシンタイプを設定します。
+7. ジョブが実行されるマシンタイプを設定します。
    Jobを送信するだけなので、小さなマシンで十分です。
    (例: `runs-on: ubuntu-latest`)
-7. PRブランチのソースコードをチェックアウトします。
+8. PRブランチのソースコードをチェックアウトします。
    (例: `uses: actions/checkout@v6`)
-8. [GitHub Actionから][bencher cli github action]Bencher CLIをインストールします。
+9. [GitHub Actionから][bencher cli github action]Bencher CLIをインストールします。
    (例: `uses: bencherdev/bencher@main`)
-9. プルリクエストブランチのベンチマークを送信するために、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用します。
-   [`bencher run` CLIサブコマンド][bencher run]を参照し、全体を把握してください。
-   (例: `bencher run`)
-10. `--project`オプションをプロジェクトのスラッグに設定します。
+10. プルリクエストブランチのベンチマークを送信するために、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用します。
+    [`bencher run` CLIサブコマンド][bencher run]を参照し、全体を把握してください。
+    (例: `bencher run`)
+11. `--project`オプションをプロジェクトのスラッグに設定します。
     詳細は[`--project`ドキュメント][project option]を参照してください。
     (例: `--project project-abc4567-wxyz123456789`)
-11. `--key`オプションを`BENCHER_API_KEY` **リポジトリ**シークレットに設定します。
+12. `--key`オプションを`BENCHER_API_KEY` **リポジトリ**シークレットに設定します。
     詳細は[`--key`ドキュメント][key option]を参照してください。
     (例: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-12. [`GITHUB_HEAD_REF`のGitHub Actionsデフォルト環境変数][github default environment variables]を使用して、`--branch`オプションをPRブランチ名に設定します。
+13. [`GITHUB_HEAD_REF`のGitHub Actionsデフォルト環境変数][github default environment variables]を使用して、`--branch`オプションをPRブランチ名に設定します。
     全体を把握するために[`--branch`ドキュメント][branch option]を参照してください。
     (例: `--branch "$GITHUB_HEAD_REF"`)
-13. 上記の[プルリクエスト][pull requests]と同じように、PRブランチの開始ポイントを設定します。
+14. 上記の[プルリクエスト][pull requests]と同じように、PRブランチの開始ポイントを設定します。
     全体を把握するために[`--start-point`ドキュメント][start point]を参照してください。
     (例: `--start-point "$GITHUB_BASE_REF"`)
-14. `--adapter`オプションを、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>が生成する[Bencher Metric Format JSON (`json`)][bmf]に設定します。
+15. `--adapter`オプションを、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>が生成する[Bencher Metric Format JSON (`json`)][bmf]に設定します。
     全体を把握するために[ベンチマークハーネスアダプター][adapter json]を参照してください。
     (例: `--adapter json`)
-15. `--image`オプションをベアメタル用のイメージに設定します。
+16. `--image`オプションをベアメタル用のイメージに設定します。
     全体を把握するために[`--image`ドキュメント][image option]を参照してください。
     (例: `--image project-abc4567-wxyz123456789:latest`)
-16. Jobを送信したらすぐに終了するように`--detach`フラグを設定します。
+17. Jobを送信したらすぐに終了するように`--detach`フラグを設定します。
     詳細は[`--detach`ドキュメント][detach option]を参照してください。
     (例: `--detach`)
-17. [GitHub Actionsの`GITHUB_TOKEN`環境変数][github token]を使用して、GitHubチェックを開始するためのGitHub API認証トークンを`--github-actions`オプションに設定します。
+18. [GitHub Actionsの`GITHUB_TOKEN`環境変数][github token]を使用して、GitHubチェックを開始するためのGitHub API認証トークンを`--github-actions`オプションに設定します。
     詳細は[`--github-actions`ドキュメント][github actions option]を参照してください。
     (例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-18. Jobの終了時にBencherが`repository_dispatch`イベントを送信できるように、`--ci-callback-token`オプションを`BENCHER_CALLBACK_TOKEN` **リポジトリ**シークレットに設定します。
+19. Jobの終了時にBencherが`repository_dispatch`イベントを送信できるように、`--ci-callback-token`オプションを`BENCHER_CALLBACK_TOKEN` **リポジトリ**シークレットに設定します。
     詳細は[`--ci-callback-token`ドキュメント][ci callback token option]を参照してください。
     (例: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-19. イメージ内で実行するベンチマークコマンドを指定します。
+20. イメージ内で実行するベンチマークコマンドを指定します。
     コマンドは、イメージにエントリポイントがある場合はそのエントリポイントに渡されます（[`--entrypoint`オプション][entrypoint option]を参照）。
     全体を把握するために[ベンチマークコマンド][command argument]を参照してください。
     (例: `bencher mock`)
@@ -82,40 +84,42 @@ GitHub ActionsがBencher Bare MetalのJobを非同期に待機できるように
    GitHubは`repository_dispatch`ワークフローをデフォルトブランチからのみ実行するため、
    このファイルがそこに置かれるまで、1つ目のワークフローが開始したGitHubチェックは実行中のままになります。
    (例: `.github/workflows/pr_bare_metal_benchmarks_attach.yml`)
-2. `bencher_run`タイプの`repository_dispatch`イベントに応じて実行します。
+2. このワークフローに名前を付けます。
+   (例: `name: Attach Bare Metal PR Benchmarks with Bencher`)
+3. `bencher_run`タイプの`repository_dispatch`イベントに応じて実行します。
    [GitHub Actionsの`on`ドキュメント][github actions on]
    および[GitHub Actionsの`repository_dispatch`ドキュメント][github repository_dispatch]を参照し、全体を把握してください。
    (例: `on: repository_dispatch: types: [bencher_run]`)
-3. GitHub Actionsの`job`を作成します。
+4. GitHub Actionsの`job`を作成します。
    (例: `jobs: attach_pr_benchmarks`)
-4. [`GITHUB_TOKEN`の権限][github token permissions]を`checks`と`pull-requests`に対して`write`に設定します。
+5. [`GITHUB_TOKEN`の権限][github token permissions]を`checks`と`pull-requests`に対して`write`に設定します。
    (例: `permissions: checks: write pull-requests: write`)
-5. ジョブが実行されるマシンタイプを設定します。
+6. ジョブが実行されるマシンタイプを設定します。
    Jobはすでに終了しているため、このジョブは結果を投稿するだけです。
    (例: `runs-on: ubuntu-latest`)
-6. [GitHub Actionから][bencher cli github action]Bencher CLIをインストールします。
+7. [GitHub Actionから][bencher cli github action]Bencher CLIをインストールします。
    チェックアウトは不要です。
    (例: `uses: bencherdev/bencher@main`)
-7. GitHubのスクリプトインジェクションに関するガイダンスに従い、イベントのJobのUUIDは`run:`に直接書かず、[中間環境変数][github intermediate environment variable]を通して渡します。
+8. GitHubのスクリプトインジェクションに関するガイダンスに従い、イベントのJobのUUIDは`run:`に直接書かず、[中間環境変数][github intermediate environment variable]を通して渡します。
    (例: `env: JOB_UUID: ${{ github.event.client_payload.bencher.job }}`)
-8. Jobにアタッチするために、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用します。
+9. Jobにアタッチするために、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドを使用します。
    [`bencher run` CLIサブコマンド][bencher run]を参照し、全体を把握してください。
    (例: `bencher run`)
-9. `--project`オプションをプロジェクトのスラッグに設定します。
-   リポジトリに複数のプロジェクトがある場合は、`github.event.client_payload.bencher.project`も同じように環境変数を通して渡し、引用符で囲んでください（例: `--project "$PROJECT_SLUG"`）。
-   詳細は[`--project`ドキュメント][project option]を参照してください。
-   (例: `--project project-abc4567-wxyz123456789`)
-10. `--key`オプションを`BENCHER_API_KEY` **リポジトリ**シークレットに設定します。
+10. `--project`オプションをプロジェクトのスラッグに設定します。
+    リポジトリに複数のプロジェクトがある場合は、`github.event.client_payload.bencher.project`も同じように環境変数を通して渡し、引用符で囲んでください（例: `--project "$PROJECT_SLUG"`）。
+    詳細は[`--project`ドキュメント][project option]を参照してください。
+    (例: `--project project-abc4567-wxyz123456789`)
+11. `--key`オプションを`BENCHER_API_KEY` **リポジトリ**シークレットに設定します。
     詳細は[`--key`ドキュメント][key option]を参照してください。
     (例: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-11. `--job`オプションを引用符で囲んだJobのUUIDに設定します。
+12. `--job`オプションを引用符で囲んだJobのUUIDに設定します。
     全体を把握するために[`--job`ドキュメント][job option]を参照してください。
     (例: `--job "$JOB_UUID"`)
-12. アラートが生成された場合にコマンドを失敗させるために、`--error-on-alert`フラグを設定します。
+13. アラートが生成された場合にコマンドを失敗させるために、`--error-on-alert`フラグを設定します。
     イベントが運ぶのはデータだけなので、`--ci-only-on-alert`や`--ci-public-links`など、結果の投稿方法を決めるオプションも、2つ目のワークフローのここに指定します。
     全体を把握するために[`--error-on-alert`ドキュメント][alert err]を参照してください。
     (例: `--error-on-alert`)
-13. [GitHub Actionsの`GITHUB_TOKEN`環境変数][github token]を使用して、結果をGitHubチェックとプルリクエストのコメントとして投稿するためのGitHub API認証トークンを`--github-actions`オプションに設定します。
+14. [GitHub Actionsの`GITHUB_TOKEN`環境変数][github token]を使用して、結果をGitHubチェックとプルリクエストのコメントとして投稿するためのGitHub API認証トークンを`--github-actions`オプションに設定します。
     ここで明示的に指定した`--ci-number`または`--ci-id`はイベントより優先されます。
     詳細は[`--github-actions`ドキュメント][github actions option]を参照してください。
     (例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

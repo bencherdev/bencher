@@ -6,33 +6,35 @@ PRがクローズされた後にPRブランチをクリーンアップするた�
 
 1. GitHub Actionsの`workflow`ファイルを作成します。
    (例: `.github/workflows/pr_benchmarks_closed.yml`)
-2. `pull_request`イベントで実行:
+2. このワークフローに名前を付けます。
+   (例: `name: Archive Closed PR Branch with Bencher`)
+3. `pull_request`イベントで実行:
    - `closed` - プルリクエストがクローズされた。
 
    完全な概要については[GitHub Actionsの`on`ドキュメント][github actions on]と[GitHub Actionsの`pull_request`ドキュメント][github action pull_request]をご覧ください。
    (例: `on: pull_request: types: [closed]`)
-3. GitHub Actionsの`job`を作成します。
+4. GitHub Actionsの`job`を作成します。
    (例: `jobs: archive_pr_branch`)
-4. プルリクエストが同じリポジトリからのものである場合にのみ、`pull_request`イベントで実行します。
+5. プルリクエストが同じリポジトリからのものである場合にのみ、`pull_request`イベントで実行します。
    ⚠️ この行を削除しないでください！
    Fork PRの処理については、以下の[フォークからのプルリクエスト][pull requests from forks]を参照してください。
    (例: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. ジョブを実行するマシンのタイプを設定します。
+6. ジョブを実行するマシンのタイプを設定します。
    完全な概要については[GitHub Actionsの`runs-on`ドキュメント][github actions runs-on]をご覧ください。
    (例: `runs-on: ubuntu-latest`)
-6. PRブランチのソースコードをチェックアウトします。
+7. PRブランチのソースコードをチェックアウトします。
    (例: `uses: actions/checkout@v6`)
-7. [GitHub Action][bencher cli github action]を使用してBencher CLIをインストールします。
+8. [GitHub Action][bencher cli github action]を使用してBencher CLIをインストールします。
    (例: `uses: bencherdev/bencher@main`)
-8. `bencher archive` CLIサブコマンドを使用してPRブランチをアーカイブします。
+9. `bencher archive` CLIサブコマンドを使用してPRブランチをアーカイブします。
    (例: `bencher archive`)
-9. `--project`オプションをプロジェクトスラッグに設定します。
-   詳細は[プロジェクトの`--project`ドキュメント][project option]を参照してください。
-   (例: `--project project-abc4567-wxyz123456789`)
-10. `--key`オプションを`BENCHER_API_KEY` **リポジトリ**シークレットに設定します。
+10. `--project`オプションをプロジェクトスラッグに設定します。
+    詳細は[プロジェクトの`--project`ドキュメント][project option]を参照してください。
+    (例: `--project project-abc4567-wxyz123456789`)
+11. `--key`オプションを`BENCHER_API_KEY` **リポジトリ**シークレットに設定します。
     詳細は[トークンの`--key`ドキュメント][key option]を参照してください。
     (例: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-11. [GitHub Actionsの`GITHUB_HEAD_REF`デフォルト環境変数][github default environment variables]を使用して、PRブランチ名を`--branch`オプションに設定します。
+12. [GitHub Actionsの`GITHUB_HEAD_REF`デフォルト環境変数][github default environment variables]を使用して、PRブランチ名を`--branch`オプションに設定します。
     (例: `--branch "$GITHUB_HEAD_REF"`)
 
 
