@@ -34,7 +34,7 @@ use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
     error::{
-        BencherResource, assert_parentage, assert_siblings, bad_request_error,
+        BencherResource, assert_parentage, assert_siblings, bad_request_error, past_the_ceiling,
         resource_conflict_error, resource_not_found_err,
     },
     macros::{
@@ -239,6 +239,23 @@ impl QueryThreshold {
                 })
             },
         }
+    }
+
+    /// Whether one more model fits under the per threshold model ceiling, warning of a refusal.
+    async fn model_fits(
+        &self,
+        log: &Logger,
+        context: &ApiContext,
+        warnings: &mut ReportWarnings,
+    ) -> Result<bool, HttpError> {
+        #[cfg(feature = "plus")]
+        if past_the_ceiling(log, InsertModel::rate_limit(context, self).await)?.is_none() {
+            warnings.skip(ReportWarningResource::Threshold);
+            return Ok(false);
+        }
+        #[cfg(not(feature = "plus"))]
+        let _ = (log, context, warnings);
+        Ok(true)
     }
 
     async fn update_from_model(&self, context: &ApiContext, model: Model) -> Result<(), HttpError> {
@@ -731,9 +748,9 @@ impl InsertThreshold {
                         actions.push(StartPointAction::NoChange);
                     },
                     ThresholdModelAction::Update(model) => {
-                        #[cfg(feature = "plus")]
-                        InsertModel::rate_limit(context, &current_threshold).await?;
-                        actions.push(StartPointAction::Update(current_threshold, model));
+                        if current_threshold.model_fits(log, context, warnings).await? {
+                            actions.push(StartPointAction::Update(current_threshold, model));
+                        }
                     },
                     ThresholdModelAction::Remove => {
                         active.release(&current_threshold);
@@ -827,8 +844,10 @@ impl InsertThreshold {
 
         // Phase 1: Pre-resolve all measure IDs (may trigger get_or_create writes)
         // and read current model state.
-        let declared =
-            Self::declared_thresholds(context, project_id, branch_id, testbed_id, models).await?;
+        let declared = Self::declared_thresholds(
+            log, context, project_id, branch_id, testbed_id, models, warnings,
+        )
+        .await?;
         let auth_conn = auth_conn!(context);
         let mut actions = Vec::new();
         for (dimensions, model) in declared {
@@ -840,11 +859,12 @@ impl InsertThreshold {
                     current_threshold.model_id,
                     Some(model),
                 )? {
+                    // Refused, the threshold keeps its model, and a reset does not strip it.
                     ThresholdModelAction::Update(model) => {
-                        #[cfg(feature = "plus")]
-                        InsertModel::rate_limit(context, &current_threshold).await?;
-                        slog::debug!(log, "Updating threshold for measure {measure_id}");
-                        actions.push(ThresholdAction::Update(current_threshold, model));
+                        if current_threshold.model_fits(log, context, warnings).await? {
+                            slog::debug!(log, "Updating threshold for measure {measure_id}");
+                            actions.push(ThresholdAction::Update(current_threshold, model));
+                        }
                     },
                     ThresholdModelAction::NoChange => {
                         slog::debug!(log, "Model unchanged for measure {measure_id}");
@@ -935,13 +955,15 @@ impl InsertThreshold {
     }
 
     /// The thresholds the payload declares, each resolved to the dimensions it
-    /// addresses.
+    /// addresses, skipping one whose measure a daily limit refused.
     async fn declared_thresholds(
+        log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         branch_id: BranchId,
         testbed_id: TestbedId,
         models: Option<JsonReportThresholdModels>,
+        warnings: &mut ReportWarnings,
     ) -> Result<Vec<(ThresholdDimensions, Model)>, HttpError> {
         let mut declared = Vec::new();
         let mut positions = HashMap::new();
@@ -949,8 +971,14 @@ impl InsertThreshold {
             None => {},
             Some(JsonReportThresholdModels::Map(models)) => {
                 for (measure, model) in models {
-                    let measure_id =
-                        QueryMeasure::get_or_create(context, project_id, &measure).await?;
+                    let Some(measure_id) = past_the_ceiling(
+                        log,
+                        QueryMeasure::get_or_create(context, project_id, &measure).await,
+                    )?
+                    else {
+                        warnings.skip(ReportWarningResource::Threshold);
+                        continue;
+                    };
                     Self::declare(
                         &mut declared,
                         &mut positions,
@@ -967,8 +995,14 @@ impl InsertThreshold {
                         metric,
                         model,
                     } = entry;
-                    let measure_id =
-                        QueryMeasure::get_or_create(context, project_id, &measure).await?;
+                    let Some(measure_id) = past_the_ceiling(
+                        log,
+                        QueryMeasure::get_or_create(context, project_id, &measure).await,
+                    )?
+                    else {
+                        warnings.skip(ReportWarningResource::Threshold);
+                        continue;
+                    };
                     Self::declare(
                         &mut declared,
                         &mut positions,

@@ -20,12 +20,54 @@ pub struct AdapterResults {
     /// The BMF version these results were parsed from.
     /// Fold is a v0 only operation, so this is what gates it.
     pub version: BmfVersion,
-    /// How many metrics the per measure cap dropped.
+    /// What the adapter skipped instead of parsing.
     /// The log line and the counter belong to ingest, where the providers are in scope.
-    pub dropped_names: usize,
+    pub skipped: Skipped,
 }
 
 pub type ResultsMap = HashMap<BenchmarkNameId, BenchmarkEntries>;
+
+/// How many of each resource a payload skipped: a benchmark whose name fails
+/// validation, a variant whose parameters do, a measure or a metric whose name
+/// does, and a metric past the per measure cap.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Skipped {
+    pub benchmarks: usize,
+    pub variants: usize,
+    pub measures: usize,
+    pub metrics: usize,
+}
+
+impl Skipped {
+    pub fn is_empty(&self) -> bool {
+        let Self {
+            benchmarks,
+            variants,
+            measures,
+            metrics,
+        } = *self;
+        benchmarks == 0 && variants == 0 && measures == 0 && metrics == 0
+    }
+}
+
+impl std::ops::Add for Skipped {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        let Self {
+            benchmarks,
+            variants,
+            measures,
+            metrics,
+        } = self;
+        Self {
+            benchmarks: benchmarks + rhs.benchmarks,
+            variants: variants + rhs.variants,
+            measures: measures + rhs.measures,
+            metrics: metrics + rhs.metrics,
+        }
+    }
+}
 
 /// Every variant one benchmark reported, keyed by its canonical parameters.
 ///
@@ -38,7 +80,7 @@ impl From<ResultsMap> for AdapterResults {
         Self {
             inner,
             version: BmfVersion::V0,
-            dropped_names: 0,
+            skipped: Skipped::default(),
         }
     }
 }

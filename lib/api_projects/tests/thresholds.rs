@@ -1286,3 +1286,162 @@ async fn threshold_ceiling_skips_a_start_point_clone_that_passes_it() {
         "the clone copied no threshold"
     );
 }
+
+/// A threshold's current model and how many models it has had.
+#[cfg(feature = "plus")]
+fn threshold_models(server: &TestServer, threshold_id: ThresholdId) -> (Option<ModelId>, i64) {
+    let mut conn = server.db_conn();
+    let model_id = schema::threshold::table
+        .filter(schema::threshold::id.eq(threshold_id))
+        .select(schema::threshold::model_id)
+        .first(&mut conn)
+        .expect("Failed to load the threshold");
+    let models = schema::model::table
+        .filter(schema::model::threshold_id.eq(threshold_id))
+        .count()
+        .get_result(&mut conn)
+        .expect("Failed to count the models");
+    (model_id, models)
+}
+
+#[cfg(feature = "plus")]
+fn threshold_id(server: &TestServer, uuid: ThresholdUuid) -> ThresholdId {
+    schema::threshold::table
+        .filter(schema::threshold::uuid.eq(uuid))
+        .select(schema::threshold::id)
+        .first(&mut server.db_conn())
+        .expect("Failed to load the threshold id")
+}
+
+/// The model ceiling stops both the API and a report, so these go straight into the database:
+/// `count` more models for a threshold, each a copy of its current one.
+#[cfg(feature = "plus")]
+fn insert_models(server: &TestServer, threshold_id: ThresholdId, count: usize) {
+    let mut conn = server.db_conn();
+    let model = schema::model::table
+        .filter(schema::model::threshold_id.eq(threshold_id))
+        .select(QueryModel::as_select())
+        .first(&mut conn)
+        .expect("Failed to load the model")
+        .into_model();
+    for _ in 0..count {
+        diesel::insert_into(schema::model::table)
+            .values(&InsertModel::new(threshold_id, model))
+            .execute(&mut conn)
+            .expect("Failed to insert a model");
+    }
+}
+
+#[cfg(feature = "plus")]
+fn skipped_threshold() -> Vec<JsonReportWarning> {
+    vec![JsonReportWarning {
+        resource: ReportWarningResource::Threshold,
+        action: ReportWarningAction::Skip,
+        count: 1,
+    }]
+}
+
+// Past the per threshold model ceiling a report skips that threshold's update and warns of it, and
+// the threshold keeps its model, even when the report resets every threshold it does not name.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn model_ceiling_skips_a_report_update_past_it() {
+    // Three models per threshold and three reports per project.
+    let server = TestServer::new_with_creation_limits(3, 3).await;
+    let (user, project_slug) = project_with_thresholds(&server, "model", 1).await;
+    let (bare, _, _) = branch_thresholds(&server, &project_slug, "ssize-branch")
+        .into_iter()
+        .next()
+        .expect("the seed threshold");
+    let bare = threshold_id(&server, bare);
+    let models = |upper_boundary: f64| {
+        serde_json::json!({
+            "latency": { "test": "percentage", "upper_boundary": upper_boundary }
+        })
+    };
+
+    for upper_boundary in [0.10, 0.20] {
+        let thresholds = serde_json::json!({ "models": models(upper_boundary) });
+        let (status, body) = post_report(&server, &user, &project_slug, Some(thresholds)).await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+    }
+    let before = threshold_models(&server, bare);
+    assert_eq!(
+        before.1, 3,
+        "the seed model and two updates fill the ceiling"
+    );
+
+    let thresholds = serde_json::json!({ "models": models(0.30), "reset": true });
+    let (status, body) = post_report(&server, &user, &project_slug, Some(thresholds)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+    assert_eq!(report.warnings, Some(skipped_threshold()));
+    assert_eq!(
+        threshold_models(&server, bare),
+        before,
+        "the threshold keeps its model"
+    );
+}
+
+// Past the per threshold model ceiling a report's start point clone skips that threshold's update
+// and warns of it on the report, and the copy keeps its model.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn model_ceiling_skips_a_start_point_clone_update_past_it() {
+    let server = TestServer::new_with_creation_limits(4, 4).await;
+    let (user, project_slug) = project_with_thresholds(&server, "modelclone", 1).await;
+    // A start point is a version, so the branch needs a report to be cloned from.
+    let (status, body) = post_report(&server, &user, &project_slug, None).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let path = format!("/v0/projects/{project_slug}/reports");
+    let onto_feature = |reset: bool| {
+        serde_json::json!({
+            "branch": "feature",
+            "start_point": { "branch": "ssize-branch", "clone_thresholds": true, "reset": reset },
+            "testbed": "ssize-testbed",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": ["{\"bench\": {\"latency\": {\"value\": 1.0}}}"],
+        })
+    };
+    let (status, body) = send_json(&server, &user, Method::POST, &path, &onto_feature(false)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (copy, _, _) = branch_thresholds(&server, &project_slug, "feature")
+        .into_iter()
+        .next()
+        .expect("the clone copied the seed threshold");
+    let copy = threshold_id(&server, copy);
+    insert_models(&server, copy, 3);
+    let before = threshold_models(&server, copy);
+    assert_eq!(
+        before.1, 4,
+        "the copied model and three more fill the ceiling"
+    );
+
+    // A new model on the start point's threshold, so the next clone updates the copy.
+    let (seed, _, _) = branch_thresholds(&server, &project_slug, "ssize-branch")
+        .into_iter()
+        .next()
+        .expect("the seed threshold");
+    let model = serde_json::json!({ "test": "t_test", "upper_boundary": 0.99 });
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::PUT,
+        &format!("/v0/projects/{project_slug}/thresholds/{seed}"),
+        &model,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let (status, body) = send_json(&server, &user, Method::POST, &path, &onto_feature(true)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+    assert_eq!(report.warnings, Some(skipped_threshold()));
+    assert_eq!(
+        threshold_models(&server, copy),
+        before,
+        "the copy keeps its model"
+    );
+}

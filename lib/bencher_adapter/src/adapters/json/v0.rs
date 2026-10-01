@@ -74,7 +74,7 @@ pub(crate) mod test_json_v0 {
 
     pub fn validate_adapter_json_latency(results: &AdapterResults) {
         assert_eq!(results.version, BmfVersion::V0);
-        assert_eq!(results.dropped_names, 0);
+        assert_eq!(results.skipped.metrics, 0);
         assert_eq!(results.inner.len(), 3);
 
         let metrics = results.get("tests::benchmark_a").unwrap();

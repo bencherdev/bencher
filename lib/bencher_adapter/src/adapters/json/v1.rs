@@ -3,30 +3,38 @@ use std::collections::HashMap;
 use bencher_json::{BenchmarkNameId, BmfVersion, MeasureNameId, ParameterSet};
 use serde::Deserialize;
 
+use super::Lenient;
 use crate::{
     Adaptable, Settings,
     results::{
         adapter_metrics::{AdapterMetrics, NamedMap},
-        adapter_results::{AdapterResults, BenchmarkEntries, ResultsMap},
+        adapter_results::{AdapterResults, BenchmarkEntries, ResultsMap, Skipped},
     },
 };
 
 /// The BMF v1 wire shape: a benchmark name maps to an array of entries,
 /// each carrying its parameters and its measures.
-pub type JsonV1Results = HashMap<BenchmarkNameId, Vec<JsonV1Entry>>;
+///
+/// A name that fails validation is skipped and counted.
+type JsonV1Results = Lenient<HashMap<BenchmarkNameId, Vec<JsonV1Entry>>>;
 
 /// One variant: what the benchmark ran with, and what it measured.
-#[derive(Debug, Clone, Deserialize)]
-pub struct JsonV1Entry {
-    /// Optional. An entry without it resolves to the benchmark's empty variant,
-    /// which is exactly what an explicit `{}` resolves to.
-    #[serde(default)]
-    pub parameters: ParameterSet,
-    pub measures: HashMap<MeasureNameId, JsonV1Measure>,
+#[derive(Debug, Deserialize)]
+struct JsonV1Entry {
+    /// Validated on its own, so parameters that fail skip this entry alone.
+    /// An entry without them resolves to the benchmark's empty variant, which is
+    /// exactly what an explicit `{}` resolves to, and an explicit `null` fails.
+    #[serde(default = "empty_parameters")]
+    parameters: serde_json::Value,
+    measures: Lenient<HashMap<MeasureNameId, JsonV1Measure>>,
 }
 
 /// A measure's metrics. Every name is equal on the wire.
-pub type JsonV1Measure = NamedMap;
+type JsonV1Measure = Lenient<NamedMap>;
+
+fn empty_parameters() -> serde_json::Value {
+    serde_json::Value::Object(serde_json::Map::new())
+}
 
 /// The BMF v1 leaf of the `json` adapter tree.
 ///
@@ -43,15 +51,23 @@ impl Adaptable for AdapterJsonV1 {
 }
 
 fn from_wire(results: JsonV1Results) -> AdapterResults {
-    let mut dropped_names = 0;
-    let mut results_map = ResultsMap::with_capacity(results.len());
-    for (benchmark, entries) in results {
+    let mut skipped = Skipped {
+        benchmarks: results.skipped,
+        ..Skipped::default()
+    };
+    let mut results_map = ResultsMap::with_capacity(results.inner.len());
+    for (benchmark, entries) in results.inner {
         let mut benchmark_entries = BenchmarkEntries::new();
         for JsonV1Entry {
             parameters,
             measures,
         } in entries
         {
+            let Ok(parameters) = serde_json::from_value::<ParameterSet>(parameters) else {
+                skipped.variants += 1;
+                continue;
+            };
+            skipped.measures += measures.skipped;
             // Two entries that canonicalize to the same parameters are one
             // variant, so their metrics merge rather than fork a series. A name
             // that genuinely repeats takes the later entry, which is deterministic
@@ -59,19 +75,20 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
             // dropped, so nothing is counted: a harness that emits one entry per
             // statistic is a plausible shape, not an error.
             let metrics: &mut AdapterMetrics = benchmark_entries.entry(parameters).or_default();
-            for (measure, named) in measures {
+            for (measure, named) in measures.inner {
+                skipped.metrics += named.skipped;
                 metrics
                     .inner
                     .entry(measure)
                     .or_default()
                     .inner
-                    .extend(named);
+                    .extend(named.inner);
             }
         }
         // The cap applies to the merged variant, so a name is counted once.
         for metrics in benchmark_entries.values_mut() {
             for metric in metrics.inner.values_mut() {
-                dropped_names += metric.truncate();
+                skipped.metrics += metric.truncate();
             }
         }
         results_map.insert(benchmark, benchmark_entries);
@@ -80,13 +97,15 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
     AdapterResults {
         inner: results_map,
         version: BmfVersion::V1,
-        dropped_names,
+        skipped,
     }
 }
 
 #[cfg(test)]
 pub(crate) mod test_json_v1 {
-    use bencher_json::{BenchmarkNameId, BmfVersion, MAX_PARAMETER_KEYS, MetricName, ParameterSet};
+    use bencher_json::{
+        BenchmarkName, BenchmarkNameId, BmfVersion, MAX_PARAMETER_KEYS, MetricName, ParameterSet,
+    };
     use ordered_float::OrderedFloat;
     use pretty_assertions::assert_eq;
 
@@ -99,7 +118,7 @@ pub(crate) mod test_json_v1 {
         },
         results::{
             adapter_metrics::{AdapterMetrics, MAX_METRIC_NAMES},
-            adapter_results::AdapterResults,
+            adapter_results::{AdapterResults, Skipped},
         },
     };
 
@@ -168,7 +187,7 @@ pub(crate) mod test_json_v1 {
 
     pub fn validate_adapter_json_v1_latency(results: &AdapterResults) {
         assert_eq!(results.version, BmfVersion::V1);
-        assert_eq!(results.dropped_names, 0);
+        assert_eq!(results.skipped.metrics, 0);
         assert_eq!(results.inner.len(), 1);
 
         let benchmark = "tests::benchmark_a".parse::<BenchmarkNameId>().unwrap();
@@ -261,7 +280,7 @@ pub(crate) mod test_json_v1 {
             Some(4.0.into()),
             "a repeated name takes the later entry"
         );
-        assert_eq!(results.dropped_names, 0, "nothing was dropped");
+        assert_eq!(results.skipped.metrics, 0, "nothing was dropped");
     }
 
     /// The union is per measure: a measure only one entry mentions is untouched.
@@ -308,7 +327,7 @@ pub(crate) mod test_json_v1 {
         assert_eq!(named(metrics, "latency", "p99"), Some(30.0.into()));
         assert_eq!(named(metrics, "latency", "value"), Some(3.0.into()));
         assert_eq!(named(metrics, "throughput", "value"), Some(100.0.into()));
-        assert_eq!(results.dropped_names, 0);
+        assert_eq!(results.skipped.metrics, 0);
     }
 
     /// Two entries with the same canonical parameters union the names of the
@@ -325,7 +344,7 @@ pub(crate) mod test_json_v1 {
         let metrics = variant(&results, "tests::disjoint", "{}");
         assert_eq!(named(metrics, "latency", "value"), Some(1.0.into()));
         assert_eq!(named(metrics, "latency", "p99"), Some(2.0.into()));
-        assert_eq!(results.dropped_names, 0);
+        assert_eq!(results.skipped.metrics, 0);
     }
 
     /// A name written by more than one entry takes the last entry's value,
@@ -342,7 +361,7 @@ pub(crate) mod test_json_v1 {
         let metrics = variant(&results, "tests::overlap", "{}");
         assert_eq!(named(metrics, "latency", "p99"), Some(3.0.into()));
         assert_eq!(named(metrics, "latency", "value"), Some(1.0.into()));
-        assert_eq!(results.dropped_names, 0);
+        assert_eq!(results.skipped.metrics, 0);
     }
 
     /// The cap applies to the union rather than to either entry alone,
@@ -370,7 +389,7 @@ pub(crate) mod test_json_v1 {
                 "value".parse().unwrap(),
             ]
         );
-        assert_eq!(results.dropped_names, 2);
+        assert_eq!(results.skipped.metrics, 2);
     }
 
     /// A name written by two entries is one name, never a drop: nine metrics
@@ -388,7 +407,7 @@ pub(crate) mod test_json_v1 {
         assert_eq!(names(metrics, "latency").len(), MAX_METRIC_NAMES);
         assert_eq!(named(metrics, "latency", "a1"), Some(1.0.into()));
         assert_eq!(named(metrics, "latency", "value"), Some(9.0.into()));
-        assert_eq!(results.dropped_names, 0);
+        assert_eq!(results.skipped.metrics, 0);
     }
 
     /// The cap keeps the three conventional names regardless of where they sort,
@@ -416,7 +435,7 @@ pub(crate) mod test_json_v1 {
                 "value".parse().unwrap(),
             ]
         );
-        assert_eq!(results.dropped_names, 2);
+        assert_eq!(results.skipped.metrics, 2);
     }
 
     /// The survivor set is a property of the payload, not of hash iteration order.
@@ -435,7 +454,7 @@ pub(crate) mod test_json_v1 {
             names(metrics, "latency"),
             names(variant(&expected, "tests::capped", "{}"), "latency")
         );
-        assert_eq!(permuted.dropped_names, 2);
+        assert_eq!(permuted.skipped.metrics, 2);
     }
 
     /// Explicit v1 selection rejects a v0 object payload outright.
@@ -467,7 +486,7 @@ pub(crate) mod test_json_v1 {
 
         let benchmark = "tests::none".parse::<BenchmarkNameId>().unwrap();
         assert!(results.inner[&benchmark].is_empty());
-        assert_eq!(results.dropped_names, 0);
+        assert_eq!(results.skipped.metrics, 0);
     }
 
     /// An entry that names no measure is a variant that measured nothing. It is
@@ -480,7 +499,7 @@ pub(crate) mod test_json_v1 {
 
         let metrics = variant(&results, "tests::none", "{}");
         assert!(metrics.inner.is_empty());
-        assert_eq!(results.dropped_names, 0);
+        assert_eq!(results.skipped.metrics, 0);
 
         // The v0 analog, byte for byte the same variant.
         let v0 = AdapterJsonV0::parse(r#"{"tests::none": {}}"#, Settings::default())
@@ -497,22 +516,45 @@ pub(crate) mod test_json_v1 {
 
         let metrics = variant(&results, "tests::none", r#"{"size_mb":16}"#);
         assert!(metrics.inner.is_empty());
-        assert_eq!(results.dropped_names, 0);
+        assert_eq!(results.skipped.metrics, 0);
+    }
+
+    /// The entry a test pins parameters on, beside one good entry.
+    fn beside_a_good_entry(parameters: &str) -> String {
+        format!(
+            r#"{{"bench": [
+                {{"parameters": {{"good": 1}}, "measures": {{"latency": {{"value": 1}}}}}},
+                {{"parameters": {parameters}, "measures": {{"latency": {{"value": 2}}}}}}
+            ]}}"#
+        )
+    }
+
+    fn assert_skips_the_variant(parameters: &str) {
+        let results = AdapterJsonV1::parse(&beside_a_good_entry(parameters), Settings::default())
+            .unwrap_or_else(|| panic!("expected {parameters} to skip its variant"));
+        let benchmark = "bench".parse::<BenchmarkNameId>().unwrap();
+        assert_eq!(
+            results.inner[&benchmark].keys().collect::<Vec<_>>(),
+            vec![&r#"{"good":1}"#.parse::<ParameterSet>().unwrap()],
+            "{parameters}"
+        );
+        assert_eq!(
+            results.skipped,
+            Skipped {
+                variants: 1,
+                ..Skipped::default()
+            },
+            "{parameters}"
+        );
     }
 
     /// Parameters are bounded: at most `MAX_PARAMETER_KEYS` keys, and a key
     /// or a string value that is non-empty, trimmed, and within `MAX_LEN` bytes.
     ///
-    /// A payload that breaks a bound is not a v1 payload. The whole report fails
-    /// to parse, so the run is rejected rather than quietly losing the variant
-    /// that carried the offending set.
+    /// An entry whose parameters break a bound is skipped and counted, never
+    /// trimmed to fit, since a trimmed set could merge two variants.
     #[test]
-    fn adapter_json_v1_rejects_out_of_bounds_parameters() {
-        fn entry(parameters: &str) -> String {
-            format!(
-                r#"{{"bench": [{{"parameters": {parameters}, "measures": {{"latency": {{"value": 1}}}}}}]}}"#
-            )
-        }
+    fn adapter_json_v1_skips_out_of_bounds_parameters() {
         fn keys(count: usize) -> String {
             format!(
                 "{{{}}}",
@@ -535,42 +577,82 @@ pub(crate) mod test_json_v1 {
             r#"{"a": " b"}"#.to_owned(),
             r#"{"a": ""}"#.to_owned(),
         ] {
-            assert!(
-                AdapterJsonV1::parse(&entry(&parameters), Settings::default()).is_none(),
-                "expected {parameters} to be rejected"
-            );
+            assert_skips_the_variant(&parameters);
         }
 
-        // Every bound is inclusive, so a set sitting on each limit still parses.
+        // Every bound is inclusive, so a set sitting on each limit is kept.
         for parameters in [
             keys(MAX_PARAMETER_KEYS),
             format!(r#"{{"{at_max_len}": 1}}"#),
             format!(r#"{{"a": "{at_max_len}"}}"#),
         ] {
-            assert!(
-                AdapterJsonV1::parse(&entry(&parameters), Settings::default()).is_some(),
-                "expected {parameters} to be accepted"
-            );
+            let results =
+                AdapterJsonV1::parse(&beside_a_good_entry(&parameters), Settings::default())
+                    .unwrap_or_else(|| panic!("expected {parameters} to be accepted"));
+            let benchmark = "bench".parse::<BenchmarkNameId>().unwrap();
+            assert_eq!(results.inner[&benchmark].len(), 2, "{parameters}");
+            assert!(results.skipped.is_empty(), "{parameters}");
         }
     }
 
-    /// Parameter values are JSON scalars only.
+    /// Parameter values are JSON scalars only, and parameters that are present
+    /// are an object: an explicit `null` is not the absent, empty set.
     #[test]
-    fn adapter_json_v1_rejects_non_scalar_parameters() {
+    fn adapter_json_v1_skips_non_scalar_parameters() {
         for parameters in [
             r#"{"a": null}"#,
             r#"{"a": []}"#,
             r#"{"a": {"b": 1}}"#,
             "[]",
             "1",
+            "null",
         ] {
-            let input = format!(
-                r#"{{"bench": [{{"parameters": {parameters}, "measures": {{"latency": {{"value": 1}}}}}}]}}"#
-            );
-            assert!(
-                AdapterJsonV1::parse(&input, Settings::default()).is_none(),
-                "expected {parameters} to be rejected"
-            );
+            assert_skips_the_variant(parameters);
         }
+    }
+
+    /// What fails validation is skipped at the smallest unit and counted, and
+    /// everything else is kept: a benchmark by its name, a variant by its
+    /// parameters, and a measure and a metric by their names. What sits under a
+    /// skipped item is not counted again.
+    #[test]
+    fn adapter_json_v1_skips_what_fails_validation() {
+        let long_benchmark = "b".repeat(BenchmarkName::MAX_LEN + 1);
+        let long = "n".repeat(MetricName::MAX_LEN + 1);
+        let input = serde_json::json!({
+            "good": [
+                {
+                    "parameters": { "size": 1 },
+                    "measures": {
+                        "latency": { "value": 1.0, long.clone(): 2.0 },
+                        long.clone(): { "value": 3.0 },
+                    },
+                },
+                {
+                    "parameters": { "size": [2] },
+                    "measures": {
+                        "latency": { "value": 4.0, long.clone(): 5.0 },
+                        long.clone(): { "value": 6.0 },
+                    },
+                },
+            ],
+            long_benchmark: [{ "measures": { long.clone(): { long: 7.0 } } }],
+        })
+        .to_string();
+        let results = parse_json_v1(&input);
+
+        assert_eq!(results.inner.len(), 1);
+        let metrics = variant(&results, "good", r#"{"size":1}"#);
+        assert_eq!(metrics.inner.len(), 1);
+        assert_eq!(names(metrics, "latency"), vec![MetricName::value()]);
+        assert_eq!(
+            results.skipped,
+            Skipped {
+                benchmarks: 1,
+                variants: 1,
+                measures: 1,
+                metrics: 1,
+            }
+        );
     }
 }
