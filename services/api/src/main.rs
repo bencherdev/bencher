@@ -29,6 +29,8 @@ use tokio_rustls::rustls::crypto::{CryptoProvider, aws_lc_rs};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
+    #[error("Failed to build the async runtime: {0}")]
+    Runtime(std::io::Error),
     #[error("Failed to install default TLS crypto provider: {0:?}")]
     Rustls(Arc<CryptoProvider>),
     #[error("{0}")]
@@ -47,8 +49,13 @@ pub enum ApiError {
     RunServer(String),
 }
 
-#[tokio::main]
-async fn main() -> Result<(), ApiError> {
+fn main() -> Result<(), ApiError> {
+    bencher_api::runtime()
+        .map_err(ApiError::Runtime)?
+        .block_on(serve())
+}
+
+async fn serve() -> Result<(), ApiError> {
     let log = bencher_logger::bootstrap_logger();
     #[cfg(feature = "sentry")]
     let guard = sentry::init(sentry::ClientOptions {

@@ -15,11 +15,25 @@ use sentry as _;
 use serde_yaml as _;
 use slog as _;
 use thiserror as _;
-use tokio as _;
 use tokio_rustls as _;
 // Needed for distroless builds
 use libsqlite3_sys as _;
 
+use tokio::runtime::{Builder, Runtime};
+
 pub mod api;
 
 pub use api_server::{SPEC, SPEC_STR};
+
+#[cfg(not(tokio_unstable))]
+compile_error!("`tokio_unstable` required for `enable_eager_driver_handoff`");
+
+pub fn runtime() -> std::io::Result<Runtime> {
+    Builder::new_multi_thread()
+        .enable_all()
+        // A worker that held the I/O driver wakes a parked worker before it polls a task, so one
+        // handler that blocks its thread cannot leave the listener and every other socket unpolled.
+        // https://docs.rs/tokio/latest/tokio/runtime/struct.Builder.html#method.enable_eager_driver_handoff
+        .enable_eager_driver_handoff()
+        .build()
+}

@@ -42,6 +42,7 @@ jobs:
         with:
           filters: |
             rust:
+              - '.cargo/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
               - 'lib/**'

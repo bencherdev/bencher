@@ -17,12 +17,13 @@ update-sandbox = "run --manifest-path ./tasks/update_sandbox/Cargo.toml --"
 
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+rustflags = ["--cfg", "tokio_unstable", "-C", "link-arg=-fuse-ld=mold"]
 
 [target.aarch64-unknown-linux-gnu]
 linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+rustflags = ["--cfg", "tokio_unstable", "-C", "link-arg=-fuse-ld=mold"]
 
 # https://blog.rust-lang.org/2025/11/20/switching-to-v0-mangling-on-nightly/
 [build]
-rustflags = ["-Csymbol-mangling-version=v0"]
+rustflags = ["--cfg", "tokio_unstable", "-Csymbol-mangling-version=v0"]
+rustdocflags = ["--cfg", "tokio_unstable"]
