@@ -4,6 +4,8 @@ diesel::table! {
     alert (id) {
         id -> Integer,
         uuid -> Text,
+        project_id -> Integer,
+        threshold_id -> Integer,
         boundary_id -> Integer,
         boundary_limit -> Bool,
         status -> Integer,
@@ -483,6 +485,8 @@ diesel::table! {
 }
 
 diesel::joinable!(alert -> boundary (boundary_id));
+diesel::joinable!(alert -> project (project_id));
+diesel::joinable!(alert -> threshold (threshold_id));
 diesel::joinable!(benchmark -> project (project_id));
 diesel::joinable!(boundary -> metric (metric_id));
 diesel::joinable!(boundary -> model (model_id));

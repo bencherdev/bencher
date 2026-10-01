@@ -707,7 +707,7 @@ pub fn create_boundary(
         .expect("Failed to get boundary id")
 }
 
-/// Create an alert for testing.
+/// Create an alert for testing, under its boundary's threshold and that threshold's project.
 pub fn create_alert(
     conn: &mut SqliteConnection,
     alert_uuid: &str,
@@ -715,9 +715,17 @@ pub fn create_alert(
     boundary_limit: BoundaryLimit,
     status: AlertStatus,
 ) -> AlertId {
+    let (project_id, threshold_id): (ProjectId, ThresholdId) = schema::boundary::table
+        .inner_join(schema::threshold::table)
+        .filter(schema::boundary::id.eq(boundary_id))
+        .select((schema::threshold::project_id, schema::threshold::id))
+        .first(conn)
+        .expect("Failed to get the boundary's threshold");
     diesel::insert_into(schema::alert::table)
         .values((
             schema::alert::uuid.eq(alert_uuid),
+            schema::alert::project_id.eq(project_id),
+            schema::alert::threshold_id.eq(threshold_id),
             schema::alert::boundary_id.eq(boundary_id),
             schema::alert::boundary_limit.eq(boundary_limit),
             schema::alert::status.eq(status),

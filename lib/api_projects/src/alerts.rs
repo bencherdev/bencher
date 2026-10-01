@@ -6,7 +6,7 @@ use bencher_json::{
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     actor_conn, auth_conn,
-    context::ApiContext,
+    context::{ApiContext, DbConnection},
     error::{forbidden_error, resource_conflict_err, resource_not_found_err, with_auth_hint},
     model::{
         project::{
@@ -18,8 +18,8 @@ use bencher_schema::{
     schema, write_conn,
 };
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    BoolExpressionMethods as _, BoxableExpression, ExpressionMethods as _, QueryDsl as _,
+    RunQueryDsl as _, SelectableExpression, SelectableHelper as _,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use futures::stream::{FuturesOrdered, StreamExt as _};
@@ -150,16 +150,44 @@ pub async fn get_ls_inner(
         })
         .collect::<Vec<_>>();
 
-    let total_count = get_ls_query(&query_project, &pagination_params, &query_params)
-        .count()
-        .get_result::<i64>(actor_conn!(context, api_actor))
-        .map_err(resource_not_found_err!(
-            Alert,
-            (&query_project, &pagination_params, &query_params)
-        ))?
-        .try_into()?;
+    let total_count = get_ls_count(
+        actor_conn!(context, api_actor),
+        &query_project,
+        &query_params,
+    )
+    .map_err(resource_not_found_err!(
+        Alert,
+        (&query_project, &pagination_params, &query_params)
+    ))?
+    .try_into()?;
 
     Ok((json_alerts.into(), total_count))
+}
+
+/// Counts what `get_ls_query` lists, joining only what its filters read.
+fn get_ls_count(
+    conn: &mut DbConnection,
+    query_project: &QueryProject,
+    query_params: &ProjAlertsQuery,
+) -> diesel::QueryResult<i64> {
+    let mut query = schema::alert::table
+        .inner_join(
+            schema::threshold::table
+                .inner_join(schema::branch::table)
+                .inner_join(schema::testbed::table)
+                .inner_join(schema::measure::table),
+        )
+        .filter(schema::alert::project_id.eq(query_project.id))
+        .into_boxed();
+
+    if let Some(status) = query_params.status {
+        query = query.filter(schema::alert::status.eq(status));
+    }
+
+    query
+        .filter(archived_filter(query_params.archived))
+        .count()
+        .get_result(conn)
 }
 
 fn get_ls_query<'q>(
@@ -184,28 +212,13 @@ fn get_ls_query<'q>(
                     ),
                 ),
         )
-        .filter(schema::benchmark::project_id.eq(query_project.id))
+        .filter(schema::alert::project_id.eq(query_project.id))
         .into_boxed();
 
     if let Some(status) = query_params.status {
         query = query.filter(schema::alert::status.eq(status));
     }
-
-    if let Some(true) = query_params.archived {
-        query = query.filter(
-            schema::branch::archived
-                .is_not_null()
-                .or(schema::testbed::archived.is_not_null())
-                .or(schema::measure::archived.is_not_null()),
-        );
-    } else {
-        query = query.filter(
-            schema::branch::archived
-                .is_null()
-                .and(schema::testbed::archived.is_null())
-                .and(schema::measure::archived.is_null()),
-        );
-    }
+    query = query.filter(archived_filter(query_params.archived));
 
     // Two variants of one benchmark tie on every other key, so the alert identifier
     // is what makes each order total.
@@ -244,6 +257,31 @@ fn get_ls_query<'q>(
         },
     }
     .select(QueryAlert::as_select())
+}
+
+fn archived_filter<QS>(
+    archived: Option<bool>,
+) -> Box<dyn BoxableExpression<QS, diesel::sqlite::Sqlite, SqlType = diesel::sql_types::Bool>>
+where
+    schema::branch::archived: SelectableExpression<QS>,
+    schema::testbed::archived: SelectableExpression<QS>,
+    schema::measure::archived: SelectableExpression<QS>,
+{
+    if let Some(true) = archived {
+        Box::new(
+            schema::branch::archived
+                .is_not_null()
+                .or(schema::testbed::archived.is_not_null())
+                .or(schema::measure::archived.is_not_null()),
+        )
+    } else {
+        Box::new(
+            schema::branch::archived
+                .is_null()
+                .and(schema::testbed::archived.is_null())
+                .and(schema::measure::archived.is_null()),
+        )
+    }
 }
 
 // TODO refactor out internal types

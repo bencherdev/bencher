@@ -13,7 +13,7 @@ use diesel::{
 use dropshot::HttpError;
 
 use super::{
-    QueryThreshold,
+    QueryThreshold, ThresholdId,
     boundary::{BoundaryId, QueryBoundary},
 };
 use crate::{
@@ -40,6 +40,8 @@ crate::macros::typed_id::typed_id!(AlertId);
 pub struct QueryAlert {
     pub id: AlertId,
     pub uuid: AlertUuid,
+    pub project_id: ProjectId,
+    pub threshold_id: ThresholdId,
     pub boundary_id: BoundaryId,
     pub boundary_limit: BoundaryLimit,
     pub status: AlertStatus,
@@ -58,12 +60,7 @@ impl QueryAlert {
     ) -> Result<Self, HttpError> {
         schema::alert::table
             .filter(schema::alert::uuid.eq(uuid.to_string()))
-            .inner_join(schema::boundary::table.inner_join(
-                schema::metric::table.inner_join(
-                    schema::report_benchmark::table.inner_join(schema::benchmark::table),
-                ),
-            ))
-            .filter(schema::benchmark::project_id.eq(project_id))
+            .filter(schema::alert::project_id.eq(project_id))
             .select(QueryAlert::as_select())
             .first(conn)
             .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
@@ -297,6 +294,8 @@ pub struct AlertContext {
 #[diesel(table_name = alert_table)]
 pub struct InsertAlert {
     pub uuid: AlertUuid,
+    pub project_id: ProjectId,
+    pub threshold_id: ThresholdId,
     pub boundary_id: BoundaryId,
     pub boundary_limit: BoundaryLimit,
     pub status: AlertStatus,
@@ -305,14 +304,18 @@ pub struct InsertAlert {
 
 impl InsertAlert {
     /// Insert a new alert for the given boundary.
-    /// Must be called within a transaction — uses the caller-provided `BoundaryId`.
+    /// Must be called within a transaction.
     pub fn insert(
         conn: &mut DbConnection,
+        project_id: ProjectId,
+        threshold_id: ThresholdId,
         boundary_id: BoundaryId,
         boundary_limit: BoundaryLimit,
     ) -> diesel::QueryResult<()> {
         let insert_alert = InsertAlert {
             uuid: AlertUuid::new(),
+            project_id,
+            threshold_id,
             boundary_id,
             boundary_limit,
             status: AlertStatus::default(),

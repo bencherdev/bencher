@@ -12,6 +12,7 @@ use diesel::{
 use crate::{
     context::DbConnection,
     model::project::{
+        ProjectId,
         branch::BranchId,
         measure::MeasureId,
         testbed::TestbedId,
@@ -27,6 +28,7 @@ use crate::{
 pub struct Threshold {
     pub id: ThresholdId,
     pub uuid: ThresholdUuid,
+    pub project_id: ProjectId,
     /// The variants this threshold checks. `None` checks every variant.
     pub parameters: Option<ParameterFilter>,
     /// The name this threshold checks. A threshold that names none checks the
@@ -62,6 +64,7 @@ impl Threshold {
             .select((
                 schema::threshold::id,
                 schema::threshold::uuid,
+                schema::threshold::project_id,
                 schema::threshold::parameters,
                 schema::threshold::measure_id,
                 schema::threshold::metric,
@@ -70,6 +73,7 @@ impl Threshold {
             .load::<(
                 ThresholdId,
                 ThresholdUuid,
+                ProjectId,
                 Option<ParameterFilter>,
                 MeasureId,
                 Option<MetricName>,
@@ -77,7 +81,7 @@ impl Threshold {
             )>(conn)?;
 
         let mut by_measure: HashMap<MeasureId, Vec<Self>> = HashMap::new();
-        for (id, uuid, parameters, measure_id, metric, query_model) in thresholds {
+        for (id, uuid, project_id, parameters, measure_id, metric, query_model) in thresholds {
             let QueryModel {
                 id: model_id,
                 test,
@@ -91,6 +95,7 @@ impl Threshold {
             by_measure.entry(measure_id).or_default().push(Self {
                 id,
                 uuid,
+                project_id,
                 parameters,
                 metric: metric.unwrap_or_else(MetricName::value),
                 model: ThresholdModel {
