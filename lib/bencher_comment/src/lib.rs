@@ -793,7 +793,7 @@ impl ReportComment {
             specs: vec![self.json_report.testbed.spec.as_ref().map(|s| s.uuid)],
             benchmarks: vec![benchmark.uuid],
             // No filter, so the link plots every variant of the benchmark.
-            parameters: Vec::new(),
+            parameters: None,
             measures: vec![measure.uuid],
             start_time: Some(
                 (self.json_report.start_time.into_inner() - DEFAULT_REPORT_HISTORY).into(),

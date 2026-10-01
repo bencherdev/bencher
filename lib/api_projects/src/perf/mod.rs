@@ -65,11 +65,11 @@ const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(672);
 
 /// A permutation is one (branch, testbed, benchmark, measure), and each one is a
 /// query of its own, so this bounds the work a request can ask for.
-const MAX_PERMUTATIONS: usize = 256;
+const MAX_PERMUTATIONS: usize = 64;
 
 /// A line is one variant of one benchmark, on one branch, one testbed, and one
 /// measure. Only a line that comes back spends one of these.
-const MAX_LINES: usize = 256;
+const MAX_LINES: usize = 64;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjPerfParams {
@@ -96,9 +96,11 @@ pub async fn proj_perf_options(
 /// The query results are every permutation of each branch, testbed, benchmark, and measure.
 /// Each permutation returns one line per variant of its benchmark,
 /// narrowed by the `parameters` filter when one is given.
-/// Only the first 64 entries of each dimension list are queried,
+/// Only the first 8 entries of each dimension list are queried,
 /// the `parameters` filter included.
-/// There is a limit of 256 permutations and 256 lines for a single request.
+/// A `parameters` entry that is not a valid parameter set is dropped,
+/// and when every entry is dropped there are no lines.
+/// There is a limit of 64 permutations and 64 lines for a single request.
 /// A permutation with nothing to plot returns no line,
 /// but it still counts against the permutation limit.
 /// If there is no `start_time`, then the last four weeks are queried,
@@ -190,7 +192,7 @@ pub async fn get_inner(
         #[cfg(feature = "plus")]
         &specs,
         &benchmarks,
-        &parameters,
+        parameters.as_deref(),
         &measures,
         times,
     )
@@ -251,7 +253,7 @@ fn benchmark_variants(
     conn: &mut DbConnection,
     project: &QueryProject,
     benchmark_uuid: BenchmarkUuid,
-    parameters: &[ParameterSet],
+    parameters: Option<&[ParameterSet]>,
 ) -> Result<BenchmarkVariants, HttpError> {
     let benchmark = QueryBenchmark::from_uuid(conn, project.id, benchmark_uuid)?;
     let json = benchmark.clone().into_json_for_project(project);
@@ -263,10 +265,11 @@ fn benchmark_variants(
         .map_err(resource_not_found_err!(Variant, (project, benchmark_uuid)))?
         .into_iter()
         .filter(|variant| {
-            parameters.is_empty()
-                || parameters
+            parameters.is_none_or(|parameters| {
+                parameters
                     .iter()
                     .any(|filter| filter.is_subset_of(&variant.parameters))
+            })
         })
         .map(|variant| (variant.id, variant))
         .collect();
@@ -275,7 +278,7 @@ fn benchmark_variants(
         benchmark,
         json,
         variants,
-        filtered: !parameters.is_empty(),
+        filtered: parameters.is_some(),
     })
 }
 
@@ -426,7 +429,7 @@ fn queried_variants<'v>(
     variants_cache: &'v mut HashMap<BenchmarkUuid, Option<BenchmarkVariants>>,
     project: &QueryProject,
     benchmark_uuid: BenchmarkUuid,
-    parameters: &[ParameterSet],
+    parameters: Option<&[ParameterSet]>,
 ) -> Option<&'v BenchmarkVariants> {
     variants_cache
         .entry(benchmark_uuid)
@@ -457,7 +460,7 @@ async fn perf_results(
     testbeds: &[TestbedUuid],
     #[cfg(feature = "plus")] specs: &[Option<SpecUuid>],
     benchmarks: &[BenchmarkUuid],
-    parameters: &[ParameterSet],
+    parameters: Option<&[ParameterSet]>,
     measures: &[MeasureUuid],
     times: Times,
 ) -> Result<Vec<JsonPerfLine>, HttpError> {

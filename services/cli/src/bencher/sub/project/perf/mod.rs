@@ -96,7 +96,7 @@ impl From<Perf> for JsonPerfQuery {
             specs,
             benchmarks,
             // No filter, so every variant is queried.
-            parameters: Vec::new(),
+            parameters: None,
             measures,
             start_time,
             end_time,
