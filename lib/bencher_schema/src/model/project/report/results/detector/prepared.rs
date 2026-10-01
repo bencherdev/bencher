@@ -5,6 +5,7 @@ use crate::macros::sql::last_insert_rowid;
 use crate::{
     context::DbConnection,
     model::project::{
+        ProjectId,
         metric::MetricId,
         threshold::{
             ThresholdId,
@@ -19,6 +20,7 @@ use crate::{
 /// Pre-computed detection result from Phase 1 (reads + compute).
 /// Contains all data needed to write boundary and optional alert in Phase 2.
 pub struct PreparedDetection {
+    pub project_id: ProjectId,
     pub threshold_id: ThresholdId,
     pub model_id: ModelId,
     pub boundary_uuid: BoundaryUuid,
@@ -34,6 +36,7 @@ impl PreparedDetection {
     /// using the provided connection (expected to be within a transaction).
     pub fn write(self, conn: &mut DbConnection, metric_id: MetricId) -> diesel::QueryResult<()> {
         let Self {
+            project_id,
             threshold_id,
             model_id,
             boundary_uuid,
@@ -61,7 +64,7 @@ impl PreparedDetection {
         let boundary_id = diesel::select(last_insert_rowid()).get_result::<BoundaryId>(conn)?;
 
         if !ignore_benchmark && let Some(boundary_limit) = outlier {
-            InsertAlert::insert(conn, boundary_id, boundary_limit)?;
+            InsertAlert::insert(conn, project_id, threshold_id, boundary_id, boundary_limit)?;
         }
 
         Ok(())
@@ -76,6 +79,7 @@ mod tests {
     use crate::{
         context::DbConnection,
         model::project::{
+            ProjectId,
             metric::MetricId,
             threshold::{ThresholdId, model::ModelId},
         },
@@ -90,10 +94,10 @@ mod tests {
     use super::PreparedDetection;
 
     /// Set up the full entity chain needed for `PreparedDetection::write` tests.
-    /// Returns `(threshold_id, model_id, metric_id)`.
+    /// Returns `(project_id, threshold_id, model_id, metric_id)`.
     fn setup_prepared_detection_entities(
         conn: &mut DbConnection,
-    ) -> (ThresholdId, ModelId, MetricId) {
+    ) -> (ProjectId, ThresholdId, ModelId, MetricId) {
         let base = create_base_entities(conn);
         let branch = create_branch_with_head(
             conn,
@@ -169,15 +173,17 @@ mod tests {
             100.0,
         );
 
-        (threshold_id, model_id, metric_id)
+        (base.project_id, threshold_id, model_id, metric_id)
     }
 
     #[test]
     fn prepared_detection_write_inserts_boundary() {
         let mut conn = setup_test_db();
-        let (threshold_id, model_id, metric_id) = setup_prepared_detection_entities(&mut conn);
+        let (project_id, threshold_id, model_id, metric_id) =
+            setup_prepared_detection_entities(&mut conn);
 
         let detection = PreparedDetection {
+            project_id,
             threshold_id,
             model_id,
             boundary_uuid: BoundaryUuid::new(),
@@ -212,9 +218,11 @@ mod tests {
     #[test]
     fn prepared_detection_write_creates_alert_on_outlier() {
         let mut conn = setup_test_db();
-        let (threshold_id, model_id, metric_id) = setup_prepared_detection_entities(&mut conn);
+        let (project_id, threshold_id, model_id, metric_id) =
+            setup_prepared_detection_entities(&mut conn);
 
         let detection = PreparedDetection {
+            project_id,
             threshold_id,
             model_id,
             boundary_uuid: BoundaryUuid::new(),
@@ -247,9 +255,11 @@ mod tests {
     #[test]
     fn prepared_detection_write_skips_alert_when_ignore_benchmark() {
         let mut conn = setup_test_db();
-        let (threshold_id, model_id, metric_id) = setup_prepared_detection_entities(&mut conn);
+        let (project_id, threshold_id, model_id, metric_id) =
+            setup_prepared_detection_entities(&mut conn);
 
         let detection = PreparedDetection {
+            project_id,
             threshold_id,
             model_id,
             boundary_uuid: BoundaryUuid::new(),

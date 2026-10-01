@@ -381,6 +381,7 @@ mod tests {
             threshold: Threshold {
                 id: ThresholdId::default(),
                 uuid: ThresholdUuid::default(),
+                project_id: ProjectId::default(),
                 parameters: None,
                 metric: MetricName::value(),
                 model: ThresholdModel {

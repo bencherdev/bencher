@@ -525,14 +525,22 @@ fn create_threshold_and_boundary(
     (threshold_id, boundary_id)
 }
 
-/// Create an alert for a boundary.
+/// Create an alert for a boundary, under its threshold and that threshold's project.
 fn create_alert(server: &TestServer, boundary_id: i32) -> AlertUuid {
     let mut conn = server.db_conn();
     let now = base_timestamp();
     let alert_uuid = AlertUuid::new();
+    let (project_id, threshold_id): (i32, i32) = schema::boundary::table
+        .inner_join(schema::threshold::table)
+        .filter(schema::boundary::id.eq(boundary_id))
+        .select((schema::threshold::project_id, schema::threshold::id))
+        .first(&mut conn)
+        .expect("get the boundary's threshold");
     diesel::insert_into(schema::alert::table)
         .values((
             schema::alert::uuid.eq(&alert_uuid),
+            schema::alert::project_id.eq(project_id),
+            schema::alert::threshold_id.eq(threshold_id),
             schema::alert::boundary_id.eq(boundary_id),
             schema::alert::boundary_limit.eq(BoundaryLimit::Upper),
             schema::alert::status.eq(AlertStatus::Active),

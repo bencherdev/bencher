@@ -59,6 +59,7 @@ impl Detector {
         .map_err(bad_request_error)?;
 
         Ok(PreparedDetection {
+            project_id: self.threshold.project_id,
             threshold_id: self.threshold.id,
             model_id: self.threshold.model.id,
             boundary_uuid: BoundaryUuid::new(),
