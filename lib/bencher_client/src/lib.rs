@@ -192,7 +192,6 @@ try_from_client!(
     JsonAccept,
     JsonAuthAck,
     JsonAuthUser,
-    JsonBackupCreated,
     JsonConfig,
     JsonConsole,
     JsonApiVersion,

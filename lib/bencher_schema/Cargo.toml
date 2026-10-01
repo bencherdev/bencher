@@ -15,6 +15,7 @@ plus = [
     "dep:bencher_google_index",
     "dep:bencher_oci_storage",
     "dep:bencher_rate_limiter",
+    "dep:camino",
     "dep:http",
     "dep:reqwest",
     "dep:serde",
@@ -34,10 +35,7 @@ sentry = ["dep:sentry"]
 otel = ["dep:bencher_otel", "bencher_recaptcha?/otel"]
 
 [dependencies]
-async-compression = { workspace = true, features = ["tokio", "gzip"] }
 async-trait.workspace = true
-aws-credential-types.workspace = true
-aws-sdk-s3.workspace = true
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
 bencher_bing_index = { workspace = true, optional = true }
@@ -55,7 +53,7 @@ bencher_rank.workspace = true
 bencher_rbac.workspace = true
 bencher_recaptcha = { workspace = true, optional = true }
 bencher_token.workspace = true
-camino.workspace = true
+camino = { workspace = true, optional = true }
 chrono.workspace = true
 css-inline.workspace = true
 dashmap.workspace = true
@@ -70,7 +68,6 @@ http = { workspace = true, optional = true }
 libsqlite3-sys.workspace = true
 mail-send.workspace = true
 regex.workspace = true
-rusqlite = { workspace = true, features = ["backup"] }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 serde_urlencoded.workspace = true
@@ -79,7 +76,7 @@ reqwest = { workspace = true, optional = true, features = ["query", "rustls-no-p
 sentry = { workspace = true, optional = true }
 slog.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["fs", "rt-multi-thread", "time"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "time"] }
 tokio-rustls.workspace = true
 tokio-util = { workspace = true, optional = true }
 url.workspace = true
