@@ -42,6 +42,7 @@ pub struct ReportComment {
     json_report: JsonReport,
     sub_adapter: SubAdapter,
     source: String,
+    pending: bool,
 }
 
 pub struct SubAdapter {
@@ -67,7 +68,15 @@ impl ReportComment {
             json_report,
             sub_adapter,
             source,
+            pending: false,
         }
+    }
+
+    /// Pending is the caller's to say, since a job that finished without results leaves the same report.
+    #[must_use]
+    pub fn with_pending(mut self, pending: bool) -> Self {
+        self.pending = pending;
+        self
     }
 
     fn results(&self) -> &[JsonReportIteration] {
@@ -95,7 +104,11 @@ impl ReportComment {
 
     fn human_no_benchmarks(&self, text: &mut String) {
         if self.benchmark_count == 0 {
-            text.push_str("\n\nWARNING: No benchmarks found!");
+            if self.pending {
+                text.push_str("\n\nResults pending until the remote job finishes.");
+            } else {
+                text.push_str("\n\nWARNING: No benchmarks found!");
+            }
         }
     }
 
@@ -246,7 +259,13 @@ impl ReportComment {
 
     fn html_no_benchmarks(&self, html: &mut String, truncated: bool) {
         if self.benchmark_count == 0 {
-            html.push_str("<blockquote><h3>⚠️ WARNING: No benchmarks found!</h3></blockquote>");
+            if self.pending {
+                html.push_str(
+                    "<blockquote><h3>Results pending until the remote job finishes.</h3></blockquote>",
+                );
+            } else {
+                html.push_str("<blockquote><h3>⚠️ WARNING: No benchmarks found!</h3></blockquote>");
+            }
         } else if truncated {
             html.push_str("<blockquote><h3>⚠️ WARNING: Truncated view!</h3><p>The full continuous benchmarking report exceeds the maximum length allowed on this platform.</p></blockquote>");
         }
@@ -1264,6 +1283,14 @@ mod tests {
         )
     }
 
+    fn job_report() -> JsonReport {
+        JsonReport {
+            #[cfg(feature = "plus")]
+            job: Some("12121212-1212-1212-1212-121212121212".parse().unwrap()),
+            ..json_report(Visibility::Public)
+        }
+    }
+
     /// One iteration with two measures of one benchmark: one that named a point
     /// estimate and one that named only a percentile.
     ///
@@ -1576,6 +1603,46 @@ mod tests {
             html.contains("/measures/throughput\">Throughput"),
             "unexpected report: {html}"
         );
+    }
+
+    #[test]
+    fn pending_report_replaces_no_benchmarks_warning() {
+        let comment = report_comment_for(job_report()).with_pending(true);
+
+        let human = comment.human();
+        assert!(
+            human.contains("\n\nResults pending until the remote job finishes."),
+            "{human}"
+        );
+        assert!(!human.contains("No benchmarks found"), "{human}");
+
+        let html = comment.html(false, None);
+        assert!(
+            html.contains(
+                "<blockquote><h3>Results pending until the remote job finishes.</h3></blockquote>"
+            ),
+            "{html}"
+        );
+        assert!(!html.contains("No benchmarks found"), "{html}");
+    }
+
+    #[test]
+    fn finished_job_without_results_keeps_no_benchmarks_warning() {
+        let comment = report_comment_for(job_report()).with_pending(false);
+
+        let human = comment.human();
+        assert!(
+            human.contains("\n\nWARNING: No benchmarks found!"),
+            "{human}"
+        );
+        assert!(!human.contains("Results pending"), "{human}");
+
+        let html = comment.html(false, None);
+        assert!(
+            html.contains("<blockquote><h3>⚠️ WARNING: No benchmarks found!</h3></blockquote>"),
+            "{html}"
+        );
+        assert!(!html.contains("Results pending"), "{html}");
     }
 
     #[test]
