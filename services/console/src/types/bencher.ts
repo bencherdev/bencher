@@ -716,7 +716,8 @@ export interface JsonNewCallback {
 	/**
 	 * Request headers. Names are case-insensitive: send each name once; if one repeats in
 	 * different case, only one is kept.
-	 * A header named `Content-Type` or `User-Agent` replaces Bencher's default.
+	 * A header named `Content-Type` replaces Bencher's default, and a `User-Agent` follows
+	 * Bencher's.
 	 */
 	headers?: Record<string, string>;
 	/**

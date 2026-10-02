@@ -14,9 +14,13 @@ use reqwest::{
 };
 use url::{Host, Url};
 
+mod credential;
 mod policy;
+mod rate_limit;
 
+pub use credential::{CallbackCredential, CallbackHost};
 pub use policy::AddressClass;
+pub use rate_limit::RateLimit;
 
 /// The whole attempt, from the host lookup to the response head.
 const TIMEOUT: Duration = Duration::from_secs(10);
@@ -42,8 +46,9 @@ pub struct CallbackRequest {
 pub enum CallbackAttempt {
     /// The receiver answered with a 2xx status.
     Delivered(StatusCode),
-    /// The receiver answered with any other status from 100 to 999, a redirect included.
-    Refused(StatusCode),
+    /// The receiver answered with any other status from 100 to 999, a redirect included, and for
+    /// a 403 or a 429, its rate limit headers.
+    Refused(StatusCode, RateLimit),
     /// The receiver did not answer in time.
     TimedOut,
     /// The attempt failed before the receiver answered, a failed host lookup or a client that
@@ -108,7 +113,7 @@ pub enum CallbackFinish {
 /// Why a callback failed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display)]
 pub enum CallbackFailure {
-    /// Every attempt was a timeout, a connection error, 408, 429, or a 5xx.
+    /// Every attempt was a timeout, a connection error, 408, a 5xx, or a rate limit.
     #[display("exhausted")]
     Exhausted,
     /// The receiver answered with a status no retry can change.
@@ -136,7 +141,7 @@ impl CallbackAttempt {
     pub fn class(&self) -> CallbackAttemptClass {
         match self {
             Self::Delivered(_) => CallbackAttemptClass::Success,
-            Self::Refused(status) => match status.as_u16() {
+            Self::Refused(status, _) => match status.as_u16() {
                 300..=399 => CallbackAttemptClass::Redirection,
                 400..=499 => CallbackAttemptClass::ClientError,
                 500..=599 => CallbackAttemptClass::ServerError,
@@ -148,11 +153,11 @@ impl CallbackAttempt {
         }
     }
 
-    fn answered(status: StatusCode) -> Self {
+    fn answered(status: StatusCode, headers: &HeaderMap) -> Self {
         if status.is_success() {
             Self::Delivered(status)
         } else {
-            Self::Refused(status)
+            Self::Refused(status, RateLimit::read(status, headers))
         }
     }
 
@@ -245,7 +250,7 @@ impl CallbackSender for CallbackClient {
             .await;
         match response {
             // The body is never read: dropping the response closes the connection.
-            Ok(response) => CallbackAttempt::answered(response.status()),
+            Ok(response) => CallbackAttempt::answered(response.status(), response.headers()),
             Err(error) => CallbackAttempt::failed(error),
         }
     }
@@ -360,7 +365,7 @@ mod tests {
 
     use super::{
         AddressClass, CallbackAttempt, CallbackBlock, CallbackClient, CallbackRequest,
-        CallbackSender, Lookup, Policy, SystemLookup, VettingResolver, error_chain,
+        CallbackSender, Lookup, Policy, RateLimit, SystemLookup, VettingResolver, error_chain,
     };
 
     /// Answers each lookup with the next scripted answer, and records every name it is asked.
@@ -591,10 +596,69 @@ mod tests {
                 );
             } else {
                 assert!(
-                    matches!(attempt, CallbackAttempt::Refused(code) if code == expected),
+                    matches!(attempt, CallbackAttempt::Refused(code, _) if code == expected),
                     "{status}: {attempt:?}"
                 );
             }
+            server.await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn only_a_403_or_a_429_reads_its_rate_limit_headers() {
+        const LIMITED: &str =
+            "retry-after: 30\r\nx-ratelimit-remaining: 0\r\nx-ratelimit-reset: 1700000000\r\n";
+        let read = RateLimit {
+            retry_after: Some(30),
+            remaining: Some(0),
+            reset: Some(1_700_000_000),
+        };
+        for (status, headers, expected) in [
+            (429, LIMITED, read),
+            (403, LIMITED, read),
+            (
+                403,
+                "x-ratelimit-remaining: 4999\r\nx-ratelimit-reset: 1700000000\r\n",
+                RateLimit {
+                    retry_after: None,
+                    remaining: Some(4999),
+                    reset: Some(1_700_000_000),
+                },
+            ),
+            // An HTTP-date and anything else that is not delta-seconds count as absent.
+            (
+                429,
+                "retry-after: Wed, 21 Oct 2015 07:28:00 GMT\r\n",
+                RateLimit::default(),
+            ),
+            (
+                429,
+                "retry-after: 99999999999999999999\r\n",
+                RateLimit {
+                    retry_after: Some(u64::MAX),
+                    ..RateLimit::default()
+                },
+            ),
+            (429, "retry-after: +30\r\n", RateLimit::default()),
+            (429, "retry-after: 1.5\r\n", RateLimit::default()),
+            (429, "", RateLimit::default()),
+            (400, LIMITED, RateLimit::default()),
+            (503, LIMITED, RateLimit::default()),
+        ] {
+            let (address, server) = receiver(format!(
+                "HTTP/1.1 {status} Status\r\n{headers}content-length: 0\r\nconnection: close\r\n\r\n"
+            ))
+            .await;
+
+            let attempt = client(Policy::Loopback, ScriptedLookup::new(Vec::new()))
+                .send(&request(&format!("http://{address}/")))
+                .await;
+
+            let CallbackAttempt::Refused(code, rate_limit) = attempt else {
+                panic!("{status}: {attempt:?}");
+            };
+            assert_eq!(code.as_u16(), status);
+            assert_eq!(rate_limit, expected, "{status} with {headers:?}");
             server.await.unwrap();
         }
     }
@@ -621,7 +685,7 @@ mod tests {
             .await;
 
         assert!(
-            matches!(attempt, CallbackAttempt::Refused(StatusCode::FOUND)),
+            matches!(attempt, CallbackAttempt::Refused(StatusCode::FOUND, _)),
             "{attempt:?}"
         );
         let (received, _listener) = server.await.unwrap();

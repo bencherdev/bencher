@@ -24,6 +24,8 @@ pub const MAX_CALLBACK_HEADER_NAME_LEN: usize = 256;
 pub const MAX_CALLBACK_HEADER_VALUE_LEN: usize = 8 << 10;
 pub const MAX_CALLBACK_BODY_LEN: usize = 64 << 10;
 
+const CALLBACK_DOCS_URL: &str = "https://bencher.dev/docs/explanation/images/";
+
 /// The job statuses a callback fires on, and so the values `{{ job.status }}` can take.
 pub const CALLBACK_JOB_STATUSES: [JobStatus; 3] =
     [JobStatus::Processed, JobStatus::Failed, JobStatus::Canceled];
@@ -55,7 +57,8 @@ pub struct JsonNewCallback {
     url: Url,
     /// Request headers. Names are case-insensitive: send each name once; if one repeats in
     /// different case, only one is kept.
-    /// A header named `Content-Type` or `User-Agent` replaces Bencher's default.
+    /// A header named `Content-Type` replaces Bencher's default, and a `User-Agent` follows
+    /// Bencher's.
     // `default` only feeds the generated types: deserializing goes through `TryFrom<Value>`.
     // A `Secret` is never empty, so an empty value, which HTTP allows, is `None`.
     #[serde(
@@ -157,18 +160,23 @@ impl JsonNewCallback {
         &self.url
     }
 
-    /// The headers to send: Bencher's defaults, replaced by any customer header of the same name.
-    /// Every value is sensitive, so the map's `Debug` never prints one.
+    /// The headers to send: Bencher's defaults, replaced by any customer header of the same name,
+    /// except a `User-Agent`, which follows Bencher's. Every value is sensitive, so the map's
+    /// `Debug` never prints one.
     pub fn delivery_headers(&self, version: &str) -> Result<HeaderMap, http::Error> {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        headers.insert(USER_AGENT, format!("bencher/{version}").try_into()?);
+        let mut user_agent = format!("Bencher/{version} (+{CALLBACK_DOCS_URL})");
         for (name, value) in &self.headers {
-            headers.insert(
-                HeaderName::try_from(name.as_str())?,
-                header_str(value.as_ref()).try_into()?,
-            );
+            let value = header_str(value.as_ref());
+            if name == USER_AGENT.as_str() {
+                user_agent.push(' ');
+                user_agent.push_str(value);
+            } else {
+                headers.insert(HeaderName::try_from(name.as_str())?, value.try_into()?);
+            }
         }
+        headers.insert(USER_AGENT, user_agent.try_into()?);
         headers
             .values_mut()
             .for_each(|value| value.set_sensitive(true));
@@ -787,7 +795,8 @@ mod tests {
     }
 
     #[test]
-    fn delivery_headers_let_a_customer_header_replace_a_default() {
+    fn delivery_headers_replace_the_content_type_and_follow_bencher_s_user_agent() {
+        const BENCHER: &str = "Bencher/1.2.3 (+https://bencher.dev/docs/explanation/images/)";
         let callback = new_callback(
             URL,
             &[
@@ -805,14 +814,14 @@ mod tests {
                     CONTENT_TYPE,
                     HeaderValue::from_static("application/vnd.github+json")
                 ),
-                (USER_AGENT, HeaderValue::from_static("bencher/1.2.3")),
+                (USER_AGENT, HeaderValue::from_static(BENCHER)),
             ])
         );
 
-        let user_agent = new_callback(URL, &[("User-Agent", "my-agent")], None).unwrap();
+        let user_agent = new_callback(URL, &[("User-Agent", "my-agent/2.0")], None).unwrap();
         assert_eq!(
             user_agent.delivery_headers("1.2.3").unwrap()[USER_AGENT],
-            "my-agent"
+            format!("{BENCHER} my-agent/2.0").as_str()
         );
     }
 

@@ -1,14 +1,18 @@
 use std::{sync::Arc, time::Duration};
 
+#[cfg(feature = "sentry")]
+use bencher_callback::CallbackHost;
 use bencher_callback::{
-    CallbackAttempt, CallbackBlock, CallbackFailure, CallbackFinish, CallbackKey, CallbackRequest,
-    CallbackSender, SealedRequest, error_chain,
+    CallbackAttempt, CallbackBlock, CallbackCredential, CallbackFailure, CallbackFinish,
+    CallbackKey, CallbackRequest, CallbackSender, SealedRequest, error_chain,
 };
 use bencher_json::{
     BENCHER_API_VERSION, CallbackContext, Clock, JobStatus, JobUuid, JsonNewCallback, JsonReport,
     OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName,
     runner::{CALLBACK_JOB_STATUSES, JobCallbackState},
 };
+#[cfg(feature = "sentry")]
+use dashmap::{DashMap, Entry};
 use diesel::{
     ExpressionMethods as _, NullableExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
     RunQueryDsl as _, SelectableHelper as _,
@@ -23,6 +27,9 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
+#[cfg(feature = "sentry")]
+use super::governor::Signal;
+use super::governor::{Governor, rate_limit};
 use crate::{
     context::DbConnection,
     model::{
@@ -35,6 +42,8 @@ use crate::{
 const MAX_ATTEMPTS: i32 = 3;
 /// A report builds synchronously on a worker thread, so a burst of builds could take every worker.
 const REPORT_BUILDS: usize = 2;
+#[cfg(feature = "sentry")]
+const ALARM_INTERVAL: Duration = Duration::from_hours(1);
 
 /// What every delivery task shares.
 pub(super) struct Delivery {
@@ -46,6 +55,9 @@ pub(super) struct Delivery {
     shutdown: CancellationToken,
     clock: Clock,
     report_builds: Semaphore,
+    governor: Governor,
+    #[cfg(feature = "sentry")]
+    alarms: Alarms,
 }
 
 /// A pending callback and the values its log lines name.
@@ -116,6 +128,9 @@ impl Delivery {
             shutdown,
             clock,
             report_builds: Semaphore::new(REPORT_BUILDS),
+            governor: Governor::default(),
+            #[cfg(feature = "sentry")]
+            alarms: Alarms::default(),
         }
     }
 
@@ -306,6 +321,7 @@ impl Delivery {
     }
 
     async fn attempt(&self, log: &Logger, mut claim: Claim, request: &CallbackRequest) {
+        let credential = CallbackCredential::of(request);
         loop {
             let number = claim.attempts + 1;
             // A count at the limit, as a restart can find, never sends again.
@@ -327,6 +343,13 @@ impl Delivery {
             {
                 return;
             }
+            let Some(Some(turn)) = self
+                .shutdown
+                .run_until_cancelled(self.governor.turn(&credential))
+                .await
+            else {
+                return;
+            };
             let started = Instant::now();
             let Some(attempt) = self
                 .shutdown
@@ -335,7 +358,18 @@ impl Delivery {
             else {
                 return;
             };
-            log_attempt(log, &claim, request, number, &attempt, started.elapsed());
+            let pause = turn.settle(&attempt, self.clock.timestamp());
+            log_attempt(
+                log,
+                &claim,
+                request,
+                number,
+                &attempt,
+                started.elapsed(),
+                pause,
+            );
+            #[cfg(feature = "sentry")]
+            self.alarm(&claim, &credential, &attempt);
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::CallbackAttempt(
                 attempt.class(),
@@ -369,6 +403,59 @@ impl Delivery {
             self.clock.now(),
         );
         settled(log, claim, finished, Some(finish));
+    }
+
+    /// Tell Sentry of a rate limit, once an hour per host at most.
+    #[cfg(feature = "sentry")]
+    fn alarm(&self, claim: &Claim, credential: &CallbackCredential, attempt: &CallbackAttempt) {
+        if let Some((_, signal)) = rate_limit(attempt)
+            && let Some(status) = response_status(attempt)
+            && self.alarms.due(credential.host())
+        {
+            sentry::capture_error(&RateLimited {
+                host: credential.host().clone(),
+                status,
+                signal,
+                job: claim.job_uuid,
+                organization: claim.organization,
+                project: claim.project,
+            });
+        }
+    }
+}
+
+/// A receiver's rate limit, named by its host and never by its URL path, a header, or a body.
+#[cfg(feature = "sentry")]
+#[derive(Debug, thiserror::Error)]
+#[error(
+    "Callback rate limited by {host}: {status} ({signal}) for job {job}, organization {organization}, project {project}"
+)]
+struct RateLimited {
+    host: CallbackHost,
+    status: StatusCode,
+    signal: Signal,
+    job: JobUuid,
+    organization: OrganizationUuid,
+    project: ProjectUuid,
+}
+
+/// When Sentry last heard of each host's rate limit, within the hour.
+#[cfg(feature = "sentry")]
+#[derive(Default)]
+struct Alarms(DashMap<CallbackHost, Instant>);
+
+#[cfg(feature = "sentry")]
+impl Alarms {
+    /// Whether Sentry has not heard of the host within the hour, marking it heard if so.
+    fn due(&self, host: &CallbackHost) -> bool {
+        self.0.retain(|_, at| at.elapsed() < ALARM_INTERVAL);
+        match self.0.entry(host.clone()) {
+            Entry::Occupied(_) => false,
+            Entry::Vacant(entry) => {
+                entry.insert(Instant::now());
+                true
+            },
+        }
     }
 }
 
@@ -424,23 +511,25 @@ fn wait_before(attempt: i32) -> Option<Duration> {
 fn verdict(attempt: &CallbackAttempt) -> Verdict {
     match attempt {
         CallbackAttempt::Delivered(_) => Verdict::Delivered,
-        CallbackAttempt::Refused(status) if retries(*status) => Verdict::Retry,
-        CallbackAttempt::Refused(_) => Verdict::Final(CallbackFailure::Refused),
+        CallbackAttempt::Refused(status, _)
+            if retries(*status) || rate_limit(attempt).is_some() =>
+        {
+            Verdict::Retry
+        },
+        CallbackAttempt::Refused(..) => Verdict::Final(CallbackFailure::Refused),
         CallbackAttempt::TimedOut | CallbackAttempt::Connection(_) => Verdict::Retry,
         CallbackAttempt::Blocked(block) => Verdict::Final(CallbackFailure::Blocked(block.reason())),
     }
 }
 
-/// Only these answers can change on a retry.
+/// Besides a rate limit, only these answers can change on a retry.
 fn retries(status: StatusCode) -> bool {
-    status == StatusCode::REQUEST_TIMEOUT
-        || status == StatusCode::TOO_MANY_REQUESTS
-        || status.is_server_error()
+    status == StatusCode::REQUEST_TIMEOUT || status.is_server_error()
 }
 
 fn response_status(attempt: &CallbackAttempt) -> Option<StatusCode> {
     match attempt {
-        CallbackAttempt::Delivered(status) | CallbackAttempt::Refused(status) => Some(*status),
+        CallbackAttempt::Delivered(status) | CallbackAttempt::Refused(status, _) => Some(*status),
         CallbackAttempt::TimedOut
         | CallbackAttempt::Connection(_)
         | CallbackAttempt::Blocked(_) => None,
@@ -455,6 +544,7 @@ fn log_attempt(
     number: i32,
     attempt: &CallbackAttempt,
     duration: Duration,
+    pause: Option<Duration>,
 ) {
     let (address, error) = match attempt {
         CallbackAttempt::Blocked(CallbackBlock::Address { address, class: _ }) => {
@@ -462,7 +552,7 @@ fn log_attempt(
         },
         CallbackAttempt::Connection(error) => (None, Some(error_chain(error))),
         CallbackAttempt::Delivered(_)
-        | CallbackAttempt::Refused(_)
+        | CallbackAttempt::Refused(..)
         | CallbackAttempt::TimedOut
         | CallbackAttempt::Blocked(CallbackBlock::NotHttps) => (None, None),
     };
@@ -475,6 +565,7 @@ fn log_attempt(
         "outcome" => %attempt.class(),
         "status" => response_status(attempt).map(|status| status.as_u16()),
         "duration_ms" => millis(duration),
+        "pause_ms" => pause.map(millis),
         "address" => address,
         "error" => error,
     );

@@ -803,7 +803,10 @@ async fn one_delivered_callback(server: &TestServer, job_uuid: JobUuid) -> Callb
     );
     assert_eq!(
         header("user-agent"),
-        Some(format!("bencher/{}", bencher_json::BENCHER_API_VERSION)),
+        Some(format!(
+            "Bencher/{} (+https://bencher.dev/docs/explanation/images/)",
+            bencher_json::BENCHER_API_VERSION
+        )),
         "the server's user agent"
     );
     assert_eq!(
