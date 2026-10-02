@@ -5,6 +5,8 @@ on:
     secrets:
       BENCHER_API_KEY:
         required: true
+      BENCHER_CALLBACK_TOKEN:
+        required: true
 
 env:
   # The Bencher project slug. For a project-scoped API key (`bencher_run_*`) this
@@ -108,6 +110,7 @@ jobs:
           --threshold-max-sample-size 64 \
           --threshold-upper-boundary 0.9999 \
           --thresholds-reset \
-          --error-on-alert \
+          --detach \
           --adapter rust_criterion \
-          --github-actions '${{ secrets.GITHUB_TOKEN }}'
+          --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          --ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'
