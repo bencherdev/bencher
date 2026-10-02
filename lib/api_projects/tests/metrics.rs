@@ -17,11 +17,17 @@ use bencher_api_tests::{
     helpers::{base_timestamp, create_empty_variant, create_test_report, get_project_id},
 };
 use bencher_json::{
-    BenchmarkUuid, JsonAlerts, JsonOneMetric, JsonReport, MeasureUuid, MetricName, MetricUuid,
-    ReportBenchmarkUuid,
+    BenchmarkUuid, DateTime, JsonAlerts, JsonOneMetric, JsonReport, MeasureUuid, MetricName,
+    MetricUuid, ReportBenchmarkUuid,
 };
 use bencher_schema::{
-    model::project::report::{ReportId, upsert_metric_count},
+    model::{
+        organization::OrganizationId,
+        project::{
+            metric::QueryMetric,
+            report::{ReportId, upsert_metric_count},
+        },
+    },
     schema,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -446,6 +452,62 @@ async fn metric_count_by_report_upsert() {
         .first(&mut conn)
         .expect("Failed to query metric_count_by_report after second upsert");
     assert_eq!(count, 4, "Upsert should accumulate: 1 + 3 = 4");
+}
+
+// Summing the per-report metric counts gives the same usage as counting the metric rows.
+#[tokio::test]
+async fn rollup_usage_agrees_with_usage() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "rollupusage@example.com").await;
+    let org = server.create_org(&user, "Rollup Usage Org").await;
+    let project = server
+        .create_project(&user, &org, "Rollup Usage Project")
+        .await;
+    let counted = Fixture {
+        project_slug: project.slug.to_string(),
+        token: user.token.clone(),
+    };
+    let other = fixture(&server, "rollup").await;
+
+    // Three point estimates an iteration, one of them with its bounds.
+    let iteration = serde_json::json!({
+        "bench-a": {
+            "latency": { "value": 1.0, "lower_value": 0.5, "upper_value": 1.5 },
+            "throughput": { "value": 2.0 },
+        },
+        "bench-b": { "latency": { "value": 3.0 } },
+    })
+    .to_string();
+    // Each report runs as many iterations as its day, so every report counts differently.
+    for day in 1..=5 {
+        report(
+            &server,
+            &counted,
+            day,
+            vec![iteration.clone(); day],
+            None,
+            None,
+        )
+        .await;
+    }
+    report(&server, &other, 3, vec![iteration.clone(); 2], None, None).await;
+
+    let organization_id: OrganizationId = schema::organization::table
+        .filter(schema::organization::uuid.eq(org.uuid))
+        .select(schema::organization::id)
+        .first(&mut server.db_conn())
+        .expect("Failed to get the organization ID");
+    // The reports of days 2 and 4 end exactly on the bounds, at 00:01 UTC.
+    let start_time = DateTime::try_from(1_704_153_660).expect("Invalid start time");
+    let end_time = DateTime::try_from(1_704_326_460).expect("Invalid end time");
+    let mut conn = server.db_conn();
+    let usage = QueryMetric::usage(&mut conn, organization_id, start_time, end_time)
+        .expect("Failed to count the metric rows");
+    let rollup_usage = QueryMetric::rollup_usage(&mut conn, organization_id, start_time, end_time)
+        .expect("Failed to sum the metric counts");
+
+    assert_eq!(usage, (2 + 3 + 4) * 3);
+    assert_eq!(rollup_usage, usage);
 }
 
 // =============================================================================

@@ -419,7 +419,7 @@ impl QueryOrganization {
         use crate::model::project::metric::QueryMetric;
 
         let (start_time, end_time) = context.rate_limiting.window();
-        QueryMetric::usage(
+        QueryMetric::rollup_usage(
             actor_conn!(context, api_actor),
             self.id,
             start_time,

@@ -8,6 +8,8 @@
 )]
 //! Integration tests for project report endpoints.
 
+#[cfg(feature = "plus")]
+use bencher_api_tests::helpers::{plan_project, post_metrics};
 use bencher_api_tests::{
     TestServer,
     helpers::{
@@ -18,6 +20,8 @@ use bencher_json::{
     BenchmarkUuid, BoundaryUuid, HeadUuid, JsonReport, JsonReports, MeasureUuid, MetricName,
     MetricUuid, ModelUuid, ParameterSet, ReportBenchmarkUuid, ThresholdUuid, VersionUuid,
 };
+#[cfg(feature = "plus")]
+use bencher_json::{BranchName, PlanLevel};
 use bencher_schema::{
     context::DbConnection,
     model::project::report::{ReportId, upsert_metric_count},
@@ -854,4 +858,61 @@ async fn reports_ingest_empty_variants() {
             "every report benchmark rides its own benchmark's empty variant"
         );
     }
+}
+
+// POST /v0/projects/{project}/reports - a paid organization past its daily metrics
+// limit is refused, and is not told to buy the plan it already has
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_refuses_a_paid_org_past_its_daily_metrics_limit() {
+    let server = TestServer::new_with_creation_and_plus_limits(u32::MAX, u32::MAX, 4).await;
+    let branch: BranchName = "main".parse().expect("Invalid branch name");
+    let (user, project) = plan_project(&server, "paid", Some(PlanLevel::Enterprise)).await;
+
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 1).await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+    assert!(body.contains("for Metric creation"), "{body}");
+    assert!(!body.contains("pricing"), "{body}");
+}
+
+// POST /v0/projects/{project}/reports - a paid organization is held to its own daily
+// metrics limit, not the claimed one that refuses an organization with no plan
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_admits_a_paid_org_past_the_claimed_limit() {
+    let server = TestServer::new_with_creation_and_plus_limits(4, 4, 8).await;
+    let branch: BranchName = "main".parse().expect("Invalid branch name");
+
+    let (user, project) = plan_project(&server, "free", None).await;
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 1).await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+    assert!(body.contains("pricing"), "{body}");
+
+    let (user, project) = plan_project(&server, "paid", Some(PlanLevel::Enterprise)).await;
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 1).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+}
+
+// POST /v0/projects/{project}/reports - an organization licensed at the Free level is
+// not paid, so it is held to the claimed limit and not the daily metrics limit of a paid
+// organization
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_holds_a_free_license_to_the_claimed_limit() {
+    let server = TestServer::new_with_creation_and_plus_limits(4, 4, 0).await;
+    let branch: BranchName = "main".parse().expect("Invalid branch name");
+    let (user, project) = plan_project(&server, "free-license", Some(PlanLevel::Free)).await;
+
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 1).await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+    assert!(body.contains("pricing"), "{body}");
 }

@@ -16577,6 +16577,12 @@
               }
             ]
           },
+          "plus_limit": {
+            "nullable": true,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
           "project": {
             "nullable": true,
             "allOf": [

@@ -1258,3 +1258,38 @@ async fn plot_component_lists_dedupe() {
     let updated = patch_plot(&server, &user, project_slug, created.uuid, &patch).await;
     assert_eq!(updated.branches, vec![dims.branch2]);
 }
+
+// PATCH /v0/projects/{project} - a paid organization past its daily metrics limit can
+// still make a project private
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn projects_update_private_for_a_paid_org_past_its_daily_metrics_limit() {
+    use bencher_json::PlanLevel;
+
+    let server = TestServer::new_with_creation_and_plus_limits(u32::MAX, u32::MAX, 0).await;
+    let user = server
+        .signup("Test User", "projupdprivpaid@example.com")
+        .await;
+    let org = server.create_org(&user, "Update Private Paid Org").await;
+    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    let project = server
+        .create_project(&user, &org, "Update Private Paid Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "visibility": "private" }))
+        .send()
+        .await
+        .expect("Request failed");
+
+    let status = resp.status();
+    let resp_body = resp.text().await.expect("Failed to read response body");
+    assert_eq!(status, StatusCode::OK, "{resp_body}");
+}

@@ -160,3 +160,41 @@ async fn projects_create_duplicate_slug() {
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::CONFLICT);
 }
+
+// POST /v0/organizations/{organization}/projects - a paid organization past its daily
+// metrics limit can still create a private project
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn projects_create_private_for_a_paid_org_past_its_daily_metrics_limit() {
+    use bencher_json::{JsonNewProject, PlanLevel, project::Visibility};
+
+    let server = TestServer::new_with_creation_and_plus_limits(u32::MAX, u32::MAX, 0).await;
+    let user = server.signup("Test User", "projprivpaid@example.com").await;
+    let org = server.create_org(&user, "Private Paid Org").await;
+    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+
+    let body = JsonNewProject {
+        name: "Private Paid Project"
+            .parse()
+            .expect("Invalid project name"),
+        slug: None,
+        url: None,
+        visibility: Some(Visibility::Private),
+    };
+    let org_slug: &str = org.slug.as_ref();
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/organizations/{org_slug}/projects")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    let status = resp.status();
+    let resp_body = resp.text().await.expect("Failed to read response body");
+    assert_eq!(status, StatusCode::CREATED, "{resp_body}");
+}
