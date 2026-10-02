@@ -2487,6 +2487,23 @@ fn marked_callback() -> serde_json::Value {
     })
 }
 
+/// The GitHub Actions dispatch `bencher run` composes, which a claimed project sends on any plan.
+#[cfg(feature = "plus")]
+fn bencher_run_dispatch() -> serde_json::Value {
+    serde_json::json!({
+        "url": "https://api.github.com/repos/owner/repo/dispatches",
+        "headers": {
+            "Accept": "application/vnd.github+json",
+            "Authorization": format!("Bearer {HEADER_MARKER}"),
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+        "body": {
+            "event_type": "bencher_run",
+            "client_payload": { "bencher": { "project": "{{ project.slug }}", "job": "{{ job.uuid }}" } },
+        },
+    })
+}
+
 /// A job on an image named by digest, which the registry resolves without a push.
 #[cfg(feature = "plus")]
 fn digest_job(project_slug: &str, callback: Option<serde_json::Value>) -> serde_json::Value {
@@ -2705,6 +2722,176 @@ async fn run_post_with_job_callback_is_skipped_without_a_plan() {
         stored.request.is_none(),
         "nothing is sealed for a skipped callback"
     );
+}
+
+/// Submit a run of `job` without authentication, which creates `project_slug`, named from the
+/// run's context, in an unclaimed organization, and return the run's job.
+#[cfg(feature = "plus")]
+async fn post_unclaimed_job_run(
+    server: &TestServer,
+    project_slug: &str,
+    job: serde_json::Value,
+) -> bencher_json::JobUuid {
+    let run = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [],
+        "context": { "bencher.dev/v0/repo/name": project_slug },
+        "job": job,
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .json(&run)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    assert_eq!(status, StatusCode::CREATED, "the run is accepted: {body}");
+    run_job(&body)
+}
+
+/// The job of a run, from the run's response body.
+#[cfg(feature = "plus")]
+fn run_job(body: &str) -> bencher_json::JobUuid {
+    let report: JsonReport = serde_json::from_str(body).expect("Failed to parse the report");
+    report.job.expect("the run has a job")
+}
+
+/// A job of a public project, read without authentication.
+#[cfg(feature = "plus")]
+async fn get_public_job(
+    server: &TestServer,
+    project_slug: &str,
+    job_uuid: bencher_json::JobUuid,
+) -> JsonJob {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "the project is public");
+    resp.json().await.expect("Failed to parse the job")
+}
+
+// POST /v0/run with the GitHub Actions dispatch `bencher run` composes, for a claimed project
+// without a plan, seals it to the job
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_callback_sends_the_dispatch_for_a_free_claimed_project() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_dispatch@example.com")
+        .await;
+    let org = server.create_org(&user, "Callback Dispatch Org").await;
+    let project = server
+        .create_project(&user, &org, "Callback Dispatch Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let (status, body) = post_job_run(
+        &server,
+        &user,
+        project_slug,
+        digest_job(project_slug, Some(bencher_run_dispatch())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let job_uuid = run_job(&body);
+    let job = get_public_job(&server, project_slug, job_uuid).await;
+    assert_eq!(
+        serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
+        serde_json::json!({ "state": "pending", "status": null }),
+        "a claimed project sends the dispatch without a plan"
+    );
+    let stored = stored_callback(&server, job_uuid);
+    assert!(
+        stored.request.is_some(),
+        "a pending callback holds its sealed request"
+    );
+}
+
+// POST /v0/run with a callback for an unclaimed project accepts the run and skips the callback,
+// even the GitHub Actions dispatch
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_callback_is_skipped_for_an_unclaimed_project() {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin", "runjob_cb_unclaimed@example.com")
+        .await;
+    create_fallback_spec(&server, &admin).await;
+
+    let project_slug = "callback-unclaimed-project";
+    let job_uuid = post_unclaimed_job_run(
+        &server,
+        project_slug,
+        digest_job(project_slug, Some(bencher_run_dispatch())),
+    )
+    .await;
+    let job = get_public_job(&server, project_slug, job_uuid).await;
+    assert_eq!(
+        serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
+        serde_json::json!({ "state": "skipped", "status": null }),
+        "an unclaimed project skips the dispatch"
+    );
+    let stored = stored_callback(&server, job_uuid);
+    assert!(
+        stored.request.is_none(),
+        "nothing is sealed for a skipped callback"
+    );
+}
+
+// POST /v0/run by an authenticated user on a project created without authentication claims its
+// organization, and that run is claimed: its callback goes through as a claimed project's, and its
+// job runs at Free priority with the Free timeout
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_that_claims_its_project_sends_the_dispatch() {
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_claiming@example.com")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug = "callback-claiming-project";
+    post_unclaimed_job_run(&server, project_slug, digest_job(project_slug, None)).await;
+
+    let (status, body) = post_job_run(
+        &server,
+        &user,
+        project_slug,
+        digest_job(project_slug, Some(bencher_run_dispatch())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let job_uuid = run_job(&body);
+    let job = get_public_job(&server, project_slug, job_uuid).await;
+    assert_eq!(
+        serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
+        serde_json::json!({ "state": "pending", "status": null }),
+        "the run that claims the project sends the dispatch"
+    );
+    assert_eq!(
+        job.timeout,
+        bencher_json::Timeout::FREE_MAX,
+        "the Free timeout"
+    );
+    let priority: bencher_json::Priority = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::priority)
+        .first(&mut server.db_conn())
+        .expect("Failed to query job priority");
+    assert_eq!(priority, bencher_json::Priority::Free, "Free priority");
 }
 
 // POST /v0/run with a callback for an organization licensed at the Free level skips it, as its job runs at Free priority.

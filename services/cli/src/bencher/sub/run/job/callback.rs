@@ -39,9 +39,8 @@ pub fn client_callback(
     }
 }
 
-pub const CALLBACK_SKIPPED: &str = "callback skipped: requires a Bencher Plus plan";
+pub const CALLBACK_SKIPPED: &str = "callback skipped: claim this project to send a GitHub Actions dispatch or upgrade to Bencher Plus for custom callbacks";
 
-/// Whether the server skipped the job's callback for want of a Bencher Plus plan.
 pub fn callback_skipped(json_job: &JsonJob) -> bool {
     matches!(
         json_job.callback,

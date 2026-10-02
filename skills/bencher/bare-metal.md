@@ -91,7 +91,7 @@ bencher run \
 | `--job-timeout <secs>` | Maximum execution time |
 | `--job-poll-interval <secs>` | How often to check for completion |
 | `--detach` | Submit without waiting for results (conflicts with `--job-poll-interval`) |
-| `--callback-url <url>` | `https` URL that Bencher sends one request to when the detached job finishes, Bencher Plus plans only, except that a callback to exactly `https://api.github.com/repos/<OWNER>/<REPO>/dispatches` goes out on every plan (requires `--image` and `--detach`, conflicts with `--github-actions`) |
+| `--callback-url <url>` | `https` URL that Bencher sends one request to when the detached job finishes, only for a claimed project: a callback to exactly `https://api.github.com/repos/<OWNER>/<REPO>/dispatches` with an `Authorization: Bearer <token>` header and `"event_type": "bencher_run"` in its body goes out on any plan, any other callback needs a Bencher Plus plan, and otherwise the callback is skipped (requires `--image` and `--detach`, conflicts with `--github-actions`) |
 | `--callback-header '<NAME: VALUE>'` | Callback request header, quoted as one argument (repeatable, requires `--callback-url`) |
 | `--callback-body '<json>'` | Callback JSON body, quoted as one argument: `{{ job.uuid }}`, `{{ job.status }}`, `{{ report.uuid }}`, `{{ project.uuid }}`, `{{ project.name }}`, and `{{ project.slug }}` are replaced anywhere inside a string, a string that is exactly `{{ report }}` becomes the whole report (once per body), and any other name in braces is refused; optional, and without it the body is the report (requires `--callback-url`) |
 | `--ci-callback-token <token>` | With `--detach` and `--github-actions`, the token for the `repository_dispatch` the CLI composes in place of `--callback-*` (see `ci.md`) |

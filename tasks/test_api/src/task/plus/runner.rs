@@ -18,11 +18,21 @@ const DOCKER_IMAGE: &str = "ghcr.io/bencherdev/bencher:latest";
 const IMAGE_TAG: &str = "runner-test";
 const MOCK_IMAGE_TAG: &str = "runner-test-mock";
 
-// Every plan sends the GitHub Actions dispatch. GitHub answers one without a token with 401,
-// or with 403 or 429 under its rate limit.
-const DISPATCH_CALLBACK_URL: &str = "https://api.github.com/repos/bencherdev/bencher/dispatches";
+// A claimed project sends the GitHub Actions dispatch on any plan when it carries a bearer token
+// and the `bencher_run` event. GitHub answers this one's invalid token with a 4xx.
+const DISPATCH_CALLBACK: [&str; 6] = [
+    "--callback-url",
+    "https://api.github.com/repos/bencherdev/bencher/dispatches",
+    "--callback-header",
+    "Authorization: Bearer invalid-token",
+    "--callback-body",
+    r#"{"event_type":"bencher_run","client_payload":{}}"#,
+];
 // An organization without a plan skips any other callback, so this one is never sent.
-const SKIPPED_CALLBACK_URL: &str = "https://receiver.example/bencher/callback";
+const SKIPPED_CALLBACK: [&str; 2] = [
+    "--callback-url",
+    "https://receiver.example/bencher/callback",
+];
 
 #[derive(Debug)]
 pub struct RunnerTest {
@@ -753,7 +763,7 @@ fn run_callback_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 
     println!("Running callback runner smoke test against: {host}");
 
-    let job_uuid = submit_callback_job(host, token, SKIPPED_CALLBACK_URL)?;
+    let job_uuid = submit_callback_job(host, token, &SKIPPED_CALLBACK)?;
     let job = view_job(host, token, job_uuid)?;
     anyhow::ensure!(
         job.callback
@@ -766,7 +776,7 @@ fn run_callback_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     );
     println!("Custom callback of job {job_uuid} skipped without a plan");
 
-    let job_uuid = submit_callback_job(host, token, DISPATCH_CALLBACK_URL)?;
+    let job_uuid = submit_callback_job(host, token, &DISPATCH_CALLBACK)?;
     let callback = wait_for_settled_callback(host, token, job_uuid)?;
     anyhow::ensure!(
         callback.state == JobCallbackState::Failed
@@ -779,13 +789,9 @@ fn run_callback_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Submit a detached job with a callback and the default body, and wait for it through the attach.
-fn submit_callback_job(host: &str, token: &Jwt, callback_url: &str) -> anyhow::Result<JobUuid> {
-    let report = submit_detached(
-        host,
-        token,
-        &["--callback-url", callback_url, "--exec", "mock"],
-    )?;
+/// Submit a detached job with `callback`, and wait for it through the attach.
+fn submit_callback_job(host: &str, token: &Jwt, callback: &[&str]) -> anyhow::Result<JobUuid> {
+    let report = submit_detached(host, token, &[callback, &["--exec", "mock"]].concat())?;
     let job_uuid = report
         .job
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {report:?}"))?;

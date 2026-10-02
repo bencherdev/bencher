@@ -910,9 +910,10 @@ export interface JsonNewRunJob {
 	/** Backdate the report start time */
 	backdate?: string;
 	/**
-	 * An HTTP request to send once the job finishes: the GitHub Actions dispatch to
-	 * `https://api.github.com/repos/{owner}/{repo}/dispatches` on every plan, and any other request
-	 * only for an organization with a Bencher Plus plan
+	 * An HTTP request to send once the job finishes, only for a claimed project: the GitHub Actions
+	 * dispatch to `https://api.github.com/repos/{owner}/{repo}/dispatches` with a `Bearer` token
+	 * and the `bencher_run` event on any plan, and any other request only for an organization with
+	 * a Bencher Plus plan
 	 */
 	callback?: JsonNewCallback;
 }

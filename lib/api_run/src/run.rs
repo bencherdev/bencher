@@ -158,7 +158,7 @@ async fn post_inner(
     };
 
     let query_organization = query_project.organization(public_conn!(context, public_user))?;
-    let is_claimed = query_organization.is_claimed(public_conn!(context, public_user))?;
+    let mut is_claimed = query_organization.is_claimed(public_conn!(context, public_user))?;
     // If the organization is claimed, check permissions
     if is_claimed {
         match public_user {
@@ -180,6 +180,7 @@ async fn post_inner(
         query_organization
             .claim(log, context, &auth_user.user)
             .await?;
+        is_claimed = true;
     }
 
     let api_actor = ApiActor::Public(public_user.clone());

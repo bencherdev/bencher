@@ -1471,17 +1471,23 @@ mod dispatch_tests {
         );
     }
 
-    /// The server sends github.com's dispatch on every plan only when it recognizes the composed URL.
+    /// The server sends the dispatch without Bencher Plus only when it recognizes the whole
+    /// composed request, whatever its payload.
     #[test]
-    fn the_default_api_url_composes_the_github_dispatch() {
-        let callback = dispatch_request(
-            DEFAULT_GITHUB_API_URL,
-            FULL_NAME,
-            &TOKEN.parse::<Secret>().unwrap(),
-            &payload(None, None, None),
-        )
-        .unwrap();
-        assert!(callback.is_github_dispatch(), "{}", callback.url());
+    fn the_default_api_url_composes_the_bencher_run_dispatch() {
+        let mut flags = payload(Some(7), Some(4242), Some("suite"));
+        flags.bencher.build_time = true;
+        flags.bencher.file_size = true;
+        for dispatch in [flags, payload(None, None, None)] {
+            let callback = dispatch_request(
+                DEFAULT_GITHUB_API_URL,
+                FULL_NAME,
+                &TOKEN.parse::<Secret>().unwrap(),
+                &dispatch,
+            )
+            .unwrap();
+            assert!(callback.is_bencher_run_dispatch(), "{dispatch:?}");
+        }
     }
 
     #[test]

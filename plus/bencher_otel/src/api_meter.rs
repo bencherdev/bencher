@@ -500,9 +500,7 @@ impl ApiCounter {
 
             // Callback metrics
             Self::CallbackSubmit(_) => "Counts the number of callbacks submitted with a run",
-            Self::CallbackSkip(_) => {
-                "Counts the number of callbacks skipped because the organization has no paid plan"
-            },
+            Self::CallbackSkip(_) => "Counts the number of callbacks skipped",
             Self::CallbackAttempt(_) => "Counts the number of callback delivery attempts",
 
             // Self-hosted specific metrics
