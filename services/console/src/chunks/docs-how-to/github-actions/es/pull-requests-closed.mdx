@@ -6,35 +6,37 @@ Para limpiar la rama de PR después de que su PR esté cerrado, puedes crear un 
 
 1. Crea un archivo de `workflow` de GitHub Actions.
    (ej: `.github/workflows/pr_benchmarks_closed.yml`)
-2. Ejecutar en eventos `pull_request`:
+2. Nombra este flujo de trabajo.
+   (ej: `name: Archive Closed PR Branch with Bencher`)
+3. Ejecutar en eventos `pull_request`:
    - `closed` - Una solicitud de extracción fue cerrada.
 
    Consulta la [documentación de GitHub Actions `on`][github actions on]
    y la [documentación de GitHub Actions `pull_request`][github action pull_request] para una visión completa.
    (ej: `on: pull_request: types: [closed]`)
-3. Crea un `job` de GitHub Actions.
+4. Crea un `job` de GitHub Actions.
    (ej: `jobs: archive_pr_branch`)
-4. Ejecutar en eventos `pull_request` si y solo si la solicitud de extracción es del mismo repositorio.
+5. Ejecutar en eventos `pull_request` si y solo si la solicitud de extracción es del mismo repositorio.
    ⚠️ ¡NO ELIMINES ESTA LÍNEA!
    Para manejar PRs de Forks, consulta [Solicitudes de Extracción desde Forks][pull requests from forks] a continuación.
    (ej: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. Establecer el tipo de máquina en la que el trabajo se ejecutará.
+6. Establecer el tipo de máquina en la que el trabajo se ejecutará.
    Consulta la [documentación de GitHub Actions `runs-on`][github actions runs-on]
    para una visión completa.
    (ej: `runs-on: ubuntu-latest`)
-6. Checkout del código fuente de la rama PR.
+7. Checkout del código fuente de la rama PR.
    (ej: `uses: actions/checkout@v6`)
-7. Instala el CLI de Bencher usando [la Acción de GitHub][bencher cli github action].
+8. Instala el CLI de Bencher usando [la Acción de GitHub][bencher cli github action].
    (ej: `uses: bencherdev/bencher@main`)
-8.  Utiliza el subcomando `bencher archive` del CLI para archivar la rama PR.
+9.  Utiliza el subcomando `bencher archive` del CLI para archivar la rama PR.
    (ej: `bencher archive`)
-9.  Configura la opción `--project` al identificador del Proyecto.
+10. Configura la opción `--project` al identificador del Proyecto.
     Consulta [la documentación de `--project`][project option] para más detalles.
     (ej: `--project project-abc4567-wxyz123456789`)
-10. Configura la opción `--key` al secreto de **Repository** `BENCHER_API_KEY`.
+11. Configura la opción `--key` al secreto de **Repository** `BENCHER_API_KEY`.
     Consulta [la documentación de `--key`][key option] para más detalles.
     (ej: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-11. Configura la opción `--branch` al nombre de la rama PR
+12. Configura la opción `--branch` al nombre de la rama PR
     usando [la variable de entorno predeterminada `GITHUB_HEAD_REF` de GitHub Actions][github default environment variables].
     (ej: `--branch "$GITHUB_HEAD_REF"`)
 

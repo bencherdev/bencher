@@ -14,7 +14,9 @@ entonces simplemente puedes crear otro flujo de trabajo para ejecutar `on` event
 
 1. Crea un archivo de `workflow` de GitHub Actions.
    (ej: `.github/workflows/pr_benchmarks.yml`)
-2. Ejecuta en eventos de `pull_request`:
+2. Nombra este flujo de trabajo.
+   (ej: `name: PR Benchmarks with Bencher`)
+3. Ejecuta en eventos de `pull_request`:
    - `opened` - Se creó una pull request.
    - `reopened` - Se reabrió una pull request previamente cerrada.
    - `edited` - Se editó el título o el cuerpo de una pull request, o se cambió la rama base de una pull request.
@@ -24,13 +26,13 @@ entonces simplemente puedes crear otro flujo de trabajo para ejecutar `on` event
    Revisa la documentación de [GitHub Actions `on`][github actions on]
    y la documentación de [GitHub Actions `pull_request`][github action pull_request] para una visión completa.
    (ej: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-3. Crea un `job` de GitHub Actions.
+4. Crea un `job` de GitHub Actions.
    (ej: `jobs: benchmark_pr_branch`)
-4. Ejecuta en eventos de `pull_request` si y solo si la pull request es del mismo repositorio.
+5. Ejecuta en eventos de `pull_request` si y solo si la pull request es del mismo repositorio.
    ⚠️ ¡NO ELIMINES ESTA LÍNEA!
    Para manejar PRs de Forks, consulta [Pull Requests desde Forks][pull requests from forks] a continuación.
    (ej: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. Establece [los permisos para el `GITHUB_TOKEN`][github token permissions]
+6. Establece [los permisos para el `GITHUB_TOKEN`][github token permissions]
    a `write` para `checks` y `pull-requests`.
    Dependiendo de tu configuración de GitHub, esto puede no ser necesario.
    Pero para todas las organizaciones y repos personales
@@ -39,29 +41,29 @@ entonces simplemente puedes crear otro flujo de trabajo para ejecutar `on` event
    Consulta [la documentación de GitHub][github token permissions security]
    para una visión completa.
    (ej: `permissions: checks: write pull-requests: write`)
-6. Establece el tipo de máquina en la que se ejecutará el trabajo.
+7. Establece el tipo de máquina en la que se ejecutará el trabajo.
    Consulta la documentación de [GitHub Actions `runs-on`][github actions runs-on]
    para una visión completa.
    (ej: `runs-on: ubuntu-latest`)
-7. Clona el código fuente de la rama PR.
+8. Clona el código fuente de la rama PR.
    (ej: `uses: actions/checkout@v6`)
-8. Instala el Bencher CLI usando [la GitHub Action][bencher cli github action].
+9. Instala el Bencher CLI usando [la GitHub Action][bencher cli github action].
    (ej: `uses: bencherdev/bencher@main`)
-9. Usa la subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
-   para ejecutar tus benchmarks de la rama de la pull request.
-   Consulta [la subcomando CLI `bencher run`][bencher run] para una visión completa.
-   (ej: `bencher run`)
-10. Establece la opción `--project` al slug del Proyecto.
+10. Usa la subcomando CLI <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+    para ejecutar tus benchmarks de la rama de la pull request.
+    Consulta [la subcomando CLI `bencher run`][bencher run] para una visión completa.
+    (ej: `bencher run`)
+11. Establece la opción `--project` al slug del Proyecto.
     Consulta [los documentos de `--project`][project option] para más detalles.
     (ej: `--project project-abc4567-wxyz123456789`)
-11. Establece la opción `--key` al secreto **Repository** `BENCHER_API_KEY`.
+12. Establece la opción `--key` al secreto **Repository** `BENCHER_API_KEY`.
     Consulta [los documentos de `--key`][key option] para más detalles.
     (ej: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-12. Establece la opción `--branch` al nombre de la rama PR
+13. Establece la opción `--branch` al nombre de la rama PR
     usando [la variable de entorno predeterminada `GITHUB_HEAD_REF` de GitHub Actions][github default environment variables].
     Consulta [los documentos de `--branch`][branch option] para una visión completa.
     (ej: `--branch "$GITHUB_HEAD_REF"`)
-13. Establece el Punto de Inicio para la Rama PR:
+14. Establece el Punto de Inicio para la Rama PR:
     1. Establece la opción `--start-point` al punto de inicio de la Rama PR
     usando [la variable de entorno predeterminada `GITHUB_BASE_REF` de GitHub Actions][github default environment variables].
     Consulta [los documentos de `--start-point`][start point] para una visión completa.
@@ -77,21 +79,21 @@ entonces simplemente puedes crear otro flujo de trabajo para ejecutar `on` event
     Esto evitará la deriva de datos de benchmark.
     Consulta [los documentos de `--start-point-reset`][start point reset] para una visión completa.
     (ej: `--start-point-reset`)
-14. Establece la opción `--testbed` al nombre del Testbed.
+15. Establece la opción `--testbed` al nombre del Testbed.
     Esto debería coincidir con la máquina seleccionada en `runs-on`.
     Consulta [los documentos de `--tested`][testbed option] para más detalles.
     (ej: `--testbed ubuntu-latest`)
-15. Establece la bandera `--error-on-alert` para fallar el comando si se genera una Alerta.
+16. Establece la bandera `--error-on-alert` para fallar el comando si se genera una Alerta.
    Consulta [los documentos de `--error-on-alert`][alert err] para una visión completa.
    (ej: `--error-on-alert`)
-16. Establece la opción `--adapter` al [Formato de Métrica Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+17. Establece la opción `--adapter` al [Formato de Métrica Bencher JSON (`json`)][bmf] que es generado por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Consulta [adaptadores de harness de benchmark][adapter json] para una visión completa.
    (ej: `--adapter json`)
-17. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como una Verificación de GitHub y un comentario en la Pull Request usando
+18. Establece la opción `--github-actions` al token de autenticación de la API de GitHub para publicar resultados como una Verificación de GitHub y un comentario en la Pull Request usando
     [la variable de entorno `GITHUB_TOKEN` de GitHub Actions][github token].
     Consulta [los documentos de `--github-actions`][github actions option] para más detalles.
     (ej: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-18. Especifica los argumentos del comando de benchmark.
+19. Especifica los argumentos del comando de benchmark.
     Consulta [comando de benchmark][command argument] para una visión completa.
     (ej: `bencher mock`)
 

@@ -24,55 +24,57 @@ Bencher Bare Metal Job을 비동기적으로 기다릴 수 있게 합니다.
 
 1. 첫 번째 GitHub Actions `workflow` 파일을 생성합니다.
    (예: `.github/workflows/pr_bare_metal_benchmarks.yml`)
-2. 위의 [Pull Requests][pull requests]처럼 `pull_request` 이벤트에서 실행합니다.
+2. 이 워크플로의 이름을 지정합니다.
+   (예: `name: Bare Metal PR Benchmarks with Bencher`)
+3. 위의 [Pull Requests][pull requests]처럼 `pull_request` 이벤트에서 실행합니다.
    (예: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-3. GitHub Actions `job`을 생성합니다.
+4. GitHub Actions `job`을 생성합니다.
    (예: `jobs: submit_pr_benchmarks`)
-4. pull request가 동일한 저장소에서 온 경우에만 `pull_request` 이벤트에서 실행합니다.
+5. pull request가 동일한 저장소에서 온 경우에만 `pull_request` 이벤트에서 실행합니다.
    ⚠️ 이 라인을 제거하지 마십시오!
    포크 PR 처리에 관해서는 위의 [포크에서의 Pull Requests][pull requests from forks]를 참조하세요.
    (예: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. `GITHUB_TOKEN`의 [권한을 설정][github token permissions]하여 `checks`에 `write`를 부여합니다.
+6. `GITHUB_TOKEN`의 [권한을 설정][github token permissions]하여 `checks`에 `write`를 부여합니다.
    첫 번째 워크플로는 GitHub Check를 시작하고 댓글은 게시하지 않습니다.
    (예: `permissions: checks: write`)
-6. 작업을 실행할 머신의 유형을 설정합니다.
+7. 작업을 실행할 머신의 유형을 설정합니다.
    Job을 제출하기만 하므로 작은 머신으로 충분합니다.
    (예: `runs-on: ubuntu-latest`)
-7. PR 브랜치의 소스 코드를 체크아웃합니다.
+8. PR 브랜치의 소스 코드를 체크아웃합니다.
    (예: `uses: actions/checkout@v6`)
-8. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
+9. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
    (예: `uses: bencherdev/bencher@main`)
-9. PR 브랜치 벤치마크를 제출하기 위해 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용합니다.
-   전체 개요는 [`bencher run` CLI 서브커맨드][bencher run]를 참조하세요.
-   (예: `bencher run`)
-10. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+10. PR 브랜치 벤치마크를 제출하기 위해 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용합니다.
+    전체 개요는 [`bencher run` CLI 서브커맨드][bencher run]를 참조하세요.
+    (예: `bencher run`)
+11. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
     더 많은 세부 사항은 [`--project` 문서][project option]를 참조하세요.
     (예: `--project project-abc4567-wxyz123456789`)
-11. `--key` 옵션을 `BENCHER_API_KEY` **레포지토리** 시크릿으로 설정합니다.
+12. `--key` 옵션을 `BENCHER_API_KEY` **레포지토리** 시크릿으로 설정합니다.
     더 많은 세부 사항은 [`--key` 문서][key option]를 참조하세요.
     (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-12. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
+13. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
     전체 개요는 [`--branch` 문서][branch option]를 참조하세요.
     (예: `--branch "$GITHUB_HEAD_REF"`)
-13. 위의 [Pull Requests][pull requests]처럼 PR 브랜치의 시작점을 설정합니다.
+14. 위의 [Pull Requests][pull requests]처럼 PR 브랜치의 시작점을 설정합니다.
     전체 개요는 [`--start-point` 문서][start point]를 참조하세요.
     (예: `--start-point "$GITHUB_BASE_REF"`)
-14. `--adapter` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>이 생성하는 [Bencher Metric Format JSON (`json`)][bmf]으로 설정합니다.
+15. `--adapter` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>이 생성하는 [Bencher Metric Format JSON (`json`)][bmf]으로 설정합니다.
     전체 개요는 [벤치마크 하니스 어댑터][adapter json]를 참조하세요.
     (예: `--adapter json`)
-15. `--image` 옵션을 베어 메탈 이미지로 설정합니다.
+16. `--image` 옵션을 베어 메탈 이미지로 설정합니다.
     전체 개요는 [`--image` 문서][image option]를 참조하세요.
     (예: `--image project-abc4567-wxyz123456789:latest`)
-16. Job을 제출하자마자 종료하도록 `--detach` 플래그를 설정합니다.
+17. Job을 제출하자마자 종료하도록 `--detach` 플래그를 설정합니다.
     더 많은 세부 사항은 [`--detach` 문서][detach option]를 참조하세요.
     (예: `--detach`)
-17. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 GitHub Check를 시작할 GitHub API 인증 토큰으로 `--github-actions` 옵션을 설정합니다.
+18. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 GitHub Check를 시작할 GitHub API 인증 토큰으로 `--github-actions` 옵션을 설정합니다.
     더 많은 세부 사항은 [`--github-actions` 문서][github actions option]를 참조하세요.
     (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-18. Job이 끝났을 때 Bencher가 `repository_dispatch` 이벤트를 보낼 수 있도록 `--ci-callback-token` 옵션을 `BENCHER_CALLBACK_TOKEN` **레포지토리** 시크릿으로 설정합니다.
+19. Job이 끝났을 때 Bencher가 `repository_dispatch` 이벤트를 보낼 수 있도록 `--ci-callback-token` 옵션을 `BENCHER_CALLBACK_TOKEN` **레포지토리** 시크릿으로 설정합니다.
     더 많은 세부 사항은 [`--ci-callback-token` 문서][ci callback token option]를 참조하세요.
     (예: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-19. 이미지 안에서 실행할 벤치마크 명령을 지정합니다.
+20. 이미지 안에서 실행할 벤치마크 명령을 지정합니다.
     이미지에 엔트리포인트가 있으면 명령은 그 엔트리포인트에 전달됩니다([`--entrypoint` 옵션][entrypoint option] 참조).
     전체 개요는 [벤치마크 명령][command argument]을 참조하세요.
     (예: `bencher mock`)
@@ -83,39 +85,41 @@ Bencher Bare Metal Job을 비동기적으로 기다릴 수 있게 합니다.
    GitHub는 `repository_dispatch` 워크플로를 기본 브랜치에서만 실행하므로,
    이 파일이 그곳에 있기 전까지는 첫 번째 워크플로가 시작한 GitHub Check가 진행 중으로 남습니다.
    (예: `.github/workflows/pr_bare_metal_benchmarks_attach.yml`)
-2. `bencher_run` 유형의 `repository_dispatch` 이벤트에서 실행합니다.
+2. 이 워크플로의 이름을 지정합니다.
+   (예: `name: Attach Bare Metal PR Benchmarks with Bencher`)
+3. `bencher_run` 유형의 `repository_dispatch` 이벤트에서 실행합니다.
    전체 개요는 [GitHub Actions `on` 문서][github actions on] 및 [GitHub Actions `repository_dispatch` 문서][github repository_dispatch]를 참조하세요.
    (예: `on: repository_dispatch: types: [bencher_run]`)
-3. GitHub Actions `job`을 생성합니다.
+4. GitHub Actions `job`을 생성합니다.
    (예: `jobs: attach_pr_benchmarks`)
-4. `GITHUB_TOKEN`의 [권한을 설정][github token permissions]하여 `checks` 및 `pull-requests`에 `write`를 부여합니다.
+5. `GITHUB_TOKEN`의 [권한을 설정][github token permissions]하여 `checks` 및 `pull-requests`에 `write`를 부여합니다.
    (예: `permissions: checks: write pull-requests: write`)
-5. 작업을 실행할 머신의 유형을 설정합니다.
+6. 작업을 실행할 머신의 유형을 설정합니다.
    Job은 이미 끝났으므로 이 작업은 결과를 게시하기만 합니다.
    (예: `runs-on: ubuntu-latest`)
-6. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
+7. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
    체크아웃은 필요하지 않습니다.
    (예: `uses: bencherdev/bencher@main`)
-7. GitHub의 스크립트 인젝션 가이드에 따라, 이벤트의 Job UUID는 `run:`에 직접 넣지 말고 [중간 환경 변수][github intermediate environment variable]를 통해 전달합니다.
+8. GitHub의 스크립트 인젝션 가이드에 따라, 이벤트의 Job UUID는 `run:`에 직접 넣지 말고 [중간 환경 변수][github intermediate environment variable]를 통해 전달합니다.
    (예: `env: JOB_UUID: ${{ github.event.client_payload.bencher.job }}`)
-8. Job에 연결하기 위해 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용합니다.
+9. Job에 연결하기 위해 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용합니다.
    전체 개요는 [`bencher run` CLI 서브커맨드][bencher run]를 참조하세요.
    (예: `bencher run`)
-9. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
-   저장소에 프로젝트가 둘 이상이면 `github.event.client_payload.bencher.project`도 같은 방식으로 환경 변수를 통해 전달하고 따옴표로 감싸세요(예: `--project "$PROJECT_SLUG"`).
-   더 많은 세부 사항은 [`--project` 문서][project option]를 참조하세요.
-   (예: `--project project-abc4567-wxyz123456789`)
-10. `--key` 옵션을 `BENCHER_API_KEY` **레포지토리** 시크릿으로 설정합니다.
+10. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+    저장소에 프로젝트가 둘 이상이면 `github.event.client_payload.bencher.project`도 같은 방식으로 환경 변수를 통해 전달하고 따옴표로 감싸세요(예: `--project "$PROJECT_SLUG"`).
+    더 많은 세부 사항은 [`--project` 문서][project option]를 참조하세요.
+    (예: `--project project-abc4567-wxyz123456789`)
+11. `--key` 옵션을 `BENCHER_API_KEY` **레포지토리** 시크릿으로 설정합니다.
     더 많은 세부 사항은 [`--key` 문서][key option]를 참조하세요.
     (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-11. `--job` 옵션을 따옴표로 감싼 Job UUID로 설정합니다.
+12. `--job` 옵션을 따옴표로 감싼 Job UUID로 설정합니다.
     전체 개요는 [`--job` 문서][job option]를 참조하세요.
     (예: `--job "$JOB_UUID"`)
-12. 경고가 생성되면 명령이 실패하도록 `--error-on-alert` 플래그를 설정합니다.
+13. 경고가 생성되면 명령이 실패하도록 `--error-on-alert` 플래그를 설정합니다.
     이벤트는 데이터만 전달하므로, `--ci-only-on-alert`와 `--ci-public-links`처럼 결과를 게시하는 방식을 정하는 옵션도 여기, 두 번째 워크플로에 둡니다.
     전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
     (예: `--error-on-alert`)
-13. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 결과를 GitHub Check와 pull request 댓글로 게시할 GitHub API 인증 토큰으로 `--github-actions` 옵션을 설정합니다.
+14. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 결과를 GitHub Check와 pull request 댓글로 게시할 GitHub API 인증 토큰으로 `--github-actions` 옵션을 설정합니다.
     여기에서 명시적으로 지정한 `--ci-number` 또는 `--ci-id`가 이벤트보다 우선합니다.
     더 많은 세부 사항은 [`--github-actions` 문서][github actions option]를 참조하세요.
     (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)

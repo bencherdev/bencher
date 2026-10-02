@@ -12,7 +12,9 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 
 1. GitHub Actions `workflow` 파일을 생성합니다.
    (예: `.github/workflows/pr_benchmarks.yml`)
-2. `pull_request` 이벤트에서 실행합니다:
+2. 이 워크플로의 이름을 지정합니다.
+   (예: `name: PR Benchmarks with Bencher`)
+3. `pull_request` 이벤트에서 실행합니다:
    - `opened` - Pull request가 생성되었습니다.
    - `reopened` - 이전에 닫혔던 pull request가 다시 열렸습니다.
    - `edited` - pull request의 제목이나 본문이 편집되었거나 pull request의 기본 브랜치가 변경되었습니다.
@@ -20,37 +22,37 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 
    전체 개요는 [GitHub Actions `on` 문서][github actions on] 및 [GitHub Actions `pull_request` 문서][github action pull_request]를 참조하세요.
    (예: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-3. GitHub Actions `job`을 생성합니다.
+4. GitHub Actions `job`을 생성합니다.
    (예: `jobs: benchmark_pr_branch`)
-4. pull request가 동일한 저장소에서 온 경우에만 `pull_request` 이벤트에서 실행합니다.
+5. pull request가 동일한 저장소에서 온 경우에만 `pull_request` 이벤트에서 실행합니다.
    ⚠️ 이 라인을 제거하지 마십시오!
    포크 PR 처리에 관해서는 아래의 [포크에서의 Pull Requests][pull requests from forks]를 참조하세요.
    (예: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. `GITHUB_TOKEN`의 [권한을 설정][github token permissions]하여 `checks` 및 `pull-requests`에 `write`를 부여합니다.
+6. `GITHUB_TOKEN`의 [권한을 설정][github token permissions]하여 `checks` 및 `pull-requests`에 `write`를 부여합니다.
    GitHub 설정에 따라 이 작업이 필요하지 않을 수 있습니다.
    그러나 [2023년 2월 2일 이후][github token read only]에 생성된 모든 조직 및 개인 저장소의 경우 기본 동작입니다.
    전체 개요는 [GitHub 문서][github token permissions security]를 참조하세요.
    (예: `permissions: checks: write pull-requests: write`)
-6. 작업을 실행할 머신의 유형을 설정합니다.
+7. 작업을 실행할 머신의 유형을 설정합니다.
    전체 개요는 [GitHub Actions `runs-on` 문서][github actions runs-on]를 참조하세요.
    (예: `runs-on: ubuntu-latest`)
-7. PR 브랜치의 소스 코드를 체크아웃합니다.
+8. PR 브랜치의 소스 코드를 체크아웃합니다.
    (예: `uses: actions/checkout@v6`)
-8. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
+9. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
    (예: `uses: bencherdev/bencher@main`)
-9. PR 브랜치 벤치마크를 실행하기 위해 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용합니다.
-   전체 개요는 [`bencher run` CLI 서브커맨드][bencher run]를 참조하세요.
-   (예: `bencher run`)
-10. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+10. PR 브랜치 벤치마크를 실행하기 위해 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드를 사용합니다.
+    전체 개요는 [`bencher run` CLI 서브커맨드][bencher run]를 참조하세요.
+    (예: `bencher run`)
+11. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
     더 많은 세부 사항은 [`--project` 문서][project option]를 참조하세요.
     (예: `--project project-abc4567-wxyz123456789`)
-11. `--key` 옵션을 `BENCHER_API_KEY` **레포지토리** 시크릿으로 설정합니다.
+12. `--key` 옵션을 `BENCHER_API_KEY` **레포지토리** 시크릿으로 설정합니다.
     더 많은 세부 사항은 [`--key` 문서][key option]를 참조하세요.
     (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-12. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
+13. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
     전체 개요는 [`--branch` 문서][branch option]를 참조하세요.
     (예: `--branch "$GITHUB_HEAD_REF"`)
-13. PR 브랜치의 시작점을 설정합니다:
+14. PR 브랜치의 시작점을 설정합니다:
     1. [GitHub Actions `GITHUB_BASE_REF` 기본 환경 변수][github default environment variables]을 사용하여 PR 브랜치 시작점으로 `--start-point` 옵션을 설정합니다.
     전체 개요는 [`--start-point` 문서][start point]를 참조하세요.
     (예: `--start-point "$GITHUB_BASE_REF"`)
@@ -65,20 +67,20 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
     이는 벤치마크 데이터 드리프트를 방지합니다.
     전체 개요는 [`--start-point-reset` 문서][start point reset]를 참조하세요.
     (예: `--start-point-reset`)
-14. `--testbed` 옵션을 테스트베드 이름으로 설정합니다.
+15. `--testbed` 옵션을 테스트베드 이름으로 설정합니다.
     이는 `runs-on`에서 선택한 머신과 일치해야 합니다.
     더 많은 세부 사항은 [`--testbed` 문서][testbed option]를 참조하세요.
     (예: `--testbed ubuntu-latest`)
-15. 알림이 생성되면 명령어를 실패시키도록 `--error-on-alert` 플래그를 설정합니다.
+16. 알림이 생성되면 명령어를 실패시키도록 `--error-on-alert` 플래그를 설정합니다.
    전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
    (예: `--error-on-alert`)
-16. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 [Bencher Metric Format JSON (`json`)][bmf]에 `--adapter` 옵션을 설정합니다.
+17. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 [Bencher Metric Format JSON (`json`)][bmf]에 `--adapter` 옵션을 설정합니다.
    전체 개요는 [벤치마크 하네스 어댑터][adapter json]를 참조하세요.
    (예: `--adapter json`)
-17. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]을 사용하여 결과를 GitHub Check 및 Pull Request 댓글로 게시하는 [GitHub API 인증 토큰][github actions option]에 `--github-actions` 옵션을 설정합니다.
+18. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]을 사용하여 결과를 GitHub Check 및 Pull Request 댓글로 게시하는 [GitHub API 인증 토큰][github actions option]에 `--github-actions` 옵션을 설정합니다.
     더 많은 세부 사항은 [`--github-actions` 문서][github actions option]를 참조하세요.
     (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-18. 벤치마크 명령어 인수를 지정합니다.
+19. 벤치마크 명령어 인수를 지정합니다.
     전체 개요는 [벤치마크 명령어][command argument]를 참조하세요.
     (예: `bencher mock`)
 
