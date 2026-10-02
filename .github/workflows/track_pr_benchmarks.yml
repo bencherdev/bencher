@@ -16,7 +16,6 @@ jobs:
     if: ${{ github.event.workflow_run.event == 'pull_request' }}
     permissions:
       checks: write
-      pull-requests: write
     runs-on: ubuntu-22.04
     env:
       PR_EVENT: event.json
@@ -61,6 +60,7 @@ jobs:
         if: steps.download_bench.outcome == 'success'
         env:
           BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+          BENCHER_CALLBACK_TOKEN: ${{ secrets.BENCHER_CALLBACK_TOKEN }}
           GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           bencher run \
@@ -76,6 +76,7 @@ jobs:
           --testbed intel-v1 \
           --spec intel-v1 \
           --adapter rust_criterion \
-          --error-on-alert \
+          --detach \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
+          --ci-callback-token "$BENCHER_CALLBACK_TOKEN" \
           --ci-number "$PR_NUMBER"
