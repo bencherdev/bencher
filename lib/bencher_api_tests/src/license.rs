@@ -15,9 +15,24 @@ impl TestServer {
         reason = "test helper for licensing an organization"
     )]
     pub async fn license_org(&self, user: &TestUser, org: &TestOrg, level: PlanLevel) {
-        let key: Secret = TEST_LICENSE_KEY.parse().expect("Invalid test license key");
         let entitlements = Entitlements::try_from(TEST_LICENSE_ENTITLEMENTS)
             .expect("Invalid test license entitlements");
+        self.license_org_with_entitlements(user, org, level, entitlements)
+            .await;
+    }
+
+    #[expect(
+        clippy::expect_used,
+        reason = "test helper for licensing an organization"
+    )]
+    pub async fn license_org_with_entitlements(
+        &self,
+        user: &TestUser,
+        org: &TestOrg,
+        level: PlanLevel,
+        entitlements: Entitlements,
+    ) {
+        let key: Secret = TEST_LICENSE_KEY.parse().expect("Invalid test license key");
         let license = Licensor::bencher_cloud(&key)
             .expect("Failed to load the test license key")
             .new_annual_license(org.uuid, level, entitlements)

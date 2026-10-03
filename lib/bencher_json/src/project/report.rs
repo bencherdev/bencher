@@ -562,6 +562,10 @@ pub struct JsonReport {
     /// The report counts.
     #[serde(default)]
     pub counts: JsonReportCounts,
+    /// What the report skipped instead of ingesting,
+    /// omitted when it skipped nothing and from the reports list endpoint.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warnings: Option<Vec<JsonReportWarning>>,
     #[cfg(feature = "plus")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub job: Option<JobUuid>,
@@ -678,6 +682,133 @@ pub struct JsonReportAlertsCounts {
     pub total: u32,
     /// The number of active alerts.
     pub active: u32,
+}
+
+/// How many of one resource a report handled with one action.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportWarning {
+    pub resource: ReportWarningResource,
+    pub action: ReportWarningAction,
+    pub count: u32,
+}
+
+const RESOURCE_BENCHMARK_INT: i32 = 0;
+const RESOURCE_VARIANT_INT: i32 = 1;
+const RESOURCE_MEASURE_INT: i32 = 2;
+const RESOURCE_METRIC_INT: i32 = 3;
+const RESOURCE_THRESHOLD_INT: i32 = 4;
+
+/// The resource a report warning counts.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
+#[serde(rename_all = "snake_case")]
+#[repr(i32)]
+pub enum ReportWarningResource {
+    Benchmark = RESOURCE_BENCHMARK_INT,
+    Variant = RESOURCE_VARIANT_INT,
+    Measure = RESOURCE_MEASURE_INT,
+    Metric = RESOURCE_METRIC_INT,
+    Threshold = RESOURCE_THRESHOLD_INT,
+}
+
+const ACTION_SKIP_INT: i32 = 0;
+
+/// What a report did with the resources a warning counts.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
+#[serde(rename_all = "snake_case")]
+#[repr(i32)]
+pub enum ReportWarningAction {
+    /// The report did not ingest them.
+    Skip = ACTION_SKIP_INT,
+}
+
+#[cfg(feature = "db")]
+mod report_warning_db {
+    use super::{
+        ACTION_SKIP_INT, RESOURCE_BENCHMARK_INT, RESOURCE_MEASURE_INT, RESOURCE_METRIC_INT,
+        RESOURCE_THRESHOLD_INT, RESOURCE_VARIANT_INT, ReportWarningAction, ReportWarningResource,
+    };
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum ReportWarningError {
+        #[error("Invalid report warning resource value: {0}")]
+        Resource(i32),
+        #[error("Invalid report warning action value: {0}")]
+        Action(i32),
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for ReportWarningResource
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Benchmark => RESOURCE_BENCHMARK_INT.to_sql(out),
+                Self::Variant => RESOURCE_VARIANT_INT.to_sql(out),
+                Self::Measure => RESOURCE_MEASURE_INT.to_sql(out),
+                Self::Metric => RESOURCE_METRIC_INT.to_sql(out),
+                Self::Threshold => RESOURCE_THRESHOLD_INT.to_sql(out),
+            }
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for ReportWarningResource
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            match i32::from_sql(bytes)? {
+                RESOURCE_BENCHMARK_INT => Ok(Self::Benchmark),
+                RESOURCE_VARIANT_INT => Ok(Self::Variant),
+                RESOURCE_MEASURE_INT => Ok(Self::Measure),
+                RESOURCE_METRIC_INT => Ok(Self::Metric),
+                RESOURCE_THRESHOLD_INT => Ok(Self::Threshold),
+                value => Err(Box::new(ReportWarningError::Resource(value))),
+            }
+        }
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for ReportWarningAction
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Skip => ACTION_SKIP_INT.to_sql(out),
+            }
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for ReportWarningAction
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            match i32::from_sql(bytes)? {
+                ACTION_SKIP_INT => Ok(Self::Skip),
+                value => Err(Box::new(ReportWarningError::Action(value))),
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

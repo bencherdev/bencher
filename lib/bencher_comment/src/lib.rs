@@ -1242,6 +1242,7 @@ mod tests {
             results: Some(Vec::new()),
             alerts: Some(Vec::new()),
             counts: JsonReportCounts::default(),
+            warnings: None,
             #[cfg(feature = "plus")]
             job: None,
             created: DateTime::TEST,

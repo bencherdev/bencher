@@ -8,8 +8,12 @@
 
 use bencher_api_tests::{TestServer, helpers::get_project_id};
 use bencher_json::{
-    BmfVersion, MeasureUuid, MetricName, ParameterFilter, ParameterSet, ProjectSlug, ThresholdUuid,
-    project::threshold::MAX_ACTIVE_THRESHOLDS,
+    BmfVersion, JsonReport, MeasureUuid, MetricName, ParameterFilter, ParameterSet, ProjectSlug,
+    ReportUuid, ThresholdUuid,
+    project::{
+        report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
+        threshold::MAX_ACTIVE_THRESHOLDS,
+    },
 };
 use bencher_schema::{
     context::DbConnection,
@@ -147,10 +151,39 @@ async fn try_report(server: &TestServer, fixture: &Fixture, post: Post) -> (Stat
 }
 
 /// Post one report and require it to be created.
-async fn report(server: &TestServer, fixture: &Fixture, post: Post) {
+async fn report(server: &TestServer, fixture: &Fixture, post: Post) -> JsonReport {
     let day = post.day;
     let (status, body) = try_report(server, fixture, post).await;
     assert_eq!(status, StatusCode::CREATED, "POST report {day}: {body}");
+    serde_json::from_str(&body).expect("Failed to parse the report")
+}
+
+/// Read one report back.
+async fn get_report(server: &TestServer, fixture: &Fixture, report: ReportUuid) -> JsonReport {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{}/reports/{report}",
+            fixture.project_slug
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET report {report}");
+    resp.json().await.expect("Failed to parse the report")
+}
+
+/// The one warning of a report that skipped `count` thresholds.
+fn skipped_thresholds(count: u32) -> Vec<JsonReportWarning> {
+    vec![JsonReportWarning {
+        resource: ReportWarningResource::Threshold,
+        action: ReportWarningAction::Skip,
+        count,
+    }]
 }
 
 /// One BMF v1 payload for a single benchmark's variants.
@@ -1070,7 +1103,7 @@ async fn a_v1_list_whose_creates_pass_the_ceiling_creates_none() {
     let server = TestServer::new_with_creation_limits(3, 3).await;
     let fixture = fixture(&server, "ceiling").await;
 
-    report(
+    let created = report(
         &server,
         &fixture,
         Post::new(1, vec![steady(0)]).thresholds(serde_json::json!({
@@ -1102,6 +1135,57 @@ async fn a_v1_list_whose_creates_pass_the_ceiling_creates_none() {
         .get_result::<i64>(&mut conn)
         .expect("Failed to count the results");
     assert_eq!(results, 2, "the report kept a result for each variant");
+    assert_eq!(created.warnings, Some(skipped_thresholds(4)));
+}
+
+// A report that skips thresholds past the cap says how many when it is created and when it is read.
+#[tokio::test]
+async fn a_report_past_the_active_cap_warns_of_what_it_skipped() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "capwarn").await;
+    let declared = (0..MAX_ACTIVE_THRESHOLDS + 2)
+        .map(|n| {
+            serde_json::json!({
+                "measure": "latency",
+                "metric": format!("m-{n}"),
+                "model": model(),
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let created = report(
+        &server,
+        &fixture,
+        Post::new(1, vec![steady(0)]).thresholds(serde_json::json!({ "models": declared })),
+    )
+    .await;
+    assert_eq!(created.warnings, Some(skipped_thresholds(2)), "POST");
+    let read = get_report(&server, &fixture, created.uuid).await;
+    assert_eq!(read.warnings, Some(skipped_thresholds(2)), "GET");
+}
+
+// A report whose declared thresholds all fit under the cap skipped nothing, so it has no `warnings`
+// key.
+#[tokio::test]
+async fn a_report_whose_thresholds_fit_under_the_active_cap_has_no_warnings() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "fitwarn").await;
+
+    let (status, body) = try_report(
+        &server,
+        &fixture,
+        Post::new(1, vec![steady(0)]).thresholds(serde_json::json!({
+            "models": [
+                { "measure": "latency", "metric": "first", "model": model() },
+                { "measure": "latency", "metric": "second", "model": model() },
+            ]
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let report: serde_json::Value =
+        serde_json::from_str(&body).expect("Failed to parse the report");
+    assert!(report.get("warnings").is_none(), "{body}");
 }
 
 // Past the cap on active thresholds for a measure, a report creates what fits in payload order

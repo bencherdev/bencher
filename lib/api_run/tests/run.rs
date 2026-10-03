@@ -10,9 +10,15 @@
 use bencher_api_tests::TestServer;
 #[cfg(feature = "plus")]
 use bencher_api_tests::oci::compute_digest;
-use bencher_json::{BmfVersion, JsonReport, JsonReports};
+use bencher_json::{
+    BmfVersion, JsonReport, JsonReports,
+    project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
+};
 #[cfg(feature = "plus")]
-use bencher_json::{JsonJob, JsonRunners, JsonSpec, PlanLevel, runner::JsonJobs};
+use bencher_json::{
+    JsonJob, JsonRunners, JsonSpec, PlanLevel, project::threshold::MAX_ACTIVE_THRESHOLDS,
+    runner::JsonJobs,
+};
 #[cfg(feature = "plus")]
 use bencher_schema::model::runner::QueryJobCallback;
 use http::StatusCode;
@@ -572,6 +578,65 @@ async fn run_post_with_job_creates_job() {
     assert_eq!(
         AsRef::<str>::as_ref(&jobs[0].spec.slug),
         AsRef::<str>::as_ref(&spec.slug),
+    );
+}
+
+// POST /v0/run with job - the thresholds a job run skips are on the report it returns, before its
+// results are processed
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_warns_of_the_thresholds_it_skipped() {
+    let server = TestServer::new().await;
+    let user = server.signup("Job User", "runjobwarn@example.com").await;
+    let org = server.create_org(&user, "Job Warn Org").await;
+    let project = server.create_project(&user, &org, "Job Warn Project").await;
+    create_fallback_spec(&server, &user).await;
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    let declared = (0..MAX_ACTIVE_THRESHOLDS + 2)
+        .map(|n| {
+            serde_json::json!({
+                "measure": "latency",
+                "metric": format!("m-{n}"),
+                "model": { "test": "percentage", "upper_boundary": 0.05 },
+            })
+        })
+        .collect::<Vec<_>>();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "bmf_version": 1,
+        "thresholds": { "models": declared },
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse the report");
+    assert!(report.job.is_some(), "the run is a job");
+    assert_eq!(
+        report.warnings,
+        Some(vec![JsonReportWarning {
+            resource: ReportWarningResource::Threshold,
+            action: ReportWarningAction::Skip,
+            count: 2,
+        }])
     );
 }
 
@@ -2337,6 +2402,57 @@ async fn run_post_idempotency_key_returns_same_report() {
     let report2: JsonReport = resp2.json().await.expect("Failed to parse second response");
 
     assert_eq!(report1.uuid, report2.uuid);
+}
+
+// POST /v0/run - a retry with the same idempotency key returns the warnings of the stored report
+#[tokio::test]
+async fn run_post_idempotency_key_returns_the_same_warnings() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "idempotencywarn@example.com")
+        .await;
+    let org = server.create_org(&user, "Idempotency Warn Org").await;
+    let project = server
+        .create_project(&user, &org, "Idempotency Warn Project")
+        .await;
+
+    // Ten metric names on one measure, two past the per measure cap of eight.
+    let names = (1..=10)
+        .map(|n| (format!("p{n}"), serde_json::json!(n)))
+        .collect::<serde_json::Map<_, _>>();
+    let results = serde_json::json!({ "bench": [{ "measures": { "latency": names } }] });
+    let body = serde_json::json!({
+        "project": project.slug,
+        "idempotency_key": uuid::Uuid::new_v4().to_string(),
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [results.to_string()],
+        "bmf_version": 1,
+    });
+    let skipped = Some(vec![JsonReportWarning {
+        resource: ReportWarningResource::Metric,
+        action: ReportWarningAction::Skip,
+        count: 2,
+    }]);
+
+    for attempt in ["first", "retry"] {
+        let resp = server
+            .client
+            .post(server.api_url("/v0/run"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED, "{attempt}");
+        let report: JsonReport = resp.json().await.expect("Failed to parse the report");
+        assert_eq!(report.warnings, skipped, "{attempt}");
+    }
 }
 
 // POST /v0/run - different idempotency keys create different reports

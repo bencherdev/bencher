@@ -6,7 +6,7 @@ use bencher_adapter::{
 };
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BmfVersion, MeasureNameId, MetricName, ParameterSet, Slug,
-    project::report::{Adapter, Iteration, JsonReportSettings},
+    project::report::{Adapter, Iteration, JsonReportSettings, ReportWarningResource},
 };
 use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
@@ -43,7 +43,7 @@ pub mod detector;
 
 use detector::{Detector, PreparedDetection, Threshold};
 
-use super::ReportId;
+use super::{ReportId, warning::ReportWarnings};
 
 /// `ReportResults` is used to process the report results.
 pub struct ReportResults {
@@ -120,6 +120,7 @@ impl ReportResults {
         adapter: Adapter,
         settings: JsonReportSettings,
         bmf_version: BmfVersion,
+        warnings: &mut ReportWarnings,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         #[cfg(feature = "otel")]
@@ -162,6 +163,7 @@ impl ReportResults {
                 bencher_otel::ApiCounter::MetricNamesDropped,
                 u64::try_from(dropped_names).unwrap_or(u64::MAX),
             );
+            warnings.skip_with_count(ReportWarningResource::Metric, dropped_names);
         }
 
         // Fold is a BMF v0 operation and nothing else: the mean of per iteration
