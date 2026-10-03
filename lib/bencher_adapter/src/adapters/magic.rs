@@ -163,17 +163,17 @@ mod test_magic {
         }
     }
 
-    /// Out of bounds parameters fail magic outright: the json node rejects
-    /// them and no other adapter claims it either.
+    /// At version 0 magic refuses a BMF v1 payload: the json node refuses it and no
+    /// other adapter claims it.
     #[test]
-    fn adapter_magic_json_out_of_bounds_parameters_fails() {
+    fn adapter_magic_version_0_refuses_json_v1() {
         assert!(
             opt_convert_file_path::<AdapterMagic>(
-                "./tool_output/json/report_v1_bad_parameters.json",
-                Settings::default()
+                "./tool_output/json/report_v1_canonical.json",
+                test_json::version_settings(BmfVersion::V0)
             )
             .is_none(),
-            "expected out of bounds parameters to fail magic"
+            "expected magic to refuse a v1 payload at version 0"
         );
     }
 

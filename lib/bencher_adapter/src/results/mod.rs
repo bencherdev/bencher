@@ -10,7 +10,7 @@ pub mod adapter_results;
 pub mod foldable;
 pub mod results_reducer;
 
-use adapter_results::AdapterResults;
+use adapter_results::{AdapterResults, Skipped};
 use foldable::FoldableResultsArray;
 
 #[derive(Debug, Clone)]
@@ -69,9 +69,10 @@ impl AdapterResultsArray {
         }
     }
 
-    /// How many metrics the per measure cap dropped across every payload.
-    pub fn dropped_names(&self) -> usize {
-        self.inner.iter().map(|results| results.dropped_names).sum()
+    pub fn skipped(&self) -> Skipped {
+        self.inner
+            .iter()
+            .fold(Skipped::default(), |sum, results| sum + results.skipped)
     }
 
     /// Every result as a foldable BMF v0 payload, or the array back untouched if

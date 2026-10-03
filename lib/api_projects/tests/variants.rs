@@ -1133,9 +1133,10 @@ async fn report_response_echoes_metrics_and_separates_variants() {
 // Variants are minted straight from report content, one row per variant, so
 // they carry the same per project creation ceiling as every other entity a report
 // mints. Without it a harness that interpolates a commit sha or a timestamp into its
-// parameters mints rows, variants, and billable series without bound.
+// parameters mints rows, variants, and billable series without bound. A report past
+// it skips the variants it refuses and keeps the rest.
 #[tokio::test]
-async fn variant_creation_is_rate_limited() {
+async fn variant_creation_past_the_ceiling_is_skipped() {
     // Four creations per project per window. A benchmark is born with its empty
     // variant, which is one of the four, so the fourth new variant under one
     // benchmark is the one that is refused.
@@ -1157,25 +1158,32 @@ async fn variant_creation_is_rate_limited() {
     // Over the ceiling, and in its own project, so what is counted is this project's
     // own variant rows rather than every project's.
     let over = fixture(&server, "over-limit").await;
-    let (status, body) = try_report(&server, &over, 1, variants(4), None, None, Some(1)).await;
+    let report = report(&server, &over, 1, variants(4), None, None, Some(1)).await;
     assert_eq!(
-        status,
-        StatusCode::TOO_MANY_REQUESTS,
-        "over the ceiling: {body}"
-    );
-    assert!(
-        body.contains("Variant"),
-        "the limit that fired is the variant one: {body}"
+        report["warnings"],
+        serde_json::json!([{ "resource": "variant", "action": "skip", "count": 1 }]),
+        "the refused variant is warned of"
     );
 
     // Minting stopped at the ceiling: the birth empty variant plus three variants,
-    // with the fourth refused rather than written.
+    // with the fourth refused rather than written, and it bills nothing.
     let project_id = get_project_id(&server, &over.project_slug);
     let mut conn = server.db_conn();
     assert_eq!(
-        stored_variants(&mut conn, project_id).len(),
-        4,
+        stored_variants(&mut conn, project_id),
+        vec![
+            (ParameterSet::default(), 0),
+            (parameters(r#"{"n":0}"#), 1),
+            (parameters(r#"{"n":1}"#), 1),
+            (parameters(r#"{"n":2}"#), 1),
+        ],
         "no variant is minted past the ceiling"
+    );
+    assert_eq!(metric_rows(&mut conn, project_id).len(), 3);
+    assert_eq!(
+        series_measures(&mut conn, project_id).len(),
+        3,
+        "the refused variant bills no series"
     );
 }
 
