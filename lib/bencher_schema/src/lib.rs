@@ -118,6 +118,8 @@ pub fn run_migrations(database: &mut context::DbConnection) -> Result<(), Migrat
 
 #[cfg(test)]
 mod tests {
+    use std::collections::{BTreeMap, BTreeSet};
+
     use diesel::{Connection as _, RunQueryDsl as _, connection::SimpleConnection as _};
 
     use super::{cache_size, run_migrations};
@@ -126,6 +128,16 @@ mod tests {
     struct TableName {
         #[diesel(sql_type = diesel::sql_types::Text)]
         name: String,
+    }
+
+    #[derive(diesel::QueryableByName)]
+    struct KeyColumn {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        table: String,
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        key: String,
+        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+        column: Option<String>,
     }
 
     // The planner runs on its structural heuristics: a statistics table left behind
@@ -148,6 +160,85 @@ mod tests {
             statistics_tables.is_empty(),
             "the migrations leave no statistics tables behind, found {statistics_tables:?}"
         );
+    }
+
+    // Deleting a parent row looks up its children in every table that references it,
+    // which walks the whole table unless the child columns lead the rowid alias or an index.
+    #[test]
+    fn migrations_index_every_foreign_key() {
+        let mut conn = diesel::SqliteConnection::establish(":memory:")
+            .expect("Failed to create an in-memory database");
+
+        run_migrations(&mut conn).expect("Failed to run migrations");
+
+        let foreign_keys = key_columns(
+            &mut conn,
+            r#"SELECT m.name AS "table", CAST(f.id AS TEXT) AS "key", f."from" AS "column"
+                FROM sqlite_master AS m, pragma_foreign_key_list(m.name) AS f
+                WHERE m.type = 'table'
+                    AND m.name NOT LIKE 'sqlite_%'
+                    AND m.name != '__diesel_schema_migrations'
+                ORDER BY m.name, f.id, f.seq"#,
+        );
+        let indexes = key_columns(
+            &mut conn,
+            r#"SELECT m.name AS "table", i.name AS "key", c.name AS "column", c.seqno AS position
+                FROM sqlite_master AS m,
+                    pragma_index_list(m.name) AS i,
+                    pragma_index_info(i.name) AS c
+                WHERE m.type = 'table' AND i.partial = 0
+                UNION ALL
+                SELECT m.name, 'rowid', c.name, 0
+                FROM sqlite_master AS m, pragma_table_info(m.name) AS c
+                WHERE m.type = 'table'
+                    AND c.pk = 1
+                    AND upper(c.type) = 'INTEGER'
+                    AND NOT EXISTS (SELECT 1 FROM pragma_table_info(m.name) WHERE pk > 1)
+                ORDER BY "table", "key", position"#,
+        );
+
+        let unindexed: BTreeSet<String> = foreign_keys
+            .iter()
+            .filter(|((table, _), columns)| {
+                !indexes.iter().any(|((indexed_table, _), indexed_columns)| {
+                    indexed_table == table && leads(indexed_columns, columns)
+                })
+            })
+            .map(|((table, _), columns)| {
+                let columns: Vec<&str> = columns.iter().flatten().map(String::as_str).collect();
+                format!("{table}.{}", columns.join(", "))
+            })
+            .collect();
+        assert!(
+            unindexed.is_empty(),
+            "every foreign key's columns lead an index, these do not: {unindexed:?}"
+        );
+    }
+
+    /// The columns of every key the query reads, in key order, by table and key.
+    fn key_columns(
+        conn: &mut diesel::SqliteConnection,
+        query: &str,
+    ) -> BTreeMap<(String, String), Vec<Option<String>>> {
+        let mut keys = BTreeMap::<_, Vec<_>>::new();
+        for KeyColumn { table, key, column } in diesel::sql_query(query)
+            .load::<KeyColumn>(conn)
+            .expect("Failed to read the keys")
+        {
+            keys.entry((table, key)).or_default().push(column);
+        }
+        keys
+    }
+
+    /// Whether the index leads with exactly the key's columns, in any order.
+    fn leads(index: &[Option<String>], key: &[Option<String>]) -> bool {
+        index.get(..key.len()).is_some_and(|leading| {
+            let mut leading = leading.to_vec();
+            let mut key = key.to_vec();
+            leading.sort_unstable();
+            key.sort_unstable();
+            leading == key
+        })
     }
 
     // The connection that runs the migrations is the connection the API then serves
