@@ -9,7 +9,7 @@ use dropshot::HttpError;
 use slog::Logger;
 use version::{QueryVersion, VersionId};
 
-use super::{ProjectId, QueryProject, threshold::InsertThreshold};
+use super::{ProjectId, QueryProject, report::warning::ReportWarnings, threshold::InsertThreshold};
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
@@ -93,9 +93,11 @@ impl QueryBranch {
         project_id: ProjectId,
         branch: &BranchNameId,
         start_point: Option<&JsonUpdateStartPoint>,
+        warnings: &mut ReportWarnings,
     ) -> Result<(BranchId, HeadId), HttpError> {
         let (mut query_branch, query_head) =
-            Self::get_or_create_inner(log, context, project_id, branch, start_point).await?;
+            Self::get_or_create_inner(log, context, project_id, branch, start_point, warnings)
+                .await?;
 
         if query_branch.archived.is_some() {
             let update_branch = UpdateBranch::unarchive();
@@ -115,13 +117,14 @@ impl QueryBranch {
         project_id: ProjectId,
         branch: &BranchNameId,
         start_point: Option<&JsonUpdateStartPoint>,
+        warnings: &mut ReportWarnings,
     ) -> Result<(Self, QueryHead), HttpError> {
         let query_branch = Self::from_name_id(auth_conn!(context), project_id, branch);
 
         let http_error = match query_branch {
             Ok(branch) => {
                 return branch
-                    .update_start_point_if_changed(log, context, project_id, start_point)
+                    .update_start_point_if_changed(log, context, project_id, start_point, warnings)
                     .await;
             },
             Err(e) => e,
@@ -140,28 +143,31 @@ impl QueryBranch {
                 start_point: start_point.cloned().and_then(Into::into),
             },
         };
-        match Self::create_with_head(log, context, project_id, json_branch).await {
+        match Self::create_with_head(log, context, project_id, json_branch, warnings).await {
             Ok(result) => Ok(result),
             Err(e) if crate::error::is_conflict(&e) => {
                 // Another concurrent request created this branch — re-lookup
                 let query_branch = Self::from_name_id(auth_conn!(context), project_id, branch)
                     .map_err(|_lookup_err| e)?;
                 query_branch
-                    .update_start_point_if_changed(log, context, project_id, start_point)
+                    .update_start_point_if_changed(log, context, project_id, start_point, warnings)
                     .await
             },
             Err(e) => Err(e),
         }
     }
 
+    /// A branch created through the API has no report, so what its clone skips is only logged
+    /// and counted.
     pub async fn create(
         log: &Logger,
         context: &ApiContext,
         project_id: ProjectId,
         json_branch: JsonNewBranch,
     ) -> Result<Self, HttpError> {
+        let mut warnings = ReportWarnings::default();
         Ok(
-            Self::create_with_head(log, context, project_id, json_branch)
+            Self::create_with_head(log, context, project_id, json_branch, &mut warnings)
                 .await?
                 .0,
         )
@@ -172,10 +178,11 @@ impl QueryBranch {
         context: &ApiContext,
         project_id: ProjectId,
         json_branch: JsonNewBranch,
+        warnings: &mut ReportWarnings,
     ) -> Result<(Self, QueryHead), HttpError> {
         #[cfg(feature = "plus")]
         InsertBranch::rate_limit(context, project_id).await?;
-        InsertBranch::from_json(log, context, project_id, json_branch).await
+        InsertBranch::from_json(log, context, project_id, json_branch, warnings).await
     }
 
     pub async fn update_start_point_if_changed(
@@ -184,6 +191,7 @@ impl QueryBranch {
         context: &ApiContext,
         project_id: ProjectId,
         start_point: Option<&JsonUpdateStartPoint>,
+        warnings: &mut ReportWarnings,
     ) -> Result<(Self, QueryHead), HttpError> {
         // Self-heal legacy rows that pre-date f5516cc. Before that fix, a branch
         // row could exist with head_id = NULL due to a non-atomic insert race
@@ -200,7 +208,8 @@ impl QueryBranch {
             );
             let new_start_point =
                 StartPoint::from_update_json(context, project_id, start_point).await?;
-            return InsertHead::for_branch(log, context, self, new_start_point.as_ref()).await;
+            return InsertHead::for_branch(log, context, self, new_start_point.as_ref(), warnings)
+                .await;
         }
         // Get the current start point, if one exists.
         let current_start_point = self.get_start_point(context).await?;
@@ -213,7 +222,8 @@ impl QueryBranch {
             reset: Some(true), ..
         }) = start_point
         {
-            return InsertHead::for_branch(log, context, self, new_start_point.as_ref()).await;
+            return InsertHead::for_branch(log, context, self, new_start_point.as_ref(), warnings)
+                .await;
         }
 
         // Compare the current start point against the new start point.
@@ -230,16 +240,28 @@ impl QueryBranch {
                                 self.into_branch_and_head(context).await
                             } else {
                                 // If the hashes do not match, create a new branch head.
-                                InsertHead::for_branch(log, context, self, new_start_point.as_ref())
-                                    .await
+                                InsertHead::for_branch(
+                                    log,
+                                    context,
+                                    self,
+                                    new_start_point.as_ref(),
+                                    warnings,
+                                )
+                                .await
                             }
                         },
                         // If there is no current start point hash and the new start point has a start point hash,
                         // then the branch head needs to be recreated from the new start point.
                         // This should only rarely happen going forward, as most branches with a start point will have a hash.
                         (None, Some(_)) => {
-                            InsertHead::for_branch(log, context, self, new_start_point.as_ref())
-                                .await
+                            InsertHead::for_branch(
+                                log,
+                                context,
+                                self,
+                                new_start_point.as_ref(),
+                                warnings,
+                            )
+                            .await
                         },
                         // If a start point hash is not specified, then there is nothing to check.
                         // Even if the current branch head has a start point hash, it does not need to always be specified.
@@ -251,13 +273,14 @@ impl QueryBranch {
                 } else {
                     // If the current start point branch does not match the new start point branch,
                     // then the branch head needs to be recreated from the new start point.
-                    InsertHead::for_branch(log, context, self, new_start_point.as_ref()).await
+                    InsertHead::for_branch(log, context, self, new_start_point.as_ref(), warnings)
+                        .await
                 }
             },
             // If the current branch does not have a start point and one is specified,
             // then the branch head needs to be recreated from the new start point.
             (None, Some(_)) => {
-                InsertHead::for_branch(log, context, self, new_start_point.as_ref()).await
+                InsertHead::for_branch(log, context, self, new_start_point.as_ref(), warnings).await
             },
             // If a start point is not specified, then there is nothing to check.
             // Even if the current branch has a start point, it does not need to always be specified.
@@ -391,6 +414,7 @@ impl InsertBranch {
         context: &ApiContext,
         project_id: ProjectId,
         branch: JsonNewBranch,
+        warnings: &mut ReportWarnings,
     ) -> Result<(QueryBranch, QueryHead), HttpError> {
         let JsonNewBranch {
             name,
@@ -452,7 +476,8 @@ impl InsertBranch {
         );
 
         if let Some(start_point) = &branch_start_point {
-            InsertThreshold::from_start_point(log, context, &query_branch, start_point).await?;
+            InsertThreshold::from_start_point(log, context, &query_branch, start_point, warnings)
+                .await?;
         }
 
         Ok((query_branch, query_head))
@@ -483,9 +508,15 @@ impl InsertBranch {
         context: &ApiContext,
         project_id: ProjectId,
     ) -> Result<QueryBranch, HttpError> {
-        Self::from_json(log, context, project_id, JsonNewBranch::main())
-            .await
-            .map(|(branch, _)| branch)
+        Self::from_json(
+            log,
+            context,
+            project_id,
+            JsonNewBranch::main(),
+            &mut ReportWarnings::default(),
+        )
+        .await
+        .map(|(branch, _)| branch)
     }
 }
 

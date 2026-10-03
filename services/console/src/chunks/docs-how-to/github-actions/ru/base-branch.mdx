@@ -10,41 +10,43 @@ import BaseBranchCode from "../base-branch-code.mdx";
 
 1. Создайте файл `workflow` для GitHub Actions.
    (например, `.github/workflows/base_benchmarks.yml`)
-2. Запустите при событиях `push` в ветку `main`.
+2. Назовите этот workflow.
+   (например, `name: Base Branch Benchmarks with Bencher`)
+3. Запустите при событиях `push` в ветку `main`.
    См. [документацию GitHub Actions `on`][github actions on]
    и [документацию о `push` для GitHub Actions][github actions push] для получения общей информации.
    (например, `on: push: branches: main`)
-3. Создайте `job` для GitHub Actions.
+4. Создайте `job` для GitHub Actions.
    (например, `jobs: benchmark_base_branch`)
-4. Установите [разрешения для `GITHUB_TOKEN`][github token permissions]
+5. Установите [разрешения для `GITHUB_TOKEN`][github token permissions]
    на `write` для `checks`.
    (например: `permissions: checks: write`)
-5. Установите тип машины, на которой будет выполняться задание.
+6. Установите тип машины, на которой будет выполняться задание.
    См. [документацию о `runs-on` для GitHub Actions][github actions runs-on]
    для получения подробной информации.
    (например, `runs-on: ubuntu-latest`)
-6. Получите исходный код вашей основной ветки.
+7. Получите исходный код вашей основной ветки.
    (например, `uses: actions/checkout@v6`)
-7. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
+8. Установите Bencher CLI, используя [GitHub Action][bencher cli github action].
    (например, `uses: bencherdev/bencher@main`)
-8. Используйте подкaманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
+9. Используйте подкaманды CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>
    для запуска бенчмарков вашей ветки `main`.
    См. [подкaманды CLI `bencher run`][bencher run] для получения полной информации.
    (например, `bencher run`)
-9. Установите опцию `--project` на шифр проекта.
-   См. [документацию о `--project`][project option] для получения более подробной информации.
-   (например, `--project project-abc4567-wxyz123456789`)
-10. Установите опцию `--key` на секрет **Repositorий** `BENCHER_API_KEY`.
+10. Установите опцию `--project` на шифр проекта.
+    См. [документацию о `--project`][project option] для получения более подробной информации.
+    (например, `--project project-abc4567-wxyz123456789`)
+11. Установите опцию `--key` на секрет **Repositorий** `BENCHER_API_KEY`.
    См. [документацию о `--key`][key option] для получения более подробной информации.
    (например, `--key '${{ secrets.BENCHER_API_KEY }}'`)
-11. Установите опцию `--branch` на имя основной ветки.
+12. Установите опцию `--branch` на имя основной ветки.
     См. [документацию о `--branch`][branch option] для получения полной информации.
     (например, `--branch main`)
-12. Установите опцию `--testbed` на имя Testbed.
+13. Установите опцию `--testbed` на имя Testbed.
     Это, вероятно, должно соответствовать машине, выбранной в `runs-on`.
     См. [документацию о `--tested`][testbed option] для получения более подробной информации.
     (например, `--testbed ubuntu-latest`)
-13. Установите порог для ветки `main`, тестового стенда `ubuntu-latest` и измерения `latency`:
+14. Установите порог для ветки `main`, тестового стенда `ubuntu-latest` и измерения `latency`:
     1. Установите опцию `--threshold-measure` на встроенное измерение `latency`, которое создается <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     См. [документацию о `--threshold-measure`][threshold measure option] для получения более подробной информации.
     (например, `--threshold-measure latency`)
@@ -60,17 +62,17 @@ import BaseBranchCode from "../base-branch-code.mdx";
     5. Установите флаг `--thresholds-reset`, чтобы только указанное пороговое значение было активным.
     См. [документацию о `--thresholds-reset`][thresholds reset] для получения полной информации.
     (например, `--thresholds-reset`)
-14. Установите флаг `--error-on-alert`, чтобы команда завершалась с ошибкой, если будет сформировано оповещение.
+15. Установите флаг `--error-on-alert`, чтобы команда завершалась с ошибкой, если будет сформировано оповещение.
     См. [документацию о `--error-on-alert`][alert err] для получения полной информации.
     (например, `--error-on-alert`)
-15. Установите опцию `--adapter` на [формат метрик Bencher в формате JSON (`json`)][bmf], который сгенерирован <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+16. Установите опцию `--adapter` на [формат метрик Bencher в формате JSON (`json`)][bmf], который сгенерирован <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     См. [Адаптеры для бенчмарк-харнесов][adapter json] для получения полной информации.
     (например, `--adapter json`)
-16. Установите опцию `--github-actions` на токен аутентификации API GitHub, чтобы отправить результаты в виде комментария GitHub Checks, используя
+17. Установите опцию `--github-actions` на токен аутентификации API GitHub, чтобы отправить результаты в виде комментария GitHub Checks, используя
     [переменную окружения `GITHUB_TOKEN` для GitHub Actions][github token].
     См. [документацию о `--github-actions`][github actions option] для получения более подробной информации.
     (например, `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-17. Укажите аргументы для команды бенчмарков.
+18. Укажите аргументы для команды бенчмарков.
     См. [документацию о команде бенчмарков][command argument] для получения полной информации.
     (например, `bencher mock`)
 

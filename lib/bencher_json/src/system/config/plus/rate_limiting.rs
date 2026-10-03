@@ -8,6 +8,7 @@ pub struct JsonRateLimiting {
     pub window: Option<u32>,
     pub unclaimed_limit: Option<u32>,
     pub claimed_limit: Option<u32>,
+    pub plus_limit: Option<u32>,
     pub public: Option<JsonPublicRateLimiter>,
     pub user: Option<JsonUserRateLimiter>,
     pub project: Option<JsonProjectRateLimiter>,

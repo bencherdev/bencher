@@ -6,29 +6,31 @@ import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
 
 1. Создайте файл `workflow` для GitHub Actions.
    (например, `.github/workflows/fork_pr_benchmarks_closed.yml`)
-2. Запускайте на событиях `pull_request_target`:
+2. Назовите этот workflow.
+   (например, `name: Archive Closed Fork PR Branch with Bencher`)
+3. Запускайте на событиях `pull_request_target`:
    - `closed` - Пул-реквест был закрыт.
 
    См. [документацию по GitHub Actions `on`][github actions on] и [документацию по GitHub Actions `pull_request_target`][github action pull_request_target] для полного обзора.
    (например, `on: pull_request_target: types: [closed]`)
-3. Создайте задание `job` для GitHub Actions.
+4. Создайте задание `job` для GitHub Actions.
    (например, `jobs: archive_pr_branch`)
-4. Установите тип машины, на которой будет выполнено задание.
+5. Установите тип машины, на которой будет выполнено задание.
    См. [документацию по GitHub Actions `runs-on`][github actions runs-on] для полного обзора.
    (например, `runs-on: ubuntu-latest`)
-5. Выполните проверку исходного кода ветки PR.
+6. Выполните проверку исходного кода ветки PR.
    (например, `uses: actions/checkout@v6`)
-6. Установите Bencher CLI, используя [действие GitHub Action][bencher cli github action].
+7. Установите Bencher CLI, используя [действие GitHub Action][bencher cli github action].
    (например, `uses: bencherdev/bencher@main`)
-7. Используйте подкоманду CLI `bencher archive` для архивирования ветки PR.
+8. Используйте подкоманду CLI `bencher archive` для архивирования ветки PR.
    (например, `bencher archive`)
-8. Установите опцию `--project` на идентификатор проекта.
+9. Установите опцию `--project` на идентификатор проекта.
     Подробнее см. в [документации по `--project`][project option].
     (например, `--project project-abc4567-wxyz123456789`)
-9. Установите опцию `--key` на секрет репозитория **`BENCHER_API_KEY`**.
+10. Установите опцию `--key` на секрет репозитория **`BENCHER_API_KEY`**.
     Подробнее см. в [документации по `--key`][key option].
     (например, `--key '${{ secrets.BENCHER_API_KEY }}'`)
-10. Установите опцию `--branch` на имя ветки PR, используя [переменную среды по умолчанию `GITHUB_HEAD_REF` для GitHub Actions][github default environment variables].
+11. Установите опцию `--branch` на имя ветки PR, используя [переменную среды по умолчанию `GITHUB_HEAD_REF` для GitHub Actions][github default environment variables].
     (например, `--branch "$GITHUB_HEAD_REF"`)
 
 [github actions on]: https://docs.github.com/ru/actions/using-workflows/workflow-syntax-for-github-actions#on

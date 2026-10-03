@@ -13,8 +13,8 @@ use crate::{
     ApiContext, actor_conn, auth_conn,
     context::{DbConnection, RateLimitingError},
     error::{
-        issue_error, not_found_error, payment_required_error, resource_conflict_err,
-        resource_not_found_err,
+        BencherResource, issue_error, not_found_error, payment_required_error,
+        resource_conflict_err, resource_not_found_err,
     },
     model::{
         organization::{OrganizationId, QueryOrganization, UpdateOrganization},
@@ -324,24 +324,7 @@ impl PlanKind {
                 }))
             }
         } else if visibility.is_public() {
-            let is_claimed = query_organization.is_claimed(actor_conn!(context, api_actor))?;
-            let window_usage = query_organization.window_usage(context, api_actor).await?;
-
-            context
-                .rate_limiting
-                .check_claimable_limit(
-                    is_claimed,
-                    window_usage,
-                    |rate_limit| RateLimitingError::UnclaimedOrganization {
-                        organization: query_organization.clone(),
-                        rate_limit,
-                    },
-                    |rate_limit| RateLimitingError::ClaimedOrganization {
-                        organization: query_organization.clone(),
-                        rate_limit,
-                    },
-                )
-                .map(|()| Self::None)
+            Ok(Self::None)
         } else {
             Err(payment_required_error(PlanKindError::NoPlan {
                 organization: query_organization.clone(),
@@ -349,6 +332,43 @@ impl PlanKind {
         }
     }
 
+    async fn check_claimable_limit(
+        context: &ApiContext,
+        api_actor: &ApiActor,
+        query_organization: &QueryOrganization,
+    ) -> Result<(), HttpError> {
+        let is_claimed = query_organization.is_claimed(actor_conn!(context, api_actor))?;
+        let window_usage = query_organization.window_usage(context, api_actor).await?;
+        context.rate_limiting.check_claimable_limit(
+            is_claimed,
+            window_usage,
+            |rate_limit| RateLimitingError::UnclaimedOrganization {
+                organization: query_organization.clone(),
+                rate_limit,
+            },
+            |rate_limit| RateLimitingError::ClaimedOrganization {
+                organization: query_organization.clone(),
+                rate_limit,
+            },
+        )
+    }
+
+    async fn check_plus_limit(
+        context: &ApiContext,
+        api_actor: &ApiActor,
+        query_organization: &QueryOrganization,
+    ) -> Result<(), HttpError> {
+        let window_usage = query_organization.window_usage(context, api_actor).await?;
+        context
+            .rate_limiting
+            .check_plus_limit(window_usage, |rate_limit| RateLimitingError::Organization {
+                organization: query_organization.clone(),
+                resource: BencherResource::Metric,
+                rate_limit,
+            })
+    }
+
+    /// The plan for a new report or run, held to its organization's daily metrics limit.
     pub async fn new_for_project(
         context: &ApiContext,
         biller: Option<&Biller>,
@@ -357,7 +377,7 @@ impl PlanKind {
         api_actor: &ApiActor,
     ) -> Result<Self, HttpError> {
         let query_organization = project.organization(actor_conn!(context, api_actor))?;
-        Self::new(
+        let plan_kind = Self::new(
             context,
             biller,
             licensor,
@@ -365,7 +385,36 @@ impl PlanKind {
             &query_organization,
             project.visibility,
         )
-        .await
+        .await?;
+        if plan_kind.is_paid() {
+            Self::check_plus_limit(context, api_actor, &query_organization).await?;
+        } else {
+            Self::check_claimable_limit(context, api_actor, &query_organization).await?;
+        }
+        Ok(plan_kind)
+    }
+
+    /// The plan for the results of a job that has already run, which a paid plan's
+    /// daily metrics limit does not refuse.
+    pub async fn new_for_job_results(
+        context: &ApiContext,
+        project: &QueryProject,
+        api_actor: &ApiActor,
+    ) -> Result<Self, HttpError> {
+        let query_organization = project.organization(actor_conn!(context, api_actor))?;
+        let plan_kind = Self::new(
+            context,
+            context.biller.as_ref(),
+            &context.licensor,
+            api_actor,
+            &query_organization,
+            project.visibility,
+        )
+        .await?;
+        if !plan_kind.is_paid() {
+            Self::check_claimable_limit(context, api_actor, &query_organization).await?;
+        }
+        Ok(plan_kind)
     }
 
     pub async fn check_for_organization(

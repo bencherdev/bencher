@@ -8,31 +8,33 @@ Dieser Workflow archiviert den Fork-PR-Branch mit dem Befehl `bencher archive`.
 
 1. Erstellen Sie eine GitHub Actions `workflow`-Datei.
    (z.B.: `.github/workflows/fork_pr_benchmarks_closed.yml`)
-2. Ausführen bei `pull_request_target`-Ereignissen:
+2. Benennen Sie diesen Workflow.
+   (z.B.: `name: Archive Closed Fork PR Branch with Bencher`)
+3. Ausführen bei `pull_request_target`-Ereignissen:
    - `closed` - Ein Pull-Request wurde geschlossen.
 
    Siehe die [GitHub Actions `on` Dokumentation][github actions on]
    und [GitHub Actions `pull_request_target` Dokumentation][github action pull_request_target] für einen vollständigen Überblick.
    (z.B.: `on: pull_request_target: types: [closed]`)
-3. Erstellen Sie einen GitHub Actions `job`.
+4. Erstellen Sie einen GitHub Actions `job`.
    (z.B.: `jobs: archive_pr_branch`)
-4. Legen Sie den Maschinentyp fest, auf dem der Job ausgeführt wird.
+5. Legen Sie den Maschinentyp fest, auf dem der Job ausgeführt wird.
    Siehe die [GitHub Actions `runs-on` Dokumentation][github actions runs-on]
    für einen vollständigen Überblick.
    (z.B.: `runs-on: ubuntu-latest`)
-5. Checken Sie den Quellcode des PR-Branches aus.
+6. Checken Sie den Quellcode des PR-Branches aus.
    (z.B.: `uses: actions/checkout@v6`)
-6. Installieren Sie die Bencher CLI mit [der GitHub Action][bencher cli github action].
+7. Installieren Sie die Bencher CLI mit [der GitHub Action][bencher cli github action].
    (z.B.: `uses: bencherdev/bencher@main`)
-7. Verwenden Sie den `bencher archive` CLI-Unterbefehl, um den PR-Branch zu archivieren.
+8. Verwenden Sie den `bencher archive` CLI-Unterbefehl, um den PR-Branch zu archivieren.
    (z.B.: `bencher archive`)
-8.  Setzen Sie die `--project` Option auf den Projektslug.
+9.  Setzen Sie die `--project` Option auf den Projektslug.
     Siehe [die `--project` Dokumentation][project option] für weitere Details.
     (z.B.: `--project project-abc4567-wxyz123456789`)
-9.  Setzen Sie die `--key` Option auf das **Repository**-Geheimnis `BENCHER_API_KEY`.
+10. Setzen Sie die `--key` Option auf das **Repository**-Geheimnis `BENCHER_API_KEY`.
     Siehe [die `--key` Dokumentation][key option] für weitere Details.
     (z.B.: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-10. Setzen Sie die `--branch` Option auf den PR-Branch-Namen
+11. Setzen Sie die `--branch` Option auf den PR-Branch-Namen
     unter Verwendung der [GitHub Actions `GITHUB_HEAD_REF` Standard-Umgebungsvariable][github default environment variables].
     (z.B.: `--branch "$GITHUB_HEAD_REF"`)
 

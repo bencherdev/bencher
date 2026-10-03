@@ -185,6 +185,21 @@ pub fn is_conflict(error: &HttpError) -> bool {
     error.status_code == ClientErrorStatusCode::CONFLICT
 }
 
+/// The value, or `None` for a daily limit's 429, which a report skips past instead of failing.
+/// Every other error propagates.
+pub fn past_the_ceiling<T>(
+    log: &slog::Logger,
+    result: Result<T, HttpError>,
+) -> Result<Option<T>, HttpError> {
+    if let Err(error) = &result
+        && error.status_code == ClientErrorStatusCode::TOO_MANY_REQUESTS
+    {
+        slog::warn!(log, "Skipping what a daily limit refused: {error}");
+        return Ok(None);
+    }
+    result.map(Some)
+}
+
 pub fn locked_error<E>(error: E) -> HttpError
 where
     E: fmt::Display,

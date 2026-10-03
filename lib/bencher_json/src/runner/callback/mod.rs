@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use http::header::{CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue, USER_AGENT};
+use http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderName, HeaderValue, USER_AGENT};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, Serializer};
@@ -9,7 +9,7 @@ use serde_json::Value;
 use url::Url;
 
 use crate::runner::JobStatus;
-use crate::{JsonReport, Sanitize, Secret};
+use crate::{JsonReport, Sanitize, Secret, strip_bearer_token};
 
 mod body;
 mod state;
@@ -24,9 +24,14 @@ pub const MAX_CALLBACK_HEADER_NAME_LEN: usize = 256;
 pub const MAX_CALLBACK_HEADER_VALUE_LEN: usize = 8 << 10;
 pub const MAX_CALLBACK_BODY_LEN: usize = 64 << 10;
 
+const CALLBACK_DOCS_URL: &str = "https://bencher.dev/docs/explanation/images/";
+
 /// The job statuses a callback fires on, and so the values `{{ job.status }}` can take.
 pub const CALLBACK_JOB_STATUSES: [JobStatus; 3] =
     [JobStatus::Processed, JobStatus::Failed, JobStatus::Canceled];
+
+// The `repository_dispatch` event type that released `bencher run` versions compose.
+const DISPATCH_EVENT_TYPE: &str = "bencher_run";
 
 // The HTTP client owns message framing and the connection, so these are never the customer's.
 const REFUSED_HEADERS: [&str; 9] = [
@@ -52,7 +57,8 @@ pub struct JsonNewCallback {
     url: Url,
     /// Request headers. Names are case-insensitive: send each name once; if one repeats in
     /// different case, only one is kept.
-    /// A header named `Content-Type` or `User-Agent` replaces Bencher's default.
+    /// A header named `Content-Type` replaces Bencher's default, and a `User-Agent` follows
+    /// Bencher's.
     // `default` only feeds the generated types: deserializing goes through `TryFrom<Value>`.
     // A `Secret` is never empty, so an empty value, which HTTP allows, is `None`.
     #[serde(
@@ -154,28 +160,46 @@ impl JsonNewCallback {
         &self.url
     }
 
-    /// The headers to send: Bencher's defaults, replaced by any customer header of the same name.
-    /// Every value is sensitive, so the map's `Debug` never prints one.
+    /// The headers to send: Bencher's defaults, replaced by any customer header of the same name,
+    /// except a `User-Agent`, which follows Bencher's. Every value is sensitive, so the map's
+    /// `Debug` never prints one.
     pub fn delivery_headers(&self, version: &str) -> Result<HeaderMap, http::Error> {
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        headers.insert(USER_AGENT, format!("bencher/{version}").try_into()?);
+        let mut user_agent = format!("Bencher/{version} (+{CALLBACK_DOCS_URL})");
         for (name, value) in &self.headers {
-            headers.insert(
-                HeaderName::try_from(name.as_str())?,
-                header_str(value.as_ref()).try_into()?,
-            );
+            let value = header_str(value.as_ref());
+            if name == USER_AGENT.as_str() {
+                user_agent.push(' ');
+                user_agent.push_str(value);
+            } else {
+                headers.insert(HeaderName::try_from(name.as_str())?, value.try_into()?);
+            }
         }
+        headers.insert(USER_AGENT, user_agent.try_into()?);
         headers
             .values_mut()
             .for_each(|value| value.set_sensitive(true));
         Ok(headers)
     }
 
-    /// Whether the callback is the GitHub Actions dispatch to a repository on github.com, which
-    /// Bencher sends on every plan.
-    pub fn is_github_dispatch(&self) -> bool {
+    /// Whether the callback is the GitHub Actions dispatch that `bencher run` composes: the
+    /// `bencher_run` event, sent with a bearer token to a repository on github.com.
+    pub fn is_bencher_run_dispatch(&self) -> bool {
+        let has_bearer_token = self
+            .headers
+            .get(AUTHORIZATION.as_str())
+            .and_then(Option::as_ref)
+            .and_then(|value| strip_bearer_token(value.as_ref()))
+            .is_some();
+        let event_type = self
+            .body
+            .as_ref()
+            .and_then(|body| body.get("event_type"))
+            .and_then(Value::as_str);
         is_github_dispatch_url(&self.url)
+            && has_bearer_token
+            && event_type == Some(DISPATCH_EVENT_TYPE)
     }
 
     /// Whether the body sends the job's report, as a callback without a body does.
@@ -383,6 +407,7 @@ mod tests {
     use crate::Sanitize as _;
 
     const URL: &str = "https://example.com/hook";
+    const DISPATCH: &str = "https://api.github.com/repos/owner/repo/dispatches";
     const REFUSED_HEADERS: [&str; 9] = [
         "Host",
         "Content-Length",
@@ -449,13 +474,6 @@ mod tests {
 
     #[test]
     fn a_github_dispatch_is_exactly_the_dispatch_endpoint_on_api_github_com() {
-        const DISPATCH: &str = "https://api.github.com/repos/owner/repo/dispatches";
-        assert!(
-            new_callback(DISPATCH, &[], None)
-                .unwrap()
-                .is_github_dispatch()
-        );
-        assert!(!new_callback(URL, &[], None).unwrap().is_github_dispatch());
         for (url, expected) in [
             (DISPATCH, true),
             ("http://api.github.com/repos/owner/repo/dispatches", false),
@@ -498,6 +516,100 @@ mod tests {
                 is_github_dispatch_url(&Url::parse(url).unwrap()),
                 expected,
                 "{url}"
+            );
+        }
+    }
+
+    /// Each false row differs from what `bencher run` v0.6.13 composes in one respect.
+    #[test]
+    fn a_bencher_run_dispatch_is_exactly_what_the_cli_composes() {
+        const BEARER: Option<(&str, &str)> = Some(("Authorization", "Bearer github_pat_token"));
+        let authorization = |value| Some(("Authorization", value));
+        let with_event_type = |event_type: Option<Value>| {
+            let mut body = json!({
+                "client_payload": {
+                    "bencher": { "project": "{{ project.slug }}", "job": "{{ job.uuid }}" },
+                    "github": { "sha": "f1e2d3c4b5a697887766554433221100ffeeddcc" },
+                },
+            });
+            if let Some(event_type) = event_type {
+                body["event_type"] = event_type;
+            }
+            body
+        };
+        let composed = || Some(with_event_type(Some(json!("bencher_run"))));
+        for (url, bearer, body, expected) in [
+            (DISPATCH, BEARER, composed(), true),
+            // HTTP auth schemes are case-insensitive.
+            (
+                DISPATCH,
+                authorization("bearer github_pat_token"),
+                composed(),
+                true,
+            ),
+            // A GitHub Enterprise Server host
+            (
+                "https://github.example.com/api/v3/repos/owner/repo/dispatches",
+                BEARER,
+                composed(),
+                false,
+            ),
+            (DISPATCH, None, composed(), false),
+            // GitHub reads the token only from `Authorization`.
+            (
+                DISPATCH,
+                Some(("Proxy-Authorization", "Bearer github_pat_token")),
+                composed(),
+                false,
+            ),
+            (
+                DISPATCH,
+                authorization("Basic dXNlcjpwYXNz"),
+                composed(),
+                false,
+            ),
+            (DISPATCH, authorization("Bearer "), composed(), false),
+            (DISPATCH, authorization("Bearer \t "), composed(), false),
+            (DISPATCH, BEARER, None, false),
+            (
+                DISPATCH,
+                BEARER,
+                Some(json!([with_event_type(Some(json!("bencher_run")))])),
+                false,
+            ),
+            (DISPATCH, BEARER, Some(with_event_type(None)), false),
+            (
+                DISPATCH,
+                BEARER,
+                Some(with_event_type(Some(json!("deploy")))),
+                false,
+            ),
+            (
+                DISPATCH,
+                BEARER,
+                Some(with_event_type(Some(json!("BENCHER_RUN")))),
+                false,
+            ),
+            (
+                DISPATCH,
+                BEARER,
+                Some(with_event_type(Some(json!("bencher_run{{ job.status }}")))),
+                false,
+            ),
+        ] {
+            let headers = [
+                Some(("Accept", "application/vnd.github+json")),
+                bearer,
+                Some(("X-GitHub-Api-Version", "2022-11-28")),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+            let callback = new_callback(url, &headers, body.clone()).unwrap();
+            assert_eq!(
+                callback.is_bencher_run_dispatch(),
+                expected,
+                "{url} {bearer:?} {body:?}"
             );
         }
     }
@@ -683,7 +795,8 @@ mod tests {
     }
 
     #[test]
-    fn delivery_headers_let_a_customer_header_replace_a_default() {
+    fn delivery_headers_replace_the_content_type_and_follow_bencher_s_user_agent() {
+        const BENCHER: &str = "Bencher/1.2.3 (+https://bencher.dev/docs/explanation/images/)";
         let callback = new_callback(
             URL,
             &[
@@ -701,14 +814,14 @@ mod tests {
                     CONTENT_TYPE,
                     HeaderValue::from_static("application/vnd.github+json")
                 ),
-                (USER_AGENT, HeaderValue::from_static("bencher/1.2.3")),
+                (USER_AGENT, HeaderValue::from_static(BENCHER)),
             ])
         );
 
-        let user_agent = new_callback(URL, &[("User-Agent", "my-agent")], None).unwrap();
+        let user_agent = new_callback(URL, &[("User-Agent", "my-agent/2.0")], None).unwrap();
         assert_eq!(
             user_agent.delivery_headers("1.2.3").unwrap()[USER_AGENT],
-            "my-agent"
+            format!("{BENCHER} my-agent/2.0").as_str()
         );
     }
 

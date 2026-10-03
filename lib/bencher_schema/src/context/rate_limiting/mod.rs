@@ -54,12 +54,14 @@ const PRUNE_PERIOD: Duration = Duration::from_hours(1);
 
 const DEFAULT_UNCLAIMED_LIMIT: u32 = u8::MAX as u32;
 const DEFAULT_CLAIMED_LIMIT: u32 = u16::MAX as u32;
+const DEFAULT_PLUS_LIMIT: u32 = 1 << 20;
 
 pub struct RateLimiting {
     // Database-backed rate limits
     window: Duration,
     unclaimed_limit: u32,
     claimed_limit: u32,
+    plus_limit: u32,
     // In-memory rate limiters
     public: PublicRateLimiter,
     user: UserRateLimiter,
@@ -154,6 +156,7 @@ impl Default for RateLimiting {
             window: bencher_rate_limiter::DAY,
             unclaimed_limit: DEFAULT_UNCLAIMED_LIMIT,
             claimed_limit: DEFAULT_CLAIMED_LIMIT,
+            plus_limit: DEFAULT_PLUS_LIMIT,
             public: PublicRateLimiter::default(),
             user: UserRateLimiter::default(),
             project: ProjectRateLimiter::default(),
@@ -169,6 +172,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             window,
             unclaimed_limit,
             claimed_limit,
+            plus_limit,
             public,
             user,
             project,
@@ -181,6 +185,7 @@ impl From<JsonRateLimiting> for RateLimiting {
                 .map_or(bencher_rate_limiter::DAY, Duration::from_secs),
             unclaimed_limit: unclaimed_limit.unwrap_or(DEFAULT_UNCLAIMED_LIMIT),
             claimed_limit: claimed_limit.unwrap_or(DEFAULT_CLAIMED_LIMIT),
+            plus_limit: plus_limit.unwrap_or(DEFAULT_PLUS_LIMIT),
             public: public.map_or_else(PublicRateLimiter::default, Into::into),
             user: user.map_or_else(UserRateLimiter::default, Into::into),
             project: project.map_or_else(ProjectRateLimiter::default, Into::into),
@@ -238,6 +243,7 @@ impl RateLimiting {
             window: bencher_rate_limiter::DAY,
             unclaimed_limit: u32::MAX,
             claimed_limit: u32::MAX,
+            plus_limit: u32::MAX,
             public: PublicRateLimiter::max(),
             user: UserRateLimiter::max(),
             project: ProjectRateLimiter::max(),
@@ -250,9 +256,20 @@ impl RateLimiting {
     /// set. Exercising a creation ceiling otherwise means throttling the requests
     /// that reach it.
     pub fn max_with_creation_limits(unclaimed_limit: u32, claimed_limit: u32) -> Self {
+        Self::max_with_creation_and_plus_limits(unclaimed_limit, claimed_limit, u32::MAX)
+    }
+
+    /// [`Self::max_with_creation_limits`] with the daily metrics limit of a paid
+    /// organization set too.
+    pub fn max_with_creation_and_plus_limits(
+        unclaimed_limit: u32,
+        claimed_limit: u32,
+        plus_limit: u32,
+    ) -> Self {
         Self {
             unclaimed_limit,
             claimed_limit,
+            plus_limit,
             ..Self::max()
         }
     }
@@ -333,6 +350,20 @@ impl RateLimiting {
     {
         Self::check_inner(
             self.claimed_limit,
+            window_usage,
+            NonZeroU32::MIN,
+            error_fn,
+            #[cfg(feature = "otel")]
+            AuthorizationKind::User,
+        )
+    }
+
+    pub fn check_plus_limit<F>(&self, window_usage: u32, error_fn: F) -> Result<(), HttpError>
+    where
+        F: FnOnce(u32) -> RateLimitingError,
+    {
+        Self::check_inner(
+            self.plus_limit,
             window_usage,
             NonZeroU32::MIN,
             error_fn,

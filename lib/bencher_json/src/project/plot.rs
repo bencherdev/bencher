@@ -8,7 +8,10 @@ use serde::{
     de::{self, Visitor},
 };
 
-use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ProjectUuid, TestbedUuid};
+use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ParameterFilter, ProjectUuid, TestbedUuid};
+
+#[cfg(feature = "schema")]
+use super::perf::MAX_DIMENSION_ENTRIES;
 
 crate::typed_uuid::typed_uuid!(PlotUuid);
 
@@ -44,16 +47,26 @@ pub struct JsonNewPlot {
     /// Metrics outside of this window will be omitted.
     pub window: Window,
     /// The branches to include in the plot.
-    /// At least one branch must be specified.
+    /// At least one branch must be specified, and at most 8.
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub branches: Vec<BranchUuid>,
     /// The testbeds to include in the plot.
-    /// At least one testbed must be specified.
+    /// At least one testbed must be specified, and at most 8.
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub testbeds: Vec<TestbedUuid>,
     /// The benchmarks to include in the plot.
-    /// At least one benchmark must be specified.
+    /// At least one benchmark must be specified, and at most 8.
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub benchmarks: Vec<BenchmarkUuid>,
+    /// The variants to include in the plot, as a parameters filter.
+    /// A variant matches when any entry in the filter is a subset of its parameters.
+    /// If not set, or set to an empty list, the plot includes every variant.
+    /// At most 8 entries may be specified.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     /// The measures to include in the plot.
-    /// At least one measure must be specified.
+    /// At least one measure must be specified, and at most 8.
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub measures: Vec<MeasureUuid>,
 }
 
@@ -84,6 +97,10 @@ pub struct JsonPlot {
     pub branches: Vec<BranchUuid>,
     pub testbeds: Vec<TestbedUuid>,
     pub benchmarks: Vec<BenchmarkUuid>,
+    /// The variants this plot draws, in canonical order.
+    /// Absent when the plot draws every variant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     pub measures: Vec<MeasureUuid>,
     pub created: DateTime,
     pub modified: DateTime,
@@ -124,19 +141,29 @@ pub struct JsonPlotPatch {
     pub window: Option<Window>,
     /// The branches to include in the plot.
     /// Replaces the current branches for the plot.
-    /// At least one branch must be specified.
+    /// At least one branch must be specified, and at most 8.
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub branches: Option<Vec<BranchUuid>>,
     /// The testbeds to include in the plot.
     /// Replaces the current testbeds for the plot.
-    /// At least one testbed must be specified.
+    /// At least one testbed must be specified, and at most 8.
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub testbeds: Option<Vec<TestbedUuid>>,
     /// The benchmarks to include in the plot.
     /// Replaces the current benchmarks for the plot.
-    /// At least one benchmark must be specified.
+    /// At least one benchmark must be specified, and at most 8.
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub benchmarks: Option<Vec<BenchmarkUuid>>,
+    /// The variants to include in the plot, as a parameters filter.
+    /// Replaces the current filter for the plot.
+    /// Set to `null` or to an empty list to include every variant again.
+    /// At most 8 entries may be specified.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
     /// The measures to include in the plot.
     /// Replaces the current measures for the plot.
-    /// At least one measure must be specified.
+    /// At least one measure must be specified, and at most 8.
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub measures: Option<Vec<MeasureUuid>>,
 }
 
@@ -152,9 +179,15 @@ pub struct JsonPlotPatchNull {
     pub x_axis: Option<XAxis>,
     pub y_axis: Option<YAxis>,
     pub window: Option<Window>,
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub branches: Option<Vec<BranchUuid>>,
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub testbeds: Option<Vec<TestbedUuid>>,
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub benchmarks: Option<Vec<BenchmarkUuid>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
+    #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub measures: Option<Vec<MeasureUuid>>,
 }
 
@@ -176,6 +209,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
         const BRANCHES_FIELD: &str = "branches";
         const TESTBEDS_FIELD: &str = "testbeds";
         const BENCHMARKS_FIELD: &str = "benchmarks";
+        const PARAMETERS_FIELD: &str = "parameters";
         const MEASURES_FIELD: &str = "measures";
         const FIELDS: &[&str] = &[
             INDEX_FIELD,
@@ -190,6 +224,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
             BRANCHES_FIELD,
             TESTBEDS_FIELD,
             BENCHMARKS_FIELD,
+            PARAMETERS_FIELD,
             MEASURES_FIELD,
         ];
 
@@ -208,6 +243,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
             Branches,
             Testbeds,
             Benchmarks,
+            Parameters,
             Measures,
         }
 
@@ -237,6 +273,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                 let mut branches = None;
                 let mut testbeds = None;
                 let mut benchmarks = None;
+                let mut parameters: Option<Option<ParameterFilter>> = None;
                 let mut measures = None;
 
                 while let Some(key) = map.next_key()? {
@@ -313,6 +350,12 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                             }
                             benchmarks = Some(map.next_value()?);
                         },
+                        Field::Parameters => {
+                            if parameters.is_some() {
+                                return Err(de::Error::duplicate_field(PARAMETERS_FIELD));
+                            }
+                            parameters = Some(map.next_value()?);
+                        },
                         Field::Measures => {
                             if measures.is_some() {
                                 return Err(de::Error::duplicate_field(MEASURES_FIELD));
@@ -321,6 +364,9 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         },
                     }
                 }
+
+                // An explicit null clears the filter, as an empty list does.
+                let parameters = parameters.map(Option::unwrap_or_default);
 
                 Ok(match title {
                     Some(Some(title)) => Self::Value::Patch(JsonPlotPatch {
@@ -336,6 +382,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         branches,
                         testbeds,
                         benchmarks,
+                        parameters,
                         measures,
                     }),
                     Some(None) => Self::Value::Null(JsonPlotPatchNull {
@@ -351,6 +398,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         branches,
                         testbeds,
                         benchmarks,
+                        parameters,
                         measures,
                     }),
                     None => Self::Value::Patch(JsonPlotPatch {
@@ -366,6 +414,7 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         branches,
                         testbeds,
                         benchmarks,
+                        parameters,
                         measures,
                     }),
                 })
@@ -575,6 +624,7 @@ mod tests {
         assert!(patch.branches.is_none());
         assert!(patch.testbeds.is_none());
         assert!(patch.benchmarks.is_none());
+        assert!(patch.parameters.is_none());
         assert!(patch.measures.is_none());
     }
 
@@ -659,5 +709,34 @@ mod tests {
     fn deserialize_duplicate_field_errors() {
         serde_json::from_str::<JsonUpdatePlot>(r#"{"lower_value": true, "lower_value": false}"#)
             .unwrap_err();
+    }
+
+    #[test]
+    fn deserialize_null_and_empty_parameters_both_clear() {
+        for body in [r#"{"parameters": null}"#, r#"{"parameters": []}"#] {
+            let update: JsonUpdatePlot = serde_json::from_str(body).unwrap();
+            let JsonUpdatePlot::Patch(patch) = update else {
+                panic!("expected Patch variant");
+            };
+            let parameters = patch.parameters.expect("parameters was written");
+            assert!(parameters.is_match_all(), "{body}");
+        }
+    }
+
+    #[test]
+    fn deserialize_duplicate_parameters_field_errors() {
+        serde_json::from_str::<JsonUpdatePlot>(r#"{"parameters": [], "parameters": []}"#)
+            .unwrap_err();
+    }
+
+    #[test]
+    fn deserialize_null_title_carries_parameters() {
+        let update: JsonUpdatePlot =
+            serde_json::from_str(r#"{"title": null, "parameters": [{"size": 1}]}"#).unwrap();
+        let JsonUpdatePlot::Null(patch) = update else {
+            panic!("expected Null variant");
+        };
+        let parameters = patch.parameters.expect("parameters was written");
+        assert_eq!(parameters.canonical(), r#"[{"size":1}]"#);
     }
 }

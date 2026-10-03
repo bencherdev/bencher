@@ -8,35 +8,37 @@ Este fluxo de trabalho arquivará o branch do PR usando o comando `bencher archi
 
 1. Crie um arquivo de `workflow` do GitHub Actions.
    (ex: `.github/workflows/pr_benchmarks_closed.yml`)
-2. Execute em eventos `pull_request`:
+2. Nomeie esse workflow.
+   (ex: `name: Archive Closed PR Branch with Bencher`)
+3. Execute em eventos `pull_request`:
    - `closed` - Um pull request foi fechado.
 
    Veja a [documentação `on` do GitHub Actions][github actions on]
    e a [documentação `pull_request` do GitHub Action][github action pull_request] para uma visão completa.
    (ex: `on: pull_request: types: [closed]`)
-3. Crie um `job` do GitHub Actions.
+4. Crie um `job` do GitHub Actions.
    (ex: `jobs: archive_pr_branch`)
-4. Execute em eventos `pull_request` se e somente se o pull request for do mesmo repositório.
+5. Execute em eventos `pull_request` se e somente se o pull request for do mesmo repositório.
    ⚠️ NÃO REMOVA ESTA LINHA!
    Para lidar com PRs de Forks, veja [Pull Requests de Forks][pull requests from forks] abaixo.
    (ex: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. Defina o tipo de máquina em que o job será executado.
+6. Defina o tipo de máquina em que o job será executado.
    Veja a [documentação `runs-on` do GitHub Actions][github actions runs-on]
    para uma visão completa.
    (ex: `runs-on: ubuntu-latest`)
-6. Faça o checkout do código-fonte do branch do PR.
+7. Faça o checkout do código-fonte do branch do PR.
    (ex: `uses: actions/checkout@v6`)
-7. Instale o Bencher CLI usando [a Ação do GitHub][bencher cli github action].
+8. Instale o Bencher CLI usando [a Ação do GitHub][bencher cli github action].
    (ex: `uses: bencherdev/bencher@main`)
-8. Use o subcomando `bencher archive` da CLI para arquivar o branch do PR.
+9. Use o subcomando `bencher archive` da CLI para arquivar o branch do PR.
    (ex: `bencher archive`)
-9. Defina a opção `--project` para o identificador do Projeto.
+10. Defina a opção `--project` para o identificador do Projeto.
     Veja [os documentos `--project`][project option] para mais detalhes.
     (ex: `--project project-abc4567-wxyz123456789`)
-10. Defina a opção `--key` para o segredo **Repositório** `BENCHER_API_KEY`.
+11. Defina a opção `--key` para o segredo **Repositório** `BENCHER_API_KEY`.
     Veja [os documentos `--key`][key option] para mais detalhes.
     (ex: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-11. Defina a opção `--branch` para o nome do branch do PR
+12. Defina a opção `--branch` para o nome do branch do PR
     usando [a variável de ambiente padrão `GITHUB_HEAD_REF` do GitHub Actions][github default environment variables].
     (ex: `--branch "$GITHUB_HEAD_REF"`)
 

@@ -16,8 +16,8 @@ use crate::urlencoded::{
 };
 use crate::{
     BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, HeadUuid, JsonBenchmark, JsonBranch,
-    JsonMeasure, JsonProject, JsonTestbed, JsonVariant, MeasureUuid, ParameterSet, ReportUuid,
-    TestbedUuid,
+    JsonMeasure, JsonProject, JsonTestbed, JsonVariant, MAX_FILTER_SETS, MeasureUuid, ParameterSet,
+    ReportUuid, TestbedUuid,
 };
 
 use super::alert::JsonPerfAlert;
@@ -29,8 +29,8 @@ use super::threshold::JsonThresholdModel;
 
 crate::typed_uuid::typed_uuid!(ReportBenchmarkUuid);
 
-/// Each dimension list is truncated to this as the query is read, so the product
-/// of the lists is bounded before anything is looked up.
+/// A perf query reads at most this many entries of each dimension, which bounds the
+/// product of the lists before anything is looked up. A plot may save at most this many.
 pub const MAX_DIMENSION_ENTRIES: usize = 8;
 
 /// `JsonPerfQueryParams` is the actual query parameters accepted by the server.
@@ -218,7 +218,7 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
             && !parameters.is_empty()
         {
             let mut entries: Vec<String> = from_urlencoded_list(parameters)?;
-            entries.truncate(MAX_DIMENSION_ENTRIES);
+            entries.truncate(MAX_FILTER_SETS);
             Some(
                 entries
                     .iter()
@@ -509,7 +509,7 @@ pub struct JsonPerfBoundary {
 #[cfg(test)]
 mod tests {
     use super::{
-        BenchmarkUuid, BranchUuid, JsonPerfQuery, JsonPerfQueryParams, MAX_DIMENSION_ENTRIES,
+        BenchmarkUuid, BranchUuid, JsonPerfQuery, JsonPerfQueryParams, MAX_FILTER_SETS,
         MeasureUuid, TestbedUuid,
     };
 
@@ -529,7 +529,7 @@ mod tests {
 
     #[test]
     fn truncates_the_parameters_list() {
-        let over = MAX_DIMENSION_ENTRIES + 8;
+        let over = MAX_FILTER_SETS + 8;
         let parameters = (0..over)
             .map(|index| format!(r#"{{"n":{index}}}"#))
             .collect::<Vec<_>>()
@@ -538,10 +538,7 @@ mod tests {
         let query =
             JsonPerfQuery::try_from(query_params(parameters)).expect("Failed to read the params");
 
-        assert_eq!(
-            query.parameters.map(|p| p.len()),
-            Some(MAX_DIMENSION_ENTRIES)
-        );
+        assert_eq!(query.parameters.map(|p| p.len()), Some(MAX_FILTER_SETS));
     }
 
     // A dead entry inside the cap still spends its place, so a live entry past the
@@ -549,10 +546,7 @@ mod tests {
     #[test]
     fn truncates_the_parameters_list_before_dropping_dead_entries() {
         let parameters = std::iter::once(r#"{"n":0}"#)
-            .chain(std::iter::repeat_n(
-                r#"{"n":[0]}"#,
-                MAX_DIMENSION_ENTRIES - 1,
-            ))
+            .chain(std::iter::repeat_n(r#"{"n":[0]}"#, MAX_FILTER_SETS - 1))
             .chain(std::iter::once(r#"{"n":1}"#))
             .collect::<Vec<_>>()
             .join(",");

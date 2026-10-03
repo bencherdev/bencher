@@ -2,11 +2,14 @@ use std::collections::HashMap;
 
 use bencher_adapter::{
     AdapterError, AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
-    results::adapter_metrics::{AdapterMetrics, NamedMap},
+    results::{
+        adapter_metrics::{AdapterMetrics, NamedMap},
+        adapter_results::Skipped,
+    },
 };
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BmfVersion, MeasureNameId, MetricName, ParameterSet, Slug,
-    project::report::{Adapter, Iteration, JsonReportSettings},
+    project::report::{Adapter, Iteration, JsonReportSettings, ReportWarningResource},
 };
 use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
@@ -25,7 +28,7 @@ use crate::model::{
 use crate::{
     auth_conn,
     context::ApiContext,
-    error::{bad_request_error, issue_error},
+    error::{bad_request_error, issue_error, past_the_ceiling},
     model::project::{
         ProjectId,
         benchmark::{BenchmarkId, QueryBenchmark},
@@ -43,7 +46,7 @@ pub mod detector;
 
 use detector::{Detector, PreparedDetection, Threshold};
 
-use super::ReportId;
+use super::{ReportId, warning::ReportWarnings};
 
 /// `ReportResults` is used to process the report results.
 pub struct ReportResults {
@@ -58,9 +61,10 @@ pub struct ReportResults {
     // argument count.
     #[cfg(feature = "plus")]
     pub series_cache: SeriesCacheContext,
-    pub benchmark_cache: HashMap<BenchmarkNameId, BenchmarkId>,
-    pub variant_cache: HashMap<(BenchmarkId, ParameterSet), VariantId>,
-    pub measure_cache: HashMap<MeasureNameId, MeasureId>,
+    /// `None` is a new item the creation ceiling refused, which the report skips.
+    pub benchmark_cache: HashMap<BenchmarkNameId, Option<BenchmarkId>>,
+    pub variant_cache: HashMap<(BenchmarkId, ParameterSet), Option<VariantId>>,
+    pub measure_cache: HashMap<MeasureNameId, Option<MeasureId>>,
     pub threshold_cache: HashMap<MeasureId, Vec<Threshold>>,
 }
 
@@ -120,6 +124,7 @@ impl ReportResults {
         adapter: Adapter,
         settings: JsonReportSettings,
         bmf_version: BmfVersion,
+        warnings: &mut ReportWarnings,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         #[cfg(feature = "otel")]
@@ -146,23 +151,33 @@ impl ReportResults {
                 },
             })?;
 
-        // The per measure cap has already truncated, so this is the report of it and
-        // never an ingest error: a harness that names more statistics than the cap
-        // allows still gets its report. The adapter counts; the log line and the
-        // counter are here because this is where the providers are in scope.
-        let dropped_names = results_array.dropped_names();
+        // The adapter counts; the log line and the counter are here because this is
+        // where the providers are in scope.
+        let skipped = results_array.skipped();
         let report_id = self.report_id;
-        if dropped_names > 0 {
+        if !skipped.is_empty() {
             slog::warn!(
                 log,
-                "Dropped {dropped_names} named metric value(s) over the per measure cap for report ({report_id})"
-            );
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment_by(
-                bencher_otel::ApiCounter::MetricNamesDropped,
-                u64::try_from(dropped_names).unwrap_or(u64::MAX),
+                "Skipped what failed to parse or passed the per measure cap for report ({report_id}): {skipped:?}"
             );
         }
+        let Skipped {
+            benchmarks,
+            variants,
+            measures,
+            metrics,
+        } = skipped;
+        #[cfg(feature = "otel")]
+        if metrics > 0 {
+            bencher_otel::ApiMeter::increment_by(
+                bencher_otel::ApiCounter::MetricNamesDropped,
+                u64::try_from(metrics).unwrap_or(u64::MAX),
+            );
+        }
+        warnings.skip_with_count(ReportWarningResource::Benchmark, benchmarks);
+        warnings.skip_with_count(ReportWarningResource::Variant, variants);
+        warnings.skip_with_count(ReportWarningResource::Measure, measures);
+        warnings.skip_with_count(ReportWarningResource::Metric, metrics);
 
         // Fold is a BMF v0 operation and nothing else: the mean of per iteration
         // `p99` values is not the `p99` of the pooled sample. A v1 payload with fold
@@ -189,6 +204,7 @@ impl ReportResults {
                 context,
                 iteration.into(),
                 results,
+                warnings,
                 #[cfg(feature = "plus")]
                 usage,
             )
@@ -213,6 +229,7 @@ impl ReportResults {
         context: &ApiContext,
         iteration: Iteration,
         results: AdapterResults,
+        warnings: &mut ReportWarnings,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
         // Phase 1: Pre-compute all data using read connections.
@@ -232,14 +249,17 @@ impl ReportResults {
         for (benchmark, entries) in results.inner {
             // If benchmark name is ignored then strip the special suffix before querying
             let (benchmark, ignore_benchmark) = strip_ignore_suffix(benchmark);
-            let benchmark_id = self.benchmark_id(context, benchmark).await?;
+            let Some(benchmark_id) = self.benchmark_id(log, context, benchmark).await? else {
+                warnings.skip(ReportWarningResource::Benchmark);
+                continue;
+            };
             // A benchmark reports one result per variant, and
             // each is its own `report_benchmark` row with its own series history.
             for (parameters, metrics) in entries {
                 if skip_empty_variants && metrics.inner.is_empty() {
                     continue;
                 }
-                let prepared = self
+                let Some(prepared) = self
                     .prepare_variant(
                         log,
                         context,
@@ -248,8 +268,16 @@ impl ReportResults {
                         ignore_benchmark,
                         parameters,
                         metrics,
+                        warnings,
                     )
-                    .await?;
+                    .await?
+                else {
+                    continue;
+                };
+                // A v1 variant whose every measure the ceiling refused measured nothing too.
+                if skip_empty_variants && prepared.measures.is_empty() {
+                    continue;
+                }
                 prepared_variants.push(prepared);
             }
         }
@@ -335,7 +363,8 @@ impl ReportResults {
         Ok(())
     }
 
-    /// Phase 1: Prepare all data for a single variant (reads + compute only).
+    /// Phase 1: Prepare all data for a single variant (reads + compute only),
+    /// or `None` if the creation ceiling refused the variant.
     #[expect(
         clippy::too_many_arguments,
         reason = "a variant is a benchmark, its parameters, and its metrics"
@@ -349,19 +378,27 @@ impl ReportResults {
         ignore_benchmark: bool,
         parameters: ParameterSet,
         metrics: AdapterMetrics,
-    ) -> Result<PreparedVariant, HttpError> {
+        warnings: &mut ReportWarnings,
+    ) -> Result<Option<PreparedVariant>, HttpError> {
         // Resolved here in Phase 1, alongside the benchmark and the measures, so the
         // Phase 2 write transaction stays read free and never nests a transaction.
-        let variant_id = self
-            .variant_id(context, benchmark_id, parameters.clone())
-            .await?;
+        let Some(variant_id) = self
+            .variant_id(log, context, benchmark_id, parameters.clone())
+            .await?
+        else {
+            warnings.skip(ReportWarningResource::Variant);
+            return Ok(None);
+        };
 
         let insert_report_benchmark =
             InsertReportBenchmark::from_json(self.report_id, iteration, benchmark_id, variant_id);
 
         let mut prepared_measures = Vec::with_capacity(metrics.inner.len());
         for (measure_key, metric) in metrics.inner {
-            let measure_id = self.measure_id(context, measure_key).await?;
+            let Some(measure_id) = self.measure_id(log, context, measure_key).await? else {
+                warnings.skip(ReportWarningResource::Measure);
+                continue;
+            };
             let named = metric.inner;
 
             let mut detections: HashMap<MetricName, Vec<PreparedDetection>> = HashMap::new();
@@ -398,22 +435,25 @@ impl ReportResults {
             });
         }
 
-        Ok(PreparedVariant {
+        Ok(Some(PreparedVariant {
             insert_report_benchmark,
             measures: prepared_measures,
-        })
+        }))
     }
 
     async fn benchmark_id(
         &mut self,
+        log: &Logger,
         context: &ApiContext,
         benchmark: BenchmarkNameId,
-    ) -> Result<BenchmarkId, HttpError> {
+    ) -> Result<Option<BenchmarkId>, HttpError> {
         Ok(if let Some(id) = self.benchmark_cache.get(&benchmark) {
             *id
         } else {
-            let benchmark_id =
-                QueryBenchmark::get_or_create(context, self.project_id, &benchmark).await?;
+            let benchmark_id = past_the_ceiling(
+                log,
+                QueryBenchmark::get_or_create(context, self.project_id, &benchmark).await,
+            )?;
             self.benchmark_cache.insert(benchmark, benchmark_id);
             benchmark_id
         })
@@ -423,16 +463,19 @@ impl ReportResults {
     /// one benchmark has many variants.
     async fn variant_id(
         &mut self,
+        log: &Logger,
         context: &ApiContext,
         benchmark_id: BenchmarkId,
         parameters: ParameterSet,
-    ) -> Result<VariantId, HttpError> {
+    ) -> Result<Option<VariantId>, HttpError> {
         let key = (benchmark_id, parameters);
         Ok(if let Some(id) = self.variant_cache.get(&key) {
             *id
         } else {
-            let variant_id =
-                QueryVariant::get_or_create(context, self.project_id, benchmark_id, &key.1).await?;
+            let variant_id = past_the_ceiling(
+                log,
+                QueryVariant::get_or_create(context, self.project_id, benchmark_id, &key.1).await,
+            )?;
             self.variant_cache.insert(key, variant_id);
             variant_id
         })
@@ -440,14 +483,17 @@ impl ReportResults {
 
     async fn measure_id(
         &mut self,
+        log: &Logger,
         context: &ApiContext,
         measure: MeasureNameId,
-    ) -> Result<MeasureId, HttpError> {
+    ) -> Result<Option<MeasureId>, HttpError> {
         Ok(if let Some(id) = self.measure_cache.get(&measure) {
             *id
         } else {
-            let measure_id =
-                QueryMeasure::get_or_create(context, self.project_id, &measure).await?;
+            let measure_id = past_the_ceiling(
+                log,
+                QueryMeasure::get_or_create(context, self.project_id, &measure).await,
+            )?;
             self.measure_cache.insert(measure, measure_id);
             measure_id
         })

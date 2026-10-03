@@ -3,13 +3,18 @@
 //! These helpers are used by both `api_projects` and `api_runners` integration tests.
 
 use bencher_json::{
-    BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, MetricName, MetricUuid, ParameterSet,
-    ReportUuid, ResourceName, TestbedUuid, TokenUuid, VariantUuid, VersionUuid,
+    BranchName, BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, MetricName, MetricUuid,
+    ParameterSet, PlanLevel, ReportUuid, ResourceName, TestbedUuid, TokenUuid, VariantUuid,
+    VersionUuid,
 };
 use bencher_schema::{context::DbConnection, model::user::UserId, schema};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use http::StatusCode;
 
-use crate::{TestServer, seed::TestUser};
+use crate::{
+    TestServer,
+    seed::{TestProject, TestUser},
+};
 
 /// Fixed base timestamp for deterministic tests (Unix epoch + 1 billion seconds).
 #[expect(clippy::expect_used, reason = "test helper creating fixed timestamp")]
@@ -164,6 +169,57 @@ pub fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
         .select(schema::report::id)
         .first(&mut conn)
         .expect("Failed to get report ID")
+}
+
+/// A project of a claimed organization, licensed at `plan` if one is given.
+pub async fn plan_project(
+    server: &TestServer,
+    label: &str,
+    plan: Option<PlanLevel>,
+) -> (TestUser, TestProject) {
+    let user = server
+        .signup("Test User", &format!("plan-{label}@example.com"))
+        .await;
+    let org = server.create_org(&user, &format!("Plan {label} Org")).await;
+    if let Some(level) = plan {
+        server.license_org(&user, &org, level).await;
+    }
+    let project = server
+        .create_project(&user, &org, &format!("Plan {label} Project"))
+        .await;
+    (user, project)
+}
+
+/// Post a report of `iterations` metrics that ends now, inside the daily metrics window.
+#[expect(clippy::expect_used, reason = "test helper posting a report")]
+pub async fn post_metrics(
+    server: &TestServer,
+    user: &TestUser,
+    project: &TestProject,
+    branch: &BranchName,
+    iterations: usize,
+) -> (StatusCode, String) {
+    let project_slug: &str = project.slug.as_ref();
+    let now = DateTime::now();
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/reports")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({
+            "branch": branch,
+            "testbed": "localhost",
+            "start_time": now,
+            "end_time": now,
+            "results": vec!["{\"bench\": {\"latency\": {\"value\": 1.0}}}"; iterations],
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    (status, resp.text().await.expect("Failed to read response"))
 }
 
 /// A user API token seeded directly into the database.

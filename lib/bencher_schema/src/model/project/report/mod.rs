@@ -26,6 +26,7 @@ use diesel::{
 use dropshot::HttpError;
 use results::ReportResults;
 use slog::Logger;
+use warning::{ReportWarnings, get_report_warnings};
 
 #[cfg(feature = "plus")]
 use crate::macros::sql::last_insert_rowid;
@@ -99,11 +100,12 @@ impl NewRunJob {
 
 use super::{
     branch::{BranchId, QueryBranch, head::HeadId, version::VersionId},
-    threshold::{InsertThreshold, boundary::QueryBoundary},
+    threshold::{InsertThreshold, boundary::QueryBoundary, check_report_thresholds_shape},
 };
 
 pub mod report_benchmark;
 pub mod results;
+pub mod warning;
 
 crate::macros::typed_id::typed_id!(ReportId);
 
@@ -181,6 +183,10 @@ impl QueryReport {
             return existing.into_json(log, actor_conn!(context, api_actor), ReportMode::Full);
         }
 
+        // Checked before the report creates anything, so a refused payload leaves nothing behind.
+        let bmf_version = json_report.bmf_version.unwrap_or(query_project.bmf_version);
+        check_report_thresholds_shape(bmf_version, json_report.thresholds.as_ref())?;
+
         #[cfg(all(feature = "plus", not(feature = "otel")))]
         let _ = is_claimed;
         #[cfg(all(feature = "plus", feature = "otel"))]
@@ -194,6 +200,8 @@ impl QueryReport {
             .as_ref()
             .map_or(RunJob::None, NewRunJob::run_job);
 
+        let mut warnings = ReportWarnings::default();
+
         // Get or create the branch and testbed
         let (branch_id, head_id) = QueryBranch::get_or_create(
             log,
@@ -201,6 +209,7 @@ impl QueryReport {
             project_id,
             &json_report.branch,
             json_report.start_point.as_ref(),
+            &mut warnings,
         )
         .await?;
         let ResolvedTestbed {
@@ -227,12 +236,12 @@ impl QueryReport {
             branch_id,
             testbed_id,
             json_report.thresholds.take(),
+            &mut warnings,
         )
         .await?;
 
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default().normalize();
-        let bmf_version = json_report.bmf_version.unwrap_or(query_project.bmf_version);
 
         // Validate job before inserting report so that report + job creation is atomic:
         // if OCI resolution fails, neither the report nor the job is created.
@@ -321,6 +330,11 @@ impl QueryReport {
             if let Some(pending_job) = pending_job {
                 let report_id = diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)?;
                 pending_job.insert(conn, report_id, now)?;
+                // A job's results are processed after this response, so what the report has
+                // skipped so far is stored now.
+                if !warnings.is_empty() {
+                    warnings.insert(conn, report_id)?;
+                }
             }
 
             diesel::QueryResult::Ok(insert_report.uuid)
@@ -378,6 +392,7 @@ impl QueryReport {
                 adapter,
                 json_settings,
                 bmf_version,
+                warnings,
                 #[cfg(feature = "plus")]
                 plan_kind,
                 #[cfg(all(feature = "plus", feature = "otel"))]
@@ -473,7 +488,7 @@ impl QueryReport {
         let branch = QueryBranch::get_json_for_report(conn, &query_project, head_id, version_id)?;
         let testbed = QueryTestbed::get_json_for_report(conn, &query_project, testbed_id, spec_id)?;
         let (results, alerts, counts) = match mode {
-            ReportMode::Full => {
+            ReportMode::Full | ReportMode::Expanded => {
                 let results = get_report_results(log, conn, &query_project, id)?;
                 let alerts = get_report_alerts(
                     conn,
@@ -492,6 +507,10 @@ impl QueryReport {
             },
             ReportMode::Collapsed => (None, None, get_report_counts(conn, id)?),
         };
+        let warnings = match mode {
+            ReportMode::Full => get_report_warnings(conn, id)?,
+            ReportMode::Expanded | ReportMode::Collapsed => None,
+        };
         #[cfg(feature = "plus")]
         let job = get_report_job(conn, id)?;
 
@@ -509,6 +528,7 @@ impl QueryReport {
             results,
             alerts,
             counts,
+            warnings,
             #[cfg(feature = "plus")]
             job,
             created,
@@ -529,6 +549,7 @@ impl QueryReport {
         adapter: Adapter,
         settings: JsonReportSettings,
         bmf_version: BmfVersion,
+        mut warnings: ReportWarnings,
         #[cfg(feature = "plus")] plan_kind: PlanKind,
         #[cfg(all(feature = "plus", feature = "otel"))] priority: bencher_json::Priority,
         #[cfg(feature = "plus")] query_project: &QueryProject,
@@ -553,7 +574,7 @@ impl QueryReport {
                 report_created: self.created,
             },
         );
-        let processed = report_results
+        let mut processed = report_results
             .process(
                 log,
                 context,
@@ -561,10 +582,22 @@ impl QueryReport {
                 adapter,
                 settings,
                 bmf_version,
+                &mut warnings,
                 #[cfg(feature = "plus")]
                 &mut usage,
             )
             .await;
+        if processed.is_ok() && !warnings.is_empty() {
+            let report_id = self.id;
+            processed = write_transaction!(context, |conn| warnings.insert(conn, report_id))
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to write report warnings",
+                        &format!("Failed to write the warnings for report ({report_id}):"),
+                        e,
+                    )
+                });
+        }
 
         #[cfg(all(feature = "otel", feature = "plus"))]
         if usage > 0 {
@@ -676,8 +709,11 @@ async fn post_series_usage(
 /// Whether to materialize the full results and alerts when converting a report to JSON.
 #[derive(Debug, Clone, Copy)]
 pub enum ReportMode {
-    /// Include the full report results and alerts and compute the counts from them.
+    /// Include the full report results and alerts, compute the counts from them, and include
+    /// the warnings.
     Full,
+    /// As `Full` without the warnings, so a page of reports costs no query for them.
+    Expanded,
     /// Omit the report results and alerts and compute the counts with aggregate queries.
     Collapsed,
 }

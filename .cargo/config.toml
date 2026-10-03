@@ -27,3 +27,6 @@ rustflags = ["--cfg", "tokio_unstable", "-C", "link-arg=-fuse-ld=mold"]
 [build]
 rustflags = ["--cfg", "tokio_unstable", "-Csymbol-mangling-version=v0"]
 rustdocflags = ["--cfg", "tokio_unstable"]
+
+[env]
+LIBSQLITE3_FLAGS = "-DSQLITE_DEFAULT_MEMSTATUS=0 -USQLITE_ENABLE_MEMORY_MANAGEMENT"

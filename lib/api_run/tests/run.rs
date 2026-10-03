@@ -10,9 +10,15 @@
 use bencher_api_tests::TestServer;
 #[cfg(feature = "plus")]
 use bencher_api_tests::oci::compute_digest;
-use bencher_json::{BmfVersion, JsonReport, JsonReports};
+use bencher_json::{
+    BmfVersion, JsonReport, JsonReports,
+    project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
+};
 #[cfg(feature = "plus")]
-use bencher_json::{JsonJob, JsonRunners, JsonSpec, PlanLevel, runner::JsonJobs};
+use bencher_json::{
+    JsonJob, JsonRunners, JsonSpec, PlanLevel, project::threshold::MAX_ACTIVE_THRESHOLDS,
+    runner::JsonJobs,
+};
 #[cfg(feature = "plus")]
 use bencher_schema::model::runner::QueryJobCallback;
 use http::StatusCode;
@@ -572,6 +578,65 @@ async fn run_post_with_job_creates_job() {
     assert_eq!(
         AsRef::<str>::as_ref(&jobs[0].spec.slug),
         AsRef::<str>::as_ref(&spec.slug),
+    );
+}
+
+// POST /v0/run with job - the thresholds a job run skips are on the report it returns, before its
+// results are processed
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_warns_of_the_thresholds_it_skipped() {
+    let server = TestServer::new().await;
+    let user = server.signup("Job User", "runjobwarn@example.com").await;
+    let org = server.create_org(&user, "Job Warn Org").await;
+    let project = server.create_project(&user, &org, "Job Warn Project").await;
+    create_fallback_spec(&server, &user).await;
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    let declared = (0..MAX_ACTIVE_THRESHOLDS + 2)
+        .map(|n| {
+            serde_json::json!({
+                "measure": "latency",
+                "metric": format!("m-{n}"),
+                "model": { "test": "percentage", "upper_boundary": 0.05 },
+            })
+        })
+        .collect::<Vec<_>>();
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "bmf_version": 1,
+        "thresholds": { "models": declared },
+        "job": {
+            "image": format!("localhost/{project_slug}:v1")
+        }
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse the report");
+    assert!(report.job.is_some(), "the run is a job");
+    assert_eq!(
+        report.warnings,
+        Some(vec![JsonReportWarning {
+            resource: ReportWarningResource::Threshold,
+            action: ReportWarningAction::Skip,
+            count: 2,
+        }])
     );
 }
 
@@ -2339,6 +2404,57 @@ async fn run_post_idempotency_key_returns_same_report() {
     assert_eq!(report1.uuid, report2.uuid);
 }
 
+// POST /v0/run - a retry with the same idempotency key returns the warnings of the stored report
+#[tokio::test]
+async fn run_post_idempotency_key_returns_the_same_warnings() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "idempotencywarn@example.com")
+        .await;
+    let org = server.create_org(&user, "Idempotency Warn Org").await;
+    let project = server
+        .create_project(&user, &org, "Idempotency Warn Project")
+        .await;
+
+    // Ten metric names on one measure, two past the per measure cap of eight.
+    let names = (1..=10)
+        .map(|n| (format!("p{n}"), serde_json::json!(n)))
+        .collect::<serde_json::Map<_, _>>();
+    let results = serde_json::json!({ "bench": [{ "measures": { "latency": names } }] });
+    let body = serde_json::json!({
+        "project": project.slug,
+        "idempotency_key": uuid::Uuid::new_v4().to_string(),
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [results.to_string()],
+        "bmf_version": 1,
+    });
+    let skipped = Some(vec![JsonReportWarning {
+        resource: ReportWarningResource::Metric,
+        action: ReportWarningAction::Skip,
+        count: 2,
+    }]);
+
+    for attempt in ["first", "retry"] {
+        let resp = server
+            .client
+            .post(server.api_url("/v0/run"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED, "{attempt}");
+        let report: JsonReport = resp.json().await.expect("Failed to parse the report");
+        assert_eq!(report.warnings, skipped, "{attempt}");
+    }
+}
+
 // POST /v0/run - different idempotency keys create different reports
 #[tokio::test]
 async fn run_post_different_idempotency_keys_create_different_reports() {
@@ -2484,6 +2600,23 @@ fn marked_callback() -> serde_json::Value {
         "url": format!("https://receiver.example/hooks/{URL_PATH_MARKER}?key={URL_QUERY_MARKER}"),
         "headers": { "Authorization": format!("Bearer {HEADER_MARKER}") },
         "body": { "note": BODY_MARKER, "job": "{{ job.uuid }}", "status": "{{ job.status }}" },
+    })
+}
+
+/// The GitHub Actions dispatch `bencher run` composes, which a claimed project sends on any plan.
+#[cfg(feature = "plus")]
+fn bencher_run_dispatch() -> serde_json::Value {
+    serde_json::json!({
+        "url": "https://api.github.com/repos/owner/repo/dispatches",
+        "headers": {
+            "Accept": "application/vnd.github+json",
+            "Authorization": format!("Bearer {HEADER_MARKER}"),
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+        "body": {
+            "event_type": "bencher_run",
+            "client_payload": { "bencher": { "project": "{{ project.slug }}", "job": "{{ job.uuid }}" } },
+        },
     })
 }
 
@@ -2705,6 +2838,176 @@ async fn run_post_with_job_callback_is_skipped_without_a_plan() {
         stored.request.is_none(),
         "nothing is sealed for a skipped callback"
     );
+}
+
+/// Submit a run of `job` without authentication, which creates `project_slug`, named from the
+/// run's context, in an unclaimed organization, and return the run's job.
+#[cfg(feature = "plus")]
+async fn post_unclaimed_job_run(
+    server: &TestServer,
+    project_slug: &str,
+    job: serde_json::Value,
+) -> bencher_json::JobUuid {
+    let run = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [],
+        "context": { "bencher.dev/v0/repo/name": project_slug },
+        "job": job,
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .json(&run)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    assert_eq!(status, StatusCode::CREATED, "the run is accepted: {body}");
+    run_job(&body)
+}
+
+/// The job of a run, from the run's response body.
+#[cfg(feature = "plus")]
+fn run_job(body: &str) -> bencher_json::JobUuid {
+    let report: JsonReport = serde_json::from_str(body).expect("Failed to parse the report");
+    report.job.expect("the run has a job")
+}
+
+/// A job of a public project, read without authentication.
+#[cfg(feature = "plus")]
+async fn get_public_job(
+    server: &TestServer,
+    project_slug: &str,
+    job_uuid: bencher_json::JobUuid,
+) -> JsonJob {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/jobs/{job_uuid}")))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "the project is public");
+    resp.json().await.expect("Failed to parse the job")
+}
+
+// POST /v0/run with the GitHub Actions dispatch `bencher run` composes, for a claimed project
+// without a plan, seals it to the job
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_callback_sends_the_dispatch_for_a_free_claimed_project() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_dispatch@example.com")
+        .await;
+    let org = server.create_org(&user, "Callback Dispatch Org").await;
+    let project = server
+        .create_project(&user, &org, "Callback Dispatch Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let (status, body) = post_job_run(
+        &server,
+        &user,
+        project_slug,
+        digest_job(project_slug, Some(bencher_run_dispatch())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let job_uuid = run_job(&body);
+    let job = get_public_job(&server, project_slug, job_uuid).await;
+    assert_eq!(
+        serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
+        serde_json::json!({ "state": "pending", "status": null }),
+        "a claimed project sends the dispatch without a plan"
+    );
+    let stored = stored_callback(&server, job_uuid);
+    assert!(
+        stored.request.is_some(),
+        "a pending callback holds its sealed request"
+    );
+}
+
+// POST /v0/run with a callback for an unclaimed project accepts the run and skips the callback,
+// even the GitHub Actions dispatch
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_callback_is_skipped_for_an_unclaimed_project() {
+    let server = TestServer::new().await;
+    let admin = server
+        .signup("Admin", "runjob_cb_unclaimed@example.com")
+        .await;
+    create_fallback_spec(&server, &admin).await;
+
+    let project_slug = "callback-unclaimed-project";
+    let job_uuid = post_unclaimed_job_run(
+        &server,
+        project_slug,
+        digest_job(project_slug, Some(bencher_run_dispatch())),
+    )
+    .await;
+    let job = get_public_job(&server, project_slug, job_uuid).await;
+    assert_eq!(
+        serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
+        serde_json::json!({ "state": "skipped", "status": null }),
+        "an unclaimed project skips the dispatch"
+    );
+    let stored = stored_callback(&server, job_uuid);
+    assert!(
+        stored.request.is_none(),
+        "nothing is sealed for a skipped callback"
+    );
+}
+
+// POST /v0/run by an authenticated user on a project created without authentication claims its
+// organization, and that run is claimed: its callback goes through as a claimed project's, and its
+// job runs at Free priority with the Free timeout
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_that_claims_its_project_sends_the_dispatch() {
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_cb_claiming@example.com")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug = "callback-claiming-project";
+    post_unclaimed_job_run(&server, project_slug, digest_job(project_slug, None)).await;
+
+    let (status, body) = post_job_run(
+        &server,
+        &user,
+        project_slug,
+        digest_job(project_slug, Some(bencher_run_dispatch())),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let job_uuid = run_job(&body);
+    let job = get_public_job(&server, project_slug, job_uuid).await;
+    assert_eq!(
+        serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
+        serde_json::json!({ "state": "pending", "status": null }),
+        "the run that claims the project sends the dispatch"
+    );
+    assert_eq!(
+        job.timeout,
+        bencher_json::Timeout::FREE_MAX,
+        "the Free timeout"
+    );
+    let priority: bencher_json::Priority = schema::job::table
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select(schema::job::priority)
+        .first(&mut server.db_conn())
+        .expect("Failed to query job priority");
+    assert_eq!(priority, bencher_json::Priority::Free, "Free priority");
 }
 
 // POST /v0/run with a callback for an organization licensed at the Free level skips it, as its job runs at Free priority.

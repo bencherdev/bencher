@@ -8,30 +8,32 @@ import PullRequestsForkClosedCode from "../pull-requests-fork-closed-code.mdx";
 
 1. GitHub Actions `workflow` 파일을 생성합니다.
    (예: `.github/workflows/fork_pr_benchmarks_closed.yml`)
-2. `pull_request_target` 이벤트에서 실행하십시오:
+2. 이 워크플로의 이름을 지정합니다.
+   (예: `name: Archive Closed Fork PR Branch with Bencher`)
+3. `pull_request_target` 이벤트에서 실행하십시오:
    - `closed` - 풀 리퀘스트가 종료되었습니다.
 
    전체 개요는 [GitHub Actions `on` 문서][github actions on]
    및 [GitHub Actions `pull_request_target` 문서][github action pull_request_target]를 참조하십시오.
    (예: `on: pull_request_target: types: [closed]`)
-3. GitHub Actions `job`을 생성합니다.
+4. GitHub Actions `job`을 생성합니다.
    (예: `jobs: archive_pr_branch`)
-4. 작업이 실행될 머신 유형을 설정하십시오.
+5. 작업이 실행될 머신 유형을 설정하십시오.
    전체 개요는 [GitHub Actions `runs-on` 문서][github actions runs-on]를 참조하십시오.
    (예: `runs-on: ubuntu-latest`)
-5. PR 브랜치 소스 코드를 체크아웃합니다.
+6. PR 브랜치 소스 코드를 체크아웃합니다.
    (예: `uses: actions/checkout@v6`)
-6. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
+7. [GitHub Action][bencher cli github action]을 사용하여 Bencher CLI를 설치합니다.
    (예: `uses: bencherdev/bencher@main`)
-7. PR 브랜치를 아카이브하기 위해 `bencher archive` CLI 서브커맨드를 사용합니다.
+8. PR 브랜치를 아카이브하기 위해 `bencher archive` CLI 서브커맨드를 사용합니다.
    (예: `bencher archive`)
-8. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
+9. `--project` 옵션을 프로젝트 슬러그로 설정합니다.
    자세한 사항은 [ `--project` 문서][project option]를 참조하십시오.
    (예: `--project project-abc4567-wxyz123456789`)
-9. `--key` 옵션을 `BENCHER_API_KEY` **저장소** 시크릿으로 설정합니다.
-   자세한 사항은 [ `--key` 문서][key option]를 참조하십시오.
-   (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-10. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
+10. `--key` 옵션을 `BENCHER_API_KEY` **저장소** 시크릿으로 설정합니다.
+    자세한 사항은 [ `--key` 문서][key option]를 참조하십시오.
+    (예: `--key '${{ secrets.BENCHER_API_KEY }}'`)
+11. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
     (예: `--branch "$GITHUB_HEAD_REF"`)
 
 [github actions on]: https://docs.github.com/ko/actions/using-workflows/workflow-syntax-for-github-actions#on

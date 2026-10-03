@@ -99,7 +99,7 @@ completes the check and the PR comment:
 The payload's `bencher` object holds the Job UUID (`job`) and the Project slug (`project`), and the attach reads the rest of it.
 `--detach` with `--github-actions` requires `--ci-callback-token`, and `--callback-url` conflicts with `--github-actions`.
 Give each detached job of one PR its own `--ci-id`, so each keeps its own comment.
-The dispatch to `api.github.com` works on every plan. On GitHub Enterprise Server it needs a Bencher Plus plan, and without one the callback is skipped and the check completes as neutral.
+The dispatch to `api.github.com`, which carries `--ci-callback-token` as a `Bearer` token and the `bencher_run` event, goes out on any plan for a claimed project. On GitHub Enterprise Server it also needs a Bencher Plus plan. Otherwise the callback is skipped and the check completes as neutral.
 
 ### On-the-Fly Project Creation
 

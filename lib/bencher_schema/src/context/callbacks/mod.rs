@@ -14,6 +14,7 @@ use super::DbConnection;
 use crate::model::runner::{JobId, QueryJobCallback};
 
 mod delivery;
+mod governor;
 
 use delivery::Delivery;
 
@@ -137,6 +138,7 @@ mod tests {
         collections::VecDeque,
         error::Error as _,
         fmt::{self, Write as _},
+        iter,
         net::{IpAddr, Ipv4Addr},
         sync::{Arc, Mutex},
         time::Duration,
@@ -145,6 +147,7 @@ mod tests {
     use async_trait::async_trait;
     use bencher_callback::{
         AddressClass, CallbackAttempt, CallbackBlock, CallbackKey, CallbackRequest, CallbackSender,
+        RateLimit,
     };
     use bencher_json::{
         BENCHER_API_VERSION, Clock, DateTime, JobStatus, JobUuid, JsonNewCallback, Secret,
@@ -179,10 +182,15 @@ mod tests {
     const MARKERS: [&str; 4] = [USERINFO_MARKER, PATH_MARKER, QUERY_MARKER, HEADER_MARKER];
     const REPORT_UUID: &str = "00000000-0000-0000-0000-000000000040";
     const NO_READ_CONNECTION: &str = "No read connection for a job callback";
+    const DOCS_URL_COMMENT: &str = "(+https://bencher.dev/docs/explanation/images/)";
 
     /// What the scripted receiver does with its next request.
     enum Answer {
         Status(u16),
+        /// A 403 or a 429 with its rate limit headers.
+        Limited(u16, RateLimit),
+        /// A 200 that takes this long to arrive.
+        Slow(Duration),
         TimedOut,
         Connection,
         Blocked(CallbackBlock),
@@ -215,8 +223,15 @@ mod tests {
                     if status.is_success() {
                         CallbackAttempt::Delivered(status)
                     } else {
-                        CallbackAttempt::Refused(status)
+                        CallbackAttempt::Refused(status, RateLimit::default())
                     }
+                },
+                Answer::Limited(code, rate_limit) => {
+                    CallbackAttempt::Refused(StatusCode::from_u16(code).unwrap(), rate_limit)
+                },
+                Answer::Slow(duration) => {
+                    tokio::time::sleep(duration).await;
+                    CallbackAttempt::Delivered(StatusCode::OK)
                 },
                 Answer::TimedOut => CallbackAttempt::TimedOut,
                 Answer::Connection => CallbackAttempt::Connection(Arc::new(connection_error())),
@@ -389,6 +404,31 @@ mod tests {
                 .collect()
         }
 
+        /// When each request went out, and the job its body names.
+        fn sent_jobs(&self) -> Vec<(Instant, JobUuid)> {
+            self.sender
+                .sent
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|(at, request)| {
+                    let body: serde_json::Value = serde_json::from_str(&request.body).unwrap();
+                    (*at, body["job"]["uuid"].as_str().unwrap().parse().unwrap())
+                })
+                .collect()
+        }
+
+        /// When each request went out, and its host.
+        fn sent_hosts(&self) -> Vec<(Instant, String)> {
+            self.sender
+                .sent
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|(at, request)| (*at, request.url.host_str().unwrap().to_owned()))
+                .collect()
+        }
+
         fn logs(&self) -> Vec<String> {
             self.capture.0.lock().unwrap().clone()
         }
@@ -531,6 +571,23 @@ mod tests {
         .unwrap()
     }
 
+    /// A callback that names its job, sent to `url` with `authorization`.
+    fn callback_to(url: &str, authorization: &str) -> JsonNewCallback {
+        JsonNewCallback::new(
+            url,
+            [("Authorization".to_owned(), authorization.to_owned())],
+            Some(serde_json::json!({ "job": { "uuid": "{{ job.uuid }}" } })),
+        )
+        .unwrap()
+    }
+
+    fn retry_after(seconds: u64) -> RateLimit {
+        RateLimit {
+            retry_after: Some(seconds),
+            ..RateLimit::default()
+        }
+    }
+
     fn assert_no_marker(text: &str) {
         for marker in MARKERS {
             assert!(!text.contains(marker), "{marker} leaked into: {text}");
@@ -569,7 +626,7 @@ mod tests {
         assert_eq!(header("content-type"), "application/json");
         assert_eq!(
             header("user-agent"),
-            format!("bencher/{BENCHER_API_VERSION}")
+            format!("Bencher/{BENCHER_API_VERSION} {DOCS_URL_COMMENT}")
         );
         assert_eq!(header("authorization"), format!("Bearer {HEADER_MARKER}"));
         assert_eq!(header("x-receiver"), "bencher");
@@ -578,14 +635,16 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn the_body_names_the_status_that_fired() {
         let harness = Harness::new([]);
-        for (status, name) in [
+        for (sent, (status, name)) in (1..).zip([
             (JobStatus::Processed, "processed"),
             (JobStatus::Failed, "failed"),
             (JobStatus::Canceled, "canceled"),
-        ] {
+        ]) {
             let (job_id, _) = harness.job(status, &callback()).await;
             harness.fire(job_id);
-            harness.until_sent(harness.sent() + 1).await;
+            // One credential sends a second apart.
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            harness.until_sent(sent).await;
             let body = harness
                 .sender
                 .sent
@@ -629,7 +688,7 @@ mod tests {
         assert_eq!(header("content-type"), "application/json");
         assert_eq!(
             header("user-agent"),
-            format!("bencher/{BENCHER_API_VERSION}")
+            format!("Bencher/{BENCHER_API_VERSION} {DOCS_URL_COMMENT}")
         );
         assert_eq!(header("authorization"), format!("Bearer {HEADER_MARKER}"));
         // The report can hold private results, so the delivery never logs it.
@@ -1198,6 +1257,8 @@ mod tests {
         harness.until_sent(2).await;
         harness.until_settled(reaped).await;
         harness.fire(drained);
+        // One credential sends a second apart.
+        tokio::time::sleep(Duration::from_secs(1)).await;
         harness.until_sent(3).await;
         harness.callbacks.drain(&harness.log).await;
 
@@ -1269,6 +1330,269 @@ mod tests {
         );
         assert_eq!(
             harness.settled(running).await,
+            (JobCallbackState::Pending, 0, None, true)
+        );
+    }
+
+    const RECEIVER: &str = "https://receiver.example/hook";
+
+    #[tokio::test(start_paused = true)]
+    async fn one_credential_sends_one_request_at_a_time_a_second_apart() {
+        let harness = Harness::new([Answer::Slow(Duration::from_secs(5))]);
+        let mut jobs = Vec::new();
+        for _ in 0..3 {
+            let callback = callback_to(RECEIVER, "Bearer token");
+            jobs.push(harness.job(JobStatus::Processed, &callback).await);
+        }
+        let fired = Instant::now();
+
+        for (job_id, _) in &jobs {
+            harness.fire(*job_id);
+        }
+        harness.callbacks.drain(&harness.log).await;
+
+        // The first answer takes 5 s, and each next request waits a second past the one before.
+        let sent: Vec<_> = jobs
+            .iter()
+            .zip([0, 6, 7])
+            .map(|((_, job_uuid), seconds)| (fired + Duration::from_secs(seconds), *job_uuid))
+            .collect();
+        assert_eq!(harness.sent_jobs(), sent);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_retry_after_pauses_its_credential_and_no_other() {
+        let harness = Harness::new([Answer::Limited(429, retry_after(30))]);
+        let (limited, limited_uuid) = harness
+            .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer token"))
+            .await;
+        let (same, same_uuid) = harness
+            .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer token"))
+            .await;
+        let (other, other_uuid) = harness
+            .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer other"))
+            .await;
+        let fired = Instant::now();
+
+        harness.fire(limited);
+        harness.until_sent(1).await;
+        harness.fire(same);
+        harness.fire(other);
+        harness.callbacks.drain(&harness.log).await;
+
+        assert_eq!(
+            harness.sent_jobs(),
+            [
+                (fired, limited_uuid),
+                (fired, other_uuid),
+                (fired + Duration::from_secs(30), same_uuid),
+                // The retry waits out the pause too, then a second behind the callback ahead of it.
+                (fired + Duration::from_secs(31), limited_uuid),
+            ]
+        );
+        for job_id in [same, other] {
+            assert_eq!(
+                harness.settled(job_id).await,
+                (JobCallbackState::Delivered, 1, Some(200), false)
+            );
+        }
+        assert_eq!(
+            harness.settled(limited).await,
+            (JobCallbackState::Delivered, 2, Some(200), false)
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_403_out_of_requests_retries_at_the_reset_and_any_other_403_is_final() {
+        let reset = DateTime::TEST.timestamp() + 600;
+        let harness = Harness::new([Answer::Limited(
+            403,
+            RateLimit {
+                retry_after: None,
+                remaining: Some(0),
+                reset: Some(reset),
+            },
+        )]);
+        let (job_id, _) = harness
+            .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer token"))
+            .await;
+        let fired = Instant::now();
+
+        harness.deliver(job_id).await;
+
+        assert_eq!(harness.sent_at(), [fired, fired + Duration::from_mins(10)]);
+        assert_eq!(
+            harness.settled(job_id).await,
+            (JobCallbackState::Delivered, 2, Some(200), false)
+        );
+
+        for answer in [
+            Answer::Status(403),
+            Answer::Limited(
+                403,
+                RateLimit {
+                    retry_after: None,
+                    remaining: Some(5),
+                    reset: Some(reset),
+                },
+            ),
+        ] {
+            let harness = Harness::new([answer]);
+            let (job_id, _) = harness
+                .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer token"))
+                .await;
+
+            harness.deliver(job_id).await;
+
+            assert_eq!(harness.sent(), 1);
+            assert_eq!(
+                harness.settled(job_id).await,
+                (JobCallbackState::Failed, 1, Some(403), false)
+            );
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_fallback_pause_doubles_while_limits_repeat_and_a_2xx_resets_it() {
+        let harness = Harness::new([
+            Answer::Status(429),
+            Answer::Status(429),
+            Answer::Status(200),
+            Answer::Status(429),
+        ]);
+        let (first, _) = harness
+            .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer token"))
+            .await;
+        let (second, _) = harness
+            .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer token"))
+            .await;
+        let fired = Instant::now();
+
+        harness.fire(first);
+        tokio::time::sleep(Duration::from_mins(3)).await;
+        harness.until_sent(3).await;
+        harness.fire(second);
+        harness.callbacks.drain(&harness.log).await;
+
+        // A minute, then two; after the 2xx, the second callback's limit pauses a minute again.
+        assert_eq!(
+            harness.sent_at(),
+            [
+                fired,
+                fired + Duration::from_mins(1),
+                fired + Duration::from_mins(3),
+                fired + Duration::from_secs(181),
+                fired + Duration::from_secs(241),
+            ]
+        );
+        for job_id in [first, second] {
+            assert_eq!(harness.settled(job_id).await.0, JobCallbackState::Delivered);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_pause_lasts_an_hour_at_most() {
+        let harness = Harness::new([Answer::Limited(429, retry_after(7200))]);
+        let (job_id, _) = harness
+            .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer token"))
+            .await;
+        let fired = Instant::now();
+
+        harness.deliver(job_id).await;
+
+        assert_eq!(harness.sent_at(), [fired, fired + Duration::from_hours(1)]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_host_has_at_most_64_requests_in_flight() {
+        let harness =
+            Harness::new(iter::repeat_with(|| Answer::Slow(Duration::from_secs(10))).take(65));
+        let mut jobs = Vec::new();
+        for token in 0..65 {
+            let callback = callback_to(RECEIVER, &format!("Bearer token-{token}"));
+            jobs.push(harness.job(JobStatus::Processed, &callback).await.0);
+        }
+        let callback = callback_to("https://other.example/hook", "Bearer token-0");
+        jobs.push(harness.job(JobStatus::Processed, &callback).await.0);
+        let fired = Instant::now();
+
+        for job_id in jobs {
+            harness.fire(job_id);
+        }
+        harness.callbacks.drain(&harness.log).await;
+
+        let sent = harness.sent_hosts();
+        let count = |at: Instant, host: &str| {
+            sent.iter()
+                .filter(|(sent_at, sent_to)| *sent_at == at && sent_to == host)
+                .count()
+        };
+        let later = fired + Duration::from_secs(10);
+        assert_eq!(sent.len(), 66);
+        assert_eq!(count(fired, "receiver.example"), 64);
+        assert_eq!(count(fired, "other.example"), 1);
+        assert_eq!(count(later, "receiver.example"), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn callbacks_waiting_out_a_pause_hold_no_host_slot() {
+        let harness = Harness::new(
+            iter::once(Answer::Limited(429, retry_after(600)))
+                .chain(iter::repeat_with(|| Answer::Slow(Duration::from_secs(10))).take(64)),
+        );
+        let (limited, _) = harness
+            .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer token"))
+            .await;
+        let mut others = Vec::new();
+        for token in 0..64 {
+            let callback = callback_to(RECEIVER, &format!("Bearer other-{token}"));
+            others.push(harness.job(JobStatus::Processed, &callback).await.0);
+        }
+
+        harness.fire(limited);
+        harness.until_sent(1).await;
+        // Past the retry's 4 s, so it waits out the pause.
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(5)).await;
+        tokio::task::yield_now().await;
+        let waited = Instant::now();
+        for job_id in others {
+            harness.fire(job_id);
+        }
+        harness.until_sent(65).await;
+
+        assert_eq!(harness.sent_at()[1..], [waited; 64]);
+        harness.shutdown.cancel();
+        harness.drain_after_shutdown().await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn shutdown_during_a_pause_leaves_every_waiting_callback_pending() {
+        let harness = Harness::new([Answer::Limited(429, retry_after(600))]);
+        let (limited, _) = harness
+            .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer token"))
+            .await;
+        let (waiting, _) = harness
+            .job(JobStatus::Processed, &callback_to(RECEIVER, "Bearer token"))
+            .await;
+
+        harness.fire(limited);
+        harness.until_sent(1).await;
+        harness.fire(waiting);
+        // Past the retry's 4 s, so both wait on the pause.
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(5)).await;
+        tokio::task::yield_now().await;
+        harness.shutdown.cancel();
+        harness.drain_after_shutdown().await;
+
+        assert_eq!(harness.sent(), 1);
+        assert_eq!(
+            harness.settled(limited).await,
+            (JobCallbackState::Pending, 1, Some(429), true)
+        );
+        assert_eq!(
+            harness.settled(waiting).await,
             (JobCallbackState::Pending, 0, None, true)
         );
     }

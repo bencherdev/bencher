@@ -4,14 +4,14 @@ use bencher_valid::{BmfVersion, DateTime, DateTimeMillis, GitHash, MetricName, M
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de, de::Visitor};
 
 #[cfg(feature = "plus")]
 use crate::runner::job::JobUuid;
 use crate::{
     BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure,
     JsonMetricTriple, JsonProject, JsonPubUser, JsonTestbed, MeasureNameId, MetricUuid,
-    ParameterSet, TestbedNameId, VariantUuid,
+    ParameterFilter, ParameterSet, TestbedNameId, VariantUuid,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -65,15 +65,164 @@ pub struct JsonNewReport {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportThresholds {
-    /// Map of measure UUID, slug, or name to the threshold model to use.
+    /// The thresholds to create or update for the report's branch and testbed.
+    /// At BMF version 0 this is a map of measure UUID, slug, or name to the threshold model to use.
+    /// At BMF version 1 this is a list of threshold entries.
     /// If a measure name or slug is provided, the measure will be created if it does not exist.
-    pub models: Option<HashMap<MeasureNameId, Model>>,
-    /// Reset the thresholds of the branch and testbed that the `models` map can address,
-    /// the ones with no parameters filter and no metric name.
-    /// Any models present in the `models` field will still be updated accordingly.
+    pub models: Option<JsonReportThresholdModels>,
+    /// Reset the unspecified thresholds of the branch and testbed.
+    /// Any thresholds present in the `models` field will still be updated accordingly.
     /// If a threshold already exists and is not present in the `models` field,
     /// its current model will be removed.
     pub reset: Option<bool>,
+}
+
+/// The thresholds a report declares, in the shape its BMF version spells them.
+///
+/// The report's BMF version says which shape is expected, and the other shape is a bad request.
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub enum JsonReportThresholdModels {
+    /// BMF version 0: a map of measure to model.
+    ///
+    /// A map key names a measure and nothing else, so the threshold it addresses is
+    /// the bare one: the conventional `value` name of every variant.
+    Map(HashMap<MeasureNameId, Model>),
+    /// BMF version 1: a list of entries.
+    ///
+    /// An entry names everything a threshold checks, so one measure may carry several
+    /// of them.
+    List(Vec<JsonReportThresholdEntry>),
+}
+
+impl JsonReportThresholdModels {
+    /// Whether this declares no threshold at all.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Map(models) => models.is_empty(),
+            Self::List(entries) => entries.is_empty(),
+        }
+    }
+}
+
+/// Hand written because a derived `#[serde(untagged)]` replaces the field error inside
+/// either shape with "data did not match any variant".
+impl<'de> Deserialize<'de> for JsonReportThresholdModels {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(JsonReportThresholdModelsVisitor)
+    }
+}
+
+struct JsonReportThresholdModelsVisitor;
+
+impl<'de> Visitor<'de> for JsonReportThresholdModelsVisitor {
+    type Value = JsonReportThresholdModels;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(
+            "a map of measure to threshold model (BMF version 0) or a list of threshold entries (BMF version 1)",
+        )
+    }
+
+    fn visit_map<A>(self, map: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::MapAccess<'de>,
+    {
+        HashMap::deserialize(de::value::MapAccessDeserializer::new(map))
+            .map(JsonReportThresholdModels::Map)
+    }
+
+    fn visit_seq<A>(self, seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: de::SeqAccess<'de>,
+    {
+        Vec::deserialize(de::value::SeqAccessDeserializer::new(seq))
+            .map(JsonReportThresholdModels::List)
+    }
+}
+
+/// One threshold a BMF version 1 report declares.
+///
+/// The fields are the dimensions a threshold hangs off that the report does not
+/// already state, in their canonical order, and the model to check with.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportThresholdEntry {
+    /// The variants this threshold checks, as a parameters filter.
+    /// A variant matches when any entry in the filter is a subset of its parameters.
+    /// If not set, or set to an empty list, the threshold checks every variant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
+    /// Measure UUID, slug, or name.
+    /// If a measure name or slug is provided, the measure will be created if it does not exist.
+    pub measure: MeasureNameId,
+    /// The name of the metric this threshold checks.
+    /// `value` names the conventional metric.
+    pub metric: MetricName,
+    /// The threshold model to use.
+    pub model: Model,
+}
+
+/// The description a derived schema would have taken from the doc comment, spelled
+/// out because a hand written schema takes nothing from it.
+#[cfg(feature = "schema")]
+const MODELS_DESCRIPTION: &str = "The thresholds a report declares, in the shape its BMF version spells them.\n\nThe report's BMF version says which shape is expected, and the other shape is a bad request.";
+
+/// The two shapes are mutually exclusive, so they are a `oneOf` rather than the
+/// `anyOf` a derived untagged enum would emit. A client generator turns an `anyOf`
+/// of two objects into one struct of flattened optional members, and a list cannot
+/// be flattened into a struct.
+#[cfg(feature = "schema")]
+impl JsonSchema for JsonReportThresholdModels {
+    fn schema_name() -> String {
+        "JsonReportThresholdModels".to_owned()
+    }
+
+    fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        use schemars::schema::{Metadata, SchemaObject, SubschemaValidation};
+
+        fn described(
+            title: &str,
+            description: &str,
+            schema: schemars::schema::Schema,
+        ) -> schemars::schema::Schema {
+            let mut schema = SchemaObject::from(schema);
+            schema.metadata = Some(Box::new(Metadata {
+                title: Some(title.to_owned()),
+                description: Some(description.to_owned()),
+                ..Default::default()
+            }));
+            schema.into()
+        }
+
+        SchemaObject {
+            metadata: Some(Box::new(Metadata {
+                description: Some(MODELS_DESCRIPTION.to_owned()),
+                ..Default::default()
+            })),
+            subschemas: Some(Box::new(SubschemaValidation {
+                one_of: Some(vec![
+                    described(
+                        "Map",
+                        "BMF version 0: a map of measure to model. A map key names a measure and nothing else, so the threshold it addresses is the bare one: the conventional `value` name of every variant.",
+                        <HashMap<MeasureNameId, Model>>::json_schema(generator),
+                    ),
+                    described(
+                        "List",
+                        "BMF version 1: a list of entries. An entry names everything a threshold checks, so one measure may carry several of them.",
+                        <Vec<JsonReportThresholdEntry>>::json_schema(generator),
+                    ),
+                ]),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+        .into()
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -413,6 +562,10 @@ pub struct JsonReport {
     /// The report counts.
     #[serde(default)]
     pub counts: JsonReportCounts,
+    /// What the report skipped instead of ingesting,
+    /// omitted when it skipped nothing and from the reports list endpoint.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warnings: Option<Vec<JsonReportWarning>>,
     #[cfg(feature = "plus")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub job: Option<JobUuid>,
@@ -529,6 +682,133 @@ pub struct JsonReportAlertsCounts {
     pub total: u32,
     /// The number of active alerts.
     pub active: u32,
+}
+
+/// How many of one resource a report handled with one action.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportWarning {
+    pub resource: ReportWarningResource,
+    pub action: ReportWarningAction,
+    pub count: u32,
+}
+
+const RESOURCE_BENCHMARK_INT: i32 = 0;
+const RESOURCE_VARIANT_INT: i32 = 1;
+const RESOURCE_MEASURE_INT: i32 = 2;
+const RESOURCE_METRIC_INT: i32 = 3;
+const RESOURCE_THRESHOLD_INT: i32 = 4;
+
+/// The resource a report warning counts.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
+#[serde(rename_all = "snake_case")]
+#[repr(i32)]
+pub enum ReportWarningResource {
+    Benchmark = RESOURCE_BENCHMARK_INT,
+    Variant = RESOURCE_VARIANT_INT,
+    Measure = RESOURCE_MEASURE_INT,
+    Metric = RESOURCE_METRIC_INT,
+    Threshold = RESOURCE_THRESHOLD_INT,
+}
+
+const ACTION_SKIP_INT: i32 = 0;
+
+/// What a report did with the resources a warning counts.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
+#[serde(rename_all = "snake_case")]
+#[repr(i32)]
+pub enum ReportWarningAction {
+    /// The report did not ingest them.
+    Skip = ACTION_SKIP_INT,
+}
+
+#[cfg(feature = "db")]
+mod report_warning_db {
+    use super::{
+        ACTION_SKIP_INT, RESOURCE_BENCHMARK_INT, RESOURCE_MEASURE_INT, RESOURCE_METRIC_INT,
+        RESOURCE_THRESHOLD_INT, RESOURCE_VARIANT_INT, ReportWarningAction, ReportWarningResource,
+    };
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum ReportWarningError {
+        #[error("Invalid report warning resource value: {0}")]
+        Resource(i32),
+        #[error("Invalid report warning action value: {0}")]
+        Action(i32),
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for ReportWarningResource
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Benchmark => RESOURCE_BENCHMARK_INT.to_sql(out),
+                Self::Variant => RESOURCE_VARIANT_INT.to_sql(out),
+                Self::Measure => RESOURCE_MEASURE_INT.to_sql(out),
+                Self::Metric => RESOURCE_METRIC_INT.to_sql(out),
+                Self::Threshold => RESOURCE_THRESHOLD_INT.to_sql(out),
+            }
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for ReportWarningResource
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            match i32::from_sql(bytes)? {
+                RESOURCE_BENCHMARK_INT => Ok(Self::Benchmark),
+                RESOURCE_VARIANT_INT => Ok(Self::Variant),
+                RESOURCE_MEASURE_INT => Ok(Self::Measure),
+                RESOURCE_METRIC_INT => Ok(Self::Metric),
+                RESOURCE_THRESHOLD_INT => Ok(Self::Threshold),
+                value => Err(Box::new(ReportWarningError::Resource(value))),
+            }
+        }
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for ReportWarningAction
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Skip => ACTION_SKIP_INT.to_sql(out),
+            }
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for ReportWarningAction
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            match i32::from_sql(bytes)? {
+                ACTION_SKIP_INT => Ok(Self::Skip),
+                value => Err(Box::new(ReportWarningError::Action(value))),
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

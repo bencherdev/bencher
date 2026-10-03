@@ -1,0 +1,30 @@
+name: Attach Benchmarks
+
+on:
+  # Bencher sends this event when a job submitted with `bencher run --detach --ci-callback-token` finishes.
+  repository_dispatch:
+    types: [bencher_run]
+
+env:
+  BENCHER_PROJECT: bencher
+
+jobs:
+  attach_benchmarks:
+    name: Attach Benchmarks with Bencher
+    permissions:
+      checks: write
+      pull-requests: write
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: bencherdev/bencher@main # zizmor: ignore[unpinned-uses] first-party action; intentionally tracks @main to exercise the latest released CLI
+      - name: Attach Benchmarks with Bencher
+        env:
+          BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+          JOB_UUID: ${{ github.event.client_payload.bencher.job }}
+        run: |
+          bencher run \
+          --project "$BENCHER_PROJECT" \
+          --key "$BENCHER_API_KEY" \
+          --job "$JOB_UUID" \
+          --error-on-alert \
+          --github-actions '${{ secrets.GITHUB_TOKEN }}'

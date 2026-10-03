@@ -1,6 +1,9 @@
 ## Pending `v0.6.14`
 - Fix a very large `page` query parameter returning the wrong page
 - **BREAKING CHANGE** Cap perf queries at 8 branches, testbeds, benchmarks, and measures each, and at 64 permutations and 64 lines; extra entries are ignored rather than refused
+- Add a `plus_limit` server config option for the daily metrics limit of organizations with a Bencher Plus plan
+- **BREAKING CHANGE** Cap a plot at 8 branches, testbeds, benchmarks, and measures each
+- Cap active Thresholds at 64 per Branch, Testbed, and Measure, and skip the Thresholds a report cannot create (over a cap or over the daily creation limit) instead of failing the report
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects

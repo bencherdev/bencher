@@ -18,6 +18,7 @@ use bencher_schema::{
         project::{
             QueryProject,
             branch::{QueryBranch, UpdateBranch, head::QueryHead},
+            report::warning::ReportWarnings,
         },
         user::{
             actor::{ApiActor, PubProjectBearerToken},
@@ -430,12 +431,15 @@ pub async fn patch_inner(
     let query_branch =
         QueryBranch::from_resource_id(auth_conn!(context), query_project.id, &path_params.branch)?;
 
+    // A branch updated through the API has no report, so what its clone skips is only logged and
+    // counted.
     let (query_branch, _query_head) = query_branch
         .update_start_point_if_changed(
             log,
             context,
             query_project.id,
             json_branch.start_point.as_ref(),
+            &mut ReportWarnings::default(),
         )
         .await?;
 

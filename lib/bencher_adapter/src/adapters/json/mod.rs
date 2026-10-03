@@ -1,4 +1,10 @@
+use std::{fmt, marker::PhantomData, str::FromStr};
+
 use bencher_json::BmfVersion;
+use serde::{
+    Deserialize, Deserializer,
+    de::{MapAccess, Visitor},
+};
 
 use crate::{Adaptable, Settings, results::adapter_results::AdapterResults};
 
@@ -24,6 +30,60 @@ impl Adaptable for AdapterJson {
     }
 }
 
+/// A JSON object read one entry at a time: an entry whose key fails validation is
+/// skipped and counted, and every other entry is kept.
+///
+/// Values are read strictly, because shape is what tells the two BMF versions apart.
+#[derive(Debug, Default)]
+struct Lenient<M> {
+    inner: M,
+    skipped: usize,
+}
+
+impl<'de, M, K, V> Deserialize<'de> for Lenient<M>
+where
+    M: Default + Extend<(K, V)> + IntoIterator<Item = (K, V)>,
+    K: FromStr,
+    V: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(LenientVisitor(PhantomData))
+    }
+}
+
+struct LenientVisitor<M>(PhantomData<M>);
+
+impl<'de, M, K, V> Visitor<'de> for LenientVisitor<M>
+where
+    M: Default + Extend<(K, V)> + IntoIterator<Item = (K, V)>,
+    K: FromStr,
+    V: Deserialize<'de>,
+{
+    type Value = Lenient<M>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("an object")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: MapAccess<'de>,
+    {
+        let mut lenient = Lenient::<M>::default();
+        while let Some((key, value)) = map.next_entry::<String, V>()? {
+            if let Ok(key) = key.parse() {
+                lenient.inner.extend(std::iter::once((key, value)));
+            } else {
+                lenient.skipped += 1;
+            }
+        }
+        Ok(lenient)
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod test_json {
     use pretty_assertions::assert_eq;
@@ -33,27 +93,28 @@ pub(crate) mod test_json {
         v0::{AdapterJsonV0, test_json_v0},
         v1::{AdapterJsonV1, test_json_v1},
     };
-    use bencher_json::BmfVersion;
+    use bencher_json::{BenchmarkNameId, BmfVersion};
 
     use crate::{
         Adaptable as _, Settings,
         adapters::test_util::{convert_file_path, opt_convert_file_path},
-        results::adapter_results::AdapterResults,
+        results::adapter_results::{AdapterResults, Skipped},
     };
 
     /// The fixtures the v0 leaf claims.
     pub const V0_FIXTURES: [&str; 3] = ["latency", "dhat", "bmf_mixed"];
     /// The fixtures the v1 leaf claims.
-    pub const V1_FIXTURES: [&str; 6] = [
+    pub const V1_FIXTURES: [&str; 7] = [
         "v1_latency",
         "v1_parameters",
         "v1_named",
         "v1_cap",
         "v1_cap_permuted",
         "v1_canonical",
+        "v1_bad_parameters",
     ];
     /// The fixtures no leaf claims.
-    pub const UNCLAIMED_FIXTURES: [&str; 2] = ["mixed_versions", "v1_bad_parameters"];
+    pub const UNCLAIMED_FIXTURES: [&str; 1] = ["mixed_versions"];
     /// Every JSON fixture, whichever leaf claims it and whether any leaf does.
     pub const JSON_FIXTURES: [&str; 11] = [
         "latency",
@@ -115,24 +176,44 @@ pub(crate) mod test_json {
         test_json_v0::validate_adapter_json_bmf_mixed(&results);
     }
 
-    /// A v1 payload whose parameters break a bound is claimed by no leaf, so
-    /// the report fails to parse rather than degrading and dropping the parameters.
+    /// A v1 payload whose parameters break a bound skips that variant at version
+    /// 1, rather than failing the report or dropping the parameters, and is still
+    /// refused at version 0 by its shape.
     #[test]
-    fn adapter_json_out_of_bounds_parameters_fails_every_leaf() {
+    fn adapter_json_out_of_bounds_parameters_skip_the_variant() {
         let file_path = fixture_path("v1_bad_parameters");
         assert!(
-            opt_convert_file_path::<AdapterJsonV0>(&file_path, Settings::default()).is_none(),
-            "expected the v0 leaf to reject out of bounds parameters"
+            opt_convert_file_path::<AdapterJson>(&file_path, version_settings(BmfVersion::V0))
+                .is_none(),
+            "expected the json node to refuse a v1 payload at version 0"
         );
-        assert!(
-            opt_convert_file_path::<AdapterJsonV1>(&file_path, Settings::default()).is_none(),
-            "expected the v1 leaf to reject out of bounds parameters"
+        let results = convert_json_v1("v1_bad_parameters");
+        let benchmark = "tests::over_the_key_cap"
+            .parse::<BenchmarkNameId>()
+            .unwrap();
+        assert!(results.inner[&benchmark].is_empty());
+        assert_eq!(
+            results.skipped,
+            Skipped {
+                variants: 1,
+                ..Skipped::default()
+            }
         );
-        for bmf_version in [BmfVersion::V0, BmfVersion::V1] {
+    }
+
+    /// Names and parameters are read one entry at a time, but a value of the
+    /// wrong shape still fails the v1 leaf, since shape is what tells the two BMF
+    /// versions apart.
+    #[test]
+    fn adapter_json_v1_values_stay_strict() {
+        for input in [
+            r#"{"bench": [{"measures": {"latency": []}}]}"#,
+            r#"{"bench": [{"measures": {"latency": {"value": "fast"}}}]}"#,
+            r#"{"bench": [{"parameters": {}}]}"#,
+        ] {
             assert!(
-                opt_convert_file_path::<AdapterJson>(&file_path, version_settings(bmf_version))
-                    .is_none(),
-                "expected the json node to reject out of bounds parameters at version {bmf_version}"
+                AdapterJson::parse(input, version_settings(BmfVersion::V1)).is_none(),
+                "expected {input} to fail"
             );
         }
     }

@@ -1,18 +1,23 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, hash_map::Entry};
 #[cfg(feature = "plus")]
 use std::num::NonZeroU32;
 
 use bencher_json::{
-    DateTime, MetricName, Model, ParameterFilter, ThresholdUuid,
+    BmfVersion, DateTime, MetricName, Model, ParameterFilter, ThresholdUuid,
     project::{
-        report::JsonReportThresholds,
-        threshold::{JsonThreshold, JsonThresholdModel},
+        report::{
+            JsonReportThresholdEntry, JsonReportThresholdModels, JsonReportThresholds,
+            ReportWarningResource,
+        },
+        threshold::{JsonThreshold, JsonThresholdModel, MAX_ACTIVE_THRESHOLDS},
     },
 };
 use diesel::{
     BelongingToDsl as _, ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _,
     OptionalExtension as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
+#[cfg(feature = "plus")]
+use dropshot::ClientErrorStatusCode;
 use dropshot::HttpError;
 use model::UpdateModel;
 use slog::Logger;
@@ -22,14 +27,15 @@ use super::{
     ProjectId, QueryProject,
     branch::{BranchId, QueryBranch, head::HeadId, start_point::StartPoint, version::VersionId},
     measure::{MeasureId, QueryMeasure},
+    report::warning::ReportWarnings,
     testbed::{QueryTestbed, TestbedId},
 };
 use crate::{
     auth_conn,
     context::{ApiContext, DbConnection},
     error::{
-        BencherResource, assert_parentage, assert_siblings, resource_conflict_error,
-        resource_not_found_err,
+        BencherResource, assert_parentage, assert_siblings, bad_request_error, past_the_ceiling,
+        resource_conflict_error, resource_not_found_err,
     },
     macros::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
@@ -217,7 +223,12 @@ impl QueryThreshold {
     ) -> Result<(), HttpError> {
         match Self::compute_model_action(auth_conn!(context), self.model_id, model)? {
             ThresholdModelAction::NoChange => Ok(()),
-            ThresholdModelAction::Update(model) => self.update_from_model(context, model).await,
+            ThresholdModelAction::Update(model) => {
+                if self.model_id.is_none() {
+                    Self::check_active_cap(auth_conn!(context), &self.dimensions())?;
+                }
+                self.update_from_model(context, model).await
+            },
             ThresholdModelAction::Remove => {
                 write_transaction!(context, |conn| self.remove_current_model(conn)).map_err(|e| {
                     crate::error::issue_error(
@@ -228,6 +239,23 @@ impl QueryThreshold {
                 })
             },
         }
+    }
+
+    /// Whether one more model fits under the per threshold model ceiling, warning of a refusal.
+    async fn model_fits(
+        &self,
+        log: &Logger,
+        context: &ApiContext,
+        warnings: &mut ReportWarnings,
+    ) -> Result<bool, HttpError> {
+        #[cfg(feature = "plus")]
+        if past_the_ceiling(log, InsertModel::rate_limit(context, self).await)?.is_none() {
+            warnings.skip(ReportWarningResource::Threshold);
+            return Ok(false);
+        }
+        #[cfg(not(feature = "plus"))]
+        let _ = (log, context, warnings);
+        Ok(true)
     }
 
     async fn update_from_model(&self, context: &ApiContext, model: Model) -> Result<(), HttpError> {
@@ -290,6 +318,37 @@ impl QueryThreshold {
                 .execute(conn)?;
         }
         Ok(())
+    }
+
+    /// Refuse one more threshold with a model on a branch, testbed, and measure at the cap.
+    fn check_active_cap(
+        conn: &mut DbConnection,
+        dimensions: &ThresholdDimensions,
+    ) -> Result<(), HttpError> {
+        let ThresholdDimensions {
+            branch_id,
+            testbed_id,
+            measure_id,
+            ..
+        } = *dimensions;
+        let active = schema::threshold::table
+            .filter(schema::threshold::branch_id.eq(branch_id))
+            .filter(schema::threshold::testbed_id.eq(testbed_id))
+            .filter(schema::threshold::measure_id.eq(measure_id))
+            .filter(schema::threshold::model_id.is_not_null())
+            .count()
+            .get_result::<i64>(conn)
+            .map_err(resource_not_found_err!(
+                Threshold,
+                (branch_id, testbed_id, measure_id)
+            ))?;
+        if usize::try_from(active).is_ok_and(|active| active < MAX_ACTIVE_THRESHOLDS) {
+            Ok(())
+        } else {
+            Err(bad_request_error(format!(
+                "This branch, testbed, and measure already have {MAX_ACTIVE_THRESHOLDS} thresholds with a model, which is the most they may have. Remove the model from one of them first."
+            )))
+        }
     }
 
     pub fn get_alert_json(
@@ -439,7 +498,7 @@ enum StartPointAction {
 }
 
 enum ThresholdAction {
-    Create(MeasureId, Model),
+    Create(ThresholdDimensions, Model),
     Update(QueryThreshold, Model),
     NoChange,
 }
@@ -505,6 +564,7 @@ impl InsertThreshold {
             ));
         }
 
+        QueryThreshold::check_active_cap(auth_conn!(context), &dimensions)?;
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
         write_transaction!(context, |conn| {
@@ -554,6 +614,7 @@ impl InsertThreshold {
         context: &ApiContext,
         query_branch: &QueryBranch,
         branch_start_point: &StartPoint,
+        warnings: &mut ReportWarnings,
     ) -> Result<(), HttpError> {
         let Some(true) = branch_start_point.clone_thresholds else {
             slog::debug!(
@@ -572,9 +633,14 @@ impl InsertThreshold {
         );
 
         // Phase 1: Read current and start point thresholds, pre-compute actions.
-        let (actions, orphans) =
-            Self::compute_start_point_actions(log, context, query_branch, branch_start_point)
-                .await?;
+        let (actions, orphans) = Self::compute_start_point_actions(
+            log,
+            context,
+            query_branch,
+            branch_start_point,
+            warnings,
+        )
+        .await?;
 
         // Phase 2: Batch all writes in a single write lock + transaction.
         let has_writes = actions
@@ -623,6 +689,7 @@ impl InsertThreshold {
         context: &ApiContext,
         query_branch: &QueryBranch,
         branch_start_point: &StartPoint,
+        warnings: &mut ReportWarnings,
     ) -> Result<(Vec<StartPointAction>, Vec<QueryThreshold>), HttpError> {
         let mut current_thresholds = schema::threshold::table
             .filter(schema::threshold::branch_id.eq(query_branch.id))
@@ -635,14 +702,17 @@ impl InsertThreshold {
             .map(|threshold| (threshold.dimensions(), threshold))
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
+        let mut active = ActiveThresholds::new(&current_thresholds);
 
-        // Fetch start point thresholds with their models in a single JOIN query
+        // Fetch start point thresholds with their models in a single JOIN query, in the UUID
+        // order that decides which of them fit under the cap
         let start_point_thresholds = schema::threshold::table
             .left_join(
                 schema::model::table
                     .on(schema::model::id.nullable().eq(schema::threshold::model_id)),
             )
             .filter(schema::threshold::branch_id.eq(branch_start_point.branch.id))
+            .order(schema::threshold::uuid.asc())
             .select((
                 QueryThreshold::as_select(),
                 Option::<QueryModel>::as_select(),
@@ -659,7 +729,7 @@ impl InsertThreshold {
                     (threshold, model.map(QueryModel::into_model)),
                 )
             })
-            .collect::<HashMap<_, _>>();
+            .collect::<Vec<_>>();
         slog::debug!(log, "Start point thresholds: {start_point_thresholds:?}");
 
         // Pre-compute actions using read connections
@@ -678,11 +748,12 @@ impl InsertThreshold {
                         actions.push(StartPointAction::NoChange);
                     },
                     ThresholdModelAction::Update(model) => {
-                        #[cfg(feature = "plus")]
-                        InsertModel::rate_limit(context, &current_threshold).await?;
-                        actions.push(StartPointAction::Update(current_threshold, model));
+                        if current_threshold.model_fits(log, context, warnings).await? {
+                            actions.push(StartPointAction::Update(current_threshold, model));
+                        }
                     },
                     ThresholdModelAction::Remove => {
+                        active.release(&current_threshold);
                         actions.push(StartPointAction::Remove(current_threshold));
                     },
                 }
@@ -696,26 +767,40 @@ impl InsertThreshold {
             }
         }
 
-        #[cfg(feature = "plus")]
-        if let Some(count) = NonZeroU32::new(
-            u32::try_from(
-                actions
-                    .iter()
-                    .filter(|action| matches!(action, StartPointAction::Create(..)))
-                    .count(),
-            )
-            .unwrap_or(u32::MAX),
-        ) {
-            Self::rate_limit_with_count(context, query_branch.project_id, count).await?;
-        }
-
         // Remaining current thresholds are orphans to remove
         let orphans: Vec<QueryThreshold> = current_thresholds.into_values().collect();
         slog::debug!(log, "Orphan thresholds to remove: {orphans:?}");
+        for orphan in &orphans {
+            active.release(orphan);
+        }
+
+        let planned = actions.len();
+        actions.retain(|action| match action {
+            StartPointAction::Create(dimensions, _) => active.admit(log, dimensions),
+            StartPointAction::Update(threshold, _) if threshold.model_id.is_none() => {
+                active.admit(log, &threshold.dimensions())
+            },
+            StartPointAction::Update(..)
+            | StartPointAction::Remove(_)
+            | StartPointAction::NoChange => true,
+        });
+        #[cfg(feature = "plus")]
+        {
+            let creates = actions
+                .iter()
+                .filter(|action| matches!(action, StartPointAction::Create(..)))
+                .count();
+            if !Self::ceiling_admits(log, context, query_branch.project_id, creates).await? {
+                actions.retain(|action| !matches!(action, StartPointAction::Create(..)));
+            }
+        }
+        warnings.skip_with_count(ReportWarningResource::Threshold, planned - actions.len());
 
         Ok((actions, orphans))
     }
 
+    /// The thresholds a report declares, created or updated for its branch and its
+    /// testbed.
     #[expect(
         clippy::too_many_lines,
         reason = "Batch threshold processing with rate limiting"
@@ -727,17 +812,20 @@ impl InsertThreshold {
         branch_id: BranchId,
         testbed_id: TestbedId,
         json_thresholds: Option<JsonReportThresholds>,
+        warnings: &mut ReportWarnings,
     ) -> Result<(), HttpError> {
         let Some(json_thresholds) = json_thresholds else {
             slog::debug!(log, "No thresholds in report");
             return Ok(());
         };
-        let no_models = json_thresholds
-            .models
+        let JsonReportThresholds { models, reset } = json_thresholds;
+
+        let reset_thresholds = reset.unwrap_or_default();
+        if models
             .as_ref()
-            .is_none_or(HashMap::is_empty);
-        let reset_thresholds = json_thresholds.reset.unwrap_or_default();
-        if no_models && !reset_thresholds {
+            .is_none_or(JsonReportThresholdModels::is_empty)
+            && !reset_thresholds
+        {
             slog::debug!(log, "No threshold models or reset in report");
             return Ok(());
         }
@@ -746,66 +834,55 @@ impl InsertThreshold {
             .filter(schema::threshold::project_id.eq(project_id))
             .filter(schema::threshold::branch_id.eq(branch_id))
             .filter(schema::threshold::testbed_id.eq(testbed_id))
-            .filter(schema::threshold::parameters.is_null())
-            .filter(schema::threshold::metric.is_null())
             .load::<QueryThreshold>(auth_conn!(context))
             .map_err(resource_not_found_err!(Threshold, (branch_id, testbed_id)))?
             .into_iter()
-            .map(|threshold| (threshold.measure_id, threshold))
+            .map(|threshold| (threshold.dimensions(), threshold))
             .collect::<HashMap<_, _>>();
         slog::debug!(log, "Current thresholds: {current_thresholds:?}");
+        let mut active = ActiveThresholds::new(&current_thresholds);
 
         // Phase 1: Pre-resolve all measure IDs (may trigger get_or_create writes)
         // and read current model state.
+        let declared = Self::declared_thresholds(
+            log, context, project_id, branch_id, testbed_id, models, warnings,
+        )
+        .await?;
         let auth_conn = auth_conn!(context);
         let mut actions = Vec::new();
-        if let Some(models) = json_thresholds.models {
-            for (measure, model) in models {
-                let measure_id = QueryMeasure::get_or_create(context, project_id, &measure).await?;
-                slog::debug!(log, "Processing threshold for measure {measure_id}");
-                if let Some(current_threshold) = current_thresholds.remove(&measure_id) {
-                    match QueryThreshold::compute_model_action(
-                        auth_conn,
-                        current_threshold.model_id,
-                        Some(model),
-                    )? {
-                        ThresholdModelAction::Update(model) => {
-                            #[cfg(feature = "plus")]
-                            InsertModel::rate_limit(context, &current_threshold).await?;
+        for (dimensions, model) in declared {
+            let measure_id = dimensions.measure_id;
+            slog::debug!(log, "Processing threshold for measure {measure_id}");
+            if let Some(current_threshold) = current_thresholds.remove(&dimensions) {
+                match QueryThreshold::compute_model_action(
+                    auth_conn,
+                    current_threshold.model_id,
+                    Some(model),
+                )? {
+                    // Refused, the threshold keeps its model, and a reset does not strip it.
+                    ThresholdModelAction::Update(model) => {
+                        if current_threshold.model_fits(log, context, warnings).await? {
                             slog::debug!(log, "Updating threshold for measure {measure_id}");
                             actions.push(ThresholdAction::Update(current_threshold, model));
-                        },
-                        ThresholdModelAction::NoChange => {
-                            slog::debug!(log, "Model unchanged for measure {measure_id}");
-                            actions.push(ThresholdAction::NoChange);
-                        },
-                        // Cannot happen: we always pass Some(model) as new_model.
-                        ThresholdModelAction::Remove => {
-                            return Err(crate::error::issue_error(
-                                "Unexpected threshold model removal",
-                                "compute_model_action returned Remove with Some(model) input for measure:",
-                                measure_id,
-                            ));
-                        },
-                    }
-                } else {
-                    slog::debug!(log, "Creating threshold for measure {measure_id}");
-                    actions.push(ThresholdAction::Create(measure_id, model));
+                        }
+                    },
+                    ThresholdModelAction::NoChange => {
+                        slog::debug!(log, "Model unchanged for measure {measure_id}");
+                        actions.push(ThresholdAction::NoChange);
+                    },
+                    // Cannot happen: we always pass Some(model) as new_model.
+                    ThresholdModelAction::Remove => {
+                        return Err(crate::error::issue_error(
+                            "Unexpected threshold model removal",
+                            "compute_model_action returned Remove with Some(model) input for measure:",
+                            measure_id,
+                        ));
+                    },
                 }
+            } else {
+                slog::debug!(log, "Creating threshold for measure {measure_id}");
+                actions.push(ThresholdAction::Create(dimensions, model));
             }
-        }
-
-        #[cfg(feature = "plus")]
-        if let Some(count) = NonZeroU32::new(
-            u32::try_from(
-                actions
-                    .iter()
-                    .filter(|action| matches!(action, ThresholdAction::Create(..)))
-                    .count(),
-            )
-            .unwrap_or(u32::MAX),
-        ) {
-            Self::rate_limit_with_count(context, project_id, count).await?;
         }
 
         // Collect orphan thresholds to reset
@@ -814,6 +891,30 @@ impl InsertThreshold {
         } else {
             Vec::new()
         };
+        for orphan in &orphans {
+            active.release(orphan);
+        }
+
+        // Past the cap or the ceiling, a report skips what does not fit and keeps the rest.
+        let planned = actions.len();
+        actions.retain(|action| match action {
+            ThresholdAction::Create(dimensions, _) => active.admit(log, dimensions),
+            ThresholdAction::Update(threshold, _) if threshold.model_id.is_none() => {
+                active.admit(log, &threshold.dimensions())
+            },
+            ThresholdAction::Update(..) | ThresholdAction::NoChange => true,
+        });
+        #[cfg(feature = "plus")]
+        {
+            let creates = actions
+                .iter()
+                .filter(|action| matches!(action, ThresholdAction::Create(..)))
+                .count();
+            if !Self::ceiling_admits(log, context, project_id, creates).await? {
+                actions.retain(|action| !matches!(action, ThresholdAction::Create(..)));
+            }
+        }
+        warnings.skip_with_count(ReportWarningResource::Threshold, planned - actions.len());
 
         // Phase 2: Batch all threshold writes in a single write lock acquisition
         // wrapped in a transaction for atomicity.
@@ -826,15 +927,8 @@ impl InsertThreshold {
             write_transaction!(context, |conn| {
                 for action in actions {
                     match action {
-                        ThresholdAction::Create(measure_id, model) => {
-                            InsertThreshold::from_model_inner(
-                                conn,
-                                project_id,
-                                ThresholdDimensions::new(
-                                    branch_id, testbed_id, None, measure_id, None,
-                                ),
-                                model,
-                            )?;
+                        ThresholdAction::Create(dimensions, model) => {
+                            InsertThreshold::from_model_inner(conn, project_id, dimensions, model)?;
                         },
                         ThresholdAction::Update(threshold, model) => {
                             threshold.update_from_model_inner(conn, model)?;
@@ -859,6 +953,204 @@ impl InsertThreshold {
 
         Ok(())
     }
+
+    /// The thresholds the payload declares, each resolved to the dimensions it
+    /// addresses, skipping one whose measure a daily limit refused.
+    async fn declared_thresholds(
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        branch_id: BranchId,
+        testbed_id: TestbedId,
+        models: Option<JsonReportThresholdModels>,
+        warnings: &mut ReportWarnings,
+    ) -> Result<Vec<(ThresholdDimensions, Model)>, HttpError> {
+        let mut declared = Vec::new();
+        let mut positions = HashMap::new();
+        match models {
+            None => {},
+            Some(JsonReportThresholdModels::Map(models)) => {
+                for (measure, model) in models {
+                    let Some(measure_id) = past_the_ceiling(
+                        log,
+                        QueryMeasure::get_or_create(context, project_id, &measure).await,
+                    )?
+                    else {
+                        warnings.skip(ReportWarningResource::Threshold);
+                        continue;
+                    };
+                    Self::declare(
+                        &mut declared,
+                        &mut positions,
+                        ThresholdDimensions::new(branch_id, testbed_id, None, measure_id, None),
+                        model,
+                    );
+                }
+            },
+            Some(JsonReportThresholdModels::List(entries)) => {
+                for entry in entries {
+                    let JsonReportThresholdEntry {
+                        parameters,
+                        measure,
+                        metric,
+                        model,
+                    } = entry;
+                    let Some(measure_id) = past_the_ceiling(
+                        log,
+                        QueryMeasure::get_or_create(context, project_id, &measure).await,
+                    )?
+                    else {
+                        warnings.skip(ReportWarningResource::Threshold);
+                        continue;
+                    };
+                    Self::declare(
+                        &mut declared,
+                        &mut positions,
+                        ThresholdDimensions::new(
+                            branch_id,
+                            testbed_id,
+                            parameters,
+                            measure_id,
+                            Some(metric),
+                        ),
+                        model,
+                    );
+                }
+            },
+        }
+        Ok(declared)
+    }
+
+    /// Dimensions declared twice are one threshold, at the first position with the last model.
+    fn declare(
+        declared: &mut Vec<(ThresholdDimensions, Model)>,
+        positions: &mut HashMap<ThresholdDimensions, usize>,
+        dimensions: ThresholdDimensions,
+        model: Model,
+    ) {
+        match positions.entry(dimensions) {
+            Entry::Occupied(position) => {
+                if let Some((_, declared_model)) = declared.get_mut(*position.get()) {
+                    *declared_model = model;
+                }
+            },
+            Entry::Vacant(position) => {
+                let dimensions = position.key().clone();
+                position.insert(declared.len());
+                declared.push((dimensions, model));
+            },
+        }
+    }
+
+    /// Only the ceiling's own 429 is a `false`; every other error propagates.
+    #[cfg(feature = "plus")]
+    async fn ceiling_admits(
+        log: &Logger,
+        context: &ApiContext,
+        project_id: ProjectId,
+        creates: usize,
+    ) -> Result<bool, HttpError> {
+        let Some(count) = NonZeroU32::new(u32::try_from(creates).unwrap_or(u32::MAX)) else {
+            return Ok(true);
+        };
+        match Self::rate_limit_with_count(context, project_id, count).await {
+            Ok(()) => Ok(true),
+            Err(error) if error.status_code == ClientErrorStatusCode::TOO_MANY_REQUESTS => {
+                slog::warn!(
+                    log,
+                    "Skipping {creates} threshold creation(s) past the daily ceiling: {error}"
+                );
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment_by(
+                    bencher_otel::ApiCounter::ThresholdCeilingSkip,
+                    u64::try_from(creates).unwrap_or(u64::MAX),
+                );
+                Ok(false)
+            },
+            Err(error) => Err(error),
+        }
+    }
+}
+
+/// How many thresholds with a model each branch, testbed, and measure has, for the cap.
+struct ActiveThresholds(HashMap<(BranchId, TestbedId, MeasureId), usize>);
+
+impl ActiveThresholds {
+    fn new(thresholds: &HashMap<ThresholdDimensions, QueryThreshold>) -> Self {
+        let mut active = HashMap::new();
+        for threshold in thresholds
+            .values()
+            .filter(|threshold| threshold.model_id.is_some())
+        {
+            *active
+                .entry((
+                    threshold.branch_id,
+                    threshold.testbed_id,
+                    threshold.measure_id,
+                ))
+                .or_default() += 1;
+        }
+        Self(active)
+    }
+
+    fn admit(&mut self, log: &Logger, dimensions: &ThresholdDimensions) -> bool {
+        let active = self
+            .0
+            .entry((
+                dimensions.branch_id,
+                dimensions.testbed_id,
+                dimensions.measure_id,
+            ))
+            .or_default();
+        if *active < MAX_ACTIVE_THRESHOLDS {
+            *active += 1;
+            true
+        } else {
+            slog::warn!(
+                log,
+                "Skipping a threshold past the cap of {MAX_ACTIVE_THRESHOLDS} with a model on its branch, testbed, and measure: {dimensions:?}"
+            );
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ThresholdCapSkip);
+            false
+        }
+    }
+
+    fn release(&mut self, threshold: &QueryThreshold) {
+        if threshold.model_id.is_some()
+            && let Some(active) = self.0.get_mut(&(
+                threshold.branch_id,
+                threshold.testbed_id,
+                threshold.measure_id,
+            ))
+        {
+            *active -= 1;
+        }
+    }
+}
+
+/// Refuse a report whose thresholds are not in the shape its BMF version, declared
+/// or taken from the project, spells.
+pub fn check_report_thresholds_shape(
+    bmf_version: BmfVersion,
+    json_thresholds: Option<&JsonReportThresholds>,
+) -> Result<(), HttpError> {
+    let Some(models) = json_thresholds.and_then(|thresholds| thresholds.models.as_ref()) else {
+        return Ok(());
+    };
+    let (expected, sent) = match bmf_version {
+        BmfVersion::V0 => match models {
+            JsonReportThresholdModels::Map(_) => return Ok(()),
+            JsonReportThresholdModels::List(_) => ("a map of measure to threshold model", "a list"),
+        },
+        _ => match models {
+            JsonReportThresholdModels::Map(_) => ("a list of threshold entries", "a map"),
+            JsonReportThresholdModels::List(_) => return Ok(()),
+        },
+    };
+    Err(bad_request_error(format!(
+        "The report is read as BMF version {bmf_version}, so `thresholds.models` must be {expected}, but {sent} was sent."
+    )))
 }
 
 #[derive(Debug, Clone, diesel::AsChangeset)]

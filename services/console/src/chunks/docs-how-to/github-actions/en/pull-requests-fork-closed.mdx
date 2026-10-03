@@ -8,31 +8,33 @@ This workflow will archive the fork PR branch using the `bencher archive` comman
 
 1. Create a GitHub Actions `workflow` file.
    (ex: `.github/workflows/fork_pr_benchmarks_closed.yml`)
-2. Run on `pull_request_target` events:
+2. Name this workflow.
+   (ex: `name: Archive Closed Fork PR Branch with Bencher`)
+3. Run on `pull_request_target` events:
    - `closed` - A pull request was closed.
 
    See the [GitHub Actions `on` documentation][github actions on]
    and [GitHub Actions `pull_request_target` documentation][github action pull_request_target] for a full overview.
    (ex: `on: pull_request_target: types: [closed]`)
-3. Create a GitHub Actions `job`.
+4. Create a GitHub Actions `job`.
    (ex: `jobs: archive_pr_branch`)
-4. Set the type of machine the job will run on.
+5. Set the type of machine the job will run on.
    See the [GitHub Actions `runs-on` documentation][github actions runs-on]
    for a full overview.
    (ex: `runs-on: ubuntu-latest`)
-5. Checkout the PR branch source code.
+6. Checkout the PR branch source code.
    (ex: `uses: actions/checkout@v6`)
-6. Install the Bencher CLI using [the GitHub Action][bencher cli github action].
+7. Install the Bencher CLI using [the GitHub Action][bencher cli github action].
    (ex: `uses: bencherdev/bencher@main`)
-7. Use the `bencher archive` CLI subcommand to archive the PR branch.
+8. Use the `bencher archive` CLI subcommand to archive the PR branch.
    (ex: `bencher archive`)
-8.  Set the `--project` option to the Project slug.
+9.  Set the `--project` option to the Project slug.
     See [the `--project` docs][project option] for more details.
     (ex: `--project project-abc4567-wxyz123456789`)
-9.  Set the `--key` option to the `BENCHER_API_KEY` **Repository** secret.
+10. Set the `--key` option to the `BENCHER_API_KEY` **Repository** secret.
     See [the `--key` docs][key option] for more details.
     (ex: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-10. Set the `--branch` option to the PR branch name
+11. Set the `--branch` option to the PR branch name
     using [the GitHub Actions `GITHUB_HEAD_REF` default environment variable][github default environment variables].
     (ex: `--branch "$GITHUB_HEAD_REF"`)
 

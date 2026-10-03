@@ -8,6 +8,8 @@
 )]
 //! Integration tests for project report endpoints.
 
+#[cfg(feature = "plus")]
+use bencher_api_tests::helpers::{plan_project, post_metrics};
 use bencher_api_tests::{
     TestServer,
     helpers::{
@@ -15,9 +17,13 @@ use bencher_api_tests::{
     },
 };
 use bencher_json::{
-    BenchmarkUuid, BoundaryUuid, HeadUuid, JsonReport, JsonReports, MeasureUuid, MetricName,
-    MetricUuid, ModelUuid, ParameterSet, ReportBenchmarkUuid, ThresholdUuid, VersionUuid,
+    BenchmarkName, BenchmarkUuid, BoundaryUuid, HeadUuid, JsonReport, JsonReports,
+    MAX_PARAMETER_KEYS, MeasureUuid, MetricName, MetricUuid, ModelUuid, ParameterSet,
+    ReportBenchmarkUuid, Slug, ThresholdUuid, VersionUuid,
+    project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
 };
+#[cfg(feature = "plus")]
+use bencher_json::{BranchName, PlanLevel};
 use bencher_schema::{
     context::DbConnection,
     model::project::report::{ReportId, upsert_metric_count},
@@ -853,5 +859,735 @@ async fn reports_ingest_empty_variants() {
             get_empty_variant(&mut conn, benchmark_id),
             "every report benchmark rides its own benchmark's empty variant"
         );
+    }
+}
+
+// POST /v0/projects/{project}/reports - a paid organization past its daily metrics
+// limit is refused, and is not told to buy the plan it already has
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_refuses_a_paid_org_past_its_daily_metrics_limit() {
+    let server = TestServer::new_with_creation_and_plus_limits(u32::MAX, u32::MAX, 4).await;
+    let branch: BranchName = "main".parse().expect("Invalid branch name");
+    let (user, project) = plan_project(&server, "paid", Some(PlanLevel::Enterprise)).await;
+
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 1).await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+    assert!(body.contains("for Metric creation"), "{body}");
+    assert!(!body.contains("pricing"), "{body}");
+}
+
+// POST /v0/projects/{project}/reports - a paid organization is held to its own daily
+// metrics limit, not the claimed one that refuses an organization with no plan
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_admits_a_paid_org_past_the_claimed_limit() {
+    let server = TestServer::new_with_creation_and_plus_limits(4, 4, 8).await;
+    let branch: BranchName = "main".parse().expect("Invalid branch name");
+
+    let (user, project) = plan_project(&server, "free", None).await;
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 1).await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+    assert!(body.contains("pricing"), "{body}");
+
+    let (user, project) = plan_project(&server, "paid", Some(PlanLevel::Enterprise)).await;
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 1).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+}
+
+// POST /v0/projects/{project}/reports - an organization licensed at the Free level is
+// not paid, so it is held to the claimed limit and not the daily metrics limit of a paid
+// organization
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_holds_a_free_license_to_the_claimed_limit() {
+    let server = TestServer::new_with_creation_and_plus_limits(4, 4, 0).await;
+    let branch: BranchName = "main".parse().expect("Invalid branch name");
+    let (user, project) = plan_project(&server, "free-license", Some(PlanLevel::Free)).await;
+
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let (status, body) = post_metrics(&server, &user, &project, &branch, 1).await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+    assert!(body.contains("pricing"), "{body}");
+}
+
+/// Post a report of one BMF v1 benchmark with these measures and return its body.
+async fn post_v1_report(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    measures: serde_json::Value,
+) -> String {
+    let (status, body) = try_post_v1_report(server, token, project_slug, measures).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    body
+}
+
+async fn try_post_v1_report(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    measures: serde_json::Value,
+) -> (StatusCode, String) {
+    let results = serde_json::json!({ "bench": [{ "measures": measures }] });
+    try_post_ingest(
+        server,
+        token,
+        project_slug,
+        &ingest_report(&[results.to_string()], 1),
+    )
+    .await
+}
+
+/// A report that names ten metrics on one measure, two past the per measure cap of eight.
+async fn post_report_past_the_metric_cap(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+) -> JsonReport {
+    let names = (1..=10)
+        .map(|n| (format!("p{n}"), serde_json::json!(n)))
+        .collect::<serde_json::Map<_, _>>();
+    let body = post_v1_report(
+        server,
+        token,
+        project_slug,
+        serde_json::json!({ "latency": names }),
+    )
+    .await;
+    serde_json::from_str(&body).expect("Failed to parse the report")
+}
+
+fn report_warning_rows(server: &TestServer, report_id: ReportId) -> i64 {
+    schema::report_warning::table
+        .filter(schema::report_warning::report_id.eq(report_id))
+        .count()
+        .get_result(&mut server.db_conn())
+        .expect("Failed to count report warnings")
+}
+
+// POST /v0/projects/{project}/reports - the metric names dropped past the per measure cap are a
+// warning on the report
+#[tokio::test]
+async fn reports_post_warns_of_metric_names_past_the_cap() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "reportmetricwarn@example.com")
+        .await;
+    let org = server.create_org(&user, "Report Metric Warn Org").await;
+    let project = server
+        .create_project(&user, &org, "Report Metric Warn Project")
+        .await;
+
+    let report = post_report_past_the_metric_cap(&server, &user.token, project.slug.as_ref()).await;
+    assert_eq!(
+        report.warnings,
+        Some(vec![skipped(ReportWarningResource::Metric, 2)])
+    );
+}
+
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_over_the_license_keeps_its_warnings() {
+    use bencher_json::{Entitlements, PlanLevel, ReportUuid, project::Visibility};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "reportlicensewarn@example.com")
+        .await;
+    let org = server.create_org(&user, "Report License Warn Org").await;
+    server
+        .license_org_with_entitlements(&user, &org, PlanLevel::Enterprise, Entitlements::MIN)
+        .await;
+    let project = server
+        .create_project(&user, &org, "Report License Warn Project")
+        .await;
+    diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+        .set(schema::project::visibility.eq(Visibility::Private))
+        .execute(&mut server.db_conn())
+        .expect("Failed to make the project private");
+    let project_slug: &str = project.slug.as_ref();
+
+    // Two measured values pass the license of one, and two names pass the cap of eight.
+    let mut latency = (1..=9)
+        .map(|n| (format!("p{n}"), serde_json::json!(n)))
+        .collect::<serde_json::Map<_, _>>();
+    latency.insert("value".to_owned(), serde_json::json!(1.0));
+    let measures = serde_json::json!({ "latency": latency, "throughput": { "value": 1.0 } });
+    let (status, body) = try_post_v1_report(&server, &user.token, project_slug, measures).await;
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED, "{body}");
+
+    let report_uuid: ReportUuid = schema::report::table
+        .select(schema::report::uuid)
+        .first(&mut server.db_conn())
+        .expect("Failed to load the report");
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{project_slug}/reports/{report_uuid}"
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+    assert_eq!(
+        report.warnings,
+        Some(vec![skipped(ReportWarningResource::Metric, 2)])
+    );
+}
+
+// POST /v0/projects/{project}/reports - a report that skipped nothing has no `warnings` key, so
+// its bytes are what they were before warnings existed
+#[tokio::test]
+async fn reports_post_without_warnings_omits_the_key() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "reportnowarn@example.com").await;
+    let org = server.create_org(&user, "Report No Warn Org").await;
+    let project = server
+        .create_project(&user, &org, "Report No Warn Project")
+        .await;
+
+    let body = post_v1_report(
+        &server,
+        &user.token,
+        project.slug.as_ref(),
+        serde_json::json!({ "latency": { "value": 1.0 } }),
+    )
+    .await;
+    let report: serde_json::Value = serde_json::from_str(&body).expect("Failed to parse");
+    assert!(report.get("warnings").is_none(), "{body}");
+}
+
+// GET /v0/projects/{project}/reports - the warnings are only read for one report, so a page of
+// reports does not carry them, expanded or not
+#[tokio::test]
+async fn reports_list_omits_warnings() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "reportexpandwarn@example.com")
+        .await;
+    let org = server.create_org(&user, "Report Expand Warn Org").await;
+    let project = server
+        .create_project(&user, &org, "Report Expand Warn Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let report = post_report_past_the_metric_cap(&server, &user.token, project_slug).await;
+    assert_eq!(
+        report.warnings,
+        Some(vec![skipped(ReportWarningResource::Metric, 2)]),
+        "the report has warnings"
+    );
+
+    for (query, expand) in [("", false), ("?expand=true", true)] {
+        let resp = server
+            .client
+            .get(server.api_url(&format!("/v0/projects/{project_slug}/reports{query}")))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::OK);
+        let reports: JsonReports = resp.json().await.expect("Failed to parse response");
+        let listed = reports.0.first().expect("Reports are empty");
+        assert_eq!(listed.results.is_some(), expand, "expand: {expand}");
+        assert!(listed.warnings.is_none(), "expand: {expand}");
+    }
+}
+
+// DELETE /v0/projects/{project}/reports/{report} - deleting a report deletes its warnings
+#[tokio::test]
+async fn reports_delete_deletes_warnings() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "reportdelwarn@example.com")
+        .await;
+    let org = server.create_org(&user, "Report Del Warn Org").await;
+    let project = server
+        .create_project(&user, &org, "Report Del Warn Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let report = post_report_past_the_metric_cap(&server, &user.token, project_slug).await;
+    let report_id: ReportId = schema::report::table
+        .filter(schema::report::uuid.eq(report.uuid))
+        .select(schema::report::id)
+        .first(&mut server.db_conn())
+        .expect("Failed to load the report id");
+    assert_eq!(report_warning_rows(&server, report_id), 1);
+
+    let resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v0/projects/{project_slug}/reports/{}",
+            report.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    assert_eq!(report_warning_rows(&server, report_id), 0);
+}
+
+/// A signed up user's token and the slug of a new project to report into.
+async fn ingest_project(server: &TestServer, label: &str) -> (String, String) {
+    let user = server
+        .signup("Test User", &format!("ingest{label}@example.com"))
+        .await;
+    let org = server
+        .create_org(&user, &format!("Ingest Org {label}"))
+        .await;
+    let project = server
+        .create_project(&user, &org, &format!("Ingest Project {label}"))
+        .await;
+    (user.token, project.slug.to_string())
+}
+
+fn ingest_report(results: &[String], bmf_version: u8) -> serde_json::Value {
+    serde_json::json!({
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": results,
+        "bmf_version": bmf_version,
+        "settings": { "adapter": "json" },
+    })
+}
+
+async fn try_post_ingest(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    report: &serde_json::Value,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/reports")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .json(report)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    (status, body)
+}
+
+async fn post_ingest(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    report: &serde_json::Value,
+) -> Option<Vec<JsonReportWarning>> {
+    let (status, body) = try_post_ingest(server, token, project_slug, report).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+    report.warnings
+}
+
+fn skipped(resource: ReportWarningResource, count: u32) -> JsonReportWarning {
+    JsonReportWarning {
+        resource,
+        action: ReportWarningAction::Skip,
+        count,
+    }
+}
+
+/// Every metric a project ingested, as its benchmark, its variant's parameters, its measure, and
+/// its name, sorted.
+fn ingested(server: &TestServer, project_slug: &str) -> Vec<(String, String, String, String)> {
+    let project_id = get_project_id(server, project_slug);
+    let mut ingested = schema::metric::table
+        .inner_join(
+            schema::report_benchmark::table
+                .inner_join(schema::benchmark::table)
+                .inner_join(schema::variant::table),
+        )
+        .inner_join(schema::measure::table)
+        .filter(schema::benchmark::project_id.eq(project_id))
+        .select((
+            schema::benchmark::name,
+            schema::variant::parameters,
+            schema::measure::slug,
+            schema::metric::name,
+        ))
+        .load::<(BenchmarkName, ParameterSet, Slug, MetricName)>(&mut server.db_conn())
+        .expect("Failed to load the ingested metrics")
+        .into_iter()
+        .map(|(benchmark, parameters, measure, metric)| {
+            (
+                benchmark.to_string(),
+                parameters.canonical(),
+                measure.to_string(),
+                metric.to_string(),
+            )
+        })
+        .collect::<Vec<_>>();
+    ingested.sort();
+    ingested
+}
+
+fn row(
+    benchmark: &str,
+    parameters: &str,
+    measure: &str,
+    metric: &str,
+) -> (String, String, String, String) {
+    (
+        benchmark.to_owned(),
+        parameters.to_owned(),
+        measure.to_owned(),
+        metric.to_owned(),
+    )
+}
+
+fn long_benchmark() -> String {
+    "b".repeat(BenchmarkName::MAX_LEN + 1)
+}
+
+/// One past the longest measure or metric name.
+fn long_name() -> String {
+    "n".repeat(MetricName::MAX_LEN + 1)
+}
+
+// POST /v0/projects/{project}/reports - a variant whose parameters fail validation is skipped
+// and warned of, whichever way they fail
+#[tokio::test]
+async fn reports_post_skips_a_variant_whose_parameters_fail_validation() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "badvariant").await;
+
+    let too_many_keys = (0..=MAX_PARAMETER_KEYS)
+        .map(|n| (format!("k{n}"), serde_json::json!(n)))
+        .collect::<serde_json::Map<_, _>>();
+    let measures = serde_json::json!({ "latency": { "value": 1.0 } });
+    let results = serde_json::json!({
+        "bench": [
+            { "parameters": { "size": 1 }, "measures": measures },
+            { "parameters": too_many_keys, "measures": measures },
+            { "parameters": { "size": [1] }, "measures": measures },
+            { "parameters": { "": 1 }, "measures": measures },
+        ]
+    });
+    let report = ingest_report(&[results.to_string()], 1);
+    let warnings = post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(
+        warnings,
+        Some(vec![skipped(ReportWarningResource::Variant, 3)])
+    );
+    assert_eq!(
+        ingested(&server, &project_slug),
+        vec![row("bench", r#"{"size":1}"#, "latency", "value")]
+    );
+}
+
+// POST /v0/projects/{project}/reports - a metric whose name fails validation is skipped and warned
+// of, and the rest of its measure is ingested
+#[tokio::test]
+async fn reports_post_skips_a_metric_whose_name_fails_validation() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "badmetric").await;
+
+    let results = serde_json::json!({
+        "bench": [{ "measures": { "latency": { "value": 1.0, long_name(): 2.0 } } }]
+    });
+    let report = ingest_report(&[results.to_string()], 1);
+    let warnings = post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(
+        warnings,
+        Some(vec![skipped(ReportWarningResource::Metric, 1)])
+    );
+    assert_eq!(
+        ingested(&server, &project_slug),
+        vec![row("bench", "{}", "latency", "value")]
+    );
+}
+
+/// One BMF v1 payload with one bad benchmark, variant, measure, and metric among good ones. The
+/// bad variant also names a bad measure and a bad metric, which are not counted again.
+fn one_of_each() -> String {
+    serde_json::json!({
+        "good": [
+            {
+                "parameters": { "size": 1 },
+                "measures": {
+                    "latency": { "value": 1.0, "p99": 2.0, long_name(): 3.0 },
+                    long_name(): { "value": 4.0 },
+                },
+            },
+            {
+                "parameters": { "size": [2] },
+                "measures": {
+                    "latency": { "value": 5.0, long_name(): 6.0 },
+                    long_name(): { "value": 7.0 },
+                },
+            },
+        ],
+        long_benchmark(): [{ "measures": { "latency": { "value": 8.0 } } }],
+    })
+    .to_string()
+}
+
+// POST /v0/projects/{project}/reports - one payload skips each item that fails at its own level,
+// with one warning for each, and ingests every good item
+#[tokio::test]
+async fn reports_post_skips_one_of_each_in_one_v1_payload() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "oneofeach").await;
+
+    let report = ingest_report(&[one_of_each()], 1);
+    let warnings = post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(
+        warnings,
+        Some(vec![
+            skipped(ReportWarningResource::Benchmark, 1),
+            skipped(ReportWarningResource::Variant, 1),
+            skipped(ReportWarningResource::Measure, 1),
+            skipped(ReportWarningResource::Metric, 1),
+        ])
+    );
+    assert_eq!(
+        ingested(&server, &project_slug),
+        vec![
+            row("good", r#"{"size":1}"#, "latency", "p99"),
+            row("good", r#"{"size":1}"#, "latency", "value"),
+        ]
+    );
+}
+
+// POST /v0/projects/{project}/reports - a skip is counted in every payload it occurs in
+#[tokio::test]
+async fn reports_post_counts_a_skip_in_each_payload() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "eachpayload").await;
+
+    let report = ingest_report(&[one_of_each(), one_of_each()], 1);
+    let warnings = post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(
+        warnings,
+        Some(vec![
+            skipped(ReportWarningResource::Benchmark, 2),
+            skipped(ReportWarningResource::Variant, 2),
+            skipped(ReportWarningResource::Measure, 2),
+            skipped(ReportWarningResource::Metric, 2),
+        ])
+    );
+    assert_eq!(
+        ingested(&server, &project_slug),
+        vec![
+            row("good", r#"{"size":1}"#, "latency", "p99"),
+            row("good", r#"{"size":1}"#, "latency", "p99"),
+            row("good", r#"{"size":1}"#, "latency", "value"),
+            row("good", r#"{"size":1}"#, "latency", "value"),
+        ]
+    );
+}
+
+// POST /v0/projects/{project}/reports - a report level field stays strict: a bad branch name is a
+// 400 and creates no report, however lenient its results are
+#[tokio::test]
+async fn reports_post_with_a_bad_branch_name_is_a_bad_request() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "badbranch").await;
+
+    let mut report = ingest_report(&[one_of_each()], 1);
+    report["branch"] = serde_json::json!("");
+    let (status, body) = try_post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    let project_id = get_project_id(&server, &project_slug);
+    let reports: i64 = schema::report::table
+        .filter(schema::report::project_id.eq(project_id))
+        .count()
+        .get_result(&mut server.db_conn())
+        .expect("Failed to count the reports");
+    assert_eq!(reports, 0);
+}
+
+// POST /v0/projects/{project}/reports - a benchmark named by a UUID the project does not have is
+// a failed lookup, not a skip
+#[tokio::test]
+async fn reports_post_with_an_unknown_benchmark_uuid_fails() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "unknownuuid").await;
+
+    let results = serde_json::json!({
+        BenchmarkUuid::new().to_string(): { "latency": { "value": 1.0 } },
+    });
+    let report = ingest_report(&[results.to_string()], 0);
+    let (status, body) = try_post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+}
+
+// POST /v0/projects/{project}/reports - a new benchmark the daily creation ceiling refuses is
+// skipped and warned of in every payload it occurs in, and the benchmark it admitted is ingested
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_skips_a_benchmark_past_the_creation_ceiling() {
+    // One creation of each resource: the report's branch, testbed, measure, and first benchmark.
+    let server = TestServer::new_with_creation_limits(1, 1).await;
+    let (token, project_slug) = ingest_project(&server, "benchmarkceiling").await;
+
+    let first = serde_json::json!({ "first": { "latency": { "value": 1.0 } } });
+    let both = serde_json::json!({
+        "first": { "latency": { "value": 2.0 } },
+        "second": { "latency": { "value": 3.0 } },
+    });
+    let report = ingest_report(&[first.to_string(), both.to_string(), both.to_string()], 0);
+    let warnings = post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(
+        warnings,
+        Some(vec![skipped(ReportWarningResource::Benchmark, 2)])
+    );
+    assert_eq!(
+        ingested(&server, &project_slug),
+        vec![
+            row("first", "{}", "latency", "value"),
+            row("first", "{}", "latency", "value"),
+            row("first", "{}", "latency", "value"),
+        ]
+    );
+}
+
+// POST /v0/projects/{project}/reports - a new measure the daily creation ceiling refuses is skipped
+// and warned of, and the measure it admitted is ingested
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_skips_a_measure_past_the_creation_ceiling() {
+    // One creation of each resource: the report's branch, testbed, benchmark, and first measure.
+    let server = TestServer::new_with_creation_limits(1, 1).await;
+    let (token, project_slug) = ingest_project(&server, "measureceiling").await;
+
+    let first = serde_json::json!({ "bench": { "latency": { "value": 1.0 } } });
+    let both = serde_json::json!({
+        "bench": {
+            "latency": { "value": 2.0 },
+            "throughput": { "value": 3.0 },
+        }
+    });
+    let report = ingest_report(&[first.to_string(), both.to_string()], 0);
+    let warnings = post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(
+        warnings,
+        Some(vec![skipped(ReportWarningResource::Measure, 1)])
+    );
+    assert_eq!(
+        ingested(&server, &project_slug),
+        vec![
+            row("bench", "{}", "latency", "value"),
+            row("bench", "{}", "latency", "value"),
+        ]
+    );
+}
+
+// POST /v0/projects/{project}/reports - a BMF v1 variant whose every measure the daily creation
+// ceiling refuses measured nothing, so it writes no row
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_writes_no_row_for_a_variant_whose_every_measure_is_refused() {
+    // Two creations of each resource: the first payload's two measures fill the measure budget.
+    let server = TestServer::new_with_creation_limits(2, 2).await;
+    let (token, project_slug) = ingest_project(&server, "emptyvariant").await;
+
+    let first = serde_json::json!({
+        "bench": [{ "measures": { "latency": { "value": 1.0 }, "throughput": { "value": 2.0 } } }]
+    });
+    let refused = serde_json::json!({
+        "bench": [{ "parameters": { "size": 1 }, "measures": { "other": { "value": 3.0 } } }]
+    });
+    let report = ingest_report(&[first.to_string(), refused.to_string()], 1);
+    let warnings = post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(
+        warnings,
+        Some(vec![skipped(ReportWarningResource::Measure, 1)])
+    );
+    let project_id = get_project_id(&server, &project_slug);
+    let report_benchmarks: i64 = schema::report_benchmark::table
+        .inner_join(schema::benchmark::table)
+        .filter(schema::benchmark::project_id.eq(project_id))
+        .count()
+        .get_result(&mut server.db_conn())
+        .expect("Failed to count the report benchmarks");
+    assert_eq!(report_benchmarks, 1);
+}
+
+// POST /v0/projects/{project}/reports - a threshold declared on a new measure that the daily
+// creation ceiling refuses is skipped and warned of, in either form of `thresholds.models`, and the
+// rest of the report is ingested
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn reports_post_skips_a_threshold_on_a_measure_past_the_creation_ceiling() {
+    // One creation of each resource per project, so of two new measures only the first created
+    // fits, and the other is refused for its threshold and again for its results.
+    let server = TestServer::new_with_creation_limits(1, 1).await;
+
+    let model = serde_json::json!({ "test": "percentage", "upper_boundary": 0.1 });
+    let measures =
+        serde_json::json!({ "latency": { "value": 1.0 }, "throughput": { "value": 2.0 } });
+    let map = (
+        serde_json::json!({ "bench": measures }),
+        0,
+        serde_json::json!({ "latency": model, "throughput": model }),
+    );
+    let list = (
+        serde_json::json!({ "bench": [{ "measures": measures }] }),
+        1,
+        serde_json::json!([
+            { "measure": "latency", "metric": "value", "model": model },
+            { "measure": "throughput", "metric": "value", "model": model },
+        ]),
+    );
+    for (label, (results, bmf_version, models)) in [("map", map), ("list", list)] {
+        let (token, project_slug) = ingest_project(&server, &format!("threshold{label}")).await;
+        let mut report = ingest_report(&[results.to_string()], bmf_version);
+        report["thresholds"] = serde_json::json!({ "models": models });
+        let warnings = post_ingest(&server, &token, &project_slug, &report).await;
+
+        assert_eq!(
+            warnings,
+            Some(vec![
+                skipped(ReportWarningResource::Measure, 1),
+                skipped(ReportWarningResource::Threshold, 1),
+            ]),
+            "{label}"
+        );
+        assert_eq!(ingested(&server, &project_slug).len(), 1, "{label}");
+        let project_id = get_project_id(&server, &project_slug);
+        let thresholds: i64 = schema::threshold::table
+            .filter(schema::threshold::project_id.eq(project_id))
+            .count()
+            .get_result(&mut server.db_conn())
+            .expect("Failed to count the thresholds");
+        assert_eq!(thresholds, 1, "{label}");
     }
 }

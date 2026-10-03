@@ -157,6 +157,40 @@ impl QueryMetric {
                 )
             })
     }
+
+    /// [`Self::usage`] summed from the per-report metric counts, so it reads a row per
+    /// report rather than a row per metric.
+    #[cfg(feature = "plus")]
+    pub fn rollup_usage(
+        conn: &mut DbConnection,
+        organization_id: OrganizationId,
+        start_time: bencher_json::DateTime,
+        end_time: bencher_json::DateTime,
+    ) -> Result<u32, HttpError> {
+        schema::metric_count_by_report::table
+            .inner_join(schema::report::table.inner_join(schema::project::table))
+            .filter(schema::project::organization_id.eq(organization_id))
+            .filter(schema::report::end_time.ge(start_time))
+            .filter(schema::report::end_time.le(end_time))
+            .select(diesel::dsl::sum(schema::metric_count_by_report::metric_count))
+            .get_result::<Option<i64>>(conn)
+            .map_err(|e| {
+                crate::error::issue_error(
+                    "Failed to count metric usage",
+                    &format!("Failed to sum metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                    e,
+                )
+            })?
+            .unwrap_or_default()
+            .try_into()
+            .map_err(|e| {
+                crate::error::issue_error(
+                    "Failed to count metric usage",
+                    &format!("Failed to sum metric usage for organization ({organization_id}) between {start_time} and {end_time}."),
+                    e,
+                )
+            })
+    }
 }
 
 #[derive(Debug, diesel::Insertable)]

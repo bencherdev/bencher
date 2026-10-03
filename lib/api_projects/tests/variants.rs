@@ -45,6 +45,27 @@ fn threshold_models() -> serde_json::Value {
     })
 }
 
+/// The version 1 spelling of [`threshold_models`]: one entry naming the same measure,
+/// the conventional `value` metric, and the same model, which is the bare threshold of
+/// every variant. A version 1 payload has to declare its thresholds as a list.
+fn threshold_entries() -> serde_json::Value {
+    serde_json::json!({
+        "models": [
+            {
+                "measure": "latency",
+                "metric": "value",
+                "model": {
+                    "test": "t_test",
+                    "min_sample_size": 2,
+                    "max_sample_size": 64,
+                    "lower_boundary": 0.98,
+                    "upper_boundary": 0.98,
+                }
+            }
+        ]
+    })
+}
+
 /// A signed up user with an organization and a project to report into.
 struct Fixture {
     project_slug: String,
@@ -129,6 +150,12 @@ async fn try_report(
     let status = resp.status();
     let body = resp.text().await.expect("Failed to read the response");
     (status, body)
+}
+
+/// One BMF v0 payload: a benchmark, a measure, and a point estimate.
+fn v0(benchmark: &str, value: f64) -> String {
+    serde_json::to_string(&serde_json::json!({ benchmark: { "latency": { "value": value } } }))
+        .expect("the results serialize")
 }
 
 /// One BMF v1 payload for a single benchmark's variants.
@@ -369,7 +396,7 @@ async fn ingest_variants(server: &TestServer) -> (Fixture, i32) {
                     ),
                 ],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -459,7 +486,7 @@ async fn baselines_separate_by_variant() {
                     ),
                 ],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -496,7 +523,7 @@ async fn bare_threshold_checks_only_the_value_name() {
                     }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -944,7 +971,7 @@ async fn report_response_echoes_metrics_and_separates_variants() {
                     ),
                 ],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -974,7 +1001,7 @@ async fn report_response_echoes_metrics_and_separates_variants() {
                 ),
             ],
         )],
-        Some(threshold_models()),
+        Some(threshold_entries()),
         None, Some(1),
     )
     .await;
@@ -1106,9 +1133,10 @@ async fn report_response_echoes_metrics_and_separates_variants() {
 // Variants are minted straight from report content, one row per variant, so
 // they carry the same per project creation ceiling as every other entity a report
 // mints. Without it a harness that interpolates a commit sha or a timestamp into its
-// parameters mints rows, variants, and billable series without bound.
+// parameters mints rows, variants, and billable series without bound. A report past
+// it skips the variants it refuses and keeps the rest.
 #[tokio::test]
-async fn variant_creation_is_rate_limited() {
+async fn variant_creation_past_the_ceiling_is_skipped() {
     // Four creations per project per window. A benchmark is born with its empty
     // variant, which is one of the four, so the fourth new variant under one
     // benchmark is the one that is refused.
@@ -1130,25 +1158,32 @@ async fn variant_creation_is_rate_limited() {
     // Over the ceiling, and in its own project, so what is counted is this project's
     // own variant rows rather than every project's.
     let over = fixture(&server, "over-limit").await;
-    let (status, body) = try_report(&server, &over, 1, variants(4), None, None, Some(1)).await;
+    let report = report(&server, &over, 1, variants(4), None, None, Some(1)).await;
     assert_eq!(
-        status,
-        StatusCode::TOO_MANY_REQUESTS,
-        "over the ceiling: {body}"
-    );
-    assert!(
-        body.contains("Variant"),
-        "the limit that fired is the variant one: {body}"
+        report["warnings"],
+        serde_json::json!([{ "resource": "variant", "action": "skip", "count": 1 }]),
+        "the refused variant is warned of"
     );
 
     // Minting stopped at the ceiling: the birth empty variant plus three variants,
-    // with the fourth refused rather than written.
+    // with the fourth refused rather than written, and it bills nothing.
     let project_id = get_project_id(&server, &over.project_slug);
     let mut conn = server.db_conn();
     assert_eq!(
-        stored_variants(&mut conn, project_id).len(),
-        4,
+        stored_variants(&mut conn, project_id),
+        vec![
+            (ParameterSet::default(), 0),
+            (parameters(r#"{"n":0}"#), 1),
+            (parameters(r#"{"n":1}"#), 1),
+            (parameters(r#"{"n":2}"#), 1),
+        ],
         "no variant is minted past the ceiling"
+    );
+    assert_eq!(metric_rows(&mut conn, project_id).len(), 3);
+    assert_eq!(
+        series_measures(&mut conn, project_id).len(),
+        3,
+        "the refused variant bills no series"
     );
 }
 
@@ -1449,7 +1484,7 @@ async fn alert_json_carries_the_boundary_the_metric_exceeded() {
                     &serde_json::json!({ "latency": { "value": value, "p99": value * 2.0 } }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -1676,7 +1711,7 @@ async fn ingest_two_variants(
                     ),
                 ],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -2009,7 +2044,7 @@ async fn alert_for_bounds(
                     &measures(value),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -3408,7 +3443,7 @@ async fn every_matching_threshold_fires() {
                 &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
             )],
         )],
-        Some(threshold_models()),
+        Some(threshold_entries()),
         None,
         Some(1),
     )
@@ -3439,7 +3474,7 @@ async fn every_matching_threshold_fires() {
                     &serde_json::json!({ "latency": { "value": value } }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -3737,7 +3772,7 @@ async fn metric_row_singular_check_is_the_bare_one() {
                     &serde_json::json!({ "latency": { "value": value } }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -3841,7 +3876,7 @@ async fn singular_check_is_the_bare_one_when_it_is_younger() {
                     &serde_json::json!({ "latency": { "value": value } }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -4049,7 +4084,7 @@ async fn boundaries_name_what_each_threshold_checks() {
                     &serde_json::json!({ "latency": { "value": value } }),
                 )],
             )],
-            Some(threshold_models()),
+            Some(threshold_entries()),
             None,
             Some(1),
         )
@@ -4342,12 +4377,10 @@ fn threshold_with(
         .expect("the matched threshold")
 }
 
-// A report's `thresholds` map names a measure and a model and nothing else, so the
-// threshold it addresses is the bare one. `reset` takes a model away from the bare
-// thresholds it did not name, and from no others: a threshold that checks only some
-// variants is addressed through the thresholds endpoint, so a report cannot reset it.
+// `reset` reaches a threshold that checks only some variants, even one made through the
+// thresholds endpoint.
 #[tokio::test]
-async fn reset_leaves_a_filtered_threshold_alone() {
+async fn reset_strips_a_filtered_threshold() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "reset").await;
 
@@ -4356,16 +4389,10 @@ async fn reset_leaves_a_filtered_threshold_alone() {
         &server,
         &fixture,
         1,
-        vec![v1(
-            "bench",
-            &[entry(
-                &serde_json::json!({ "size": 512 }),
-                &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
-            )],
-        )],
+        vec![v0("bench", FILTERED[0])],
         Some(threshold_models()),
         None,
-        Some(1),
+        None,
     )
     .await;
     create_threshold(
@@ -4388,16 +4415,10 @@ async fn reset_leaves_a_filtered_threshold_alone() {
         &server,
         &fixture,
         2,
-        vec![v1(
-            "bench",
-            &[entry(
-                &serde_json::json!({ "size": 512 }),
-                &serde_json::json!({ "latency": { "value": FILTERED[1] } }),
-            )],
-        )],
+        vec![v0("bench", FILTERED[1])],
         Some(serde_json::json!({ "reset": true })),
         None,
-        Some(1),
+        None,
     )
     .await;
 
@@ -4408,10 +4429,10 @@ async fn reset_leaves_a_filtered_threshold_alone() {
         serde_json::Value::Null,
         "the reset took the bare threshold's model, because the map did not name it"
     );
-    let filtered = threshold_with(&after, &serde_json::json!([{ "size": 512 }]));
-    assert!(
-        filtered["model"]["test"].is_string(),
-        "the filtered threshold keeps its model: no report map addresses it"
+    assert_eq!(
+        threshold_with(&after, &serde_json::json!([{ "size": 512 }]))["model"],
+        serde_json::Value::Null,
+        "the reset took the filtered threshold's model too"
     );
 }
 
@@ -4462,7 +4483,7 @@ async fn start_point_clone_carries_what_each_threshold_checks() {
                 &serde_json::json!({ "latency": { "value": FILTERED[0] } }),
             )],
         )],
-        Some(threshold_models()),
+        Some(threshold_entries()),
         None,
         Some(1),
     )

@@ -716,7 +716,8 @@ export interface JsonNewCallback {
 	/**
 	 * Request headers. Names are case-insensitive: send each name once; if one repeats in
 	 * different case, only one is kept.
-	 * A header named `Content-Type` or `User-Agent` replaces Bencher's default.
+	 * A header named `Content-Type` replaces Bencher's default, and a `User-Agent` follows
+	 * Bencher's.
 	 */
 	headers?: Record<string, string>;
 	/**
@@ -814,22 +815,29 @@ export interface JsonNewPlot {
 	window: Window;
 	/**
 	 * The branches to include in the plot.
-	 * At least one branch must be specified.
+	 * At least one branch must be specified, and at most 8.
 	 */
 	branches: Uuid[];
 	/**
 	 * The testbeds to include in the plot.
-	 * At least one testbed must be specified.
+	 * At least one testbed must be specified, and at most 8.
 	 */
 	testbeds: Uuid[];
 	/**
 	 * The benchmarks to include in the plot.
-	 * At least one benchmark must be specified.
+	 * At least one benchmark must be specified, and at most 8.
 	 */
 	benchmarks: Uuid[];
 	/**
+	 * The variants to include in the plot, as a parameters filter.
+	 * A variant matches when any entry in the filter is a subset of its parameters.
+	 * If not set, or set to an empty list, the plot includes every variant.
+	 * At most 8 entries may be specified.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
+	/**
 	 * The measures to include in the plot.
-	 * At least one measure must be specified.
+	 * At least one measure must be specified, and at most 8.
 	 */
 	measures: Uuid[];
 }
@@ -910,9 +918,10 @@ export interface JsonNewRunJob {
 	/** Backdate the report start time */
 	backdate?: string;
 	/**
-	 * An HTTP request to send once the job finishes: the GitHub Actions dispatch to
-	 * `https://api.github.com/repos/{owner}/{repo}/dispatches` on every plan, and any other request
-	 * only for an organization with a Bencher Plus plan
+	 * An HTTP request to send once the job finishes, only for a claimed project: the GitHub Actions
+	 * dispatch to `https://api.github.com/repos/{owner}/{repo}/dispatches` with a `Bearer` token
+	 * and the `bencher_run` event on any plan, and any other request only for an organization with
+	 * a Bencher Plus plan
 	 */
 	callback?: JsonNewCallback;
 }
@@ -1233,6 +1242,11 @@ export interface JsonPlot {
 	branches: Uuid[];
 	testbeds: Uuid[];
 	benchmarks: Uuid[];
+	/**
+	 * The variants this plot draws, in canonical order.
+	 * Absent when the plot draws every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
 	measures: Uuid[];
 	created: string;
 	modified: string;
@@ -1331,6 +1345,28 @@ export interface JsonReportCounts {
 	alerts: JsonReportAlertsCounts;
 }
 
+/** The resource a report warning counts. */
+export enum ReportWarningResource {
+	Benchmark = "benchmark",
+	Variant = "variant",
+	Measure = "measure",
+	Metric = "metric",
+	Threshold = "threshold",
+}
+
+/** What a report did with the resources a warning counts. */
+export enum ReportWarningAction {
+	/** The report did not ingest them. */
+	Skip = "skip",
+}
+
+/** How many of one resource a report handled with one action. */
+export interface JsonReportWarning {
+	resource: ReportWarningResource;
+	action: ReportWarningAction;
+	count: number;
+}
+
 export interface JsonReport {
 	uuid: Uuid;
 	user?: JsonPubUser;
@@ -1352,6 +1388,11 @@ export interface JsonReport {
 	alerts?: JsonReportAlerts;
 	/** The report counts. */
 	counts?: JsonReportCounts;
+	/**
+	 * What the report skipped instead of ingesting,
+	 * omitted when it skipped nothing and from the reports list endpoint.
+	 */
+	warnings?: JsonReportWarning[];
 	job?: Uuid;
 	created: string;
 }

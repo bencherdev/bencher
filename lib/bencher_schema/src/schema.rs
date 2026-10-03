@@ -213,6 +213,7 @@ diesel::table! {
         x_axis -> Integer,
         y_axis -> Integer,
         window -> BigInt,
+        parameters -> Nullable<Jsonb>,
         created -> BigInt,
         modified -> BigInt,
     }
@@ -317,6 +318,16 @@ diesel::table! {
         iteration -> Integer,
         benchmark_id -> Integer,
         variant_id -> Integer,
+    }
+}
+
+diesel::table! {
+    report_warning (id) {
+        id -> Integer,
+        report_id -> Integer,
+        resource -> Integer,
+        action -> Integer,
+        count -> Integer,
     }
 }
 
@@ -529,6 +540,7 @@ diesel::joinable!(report -> version (version_id));
 diesel::joinable!(report_benchmark -> benchmark (benchmark_id));
 diesel::joinable!(report_benchmark -> report (report_id));
 diesel::joinable!(report_benchmark -> variant (variant_id));
+diesel::joinable!(report_warning -> report (report_id));
 diesel::joinable!(runner_spec -> runner (runner_id));
 diesel::joinable!(runner_spec -> spec (spec_id));
 diesel::joinable!(series_last_seen -> benchmark (benchmark_id));
@@ -576,6 +588,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     project_role,
     report,
     report_benchmark,
+    report_warning,
     runner,
     runner_spec,
     series_last_seen,

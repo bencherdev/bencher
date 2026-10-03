@@ -2,13 +2,14 @@ use super::common::{
     WsStream, assert_ws_closed, associate_runner_spec, connect_channel_ws as connect_channel,
     create_runner, create_test_report, get_project_id, get_runner_id, insert_test_job,
     insert_test_job_with_optional_fields, insert_test_job_with_timeout, insert_test_spec,
-    recv_server_msg as recv_msg, runner_metadata, send_runner_msg as send_msg, set_job_runner_id,
-    set_job_status, ws_url,
+    plan_project, post_metrics, recv_server_msg as recv_msg, runner_metadata,
+    send_runner_msg as send_msg, set_job_runner_id, set_job_status, ws_url,
 };
 use api_runners::{RunnerMessage, ServerMessage};
-use bencher_api_tests::TestServer;
+use bencher_api_tests::{TestProject, TestServer, TestUser};
 use bencher_json::{
-    JobStatus, JobUuid, JsonRunnerKey, PollTimeout, RunnerUuid, runner::JsonIterationOutput,
+    BranchName, JobStatus, JobUuid, JsonRunnerKey, PlanLevel, PollTimeout, RunnerUuid,
+    runner::JsonIterationOutput,
 };
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -90,6 +91,63 @@ fn get_job_status(server: &TestServer, job_uuid: JobUuid) -> JobStatus {
         .select(schema::job::status)
         .first(&mut conn)
         .expect("Failed to get job status")
+}
+
+/// Run a job of the project through to its results and return the status they leave it in.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn complete_job(server: &TestServer, admin: &TestUser, project: &TestProject) -> JobStatus {
+    let runner = create_runner(server, &admin.token, "Runner").await;
+    let runner_key = runner.key.to_string();
+
+    let project_id = get_project_id(server, project.slug.as_ref());
+    let report_id = create_test_report(server, project_id);
+    let (_, spec_id) = insert_test_spec(server);
+    let job_uuid = insert_test_job(server, report_id, spec_id);
+
+    let runner_id = get_runner_id(server, runner.uuid);
+    associate_runner_spec(server, runner_id, spec_id);
+
+    let mut ws = connect_channel(server, runner.uuid, &runner_key).await;
+    let ready = RunnerMessage::Ready {
+        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        runner: Some(runner_metadata()),
+    };
+    send_msg(&mut ws, &ready).await;
+    let response = recv_msg(&mut ws).await;
+    assert!(
+        matches!(response, ServerMessage::Job(_)),
+        "Expected Job, got: {response:?}"
+    );
+
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack { .. }),
+        "Expected Ack, got: {resp:?}"
+    );
+
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            job: job_uuid,
+            results: vec![JsonIterationOutput {
+                exit_code: 0,
+                stdout: None,
+                stderr: None,
+                output: None,
+            }],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack { .. }),
+        "Expected Ack, got: {resp:?}"
+    );
+    let status = get_job_status(server, job_uuid);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+    status
 }
 
 // =============================================================================
@@ -263,6 +321,48 @@ async fn channel_lifecycle_completed() {
     // Connection stays open (no close frame from server).
     // Close from client side.
     ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// A job that already ran has its results processed even when its paid organization is
+/// past both the claimed daily metrics limit and its own.
+#[tokio::test]
+async fn channel_completed_for_a_paid_org_past_its_daily_metrics_limit() {
+    let server = TestServer::new_with_creation_and_plus_limits(u32::MAX, 4, 4).await;
+    let branch: BranchName = "metrics".parse().expect("Invalid branch name");
+    let (admin, project) = plan_project(&server, "paid", Some(PlanLevel::Enterprise)).await;
+    let (status, body) = post_metrics(&server, &admin, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let status = complete_job(&server, &admin, &project).await;
+    assert_eq!(status, JobStatus::Processed);
+}
+
+/// A job's results are refused once its organization with no plan is past its daily
+/// metrics limit.
+#[tokio::test]
+async fn channel_completed_for_an_org_with_no_plan_past_its_daily_metrics_limit() {
+    let server = TestServer::new_with_creation_limits(u32::MAX, 4).await;
+    let branch: BranchName = "metrics".parse().expect("Invalid branch name");
+    let (admin, project) = plan_project(&server, "no-plan", None).await;
+    let (status, body) = post_metrics(&server, &admin, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let status = complete_job(&server, &admin, &project).await;
+    assert_eq!(status, JobStatus::Failed);
+}
+
+/// An organization licensed at the Free level is not paid, so a job's results are refused
+/// once it is past its daily metrics limit.
+#[tokio::test]
+async fn channel_completed_for_a_free_license_past_its_daily_metrics_limit() {
+    let server = TestServer::new_with_creation_limits(u32::MAX, 4).await;
+    let branch: BranchName = "metrics".parse().expect("Invalid branch name");
+    let (admin, project) = plan_project(&server, "free-license", Some(PlanLevel::Free)).await;
+    let (status, body) = post_metrics(&server, &admin, &project, &branch, 4).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let status = complete_job(&server, &admin, &project).await;
+    assert_eq!(status, JobStatus::Failed);
 }
 
 /// Completed lifecycle records a non-zero job duration in `job_duration_by_report`.

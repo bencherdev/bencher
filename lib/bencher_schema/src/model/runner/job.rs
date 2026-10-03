@@ -28,7 +28,7 @@ use crate::{
         organization::{OrganizationId, plan::PlanKind},
         project::{
             ProjectId, QueryProject,
-            report::{QueryReport, ReportId},
+            report::{QueryReport, ReportId, warning::ReportWarnings},
         },
         runner::{InsertJobCallback, QueryJobCallbackView, QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
@@ -117,7 +117,6 @@ impl QueryJob {
     ///
     /// Looks up the report and branch, parses benchmark output via the adapter,
     /// creates metrics/alerts, checks plan usage, and updates the report timestamps.
-    #[expect(clippy::too_many_lines, reason = "sequential job processing steps")]
     pub async fn process_results(
         &self,
         log: &Logger,
@@ -143,14 +142,7 @@ impl QueryJob {
 
         // TODO: Add a RunnerKey variant to ApiActor so runner-authenticated requests use auth_conn
         let api_actor = ApiActor::Public(PublicUser::Public(None));
-        let plan_kind = PlanKind::new_for_project(
-            context,
-            context.biller.as_ref(),
-            &context.licensor,
-            &query_project,
-            &api_actor,
-        )
-        .await?;
+        let plan_kind = PlanKind::new_for_job_results(context, &query_project, &api_actor).await?;
 
         // Build results array from per-iteration output.
         // File output takes precedence (mirrors CLI CommandToFile mode):
@@ -194,6 +186,7 @@ impl QueryJob {
                 query_report.adapter,
                 settings,
                 self.config.bmf_version.unwrap_or_default(),
+                ReportWarnings::default(),
                 plan_kind,
                 #[cfg(feature = "otel")]
                 self.priority,
@@ -434,7 +427,15 @@ impl PendingInsertJob {
         // 5. Seal the callback to the job now, so no crypto runs while the writer lock is held
         let uuid = JobUuid::new();
         let callback = callback
-            .map(|callback| PendingCallback::new(&context.callback_key, uuid, plan_kind, &callback))
+            .map(|callback| {
+                PendingCallback::new(
+                    &context.callback_key,
+                    uuid,
+                    plan_kind,
+                    is_claimed,
+                    &callback,
+                )
+            })
             .transpose()?;
 
         Ok(Self {
@@ -507,8 +508,8 @@ impl PendingInsertJob {
     }
 }
 
-/// A run's callback: sealed to its job for an organization with a paid plan, or for the GitHub Actions
-/// dispatch on github.com on any plan, and skipped otherwise.
+/// A run's callback: sealed to its job for a claimed project, on a paid plan or as the GitHub Actions
+/// dispatch `bencher run` composes, and skipped otherwise.
 enum PendingCallback {
     Sealed(SealedRequest),
     Skipped,
@@ -519,9 +520,10 @@ impl PendingCallback {
         key: &CallbackKey,
         job: JobUuid,
         plan_kind: &PlanKind,
+        is_claimed: bool,
         callback: &JsonNewCallback,
     ) -> Result<Self, HttpError> {
-        if plan_kind.is_paid() || callback.is_github_dispatch() {
+        if is_claimed && (plan_kind.is_paid() || callback.is_bencher_run_dispatch()) {
             let plaintext = serde_json::to_vec(callback).map_err(|e| {
                 issue_error(
                     "Failed to serialize job callback",
@@ -929,6 +931,32 @@ mod tests {
         .unwrap()
     }
 
+    /// The GitHub Actions dispatch `bencher run` composes, but with `authorization` and `event_type`.
+    fn dispatch(authorization: &str, event_type: &str) -> JsonNewCallback {
+        JsonNewCallback::new(
+            "https://api.github.com/repos/owner/repo/dispatches",
+            [
+                ("Accept", "application/vnd.github+json"),
+                ("Authorization", authorization),
+                ("X-GitHub-Api-Version", "2022-11-28"),
+            ]
+            .map(|(name, value)| (name.to_owned(), value.to_owned())),
+            Some(serde_json::json!({
+                "event_type": event_type,
+                "client_payload": { "bencher": { "job": "{{ job.uuid }}" } },
+            })),
+        )
+        .unwrap()
+    }
+
+    fn bencher_run_dispatch() -> JsonNewCallback {
+        dispatch("Bearer token", "bencher_run")
+    }
+
+    fn unpaid_plans() -> [PlanKind; 2] {
+        [PlanKind::None, licensed_plan(PlanLevel::Free)]
+    }
+
     fn callback_key() -> CallbackKey {
         CallbackKey::new(&"callback-test-secret".parse().unwrap()).unwrap()
     }
@@ -944,7 +972,7 @@ mod tests {
             licensed_plan(PlanLevel::Enterprise),
         ] {
             let PendingCallback::Sealed(sealed) =
-                PendingCallback::new(&key, job, &plan_kind, &callback()).unwrap()
+                PendingCallback::new(&key, job, &plan_kind, true, &callback()).unwrap()
             else {
                 panic!("a paid plan seals its callback");
             };
@@ -961,20 +989,15 @@ mod tests {
     }
 
     #[test]
-    fn an_unpaid_plan_seals_a_github_dispatch() {
+    fn an_unpaid_plan_seals_the_bencher_run_dispatch() {
         let key = callback_key();
         let job = JobUuid::new();
-        let dispatch = JsonNewCallback::new(
-            "https://api.github.com/repos/owner/repo/dispatches",
-            [("Authorization".to_owned(), "Bearer token".to_owned())],
-            None,
-        )
-        .unwrap();
-        for plan_kind in [PlanKind::None, licensed_plan(PlanLevel::Free)] {
+        let dispatch = bencher_run_dispatch();
+        for plan_kind in unpaid_plans() {
             let PendingCallback::Sealed(sealed) =
-                PendingCallback::new(&key, job, &plan_kind, &dispatch).unwrap()
+                PendingCallback::new(&key, job, &plan_kind, true, &dispatch).unwrap()
             else {
-                panic!("every plan seals a GitHub dispatch");
+                panic!("a claimed project seals the bencher_run dispatch on any plan");
             };
             assert_eq!(
                 key.open(job, &sealed).unwrap(),
@@ -985,14 +1008,52 @@ mod tests {
 
     #[test]
     fn an_unpaid_plan_skips_any_other_callback() {
-        for plan_kind in [PlanKind::None, licensed_plan(PlanLevel::Free)] {
-            let pending =
-                PendingCallback::new(&callback_key(), JobUuid::new(), &plan_kind, &callback())
-                    .unwrap();
-            assert!(
-                matches!(pending, PendingCallback::Skipped),
-                "an unpaid plan seals no other callback"
-            );
+        for plan_kind in unpaid_plans() {
+            for (callback, what) in [
+                (callback(), "another URL"),
+                (
+                    dispatch("Basic dXNlcjpwYXNz", "bencher_run"),
+                    "a dispatch without a bearer token",
+                ),
+                (
+                    dispatch("Bearer token", "deploy"),
+                    "a dispatch of another event",
+                ),
+            ] {
+                let pending = PendingCallback::new(
+                    &callback_key(),
+                    JobUuid::new(),
+                    &plan_kind,
+                    true,
+                    &callback,
+                )
+                .unwrap();
+                assert!(matches!(pending, PendingCallback::Skipped), "{what}");
+            }
+        }
+    }
+
+    #[test]
+    fn an_unclaimed_project_skips_even_the_bencher_run_dispatch() {
+        for plan_kind in [
+            PlanKind::None,
+            licensed_plan(PlanLevel::Free),
+            metered_plan(),
+        ] {
+            for (callback, what) in [
+                (bencher_run_dispatch(), "the bencher_run dispatch"),
+                (callback(), "another URL"),
+            ] {
+                let pending = PendingCallback::new(
+                    &callback_key(),
+                    JobUuid::new(),
+                    &plan_kind,
+                    false,
+                    &callback,
+                )
+                .unwrap();
+                assert!(matches!(pending, PendingCallback::Skipped), "{what}");
+            }
         }
     }
 
@@ -1030,7 +1091,9 @@ mod tests {
                 config: config.clone(),
                 timeout: Timeout::PLUS_DEFAULT,
                 priority: Priority::Plus,
-                callback: Some(PendingCallback::new(&key, uuid, &plan_kind, &callback()).unwrap()),
+                callback: Some(
+                    PendingCallback::new(&key, uuid, &plan_kind, true, &callback()).unwrap(),
+                ),
             };
             conn.immediate_transaction(|conn| {
                 pending_job.insert(conn, fixture.report_id, DateTime::TEST)

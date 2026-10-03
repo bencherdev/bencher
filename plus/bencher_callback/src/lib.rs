@@ -8,5 +8,6 @@ pub use key::{CallbackKey, CallbackKeyError};
 pub use sealed_request::SealedRequest;
 pub use sender::{
     AddressClass, CallbackAttempt, CallbackAttemptClass, CallbackBlock, CallbackBlockReason,
-    CallbackClient, CallbackFailure, CallbackFinish, CallbackRequest, CallbackSender, error_chain,
+    CallbackClient, CallbackCredential, CallbackFailure, CallbackFinish, CallbackHost,
+    CallbackRequest, CallbackSender, RateLimit, error_chain,
 };

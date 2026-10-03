@@ -14,7 +14,9 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 
 1. Создайте файл `workflow` GitHub Actions.
    (пример: `.github/workflows/pr_benchmarks.yml`)
-2. Запустите на событиях `pull_request`:
+2. Назовите этот workflow.
+   (пример: `name: PR Benchmarks with Bencher`)
+3. Запустите на событиях `pull_request`:
    - `opened` - Pull request был создан.
    - `reopened` - Ранее закрытый pull request был переоткрыт.
    - `edited` - Название или тело pull request было отредактировано, или базовая ветка pull request была изменена.
@@ -24,13 +26,13 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
    См. [документацию GitHub Actions `on`][github actions on]
    и [документацию GitHub Actions `pull_request`][github action pull_request] для полного обзора.
    (пример: `on: pull_request: types: [opened, reopened, edited, synchronize]`)
-3. Создайте `job` GitHub Actions.
+4. Создайте `job` GitHub Actions.
    (пример: `jobs: benchmark_pr_branch`)
-4. Запустите на событиях `pull_request` только в том случае, если pull request из того же репозитория.
+5. Запустите на событиях `pull_request` только в том случае, если pull request из того же репозитория.
    ⚠️ НЕ УДАЛЯЙТЕ ЭТУ СТРОКУ!
    Для обработки Fork PRs см. [Pull Requests из Fork][pull requests from forks] ниже.
    (пример: `if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository`)
-5. Установите [разрешения для `GITHUB_TOKEN`][github token permissions]
+6. Установите [разрешения для `GITHUB_TOKEN`][github token permissions]
    на `write` для `checks` и `pull-requests`.
    В зависимости от настроек GitHub, это может не требоваться.
    Но для всех организаций и личных репозиториев,
@@ -39,29 +41,29 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
    См. [документацию GitHub][github token permissions security]
    для полного обзора.
    (пример: `permissions: checks: write pull-requests: write`)
-6. Установите тип машины, на которой будет выполняться job.
+7. Установите тип машины, на которой будет выполняться job.
    См. [документацию GitHub Actions `runs-on`][github actions runs-on]
    для полного обзора.
    (пример: `runs-on: ubuntu-latest`)
-7. Проверьте исходный код ветки PR.
+8. Проверьте исходный код ветки PR.
    (пример: `uses: actions/checkout@v6`)
-8. Установите Bencher CLI с использованием [GitHub Action][bencher cli github action].
+9. Установите Bencher CLI с использованием [GitHub Action][bencher cli github action].
    (пример: `uses: bencherdev/bencher@main`)
-9. Используйте <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> CLI подкоманду
-   для запуска тестов производительности ветки pull request.
-   См. [подкоманду `bencher run` CLI][bencher run] для полного обзора.
-   (пример: `bencher run`)
-10. Установите опцию `--project` на идентификатор проекта.
+10. Используйте <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> CLI подкоманду
+    для запуска тестов производительности ветки pull request.
+    См. [подкоманду `bencher run` CLI][bencher run] для полного обзора.
+    (пример: `bencher run`)
+11. Установите опцию `--project` на идентификатор проекта.
     См. [документацию `--project`][project option] для подробностей.
     (пример: `--project project-abc4567-wxyz123456789`)
-11. Установите опцию `--key` на **секрет** репозитория `BENCHER_API_KEY`.
+12. Установите опцию `--key` на **секрет** репозитория `BENCHER_API_KEY`.
     См. [документацию `--key`][key option] для подробностей.
     (пример: `--key '${{ secrets.BENCHER_API_KEY }}'`)
-12. Установите опцию `--branch` на имя ветки PR
+13. Установите опцию `--branch` на имя ветки PR
     используя [переменную окружения `GITHUB_HEAD_REF` по умолчанию GitHub Actions][github default environment variables].
     См. [документацию `--branch`][branch option] для полного обзора.
     (пример: `--branch "$GITHUB_HEAD_REF"`)
-13. Установите начальную точку для ветки PR:
+14. Установите начальную точку для ветки PR:
     1. Установите опцию `--start-point` на стартовую точку ветки PR
     используя [переменную окружения `GITHUB_BASE_REF` по умолчанию GitHub Actions][github default environment variables].
     См. [документацию `--start-point`][start point] для полного обзора.
@@ -77,21 +79,21 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
     Это предотвратит дрейф данных тестов производительности.
     См. [документацию `--start-point-reset`][start point reset] для полного обзора.
     (пример: `--start-point-reset`)
-14. Установите опцию `--testbed` на имя Testbed.
+15. Установите опцию `--testbed` на имя Testbed.
     Это, вероятно, должно совпадать с машиной, выбранной в `runs-on`.
     См. [документацию `--testbed`][testbed option] для подробностей.
     (пример: `--testbed ubuntu-latest`)
-15. Установите флаг `--error-on-alert`, чтобы команда завершалась неудачей, если генерируется предупреждение.
+16. Установите флаг `--error-on-alert`, чтобы команда завершалась неудачей, если генерируется предупреждение.
    См. [документацию `--error-on-alert`][alert err] для полного обзора.
    (пример: `--error-on-alert`)
-16. Установите опцию `--adapter` на [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+17. Установите опцию `--adapter` на [Bencher Metric Format JSON (`json`)][bmf], который генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    См. [адаптеры тестовых сред][adapter json] для полного обзора.
    (пример: `--adapter json`)
-17. Установите опцию `--github-actions` на токен аутентификации API GitHub для публикации результатов как проверка GitHub и комментарий к Pull Request с использованием
+18. Установите опцию `--github-actions` на токен аутентификации API GitHub для публикации результатов как проверка GitHub и комментарий к Pull Request с использованием
     [переменной окружения `GITHUB_TOKEN`][github token].
     См. [документацию `--github-actions`][github actions option] для подробностей.
     (пример: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-18. Укажите аргументы команды теста производительности.
+19. Укажите аргументы команды теста производительности.
     См. [команду теста производительности][command argument] для полного обзора.
     (пример: `bencher mock`)
 
