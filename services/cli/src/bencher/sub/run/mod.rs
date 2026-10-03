@@ -356,16 +356,16 @@ impl Run {
             && self
                 .callback_notice(&json_report, job_uuid, ci_check.as_ref())
                 .await;
-        let Some(ci) = &self.ci else {
-            return self.display_and_check_alerts(json_report, ci_check).await;
-        };
-        if let Some(check) = ci_check.take()
+        if let Some(ci) = &self.ci
+            && let Some(check) = ci_check.take()
             && skipped
         {
             ci.complete_unfired(check, &json_report.project.name, self.log)
                 .await;
         }
-        self.display_report(json_report).await.map(drop)
+        self.display_report_with_pending(json_report, true)
+            .await
+            .map(drop)
     }
 
     async fn generate_report(&self) -> Result<Option<JsonNewRun>, RunError> {
@@ -743,6 +743,14 @@ impl Run {
     }
 
     async fn display_report(&self, json_report: JsonReport) -> Result<ReportComment, RunError> {
+        self.display_report_with_pending(json_report, false).await
+    }
+
+    async fn display_report_with_pending(
+        &self,
+        json_report: JsonReport,
+        pending: bool,
+    ) -> Result<ReportComment, RunError> {
         let console_url = self
             .backend
             .get_console_url()
@@ -753,7 +761,8 @@ impl Run {
             .as_ref()
             .map_or_else(|| "cli".to_owned(), Ci::source);
         let report_comment =
-            ReportComment::new(console_url, json_report, self.sub_adapter.into(), source);
+            ReportComment::new(console_url, json_report, self.sub_adapter.into(), source)
+                .with_pending(pending);
 
         let report_str = match self.format {
             Format::Human => report_comment.human(),
