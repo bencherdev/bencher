@@ -815,28 +815,29 @@ export interface JsonNewPlot {
 	window: Window;
 	/**
 	 * The branches to include in the plot.
-	 * At least one branch must be specified.
+	 * At least one branch must be specified, and at most 8.
 	 */
 	branches: Uuid[];
 	/**
 	 * The testbeds to include in the plot.
-	 * At least one testbed must be specified.
+	 * At least one testbed must be specified, and at most 8.
 	 */
 	testbeds: Uuid[];
 	/**
 	 * The benchmarks to include in the plot.
-	 * At least one benchmark must be specified.
+	 * At least one benchmark must be specified, and at most 8.
 	 */
 	benchmarks: Uuid[];
 	/**
 	 * The variants to include in the plot, as a parameters filter.
 	 * A variant matches when any entry in the filter is a subset of its parameters.
 	 * If not set, or set to an empty list, the plot includes every variant.
+	 * At most 8 entries may be specified.
 	 */
 	parameters?: Record<string, string | number | boolean>[];
 	/**
 	 * The measures to include in the plot.
-	 * At least one measure must be specified.
+	 * At least one measure must be specified, and at most 8.
 	 */
 	measures: Uuid[];
 }

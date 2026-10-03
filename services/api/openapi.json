@@ -6448,7 +6448,7 @@
           "perf"
         ],
         "summary": "Query project performance metrics",
-        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. Each permutation returns one line per variant of its benchmark, narrowed by the `parameters` filter when one is given. Only the first 8 entries of each dimension list are queried, the `parameters` filter included. A `parameters` entry that is not a valid parameter set is dropped, and when every entry is dropped there are no lines. There is a limit of 64 permutations and 64 lines for a single request. A permutation with nothing to plot returns no line, but it still counts against the permutation limit. If there is no `start_time`, then the last four weeks are queried, back from the `end_time` when there is one and from now when there is not. The response always states the window that was queried. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
+        "description": "Query the performance metrics for a project. The query results are every permutation of each branch, testbed, benchmark, and measure. Each permutation returns one line per variant of its benchmark, narrowed by the `parameters` filter when one is given. Only the first 8 entries of each dimension list are queried, and only the first 8 entries of the `parameters` filter are read. A `parameters` entry that is not a valid parameter set is dropped, and when every entry is dropped there are no lines. There is a limit of 64 permutations and 64 lines for a single request. A permutation with nothing to plot returns no line, but it still counts against the permutation limit. If there is no `start_time`, then the last four weeks are queried, back from the `end_time` when there is one and from now when there is not. The response always states the window that was queried. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_perf_get",
         "parameters": [
           {
@@ -8251,7 +8251,7 @@
           "thresholds"
         ],
         "summary": "Create a threshold",
-        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, parameters filter, measure, and metric name. A threshold with no parameters filter checks every variant, and a threshold that names no metric checks the conventional `value` name. Every threshold that matches a metric row runs: there is no winner among them.",
+        "description": "Create a threshold for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. There can only be one threshold for any unique combination of: branch, testbed, parameters filter, measure, and metric name. A threshold with no parameters filter checks every variant, and a threshold that names no metric checks the conventional `value` name. Every threshold that matches a metric row runs: there is no winner among them. A branch, testbed, and measure can have at most 64 thresholds with a model.",
         "operationId": "proj_threshold_post",
         "parameters": [
           {
@@ -8430,7 +8430,7 @@
           "thresholds"
         ],
         "summary": "Update a threshold",
-        "description": "Update a threshold for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active.",
+        "description": "Update a threshold for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project. The new model will be added to the threshold and used going forward. The old model will be replaced but still show up in the report history and alerts created when it was active. A threshold with no model can only be given one while its branch, testbed, and measure have fewer than 64 thresholds with a model.",
         "operationId": "proj_threshold_put",
         "parameters": [
           {
@@ -14323,18 +14323,20 @@
         "type": "object",
         "properties": {
           "benchmarks": {
-            "description": "The benchmarks to include in the plot. At least one benchmark must be specified.",
+            "description": "The benchmarks to include in the plot. At least one benchmark must be specified, and at most 8.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BenchmarkUuid"
-            }
+            },
+            "maxItems": 8
           },
           "branches": {
-            "description": "The branches to include in the plot. At least one branch must be specified.",
+            "description": "The branches to include in the plot. At least one branch must be specified, and at most 8.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BranchUuid"
-            }
+            },
+            "maxItems": 8
           },
           "index": {
             "nullable": true,
@@ -14354,15 +14356,16 @@
             "type": "boolean"
           },
           "measures": {
-            "description": "The measures to include in the plot. At least one measure must be specified.",
+            "description": "The measures to include in the plot. At least one measure must be specified, and at most 8.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MeasureUuid"
-            }
+            },
+            "maxItems": 8
           },
           "parameters": {
             "nullable": true,
-            "description": "The variants to include in the plot, as a parameters filter. A variant matches when any entry in the filter is a subset of its parameters. If not set, or set to an empty list, the plot includes every variant.",
+            "description": "The variants to include in the plot, as a parameters filter. A variant matches when any entry in the filter is a subset of its parameters. If not set, or set to an empty list, the plot includes every variant. At most 8 entries may be specified.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ParameterFilter"
@@ -14370,11 +14373,12 @@
             ]
           },
           "testbeds": {
-            "description": "The testbeds to include in the plot. At least one testbed must be specified.",
+            "description": "The testbeds to include in the plot. At least one testbed must be specified, and at most 8.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TestbedUuid"
-            }
+            },
+            "maxItems": 8
           },
           "title": {
             "nullable": true,
@@ -15921,19 +15925,21 @@
         "properties": {
           "benchmarks": {
             "nullable": true,
-            "description": "The benchmarks to include in the plot. Replaces the current benchmarks for the plot. At least one benchmark must be specified.",
+            "description": "The benchmarks to include in the plot. Replaces the current benchmarks for the plot. At least one benchmark must be specified, and at most 8.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BenchmarkUuid"
-            }
+            },
+            "maxItems": 8
           },
           "branches": {
             "nullable": true,
-            "description": "The branches to include in the plot. Replaces the current branches for the plot. At least one branch must be specified.",
+            "description": "The branches to include in the plot. Replaces the current branches for the plot. At least one branch must be specified, and at most 8.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BranchUuid"
-            }
+            },
+            "maxItems": 8
           },
           "index": {
             "nullable": true,
@@ -15956,15 +15962,16 @@
           },
           "measures": {
             "nullable": true,
-            "description": "The measures to include in the plot. Replaces the current measures for the plot. At least one measure must be specified.",
+            "description": "The measures to include in the plot. Replaces the current measures for the plot. At least one measure must be specified, and at most 8.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MeasureUuid"
-            }
+            },
+            "maxItems": 8
           },
           "parameters": {
             "nullable": true,
-            "description": "The variants to include in the plot, as a parameters filter. Replaces the current filter for the plot. Set to `null` or to an empty list to include every variant again.",
+            "description": "The variants to include in the plot, as a parameters filter. Replaces the current filter for the plot. Set to `null` or to an empty list to include every variant again. At most 8 entries may be specified.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ParameterFilter"
@@ -15973,11 +15980,12 @@
           },
           "testbeds": {
             "nullable": true,
-            "description": "The testbeds to include in the plot. Replaces the current testbeds for the plot. At least one testbed must be specified.",
+            "description": "The testbeds to include in the plot. Replaces the current testbeds for the plot. At least one testbed must be specified, and at most 8.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TestbedUuid"
-            }
+            },
+            "maxItems": 8
           },
           "title": {
             "nullable": true,
@@ -16035,14 +16043,16 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BenchmarkUuid"
-            }
+            },
+            "maxItems": 8
           },
           "branches": {
             "nullable": true,
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/BranchUuid"
-            }
+            },
+            "maxItems": 8
           },
           "index": {
             "nullable": true,
@@ -16065,7 +16075,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MeasureUuid"
-            }
+            },
+            "maxItems": 8
           },
           "parameters": {
             "nullable": true,
@@ -16080,7 +16091,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/TestbedUuid"
-            }
+            },
+            "maxItems": 8
           },
           "title": {
             "type": "string",

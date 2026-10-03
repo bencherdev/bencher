@@ -97,7 +97,7 @@ pub async fn proj_perf_options(
 /// Each permutation returns one line per variant of its benchmark,
 /// narrowed by the `parameters` filter when one is given.
 /// Only the first 8 entries of each dimension list are queried,
-/// the `parameters` filter included.
+/// and only the first 8 entries of the `parameters` filter are read.
 /// A `parameters` entry that is not a valid parameter set is dropped,
 /// and when every entry is dropped there are no lines.
 /// There is a limit of 64 permutations and 64 lines for a single request.

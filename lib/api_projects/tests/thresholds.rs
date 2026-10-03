@@ -10,23 +10,26 @@
 )]
 //! Integration tests for project threshold endpoints.
 
+use bencher_api_tests::{TestServer, TestUser, helpers::get_project_id};
 #[cfg(feature = "plus")]
-use bencher_api_tests::helpers::get_project_id;
-use bencher_api_tests::{TestServer, TestUser};
-#[cfg(feature = "plus")]
-use bencher_json::ThresholdUuid;
-use bencher_json::{JsonThreshold, JsonThresholds, ModelUuid};
-#[cfg(feature = "plus")]
+use bencher_json::{JsonReport, JsonReportIterationCounts};
+use bencher_json::{
+    JsonThreshold, JsonThresholds, MetricName, ModelUuid, ThresholdUuid,
+    project::threshold::MAX_ACTIVE_THRESHOLDS,
+};
 use bencher_schema::{
     model::project::{
         ProjectId,
-        threshold::{InsertThreshold, QueryThreshold},
+        branch::BranchId,
+        threshold::{
+            InsertThreshold, QueryThreshold, ThresholdId,
+            model::{InsertModel, ModelId, QueryModel},
+        },
     },
     schema,
 };
-#[cfg(feature = "plus")]
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-use http::StatusCode;
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
+use http::{Method, StatusCode};
 
 // GET /v0/projects/{project}/thresholds - list thresholds
 #[tokio::test]
@@ -604,16 +607,16 @@ async fn create_threshold_iqr_max_sample_size_one_rejected() {
     );
 }
 
-#[cfg(feature = "plus")]
-async fn post_json(
+async fn send_json(
     server: &TestServer,
     user: &TestUser,
+    method: Method,
     path: &str,
     body: &serde_json::Value,
 ) -> (StatusCode, String) {
     let resp = server
         .client
-        .post(server.api_url(path))
+        .request(method, server.api_url(path))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
@@ -629,7 +632,6 @@ async fn post_json(
 
 /// A project with `usage` thresholds, seeded through the threshold endpoint so that no report is
 /// spent: one bare threshold, which a report can address, and the rest one per metric name.
-#[cfg(feature = "plus")]
 async fn project_with_thresholds(
     server: &TestServer,
     label: &str,
@@ -655,13 +657,12 @@ async fn project_with_thresholds(
             "upper_boundary": 0.05,
         });
         let path = format!("/v0/projects/{project_slug}/thresholds");
-        let (status, body) = post_json(server, &user, &path, &threshold).await;
+        let (status, body) = send_json(server, &user, Method::POST, &path, &threshold).await;
         assert_eq!(status, StatusCode::CREATED, "seed threshold {n}: {body}");
     }
     (user, project_slug)
 }
 
-#[cfg(feature = "plus")]
 async fn post_report(
     server: &TestServer,
     user: &TestUser,
@@ -677,7 +678,7 @@ async fn post_report(
         "thresholds": thresholds,
     });
     let path = format!("/v0/projects/{project_slug}/reports");
-    post_json(server, user, &path, &report).await
+    send_json(server, user, Method::POST, &path, &report).await
 }
 
 /// Report thresholds that create one threshold on each of `count` new measures.
@@ -716,21 +717,29 @@ async fn threshold_count(
     thresholds.0.len()
 }
 
-/// Every resource shares one limit, so the refusal has to name the threshold ceiling.
+/// The report was created with its one result, whatever became of its thresholds.
 #[cfg(feature = "plus")]
-fn assert_threshold_ceiling(status: StatusCode, body: &str) {
-    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
-    assert!(
-        body.contains("for Threshold creation"),
-        "the threshold ceiling fired: {body}"
+fn assert_report_results(status: StatusCode, body: &str) {
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let report: JsonReport = serde_json::from_str(body).expect("Failed to parse the report");
+    assert_eq!(
+        report.counts.results,
+        vec![JsonReportIterationCounts {
+            benchmarks: 1,
+            measures: 1,
+        }],
+        "the report kept its results"
     );
+}
+
+fn project_id(server: &TestServer, project_slug: &str) -> ProjectId {
+    ProjectId::try_from_raw(get_project_id(server, project_slug)).expect("valid project ID")
 }
 
 /// The API refuses a threshold past the ceiling, so this one goes straight into the database.
 #[cfg(feature = "plus")]
 fn insert_threshold_past_the_ceiling(server: &TestServer, project_slug: &str) {
-    let project_id =
-        ProjectId::try_from_raw(get_project_id(server, project_slug)).expect("valid project ID");
+    let project_id = project_id(server, project_slug);
     let mut conn = server.db_conn();
     let QueryThreshold {
         branch_id,
@@ -761,6 +770,342 @@ fn insert_threshold_past_the_ceiling(server: &TestServer, project_slug: &str) {
         .expect("Failed to insert a threshold");
 }
 
+/// The API stops at the cap on active thresholds, so these go straight into the database: `count`
+/// more thresholds with a model beside the first seed threshold, each copying its model.
+///
+/// They go in by descending UUID, so their row order is not their UUID order.
+fn insert_active_thresholds(server: &TestServer, project_slug: &str, count: usize) {
+    let project_id = project_id(server, project_slug);
+    let mut conn = server.db_conn();
+    let seed: QueryThreshold = schema::threshold::table
+        .filter(schema::threshold::project_id.eq(project_id))
+        .order(schema::threshold::id.asc())
+        .first(&mut conn)
+        .expect("Failed to load a seed threshold");
+    let model = schema::model::table
+        .filter(schema::model::threshold_id.eq(seed.id))
+        .select(QueryModel::as_select())
+        .first(&mut conn)
+        .expect("Failed to load the seed model");
+    let mut uuids = std::iter::repeat_with(ThresholdUuid::new)
+        .take(count)
+        .collect::<Vec<_>>();
+    uuids.sort_unstable_by(|left, right| right.cmp(left));
+    for (n, uuid) in uuids.into_iter().enumerate() {
+        diesel::insert_into(schema::threshold::table)
+            .values(InsertThreshold {
+                uuid,
+                project_id,
+                branch_id: seed.branch_id,
+                testbed_id: seed.testbed_id,
+                parameters: None,
+                measure_id: seed.measure_id,
+                metric: Some(format!("direct-{n}").parse().expect("valid metric name")),
+                model_id: None,
+                created: seed.created,
+                modified: seed.modified,
+            })
+            .execute(&mut conn)
+            .expect("Failed to insert a threshold");
+        let threshold_id: ThresholdId = schema::threshold::table
+            .filter(schema::threshold::uuid.eq(uuid))
+            .select(schema::threshold::id)
+            .first(&mut conn)
+            .expect("Failed to load the threshold id");
+        let insert_model = InsertModel::with_threshold_id(model, threshold_id);
+        diesel::insert_into(schema::model::table)
+            .values(&insert_model)
+            .execute(&mut conn)
+            .expect("Failed to insert a model");
+        let model_id: ModelId = schema::model::table
+            .filter(schema::model::uuid.eq(insert_model.uuid))
+            .select(schema::model::id)
+            .first(&mut conn)
+            .expect("Failed to load the model id");
+        diesel::update(schema::threshold::table.filter(schema::threshold::id.eq(threshold_id)))
+            .set(schema::threshold::model_id.eq(model_id))
+            .execute(&mut conn)
+            .expect("Failed to give the threshold its model");
+    }
+}
+
+/// Every threshold on a branch: its UUID, the metric name it checks, and whether it carries a
+/// model.
+fn branch_thresholds(
+    server: &TestServer,
+    project_slug: &str,
+    branch: &str,
+) -> Vec<(ThresholdUuid, String, bool)> {
+    let project_id = project_id(server, project_slug);
+    let mut conn = server.db_conn();
+    let branch_id: BranchId = schema::branch::table
+        .filter(schema::branch::project_id.eq(project_id))
+        .filter(schema::branch::name.eq(branch))
+        .select(schema::branch::id)
+        .first(&mut conn)
+        .expect("Failed to load the branch");
+    schema::threshold::table
+        .filter(schema::threshold::branch_id.eq(branch_id))
+        .select((
+            schema::threshold::uuid,
+            schema::threshold::metric,
+            schema::threshold::model_id,
+        ))
+        .load::<(ThresholdUuid, Option<MetricName>, Option<ModelId>)>(&mut conn)
+        .expect("Failed to load the thresholds")
+        .into_iter()
+        .map(|(uuid, metric, model_id)| {
+            (
+                uuid,
+                metric.map_or_else(|| "value".to_owned(), |metric| metric.to_string()),
+                model_id.is_some(),
+            )
+        })
+        .collect()
+}
+
+/// The UUIDs of every threshold in a project.
+async fn threshold_uuids(
+    server: &TestServer,
+    user: &TestUser,
+    project_slug: &str,
+) -> Vec<ThresholdUuid> {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{project_slug}/thresholds?per_page=255"
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let thresholds: JsonThresholds = resp.json().await.expect("Failed to parse thresholds");
+    thresholds
+        .0
+        .into_iter()
+        .map(|threshold| threshold.uuid)
+        .collect()
+}
+
+fn new_threshold(metric: &str) -> serde_json::Value {
+    serde_json::json!({
+        "branch": "ssize-branch",
+        "testbed": "ssize-testbed",
+        "measure": "latency",
+        "metric": metric,
+        "test": "percentage",
+        "upper_boundary": 0.05,
+    })
+}
+
+// A branch, testbed, and measure carry at most `MAX_ACTIVE_THRESHOLDS` thresholds with a model, and
+// one whose model was removed no longer counts.
+#[tokio::test]
+async fn active_cap_refuses_a_create_past_it() {
+    let server = TestServer::new().await;
+    let (user, project_slug) =
+        project_with_thresholds(&server, "capcreate", MAX_ACTIVE_THRESHOLDS).await;
+    let path = format!("/v0/projects/{project_slug}/thresholds");
+
+    let (status, body) =
+        send_json(&server, &user, Method::POST, &path, &new_threshold("past")).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+
+    let stripped = threshold_uuids(&server, &user, &project_slug)
+        .await
+        .into_iter()
+        .next()
+        .expect("a seed threshold");
+    let remove = serde_json::json!({ "test": null });
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::PUT,
+        &format!("{path}/{stripped}"),
+        &remove,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let (status, body) =
+        send_json(&server, &user, Method::POST, &path, &new_threshold("past")).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+}
+
+// Giving a model to a threshold that has none counts toward the cap, and changing the model of
+// one that has a model does not.
+#[tokio::test]
+async fn active_cap_refuses_to_give_a_model_past_it() {
+    let server = TestServer::new().await;
+    let (user, project_slug) =
+        project_with_thresholds(&server, "capupdate", MAX_ACTIVE_THRESHOLDS).await;
+    let path = format!("/v0/projects/{project_slug}/thresholds");
+    let mut uuids = threshold_uuids(&server, &user, &project_slug)
+        .await
+        .into_iter();
+    let stripped = uuids.next().expect("a seed threshold");
+    let active = uuids.next().expect("another seed threshold");
+
+    let remove = serde_json::json!({ "test": null });
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::PUT,
+        &format!("{path}/{stripped}"),
+        &remove,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) =
+        send_json(&server, &user, Method::POST, &path, &new_threshold("past")).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let model = serde_json::json!({ "test": "t_test", "upper_boundary": 0.99 });
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::PUT,
+        &format!("{path}/{stripped}"),
+        &model,
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::PUT,
+        &format!("{path}/{active}"),
+        &model,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+}
+
+// A start point clone copies what fits under the cap, in the UUID order of the thresholds it
+// copies, and skips the rest.
+#[tokio::test]
+async fn a_start_point_clone_past_the_active_cap_copies_what_fits_in_uuid_order() {
+    let server = TestServer::new().await;
+    let (user, project_slug) = project_with_thresholds(&server, "capclone", 1).await;
+    // More than one past the cap, so that any other order copies a different set.
+    insert_active_thresholds(&server, &project_slug, MAX_ACTIVE_THRESHOLDS + 3);
+    // A start point is a version, so the branch needs a report to be cloned from.
+    let (status, body) = post_report(&server, &user, &project_slug, None).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let mut source = branch_thresholds(&server, &project_slug, "ssize-branch");
+    source.sort();
+    let mut fits = source
+        .into_iter()
+        .take(MAX_ACTIVE_THRESHOLDS)
+        .map(|(_, metric, has_model)| (metric, has_model))
+        .collect::<Vec<_>>();
+    fits.sort();
+
+    let clone = serde_json::json!({
+        "name": "capped",
+        "start_point": { "branch": "ssize-branch", "clone_thresholds": true }
+    });
+    let path = format!("/v0/projects/{project_slug}/branches");
+    let (status, body) = send_json(&server, &user, Method::POST, &path, &clone).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let mut copied = branch_thresholds(&server, &project_slug, "capped")
+        .into_iter()
+        .map(|(_, metric, has_model)| (metric, has_model))
+        .collect::<Vec<_>>();
+    copied.sort();
+    assert_eq!(copied, fits);
+}
+
+// A start point reset clones onto a branch that already has thresholds. What the clone strips
+// makes room under the cap, and a threshold it gives a model back counts toward it in UUID order.
+#[tokio::test]
+async fn a_start_point_reset_clone_frees_room_under_the_active_cap() {
+    let server = TestServer::new().await;
+    let (user, project_slug) = project_with_thresholds(&server, "capreset", 2).await;
+    // A start point is a version, so the branch needs a report to be cloned from.
+    let (status, body) = post_report(&server, &user, &project_slug, None).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let branches = format!("/v0/projects/{project_slug}/branches");
+    let clone = serde_json::json!({
+        "name": "feature",
+        "start_point": { "branch": "ssize-branch", "clone_thresholds": true }
+    });
+    let (status, body) = send_json(&server, &user, Method::POST, &branches, &clone).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    insert_active_thresholds(&server, &project_slug, MAX_ACTIVE_THRESHOLDS + 3);
+
+    // On the feature branch, `value` keeps a model its twin loses, `p1` loses a model its twin
+    // keeps, and `orphan` has no twin.
+    let thresholds = format!("/v0/projects/{project_slug}/thresholds");
+    let uuid = |branch: &str, metric: &str| {
+        branch_thresholds(&server, &project_slug, branch)
+            .into_iter()
+            .find(|(_, name, _)| name == metric)
+            .map(|(uuid, ..)| uuid)
+            .expect("Failed to find the threshold")
+    };
+    let remove = serde_json::json!({ "test": null });
+    for stripped in [uuid("ssize-branch", "value"), uuid("feature", "p1")] {
+        let path = format!("{thresholds}/{stripped}");
+        let (status, body) = send_json(&server, &user, Method::PUT, &path, &remove).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+    }
+    let mut orphan = new_threshold("orphan");
+    orphan["branch"] = "feature".into();
+    let (status, body) = send_json(&server, &user, Method::POST, &thresholds, &orphan).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let mut source = branch_thresholds(&server, &project_slug, "ssize-branch")
+        .into_iter()
+        .filter(|(_, _, has_model)| *has_model)
+        .collect::<Vec<_>>();
+    source.sort();
+    let mut fits = source
+        .into_iter()
+        .take(MAX_ACTIVE_THRESHOLDS)
+        .map(|(_, metric, _)| metric)
+        .collect::<Vec<_>>();
+    fits.sort();
+
+    let reset = serde_json::json!({
+        "start_point": { "branch": "ssize-branch", "clone_thresholds": true, "reset": true }
+    });
+    let path = format!("{branches}/feature");
+    let (status, body) = send_json(&server, &user, Method::PATCH, &path, &reset).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let mut active = branch_thresholds(&server, &project_slug, "feature")
+        .into_iter()
+        .filter(|(_, _, has_model)| *has_model)
+        .map(|(_, metric, _)| metric)
+        .collect::<Vec<_>>();
+    active.sort();
+    assert_eq!(active, fits);
+}
+
+// The API stays strict past the ceiling, where a report skips.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn threshold_ceiling_refuses_an_api_create_past_it() {
+    let server = TestServer::new_with_creation_limits(4, 4).await;
+    let (user, project_slug) = project_with_thresholds(&server, "api", 4).await;
+
+    let path = format!("/v0/projects/{project_slug}/thresholds");
+    let (status, body) =
+        send_json(&server, &user, Method::POST, &path, &new_threshold("past")).await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
+    assert!(
+        body.contains("for Threshold creation"),
+        "the threshold ceiling fired: {body}"
+    );
+}
+
 #[cfg(feature = "plus")]
 #[tokio::test]
 async fn threshold_ceiling_admits_a_report_that_creates_none() {
@@ -781,17 +1126,53 @@ async fn threshold_ceiling_admits_a_report_that_creates_none() {
 
 #[cfg(feature = "plus")]
 #[tokio::test]
-async fn threshold_ceiling_refuses_a_report_whose_creates_pass_it() {
+async fn threshold_ceiling_skips_every_create_of_a_report_that_passes_it() {
     let server = TestServer::new_with_creation_limits(4, 4).await;
     let (user, project_slug) = project_with_thresholds(&server, "over", 2).await;
 
     let (status, body) = post_report(&server, &user, &project_slug, Some(new_thresholds(3))).await;
-    assert_threshold_ceiling(status, &body);
+    assert_report_results(status, &body);
     assert_eq!(
         threshold_count(&server, &user, &project_slug, "").await,
         2,
-        "the refused report created no threshold"
+        "the report created no threshold"
     );
+}
+
+// Over the ceiling a report still applies what creates nothing.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn threshold_ceiling_skips_the_creates_of_a_report_but_applies_its_update() {
+    let server = TestServer::new_with_creation_limits(4, 4).await;
+    let (user, project_slug) = project_with_thresholds(&server, "update", 2).await;
+    let project_id = project_id(&server, &project_slug);
+    let mut conn = server.db_conn();
+    let bare: ThresholdId = schema::threshold::table
+        .filter(schema::threshold::project_id.eq(project_id))
+        .filter(schema::threshold::metric.is_null())
+        .select(schema::threshold::id)
+        .first(&mut conn)
+        .expect("Failed to load the bare threshold");
+    drop(conn);
+
+    let mut thresholds = new_thresholds(3);
+    thresholds["models"]["latency"] =
+        serde_json::json!({ "test": "t_test", "upper_boundary": 0.99 });
+    let (status, body) = post_report(&server, &user, &project_slug, Some(thresholds)).await;
+    assert_report_results(status, &body);
+    assert_eq!(
+        threshold_count(&server, &user, &project_slug, "").await,
+        2,
+        "the report created no threshold"
+    );
+
+    let mut conn = server.db_conn();
+    let models = schema::model::table
+        .filter(schema::model::threshold_id.eq(bare))
+        .count()
+        .get_result::<i64>(&mut conn)
+        .expect("Failed to count the models");
+    assert_eq!(models, 2, "the report updated the model it named");
 }
 
 #[cfg(feature = "plus")]
@@ -807,7 +1188,7 @@ async fn threshold_ceiling_admits_a_report_whose_creates_reach_it() {
 
 #[cfg(feature = "plus")]
 #[tokio::test]
-async fn threshold_ceiling_counts_a_start_point_clone() {
+async fn threshold_ceiling_skips_a_start_point_clone_that_passes_it() {
     let server = TestServer::new_with_creation_limits(5, 5).await;
     let (user, project_slug) = project_with_thresholds(&server, "clone", 2).await;
     // A start point is a version, so the branch needs a report to be cloned from.
@@ -822,13 +1203,18 @@ async fn threshold_ceiling_counts_a_start_point_clone() {
         })
     };
 
-    let (status, body) = post_json(&server, &user, &path, &clone("fits")).await;
+    let (status, body) = send_json(&server, &user, Method::POST, &path, &clone("fits")).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     assert_eq!(
         threshold_count(&server, &user, &project_slug, "?branch=fits").await,
         2
     );
 
-    let (status, body) = post_json(&server, &user, &path, &clone("refused")).await;
-    assert_threshold_ceiling(status, &body);
+    let (status, body) = send_json(&server, &user, Method::POST, &path, &clone("skipped")).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    assert_eq!(
+        threshold_count(&server, &user, &project_slug, "?branch=skipped").await,
+        0,
+        "the clone copied no threshold"
+    );
 }

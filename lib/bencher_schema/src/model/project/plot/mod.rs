@@ -1,7 +1,10 @@
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, Index, JsonNewPlot, JsonPlot, MeasureUuid,
     ParameterFilter, PlotUuid, ResourceName, TestbedUuid, Window,
-    project::plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis, YAxis},
+    project::{
+        perf::MAX_DIMENSION_ENTRIES,
+        plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis, YAxis},
+    },
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
 use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -45,16 +48,26 @@ crate::macros::typed_id::typed_id!(PlotId);
 /// Resolve component UUIDs to IDs via read connections, scoped to the project
 /// so a foreign or missing UUID is rejected (404) up front. An empty list is
 /// rejected (400): a plot missing any dimension would never render anything.
+/// So is a list past the cap, counted before duplicates collapse.
 /// Duplicate UUIDs collapse to a single ID, preserving first-occurrence order,
 /// since a repeat would violate the `(plot_id, component_id)` primary key on
 /// insert.
 macro_rules! resolve_component_ids {
-    ($context:expr, $query_project:expr, $uuids:expr, $query:ty, $name:literal) => {{
+    (
+        $context:expr, $query_project:expr, $uuids:expr, $query:ty, $name:literal, $field:literal
+    ) => {{
         let uuids = $uuids;
         if uuids.is_empty() {
             return Err(bad_request_error(concat!(
                 "A plot must have at least one ",
                 $name
+            )));
+        }
+        if uuids.len() > MAX_DIMENSION_ENTRIES {
+            return Err(bad_request_error(format!(
+                "A plot may have at most {MAX_DIMENSION_ENTRIES} {field}, found {count}",
+                field = $field,
+                count = uuids.len()
             )));
         }
         let mut ids = Vec::with_capacity(uuids.len());
@@ -316,7 +329,8 @@ impl QueryPlot {
                 query_project,
                 uuids,
                 QueryBranch,
-                "branch"
+                "branch",
+                "branches"
             )),
             None => None,
         };
@@ -326,7 +340,8 @@ impl QueryPlot {
                 query_project,
                 uuids,
                 QueryTestbed,
-                "testbed"
+                "testbed",
+                "testbeds"
             )),
             None => None,
         };
@@ -336,7 +351,8 @@ impl QueryPlot {
                 query_project,
                 uuids,
                 QueryBenchmark,
-                "benchmark"
+                "benchmark",
+                "benchmarks"
             )),
             None => None,
         };
@@ -346,7 +362,8 @@ impl QueryPlot {
                 query_project,
                 uuids,
                 QueryMeasure,
-                "measure"
+                "measure",
+                "measures"
             )),
             None => None,
         };
@@ -491,19 +508,38 @@ impl InsertPlot {
         } = plot;
 
         // Phase 1: Resolve UUIDs to IDs via read connections
-        let branch_ids =
-            resolve_component_ids!(context, query_project, branches, QueryBranch, "branch");
-        let testbed_ids =
-            resolve_component_ids!(context, query_project, testbeds, QueryTestbed, "testbed");
+        let branch_ids = resolve_component_ids!(
+            context,
+            query_project,
+            branches,
+            QueryBranch,
+            "branch",
+            "branches"
+        );
+        let testbed_ids = resolve_component_ids!(
+            context,
+            query_project,
+            testbeds,
+            QueryTestbed,
+            "testbed",
+            "testbeds"
+        );
         let benchmark_ids = resolve_component_ids!(
             context,
             query_project,
             benchmarks,
             QueryBenchmark,
-            "benchmark"
+            "benchmark",
+            "benchmarks"
         );
-        let measure_ids =
-            resolve_component_ids!(context, query_project, measures, QueryMeasure, "measure");
+        let measure_ids = resolve_component_ids!(
+            context,
+            query_project,
+            measures,
+            QueryMeasure,
+            "measure",
+            "measures"
+        );
 
         // Phase 2: Single write_conn + transaction for all writes
         let conn = write_conn!(context);

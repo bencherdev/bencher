@@ -109,6 +109,9 @@ pub enum ApiCounter {
     ReportCreate,
     ReportDelete,
 
+    ThresholdCapSkip,
+    ThresholdCeilingSkip,
+
     MetricsCreate(Priority),
     MetricNamesDropped,
     MetricsBilled,
@@ -209,6 +212,8 @@ impl ApiCounter {
 
             Self::ReportCreate | Self::ReportDelete | Self::SelfHostedServerStats(_) => "{report}",
 
+            Self::ThresholdCapSkip | Self::ThresholdCeilingSkip => "{threshold}",
+
             Self::MetricsCreate(_)
             | Self::MetricNamesDropped
             | Self::MetricsBilled
@@ -280,6 +285,9 @@ impl ApiCounter {
 
             Self::ReportCreate => "report.create",
             Self::ReportDelete => "report.delete",
+
+            Self::ThresholdCapSkip => "threshold.cap.skip",
+            Self::ThresholdCeilingSkip => "threshold.ceiling.skip",
 
             Self::MetricsCreate(_) => "metrics.create",
             Self::MetricNamesDropped => "metrics.names.dropped",
@@ -389,6 +397,13 @@ impl ApiCounter {
 
             Self::ReportCreate => "Counts the number of report creations",
             Self::ReportDelete => "Counts the number of report deletions",
+
+            Self::ThresholdCapSkip => {
+                "Counts the thresholds a report or a start point clone skipped over the per measure cap on thresholds with a model"
+            },
+            Self::ThresholdCeilingSkip => {
+                "Counts the threshold creations a report or a start point clone skipped over the daily ceiling"
+            },
 
             Self::MetricsCreate(_) => "Counts the number of metrics created",
             Self::MetricNamesDropped => {
@@ -519,6 +534,8 @@ impl ApiCounter {
             | Self::ProjectDelete
             | Self::ReportCreate
             | Self::ReportDelete
+            | Self::ThresholdCapSkip
+            | Self::ThresholdCeilingSkip
             | Self::UserIp
             | Self::UserIpNotFound
             | Self::UserRecaptchaFailure
