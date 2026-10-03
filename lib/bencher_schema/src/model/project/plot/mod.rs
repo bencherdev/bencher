@@ -1,6 +1,6 @@
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, DateTime, Index, JsonNewPlot, JsonPlot, MeasureUuid, PlotUuid,
-    ResourceName, TestbedUuid, Window,
+    BenchmarkUuid, BranchUuid, DateTime, Index, JsonNewPlot, JsonPlot, MeasureUuid,
+    ParameterFilter, PlotUuid, ResourceName, TestbedUuid, Window,
     project::plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis, YAxis},
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
@@ -90,6 +90,7 @@ pub struct QueryPlot {
     pub x_axis: XAxis,
     pub y_axis: YAxis,
     pub window: Window,
+    pub parameters: Option<ParameterFilter>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -158,6 +159,7 @@ impl QueryPlot {
                     x_axis: None,
                     y_axis: None,
                     window: None,
+                    parameters: None,
                     modified: now,
                 };
                 diesel::update(plot_table::table.filter(plot_table::id.eq(plot.id)))
@@ -216,6 +218,7 @@ impl QueryPlot {
                 x_axis: None,
                 y_axis: None,
                 window: None,
+                parameters: None,
                 modified,
             };
             diesel::update(plot_table::table.filter(plot_table::id.eq(plot.id)))
@@ -256,6 +259,7 @@ impl QueryPlot {
             x_axis,
             y_axis,
             window,
+            parameters,
             created,
             modified,
             ..
@@ -274,6 +278,7 @@ impl QueryPlot {
             branches,
             testbeds,
             benchmarks,
+            parameters,
             measures,
             created,
             modified,
@@ -299,6 +304,7 @@ impl QueryPlot {
             branches,
             testbeds,
             benchmarks,
+            parameters,
             measures,
         } = update.into();
 
@@ -366,6 +372,7 @@ impl QueryPlot {
                 x_axis,
                 y_axis,
                 window,
+                parameters: parameters.map(canonical_parameters),
                 modified,
             };
             Self::apply_update(
@@ -452,6 +459,7 @@ pub struct InsertPlot {
     pub x_axis: XAxis,
     pub y_axis: YAxis,
     pub window: Window,
+    pub parameters: Option<ParameterFilter>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -478,6 +486,7 @@ impl InsertPlot {
             branches,
             testbeds,
             benchmarks,
+            parameters,
             measures,
         } = plot;
 
@@ -512,6 +521,7 @@ impl InsertPlot {
             x_axis,
             y_axis,
             window,
+            parameters: parameters.and_then(canonical_parameters),
             created: timestamp,
             modified: timestamp,
         };
@@ -551,7 +561,12 @@ pub struct UpdatePlot {
     pub x_axis: Option<XAxis>,
     pub y_axis: Option<YAxis>,
     pub window: Option<Window>,
+    pub parameters: Option<Option<ParameterFilter>>,
     pub modified: DateTime,
+}
+
+fn canonical_parameters(parameters: ParameterFilter) -> Option<ParameterFilter> {
+    (!parameters.is_match_all()).then_some(parameters)
 }
 
 /// The fields of a [`JsonUpdatePlot`], unified across its `Patch` and `Null`
@@ -573,6 +588,7 @@ struct UpdatePlotFields {
     branches: Option<Vec<BranchUuid>>,
     testbeds: Option<Vec<TestbedUuid>>,
     benchmarks: Option<Vec<BenchmarkUuid>>,
+    parameters: Option<ParameterFilter>,
     measures: Option<Vec<MeasureUuid>>,
 }
 
@@ -593,6 +609,7 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     branches,
                     testbeds,
                     benchmarks,
+                    parameters,
                     measures,
                 } = patch;
                 Self {
@@ -608,6 +625,7 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     branches,
                     testbeds,
                     benchmarks,
+                    parameters,
                     measures,
                 }
             },
@@ -625,6 +643,7 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     branches,
                     testbeds,
                     benchmarks,
+                    parameters,
                     measures,
                 } = patch_null;
                 Self {
@@ -640,6 +659,7 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     branches,
                     testbeds,
                     benchmarks,
+                    parameters,
                     measures,
                 }
             },
@@ -953,6 +973,7 @@ mod tests {
                     x_axis: XAxis::DateTime,
                     y_axis: YAxis::Auto,
                     window: bencher_json::Window::try_from(2_592_000u32).unwrap(),
+                    parameters: None,
                     created: timestamp,
                     modified: timestamp,
                 };
@@ -1129,6 +1150,7 @@ mod tests {
             x_axis: None,
             y_axis: None,
             window: None,
+            parameters: None,
             modified: DateTime::TEST,
         }
     }
@@ -1198,6 +1220,7 @@ mod tests {
             x_axis: Some(XAxis::Version),
             y_axis: Some(YAxis::Log),
             window: None,
+            parameters: None,
             modified: DateTime::TEST,
         };
         QueryPlot::apply_update(&mut conn, plot_id, &update_plot, None, None, None, None)
@@ -1243,6 +1266,7 @@ mod tests {
             x_axis: XAxis::DateTime,
             y_axis: YAxis::Log,
             window: bencher_json::Window::try_from(2_592_000u32).unwrap(),
+            parameters: None,
             created: timestamp,
             modified: timestamp,
         };

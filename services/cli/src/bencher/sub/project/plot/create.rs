@@ -120,6 +120,7 @@ impl From<Create> for JsonNewPlot {
             branches: branches.into_iter().map(Into::into).collect(),
             testbeds: testbeds.into_iter().map(Into::into).collect(),
             benchmarks: benchmarks.into_iter().map(Into::into).collect(),
+            parameters: None,
             measures: measures.into_iter().map(Into::into).collect(),
         }
     }
