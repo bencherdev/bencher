@@ -17,7 +17,7 @@ fn serial_number() -> Option<Uuid> {
     SmbiosInformation::SerialNumber()
         .ok()
         .as_ref()
-        .and_then(|uuid| Uuid::parse_str(&uuid.to_string().trim()).ok())
+        .and_then(|uuid| Uuid::parse_str(uuid.to_string().trim()).ok())
 }
 
 fn digital_product_id() -> Option<Uuid> {
@@ -30,7 +30,7 @@ fn digital_product_id() -> Option<Uuid> {
     let value = PCWSTR::from_raw(value_bytes.as_ptr());
 
     let mut data = [0u8; 256];
-    let mut data_size = data.len() as u32;
+    let mut data_size = u32::try_from(data.len()).ok()?;
     // Safety: The accuracy of the data returned by `RegGetValueW` is not of any importance,
     // rather the consistency of the data is what is important.
     // https://learn.microsoft.com/en-us/windows/win32/api/winreg/nf-winreg-reggetvaluew
@@ -42,8 +42,8 @@ fn digital_product_id() -> Option<Uuid> {
             value,
             RRF_RT_ANY,
             None,
-            Some(data.as_mut_ptr() as *mut c_void),
-            Some(&mut data_size),
+            Some(data.as_mut_ptr().cast::<c_void>()),
+            Some(&raw mut data_size),
         )
         .ok()
         .ok()?;

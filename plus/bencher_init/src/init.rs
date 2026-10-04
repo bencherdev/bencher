@@ -72,7 +72,7 @@ fn console_log(msg: &str) {
     // Fallback for non-x86_64 architectures
     #[cfg(not(target_arch = "x86_64"))]
     {
-        use std::io::Write;
+        use std::io::Write as _;
         // Try stdout first
         // SAFETY: Writing to stdout with a valid buffer and correct length.
         let written =
@@ -83,8 +83,8 @@ fn console_log(msg: &str) {
 
         // Try /dev/ttyS0 (serial console the kernel uses)
         if let Ok(mut f) = fs::OpenOptions::new().write(true).open("/dev/ttyS0") {
-            let _ = f.write_all(bytes);
-            let _ = f.flush();
+            drop(f.write_all(bytes));
+            drop(f.flush());
             return;
         }
 
