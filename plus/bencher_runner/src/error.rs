@@ -37,17 +37,19 @@ pub enum JailError {
         source: std::io::Error,
     },
 
-    #[error("Failed to enable cgroup controllers at {path}: {source}")]
-    EnableControllers {
-        path: Utf8PathBuf,
-        source: std::io::Error,
+    #[cfg(target_os = "linux")]
+    #[error("{parent} does not offer the {controller} controller")]
+    ControllerNotOffered {
+        controller: &'static str,
+        parent: Utf8PathBuf,
     },
 
-    #[error("Required cgroup controller '{controller}' not enabled at {path}. Enabled: {enabled}")]
-    MissingController {
-        controller: String,
+    #[cfg(target_os = "linux")]
+    #[error("{path} refused the {controller} controller: {source}")]
+    ControllerRefused {
+        controller: &'static str,
         path: Utf8PathBuf,
-        enabled: String,
+        source: std::io::Error,
     },
 
     #[error("Failed to write cgroup file {path}: {source}")]

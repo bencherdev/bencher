@@ -54,6 +54,9 @@
 //! | `CgroupManager` teardown: the cgroup cannot be stat'ed | keeps the chroot for the next job's sweep: it is treated as still there |
 //! | `CgroupManager` teardown: `rmdir` of the cgroup | keeps the chroot for the next job's sweep |
 //! | `CgroupManager` creation: the cgroup cannot be stat'ed | fails the job: this decides whether `Drop` may remove it |
+//! | `cgroup_for_run`: the VM cgroup cannot be created, for any reason | fails the job: a VMM outside its cgroup runs unconfined, unmetered, and unseen by `refuse_occupied_cgroups` |
+//! | `cgroup_for_run`: the CPU layout offers no isolation | runs with no VM cgroup, which startup announced as CPU isolation disabled |
+//! | `run_firecracker`: the VMM cannot be placed in its cgroup before exec, or is not in it after | fails the job |
 //! | `remove_stale_cgroup`: the cgroup cannot be stat'ed | fails the job: the caller deletes the chroot on an `Ok` here |
 //! | `StateDir::create`: the chroot tree cannot be stat'ed | fails the job: the 0700 chmod follows |
 //! | `StateDir::create`: taking a directory of the tree for root (the chown to 0:0) | fails the job; `EPERM` alone is ignored: it refuses exactly a process that never builds a jail, since root is checked by name before any of this runs |
@@ -66,7 +69,7 @@
 //! | Step | On failure |
 //! |---|---|
 //! | `apply_cpuset`: no isolation in the layout, or an empty core set | declares the absence |
-//! | `apply_cpuset`: `cpuset.cpus` is absent | declares the absence: the controller is not delegated |
+//! | `apply_cpuset`: `cpuset.cpus` is absent | declares the absence, naming the controller and the cgroup that withheld it |
 //! | `apply_cpuset`: `cpuset.cpus` cannot be stat'ed | fails the job: an error is not an absence |
 //! | `apply_cpuset`: the kernel rejects a cpuset write | fails the job: half-applied confinement |
 //! | `apply_cpuset`: the parent's node set is absent | node 0, which is what an undelegated controller means |
@@ -74,8 +77,12 @@
 //! | `apply_cpuset`: the effective set cannot be read back | fails the job: the read back *is* the mechanism, and the write already proved the controller delegated |
 //! | `apply_cpuset`: the kernel narrowed the set | fails the job |
 //! | `apply_cpuset`: either side of the verification cannot be parsed as a cpu list | fails the job: dropping what would not parse would compare partial sets nobody read |
-//! | `enable_controllers`: `cgroup.subtree_control` cannot be read | fails the job: an unreadable list is not an empty one |
-//! | `enable_controllers`: the kernel refuses the `+cpuset` write | declares the absence: this run has no cpuset, and whether the host delegates it is unknown |
+//! | `ensure_controllers`, on a job: the root's `cgroup.controllers` or `bencher/`'s `cgroup.subtree_control` cannot be read | fails the job: an unreadable list is not an empty one |
+//! | `ensure_controllers`: the root does not offer `cpuset` or `memory` | declares that controller's absence, naming it and the root: no cpuset, or no swap limit |
+//! | `ensure_controllers`: the kernel refuses a write for `cpuset` or `memory`, and `bencher/` does not enable it | declares that controller's absence, naming it and the first cgroup that refused it |
+//! | `ensure_controllers`: `pids` is not offered or is refused | ignored: nothing the runner reads depends on it |
+//! | `ensure_controllers`: another controller cannot be disabled in `bencher/` | warns: Jobs run with it enabled |
+//! | `disable_swap`: `memory` is absent, or `memory.swap.max` cannot be written | declares the absence: no swap limit |
 //! | `BencherPartition::apply`: any read or write in the partition path | declares the absence: the level achieved is reported, down to `member` |
 //! | `CpuLayout::detect`: the online CPU list cannot be read or parsed | declares the absence: the counted layout is announced as a guess |
 //! | `CpuLayout::detect`: the core count cannot be read | one core, which reports as a layout with no isolation |
