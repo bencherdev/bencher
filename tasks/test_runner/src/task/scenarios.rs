@@ -3046,6 +3046,8 @@ CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
                 // booted a guest.
                 assert_job_succeeded(output, "JAIL_CONFINEMENT_a7f3b2c9")?;
                 assert_cpu_isolation_applied(output)?;
+                assert_cgroup_metrics_reported(output)?;
+                assert_no_cgroup_warning(output)?;
                 assert_no_chroot_remains(&scenario_state_dir())
             },
             ..Scenario::default()
@@ -3203,6 +3205,45 @@ fn assert_cpu_isolation_applied(output: &ScenarioOutput) -> Result<()> {
         output.stdout,
         output.stderr
     )
+}
+
+/// Read from the VMM's own cgroup, so a run that never had one reports none.
+fn assert_cgroup_metrics_reported(output: &ScenarioOutput) -> Result<()> {
+    let reported = output
+        .stderr
+        .lines()
+        .find(|line| line.contains("---BENCHER_METRICS:"))
+        .and_then(|line| serde_json::from_str::<serde_json::Value>(extract_json_substr(line)).ok())
+        .and_then(|metrics| metrics.get("cgroup")?.get("cpu_usage_us")?.as_u64())
+        .is_some();
+    if reported {
+        return Ok(());
+    }
+    bail!(
+        "Expected the run metrics to carry the VM cgroup's cpu_usage_us.\nstderr: {}",
+        output.stderr
+    )
+}
+
+/// A cgroup warning means the Job ran with less confinement than a pinned run
+/// claims: no cpuset, no swap limit, or no cgroup at all.
+fn assert_no_cgroup_warning(output: &ScenarioOutput) -> Result<()> {
+    let warnings: Vec<&str> = output
+        .stderr
+        .lines()
+        .filter(|line| {
+            line.contains("Warning:")
+                && ["cgroup", "cpuset", "controller", "swap"]
+                    .iter()
+                    .any(|word| line.contains(word))
+        })
+        .collect();
+    anyhow::ensure!(
+        warnings.is_empty(),
+        "Expected no cgroup warning, got: {warnings:#?}\nstderr: {}",
+        output.stderr
+    );
+    Ok(())
 }
 
 /// A stacked handle fails every sandboxed job on the host unless the runner's
