@@ -838,7 +838,7 @@ mod tests {
         };
 
         assert!(
-            reason.contains("cpuset") && reason.contains(root.as_str()),
+            reason.contains(&format!("{root} does not offer the cpuset controller")),
             "names the controller and the root that does not offer it: {reason}"
         );
     }
