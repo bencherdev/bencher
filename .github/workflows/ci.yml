@@ -123,29 +123,137 @@ jobs:
   runner:
     name: Runner
     needs: changes
-    # On cloud pushes, the runner is only rebuilt when runner code changed
-    # (avoids pointless canary fleet updates) and skips the scenario tests
-    # (the same commits already ran them on devel).
-    # "Changed" on cloud pushes means changed since the last deploy: the
-    # changes filter has no explicit base, so it diffs against the default
-    # branch (main), which CI resets to cloud after each successful deploy.
-    if: ${{ needs.changes.outputs.runner == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ github.ref != 'refs/heads/cloud' && (needs.changes.outputs.runner == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/')) }}
     uses: ./.github/workflows/runner.yml
     with:
       mold-version: "2.34.1"
       zig-version: "0.13.0"
       zig-build-version: "0.19.3"
-      build-only: ${{ github.ref == 'refs/heads/cloud' }}
 
-  # Publish the cloud branch runner build to the rolling `canary` prerelease.
+  # Cloud deploys and publishes what devel CI built for this commit, never a build of its own.
+  # Every check runs in this one job, so a missing build fails the run before anything deploys.
+  fetch_devel_builds:
+    name: Fetch Devel Builds
+    permissions:
+      contents: read
+      actions: read
+    needs: changes
+    if: github.ref == 'refs/heads/cloud'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Find Devel Run
+        id: devel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUNNER_CHANGED: ${{ needs.changes.outputs.runner }}
+        run: |
+          set -euo pipefail
+          # Only push runs in this repository are trusted: a fork pull request
+          # can name its branch `devel` and upload artifacts under these names.
+          RUN_ID="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?event=push&branch=devel&head_sha=$GITHUB_SHA&per_page=100" --jq '
+            [.workflow_runs[] | select(
+              .event == "push"
+              and .head_branch == "devel"
+              and .head_repository.full_name == env.GITHUB_REPOSITORY
+              and .path == ".github/workflows/ci.yml"
+              and .head_sha == env.GITHUB_SHA
+            )] | max_by(.created_at) | .id // empty')"
+          if [[ -z "$RUN_ID" ]]; then
+            echo "::error::No devel push run of ci.yml for commit $GITHUB_SHA, so there are no builds to deploy. Push the commit to devel, then re-run this workflow once that run has uploaded them."
+            exit 1
+          fi
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID"
+          ARTIFACTS=(bencher-console-prod)
+          if [[ "$RUNNER_CHANGED" == "true" ]]; then
+            ARTIFACTS+=(runner-devel-linux-x86-64 runner-devel-linux-arm-64)
+          fi
+          MISSING=()
+          for ARTIFACT in "${ARTIFACTS[@]}"; do
+            FOUND="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/artifacts?name=$ARTIFACT" --jq '[.artifacts[] | select(.expired | not)] | length')"
+            if [[ "$FOUND" == "0" ]]; then
+              MISSING+=("$ARTIFACT")
+            fi
+          done
+          if [[ ${#MISSING[@]} -gt 0 ]]; then
+            echo "::error::Devel run $RUN_URL for commit $GITHUB_SHA has not uploaded ${MISSING[*]}. Re-run this workflow once it has, re-running that devel run first if it stopped before the upload."
+            exit 1
+          fi
+          echo "Reusing the builds of devel run $RUN_URL"
+          echo "run-id=$RUN_ID" >> "$GITHUB_OUTPUT"
+      - name: Download Console UI Artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bencher-console-prod
+          path: ./services/console
+          run-id: ${{ steps.devel.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # The script only uses Node builtins, so the runner image's Node is enough.
+      - name: Verify Deploy Target
+        working-directory: ./services/console
+        run: npm run deploy-target console
+      # Without `include-hidden-files` the upload drops `.wrangler/deploy/config.json`,
+      # and `wrangler deploy` then falls back to `wrangler.jsonc`.
+      - name: Upload Console UI Artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bencher-console
+          path: |
+            ./services/console/dist
+            ./services/console/.wrangler
+          include-hidden-files: true
+          if-no-files-found: error
+      # The runner is only republished when runner code changed, which avoids
+      # pointless canary fleet updates. "Changed" means changed since the last
+      # deploy: the changes filter has no explicit base, so it diffs against the
+      # default branch (main), which CI resets to cloud after each successful deploy.
+      - name: Download Runner Artifacts
+        if: needs.changes.outputs.runner == 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: runner-devel-linux-*
+          merge-multiple: true
+          run-id: ${{ steps.devel.outputs.run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rename Runner Binaries
+        if: needs.changes.outputs.runner == 'true'
+        run: |
+          set -euo pipefail
+          for BUILD in linux-x86-64 linux-arm-64; do
+            sha256sum -c "runner-devel-$BUILD.sha256"
+            mv "runner-devel-$BUILD" "runner-canary-$BUILD"
+            sha256sum "runner-canary-$BUILD" > "runner-canary-$BUILD.sha256"
+          done
+      - name: Upload Runner Artifact (linux-x86-64)
+        if: needs.changes.outputs.runner == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: runner-canary-linux-x86-64
+          path: |
+            runner-canary-linux-x86-64
+            runner-canary-linux-x86-64.sha256
+          if-no-files-found: error
+      - name: Upload Runner Artifact (linux-arm-64)
+        if: needs.changes.outputs.runner == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: runner-canary-linux-arm-64
+          path: |
+            runner-canary-linux-arm-64
+            runner-canary-linux-arm-64.sha256
+          if-no-files-found: error
+
+  # Publish devel's runner build of this commit to the rolling `canary` prerelease.
   # Canary channel runners poll this release's checksums and self-update when
   # the published binary changes.
   publish_runner_canary:
     name: Publish Runner Canary
     permissions:
       contents: write
-    needs: runner
-    if: ${{ !failure() && !cancelled() && github.ref == 'refs/heads/cloud' && needs.runner.result == 'success' }}
+    needs: [changes, fetch_devel_builds]
+    if: ${{ !failure() && !cancelled() && github.ref == 'refs/heads/cloud' && needs.changes.outputs.runner == 'true' && needs.fetch_devel_builds.result == 'success' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Download Runner Artifacts
@@ -165,7 +273,7 @@ jobs:
               --latest=false \
               --target "$GITHUB_SHA" \
               --title "Runner Canary" \
-              --notes "Rolling prerelease of the runner, rebuilt on cloud branch deploys."
+              --notes "Rolling prerelease of the runner, published on cloud branch deploys."
           fi
           # Binaries first, checksums last: the server triggers updates off
           # the .sha256 files, so a partial upload never advertises a binary
@@ -181,7 +289,7 @@ jobs:
           # inspecting the release; tag moves do not trigger CI (tags: v**).
           gh api --method PATCH "repos/{owner}/{repo}/git/refs/tags/canary" \
             -f "sha=$GITHUB_SHA" -F force=true > /dev/null
-          gh release edit canary --notes "Rolling prerelease of the runner, rebuilt on cloud branch deploys. Currently built from $GITHUB_SHA."
+          gh release edit canary --notes "Rolling prerelease of the runner, published on cloud branch deploys. Currently built from $GITHUB_SHA."
 
   test:
     name: Test
@@ -206,6 +314,7 @@ jobs:
       contents: read
       packages: write
     needs: changes
+    if: github.ref != 'refs/heads/cloud'
     uses: ./.github/workflows/build.yml
     with:
       mold-version: "2.34.1"
@@ -214,16 +323,17 @@ jobs:
       cargo-chef-version: "0.1.77"
       sccache-version: "0.16.0"
       is-fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
-      build-action: ${{ needs.changes.outputs.action == 'true' || github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || startsWith(github.ref, 'refs/tags/') }}
+      build-action: ${{ needs.changes.outputs.action == 'true' || github.ref == 'refs/heads/devel' || startsWith(github.ref, 'refs/tags/') }}
       build-docker: ${{ !startsWith(github.ref, 'refs/tags/') && (needs.changes.outputs.docker == 'true' || github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))) }}
-      deploy-only: ${{ github.ref == 'refs/heads/cloud' }}
       # The console build is environment-specific, so it has to match the deploy
       # this run will perform. Anything that does not deploy dev builds the
       # top-level (production) configuration.
       cloudflare-env: ${{ (github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))) && 'dev' || '' }}
+      # Cloud deploys reuse this top-level console, and the lookup only trusts push runs.
+      build-console-prod: ${{ github.event_name == 'push' && github.ref == 'refs/heads/devel' }}
       # Only runs that deploy upload sourcemaps, and only from this repository:
       # fork pull requests get no secrets, and uploading without a token fails the build.
-      sentry-upload: ${{ github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'deploy')) }}
+      sentry-upload: ${{ github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'deploy')) }}
     secrets:
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -260,7 +370,7 @@ jobs:
     permissions:
       contents: write
       packages: read
-    needs: [lint, cli, test, build]
+    needs: [lint, cli, test, build, fetch_devel_builds]
     if: ${{ !failure() && !cancelled() && (github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))) }}
     uses: ./.github/workflows/deploy.yml
     with:
@@ -293,7 +403,7 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [lint, cli, runner, publish_runner_canary, test, build, docker, deploy, release]
+    needs: [lint, cli, runner, fetch_devel_builds, publish_runner_canary, test, build, docker, deploy, release]
     runs-on: ubuntu-22.04
     steps:
       - name: Check all jobs passed
@@ -318,7 +428,12 @@ jobs:
             echo "Test failed"
             exit 1
           fi
-          if [[ "${{ needs.build.result }}" != "success" ]]; then
+          # Cloud fetches devel's builds instead of building, and every other run builds.
+          if [[ "${{ needs.fetch_devel_builds.result }}" != "success" && ( "$GITHUB_REF" == "refs/heads/cloud" || "${{ needs.fetch_devel_builds.result }}" != "skipped" ) ]]; then
+            echo "Fetch Devel Builds failed"
+            exit 1
+          fi
+          if [[ "${{ needs.build.result }}" != "success" && ( "$GITHUB_REF" != "refs/heads/cloud" || "${{ needs.build.result }}" != "skipped" ) ]]; then
             echo "Build failed"
             exit 1
           fi
