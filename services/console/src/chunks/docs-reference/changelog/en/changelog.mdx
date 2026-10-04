@@ -4,6 +4,8 @@
 - Add a `plus_limit` server config option for the daily metrics limit of organizations with a Bencher Plus plan
 - **BREAKING CHANGE** Cap a plot at 8 branches, testbeds, benchmarks, and measures each
 - Cap active Thresholds at 64 per Branch, Testbed, and Measure, and skip the Thresholds a report cannot create (over a cap or over the daily creation limit) instead of failing the report
+- **BREAKING CHANGE** The `plus.litestream` server config key is removed; use `plus.disaster_recovery`. A config that still uses `plus.litestream` is ignored and disaster recovery does not run at all: no restore at startup and no replication
+- **BREAKING CHANGE** The `sftp` disaster recovery replica scheme is removed; `file` and `s3` remain
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects

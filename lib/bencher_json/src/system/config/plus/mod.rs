@@ -6,18 +6,18 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 pub mod cloud;
+pub mod disaster_recovery;
 pub mod github;
 pub mod google;
-pub mod litestream;
 pub mod rate_limiting;
 pub mod registry;
 pub mod runners;
 pub mod stats;
 
 pub use cloud::JsonCloud;
+pub use disaster_recovery::JsonDisasterRecovery;
 pub use github::JsonGitHub;
 pub use google::JsonGoogle;
-pub use litestream::JsonLitestream;
 pub use rate_limiting::JsonRateLimiting;
 pub use registry::JsonRegistry;
 pub use runners::JsonRunners;
@@ -32,8 +32,8 @@ pub struct JsonPlus {
     pub github: Option<JsonGitHub>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub google: Option<JsonGoogle>,
-    #[serde(alias = "disaster_recovery", skip_serializing_if = "Option::is_none")]
-    pub litestream: Option<JsonLitestream>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disaster_recovery: Option<JsonDisasterRecovery>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stats: Option<JsonStats>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -48,7 +48,7 @@ impl Sanitize for JsonPlus {
     fn sanitize(&mut self) {
         self.github.sanitize();
         self.google.sanitize();
-        self.litestream.sanitize();
+        self.disaster_recovery.sanitize();
         self.cloud.sanitize();
         self.registry.sanitize();
     }
