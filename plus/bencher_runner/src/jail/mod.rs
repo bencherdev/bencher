@@ -69,7 +69,7 @@
 //! | Step | On failure |
 //! |---|---|
 //! | `apply_cpuset`: no isolation in the layout, or an empty core set | declares the absence |
-//! | `apply_cpuset`: `cpuset.cpus` is absent | declares the absence, naming the controller and the cgroup that withheld it |
+//! | `apply_cpuset`: `cpuset.cpus` is absent | declares the absence, naming the controller and the cgroup that withheld it, or the VM cgroup itself when no absence was recorded |
 //! | `apply_cpuset`: `cpuset.cpus` cannot be stat'ed | fails the job: an error is not an absence |
 //! | `apply_cpuset`: the kernel rejects a cpuset write | fails the job: half-applied confinement |
 //! | `apply_cpuset`: the parent's node set is absent | node 0, which is what an undelegated controller means |
@@ -84,7 +84,7 @@
 //! | `ensure_controllers`: another controller cannot be disabled in `bencher/` | warns: Jobs run with it enabled |
 //! | `disable_swap`: `memory` is absent, or `memory.swap.max` cannot be written | declares the absence: no swap limit |
 //! | `BencherPartition::apply`: any read or write in the partition path, `ensure_controllers` included | declares the absence: it warns, and the level achieved is reported, down to `member` |
-//! | `BencherPartition::apply`: the kernel refuses both partition modes | writes `member` back, so the file never reads `invalid` for the life of the process |
+//! | `BencherPartition::apply`: the kernel refuses both partition modes | writes `member` back; the restore at exit returns the mode found at startup, which reads `invalid` again when a previous binary left it so, until `bencher/` is removed |
 //! | `CpuLayout::detect`: the online CPU list cannot be read or parsed | declares the absence: the counted layout is announced as a guess |
 //! | `CpuLayout::detect`: the core count cannot be read | one core, which reports as a layout with no isolation |
 //! | `metrics`: a cgroup that is not there | no metrics, reported as absent |
