@@ -449,9 +449,19 @@ pub(crate) struct Controllers {
 
 impl Controllers {
     #[cfg(test)]
-    fn enabled() -> Self {
+    pub(crate) fn enabled() -> Self {
         Self {
             cpuset: Controller::Enabled,
+            memory: Controller::Enabled,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn without_cpuset(parent: &Utf8Path) -> Self {
+        Self {
+            cpuset: Controller::NotOffered {
+                parent: parent.to_owned(),
+            },
             memory: Controller::Enabled,
         }
     }
@@ -507,6 +517,47 @@ pub enum Cpuset {
     /// confirmed.
     Applied,
     Unavailable(String),
+}
+
+/// A cgroup under the real root for the root-only tests, removed bottom up on
+/// drop so a failed assertion does not leave it pinning controllers there.
+#[cfg(test)]
+pub(crate) struct ScratchCgroup(Utf8PathBuf);
+
+#[cfg(test)]
+impl ScratchCgroup {
+    /// Offered what the real root enables, so the controllers Jobs use are
+    /// enabled there first, as the runner does at startup.
+    pub(crate) fn new(name: &str) -> Self {
+        let real_root = Utf8Path::new(CGROUP_ROOT);
+        for controller in CONTROLLERS {
+            fs::write(real_root.join(SUBTREE_CONTROL), format!("+{controller}")).unwrap();
+        }
+        let path = real_root.join(format!("{name}-{}", std::process::id()));
+        fs::create_dir(&path).unwrap();
+        Self(path)
+    }
+
+    pub(crate) fn path(&self) -> &Utf8Path {
+        &self.0
+    }
+}
+
+#[cfg(test)]
+impl Drop for ScratchCgroup {
+    fn drop(&mut self) {
+        fn remove(cgroup: &Utf8Path) {
+            if let Ok(entries) = cgroup.read_dir_utf8() {
+                for entry in entries.flatten() {
+                    if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+                        remove(entry.path());
+                    }
+                }
+            }
+            drop(fs::remove_dir(cgroup));
+        }
+        remove(&self.0);
+    }
 }
 
 /// Parse a kernel cpu list (`0-3,5,7-9`), returning `None` rather than a
@@ -1030,26 +1081,6 @@ mod tests {
             .unwrap_err();
     }
 
-    /// Removed bottom up on drop, so a failed assertion does not leave the
-    /// scratch tree pinning controllers in the real root.
-    struct ScratchCgroup(Utf8PathBuf);
-
-    impl Drop for ScratchCgroup {
-        fn drop(&mut self) {
-            fn remove(cgroup: &Utf8Path) {
-                if let Ok(entries) = cgroup.read_dir_utf8() {
-                    for entry in entries.flatten() {
-                        if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
-                            remove(entry.path());
-                        }
-                    }
-                }
-                drop(fs::remove_dir(cgroup));
-            }
-            remove(&self.0);
-        }
-    }
-
     #[test]
     fn a_root_systemd_left_idle_still_gives_the_vm_cgroup_its_controllers() {
         // Stands a scratch cgroup in for a root systemd keeps at `memory pids`
@@ -1061,21 +1092,13 @@ mod tests {
             );
             return;
         }
-        let real_root = Utf8Path::new(CGROUP_ROOT);
-        // The scratch root is offered what the real root enables, and the
-        // runner enables the same there at startup.
-        for controller in ["+cpuset", "+memory", "+pids"] {
-            fs::write(real_root.join(SUBTREE_CONTROL), controller).unwrap();
-        }
-        let scratch =
-            ScratchCgroup(real_root.join(format!("bencher-runner-test-{}", std::process::id())));
-        fs::create_dir(&scratch.0).unwrap();
+        let scratch = ScratchCgroup::new("bencher-runner-idle-root");
         for controller in ["+memory", "+pids"] {
-            fs::write(scratch.0.join(SUBTREE_CONTROL), controller).unwrap();
+            fs::write(scratch.path().join(SUBTREE_CONTROL), controller).unwrap();
         }
 
         let manager =
-            CgroupManager::new_at(&scratch.0, &VmId::new(), CgroupSurvived::default()).unwrap();
+            CgroupManager::new_at(scratch.path(), &VmId::new(), CgroupSurvived::default()).unwrap();
 
         assert!(
             manager.path().join("cpuset.cpus.effective").exists(),
@@ -1085,7 +1108,7 @@ mod tests {
             manager.path().join("memory.swap.max").exists(),
             "the VM cgroup has the memory controller"
         );
-        let removal = fs::write(scratch.0.join(SUBTREE_CONTROL), "-cpuset").unwrap_err();
+        let removal = fs::write(scratch.path().join(SUBTREE_CONTROL), "-cpuset").unwrap_err();
         assert_eq!(
             removal.raw_os_error(),
             Some(libc::EBUSY),
