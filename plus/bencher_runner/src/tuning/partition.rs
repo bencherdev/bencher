@@ -66,13 +66,6 @@ impl BencherPartition {
         self.apply_with(layout, guard, ensure_controllers)
     }
 
-    /// Enable the controllers Jobs use with the partition off, removing
-    /// `bencher/` at exit only if this process created it, since a runner
-    /// without the tuning lock must not remove the holder's.
-    pub(super) fn enable_controllers(&self, guard: &mut TuningGuard) {
-        self.enable_controllers_with(guard, ensure_controllers);
-    }
-
     /// The controllers step is injectable because only cgroupfs gives its
     /// writes their meaning.
     fn apply_with<E>(
@@ -167,21 +160,6 @@ impl BencherPartition {
             eprintln!("Warning: failed to write cpuset partition mode 'member' back: {e}");
         }
         PartitionLevel::Member
-    }
-
-    fn enable_controllers_with<E>(&self, guard: &mut TuningGuard, ensure: E)
-    where
-        E: FnOnce(&Utf8Path) -> Result<Controllers, JailError>,
-    {
-        let created = self.path.try_exists().is_ok_and(|exists| !exists);
-        if let Err(e) = fs::create_dir_all(&self.path) {
-            eprintln!("Warning: failed to create cgroup {}: {e}", self.path);
-            return;
-        }
-        if created {
-            guard.remove_when_empty(self.path.clone());
-        }
-        report_controllers(ensure(&self.root));
     }
 }
 
@@ -502,38 +480,6 @@ mod tests {
             "",
             "no partition was attempted"
         );
-    }
-
-    #[test]
-    fn bencher_created_with_the_partition_off_is_removed_at_exit() {
-        // Left behind, it would hold `cpuset` in the root after the runner exits.
-        let dir = tempfile::tempdir().unwrap();
-        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-
-        {
-            let mut guard = empty_guard();
-            BencherPartition::new(&root)
-                .enable_controllers_with(&mut guard, |_| Ok(Controllers::enabled()));
-            assert!(root.join("bencher").is_dir(), "created for the Jobs");
-        }
-
-        assert!(!root.join("bencher").exists());
-    }
-
-    #[test]
-    fn bencher_another_runner_made_is_left_at_exit() {
-        // A runner without the tuning lock must not remove the holder's.
-        let dir = tempfile::tempdir().unwrap();
-        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        fs::create_dir(root.join("bencher")).unwrap();
-
-        {
-            let mut guard = empty_guard();
-            BencherPartition::new(&root)
-                .enable_controllers_with(&mut guard, |_| Ok(Controllers::enabled()));
-        }
-
-        assert!(root.join("bencher").is_dir());
     }
 
     #[test]

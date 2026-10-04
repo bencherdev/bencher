@@ -83,7 +83,7 @@
 //! | `ensure_controllers`: `pids` is not offered or is refused | ignored: nothing the runner reads depends on it |
 //! | `ensure_controllers`: another controller cannot be disabled in `bencher/` | warns: Jobs run with it enabled |
 //! | `disable_swap`: `memory` is absent, or `memory.swap.max` cannot be written | declares the absence: no swap limit |
-//! | `BencherPartition`, at startup with the partition on or off: any read or write, `ensure_controllers` included | declares the absence: it warns, and the level achieved is reported, down to `member` |
+//! | `BencherPartition::apply`: any read or write in the partition path, `ensure_controllers` included | declares the absence: it warns, and the level achieved is reported, down to `member` |
 //! | `BencherPartition::apply`: the kernel refuses both partition modes | writes `member` back, so the file never reads `invalid` for the life of the process |
 //! | `CpuLayout::detect`: the online CPU list cannot be read or parsed | declares the absence: the counted layout is announced as a guess |
 //! | `CpuLayout::detect`: the core count cannot be read | one core, which reports as a layout with no isolation |

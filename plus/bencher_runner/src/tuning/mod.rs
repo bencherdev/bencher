@@ -326,13 +326,10 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
 /// on the same guard and restored on drop.
 #[cfg(target_os = "linux")]
 pub fn apply_cpu_scoped(config: &TuningConfig, layout: &CpuLayout, guard: &mut TuningGuard) {
-    let bencher = partition::BencherPartition::new(Utf8Path::new("/sys/fs/cgroup"));
     if config.cpuset_partition && layout.has_isolation() {
+        let bencher = partition::BencherPartition::new(Utf8Path::new("/sys/fs/cgroup"));
         let level = bencher.apply(layout, guard);
         println!("  Tuning: cpuset partition - achieved level '{level}'");
-    } else if layout.has_isolation() {
-        // Jobs enable the same, but only startup can register the removal.
-        bencher.enable_controllers(guard);
     }
 
     if config.steer_kernel_work && layout.has_isolation() {
