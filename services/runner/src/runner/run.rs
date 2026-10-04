@@ -13,6 +13,8 @@ impl TryFrom<CliRun> for Run {
 
     fn try_from(task: CliRun) -> Result<Self, Self::Error> {
         let tuning = task.tuning.try_into()?;
+        let jail_user = bencher_runner::JailUser::new(task.jail_uid, task.jail_gid)
+            .map_err(bencher_runner::RunnerError::from)?;
 
         let vcpus = task.vcpus.map(bencher_runner::Cpu::try_from).transpose()?;
         let memory = task
@@ -54,6 +56,8 @@ impl TryFrom<CliRun> for Run {
                 grace_period: task.grace_period,
                 sandbox_log_level: task.sandbox_log_level,
                 sandbox: task.sandbox,
+                state_dir: task.state_dir,
+                jail_user,
             },
         })
     }

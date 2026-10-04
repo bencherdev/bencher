@@ -19,7 +19,6 @@
 
 use std::collections::HashMap;
 use std::process::Command;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
@@ -36,13 +35,17 @@ use crate::run::{RunOutput, prepare_oci_workspace};
 /// `std::process::Command` from the unpacked rootfs. No sandboxing is applied.
 pub fn local_execute(
     config: &crate::Config,
-    cancel_flag: Option<&Arc<AtomicBool>>,
+    cancel_flag: Option<&AtomicBool>,
 ) -> Result<RunOutput, RunnerError> {
     println!("Executing benchmark run (non-sandboxed mode):");
     println!("  OCI image: {}", config.oci_image);
     println!("  Timeout: {} seconds", config.timeout_secs);
 
     let workspace = prepare_oci_workspace(config)?;
+    // A cancel during the pull ends the job here rather than after a spawn.
+    if cancel_flag.is_some_and(|flag| flag.load(Ordering::SeqCst)) {
+        return Err(crate::error::ExecutionError::Canceled("job was canceled".to_owned()).into());
+    }
     let unpack_dir = &workspace.unpack_dir;
     let oci_config = &workspace.oci_config;
 
@@ -172,7 +175,7 @@ struct WaitOutput {
 fn wait_with_timeout(
     child: std::process::Child,
     timeout_secs: u64,
-    cancel_flag: Option<&Arc<AtomicBool>>,
+    cancel_flag: Option<&AtomicBool>,
 ) -> Result<WaitOutput, RunnerError> {
     let timeout = Duration::from_secs(timeout_secs);
     let start = Instant::now();

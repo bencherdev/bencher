@@ -54,8 +54,30 @@ jobs:
         run: |
           echo '{"features": {"containerd-snapshotter": true}}' | sudo tee /etc/docker/daemon.json
           sudo systemctl restart docker
+      - name: Build scenario binaries
+        run: cargo test-runner scenarios --build-only
+      - name: Build runner unit tests
+        id: runner_unit_tests
+        run: |
+          set -o pipefail
+          bin=$(cargo test -p bencher_runner --features plus --no-run --message-format=json \
+            | jq -r 'select(.reason == "compiler-artifact" and .profile.test == true and .executable != null) | .executable')
+          test "$(printf '%s\n' "$bin" | grep -c .)" -eq 1
+          echo "bin=$bin" >> "$GITHUB_OUTPUT"
+      - name: Run runner unit tests as root
+        # Some of these tests create and remove directories directly under /, so this step must not move to a persistent host.
+        # The cgroup base is left as the tests found it; a child left in it fails the rmdir.
+        env:
+          RUNNER_UNIT_TESTS: ${{ steps.runner_unit_tests.outputs.bin }}
+        run: |
+          existed=$(test -d /sys/fs/cgroup/bencher && echo yes || echo no)
+          status=0
+          sudo "$RUNNER_UNIT_TESTS" || status=$?
+          if [ "$existed" = no ] && [ -d /sys/fs/cgroup/bencher ]; then sudo rmdir /sys/fs/cgroup/bencher; fi
+          exit "$status"
       - name: Run scenarios
-        run: cargo test-runner scenarios
+        # Only the test runs are elevated, so cargo's cache and target directory are never left root-owned.
+        run: sudo BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios
 
   build_runner:
     name: Build Runner (${{ matrix.build }})

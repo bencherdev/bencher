@@ -29,6 +29,10 @@ runner up
 버전이 지정된 릴리스로만 업데이트합니다.
 `canary` 채널은 Bencher Cloud에 배포되는 롤링 canary 빌드를 추적합니다.
 
+샌드박스 Job을 실행하는 Runner는 `root`로 실행해야 하므로,
+위 명령은 `root` 사용자가 실행하거나
+Runner를 `root`로 시작하는 서비스 관리자 아래에서 실행하는 것을 전제로 합니다.
+
 기본적으로 Runner는 [Sandbox][sandbox]가 없는 Spec의 Job을 거부합니다.
 Runner가 샌드박스 없는 Job을 호스트에서 직접 실행하도록 하려면,
 [`--danger-allow-no-sandbox` 플래그][danger allow no sandbox]로 시작하세요.

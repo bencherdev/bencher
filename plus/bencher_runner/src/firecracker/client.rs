@@ -9,57 +9,54 @@ use std::io::{Read as _, Write as _};
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
 
-use camino::Utf8Path;
-
 use crate::firecracker::config::{Action, BootSource, Drive, MachineConfig, VsockConfig};
 use crate::firecracker::error::FirecrackerError;
+use crate::jail::SocketPath;
 
 /// Client for the Firecracker REST API.
-pub struct FirecrackerClient {
-    socket_path: String,
+pub struct FirecrackerClient<'a> {
+    /// Borrowed, so the client cannot outlive the descriptor this path names.
+    socket_path: &'a SocketPath,
 }
 
-impl FirecrackerClient {
-    /// Create a new client for the given API socket path.
-    pub fn new(socket_path: &str) -> Self {
-        Self {
-            socket_path: socket_path.to_owned(),
-        }
+impl<'a> FirecrackerClient<'a> {
+    /// Takes the socket view, since the runner connects from outside the chroot.
+    pub fn new(socket_path: &'a SocketPath) -> Self {
+        Self { socket_path }
     }
 
-    /// Wait for the Firecracker API socket to become ready.
-    pub fn wait_for_ready(&self, timeout: Duration) -> Result<(), FirecrackerError> {
-        let start = std::time::Instant::now();
-        let poll_interval = Duration::from_millis(50);
+    /// `Ok(false)` while Firecracker is not listening yet, and an error for an
+    /// address that waiting cannot fix.
+    pub fn try_ready(&self) -> Result<bool, FirecrackerError> {
+        match UnixStream::connect(self.socket_path.as_str()) {
+            Ok(mut stream) => {
+                drop(stream.set_read_timeout(Some(Duration::from_secs(1))));
+                drop(stream.set_write_timeout(Some(Duration::from_secs(1))));
 
-        while start.elapsed() < timeout {
-            if Utf8Path::new(&self.socket_path).exists() {
-                // Try to connect
-                if let Ok(mut stream) = UnixStream::connect(&self.socket_path) {
-                    drop(stream.set_read_timeout(Some(Duration::from_secs(1))));
-                    drop(stream.set_write_timeout(Some(Duration::from_secs(1))));
-
-                    let request = "GET / HTTP/1.1\r\nHost: localhost\r\nAccept: */*\r\n\r\n";
-                    if stream.write_all(request.as_bytes()).is_ok() {
-                        let mut buf = [0u8; 256];
-                        if let Ok(n) = stream.read(&mut buf)
-                            && n > 0
-                        {
-                            return Ok(());
-                        }
+                let request = "GET / HTTP/1.1\r\nHost: localhost\r\nAccept: */*\r\n\r\n";
+                if stream.write_all(request.as_bytes()).is_ok() {
+                    let mut buf = [0u8; 256];
+                    if let Ok(n) = stream.read(&mut buf)
+                        && n > 0
+                    {
+                        return Ok(true);
                     }
                 }
-            }
-            std::thread::sleep(poll_interval);
+                Ok(false)
+            },
+            Err(e) if is_not_listening_yet(&e) => Ok(false),
+            Err(e) => Err(FirecrackerError::SocketUnusable {
+                path: self.socket_path.clone(),
+                source: e,
+            }),
         }
-
-        Err(FirecrackerError::SocketNotReady(timeout))
     }
 
     /// Configure the machine (vCPUs, memory).
     pub fn put_machine_config(&self, config: &MachineConfig) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(config).map_err(|e| {
-            FirecrackerError::ProcessStart(format!("serialize machine config: {e}"))
+        let body = serde_json::to_string(config).map_err(|e| FirecrackerError::ApiEncoding {
+            context: "serialize machine config",
+            source: e,
         })?;
         let (status, response_body) = self.http_put("/machine-config", &body)?;
         if status >= 300 {
@@ -73,8 +70,10 @@ impl FirecrackerClient {
 
     /// Configure the boot source (kernel and boot args).
     pub fn put_boot_source(&self, config: &BootSource) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(config)
-            .map_err(|e| FirecrackerError::ProcessStart(format!("serialize boot source: {e}")))?;
+        let body = serde_json::to_string(config).map_err(|e| FirecrackerError::ApiEncoding {
+            context: "serialize boot source",
+            source: e,
+        })?;
         let (status, response_body) = self.http_put("/boot-source", &body)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
@@ -87,8 +86,10 @@ impl FirecrackerClient {
 
     /// Configure a block device (drive).
     pub fn put_drive(&self, config: &Drive) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(config)
-            .map_err(|e| FirecrackerError::ProcessStart(format!("serialize drive: {e}")))?;
+        let body = serde_json::to_string(config).map_err(|e| FirecrackerError::ApiEncoding {
+            context: "serialize drive",
+            source: e,
+        })?;
         let path = format!("/drives/{}", config.drive_id);
         let (status, response_body) = self.http_put(&path, &body)?;
         if status >= 300 {
@@ -102,8 +103,10 @@ impl FirecrackerClient {
 
     /// Configure the vsock device.
     pub fn put_vsock(&self, config: &VsockConfig) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(config)
-            .map_err(|e| FirecrackerError::ProcessStart(format!("serialize vsock: {e}")))?;
+        let body = serde_json::to_string(config).map_err(|e| FirecrackerError::ApiEncoding {
+            context: "serialize vsock",
+            source: e,
+        })?;
         let (status, response_body) = self.http_put("/vsock", &body)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
@@ -116,8 +119,10 @@ impl FirecrackerClient {
 
     /// Perform a VM action (start, shutdown, etc.).
     pub fn put_action(&self, action: &Action) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(action)
-            .map_err(|e| FirecrackerError::ProcessStart(format!("serialize action: {e}")))?;
+        let body = serde_json::to_string(action).map_err(|e| FirecrackerError::ApiEncoding {
+            context: "serialize action",
+            source: e,
+        })?;
         let (status, response_body) = self.http_put("/actions", &body)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
@@ -128,13 +133,27 @@ impl FirecrackerClient {
         Ok(())
     }
 
+    fn unusable(&self, source: std::io::Error) -> FirecrackerError {
+        FirecrackerError::SocketUnusable {
+            path: self.socket_path.clone(),
+            source,
+        }
+    }
+
     /// Send an HTTP PUT request over the Unix socket.
     ///
     /// Returns the HTTP status code and response body.
     fn http_put(&self, path: &str, json_body: &str) -> Result<(u16, String), FirecrackerError> {
-        let mut stream = UnixStream::connect(&self.socket_path)?;
-        stream.set_read_timeout(Some(Duration::from_secs(5)))?;
-        stream.set_write_timeout(Some(Duration::from_secs(5)))?;
+        // Only failures about the socket itself name it; errors on an
+        // established stream stay plain I/O.
+        let mut stream =
+            UnixStream::connect(self.socket_path.as_str()).map_err(|e| self.unusable(e))?;
+        stream
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .map_err(|e| self.unusable(e))?;
+        stream
+            .set_write_timeout(Some(Duration::from_secs(5)))
+            .map_err(|e| self.unusable(e))?;
 
         let request = format!(
             "PUT {path} HTTP/1.1\r\n\
@@ -200,6 +219,17 @@ impl FirecrackerClient {
     }
 }
 
+/// The errors a booting VMM produces; any other describes the address itself.
+fn is_not_listening_yet(error: &std::io::Error) -> bool {
+    matches!(
+        error.kind(),
+        std::io::ErrorKind::NotFound
+            | std::io::ErrorKind::ConnectionRefused
+            | std::io::ErrorKind::WouldBlock
+            | std::io::ErrorKind::Interrupted
+    )
+}
+
 /// Check if we have received a complete HTTP response.
 fn response_complete(data: &[u8]) -> bool {
     let header_end = find_header_end(data);
@@ -238,13 +268,15 @@ fn parse_http_response(data: &[u8]) -> Result<(u16, String), FirecrackerError> {
     let status_line = response
         .lines()
         .next()
-        .ok_or_else(|| FirecrackerError::ProcessStart("empty HTTP response".to_owned()))?;
+        .ok_or(FirecrackerError::MalformedResponse("empty HTTP response"))?;
 
     let status_code: u16 = status_line
         .split_whitespace()
         .nth(1)
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(500);
+        .and_then(|code| code.parse().ok())
+        .ok_or(FirecrackerError::MalformedResponse(
+            "HTTP status line carries no status code",
+        ))?;
 
     // Extract body (after \r\n\r\n)
     let body = response
@@ -257,7 +289,35 @@ fn parse_http_response(data: &[u8]) -> Result<(u16, String), FirecrackerError> {
 
 #[cfg(test)]
 mod tests {
+    use camino::Utf8Path;
+
     use super::*;
+    use crate::firecracker::config::ActionType;
+    use crate::jail::JailPaths;
+
+    #[test]
+    fn an_api_call_that_cannot_reach_the_socket_names_it() {
+        // Prevents a call after readiness failing as a bare I/O error that never names the socket.
+        let dir = tempfile::tempdir().unwrap();
+        let jail = JailPaths::new(Utf8Path::from_path(dir.path()).unwrap()).unwrap();
+        let client = FirecrackerClient::new(jail.api_socket().socket());
+
+        let Err(err) = client.put_action(&Action {
+            action_type: ActionType::SendCtrlAltDel,
+        }) else {
+            panic!("nothing is listening on this path");
+        };
+
+        assert!(
+            matches!(err, FirecrackerError::SocketUnusable { .. }),
+            "an address that cannot be reached is not a bare I/O error: {err}"
+        );
+        assert!(
+            err.to_string()
+                .contains(jail.api_socket().socket().as_str()),
+            "the error must name the socket: {err}"
+        );
+    }
 
     // --- find_header_end ---
 
@@ -348,18 +408,28 @@ mod tests {
     }
 
     #[test]
-    fn parse_http_malformed_status_defaults_to_500() {
-        // No status code in the status line
+    fn a_status_line_without_a_status_is_malformed_not_a_500() {
+        // Prevents an unparseable status being reported as a 500 Firecracker never sent.
         let data = b"HTTP/1.1\r\n\r\n";
-        let (status, _) = parse_http_response(data).unwrap();
-        assert_eq!(status, 500);
+
+        let err = parse_http_response(data).unwrap_err();
+
+        assert!(
+            matches!(err, FirecrackerError::MalformedResponse(_)),
+            "a response that could not be parsed is not a status: {err}"
+        );
     }
 
     #[test]
-    fn parse_http_non_numeric_status_defaults_to_500() {
+    fn a_status_that_is_not_a_number_is_malformed_not_a_500() {
         let data = b"HTTP/1.1 abc OK\r\n\r\n";
-        let (status, _) = parse_http_response(data).unwrap();
-        assert_eq!(status, 500);
+
+        let err = parse_http_response(data).unwrap_err();
+
+        assert!(
+            matches!(err, FirecrackerError::MalformedResponse(_)),
+            "{err}"
+        );
     }
 
     #[test]

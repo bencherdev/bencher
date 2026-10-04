@@ -2,19 +2,20 @@
 //!
 //! Firecracker's vsock implementation uses Unix domain sockets on the host side.
 //! When the guest connects to CID 2 (host) on port N, Firecracker connects to
-//! `{uds_path}_{N}` on the host. The host must have Unix listeners at those
-//! paths before VM boot.
+//! `{uds_path}_{N}`, which the runner binds from outside the chroot before VM boot.
 
 use std::io::Read as _;
 use std::os::fd::AsFd as _;
 use std::os::unix::net::UnixListener;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
+use camino::Utf8Path;
 use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 
 use crate::firecracker::error::FirecrackerError;
+use crate::jail::chroot::chown_to_jail;
+use crate::jail::{JailFile, JailUser};
 
 /// Poll timeout for vsock listeners (50ms).
 ///
@@ -32,6 +33,19 @@ mod ports {
     pub const STDERR: u32 = 5001;
     pub const EXIT_CODE: u32 = 5002;
     pub const OUTPUT_FILES: u32 = 5005;
+
+    pub const ALL: [u32; 4] = [STDOUT, STDERR, EXIT_CODE, OUTPUT_FILES];
+
+    /// Names the stream in errors, since a port alone sends an operator here.
+    pub const fn stream(port: u32) -> &'static str {
+        match port {
+            STDOUT => "stdout",
+            STDERR => "stderr",
+            EXIT_CODE => "exit_code",
+            OUTPUT_FILES => "output_files",
+            _ => "unknown",
+        }
+    }
 }
 
 /// Results collected from the guest via vsock.
@@ -49,8 +63,9 @@ pub struct VsockResults {
 
 /// Host-side vsock listener that accepts connections from Firecracker.
 pub struct VsockListener {
-    /// Base path for the vsock UDS.
-    vsock_uds_path: String,
+    /// Binding needs the socket view for `sun_path`; everything else uses the
+    /// host view, which needs no open descriptor.
+    vsock: JailFile,
     /// Listeners for each port.
     stdout_listener: UnixListener,
     stderr_listener: UnixListener,
@@ -61,49 +76,15 @@ pub struct VsockListener {
 impl VsockListener {
     /// Create vsock listeners for all expected ports.
     ///
-    /// Creates Unix listeners at `{vsock_uds_path}_{port}` for each port.
-    /// These must be created before the VM boots.
-    pub fn new(vsock_uds_path: &str) -> Result<Self, FirecrackerError> {
-        let stdout_path = format!("{vsock_uds_path}_{}", ports::STDOUT);
-        let stderr_path = format!("{vsock_uds_path}_{}", ports::STDERR);
-        let exit_code_path = format!("{vsock_uds_path}_{}", ports::EXIT_CODE);
-        let output_files_path = format!("{vsock_uds_path}_{}", ports::OUTPUT_FILES);
-
-        // Remove stale socket files
-        for path in [
-            &stdout_path,
-            &stderr_path,
-            &exit_code_path,
-            &output_files_path,
-        ] {
-            drop(std::fs::remove_file(path));
-        }
-
-        let stdout_listener = UnixListener::bind(&stdout_path)
-            .map_err(|e| FirecrackerError::VsockCollection(format!("bind stdout: {e}")))?;
-        let stderr_listener = UnixListener::bind(&stderr_path)
-            .map_err(|e| FirecrackerError::VsockCollection(format!("bind stderr: {e}")))?;
-        let exit_code_listener = UnixListener::bind(&exit_code_path)
-            .map_err(|e| FirecrackerError::VsockCollection(format!("bind exit_code: {e}")))?;
-        let output_files_listener = UnixListener::bind(&output_files_path)
-            .map_err(|e| FirecrackerError::VsockCollection(format!("bind output_files: {e}")))?;
-
-        // Set non-blocking so we can poll
-        stdout_listener.set_nonblocking(true).map_err(|e| {
-            FirecrackerError::VsockCollection(format!("set_nonblocking stdout: {e}"))
-        })?;
-        stderr_listener.set_nonblocking(true).map_err(|e| {
-            FirecrackerError::VsockCollection(format!("set_nonblocking stderr: {e}"))
-        })?;
-        exit_code_listener.set_nonblocking(true).map_err(|e| {
-            FirecrackerError::VsockCollection(format!("set_nonblocking exit_code: {e}"))
-        })?;
-        output_files_listener.set_nonblocking(true).map_err(|e| {
-            FirecrackerError::VsockCollection(format!("set_nonblocking output_files: {e}"))
-        })?;
+    /// Binds `{vsock}_{port}` for each port, and must run before the VM boots.
+    pub fn new(vsock: &JailFile) -> Result<Self, FirecrackerError> {
+        let stdout_listener = bind_nonblocking(vsock, ports::STDOUT)?;
+        let stderr_listener = bind_nonblocking(vsock, ports::STDERR)?;
+        let exit_code_listener = bind_nonblocking(vsock, ports::EXIT_CODE)?;
+        let output_files_listener = bind_nonblocking(vsock, ports::OUTPUT_FILES)?;
 
         Ok(Self {
-            vsock_uds_path: vsock_uds_path.to_owned(),
+            vsock: vsock.clone(),
             stdout_listener,
             stderr_listener,
             exit_code_listener,
@@ -129,7 +110,7 @@ impl VsockListener {
         &self,
         timeout: Duration,
         max_data_size: usize,
-        cancel_flag: Option<&Arc<AtomicBool>>,
+        cancel_flag: Option<&AtomicBool>,
         grace_period: Duration,
     ) -> Result<VsockResults, FirecrackerError> {
         let start = std::time::Instant::now();
@@ -189,8 +170,8 @@ impl VsockListener {
             match poll(&mut fds, poll_timeout) {
                 Ok(_) => {},
                 Err(nix::errno::Errno::EINTR) => continue,
-                Err(e) => {
-                    return Err(FirecrackerError::VsockCollection(format!("poll: {e}")));
+                Err(source) => {
+                    return Err(FirecrackerError::PollVsock { source });
                 },
             }
 
@@ -263,17 +244,27 @@ impl VsockListener {
         })
     }
 
-    /// Remove all socket files created by this listener.
-    pub fn cleanup(&self) {
-        for port in [
-            ports::STDOUT,
-            ports::STDERR,
-            ports::EXIT_CODE,
-            ports::OUTPUT_FILES,
-        ] {
-            let path = format!("{}_{port}", self.vsock_uds_path);
-            drop(std::fs::remove_file(path));
+    /// Firecracker connects to these as the jail user, so this must run after
+    /// the bind and before `InstanceStart`.
+    pub fn chown_to_jail(&self, jail_user: JailUser) -> Result<(), crate::error::JailError> {
+        for port in ports::ALL {
+            chown_to_jail(Utf8Path::new(&self.host_path(port)), jail_user)?;
         }
+        Ok(())
+    }
+
+    /// Remove all socket files created by this listener.
+    ///
+    /// Unlinks through the host view, since from `Drop` the socket view may name
+    /// a closed descriptor and delete an unrelated file.
+    pub fn cleanup(&self) {
+        for port in ports::ALL {
+            drop(std::fs::remove_file(self.host_path(port)));
+        }
+    }
+
+    fn host_path(&self, port: u32) -> String {
+        format!("{}_{port}", self.vsock.host())
     }
 }
 
@@ -281,6 +272,23 @@ impl Drop for VsockListener {
     fn drop(&mut self) {
         self.cleanup();
     }
+}
+
+fn bind_nonblocking(vsock: &JailFile, port: u32) -> Result<UnixListener, FirecrackerError> {
+    let path = vsock.socket().with_port(port);
+    let listener = UnixListener::bind(&path).map_err(|source| FirecrackerError::BindVsock {
+        stream: ports::stream(port),
+        port,
+        source,
+    })?;
+    listener
+        .set_nonblocking(true)
+        .map_err(|source| FirecrackerError::VsockNonblocking {
+            stream: ports::stream(port),
+            port,
+            source,
+        })?;
+    Ok(listener)
 }
 
 /// Try to accept a connection on a non-blocking listener and read all data.
@@ -324,6 +332,7 @@ fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<
 )]
 mod tests {
     use super::*;
+    use crate::jail::JailPaths;
 
     use std::io::Write as _;
     use std::os::unix::net::UnixStream;
@@ -333,12 +342,19 @@ mod tests {
     /// Short grace period for tests to avoid slowing down the test suite.
     const TEST_GRACE_PERIOD: Duration = Duration::from_millis(50);
 
-    /// Helper: create a `VsockListener` in a temp directory.
-    fn listener_in_tmpdir() -> (tempfile::TempDir, VsockListener) {
+    /// Returns the `JailPaths` too, since the socket view names its descriptor.
+    fn jail_in_tmpdir() -> (tempfile::TempDir, JailPaths) {
         let dir = tempfile::tempdir().unwrap();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
-        let listener = VsockListener::new(&base).unwrap();
-        (dir, listener)
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let jail = JailPaths::new(root).unwrap();
+        (dir, jail)
+    }
+
+    /// Helper: create a `VsockListener` on a jail that stays alive.
+    fn listener_in_tmpdir() -> (tempfile::TempDir, JailPaths, VsockListener) {
+        let (dir, jail) = jail_in_tmpdir();
+        let listener = VsockListener::new(jail.vsock()).unwrap();
+        (dir, jail, listener)
     }
 
     /// Helper: connect to a vsock port and write data.
@@ -351,9 +367,8 @@ mod tests {
 
     #[test]
     fn vsock_listener_creates_socket_files() {
-        let dir = tempfile::tempdir().unwrap();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
-        let _listener = VsockListener::new(&base).unwrap();
+        let (_dir, jail, _listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
 
         for port in [5000, 5001, 5002, 5005] {
             let path = format!("{base}_{port}");
@@ -365,12 +380,41 @@ mod tests {
     }
 
     #[test]
+    fn a_path_already_taken_is_reported_not_deleted() {
+        // Prevents `new` unlinking a taken path, which through a stale socket
+        // view deletes an unrelated file.
+        let (_dir, jail) = jail_in_tmpdir();
+        let occupied = format!("{}_{}", jail.vsock().host(), ports::STDOUT);
+        std::fs::write(&occupied, b"not ours").unwrap();
+
+        let Err(err) = VsockListener::new(jail.vsock()) else {
+            panic!("binding over a path that is already taken must fail");
+        };
+
+        assert!(
+            matches!(
+                err,
+                FirecrackerError::BindVsock {
+                    stream: "stdout",
+                    ..
+                }
+            ),
+            "a taken path is a bind failure that names the stream, got: {err}"
+        );
+        assert_eq!(
+            std::fs::read(&occupied).unwrap(),
+            b"not ours",
+            "the file that was there must still be there"
+        );
+    }
+
+    #[test]
     fn vsock_listener_cleanup_removes_files() {
-        let dir = tempfile::tempdir().unwrap();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let (_dir, jail) = jail_in_tmpdir();
+        let base = jail.vsock().host().to_string();
 
         {
-            let _listener = VsockListener::new(&base).unwrap();
+            let _listener = VsockListener::new(jail.vsock()).unwrap();
             // listener drops here
         }
 
@@ -385,8 +429,8 @@ mod tests {
 
     #[test]
     fn collect_all_ports() {
-        let (dir, listener) = listener_in_tmpdir();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
 
         // Build protocol-encoded data: 1 file, path="out.bin", content=\x00\x01\x02
         let mut encoded = Vec::new();
@@ -427,8 +471,8 @@ mod tests {
 
     #[test]
     fn collect_exit_code_only() {
-        let (dir, listener) = listener_in_tmpdir();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
 
         let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
@@ -454,7 +498,7 @@ mod tests {
 
     #[test]
     fn collect_timeout_returns_error() {
-        let (_dir, listener) = listener_in_tmpdir();
+        let (_dir, _jail, listener) = listener_in_tmpdir();
 
         // No data sent — should timeout with an error
         let result = listener.collect_results(
@@ -473,8 +517,8 @@ mod tests {
 
     #[test]
     fn collect_non_utf8_stdout() {
-        let (dir, listener) = listener_in_tmpdir();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
 
         let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
@@ -502,8 +546,8 @@ mod tests {
 
     #[test]
     fn collect_exit_code_triggers_final_pass() {
-        let (dir, listener) = listener_in_tmpdir();
-        let base = dir.path().join("vsock").to_str().unwrap().to_owned();
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
 
         let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
@@ -605,10 +649,10 @@ mod tests {
 
     #[test]
     fn collect_cancelled_returns_error() {
-        let (_dir, listener) = listener_in_tmpdir();
+        let (_dir, _jail, listener) = listener_in_tmpdir();
 
         // Set the cancel flag before collecting
-        let cancel_flag = Arc::new(AtomicBool::new(true));
+        let cancel_flag = AtomicBool::new(true);
 
         let result = listener.collect_results(
             Duration::from_secs(5),

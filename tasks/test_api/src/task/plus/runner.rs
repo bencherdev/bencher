@@ -6,6 +6,8 @@ use bencher_json::{
     runner::{JobCallbackState, JsonJobCallback},
 };
 use pretty_assertions::assert_eq;
+#[cfg(unix)]
+use std::os::unix::process::CommandExt as _;
 
 use crate::parser::TaskRunner;
 use crate::task::test::seed_test::{
@@ -193,31 +195,10 @@ impl RunnerTest {
             anyhow::ensure!(build_status.success(), "Failed to build bencher CLI");
         }
 
-        // Start the Firecracker runner daemon only when KVM is available
-        let runner_child_and_handle = if has_kvm {
-            println!("Starting runner daemon...");
-            let mut runner_child = Command::cargo_bin("runner")?;
-            let mut runner_child = runner_child
-                .args([
-                    "up",
-                    HOST_ARG,
-                    host,
-                    "--key",
-                    runner_key.key.as_ref(),
-                    "--runner",
-                    "test-runner",
-                ])
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::inherit())
-                .spawn()?;
-
-            let reader_handle = wait_for_stdout_ready(
-                &mut runner_child,
-                "Polling for jobs",
-                "runner",
-                std::time::Duration::from_secs(30),
-            );
-            Some((runner_child, reader_handle))
+        // Only the jailed runner is elevated, and the no-sandbox runner below
+        // stays unprivileged, proving it needs no root in the same run.
+        let _elevated_runner = if has_kvm {
+            Some(ElevatedRunner::start(host, runner_key.key.as_ref())?)
         } else {
             println!("Skipping Firecracker runner daemon (no KVM)");
             None
@@ -319,12 +300,8 @@ impl RunnerTest {
             Ok(())
         };
 
-        // Always kill runner daemons, even if the test failed
-        if let Some((mut runner_child, reader_handle)) = runner_child_and_handle {
-            let _kill = runner_child.kill();
-            let _wait = runner_child.wait();
-            let _join = reader_handle.join();
-        }
+        // Always kill the no-sandbox daemon, even if the test failed; the
+        // elevated one stops when `_elevated_runner` drops.
         let _kill = no_sandbox_child.kill();
         let _wait = no_sandbox_child.wait();
         let _join = no_sandbox_reader_handle.join();
@@ -342,6 +319,194 @@ impl RunnerTest {
         println!("=== Runner Daemon Test Passed ===");
         Ok(())
     }
+}
+
+/// Cleaned up on drop so a panic or early `?` cannot strand a root daemon, but a
+/// signal that kills the harness outright still does, and Ctrl-C never reaches
+/// its process group.
+struct ElevatedRunner {
+    child: std::process::Child,
+    /// `None` until the readiness wait returns, since the guard is armed before it.
+    reader: Option<std::thread::JoinHandle<()>>,
+    state_dir: std::path::PathBuf,
+}
+
+impl ElevatedRunner {
+    /// Start the daemon under `sudo` and wait for it to poll for jobs.
+    fn start(host: &str, key: &str) -> anyhow::Result<Self> {
+        println!("Starting runner daemon (elevated)...");
+        ensure_passwordless_sudo()?;
+
+        // Run the already-built binary under sudo, so cargo never runs as root
+        // and leaves root-owned artifacts in the target directory.
+        let runner_cmd = Command::cargo_bin("runner")?;
+        let runner_bin = runner_cmd.get_program().to_owned();
+
+        // Never the default state directory, which a root runner would chmod,
+        // sweep, and leave root-owned on a machine where a real runner may own it.
+        let state_dir = elevated_state_dir(&runner_bin);
+        println!("  Runner state directory: {}", state_dir.display());
+
+        let mut runner_child = Command::new("sudo");
+        let runner_child = runner_child
+            .args(["-n", "--"])
+            .arg(&runner_bin)
+            .args([
+                "up",
+                HOST_ARG,
+                host,
+                "--key",
+                key,
+                "--runner",
+                "test-runner",
+            ])
+            .arg("--state-dir")
+            .arg(&state_dir)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit());
+        // Its own process group, so teardown can signal the runner even
+        // though the child handle is sudo, which may exec the runner in
+        // place or fork it depending on version and configuration.
+        #[cfg(unix)]
+        runner_child.process_group(0);
+        // Armed before the wait, because the wait panics on a timeout and an
+        // unguarded daemon is one nothing stops.
+        let mut runner = Self {
+            child: runner_child.spawn()?,
+            reader: None,
+            state_dir,
+        };
+        runner.reader = Some(wait_for_stdout_ready(
+            &mut runner.child,
+            "Polling for jobs",
+            "runner",
+            std::time::Duration::from_secs(30),
+        ));
+        Ok(runner)
+    }
+}
+
+impl Drop for ElevatedRunner {
+    fn drop(&mut self) {
+        kill_elevated_runner(&mut self.child);
+        // The kill closes the daemon's stdout, which ends the reader.
+        if let Some(reader) = self.reader.take() {
+            let _join = reader.join();
+        }
+        // The cgroups first: they are named by the jail directories in the
+        // state directory, which is removed next.
+        remove_elevated_cgroups(&self.state_dir);
+        remove_elevated_state_dir(&self.state_dir);
+    }
+}
+
+/// Fail early, rather than as a readiness timeout that names no cause.
+fn ensure_passwordless_sudo() -> anyhow::Result<()> {
+    let status = Command::new("sudo")
+        .args(["-n", "true"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()?;
+    anyhow::ensure!(
+        status.success(),
+        "A Runner executing sandboxed Jobs must run as root, and passwordless sudo is not available. \
+         The jailer creates the chroot's device nodes with mknod, chowns the tree to the jail user, \
+         pivot_roots into it, and joins a network namespace, none of which an unprivileged process can do."
+    );
+    Ok(())
+}
+
+/// Beside the runner binary, so it lands in the target directory the harness
+/// already owns.
+fn elevated_state_dir(runner_bin: &std::ffi::OsStr) -> std::path::PathBuf {
+    std::path::Path::new(runner_bin)
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("test-api-runner-state")
+}
+
+/// Remove the cgroups a killed daemon leaves, which the runner's own sweep can
+/// never find once the state directory that names them is gone.
+fn remove_elevated_cgroups(state_dir: &std::path::Path) {
+    let jail_parent = state_dir.join("jail").join("firecracker");
+    let _status = Command::new("sudo")
+        .args(["-n", "sh", "-c"])
+        .arg(cgroup_cleanup_script(
+            &jail_parent,
+            CGROUP_ROOT,
+            CGROUP_REMOVE_ATTEMPTS,
+        ))
+        .status();
+}
+
+/// Where the runner puts the cgroup of a jailed VMM, named by the jail's id.
+const CGROUP_ROOT: &str = "/sys/fs/cgroup/bencher";
+
+/// Retried because `rmdir` refuses until the just-killed process is reaped.
+const CGROUP_REMOVE_ATTEMPTS: u32 = 100;
+
+/// How long to wait between attempts, in seconds, as the shell spells it.
+const CGROUP_REMOVE_INTERVAL: &str = "0.05";
+
+/// A shell rather than Rust, because listing the jails in the root-owned 0700
+/// state directory needs `sudo` as much as removing the cgroups does.
+fn cgroup_cleanup_script(
+    jail_parent: &std::path::Path,
+    cgroup_root: &str,
+    attempts: u32,
+) -> String {
+    let jail_parent = jail_parent.display();
+    format!(
+        "for jail in \"{jail_parent}\"/*; do \
+           [ -d \"$jail\" ] || continue; \
+           cgroup=\"{cgroup_root}/$(basename \"$jail\")\"; \
+           [ -d \"$cgroup\" ] || continue; \
+           attempt=0; \
+           while [ \"$attempt\" -lt {attempts} ] && ! rmdir \"$cgroup\" 2>/dev/null; do \
+             [ -d \"$cgroup\" ] || break; \
+             sleep {CGROUP_REMOVE_INTERVAL}; \
+             attempt=$((attempt + 1)); \
+           done; \
+           [ -d \"$cgroup\" ] && \
+             echo \"Note: $cgroup is left owned by root. Remove it with: sudo rmdir $cgroup\"; \
+         done; \
+         true"
+    )
+}
+
+/// Through `sudo`, because the state directory is owned by the root runner that
+/// created it.
+fn remove_elevated_state_dir(state_dir: &std::path::Path) {
+    if !state_dir.exists() {
+        return;
+    }
+    let removed = Command::new("sudo")
+        .args(["-n", "rm", "-rf"])
+        .arg(state_dir)
+        .status()
+        .is_ok_and(|status| status.success());
+    if !removed {
+        println!(
+            "Note: {} is left owned by root. Remove it with: sudo rm -rf {}",
+            state_dir.display(),
+            state_dir.display()
+        );
+    }
+}
+
+/// Kills the whole process group through `sudo`, because the handle is `sudo`
+/// itself and killing it alone would leave a root daemon holding the jail lock.
+fn kill_elevated_runner(child: &mut std::process::Child) {
+    let pid = child.id();
+    let _status = Command::new("sudo")
+        .args(["-n", "sh", "-c"])
+        .arg(format!(
+            "kill -KILL -{pid} 2>/dev/null || kill -KILL {pid} 2>/dev/null || true"
+        ))
+        .status();
+    // Reap the handle whatever the signal did.
+    let _kill = child.kill();
+    let _wait = child.wait();
 }
 
 /// Check whether Docker is available.
@@ -1608,4 +1773,132 @@ fn wait_for_stdout_ready(
     }
 
     handle
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    fn scratch(name: &str) -> std::path::PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("bencher-runner-test-{name}-{}", std::process::id()));
+        drop(std::fs::remove_dir_all(&dir));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// Run the cleanup as `remove_elevated_cgroups` does, minus the sudo.
+    fn run_cleanup(
+        jail_parent: &std::path::Path,
+        cgroup_root: &std::path::Path,
+        attempts: u32,
+    ) -> String {
+        let output = Command::new("sh")
+            .arg("-c")
+            .arg(cgroup_cleanup_script(
+                jail_parent,
+                &cgroup_root.display().to_string(),
+                attempts,
+            ))
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "the cleanup reports nothing to complain about"
+        );
+        String::from_utf8(output.stdout).unwrap()
+    }
+
+    #[test]
+    fn the_cleanup_removes_the_cgroup_of_every_jail() {
+        // A cgroup left here is never found again, since the jail directories
+        // that name it are removed next.
+        let root = scratch("cgroups");
+        let jail_parent = root.join("state/jail/firecracker");
+        let cgroup_root = root.join("cgroup/bencher");
+        for vm_id in ["job-one", "job-two"] {
+            std::fs::create_dir_all(jail_parent.join(vm_id).join("root")).unwrap();
+            std::fs::create_dir_all(cgroup_root.join(vm_id)).unwrap();
+        }
+        std::fs::write(jail_parent.join("notes.txt"), b"not a jail").unwrap();
+        std::fs::create_dir_all(cgroup_root.join("someone-elses")).unwrap();
+
+        let said = run_cleanup(&jail_parent, &cgroup_root, CGROUP_REMOVE_ATTEMPTS);
+
+        assert!(!cgroup_root.join("job-one").exists());
+        assert!(!cgroup_root.join("job-two").exists());
+        assert!(
+            cgroup_root.join("someone-elses").exists(),
+            "only the cgroups this run's jails name are its to remove"
+        );
+        assert!(said.is_empty(), "a cleanup that worked has nothing to say");
+
+        drop(std::fs::remove_dir_all(&root));
+    }
+
+    #[test]
+    fn the_cleanup_says_nothing_about_a_run_that_never_had_a_job() {
+        // The guard runs on every path out of the test, so an absent jail parent
+        // is ordinary and has to pass quietly.
+        let root = scratch("no-jobs");
+
+        let said = run_cleanup(
+            &root.join("state/jail/firecracker"),
+            &root.join("cgroup"),
+            CGROUP_REMOVE_ATTEMPTS,
+        );
+
+        assert!(said.is_empty(), "a run with no jails has nothing to report");
+
+        drop(std::fs::remove_dir_all(&root));
+    }
+
+    #[test]
+    fn the_cleanup_waits_for_a_cgroup_the_kill_has_not_emptied_yet() {
+        // A single `rmdir` would lose the race with the reap of the just-killed
+        // process and strand the cgroup for good.
+        let root = scratch("cgroup-busy");
+        let jail_parent = root.join("state/jail/firecracker");
+        let cgroup_root = root.join("cgroup/bencher");
+        std::fs::create_dir_all(jail_parent.join("job-one")).unwrap();
+        std::fs::create_dir_all(cgroup_root.join("job-one")).unwrap();
+        let occupant = cgroup_root.join("job-one").join("occupant");
+        std::fs::write(&occupant, b"still here").unwrap();
+        let clearing = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            std::fs::remove_file(&occupant).unwrap();
+        });
+
+        let said = run_cleanup(&jail_parent, &cgroup_root, CGROUP_REMOVE_ATTEMPTS);
+
+        clearing.join().unwrap();
+        assert!(
+            !cgroup_root.join("job-one").exists(),
+            "the cleanup waits out a refusal rather than taking it as final"
+        );
+        assert!(said.is_empty(), "a cleanup that worked has nothing to say");
+
+        drop(std::fs::remove_dir_all(&root));
+    }
+
+    #[test]
+    fn the_cleanup_names_the_cgroup_it_could_not_remove() {
+        // A silent give-up would leave a root-owned cgroup nothing will ever
+        // find again.
+        let root = scratch("cgroup-stuck");
+        let jail_parent = root.join("state/jail/firecracker");
+        let cgroup_root = root.join("cgroup/bencher");
+        std::fs::create_dir_all(jail_parent.join("job-one")).unwrap();
+        std::fs::create_dir_all(cgroup_root.join("job-one").join("occupant")).unwrap();
+
+        let said = run_cleanup(&jail_parent, &cgroup_root, 1);
+
+        let stuck = cgroup_root.join("job-one");
+        assert!(
+            said.contains(&stuck.display().to_string()),
+            "the cgroup that stayed is named: {said}"
+        );
+
+        drop(std::fs::remove_dir_all(&root));
+    }
 }

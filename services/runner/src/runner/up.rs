@@ -13,6 +13,8 @@ impl TryFrom<CliUp> for Up {
 
     fn try_from(task: CliUp) -> Result<Self, Self::Error> {
         let tuning = task.tuning.try_into()?;
+        let jail_user = bencher_runner::JailUser::new(task.jail_uid, task.jail_gid)
+            .map_err(bencher_runner::RunnerError::from)?;
 
         Ok(Self {
             config: UpConfig {
@@ -31,6 +33,8 @@ impl TryFrom<CliUp> for Up {
                 no_auto_update: task.no_auto_update,
                 update_channel: task.update_channel,
                 max_download_size: task.max_download_size,
+                state_dir: task.state_dir,
+                jail_user,
             },
         })
     }
