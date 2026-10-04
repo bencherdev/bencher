@@ -30,9 +30,18 @@ pub struct CgroupManager {
 impl CgroupManager {
     /// Create a new cgroup for the given microVM.
     pub fn new(vm_id: &VmId, cgroup_survived: CgroupSurvived) -> Result<Self, RunnerError> {
-        let cgroup_path = vm_cgroup(vm_id.as_str());
+        Self::new_at(Utf8Path::new(CGROUP_ROOT), vm_id, cgroup_survived)
+    }
 
-        let parent = Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE);
+    /// Takes the cgroup root so a test can stand a scratch cgroup in for it.
+    fn new_at(
+        cgroup_root: &Utf8Path,
+        vm_id: &VmId,
+        cgroup_survived: CgroupSurvived,
+    ) -> Result<Self, RunnerError> {
+        let parent = cgroup_root.join(BENCHER_CGROUP_BASE);
+        let cgroup_path = parent.join(vm_id.as_str());
+
         fs::create_dir_all(&parent).map_err(|e| JailError::CreateCgroup {
             path: parent.clone(),
             source: e,
