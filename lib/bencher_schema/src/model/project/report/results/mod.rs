@@ -68,11 +68,13 @@ pub struct ReportResults {
     pub threshold_cache: HashMap<MeasureId, Vec<Threshold>>,
 }
 
-/// The report context the active-series cache write needs: the owning organization
-/// (denormalized into each `series_last_seen` row so a billing read is a single index
-/// scan) and the report's server-side creation time (written as each ingested series'
-/// `last_seen`). Creation time, not the user-supplied `end_time`, is used so a report
-/// cannot dodge active-series billing by claiming a far-future `end_time`.
+/// The report context the active-series cache write needs.
+///
+/// It carries the owning organization (denormalized into each `series_last_seen` row so
+/// a billing read is a single index scan) and the report's server-side creation time
+/// (written as each ingested series' `last_seen`). Creation time, not the user-supplied
+/// `end_time`, is used so a report cannot dodge active-series billing by claiming a
+/// far-future `end_time`.
 #[cfg(feature = "plus")]
 pub struct SeriesCacheContext {
     pub organization_id: OrganizationId,

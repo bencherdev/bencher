@@ -604,7 +604,7 @@ mod tests {
             .load(&mut conn)
             .expect("Failed to query");
 
-        assert!(version_ids.is_empty());
+        assert_eq!(version_ids, Vec::new());
 
         // Batch insert with empty list should succeed
         let insert_values: Vec<_> = version_ids

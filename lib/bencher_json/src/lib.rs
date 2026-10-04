@@ -276,6 +276,10 @@ pub const MAX_ENV_LEN: usize = 255;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[expect(
+    clippy::empty_structs_with_brackets,
+    reason = "serde maps a unit struct to null, not an empty object"
+)]
 pub struct JsonAny {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

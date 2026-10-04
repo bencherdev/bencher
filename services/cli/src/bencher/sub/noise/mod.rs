@@ -33,8 +33,8 @@ impl From<CliNoise> for Noise {
 }
 
 impl SubCmd for Noise {
-    async fn exec(&self) -> Result<(), CliError> {
-        self.exec_inner().map_err(Into::into)
+    fn exec(&self) -> impl Future<Output = Result<(), CliError>> {
+        std::future::ready(self.exec_inner().map_err(Into::into))
     }
 }
 

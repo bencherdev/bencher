@@ -44,7 +44,7 @@ impl QueryProjectKey {
         schema::project_key::table
             .filter(schema::project_key::project_id.eq(project_id))
             .filter(schema::project_key::uuid.eq(uuid))
-            .first::<QueryProjectKey>(conn)
+            .first::<Self>(conn)
             .map_err(resource_not_found_err!(ProjectKey, (project_id, &uuid)))
     }
 
@@ -60,7 +60,7 @@ impl QueryProjectKey {
             .filter(schema::project_key::expiration.gt(now))
             .filter(schema::project::deleted.is_null())
             .select(schema::project_key::all_columns)
-            .first::<QueryProjectKey>(conn)
+            .first::<Self>(conn)
     }
 
     pub fn revoke(

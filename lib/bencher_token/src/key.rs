@@ -526,7 +526,7 @@ mod tests {
         let claims = secret_key.validate_oci_auth(&token).unwrap();
         assert_eq!(claims.aud, Audience::OciAuth.to_string());
         assert_eq!(claims.sub, *EMAIL);
-        assert!(claims.oci.actions.is_empty());
+        assert_eq!(claims.oci.actions, Vec::new());
         assert!(claims.oci.repository.is_none());
     }
 

@@ -2,7 +2,9 @@ use std::{fmt, str::FromStr};
 
 use crate::{ProjectKey, Sanitize, UserKey, ValidError};
 
-/// A Bencher API key. Either a user-scoped key (`bencher_user_*`) or a
+/// A Bencher API key.
+///
+/// Either a user-scoped key (`bencher_user_*`) or a
 /// project-scoped key (`bencher_run_*`). The prefix disambiguates the two so
 /// the CLI / SDK can accept a single `--key` / `BENCHER_API_KEY` slot for both.
 #[derive(Clone, Eq, PartialEq, Hash)]

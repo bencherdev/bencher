@@ -148,7 +148,7 @@ impl QueryPlot {
         let index = u8::from(index.unwrap_or_default()).into();
 
         // Get the current plots.
-        let plots = QueryPlot::all_for_project(conn, query_project)
+        let plots = Self::all_for_project(conn, query_project)
             .map_err(resource_not_found_err!(Plot, &query_project))?;
 
         // Try to calculate the rank within the current plots.
@@ -184,7 +184,7 @@ impl QueryPlot {
         .map_err(|e| resource_conflict_error(BencherResource::Plot, &plots, e))?;
 
         // Try to calculate the rank within the redistributed plots.
-        let redistributed_plots = QueryPlot::all_for_project(conn, query_project)
+        let redistributed_plots = Self::all_for_project(conn, query_project)
             .map_err(resource_not_found_err!(Plot, &query_project))?;
         Rank::calculate(&redistributed_plots, index).ok_or_else(|| {
             resource_conflict_error(
@@ -218,7 +218,7 @@ impl QueryPlot {
 
         // If the rank cannot be calculated, then we need to redistribute all the
         // ranks within the caller's transaction.
-        let all_plots = QueryPlot::all_for_project(conn, query_project)?;
+        let all_plots = Self::all_for_project(conn, query_project)?;
         let plot_ranker = RankGenerator::new(all_plots.len());
         for (plot, rank) in all_plots.iter().zip(plot_ranker) {
             let update_plot = UpdatePlot {

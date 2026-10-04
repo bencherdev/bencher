@@ -98,7 +98,7 @@ impl InsertVersion {
         };
 
         let version_uuid = VersionUuid::new();
-        let insert_version = InsertVersion {
+        let insert_version = Self {
             uuid: version_uuid,
             project_id,
             number,

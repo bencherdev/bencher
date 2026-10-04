@@ -45,6 +45,7 @@ jobs:
               - '.cargo/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
+              - 'rust-toolchain.toml'
               - 'lib/**'
               - 'plus/**'
               - 'services/api/**'
@@ -54,12 +55,14 @@ jobs:
               - 'tasks/**'
               - 'xtask/**'
             console:
+              - 'rust-toolchain.toml'
               - 'services/console/**'
               - 'lib/bencher_valid/**'
             action:
               - 'services/action/**'
               - 'services/api/openapi.json'
             cli:
+              - 'rust-toolchain.toml'
               - 'services/cli/**'
               - 'lib/bencher_adapter/**'
               - 'lib/bencher_client/**'
@@ -76,6 +79,7 @@ jobs:
               - 'services/console/Dockerfile'
               - 'docker/**'
             runner:
+              - 'rust-toolchain.toml'
               - 'lib/bencher_context/**'
               - 'lib/bencher_json/**'
               - 'lib/bencher_parser/**'
@@ -109,7 +113,7 @@ jobs:
     with:
       bencher-version: "0.6.13"
       mold-version: "2.34.1"
-      zig-build-version: "0.19.3"
+      zig-build-version: "0.23.4"
       zig-version: "0.13.0"
       # Use minimum supported glibc version for Rust Tier 1
       # https://doc.rust-lang.org/nightly/rustc/platform-support.html#tier-1-with-host-tools
@@ -128,7 +132,7 @@ jobs:
     with:
       mold-version: "2.34.1"
       zig-version: "0.13.0"
-      zig-build-version: "0.19.3"
+      zig-build-version: "0.23.4"
 
   # Cloud deploys and publishes what devel CI built for this commit, never a build of its own.
   # Every check runs in this one job, so a missing build fails the run before anything deploys.

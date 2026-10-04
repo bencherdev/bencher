@@ -71,10 +71,11 @@ pub struct Biller {
     products: Products,
 }
 
-/// A metered subscription's current billing snapshot, fetched in one call: its
-/// [`PlanStatus`] (the active/lapsed gate), the Stripe [`CustomerId`] to post usage
-/// for, the [`PlanLevel`], and the current period bounds (the active-series count
-/// window).
+/// A metered subscription's current billing snapshot, fetched in one call.
+///
+/// It holds the subscription's [`PlanStatus`] (the active/lapsed gate), the Stripe
+/// [`CustomerId`] to post usage for, the [`PlanLevel`], and the current period bounds
+/// (the active-series count window).
 #[derive(Debug, Clone)]
 pub struct MeteredPlanBilling {
     pub status: PlanStatus,
@@ -176,10 +177,10 @@ impl PlusPlan {
         products: &Products,
     ) -> Result<(&Price, Option<Entitlements>), BillingError> {
         Ok(match self {
-            PlusPlan::Free => return Err(BillingError::ProductLevelFree),
+            Self::Free => return Err(BillingError::ProductLevelFree),
             // Pro bills on its own tiered active-series price (base fee + step-ups),
             // which lives on the `pro` product, not the shared `metrics` product.
-            PlusPlan::Pro(price_name) => (
+            Self::Pro(price_name) => (
                 products
                     .pro
                     .metered
@@ -187,7 +188,7 @@ impl PlusPlan {
                     .ok_or_else(|| BillingError::PriceNotFound(price_name.to_string()))?,
                 None,
             ),
-            PlusPlan::Team(plus_usage) => match plus_usage {
+            Self::Team(plus_usage) => match plus_usage {
                 // Metered metrics bill on the shared `metrics` ("Bencher Metrics")
                 // product across paid tiers; only the licensed price stays on the
                 // tier's own product.
@@ -208,7 +209,7 @@ impl PlusPlan {
                     Some(entitlements),
                 ),
             },
-            PlusPlan::Enterprise(plus_usage) => match plus_usage {
+            Self::Enterprise(plus_usage) => match plus_usage {
                 // Metered metrics bill on the shared `metrics` product (see Team).
                 PlusUsage::Metered(price_name) => (
                     products

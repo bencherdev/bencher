@@ -97,6 +97,7 @@ pub async fn proj_jobs_get(
 }
 
 /// NOTE: Job output is intentionally not fetched for list responses.
+///
 /// Output is only included in single-job GET responses for terminal jobs,
 /// since fetching output from blob storage for every job in a list would
 /// be a performance concern.

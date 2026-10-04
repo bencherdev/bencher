@@ -452,7 +452,9 @@ pub async fn proj_report_delete(
 }
 
 /// Number of `report_benchmark` rows deleted per write statement when
-/// deleting a report's results. Bounds how long each delete holds the single
+/// deleting a report's results.
+///
+/// Bounds how long each delete holds the single
 /// writer connection (validated at ~1s per chunk against a production-scale
 /// report).
 pub const DELETE_CHUNK_SIZE: i64 = 1024;

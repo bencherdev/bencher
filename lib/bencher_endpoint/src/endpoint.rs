@@ -29,27 +29,27 @@ impl Endpoint {
 
 impl From<Get> for Endpoint {
     fn from(method: Get) -> Self {
-        Endpoint::Get(method)
+        Self::Get(method)
     }
 }
 impl From<Post> for Endpoint {
     fn from(method: Post) -> Self {
-        Endpoint::Post(method)
+        Self::Post(method)
     }
 }
 impl From<Put> for Endpoint {
     fn from(method: Put) -> Self {
-        Endpoint::Put(method)
+        Self::Put(method)
     }
 }
 impl From<Patch> for Endpoint {
     fn from(method: Patch) -> Self {
-        Endpoint::Patch(method)
+        Self::Patch(method)
     }
 }
 impl From<Delete> for Endpoint {
     fn from(method: Delete) -> Self {
-        Endpoint::Delete(method)
+        Self::Delete(method)
     }
 }
 
@@ -59,11 +59,11 @@ impl fmt::Display for Endpoint {
             f,
             "{}",
             match self {
-                Endpoint::Get(method) => method.to_string(),
-                Endpoint::Post(method) => method.to_string(),
-                Endpoint::Put(method) => method.to_string(),
-                Endpoint::Patch(method) => method.to_string(),
-                Endpoint::Delete(method) => method.to_string(),
+                Self::Get(method) => method.to_string(),
+                Self::Post(method) => method.to_string(),
+                Self::Put(method) => method.to_string(),
+                Self::Patch(method) => method.to_string(),
+                Self::Delete(method) => method.to_string(),
             }
         )
     }

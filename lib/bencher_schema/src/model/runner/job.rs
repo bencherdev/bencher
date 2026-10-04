@@ -618,7 +618,6 @@ fn insert_job_duration(
 #[cfg(test)]
 mod tests {
     use bencher_json::{DateTime, Entitlements, PlanLevel};
-    use diesel::QueryDsl as _;
     use pretty_assertions::assert_eq;
 
     use super::*;
@@ -1642,7 +1641,9 @@ pub fn in_flight_jobs(conn: &mut DbConnection) -> QueryResult<Vec<QueryJob>> {
 }
 
 /// Mark jobs stuck in `Claimed` status that were claimed longer ago than the
-/// heartbeat timeout as `Unknown`. These are orphaned: the runner claimed them but never
+/// heartbeat timeout as `Unknown`.
+///
+/// These are orphaned: the runner claimed them but never
 /// transitioned them to `Running` (e.g., the runner crashed after claiming).
 /// An `Unknown` job still accepts the runner's result, and its deadline ends it otherwise.
 ///
@@ -1791,7 +1792,9 @@ fn until_deadline(
 async fn mark_orphaned_completed_unknown(log: &Logger, context: &ApiContext, job: &QueryJob) {
     let now = context.clock.now();
     let unknown_update = UpdateJob::set_status(JobStatus::Unknown, now);
-    match unknown_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
+    let result =
+        unknown_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed);
+    match result {
         Ok(updated) if updated > 0 => {
             slog::info!(log, "Marked orphaned completed job as Unknown"; "job_id" => ?job.id);
             #[cfg(feature = "otel")]
@@ -1826,17 +1829,15 @@ async fn mark_orphaned_completed_unknown(log: &Logger, context: &ApiContext, job
 /// metrics, alerts) failed or was interrupted. Fetches stored output from OCI
 /// storage, runs `process_results`, and transitions to `Processed` on success.
 pub async fn reprocess_completed_jobs(log: &Logger, context: &ApiContext) {
-    let completed_jobs: Vec<QueryJob> = {
-        match schema::job::table
-            .filter(schema::job::status.eq(JobStatus::Completed))
-            .load(write_conn!(context))
-        {
-            Ok(jobs) => jobs,
-            Err(e) => {
-                slog::error!(log, "Failed to query completed jobs for reprocessing"; "error" => %e);
-                return;
-            },
-        }
+    let loaded = schema::job::table
+        .filter(schema::job::status.eq(JobStatus::Completed))
+        .load(write_conn!(context));
+    let completed_jobs: Vec<QueryJob> = match loaded {
+        Ok(jobs) => jobs,
+        Err(e) => {
+            slog::error!(log, "Failed to query completed jobs for reprocessing"; "error" => %e);
+            return;
+        },
     };
 
     let count = completed_jobs.len();
@@ -1879,7 +1880,9 @@ async fn reprocess_single_completed_job(log: &Logger, context: &ApiContext, job:
     if let Err(e) = job.process_results(log, context, output.results, now).await {
         slog::warn!(log, "Failed to reprocess job results, marking as Failed"; "job_id" => ?job.id, "error" => %e);
         let failed_update = UpdateJob::set_status(JobStatus::Failed, now);
-        match failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
+        let result =
+            failed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed);
+        match result {
             Ok(updated) if updated > 0 => {
                 slog::info!(log, "Marked failed reprocessing job as Failed"; "job_id" => ?job.id);
                 context.callbacks.fire(log, job.id);
@@ -1899,7 +1902,9 @@ async fn reprocess_single_completed_job(log: &Logger, context: &ApiContext, job:
     }
 
     let processed_update = UpdateJob::set_status(JobStatus::Processed, now);
-    match processed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed) {
+    let result =
+        processed_update.execute_if_status(write_conn!(context), job.id, JobStatus::Completed);
+    match result {
         Ok(updated) if updated > 0 => {
             slog::info!(log, "Reprocessed completed job"; "job_id" => ?job.id);
             context.callbacks.fire(log, job.id);

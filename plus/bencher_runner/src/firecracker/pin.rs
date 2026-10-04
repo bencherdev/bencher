@@ -188,6 +188,6 @@ mod tests {
 
     #[test]
     fn read_tasks_missing_dir_is_empty() {
-        assert!(read_tasks(Utf8Path::new("/nonexistent/task")).is_empty());
+        assert_eq!(read_tasks(Utf8Path::new("/nonexistent/task")), Vec::new());
     }
 }

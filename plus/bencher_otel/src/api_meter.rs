@@ -633,7 +633,7 @@ impl fmt::Display for AuthMethod {
 
 impl From<AuthMethod> for opentelemetry::KeyValue {
     fn from(auth_method: AuthMethod) -> Self {
-        opentelemetry::KeyValue::new(AuthMethod::KEY, auth_method.to_string())
+        Self::new(AuthMethod::KEY, auth_method.to_string())
     }
 }
 
@@ -649,7 +649,7 @@ impl AuthMethod {
     fn nullable_attributes(auth_method: Option<Self>) -> Vec<opentelemetry::KeyValue> {
         match auth_method {
             Some(auth_method) => auth_method.attributes(),
-            None => vec![opentelemetry::KeyValue::new(AuthMethod::KEY, "unknown")],
+            None => vec![opentelemetry::KeyValue::new(Self::KEY, "unknown")],
         }
     }
 
@@ -678,7 +678,7 @@ impl fmt::Display for OAuthProvider {
 
 impl From<OAuthProvider> for opentelemetry::KeyValue {
     fn from(provider: OAuthProvider) -> Self {
-        opentelemetry::KeyValue::new(OAuthProvider::KEY, provider.to_string())
+        Self::new(OAuthProvider::KEY, provider.to_string())
     }
 }
 
@@ -707,7 +707,7 @@ impl fmt::Display for IntervalKind {
 
 impl From<IntervalKind> for opentelemetry::KeyValue {
     fn from(interval_kind: IntervalKind) -> Self {
-        opentelemetry::KeyValue::new(IntervalKind::KEY, interval_kind.to_string())
+        Self::new(IntervalKind::KEY, interval_kind.to_string())
     }
 }
 
@@ -734,7 +734,7 @@ impl fmt::Display for AuthorizationKind {
 
 impl From<AuthorizationKind> for opentelemetry::KeyValue {
     fn from(authorization_kind: AuthorizationKind) -> Self {
-        opentelemetry::KeyValue::new(AuthorizationKind::KEY, authorization_kind.to_string())
+        Self::new(AuthorizationKind::KEY, authorization_kind.to_string())
     }
 }
 
@@ -767,7 +767,7 @@ impl fmt::Display for JobStatusKind {
 
 impl From<JobStatusKind> for opentelemetry::KeyValue {
     fn from(status_kind: JobStatusKind) -> Self {
-        opentelemetry::KeyValue::new(JobStatusKind::KEY, status_kind.to_string())
+        Self::new(JobStatusKind::KEY, status_kind.to_string())
     }
 }
 
@@ -794,7 +794,7 @@ impl fmt::Display for PlanKind {
 
 impl From<PlanKind> for opentelemetry::KeyValue {
     fn from(plan_kind: PlanKind) -> Self {
-        opentelemetry::KeyValue::new(PlanKind::KEY, plan_kind.to_string())
+        Self::new(PlanKind::KEY, plan_kind.to_string())
     }
 }
 
@@ -819,7 +819,7 @@ impl fmt::Display for UpdateChannelKind {
 
 impl From<UpdateChannelKind> for opentelemetry::KeyValue {
     fn from(update_channel_kind: UpdateChannelKind) -> Self {
-        opentelemetry::KeyValue::new(UpdateChannelKind::KEY, update_channel_kind.to_string())
+        Self::new(UpdateChannelKind::KEY, update_channel_kind.to_string())
     }
 }
 
@@ -844,7 +844,7 @@ impl fmt::Display for ProjectKeyAuthFailureReason {
 
 impl From<ProjectKeyAuthFailureReason> for opentelemetry::KeyValue {
     fn from(reason: ProjectKeyAuthFailureReason) -> Self {
-        opentelemetry::KeyValue::new(ProjectKeyAuthFailureReason::KEY, reason.to_string())
+        Self::new(ProjectKeyAuthFailureReason::KEY, reason.to_string())
     }
 }
 
@@ -875,7 +875,7 @@ impl fmt::Display for UserKeyAuthFailureReason {
 
 impl From<UserKeyAuthFailureReason> for opentelemetry::KeyValue {
     fn from(reason: UserKeyAuthFailureReason) -> Self {
-        opentelemetry::KeyValue::new(UserKeyAuthFailureReason::KEY, reason.to_string())
+        Self::new(UserKeyAuthFailureReason::KEY, reason.to_string())
     }
 }
 

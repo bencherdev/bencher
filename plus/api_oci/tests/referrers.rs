@@ -105,12 +105,7 @@ async fn referrers_list_empty() {
     let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
     assert_eq!(body["schemaVersion"], 2);
     assert_eq!(body["mediaType"], "application/vnd.oci.image.index.v1+json");
-    assert!(
-        body["manifests"]
-            .as_array()
-            .expect("manifests should be array")
-            .is_empty()
-    );
+    assert_eq!(body["manifests"], serde_json::json!([]));
 }
 
 // GET /v2/{name}/referrers/{digest} - List referrers with results

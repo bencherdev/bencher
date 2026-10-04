@@ -873,7 +873,7 @@ mod tests {
             );
         }
 
-        let mut sanitized = callback.clone();
+        let mut sanitized = callback;
         sanitized.sanitize();
         let sanitized_json = serde_json::to_value(&sanitized).unwrap();
         let printed = sanitized_json.to_string();

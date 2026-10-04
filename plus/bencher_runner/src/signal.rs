@@ -54,9 +54,8 @@ fn install(reset: bool) {
     for signal in [libc::SIGINT, libc::SIGTERM] {
         #[expect(
             unsafe_code,
-            clippy::fn_to_numeric_cast_any,
             clippy::multiple_unsafe_ops_per_block,
-            reason = "sigaction requires unsafe FFI and a handler cast"
+            reason = "sigaction requires unsafe FFI"
         )]
         // SAFETY: `handle` only performs `AtomicBool::store` with
         // `Ordering::SeqCst`, which is async-signal-safe per POSIX, and the

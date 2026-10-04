@@ -134,6 +134,7 @@ impl TestServer {
     #[expect(
         clippy::expect_used,
         clippy::unused_async,
+        clippy::unused_async_trait_impl,
         reason = "test server setup with fallible init; async for API parity"
     )]
     async fn build(
@@ -237,6 +238,7 @@ impl TestServer {
     #[expect(
         clippy::expect_used,
         clippy::unused_async,
+        clippy::unused_async_trait_impl,
         reason = "test server setup with fallible init; async for API parity"
     )]
     async fn build(

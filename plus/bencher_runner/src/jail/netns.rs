@@ -66,9 +66,7 @@ pub fn ensure() -> Result<Utf8PathBuf, JailError> {
     // VMM with host network reach.
     if !is_live_netns(&handle) {
         drop(clear(&handle));
-        return Err(JailError::NetnsNotDistinct {
-            path: handle.clone(),
-        });
+        return Err(JailError::NetnsNotDistinct { path: handle });
     }
 
     Ok(handle)

@@ -10,7 +10,7 @@ pub const SESSION_PEM: &str = "session";
 pub const ADMINISTER_PEM: &str = "administer";
 
 #[derive(Debug, Clone, Copy, PolarClass)]
-pub struct Server {}
+pub struct Server;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Role {

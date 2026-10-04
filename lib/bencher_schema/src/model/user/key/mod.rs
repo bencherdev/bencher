@@ -42,7 +42,7 @@ impl QueryUserKey {
         schema::user_key::table
             .filter(schema::user_key::user_id.eq(user_id))
             .filter(schema::user_key::uuid.eq(uuid))
-            .first::<QueryUserKey>(conn)
+            .first::<Self>(conn)
             .map_err(resource_not_found_err!(UserKey, (user_id, &uuid)))
     }
 
@@ -58,7 +58,7 @@ impl QueryUserKey {
             .inner_join(schema::user::table)
             .filter(schema::user_key::key_hash.eq(key_hash.as_ref()))
             .select((schema::user::all_columns, schema::user_key::all_columns))
-            .first::<(QueryUser, QueryUserKey)>(conn)
+            .first::<(QueryUser, Self)>(conn)
     }
 
     pub fn revoke(

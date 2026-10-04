@@ -3,13 +3,13 @@ use std::process::Command;
 use crate::parser::TaskTs;
 
 #[derive(Debug)]
-pub struct Ts {}
+pub struct Ts;
 
 impl TryFrom<TaskTs> for Ts {
     type Error = anyhow::Error;
 
     fn try_from(_typeshare: TaskTs) -> Result<Self, Self::Error> {
-        Ok(Self {})
+        Ok(Self)
     }
 }
 

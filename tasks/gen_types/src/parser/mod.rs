@@ -17,10 +17,10 @@ pub enum TaskSub {
 }
 
 #[derive(Parser, Debug)]
-pub struct TaskTypes {}
+pub struct TaskTypes;
 
 #[derive(Parser, Debug)]
-pub struct TaskSpec {}
+pub struct TaskSpec;
 
 #[derive(Parser, Debug)]
-pub struct TaskTs {}
+pub struct TaskTs;

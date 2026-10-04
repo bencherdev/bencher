@@ -184,7 +184,7 @@ impl TryFrom<Boundary> for PercentageBoundary {
 impl From<PercentageBoundary> for Boundary {
     fn from(boundary: PercentageBoundary) -> Self {
         // This should never fail because Boundary is a superset of PercentageBoundary
-        f64::from(boundary).try_into().unwrap_or(Boundary::ZERO)
+        f64::from(boundary).try_into().unwrap_or(Self::ZERO)
     }
 }
 
@@ -219,7 +219,7 @@ impl TryFrom<Boundary> for CdfBoundary {
 impl From<CdfBoundary> for Boundary {
     fn from(boundary: CdfBoundary) -> Self {
         // This should never fail because Boundary is a superset of CdfBoundary
-        f64::from(boundary).try_into().unwrap_or(Boundary::ZERO)
+        f64::from(boundary).try_into().unwrap_or(Self::ZERO)
     }
 }
 
@@ -254,7 +254,7 @@ impl TryFrom<Boundary> for IqrBoundary {
 impl From<IqrBoundary> for Boundary {
     fn from(boundary: IqrBoundary) -> Self {
         // This should never fail because Boundary is a superset of IqrBoundary
-        f64::from(boundary).try_into().unwrap_or(Boundary::ZERO)
+        f64::from(boundary).try_into().unwrap_or(Self::ZERO)
     }
 }
 

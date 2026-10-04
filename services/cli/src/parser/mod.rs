@@ -278,7 +278,7 @@ pub struct CliArchived {
 }
 
 impl From<CliArchived> for Option<bool> {
-    fn from(archived: CliArchived) -> Option<bool> {
+    fn from(archived: CliArchived) -> Self {
         match (archived.archive, archived.unarchive) {
             (false, false) => None,
             (false, true) => Some(false),
@@ -300,7 +300,7 @@ where
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == "_" {
-            Ok(ElidedOption(None))
+            Ok(Self(None))
         } else {
             s.parse().map(Some).map(ElidedOption)
         }
@@ -308,7 +308,7 @@ where
 }
 
 impl<T> From<ElidedOption<T>> for Option<T> {
-    fn from(elided: ElidedOption<T>) -> Option<T> {
+    fn from(elided: ElidedOption<T>) -> Self {
         elided.0
     }
 }

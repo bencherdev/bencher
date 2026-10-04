@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # https://hub.docker.com/_/rust
-FROM rust:1.95.0-bookworm@sha256:503651ea31e66ecb74623beabde781059a5978df1595a9e8ed03974d5fec1bf0 AS base
+FROM rust:1.99.0-bookworm@sha256:59037199c44290f2befcdd58dcc540164763fc296950255aaefeef096a1866b0 AS base
 
 FROM base AS chef
 

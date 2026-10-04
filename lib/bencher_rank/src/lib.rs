@@ -43,12 +43,12 @@ impl Rank {
     }
 
     /// Calculate the rank that would fit in between the surrounding `ranks` at `index`.
-    pub fn calculate<R>(ranks: &[R], index: usize) -> Option<Rank>
+    pub fn calculate<R>(ranks: &[R], index: usize) -> Option<Self>
     where
         R: Ranked,
     {
         if ranks.is_empty() {
-            return Some(Rank(MID_RANK));
+            return Some(Self(MID_RANK));
         }
 
         match index {
@@ -58,7 +58,7 @@ impl Rank {
                 #[expect(clippy::integer_division, reason = "halving to find rank before first")]
                 let new_first = first / 2;
                 if new_first < first {
-                    return Some(Rank(new_first));
+                    return Some(Self(new_first));
                 }
             },
             _ if index >= ranks.len() => {
@@ -70,7 +70,7 @@ impl Rank {
                 )]
                 let new_last = last + ((i64::MAX - last) / 2);
                 if new_last > last {
-                    return Some(Rank(new_last));
+                    return Some(Self(new_last));
                 }
             },
             _ => {
@@ -80,7 +80,7 @@ impl Rank {
                 #[expect(clippy::integer_division, reason = "midpoint between adjacent ranks")]
                 let new_rank = prev_rank + ((next_rank - prev_rank) / 2);
                 if new_rank > prev_rank && new_rank < next_rank {
-                    return Some(Rank(new_rank));
+                    return Some(Self(new_rank));
                 }
             },
         }

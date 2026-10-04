@@ -85,7 +85,7 @@ impl From<Model> for bencher_client::types::Model {
             lower_boundary,
             upper_boundary,
         } = model;
-        bencher_client::types::Model {
+        Self {
             test,
             min_sample_size,
             max_sample_size,

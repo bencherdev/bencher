@@ -55,12 +55,7 @@ async fn tags_list_empty() {
 
     let body: serde_json::Value = resp.json().await.expect("Failed to parse response");
     assert_eq!(body["name"], project_slug);
-    assert!(
-        body["tags"]
-            .as_array()
-            .expect("tags should be array")
-            .is_empty()
-    );
+    assert_eq!(body["tags"], serde_json::json!([]));
 }
 
 // GET /v2/{name}/tags/list - List tags with manifests

@@ -100,7 +100,7 @@ impl RecaptchaClient {
         slog::info!(log, "reCAPTCHA verification response"; "response" => %json_value, "remote_ip" => ?remote_ip);
 
         let recaptcha_response =
-            serde_json::from_value(json_value.clone()).map_err(RecaptchaError::ParseJson)?;
+            serde_json::from_value(json_value).map_err(RecaptchaError::ParseJson)?;
 
         // todo(epompeii): Create a custom deserializer round `success` for better handling of the response
         match recaptcha_response {

@@ -96,8 +96,8 @@ impl QueryPlan {
             return Ok(None);
         };
 
-        let Ok(query_plan) = Self::belonging_to(&query_organization)
-            .first::<QueryPlan>(actor_conn!(context, api_actor))
+        let Ok(query_plan) =
+            Self::belonging_to(&query_organization).first::<Self>(actor_conn!(context, api_actor))
         else {
             return Ok(None);
         };
@@ -145,7 +145,7 @@ impl InsertPlan {
         query_organization: &QueryOrganization,
     ) -> Result<Self, HttpError> {
         let timestamp = DateTime::now();
-        let insert_plan = InsertPlan {
+        let insert_plan = Self {
             organization_id: query_organization.id,
             metered_plan: Some(metered_plan_id),
             licensed_plan: None,
@@ -182,7 +182,7 @@ impl InsertPlan {
             ))?;
 
         let timestamp = DateTime::now();
-        let insert_plan = InsertPlan {
+        let insert_plan = Self {
             organization_id: query_organization.id,
             metered_plan: None,
             licensed_plan: Some(licensed_plan_id),
@@ -217,9 +217,10 @@ impl InsertPlan {
 }
 
 /// An active metered (Stripe) subscription's billing context, carried by
-/// [`PlanKind::Metered`]: who to bill (`customer_id`), the tier (`level`), and the
-/// current billing period (the active-series count window for the post-report Pro
-/// series push).
+/// [`PlanKind::Metered`].
+///
+/// It holds who to bill (`customer_id`), the tier (`level`), and the current billing
+/// period (the active-series count window for the post-report Pro series push).
 pub struct MeteredPlan {
     pub customer_id: CustomerId,
     pub level: PlanLevel,
@@ -567,7 +568,7 @@ impl LicenseUsage {
         conn: &mut DbConnection,
         licensor: &Licensor,
         query_organization: &QueryOrganization,
-    ) -> Result<Option<LicenseUsage>, HttpError> {
+    ) -> Result<Option<Self>, HttpError> {
         // It is important that we check the organization license and NOT the plan license
         // The organization license is the one that is actually in use, either on Bencher Cloud or Self-Hosted
         // The plan license is simply there to keep track of the license on Bencher Cloud only
@@ -587,7 +588,7 @@ impl LicenseUsage {
             .validate_usage(&token_data.claims, usage)
             .map_err(payment_required_error)?;
 
-        Ok(Some(LicenseUsage {
+        Ok(Some(Self {
             entitlements,
             usage,
             level: token_data.claims.level(),

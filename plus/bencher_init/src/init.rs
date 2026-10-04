@@ -374,10 +374,6 @@ fn mount(
 }
 
 /// Set up signal handlers for graceful shutdown.
-#[expect(
-    clippy::fn_to_numeric_cast_any,
-    reason = "required for libc signal handler registration"
-)]
 fn setup_signal_handlers() -> Result<(), InitError> {
     #[expect(
         clippy::multiple_unsafe_ops_per_block,

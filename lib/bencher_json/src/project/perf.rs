@@ -34,6 +34,7 @@ crate::typed_uuid::typed_uuid!(ReportBenchmarkUuid);
 pub const MAX_DIMENSION_ENTRIES: usize = 8;
 
 /// `JsonPerfQueryParams` is the actual query parameters accepted by the server.
+///
 /// All query parameter values are therefore scalar values.
 /// Arrays are represented as comma separated lists.
 /// Optional date times are simply stored as their millisecond representation.

@@ -199,7 +199,7 @@ pub(crate) mod test_js_vitest {
         );
 
         // An empty suite name returns the leaf unchanged.
-        assert_eq!(combine_name("", add.clone()), add.clone());
+        assert_eq!(combine_name("", add.clone()), add);
 
         // A combined name longer than `MAX_LEN` falls back to the leaf name.
         let long = "a".repeat(BenchmarkName::MAX_LEN);

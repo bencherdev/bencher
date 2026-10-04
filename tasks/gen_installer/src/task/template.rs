@@ -216,9 +216,9 @@ impl ZipStyle {
     /// Get the extension used for this kind of zip
     pub fn ext(self) -> &'static str {
         match self {
-            ZipStyle::TempDir => "",
-            ZipStyle::Zip => ".zip",
-            ZipStyle::Tar(compression) => match compression {
+            Self::TempDir => "",
+            Self::Zip => ".zip",
+            Self::Tar(compression) => match compression {
                 CompressionImpl::Gzip => ".tar.gz",
                 CompressionImpl::Xzip => ".tar.xz",
                 CompressionImpl::Zstd => ".tar.zstd",

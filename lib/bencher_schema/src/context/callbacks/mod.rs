@@ -91,9 +91,10 @@ impl Callbacks {
 
     /// Fire every pending callback whose job is already terminal, which no process has delivered.
     pub async fn fire_pending(&self, log: &Logger) {
-        let job_ids = match QueryJobCallback::pending_on_terminal_jobs(
+        let pending = QueryJobCallback::pending_on_terminal_jobs(
             &mut *self.delivery.connection().lock().await,
-        ) {
+        );
+        let job_ids = match pending {
             Ok(job_ids) => job_ids,
             Err(e) => {
                 slog::error!(log, "Failed to query pending job callbacks: {e}");
@@ -693,7 +694,7 @@ mod tests {
         assert_eq!(header("authorization"), format!("Bearer {HEADER_MARKER}"));
         // The report can hold private results, so the delivery never logs it.
         let delivery = harness.logs();
-        assert!(!delivery.is_empty());
+        assert_ne!(delivery, Vec::<String>::new());
         for line in delivery {
             for private in [REPORT_UUID, "Test Project"] {
                 assert!(!line.contains(private), "{private} in {line}");
@@ -1305,7 +1306,7 @@ mod tests {
             }
         }
         let logs = harness.logs();
-        assert!(!logs.is_empty());
+        assert_ne!(logs, Vec::<String>::new());
         for line in logs {
             assert_no_marker(&line);
         }

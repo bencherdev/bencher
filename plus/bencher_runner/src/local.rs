@@ -436,14 +436,11 @@ fn canonicalize_within_rootfs(
         .strip_prefix(rootfs)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
 
-    let components: Vec<String> = relative
-        .components()
-        .map(|c| c.as_str().to_owned())
-        .collect();
+    let components = relative.components().map(|c| c.as_str().to_owned());
 
     let mut resolved = rootfs.to_path_buf();
     // Stack of components still to process (LIFO — push reversed segments).
-    let mut stack: Vec<String> = components.into_iter().rev().collect();
+    let mut stack: Vec<String> = components.rev().collect();
     let mut symlink_count = 0u32;
 
     while let Some(component) = stack.pop() {

@@ -46,7 +46,7 @@ impl QueryToken {
         schema::token::table
             .filter(schema::token::user_id.eq(user_id))
             .filter(schema::token::uuid.eq(uuid))
-            .first::<QueryToken>(conn)
+            .first::<Self>(conn)
             .map_err(resource_not_found_err!(Token, (user_id, uuid)))
     }
 
@@ -58,7 +58,7 @@ impl QueryToken {
         schema::token::table
             .filter(schema::token::user_id.eq(user_id))
             .filter(schema::token::jwt.eq(jwt.as_ref()))
-            .first::<QueryToken>(conn)
+            .first::<Self>(conn)
     }
 
     pub fn revoke(

@@ -61,7 +61,7 @@ impl QueryAlert {
         schema::alert::table
             .filter(schema::alert::uuid.eq(uuid.to_string()))
             .filter(schema::alert::project_id.eq(project_id))
-            .select(QueryAlert::as_select())
+            .select(Self::as_select())
             .first(conn)
             .map_err(resource_not_found_err!(Alert, (project_id, uuid)))
     }
@@ -254,7 +254,7 @@ impl QueryAlert {
     }
 
     pub fn into_perf_json(self) -> JsonPerfAlert {
-        let QueryAlert {
+        let Self {
             uuid,
             boundary_limit,
             status,
@@ -312,7 +312,7 @@ impl InsertAlert {
         boundary_id: BoundaryId,
         boundary_limit: BoundaryLimit,
     ) -> diesel::QueryResult<()> {
-        let insert_alert = InsertAlert {
+        let insert_alert = Self {
             uuid: AlertUuid::new(),
             project_id,
             threshold_id,
@@ -765,7 +765,7 @@ mod tests {
                 .load::<AlertId>(&mut conn)
                 .expect("Failed to query alerts");
 
-        assert!(alert_ids.is_empty());
+        assert_eq!(alert_ids, Vec::new());
 
         // Replicate the silence_all early-return logic:
         // When alert_ids is empty, the update should affect 0 rows.

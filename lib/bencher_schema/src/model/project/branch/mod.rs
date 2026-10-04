@@ -345,7 +345,7 @@ impl QueryBranch {
     ) -> Result<JsonBranch, HttpError> {
         let head = QueryHead::get(conn, head_id)?;
         let version = QueryVersion::get(conn, version_id)?;
-        let branch = QueryBranch::get(conn, head.branch_id)?;
+        let branch = Self::get(conn, head.branch_id)?;
         branch.into_json_for_head(conn, project, &head, Some(version))
     }
 

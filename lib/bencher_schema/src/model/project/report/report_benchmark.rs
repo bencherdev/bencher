@@ -45,7 +45,7 @@ impl InsertReportBenchmark {
         benchmark_id: BenchmarkId,
         variant_id: VariantId,
     ) -> Self {
-        InsertReportBenchmark {
+        Self {
             uuid: ReportBenchmarkUuid::new(),
             report_id,
             iteration,

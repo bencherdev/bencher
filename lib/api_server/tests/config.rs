@@ -24,7 +24,7 @@ async fn config_console_get() {
     assert_eq!(resp.status(), StatusCode::OK);
     let console: JsonConsole = resp.json().await.expect("Failed to parse response");
     // Console URL should be set
-    assert!(!console.url.as_ref().is_empty());
+    assert_ne!(console.url.as_ref(), "");
 }
 
 // GET /v0/server/config - requires admin auth

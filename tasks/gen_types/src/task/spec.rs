@@ -9,13 +9,13 @@ use crate::{API_VERSION, parser::TaskSpec};
 const SPEC_PATH: &str = "./services/api/openapi.json";
 
 #[derive(Debug)]
-pub struct Spec {}
+pub struct Spec;
 
 impl TryFrom<TaskSpec> for Spec {
     type Error = anyhow::Error;
 
     fn try_from(_task: TaskSpec) -> Result<Self, Self::Error> {
-        Ok(Self {})
+        Ok(Self)
     }
 }
 

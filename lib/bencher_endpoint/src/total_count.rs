@@ -13,7 +13,7 @@ impl TryFrom<i64> for TotalCount {
 
     fn try_from(total_count: i64) -> Result<Self, Self::Error> {
         match u32::try_from(total_count) {
-            Ok(total_count) => Ok(TotalCount(total_count)),
+            Ok(total_count) => Ok(Self(total_count)),
             Err(err) => Err(issue_error(
                 "Failed to count resource total.",
                 &format!("Failed to count resource total: {total_count}"),
@@ -30,6 +30,6 @@ impl fmt::Display for TotalCount {
 }
 
 impl TotalCount {
-    pub const ZERO: Self = TotalCount(0);
-    pub const ONE: Self = TotalCount(1);
+    pub const ZERO: Self = Self(0);
+    pub const ONE: Self = Self(1);
 }

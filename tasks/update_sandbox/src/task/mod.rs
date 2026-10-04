@@ -130,7 +130,7 @@ fn default_build_rs_path() -> Utf8PathBuf {
     let manifest_path = Utf8PathBuf::from(manifest_dir);
 
     // Walk up to find the workspace root (contains Cargo.lock)
-    let mut workspace_root = manifest_path.clone();
+    let mut workspace_root = manifest_path;
     while let Some(parent) = workspace_root.parent() {
         if workspace_root.join("Cargo.lock").exists() {
             break;

@@ -239,7 +239,7 @@ mod tests {
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
         assert_eq!(decoded.len(), 1);
         assert_eq!(decoded[0].0, "empty.txt");
-        assert!(decoded[0].1.is_empty());
+        assert_eq!(decoded[0].1, Vec::<u8>::new());
     }
 
     #[test]
@@ -258,7 +258,7 @@ mod tests {
         let encoded = encode(&[]).unwrap();
         assert_eq!(encoded, 0u32.to_le_bytes());
         let decoded = decode(&encoded, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
-        assert!(decoded.is_empty());
+        assert_eq!(decoded, Vec::new());
     }
 
     // --- Existing error tests ---
@@ -568,7 +568,7 @@ mod tests {
     #[test]
     fn decode_trailing_bytes_after_valid_data() {
         let encoded = encode(&[(Utf8Path::new("f"), &b"d"[..])]).unwrap();
-        let mut with_trailing = encoded.clone();
+        let mut with_trailing = encoded;
         with_trailing.extend_from_slice(b"garbage");
         // Trailing bytes are silently ignored
         let decoded = decode(&with_trailing, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
@@ -583,7 +583,7 @@ mod tests {
         data.extend_from_slice(&0u32.to_le_bytes());
         data.extend_from_slice(b"extra bytes");
         let decoded = decode(&data, TEST_MAX_FILE_COUNT, TEST_MAX_CONTENT_SIZE).unwrap();
-        assert!(decoded.is_empty());
+        assert_eq!(decoded, Vec::new());
     }
 
     #[test]

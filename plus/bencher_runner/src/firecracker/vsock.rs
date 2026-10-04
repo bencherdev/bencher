@@ -443,14 +443,13 @@ mod tests {
         encoded.extend_from_slice(content);
 
         // Send data on all ports from a separate thread
-        let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
             // Small delay to let collect_results start polling
             std::thread::sleep(Duration::from_millis(50));
-            send_to_port(&base_clone, ports::STDOUT, b"benchmark output");
-            send_to_port(&base_clone, ports::STDERR, b"some warnings");
-            send_to_port(&base_clone, ports::OUTPUT_FILES, &encoded);
-            send_to_port(&base_clone, ports::EXIT_CODE, b"0");
+            send_to_port(&base, ports::STDOUT, b"benchmark output");
+            send_to_port(&base, ports::STDERR, b"some warnings");
+            send_to_port(&base, ports::OUTPUT_FILES, &encoded);
+            send_to_port(&base, ports::EXIT_CODE, b"0");
         });
 
         let results = listener
@@ -474,10 +473,9 @@ mod tests {
         let (_dir, jail, listener) = listener_in_tmpdir();
         let base = jail.vsock().host().to_string();
 
-        let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(50));
-            send_to_port(&base_clone, ports::EXIT_CODE, b"1");
+            send_to_port(&base, ports::EXIT_CODE, b"1");
         });
 
         let results = listener
@@ -520,12 +518,11 @@ mod tests {
         let (_dir, jail, listener) = listener_in_tmpdir();
         let base = jail.vsock().host().to_string();
 
-        let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(50));
             // Invalid UTF-8 bytes
-            send_to_port(&base_clone, ports::STDOUT, b"hello \xff\xfe world");
-            send_to_port(&base_clone, ports::EXIT_CODE, b"0");
+            send_to_port(&base, ports::STDOUT, b"hello \xff\xfe world");
+            send_to_port(&base, ports::EXIT_CODE, b"0");
         });
 
         let results = listener
@@ -549,14 +546,13 @@ mod tests {
         let (_dir, jail, listener) = listener_in_tmpdir();
         let base = jail.vsock().host().to_string();
 
-        let base_clone = base.clone();
         let sender = std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(50));
             // Send exit code first
-            send_to_port(&base_clone, ports::EXIT_CODE, b"0");
+            send_to_port(&base, ports::EXIT_CODE, b"0");
             // Then stdout arrives during the grace window
             std::thread::sleep(Duration::from_millis(20));
-            send_to_port(&base_clone, ports::STDOUT, b"late output");
+            send_to_port(&base, ports::STDOUT, b"late output");
         });
 
         let results = listener
@@ -617,7 +613,7 @@ mod tests {
         std::thread::sleep(Duration::from_millis(10));
 
         let data = try_accept_and_read(&listener, TEST_MAX_DATA_SIZE).unwrap();
-        assert!(data.is_empty());
+        assert_eq!(data, Vec::<u8>::new());
     }
 
     #[test]

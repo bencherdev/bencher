@@ -62,7 +62,7 @@ impl TryFrom<Url> for url::Url {
     type Error = ValidError;
 
     fn try_from(url: Url) -> Result<Self, Self::Error> {
-        url::Url::from_str(url.as_ref()).map_err(|e| ValidError::UrlToUrl(url, e))
+        Self::from_str(url.as_ref()).map_err(|e| ValidError::UrlToUrl(url, e))
     }
 }
 

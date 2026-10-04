@@ -358,7 +358,7 @@ impl QueryReport {
         // Read full report via public_conn (outside write lock)
         let query_report = schema::report::table
             .filter(schema::report::uuid.eq(&insert_report_uuid))
-            .first::<QueryReport>(actor_conn!(context, api_actor))
+            .first::<Self>(actor_conn!(context, api_actor))
             .map_err(|e| {
                 issue_error(
                     "Failed to find new report that was just created",
@@ -1564,7 +1564,7 @@ mod tests {
 
         let counts =
             get_report_counts(&mut conn, fixture.report_id).expect("Failed to get report counts");
-        assert!(counts.results.is_empty());
+        assert_eq!(counts.results, Vec::new());
         assert_eq!(counts.alerts, JsonReportAlertsCounts::default());
     }
 

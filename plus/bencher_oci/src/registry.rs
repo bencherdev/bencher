@@ -222,7 +222,7 @@ impl RegistryClient {
     }
 
     /// Pull an image manifest.
-    fn pull_manifest(&mut self, image_ref: &ImageReference) -> Result<(String, Vec<u8>), OciError> {
+    fn pull_manifest(&self, image_ref: &ImageReference) -> Result<(String, Vec<u8>), OciError> {
         let url = self.registry_url(
             image_ref.registry(),
             &format!(
@@ -281,7 +281,7 @@ impl RegistryClient {
     }
 
     fn pull_manifest_by_digest(
-        &mut self,
+        &self,
         image_ref: &ImageReference,
         digest: &str,
     ) -> Result<(String, Vec<u8>), OciError> {
@@ -314,7 +314,7 @@ impl RegistryClient {
 
     /// Pull a blob from the registry into memory.
     fn pull_blob(
-        &mut self,
+        &self,
         image_ref: &ImageReference,
         digest: &str,
     ) -> Result<(String, Vec<u8>), OciError> {
@@ -365,7 +365,7 @@ impl RegistryClient {
     ///
     /// This avoids loading entire layer blobs into memory.
     fn pull_blob_to_file(
-        &mut self,
+        &self,
         image_ref: &ImageReference,
         digest: &str,
         output_path: &Utf8Path,
@@ -431,7 +431,7 @@ impl RegistryClient {
 
     /// Make an authenticated request to the registry.
     fn authenticated_request(
-        &mut self,
+        &self,
         url: &str,
         accept: &str,
     ) -> Result<ureq::http::Response<ureq::Body>, OciError> {

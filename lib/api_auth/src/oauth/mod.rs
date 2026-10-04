@@ -197,8 +197,8 @@ impl fmt::Display for AuthAction {
 impl From<OAuthProvider> for bencher_otel::OAuthProvider {
     fn from(provider: OAuthProvider) -> Self {
         match provider {
-            OAuthProvider::GitHub => bencher_otel::OAuthProvider::GitHub,
-            OAuthProvider::Google => bencher_otel::OAuthProvider::Google,
+            OAuthProvider::GitHub => Self::GitHub,
+            OAuthProvider::Google => Self::Google,
         }
     }
 }
