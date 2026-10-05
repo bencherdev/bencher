@@ -181,6 +181,9 @@ impl<'a> FirecrackerClient<'a> {
                         break;
                     }
                 },
+                // A read with a timeout is interrupted by any signal rather
+                // than restarted.
+                Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {},
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                     eprintln!(
                         "Warning: Firecracker API read terminated early (WouldBlock) for PUT {path}, {read_bytes} bytes read so far",
@@ -293,6 +296,7 @@ mod tests {
 
     use super::*;
     use crate::firecracker::config::ActionType;
+    use crate::firecracker::test_util::interrupt;
     use crate::jail::JailPaths;
 
     #[test]
@@ -317,6 +321,34 @@ mod tests {
                 .contains(jail.api_socket().socket().as_str()),
             "the error must name the socket: {err}"
         );
+    }
+
+    #[test]
+    fn a_signal_while_waiting_for_the_response_does_not_fail_the_call() {
+        // Prevents a signal or stop during an API call failing the job's VM setup.
+        use std::os::unix::net::UnixListener;
+
+        let dir = tempfile::tempdir().unwrap();
+        let jail = JailPaths::new(Utf8Path::from_path(dir.path()).unwrap()).unwrap();
+        let vmm = UnixListener::bind(jail.api_socket().host().as_path()).unwrap();
+        let socket = jail.api_socket().socket().clone();
+
+        let client = std::thread::spawn(move || {
+            FirecrackerClient::new(&socket).put_action(&Action {
+                action_type: ActionType::SendCtrlAltDel,
+            })
+        });
+        let (mut stream, _) = vmm.accept().unwrap();
+        assert!(
+            stream.read(&mut [0u8; 512]).unwrap() > 0,
+            "the client must send its request before it waits"
+        );
+        drop(stream.write_all(b"HTTP/1.1 204 No Content\r\n"));
+        interrupt(&client);
+        drop(stream.write_all(b"\r\n"));
+        drop(stream);
+
+        client.join().unwrap().unwrap();
     }
 
     // --- find_header_end ---
