@@ -118,6 +118,9 @@ impl HostTuningLock {
 #[cfg(test)]
 #[cfg(target_os = "linux")]
 mod tests {
+    use std::fs::{File, TryLockError};
+    use std::time::{Duration, Instant};
+
     use camino::Utf8PathBuf;
 
     use super::*;
@@ -146,13 +149,28 @@ mod tests {
         assert!(!second.allows_tuning());
     }
 
+    /// A bound only a broken release reaches, so a failure is a failure and
+    /// not a hang.
+    const NEVER: Duration = Duration::from_secs(30);
+
     #[test]
     fn dropped_lock_can_be_reacquired() {
         let (_dir, path) = lock_path();
         drop(HostTuningLock::acquire_at(&path));
 
-        let again = HostTuningLock::acquire_at(&path);
-        assert!(again.allows_tuning());
+        // A child another test forks keeps the lock until its exec closes the
+        // copy, so the release is awaited rather than probed once.
+        let probe = File::open(&path).unwrap();
+        let dropped = Instant::now();
+        while let Err(e) = probe.try_lock() {
+            assert!(matches!(e, TryLockError::WouldBlock), "{e}");
+            assert!(dropped.elapsed() < NEVER, "a dropped lock must be released");
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        // Unlocking, unlike a drop, releases the lock in any copy a fork took
+        // of the probe.
+        probe.unlock().unwrap();
+        assert!(HostTuningLock::acquire_at(&path).allows_tuning());
     }
 
     #[test]
