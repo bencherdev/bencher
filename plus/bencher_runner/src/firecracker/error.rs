@@ -33,9 +33,6 @@ pub enum FirecrackerError {
         source: std::io::Error,
     },
 
-    #[error("Firecracker process stdio unavailable: {0}")]
-    Stdio(&'static str),
-
     #[error("Firecracker API {context}: {source}")]
     ApiEncoding {
         context: &'static str,
