@@ -3983,24 +3983,26 @@ const TUNED_THP: &[&str] = &[
 
 const THP_TARGET: &str = "never";
 
-const TUNED_PARTITION: &[&str] = &[
-    "/sys/fs/cgroup/bencher/cpuset.cpus",
-    "/sys/fs/cgroup/bencher/cpuset.mems",
-    "/sys/fs/cgroup/bencher/cpuset.cpus.partition",
+const TURBO_SWITCHES: &[&str] = &[
+    "/sys/devices/system/cpu/intel_pstate/no_turbo",
+    "/sys/devices/system/cpu/cpufreq/boost",
 ];
+
+const BENCHER_CGROUP: &str = "/sys/fs/cgroup/bencher";
+
+const CPU_DMA_LATENCY: &str = "/dev/cpu_dma_latency";
 
 #[derive(Debug, Clone)]
 struct TunedSetting {
     path: Utf8PathBuf,
     original: String,
-    /// `None` when this host will not let the runner change it, or it already
-    /// holds the target.
+    /// `None` when this host will not let the runner change it, it already holds
+    /// the target, or the harness only restores it.
     expected: Option<String>,
     bracketed: bool,
 }
 
-/// The harness restores from this itself rather than trusting the mechanism it
-/// is testing.
+/// The runner never reverts its tuning, so the harness restores from this.
 #[derive(Debug)]
 struct TuningSnapshot {
     settings: Vec<TunedSetting>,
@@ -4062,6 +4064,21 @@ impl TuningSnapshot {
             });
         }
 
+        // Restored but never asserted, since whether the runner can change them
+        // depends on the host's cpufreq driver.
+        let governors = cpu_governors();
+        let turbo = TURBO_SWITCHES.iter().map(Utf8PathBuf::from);
+        for path in governors.into_iter().chain(turbo) {
+            if let Some(original) = readable_setting(&path) {
+                settings.push(TunedSetting {
+                    path,
+                    original,
+                    expected: None,
+                    bracketed: false,
+                });
+            }
+        }
+
         Self { settings }
     }
 
@@ -4111,21 +4128,6 @@ impl TuningSnapshot {
             .collect()
     }
 
-    fn unrestored(&self) -> Vec<String> {
-        self.settings
-            .iter()
-            .filter_map(|setting| {
-                let current = readable_setting(&setting.path)?;
-                (current != setting.original).then(|| {
-                    format!(
-                        "{} is '{current}', was '{}'",
-                        setting.path, setting.original
-                    )
-                })
-            })
-            .collect()
-    }
-
     fn restore(&self) {
         for setting in &self.settings {
             let Some(current) = readable_setting(&setting.path) else {
@@ -4158,7 +4160,45 @@ struct RestoreTuning(TuningSnapshot);
 impl Drop for RestoreTuning {
     fn drop(&mut self) {
         self.0.restore();
+        if let Err(e) = remove_bencher_cgroup() {
+            println!(
+                "  tuning: harness could NOT remove {BENCHER_CGROUP}: {e}; {}",
+                partition_diagnosis()
+            );
+        }
     }
+}
+
+/// Undoes the partition the runner leaves, which the runner recreates on demand.
+fn remove_bencher_cgroup() -> std::io::Result<()> {
+    match fs::remove_dir(BENCHER_CGROUP) {
+        Ok(()) => {
+            println!("  tuning: harness removed {BENCHER_CGROUP}");
+            Ok(())
+        },
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
+/// Each CPU's governor, found as the runner finds them.
+fn cpu_governors() -> Vec<Utf8PathBuf> {
+    let Ok(entries) = fs::read_dir("/sys/devices/system/cpu") else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|name| {
+            name.strip_prefix("cpu")
+                .is_some_and(|index| index.parse::<u32>().is_ok())
+        })
+        .map(|name| {
+            Utf8PathBuf::from(format!(
+                "/sys/devices/system/cpu/{name}/cpufreq/scaling_governor"
+            ))
+        })
+        .collect()
 }
 
 fn readable_setting(path: &Utf8Path) -> Option<String> {
@@ -4174,14 +4214,6 @@ fn bracketed_value(listing: &str) -> Option<&str> {
     let (_, selected) = listing.split_once('[')?;
     let (selected, _) = selected.split_once(']')?;
     Some(selected)
-}
-
-fn partition_state() -> Vec<(Utf8PathBuf, String)> {
-    TUNED_PARTITION
-        .iter()
-        .map(Utf8PathBuf::from)
-        .filter_map(|path| readable_setting(&path).map(|value| (path, value)))
-        .collect()
 }
 
 /// Must run before the state directory is wiped, which destroys the chroot a
@@ -4232,7 +4264,7 @@ fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<Vec<String>> {
             }
             anyhow::ensure!(
                 std::time::Instant::now() < deadline,
-                "The cgroup {cgroup} could not be removed, so it would block the cpuset restore of every run that follows"
+                "The cgroup {cgroup} could not be removed, so it would stay under the bencher cgroup for every run that follows"
             );
             std::thread::sleep(PROBE_INTERVAL);
         }
@@ -4274,10 +4306,10 @@ fn rooted_in(pid: u32, jail_root: &Utf8Path) -> bool {
         .is_some_and(|(jail, root)| same_object(&root, &jail))
 }
 
-/// Clearing a parent's `cpuset.cpus` fails with `EIO` while a descendant holds a
-/// task, so a failed restore reports what is still in the `bencher` cgroup.
+/// Removing a cgroup fails while it holds a task or a child, so a failed
+/// removal reports what is still in the `bencher` cgroup.
 fn partition_diagnosis() -> String {
-    let root = Utf8Path::new("/sys/fs/cgroup/bencher");
+    let root = Utf8Path::new(BENCHER_CGROUP);
     if !root.exists() {
         return "the bencher cgroup is gone".to_owned();
     }
@@ -4350,7 +4382,7 @@ fn run_runner_with_tuning(
     runner_bin: &Utf8Path,
 ) -> Result<ScenarioOutput> {
     let (snapshot, expected) = plan_tuning()?;
-    let partition_before = partition_state();
+    let latency_before = dma_latency();
 
     let restore = RestoreTuning(snapshot);
 
@@ -4377,7 +4409,10 @@ fn run_runner_with_tuning(
         }
         std::thread::sleep(PROBE_INTERVAL);
     }
-    let partition_during = partition_state();
+
+    let cstates_held = applied
+        && latency_before.is_some_and(|latency| latency != 0)
+        && wait_for_cstate_hold(&mut child, deadline)?;
 
     if !applied && child.try_wait()?.is_none() {
         kill_pid(child.id(), libc::SIGKILL);
@@ -4399,39 +4434,57 @@ fn run_runner_with_tuning(
         );
     }
 
-    let unrestored = restore.0.unrestored();
-    if !unrestored.is_empty() {
+    if !stdout.contains("C-states - max exit latency held at 0 us") {
+        println!("  tuning: the runner held no C-state constraint, so none was asserted");
+    } else if latency_before.is_none_or(|latency| latency == 0) {
+        println!(
+            "  tuning: {CPU_DMA_LATENCY} was unreadable or already 0, so the C-state hold was not asserted"
+        );
+    } else if !cstates_held {
         bail!(
-            "Host tuning was not restored when the runner exited: {unrestored:?}.\nstdout: {stdout}\nstderr: {stderr}"
+            "The runner reported holding C-states, but {CPU_DMA_LATENCY} never read 0 while it ran.\nstdout: {stdout}\nstderr: {stderr}"
+        );
+    } else {
+        println!("  tuning: the C-state hold read 0 while the runner ran");
+    }
+
+    let reverted = restore.0.missing();
+    if !reverted.is_empty() {
+        bail!(
+            "Host tuning did not persist after the runner exited: {reverted:?}.\nstdout: {stdout}\nstderr: {stderr}"
         );
     }
 
-    // Only files that existed before: the partition creates its own, which have
-    // nothing to be restored to.
-    let partition_after = partition_state();
-    let partition_unrestored: Vec<String> = partition_before
-        .iter()
-        .filter_map(|(path, before)| {
-            let after = partition_after
-                .iter()
-                .find_map(|(p, v)| (p == path).then_some(v.as_str()))?;
-            (after != before).then(|| format!("{path} is '{after}', was '{before}'"))
-        })
-        .collect();
-    if !partition_unrestored.is_empty() {
+    if let Some(level) = achieved_partition(&stdout) {
+        let partition = Utf8Path::new(BENCHER_CGROUP).join("cpuset.cpus.partition");
+        let after = readable_setting(&partition);
+        if after.is_none() && level == "member" {
+            println!(
+                "  tuning: no cpuset partition file on this host, so the runner's 'member' was not asserted"
+            );
+        } else if after.as_deref() != Some(level) {
+            bail!(
+                "The cpuset partition did not persist after the runner exited: {partition} is '{}', but the runner achieved '{level}'.\nstdout: {stdout}\nstderr: {stderr}",
+                after.as_deref().unwrap_or("?")
+            );
+        } else {
+            println!("  tuning: the cpuset partition persisted at '{level}'");
+        }
+    } else {
+        println!("  tuning: the runner made no cpuset partition, so none was asserted");
+    }
+
+    // Fails while the run left a cgroup or a task behind.
+    if let Err(e) = remove_bencher_cgroup() {
         bail!(
-            "The cpuset partition was not restored: {partition_unrestored:?}. Now {}.\nstdout: {stdout}\nstderr: {stderr}",
+            "The harness could not remove {BENCHER_CGROUP}: {e}; {}.\nstdout: {stdout}\nstderr: {stderr}",
             partition_diagnosis()
         );
     }
-    if partition_during.is_empty() {
-        println!("  tuning: no cpuset partition files on this host, so none were asserted");
-    }
 
     println!(
-        "  tuning: {} setting(s) applied and restored, {} partition file(s) checked",
-        expected.len(),
-        partition_before.len()
+        "  tuning: {} setting(s) applied and persisted",
+        expected.len()
     );
 
     Ok(ScenarioOutput {
@@ -4441,10 +4494,46 @@ fn run_runner_with_tuning(
     })
 }
 
+/// The C-state hold is a descriptor the runner keeps open, so the bound reads 0
+/// only while the runner holds it.
+fn wait_for_cstate_hold(
+    child: &mut std::process::Child,
+    deadline: std::time::Instant,
+) -> Result<bool> {
+    loop {
+        if dma_latency() == Some(0) {
+            return Ok(true);
+        }
+        if child.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
+            return Ok(false);
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    }
+}
+
+/// The kernel's current C-state latency bound, a native-endian `i32`.
+#[expect(
+    clippy::host_endian_bytes,
+    reason = "the kernel interface is native-endian"
+)]
+fn dma_latency() -> Option<i32> {
+    let bytes = fs::read(CPU_DMA_LATENCY).ok()?;
+    <[u8; 4]>::try_from(bytes.as_slice())
+        .ok()
+        .map(i32::from_ne_bytes)
+}
+
+/// The partition level the runner reports achieving.
+fn achieved_partition(stdout: &str) -> Option<&str> {
+    let (_, rest) = stdout.split_once("cpuset partition - achieved level '")?;
+    let (level, _) = rest.split_once('\'')?;
+    Some(level)
+}
+
 fn tuning_scenarios() -> Vec<Scenario> {
     vec![Scenario {
         name: "host_tuning",
-        description: "Host tuning applies while a Job runs and is restored after",
+        description: "Host tuning applies while a Job runs and persists after",
         dockerfile: r#"FROM busybox
 CMD ["printf", "%s_%s\\n", "TUNED", "RUN"]"#,
         extra_args: &["--timeout", "60"],

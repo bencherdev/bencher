@@ -84,7 +84,7 @@
 //! | `ensure_controllers`: another controller cannot be disabled in `bencher/` | warns: Jobs run with it enabled |
 //! | `disable_swap`: `memory` is absent, or `memory.swap.max` cannot be written | declares the absence: no swap limit |
 //! | `BencherPartition::apply`: any read or write in the partition path, `ensure_controllers` included | declares the absence: it warns, and the level achieved is reported, down to `member` |
-//! | `BencherPartition::apply`: the kernel refuses both partition modes | writes `member` back; the restore at exit returns the mode found at startup, which reads `invalid` again when a previous binary left it so, until `bencher/` is removed |
+//! | `BencherPartition::apply`: the kernel refuses both partition modes | writes `member` back, where it stays: tuning is never reverted |
 //! | `CpuLayout::detect`: the online CPU list cannot be read or parsed | declares the absence: the counted layout is announced as a guess |
 //! | `CpuLayout::detect`: the core count cannot be read | one core, which reports as a layout with no isolation |
 //! | `metrics`: a cgroup that is not there | no metrics, reported as absent |

@@ -8,20 +8,18 @@
 
 use camino::Utf8Path;
 
-use super::{TuningGuard, write_sysctl};
+use super::write_sysctl;
 use crate::cpu::{CpuLayout, format_cpumask};
 
 /// Steer kernel work (IRQs and unbound workqueues) to housekeeping cores.
 ///
 /// `root` is the filesystem root (`/` in production); tests pass a
-/// tempdir tree containing `proc/` and `sys/` subtrees. All writes are
-/// saved on the guard and restored in reverse order on drop.
-pub(super) fn steer_kernel_work(guard: &mut TuningGuard, layout: &CpuLayout, root: &Utf8Path) {
+/// tempdir tree containing `proc/` and `sys/` subtrees.
+pub(super) fn steer_kernel_work(layout: &CpuLayout, root: &Utf8Path) {
     let housekeeping_mask = format_cpumask(&layout.housekeeping);
 
     // New IRQs default to housekeeping cores.
     write_sysctl(
-        guard,
         root.join("proc/irq/default_smp_affinity").as_str(),
         &housekeeping_mask,
         "default IRQ affinity",
@@ -29,20 +27,19 @@ pub(super) fn steer_kernel_work(guard: &mut TuningGuard, layout: &CpuLayout, roo
 
     // Unbound workqueue workers run on housekeeping cores.
     write_sysctl(
-        guard,
         root.join("sys/devices/virtual/workqueue/cpumask").as_str(),
         &housekeeping_mask,
         "workqueue cpumask",
     );
 
-    steer_existing_irqs(guard, layout, root);
+    steer_existing_irqs(layout, root);
 }
 
 /// Move every movable IRQ to the housekeeping cores.
 ///
 /// Iterates `proc/irq/<N>/smp_affinity_list`, skipping per-IRQ failures
 /// (unmovable IRQs fail with EIO), and prints one summary line.
-fn steer_existing_irqs(guard: &mut TuningGuard, layout: &CpuLayout, root: &Utf8Path) {
+fn steer_existing_irqs(layout: &CpuLayout, root: &Utf8Path) {
     let irq_dir = root.join("proc/irq");
     let Ok(entries) = std::fs::read_dir(irq_dir.as_std_path()) else {
         println!("  Tuning: IRQ steering - skipped (cannot read {irq_dir})");
@@ -67,10 +64,9 @@ fn steer_existing_irqs(guard: &mut TuningGuard, layout: &CpuLayout, root: &Utf8P
         let Ok(current) = std::fs::read_to_string(affinity_path.as_std_path()) else {
             continue;
         };
-        let current = current.trim().to_owned();
         total += 1;
 
-        if current == housekeeping_list {
+        if current.trim() == housekeeping_list {
             moved += 1;
             continue;
         }
@@ -81,7 +77,6 @@ fn steer_existing_irqs(guard: &mut TuningGuard, layout: &CpuLayout, root: &Utf8P
         }
 
         moved += 1;
-        guard.save_restore(affinity_path, current, format!("IRQ {name_str} affinity"));
     }
 
     println!(
@@ -96,14 +91,6 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use super::*;
-
-    fn empty_guard() -> TuningGuard {
-        TuningGuard {
-            saved: Vec::new(),
-            held_fds: Vec::new(),
-            remove_if_empty: Vec::new(),
-        }
-    }
 
     /// Build a fake `/proc` + `/sys` tree with two movable IRQs.
     fn fake_root() -> (tempfile::TempDir, Utf8PathBuf) {
@@ -127,8 +114,7 @@ mod tests {
         let (_dir, root) = fake_root();
         let layout = CpuLayout::with_core_count(8);
 
-        let mut guard = empty_guard();
-        steer_kernel_work(&mut guard, &layout, &root);
+        steer_kernel_work(&layout, &root);
 
         assert_eq!(
             fs::read_to_string(root.join("proc/irq/default_smp_affinity")).unwrap(),
@@ -146,32 +132,6 @@ mod tests {
             fs::read_to_string(root.join("proc/irq/11/smp_affinity_list")).unwrap(),
             "0-1"
         );
-        // default affinity + workqueue + 2 IRQs
-        assert_eq!(guard.saved.len(), 4);
-    }
-
-    #[test]
-    fn guard_drop_restores_originals() {
-        let (_dir, root) = fake_root();
-        let layout = CpuLayout::with_core_count(8);
-
-        {
-            let mut guard = empty_guard();
-            steer_kernel_work(&mut guard, &layout, &root);
-        }
-
-        assert_eq!(
-            fs::read_to_string(root.join("proc/irq/default_smp_affinity")).unwrap(),
-            "ff"
-        );
-        assert_eq!(
-            fs::read_to_string(root.join("sys/devices/virtual/workqueue/cpumask")).unwrap(),
-            "ff"
-        );
-        assert_eq!(
-            fs::read_to_string(root.join("proc/irq/10/smp_affinity_list")).unwrap(),
-            "0-7"
-        );
     }
 
     #[test]
@@ -182,39 +142,31 @@ mod tests {
         fs::create_dir_all(root.join("proc/irq/12/smp_affinity_list")).unwrap();
         let layout = CpuLayout::with_core_count(8);
 
-        let mut guard = empty_guard();
-        steer_kernel_work(&mut guard, &layout, &root);
+        steer_kernel_work(&layout, &root);
 
         // The unmovable IRQ is skipped; the movable ones are still steered.
+        for irq in ["10", "11"] {
+            assert_eq!(
+                fs::read_to_string(root.join(format!("proc/irq/{irq}/smp_affinity_list"))).unwrap(),
+                "0-1"
+            );
+        }
+    }
+
+    #[test]
+    fn a_restart_leaves_a_steered_irq_unwritten() {
+        // Kills dropping the equality check: the kernel prints a newline the
+        // runner never writes, so a rewrite loses it.
+        let (_dir, root) = fake_root();
+        fs::write(root.join("proc/irq/10/smp_affinity_list"), "0-1\n").unwrap();
+        let layout = CpuLayout::with_core_count(8);
+
+        steer_kernel_work(&layout, &root);
+
         assert_eq!(
             fs::read_to_string(root.join("proc/irq/10/smp_affinity_list")).unwrap(),
-            "0-1"
+            "0-1\n"
         );
-        assert_eq!(guard.saved.len(), 4);
-    }
-
-    #[test]
-    fn already_steered_irq_not_saved() {
-        let (_dir, root) = fake_root();
-        fs::write(root.join("proc/irq/10/smp_affinity_list"), "0-1").unwrap();
-        let layout = CpuLayout::with_core_count(8);
-
-        let mut guard = empty_guard();
-        steer_kernel_work(&mut guard, &layout, &root);
-
-        // IRQ 10 was already on housekeeping cores: not saved for restore.
-        assert_eq!(guard.saved.len(), 3);
-    }
-
-    #[test]
-    fn skips_missing_tree() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let layout = CpuLayout::with_core_count(8);
-
-        let mut guard = empty_guard();
-        steer_kernel_work(&mut guard, &layout, &root);
-        assert!(guard.saved.is_empty());
     }
 
     #[test]
@@ -224,8 +176,7 @@ mod tests {
         fs::write(root.join("proc/irq/not-an-irq/smp_affinity_list"), "0-7\n").unwrap();
         let layout = CpuLayout::with_core_count(8);
 
-        let mut guard = empty_guard();
-        steer_kernel_work(&mut guard, &layout, &root);
+        steer_kernel_work(&layout, &root);
 
         assert_eq!(
             fs::read_to_string(root.join("proc/irq/not-an-irq/smp_affinity_list")).unwrap(),

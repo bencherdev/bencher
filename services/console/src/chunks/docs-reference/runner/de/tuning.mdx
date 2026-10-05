@@ -3,7 +3,10 @@
 Vor jedem Benchmark wendet der `runner` Host-Tuning an, um Messrauschen zu reduzieren.
 Standardmäßig deaktiviert er ASLR, den NMI-Watchdog, SMT / Hyper-Threading und Turbo Boost;
 setzt den CPU-Scaling-Governor auf `performance`, Swappiness auf `10` und `perf_event_paranoid` auf `-1`.
-Die folgenden Flags belassen einzelne Optimierungen stattdessen bei ihren Host-Standardwerten.
+Auf einem Host, auf den der `runner` seit dem letzten Neustart kein Host-Tuning angewendet hat, belassen die folgenden Flags einzelne Optimierungen stattdessen bei ihren Host-Standardwerten.
+
+Das Host-Tuning bleibt bis zum Neustart des Hosts bestehen: Jede Einstellung ist ein reiner Laufzeit-Schreibvorgang, den der `runner` beim Beenden nicht zurücksetzt.
+Starten Sie einen gemeinsam genutzten Host neu, nachdem Sie den `runner` entfernt haben.
 
 ### `--no-tuning`
 

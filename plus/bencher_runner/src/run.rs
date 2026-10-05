@@ -136,11 +136,7 @@ fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::er
 /// setting in the configuration.
 #[cfg_attr(
     not(target_os = "linux"),
-    expect(
-        unused_mut,
-        unused_variables,
-        reason = "tuning guard and config only mutated on Linux for CPU isolation"
-    )
+    expect(unused_mut, reason = "config only mutated on Linux for CPU isolation")
 )]
 pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     // A signal cancels the job through its teardown rather than killing the
@@ -150,13 +146,12 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     // Warn about host conditions that limit benchmark accuracy (Linux only)
     preflight::print_host_warnings();
 
-    // Serialize host-global tuning across runner processes. Declared
-    // before the guard so the lock releases only after restore completes.
+    // Serialize host-global tuning across runner processes.
     let host_lock = crate::tuning::HostTuningLock::acquire();
     let tuning = host_lock.effective_tuning(&args.tuning);
 
-    // Apply host tuning - guard restores settings on drop (no-op on non-Linux)
-    let mut tuning_guard = crate::tuning::apply(&tuning);
+    // Apply host tuning, which persists until the host reboots (no-op on non-Linux)
+    let _tuning_guard = crate::tuning::apply(&tuning);
 
     let mut config = build_config_from_run_args(args)?;
 
@@ -168,7 +163,7 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     #[cfg(target_os = "linux")]
     {
         let cpu_layout = crate::cpu::CpuLayout::detect();
-        crate::tuning::apply_cpu_scoped(&tuning, &cpu_layout, &mut tuning_guard);
+        crate::tuning::apply_cpu_scoped(&tuning, &cpu_layout);
         if cpu_layout.has_isolation() {
             println!(
                 "  CPU isolation: housekeeping={}, benchmark={}",
