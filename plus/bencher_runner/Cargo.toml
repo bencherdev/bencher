@@ -67,6 +67,7 @@ nix = { workspace = true, features = [
     "poll",
     "sched",
     "signal",
+    "socket",
 ] }
 
 [build-dependencies]
