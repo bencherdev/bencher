@@ -315,6 +315,9 @@ fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<
                     break;
                 }
             },
+            // A read with a timeout is interrupted by any signal rather than
+            // restarted.
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {},
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
             Err(e) if e.kind() == std::io::ErrorKind::TimedOut => break,
             Err(_) => break,
@@ -332,6 +335,7 @@ fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<
 )]
 mod tests {
     use super::*;
+    use crate::firecracker::test_util::interrupt;
     use crate::jail::JailPaths;
 
     use std::io::Write as _;
@@ -640,6 +644,29 @@ mod tests {
         assert!(
             data.iter().all(|&b| b == 0xAB),
             "truncated data should contain the correct bytes"
+        );
+    }
+
+    #[test]
+    fn a_signal_mid_stream_does_not_truncate_the_result() {
+        // Prevents a signal or stop during result transfer silently truncating the result.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let mut stream = UnixStream::connect(&path).unwrap();
+        stream.write_all(b"first ").unwrap();
+
+        let reader = std::thread::spawn(move || try_accept_and_read(&listener, TEST_MAX_DATA_SIZE));
+        interrupt(&reader);
+        drop(stream.write_all(b"second"));
+        drop(stream);
+
+        let data = reader.join().unwrap().unwrap();
+        assert_eq!(
+            String::from_utf8_lossy(&data),
+            "first second",
+            "a signal must not end the stream early"
         );
     }
 
