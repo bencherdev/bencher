@@ -42,6 +42,12 @@ pub enum FirecrackerError {
     #[error("Firecracker API response malformed: {0}")]
     MalformedResponse(&'static str),
 
+    #[error(
+        "Firecracker's response to PUT {path} exceeded {kib} KiB",
+        kib = super::client::API_RESPONSE_CAP_KIB
+    )]
+    ApiResponseTooLarge { path: String },
+
     /// Firecracker API returned an error.
     #[error("Firecracker API error: {status} {body}")]
     Api {

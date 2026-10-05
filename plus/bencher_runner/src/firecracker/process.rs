@@ -21,6 +21,11 @@ use crate::jail::{JailFile, JailUser, PinnedSocket, VmId};
 /// jailer that dies is caught when it exits, not at this deadline.
 const API_SOCKET_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// Far above any line an honest VMM or jailer writes, yet short enough that a
+/// cut line stays one journald record (split at 48 KiB) even once replacement
+/// characters triple it, so no part of it logs without the `[firecracker]` prefix.
+const STDERR_LINE_CAP_KIB: usize = 15;
+
 #[derive(Debug)]
 pub struct JailedSpawn<'a> {
     /// The jailer binary, which runs as root and execs Firecracker in place.
@@ -246,19 +251,12 @@ impl StderrReader {
         let socket = Arc::new(reader);
         let read = Arc::clone(&socket);
         let thread = std::thread::spawn(move || {
-            use std::io::BufRead as _;
-
             let _stop = StopReading(&read);
             // Pin to housekeeping cores to avoid benchmark interference
             if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
                 eprintln!("Warning: failed to pin stderr reader thread: {e}");
             }
-            for line in std::io::BufReader::new(&*read).lines() {
-                match line {
-                    Ok(line) => on_line(line),
-                    Err(_) => break,
-                }
-            }
+            forward_capped_lines(&*read, &mut on_line);
         });
         Ok((
             writer,
@@ -354,6 +352,46 @@ fn place_in_cgroup(mut procs: &File) -> std::io::Result<()> {
     use std::io::Write as _;
 
     procs.write_all(b"0")
+}
+
+/// Hands each line to `on_line` without its newline until EOF, keeping at most
+/// `STDERR_LINE_CAP_KIB` of a line and marking the cut.
+fn forward_capped_lines<R, F>(stderr: R, mut on_line: F)
+where
+    R: std::io::Read,
+    F: FnMut(String),
+{
+    use std::io::{BufRead as _, Read as _};
+
+    let cap = STDERR_LINE_CAP_KIB * 1024;
+    let mut stderr = std::io::BufReader::new(stderr);
+    let mut line = Vec::new();
+    while let Ok(1..) = stderr
+        .by_ref()
+        .take(cap as u64 + 1)
+        .read_until(b'\n', &mut line)
+    {
+        let cut = line.len() > cap && !line.ends_with(b"\n");
+        if cut {
+            line.truncate(cap);
+        } else if line.ends_with(b"\n") {
+            line.pop();
+            if line.ends_with(b"\r") {
+                line.pop();
+            }
+        }
+        // Lossy, since the cut can split a character, and without NUL, which
+        // ends a journald record as a newline does.
+        on_line(String::from_utf8_lossy(&line).replace('\0', "\u{FFFD}"));
+        if cut {
+            on_line(format!(
+                "(the runner cut the line above at {STDERR_LINE_CAP_KIB} KiB)"
+            ));
+            // Only now, so a line that never ends still shows its start.
+            drop(stderr.skip_until(b'\n'));
+        }
+        line.clear();
+    }
 }
 
 #[cfg(test)]
@@ -634,41 +672,6 @@ mod tests {
     }
 
     #[test]
-    fn a_reader_that_stops_at_a_bad_line_fails_the_vmm_writes() {
-        // Prevents a reader that ends at a line that is not UTF-8 leaving the
-        // VMM blocked on a full socket instead of failing its writes.
-        let (_dir, jail) = jail_in_tmpdir();
-        let mut command = Command::new("/bin/sh");
-        command
-            .args([
-                "-c",
-                "printf 'first\\n\\377\\n' >&2; head -c 4194304 /dev/zero >&2",
-            ])
-            .stdin(std::process::Stdio::null())
-            .stdout(std::process::Stdio::null());
-        let lines = Arc::new(std::sync::Mutex::new(Vec::new()));
-        let sink = Arc::clone(&lines);
-        let mut jailed =
-            JailedChild::spawn_with(command, jail.api_socket(), Vec::new(), move |line| {
-                sink.lock().unwrap().push(line);
-            })
-            .unwrap();
-        let started = std::time::Instant::now();
-        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
-            std::thread::sleep(Duration::from_millis(10));
-        }
-        let exited = jailed.exited();
-
-        jailed.kill();
-
-        assert!(
-            exited.is_some(),
-            "the VMM must not block on a stderr nobody reads"
-        );
-        assert_eq!(*lines.lock().unwrap(), ["first"]);
-    }
-
-    #[test]
     fn a_reader_that_panics_fails_the_vmm_writes() {
         // Prevents a reader that panics leaving the VMM blocked on a full
         // socket instead of failing its writes.
@@ -694,6 +697,116 @@ mod tests {
             exited.is_some(),
             "the VMM must not block on a stderr nobody reads"
         );
+    }
+
+    #[test]
+    fn a_stderr_line_over_the_cap_is_cut_and_the_next_line_kept() {
+        // Prevents a cut that keeps more than the cap or drops the lines after
+        // it, and a line that is not UTF-8 ending the read.
+        let (_dir, jail) = jail_in_tmpdir();
+        let mut command = Command::new("/bin/sh");
+        command
+            .args([
+                "-c",
+                "{ head -c 1048576 /dev/zero | tr '\\0' a; echo; printf '\\377\\n'; echo two; } >&2",
+            ])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null());
+        let lines = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let sink = Arc::clone(&lines);
+        let mut jailed =
+            JailedChild::spawn_with(command, jail.api_socket(), Vec::new(), move |line| {
+                sink.lock().unwrap().push(line);
+            })
+            .unwrap();
+        let started = std::time::Instant::now();
+        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        jailed.kill();
+
+        let lines = lines.lock().unwrap();
+        let [cut, marker, invalid, next] = lines.as_slice() else {
+            panic!(
+                "expected the cut line, 1 marker, and the next 2 lines, got lines of {:?} bytes",
+                lines.iter().map(String::len).collect::<Vec<_>>()
+            );
+        };
+        assert_eq!(
+            cut.len(),
+            STDERR_LINE_CAP_KIB * 1024,
+            "the line keeps its first bytes"
+        );
+        assert!(
+            marker.contains(&format!("{STDERR_LINE_CAP_KIB} KiB")),
+            "the marker must name the cap: {marker}"
+        );
+        assert_eq!(*invalid, char::REPLACEMENT_CHARACTER.to_string());
+        assert_eq!(next, "two");
+    }
+
+    #[test]
+    fn a_nul_cannot_split_a_stderr_line() {
+        // Prevents a NUL ending the journald record mid-line, which logs the
+        // rest without the `[firecracker]` prefix and lets `<N>` set its priority.
+        let mut lines = Vec::new();
+        forward_capped_lines(&b"head\0<3>forged\ntwo\n"[..], |line| lines.push(line));
+
+        assert_eq!(lines, ["head\u{FFFD}<3>forged", "two"]);
+    }
+
+    #[test]
+    fn a_cut_line_is_handed_on_before_the_line_ends() {
+        // Prevents a reader that holds a whole line before it cuts it, which a
+        // line that never ends grows without bound.
+        let sent = std::cell::Cell::new(0);
+        let handed_on = std::cell::Cell::new(false);
+        let mut first_after = None;
+        let mut lines = Vec::new();
+        forward_capped_lines(
+            EndlessLine {
+                sent: &sent,
+                handed_on: &handed_on,
+                tail: b"\ntwo\n",
+            },
+            |line| {
+                handed_on.set(true);
+                first_after.get_or_insert(sent.get());
+                lines.push(line);
+            },
+        );
+
+        assert!(
+            first_after.is_some_and(|sent| sent < 1024 * 1024),
+            "the cut line waited for {first_after:?} bytes"
+        );
+        assert_eq!(
+            lines.first().map(String::len),
+            Some(STDERR_LINE_CAP_KIB * 1024)
+        );
+    }
+
+    /// Writes one line until a line is handed on, or for 64 MiB, then ends it
+    /// with `tail`.
+    struct EndlessLine<'a> {
+        sent: &'a std::cell::Cell<usize>,
+        handed_on: &'a std::cell::Cell<bool>,
+        tail: &'static [u8],
+    }
+
+    impl std::io::Read for EndlessLine<'_> {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            if self.handed_on.get() || self.sent.get() >= 64 * 1024 * 1024 {
+                let n = self.tail.len().min(buf.len());
+                buf[..n].copy_from_slice(&self.tail[..n]);
+                self.tail = &self.tail[n..];
+                return Ok(n);
+            }
+            buf.fill(b'a');
+            self.sent.set(self.sent.get() + buf.len());
+            Ok(buf.len())
+        }
     }
 
     #[test]
