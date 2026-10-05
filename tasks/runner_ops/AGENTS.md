@@ -57,4 +57,4 @@ cargo ops isolate <runner> --cpus 1-5
 
 1. `deploy` downloads the runner binary from the release of the runner's update channel, or from a devel CI artifact with `--run-id`, checks it against its published checksum, SSHes into the server, stops the existing service, copies the new binary, configures systemd, and starts the service.
 2. Server SSH details, runner key, and host URL are resolved by merging `runners.json` with any CLI flags. CLI flags override the JSON file.
-3. The runner key and host are written to a systemd drop-in at `/etc/systemd/system/bencher-runner.service.d/credentials.conf`.
+3. The host, runner, and update channel are written to a systemd drop-in at `/etc/systemd/system/bencher-runner.service.d/credentials.conf`, and the runner key to `/etc/bencher-runner/key.env`, which the drop-in loads with `EnvironmentFile=`. Both are root only (`0600`): `systemctl show` lists a unit's `Environment=` values to any local user, but never an environment file's contents.
