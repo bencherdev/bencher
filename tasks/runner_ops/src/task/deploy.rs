@@ -54,7 +54,8 @@ impl Deploy {
             update_channel,
             run_id,
         } = self;
-        let (runner_binary, _temp_dir) = download::download(run_id)?;
+        let (runner_binary, _temp_dir) =
+            download::download(update_channel.unwrap_or_default(), run_id)?;
         deploy_setup::deploy(&ssh, Some(runner_binary.as_path()))?;
         let start = Start::new(ssh, host, runner, key, update_channel, false);
         start.exec()?;

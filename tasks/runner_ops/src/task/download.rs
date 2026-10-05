@@ -1,131 +1,203 @@
 use std::process::Command;
 
-use camino::Utf8PathBuf;
+use anyhow::Context as _;
+use bencher_json::{Sha256, UpdateChannel};
+use camino::{Utf8Path, Utf8PathBuf};
+use serde::Deserialize;
+use sha2::Digest as _;
 use tempfile::TempDir;
 
-const DEFAULT_BRANCH: &str = "devel";
+const REPO: &str = "bencherdev/bencher";
+const CANARY: &str = "canary";
+const DEVEL: &str = "devel";
 
-/// Download the runner binary from GitHub Actions.
+/// Download the runner binary and check it against the checksum published beside it.
 ///
-/// If `run_id` is `None`, finds the latest successful `devel` branch run.
+/// Without `run_id` it is the release asset of the update channel: the `canary` release,
+/// or the latest tagged release for stable.
+/// With `run_id` it is the artifact of that `devel` push run of CI.
 /// Returns the path to the downloaded binary and the temp directory that owns it.
-pub fn download(run_id: Option<u64>) -> anyhow::Result<(Utf8PathBuf, TempDir)> {
-    let (run_id, branch) = if let Some(id) = run_id {
-        let branch = run_branch(id)?;
-        (id, branch)
-    } else {
-        let id = latest_devel_run_id()?;
-        (id, DEFAULT_BRANCH.into())
-    };
-
-    // Runner artifacts are named by branch, except on `cloud` where the
-    // build is versioned as `canary` for the rolling canary prerelease.
-    let artifact_version = if branch == "cloud" { "canary" } else { &branch };
-    let artifact_name = format!("runner-{artifact_version}-linux-x86-64");
-    println!("Downloading artifact {artifact_name} from run {run_id}...");
-
+pub fn download(
+    update_channel: UpdateChannel,
+    run_id: Option<u64>,
+) -> anyhow::Result<(Utf8PathBuf, TempDir)> {
     let temp_dir = tempfile::tempdir()?;
     let temp_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
         .map_err(|path| anyhow::anyhow!("Non-UTF8 temp dir path: {}", path.display()))?;
 
-    let output = Command::new("gh")
-        .args([
+    let name = if let Some(run_id) = run_id {
+        check_devel_push(run_id, &view_run(run_id)?)?;
+        let name = binary_name(DEVEL);
+        println!("Downloading artifact {name} from devel run {run_id}...");
+        gh(&[
             "run",
             "download",
             &run_id.to_string(),
             "--repo",
-            "bencherdev/bencher",
-            "-n",
-            &artifact_name,
-            "-D",
+            REPO,
+            "--name",
+            &name,
+            "--dir",
             temp_path.as_str(),
-        ])
-        .output()?;
+        ])?;
+        name
+    } else {
+        let tag = release_tag(update_channel, latest_release_tag)?;
+        let name = binary_name(&tag);
+        println!("Downloading {name} from the {tag} release...");
+        gh(&[
+            "release",
+            "download",
+            &tag,
+            "--repo",
+            REPO,
+            "--pattern",
+            &name,
+            "--pattern",
+            &format!("{name}.sha256"),
+            "--dir",
+            temp_path.as_str(),
+        ])?;
+        name
+    };
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("gh run download failed: {stderr}");
-    }
-
-    let binary_path = temp_path.join(&artifact_name);
-    if !binary_path.exists() {
-        anyhow::bail!(
-            "Expected binary not found at {binary_path}; contents: {:?}",
-            std::fs::read_dir(&temp_path)?
-                .filter_map(|e| e.ok().map(|e| e.file_name()))
-                .collect::<Vec<_>>()
-        );
-    }
-
-    println!("Downloaded runner binary to {binary_path}");
+    let binary_path = temp_path.join(&name);
+    let checksum = verify_checksum(&binary_path, &temp_path.join(format!("{name}.sha256")))?;
+    println!("Downloaded runner binary to {binary_path}, sha256 {checksum}");
 
     Ok((binary_path, temp_dir))
 }
 
-fn run_branch(run_id: u64) -> anyhow::Result<String> {
-    let output = Command::new("gh")
-        .args([
-            "run",
-            "view",
-            &run_id.to_string(),
-            "--repo",
-            "bencherdev/bencher",
-            "--json",
-            "headBranch",
-            "--jq",
-            ".headBranch",
-        ])
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("gh run view failed: {stderr}");
-    }
-
-    let branch = String::from_utf8_lossy(&output.stdout).trim().to_owned();
-    if branch.is_empty() {
-        anyhow::bail!("Could not determine branch for run {run_id}");
-    }
-
-    println!("Run {run_id} is from branch: {branch}");
-    Ok(branch)
+fn binary_name(version: &str) -> String {
+    format!("runner-{version}-linux-x86-64")
 }
 
-fn latest_devel_run_id() -> anyhow::Result<u64> {
-    println!("Finding latest successful devel CI run...");
+fn release_tag(
+    update_channel: UpdateChannel,
+    latest_release_tag: impl FnOnce() -> anyhow::Result<String>,
+) -> anyhow::Result<String> {
+    match update_channel {
+        UpdateChannel::Canary => Ok(CANARY.to_owned()),
+        UpdateChannel::Stable => latest_release_tag(),
+    }
+}
 
-    let output = Command::new("gh")
-        .args([
-            "run",
-            "list",
-            "--repo",
-            "bencherdev/bencher",
-            "--branch",
-            DEFAULT_BRANCH,
-            "--workflow",
-            "ci.yml",
-            "--status",
-            "success",
-            "--json",
-            "databaseId",
-            "-L",
-            "1",
-            "--jq",
-            ".[0].databaseId",
-        ])
-        .output()?;
+/// GitHub's latest release is the newest tagged one, never the `canary` prerelease.
+fn latest_release_tag() -> anyhow::Result<String> {
+    let stdout = gh(&[
+        "release", "view", "--repo", REPO, "--json", "tagName", "--jq", ".tagName",
+    ])?;
+    let tag = String::from_utf8_lossy(&stdout).trim().to_owned();
+    anyhow::ensure!(!tag.is_empty(), "gh release view returned no tag");
+    Ok(tag)
+}
 
+fn view_run(run_id: u64) -> anyhow::Result<RunView> {
+    let stdout = gh(&[
+        "run",
+        "view",
+        &run_id.to_string(),
+        "--repo",
+        REPO,
+        "--json",
+        "event,headBranch",
+    ])?;
+    serde_json::from_slice(&stdout).with_context(|| {
+        format!(
+            "unexpected gh run view output: {}",
+            String::from_utf8_lossy(&stdout)
+        )
+    })
+}
+
+/// A pull request from a fork's branch named `devel` uploads artifacts under the same names.
+fn check_devel_push(run_id: u64, run: &RunView) -> anyhow::Result<()> {
+    let RunView { event, head_branch } = run;
+    anyhow::ensure!(
+        event == "push" && head_branch == DEVEL,
+        "Run {run_id} is a {event} run on {head_branch}; only a push run of {DEVEL} can be deployed"
+    );
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RunView {
+    event: String,
+    head_branch: String,
+}
+
+fn gh(args: &[&str]) -> anyhow::Result<Vec<u8>> {
+    let output = Command::new("gh").args(args).output()?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("gh run list failed: {stderr}");
+        anyhow::bail!("gh {} failed: {stderr}", args.join(" "));
+    }
+    Ok(output.stdout)
+}
+
+/// Check the binary against the first field of its `sha256sum` file.
+fn verify_checksum(binary: &Utf8Path, checksum_file: &Utf8Path) -> anyhow::Result<Sha256> {
+    let published = std::fs::read_to_string(checksum_file)
+        .with_context(|| format!("failed to read {checksum_file}"))?;
+    let expected: Sha256 = published
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+        .parse()
+        .with_context(|| format!("invalid checksum in {checksum_file}: {published}"))?;
+    let contents = std::fs::read(binary).with_context(|| format!("failed to read {binary}"))?;
+    let actual: Sha256 = hex::encode(sha2::Sha256::digest(contents)).parse()?;
+    anyhow::ensure!(
+        actual == expected,
+        "{binary} has sha256 {actual}, but {checksum_file} publishes {expected}"
+    );
+    Ok(expected)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn run(event: &str, head_branch: &str) -> RunView {
+        RunView {
+            event: event.to_owned(),
+            head_branch: head_branch.to_owned(),
+        }
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let run_id: u64 = stdout
-        .trim()
-        .parse()
-        .map_err(|e| anyhow::anyhow!("Failed to parse run ID from '{stdout}': {e}"))?;
+    #[test]
+    fn release_tag_follows_the_update_channel() {
+        let latest = || anyhow::Ok("v1.2.3".to_owned());
+        assert_eq!(release_tag(UpdateChannel::Canary, latest).unwrap(), CANARY);
+        assert_eq!(
+            release_tag(UpdateChannel::Stable, latest).unwrap(),
+            "v1.2.3"
+        );
+    }
 
-    println!("Latest devel run ID: {run_id}");
-    Ok(run_id)
+    #[test]
+    fn check_devel_push_accepts_only_a_devel_push() {
+        check_devel_push(1, &run("push", "devel")).unwrap();
+        check_devel_push(1, &run("pull_request", "devel")).unwrap_err();
+        check_devel_push(1, &run("push", "cloud")).unwrap_err();
+    }
+
+    #[test]
+    fn verify_checksum_rejects_a_mismatch() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(dir.path()).unwrap();
+        let binary = dir.join("runner");
+        let checksum_file = dir.join("runner.sha256");
+        std::fs::write(&binary, b"runner").unwrap();
+        let published = hex::encode(sha2::Sha256::digest(b"runner"));
+        std::fs::write(&checksum_file, format!("{published}  runner\n")).unwrap();
+        assert_eq!(
+            verify_checksum(&binary, &checksum_file).unwrap().as_ref(),
+            published
+        );
+
+        std::fs::write(&binary, b"tampered").unwrap();
+        verify_checksum(&binary, &checksum_file).unwrap_err();
+    }
 }

@@ -8,32 +8,25 @@ Servers are configured in `tasks/runner_ops/runners.json`. Each entry maps a run
 
 Optional per-runner fields:
 
-- `"update_channel": "canary"` puts the runner on the canary update channel: it self-updates to the rolling canary build published on each `cloud` branch deploy, instead of waiting for versioned releases. Omit (or use `"stable"`) for release-only updates. The channel is written to the systemd drop-in as `BENCHER_UPDATE_CHANNEL` by `deploy` and `start`; both commands also accept an `--update-channel` flag that overrides the file.
+- `"update_channel": "canary"` puts the runner on the canary update channel: it self-updates to the rolling canary build published on each `cloud` branch deploy, instead of waiting for versioned releases. Omit (or use `"stable"`) for release-only updates. The channel is written to the systemd drop-in as `BENCHER_UPDATE_CHANNEL` by `deploy` and `start`, and `deploy` installs that channel's release; both commands also accept an `--update-channel` flag that overrides the file.
 
 ## Common Operations
 
-### Deploy a tagged release
+### Deploy the release of the runner's channel
 
-To deploy a specific release version, find the CI run ID for the tag and pass it via `--run-id`:
-
-```bash
-gh run list --repo bencherdev/bencher --branch v0.X.Y --workflow ci.yml --status success --json databaseId -L 1
-cargo ops deploy <runner> --run-id <run_id>
-```
-
-### Deploy latest from devel
+By default `deploy` follows the runner's update channel, from `--update-channel` or `runners.json`, and stable when neither sets it, as on the runner. A canary runner gets `runner-canary-linux-x86-64` from the `canary` release; a stable runner gets `runner-v0.X.Y-linux-x86-64` from the latest tagged release. Each binary is checked against its own `.sha256` from the same release before it is installed. Runners self-update on their channel, so this is only needed to bootstrap a runner or to force an immediate deploy.
 
 ```bash
 cargo ops deploy <runner>
 ```
 
-### Deploy a canary (cloud branch) build
+### Deploy a devel build
 
-Canary channel runners self-update automatically after each `cloud` push, so this is only needed to bootstrap a runner onto the channel or to force an immediate deploy:
+`--run-id` deploys the `runner-devel-linux-x86-64` artifact of a CI run instead, checked against the checksum uploaded with it. Only a push run of `devel` is accepted, since a pull request from a fork's branch named `devel` uploads artifacts under the same name. GitHub's filtered run list can return a stale page, months old, so check that the run's `headSha` is the commit you want:
 
 ```bash
-gh run list --repo bencherdev/bencher --branch cloud --workflow ci.yml --status success --json databaseId -L 1
-cargo ops deploy <runner> --run-id <run_id> --update-channel canary
+gh run list --repo bencherdev/bencher --branch devel --workflow ci.yml --event push --json databaseId,conclusion,headSha -L 32
+cargo ops deploy <runner> --run-id <run_id>
 ```
 
 ### Start/stop/logs
@@ -62,6 +55,6 @@ cargo ops isolate <runner> --cpus 1-5
 
 ## How It Works
 
-1. `deploy` downloads the runner binary from a GitHub Actions CI artifact, SSHes into the server, stops the existing service, copies the new binary, configures systemd, and starts the service.
+1. `deploy` downloads the runner binary from the release of the runner's update channel, or from a devel CI artifact with `--run-id`, checks it against its published checksum, SSHes into the server, stops the existing service, copies the new binary, configures systemd, and starts the service.
 2. Server SSH details, runner key, and host URL are resolved by merging `runners.json` with any CLI flags. CLI flags override the JSON file.
 3. The runner key and host are written to a systemd drop-in at `/etc/systemd/system/bencher-runner.service.d/credentials.conf`.

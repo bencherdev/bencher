@@ -16,7 +16,7 @@ pub enum TaskSub {
     Provision(TaskProvision),
     /// Configure kernel boot args for CPU isolation and reboot
     Isolate(TaskIsolate),
-    /// Download latest runner binary from CI and deploy to server
+    /// Download the runner binary of the runner's update channel and deploy it to a server
     Deploy(TaskDeploy),
     /// Show runner binary version
     Version(TaskVersion),
@@ -97,11 +97,11 @@ pub struct TaskDeploy {
     #[clap(long)]
     pub host: Option<url::Url>,
 
-    /// Update channel for automatic updates (stable or canary)
+    /// Update channel for automatic updates and the release to deploy (stable or canary)
     #[clap(long)]
     pub update_channel: Option<bencher_json::UpdateChannel>,
 
-    /// GitHub Actions run ID (defaults to latest successful `devel` run)
+    /// CI run ID of a `devel` push run to deploy instead of the update channel's release
     #[clap(long)]
     pub run_id: Option<u64>,
 }
