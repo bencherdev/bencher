@@ -67,7 +67,7 @@ pub struct TaskIsolate {
     #[clap(long)]
     pub user: Option<String>,
 
-    /// Benchmark CPU list to isolate (e.g. `1-5`; defaults to `1-(nproc-1)`)
+    /// Benchmark CPU list to isolate (e.g. `1-5`; defaults to the lowest logical CPU of each physical core except CPU 0's)
     #[clap(long)]
     pub cpus: Option<String>,
 }
