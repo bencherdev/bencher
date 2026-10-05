@@ -85,6 +85,9 @@ struct Scenario {
     unusable_state_dir: bool,
     /// Point the runner at a state directory on a `nodev` tmpfs.
     nodev_state_dir: bool,
+    /// A line the image must print in a plain run first, so a run that prints
+    /// nothing cannot pass on a runner that boots no guest.
+    control_marker: Option<&'static str>,
     validate: fn(&ScenarioOutput) -> Result<()>,
 }
 
@@ -108,6 +111,7 @@ impl Default for Scenario {
             occupied_mid_build: false,
             unusable_state_dir: false,
             nodev_state_dir: false,
+            control_marker: None,
             // Most scenarios are sandboxed, so the few that are not opt out.
             sandboxed: true,
             validate: |_output| Ok(()),
@@ -548,6 +552,15 @@ fn run_and_validate(
     if scenario.sandboxed {
         args.extend(["--sandbox", "firecracker"]);
     }
+    if let Some(marker) = scenario.control_marker {
+        let control = run_runner(
+            image_path,
+            &[args.as_slice(), &["--timeout", "60"]].concat(),
+            runner_bin,
+        )?;
+        assert_job_succeeded(&control, marker)
+            .with_context(|| format!("The control run failed for {}", scenario.name))?;
+    }
     args.extend(scenario.extra_args);
 
     let output = if scenario.unusable_state_dir {
@@ -620,17 +633,11 @@ fn all_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
             name: "basic_execution",
-            description: "Simple echo command",
+            description: "Simple exec-form command",
             dockerfile: r#"FROM busybox
-CMD ["echo", "hello from vm"]"#,
+CMD ["printf", "%s_%s\\n", "HELLO", "VM"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.stdout.contains("hello from vm") {
-                    Ok(())
-                } else {
-                    bail!("Expected 'hello from vm' in output, got: {}", output.stdout)
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "HELLO_VM"),
             ..Scenario::default()
         },
         Scenario {
@@ -640,18 +647,7 @@ CMD ["echo", "hello from vm"]"#,
 ENV MY_VAR=test_value
 CMD ["sh", "-c", "echo $MY_VAR"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.stdout.contains("test_value") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'test_value' in output.\nstdout: {}\nstderr: {}\nexit_code: {}",
-                        output.stdout,
-                        output.stderr,
-                        output.exit_code
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "test_value"),
             ..Scenario::default()
         },
         Scenario {
@@ -659,46 +655,27 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
             description: "WORKDIR set correctly",
             dockerfile: r#"FROM busybox
 WORKDIR /myapp
-CMD ["pwd"]"#,
+CMD ["sh", "-c", "echo CWD=$(pwd)"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.stdout.contains("/myapp") {
-                    Ok(())
-                } else {
-                    bail!("Expected '/myapp' in output, got: {}", output.stdout)
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "CWD=/myapp"),
             ..Scenario::default()
         },
         Scenario {
             name: "file_output",
             description: "Output file collection via vsock",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo '{\"result\": 42}' > /tmp/output.json && cat /tmp/output.json"]"#,
+CMD ["sh", "-c", "printf '{\"result\": %d}\\n' $((6 * 7)) > /tmp/output.json && cat /tmp/output.json"]"#,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
-            validate: |output| {
-                if output.stdout.contains("\"result\"") || output.stdout.contains("42") {
-                    Ok(())
-                } else {
-                    bail!("Expected JSON output, got: {}", output.stdout)
-                }
-            },
+            validate: |output| assert_job_succeeded(output, r#"{"result": 42}"#),
             ..Scenario::default()
         },
         Scenario {
             name: "exit_code",
             description: "Non-zero exit codes captured",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "exit 42"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' EXIT CODE; exit 42"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                let combined = format!("{}{}", output.stdout, output.stderr);
-                if combined.contains("42") || output.exit_code != 0 {
-                    Ok(())
-                } else {
-                    bail!("Expected exit code 42 in output")
-                }
-            },
+            validate: |output| assert_guest_exited(output, "EXIT_CODE", 42),
             ..Scenario::default()
         },
         Scenario {
@@ -707,108 +684,65 @@ CMD ["sh", "-c", "exit 42"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
             extra_args: &["--timeout", "5"],
-            validate: |output| {
-                let combined = format!("{}{}", output.stdout, output.stderr).to_lowercase();
-                if combined.contains("timeout") || output.exit_code != 0 {
-                    Ok(())
-                } else {
-                    bail!("Expected timeout error")
-                }
-            },
+            probe: Some(probe_booted),
+            validate: assert_timed_out,
             ..Scenario::default()
         },
         Scenario {
             name: "writable_filesystem",
             description: "Guest can write to ext4 rootfs",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo test > /data.txt && cat /data.txt"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' WRITE TEST > /data.txt && cat /data.txt"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.stdout.contains("test") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'test' in output (proves write worked), got: {}",
-                        output.stdout
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "WRITE_TEST"),
             ..Scenario::default()
         },
         Scenario {
             name: "stderr_capture",
             description: "Stderr captured separately",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo stdout && echo stderr >&2"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' TO STDOUT && printf '%s_%s\\n' TO STDERR >&2"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
-                let combined = format!("{}{}", output.stdout, output.stderr);
-                if combined.contains("stdout") {
-                    Ok(())
-                } else {
-                    bail!("Expected 'stdout' in output")
-                }
+                assert_job_succeeded(output, "TO_STDOUT")?;
+                anyhow::ensure!(
+                    guest_printed_to_stderr(output, "TO_STDERR") > 0
+                        && guest_printed(output, "TO_STDERR") == 0
+                        && guest_printed_to_stderr(output, "TO_STDOUT") == 0,
+                    "Expected 'TO_STDERR' on stderr alone and 'TO_STDOUT' on stdout alone.\nstdout: {}\nstderr: {}",
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
             },
             ..Scenario::default()
         },
         Scenario {
             name: "multi_cpu",
-            description: "Multiple vCPUs work (expected: timeout, SMP boot unsupported)",
+            description: "Multiple vCPUs boot and the guest sees them all",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "cat /proc/cpuinfo | grep processor | wc -l"]"#,
-            extra_args: &["--timeout", "10", "--vcpus", "4"],
-            validate: |output| {
-                // SMP boot is not yet supported (requires LAPIC/APIC emulation).
-                // The kernel hangs trying to bring up secondary CPUs, so the VM
-                // times out. Accept timeout as expected behavior for now.
-                let combined = format!("{}{}", output.stdout, output.stderr).to_lowercase();
-                if combined.contains("timeout") || output.exit_code != 0 {
-                    Ok(())
-                } else if output.stdout.contains('4') {
-                    // If SMP starts working, this is even better
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected timeout or '4' CPUs in output, got: {}",
-                        output.stdout
-                    )
-                }
-            },
+CMD ["sh", "-c", "printf 'CPUS=%s\\n' $(grep -c ^processor /proc/cpuinfo)"]"#,
+            extra_args: &["--timeout", "60", "--vcpus", "4"],
+            validate: |output| assert_job_succeeded(output, "CPUS=4"),
             ..Scenario::default()
         },
         Scenario {
             name: "entrypoint_with_args",
             description: "ENTRYPOINT + CMD combined",
             dockerfile: r#"FROM busybox
-ENTRYPOINT ["echo"]
-CMD ["hello", "world"]"#,
+ENTRYPOINT ["printf", "%s_%s\\n"]
+CMD ["HELLO", "WORLD"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.stdout.contains("hello world") {
-                    Ok(())
-                } else {
-                    bail!("Expected 'hello world' in output, got: {}", output.stdout)
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "HELLO_WORLD"),
             ..Scenario::default()
         },
         Scenario {
             name: "no_network_access",
             description: "Guest has no network",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
+CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 > /dev/null 2>&1 || printf '%s_%s\\n' NO NETWORK"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                let combined = format!("{}{}", output.stdout, output.stderr);
-                if combined.contains("no_network")
-                    || combined.contains("Network is unreachable")
-                    || combined.contains("bad address")
-                {
-                    Ok(())
-                } else {
-                    bail!("Expected network failure, got: {combined}")
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "NO_NETWORK"),
             ..Scenario::default()
         },
         // =======================================================================
@@ -821,18 +755,7 @@ CMD ["sh", "-c", "ping -c 1 -W 1 8.8.8.8 2>&1 || echo no_network"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && echo DONE"]"#,
             extra_args: &["--timeout", "120", "--max-output-size", "10485760"],
-            validate: |output| {
-                // The key test: the runner completes without OOM and output is bounded.
-                // The runner may return non-zero exit code (e.g., if the VM is killed
-                // due to output flooding), which is acceptable behavior.
-                let combined_len = output.stdout.len() + output.stderr.len();
-                // Output should be bounded - 15MB threshold means our 10MB limit works
-                if combined_len > 15 * 1024 * 1024 {
-                    bail!("Output too large ({combined_len} bytes), limit not enforced")
-                }
-                // Runner completed (didn't hang or OOM) - that's a pass
-                Ok(())
-            },
+            validate: |output| assert_guest_payload_capped(output, 'A', 10 * 1024 * 1024),
             ..Scenario::default()
         },
         Scenario {
@@ -842,20 +765,8 @@ CMD ["sh", "-c", "dd if=/dev/zero bs=1M count=20 2>/dev/null | tr '\\0' 'A' && e
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]"#,
             extra_args: &["--timeout", "5"],
-            validate: |output| {
-                // The VM should be killed after 5 seconds due to timeout
-                // The process ignores SIGTERM/SIGINT, so we need forceful termination
-                let combined = format!("{}{}", output.stdout, output.stderr).to_lowercase();
-                if combined.contains("timeout") || output.exit_code != 0 {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected timeout error, got exit_code={}, output={}",
-                        output.exit_code,
-                        combined
-                    )
-                }
-            },
+            probe: Some(probe_booted),
+            validate: assert_timed_out,
             ..Scenario::default()
         },
         // =======================================================================
@@ -870,21 +781,17 @@ CMD ["sh", "-c", "trap '' TERM INT; echo started; while true; do sleep 1; done"]
             // A common bug: calling getuid() after unshare(CLONE_NEWUSER) returns 65534,
             // causing uid_map writes to fail with EPERM.
             dockerfile: r#"FROM busybox
-CMD ["id"]"#,
+CMD ["sh", "-c", "printf 'UID=%s\\n' $(id -u)"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 // The runner should not fail with uid_map errors.
-                // Check that it ran successfully (no uid_map/EPERM errors in stderr)
                 let combined = format!("{}{}", output.stdout, output.stderr);
                 if combined.contains("uid_map") || combined.contains("Operation not permitted") {
                     bail!(
                         "uid_map error detected - likely getuid() called after unshare: {combined}"
                     )
                 }
-                if output.exit_code != 0 {
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                Ok(())
+                assert_job_succeeded(output, "UID=0")
             },
             ..Scenario::default()
         },
@@ -895,17 +802,14 @@ CMD ["id"]"#,
             // A previous bug: mounting tmpfs on /dev after pivot_root overwrote
             // the bind-mounted /dev/kvm.
             dockerfile: r#"FROM busybox
-CMD ["echo", "kvm_test_ok"]"#,
+CMD ["printf", "%s_%s\\n", "KVM", "OK"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
                 if combined.contains("/dev/kvm") && combined.contains("not available") {
                     bail!("/dev/kvm not accessible in jail - bind mount likely lost: {combined}")
                 }
-                if output.exit_code != 0 {
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                Ok(())
+                assert_job_succeeded(output, "KVM_OK")
             },
             ..Scenario::default()
         },
@@ -916,7 +820,7 @@ CMD ["echo", "kvm_test_ok"]"#,
             // A previous bug: mounting fresh procfs requires PID namespace + fork,
             // which we fixed by bind-mounting the host's /proc instead.
             dockerfile: r#"FROM busybox
-CMD ["cat", "/proc/version"]"#,
+CMD ["sh", "-c", "set -- $(cat /proc/version) && printf '%s_%s\\n' $1 $2"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
@@ -925,10 +829,7 @@ CMD ["cat", "/proc/version"]"#,
                         "/proc mount failed - likely procfs mount in user namespace without PID namespace: {combined}"
                     )
                 }
-                if output.exit_code != 0 {
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                Ok(())
+                assert_job_succeeded(output, "Linux_version")
             },
             ..Scenario::default()
         },
@@ -939,44 +840,16 @@ CMD ["cat", "/proc/version"]"#,
             // A previous bug: default cmdline had 'ro', causing init to fail
             // when trying to write to the filesystem.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "touch /tmp/write_test && echo write_ok"]"#,
+CMD ["sh", "-c", "touch /tmp/write_test && printf '%s_%s\\n' WRITE OK"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
-                if output.stdout.contains("write_ok") {
-                    Ok(())
-                } else {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    if combined.contains("Read-only file system") {
-                        bail!(
-                            "Rootfs is read-only - kernel cmdline likely has 'ro' instead of 'rw': {combined}"
-                        )
-                    }
-                    bail!("Expected 'write_ok' in output, got: {combined}")
-                }
-            },
-            ..Scenario::default()
-        },
-        Scenario {
-            name: "timeout_includes_partial_output",
-            description: "Timeout errors include partial output captured before timeout",
-            // Verifies that when a VM times out, any output produced before the
-            // timeout is not discarded. A previous bug: the timeout error path
-            // short-circuited before serial output extraction.
-            dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
-            extra_args: &["--timeout", "10"],
-            validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
-                // The runner should fail with a timeout
-                if output.exit_code == 0 {
-                    bail!("Expected timeout failure, but runner succeeded")
+                if combined.contains("Read-only file system") {
+                    bail!(
+                        "Rootfs is read-only - kernel cmdline likely has 'ro' instead of 'rw': {combined}"
+                    )
                 }
-                // But the partial output (or at least the timeout message) should be present
-                if combined.contains("timeout") || combined.contains("Timeout") {
-                    Ok(())
-                } else {
-                    bail!("Expected timeout error in output, got: {combined}")
-                }
+                assert_job_succeeded(output, "WRITE_OK")
             },
             ..Scenario::default()
         },
@@ -990,6 +863,7 @@ CMD ["sh", "-c", "echo partial_output_marker && sleep 3600"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
             extra_args: &["--timeout", "5"],
+            probe: Some(probe_booted),
             validate: |output| {
                 // SIGSYS from seccomp violation produces exit code 159 (128 + 31)
                 if output.exit_code == 159 {
@@ -998,13 +872,7 @@ CMD ["sleep", "3600"]"#,
                         output.stderr
                     )
                 }
-                // The runner should exit with a timeout error, not a crash
-                let combined = format!("{}{}", output.stdout, output.stderr).to_lowercase();
-                if combined.contains("timeout") || output.exit_code != 0 {
-                    Ok(())
-                } else {
-                    bail!("Expected timeout exit, got exit_code={}", output.exit_code)
-                }
+                assert_timed_out(output)
             },
             ..Scenario::default()
         },
@@ -1023,21 +891,13 @@ COPY --from=build /test_iopl /test_iopl
 CMD ["/test_iopl"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
-                if output.stdout.contains("IOPL_DROPPED") {
-                    Ok(())
-                } else if output.stdout.contains("IOPL_INHERITED") {
+                if guest_printed(output, "IOPL_INHERITED") > 0 {
                     bail!(
                         "iopl(3) was inherited by benchmark process - \
                          init should drop iopl before exec"
                     )
-                } else {
-                    bail!(
-                        "Expected IOPL_DROPPED in output.\nstdout: {}\nstderr: {}\nexit_code: {}",
-                        output.stdout,
-                        output.stderr,
-                        output.exit_code
-                    )
                 }
+                assert_job_succeeded(output, "IOPL_DROPPED")
             },
             ..Scenario::default()
         },
@@ -1048,22 +908,9 @@ CMD ["/test_iopl"]"#,
             // matching runner preparation output. Uses a unique marker that would
             // never appear in runner logs.
             dockerfile: r#"FROM busybox
-CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
+CMD ["printf", "%s_%s\\n", "UNIQUE_VM_OUTPUT", "a7f3b2c9"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                // This unique string should only appear if the VM actually ran
-                // and produced output, not from runner preparation logs
-                if output.stdout.contains("UNIQUE_VM_OUTPUT_a7f3b2c9") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected unique VM output marker not found.\nstdout: {}\nstderr: {}\nexit_code: {}",
-                        output.stdout,
-                        output.stderr,
-                        output.exit_code
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "UNIQUE_VM_OUTPUT_a7f3b2c9"),
             ..Scenario::default()
         },
         // =======================================================================
@@ -1074,29 +921,12 @@ CMD ["echo", "UNIQUE_VM_OUTPUT_a7f3b2c9"]"#,
             description: "PID namespace prevents seeing host PIDs",
             // With PID namespace, /proc inside the VM should only show guest PIDs.
             // The init process should be PID 1, and there should be very few processes.
+            // Kernel threads have no `exe`, so only user-space processes are counted.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
+CMD ["sh", "-c", "n=0; for p in /proc/[0-9]*; do [ -e $p/exe ] && n=$((n + 1)); done; printf 'PIDS=%s\\n' $n"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                // The guest should see a small number of PIDs (1-5), not hundreds
-                // from the host. If we see > 50 PIDs, the PID namespace is likely broken.
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {combined}", output.exit_code)
-                }
-                if let Ok(count) = output.stdout.trim().parse::<u32>() {
-                    if count > 50 {
-                        bail!(
-                            "Too many PIDs visible ({count}), PID namespace may be leaking host PIDs"
-                        )
-                    }
-                    Ok(())
-                } else {
-                    // If we can't parse the count, the output might have extra
-                    // runner log lines. As long as exit code is 0, it's fine.
-                    Ok(())
-                }
-            },
+            // More than 50 means the PID namespace is likely leaking host PIDs.
+            validate: |output| assert_guest_value_within(output, "PIDS=", 1..=50),
             ..Scenario::default()
         },
         Scenario {
@@ -1106,21 +936,11 @@ CMD ["sh", "-c", "ls /proc | grep -E '^[0-9]+$' | wc -l"]"#,
             // With fresh procfs (not bind-mounted from host), /proc/version
             // should be accessible and /proc/1/cmdline should show the init process.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0' ' ')"]"#,
+CMD ["sh", "-c", "set -- $(cat /proc/version) && printf '%s_%s\\n' $1 $2 && printf 'PID1=%s\\n' $(tr '\\0' '\\n' < /proc/1/cmdline | head -n 1)"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if output.stdout.contains("Linux version") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'Linux version' from /proc/version, got: {}",
-                        output.stdout
-                    )
-                }
+                assert_job_succeeded(output, "Linux_version")?;
+                assert_job_succeeded(output, "PID1=/init")
             },
             ..Scenario::default()
         },
@@ -1132,9 +952,10 @@ CMD ["sh", "-c", "cat /proc/version && echo PID1=$(cat /proc/1/cmdline | tr '\\0
             description: "Metrics marker present in stderr",
             // Verifies the runner outputs ---BENCHER_METRICS:{json}--- on stderr.
             dockerfile: r#"FROM busybox
-CMD ["echo", "metrics_test"]"#,
+CMD ["printf", "%s_%s\\n", "METRICS", "PRESENT"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
+                assert_job_succeeded(output, "METRICS_PRESENT")?;
                 if output.stderr.contains("---BENCHER_METRICS:") && output.stderr.contains("---") {
                     Ok(())
                 } else {
@@ -1150,12 +971,13 @@ CMD ["echo", "metrics_test"]"#,
         Scenario {
             name: "metrics_wall_clock_reasonable",
             description: "Wall clock time is within reasonable bounds",
-            // A fast benchmark (echo) should have wall clock between 500ms and 60000ms.
+            // A fast benchmark should have wall clock between 500ms and 60000ms.
             // This catches cases where timing is broken (e.g., always 0 or absurdly large).
             dockerfile: r#"FROM busybox
-CMD ["echo", "fast_benchmark"]"#,
+CMD ["printf", "%s_%s\\n", "FAST", "BENCHMARK"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
+                assert_job_succeeded(output, "FAST_BENCHMARK")?;
                 // Parse metrics from stderr
                 let metrics_line = output
                     .stderr
@@ -1191,65 +1013,8 @@ CMD ["echo", "fast_benchmark"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
             extra_args: &["--timeout", "5"],
-            validate: |output| {
-                // The stderr should contain metrics with timed_out: true
-                let metrics_line = output
-                    .stderr
-                    .lines()
-                    .find(|l| l.contains("---BENCHER_METRICS:"));
-                let Some(line) = metrics_line else {
-                    // Metrics might not be emitted in all timeout paths
-                    // (e.g., if the VMM child process is killed before it can write metrics)
-                    // Accept the test as long as the runner reports a timeout
-                    let combined = format!("{}{}", output.stdout, output.stderr).to_lowercase();
-                    if combined.contains("timeout") || output.exit_code != 0 {
-                        return Ok(());
-                    }
-                    bail!("No BENCHER_METRICS line and no timeout error")
-                };
-                let json_str = extract_json_substr(line);
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str)
-                    && json.get("timed_out") == Some(&serde_json::Value::Bool(true))
-                {
-                    return Ok(());
-                }
-                bail!("Expected timed_out: true in metrics: {json_str}")
-            },
-            ..Scenario::default()
-        },
-        // =======================================================================
-        // HMAC Result Integrity scenarios (Item 11)
-        // =======================================================================
-        Scenario {
-            name: "hmac_verification_logged",
-            description: "HMAC verification status is logged",
-            // Verifies the runner logs HMAC verification results.
-            // The vmm child process should log [HMAC] status on stderr.
-            dockerfile: r#"FROM busybox
-CMD ["echo", "hmac_test_output"]"#,
-            extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                // The HMAC verification log should be in stderr
-                if output.stderr.contains("[HMAC]") {
-                    Ok(())
-                } else {
-                    // HMAC logging is best-effort; the test passes if the runner succeeds
-                    // and produces correct output, even without HMAC logging
-                    if output.stdout.contains("hmac_test_output") {
-                        Ok(())
-                    } else {
-                        bail!(
-                            "Expected HMAC log or correct output.\nstdout: {}\nstderr: {}",
-                            output.stdout,
-                            output.stderr
-                        )
-                    }
-                }
-            },
+            probe: Some(probe_booted),
+            validate: assert_timed_out,
             ..Scenario::default()
         },
         Scenario {
@@ -1257,9 +1022,10 @@ CMD ["echo", "hmac_test_output"]"#,
             description: "Transport type reported in metrics",
             // Verifies the metrics include the transport type (vsock or serial).
             dockerfile: r#"FROM busybox
-CMD ["echo", "transport_test"]"#,
+CMD ["printf", "%s_%s\\n", "TRANSPORT", "TEST"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
+                assert_job_succeeded(output, "TRANSPORT_TEST")?;
                 let metrics_line = output
                     .stderr
                     .lines()
@@ -1293,13 +1059,7 @@ CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             cancel_after_secs: Some(1),
             extra_args: &["--timeout", "120"],
             validate: |output| {
-                if output.exit_code == 0 {
-                    bail!(
-                        "Expected non-zero exit code after cancellation, got 0.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
+                assert_cancelled(output)?;
                 assert_no_chroot_remains(&scenario_state_dir())
             },
             ..Scenario::default()
@@ -1308,7 +1068,7 @@ CMD ["sh", "-c", "echo started && sleep 3600"]"#,
             name: "job_cancelled_twice",
             description: "A second SIGTERM kills the runner at once, and the next run reclaims what it left",
             dockerfile: r#"FROM busybox
-CMD ["echo", "CANCELLED_TWICE_a7f3b2c9"]"#,
+CMD ["printf", "%s_%s\\n", "CANCELLED_TWICE", "a7f3b2c9"]"#,
             cancelled_twice: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
@@ -1321,17 +1081,12 @@ CMD ["echo", "CANCELLED_TWICE_a7f3b2c9"]"#,
             name: "job_cancelled_before_its_jail",
             description: "SIGTERM while the image is prepared ends the job before its jail is built",
             dockerfile: r#"FROM busybox
-CMD ["echo", "CANCELLED_EARLY_a7f3b2c9"]"#,
+CMD ["printf", "%s_%s\\n", "CANCELLED_EARLY", "a7f3b2c9"]"#,
             cancelled_while_preparing: true,
             extra_args: &["--timeout", "120"],
             validate: |output| {
-                anyhow::ensure!(
-                    output.exit_code != 0 && output.stderr.contains("Job cancelled"),
-                    "Expected the job to end cancelled, got exit code {}.\nstdout: {}\nstderr: {}",
-                    output.exit_code,
-                    output.stdout,
-                    output.stderr
-                );
+                assert_cancelled(output)?;
+                assert_refused_before_guest(output, "CANCELLED_EARLY_a7f3b2c9")?;
                 anyhow::ensure!(
                     !output
                         .stdout
@@ -1352,38 +1107,30 @@ CMD ["echo", "CANCELLED_EARLY_a7f3b2c9"]"#,
             name: "stderr_only",
             description: "Stderr captured when stdout is empty",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo error_output >&2"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' STDERR ONLY >&2"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
-                if output.stderr.contains("error_output") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'error_output' in stderr.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
+                anyhow::ensure!(
+                    output.exit_code == 0
+                        && guest_printed_to_stderr(output, "STDERR_ONLY") > 0
+                        && guest_printed(output, "STDERR_ONLY") == 0,
+                    "Expected the job to succeed with 'STDERR_ONLY' on stderr alone, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
             },
             ..Scenario::default()
         },
         Scenario {
             name: "empty_output",
-            description: "Process exits 0 with no output",
+            description: "Process exits with no output",
+            // Only the guest can send 37, since a missing or garbled code reads as 1.
             dockerfile: r#"FROM busybox
-CMD ["true"]"#,
+CMD ["sh", "-c", "exit 37"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    bail!(
-                        "Expected exit code 0, got {}.\nstdout: {}\nstderr: {}",
-                        output.exit_code,
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-                Ok(())
-            },
+            validate: |output| assert_guest_exited_silently(output, 37),
             ..Scenario::default()
         },
         Scenario {
@@ -1392,27 +1139,18 @@ CMD ["true"]"#,
             // Write raw bytes 0x80-0xFF which are invalid UTF-8.
             // The runner should not panic — it should lossy-convert or pass through.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
+CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && printf '\\n%s_%s\\n' BINARY DONE"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
-                // The runner must not crash. Exit code 0 and "done" somewhere
-                // in stdout (possibly after replacement characters) means success.
-                if output.exit_code != 0 {
-                    bail!(
-                        "Expected exit code 0, got {}.\nstderr: {}",
-                        output.exit_code,
-                        output.stderr
-                    )
-                }
-                if output.stdout.contains("done") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'done' in stdout after binary bytes.\nstdout bytes: {}\nstderr: {}",
-                        output.stdout.len(),
-                        output.stderr
-                    )
-                }
+                assert_job_succeeded(output, "BINARY_DONE")?;
+                // Only the guest's bytes can have been replaced, since the runner
+                // echoes the command's escapes as plain text.
+                anyhow::ensure!(
+                    output.stdout.contains(char::REPLACEMENT_CHARACTER),
+                    "Expected the guest's invalid UTF-8 to arrive as replacement characters.\nstdout: {}",
+                    output.stdout
+                );
+                Ok(())
             },
             ..Scenario::default()
         },
@@ -1422,23 +1160,12 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
         Scenario {
             name: "shell_form_cmd",
             description: "Shell-form CMD (string, not array) works",
-            // Shell form in Dockerfile: CMD echo hello
-            // OCI config stores this as ["/bin/sh", "-c", "echo shell_form_works"]
-            // which differs from exec form ["echo", "shell_form_works"].
-            dockerfile: "FROM busybox\nCMD echo shell_form_works",
+            // Shell form in Dockerfile: CMD printf ...
+            // OCI config stores this as ["/bin/sh", "-c", "printf ..."]
+            // which differs from exec form ["printf", ...].
+            dockerfile: "FROM busybox\nCMD printf '%s_%s\\n' SHELL FORM",
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.stdout.contains("shell_form_works") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'shell_form_works' in output.\nstdout: {}\nstderr: {}\nexit_code: {}",
-                        output.stdout,
-                        output.stderr,
-                        output.exit_code
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "SHELL_FORM"),
             ..Scenario::default()
         },
         Scenario {
@@ -1447,97 +1174,55 @@ CMD ["sh", "-c", "printf '\\x80\\x81\\xFE\\xFF' && echo done"]"#,
             // When only ENTRYPOINT is set (exec form), it runs as-is with no
             // CMD args appended. The runner must not fail when Cmd is null/empty.
             dockerfile: r#"FROM busybox
-ENTRYPOINT ["echo", "entrypoint_only_works"]"#,
+ENTRYPOINT ["printf", "%s_%s\\n", "ENTRYPOINT", "ONLY"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.stdout.contains("entrypoint_only_works") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'entrypoint_only_works' in output.\nstdout: {}\nstderr: {}\nexit_code: {}",
-                        output.stdout,
-                        output.stderr,
-                        output.exit_code
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "ENTRYPOINT_ONLY"),
             ..Scenario::default()
         },
         Scenario {
             name: "shell_form_entrypoint",
             description: "ENTRYPOINT shell form (string, not array)",
-            // Shell form ENTRYPOINT: stored as ["/bin/sh", "-c", "echo ..."]
+            // Shell form ENTRYPOINT: stored as ["/bin/sh", "-c", "printf ..."]
             // in OCI config. CMD is ignored when ENTRYPOINT uses shell form.
-            dockerfile: "FROM busybox\nENTRYPOINT echo shell_entrypoint_works",
+            dockerfile: "FROM busybox\nENTRYPOINT printf '%s_%s\\n' SHELL ENTRYPOINT",
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.stdout.contains("shell_entrypoint_works") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'shell_entrypoint_works' in output.\nstdout: {}\nstderr: {}\nexit_code: {}",
-                        output.stdout,
-                        output.stderr,
-                        output.exit_code
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "SHELL_ENTRYPOINT"),
             ..Scenario::default()
         },
         Scenario {
             name: "entrypoint_shell_with_cmd",
             description: "Shell-form ENTRYPOINT with CMD args (CMD becomes $0)",
             // When ENTRYPOINT is shell form, Docker wraps it as:
-            //   ["/bin/sh", "-c", "echo ep_marker"]
+            //   ["/bin/sh", "-c", "printf '%s_%s\n' EP MARKER"]
             // Per OCI spec, CMD args are appended: the final exec is
-            //   ["/bin/sh", "-c", "echo ep_marker", "cmd_arg"]
-            // In sh -c semantics, "cmd_arg" becomes $0 (unused by echo).
-            // The VM output should contain only "ep_marker", proving
+            //   ["/bin/sh", "-c", "printf '%s_%s\n' EP MARKER", "cmd_arg"]
+            // In sh -c semantics, "cmd_arg" becomes $0 (unused by printf).
+            // The VM output should contain only "EP_MARKER", proving
             // that CMD args don't interfere with the entrypoint command.
             dockerfile: r#"FROM busybox
-ENTRYPOINT echo ep_marker
+ENTRYPOINT printf '%s_%s\n' EP MARKER
 CMD ["cmd_arg"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    bail!(
-                        "Expected exit code 0, got {}.\nstdout: {}\nstderr: {}",
-                        output.exit_code,
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-                if !output.stdout.contains("ep_marker") {
-                    bail!(
-                        "Expected 'ep_marker' in output.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-                Ok(())
-            },
+            validate: |output| assert_job_succeeded(output, "EP_MARKER"),
             ..Scenario::default()
         },
         Scenario {
             name: "no_cmd_no_entrypoint",
             description: "No CMD or ENTRYPOINT fails gracefully",
             // An image with no CMD and no ENTRYPOINT should cause the runner
-            // to fail with a clear error, not crash or hang.
-            dockerfile: r#"FROM busybox
-RUN echo "no command set""#,
+            // to fail with a clear error, not crash or hang. `CMD []` clears the
+            // `sh` that busybox would otherwise hand down.
+            dockerfile: "FROM busybox\nCMD []",
             extra_args: &["--timeout", "30"],
             validate: |output| {
-                // The runner should fail (non-zero exit) since there's nothing to run.
-                // It may also produce an error message about missing cmd/entrypoint.
-                if output.exit_code != 0 {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected non-zero exit for image with no CMD/ENTRYPOINT.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
+                anyhow::ensure!(
+                    output.exit_code == 1 && output.stderr.contains("has no CMD or ENTRYPOINT"),
+                    "Expected the job to fail naming the missing CMD and ENTRYPOINT, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
             },
             ..Scenario::default()
         },
@@ -1561,20 +1246,8 @@ CMD ["mock"]"#,
                         output.stderr
                     )
                 }
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                // bencher mock should produce JSON with benchmark results
-                if output.stdout.contains("latency") || output.stdout.contains("bencher::mock") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected benchmark JSON from 'bencher mock' in output.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
+                // A line of the benchmark JSON `bencher mock` prints.
+                assert_job_succeeded(output, r#""bencher::mock_0": {"#)
             },
             ..Scenario::default()
         },
@@ -1603,19 +1276,7 @@ CMD ["/usr/bin/hello"]"#,
                         output.stderr
                     )
                 }
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if output.stdout.contains("distroless_glibc_ok") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'distroless_glibc_ok' in output.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
+                assert_job_succeeded(output, "distroless_glibc_ok")
             },
             ..Scenario::default()
         },
@@ -1629,27 +1290,9 @@ CMD ["/usr/bin/hello"]"#,
             // listener is set up before the guest finishes, and whether
             // results are collected even for very short-lived processes.
             dockerfile: r#"FROM busybox
-CMD ["echo", "rapid_exit_marker"]"#,
+CMD ["printf", "%s_%s\\n", "RAPID", "EXIT"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    bail!(
-                        "Expected exit code 0, got {}.\nstdout: {}\nstderr: {}",
-                        output.exit_code,
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-                if output.stdout.contains("rapid_exit_marker") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Output lost for rapid exit.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "RAPID_EXIT"),
             ..Scenario::default()
         },
         // =======================================================================
@@ -1661,23 +1304,9 @@ CMD ["echo", "rapid_exit_marker"]"#,
             // Simulate a process killed by SIGKILL by exiting with 137 (128+9).
             // The runner should capture and report this exit code.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "exit 137"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' SIGNAL EXIT; exit 137"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                // The runner should report exit code 137 somewhere in its output,
-                // or the runner itself may exit non-zero for non-zero guest exits.
-                let combined = format!("{}{}", output.stdout, output.stderr);
-                if combined.contains("137") || output.exit_code != 0 {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected exit code 137 in output or non-zero runner exit.\nexit_code: {}\nstdout: {}\nstderr: {}",
-                        output.exit_code,
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-            },
+            validate: |output| assert_guest_exited(output, "SIGNAL_EXIT", 137),
             ..Scenario::default()
         },
         // =======================================================================
@@ -1691,27 +1320,10 @@ CMD ["sh", "-c", "exit 137"]"#,
             dockerfile: r#"FROM busybox
 ENV A1=val1 A2=val2 A3=val3 A4=val4 A5=val5 A6=val6 A7=val7 A8=val8 A9=val9 A10=val10
 ENV B1=val11 B2=val12 B3=val13 B4=val14 B5=val15 B6=val16 B7=val17 B8=val18 B9=val19 B10=val20
-ENV LARGE_VALUE=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+ENV LARGE_VALUE=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    bail!(
-                        "Expected exit code 0, got {}.\nstderr: {}",
-                        output.exit_code,
-                        output.stderr
-                    )
-                }
-                if output.stdout.contains("A1=val1") && output.stdout.contains("B10=val20") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected env vars in output.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "A1=val1 B10=val20 LARGE_LEN=555"),
             ..Scenario::default()
         },
         // =======================================================================
@@ -1723,16 +1335,14 @@ CMD ["sh", "-c", "echo A1=$A1 B10=$B10 LARGE_LEN=${#LARGE_VALUE}"]"#,
             // --output points to a path the guest never creates.
             // The runner should still succeed (exit 0) without crashing.
             dockerfile: r#"FROM busybox
-CMD ["echo", "no file written"]"#,
+CMD ["printf", "%s_%s\\n", "NO", "FILE"]"#,
             extra_args: &["--timeout", "60", "--output", "/nonexistent/path.json"],
             validate: |output| {
-                // Runner should not crash, regardless of exit code.
-                // A non-zero exit is acceptable (file not found), but a crash is not.
                 let combined = format!("{}{}", output.stdout, output.stderr);
                 if combined.contains("panic") || combined.contains("SIGSEGV") {
                     bail!("Runner crashed when output file is missing: {combined}")
                 }
-                Ok(())
+                assert_job_succeeded(output, "NO_FILE")
             },
             ..Scenario::default()
         },
@@ -1740,33 +1350,21 @@ CMD ["echo", "no file written"]"#,
             name: "large_file_output",
             description: "Large output file (~2 MB) transferred via vsock",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /tmp/output.json && echo done"]"#,
+CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /tmp/output.json && printf '%s_%s\\n' LARGE FILE"]"#,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                Ok(())
-            },
+            validate: |output| assert_job_succeeded(output, "LARGE_FILE"),
             ..Scenario::default()
         },
         Scenario {
             name: "completed_with_all_fields",
             description: "Stdout + stderr + output file simultaneously",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\":true}' > /tmp/out.json"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' ALL STDOUT && printf '%s_%s\\n' ALL STDERR >&2 && echo '{\"data\":true}' > /tmp/out.json"]"#,
             extra_args: &["--timeout", "60", "--output", "/tmp/out.json"],
             validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if !output.stdout.contains("stdout_marker") {
-                    bail!("Expected 'stdout_marker' in stdout, got: {}", output.stdout)
-                }
-                if !output.stderr.contains("stderr_marker") {
-                    bail!("Expected 'stderr_marker' in stderr, got: {}", output.stderr)
+                assert_job_succeeded(output, "ALL_STDOUT")?;
+                if guest_printed_to_stderr(output, "ALL_STDERR") == 0 {
+                    bail!("Expected 'ALL_STDERR' in stderr, got: {}", output.stderr)
                 }
                 Ok(())
             },
@@ -1776,7 +1374,7 @@ CMD ["sh", "-c", "echo stdout_marker && echo stderr_marker >&2 && echo '{\"data\
             name: "multi_file_output",
             description: "Multiple output files collected via vsock",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}' > /tmp/b.json && echo done"]"#,
+CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}' > /tmp/b.json && printf '%s_%s\\n' MULTI FILE"]"#,
             extra_args: &[
                 "--timeout",
                 "60",
@@ -1785,13 +1383,7 @@ CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}'
                 "--output",
                 "/tmp/b.json",
             ],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                Ok(())
-            },
+            validate: |output| assert_job_succeeded(output, "MULTI_FILE"),
             ..Scenario::default()
         },
         // =======================================================================
@@ -1804,22 +1396,9 @@ CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}'
 RUN echo "a" > /tmp/file_a.txt
 RUN mkdir -p /opt && echo "b" > /opt/file_b.txt
 RUN echo "c" > /var/file_c.txt
-CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
+CMD ["sh", "-c", "printf 'LAYERS=%s%s%s\\n' $(cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt)"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                let has_all = output.stdout.contains('a')
-                    && output.stdout.contains('b')
-                    && output.stdout.contains('c');
-                if has_all {
-                    Ok(())
-                } else {
-                    bail!("Expected 'a', 'b', 'c' in output, got: {}", output.stdout)
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "LAYERS=abc"),
             ..Scenario::default()
         },
         Scenario {
@@ -1829,20 +1408,7 @@ CMD ["sh", "-c", "cat /tmp/file_a.txt /opt/file_b.txt /var/file_c.txt"]"#,
 RUN echo "target" > /tmp/target.txt && ln -s /tmp/target.txt /tmp/link.txt
 CMD ["cat", "/tmp/link.txt"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if output.stdout.contains("target") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'target' in output (via symlink), got: {}",
-                        output.stdout
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "target"),
             ..Scenario::default()
         },
         // =======================================================================
@@ -1852,17 +1418,18 @@ CMD ["cat", "/tmp/link.txt"]"#,
             name: "failed_with_partial_output",
             description: "Writes stdout+stderr then exits non-zero",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' PARTIAL STDOUT && printf '%s_%s\\n' PARTIAL STDERR >&2 && exit 1"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
-                // The runner may succeed (exit 0) even when the guest exits non-zero.
                 // The key property: partial output is captured despite non-zero guest exit.
-                let combined = format!("{}{}", output.stdout, output.stderr);
-                if combined.contains("partial_stdout") || combined.contains("partial_stderr") {
-                    Ok(())
-                } else {
-                    bail!("Expected partial output to be captured, got: {combined}")
+                assert_guest_exited(output, "PARTIAL_STDOUT", 1)?;
+                if guest_printed_to_stderr(output, "PARTIAL_STDERR") == 0 {
+                    bail!(
+                        "Expected 'PARTIAL_STDERR' in stderr, got: {}",
+                        output.stderr
+                    )
                 }
+                Ok(())
             },
             ..Scenario::default()
         },
@@ -1872,12 +1439,8 @@ CMD ["sh", "-c", "echo partial_stdout && echo partial_stderr >&2 && exit 1"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
             extra_args: &["--timeout", "1"],
-            validate: |output| {
-                if output.exit_code == 0 {
-                    bail!("Expected non-zero exit for 1s timeout on sleep 3600")
-                }
-                Ok(())
-            },
+            probe: Some(probe_booted),
+            validate: assert_timed_out,
             ..Scenario::default()
         },
         Scenario {
@@ -1887,29 +1450,7 @@ CMD ["sleep", "3600"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/zero bs=1024 count=50 2>/dev/null | tr '\\0' 'X'"]"#,
             extra_args: &["--timeout", "60", "--max-output-size", "1024"],
-            validate: |output| {
-                // The runner prints its progress logs and the guest payload to the
-                // same stdout, so measure the payload itself (the `X` bytes) rather
-                // than the total length of the CLI output.
-                //
-                // A little slack is allowed because the progress logs can contain
-                // stray `X` characters: the CLI echoes the OCI command line (which
-                // ends in `tr '\0' 'X'`) and prints temporary paths whose random
-                // alphanumeric components may include an `X`.
-                const SLACK: usize = 16;
-
-                let payload = output.stdout.bytes().filter(|&b| b == b'X').count();
-                if payload > 1024 + SLACK {
-                    bail!(
-                        "Payload too large ({payload} bytes for a 1024 byte cap), --max-output-size not enforced"
-                    )
-                }
-                // The source emits ~50 KB, so the full 1024 byte cap must arrive.
-                if payload < 1024 {
-                    bail!("Payload not fully delivered ({payload} bytes, expected 1024)")
-                }
-                Ok(())
-            },
+            validate: |output| assert_guest_payload_capped(output, 'X', 1024),
             ..Scenario::default()
         },
         Scenario {
@@ -1922,29 +1463,10 @@ ENV SAFE_VAR=safe_value
 CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH SAFE=$SAFE_VAR"]"#,
             extra_args: &["--timeout", "60"],
             validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if !output.stdout.contains("SAFE=safe_value") {
-                    bail!(
-                        "Expected 'SAFE=safe_value' in output, got: {}",
-                        output.stdout
-                    )
-                }
-                if !output.stdout.contains("LD_PRELOAD=/test.so") {
-                    bail!(
-                        "Expected 'LD_PRELOAD=/test.so' in output, got: {}",
-                        output.stdout
-                    )
-                }
-                if !output.stdout.contains("LD_LIBRARY_PATH=/testlib") {
-                    bail!(
-                        "Expected 'LD_LIBRARY_PATH=/testlib' in output, got: {}",
-                        output.stdout
-                    )
-                }
-                Ok(())
+                assert_job_succeeded(
+                    output,
+                    "LD_PRELOAD=/test.so LD_LIBRARY_PATH=/testlib SAFE=safe_value",
+                )
             },
             ..Scenario::default()
         },
@@ -1954,25 +1476,12 @@ CMD ["sh", "-c", "echo LD_PRELOAD=$LD_PRELOAD LD_LIBRARY_PATH=$LD_LIBRARY_PATH S
         Scenario {
             name: "memory_size_visible",
             description: "Guest sees correct memory with --memory flag",
-            // Verify that --memory 64 gives the guest ~64 MiB of RAM.
-            // `free -m` reports total memory; we check it's in the right ballpark.
+            // The kernel keeps part of it, so the guest sees below 64 MiB, and far
+            // below the roughly 481 MiB it sees by default.
             dockerfile: r#"FROM busybox
-CMD ["free", "-m"]"#,
+CMD ["sh", "-c", "printf 'MEM_MIB=%s\\n' $(awk '/MemTotal/ {print int($2 / 1024)}' /proc/meminfo)"]"#,
             extra_args: &["--memory", "64", "--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                // Runner config should show 64 MiB
-                if !output.stdout.contains("64 MiB") {
-                    bail!(
-                        "Expected '64 MiB' in runner memory config output, got: {}",
-                        output.stdout
-                    )
-                }
-                Ok(())
-            },
+            validate: |output| assert_guest_value_within(output, "MEM_MIB=", 1..=64),
             ..Scenario::default()
         },
         Scenario {
@@ -1981,25 +1490,11 @@ CMD ["free", "-m"]"#,
             // Verify the --disk flag is accepted and the ext4 image is
             // created at the requested size. Note: the ext4 image uses a
             // sparse file, so the VM won't actually enforce the limit at
-            // the block device level. This test validates the config path.
+            // the block device level.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
+CMD ["sh", "-c", "printf 'DISK_MIB=%s\\n' $(df -m / | awk 'NR == 2 {print $2}')"]"#,
             extra_args: &["--disk", "64", "--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                // The runner logs should show the configured disk size
-                if output.stdout.contains("64 MiB") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected '64 MiB' in runner disk config output, got: {}",
-                        output.stdout
-                    )
-                }
-            },
+            validate: |output| assert_guest_value_within(output, "DISK_MIB=", 1..=64),
             ..Scenario::default()
         },
         Scenario {
@@ -2011,48 +1506,18 @@ CMD ["sh", "-c", "df -m / | tail -1 | awk '{print $2}'"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "df -m / | tail -1 | awk '{print \"TOTAL_MB=\" $2}'"]"#,
             extra_args: &["--disk", "64", "--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                // Parse the total MB from the output
-                for line in output.stdout.lines() {
-                    if let Some(mb_str) = line.strip_prefix("TOTAL_MB=")
-                        && let Ok(total_mb) = mb_str.trim().parse::<u64>()
-                    {
-                        // ext4 overhead reduces usable space. For a 64 MiB image,
-                        // total should be roughly 40-60 MiB (not 1024+ default).
-                        if total_mb > 100 {
-                            bail!("Filesystem too large ({total_mb} MiB), --disk 64 not enforced")
-                        }
-                        return Ok(());
-                    }
-                }
-                bail!(
-                    "Could not parse TOTAL_MB from output.\nstdout: {}",
-                    output.stdout
-                )
-            },
+            // ext4 overhead reduces usable space. For a 64 MiB image, total
+            // should be roughly 40-60 MiB (not 1024+ default).
+            validate: |output| assert_guest_value_within(output, "TOTAL_MB=", 1..=100),
             ..Scenario::default()
         },
         Scenario {
             name: "cpu_count_visible",
             description: "Guest sees 1 CPU with default vCPU count",
             dockerfile: r#"FROM busybox
-CMD ["nproc"]"#,
+CMD ["sh", "-c", "printf 'NPROC=%s\\n' $(nproc)"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if output.stdout.contains('1') {
-                    Ok(())
-                } else {
-                    bail!("Expected '1' CPU from nproc, got: {}", output.stdout)
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "NPROC=1"),
             ..Scenario::default()
         },
         // =======================================================================
@@ -2064,22 +1529,19 @@ CMD ["nproc"]"#,
             // With --network, the guest should be able to resolve DNS or ping.
             // Use wget to a well-known URL as a connectivity test.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.txt && echo net_ok || echo net_fail"]"#,
+CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.txt && printf '%s_%s\\n' NET OK || printf '%s_%s\\n' NET FAIL"]"#,
             extra_args: &["--timeout", "30", "--network"],
             validate: |output| {
                 let combined = format!("{}{}", output.stdout, output.stderr);
-                if combined.contains("net_ok") {
-                    Ok(())
-                } else {
-                    // Network may not be available in all test environments.
-                    // If the runner itself didn't crash, that's acceptable.
-                    if combined.contains("panic") || combined.contains("SIGSEGV") {
-                        bail!("Runner crashed with --network: {combined}")
-                    }
-                    // Accept net_fail if the environment doesn't have outbound access
-                    // — the key thing is --network didn't cause a crash.
-                    Ok(())
+                if combined.contains("panic") || combined.contains("SIGSEGV") {
+                    bail!("Runner crashed with --network: {combined}")
                 }
+                // Network may not be available in all test environments, so
+                // NET_FAIL passes too: the key thing is --network didn't cause a crash.
+                if guest_printed(output, "NET_FAIL") > 0 {
+                    return assert_job_succeeded(output, "NET_FAIL");
+                }
+                assert_job_succeeded(output, "NET_OK")
             },
             ..Scenario::default()
         },
@@ -2095,42 +1557,19 @@ CMD ["sh", "-c", "wget -q -O /dev/null http://detectportal.firefox.com/success.t
 RUN mkdir -p /data && echo "content_ok" > /data/file.txt
 CMD ["cat", "/data/file.txt"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if output.stdout.contains("content_ok") {
-                    Ok(())
-                } else {
-                    bail!("Expected 'content_ok' in output, got: {}", output.stdout)
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "content_ok"),
             ..Scenario::default()
         },
         Scenario {
             name: "file_permissions_preserved",
             description: "Executable bit preserved through OCI unpack + ext4",
             // chmod +x in a RUN layer must survive OCI layer extraction.
-            // If permissions are lost, `test -x` fails and we don't see "perm_ok".
+            // If permissions are lost, `test -x` fails and we don't see "PERM_OK".
             dockerfile: r#"FROM busybox
 RUN mkdir -p /data && printf '#!/bin/sh\necho hello' > /data/test.sh && chmod +x /data/test.sh
-CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
+CMD ["sh", "-c", "test -x /data/test.sh && printf '%s_%s\\n' PERM OK"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if output.stdout.contains("perm_ok") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'perm_ok' (executable bit preserved), got: {}",
-                        output.stdout
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "PERM_OK"),
             ..Scenario::default()
         },
         Scenario {
@@ -2140,22 +1579,9 @@ CMD ["sh", "-c", "test -x /data/test.sh && echo perm_ok"]"#,
             // stat -c '%a' prints the octal mode.
             dockerfile: r#"FROM busybox
 RUN mkdir -p /data/restricted && chmod 750 /data/restricted
-CMD ["stat", "-c", "%a", "/data/restricted"]"#,
+CMD ["sh", "-c", "printf 'MODE=%s\\n' $(stat -c %a /data/restricted)"]"#,
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if output.stdout.contains("750") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected '750' (directory permissions preserved), got: {}",
-                        output.stdout
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "MODE=750"),
             ..Scenario::default()
         },
         // =======================================================================
@@ -2167,22 +1593,7 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
             // Use Docker's multi-line ENV syntax with quotes for values with spaces.
             dockerfile: "FROM busybox\nENV SPACED=\"hello world\" WITH_EQ=\"key=value\"\nCMD [\"sh\", \"-c\", \"echo SPACED=$SPACED EQ=$WITH_EQ\"]",
             extra_args: &["--timeout", "60"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if !output.stdout.contains("SPACED=hello world") {
-                    bail!(
-                        "Expected 'SPACED=hello world' in output, got: {}",
-                        output.stdout
-                    )
-                }
-                if !output.stdout.contains("EQ=key=value") {
-                    bail!("Expected 'EQ=key=value' in output, got: {}", output.stdout)
-                }
-                Ok(())
-            },
+            validate: |output| assert_job_succeeded(output, "SPACED=hello world EQ=key=value"),
             ..Scenario::default()
         },
         // =======================================================================
@@ -2194,20 +1605,17 @@ CMD ["stat", "-c", "%a", "/data/restricted"]"#,
             dockerfile: r#"FROM busybox
 ENTRYPOINT ["echo", "image_ep"]
 CMD ["image_cmd"]"#,
-            extra_args: &["--timeout", "60", "--entrypoint", "echo", "cli_ep"],
+            extra_args: &[
+                "--timeout",
+                "60",
+                "--entrypoint",
+                "printf",
+                "%s_%s\\n",
+                "CLI",
+                "EP",
+            ],
             validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                // Docker semantics: CLI entrypoint ["echo", "cli_ep"] clears OCI CMD
-                if !output.stdout.contains("cli_ep") {
-                    bail!(
-                        "Expected 'cli_ep' in output (CLI entrypoint override).\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
+                assert_job_succeeded(output, "CLI_EP")?;
                 if output.stdout.contains("image_ep") {
                     bail!(
                         "OCI image_ep should have been overridden.\nstdout: {}",
@@ -2228,24 +1636,14 @@ CMD ["image_cmd"]"#,
             name: "cli_cmd_override",
             description: "Override CMD from CLI",
             dockerfile: r#"FROM busybox
-ENTRYPOINT ["echo"]
-CMD ["image_cmd"]"#,
-            extra_args: &["--timeout", "60", "--cmd", "cli_cmd"],
+ENTRYPOINT ["printf", "%s_%s\\n"]
+CMD ["IMAGE", "CMD"]"#,
+            extra_args: &["--timeout", "60", "--cmd", "CLI", "CMD"],
             validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if !output.stdout.contains("cli_cmd") {
+                assert_job_succeeded(output, "CLI_CMD")?;
+                if guest_printed(output, "IMAGE_CMD") > 0 {
                     bail!(
-                        "Expected 'cli_cmd' in output.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-                if output.stdout.contains("image_cmd") {
-                    bail!(
-                        "OCI image_cmd should have been overridden.\nstdout: {}",
+                        "OCI image CMD should have been overridden.\nstdout: {}",
                         output.stdout
                     )
                 }
@@ -2263,22 +1661,14 @@ CMD ["image_cmd"]"#,
                 "--timeout",
                 "60",
                 "--entrypoint",
-                "echo",
+                "printf",
                 "--cmd",
-                "cli_both",
+                "%s_%s\\n",
+                "CLI",
+                "BOTH",
             ],
             validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if !output.stdout.contains("cli_both") {
-                    bail!(
-                        "Expected 'cli_both' in output.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
+                assert_job_succeeded(output, "CLI_BOTH")?;
                 if output.stdout.contains("image_ep") || output.stdout.contains("image_cmd") {
                     bail!(
                         "OCI image entrypoint/cmd should have been overridden.\nstdout: {}",
@@ -2294,23 +1684,9 @@ CMD ["image_cmd"]"#,
             description: "Override an existing ENV from CLI",
             dockerfile: r#"FROM busybox
 ENV MY_VAR=image_value
-CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
+CMD ["sh", "-c", "printf 'VAR:%s\\n' $MY_VAR"]"#,
             extra_args: &["--timeout", "60", "--env", "MY_VAR=cli_value"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if output.stdout.contains("MY_VAR=cli_value") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected 'MY_VAR=cli_value' in output.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-            },
+            validate: |output| assert_job_succeeded(output, "VAR:cli_value"),
             ..Scenario::default()
         },
         Scenario {
@@ -2320,25 +1696,7 @@ CMD ["sh", "-c", "echo MY_VAR=$MY_VAR"]"#,
 ENV EXISTING=from_image
 CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
             extra_args: &["--timeout", "60", "--env", "NEW_VAR=from_cli"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if !output.stdout.contains("EXISTING=from_image") {
-                    bail!(
-                        "Expected 'EXISTING=from_image' in output.\nstdout: {}",
-                        output.stdout
-                    )
-                }
-                if !output.stdout.contains("NEW=from_cli") {
-                    bail!(
-                        "Expected 'NEW=from_cli' in output.\nstdout: {}",
-                        output.stdout
-                    )
-                }
-                Ok(())
-            },
+            validate: |output| assert_job_succeeded(output, "EXISTING=from_image NEW=from_cli"),
             ..Scenario::default()
         },
         Scenario {
@@ -2347,19 +1705,7 @@ CMD ["sh", "-c", "echo EXISTING=$EXISTING NEW=$NEW_VAR"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo A=$A B=$B"]"#,
             extra_args: &["--timeout", "60", "--env", "A=one", "--env", "B=two"],
-            validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                if !output.stdout.contains("A=one") {
-                    bail!("Expected 'A=one' in output.\nstdout: {}", output.stdout)
-                }
-                if !output.stdout.contains("B=two") {
-                    bail!("Expected 'B=two' in output.\nstdout: {}", output.stdout)
-                }
-                Ok(())
-            },
+            validate: |output| assert_job_succeeded(output, "A=one B=two"),
             ..Scenario::default()
         },
         Scenario {
@@ -2367,15 +1713,21 @@ CMD ["sh", "-c", "echo A=$A B=$B"]"#,
             description: "Add entrypoint when image only has CMD",
             dockerfile: r#"FROM busybox
 CMD ["hello", "world"]"#,
-            extra_args: &["--timeout", "60", "--entrypoint", "echo"],
+            extra_args: &[
+                "--timeout",
+                "60",
+                "--entrypoint",
+                "printf",
+                "%s_%s\\n",
+                "ENTRYPOINT",
+                "ALONE",
+            ],
             validate: |output| {
-                if output.exit_code != 0 {
-                    let combined = format!("{}{}", output.stdout, output.stderr);
-                    bail!("Runner failed (exit {}): {}", output.exit_code, combined)
-                }
-                // Docker semantics: CLI entrypoint ["echo"] clears OCI CMD ["hello", "world"]
-                // So we expect just the output of `echo` (empty line)
-                if output.stdout.contains("hello world") {
+                assert_job_succeeded(output, "ENTRYPOINT_ALONE")?;
+                // Docker semantics: a CLI entrypoint clears the OCI CMD, which
+                // `printf` would otherwise print as one more line.
+                if guest_printed(output, "hello_world") > 0 || output.stdout.contains("hello world")
+                {
                     bail!(
                         "OCI CMD should have been cleared (Docker semantics: overriding entrypoint clears CMD).\nstdout: {}\nstderr: {}",
                         output.stdout,
@@ -2390,15 +1742,12 @@ CMD ["hello", "world"]"#,
             name: "multiple_iterations",
             description: "Multiple iterations execute sequentially",
             dockerfile: r#"FROM busybox
-CMD ["echo", "iter_output"]"#,
+CMD ["printf", "%s_%s\\n", "ITER", "OUTPUT"]"#,
             extra_args: &["--timeout", "60", "--iter", "3"],
             validate: |output| {
-                if output.exit_code != 0 {
-                    bail!("Expected exit code 0, got {}", output.exit_code)
-                }
-                // Each iteration prints "iter_output", so we should see it at least 3 times
-                let count = output.stdout.matches("iter_output").count();
-                if count < 3 {
+                assert_job_succeeded(output, "ITER_OUTPUT")?;
+                let count = guest_printed(output, "ITER_OUTPUT");
+                if count != 3 {
                     bail!("Expected 3 iterations of output, found {count}")
                 }
                 Ok(())
@@ -2409,13 +1758,14 @@ CMD ["echo", "iter_output"]"#,
             name: "zero_iterations",
             description: "Zero iterations executes no benchmarks",
             dockerfile: r#"FROM busybox
-CMD ["echo", "should_not_appear"]"#,
+CMD ["printf", "%s_%s\\n", "ZERO", "ITERATIONS"]"#,
             extra_args: &["--timeout", "60", "--iter", "0"],
+            control_marker: Some("ZERO_ITERATIONS"),
             validate: |output| {
                 if output.exit_code != 0 {
                     bail!("Expected exit code 0, got {}", output.exit_code)
                 }
-                if output.stdout.contains("should_not_appear") {
+                if guest_printed(output, "ZERO_ITERATIONS") > 0 {
                     bail!("Expected no benchmark execution with --iter 0, but output was produced")
                 }
                 Ok(())
@@ -2426,22 +1776,14 @@ CMD ["echo", "should_not_appear"]"#,
             name: "allow_failure_false_aborts",
             description: "Non-zero exit code aborts iteration without --allow-failure",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' ITER DONE && exit 1"]"#,
             extra_args: &["--timeout", "60", "--iter", "3"],
             validate: |output| {
-                if output.exit_code == 0 {
-                    bail!("Expected non-zero exit code")
-                }
+                assert_guest_exited(output, "ITER_DONE", 1)?;
                 // Only 1 iteration should run before aborting.
-                // Count lines that are exactly the marker to avoid matching
-                // the informational "Command: ..." line printed to stdout.
-                let count = output
-                    .stdout
-                    .lines()
-                    .filter(|l| l.trim() == "__ITER_DONE__")
-                    .count();
-                if count > 1 {
-                    bail!("Expected at most 1 iteration, found {count}")
+                let count = guest_printed(output, "ITER_DONE");
+                if count != 1 {
+                    bail!("Expected 1 iteration, found {count}")
                 }
                 Ok(())
             },
@@ -2451,7 +1793,7 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
             name: "allow_failure_true_continues",
             description: "Non-zero exit code continues with --allow-failure",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' ITER DONE && exit 1"]"#,
             extra_args: &["--timeout", "60", "--iter", "3", "--allow-failure"],
             validate: |output| {
                 if output.exit_code != 0 {
@@ -2460,12 +1802,8 @@ CMD ["sh", "-c", "echo __ITER_DONE__ && exit 1"]"#,
                         output.exit_code
                     )
                 }
-                let count = output
-                    .stdout
-                    .lines()
-                    .filter(|l| l.trim() == "__ITER_DONE__")
-                    .count();
-                if count < 3 {
+                let count = guest_printed(output, "ITER_DONE");
+                if count != 3 {
                     bail!("Expected 3 iterations with --allow-failure, found {count}")
                 }
                 Ok(())
@@ -2897,18 +2235,21 @@ fn catches(pid: u32, signal: libc::c_int) -> Result<bool> {
 /// Wait until a VMM in `state_dir` has booted its guest, which is when it has
 /// vCPU threads, or the runner has exited.
 fn wait_for_booted_vmm(state_dir: &Utf8Path, child: &mut std::process::Child) -> Result<bool> {
-    let parent = jail_parent(state_dir);
     let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
     while std::time::Instant::now() < deadline && child.try_wait()?.is_none() {
-        if let Some((_, jail_root)) = find_jail(&parent)?
-            && let Some(pid) = find_jailed_vmm(&jail_root)?
-            && has_vcpu_threads(pid)
-        {
+        if probe_booted(state_dir)? {
             return Ok(true);
         }
         std::thread::sleep(PROBE_INTERVAL);
     }
     Ok(false)
+}
+
+fn probe_booted(state_dir: &Utf8Path) -> Result<bool> {
+    let Some((_, jail_root)) = find_jail(&jail_parent(state_dir))? else {
+        return Ok(false);
+    };
+    Ok(find_jailed_vmm(&jail_root)?.is_some_and(has_vcpu_threads))
 }
 
 /// Firecracker names each vCPU thread `fc_vcpu <n>` and starts them at
@@ -3036,7 +2377,7 @@ fn jail_scenarios() -> Vec<Scenario> {
             description: "A jailed job succeeds with the VMM unprivileged, off the host network, and in its cgroup",
             // The guest sleeps so the VMM lives long enough for the probe to see.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' JAIL_CONFINEMENT a7f3b2c9 && sleep 5"]"#,
             cancel_after_secs: None,
             probe: Some(probe_confinement),
             orphan_then_rerun: false,
@@ -3056,7 +2397,7 @@ CMD ["sh", "-c", "echo JAIL_CONFINEMENT_a7f3b2c9 && sleep 5"]"#,
             name: "jail_netns_recovers_from_stacked_mounts",
             description: "A job succeeds against a network namespace handle carrying stacked mounts",
             dockerfile: r#"FROM busybox
-CMD ["echo", "JAIL_NETNS_a7f3b2c9"]"#,
+CMD ["printf", "%s_%s\\n", "JAIL_NETNS", "a7f3b2c9"]"#,
             setup: Some(stack_netns_mounts),
             teardown: Some(unstack_netns_mounts),
             extra_args: JAIL_ARGS,
@@ -3069,26 +2410,18 @@ CMD ["echo", "JAIL_NETNS_a7f3b2c9"]"#,
             // Nothing in here should ever run, and the marker is how that is
             // known: the guest prints it and the runner cannot.
             dockerfile: r#"FROM busybox
-CMD ["echo", "JAIL_REFUSED_a7f3b2c9"]"#,
+CMD ["printf", "%s_%s\\n", "JAIL_REFUSED", "a7f3b2c9"]"#,
             unusable_state_dir: true,
             extra_args: JAIL_ARGS,
             validate: |output| {
                 // That no VMM was left running is asserted in
                 // `run_runner_without_unjailed_vmm`.
-                if output.exit_code == 0 {
-                    bail!(
-                        "Expected the job to fail when the jail could not be built, got exit code 0.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
-                if output.stdout.contains("JAIL_REFUSED_a7f3b2c9") {
-                    bail!(
-                        "The guest ran even though the runner could not build a jail to run it in.\nstdout: {}\nstderr: {}",
-                        output.stdout,
-                        output.stderr
-                    )
-                }
+                assert_refused_before_guest(output, "JAIL_REFUSED_a7f3b2c9")?;
+                anyhow::ensure!(
+                    output.stderr.contains("is a symbolic link"),
+                    "Expected the refusal to name the symlinked state directory.\nstderr: {}",
+                    output.stderr
+                );
                 Ok(())
             },
             ..Scenario::default()
@@ -3097,7 +2430,7 @@ CMD ["echo", "JAIL_REFUSED_a7f3b2c9"]"#,
             name: "jail_nodev_state_dir_is_refused",
             description: "A state directory on a nodev filesystem is refused by name before the jail is built",
             dockerfile: r#"FROM busybox
-CMD ["echo", "JAIL_NODEV_a7f3b2c9"]"#,
+CMD ["printf", "%s_%s\\n", "JAIL_NODEV", "a7f3b2c9"]"#,
             nodev_state_dir: true,
             extra_args: JAIL_ARGS,
             validate: |output| {
@@ -3118,7 +2451,7 @@ CMD ["echo", "JAIL_NODEV_a7f3b2c9"]"#,
             description: "A chroot orphaned by a runner that never unwound is swept by the next job",
             // The next job's guest; the orphan runs `ORPHAN_DOCKERFILE`.
             dockerfile: r#"FROM busybox
-CMD ["echo", "JAIL_SWEEP_a7f3b2c9"]"#,
+CMD ["printf", "%s_%s\\n", "JAIL_SWEEP", "a7f3b2c9"]"#,
             cancel_after_secs: None,
             probe: None,
             orphan_then_rerun: true,
@@ -3142,7 +2475,7 @@ fn jail_contention_scenarios() -> Vec<Scenario> {
             // Long enough that the sibling reaches the jail lock while the first
             // job still holds it.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "echo JAIL_SIBLING_a7f3b2c9 && sleep 10"]"#,
+CMD ["sh", "-c", "printf '%s_%s\\n' JAIL_SIBLING a7f3b2c9 && sleep 10"]"#,
             orphan_between_jobs: true,
             extra_args: JAIL_ARGS,
             validate: |output| {
@@ -3162,7 +2495,7 @@ CMD ["sh", "-c", "echo JAIL_SIBLING_a7f3b2c9 && sleep 10"]"#,
             name: "jail_occupied_cgroup_fails_the_job",
             description: "A process in another Bencher cgroup fails the job rather than share its cores",
             dockerfile: r#"FROM busybox
-CMD ["echo", "JAIL_OCCUPIED_a7f3b2c9"]"#,
+CMD ["printf", "%s_%s\\n", "JAIL_OCCUPIED", "a7f3b2c9"]"#,
             occupied_cgroup: true,
             extra_args: JAIL_ARGS,
             validate: |output| assert_refused_before_guest(output, "JAIL_OCCUPIED_a7f3b2c9"),
@@ -3172,7 +2505,7 @@ CMD ["echo", "JAIL_OCCUPIED_a7f3b2c9"]"#,
             name: "jail_occupied_mid_build_fails_the_job",
             description: "A process that joins another Bencher cgroup while the jail is built fails the job before its guest runs",
             dockerfile: r#"FROM busybox
-CMD ["echo", "JAIL_OCCUPIED_MID_a7f3b2c9"]"#,
+CMD ["printf", "%s_%s\\n", "JAIL_OCCUPIED_MID", "a7f3b2c9"]"#,
             occupied_mid_build: true,
             extra_args: JAIL_ARGS,
             validate: |output| assert_refused_before_guest(output, "JAIL_OCCUPIED_MID_a7f3b2c9"),
@@ -3181,9 +2514,11 @@ CMD ["echo", "JAIL_OCCUPIED_MID_a7f3b2c9"]"#,
     ]
 }
 
+/// The runner's own failure exit, so a crash or a signal does not read as a
+/// refusal.
 fn assert_refused_before_guest(output: &ScenarioOutput, marker: &str) -> Result<()> {
     anyhow::ensure!(
-        output.exit_code != 0 && guest_printed(output, marker) == 0,
+        output.exit_code == 1 && guest_printed(output, marker) == 0,
         "Expected the job to fail before its guest ran, got exit code {}.\nstdout: {}\nstderr: {}",
         output.exit_code,
         output.stdout,
@@ -3384,8 +2719,9 @@ fn mounts_on(mountinfo: &str, mount_point: &str) -> usize {
         .count()
 }
 
-/// `marker` must be a line the guest prints on its own, since the runner echoes
-/// the image's command, marker and all, before it boots anything.
+/// `marker` is a whole line the guest computes, as `printf '%s_%s\n' A B` prints
+/// `A_B`, so the command the runner echoes before it boots anything never
+/// contains it.
 fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
     if output.exit_code != 0 {
         bail!(
@@ -3411,6 +2747,137 @@ fn guest_printed(output: &ScenarioOutput, marker: &str) -> usize {
         .lines()
         .filter(|line| line.trim() == marker)
         .count()
+}
+
+fn guest_printed_to_stderr(output: &ScenarioOutput, marker: &str) -> usize {
+    output
+        .stderr
+        .lines()
+        .filter(|line| line.trim() == marker)
+        .count()
+}
+
+/// The runner relays what the guest printed, then fails the job with the
+/// guest's exit code.
+fn assert_guest_exited(output: &ScenarioOutput, marker: &str, code: i32) -> Result<()> {
+    let reported = format!("non-zero exit code: {code}");
+    anyhow::ensure!(
+        output.exit_code == 1
+            && guest_printed(output, marker) > 0
+            && output
+                .stderr
+                .lines()
+                .any(|line| line.starts_with("Error:") && line.ends_with(&reported)),
+        "Expected '{marker}' in the guest output and the job to fail with the guest's exit code {code}, got exit code {}.\nstdout: {}\nstderr: {}",
+        output.exit_code,
+        output.stdout,
+        output.stderr
+    );
+    Ok(())
+}
+
+/// The runner prints the guest's stdout after it starts waiting for the
+/// results, and the guest's stderr after its metrics line, so a silent guest
+/// leaves only blank lines there besides the VMM's lines and the runner's error.
+fn assert_guest_exited_silently(output: &ScenarioOutput, code: i32) -> Result<()> {
+    let reported = format!("non-zero exit code: {code}");
+    let runner_error = |line: &str| line.starts_with("Error:") && line.ends_with(&reported);
+    let stdout_silent = lines_after(&output.stdout, "Waiting for benchmark results")
+        .is_some_and(|mut lines| lines.all(|line| line.trim().is_empty()));
+    let stderr_silent =
+        lines_after(&output.stderr, "---BENCHER_METRICS:").is_some_and(|mut lines| {
+            lines.all(|line| {
+                line.trim().is_empty() || line.starts_with("[firecracker]") || runner_error(line)
+            })
+        });
+    anyhow::ensure!(
+        output.exit_code == 1
+            && stdout_silent
+            && stderr_silent
+            && output.stderr.lines().any(runner_error),
+        "Expected no guest output and the job to fail with the guest's exit code {code}, got exit code {}.\nstdout: {}\nstderr: {}",
+        output.exit_code,
+        output.stdout,
+        output.stderr
+    );
+    Ok(())
+}
+
+/// The lines after the first one that starts with `start`, if any does.
+fn lines_after<'a>(text: &'a str, start: &'a str) -> Option<impl Iterator<Item = &'a str>> {
+    let mut lines = text
+        .lines()
+        .skip_while(move |line| !line.starts_with(start));
+    lines.next().map(|_| lines)
+}
+
+/// The runner relays nothing a guest printed before its timeout, so the proof
+/// that one booted is the probe's.
+fn assert_timed_out(output: &ScenarioOutput) -> Result<()> {
+    let timed_out = output
+        .stderr
+        .lines()
+        .find(|line| line.contains("---BENCHER_METRICS:"))
+        .and_then(|line| serde_json::from_str::<serde_json::Value>(extract_json_substr(line)).ok())
+        .and_then(|metrics| metrics.get("timed_out")?.as_bool());
+    anyhow::ensure!(
+        output.exit_code == 1 && timed_out == Some(true),
+        "Expected the job to fail on its timeout, with timed_out: true in its metrics, got exit code {}.\nstdout: {}\nstderr: {}",
+        output.exit_code,
+        output.stdout,
+        output.stderr
+    );
+    Ok(())
+}
+
+fn assert_cancelled(output: &ScenarioOutput) -> Result<()> {
+    anyhow::ensure!(
+        output.exit_code == 1 && output.stderr.contains("Job cancelled"),
+        "Expected the job to end cancelled, got exit code {}.\nstdout: {}\nstderr: {}",
+        output.exit_code,
+        output.stdout,
+        output.stderr
+    );
+    Ok(())
+}
+
+fn assert_guest_value_within(
+    output: &ScenarioOutput,
+    key: &str,
+    range: std::ops::RangeInclusive<u64>,
+) -> Result<()> {
+    let value = output
+        .stdout
+        .lines()
+        .find_map(|line| line.trim().strip_prefix(key));
+    anyhow::ensure!(
+        output.exit_code == 0
+            && value
+                .and_then(|value| value.parse::<u64>().ok())
+                .is_some_and(|value| range.contains(&value)),
+        "Expected the job to succeed with a guest line {key}<n> for n in {range:?}, got exit code {} and {value:?}.\nstdout: {}\nstderr: {}",
+        output.exit_code,
+        output.stdout,
+        output.stderr
+    );
+    Ok(())
+}
+
+/// One line of exactly `cap` copies of `byte`, so a cap that was not enforced,
+/// or not filled, fails.
+fn assert_guest_payload_capped(output: &ScenarioOutput, byte: char, cap: usize) -> Result<()> {
+    let delivered = output
+        .stdout
+        .lines()
+        .any(|line| line.len() == cap && line.chars().all(|c| c == byte));
+    anyhow::ensure!(
+        output.exit_code == 0 && delivered,
+        "Expected the job to succeed with a guest line of exactly {cap} '{byte}', got exit code {} and stdout lines of {:?} bytes.\nstderr: {}",
+        output.exit_code,
+        output.stdout.lines().map(str::len).collect::<Vec<_>>(),
+        output.stderr
+    );
+    Ok(())
 }
 
 /// The jailer cleans up nothing by design, so a leftover means the runner's
@@ -4615,11 +4082,11 @@ fn tuning_scenarios() -> Vec<Scenario> {
         name: "host_tuning",
         description: "Host tuning applies while a Job runs and is restored after",
         dockerfile: r#"FROM busybox
-CMD ["echo", "tuned run complete"]"#,
+CMD ["printf", "%s_%s\\n", "TUNED", "RUN"]"#,
         extra_args: &["--timeout", "60"],
         tuning: true,
         // Otherwise a run that tuned the host but never booted a VM would pass.
-        validate: |output| assert_job_succeeded(output, "tuned run complete"),
+        validate: |output| assert_job_succeeded(output, "TUNED_RUN"),
         ..Scenario::default()
     }]
 }
