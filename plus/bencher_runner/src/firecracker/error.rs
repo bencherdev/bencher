@@ -110,10 +110,11 @@ pub enum FirecrackerError {
     #[error("Cgroup placement failed: {0}")]
     CgroupPlacement(#[source] crate::error::JailError),
 
-    /// Fatal rather than degraded, since an unreadable cgroup is not a declared
-    /// absence of isolation; see the failure policy table in [`crate::jail`].
-    #[error("The cgroup for CPU isolation could not be read: {0}")]
-    CgroupUnreadable(#[source] crate::error::JailError),
+    /// Fatal, since a VMM outside its cgroup runs unconfined and unseen by the
+    /// occupancy check; see the failure policy table in [`crate::jail`].
+    /// Boxed because [`crate::error::RunnerError`] in turn contains this type.
+    #[error("Failed to create the cgroup the VMM runs in: {0}")]
+    Cgroup(#[source] Box<crate::error::RunnerError>),
 
     /// Fatal, since a cgroup without the VMM is a silent lie about which cores
     /// the benchmark ran on.

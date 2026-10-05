@@ -24,24 +24,31 @@ pub struct CgroupManager {
     /// Raised when this cgroup could not be removed, which holds the chroot that
     /// names it for the next job's sweep.
     cgroup_survived: CgroupSurvived,
-    cpuset_control: CpusetControl,
+    controllers: Controllers,
 }
 
 impl CgroupManager {
     /// Create a new cgroup for the given microVM.
     pub fn new(vm_id: &VmId, cgroup_survived: CgroupSurvived) -> Result<Self, RunnerError> {
-        let cgroup_path = vm_cgroup(vm_id.as_str());
+        Self::new_at(Utf8Path::new(CGROUP_ROOT), vm_id, cgroup_survived)
+    }
 
-        let parent = Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE);
+    /// Takes the cgroup root so a test can stand a scratch cgroup in for it.
+    fn new_at(
+        cgroup_root: &Utf8Path,
+        vm_id: &VmId,
+        cgroup_survived: CgroupSurvived,
+    ) -> Result<Self, RunnerError> {
+        let parent = cgroup_root.join(BENCHER_CGROUP_BASE);
+        let cgroup_path = parent.join(vm_id.as_str());
+
         fs::create_dir_all(&parent).map_err(|e| JailError::CreateCgroup {
             path: parent.clone(),
             source: e,
         })?;
 
-        // Enable controllers in the parent. Always attempted (idempotent):
-        // the parent may have been created without controllers, e.g. by
-        // the tuning cpuset partition at startup.
-        let cpuset_control = Self::enable_controllers(&parent)?;
+        // On every Job, since `bencher/` may be new since startup.
+        let controllers = ensure_controllers(cgroup_root)?;
 
         // Create this run's cgroup, claiming it only when a stat shows it was
         // absent, because `Drop` removes whatever this claims.
@@ -67,12 +74,12 @@ impl CgroupManager {
             cgroup_path,
             created,
             cgroup_survived,
-            cpuset_control,
+            controllers,
         })
     }
 
-    /// Wrap an existing directory without owning it, with `cpuset` answered
-    /// because a stand-in tree's missing `cpuset.cpus` is one its test chose.
+    /// Wrap an existing directory without owning it, with every controller
+    /// enabled, so a file its test leaves out is the only absence.
     #[cfg(test)]
     #[must_use]
     pub fn detached(cgroup_path: Utf8PathBuf) -> Self {
@@ -80,55 +87,8 @@ impl CgroupManager {
             cgroup_path,
             created: false,
             cgroup_survived: CgroupSurvived::default(),
-            cpuset_control: CpusetControl::Answered,
+            controllers: Controllers::enabled(),
         }
-    }
-
-    /// Enable controllers in a cgroup.
-    ///
-    /// Enables cpu, memory, and pids controllers (required), and io/cpuset controllers
-    /// (optional, for I/O throttling and CPU pinning). The verification read is the
-    /// real gate: write failures are tolerated when the required controllers are
-    /// already enabled (e.g., pre-configured by an admin for an unprivileged runner).
-    ///
-    /// Returns what the widest write established about `cpuset`, since only its
-    /// refusal can tell a host with nothing to delegate from a write that failed.
-    fn enable_controllers(path: &Utf8Path) -> Result<CpusetControl, RunnerError> {
-        let subtree_control = path.join("cgroup.subtree_control");
-
-        // Try to enable all controllers at once, falling back to smaller sets
-        let (cpuset_control, write_result) =
-            match fs::write(&subtree_control, "+cpu +memory +pids +io +cpuset") {
-                Ok(()) => (CpusetControl::Answered, Ok(())),
-                Err(e) => (
-                    CpusetControl::from_refusal(e),
-                    fs::write(&subtree_control, "+cpu +memory +pids +io")
-                        .or_else(|_| fs::write(&subtree_control, "+cpu +memory +pids")),
-                ),
-            };
-
-        // Verify that required controllers are enabled
-        let enabled = fs::read_to_string(&subtree_control).map_err(|e| JailError::ReadCgroup {
-            path: subtree_control.clone(),
-            source: e,
-        })?;
-        if let Some(missing) = missing_required_controller(&enabled) {
-            return Err(match write_result {
-                Err(e) => JailError::EnableControllers {
-                    path: subtree_control,
-                    source: e,
-                }
-                .into(),
-                Ok(()) => JailError::MissingController {
-                    controller: missing.to_owned(),
-                    path: subtree_control,
-                    enabled,
-                }
-                .into(),
-            });
-        }
-
-        Ok(cpuset_control)
     }
 
     /// Apply CPU pinning via cpuset controller.
@@ -148,19 +108,23 @@ impl CgroupManager {
     pub fn apply_cpuset(&self, layout: &CpuLayout) -> Result<Cpuset, RunnerError> {
         if !layout.has_isolation() {
             // No meaningful isolation possible (single core or overlapping sets)
-            return Ok(Cpuset::Unavailable("the CPU layout offers no isolation"));
+            return Ok(Cpuset::Unavailable(
+                "the CPU layout offers no isolation".to_owned(),
+            ));
         }
 
         let cpuset = layout.benchmark_cpuset();
         if cpuset.is_empty() {
-            return Ok(Cpuset::Unavailable("the benchmark core set is empty"));
+            return Ok(Cpuset::Unavailable(
+                "the benchmark core set is empty".to_owned(),
+            ));
         }
 
         // A stat that failed is not an undelegated controller.
         let path = self.cgroup_path.join("cpuset.cpus");
         match path.try_exists() {
             Ok(true) => {},
-            Ok(false) => return Ok(self.no_cpuset()),
+            Ok(false) => return Ok(Cpuset::Unavailable(self.no_cpuset())),
             Err(e) => return Err(JailError::ReadCgroup { path, source: e }.into()),
         }
         // Delegation is settled by now, so every write failure, absence
@@ -191,19 +155,18 @@ impl CgroupManager {
         self.verify_cpuset(&cpuset, &mems)
     }
 
-    /// Why this run has no cpuset when the cgroup has no `cpuset.cpus`, blaming
-    /// the host only when the kernel said so.
-    fn no_cpuset(&self) -> Cpuset {
-        match &self.cpuset_control {
-            CpusetControl::Answered => Cpuset::Unavailable(UNDELEGATED),
-            CpusetControl::Unanswered(e) => {
-                eprintln!(
-                    "Warning: the cpuset controller could not be enabled on the parent of {}: {e}. Whether this host delegates it was never established.",
+    /// Why the cgroup has no `cpuset.cpus`, naming the controller and the
+    /// cgroup that withheld it.
+    fn no_cpuset(&self) -> String {
+        self.controllers.cpuset_absence().map_or_else(
+            || {
+                format!(
+                    "the cpuset controller is not delegated to {}",
                     self.cgroup_path
-                );
-                Cpuset::Unavailable(UNENABLED)
+                )
             },
-        }
+            |absence| absence.to_string(),
+        )
     }
 
     /// Confirm the kernel granted the requested sets, because cgroup v2 silently
@@ -251,6 +214,10 @@ impl CgroupManager {
     /// Keeps benchmark memory resident: swap thrashing adds run-to-run
     /// variance and distorts memory measurements.
     pub fn disable_swap(&self) -> Result<(), RunnerError> {
+        // Writing a file the controller never created would blame the file.
+        if let Some(absence) = self.controllers.memory_absence() {
+            return Err(absence.into());
+        }
         self.write_file("memory.swap.max", "0")
     }
 
@@ -366,37 +333,231 @@ pub(crate) fn effective_mems(cgroup: &Utf8Path) -> Result<String, std::io::Error
     }
 }
 
-const UNDELEGATED: &str = "the cpuset controller is not delegated to this cgroup";
-
-const UNENABLED: &str = "the cpuset controller could not be enabled on the parent cgroup, so this run has none and whether this host delegates it is unknown";
-
-/// What asking the kernel to delegate `cpuset` established, which decides
-/// whether an absent `cpuset.cpus` may be blamed on the host.
-enum CpusetControl {
-    /// The kernel either enabled `cpuset` or said it has none to enable here.
-    Answered,
-    /// The write failed for a reason that says nothing about `cpuset`.
-    Unanswered(std::io::Error),
+/// Enable the controllers Jobs use, one per write and in the root before
+/// `bencher/`, then disable any other controller `bencher/` enables.
+///
+/// One per write because a write is all or nothing, and once `bencher/`
+/// enables a controller the kernel refuses systemd's removal of it from the
+/// root with `EBUSY`.
+pub(crate) fn ensure_controllers(cgroup_root: &Utf8Path) -> Result<Controllers, JailError> {
+    ensure_controllers_with(cgroup_root, |path, value| fs::write(path, value))
 }
 
-impl CpusetControl {
-    /// `ENOENT` (a controller the parent does not offer) and `EINVAL` (one the
-    /// kernel lacks) are answers; any other refusal is the question failing.
-    fn from_refusal(e: std::io::Error) -> Self {
-        match e.raw_os_error() {
-            Some(libc::ENOENT | libc::EINVAL) => Self::Answered,
-            _ => Self::Unanswered(e),
+/// The writer is injectable because only cgroupfs gives these writes their
+/// meaning, so the unit tests stand in a fake of it.
+fn ensure_controllers_with<W>(
+    cgroup_root: &Utf8Path,
+    mut write: W,
+) -> Result<Controllers, JailError>
+where
+    W: FnMut(&Utf8Path, &str) -> std::io::Result<()>,
+{
+    let bencher = cgroup_root.join(BENCHER_CGROUP_BASE);
+    let offered = read_controllers(&cgroup_root.join("cgroup.controllers"))?;
+
+    let mut refusals = Vec::new();
+    for controller in CONTROLLERS {
+        if !lists(&offered, controller) {
+            continue;
+        }
+        let mut refusal = None;
+        for cgroup in [cgroup_root, bencher.as_path()] {
+            let path = cgroup.join(SUBTREE_CONTROL);
+            if let Err(source) = write(&path, &format!("+{controller}"))
+                && refusal.is_none()
+            {
+                refusal = Some((path, source));
+            }
+        }
+        if let Some((path, source)) = refusal {
+            refusals.push((controller, path, source));
+        }
+    }
+
+    // Read back rather than trusting the writes, since an administrator may
+    // have enabled what the writes could not.
+    let subtree_control = bencher.join(SUBTREE_CONTROL);
+    let enabled = read_controllers(&subtree_control)?;
+    for other in enabled
+        .split_whitespace()
+        .filter(|controller| !CONTROLLERS.contains(controller))
+    {
+        if let Err(e) = write(&subtree_control, &format!("-{other}")) {
+            eprintln!(
+                "Warning: the {other} controller could not be disabled in {subtree_control}, so Jobs run with it: {e}"
+            );
+        }
+    }
+
+    let mut outcome = |controller| {
+        if lists(&enabled, controller) {
+            return Controller::Enabled;
+        }
+        if !lists(&offered, controller) {
+            return Controller::NotOffered {
+                parent: cgroup_root.to_owned(),
+            };
+        }
+        // An unrefused write the read-back does not show was undone by a
+        // concurrent writer, which the VM cgroup's own files will reveal.
+        refusals
+            .iter()
+            .position(|(refused, ..)| *refused == controller)
+            .map(|index| refusals.swap_remove(index))
+            .map_or(Controller::Enabled, |(_, path, source)| {
+                Controller::Refused { path, source }
+            })
+    };
+    Ok(Controllers {
+        cpuset: outcome(CPUSET),
+        memory: outcome(MEMORY),
+    })
+}
+
+const CPUSET: &str = "cpuset";
+
+const MEMORY: &str = "memory";
+
+/// Never `cpu` or `io`: nothing reads them, and a Job that enabled them would
+/// pin them in a root where systemd adds them only while a unit asks.
+const CONTROLLERS: [&str; 3] = [CPUSET, MEMORY, "pids"];
+
+const SUBTREE_CONTROL: &str = "cgroup.subtree_control";
+
+/// An unreadable list is not an empty one.
+fn read_controllers(path: &Utf8Path) -> Result<String, JailError> {
+    fs::read_to_string(path).map_err(|e| JailError::ReadCgroup {
+        path: path.to_owned(),
+        source: e,
+    })
+}
+
+/// Matches whole tokens: `cpuset` must not satisfy `cpu`.
+fn lists(controllers: &str, controller: &str) -> bool {
+    controllers
+        .split_whitespace()
+        .any(|listed| listed == controller)
+}
+
+/// What enabling the controllers came to, for the two whose absence costs a
+/// Job a feature: `pids` loses nothing the runner reads.
+#[derive(Debug)]
+pub(crate) struct Controllers {
+    cpuset: Controller,
+    memory: Controller,
+}
+
+impl Controllers {
+    #[cfg(test)]
+    pub(crate) fn enabled() -> Self {
+        Self {
+            cpuset: Controller::Enabled,
+            memory: Controller::Enabled,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn without_cpuset(parent: &Utf8Path) -> Self {
+        Self {
+            cpuset: Controller::NotOffered {
+                parent: parent.to_owned(),
+            },
+            memory: Controller::Enabled,
+        }
+    }
+
+    pub(crate) fn cpuset_absence(&self) -> Option<JailError> {
+        self.cpuset.absence(CPUSET)
+    }
+
+    pub(crate) fn memory_absence(&self) -> Option<JailError> {
+        self.memory.absence(MEMORY)
+    }
+}
+
+#[derive(Debug)]
+enum Controller {
+    Enabled,
+    NotOffered {
+        parent: Utf8PathBuf,
+    },
+    /// The first write the kernel turned down, which names the cause: a
+    /// refusal in the root makes the one in `bencher/` follow.
+    Refused {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+}
+
+impl Controller {
+    fn absence(&self, controller: &'static str) -> Option<JailError> {
+        match self {
+            Self::Enabled => None,
+            Self::NotOffered { parent } => Some(JailError::ControllerNotOffered {
+                controller,
+                parent: parent.clone(),
+            }),
+            Self::Refused { path, source } => Some(JailError::ControllerRefused {
+                controller,
+                path: path.clone(),
+                // A cgroupfs refusal is an errno, so the copy loses nothing.
+                source: source.raw_os_error().map_or_else(
+                    || std::io::Error::from(source.kind()),
+                    std::io::Error::from_raw_os_error,
+                ),
+            }),
         }
     }
 }
 
 /// Whether the cpuset actually confined the VMM to the benchmark cores.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Cpuset {
     /// The cgroup confines the VMM to the benchmark cores, read back and
     /// confirmed.
     Applied,
-    Unavailable(&'static str),
+    Unavailable(String),
+}
+
+/// A cgroup under the real root for the root-only tests, removed bottom up on
+/// drop so a failed assertion does not leave it pinning controllers there.
+#[cfg(test)]
+pub(crate) struct ScratchCgroup(Utf8PathBuf);
+
+#[cfg(test)]
+impl ScratchCgroup {
+    /// Offered what the real root enables, so the controllers Jobs use are
+    /// enabled there first, as the runner does at startup.
+    pub(crate) fn new(name: &str) -> Self {
+        let real_root = Utf8Path::new(CGROUP_ROOT);
+        for controller in CONTROLLERS {
+            fs::write(real_root.join(SUBTREE_CONTROL), format!("+{controller}")).unwrap();
+        }
+        let path = real_root.join(format!("{name}-{}", std::process::id()));
+        fs::create_dir(&path).unwrap();
+        Self(path)
+    }
+
+    pub(crate) fn path(&self) -> &Utf8Path {
+        &self.0
+    }
+}
+
+#[cfg(test)]
+impl Drop for ScratchCgroup {
+    fn drop(&mut self) {
+        fn remove(cgroup: &Utf8Path) {
+            if let Ok(entries) = cgroup.read_dir_utf8() {
+                for entry in entries.flatten() {
+                    if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
+                        remove(entry.path());
+                    }
+                }
+            }
+            drop(fs::remove_dir(cgroup));
+        }
+        remove(&self.0);
+    }
 }
 
 /// Parse a kernel cpu list (`0-3,5,7-9`), returning `None` rather than a
@@ -557,37 +718,11 @@ pub(crate) fn procs_contains_pid(procs: &str, pid: u32) -> bool {
         .any(|line| line.trim().parse::<u32>() == Ok(pid))
 }
 
-/// Return the first required controller missing from a
-/// `cgroup.subtree_control` listing, or `None` when all are enabled.
-///
-/// Matches whole tokens: `cpuset` alone must not satisfy `cpu`.
-fn missing_required_controller(enabled: &str) -> Option<&'static str> {
-    ["cpu", "memory", "pids"]
-        .into_iter()
-        .find(|required| !enabled.split_whitespace().any(|token| token == *required))
-}
-
 #[cfg(test)]
 mod tests {
     use camino::Utf8PathBuf;
 
     use super::*;
-
-    #[test]
-    fn missing_required_controller_matches_whole_tokens() {
-        assert_eq!(missing_required_controller("cpu memory pids"), None);
-        assert_eq!(
-            missing_required_controller("cpuset cpu memory pids io"),
-            None
-        );
-        assert_eq!(missing_required_controller(""), Some("cpu"));
-        // "cpuset" alone must not satisfy the "cpu" controller
-        assert_eq!(
-            missing_required_controller("cpuset memory pids"),
-            Some("cpu")
-        );
-        assert_eq!(missing_required_controller("cpu memory"), Some("pids"));
-    }
 
     fn cpuset_tree(effective: &str) -> (tempfile::TempDir, CgroupManager) {
         // The mems written here derive from a parent with no
@@ -667,54 +802,319 @@ mod tests {
         let manager = CgroupManager::detached(root);
         let layout = CpuLayout::with_core_count(8);
 
-        assert_eq!(
+        assert!(matches!(
             manager.apply_cpuset(&layout).unwrap(),
-            Cpuset::Unavailable(UNDELEGATED)
-        );
+            Cpuset::Unavailable(_)
+        ));
+    }
+
+    fn not_offered_by(parent: &Utf8Path) -> Controller {
+        Controller::NotOffered {
+            parent: parent.to_owned(),
+        }
     }
 
     #[test]
-    fn a_cpuset_nobody_could_ask_about_is_not_an_undelegated_one() {
-        // Blaming the host for an enable write that failed on its own would send
-        // the operator looking in the wrong place.
+    fn a_missing_cpuset_names_the_controller_and_the_root() {
+        // The errno of an enable write names a file that exists and sends the
+        // operator to the wrong place.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let manager = CgroupManager {
-            cgroup_path: root,
+            cgroup_path: root.join("bencher").join("vm"),
             created: false,
             cgroup_survived: CgroupSurvived::default(),
-            cpuset_control: CpusetControl::Unanswered(std::io::Error::from_raw_os_error(
-                libc::EROFS,
-            )),
+            controllers: Controllers {
+                cpuset: not_offered_by(&root),
+                memory: Controller::Enabled,
+            },
         };
-        let layout = CpuLayout::with_core_count(8);
 
-        assert_eq!(
-            manager.apply_cpuset(&layout).unwrap(),
-            Cpuset::Unavailable(UNENABLED)
+        let Cpuset::Unavailable(reason) = manager
+            .apply_cpuset(&CpuLayout::with_core_count(8))
+            .unwrap()
+        else {
+            panic!("a cgroup with no cpuset files cannot confine anything");
+        };
+
+        assert!(
+            reason.contains(&format!("{root} does not offer the cpuset controller")),
+            "names the controller and the root that does not offer it: {reason}"
         );
     }
 
     #[test]
-    fn only_the_kernel_saying_it_has_no_cpuset_counts_as_an_answer() {
-        let errno = std::io::Error::from_raw_os_error;
+    fn swap_is_not_limited_through_a_memory_controller_the_root_does_not_offer() {
+        // Writing `memory.swap.max` anyway would report the errno of a file the
+        // controller never created.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        let manager = CgroupManager {
+            cgroup_path: root.clone(),
+            created: false,
+            cgroup_survived: CgroupSurvived::default(),
+            controllers: Controllers {
+                cpuset: Controller::Enabled,
+                memory: not_offered_by(&root),
+            },
+        };
 
-        assert!(matches!(
-            CpusetControl::from_refusal(errno(libc::ENOENT)),
-            CpusetControl::Answered
-        ));
-        assert!(matches!(
-            CpusetControl::from_refusal(errno(libc::EINVAL)),
-            CpusetControl::Answered
-        ));
-        assert!(matches!(
-            CpusetControl::from_refusal(errno(libc::EPERM)),
-            CpusetControl::Unanswered(_)
-        ));
-        assert!(matches!(
-            CpusetControl::from_refusal(errno(libc::EBUSY)),
-            CpusetControl::Unanswered(_)
-        ));
+        let err = manager.disable_swap().unwrap_err().to_string();
+
+        assert!(
+            err.contains("memory") && err.contains(root.as_str()),
+            "names the controller and the root that does not offer it: {err}"
+        );
+        assert!(!root.join("memory.swap.max").exists(), "nothing is written");
+    }
+
+    /// Every controller the kernel has, as a cgroup v2 root lists them.
+    const EVERY_CONTROLLER: &str = "cpuset cpu io memory hugetlb pids rdma misc";
+
+    /// A cgroup root and its `bencher/` on a tempfile tree, written to the way
+    /// cgroupfs takes `cgroup.subtree_control` writes.
+    struct FakeCgroupfs {
+        _dir: tempfile::TempDir,
+        root: Utf8PathBuf,
+    }
+
+    impl FakeCgroupfs {
+        fn new(offered: &str, root_enabled: &str, bencher_enabled: &str) -> Self {
+            let dir = tempfile::tempdir().unwrap();
+            let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+            fs::write(root.join("cgroup.controllers"), offered).unwrap();
+            fs::write(root.join(SUBTREE_CONTROL), root_enabled).unwrap();
+            fs::create_dir(root.join(BENCHER_CGROUP_BASE)).unwrap();
+            fs::write(
+                root.join(BENCHER_CGROUP_BASE).join(SUBTREE_CONTROL),
+                bencher_enabled,
+            )
+            .unwrap();
+            Self { _dir: dir, root }
+        }
+
+        fn root_subtree_control(&self) -> Utf8PathBuf {
+            self.root.join(SUBTREE_CONTROL)
+        }
+
+        fn bencher_subtree_control(&self) -> Utf8PathBuf {
+            self.root.join(BENCHER_CGROUP_BASE).join(SUBTREE_CONTROL)
+        }
+
+        /// All or nothing, and `ENOENT` for a controller the parent does not
+        /// offer: `bencher/` is offered only what the root enables.
+        fn write(&self, path: &Utf8Path, value: &str) -> std::io::Result<()> {
+            let offered = if *path == self.root_subtree_control() {
+                fs::read_to_string(self.root.join("cgroup.controllers"))?
+            } else {
+                fs::read_to_string(self.root_subtree_control())?
+            };
+            let mut enabled: Vec<String> = fs::read_to_string(path)?
+                .split_whitespace()
+                .map(str::to_owned)
+                .collect();
+            for token in value.split_whitespace() {
+                if let Some(controller) = token.strip_prefix('+') {
+                    if !lists(&offered, controller) {
+                        return Err(std::io::Error::from_raw_os_error(libc::ENOENT));
+                    }
+                    if !enabled.iter().any(|listed| listed == controller) {
+                        enabled.push(controller.to_owned());
+                    }
+                } else if let Some(controller) = token.strip_prefix('-') {
+                    enabled.retain(|listed| listed != controller);
+                } else {
+                    return Err(std::io::Error::from_raw_os_error(libc::EINVAL));
+                }
+            }
+            fs::write(path, enabled.join(" "))
+        }
+
+        fn enabled(path: &Utf8Path) -> std::collections::BTreeSet<String> {
+            fs::read_to_string(path)
+                .unwrap()
+                .split_whitespace()
+                .map(str::to_owned)
+                .collect()
+        }
+    }
+
+    fn ensure_logged(cgroupfs: &FakeCgroupfs) -> (Controllers, Vec<(Utf8PathBuf, String)>) {
+        let mut writes = Vec::new();
+        let controllers = ensure_controllers_with(&cgroupfs.root, |path, value| {
+            writes.push((path.to_owned(), value.to_owned()));
+            cgroupfs.write(path, value)
+        })
+        .unwrap();
+        (controllers, writes)
+    }
+
+    #[test]
+    fn controllers_are_enabled_one_per_write_and_root_first() {
+        // From systemd's idle root: a write carrying a controller the root does
+        // not enable fails whole, which kept `cpuset` from every Job, and
+        // `bencher/` can enable only what the root already has.
+        let cgroupfs = FakeCgroupfs::new(EVERY_CONTROLLER, "memory pids", "");
+
+        let (controllers, writes) = ensure_logged(&cgroupfs);
+
+        let root = cgroupfs.root_subtree_control();
+        let bencher = cgroupfs.bencher_subtree_control();
+        let expected: Vec<(Utf8PathBuf, String)> = ["+cpuset", "+memory", "+pids"]
+            .into_iter()
+            .flat_map(|write| [(root.clone(), write), (bencher.clone(), write)])
+            .map(|(path, write)| (path, write.to_owned()))
+            .collect();
+        assert_eq!(writes, expected);
+        assert!(controllers.cpuset_absence().is_none());
+        assert!(controllers.memory_absence().is_none());
+    }
+
+    #[test]
+    fn cpu_and_io_are_never_enabled() {
+        // Nothing reads them, and enabling them in `bencher/` pins them in a
+        // root where systemd means them to come and go.
+        let cgroupfs = FakeCgroupfs::new(EVERY_CONTROLLER, EVERY_CONTROLLER, "");
+
+        let (_, writes) = ensure_logged(&cgroupfs);
+
+        for (path, value) in &writes {
+            assert!(
+                !value
+                    .split_whitespace()
+                    .any(|token| token == "+cpu" || token == "+io"),
+                "{path} was written {value}"
+            );
+        }
+    }
+
+    #[test]
+    fn bencher_is_left_with_exactly_the_controllers_jobs_use() {
+        // An older runner left `cpu` enabled in `bencher/`, which holds it in
+        // the root against systemd's removal for as long as `bencher/` lives.
+        let cgroupfs = FakeCgroupfs::new(EVERY_CONTROLLER, "cpu memory pids", "cpu memory pids");
+
+        let (_, writes) = ensure_logged(&cgroupfs);
+
+        assert_eq!(
+            FakeCgroupfs::enabled(&cgroupfs.bencher_subtree_control()),
+            ["cpuset", "memory", "pids"].map(str::to_owned).into()
+        );
+        let root = cgroupfs.root_subtree_control();
+        assert!(
+            writes
+                .iter()
+                .all(|(path, value)| !(*path == root && value.starts_with('-'))),
+            "the root is systemd's to prune: {writes:?}"
+        );
+    }
+
+    #[test]
+    fn a_controller_enabled_by_someone_else_counts_although_the_writes_were_refused() {
+        // An administrator may enable `bencher/` for a runner without the
+        // privilege to write the root.
+        let cgroupfs =
+            FakeCgroupfs::new(EVERY_CONTROLLER, "cpuset memory pids", "cpuset memory pids");
+
+        let controllers = ensure_controllers_with(&cgroupfs.root, |_, _| {
+            Err(std::io::Error::from_raw_os_error(libc::EACCES))
+        })
+        .unwrap();
+
+        assert!(controllers.cpuset_absence().is_none());
+        assert!(controllers.memory_absence().is_none());
+    }
+
+    #[test]
+    fn a_controller_the_root_does_not_offer_costs_only_its_own_feature() {
+        let cgroupfs = FakeCgroupfs::new("cpu io memory pids", "memory pids", "");
+
+        let (controllers, _) = ensure_logged(&cgroupfs);
+
+        let absence = controllers.cpuset_absence().unwrap().to_string();
+        assert!(
+            absence.contains("cpuset") && absence.contains(cgroupfs.root.as_str()),
+            "names the controller and the root: {absence}"
+        );
+        assert!(
+            !absence.contains("No such file"),
+            "a declared absence, not the errno of a write: {absence}"
+        );
+        assert!(
+            controllers.memory_absence().is_none(),
+            "the swap limit does not depend on cpuset"
+        );
+    }
+
+    #[test]
+    fn a_refused_controller_is_named_with_the_write_that_caused_it() {
+        // The refusal in the root makes the one in `bencher/` follow with
+        // `ENOENT`, which names nothing useful.
+        let cgroupfs = FakeCgroupfs::new(EVERY_CONTROLLER, "memory pids", "");
+        let root = cgroupfs.root_subtree_control();
+
+        let controllers = ensure_controllers_with(&cgroupfs.root, |path, value| {
+            if *path == root && value == "+cpuset" {
+                Err(std::io::Error::from_raw_os_error(libc::EACCES))
+            } else {
+                cgroupfs.write(path, value)
+            }
+        })
+        .unwrap();
+
+        let absence = controllers.cpuset_absence().unwrap().to_string();
+        assert!(
+            absence.contains("cpuset")
+                && absence.contains(root.as_str())
+                && absence.contains("Permission denied"),
+            "{absence}"
+        );
+    }
+
+    #[test]
+    fn an_unreadable_controller_list_is_not_an_empty_one() {
+        // Read as empty, it would declare every controller not offered.
+        let cgroupfs = FakeCgroupfs::new(EVERY_CONTROLLER, "memory pids", "");
+        fs::remove_file(cgroupfs.root.join("cgroup.controllers")).unwrap();
+
+        ensure_controllers_with(&cgroupfs.root, |path, value| cgroupfs.write(path, value))
+            .unwrap_err();
+    }
+
+    #[test]
+    fn a_root_systemd_left_idle_still_gives_the_vm_cgroup_its_controllers() {
+        // Stands a scratch cgroup in for a root systemd keeps at `memory pids`
+        // between logins, so a host that enables every controller in its real
+        // root cannot hide the difference.
+        if crate::jail::current_euid() != 0 {
+            eprintln!(
+                "skipped a_root_systemd_left_idle_still_gives_the_vm_cgroup_its_controllers: building a cgroup needs root"
+            );
+            return;
+        }
+        let scratch = ScratchCgroup::new("bencher-runner-idle-root");
+        for controller in ["+memory", "+pids"] {
+            fs::write(scratch.path().join(SUBTREE_CONTROL), controller).unwrap();
+        }
+
+        let manager =
+            CgroupManager::new_at(scratch.path(), &VmId::new(), CgroupSurvived::default()).unwrap();
+
+        assert!(
+            manager.path().join("cpuset.cpus.effective").exists(),
+            "the VM cgroup has the cpuset controller"
+        );
+        assert!(
+            manager.path().join("memory.swap.max").exists(),
+            "the VM cgroup has the memory controller"
+        );
+        let removal = fs::write(scratch.path().join(SUBTREE_CONTROL), "-cpuset").unwrap_err();
+        assert_eq!(
+            removal.raw_os_error(),
+            Some(libc::EBUSY),
+            "a rewrite of the root cannot take cpuset away: {removal}"
+        );
+        drop(manager);
     }
 
     #[test]
@@ -796,13 +1196,13 @@ mod tests {
             cgroup_path: root.join("ours"),
             created: true,
             cgroup_survived: CgroupSurvived::default(),
-            cpuset_control: CpusetControl::Answered,
+            controllers: Controllers::enabled(),
         };
         let theirs = CgroupManager {
             cgroup_path: root.join("theirs"),
             created: false,
             cgroup_survived: CgroupSurvived::default(),
-            cpuset_control: CpusetControl::Answered,
+            controllers: Controllers::enabled(),
         };
         fs::create_dir_all(ours.path()).unwrap();
         fs::create_dir_all(theirs.path()).unwrap();
@@ -946,7 +1346,7 @@ mod tests {
             cgroup_path: root.join("stuck"),
             created: true,
             cgroup_survived: survived.clone(),
-            cpuset_control: CpusetControl::Answered,
+            controllers: Controllers::enabled(),
         };
         fs::create_dir_all(manager.path()).unwrap();
         fs::write(manager.path().join("cgroup.procs"), "42\n").unwrap();
@@ -969,7 +1369,7 @@ mod tests {
             cgroup_path: root.join("gone"),
             created: true,
             cgroup_survived: survived.clone(),
-            cpuset_control: CpusetControl::Answered,
+            controllers: Controllers::enabled(),
         };
         fs::create_dir_all(manager.path()).unwrap();
 

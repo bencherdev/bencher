@@ -30,7 +30,6 @@ use std::time::{Duration, Instant};
 use camino::Utf8PathBuf;
 
 use crate::cpu::CpuLayout;
-use crate::error::JailError;
 use crate::jail::{CgroupManager, CgroupSurvived, Cpuset, JailPaths, JailUser, VmId};
 use crate::metrics::{self, RunMetrics};
 
@@ -119,18 +118,9 @@ pub fn run_firecracker(
     let start_time = Instant::now();
 
     // Step 0: Create cgroup with cpuset if CPU layout is provided
-    let cgroup = if let Some(layout) = &config.cpu_layout {
-        if layout.has_isolation() {
-            match cgroup_for_run(CgroupManager::new(vm_id, config.cgroup_survived.clone()))? {
-                Some(cg) => Some(confine(cg, layout)?),
-                None => None,
-            }
-        } else {
-            None
-        }
-    } else {
-        None
-    };
+    let cgroup = cgroup_for_run(config.cpu_layout.as_ref(), || {
+        CgroupManager::new(vm_id, config.cgroup_survived.clone())
+    })?;
 
     // Step 1: Start the jailed Firecracker process.
     println!("Starting jailed Firecracker process...");
@@ -288,21 +278,20 @@ pub fn run_firecracker(
     })
 }
 
-/// Only a declared absence degrades to `Ok(None)`; a cgroup that could not be
-/// read fails the job, per the failure policy table in [`crate::jail`].
-fn cgroup_for_run(
-    cgroup: Result<CgroupManager, crate::RunnerError>,
-) -> Result<Option<CgroupManager>, FirecrackerError> {
-    match cgroup {
-        Ok(cgroup) => Ok(Some(cgroup)),
-        Err(crate::RunnerError::Jail(unreadable @ JailError::ReadCgroup { .. })) => {
-            Err(FirecrackerError::CgroupUnreadable(unreadable))
-        },
-        Err(e) => {
-            eprintln!("Warning: failed to create cgroup for CPU isolation: {e}");
-            Ok(None)
-        },
-    }
+/// A layout with isolation gets the VMM a confined cgroup or fails the job,
+/// per the failure policy table in [`crate::jail`].
+fn cgroup_for_run<F>(
+    layout: Option<&CpuLayout>,
+    create: F,
+) -> Result<Option<CgroupManager>, FirecrackerError>
+where
+    F: FnOnce() -> Result<CgroupManager, crate::RunnerError>,
+{
+    let Some(layout) = layout.filter(|layout| layout.has_isolation()) else {
+        return Ok(None);
+    };
+    let cgroup = create().map_err(|e| FirecrackerError::Cgroup(Box::new(e)))?;
+    confine(cgroup, layout).map(Some)
 }
 
 /// Stop at a stage boundary once the job is cancelled, before anything later is
@@ -333,7 +322,9 @@ fn confine(cgroup: CgroupManager, layout: &CpuLayout) -> Result<CgroupManager, F
     }
     // Keep VM memory resident: swap adds run-to-run variance
     if let Err(e) = cgroup.disable_swap() {
-        eprintln!("Warning: failed to disable swap for VM cgroup: {e}");
+        eprintln!(
+            "Warning: this run has no swap limit on its VM cgroup ({e}), so guest memory can be swapped out and its numbers carry more variance"
+        );
     }
     Ok(cgroup)
 }
@@ -383,41 +374,29 @@ fn parse_exit_code(s: &str) -> i32 {
 #[cfg(test)]
 #[expect(clippy::get_unwrap, reason = "test assertions")]
 mod tests {
+    use crate::error::JailError;
+
     use super::*;
 
     #[test]
-    fn a_host_that_delegates_no_controllers_degrades() {
-        // Prevents a host that declares no controllers from failing the job.
-        let degraded = cgroup_for_run(Err(JailError::MissingController {
-            controller: "cpuset".to_owned(),
-            path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/cgroup.subtree_control"),
-            enabled: "cpu memory pids".to_owned(),
-        }
-        .into()))
-        .unwrap();
+    fn a_vm_cgroup_that_cannot_be_created_fails_the_job() {
+        // A VMM outside its cgroup runs unconfined, unmetered, and unseen by the
+        // occupancy check, so no reason to lack one degrades.
+        let unwritable = || {
+            Err(JailError::CreateCgroup {
+                path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/vm-1"),
+                source: std::io::Error::from_raw_os_error(libc::EROFS),
+            }
+            .into())
+        };
 
-        assert!(
-            degraded.is_none(),
-            "a declared absence of isolation is not a failure"
-        );
-    }
-
-    #[test]
-    fn a_cgroup_that_could_not_be_read_fails_the_job() {
-        // Prevents an unreadable cgroup degrading into a run with no core confinement.
-        let read_failed = Err(JailError::ReadCgroup {
-            path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/vm-1"),
-            source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
-        }
-        .into());
-
-        let Err(err) = cgroup_for_run(read_failed) else {
-            panic!("an errored question is not a declared absence");
+        let Err(err) = cgroup_for_run(Some(&CpuLayout::with_core_count(8)), unwritable) else {
+            panic!("a job with no VM cgroup must not run");
         };
 
         assert!(
-            matches!(err, FirecrackerError::CgroupUnreadable(_)),
-            "the job must fail naming the read, got: {err}"
+            matches!(err, FirecrackerError::Cgroup(_)),
+            "the job must fail naming the cgroup, got: {err}"
         );
     }
 
@@ -426,7 +405,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
-        let cgroup = cgroup_for_run(Ok(CgroupManager::detached(root.clone()))).unwrap();
+        let cgroup = cgroup_for_run(Some(&CpuLayout::with_core_count(8)), || {
+            Ok(CgroupManager::detached(root.clone()))
+        })
+        .unwrap();
 
         assert_eq!(
             cgroup.map(|cg| cg.path().to_owned()),
