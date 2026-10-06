@@ -192,8 +192,9 @@ fn default_disk() -> Disk {
 /// the sandbox path), and `transparent_hugepage=never` makes guest memory
 /// backing deterministic.
 ///
-/// Arch differences: `reboot=t` (triple fault) is x86-only; aarch64 uses
-/// `reboot=k` and needs `keep_bootcon` for console output during boot.
+/// On x86, `reboot=k` resets through the i8042, which Firecracker ends as a
+/// clean stop. aarch64 resets through PSCI and needs `keep_bootcon` for console
+/// output during boot.
 fn default_kernel_cmdline() -> String {
     #[cfg(target_arch = "aarch64")]
     {
@@ -201,7 +202,7 @@ fn default_kernel_cmdline() -> String {
     }
     #[cfg(not(target_arch = "aarch64"))]
     {
-        "console=ttyS0 reboot=t panic=1 pci=off root=/dev/vda rw init=/init norandmaps nokaslr transparent_hugepage=never".to_owned()
+        "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw init=/init norandmaps nokaslr transparent_hugepage=never".to_owned()
     }
 }
 
@@ -674,23 +675,6 @@ mod tests {
         assert!(config.kernel_cmdline.contains("nokaslr"));
         assert!(config.kernel_cmdline.contains("transparent_hugepage=never"));
         assert!(config.kernel_cmdline.contains("init=/init"));
-    }
-
-    #[cfg(target_arch = "aarch64")]
-    #[test]
-    fn default_kernel_cmdline_aarch64() {
-        let config = Config::new("img");
-        assert!(config.kernel_cmdline.starts_with("keep_bootcon "));
-        assert!(config.kernel_cmdline.contains("reboot=k"));
-        assert!(!config.kernel_cmdline.contains("reboot=t"));
-    }
-
-    #[cfg(not(target_arch = "aarch64"))]
-    #[test]
-    fn default_kernel_cmdline_x86() {
-        let config = Config::new("img");
-        assert!(config.kernel_cmdline.contains("reboot=t"));
-        assert!(!config.kernel_cmdline.contains("keep_bootcon"));
     }
 
     #[test]

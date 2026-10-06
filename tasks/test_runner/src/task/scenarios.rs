@@ -1455,6 +1455,49 @@ CMD ["sh", "-c", "printf '%s_%s\\n' SIGNAL EXIT; exit 137"]"#,
             validate: |output| assert_guest_exited(output, "SIGNAL_EXIT", 137),
             ..Scenario::default()
         },
+        Scenario {
+            name: "a_guest_exit_stops_the_vmm_cleanly",
+            description: "A clean guest exit stops Firecracker without an error",
+            dockerfile: r#"FROM busybox
+CMD ["printf", "%s_%s\\n", "CLEAN", "STOP"]"#,
+            extra_args: &["--timeout", "60"],
+            // The runner discards the VMM's exit status, so a VMM it kills after
+            // the 2 s teardown passes too.
+            validate: |output| {
+                assert_job_succeeded(output, "CLEAN_STOP")?;
+                anyhow::ensure!(
+                    !vmm_reported_an_error(output),
+                    "Expected Firecracker to stop without an error.\nstderr: {}",
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "a_triple_fault_stops_the_vmm_with_an_error",
+            description: "A guest reset by triple fault stops Firecracker with an error",
+            // A triple fault is a reset Firecracker cannot model, so this proves the
+            // check that a clean stop reports no error can still see one.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "echo triple > /sys/kernel/reboot/type && printf '%s_%s\\n' REBOOT $(cat /sys/kernel/reboot/type)"]"#,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                anyhow::ensure!(
+                    guest_printed(output, "REBOOT_triple") > 0,
+                    "Expected the guest to set its reboot type to triple.\nstdout: {}\nstderr: {}",
+                    output.stdout,
+                    output.stderr
+                );
+                anyhow::ensure!(
+                    vmm_reported_an_error(output),
+                    "Expected Firecracker to stop with an error.\nstderr: {}",
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
         // =======================================================================
         // Environment scenarios
         // =======================================================================
@@ -2903,6 +2946,10 @@ fn guest_printed_to_stderr(output: &ScenarioOutput, marker: &str) -> usize {
         .count()
 }
 
+fn vmm_reported_an_error(output: &ScenarioOutput) -> bool {
+    output.stderr.contains("[firecracker] Error")
+}
+
 /// The runner relays what the guest printed, then fails the job with the
 /// guest's exit code.
 fn assert_guest_exited(output: &ScenarioOutput, marker: &str, code: i32) -> Result<()> {
@@ -2924,18 +2971,14 @@ fn assert_guest_exited(output: &ScenarioOutput, marker: &str, code: i32) -> Resu
 
 /// The runner prints the guest's stdout after it starts waiting for the
 /// results, and the guest's stderr after its metrics line, so a silent guest
-/// leaves only blank lines there besides the VMM's lines and the runner's error.
+/// leaves only blank lines there besides the runner's error.
 fn assert_guest_exited_silently(output: &ScenarioOutput, code: i32) -> Result<()> {
     let reported = format!("non-zero exit code: {code}");
     let runner_error = |line: &str| line.starts_with("Error:") && line.ends_with(&reported);
     let stdout_silent = lines_after(&output.stdout, "Waiting for benchmark results")
         .is_some_and(|mut lines| lines.all(|line| line.trim().is_empty()));
-    let stderr_silent =
-        lines_after(&output.stderr, "---BENCHER_METRICS:").is_some_and(|mut lines| {
-            lines.all(|line| {
-                line.trim().is_empty() || line.starts_with("[firecracker]") || runner_error(line)
-            })
-        });
+    let stderr_silent = lines_after(&output.stderr, "---BENCHER_METRICS:")
+        .is_some_and(|mut lines| lines.all(|line| line.trim().is_empty() || runner_error(line)));
     anyhow::ensure!(
         output.exit_code == 1
             && stdout_silent
