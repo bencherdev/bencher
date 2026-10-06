@@ -248,6 +248,13 @@ fn apply_cpu_scoped_at(config: &TuningConfig, layout: &CpuLayout, root: &Utf8Pat
 /// Read the current value and write the new one unless it already holds.
 #[cfg(target_os = "linux")]
 fn write_sysctl(path: &str, value: &str, label: &str) {
+    write_sysctl_with(path, value, label, |current, value| current == value);
+}
+
+/// Like [`write_sysctl`], with `same` deciding whether the current value
+/// already holds.
+#[cfg(target_os = "linux")]
+fn write_sysctl_with(path: &str, value: &str, label: &str, same: fn(&str, &str) -> bool) {
     let path = Utf8PathBuf::from(path);
 
     if !path.exists() {
@@ -263,7 +270,7 @@ fn write_sysctl(path: &str, value: &str, label: &str) {
         },
     };
 
-    if current == value {
+    if same(&current, value) {
         println!("  Tuning: {label} - already {value}");
         return;
     }

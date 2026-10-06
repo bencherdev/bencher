@@ -8,7 +8,7 @@
 
 use camino::Utf8Path;
 
-use super::write_sysctl;
+use super::write_sysctl_with;
 use crate::cpu::{CpuLayout, format_cpumask};
 
 /// Steer kernel work (IRQs and unbound workqueues) to housekeeping cores.
@@ -19,17 +19,19 @@ pub(super) fn steer_kernel_work(layout: &CpuLayout, root: &Utf8Path) {
     let housekeeping_mask = format_cpumask(&layout.housekeeping);
 
     // New IRQs default to housekeeping cores.
-    write_sysctl(
+    write_sysctl_with(
         root.join("proc/irq/default_smp_affinity").as_str(),
         &housekeeping_mask,
         "default IRQ affinity",
+        same_cpumask,
     );
 
     // Unbound workqueue workers run on housekeeping cores.
-    write_sysctl(
+    write_sysctl_with(
         root.join("sys/devices/virtual/workqueue/cpumask").as_str(),
         &housekeeping_mask,
         "workqueue cpumask",
+        same_cpumask,
     );
 
     steer_existing_irqs(layout, root);
@@ -82,6 +84,25 @@ fn steer_existing_irqs(layout: &CpuLayout, root: &Utf8Path) {
     println!(
         "  Tuning: IRQ steering - moved {moved} of {total} IRQs to housekeeping cores ({housekeeping_list})"
     );
+}
+
+/// Whether two hex cpumasks select the same CPUs, since the kernel pads its
+/// masks with zeros (`0003`, `00000000,00000003`) that `format_cpumask` omits.
+fn same_cpumask(current: &str, target: &str) -> bool {
+    cpumask_words(current).is_some_and(|current| cpumask_words(target) == Some(current))
+}
+
+/// The mask's 32-bit words, least significant first, without high zero words.
+fn cpumask_words(mask: &str) -> Option<Vec<u32>> {
+    let mut words = mask
+        .split(',')
+        .rev()
+        .map(|word| u32::from_str_radix(word, 16).ok())
+        .collect::<Option<Vec<_>>>()?;
+    while words.last() == Some(&0) {
+        words.pop();
+    }
+    Some(words)
 }
 
 #[cfg(test)]
@@ -166,6 +187,55 @@ mod tests {
         assert_eq!(
             fs::read_to_string(root.join("proc/irq/10/smp_affinity_list")).unwrap(),
             "0-1\n"
+        );
+    }
+
+    #[test]
+    fn a_restart_leaves_a_padded_mask_unwritten() {
+        // Kills a string compare: the kernel pads the mask `3` to the CPU
+        // count, in 32-bit groups above 32 CPUs.
+        let (_dir, root) = fake_root();
+        fs::write(root.join("proc/irq/default_smp_affinity"), "0003\n").unwrap();
+        fs::write(
+            root.join("sys/devices/virtual/workqueue/cpumask"),
+            "00000000,00000003\n",
+        )
+        .unwrap();
+        let layout = CpuLayout::with_core_count(8);
+
+        steer_kernel_work(&layout, &root);
+
+        assert_eq!(
+            fs::read_to_string(root.join("proc/irq/default_smp_affinity")).unwrap(),
+            "0003\n"
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("sys/devices/virtual/workqueue/cpumask")).unwrap(),
+            "00000000,00000003\n"
+        );
+    }
+
+    #[test]
+    fn a_padded_different_mask_is_rewritten() {
+        // Kills comparing only the low word, or taking any mask as already set.
+        let (_dir, root) = fake_root();
+        fs::write(
+            root.join("proc/irq/default_smp_affinity"),
+            "00000001,00000003\n",
+        )
+        .unwrap();
+        fs::write(root.join("sys/devices/virtual/workqueue/cpumask"), "000f\n").unwrap();
+        let layout = CpuLayout::with_core_count(8);
+
+        steer_kernel_work(&layout, &root);
+
+        assert_eq!(
+            fs::read_to_string(root.join("proc/irq/default_smp_affinity")).unwrap(),
+            "3"
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("sys/devices/virtual/workqueue/cpumask")).unwrap(),
+            "3"
         );
     }
 
