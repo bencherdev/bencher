@@ -175,26 +175,45 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
     }
     let mut host = crate::jail::HostPreparation::new();
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
-    let mut effects: VecDeque<Effect> =
-        ChannelStateMachine::initial_effects().into_iter().collect();
     let mut ws: Option<Arc<Mutex<JobChannel>>> = None;
 
+    drive(&mut sm, crate::signal::stop_requested, |effect| {
+        execute_effect(effect, config, channel_url, key, &mut ws, &mut host)
+    })
+}
+
+/// Executes the machine's effects and feeds their inputs back until it exits.
+///
+/// A stop reaches the machine once, ahead of the next effect, which still runs
+/// unless the machine exits first, so a running Job's result can go out.
+#[expect(clippy::print_stdout, reason = "runner CLI status output")]
+fn drive<S, F>(sm: &mut ChannelStateMachine, stopped: S, mut execute: F) -> Result<(), UpError>
+where
+    S: Fn() -> bool,
+    F: FnMut(Effect) -> EffectResult,
+{
+    let mut effects: VecDeque<Effect> =
+        ChannelStateMachine::initial_effects().into_iter().collect();
+    let mut stop_fed = false;
     while let Some(effect) = effects.pop_front() {
-        if crate::signal::stop_requested() {
+        if !stop_fed && stopped() {
+            stop_fed = true;
             println!("Shutdown signal received, exiting...");
-            effects.clear();
-            effects.extend(sm.step(Input::Shutdown));
+            effects.push_front(effect);
+            for shutdown in sm.step(Input::Shutdown).into_iter().rev() {
+                effects.push_front(shutdown);
+            }
             continue;
         }
 
-        match execute_effect(effect, config, channel_url, key, &mut ws, &mut host) {
+        match execute(effect) {
             EffectResult::Continue => {},
             EffectResult::Input(input) => {
                 effects.clear();
                 effects.extend(sm.step(input));
             },
             EffectResult::Exit => {
-                return if crate::signal::stop_requested() {
+                return if stopped() {
                     Err(UpError::Shutdown)
                 } else {
                     Ok(())
@@ -577,6 +596,8 @@ fn file_checksum(path: &std::path::Path) -> Result<bencher_valid::Sha256, SelfCh
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
     use super::*;
 
     #[test]
@@ -646,5 +667,69 @@ mod tests {
         .unwrap();
         assert_eq!(metadata.channel, Some(bencher_valid::UpdateChannel::Canary));
         assert_eq!(metadata.checksum, Some(checksum));
+    }
+
+    // --- drive ---
+
+    #[test]
+    fn a_stop_during_a_job_still_sends_its_result() {
+        // Prevents the stop replacing the Job's result with an exit, which
+        // leaves the server to find out only when the Job's heartbeat times out.
+        let stop = AtomicBool::new(false);
+        let mut sm = ChannelStateMachine::new(30, None);
+        let mut job = Some(state_machine::test_claimed_job());
+        let job_uuid = state_machine::test_claimed_job().uuid;
+        let mut sent = Vec::new();
+        let mut steps = 0;
+        let checks = std::cell::Cell::new(0);
+
+        let stopped = || {
+            // Bounded too, so a driver that loops without running an effect fails here.
+            checks.set(checks.get() + 1);
+            assert!(
+                checks.get() < 100,
+                "the driver never exited, checking for a stop"
+            );
+            stop.load(Ordering::SeqCst)
+        };
+        let result = drive(&mut sm, stopped, |effect| {
+            steps += 1;
+            assert!(steps < 100, "the driver never exited, sent: {sent:?}");
+            match effect {
+                Effect::Connect => EffectResult::Input(Input::Connected),
+                Effect::WaitForJob(_) => EffectResult::Input(Input::Message(
+                    job.take().map_or(ServerMessage::NoJob, ServerMessage::Job),
+                )),
+                Effect::ExecuteJob(_) => {
+                    // The runner is stopped mid-Job, which ends the Job.
+                    stop.store(true, Ordering::SeqCst);
+                    EffectResult::Input(Input::JobFinished(
+                        state_machine::JobFinishResult::Failed {
+                            error: "the runner stopped".to_owned(),
+                            results: Vec::new(),
+                        },
+                    ))
+                },
+                Effect::Send(msg) => {
+                    sent.push(msg);
+                    EffectResult::Continue
+                },
+                Effect::Receive(_) => EffectResult::Input(Input::Message(ServerMessage::Ack {
+                    job: Some(job_uuid),
+                })),
+                Effect::Exit => EffectResult::Exit,
+                Effect::SleepBeforeReconnect(_)
+                | Effect::Close
+                | Effect::ReportOutcome(_)
+                | Effect::Log(..)
+                | Effect::SelfUpdate { .. } => EffectResult::Continue,
+            }
+        });
+
+        assert!(matches!(result, Err(UpError::Shutdown)), "{result:?}");
+        assert!(
+            matches!(sent.last(), Some(RunnerMessage::Failed { error, .. }) if error == "the runner stopped"),
+            "the Job's result is the last message sent: {sent:?}"
+        );
     }
 }
