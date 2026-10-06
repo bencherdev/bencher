@@ -73,10 +73,10 @@ pub fn execute_job(
 
     // Execute benchmark iterations — pass cancel_flag so the vsock poll loop
     // can abort early when the server sends a cancellation message.
-    let mut results = Vec::with_capacity(iter_count);
-    let mut last_exit_code = 0;
-    let mut last_stdout_preview = None;
-    let mut failed_error = None;
+    let mut iterations = Iterations {
+        results: Vec::with_capacity(iter_count),
+        ..Iterations::default()
+    };
 
     let build_time = job_config.build_time;
     let file_size = job_config.file_size;
@@ -106,20 +106,21 @@ pub fn execute_job(
         let elapsed = start.map(|s| s.elapsed());
         match result {
             Ok(output) => {
-                last_exit_code = output.exit_code;
+                iterations.last_exit_code = output.exit_code;
                 if !output.stdout.is_empty() {
-                    last_stdout_preview = Some(output.stdout.clone());
+                    iterations.last_stdout_preview = Some(output.stdout.clone());
                 }
                 let failed = output.exit_code != 0 && !allow_failure;
-                results.push(output_to_iteration(
+                iterations.results.push(output_to_iteration(
                     output,
                     elapsed,
                     file_size,
                     benchmark_name.as_ref(),
                 ));
                 if failed {
-                    failed_error = Some(format!(
-                        "Benchmark exited with non-zero exit code: {last_exit_code}"
+                    iterations.failure = Some(format!(
+                        "Benchmark exited with non-zero exit code: {}",
+                        iterations.last_exit_code
                     ));
                     break;
                 }
@@ -131,7 +132,7 @@ pub fn execute_job(
                 );
             },
             Err(e) => {
-                failed_error = Some(e.to_string());
+                iterations.failure = Some(e.to_string());
                 break;
             },
         }
@@ -143,22 +144,44 @@ pub fn execute_job(
         eprintln!("Warning: heartbeat thread panicked: {panic:?}");
     }
 
-    // Failure takes priority over cancellation (matches original behavior:
-    // if the benchmark failed *and* a cancel arrived, we report failure).
-    if let Some(error) = failed_error {
-        return JobFinishResult::Failed { error, results };
-    }
-
-    // Check if canceled
-    if cancel_flag.load(Ordering::SeqCst) {
+    let canceled = cancel_flag.load(Ordering::SeqCst);
+    if canceled {
         println!("Job {} was canceled by server", job.uuid);
-        return JobFinishResult::Canceled;
     }
+    iterations.finish(canceled)
+}
 
-    JobFinishResult::Completed {
-        exit_code: last_exit_code,
-        output: last_stdout_preview,
-        results,
+/// What a Job's iterations leave behind for its outcome.
+#[derive(Default)]
+struct Iterations {
+    results: Vec<JsonIterationOutput>,
+    last_exit_code: i32,
+    last_stdout_preview: Option<String>,
+    /// Why the iterations stopped early.
+    failure: Option<String>,
+}
+
+impl Iterations {
+    /// A cancel outranks a failure: the server sends one only for a Job it has
+    /// already ended, and discards any other outcome as late.
+    fn finish(self, canceled: bool) -> JobFinishResult {
+        let Self {
+            results,
+            last_exit_code,
+            last_stdout_preview,
+            failure,
+        } = self;
+        if canceled {
+            return JobFinishResult::Canceled;
+        }
+        if let Some(error) = failure {
+            return JobFinishResult::Failed { error, results };
+        }
+        JobFinishResult::Completed {
+            exit_code: last_exit_code,
+            output: last_stdout_preview,
+            results,
+        }
     }
 }
 
@@ -478,6 +501,7 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use crate::units::mib_to_bytes;
+    use crate::{ExecutionError, RunnerError};
     use bencher_json::{Cpu, Disk, Memory};
 
     /// Construct a `JsonClaimedJob` for testing by building the JSON
@@ -892,6 +916,45 @@ mod tests {
     #[test]
     fn sandbox_none_allowed_with_flag() {
         check_sandbox_allowed(None, true).unwrap();
+    }
+
+    // --- Iterations::finish ---
+
+    #[test]
+    fn a_failure_without_a_cancel_ends_the_job_failed() {
+        // Prevents the cancel check passing every Job, which reports a Job
+        // that failed on its own as canceled.
+        let iterations = Iterations {
+            failure: Some("Benchmark exited with non-zero exit code: 1".to_owned()),
+            ..Iterations::default()
+        };
+
+        let outcome = iterations.finish(false);
+
+        assert!(
+            matches!(&outcome, JobFinishResult::Failed { error, .. } if error.ends_with("exit code: 1")),
+            "a Job no one canceled ends with its own failure, got: {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn a_cancel_that_ends_an_iteration_ends_the_job_canceled() {
+        // Prevents the error a server cancel leaves in result collection
+        // outranking the cancel, which reports a canceled Job as failed.
+        let iterations = Iterations {
+            failure: Some(
+                RunnerError::from(ExecutionError::Canceled("job was canceled".to_owned()))
+                    .to_string(),
+            ),
+            ..Iterations::default()
+        };
+
+        let outcome = iterations.finish(true);
+
+        assert!(
+            matches!(outcome, JobFinishResult::Canceled),
+            "a Job the server canceled ends canceled, got: {outcome:?}"
+        );
     }
 
     // --- build_config_from_job: build_time / file_size ---
