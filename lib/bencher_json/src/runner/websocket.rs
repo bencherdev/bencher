@@ -1,4 +1,4 @@
-use bencher_valid::{Architecture, OperatingSystem, PollTimeout, Sha256, UpdateChannel};
+use bencher_valid::{Architecture, DateTime, OperatingSystem, PollTimeout, Sha256, UpdateChannel};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -7,19 +7,19 @@ use url::Url;
 
 use super::job::{JobUuid, JsonClaimedJob, JsonIterationOutput};
 
+/// The most pause reasons the server reads from one `Paused` message.
+pub const MAX_PAUSE_REASONS: usize = 16;
+/// The most bytes the server keeps of any one string a runner reports.
+pub const MAX_REPORT_STRING_LEN: usize = 64;
+
 /// Messages sent from the runner to the server over the WebSocket channel.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case")]
 pub enum RunnerMessage {
     /// Runner is idle, requesting a job.
-    Ready {
-        /// Maximum time to wait for a job (long-poll), in seconds (1-900)
-        #[serde(skip_serializing_if = "Option::is_none")]
-        poll_timeout: Option<PollTimeout>,
-        /// Runner metadata (version, architecture). When present, enables auto-update.
-        #[serde(skip_serializing_if = "Option::is_none")]
-        runner: Option<JsonRunnerMetadata>,
-    },
+    Ready(JsonReady),
+    /// Runner is idle but takes no job until every pause reason clears.
+    Paused(JsonPaused),
     /// Job setup complete, benchmark execution starting.
     Running,
     /// Periodic heartbeat, keeps job alive and triggers billing.
@@ -45,6 +45,107 @@ pub enum RunnerMessage {
         /// The job this cancellation belongs to (enables retry on reconnect)
         job: JobUuid,
     },
+}
+
+/// The body of `Ready`, which `Paused` carries as well.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct JsonReady {
+    /// Maximum time to wait for a job (long-poll), in seconds (1-900)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub poll_timeout: Option<PollTimeout>,
+    /// Runner metadata (version, architecture). When present, enables auto-update.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub runner: Option<JsonRunnerMetadata>,
+}
+
+impl JsonReady {
+    pub fn new(poll_timeout: Option<PollTimeout>, runner: Option<JsonRunnerMetadata>) -> Self {
+        Self {
+            poll_timeout,
+            runner,
+        }
+    }
+}
+
+/// The body of `Paused`: why the runner takes no job, and everything `Ready` carries.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonPaused {
+    /// Why the runner is paused, never empty
+    pub reasons: Vec<PauseReason>,
+    /// When this pause began, by the runner's clock
+    pub since: DateTime,
+    #[serde(flatten)]
+    pub ready: JsonReady,
+}
+
+/// Why a runner is paused.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum PauseReason {
+    /// An md array is syncing, rebuilding, reshaping, or scrubbing.
+    Raid {
+        /// The array, such as `md0`
+        array: String,
+        /// The array's `sync_action`
+        action: MdSyncAction,
+        /// Sectors done, from `sync_completed`
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        done: Option<u64>,
+        /// Sectors in total, from `sync_completed`
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        total: Option<u64>,
+        /// KiB per second, from `sync_speed`
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        speed: Option<u64>,
+    },
+    /// Host maintenance is running or about to run.
+    Maintenance {
+        /// The maintenance marker is present
+        marker: bool,
+        /// Another process holds the job lock
+        lock: bool,
+    },
+    /// A reason this server does not know.
+    #[serde(other)]
+    Other,
+}
+
+/// An md array's `sync_action`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MdSyncAction {
+    Resync,
+    Recover,
+    Check,
+    Repair,
+    Reshape,
+    Frozen,
+    Idle,
+    /// An action this server does not know.
+    #[serde(untagged)]
+    Other(String),
+}
+
+impl PauseReason {
+    /// Cap every string the runner sent.
+    pub fn cap(&mut self) {
+        if let Self::Raid { array, action, .. } = self {
+            cap_string(array);
+            action.cap();
+        }
+    }
+}
+
+impl MdSyncAction {
+    pub(crate) fn cap(&mut self) {
+        if let Self::Other(action) = self {
+            cap_string(action);
+        }
+    }
+}
+
+pub(crate) fn cap_string(string: &mut String) {
+    string.truncate(string.floor_char_boundary(MAX_REPORT_STRING_LEN));
 }
 
 /// Runner metadata sent with `Ready` messages.
@@ -132,27 +233,33 @@ mod tests {
         env!("CARGO_PKG_VERSION").to_owned()
     }
 
+    // 06:23 UTC, 11 July 2024
+    fn test_since() -> DateTime {
+        DateTime::try_from(1_720_678_980).unwrap()
+    }
+
+    fn linux_metadata(arch: Architecture) -> JsonRunnerMetadata {
+        JsonRunnerMetadata {
+            os: OperatingSystem::Linux,
+            arch,
+            version: test_version(),
+            channel: None,
+            checksum: None,
+        }
+    }
+
     #[test]
     fn ready_no_timeout_roundtrip() {
-        let msg = RunnerMessage::Ready {
-            poll_timeout: None,
-            runner: Some(JsonRunnerMetadata {
-                os: OperatingSystem::Linux,
-                arch: Architecture::X86_64,
-                version: test_version(),
-                channel: None,
-                checksum: None,
-            }),
-        };
+        let msg = RunnerMessage::Ready(JsonReady::new(
+            None,
+            Some(linux_metadata(Architecture::X86_64)),
+        ));
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Ready {
-                poll_timeout,
-                runner,
-            } => {
-                assert!(poll_timeout.is_none());
-                let runner = runner.unwrap();
+            RunnerMessage::Ready(ready) => {
+                assert!(ready.poll_timeout.is_none());
+                let runner = ready.runner.unwrap();
                 assert_eq!(runner.os, OperatingSystem::Linux);
                 assert_eq!(runner.arch, Architecture::X86_64);
                 assert_eq!(runner.version, test_version());
@@ -165,25 +272,16 @@ mod tests {
 
     #[test]
     fn ready_with_timeout_roundtrip() {
-        let msg = RunnerMessage::Ready {
-            poll_timeout: Some(PollTimeout::try_from(30).unwrap()),
-            runner: Some(JsonRunnerMetadata {
-                os: OperatingSystem::Linux,
-                arch: Architecture::Aarch64,
-                version: test_version(),
-                channel: None,
-                checksum: None,
-            }),
-        };
+        let msg = RunnerMessage::Ready(JsonReady::new(
+            Some(PollTimeout::try_from(30).unwrap()),
+            Some(linux_metadata(Architecture::Aarch64)),
+        ));
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Ready {
-                poll_timeout,
-                runner,
-            } => {
-                assert_eq!(u32::from(poll_timeout.unwrap()), 30);
-                let runner = runner.unwrap();
+            RunnerMessage::Ready(ready) => {
+                assert_eq!(u32::from(ready.poll_timeout.unwrap()), 30);
+                let runner = ready.runner.unwrap();
                 assert_eq!(runner.os, OperatingSystem::Linux);
                 assert_eq!(runner.arch, Architecture::Aarch64);
                 assert_eq!(runner.version, test_version());
@@ -199,21 +297,19 @@ mod tests {
         let checksum: Sha256 = "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
             .parse()
             .unwrap();
-        let msg = RunnerMessage::Ready {
-            poll_timeout: None,
-            runner: Some(JsonRunnerMetadata {
-                os: OperatingSystem::Linux,
-                arch: Architecture::X86_64,
-                version: test_version(),
+        let msg = RunnerMessage::Ready(JsonReady::new(
+            None,
+            Some(JsonRunnerMetadata {
                 channel: Some(UpdateChannel::Canary),
                 checksum: Some(checksum.clone()),
+                ..linux_metadata(Architecture::X86_64)
             }),
-        };
+        ));
         let json = serde_json::to_string(&msg).unwrap();
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Ready { runner, .. } => {
-                let runner = runner.unwrap();
+            RunnerMessage::Ready(ready) => {
+                let runner = ready.runner.unwrap();
                 assert_eq!(runner.channel, Some(UpdateChannel::Canary));
                 assert_eq!(runner.checksum, Some(checksum));
             },
@@ -231,8 +327,8 @@ mod tests {
         );
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Ready { runner, .. } => {
-                let runner = runner.unwrap();
+            RunnerMessage::Ready(ready) => {
+                let runner = ready.runner.unwrap();
                 assert_eq!(runner.version, test_version());
                 assert!(runner.channel.is_none());
                 assert!(runner.checksum.is_none());
@@ -245,16 +341,10 @@ mod tests {
     fn ready_stable_metadata_wire_format_is_legacy() {
         // A stable runner without a checksum must serialize exactly like a
         // pre-channel runner: no channel or checksum fields on the wire.
-        let msg = RunnerMessage::Ready {
-            poll_timeout: None,
-            runner: Some(JsonRunnerMetadata {
-                os: OperatingSystem::Linux,
-                arch: Architecture::X86_64,
-                version: test_version(),
-                channel: None,
-                checksum: None,
-            }),
-        };
+        let msg = RunnerMessage::Ready(JsonReady::new(
+            None,
+            Some(linux_metadata(Architecture::X86_64)),
+        ));
         let json = serde_json::to_string(&msg).unwrap();
         assert!(!json.contains("channel"), "unexpected channel in {json}");
         assert!(!json.contains("checksum"), "unexpected checksum in {json}");
@@ -262,22 +352,115 @@ mod tests {
 
     #[test]
     fn ready_no_runner_metadata_roundtrip() {
-        let msg = RunnerMessage::Ready {
-            poll_timeout: None,
-            runner: None,
-        };
+        let msg = RunnerMessage::Ready(JsonReady::default());
         let json = serde_json::to_string(&msg).unwrap();
         assert_eq!(json, r#"{"event":"ready"}"#);
         let deserialized: RunnerMessage = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RunnerMessage::Ready {
-                poll_timeout,
-                runner,
-            } => {
-                assert!(poll_timeout.is_none());
-                assert!(runner.is_none());
+            RunnerMessage::Ready(ready) => {
+                assert!(ready.poll_timeout.is_none());
+                assert!(ready.runner.is_none());
             },
             other => panic!("Expected Ready, got {other:?}"),
+        }
+    }
+
+    // The newtype `Ready` must keep the struct variant's wire format, which every deployed runner sends.
+    #[test]
+    fn ready_wire_format_is_unchanged() {
+        let json = r#"{"event":"ready","poll_timeout":55,"runner":{"os":"linux","arch":"x86_64","version":"1.2.3"}}"#;
+        let msg = RunnerMessage::Ready(JsonReady::new(
+            Some(PollTimeout::try_from(55).unwrap()),
+            Some(JsonRunnerMetadata {
+                version: "1.2.3".to_owned(),
+                ..linux_metadata(Architecture::X86_64)
+            }),
+        ));
+        assert_eq!(serde_json::to_string(&msg).unwrap(), json);
+        match serde_json::from_str(json).unwrap() {
+            RunnerMessage::Ready(ready) => {
+                assert_eq!(ready.poll_timeout.map(u32::from), Some(55));
+                assert_eq!(ready.runner.unwrap().version, "1.2.3");
+            },
+            other => panic!("Expected Ready, got {other:?}"),
+        }
+    }
+
+    // `Paused` carries `Ready`'s fields at its top level, beside its own.
+    #[test]
+    fn paused_wire_format_is_pinned() {
+        let json = concat!(
+            r#"{"event":"paused","reasons":["#,
+            r#"{"kind":"raid","array":"md0","action":"check","done":1024,"total":4096,"speed":2048},"#,
+            r#"{"kind":"maintenance","marker":true,"lock":false}"#,
+            r#"],"since":"2024-07-11T06:23:00Z","poll_timeout":55,"#,
+            r#""runner":{"os":"linux","arch":"x86_64","version":"1.2.3"}}"#,
+        );
+        let msg = RunnerMessage::Paused(JsonPaused {
+            reasons: vec![
+                PauseReason::Raid {
+                    array: "md0".to_owned(),
+                    action: MdSyncAction::Check,
+                    done: Some(1024),
+                    total: Some(4096),
+                    speed: Some(2048),
+                },
+                PauseReason::Maintenance {
+                    marker: true,
+                    lock: false,
+                },
+            ],
+            since: test_since(),
+            ready: JsonReady::new(
+                Some(PollTimeout::try_from(55).unwrap()),
+                Some(JsonRunnerMetadata {
+                    version: "1.2.3".to_owned(),
+                    ..linux_metadata(Architecture::X86_64)
+                }),
+            ),
+        });
+        assert_eq!(serde_json::to_string(&msg).unwrap(), json);
+        match serde_json::from_str(json).unwrap() {
+            RunnerMessage::Paused(paused) => {
+                assert_eq!(paused.reasons.len(), 2);
+                assert_eq!(paused.since, test_since());
+                assert_eq!(paused.ready.poll_timeout.map(u32::from), Some(55));
+                assert_eq!(paused.ready.runner.unwrap().version, "1.2.3");
+            },
+            other => panic!("Expected Paused, got {other:?}"),
+        }
+    }
+
+    // A reason kind from a newer runner must not fail the whole message.
+    #[test]
+    fn unknown_pause_reason_is_other() {
+        let json = r#"{"event":"paused","reasons":[{"kind":"thermal","zone":3}],"since":"2024-07-11T06:23:00Z"}"#;
+        match serde_json::from_str(json).unwrap() {
+            RunnerMessage::Paused(paused) => {
+                assert_eq!(paused.reasons, vec![PauseReason::Other]);
+            },
+            other => panic!("Expected Paused, got {other:?}"),
+        }
+    }
+
+    // A sync action from a newer kernel must not fail the whole message.
+    #[test]
+    fn unknown_sync_action_is_other() {
+        let json = r#"{"event":"paused","reasons":[{"kind":"raid","array":"md1","action":"reassemble"}],"since":"2024-07-11T06:23:00Z"}"#;
+        match serde_json::from_str(json).unwrap() {
+            RunnerMessage::Paused(paused) => {
+                assert_eq!(
+                    paused.reasons,
+                    vec![PauseReason::Raid {
+                        array: "md1".to_owned(),
+                        action: MdSyncAction::Other("reassemble".to_owned()),
+                        done: None,
+                        total: None,
+                        speed: None,
+                    }]
+                );
+            },
+            other => panic!("Expected Paused, got {other:?}"),
         }
     }
 

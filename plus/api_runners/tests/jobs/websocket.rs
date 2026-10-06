@@ -6,10 +6,10 @@ use super::common::{
     send_runner_msg as send_msg, set_job_runner_id, set_job_status, ws_url,
 };
 use api_runners::{RunnerMessage, ServerMessage};
-use bencher_api_tests::{TestProject, TestServer, TestUser};
+use bencher_api_tests::{LogCapture, TestProject, TestServer, TestUser};
 use bencher_json::{
     BranchName, JobStatus, JobUuid, JsonRunnerKey, PlanLevel, PollTimeout, RunnerUuid,
-    runner::JsonIterationOutput,
+    runner::{JsonIterationOutput, JsonPaused, JsonReady, PauseReason},
 };
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -50,10 +50,10 @@ pub(super) async fn setup_claimed_job(
 
     // Connect channel, send Ready, receive Job
     let mut ws = connect_channel(server, runner.uuid, &runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     match response {
@@ -108,10 +108,10 @@ async fn complete_job(server: &TestServer, admin: &TestUser, project: &TestProje
     associate_runner_spec(server, runner_id, spec_id);
 
     let mut ws = connect_channel(server, runner.uuid, &runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     assert!(
@@ -404,10 +404,10 @@ async fn channel_completed_records_job_duration() {
 
     // Connect channel, send Ready, receive Job
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     assert!(matches!(response, ServerMessage::Job(_)));
@@ -725,10 +725,10 @@ async fn channel_lifecycle_with_full_spec() {
 
     // Connect channel, send Ready, receive Job
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     let claimed = match response {
@@ -1543,10 +1543,10 @@ async fn channel_job_timeout() {
 
     // Connect channel, send Ready, receive Job
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     match response {
@@ -1620,10 +1620,10 @@ async fn channel_key_rotation_invalidates_old_key() {
 
     // Open channel with original key, claim job, send Running
     let mut ws = connect_channel(&server, runner.uuid, &original_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     assert!(matches!(response, ServerMessage::Job(_)));
@@ -1676,10 +1676,10 @@ async fn channel_key_rotation_invalidates_old_key() {
     // But first we need to send Ready (the channel starts in Idle state).
     // Since the job is already Running, sending Ready will poll for a new Pending job.
     // There are no more pending jobs, so we'll get NoJob. That's fine — it proves auth works.
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(1).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(1).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let resp = recv_msg(&mut ws).await;
     assert!(
@@ -2068,10 +2068,10 @@ async fn channel_heartbeat_detects_job_timeout() {
 
     // Connect channel, send Ready, receive Job
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     assert!(matches!(response, ServerMessage::Job(_)));
@@ -2147,10 +2147,10 @@ async fn channel_heartbeat_no_false_timeout() {
 
     // Connect channel, send Ready, receive Job
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     assert!(matches!(response, ServerMessage::Job(_)));
@@ -2213,10 +2213,10 @@ async fn channel_heartbeat_timeout_counts_from_claimed_before_running() {
 
     // Connect channel, send Ready, receive Job
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     assert!(matches!(response, ServerMessage::Job(_)));
@@ -2282,10 +2282,10 @@ async fn channel_multi_job_cycle() {
 
     // --- Job 1 ---
     // Send Ready, receive Job
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     let first_job_uuid = match response {
@@ -2689,10 +2689,7 @@ async fn channel_ready_no_poll_timeout() {
 
     // Connect channel, send Ready with poll_timeout: None
     let mut ws = connect_channel(&server, runner.uuid, &runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: None,
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(None, Some(runner_metadata())));
     send_msg(&mut ws, &ready).await;
     let response = recv_msg(&mut ws).await;
     match response {
@@ -2813,10 +2810,10 @@ async fn channel_concurrent_connections_same_runner() {
     let mut ws2 = connect_channel(&server, runner.uuid, &runner_key).await;
 
     // Both send Ready with a short poll timeout
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(2).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(2).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws1, &ready).await;
     send_msg(&mut ws2, &ready).await;
 
@@ -2919,16 +2916,16 @@ async fn non_linux_version_mismatch_skips_update() {
     let runner = create_runner(&server, &admin.token, "Runner version-mismatch").await;
 
     let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(bencher_json::runner::JsonRunnerMetadata {
             os: bencher_json::OperatingSystem::Macos,
             arch: bencher_json::Architecture::Aarch64,
             version: "0.0.0".to_owned(),
             channel: None,
             checksum: None,
         }),
-    };
+    ));
     send_msg(&mut ws, &ready).await;
 
     let response = recv_msg(&mut ws).await;
@@ -2948,10 +2945,10 @@ async fn no_metadata_skips_update() {
     let runner = create_runner(&server, &admin.token, "Runner no-metadata").await;
 
     let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: None,
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        None,
+    ));
     send_msg(&mut ws, &ready).await;
 
     let response = recv_msg(&mut ws).await;
@@ -2971,10 +2968,10 @@ async fn stable_channel_version_match_no_update() {
     let runner = create_runner(&server, &admin.token, "Runner stable-match").await;
 
     let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
 
     let response = recv_msg(&mut ws).await;
@@ -2996,13 +2993,13 @@ async fn stable_channel_checksum_fetch_failure_proceeds() {
     let runner = create_runner(&server, &admin.token, "Runner stable-fetch").await;
 
     let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(bencher_json::runner::JsonRunnerMetadata {
             version: "0.0.0".to_owned(),
             ..runner_metadata()
         }),
-    };
+    ));
     send_msg(&mut ws, &ready).await;
 
     let response = recv_msg(&mut ws).await;
@@ -3028,14 +3025,14 @@ async fn canary_channel_checksum_fetch_failure_proceeds() {
             .parse()
             .expect("Invalid checksum");
     let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-        runner: Some(bencher_json::runner::JsonRunnerMetadata {
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+        Some(bencher_json::runner::JsonRunnerMetadata {
             channel: Some(bencher_json::UpdateChannel::Canary),
             checksum: Some(checksum),
             ..runner_metadata()
         }),
-    };
+    ));
     send_msg(&mut ws, &ready).await;
 
     let response = recv_msg(&mut ws).await;
@@ -3043,4 +3040,229 @@ async fn canary_channel_checksum_fetch_failure_proceeds() {
         matches!(response, ServerMessage::NoJob),
         "Expected NoJob, got: {response:?}"
     );
+}
+
+// =============================================================================
+// Pause Tests
+// =============================================================================
+
+/// A paused runner holds its poll and gets `NoJob` while a matching job waits,
+/// and its next `Ready` claims that job on the same channel.
+#[tokio::test]
+async fn channel_paused_claims_no_job() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-paused@example.com").await;
+    let org = server.create_org(&admin, "Ws paused").await;
+    let project = server.create_project(&admin, &org, "Ws paused proj").await;
+
+    let runner = create_runner(&server, &admin.token, "Runner paused").await;
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+    associate_runner_spec(&server, get_runner_id(&server, runner.uuid), spec_id);
+
+    let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
+    let sent = std::time::Instant::now();
+    send_msg(&mut ws, &paused_msg(1, Some(runner_metadata()))).await;
+    let response = recv_msg(&mut ws).await;
+    assert!(
+        matches!(response, ServerMessage::NoJob),
+        "Expected NoJob, got: {response:?}"
+    );
+    assert!(
+        sent.elapsed() >= std::time::Duration::from_secs(1),
+        "the pause holds the whole poll, answered after {:?}",
+        sent.elapsed()
+    );
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Pending);
+
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Ready(JsonReady::new(
+            Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+            Some(runner_metadata()),
+        )),
+    )
+    .await;
+    let response = recv_msg(&mut ws).await;
+    assert!(
+        matches!(&response, ServerMessage::Job(job) if job.uuid == job_uuid),
+        "Expected the pending job, got: {response:?}"
+    );
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// A pause runs the same update check as `Ready`: a stale stable runner gets `Update`.
+#[tokio::test]
+async fn channel_paused_stale_runner_gets_update() {
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("Failed to bind the checksum server");
+    let base_url: url::Url = format!(
+        "http://{}/",
+        listener.local_addr().expect("Failed to read the address")
+    )
+    .parse()
+    .expect("Invalid base URL");
+    let server = TestServer::new_with_runner_update_base_url(base_url).await;
+    let admin = server.signup("Admin", "ws-paused-update@example.com").await;
+    let runner = create_runner(&server, &admin.token, "Runner paused update").await;
+
+    let checksum: bencher_json::Sha256 =
+        "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+            .parse()
+            .expect("Invalid checksum");
+    let stale = bencher_json::runner::JsonRunnerMetadata {
+        version: "0.0.0".to_owned(),
+        ..runner_metadata()
+    };
+    let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
+    let (fetched, response) = tokio::join!(
+        tokio::time::timeout(
+            std::time::Duration::from_secs(10),
+            serve_checksum(&listener, &checksum)
+        ),
+        async {
+            send_msg(&mut ws, &paused_msg(1, Some(stale))).await;
+            recv_msg(&mut ws).await
+        }
+    );
+    match response {
+        ServerMessage::Update {
+            version,
+            checksum: sent,
+            ..
+        } => {
+            assert_eq!(version, bencher_json::BENCHER_API_VERSION);
+            assert_eq!(sent, checksum);
+        },
+        ServerMessage::Ack { .. }
+        | ServerMessage::Job(_)
+        | ServerMessage::NoJob
+        | ServerMessage::Cancel => panic!("Expected Update, got: {response:?}"),
+    }
+    fetched.expect("the server never fetched the checksum");
+}
+
+/// A pause whose poll outlasts the heartbeat timeout still ends in `NoJob`, and the channel
+/// stays open for the next pause and `Ready`.
+#[tokio::test]
+async fn channel_pause_outlasts_the_heartbeat_timeout() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-paused-long@example.com").await;
+    let runner = create_runner(&server, &admin.token, "Runner paused long").await;
+
+    let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
+    for poll_timeout in [6, 1] {
+        send_msg(&mut ws, &paused_msg(poll_timeout, Some(runner_metadata()))).await;
+        let response = recv_msg(&mut ws).await;
+        assert!(
+            matches!(response, ServerMessage::NoJob),
+            "Expected NoJob after a {poll_timeout} s pause, got: {response:?}"
+        );
+    }
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Ready(JsonReady::new(
+            Some(PollTimeout::try_from(1).expect("Invalid poll timeout")),
+            Some(runner_metadata()),
+        )),
+    )
+    .await;
+    let response = recv_msg(&mut ws).await;
+    assert!(
+        matches!(response, ServerMessage::NoJob),
+        "Expected NoJob, got: {response:?}"
+    );
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
+/// A `Paused` during a job is warned about and acknowledged but does not reset the heartbeat
+/// timeout. Kills dropping `Paused` from the messages that leave the heartbeat alone.
+#[tokio::test]
+async fn channel_paused_during_job_does_not_reset_heartbeat() {
+    let capture = LogCapture::default();
+    let server = TestServer::new_with_log(capture.logger()).await;
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
+        setup_claimed_job(&server, "paused-midjob").await;
+
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
+
+    tokio::time::pause();
+    tokio::time::advance(std::time::Duration::from_secs(4)).await;
+    tokio::time::resume();
+    send_msg(&mut ws, &paused_msg(1, Some(runner_metadata()))).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(
+        matches!(resp, ServerMessage::Ack { job: Some(job) } if job == job_uuid),
+        "Expected Ack for the job, got: {resp:?}"
+    );
+
+    // 6 s after `Running` but 2 s after the pause, so only the 5 s timeout from `Running` has fired.
+    tokio::time::pause();
+    tokio::time::advance(std::time::Duration::from_secs(2)).await;
+    tokio::time::resume();
+    let closed = tokio::time::timeout(std::time::Duration::from_secs(2), ws.next())
+        .await
+        .expect("The pause reset the heartbeat timeout");
+    match closed {
+        None | Some(Ok(Message::Close(_)) | Err(_)) => {},
+        Some(Ok(other)) => {
+            panic!("Expected connection to close from timeout, got: {other:?}");
+        },
+    }
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Unknown);
+    let warnings = capture
+        .lines()
+        .iter()
+        .filter(|line| line.starts_with("Unexpected Ready or Paused message during job execution"))
+        .count();
+    assert_eq!(warnings, 1);
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn paused_msg(
+    poll_timeout: u32,
+    runner: Option<bencher_json::runner::JsonRunnerMetadata>,
+) -> RunnerMessage {
+    RunnerMessage::Paused(JsonPaused {
+        reasons: vec![PauseReason::Maintenance {
+            marker: true,
+            lock: false,
+        }],
+        since: bencher_json::DateTime::now(),
+        ready: JsonReady::new(
+            Some(PollTimeout::try_from(poll_timeout).expect("Invalid poll timeout")),
+            runner,
+        ),
+    })
+}
+
+/// Answer one request on `listener` with `checksum`, as a release's `.sha256` file.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn serve_checksum(listener: &tokio::net::TcpListener, checksum: &bencher_json::Sha256) {
+    use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+
+    let (mut stream, _) = listener.accept().await.expect("Failed to accept");
+    let mut request = Vec::new();
+    let mut buf = [0; 1024];
+    while !request.windows(4).any(|w| w == b"\r\n\r\n") {
+        let read = stream.read(&mut buf).await.expect("Failed to read");
+        assert!(read > 0, "the request ended before its headers did");
+        request.extend_from_slice(buf.get(..read).expect("read past the buffer"));
+    }
+    let body = format!("{checksum}  runner\n");
+    let response = format!(
+        "HTTP/1.1 200 OK\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+        body.len()
+    );
+    stream
+        .write_all(response.as_bytes())
+        .await
+        .expect("Failed to write");
 }

@@ -20,7 +20,7 @@ use bencher_api_tests::{CallbackRequest, TestServer, TestUser};
 use bencher_json::{
     DateTime, JobStatus, JobUuid, JsonClaimedJob, JsonNewCallback, JsonRunnerKey, PollTimeout,
     Priority, ProjectSlug, ReportUuid, RunnerUuid, SpecUuid,
-    runner::{JobCallbackState, JsonRunnerMetadata},
+    runner::{JobCallbackState, JsonReady, JsonRunnerMetadata},
 };
 use bencher_schema::{
     model::runner::{InsertJobCallback, JobId, QueryJobCallback},
@@ -628,10 +628,10 @@ pub async fn claim_via_channel(
     poll_timeout: u32,
 ) -> (WsStream, Option<JsonClaimedJob>) {
     let mut ws = connect_channel_ws(server, runner_uuid, runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(poll_timeout).expect("Invalid poll timeout")),
-        runner: Some(runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(poll_timeout).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ));
     send_runner_msg(&mut ws, &ready).await;
     let response = recv_server_msg(&mut ws).await;
     let job = match response {

@@ -186,6 +186,7 @@ pub enum ApiCounter {
     RunnerDisconnect,
     RunnerSelfUpdateSent(UpdateChannelKind),
     RunnerSelfUpdateCheckFailed(UpdateChannelKind),
+    RunnerPause(PauseReasonKind),
 
     // Callback metrics
     CallbackSubmit(PlanKind),
@@ -265,6 +266,7 @@ impl ApiCounter {
             Self::RunnerLateResultDiscarded => "{result}",
             Self::RunnerDisconnect => "{disconnect}",
             Self::RunnerSelfUpdateSent(_) => "{update}",
+            Self::RunnerPause(_) => "{pause}",
 
             Self::CallbackSubmit(_) | Self::CallbackSkip(_) => "{callback}",
         }
@@ -364,6 +366,7 @@ impl ApiCounter {
             Self::RunnerDisconnect => "runner.disconnect",
             Self::RunnerSelfUpdateSent(_) => "runner.self_update.sent",
             Self::RunnerSelfUpdateCheckFailed(_) => "runner.self_update.check.failed",
+            Self::RunnerPause(_) => "runner.pause",
 
             // Callback metrics
             Self::CallbackSubmit(_) => "callback.submit",
@@ -512,6 +515,7 @@ impl ApiCounter {
             Self::RunnerSelfUpdateCheckFailed(_) => {
                 "Counts the number of runner self-update checksum fetch failures"
             },
+            Self::RunnerPause(_) => "Counts the number of runner pauses that began, by reason",
 
             // Callback metrics
             Self::CallbackSubmit(_) => "Counts the number of callbacks submitted with a run",
@@ -609,6 +613,7 @@ impl ApiCounter {
             Self::ProjectKeyAuthFailed(reason) => vec![reason.into()],
             Self::UserKeyAuthFailed(reason) => vec![reason.into()],
             Self::RunnerJobUpdate(status_kind) => vec![status_kind.into()],
+            Self::RunnerPause(reason_kind) => vec![reason_kind.into()],
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(server_uuid)
             | Self::SelfHostedServerStats(server_uuid) => self_hosted_attributes(server_uuid),
@@ -825,6 +830,33 @@ impl From<UpdateChannelKind> for opentelemetry::KeyValue {
 
 impl UpdateChannelKind {
     const KEY: &str = "update.channel";
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PauseReasonKind {
+    Raid,
+    Maintenance,
+    Other,
+}
+
+impl fmt::Display for PauseReasonKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Raid => write!(f, "raid"),
+            Self::Maintenance => write!(f, "maintenance"),
+            Self::Other => write!(f, "other"),
+        }
+    }
+}
+
+impl From<PauseReasonKind> for opentelemetry::KeyValue {
+    fn from(reason_kind: PauseReasonKind) -> Self {
+        Self::new(PauseReasonKind::KEY, reason_kind.to_string())
+    }
+}
+
+impl PauseReasonKind {
+    const KEY: &str = "pause.reason";
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -39,6 +39,7 @@ impl ApiGauge {
 #[derive(Debug, Clone, Copy)]
 pub enum RunnerStateKind {
     Idle,
+    Paused,
     Executing,
     Updating,
 }
@@ -47,6 +48,7 @@ impl fmt::Display for RunnerStateKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Idle => write!(f, "idle"),
+            Self::Paused => write!(f, "paused"),
             Self::Executing => write!(f, "executing"),
             Self::Updating => write!(f, "updating"),
         }
