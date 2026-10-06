@@ -23,7 +23,10 @@ use bencher_schema::{
     error::{resource_conflict_err, resource_not_found_err},
     model::{
         organization::OrganizationId,
-        runner::{JobId, JobTimeout, QueryJob, RunnerId, UpdateJob},
+        runner::{
+            JobId, JobTimeout, QueryJob, QueryRunner, QueryRunnerStatus, RunnerId, RunnerReport,
+            UpdateJob,
+        },
         spec::QuerySpec,
     },
     schema, write_conn,
@@ -373,6 +376,12 @@ async fn handle_heartbeat(
             job_id,
             &[JobStatus::Claimed, JobStatus::Running, JobStatus::Unknown],
         )?;
+
+        if let Some(runner_id) = job.runner_id
+            && let Err(e) = QueryRunner::record_heartbeat(conn, runner_id, now)
+        {
+            slog::warn!(log, "Failed to record runner heartbeat"; "error" => %e);
+        }
 
         billing
     };
@@ -1445,6 +1454,7 @@ where
                 let runner_msg: RunnerMessage = serde_json::from_str(&text)?;
                 match runner_msg {
                     RunnerMessage::Ready(ready) => {
+                        record_status(log, context, runner_id, RunnerReport::ready(&ready)).await;
                         // Boxed to keep the long-lived `runner_channel` future small;
                         // this runs once per poll cycle, so the allocation is cheap.
                         return Box::pin(handle_ready(
@@ -1459,6 +1469,7 @@ where
                         .await;
                     },
                     RunnerMessage::Paused(paused) => {
+                        record_status(log, context, runner_id, RunnerReport::paused(&paused)).await;
                         return Box::pin(handle_paused(
                             log,
                             &context.runner_update,
@@ -1501,6 +1512,27 @@ where
             },
             Message::Binary(_) | Message::Pong(_) | Message::Frame(_) => {},
         }
+    }
+}
+
+/// Note that the runner is alive and store its status if it changed, without failing the channel.
+async fn record_status(
+    log: &slog::Logger,
+    context: &ApiContext,
+    runner_id: RunnerId,
+    report: RunnerReport,
+) {
+    let now = context.clock.now();
+    let conn = write_conn!(context);
+    if let Err(e) = QueryRunner::record_heartbeat(conn, runner_id, now) {
+        slog::warn!(log, "Failed to record runner heartbeat"; "error" => %e);
+    }
+    match QueryRunnerStatus::record(conn, runner_id, report, now) {
+        Ok(Some(change)) => {
+            slog::info!(log, "Runner status changed"; "availability" => ?change.new.availability, "health" => ?change.new.health.as_ref().map(|health| &health.0.state));
+        },
+        Ok(None) => {},
+        Err(e) => slog::warn!(log, "Failed to record runner status"; "error" => %e),
     }
 }
 

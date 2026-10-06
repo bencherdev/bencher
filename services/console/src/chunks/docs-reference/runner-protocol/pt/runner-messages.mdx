@@ -4,7 +4,7 @@ Mensagens enviadas do Runner para o servidor.
 
 | Event       | Descrição                                         | Payload                                                                 |
 | ----------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
-| `ready`     | O Runner está ocioso e solicitando um Job         | `poll_timeout` opcional (1-900s) e metadados do `runner` (`os`, `arch`, `version`, `channel` de atualização opcional e `checksum` do binário opcional) |
+| `ready`     | O Runner está ocioso e solicitando um Job         | `poll_timeout` opcional (1-900s) e metadados do `runner` (`os`, `arch`, `version`, `channel` de atualização opcional e `checksum` do binário opcional), além da `health` opcional dos discos |
 | `paused`    | O Runner está ocioso, mas não aceita nenhum Job até que seus motivos de pausa sejam resolvidos; o servidor mantém a consulta e responde com `no_job` | `reasons` (cada um com um `kind`: `raid` ou `maintenance`), `since` e todos os campos de `ready` |
 | `running`   | A configuração do Job está concluída e o benchmark está iniciando | Nenhum                                                  |
 | `heartbeat` | Sinal periódico de atividade (cerca de uma vez por segundo) | Nenhum                                                       |

@@ -6,19 +6,26 @@ use serde::{Deserialize, Serialize};
 use crate::spec::SpecUuid;
 
 pub mod callback;
+pub mod health;
 pub mod job;
 pub mod job_status;
+pub mod status;
 pub mod websocket;
 
 pub use callback::{
     CALLBACK_JOB_STATUSES, CallbackContext, CallbackError, JobCallbackState, JsonJobCallback,
     JsonNewCallback,
 };
+pub use health::{
+    HealthFindingKind, HealthState, JsonHealthFinding, JsonMdArray, JsonNvmeHealth,
+    JsonNvmeHealthLog, JsonRunnerHealth, MAX_HEALTH_ITEMS,
+};
 pub use job::{
     DEFAULT_POLL_TIMEOUT, JobUuid, JsonClaimJob, JsonClaimedJob, JsonIterationOutput, JsonJob,
     JsonJobConfig, JsonJobOutput, JsonJobs, JsonNewRunJob, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT,
 };
 pub use job_status::JobStatus;
+pub use status::{JsonRunnerStatus, RunnerAvailability};
 pub use websocket::{
     CloseReason, JsonPaused, JsonReady, JsonRunnerMetadata, MAX_PAUSE_REASONS,
     MAX_REPORT_STRING_LEN, MdSyncAction, PauseReason, RunnerMessage, ServerMessage,
@@ -42,6 +49,8 @@ pub struct JsonRunner {
     pub specs: Vec<SpecUuid>,
     pub archived: Option<DateTime>,
     pub last_heartbeat: Option<DateTime>,
+    /// The runner's status, absent until it first sends `Ready` or `Paused`
+    pub status: Option<JsonRunnerStatus>,
     pub created: DateTime,
     pub modified: DateTime,
 }

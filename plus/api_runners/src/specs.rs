@@ -19,6 +19,7 @@ use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct RunnerSpecsParams {
@@ -89,11 +90,18 @@ pub async fn runner_specs_post(
     body: TypedBody<JsonNewRunnerSpec>,
 ) -> Result<ResponseCreated<JsonRunner>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = post_inner(rqctx.context(), path_params.into_inner(), body.into_inner()).await?;
+    let json = post_inner(
+        &rqctx.log,
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+    )
+    .await?;
     Ok(Post::auth_response_created(json))
 }
 
 async fn post_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: RunnerSpecsParams,
     json_runner_spec: JsonNewRunnerSpec,
@@ -114,7 +122,7 @@ async fn post_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(RunnerSpec, insert))?;
 
-    query_runner.into_json(auth_conn!(context))
+    query_runner.into_json(log, auth_conn!(context))
 }
 
 #[derive(Deserialize, JsonSchema)]

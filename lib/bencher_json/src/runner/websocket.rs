@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "plus")]
 use url::Url;
 
+use super::health::{JsonRunnerHealth, string_schema};
 use super::job::{JobUuid, JsonClaimedJob, JsonIterationOutput};
 
 /// The most pause reasons the server reads from one `Paused` message.
@@ -56,13 +57,25 @@ pub struct JsonReady {
     /// Runner metadata (version, architecture). When present, enables auto-update.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub runner: Option<JsonRunnerMetadata>,
+    /// The host's disk health. When absent, the server keeps the health it last stored.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub health: Option<JsonRunnerHealth>,
 }
 
 impl JsonReady {
     pub fn new(poll_timeout: Option<PollTimeout>, runner: Option<JsonRunnerMetadata>) -> Self {
+        Self::new_with_health(poll_timeout, runner, None)
+    }
+
+    pub fn new_with_health(
+        poll_timeout: Option<PollTimeout>,
+        runner: Option<JsonRunnerMetadata>,
+        health: Option<JsonRunnerHealth>,
+    ) -> Self {
         Self {
             poll_timeout,
             runner,
+            health,
         }
     }
 }
@@ -80,6 +93,7 @@ pub struct JsonPaused {
 
 /// Why a runner is paused.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum PauseReason {
     /// An md array is syncing, rebuilding, reshaping, or scrubbing.
@@ -125,6 +139,8 @@ pub enum MdSyncAction {
     #[serde(untagged)]
     Other(String),
 }
+
+string_schema!(MdSyncAction);
 
 impl PauseReason {
     /// Cap every string the runner sent.

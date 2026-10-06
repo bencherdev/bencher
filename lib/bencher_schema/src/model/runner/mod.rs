@@ -3,8 +3,12 @@ use std::string::ToString as _;
 use bencher_json::{
     DateTime, JsonRunner, JsonUpdateRunner, ResourceName, RunnerKeyHash, RunnerSlug, SpecUuid,
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    result::QueryResult,
+};
 use dropshot::HttpError;
+use slog::Logger;
 
 pub use bencher_json::{JobStatus, JobUuid, RunnerUuid};
 
@@ -18,10 +22,14 @@ use crate::{
     schema::{self, runner as runner_table},
 };
 
+/// How often, at most, a runner's `last_heartbeat` is written.
+const LAST_HEARTBEAT_INTERVAL_SECS: i64 = 300;
+
 pub mod job;
 pub mod job_callback;
 pub mod runner_spec;
 mod source_ip;
+pub mod status;
 
 pub use job::{
     InsertJob, JobId, JobTimeout, PendingInsertJob, QueryJob, UpdateJob, in_flight_jobs,
@@ -32,6 +40,7 @@ pub use job_callback::{
 };
 pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};
 pub use source_ip::SourceIp;
+pub use status::{QueryRunnerStatus, RunnerReport, StatusChange};
 
 crate::macros::typed_id::typed_id!(RunnerId);
 
@@ -61,12 +70,20 @@ impl QueryRunner {
         self.archived.is_some()
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonRunner, HttpError> {
+    pub fn into_json(self, log: &Logger, conn: &mut DbConnection) -> Result<JsonRunner, HttpError> {
         let spec_ids = QueryRunnerSpec::spec_ids_for_runner(conn, self.id)?;
         let specs: Vec<SpecUuid> = spec_ids
             .into_iter()
             .map(|spec_id| QuerySpec::get(conn, spec_id).map(|s| s.uuid))
             .collect::<Result<_, _>>()?;
+        // An unreadable status shows as none, so the runner and the runner list still load.
+        let status = QueryRunnerStatus::get(conn, self.id)
+            .inspect_err(|e| {
+                slog::warn!(log, "Failed to read runner status"; "runner" => %self.uuid, "error" => %e);
+            })
+            .ok()
+            .flatten()
+            .map(QueryRunnerStatus::into_json);
         Ok(JsonRunner {
             uuid: self.uuid,
             name: self.name,
@@ -74,9 +91,30 @@ impl QueryRunner {
             specs,
             archived: self.archived,
             last_heartbeat: self.last_heartbeat,
+            status,
             created: self.created,
             modified: self.modified,
         })
+    }
+
+    /// Write `now` as the runner's `last_heartbeat`, unless it was written in the last five minutes.
+    pub fn record_heartbeat(
+        conn: &mut DbConnection,
+        runner_id: RunnerId,
+        now: DateTime,
+    ) -> QueryResult<usize> {
+        let stale = now.timestamp().saturating_sub(LAST_HEARTBEAT_INTERVAL_SECS);
+        diesel::update(
+            schema::runner::table
+                .filter(schema::runner::id.eq(runner_id))
+                .filter(
+                    schema::runner::last_heartbeat
+                        .is_null()
+                        .or(schema::runner::last_heartbeat.le(stale)),
+                ),
+        )
+        .set(schema::runner::last_heartbeat.eq(now))
+        .execute(conn)
     }
 }
 
