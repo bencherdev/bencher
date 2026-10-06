@@ -23,8 +23,6 @@ mod process;
 mod test_util;
 mod vsock;
 
-use std::collections::HashMap;
-
 pub use crate::log_level::SandboxLogLevel;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -369,10 +367,9 @@ fn decode_output_files(
     data: &[u8],
     max_file_count: u32,
     max_content_size: u64,
-) -> Result<HashMap<Utf8PathBuf, Vec<u8>>, FirecrackerError> {
-    let files = bencher_output_protocol::decode(data, max_file_count, max_content_size)
-        .map_err(|source| FirecrackerError::DecodeOutputFiles { source })?;
-    Ok(files.into_iter().collect())
+) -> Result<Vec<(Utf8PathBuf, Vec<u8>)>, FirecrackerError> {
+    bencher_output_protocol::decode(data, max_file_count, max_content_size)
+        .map_err(|source| FirecrackerError::DecodeOutputFiles { source })
 }
 
 /// Parse an exit code string to i32, defaulting to 1 on failure.
@@ -381,7 +378,6 @@ fn parse_exit_code(s: &str) -> i32 {
 }
 
 #[cfg(test)]
-#[expect(clippy::get_unwrap, reason = "test assertions")]
 mod tests {
     use crate::error::JailError;
 
@@ -486,6 +482,25 @@ mod tests {
     }
 
     #[test]
+    fn output_files_decode_in_the_order_the_guest_sent_them() {
+        // Descending, and enough files that neither a sorted nor a hashed order matches.
+        let paths: Vec<Utf8PathBuf> = (0..32)
+            .rev()
+            .map(|n| Utf8PathBuf::from(format!("/{n}.out")))
+            .collect();
+        let files: Vec<(&camino::Utf8Path, &[u8])> = paths
+            .iter()
+            .map(|path| (path.as_path(), b"x".as_slice()))
+            .collect();
+        let data = bencher_output_protocol::encode(&files).unwrap();
+
+        let decoded = decode_output_files(&data, 32, 1).unwrap();
+
+        let decoded_paths: Vec<Utf8PathBuf> = decoded.into_iter().map(|(path, _)| path).collect();
+        assert_eq!(decoded_paths, paths);
+    }
+
+    #[test]
     fn parse_exit_code_zero() {
         assert_eq!(parse_exit_code("0"), 0);
     }
@@ -547,8 +562,7 @@ mod tests {
 
     #[test]
     fn run_output_fields() {
-        let mut files = HashMap::new();
-        files.insert(Utf8PathBuf::from("out.json"), vec![1, 2, 3]);
+        let files = vec![(Utf8PathBuf::from("out.json"), vec![1, 2, 3])];
         let output = RunOutput {
             exit_code: 42,
             stdout: "hello".to_owned(),
@@ -559,12 +573,8 @@ mod tests {
         assert_eq!(output.stdout, "hello");
         assert_eq!(output.stderr, "warnings");
         assert_eq!(
-            output
-                .output_files
-                .unwrap()
-                .get(Utf8PathBuf::from("out.json").as_path())
-                .unwrap(),
-            &vec![1, 2, 3]
+            output.output_files.unwrap(),
+            vec![(Utf8PathBuf::from("out.json"), vec![1, 2, 3])]
         );
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -303,7 +303,7 @@ fn output_to_iteration(
 fn build_metric_output(
     build_time: Option<Duration>,
     file_size: bool,
-    output_files: Option<HashMap<Utf8PathBuf, Vec<u8>>>,
+    output_files: Option<Vec<(Utf8PathBuf, Vec<u8>)>>,
     benchmark_name: Option<&bencher_json::BenchmarkName>,
 ) -> Option<BTreeMap<Utf8PathBuf, String>> {
     use bencher_json::{
@@ -324,23 +324,8 @@ fn build_metric_output(
 
     let mut metric_results: MetricResults = Vec::new();
 
-    if let Some(duration) = build_time
-        && let Some(name) = benchmark_name
-    {
-        let seconds = (duration.as_secs_f64() * 100.0).round() / 100.0;
-        metric_results.push((
-            name.clone(),
-            vec![(
-                built_in::json::BuildTime::name_id(),
-                JsonNewMetric {
-                    value: seconds.into(),
-                    ..Default::default()
-                },
-            )],
-        ));
-    }
-
     if file_size && let Some(files) = &output_files {
+        // In declared order, so the last file with a basename wins, as in `bencher run --file-size`.
         for (path, bytes) in files {
             let file_name = path.file_name().unwrap_or(path.as_str());
             match file_name.parse() {
@@ -363,6 +348,23 @@ fn build_metric_output(
                 },
             }
         }
+    }
+
+    // After the file sizes, so a build time named like a file wins, as in `bencher run`.
+    if let Some(duration) = build_time
+        && let Some(name) = benchmark_name
+    {
+        let seconds = (duration.as_secs_f64() * 100.0).round() / 100.0;
+        metric_results.push((
+            name.clone(),
+            vec![(
+                built_in::json::BuildTime::name_id(),
+                JsonNewMetric {
+                    value: seconds.into(),
+                    ..Default::default()
+                },
+            )],
+        ));
     }
 
     if metric_results.is_empty() {
@@ -602,6 +604,8 @@ fn housekeeping_cores(config: &UpConfig) -> Vec<usize> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use camino::Utf8PathBuf;
 
@@ -1449,6 +1453,39 @@ mod tests {
     }
 
     #[test]
+    fn output_file_size_of_a_shared_basename_is_the_last_declared_file() {
+        // Each name is declared twice, the last 1 byte longer and sorting first, so a
+        // sorted order picks the first for every name and a hash map's for about half.
+        let names: Vec<String> = (0..32).map(|n| format!("{n}.bin")).collect();
+        let first: Vec<String> = names.iter().map(|name| format!("/z/{name}")).collect();
+        let last: Vec<String> = names.iter().map(|name| format!("/a/{name}")).collect();
+        let files = first
+            .iter()
+            .map(|path| (path.as_str(), b"x".as_slice()))
+            .chain(last.iter().map(|path| (path.as_str(), b"xx".as_slice())))
+            .collect();
+        let result = output_to_iteration(test_output("hello", Some(files)), None, true, None);
+        let files = result.output.unwrap();
+        let bmf_json = files.values().next().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
+        let sizes: BTreeMap<String, Option<f64>> = parsed
+            .as_object()
+            .unwrap()
+            .iter()
+            .map(|(name, measures)| {
+                let size = measures
+                    .get("file-size")
+                    .and_then(|metric| metric.get("value"))
+                    .and_then(serde_json::Value::as_f64);
+                (name.clone(), size)
+            })
+            .collect();
+        let expected: BTreeMap<String, Option<f64>> =
+            names.into_iter().map(|name| (name, Some(2.0))).collect();
+        assert_eq!(sizes, expected);
+    }
+
+    #[test]
     fn output_file_size_no_files() {
         let output = test_output("hello", None);
         let result = output_to_iteration(output, None, true, None);
@@ -1474,6 +1511,25 @@ mod tests {
                 .is_some()
         );
         assert!(parsed.get("result.bin").unwrap().get("file-size").is_some());
+    }
+
+    #[test]
+    fn output_build_time_wins_over_a_file_of_the_same_name() {
+        let name: bencher_json::BenchmarkName = "make".parse().unwrap();
+        let output = test_output("hello", Some(vec![("/out/make", b"binary")]));
+        let result = output_to_iteration(output, Some(Duration::from_secs(2)), true, Some(&name));
+        let files = result.output.unwrap();
+        let bmf_json = files.values().next().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
+        let measures: Vec<&str> = parsed
+            .get("make")
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        assert_eq!(measures, ["build-time"]);
     }
 
     #[test]
