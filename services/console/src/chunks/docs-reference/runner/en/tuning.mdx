@@ -5,7 +5,8 @@ By default it disables ASLR, the NMI watchdog, SMT / hyper-threading, and turbo 
 sets the CPU scaling governor to `performance`, swappiness to `10`, and `perf_event_paranoid` to `-1`.
 On a host the `runner` has not tuned since it last booted, the flags below keep individual optimizations at their host defaults instead.
 
-Host tuning persists until the host reboots: every setting is a runtime-only write that the `runner` does not revert when it exits.
+Host tuning persists until the host reboots: every setting is a runtime-only write that the `runner` does not revert when it exits, except the C-state hold, which ends when the `runner` exits.
+After a tuned run, a flag that skips any other setting takes effect from the next reboot: until then, the setting keeps its tuned value, and the `runner` logs that value at startup.
 Reboot a shared host after removing the `runner`.
 
 ### `--no-tuning`
@@ -14,19 +15,47 @@ Disable all host tuning optimizations.
 
 ### `--aslr`
 
-Keep ASLR enabled (default: disabled for benchmarks).
+Do not disable ASLR (default: disabled for benchmarks).
 
 ### `--nmi-watchdog`
 
-Keep the NMI watchdog enabled (default: disabled for benchmarks).
+Do not disable the NMI watchdog (default: disabled for benchmarks).
 
 ### `--smt`
 
-Keep SMT / hyper-threading enabled (default: disabled for benchmarks).
+Do not disable SMT / hyper-threading (default: disabled for benchmarks).
 
 ### `--turbo`
 
-Keep turbo boost enabled (default: disabled for benchmarks).
+Do not disable turbo boost (default: disabled for benchmarks).
+
+### `--numa-balancing`
+
+Do not disable automatic NUMA balancing (default: disabled for benchmarks).
+
+### `--timer-migration`
+
+Do not disable timer migration (default: disabled for benchmarks).
+
+### `--soft-watchdog`
+
+Do not disable the soft lockup watchdog (default: disabled for benchmarks).
+
+### `--ksm`
+
+Do not disable KSM, kernel samepage merging (default: disabled for benchmarks).
+
+### `--cstates`
+
+Do not disable deep C-states (default: disabled for benchmarks).
+
+### `--no-irq-steering`
+
+Do not steer device IRQs and kernel workqueues to housekeeping cores.
+
+### `--no-cpuset-partition`
+
+Do not detach benchmark cores from the scheduler via an isolated cpuset partition.
 
 ### `--swappiness <SWAPPINESS>`
 
@@ -42,3 +71,9 @@ By default, `performance` is used.
 
 Set the `perf_event_paranoid` value.
 By default, `-1` is used.
+
+### `--thp <THP>`
+
+Set the host transparent hugepage mode: `never`, `madvise`, `always`, or `leave`.
+Use `leave` to keep the host's current mode.
+By default, `never` is used.

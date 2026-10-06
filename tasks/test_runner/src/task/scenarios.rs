@@ -4434,6 +4434,8 @@ fn run_runner_with_tuning(
         );
     }
 
+    ensure_steering_masks_logged(&stdout, &stderr)?;
+
     if !stdout.contains("C-states - max exit latency held at 0 us") {
         println!("  tuning: the runner held no C-state constraint, so none was asserted");
     } else if latency_before.is_none_or(|latency| latency == 0) {
@@ -4521,6 +4523,16 @@ fn dma_latency() -> Option<i32> {
     <[u8; 4]>::try_from(bytes.as_slice())
         .ok()
         .map(i32::from_ne_bytes)
+}
+
+/// `run_and_validate` passes `--no-irq-steering`, so the runner logs each mask it left.
+fn ensure_steering_masks_logged(stdout: &str, stderr: &str) -> Result<()> {
+    anyhow::ensure!(
+        stdout.contains("default IRQ affinity - left at")
+            && stdout.contains("workqueue cpumask - left at"),
+        "The runner skipped IRQ steering but did not log the masks it left in place.\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    Ok(())
 }
 
 /// The partition level the runner reports achieving.

@@ -102,7 +102,7 @@ impl BencherPartition {
             return PartitionLevel::Member;
         }
 
-        let partition_path = self.path.join("cpuset.cpus.partition");
+        let partition_path = self.partition_path();
         if let Err(e) = fs::read_to_string(&partition_path) {
             // Missing on kernels without cpuset partition support.
             eprintln!("Warning: cpuset partitions unavailable ({partition_path}: {e})");
@@ -126,6 +126,10 @@ impl BencherPartition {
             eprintln!("Warning: failed to write cpuset partition mode 'member' back: {e}");
         }
         PartitionLevel::Member
+    }
+
+    pub(super) fn partition_path(&self) -> Utf8PathBuf {
+        self.path.join("cpuset.cpus.partition")
     }
 }
 

@@ -8,8 +8,11 @@
 
 use camino::Utf8Path;
 
-use super::write_sysctl_with;
+use super::{print_left, write_sysctl_with};
 use crate::cpu::{CpuLayout, format_cpumask};
+
+const DEFAULT_SMP_AFFINITY: &str = "proc/irq/default_smp_affinity";
+const WORKQUEUE_CPUMASK: &str = "sys/devices/virtual/workqueue/cpumask";
 
 /// Steer kernel work (IRQs and unbound workqueues) to housekeeping cores.
 ///
@@ -20,7 +23,7 @@ pub(super) fn steer_kernel_work(layout: &CpuLayout, root: &Utf8Path) {
 
     // New IRQs default to housekeeping cores.
     write_sysctl_with(
-        root.join("proc/irq/default_smp_affinity").as_str(),
+        root.join(DEFAULT_SMP_AFFINITY).as_str(),
         &housekeeping_mask,
         "default IRQ affinity",
         same_cpumask,
@@ -28,13 +31,22 @@ pub(super) fn steer_kernel_work(layout: &CpuLayout, root: &Utf8Path) {
 
     // Unbound workqueue workers run on housekeeping cores.
     write_sysctl_with(
-        root.join("sys/devices/virtual/workqueue/cpumask").as_str(),
+        root.join(WORKQUEUE_CPUMASK).as_str(),
         &housekeeping_mask,
         "workqueue cpumask",
         same_cpumask,
     );
 
     steer_existing_irqs(layout, root);
+}
+
+/// Print the current value of each mask [`steer_kernel_work`] sets.
+pub(super) fn print_steering(root: &Utf8Path) {
+    print_left(
+        root.join(DEFAULT_SMP_AFFINITY).as_str(),
+        "default IRQ affinity",
+    );
+    print_left(root.join(WORKQUEUE_CPUMASK).as_str(), "workqueue cpumask");
 }
 
 /// Move every movable IRQ to the housekeeping cores.

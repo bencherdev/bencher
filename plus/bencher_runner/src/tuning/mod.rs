@@ -46,6 +46,8 @@ use camino::{Utf8Path, Utf8PathBuf};
 const INTEL_NO_TURBO: &str = "/sys/devices/system/cpu/intel_pstate/no_turbo";
 #[cfg(target_os = "linux")]
 const CPUFREQ_BOOST: &str = "/sys/devices/system/cpu/cpufreq/boost";
+#[cfg(target_os = "linux")]
+const SMT_CONTROL: &str = "/sys/devices/system/cpu/smt/control";
 
 /// Host tuning configuration - all defaults optimize for benchmark accuracy.
 #[expect(
@@ -154,70 +156,94 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
         held_fds: Vec::new(),
     };
 
-    if config.disable_aslr {
-        write_sysctl("/proc/sys/kernel/randomize_va_space", "0", "ASLR");
-    }
+    tune_sysctl(
+        "/proc/sys/kernel/randomize_va_space",
+        config.disable_aslr.then_some("0"),
+        "ASLR",
+    );
 
-    if config.disable_nmi_watchdog {
-        write_sysctl("/proc/sys/kernel/nmi_watchdog", "0", "NMI watchdog");
-    }
+    tune_sysctl(
+        "/proc/sys/kernel/nmi_watchdog",
+        config.disable_nmi_watchdog.then_some("0"),
+        "NMI watchdog",
+    );
 
-    if let Some(val) = config.swappiness {
-        write_sysctl("/proc/sys/vm/swappiness", &val.to_string(), "swappiness");
-    }
+    let swappiness = config.swappiness.map(|val| val.to_string());
+    tune_sysctl(
+        "/proc/sys/vm/swappiness",
+        swappiness.as_deref(),
+        "swappiness",
+    );
 
-    if let Some(val) = config.perf_event_paranoid {
-        write_sysctl(
-            "/proc/sys/kernel/perf_event_paranoid",
-            &val.to_string(),
-            "perf_event_paranoid",
-        );
-    }
+    let perf_event_paranoid = config.perf_event_paranoid.map(|val| val.to_string());
+    tune_sysctl(
+        "/proc/sys/kernel/perf_event_paranoid",
+        perf_event_paranoid.as_deref(),
+        "perf_event_paranoid",
+    );
 
     if let Some(gov) = &config.governor {
         set_cpu_governor(gov);
+    } else {
+        print_left(
+            "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+            "CPU governor (cpu0)",
+        );
     }
 
     if config.disable_smt {
         set_smt();
+    } else {
+        print_left(SMT_CONTROL, "SMT");
     }
 
     if config.disable_turbo {
         set_turbo();
+    } else if Utf8Path::new(INTEL_NO_TURBO).exists() {
+        print_left(INTEL_NO_TURBO, "turboboost (Intel)");
+    } else {
+        print_left(CPUFREQ_BOOST, "turboboost (generic)");
     }
 
-    if config.disable_numa_balancing {
-        write_sysctl("/proc/sys/kernel/numa_balancing", "0", "NUMA balancing");
-    }
+    tune_sysctl(
+        "/proc/sys/kernel/numa_balancing",
+        config.disable_numa_balancing.then_some("0"),
+        "NUMA balancing",
+    );
 
-    if config.disable_timer_migration {
-        write_sysctl("/proc/sys/kernel/timer_migration", "0", "timer migration");
-    }
+    tune_sysctl(
+        "/proc/sys/kernel/timer_migration",
+        config.disable_timer_migration.then_some("0"),
+        "timer migration",
+    );
 
-    if config.disable_soft_watchdog {
-        write_sysctl("/proc/sys/kernel/soft_watchdog", "0", "soft watchdog");
-    }
+    tune_sysctl(
+        "/proc/sys/kernel/soft_watchdog",
+        config.disable_soft_watchdog.then_some("0"),
+        "soft watchdog",
+    );
 
-    if config.disable_ksm {
-        write_sysctl("/sys/kernel/mm/ksm/run", "0", "KSM");
-    }
+    tune_sysctl(
+        "/sys/kernel/mm/ksm/run",
+        config.disable_ksm.then_some("0"),
+        "KSM",
+    );
 
     if config.disable_cstates {
         dma_latency::hold_dma_latency(&mut guard, Utf8Path::new(dma_latency::CPU_DMA_LATENCY));
     }
 
-    if let Some(value) = config.thp.sysfs_value() {
-        write_bracketed_sysctl(
-            "/sys/kernel/mm/transparent_hugepage/enabled",
-            value,
-            "THP enabled",
-        );
-        write_bracketed_sysctl(
-            "/sys/kernel/mm/transparent_hugepage/defrag",
-            value,
-            "THP defrag",
-        );
-    }
+    let thp = config.thp.sysfs_value();
+    tune_bracketed_sysctl(
+        "/sys/kernel/mm/transparent_hugepage/enabled",
+        thp,
+        "THP enabled",
+    );
+    tune_bracketed_sysctl(
+        "/sys/kernel/mm/transparent_hugepage/defrag",
+        thp,
+        "THP defrag",
+    );
 
     guard
 }
@@ -234,14 +260,48 @@ pub fn apply_cpu_scoped(config: &TuningConfig, layout: &CpuLayout) {
 /// Like [`apply_cpu_scoped`], under the filesystem root `root`.
 #[cfg(target_os = "linux")]
 fn apply_cpu_scoped_at(config: &TuningConfig, layout: &CpuLayout, root: &Utf8Path) {
+    let bencher = partition::BencherPartition::new(&root.join("sys/fs/cgroup"));
     if config.cpuset_partition && layout.has_isolation() {
-        let bencher = partition::BencherPartition::new(&root.join("sys/fs/cgroup"));
         let level = bencher.apply(layout);
         println!("  Tuning: cpuset partition - achieved level '{level}'");
+    } else if !config.cpuset_partition {
+        print_left(bencher.partition_path().as_str(), "cpuset partition");
     }
 
     if config.steer_kernel_work && layout.has_isolation() {
         kernel_work::steer_kernel_work(layout, root);
+    } else if !config.steer_kernel_work {
+        kernel_work::print_steering(root);
+    }
+}
+
+/// Write `target` unless it already holds, or print the current value when
+/// the knob is skipped.
+#[cfg(target_os = "linux")]
+fn tune_sysctl(path: &str, target: Option<&str>, label: &str) {
+    if let Some(target) = target {
+        write_sysctl(path, target, label);
+    } else {
+        print_left(path, label);
+    }
+}
+
+/// Like [`tune_sysctl`], for [`write_bracketed_sysctl`].
+#[cfg(target_os = "linux")]
+fn tune_bracketed_sysctl(path: &str, target: Option<&str>, label: &str) {
+    if let Some(target) = target {
+        write_bracketed_sysctl(path, target, label);
+    } else {
+        print_left(path, label);
+    }
+}
+
+/// Print a skipped knob's current value, since tuning from an earlier run
+/// stays until the host reboots.
+#[cfg(target_os = "linux")]
+fn print_left(path: &str, label: &str) {
+    if let Ok(current) = std::fs::read_to_string(path) {
+        println!("  Tuning: {label} - left at {}", current.trim());
     }
 }
 
@@ -383,7 +443,7 @@ fn set_cpu_governor(target: &str) {
 /// Disable SMT (simultaneous multi-threading / hyper-threading).
 #[cfg(target_os = "linux")]
 fn set_smt() {
-    let path = Utf8PathBuf::from("/sys/devices/system/cpu/smt/control");
+    let path = Utf8PathBuf::from(SMT_CONTROL);
 
     if !path.exists() {
         println!("  Tuning: SMT - skipped (not available on this platform)");

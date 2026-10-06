@@ -5,7 +5,8 @@
 将 CPU 调频调速器（governor）设为 `performance`，swappiness 设为 `10`，`perf_event_paranoid` 设为 `-1`。
 在自上次启动以来 `runner` 尚未调优过的主机上，下面的标志会改为将各项优化保持在其主机默认值。
 
-主机调优会一直保留到主机重启：每项设置都是仅在运行时生效的写入，`runner` 退出时不会将其还原。
+主机调优会一直保留到主机重启：每项设置都是仅在运行时生效的写入，`runner` 退出时不会将其还原；C-state 保持除外，它会在 `runner` 退出时结束。
+在一次调优运行之后，跳过其他任何设置的标志从下一次重启起生效：在此之前，该设置保持其调优值，`runner` 会在启动时记录该值。
 移除 `runner` 后，请重启共享主机。
 
 ### `--no-tuning`
@@ -14,19 +15,47 @@
 
 ### `--aslr`
 
-保持 ASLR 启用（默认：基准测试时禁用）。
+不禁用 ASLR（默认：基准测试时禁用）。
 
 ### `--nmi-watchdog`
 
-保持 NMI 看门狗启用（默认：基准测试时禁用）。
+不禁用 NMI 看门狗（默认：基准测试时禁用）。
 
 ### `--smt`
 
-保持 SMT / 超线程启用（默认：基准测试时禁用）。
+不禁用 SMT / 超线程（默认：基准测试时禁用）。
 
 ### `--turbo`
 
-保持睿频加速启用（默认：基准测试时禁用）。
+不禁用睿频加速（默认：基准测试时禁用）。
+
+### `--numa-balancing`
+
+不禁用自动 NUMA 平衡（默认：基准测试时禁用）。
+
+### `--timer-migration`
+
+不禁用定时器迁移（默认：基准测试时禁用）。
+
+### `--soft-watchdog`
+
+不禁用软锁死（soft lockup）看门狗（默认：基准测试时禁用）。
+
+### `--ksm`
+
+不禁用内核同页合并 KSM（默认：基准测试时禁用）。
+
+### `--cstates`
+
+不禁用深度 C-state（默认：基准测试时禁用）。
+
+### `--no-irq-steering`
+
+不将设备 IRQ 和内核工作队列引导到内务（housekeeping）核心。
+
+### `--no-cpuset-partition`
+
+不通过隔离的 cpuset 分区将基准测试核心从调度器中分离。
 
 ### `--swappiness <SWAPPINESS>`
 
@@ -42,3 +71,9 @@
 
 设置 `perf_event_paranoid` 值。
 默认使用 `-1`。
+
+### `--thp <THP>`
+
+设置主机的透明大页（transparent hugepage）模式：`never`、`madvise`、`always` 或 `leave`。
+使用 `leave` 可保留主机当前的模式。
+默认使用 `never`。

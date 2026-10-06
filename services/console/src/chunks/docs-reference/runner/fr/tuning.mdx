@@ -5,7 +5,8 @@ Par défaut, il désactive l'ASLR, le NMI watchdog, le SMT / hyper-threading et 
 règle le gouverneur de mise à l'échelle du CPU sur `performance`, la swappiness sur `10`, et `perf_event_paranoid` sur `-1`.
 Sur un hôte que le `runner` n'a pas réglé depuis son dernier redémarrage, les drapeaux ci-dessous conservent au contraire les optimisations individuelles à leurs valeurs par défaut de l'hôte.
 
-Le réglage de l'hôte persiste jusqu'au redémarrage de l'hôte : chaque paramètre est une écriture valable uniquement à l'exécution, que le `runner` n'annule pas lorsqu'il se termine.
+Le réglage de l'hôte persiste jusqu'au redémarrage de l'hôte : chaque paramètre est une écriture valable uniquement à l'exécution, que le `runner` n'annule pas lorsqu'il se termine, sauf le maintien des C-states, qui prend fin lorsque le `runner` se termine.
+Après une exécution avec réglage, un drapeau qui ignore tout autre paramètre prend effet à partir du prochain redémarrage : jusque-là, le paramètre conserve sa valeur réglée, et le `runner` journalise cette valeur au démarrage.
 Redémarrez un hôte partagé après avoir retiré le `runner`.
 
 ### `--no-tuning`
@@ -14,19 +15,47 @@ Désactive toutes les optimisations de réglage de l'hôte.
 
 ### `--aslr`
 
-Conserve l'ASLR activé (par défaut : désactivé pour les benchmarks).
+Ne désactive pas l'ASLR (par défaut : désactivé pour les benchmarks).
 
 ### `--nmi-watchdog`
 
-Conserve le NMI watchdog activé (par défaut : désactivé pour les benchmarks).
+Ne désactive pas le NMI watchdog (par défaut : désactivé pour les benchmarks).
 
 ### `--smt`
 
-Conserve le SMT / hyper-threading activé (par défaut : désactivé pour les benchmarks).
+Ne désactive pas le SMT / hyper-threading (par défaut : désactivé pour les benchmarks).
 
 ### `--turbo`
 
-Conserve le turbo boost activé (par défaut : désactivé pour les benchmarks).
+Ne désactive pas le turbo boost (par défaut : désactivé pour les benchmarks).
+
+### `--numa-balancing`
+
+Ne désactive pas l'équilibrage NUMA automatique (par défaut : désactivé pour les benchmarks).
+
+### `--timer-migration`
+
+Ne désactive pas la migration des timers (par défaut : désactivée pour les benchmarks).
+
+### `--soft-watchdog`
+
+Ne désactive pas le soft lockup watchdog (par défaut : désactivé pour les benchmarks).
+
+### `--ksm`
+
+Ne désactive pas le KSM, kernel samepage merging (par défaut : désactivé pour les benchmarks).
+
+### `--cstates`
+
+Ne désactive pas les C-states profonds (par défaut : désactivés pour les benchmarks).
+
+### `--no-irq-steering`
+
+Ne dirige pas les IRQ des périphériques ni les workqueues du noyau vers les cœurs de housekeeping.
+
+### `--no-cpuset-partition`
+
+Ne détache pas les cœurs de benchmark de l'ordonnanceur via une partition cpuset isolée.
 
 ### `--swappiness <SWAPPINESS>`
 
@@ -42,3 +71,9 @@ Par défaut, `performance` est utilisé.
 
 Définit la valeur de `perf_event_paranoid`.
 Par défaut, `-1` est utilisé.
+
+### `--thp <THP>`
+
+Définit le mode transparent hugepage de l'hôte : `never`, `madvise`, `always` ou `leave`.
+Utilisez `leave` pour conserver le mode actuel de l'hôte.
+Par défaut, `never` est utilisé.

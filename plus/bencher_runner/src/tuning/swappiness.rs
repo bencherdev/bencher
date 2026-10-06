@@ -1,6 +1,6 @@
 use crate::error::{ConfigError, RunnerError};
 
-/// Validated swappiness value (0–200).
+/// Validated swappiness value (0 to 200).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Swappiness(u32);
 
@@ -19,7 +19,7 @@ impl TryFrom<u32> for Swappiness {
             return Err(ConfigError::OutOfRange {
                 name: "swappiness",
                 value: value.to_string(),
-                range: "0–200",
+                range: "0 to 200",
             }
             .into());
         }
