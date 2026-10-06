@@ -90,6 +90,12 @@ impl TestServer {
         .await
     }
 
+    /// Create a new test server with an injectable clock that logs to `log` instead of stderr.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_clock_and_log(clock: bencher_json::Clock, log: slog::Logger) -> Self {
+        Self::build(None, None, Some(clock), None, None, Some(log)).await
+    }
+
     /// Create a new test server whose clock is frozen at the given time.
     #[cfg(feature = "plus")]
     pub async fn new_at(now: bencher_json::DateTime) -> Self {

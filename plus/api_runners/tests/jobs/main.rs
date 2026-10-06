@@ -12,6 +12,7 @@
 mod callbacks;
 #[path = "../common/mod.rs"]
 mod common;
+mod mail;
 mod status;
 mod websocket;
 

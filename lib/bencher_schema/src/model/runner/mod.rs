@@ -40,7 +40,7 @@ pub use job_callback::{
 };
 pub use runner_spec::{InsertRunnerSpec, QueryRunnerSpec, RunnerSpecId};
 pub use source_ip::SourceIp;
-pub use status::{QueryRunnerStatus, RunnerReport, StatusChange};
+pub use status::{PAUSE_NOTICE_HOURS, QueryRunnerStatus, RunnerNotice, RunnerReport, StatusChange};
 
 crate::macros::typed_id::typed_id!(RunnerId);
 

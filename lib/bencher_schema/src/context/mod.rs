@@ -45,9 +45,9 @@ pub use database::{Database, DbConnection};
 pub use heartbeat_tasks::HeartbeatTasks;
 #[cfg(feature = "plus")]
 pub use indexer::{IndexError, Indexer};
-#[cfg(feature = "plus")]
-pub use messenger::ServerStatsBody;
 pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
+#[cfg(feature = "plus")]
+pub use messenger::{RunnerStatusBody, ServerStatsBody};
 #[cfg(feature = "plus")]
 pub use rate_limiting::{HeaderMap, RateLimiting, RateLimitingError, RateLimitingPruneTask};
 pub use rbac::{Rbac, RbacError};
