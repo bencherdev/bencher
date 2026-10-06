@@ -23,6 +23,8 @@ mod config;
 #[cfg(feature = "plus")]
 pub mod cpu;
 #[cfg(feature = "plus")]
+mod deadline;
+#[cfg(feature = "plus")]
 mod error;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod firecracker;
@@ -62,6 +64,8 @@ pub use bencher_json::{Cpu, Disk, GracePeriod, Memory};
 #[cfg(feature = "plus")]
 pub use config::Config;
 #[cfg(feature = "plus")]
+pub use deadline::JobDeadline;
+#[cfg(feature = "plus")]
 pub use error::{ConfigError, ExecutionError, JailError, RunnerError};
 #[cfg(feature = "plus")]
 pub use jail::{
@@ -71,6 +75,8 @@ pub use jail::{
 #[cfg(feature = "plus")]
 pub use log_level::SandboxLogLevel;
 #[cfg(feature = "plus")]
-pub use run::{RunArgs, RunOutput, execute, resolve_oci_image, run_with_args};
+pub use run::{
+    RunArgs, RunOutput, execute, execute_with_deadline, resolve_oci_image, run_with_args,
+};
 #[cfg(feature = "plus")]
 pub use tuning::{ParseThpModeError, PerfEventParanoid, Swappiness, ThpMode, TuningConfig};

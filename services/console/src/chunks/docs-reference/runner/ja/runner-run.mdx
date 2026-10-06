@@ -29,7 +29,7 @@ Firecracker microVM には `firecracker` を使用します (Linux のみ)。
 
 ### `--timeout <TIMEOUT>`
 
-実行タイムアウト (秒)。
+実行の開始からすべての反復で共有される実行タイムアウト (秒)。
 デフォルトでは `300` が使用されます。
 
 ### `--state-dir <STATE_DIR>`
@@ -80,6 +80,7 @@ Job がそのような cgroup で実行されるのは Runner が CPU コアを�
 ### `--allow-failure`
 
 ベンチマークの失敗が発生しても、残りの反復を打ち切らずに許可します。
+時間切れになった場合は、それでも実行がタイムアウトとして終了します。
 
 ### `--entrypoint <ENTRYPOINT>`
 

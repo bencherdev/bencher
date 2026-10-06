@@ -86,6 +86,8 @@ struct Scenario {
     unusable_state_dir: bool,
     /// Point the runner at a state directory on a `nodev` tmpfs.
     nodev_state_dir: bool,
+    /// Queue the run on the jail lock behind a holder until its timeout is gone.
+    queued_past_timeout: bool,
     /// A line the image must print in a plain run first, so a run that prints
     /// nothing cannot pass on a runner that boots no guest.
     control_marker: Option<&'static str>,
@@ -112,6 +114,7 @@ impl Default for Scenario {
             occupied_mid_build: false,
             unusable_state_dir: false,
             nodev_state_dir: false,
+            queued_past_timeout: false,
             control_marker: None,
             // Most scenarios are sandboxed, so the few that are not opt out.
             sandboxed: true,
@@ -727,6 +730,8 @@ fn run_and_validate(
         run_runner_after_orphan(image_path, &args, state_dir, runner_bin)
     } else if scenario.orphan_between_jobs {
         run_runner_beside_sibling_orphan(image_path, &args, state_dir, runner_bin)
+    } else if scenario.queued_past_timeout {
+        run_runner_queued_past_timeout(image_path, &args, state_dir, runner_bin)
     } else if scenario.occupied_cgroup {
         run_runner_beside_occupied_cgroup(image_path, &args, runner_bin)
     } else if scenario.occupied_mid_build {
@@ -1999,6 +2004,29 @@ CMD ["sh", "-c", "printf '%s_%s\\n' ITER DONE && exit 1"]"#,
             },
             ..Scenario::default()
         },
+        Scenario {
+            name: "timeout_spans_iterations",
+            description: "One timeout spans every iteration, and running out ends the run even with --allow-failure",
+            // One iteration fits in the timeout and two do not, so only a
+            // timeout given to each iteration lets the second finish.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "sleep 10 && printf '%s_%s\\n' SPAN DONE"]"#,
+            extra_args: &["--timeout", "18", "--iter", "2", "--allow-failure"],
+            validate: |output| {
+                let timed_out = output.stderr.lines().any(|line| {
+                    line.contains("---BENCHER_METRICS:") && line.contains(r#""timed_out":true"#)
+                });
+                anyhow::ensure!(
+                    output.exit_code == 1 && guest_printed(output, "SPAN_DONE") == 1 && timed_out,
+                    "Expected the first iteration's 'SPAN_DONE' and the second cut off by the run's timeout, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
     ]
 }
 
@@ -2006,6 +2034,10 @@ CMD ["sh", "-c", "printf '%s_%s\\n' ITER DONE && exit 1"]"#,
 ///
 /// These test the `local_execute` code path (no Firecracker VM).
 /// The OCI image is unpacked and the command runs directly on the host.
+#[expect(
+    clippy::too_many_lines,
+    reason = "Each scenario needs its configuration"
+)]
 fn nosandbox_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
@@ -2103,6 +2135,30 @@ CMD ["sh", "-c", "exit 42"]"#,
                         output.stderr
                     )
                 }
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "nosandbox_timeout_spans_iterations",
+            description: "Non-sandboxed: one timeout spans every iteration, and running out ends the run even with --allow-failure",
+            // One iteration fits in the timeout and two do not, so only a
+            // timeout given to each process lets the second finish.
+            dockerfile: r#"FROM busybox:musl
+CMD ["sh", "-c", "sleep 5 && printf '%s_%s\\n' HOST SPAN"]"#,
+            sandboxed: false,
+            extra_args: &["--timeout", "8", "--iter", "2", "--allow-failure"],
+            validate: |output| {
+                let timed_out = output.stderr.lines().any(|line| {
+                    line.contains("---BENCHER_METRICS:") && line.contains(r#""timed_out":true"#)
+                });
+                anyhow::ensure!(
+                    output.exit_code == 1 && guest_printed(output, "HOST_SPAN") == 1 && timed_out,
+                    "Expected the first iteration's 'HOST_SPAN' and the second cut off by the run's timeout, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
             },
             ..Scenario::default()
         },
@@ -2659,6 +2715,28 @@ CMD ["printf", "%s_%s\\n", "JAIL_SWEEP", "a7f3b2c9"]"#,
 fn jail_contention_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
+            name: "jail_no_boot_past_timeout",
+            description: "A run whose timeout runs out while it queues on the jail lock never boots its VM",
+            dockerfile: r#"FROM busybox
+CMD ["printf", "%s_%s\\n", "QUEUED", "a7f3b2c9"]"#,
+            queued_past_timeout: true,
+            control_marker: Some("QUEUED_a7f3b2c9"),
+            validate: |output| {
+                anyhow::ensure!(
+                    output.exit_code == 1
+                        && output.stderr.contains("ran out before the VM booted")
+                        && !output.stdout.contains("Booting VM...")
+                        && guest_printed(output, "QUEUED_a7f3b2c9") == 0,
+                    "Expected the run to fail on its timeout before its VM booted, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
             name: "jail_sweep_reclaims_sibling_orphan",
             description: "An orphan a sibling runner process leaves between two jobs is reaped by the second",
             // Long enough that the sibling reaches the jail lock while the first
@@ -2701,6 +2779,65 @@ CMD ["printf", "%s_%s\\n", "JAIL_OCCUPIED_MID", "a7f3b2c9"]"#,
             ..Scenario::default()
         },
     ]
+}
+
+/// Holds the jail lock well past the queued run's timeout.
+const HOLDER_DOCKERFILE: &str = r#"FROM busybox
+CMD ["sh", "-c", "echo JAIL_HOLDER_a7f3b2c9 && sleep 8"]"#;
+
+/// Runs the image with a 3 s timeout once a holder's VMM is up in the same
+/// state directory, so the run waits on the jail lock until its time is gone.
+fn run_runner_queued_past_timeout(
+    image_path: &Utf8Path,
+    args: &[&str],
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let holder_image = build_test_image("jail_holder", HOLDER_DOCKERFILE)
+        .context("Failed to build the holder's image")?;
+    let parent = jail_parent(state_dir);
+    let mut holder = spawn_runner(
+        &holder_image,
+        &[args, &["--timeout", "60"]].concat(),
+        runner_bin,
+    )?;
+    let holder_output = drain_output(&mut holder);
+
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let held = loop {
+        if let Some((_, jail_root)) = find_jail(&parent)?
+            && find_jailed_vmm(&jail_root)?.is_some()
+        {
+            break true;
+        }
+        if holder.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
+            break false;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    };
+    let output = if held {
+        run_runner(
+            image_path,
+            &[args, &["--timeout", "3"]].concat(),
+            runner_bin,
+        )
+    } else {
+        if holder.try_wait()?.is_none() {
+            kill_pid(holder.id(), libc::SIGKILL);
+        }
+        Err(anyhow::anyhow!(
+            "The holder's VMM never appeared within {PROBE_TIMEOUT:?}"
+        ))
+    };
+    let status = holder.wait()?;
+    let (stdout, stderr) = holder_output.join();
+    let output =
+        output.with_context(|| format!("holder stdout: {stdout}\nholder stderr: {stderr}"))?;
+    anyhow::ensure!(
+        status.success(),
+        "The holder failed, so the lock it held is unproven.\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    Ok(output)
 }
 
 /// The runner's own failure exit, so a crash or a signal does not read as a

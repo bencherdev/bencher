@@ -29,7 +29,7 @@ Omettez pour une exécution sur l'hôte sans sandbox.
 
 ### `--timeout <TIMEOUT>`
 
-Le délai d'attente d'exécution en secondes.
+Le délai d'attente d'exécution en secondes, partagé par toutes les itérations depuis le début de l'exécution.
 Par défaut, `300` est utilisé.
 
 ### `--state-dir <STATE_DIR>`
@@ -80,6 +80,7 @@ Par défaut, `1` est utilisé.
 ### `--allow-failure`
 
 Autorise un échec de benchmark sans court-circuiter les itérations restantes.
+Si le délai est épuisé, l'exécution se termine tout de même par un dépassement de délai.
 
 ### `--entrypoint <ENTRYPOINT>`
 

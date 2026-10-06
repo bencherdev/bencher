@@ -24,6 +24,7 @@ use std::time::{Duration, Instant};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
+use crate::JobDeadline;
 use crate::error::RunnerError;
 use crate::local_isolation::LocalIsolation;
 use crate::metrics::{self, RunMetrics};
@@ -32,10 +33,12 @@ use crate::run::{RunOutput, prepare_oci_workspace};
 /// Execute a single benchmark run locally on the host system.
 ///
 /// Pulls and unpacks the OCI image, then runs the command directly via
-/// `std::process::Command` from the unpacked rootfs. No sandboxing is applied.
+/// `std::process::Command` from the unpacked rootfs, until `deadline`. No
+/// sandboxing is applied.
 pub fn local_execute(
     config: &crate::Config,
     cancel_flag: Option<&AtomicBool>,
+    deadline: JobDeadline,
 ) -> Result<RunOutput, RunnerError> {
     println!("Executing benchmark run (non-sandboxed mode):");
     println!("  OCI image: {}", config.oci_image);
@@ -106,14 +109,9 @@ pub fn local_execute(
     let start = Instant::now();
     // No metrics are emitted on spawn failure: nothing ran, so there is
     // no wall clock or cgroup usage to report.
-    let child = cmd
-        .spawn()
-        .map_err(|e| crate::error::ConfigError::BinaryNotFound {
-            name: program.clone(),
-            hint: format!("Failed to spawn process: {e}"),
-        })?;
+    let child = spawn_in_time(&mut cmd, program, deadline)?;
 
-    let output = match wait_with_timeout(child, config.timeout_secs, cancel_flag) {
+    let output = match wait_with_timeout(child, deadline, cancel_flag) {
         Ok(output) => output,
         Err(e) => {
             let timed_out = matches!(
@@ -141,6 +139,29 @@ pub fn local_execute(
         stdout: output.stdout,
         stderr: output.stderr,
         output_files,
+    })
+}
+
+/// Spawns the benchmark only with time left on `deadline`, as no VM boots
+/// without it.
+fn spawn_in_time(
+    cmd: &mut Command,
+    program: &str,
+    deadline: JobDeadline,
+) -> Result<std::process::Child, RunnerError> {
+    if deadline.remaining().is_zero() {
+        return Err(crate::error::ExecutionError::Timeout(format!(
+            "the timeout ran out before the process started (timeout {:?})",
+            deadline.timeout()
+        ))
+        .into());
+    }
+    cmd.spawn().map_err(|e| {
+        crate::error::ConfigError::BinaryNotFound {
+            name: program.to_owned(),
+            hint: format!("Failed to spawn process: {e}"),
+        }
+        .into()
     })
 }
 
@@ -174,12 +195,9 @@ struct WaitOutput {
 /// triggers. On timeout/cancel the thread is joined to ensure cleanup.
 fn wait_with_timeout(
     child: std::process::Child,
-    timeout_secs: u64,
+    deadline: JobDeadline,
     cancel_flag: Option<&AtomicBool>,
 ) -> Result<WaitOutput, RunnerError> {
-    let timeout = Duration::from_secs(timeout_secs);
-    let start = Instant::now();
-
     // Acquire a handle to the child process before the thread consumes it.
     // On Linux, this attempts to use pidfd_open for a race-free handle;
     // on other platforms (or old kernels) it falls back to the raw PID.
@@ -193,11 +211,12 @@ fn wait_with_timeout(
             break;
         }
 
-        if start.elapsed() > timeout {
+        if deadline.remaining().is_zero() {
             child_handle.kill();
             drop(handle.join());
             return Err(crate::error::ExecutionError::Timeout(format!(
-                "process did not complete within {timeout_secs}s"
+                "process did not complete within {}s",
+                deadline.timeout().as_secs()
             ))
             .into());
         }
@@ -546,4 +565,27 @@ fn collect_output_files(
     }
 
     if files.is_empty() { None } else { Some(files) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::ExecutionError;
+
+    #[test]
+    fn no_process_starts_once_the_timeout_has_run_out() {
+        // Prevents spawning the benchmark on the host with no time left, where
+        // it runs unsandboxed until the first timeout poll kills it.
+        let mut cmd = Command::new("true");
+
+        let result = spawn_in_time(&mut cmd, "true", JobDeadline::start(Duration::ZERO));
+
+        assert!(
+            matches!(
+                result,
+                Err(RunnerError::Execution(ExecutionError::Timeout(_)))
+            ),
+            "a process with no time left is never spawned, got: {result:?}"
+        );
+    }
 }

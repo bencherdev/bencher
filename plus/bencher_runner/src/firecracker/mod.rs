@@ -31,6 +31,7 @@ use std::time::{Duration, Instant};
 
 use camino::Utf8PathBuf;
 
+use crate::JobDeadline;
 use crate::cpu::CpuLayout;
 use crate::jail::{CgroupManager, CgroupSurvived, Cpuset, JailPaths, JailUser, VmId};
 use crate::metrics::{self, RunMetrics};
@@ -77,8 +78,6 @@ pub struct FirecrackerJobConfig {
     pub memory_mib: u32,
     /// Kernel boot arguments.
     pub boot_args: String,
-    /// Execution timeout in seconds.
-    pub timeout_secs: u64,
     /// Optional CPU layout for core isolation via cpuset.
     pub cpu_layout: Option<CpuLayout>,
     /// Firecracker process log level.
@@ -106,6 +105,9 @@ pub struct FirecrackerJobConfig {
 /// 8. Cleans up (including cgroup)
 ///
 /// Returns the benchmark output including exit code and stdout.
+///
+/// The VM boots only with time left on `deadline`, and its results must arrive
+/// before it runs out.
 #[expect(
     clippy::too_many_lines,
     reason = "VM lifecycle steps are sequential and clearer inline"
@@ -113,6 +115,7 @@ pub struct FirecrackerJobConfig {
 pub fn run_firecracker(
     config: &FirecrackerJobConfig,
     cancel_flag: Option<&AtomicBool>,
+    deadline: JobDeadline,
 ) -> Result<RunOutput, FirecrackerError> {
     let vm_id = &config.vm_id;
     let jail = &config.jail;
@@ -189,6 +192,12 @@ pub fn run_firecracker(
         .map_err(FirecrackerError::Chown)?;
 
     // Step 4: Boot the VM
+    if deadline.remaining().is_zero() {
+        return Err(FirecrackerError::Timeout(format!(
+            "the timeout ran out before the VM booted (timeout {:?})",
+            deadline.timeout()
+        )));
+    }
     println!("Booting VM...");
     client.put_action(&Action {
         action_type: ActionType::InstanceStart,
@@ -204,16 +213,14 @@ pub fn run_firecracker(
     }
 
     // Step 5: Collect results via vsock
-    let timeout = if config.timeout_secs > 0 {
-        Duration::from_secs(config.timeout_secs)
-    } else {
-        Duration::from_mins(5)
-    };
-
     let grace_period = Duration::from_secs(u64::from(u32::from(config.grace_period)));
-    println!("Waiting for benchmark results (timeout: {timeout:?})...");
+    println!(
+        "Waiting for benchmark results (timeout: {:?}, {:.1?} left)...",
+        deadline.timeout(),
+        deadline.remaining()
+    );
     let results = match vsock_listener.collect_results(
-        timeout,
+        deadline,
         config.max_output_size,
         cancel_flag,
         grace_period,

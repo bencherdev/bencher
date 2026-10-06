@@ -6,6 +6,7 @@ use std::sync::atomic::AtomicBool;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
+use crate::JobDeadline;
 use crate::error::RunnerError;
 use crate::firecracker::refuse_cancelled;
 use crate::jail::{
@@ -14,11 +15,13 @@ use crate::jail::{
 };
 use crate::run::{RunOutput, prepare_oci_workspace};
 
-/// Execute a single benchmark run in a jailed Firecracker microVM.
+/// Execute a single benchmark run in a jailed Firecracker microVM, which gets
+/// only what is left of `deadline`.
 pub fn vm_execute(
     config: &crate::Config,
     host: &mut HostPreparation,
     cancel_flag: Option<&AtomicBool>,
+    deadline: JobDeadline,
 ) -> Result<RunOutput, RunnerError> {
     use crate::firecracker::run_firecracker;
 
@@ -130,7 +133,7 @@ pub fn vm_execute(
     )?;
 
     refuse_cancelled(cancel_flag)?;
-    let run_output = run_firecracker(&fc_config, cancel_flag)?;
+    let run_output = run_firecracker(&fc_config, cancel_flag, deadline)?;
 
     Ok(run_output)
 }
@@ -193,7 +196,6 @@ fn build_firecracker_config(
         vcpus,
         memory_mib,
         boot_args: config.kernel_cmdline.clone(),
-        timeout_secs: config.timeout_secs,
         cpu_layout: config.cpu_layout.clone(),
         log_level: config.sandbox_log_level,
         max_file_count: config.max_file_count,

@@ -58,7 +58,7 @@ pub struct CliRun {
     #[arg(long)]
     pub disk: Option<u64>,
 
-    /// Execution timeout in seconds.
+    /// Execution timeout in seconds, shared by every iteration from the start of the run.
     #[arg(long, default_value = "300")]
     pub timeout: u64,
 
@@ -135,7 +135,8 @@ pub struct CliRun {
     #[arg(long, default_value = "1")]
     pub iter: Iteration,
 
-    /// Allow benchmark failure without short-circuiting iterations.
+    /// Allow benchmark failure without short-circuiting iterations. Running out
+    /// of time still ends the run as timed out.
     #[arg(long)]
     pub allow_failure: bool,
 

@@ -6,11 +6,13 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
+use std::time::Duration;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
 use bencher_json::Iteration;
 
+use crate::JobDeadline;
 use crate::error::RunnerError;
 use crate::tuning::{TuningConfig, preflight};
 
@@ -40,7 +42,7 @@ pub struct RunArgs {
     pub memory: Option<bencher_json::Memory>,
     /// Optional disk size override (in bytes).
     pub disk: Option<bencher_json::Disk>,
-    /// Execution timeout in seconds.
+    /// Execution timeout in seconds, shared by every iteration from the start of the run.
     pub timeout_secs: u64,
     /// Output file paths inside guest.
     pub file_paths: Option<Vec<Utf8PathBuf>>,
@@ -60,7 +62,8 @@ pub struct RunArgs {
     pub network: bool,
     /// Number of benchmark iterations.
     pub iter: Iteration,
-    /// Allow benchmark failure without short-circuiting iterations.
+    /// Allow benchmark failure without short-circuiting iterations. Running out
+    /// of time still ends the run as timed out.
     pub allow_failure: bool,
     /// Host tuning configuration.
     pub tuning: TuningConfig,
@@ -180,6 +183,8 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
 
     let mut host = crate::jail::HostPreparation::new();
 
+    // Like a Job's, the timeout spans every iteration.
+    let deadline = JobDeadline::start(Duration::from_secs(args.timeout_secs));
     let iter_count = args.iter.as_usize();
     for iteration in 0..iter_count {
         if crate::signal::stop_requested() {
@@ -187,7 +192,20 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
                 crate::error::ExecutionError::Canceled("run was canceled".to_owned()).into(),
             );
         }
-        match execute(&config, &mut host, Some(crate::signal::stop_flag())) {
+        if deadline.remaining().is_zero() {
+            return Err(crate::error::ExecutionError::Timeout(format!(
+                "the run timed out after {}s, before iteration {}/{iter_count}",
+                deadline.timeout().as_secs(),
+                iteration + 1
+            ))
+            .into());
+        }
+        match execute_with_deadline(
+            &config,
+            &mut host,
+            Some(crate::signal::stop_flag()),
+            deadline,
+        ) {
             Ok(output) => {
                 println!("{}", output.stdout);
                 if !output.stderr.is_empty() {
@@ -198,7 +216,12 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
                 }
             },
             Err(e) => {
-                if args.allow_failure && !crate::signal::stop_requested() {
+                // A failure with no time left ends the run, since no later
+                // iteration could run either.
+                if args.allow_failure
+                    && !crate::signal::stop_requested()
+                    && !deadline.remaining().is_zero()
+                {
                     eprintln!(
                         "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
                         iteration + 1
@@ -410,6 +433,17 @@ pub fn resolve_oci_config(
 /// # Returns
 ///
 /// The benchmark output including exit code and stdout.
+pub fn execute(
+    config: &crate::Config,
+    host: &mut crate::jail::HostPreparation,
+    cancel_flag: Option<&AtomicBool>,
+) -> Result<RunOutput, RunnerError> {
+    let deadline = JobDeadline::start(Duration::from_secs(config.timeout_secs));
+    execute_with_deadline(config, host, cancel_flag, deadline)
+}
+
+/// Like [`execute`], but the run has only what is left of `deadline`, which
+/// can have started before it.
 #[cfg_attr(
     not(target_os = "linux"),
     expect(
@@ -417,16 +451,17 @@ pub fn resolve_oci_config(
         reason = "host preparation is Linux-only, as is the VM executor it prepares for"
     )
 )]
-pub fn execute(
+pub fn execute_with_deadline(
     config: &crate::Config,
     host: &mut crate::jail::HostPreparation,
     cancel_flag: Option<&AtomicBool>,
+    deadline: JobDeadline,
 ) -> Result<RunOutput, RunnerError> {
     match config.sandbox {
         Some(bencher_json::Sandbox::Firecracker) => {
             #[cfg(target_os = "linux")]
             {
-                crate::vm::vm_execute(config, host, cancel_flag)
+                crate::vm::vm_execute(config, host, cancel_flag, deadline)
             }
             #[cfg(not(target_os = "linux"))]
             {
@@ -436,6 +471,6 @@ pub fn execute(
                 .into())
             }
         },
-        None => crate::local::local_execute(config, cancel_flag),
+        None => crate::local::local_execute(config, cancel_flag, deadline),
     }
 }

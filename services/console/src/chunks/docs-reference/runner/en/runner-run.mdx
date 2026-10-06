@@ -29,7 +29,7 @@ Omit for non-sandboxed host execution.
 
 ### `--timeout <TIMEOUT>`
 
-The execution timeout in seconds.
+The execution timeout in seconds, shared by every iteration from the start of the run.
 By default, `300` is used.
 
 ### `--state-dir <STATE_DIR>`
@@ -80,6 +80,7 @@ By default, `1` is used.
 ### `--allow-failure`
 
 Allow a benchmark failure without short-circuiting the remaining iterations.
+Running out of time still ends the run as timed out.
 
 ### `--entrypoint <ENTRYPOINT>`
 

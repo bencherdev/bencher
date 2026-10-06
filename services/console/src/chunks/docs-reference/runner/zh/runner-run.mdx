@@ -29,7 +29,7 @@ runner run --image <IMAGE> [OPTIONS]
 
 ### `--timeout <TIMEOUT>`
 
-执行超时（秒）。
+从运行开始起由所有迭代共享的执行超时（秒）。
 默认使用 `300`。
 
 ### `--state-dir <STATE_DIR>`
@@ -80,6 +80,7 @@ Runner 的持久状态目录。
 ### `--allow-failure`
 
 允许基准测试失败而不会短路剩余的迭代。
+时间耗尽时，运行仍会以超时结束。
 
 ### `--entrypoint <ENTRYPOINT>`
 

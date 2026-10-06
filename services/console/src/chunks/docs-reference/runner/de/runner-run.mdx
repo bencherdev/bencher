@@ -29,7 +29,7 @@ Lassen Sie es für die Ausführung auf dem Host ohne Sandbox weg.
 
 ### `--timeout <TIMEOUT>`
 
-Das Ausführungs-Timeout in Sekunden.
+Das Ausführungs-Timeout in Sekunden, das sich alle Iterationen ab dem Start des Laufs teilen.
 Standardmäßig wird `300` verwendet.
 
 ### `--state-dir <STATE_DIR>`
@@ -80,6 +80,7 @@ Standardmäßig wird `1` verwendet.
 ### `--allow-failure`
 
 Erlaubt einen Benchmark-Fehlschlag, ohne die verbleibenden Iterationen kurzzuschließen.
+Läuft die Zeit ab, endet der Lauf trotzdem mit einem Timeout.
 
 ### `--entrypoint <ENTRYPOINT>`
 
