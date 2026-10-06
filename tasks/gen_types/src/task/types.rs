@@ -12,10 +12,7 @@ impl TryFrom<TaskTypes> for Types {
     type Error = anyhow::Error;
 
     fn try_from(_task: TaskTypes) -> Result<Self, Self::Error> {
-        Ok(Self {
-            spec: Spec {},
-            ts: Ts {},
-        })
+        Ok(Self { spec: Spec, ts: Ts })
     }
 }
 

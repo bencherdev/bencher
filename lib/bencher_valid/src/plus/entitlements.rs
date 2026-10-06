@@ -29,7 +29,7 @@ impl TryFrom<u32> for Entitlements {
 
 impl From<Entitlements> for u64 {
     fn from(entitlements: Entitlements) -> Self {
-        u64::from(entitlements.0)
+        Self::from(entitlements.0)
     }
 }
 

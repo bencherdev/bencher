@@ -336,7 +336,7 @@ mod tests {
         let json: serde_json::Value = serde_json::to_value(&msg).unwrap();
         assert_eq!(json["event"], "failed");
         assert_eq!(json["job"], test_job_uuid().to_string());
-        assert!(json["results"].as_array().unwrap().is_empty());
+        assert_eq!(json["results"], serde_json::json!([]));
         assert_eq!(json["error"], "timeout");
     }
 

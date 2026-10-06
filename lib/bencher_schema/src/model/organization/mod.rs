@@ -706,7 +706,7 @@ impl From<OrganizationId> for Organization {
 
 impl From<&QueryOrganization> for Organization {
     fn from(organization: &QueryOrganization) -> Self {
-        Organization {
+        Self {
             id: organization.id.to_string(),
         }
     }

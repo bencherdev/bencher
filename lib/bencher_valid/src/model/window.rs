@@ -31,7 +31,7 @@ impl TryFrom<u32> for Window {
 
 impl From<Window> for i64 {
     fn from(window: Window) -> Self {
-        i64::from(window.0)
+        Self::from(window.0)
     }
 }
 

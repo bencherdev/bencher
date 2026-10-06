@@ -860,34 +860,34 @@ enum Resource {
 impl Resource {
     fn into_suffix(self) -> Option<(&'static str, String)> {
         match self {
-            Resource::Project => None,
-            Resource::Report(uuid) => Some(("reports", uuid.to_string())),
-            Resource::Branch { slug, .. } => Some(("branches", slug.to_string())),
-            Resource::Testbed { slug, .. } => Some(("testbeds", slug.to_string())),
-            Resource::Benchmark(slug) => Some(("benchmarks", slug.to_string())),
-            Resource::Measure(slug) => Some(("measures", slug.to_string())),
-            Resource::Threshold { uuid, .. } => Some(("thresholds", uuid.to_string())),
-            Resource::Alert(uuid) => Some(("alerts", uuid.to_string())),
+            Self::Project => None,
+            Self::Report(uuid) => Some(("reports", uuid.to_string())),
+            Self::Branch { slug, .. } => Some(("branches", slug.to_string())),
+            Self::Testbed { slug, .. } => Some(("testbeds", slug.to_string())),
+            Self::Benchmark(slug) => Some(("benchmarks", slug.to_string())),
+            Self::Measure(slug) => Some(("measures", slug.to_string())),
+            Self::Threshold { uuid, .. } => Some(("thresholds", uuid.to_string())),
+            Self::Alert(uuid) => Some(("alerts", uuid.to_string())),
         }
     }
 
     fn query_param(&self) -> Option<(&'static str, String)> {
         match self {
-            Resource::Branch { head, .. } => Some(("head", head.to_string())),
+            Self::Branch { head, .. } => Some(("head", head.to_string())),
             #[cfg(feature = "plus")]
-            Resource::Testbed {
+            Self::Testbed {
                 spec: Some(spec), ..
             } => Some(("spec", spec.to_string())),
-            Resource::Threshold {
+            Self::Threshold {
                 model: Some(model), ..
             } => Some(("model", model.to_string())),
-            Resource::Project
-            | Resource::Report(_)
-            | Resource::Testbed { .. }
-            | Resource::Benchmark(_)
-            | Resource::Measure(_)
-            | Resource::Threshold { model: None, .. }
-            | Resource::Alert(_) => None,
+            Self::Project
+            | Self::Report(_)
+            | Self::Testbed { .. }
+            | Self::Benchmark(_)
+            | Self::Measure(_)
+            | Self::Threshold { model: None, .. }
+            | Self::Alert(_) => None,
         }
     }
 }
@@ -909,7 +909,7 @@ impl From<JsonMeasure> for Measure {
 }
 
 impl Measure {
-    fn missing_threshold(json_report: &JsonReport) -> HashSet<Measure> {
+    fn missing_threshold(json_report: &JsonReport) -> HashSet<Self> {
         json_report
             .results
             .as_deref()
@@ -921,7 +921,7 @@ impl Measure {
                         .measures
                         .iter()
                         .filter(|&report_measure| !is_checked(report_measure))
-                        .map(|report_measure| Measure::from(report_measure.measure.clone()))
+                        .map(|report_measure| Self::from(report_measure.measure.clone()))
                 })
             })
             .collect()

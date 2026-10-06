@@ -91,7 +91,7 @@ impl InsertOrganizationRole {
         }
 
         let timestamp = DateTime::now();
-        Ok(InsertOrganizationRole {
+        Ok(Self {
             user_id,
             organization_id: QueryOrganization::get_id(conn, claims.org.uuid)?,
             role: claims.org.role,

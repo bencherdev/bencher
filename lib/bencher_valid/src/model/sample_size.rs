@@ -31,7 +31,7 @@ impl TryFrom<u32> for SampleSize {
 
 impl From<SampleSize> for i64 {
     fn from(sample_size: SampleSize) -> Self {
-        i64::from(sample_size.0)
+        Self::from(sample_size.0)
     }
 }
 
@@ -43,7 +43,7 @@ impl From<SampleSize> for u32 {
 
 impl From<SampleSize> for usize {
     fn from(sample_size: SampleSize) -> Self {
-        sample_size.0 as usize
+        sample_size.0 as Self
     }
 }
 

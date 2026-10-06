@@ -109,7 +109,7 @@ impl QueryUser {
     pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<Self>, HttpError> {
         schema::user::table
             .filter(schema::user::admin.eq(true))
-            .load::<QueryUser>(conn)
+            .load::<Self>(conn)
             .map_err(resource_not_found_err!(User, true))
     }
 

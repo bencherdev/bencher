@@ -72,7 +72,7 @@ impl CorsHeaders {
     }
 
     fn new_origin_all(methods: String, headers: String, total_count: Option<TotalCount>) -> Self {
-        CorsHeaders {
+        Self {
             access_control_allow_origin: ALL_ORIGIN.to_owned(),
             access_control_allow_methods: methods,
             access_control_allow_headers: headers,

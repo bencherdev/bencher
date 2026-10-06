@@ -135,9 +135,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 pub const DEFAULT_STATE_DIR: &str = "/var/lib/bencher-runner";
 
-/// In the unallocated gap between `systemd-homed` ids (60001-60513) and the
-/// `DynamicUser` range (61184-65519); two runners on one host should each pass
-/// their own `--jail-uid`, since VMMs sharing a uid can signal each other.
+/// This uid sits in the unallocated gap between `systemd-homed` ids (60001-60513) and
+/// the `DynamicUser` range (61184-65519).
+///
+/// Two runners on one host should each pass their own `--jail-uid`, since VMMs sharing
+/// a uid can signal each other.
 pub const DEFAULT_JAIL_UID: u32 = 61016;
 
 pub const DEFAULT_JAIL_GID: u32 = 61016;

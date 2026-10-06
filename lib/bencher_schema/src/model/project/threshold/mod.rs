@@ -586,7 +586,7 @@ impl InsertThreshold {
         model: Model,
     ) -> diesel::QueryResult<ThresholdId> {
         // Create the new threshold
-        let insert_threshold = InsertThreshold::new(project_id, dimensions);
+        let insert_threshold = Self::new(project_id, dimensions);
         diesel::insert_into(schema::threshold::table)
             .values(&insert_threshold)
             .execute(conn)?;
@@ -653,7 +653,7 @@ impl InsertThreshold {
                 for action in actions {
                     match action {
                         StartPointAction::Create(dimensions, model) => {
-                            InsertThreshold::from_model_inner(conn, project_id, dimensions, model)?;
+                            Self::from_model_inner(conn, project_id, dimensions, model)?;
                         },
                         StartPointAction::Update(threshold, model) => {
                             threshold.update_from_model_inner(conn, model)?;
@@ -928,7 +928,7 @@ impl InsertThreshold {
                 for action in actions {
                     match action {
                         ThresholdAction::Create(dimensions, model) => {
-                            InsertThreshold::from_model_inner(conn, project_id, dimensions, model)?;
+                            Self::from_model_inner(conn, project_id, dimensions, model)?;
                         },
                         ThresholdAction::Update(threshold, model) => {
                             threshold.update_from_model_inner(conn, model)?;

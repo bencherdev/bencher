@@ -191,8 +191,8 @@ where
         S: serde::Serializer,
     {
         match self {
-            BooleanParam::True(_) => [(T::KEY, "true")].serialize(serializer),
-            BooleanParam::False => serializer.serialize_none(),
+            Self::True(_) => [(T::KEY, "true")].serialize(serializer),
+            Self::False => serializer.serialize_none(),
         }
     }
 }
@@ -207,8 +207,8 @@ where
     {
         let opt = Option::<bool>::deserialize(deserializer)?;
         match opt {
-            Some(true) => Ok(BooleanParam::True(T::default())),
-            Some(false) | None => Ok(BooleanParam::False),
+            Some(true) => Ok(Self::True(T::default())),
+            Some(false) | None => Ok(Self::False),
         }
     }
 }

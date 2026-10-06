@@ -63,14 +63,14 @@ impl FromStr for CardBrand {
 impl AsRef<str> for CardBrand {
     fn as_ref(&self) -> &str {
         match self {
-            CardBrand::Amex => AMEX,
-            CardBrand::Diners => DINERS,
-            CardBrand::Discover => DISCOVER,
-            CardBrand::Jcb => JCB,
-            CardBrand::Mastercard => MASTERCARD,
-            CardBrand::Unionpay => UNIONPAY,
-            CardBrand::Visa => VISA,
-            CardBrand::Unknown => UNKNOWN,
+            Self::Amex => AMEX,
+            Self::Diners => DINERS,
+            Self::Discover => DISCOVER,
+            Self::Jcb => JCB,
+            Self::Mastercard => MASTERCARD,
+            Self::Unionpay => UNIONPAY,
+            Self::Visa => VISA,
+            Self::Unknown => UNKNOWN,
         }
     }
 }

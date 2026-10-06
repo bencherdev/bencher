@@ -26,7 +26,7 @@ pub const POLAR: &str = include_str!("../bencher.polar");
 pub fn init_rbac() -> Result<Oso, Box<oso::OsoError>> {
     let mut oso = Oso::new();
     oso.register_class(User::get_polar_class())?;
-    oso.register_class(ClassBuilder::with_constructor(|| Server {}).build())?;
+    oso.register_class(ClassBuilder::with_constructor(|| Server).build())?;
     oso.register_class(
         Organization::get_polar_class_builder()
             .set_constructor(|id| Organization { id })
@@ -63,7 +63,7 @@ mod tests {
     fn rbac() {
         let oso = &*OSO;
 
-        let server = Server {};
+        let server = Server;
 
         let admin = User {
             admin: true,

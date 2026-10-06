@@ -173,7 +173,7 @@ fn find_init_binary() -> Option<PathBuf> {
         let manifest_path = PathBuf::from(&manifest_dir);
 
         // Go up to find the workspace root
-        let mut workspace_root = manifest_path.clone();
+        let mut workspace_root = manifest_path;
         while workspace_root.parent().is_some() {
             if workspace_root.join("Cargo.lock").exists() {
                 break;

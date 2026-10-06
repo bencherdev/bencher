@@ -384,13 +384,13 @@ async fn manifests_and_tags(storage: &OciStorage, project: &bencher_oci_storage:
             .await
             .expect("Failed to delete manifest");
     }
-    assert!(
+    assert_eq!(
         storage
             .list_tags(project, None, None)
             .await
             .expect("Failed to list tags")
-            .tags
-            .is_empty()
+            .tags,
+        Vec::<String>::new()
     );
 }
 

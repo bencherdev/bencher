@@ -100,28 +100,28 @@ impl Scale {
 
     fn factor(&self) -> u64 {
         match self {
-            Scale::Nanos(scale) => *scale as u64,
-            Scale::Secs(scale) => *scale as u64,
-            Scale::Byte(scale) => *scale as u64,
-            Scale::OneE(scale) => *scale as u64,
+            Self::Nanos(scale) => *scale as u64,
+            Self::Secs(scale) => *scale as u64,
+            Self::Byte(scale) => *scale as u64,
+            Self::OneE(scale) => *scale as u64,
         }
     }
 
     fn units(&self, units: &str) -> String {
         match self {
-            Scale::Nanos(scale) => scale.units(),
-            Scale::Secs(scale) => scale.units(),
-            Scale::Byte(scale) => scale.units(),
-            Scale::OneE(scale) => scale.units(units),
+            Self::Nanos(scale) => scale.units(),
+            Self::Secs(scale) => scale.units(),
+            Self::Byte(scale) => scale.units(),
+            Self::OneE(scale) => scale.units(units),
         }
     }
 
     fn units_symbol(&self, units: &str) -> String {
         match self {
-            Scale::Nanos(scale) => scale.units_symbol(),
-            Scale::Secs(scale) => scale.units_symbol(),
-            Scale::Byte(scale) => scale.units_symbol(),
-            Scale::OneE(scale) => scale.units_symbol(units),
+            Self::Nanos(scale) => scale.units_symbol(),
+            Self::Secs(scale) => scale.units_symbol(),
+            Self::Byte(scale) => scale.units_symbol(),
+            Self::OneE(scale) => scale.units_symbol(units),
         }
     }
 }
@@ -139,31 +139,31 @@ enum ScaleNanos {
 
 impl From<ScaleNanos> for Scale {
     fn from(scale: ScaleNanos) -> Self {
-        Scale::Nanos(scale)
+        Self::Nanos(scale)
     }
 }
 
 impl ScaleNanos {
     fn units(self) -> String {
         match self {
-            ScaleNanos::Nanos => NANOSECONDS,
-            ScaleNanos::Micros => "microseconds (µs)",
-            ScaleNanos::Millis => "milliseconds (ms)",
-            ScaleNanos::Seconds => SECONDS,
-            ScaleNanos::Minutes => "minutes (m)",
-            ScaleNanos::Hours => "hours (h)",
+            Self::Nanos => NANOSECONDS,
+            Self::Micros => "microseconds (µs)",
+            Self::Millis => "milliseconds (ms)",
+            Self::Seconds => SECONDS,
+            Self::Minutes => "minutes (m)",
+            Self::Hours => "hours (h)",
         }
         .to_owned()
     }
 
     fn units_symbol(self) -> String {
         match self {
-            ScaleNanos::Nanos => "ns",
-            ScaleNanos::Micros => "µs",
-            ScaleNanos::Millis => "ms",
-            ScaleNanos::Seconds => "s",
-            ScaleNanos::Minutes => "m",
-            ScaleNanos::Hours => "h",
+            Self::Nanos => "ns",
+            Self::Micros => "µs",
+            Self::Millis => "ms",
+            Self::Seconds => "s",
+            Self::Minutes => "m",
+            Self::Hours => "h",
         }
         .to_owned()
     }
@@ -179,25 +179,25 @@ enum ScaleSecs {
 
 impl From<ScaleSecs> for Scale {
     fn from(scale: ScaleSecs) -> Self {
-        Scale::Secs(scale)
+        Self::Secs(scale)
     }
 }
 
 impl ScaleSecs {
     fn units(self) -> String {
         match self {
-            ScaleSecs::Seconds => "seconds (s)",
-            ScaleSecs::Minutes => "minutes (m)",
-            ScaleSecs::Hours => "hours (h)",
+            Self::Seconds => "seconds (s)",
+            Self::Minutes => "minutes (m)",
+            Self::Hours => "hours (h)",
         }
         .to_owned()
     }
 
     fn units_symbol(self) -> String {
         match self {
-            ScaleSecs::Seconds => "s",
-            ScaleSecs::Minutes => "m",
-            ScaleSecs::Hours => "h",
+            Self::Seconds => "s",
+            Self::Minutes => "m",
+            Self::Hours => "h",
         }
         .to_owned()
     }
@@ -216,31 +216,31 @@ enum ScaleBytes {
 
 impl From<ScaleBytes> for Scale {
     fn from(scale: ScaleBytes) -> Self {
-        Scale::Byte(scale)
+        Self::Byte(scale)
     }
 }
 
 impl ScaleBytes {
     fn units(self) -> String {
         match self {
-            ScaleBytes::Byte => BYTES,
-            ScaleBytes::Kilo => "kilobytes (KB)",
-            ScaleBytes::Mega => "megabytes (MB)",
-            ScaleBytes::Giga => "gigabytes (GB)",
-            ScaleBytes::Tera => "terabytes (TB)",
-            ScaleBytes::Peta => "petabytes (PB)",
+            Self::Byte => BYTES,
+            Self::Kilo => "kilobytes (KB)",
+            Self::Mega => "megabytes (MB)",
+            Self::Giga => "gigabytes (GB)",
+            Self::Tera => "terabytes (TB)",
+            Self::Peta => "petabytes (PB)",
         }
         .to_owned()
     }
 
     fn units_symbol(self) -> String {
         match self {
-            ScaleBytes::Byte => "B",
-            ScaleBytes::Kilo => "KB",
-            ScaleBytes::Mega => "MB",
-            ScaleBytes::Giga => "GB",
-            ScaleBytes::Tera => "TB",
-            ScaleBytes::Peta => "PB",
+            Self::Byte => "B",
+            Self::Kilo => "KB",
+            Self::Mega => "MB",
+            Self::Giga => "GB",
+            Self::Tera => "TB",
+            Self::Peta => "PB",
         }
         .to_owned()
     }
@@ -259,7 +259,7 @@ enum ScaleOneE {
 
 impl From<ScaleOneE> for Scale {
     fn from(scale: ScaleOneE) -> Self {
-        Scale::OneE(scale)
+        Self::OneE(scale)
     }
 }
 
@@ -272,12 +272,12 @@ const X_FIFTEEN: &str = "x 1e15";
 impl ScaleOneE {
     fn units(self, units: &str) -> String {
         match self {
-            ScaleOneE::One => units.to_owned(),
-            ScaleOneE::Three => format!("{units} {X_THREE}"),
-            ScaleOneE::Six => format!("{units} {X_SIX}"),
-            ScaleOneE::Nine => format!("{units} {X_NINE}"),
-            ScaleOneE::Twelve => format!("{units} {X_TWELVE}"),
-            ScaleOneE::Fifteen => format!("{units} {X_FIFTEEN}"),
+            Self::One => units.to_owned(),
+            Self::Three => format!("{units} {X_THREE}"),
+            Self::Six => format!("{units} {X_SIX}"),
+            Self::Nine => format!("{units} {X_NINE}"),
+            Self::Twelve => format!("{units} {X_TWELVE}"),
+            Self::Fifteen => format!("{units} {X_FIFTEEN}"),
         }
     }
 
@@ -292,21 +292,21 @@ impl ScaleOneE {
 
         if let Some(symbol) = units_symbol(units) {
             match self {
-                ScaleOneE::One => symbol,
-                ScaleOneE::Three => format!("{symbol} {X_THREE}"),
-                ScaleOneE::Six => format!("{symbol} {X_SIX}"),
-                ScaleOneE::Nine => format!("{symbol} {X_NINE}"),
-                ScaleOneE::Twelve => format!("{symbol} {X_TWELVE}"),
-                ScaleOneE::Fifteen => format!("{symbol} {X_FIFTEEN}"),
+                Self::One => symbol,
+                Self::Three => format!("{symbol} {X_THREE}"),
+                Self::Six => format!("{symbol} {X_SIX}"),
+                Self::Nine => format!("{symbol} {X_NINE}"),
+                Self::Twelve => format!("{symbol} {X_TWELVE}"),
+                Self::Fifteen => format!("{symbol} {X_FIFTEEN}"),
             }
         } else {
             match self {
-                ScaleOneE::One => "",
-                ScaleOneE::Three => X_THREE,
-                ScaleOneE::Six => X_SIX,
-                ScaleOneE::Nine => X_NINE,
-                ScaleOneE::Twelve => X_TWELVE,
-                ScaleOneE::Fifteen => X_FIFTEEN,
+                Self::One => "",
+                Self::Three => X_THREE,
+                Self::Six => X_SIX,
+                Self::Nine => X_NINE,
+                Self::Twelve => X_TWELVE,
+                Self::Fifteen => X_FIFTEEN,
             }
             .to_owned()
         }

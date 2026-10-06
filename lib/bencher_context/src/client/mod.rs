@@ -14,7 +14,7 @@ const ROOT: &str = "root";
 
 impl RunContext {
     pub fn current() -> Self {
-        let mut context = RunContext::default();
+        let mut context = Self::default();
         git_context(&mut context);
         testbed_context(&mut context);
         context

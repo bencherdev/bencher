@@ -4,7 +4,7 @@
         "args": {
             "MOLD_VERSION": "2.34.1",
             "MOLD_DEFAULT": "true",
-            "RUST_VERSION": "1.91.1",
+            "RUST_VERSION": "1.99.0",
             "LITESTREAM_VERSION": "0.5.10",
             "LITESTREAM_ARCH": "${localEnv:ARCH:x86_64}"
         }

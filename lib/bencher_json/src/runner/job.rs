@@ -129,7 +129,7 @@ impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
             file_paths.as_ref(),
             env.as_ref(),
         )?;
-        Ok(JsonNewRunJob {
+        Ok(Self {
             image,
             spec,
             entrypoint,
@@ -333,7 +333,7 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
             file_paths.as_ref(),
             env.as_ref(),
         )?;
-        Ok(JsonJobConfig {
+        Ok(Self {
             registry,
             project,
             digest,
@@ -888,7 +888,7 @@ mod db {
     {
         fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
             let json_str = String::from_sql(bytes)?;
-            let config: JsonJobConfig = serde_json::from_str(&json_str)?;
+            let config: Self = serde_json::from_str(&json_str)?;
             Ok(config)
         }
     }

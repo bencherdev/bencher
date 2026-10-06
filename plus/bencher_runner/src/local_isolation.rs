@@ -227,7 +227,7 @@ mod tests {
         {
             assert!(isolation.cgroup.is_none());
             assert!(isolation.procs.is_none());
-            assert!(isolation.benchmark.is_empty());
+            assert_eq!(isolation.benchmark, Vec::<usize>::new());
         }
     }
 
@@ -239,7 +239,7 @@ mod tests {
         #[cfg(target_os = "linux")]
         {
             assert!(isolation.cgroup.is_none());
-            assert!(isolation.benchmark.is_empty());
+            assert_eq!(isolation.benchmark, Vec::<usize>::new());
         }
     }
 

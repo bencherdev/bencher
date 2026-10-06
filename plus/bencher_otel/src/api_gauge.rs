@@ -55,7 +55,7 @@ impl fmt::Display for RunnerStateKind {
 
 impl From<RunnerStateKind> for opentelemetry::KeyValue {
     fn from(state: RunnerStateKind) -> Self {
-        opentelemetry::KeyValue::new(RunnerStateKind::KEY, state.to_string())
+        Self::new(RunnerStateKind::KEY, state.to_string())
     }
 }
 

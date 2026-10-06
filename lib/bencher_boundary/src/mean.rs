@@ -29,7 +29,7 @@ pub fn mean(data: &[f64]) -> Option<f64> {
 pub fn std_deviation(location: f64, data: &[f64]) -> Option<f64> {
     variance(location, data)
         // If the variance is zero then the standard deviation is not going to work with `statrs`
-        .and_then(|variance| if variance == 0.0 { None } else { Some(variance) })
+        .filter(|&variance| variance != 0.0)
         .map(f64::sqrt)
         .and_then(|std_dev| std_dev.is_finite().then_some(std_dev))
 }

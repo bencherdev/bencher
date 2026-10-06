@@ -796,7 +796,7 @@ mod tests {
         let scopes: Vec<String> = vec![];
         let (repo, actions) = parse_scopes(&scopes).unwrap();
         assert_eq!(repo, None);
-        assert!(actions.is_empty());
+        assert_eq!(actions, Vec::new());
     }
 
     #[test]

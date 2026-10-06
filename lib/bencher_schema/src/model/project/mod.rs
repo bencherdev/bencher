@@ -834,7 +834,7 @@ impl From<JsonUpdateProject> for UpdateProject {
 
 impl From<&InsertProject> for Organization {
     fn from(project: &InsertProject) -> Self {
-        Organization {
+        Self {
             id: project.organization_id.to_string(),
         }
     }
@@ -842,7 +842,7 @@ impl From<&InsertProject> for Organization {
 
 impl From<&QueryProject> for Organization {
     fn from(project: &QueryProject) -> Self {
-        Organization {
+        Self {
             id: project.organization_id.to_string(),
         }
     }
@@ -850,7 +850,7 @@ impl From<&QueryProject> for Organization {
 
 impl From<&QueryProject> for Project {
     fn from(project: &QueryProject) -> Self {
-        Project {
+        Self {
             id: project.id.to_string(),
             organization_id: project.organization_id.to_string(),
         }

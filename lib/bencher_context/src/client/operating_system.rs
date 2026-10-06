@@ -13,9 +13,9 @@ impl fmt::Display for OperatingSystem {
             f,
             "{}",
             match self {
-                OperatingSystem::Linux => "Linux",
-                OperatingSystem::MacOS => "macOS",
-                OperatingSystem::Windows => "Windows",
+                Self::Linux => "Linux",
+                Self::MacOS => "macOS",
+                Self::Windows => "Windows",
             }
         )
     }

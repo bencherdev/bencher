@@ -303,7 +303,7 @@ impl AuthUser {
     }
 
     pub fn is_admin(&self, rbac: &Rbac) -> bool {
-        rbac.is_allowed_unwrap(self, Permission::Administer, Server {})
+        rbac.is_allowed_unwrap(self, Permission::Administer, Server)
     }
 
     pub fn organizations(

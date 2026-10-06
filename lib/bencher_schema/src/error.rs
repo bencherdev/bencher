@@ -223,7 +223,9 @@ where
 }
 
 /// A transient, retryable server condition (e.g. `SQLITE_BUSY`, "database is locked"): the request
-/// was well-formed but the server could not service it right now. Returns `503 Service Unavailable`
+/// was well-formed but the server could not service it right now.
+///
+/// Returns `503 Service Unavailable`
 /// with a `Retry-After` hint. The CLI (`bencher_client`) and Console retry 5xx with their own
 /// backoff and do not read `Retry-After`; the header is included for HTTP correctness and other
 /// clients. The detailed cause goes to `internal_message` (and Sentry at the call site), not to the
@@ -539,7 +541,7 @@ mod tests {
     #[test]
     fn service_unavailable_error_is_retryable_503() {
         let error = service_unavailable_error("database is locked");
-        assert!(error.status_code == ErrorStatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(error.status_code, ErrorStatusCode::SERVICE_UNAVAILABLE);
         assert!(!is_conflict(&error));
     }
 

@@ -64,7 +64,7 @@ impl fmt::Display for CardNumber {
             write!(
                 f,
                 "{SANITIZED_SECRET}{}",
-                &self.0.get((self.0.len() - 4)..).unwrap_or_default()
+                self.0.get((self.0.len() - 4)..).unwrap_or_default()
             )
         }
     }

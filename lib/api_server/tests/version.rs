@@ -23,7 +23,7 @@ async fn version_get() {
 
     assert_eq!(resp.status(), StatusCode::OK);
     let body: JsonApiVersion = resp.json().await.expect("Failed to parse response");
-    assert!(!body.version.is_empty());
+    assert_ne!(body.version, "");
 }
 
 // Verify version format is semver-like

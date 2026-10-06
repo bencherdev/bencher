@@ -62,7 +62,7 @@ impl Default for LinePlot {
 }
 
 impl LinePlot {
-    pub fn new() -> LinePlot {
+    pub fn new() -> Self {
         Self::default()
     }
 
@@ -193,9 +193,9 @@ impl From<Range<f64>> for RangedCoord {
             range.end
         };
         if relative_difference < 10.0 {
-            RangedCoord::Linear(range.into())
+            Self::Linear(range.into())
         } else {
-            RangedCoord::Log(range.log_scale().into())
+            Self::Log(range.log_scale().into())
         }
     }
 }
@@ -418,7 +418,7 @@ enum Anchor {
 }
 
 impl PerfData {
-    fn new(json_perf: &JsonPerf) -> Option<PerfData> {
+    fn new(json_perf: &JsonPerf) -> Option<Self> {
         let Extent {
             left_measure,
             right_measure,
@@ -479,7 +479,7 @@ impl PerfData {
             })
             .collect();
 
-        Some(PerfData {
+        Some(Self {
             lines,
             x,
             x_time,

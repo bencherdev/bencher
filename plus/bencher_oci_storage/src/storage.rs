@@ -1864,12 +1864,12 @@ mod tests {
         .await;
 
         storage.get_upload_size(&upload_id).await.unwrap_err();
-        assert!(
+        assert_eq!(
             storage
                 .list_prefix(&storage.upload_prefix(&upload_id))
                 .await
-                .unwrap()
-                .is_empty()
+                .unwrap(),
+            Vec::new()
         );
     }
 
@@ -2158,7 +2158,7 @@ mod tests {
     async fn list_tags_on_an_empty_repository() {
         let storage = in_memory(None);
         let result = storage.list_tags(&project(), Some(10), None).await.unwrap();
-        assert!(result.tags.is_empty());
+        assert_eq!(result.tags, Vec::<String>::new());
         assert!(!result.has_more);
     }
 

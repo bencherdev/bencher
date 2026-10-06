@@ -770,7 +770,7 @@ mod tests {
                 && elapsed <= before_pause + Duration::from_secs(10) + Duration::from_millis(2),
             "timed out after {elapsed:?}"
         );
-        assert!(server.await.unwrap().is_empty());
+        assert_eq!(server.await.unwrap(), Vec::<u8>::new());
     }
 
     // A real `reqwest` error with a cause, which stands in for a client that failed to build.
@@ -1025,7 +1025,7 @@ mod tests {
             "{second:?}"
         );
         assert_eq!(lookup.names(), ["callback.example", "callback.example"]);
-        assert!(server.await.unwrap().is_empty());
+        assert_eq!(server.await.unwrap(), Vec::<u8>::new());
     }
 
     #[tokio::test]

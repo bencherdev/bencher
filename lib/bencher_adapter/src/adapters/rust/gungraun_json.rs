@@ -124,11 +124,10 @@ fn parse_json(input: &[u8]) -> Option<(BenchmarkName, BenchmarkSummary)> {
     };
 
     let name: BenchmarkName = if let Some(id) = &summary.id {
-        format!("{}::{id}", summary.module_path)
+        format!("{}::{id}", summary.module_path).parse()
     } else {
-        summary.module_path.clone()
+        summary.module_path.parse()
     }
-    .parse()
     .ok()?;
 
     Some((name, summary))

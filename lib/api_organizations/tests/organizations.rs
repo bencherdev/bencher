@@ -103,7 +103,7 @@ async fn organizations_create_auto_slug() {
     let org: JsonOrganization = resp.json().await.expect("Failed to parse response");
     // Slug should be auto-generated
     let slug: &str = org.slug.as_ref();
-    assert!(!slug.is_empty());
+    assert_ne!(slug, "");
 }
 
 // GET /v0/organizations/{organization} - view org

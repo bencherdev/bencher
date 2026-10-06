@@ -108,7 +108,7 @@ impl ConfigTx {
     where
         R: Registrar,
     {
-        let ConfigTx { config } = self;
+        let Self { config } = self;
 
         let Config(JsonConfig {
             console,
