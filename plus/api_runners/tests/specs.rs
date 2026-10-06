@@ -8,7 +8,7 @@
 mod common;
 
 use bencher_api_tests::TestServer;
-use bencher_json::{JsonSpec, JsonSpecs};
+use bencher_json::{JsonRunner, JsonSpecs};
 use common::{
     associate_runner_spec, claim_via_channel, create_runner, create_test_report, get_project_id,
     get_runner_id, insert_test_job, insert_test_spec, insert_test_spec_full,
@@ -38,8 +38,9 @@ async fn runner_specs_add() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::CREATED);
-    let spec: JsonSpec = resp.json().await.expect("Failed to parse response");
-    assert_eq!(spec.uuid, spec_uuid);
+    let json_runner: JsonRunner = resp.json().await.expect("Failed to parse response");
+    assert_eq!(json_runner.uuid, runner.uuid);
+    assert!(json_runner.specs.contains(&spec_uuid));
 }
 
 // GET /v0/runners/{runner}/specs - list runner specs

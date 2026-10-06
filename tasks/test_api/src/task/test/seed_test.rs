@@ -2646,8 +2646,13 @@ impl SeedTest {
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
-        let _spec: bencher_json::JsonSpec =
+        let runner: bencher_json::JsonRunner =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(runner.uuid, runner_uuid);
+        assert!(
+            runner.specs.contains(&spec_uuid),
+            "Expected spec to be assigned to runner"
+        );
 
         // View runner again (spec should now be assigned)
         // cargo run -- runner view --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN test-runner

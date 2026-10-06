@@ -1,7 +1,9 @@
 use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
-use bencher_json::{JsonNewRunnerSpec, JsonSpec, JsonSpecs, RunnerResourceId, SpecResourceId};
+use bencher_json::{
+    JsonNewRunnerSpec, JsonRunner, JsonSpec, JsonSpecs, RunnerResourceId, SpecResourceId,
+};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -74,6 +76,7 @@ async fn get_ls_inner(
 ///
 /// ➕ Bencher Plus: Associate a hardware spec with a runner.
 /// The user must be an admin to use this endpoint.
+/// Returns the runner with its updated specs.
 #[endpoint {
     method = POST,
     path = "/v0/runners/{runner}/specs",
@@ -84,7 +87,7 @@ pub async fn runner_specs_post(
     bearer_token: BearerToken,
     path_params: Path<RunnerSpecsParams>,
     body: TypedBody<JsonNewRunnerSpec>,
-) -> Result<ResponseCreated<JsonSpec>, HttpError> {
+) -> Result<ResponseCreated<JsonRunner>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
     let json = post_inner(rqctx.context(), path_params.into_inner(), body.into_inner()).await?;
     Ok(Post::auth_response_created(json))
@@ -94,7 +97,7 @@ async fn post_inner(
     context: &ApiContext,
     path_params: RunnerSpecsParams,
     json_runner_spec: JsonNewRunnerSpec,
-) -> Result<JsonSpec, HttpError> {
+) -> Result<JsonRunner, HttpError> {
     let (query_runner, query_spec) = auth_conn!(context, |conn| {
         let query_runner = QueryRunner::from_resource_id(conn, &path_params.runner)?;
         let query_spec = QuerySpec::from_resource_id(conn, &json_runner_spec.spec)?;
@@ -111,7 +114,7 @@ async fn post_inner(
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(RunnerSpec, insert))?;
 
-    Ok(query_spec.into_json())
+    query_runner.into_json(auth_conn!(context))
 }
 
 #[derive(Deserialize, JsonSchema)]
