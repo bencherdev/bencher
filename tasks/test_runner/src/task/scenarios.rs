@@ -856,11 +856,12 @@ CMD ["sh", "-c", "printf '%s_%s\\n' TO STDOUT && printf '%s_%s\\n' TO STDERR >&2
             extra_args: &["--timeout", "60"],
             validate: |output| {
                 assert_job_succeeded(output, "TO_STDOUT")?;
+                // A second copy is the runner echoing the guest's stderr into its own log.
                 anyhow::ensure!(
-                    guest_printed_to_stderr(output, "TO_STDERR") > 0
+                    guest_printed_to_stderr(output, "TO_STDERR") == 1
                         && guest_printed(output, "TO_STDERR") == 0
                         && guest_printed_to_stderr(output, "TO_STDOUT") == 0,
-                    "Expected 'TO_STDERR' on stderr alone and 'TO_STDOUT' on stdout alone.\nstdout: {}\nstderr: {}",
+                    "Expected 'TO_STDERR' once on stderr alone and 'TO_STDOUT' on stdout alone.\nstdout: {}\nstderr: {}",
                     output.stdout,
                     output.stderr
                 );

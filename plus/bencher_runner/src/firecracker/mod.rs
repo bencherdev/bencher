@@ -257,10 +257,6 @@ pub fn run_firecracker(
         eprintln!("{line}");
     }
 
-    if !results.stderr.is_empty() {
-        eprint!("{}", results.stderr);
-    }
-
     // Step 7: Kill Firecracker process
     fc_process.kill_after_grace_period(Duration::from_secs(2));
 
