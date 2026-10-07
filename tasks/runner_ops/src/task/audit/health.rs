@@ -182,11 +182,7 @@ fn isolation(cmdline: &str) -> Option<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::super::snapshot::{fake_output, fake_section};
-    use super::*;
-
-    const MDSTAT_SYNCED: &str = "\
+const MDSTAT_SYNCED: &str = "\
 Personalities : [raid1]
 md0 : active raid1 nvme1n1p1[1] nvme0n1p1[0]
       1000 blocks super 1.2 [2/2] [UU]
@@ -196,42 +192,51 @@ md2 : active raid1 nvme0n1p3[0] nvme1n1p3[1]
       bitmap: 1/1 pages [4KB], 65536KB chunk
 
 unused devices: <none>";
-    const AUTOREMOVE_CLEAN: &str = "\
+#[cfg(test)]
+const AUTOREMOVE_CLEAN: &str = "\
 NOTE: This is only a simulation!
 0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.";
 
-    fn healthy() -> Vec<(Section, &'static str)> {
-        Section::ALL
-            .into_iter()
-            .map(|section| {
-                let text = match section {
-                    Section::RunnerService => "active",
-                    Section::RebootRequired => "none",
-                    Section::Raid => MDSTAT_SYNCED,
-                    Section::Autoremove => AUTOREMOVE_CLEAN,
-                    Section::Cmdline => {
-                        "BOOT_IMAGE=/vmlinuz ro isolcpus=1-5 nohz_full=1-5 rcu_nocbs=1-5"
-                    },
-                    Section::Os
-                    | Section::Kernel
-                    | Section::KernelPackages
-                    | Section::Hardware
-                    | Section::Smt
-                    | Section::RunnerBinary
-                    | Section::RunnerUnit
-                    | Section::Sshd
-                    | Section::Apt
-                    | Section::Grub
-                    | Section::Ufw
-                    | Section::EnabledUnits
-                    | Section::Timezone
-                    | Section::Packages
-                    | Section::ManualPackages => "output",
-                };
-                (section, text)
-            })
-            .collect()
-    }
+/// Every section as a healthy runner prints it.
+#[cfg(test)]
+pub fn healthy() -> Vec<(Section, &'static str)> {
+    Section::ALL
+        .into_iter()
+        .map(|section| {
+            let text = match section {
+                Section::RunnerService => "active",
+                Section::RebootRequired => "none",
+                Section::Raid => MDSTAT_SYNCED,
+                Section::Autoremove => AUTOREMOVE_CLEAN,
+                Section::Cmdline => {
+                    "BOOT_IMAGE=/vmlinuz ro isolcpus=1-5 nohz_full=1-5 rcu_nocbs=1-5"
+                },
+                Section::Os
+                | Section::Kernel
+                | Section::KernelPackages
+                | Section::Hardware
+                | Section::Smt
+                | Section::Cgroup
+                | Section::RunnerBinary
+                | Section::RunnerUnit
+                | Section::Sshd
+                | Section::Apt
+                | Section::Grub
+                | Section::Ufw
+                | Section::EnabledUnits
+                | Section::Timezone
+                | Section::Packages
+                | Section::ManualPackages => "output",
+            };
+            (section, text)
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::snapshot::{fake_output, fake_section};
+    use super::*;
 
     /// The problems reported after replacing one section of a healthy runner.
     fn problems(section: Section, text: &str) -> Vec<(Check, String)> {

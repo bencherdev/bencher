@@ -1,14 +1,16 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt::{self, Write as _};
+use std::fmt;
 
 use bencher_json::RunnerKey;
 
 use crate::task::apt::AUTOREMOVE_SIMULATION;
-use crate::task::harden::{AUTO_UPGRADES_PATH, SSH_HARDENING_PATH, UNATTENDED_UPGRADES_PATH};
+use crate::task::desired::{
+    AUTO_UPGRADES_PATH, BENCHER_CGROUP, SSH_HARDENING_PATH, UNATTENDED_UPGRADES_PATH,
+};
+#[cfg(test)]
+use crate::task::framed;
+use crate::task::framed::Output;
 
-const MARKER: &str = "@@audit ";
-const STATUS: &str = "@@status ";
-const RUNNER_KEY: &str = "BENCHER_RUNNER_KEY";
 const RUNNER_NAME: &str = "BENCHER_RUNNER=";
 const RUNNER_UNIT: &str = "/etc/systemd/system/bencher-runner.service";
 // The unit lines runner ops writes and the privileges the runner depends on; `BENCHER_RUNNER=` cannot match the key.
@@ -26,6 +28,7 @@ pub enum Section {
     Cmdline,
     Hardware,
     Smt,
+    Cgroup,
     Raid,
     RunnerBinary,
     RunnerUnit,
@@ -43,13 +46,14 @@ pub enum Section {
 }
 
 impl Section {
-    pub const ALL: [Self; 20] = [
+    pub const ALL: [Self; 21] = [
         Self::Os,
         Self::Kernel,
         Self::KernelPackages,
         Self::Cmdline,
         Self::Hardware,
         Self::Smt,
+        Self::Cgroup,
         Self::Raid,
         Self::RunnerBinary,
         Self::RunnerUnit,
@@ -74,6 +78,7 @@ impl Section {
             Self::Cmdline => "cmdline",
             Self::Hardware => "hardware",
             Self::Smt => "smt",
+            Self::Cgroup => "cgroup",
             Self::Raid => "raid",
             Self::RunnerBinary => "runner binary",
             Self::RunnerUnit => "runner unit",
@@ -99,6 +104,7 @@ impl Section {
             Self::Cmdline => "cat /proc/cmdline".to_owned(),
             Self::Hardware => "grep -m1 '^model name' /proc/cpuinfo && grep -m1 '^microcode' /proc/cpuinfo && grep -H . /sys/class/dmi/id/bios_version /sys/class/dmi/id/board_name".to_owned(),
             Self::Smt => "grep -H . /sys/devices/system/cpu/smt/control /sys/devices/system/cpu/online".to_owned(),
+            Self::Cgroup => format!("grep -H . {BENCHER_CGROUP}/cgroup.subtree_control {BENCHER_CGROUP}/cpuset.cpus.effective {BENCHER_CGROUP}/cpuset.cpus.partition"),
             Self::Raid => "cat /proc/mdstat".to_owned(),
             Self::RunnerBinary => "sha256sum /usr/local/bin/runner".to_owned(),
             Self::RunnerUnit => runner_unit_command(RUNNER_UNIT),
@@ -163,6 +169,7 @@ impl Section {
             | Self::Kernel
             | Self::Hardware
             | Self::Smt
+            | Self::Cgroup
             | Self::RunnerBinary
             | Self::Sshd
             | Self::Apt
@@ -186,27 +193,11 @@ impl fmt::Display for Section {
     }
 }
 
-/// The remote script that prints each section's output between a marker line and its exit status.
-pub fn script() -> String {
-    let mut script =
-        String::from("(set -o pipefail) 2>/dev/null && set -o pipefail\nexport LC_ALL=C\n");
-    for section in Section::ALL {
-        _ = writeln!(
-            script,
-            "{}{{ {}; }} 2>&1",
-            marker(section),
-            section.command()
-        );
-        _ = writeln!(script, "printf '\\n{STATUS}%s\\n' \"$?\"");
-    }
-    // A failing section command is audit data; only a failed connection is an error.
-    script.push_str("exit 0\n");
-    script
-}
-
-// The leading newline keeps a marker off the last line of output that has no trailing newline.
-fn marker(section: Section) -> String {
-    format!("printf '\\n{MARKER}%s\\n' '{}'\n", section.name())
+/// Each section's name and its command, for the audit script.
+pub fn frames() -> impl Iterator<Item = (String, String)> {
+    Section::ALL
+        .into_iter()
+        .map(|section| (section.name().to_owned(), section.command()))
 }
 
 /// Only allowlisted lines of the unit and its drop-ins, never `systemctl cat`, and no line holding a runner key leaves the server.
@@ -221,38 +212,24 @@ fn runner_unit_command(unit: &str) -> String {
 #[derive(Debug)]
 pub struct Sections(BTreeMap<Section, Output>);
 
-#[derive(Debug, Default)]
-struct Output {
-    text: String,
-    status: Option<i32>,
-}
-
 impl Sections {
+    #[cfg(test)]
     pub fn parse(output: &str) -> Self {
-        let mut sections = BTreeMap::<Section, Output>::new();
-        let mut current = None;
-        for line in output.lines() {
-            if let Some(name) = line.strip_prefix(MARKER) {
-                current = Section::ALL
-                    .into_iter()
-                    .find(|section| section.name() == name);
-                if let Some(section) = current {
-                    sections.entry(section).or_default();
-                }
-            } else if let Some(section) = current
-                && !line.contains(RUNNER_KEY)
-                && !line.contains(RunnerKey::PREFIX)
-            {
-                let output = sections.entry(section).or_default();
-                if let Some(status) = line.strip_prefix(STATUS) {
-                    output.status = status.parse().ok();
-                } else {
-                    output.text.push_str(line);
-                    output.text.push('\n');
-                }
-            }
-        }
-        Self(sections)
+        Self::take(&mut framed::parse(output))
+    }
+
+    /// Take the sections out of the frames of one script.
+    pub fn take(frames: &mut BTreeMap<String, Output>) -> Self {
+        Self(
+            Section::ALL
+                .into_iter()
+                .filter_map(|section| {
+                    frames
+                        .remove(section.name())
+                        .map(|output| (section, output))
+                })
+                .collect(),
+        )
     }
 
     pub fn get(&self, section: Section) -> &str {
@@ -454,7 +431,7 @@ fn normalize_runner_name(line: &str) -> String {
     format!("{head}{RUNNER_NAME}<runner>{tail}")
 }
 
-/// Fake `script()` output for tests, where every section succeeds.
+/// Fake audit script output for tests, where every section succeeds.
 #[cfg(test)]
 pub fn fake_output(sections: &[(Section, &str)]) -> String {
     sections
@@ -463,11 +440,10 @@ pub fn fake_output(sections: &[(Section, &str)]) -> String {
         .collect()
 }
 
-/// Fake `script()` output for one section, cut off before its exit status when `status` is `None`.
+/// Fake audit script output for one section, cut off before its exit status when `status` is `None`.
 #[cfg(test)]
 pub fn fake_section(section: Section, text: &str, status: Option<i32>) -> String {
-    let status = status.map_or_else(String::new, |status| format!("\n{STATUS}{status}\n"));
-    format!("\n{MARKER}{}\n{text}\n{status}", section.name())
+    framed::fake_frame(section.name(), text, status)
 }
 
 #[cfg(test)]
@@ -475,6 +451,7 @@ mod tests {
     use std::process::Command;
 
     use super::*;
+    use crate::task::framed::{RUNNER_KEY, marker};
 
     const KEY: &str = "bencher_runner_0123456789abcdef";
 
@@ -509,9 +486,9 @@ mod tests {
 
     #[test]
     fn script_prints_every_section_and_status() {
-        let script = script();
+        let script = framed::script(frames());
         for section in Section::ALL {
-            assert!(script.contains(&marker(section)), "{section}");
+            assert!(script.contains(&marker(section.name())), "{section}");
         }
         assert_eq!(
             script.matches("printf '\\n@@status %s\\n' \"$?\"").count(),
@@ -742,6 +719,26 @@ unused devices: <none>";
     }
 
     #[test]
+    fn diff_reports_the_partition_level() {
+        let cgroup = |level: &str| {
+            format!(
+                "{BENCHER_CGROUP}/cgroup.subtree_control:cpuset memory pids\n{BENCHER_CGROUP}/cpuset.cpus.effective:1-5\n{BENCHER_CGROUP}/cpuset.cpus.partition:{level}"
+            )
+        };
+        let runner = snapshot(&fake_output(&[(Section::Cgroup, &cgroup("member"))]));
+        let reference = snapshot(&fake_output(&[(Section::Cgroup, &cgroup("root"))]));
+        assert_eq!(
+            runner.diff(&reference),
+            [SectionDiff {
+                section: Section::Cgroup,
+                reference: vec!["/sys/fs/cgroup/bencher/cpuset.cpus.partition:root"],
+                runner: vec!["/sys/fs/cgroup/bencher/cpuset.cpus.partition:member"],
+                order_differs: false,
+            }]
+        );
+    }
+
+    #[test]
     fn diff_reports_reordered_lines() {
         let runner = snapshot(&fake_output(&[(Section::Grub, "a.cfg:X=1\nb.cfg:X=2")]));
         let reference = snapshot(&fake_output(&[(Section::Grub, "b.cfg:X=2\na.cfg:X=1")]));
@@ -798,9 +795,9 @@ unused devices: <none>";
             (Section::Packages, "curl 8.5.0\nzlib1g 1:1.3"),
         ]));
         let (sections, lines) = snapshot.size();
-        assert_eq!(sections, 17);
-        // 3 lines of output, plus a missing exit status for each of the other 15 sections
-        assert_eq!(lines, 18);
+        assert_eq!(sections, 18);
+        // 3 lines of output, plus a missing exit status for each of the other 16 sections
+        assert_eq!(lines, 19);
     }
 
     fn mdstat(arrays: &[&str]) -> String {

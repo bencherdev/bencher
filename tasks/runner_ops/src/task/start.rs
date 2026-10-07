@@ -6,7 +6,7 @@ use crate::parser::TaskStart;
 
 const DROP_IN_DIR: &str = "/etc/systemd/system/bencher-runner.service.d";
 const KEY_DIR: &str = "/etc/bencher-runner";
-const KEY_FILE: &str = "/etc/bencher-runner/key.env";
+pub const KEY_FILE: &str = "/etc/bencher-runner/key.env";
 
 #[derive(Debug)]
 pub struct Start {

@@ -12,10 +12,12 @@ pub struct TaskRunnerOps {
 
 #[derive(Subcommand, Debug)]
 pub enum TaskSub {
-    /// Full provisioning: install OS, harden, and deploy runner
+    /// Full provisioning: install OS, apply host settings, harden, and deploy runner
     Provision(TaskProvision),
     /// Configure kernel boot args for CPU isolation and reboot
     Isolate(TaskIsolate),
+    /// Write every host setting that differs from the desired state, then report it
+    Host(TaskHost),
     /// Download the runner binary of the runner's update channel and deploy it to a server
     Deploy(TaskDeploy),
     /// Show runner binary version
@@ -72,6 +74,24 @@ pub struct TaskIsolate {
     /// Benchmark CPU list to isolate (e.g. `1-5`; defaults to the lowest logical CPU of each physical core except CPU 0's)
     #[clap(long)]
     pub cpus: Option<String>,
+}
+
+#[derive(Parser, Debug)]
+pub struct TaskHost {
+    /// Runner slug or UUID (for runners.json lookup)
+    pub runner: Option<RunnerResourceId>,
+
+    /// IP address or hostname of the server
+    #[clap(long, required_unless_present = "runner")]
+    pub server: Option<String>,
+
+    /// Path to SSH private key
+    #[clap(long, required_unless_present = "runner")]
+    pub ssh: Option<Utf8PathBuf>,
+
+    /// SSH user
+    #[clap(long)]
+    pub user: Option<String>,
 }
 
 #[derive(Parser, Debug)]

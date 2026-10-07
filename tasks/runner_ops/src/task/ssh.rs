@@ -12,6 +12,8 @@ const BOOT_ID_CMD: &str = "cat /proc/sys/kernel/random/boot_id";
 
 #[derive(Debug)]
 pub struct Ssh {
+    /// `ssh`, or a test's stand-in for it.
+    program: Utf8PathBuf,
     server: String,
     key: Utf8PathBuf,
     user: String,
@@ -19,7 +21,12 @@ pub struct Ssh {
 
 impl Ssh {
     pub fn new(server: String, key: Utf8PathBuf, user: String) -> Self {
-        Self { server, key, user }
+        Self {
+            program: "ssh".into(),
+            server,
+            key,
+            user,
+        }
     }
 
     fn destination(&self) -> String {
@@ -54,7 +61,7 @@ impl Ssh {
 
     /// Like [`Ssh::run_quiet`], with `stdin` sent to the command, which keeps it out of every command line.
     pub fn run_quiet_with_stdin(&self, command: &str, stdin: &Stdin) -> anyhow::Result<String> {
-        let mut child = Command::new("ssh")
+        let mut child = Command::new(&self.program)
             .args(self.ssh_options())
             .arg(self.destination())
             .arg(command)
@@ -87,7 +94,7 @@ impl Ssh {
     /// Does not treat non-zero exit as an error (for idempotent checks).
     pub fn check(&self, command: &str) -> anyhow::Result<bool> {
         println!("ssh check: {command}");
-        let status = Command::new("ssh")
+        let status = Command::new(&self.program)
             .args(self.ssh_options())
             .arg(self.destination())
             .arg(command)
@@ -113,7 +120,7 @@ impl Ssh {
 
     /// Run a command on the remote server with inherited stdio (streams directly to terminal).
     pub fn exec(&self, command: &str) -> anyhow::Result<()> {
-        let status = Command::new("ssh")
+        let status = Command::new(&self.program)
             .args(self.ssh_options())
             .arg(self.destination())
             .arg(command)
@@ -181,6 +188,37 @@ impl Ssh {
             );
         }
     }
+
+    /// An `Ssh` that runs the shell script `script`, written to `dir`, in place of `ssh`, with the remote command as its last argument.
+    #[cfg(test)]
+    #[cfg(target_os = "linux")]
+    pub fn stand_in(dir: &Utf8Path, script: &str) -> anyhow::Result<Self> {
+        let program = dir.join("ssh");
+        write_executable(&program, script)?;
+        Ok(Self {
+            program,
+            server: "runner".to_owned(),
+            key: dir.join("key"),
+            user: "root".to_owned(),
+        })
+    }
+}
+
+/// Write an executable script through a child process, so that no fork of a test still holds it open for writing, which would fail its exec with `ETXTBSY`.
+#[cfg(test)]
+#[cfg(target_os = "linux")]
+pub fn write_executable(path: &Utf8Path, script: &str) -> anyhow::Result<()> {
+    let mut install = Command::new("install")
+        .args(["-m", "755", "/dev/stdin", path.as_str()])
+        .stdin(Stdio::piped())
+        .spawn()?;
+    install
+        .stdin
+        .take()
+        .map(|mut stdin| stdin.write_all(script.as_bytes()))
+        .transpose()?;
+    anyhow::ensure!(install.wait()?.success(), "Failed to write {path}");
+    Ok(())
 }
 
 /// What a command reads on its stdin, a type apart from the command so the two cannot trade places.

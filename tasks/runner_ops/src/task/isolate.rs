@@ -165,7 +165,7 @@ fn validate_cpu_list(cpus: &str, present: &BTreeSet<u32>) -> anyhow::Result<BTre
     }
 }
 
-fn parse_cpu_list(list: &str) -> Option<BTreeSet<u32>> {
+pub fn parse_cpu_list(list: &str) -> Option<BTreeSet<u32>> {
     parse_cpu_ranges(list).map(|ranges| ranges.into_iter().flatten().collect())
 }
 
@@ -195,7 +195,7 @@ fn parse_cpu(cpu: &str) -> Option<u32> {
 }
 
 /// Format CPUs as a compact kernel CPU list (`1-5`, `2,4,6`).
-fn format_cpu_list(cpus: &BTreeSet<u32>) -> String {
+pub fn format_cpu_list(cpus: &BTreeSet<u32>) -> String {
     let mut ranges: Vec<(u32, u32)> = Vec::new();
     for &cpu in cpus {
         match ranges.last_mut() {

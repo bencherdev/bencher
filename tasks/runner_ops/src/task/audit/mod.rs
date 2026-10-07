@@ -1,8 +1,13 @@
 mod health;
 mod snapshot;
 
+use std::collections::BTreeMap;
+
 use bencher_json::RunnerResourceId;
 
+use super::desired::{self, Desired};
+use super::download::published_checksum;
+use super::framed::{self, Output};
 use super::merge_ssh;
 use super::ssh::Ssh;
 use crate::parser::TaskAudit;
@@ -19,6 +24,7 @@ pub struct Audit {
 struct Target {
     label: String,
     ssh: Ssh,
+    desired: Desired,
 }
 
 impl TryFrom<TaskAudit> for Audit {
@@ -33,12 +39,17 @@ impl TryFrom<TaskAudit> for Audit {
             against,
         } = task;
         let file = runner.as_ref().map(load_server).transpose()?.flatten();
+        let update_channel = file
+            .as_ref()
+            .and_then(|f| f.update_channel)
+            .unwrap_or_default();
         let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
         let label = runner.map_or_else(|| server.clone(), |runner| runner.to_string());
         Ok(Self {
             runner: Target {
                 label,
                 ssh: Ssh::new(server, ssh, user),
+                desired: Desired::new(update_channel),
             },
             against: against.as_ref().map(Target::from_file).transpose()?,
         })
@@ -48,13 +59,13 @@ impl TryFrom<TaskAudit> for Audit {
 impl Audit {
     pub fn exec(self) -> anyhow::Result<()> {
         let Self { runner, against } = self;
-        let sections = runner.collect()?;
+        let (sections, frames) = runner.collect()?;
         let snapshot = Snapshot::new(&sections);
         report_size(&runner.label, &snapshot);
 
         let mut differing = 0;
         let reference = if let Some(reference) = against {
-            let reference_sections = reference.collect()?;
+            let (reference_sections, reference_frames) = reference.collect()?;
             let reference_snapshot = Snapshot::new(&reference_sections);
             report_size(&reference.label, &reference_snapshot);
             let diff = snapshot.diff(&reference_snapshot);
@@ -66,20 +77,22 @@ impl Audit {
                 print!("{section}");
             }
             differing = diff.len();
-            Some((reference, reference_sections))
+            Some((reference, reference_sections, reference_frames))
         } else {
             print!("{snapshot}");
             None
         };
 
         let mut failed = report_health(&runner.label, &sections);
-        if let Some((reference, reference_sections)) = &reference {
+        let mut unmet = runner.report_desired(&frames);
+        if let Some((reference, reference_sections, reference_frames)) = &reference {
             failed += report_health(&reference.label, reference_sections);
+            unmet += reference.report_desired(reference_frames);
         }
 
-        if failed > 0 || differing > 0 {
+        if failed > 0 || unmet > 0 || differing > 0 {
             anyhow::bail!(
-                "Audit found {failed} failed health check(s) and {differing} differing section(s)"
+                "Audit found {failed} failed health check(s), {unmet} desired state difference(s), and {differing} differing section(s)"
             );
         }
         println!("Audit clean");
@@ -96,13 +109,24 @@ impl Target {
         Ok(Self {
             label: runner.to_string(),
             ssh: Ssh::new(server, ssh, user),
+            desired: Desired::new(file.update_channel.unwrap_or_default()),
         })
     }
 
-    fn collect(&self) -> anyhow::Result<Sections> {
+    /// The snapshot sections and the desired state rows, read in one script.
+    fn collect(&self) -> anyhow::Result<(Sections, BTreeMap<String, Output>)> {
         println!("Collecting an audit snapshot from {}...", self.label);
-        let output = self.ssh.run_quiet(&snapshot::script())?;
-        Ok(Sections::parse(&output))
+        let script = framed::script(snapshot::frames().chain(self.desired.frames()));
+        let mut frames = framed::parse(&self.ssh.run_quiet(&script)?);
+        Ok((Sections::take(&mut frames), frames))
+    }
+
+    /// Print this runner's desired state and count the rows that differ.
+    fn report_desired(&self, frames: &BTreeMap<String, Output>) -> usize {
+        desired::report(
+            &self.label,
+            &self.desired.check(frames, &mut published_checksum),
+        )
     }
 }
 
@@ -119,4 +143,72 @@ fn report_health(label: &str, sections: &Sections) -> usize {
 fn report_size(label: &str, snapshot: &Snapshot) {
     let (sections, lines) = snapshot.size();
     println!("Audited {sections} sections ({lines} lines) from {label}");
+}
+
+#[cfg(test)]
+#[cfg(target_os = "linux")]
+mod tests {
+    use std::collections::BTreeSet;
+    use std::fs;
+
+    use bencher_json::UpdateChannel;
+    use camino::Utf8Path;
+
+    use super::snapshot::fake_output;
+    use super::*;
+
+    #[test]
+    fn the_audit_reads_every_desired_row_in_its_one_script() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(dir.path()).unwrap();
+        // A runner with no commands at all, so every framed command prints its own failure.
+        let ssh = Ssh::stand_in(
+            dir,
+            "#!/bin/sh\nfor command; do :; done\nPATH=/nonexistent exec /bin/sh -c \"$command\"\n",
+        )
+        .unwrap();
+        let target = Target {
+            label: "runner".to_owned(),
+            ssh,
+            desired: Desired::new(UpdateChannel::Stable),
+        };
+        let (_, frames) = target.collect().unwrap();
+        assert_eq!(
+            frames.keys().cloned().collect::<BTreeSet<_>>(),
+            target
+                .desired
+                .frames()
+                .map(|(name, _)| name)
+                .collect::<BTreeSet<_>>()
+        );
+    }
+
+    #[test]
+    fn the_audit_counts_each_desired_state_difference() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(dir.path()).unwrap();
+        let desired = Desired::new(UpdateChannel::Stable);
+        let rows = desired.frames().count();
+        // A healthy runner on which every desired state row is absent.
+        let mut reply = fake_output(&health::healthy());
+        for (name, _) in desired.frames() {
+            reply.push_str(&framed::fake_frame(&name, "absent", Some(0)));
+        }
+        fs::write(dir.join("reply"), reply).unwrap();
+        let ssh = Ssh::stand_in(dir, &format!("#!/bin/sh\ncat {dir}/reply\n")).unwrap();
+        let audit = Audit {
+            runner: Target {
+                label: "runner".to_owned(),
+                ssh,
+                desired,
+            },
+            against: None,
+        };
+        assert_eq!(
+            audit.exec().unwrap_err().to_string(),
+            format!(
+                "Audit found 0 failed health check(s), {rows} desired state difference(s), and 0 differing section(s)"
+            )
+        );
+    }
 }
