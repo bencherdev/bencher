@@ -1,8 +1,15 @@
 @layer ui-components {
+	/* Holds its place at once and shows only once the wait is noticeable, so
+	   data that arrives quickly never flashes a placeholder. */
 	.ui-skeleton {
+		display: block;
 		background: var(--color-skeleton);
-		border-radius: var(--radius-container);
-		animation: ui-skeleton-pulse 1.6s var(--ease-standard) infinite;
+		border-radius: var(--radius-inner);
+		animation: ui-skeleton-show 0s 400ms both;
+	}
+
+	.ui-skeleton[data-size="text"] {
+		height: 1em;
 	}
 
 	.ui-skeleton[data-size="row"] {
@@ -12,17 +19,16 @@
 
 	.ui-skeleton[data-size="card"] {
 		min-height: 9rem;
+		border-radius: var(--radius-container);
 	}
 
-	@keyframes ui-skeleton-pulse {
-		50% {
-			opacity: 0.55;
+	@keyframes ui-skeleton-show {
+		from {
+			visibility: hidden;
 		}
-	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.ui-skeleton {
-			animation: none;
+		to {
+			visibility: visible;
 		}
 	}
 }

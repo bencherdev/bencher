@@ -2,7 +2,8 @@ import type { JSX } from "solid-js";
 import { splitProps } from "solid-js";
 
 export interface SkeletonProps extends JSX.HTMLAttributes<HTMLDivElement> {
-	size?: "row" | "card";
+	/** `text` is one line of the surrounding type; its width is the caller's. */
+	size?: "text" | "row" | "card";
 }
 
 /** A quiet placeholder while real content loads. */

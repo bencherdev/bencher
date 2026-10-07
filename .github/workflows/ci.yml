@@ -33,6 +33,7 @@ jobs:
       docker: ${{ steps.filter.outputs.docker }}
       runner: ${{ steps.filter.outputs.runner }}
       nix: ${{ steps.filter.outputs.nix }}
+      console_e2e: ${{ steps.filter.outputs.console_e2e }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -97,6 +98,19 @@ jobs:
             nix:
               - 'flake.nix'
               - 'flake.lock'
+            console_e2e:
+              - '.github/workflows/console_e2e.yml'
+              - '.github/actions/**'
+              - '.cargo/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - 'services/console/**'
+              - 'packages/**'
+              - 'lib/**'
+              - 'plus/**'
+              - 'services/api/**'
+              - 'tasks/test_console/**'
 
   lint:
     name: Lint
@@ -314,6 +328,15 @@ jobs:
       BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
       BENCHER_CALLBACK_TOKEN: ${{ secrets.BENCHER_CALLBACK_TOKEN }}
 
+  console_e2e:
+    name: Console E2E
+    needs: changes
+    if: ${{ github.ref != 'refs/heads/cloud' && (needs.changes.outputs.console_e2e == 'true' || github.ref == 'refs/heads/devel') }}
+    uses: ./.github/workflows/console_e2e.yml
+    with:
+      mold-version: "2.34.1"
+      wasm-pack-version: "0.12.1"
+
   build:
     name: Build
     permissions:
@@ -376,7 +399,7 @@ jobs:
     permissions:
       contents: write
       packages: read
-    needs: [lint, cli, test, build, fetch_devel_builds]
+    needs: [lint, cli, test, console_e2e, build, fetch_devel_builds]
     if: ${{ !failure() && !cancelled() && (github.ref == 'refs/heads/devel' || github.ref == 'refs/heads/cloud' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))) }}
     uses: ./.github/workflows/deploy.yml
     with:
@@ -409,7 +432,7 @@ jobs:
   ci-success:
     name: CI Success
     if: always()
-    needs: [lint, cli, runner, fetch_devel_builds, publish_runner_canary, test, build, docker, deploy, release]
+    needs: [lint, cli, runner, fetch_devel_builds, publish_runner_canary, test, console_e2e, build, docker, deploy, release]
     runs-on: ubuntu-22.04
     steps:
       - name: Check all jobs passed
@@ -432,6 +455,10 @@ jobs:
           fi
           if [[ "${{ needs.test.result }}" != "success" && "${{ needs.test.result }}" != "skipped" ]]; then
             echo "Test failed"
+            exit 1
+          fi
+          if [[ "${{ needs.console_e2e.result }}" != "success" && "${{ needs.console_e2e.result }}" != "skipped" ]]; then
+            echo "Console E2E failed"
             exit 1
           fi
           # Cloud fetches devel's builds instead of building, and every other run builds.

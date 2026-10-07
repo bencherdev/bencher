@@ -1,0 +1,296 @@
+/* The shell and the page frame. Colors come from the design system's tokens. */
+
+.console {
+	min-height: 100vh;
+	font-size: 14px;
+	line-height: 1.45;
+}
+.console a:hover {
+	color: var(--color-text-accent-hover);
+}
+.spacer {
+	flex: 1;
+}
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* shell */
+.shell {
+	display: flex;
+	flex-direction: column;
+}
+.bar {
+	height: 56px;
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	padding: 0 24px;
+	border-bottom: var(--border-width) solid var(--color-border);
+}
+.console .brand {
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	font-weight: var(--font-weight-bold);
+	font-size: 20px;
+	letter-spacing: -0.01em;
+	color: var(--color-text-primary);
+	flex: none;
+}
+.brand svg {
+	display: block;
+}
+.mark-eye {
+	fill: var(--color-stroke-accent);
+}
+.crumbs {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--color-text-muted);
+	min-width: 0;
+}
+.console .crumbs a.crumb-org {
+	color: var(--color-text-muted);
+}
+.crumbs .sep {
+	color: var(--color-text-faint);
+}
+.crumb-skel {
+	width: 96px;
+}
+.console .projlink {
+	display: inline-flex;
+	align-items: center;
+	height: 32px;
+	padding: 0 6px;
+	border-radius: var(--radius-element);
+	color: var(--color-text-primary);
+	font-weight: var(--font-weight-semibold);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 0;
+}
+.console .projlink:hover {
+	background: var(--color-overlay-hover);
+	color: var(--color-text-primary);
+}
+.console .docs {
+	color: var(--color-text-muted);
+}
+.console .avatar {
+	display: inline-block;
+	width: 32px;
+	height: 32px;
+	flex: none;
+	border-radius: var(--radius-full);
+	border: var(--border-width) solid var(--color-border-control);
+	background: linear-gradient(
+		135deg,
+		var(--color-avatar-start),
+		var(--color-avatar-end)
+	);
+}
+.badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 6px;
+	border-radius: var(--radius-full);
+	background: var(--color-accent);
+	color: var(--color-on-accent);
+	font-size: 11px;
+	font-weight: var(--font-weight-bold);
+}
+.console .bell {
+	position: relative;
+	display: none;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	color: var(--color-text-secondary);
+	border-radius: var(--radius-element);
+	font-size: 20px;
+}
+.bell .badge {
+	position: absolute;
+	top: 4px;
+	right: 2px;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	font-size: 10px;
+}
+.tabs {
+	display: flex;
+	align-items: flex-end;
+	gap: 4px;
+	padding: 0 24px;
+	border-bottom: var(--border-width) solid var(--color-border);
+	overflow-x: auto;
+	scrollbar-width: none;
+	scroll-padding: 0 16px;
+}
+.tabs::-webkit-scrollbar {
+	display: none;
+}
+.console .tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	height: 44px;
+	padding: 0 12px;
+	flex: none;
+	color: var(--color-text-muted);
+	font-size: 13.5px;
+	font-weight: var(--font-weight-medium);
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+}
+.console .tab:hover {
+	color: var(--color-text-primary);
+}
+.console .tab[aria-current="page"] {
+	color: var(--color-text-primary);
+	font-weight: var(--font-weight-semibold);
+	border-bottom-color: var(--color-stroke-accent);
+}
+.tabspacer {
+	flex: 1;
+	min-width: 12px;
+}
+
+/* page */
+.page {
+	width: 100%;
+	max-width: 1440px;
+	margin: 0 auto;
+	padding: 16px 24px 32px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+.pagehead {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+.lede {
+	margin: 0;
+	color: var(--color-text-secondary);
+	max-width: 72ch;
+}
+.ro-note {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	font-size: 13px;
+	color: var(--color-text-secondary);
+}
+.ro-note .ui-icon {
+	color: var(--color-text-muted);
+}
+.load-error {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 14px;
+}
+.load-error .grow {
+	flex: 1 1 260px;
+	min-width: 0;
+}
+.title-skel {
+	width: 160px;
+	font-size: var(--font-size-xl);
+	line-height: 1.15;
+}
+
+/* narrow: mark, project, bell, avatar; the tab row scrolls */
+@media (max-width: 767px) {
+	.console {
+		font-size: 13.5px;
+	}
+	.bar {
+		height: 52px;
+		gap: 6px;
+		padding: 0 8px 0 12px;
+	}
+	.brand-name,
+	.crumb-org,
+	.crumb-skel,
+	.console .docs,
+	.theme-toggle {
+		display: none;
+	}
+	.console .brand {
+		width: 44px;
+		height: 44px;
+		justify-content: center;
+		/* The hit area grows into the gaps, so the mark and the project stay put. */
+		margin: 0 -6px 0 -8px;
+	}
+	.console .bell {
+		display: inline-grid;
+	}
+	.console .projlink {
+		height: 44px;
+		font-size: 15px;
+		font-weight: var(--font-weight-bold);
+	}
+	.console .avatar {
+		width: 44px;
+		height: 44px;
+		border-color: transparent;
+		background: transparent;
+		display: inline-grid;
+		place-items: center;
+	}
+	.console .avatar::after {
+		content: "";
+		width: 30px;
+		height: 30px;
+		border-radius: var(--radius-full);
+		border: var(--border-width) solid var(--color-border-control);
+		background: linear-gradient(
+			135deg,
+			var(--color-avatar-start),
+			var(--color-avatar-end)
+		);
+	}
+	.tabs {
+		gap: 0;
+		padding: 0 6px;
+	}
+	.console .tab {
+		padding: 0 10px;
+		font-size: 13px;
+	}
+	.tab .badge {
+		min-width: 16px;
+		height: 16px;
+		padding: 0 4px;
+		font-size: 10px;
+	}
+	.tabspacer {
+		display: none;
+	}
+	.page {
+		padding: 12px 14px 24px;
+		gap: 10px;
+	}
+}

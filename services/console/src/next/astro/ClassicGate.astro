@@ -1,0 +1,27 @@
+---
+import { VERSION_KEY } from "../memory";
+import { nextHref } from "../paths";
+
+interface Props {
+	slug: string | undefined;
+}
+
+const { slug } = Astro.props;
+const next = nextHref({ pathname: Astro.url.pathname, hash: "" });
+
+// A classic project page whose project the reader has seen on version 1 moves
+// to the new console before the page loads anything.
+---
+
+{
+	slug && next && (
+		<script is:inline define:vars={{ slug, next, VERSION_KEY }}>
+			try {
+				var versions = JSON.parse(localStorage.getItem(VERSION_KEY) || "{}");
+				if (versions && versions[slug] === 1) {
+					location.replace(next + location.hash);
+				}
+			} catch (_) {}
+		</script>
+	)
+}

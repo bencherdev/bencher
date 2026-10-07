@@ -8035,12 +8035,17 @@ name = "test_console"
 version = "0.6.13"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "bencher_json",
+ "bencher_license",
+ "camino",
  "clap",
+ "futures-concurrency",
  "reqwest",
  "rustls",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
 ]
 

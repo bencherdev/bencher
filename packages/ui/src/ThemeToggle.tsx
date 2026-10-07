@@ -28,7 +28,7 @@ const ThemeToggle = (props: ThemeToggleProps) => {
 	};
 	return (
 		<Button
-			variant="ghost"
+			variant="secondary"
 			{...rest}
 			aria-label="Switch between light and dark"
 			onClick={toggle}

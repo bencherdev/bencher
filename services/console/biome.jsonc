@@ -10,6 +10,8 @@
 			"!**/dist/**",
 			"!**/public/**",
 			"!**/diagrams/output/**",
+			"!**/test-results",
+			"!**/playwright-report",
 			"!**/*.svg"
 		]
 	},
@@ -33,6 +35,33 @@
 		}
 	},
 	"overrides": [
+		{
+			// solid-query's hooks read through a Solid resource, so every cache write
+			// re-suspends the page; the new console reads through `useQueryResult`.
+			"includes": ["src/next/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"@tanstack/solid-query": {
+										"importNames": [
+											"useQuery",
+											"createQuery",
+											"useQueries",
+											"createQueries"
+										],
+										"message": "Read queries through useQueryResult from src/next/query.ts."
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		{
 			// Biome only parses the frontmatter of an `.astro` file, so anything
 			// imported or bound for use in the template below looks unused.
