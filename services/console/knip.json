@@ -1,6 +1,7 @@
 {
 	"project": ["**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx,astro,mdx,sass,scss}!"],
 	"ignoreDependencies": ["@sentry/cloudflare", "wrangler"],
+	"ignore": ["src/next/plot/units.wasm.test.ts"],
 	"astro": {
 		"entry": [
 			"astro.config.{js,cjs,mjs,ts}",
