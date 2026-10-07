@@ -2023,3 +2023,271 @@ async fn console_report_branch_names_the_reports_head() {
 
     assert_eq!(report.branch.head, seeded.subject.branch.head.uuid);
 }
+
+/// Post `alpha` once a day from the first of December under a two sided latency
+/// threshold, size 10 with each of these latencies and size 2 on the small days,
+/// and return the last.
+async fn alpha_days(
+    server: &TestServer,
+    fixture: &Fixture,
+    latencies: &[f64],
+    small_days: &[usize],
+) -> JsonReport {
+    let first = at("2023-12-01T00:00:00Z").timestamp();
+    let mut last = None;
+    for (day, latency) in latencies.iter().enumerate() {
+        let start = DateTime::try_from(first + 86_400 * i64::try_from(day).expect("a day"))
+            .expect("a time");
+        let mut variants = vec![(10, serde_json::json!({ "latency": { "value": latency } }))];
+        if small_days.contains(&day) {
+            variants.push((2, serde_json::json!({ "latency": { "value": 100.0 } })));
+        }
+        let hash = format!(
+            "{:040x}",
+            0xc000_0000u64 + u64::try_from(day).expect("a day")
+        );
+        let start = serde_json::to_value(start).expect("a time");
+        let body = serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "hash": hash,
+            "start_time": start,
+            "end_time": start,
+            "results": [alpha(&variants)],
+            "bmf_version": 1,
+            // The lower limit is wide enough that no point falls below it.
+            "thresholds": { "models": [{
+                "measure": "latency",
+                "metric": "value",
+                "model": { "test": "percentage", "lower_boundary": 0.9, "upper_boundary": 0.25 },
+            }] },
+        });
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/projects/{}/reports", fixture.slug)))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&fixture.token),
+            )
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let status = resp.status();
+        let text = resp.text().await.expect("Failed to read the response");
+        assert_eq!(
+            status,
+            StatusCode::CREATED,
+            "POST report on day {day}: {text}"
+        );
+        last = Some(serde_json::from_str(&text).expect("Failed to parse the report"));
+    }
+    last.expect("a report")
+}
+
+const SINCE_NOVEMBER: &str = "?start_time=1698796800000";
+
+// Kills: thinning that drops a bucket's extreme, an alerting point, or the
+// report's own point, a baseline or limit that does not travel with the kept
+// points, an index column that does not point at the kept points, and thinning a
+// line that fits.
+#[tokio::test]
+async fn console_report_thinning_keeps_extremes_alerts_and_the_report() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "thin").await;
+    // Two buckets at four points: the first keeps 150 and 210, the second 300 and
+    // 140; 300 and 290 alert; 205 is the report's own point.
+    let subject = alpha_days(
+        &server,
+        &fixture,
+        &[200.0, 150.0, 210.0, 300.0, 290.0, 140.0, 205.0],
+        &[0, 6],
+    )
+    .await;
+
+    let full = console_report(
+        &server,
+        &fixture,
+        &subject,
+        &format!("{SINCE_NOVEMBER}&points=256"),
+    )
+    .await;
+    let thin = console_report(
+        &server,
+        &fixture,
+        &subject,
+        &format!("{SINCE_NOVEMBER}&points=4"),
+    )
+    .await;
+
+    let full_line = line(&full, ALPHA_10_LATENCY);
+    assert!(full_line.history.index.is_none(), "seven points fit in 256");
+    assert_eq!(full_line.history.y.len(), 7);
+
+    let thin_line = line(&thin, ALPHA_10_LATENCY);
+    let index = thin_line.history.index.clone().expect("thinned");
+    assert_eq!(
+        index,
+        vec![1, 2, 3, 4, 5, 6],
+        "the first day is neither extreme nor alerting"
+    );
+    assert_eq!(
+        thin_line.history.y,
+        vec![
+            Some(150.0),
+            Some(210.0),
+            Some(300.0),
+            Some(290.0),
+            Some(140.0),
+            Some(205.0)
+        ]
+    );
+    let kept = |column: &Option<Vec<Option<f64>>>| {
+        let column = column.as_ref().expect("checked");
+        Some(
+            index
+                .iter()
+                .map(|point| column[*point as usize])
+                .collect::<Vec<_>>(),
+        )
+    };
+    assert_eq!(
+        thin_line.history.baseline,
+        kept(&full_line.history.baseline),
+        "each kept point keeps its own baseline"
+    );
+    assert_eq!(
+        thin_line.history.lower,
+        kept(&full_line.history.lower),
+        "each kept point keeps its own lower limit"
+    );
+    assert_eq!(
+        thin_line.history.upper,
+        kept(&full_line.history.upper),
+        "each kept point keeps its own upper limit"
+    );
+    assert_eq!(
+        thin_line
+            .history
+            .alerts
+            .iter()
+            .map(|alert| alert.index)
+            .collect::<Vec<_>>(),
+        vec![2, 3],
+        "alerts point into the thinned columns"
+    );
+
+    let small = line(&thin, r#"alpha {"size":2} Latency value"#);
+    assert!(small.history.index.is_none(), "two points fit in four");
+    assert_eq!(small.history.y.len(), thin.points.x.len());
+    assert_eq!(
+        (small.history.y[0], small.history.y[6]),
+        (Some(100.0), Some(100.0))
+    );
+
+    // Alone, the thinned line leaves the first day out of the shared tables.
+    let alone = console_report(
+        &server,
+        &fixture,
+        &subject,
+        &format!("{SINCE_NOVEMBER}&points=4&search=size%3D10"),
+    )
+    .await;
+    assert_eq!(alone.points.x.len(), 6);
+    assert_eq!(alone.reports.len(), 6);
+    assert_eq!(alone.lines[0].history.index, Some(vec![0, 1, 2, 3, 4, 5]));
+    assert_eq!(x(&alone)[0], x(&full)[1]);
+}
+
+// Kills: an unthinned line left on the points of the unshrunk tables, and
+// thinning a line with exactly as many values as the limit.
+#[tokio::test]
+async fn console_report_thinning_realigns_the_lines_that_fit() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "thinfit").await;
+    // The thinned line keeps every day but the first, which only it reports.
+    let subject = alpha_days(
+        &server,
+        &fixture,
+        &[200.0, 150.0, 210.0, 300.0, 290.0, 140.0, 205.0],
+        &[1, 2, 5, 6],
+    )
+    .await;
+
+    let thin = console_report(
+        &server,
+        &fixture,
+        &subject,
+        &format!("{SINCE_NOVEMBER}&points=4"),
+    )
+    .await;
+
+    assert_eq!(x(&thin)[0], millis("2023-12-02T00:00:00Z"));
+    assert_eq!(thin.reports.len(), 6);
+    assert_eq!(
+        line(&thin, ALPHA_10_LATENCY).history.index,
+        Some(vec![0, 1, 2, 3, 4, 5])
+    );
+    let small = line(&thin, r#"alpha {"size":2} Latency value"#);
+    assert!(small.history.index.is_none(), "four points fit in four");
+    assert_eq!(
+        small.history.y,
+        vec![
+            Some(100.0),
+            Some(100.0),
+            None,
+            None,
+            Some(100.0),
+            Some(100.0)
+        ]
+    );
+}
+
+// Kills: a default other than 64 points, a limit of 256 that is ignored, and a
+// limit outside 2 to 256 that is served rather than refused.
+#[tokio::test]
+async fn console_report_thinning_defaults_to_64_points() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "thindefault").await;
+    let latencies = (0..70)
+        .map(|day: u8| 200.0 + f64::from(day.rem_euclid(7)))
+        .collect::<Vec<_>>();
+    let subject = alpha_days(&server, &fixture, &latencies, &[]).await;
+
+    let default = console_report(&server, &fixture, &subject, SINCE_NOVEMBER).await;
+    let history = &line(&default, ALPHA_10_LATENCY).history;
+    let kept = history
+        .index
+        .as_ref()
+        .expect("70 points do not fit in 64")
+        .len();
+    assert!(kept <= 65, "64 and the report's own point, kept {kept}");
+    assert!(kept > 32, "two points from each of 32 buckets, kept {kept}");
+
+    let most = console_report(
+        &server,
+        &fixture,
+        &subject,
+        &format!("{SINCE_NOVEMBER}&points=256"),
+    )
+    .await;
+    let history = &line(&most, ALPHA_10_LATENCY).history;
+    assert!(history.index.is_none(), "70 points fit in 256");
+    assert_eq!(history.y.len(), 70);
+
+    for (points, expected) in [
+        (1, StatusCode::BAD_REQUEST),
+        (2, StatusCode::OK),
+        (257, StatusCode::BAD_REQUEST),
+    ] {
+        let (status, text) = try_console_report(
+            &server,
+            &fixture.slug,
+            &subject,
+            &format!("{SINCE_NOVEMBER}&points={points}"),
+            Some(&fixture.token),
+        )
+        .await;
+        assert_eq!(status, expected, "points={points}: {text}");
+    }
+}

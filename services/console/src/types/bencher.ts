@@ -704,7 +704,7 @@ export interface JsonConsoleAlert {
 }
 
 export interface JsonConsoleAlertPoint {
-	/** An index into the points. */
+	/** A position in the series' columns. */
 	index: number;
 	uuid: Uuid;
 	limit: BoundaryLimit;
@@ -772,8 +772,16 @@ export interface JsonConsoleWindow {
 	clamped: boolean;
 }
 
-/** One line's values, aligned to `points`, with null where the line has no point. */
+/**
+ * One line's values, aligned to `points` with null where the line has no
+ * point, or, for a thinned line, one per position in `index`.
+ */
 export interface JsonConsoleSeries {
+	/**
+	 * The position in `points` of each value, present only when the line was
+	 * thinned.
+	 */
+	index?: number[];
 	y: (number | null)[];
 	/**
 	 * The baseline the threshold compared each point with.
