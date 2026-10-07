@@ -1,5 +1,4 @@
 //! Jailed Firecracker process management.
-#![expect(clippy::print_stderr, reason = "process management prints diagnostics")]
 
 use std::fs::File;
 use std::net::Shutdown;
@@ -11,7 +10,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use camino::Utf8Path;
-use slog::{Logger, warn};
+use slog::{Logger, info, warn};
 
 use crate::firecracker::client::FirecrackerClient;
 use crate::firecracker::config::{Action, ActionType};
@@ -23,9 +22,9 @@ use crate::jail::{JailFile, JailUser, PinnedSocket, VmId};
 const API_SOCKET_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Far above any line an honest VMM or jailer writes, yet short enough that a
-/// cut line stays one journald record (split at 48 KiB) even once replacement
-/// characters triple it, so no part of it logs without the `[firecracker]` prefix.
-const STDERR_LINE_CAP_KIB: usize = 15;
+/// cut line's record stays one journald line: 7,168 bytes escaped at up to 6
+/// bytes each is 43,008, and the rest of the record about 140, under 49,152.
+const STDERR_LINE_CAP: usize = bencher_logger::FIELD_CAP;
 
 #[derive(Debug)]
 pub struct JailedSpawn<'a> {
@@ -66,8 +65,8 @@ struct JailedChild {
     stderr_thread: Option<StderrReader>,
 }
 
-/// Prints the VMM's stderr from a thread that dropping this stops and joins,
-/// so it must outlive the VMM.
+/// Logs the VMM's stderr from a thread that dropping this stops and joins, so
+/// it must outlive the VMM.
 struct StderrReader {
     socket: Arc<UnixStream>,
     thread: Option<std::thread::JoinHandle<()>>,
@@ -162,9 +161,21 @@ impl JailedChild {
         api_socket: &JailFile,
         housekeeping_cores: Vec<usize>,
     ) -> std::io::Result<Self> {
-        Self::spawn_with(log, command, api_socket, housekeeping_cores, |line| {
-            eprintln!("[firecracker] {line}");
-        })
+        let vmm = log.clone();
+        // A VMM does not choose its records' level.
+        Self::spawn_with(
+            log,
+            command,
+            api_socket,
+            housekeeping_cores,
+            move |line, cut| {
+                if cut {
+                    info!(vmm, "VMM stderr"; "line" => line, "cut" => true);
+                } else {
+                    info!(vmm, "VMM stderr"; "line" => line);
+                }
+            },
+        )
     }
 
     /// Hands the child one end of a socket pair as its stderr and reads the
@@ -177,7 +188,7 @@ impl JailedChild {
         on_line: F,
     ) -> std::io::Result<Self>
     where
-        F: FnMut(String) + Send + 'static,
+        F: FnMut(String, bool) + Send + 'static,
     {
         let (writer, stderr) = StderrReader::spawn(log, housekeeping_cores, on_line)?;
         command.stderr(OwnedFd::from(writer));
@@ -251,7 +262,7 @@ impl StderrReader {
         mut on_line: F,
     ) -> std::io::Result<(UnixStream, Self)>
     where
-        F: FnMut(String) + Send + 'static,
+        F: FnMut(String, bool) + Send + 'static,
     {
         let (writer, reader) = UnixStream::pair()?;
         let socket = Arc::new(reader);
@@ -362,15 +373,15 @@ fn place_in_cgroup(mut procs: &File) -> std::io::Result<()> {
 }
 
 /// Hands each line to `on_line` without its newline until EOF, keeping at most
-/// `STDERR_LINE_CAP_KIB` of a line and marking the cut.
+/// `STDERR_LINE_CAP` bytes of a line, with whether it was cut.
 fn forward_capped_lines<R, F>(stderr: R, mut on_line: F)
 where
     R: std::io::Read,
-    F: FnMut(String),
+    F: FnMut(String, bool),
 {
     use std::io::{BufRead as _, Read as _};
 
-    let cap = STDERR_LINE_CAP_KIB * 1024;
+    let cap = STDERR_LINE_CAP;
     let mut stderr = std::io::BufReader::new(stderr);
     let mut line = Vec::new();
     while let Ok(1..) = stderr
@@ -387,13 +398,9 @@ where
                 line.pop();
             }
         }
-        // Lossy, since the cut can split a character, and without NUL, which
-        // ends a journald record as a newline does.
-        on_line(String::from_utf8_lossy(&line).replace('\0', "\u{FFFD}"));
+        // Lossy, since the cut can split a character and a field is UTF-8.
+        on_line(String::from_utf8_lossy(&line).into_owned(), cut);
         if cut {
-            on_line(format!(
-                "(the runner cut the line above at {STDERR_LINE_CAP_KIB} KiB)"
-            ));
             // Only now, so a line that never ends still shows its start.
             drop(stderr.skip_until(b'\n'));
         }
@@ -629,7 +636,7 @@ mod tests {
             command,
             jail.api_socket(),
             Vec::new(),
-            move |_line| {
+            move |_line, _cut| {
                 drop(Arc::clone(&token));
             },
         )
@@ -671,8 +678,8 @@ mod tests {
             command,
             jail.api_socket(),
             Vec::new(),
-            move |line| {
-                sink.lock().unwrap().push(line);
+            move |line, cut| {
+                sink.lock().unwrap().push((line, cut));
             },
         )
         .unwrap();
@@ -688,7 +695,10 @@ mod tests {
             1,
             "the reader must have finished"
         );
-        assert_eq!(*lines.lock().unwrap(), ["one", "two"]);
+        assert_eq!(
+            *lines.lock().unwrap(),
+            [("one".to_owned(), false), ("two".to_owned(), false)]
+        );
     }
 
     #[test]
@@ -706,7 +716,7 @@ mod tests {
             command,
             jail.api_socket(),
             Vec::new(),
-            |_line| {
+            |_line, _cut| {
                 panic!("the reader fails");
             },
         )
@@ -745,8 +755,8 @@ mod tests {
             command,
             jail.api_socket(),
             Vec::new(),
-            move |line| {
-                sink.lock().unwrap().push(line);
+            move |line, cut| {
+                sink.lock().unwrap().push((line, cut));
             },
         )
         .unwrap();
@@ -758,33 +768,79 @@ mod tests {
         jailed.kill();
 
         let lines = lines.lock().unwrap();
-        let [cut, marker, invalid, next] = lines.as_slice() else {
+        let [(cut, true), (invalid, false), (next, false)] = lines.as_slice() else {
             panic!(
-                "expected the cut line, 1 marker, and the next 2 lines, got lines of {:?} bytes",
-                lines.iter().map(String::len).collect::<Vec<_>>()
+                "expected the cut line and the next 2 lines, got lines of {:?} bytes",
+                lines
+                    .iter()
+                    .map(|(line, cut)| (line.len(), cut))
+                    .collect::<Vec<_>>()
             );
         };
-        assert_eq!(
-            cut.len(),
-            STDERR_LINE_CAP_KIB * 1024,
-            "the line keeps its first bytes"
-        );
-        assert!(
-            marker.contains(&format!("{STDERR_LINE_CAP_KIB} KiB")),
-            "the marker must name the cap: {marker}"
-        );
+        assert_eq!(cut.len(), STDERR_LINE_CAP, "the line keeps its first bytes");
         assert_eq!(*invalid, char::REPLACEMENT_CHARACTER.to_string());
         assert_eq!(next, "two");
     }
 
     #[test]
-    fn a_nul_cannot_split_a_stderr_line() {
-        // Prevents a NUL ending the journald record mid-line, which logs the
-        // rest without the `[firecracker]` prefix and lets `<N>` set its priority.
-        let mut lines = Vec::new();
-        forward_capped_lines(&b"head\0<3>forged\ntwo\n"[..], |line| lines.push(line));
+    fn a_vmm_line_is_one_record() {
+        // Fails if a VMM line is printed rather than logged, cut past what one
+        // journald line holds once escaped, or followed by a record of its own.
+        let (_dir, jail) = jail_in_tmpdir();
+        let mut command = Command::new("/bin/sh");
+        command
+            .args([
+                "-c",
+                "{ printf 'head\\000<3>forged\\n\\r<2>x\\n'; head -c 20480 /dev/zero | tr '\\0' '\\001'; echo; } >&2",
+            ])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null());
+        let sink = Sink::default();
+        let log = bencher_logger::runner_logger_to(sink.clone());
+        let mut jailed = JailedChild::spawn(&log, command, jail.api_socket(), Vec::new()).unwrap();
+        let started = std::time::Instant::now();
+        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
+            std::thread::sleep(Duration::from_millis(10));
+        }
 
-        assert_eq!(lines, ["head\u{FFFD}<3>forged", "two"]);
+        jailed.kill();
+
+        let written = sink.0.lock().unwrap().clone();
+        let records: Vec<serde_json::Value> = written
+            .split(|&byte| byte == b'\n')
+            .filter(|line| !line.is_empty())
+            .map(|line| {
+                assert!(line.len() < 49_152, "a record of {} bytes", line.len());
+                serde_json::from_slice(line).unwrap()
+            })
+            .collect();
+        let [head, carriage, cut] = records.as_slice() else {
+            panic!("expected 3 records, got {records:?}");
+        };
+        assert_eq!(head["msg"], "VMM stderr");
+        assert_eq!(head["line"], "head\0<3>forged");
+        assert_eq!(carriage["line"], "\r<2>x");
+        assert_eq!(head.get("cut"), None);
+        assert_eq!(cut["cut"], true);
+        assert_eq!(cut["line"], "\u{1}".repeat(STDERR_LINE_CAP));
+    }
+
+    /// Shared, so the test can read what the logger wrote.
+    #[derive(Clone, Default)]
+    struct Sink(Arc<std::sync::Mutex<Vec<u8>>>);
+
+    impl std::io::Write for Sink {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.0
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
     }
 
     #[test]
@@ -801,7 +857,7 @@ mod tests {
                 handed_on: &handed_on,
                 tail: b"\ntwo\n",
             },
-            |line| {
+            |line, _cut| {
                 handed_on.set(true);
                 first_after.get_or_insert(sent.get());
                 lines.push(line);
@@ -812,10 +868,7 @@ mod tests {
             first_after.is_some_and(|sent| sent < 1024 * 1024),
             "the cut line waited for {first_after:?} bytes"
         );
-        assert_eq!(
-            lines.first().map(String::len),
-            Some(STDERR_LINE_CAP_KIB * 1024)
-        );
+        assert_eq!(lines.first().map(String::len), Some(STDERR_LINE_CAP));
     }
 
     /// Writes one line until a line is handed on, or for 64 MiB, then ends it
@@ -863,6 +916,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
     fn the_vmm_is_in_its_cgroup_before_it_execs() {
         // Prevents placing the VMM after it execs, when it has already started on the wrong cores.
         use std::os::unix::fs::PermissionsExt as _;

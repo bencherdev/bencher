@@ -2979,7 +2979,8 @@ fn run_metrics(output: &ScenarioOutput) -> impl Iterator<Item = Record> + '_ {
 }
 
 fn vmm_reported_an_error(output: &ScenarioOutput) -> bool {
-    output.stderr.contains("[firecracker] Error")
+    records_with(&output.stderr, "VMM stderr")
+        .any(|record| text(&record, "line").is_some_and(|line| line.starts_with("Error")))
 }
 
 /// The runner relays what the guest printed, then fails the job with the
