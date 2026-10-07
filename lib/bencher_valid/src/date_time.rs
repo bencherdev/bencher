@@ -175,6 +175,14 @@ impl Visitor<'_> for DateTimeMillisVisitor {
     {
         v.try_into().map_err(E::custom)
     }
+
+    // A self-describing format reads a positive number as unsigned.
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        self.visit_i64(i64::try_from(v).map_err(E::custom)?)
+    }
 }
 
 #[cfg(feature = "db")]
@@ -209,8 +217,19 @@ mod db {
 
 #[cfg(test)]
 mod tests {
-    use super::DateTime;
+    use super::{DateTime, DateTimeMillis};
     use chrono::Duration;
+
+    // A JSON number reads as unsigned when it is positive, so both signs must read.
+    #[test]
+    fn date_time_millis_reads_a_json_number_of_either_sign() {
+        for millis in [1_720_678_980_123i64, -1_000] {
+            let read: DateTimeMillis = serde_json::from_str(&millis.to_string()).unwrap();
+            assert_eq!(i64::from(read), millis);
+        }
+        // Wrapped to `i64` this would be -1000, a valid time.
+        serde_json::from_str::<DateTimeMillis>(&(u64::MAX - 999).to_string()).unwrap_err();
+    }
 
     #[test]
     fn elapsed_secs_positive_duration() {
