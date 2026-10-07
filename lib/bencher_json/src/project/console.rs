@@ -12,16 +12,20 @@ use bencher_valid::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "plus")]
+use crate::SpecUuid;
 use crate::{
-    AlertUuid, BenchmarkSlug, BenchmarkUuid, BranchSlug, BranchUuid, HeadUuid, MeasureSlug,
-    MeasureUuid, ModelUuid, ParameterSet, ReportUuid, TestbedSlug, TestbedUuid, ThresholdUuid,
-    VariantUuid,
+    AlertUuid, BenchmarkSlug, BenchmarkUuid, BranchSlug, BranchUuid, HeadUuid, JsonPerfQuery,
+    MeasureSlug, MeasureUuid, ModelUuid, ParameterSet, ReportUuid, TestbedSlug, TestbedUuid,
+    ThresholdUuid, VariantUuid,
+    urlencoded::{UrlEncodedError, from_urlencoded_list},
 };
 
 use super::{
     alert::AlertStatus,
     boundary::BoundaryLimit,
     head::{JsonVersion, VersionNumber},
+    perf::{JsonPerfQueryParams, MAX_DIMENSION_ENTRIES},
     report::{Adapter, Iteration, JsonReportAlertsCounts},
 };
 
@@ -158,8 +162,9 @@ pub struct JsonConsoleReportLink {
 pub struct JsonConsoleWindow {
     pub start_time: DateTimeMillis,
     pub end_time: DateTimeMillis,
-    /// Whether the requested start was moved later, because a history holds a
-    /// bounded number of reports.
+    /// Whether the requested start was moved later: a report's history holds a
+    /// bounded number of reports, and an unauthenticated plot reaches back at
+    /// most three months.
     pub clamped: bool,
 }
 
@@ -293,6 +298,10 @@ pub struct JsonConsoleTestbed {
     pub uuid: TestbedUuid,
     pub name: ResourceName,
     pub slug: TestbedSlug,
+    /// The spec a plot read this testbed's runs on, when the query named one.
+    #[cfg(feature = "plus")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spec: Option<SpecUuid>,
 }
 
 #[typeshare::typeshare]
@@ -342,4 +351,191 @@ pub struct JsonConsoleModel {
     pub lower_boundary: Option<Boundary>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub upper_boundary: Option<Boundary>,
+}
+
+/// The most lines a plot draws.
+pub const MAX_CONSOLE_PLOT_LINES: usize = 64;
+
+/// The plot query: the perf query's boxes and the metric names to draw.
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsolePerfQueryParams {
+    /// A comma separated list of branch UUIDs to query.
+    /// Only the first 8 branches are queried.
+    pub branches: String,
+    /// An optional comma separated list of branch head UUIDs.
+    /// To not specify a particular branch head leave an empty entry in the list.
+    pub heads: Option<String>,
+    /// A comma separated list of testbed UUIDs to query.
+    /// Only the first 8 testbeds are queried.
+    pub testbeds: String,
+    /// An optional comma separated list of testbed spec UUIDs.
+    /// To not specify a particular testbed spec leave an empty entry in the list.
+    pub specs: Option<String>,
+    /// A comma separated list of benchmark UUIDs to query.
+    /// Only the first 8 benchmarks are queried.
+    pub benchmarks: String,
+    /// An optional comma separated list of URL encoded parameters to filter on.
+    /// A variant is queried when at least one of them is a subset of its parameters.
+    /// Only the first 8 are read.
+    pub parameters: Option<String>,
+    /// A comma separated list of measure UUIDs to query.
+    /// Only the first 8 measures are queried.
+    pub measures: String,
+    /// An optional comma separated list of URL encoded metric names to draw.
+    /// Leaving this off draws each branch, testbed, variant, and measure with every
+    /// metric name it reported in the window.
+    /// Only the first 8 are read.
+    pub metrics: Option<String>,
+    /// The start of the window in milliseconds.
+    /// Defaults to four weeks before its end.
+    pub start_time: Option<DateTimeMillis>,
+    /// The end of the window in milliseconds.
+    /// Defaults to now.
+    pub end_time: Option<DateTimeMillis>,
+}
+
+/// The validated plot query.
+#[derive(Debug, Clone)]
+pub struct JsonConsolePerfQuery {
+    pub perf: JsonPerfQuery,
+    /// `None` draws each branch, testbed, variant, and measure with every metric
+    /// name it reported in the window.
+    pub metrics: Option<Vec<MetricName>>,
+}
+
+impl TryFrom<JsonConsolePerfQueryParams> for JsonConsolePerfQuery {
+    type Error = UrlEncodedError;
+
+    fn try_from(query_params: JsonConsolePerfQueryParams) -> Result<Self, Self::Error> {
+        let JsonConsolePerfQueryParams {
+            branches,
+            heads,
+            testbeds,
+            specs,
+            benchmarks,
+            parameters,
+            measures,
+            metrics,
+            start_time,
+            end_time,
+        } = query_params;
+        let perf = JsonPerfQueryParams {
+            branches,
+            heads,
+            testbeds,
+            specs,
+            benchmarks,
+            parameters,
+            measures,
+            start_time,
+            end_time,
+        }
+        .try_into()?;
+        // An empty string is no list at all, the way the perf query reads its parameters.
+        let metrics = if let Some(metrics) = metrics.as_deref()
+            && !metrics.is_empty()
+        {
+            let mut metrics: Vec<MetricName> = from_urlencoded_list(metrics)?;
+            metrics.truncate(MAX_DIMENSION_ENTRIES);
+            Some(metrics)
+        } else {
+            None
+        };
+        Ok(Self { perf, metrics })
+    }
+}
+
+/// The lines of a plot query, drawn as columns aligned to one shared x.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsolePerf {
+    /// The window the query read, after any clamp.
+    pub window: JsonConsoleWindow,
+    /// The number of lines the query names: the product of its boxes.
+    /// More than `lines` holds when the line cap cut some off.
+    pub total: u32,
+    /// The lines in the order the boxes name them: branch, testbed, benchmark,
+    /// variant, measure, and metric. A line with no point in the window has only
+    /// nulls.
+    pub lines: Vec<JsonConsolePerfLine>,
+    pub points: JsonConsolePoints,
+    pub reports: Vec<JsonConsolePointReport>,
+    pub branches: Vec<JsonConsoleBranch>,
+    pub testbeds: Vec<JsonConsoleTestbed>,
+    pub benchmarks: Vec<JsonConsoleBenchmark>,
+    pub variants: Vec<JsonConsoleVariant>,
+    pub measures: Vec<JsonConsoleMeasure>,
+    pub models: Vec<JsonConsoleModel>,
+}
+
+/// One line of a plot: one metric name of one measure of one variant, on one
+/// branch and one testbed.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsolePerfLine {
+    /// An index into `branches`.
+    pub branch: u32,
+    /// An index into `testbeds`.
+    pub testbed: u32,
+    /// An index into `benchmarks`.
+    pub benchmark: u32,
+    /// An index into `variants`.
+    pub variant: u32,
+    /// An index into `measures`.
+    pub measure: u32,
+    pub metric: MetricName,
+    /// The model of the threshold that checked the line's latest checked point,
+    /// an index into `models`. Absent when no threshold checked it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<u32>,
+    pub series: JsonConsoleSeries,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{JsonConsolePerfQuery, JsonConsolePerfQueryParams, MAX_DIMENSION_ENTRIES};
+    use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, TestbedUuid};
+
+    fn query_params(metrics: Option<String>) -> JsonConsolePerfQueryParams {
+        JsonConsolePerfQueryParams {
+            branches: BranchUuid::new().to_string(),
+            heads: None,
+            testbeds: TestbedUuid::new().to_string(),
+            specs: None,
+            benchmarks: BenchmarkUuid::new().to_string(),
+            parameters: None,
+            measures: MeasureUuid::new().to_string(),
+            metrics,
+            start_time: None,
+            end_time: None,
+        }
+    }
+
+    #[test]
+    fn truncates_the_metrics_list() {
+        let metrics = (0..MAX_DIMENSION_ENTRIES + 2)
+            .map(|index| format!("p{index}"))
+            .collect::<Vec<_>>()
+            .join(",");
+
+        let query = JsonConsolePerfQuery::try_from(query_params(Some(metrics)))
+            .expect("Failed to read the params");
+
+        assert_eq!(
+            query.metrics.map(|metrics| metrics.len()),
+            Some(MAX_DIMENSION_ENTRIES)
+        );
+    }
+
+    // An empty value has no list form, so it means every metric name rather than none.
+    #[test]
+    fn empty_metrics_draws_every_name() {
+        let query = JsonConsolePerfQuery::try_from(query_params(Some(String::new())))
+            .expect("Failed to read the params");
+
+        assert!(query.metrics.is_none());
+    }
 }
