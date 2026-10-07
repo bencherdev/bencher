@@ -2,7 +2,6 @@
     unused_crate_dependencies,
     clippy::expect_used,
     clippy::tests_outside_test_module,
-    clippy::too_many_lines,
     clippy::uninlined_format_args,
     reason = "integration test file"
 )]
@@ -10,14 +9,18 @@
 
 use bencher_api_tests::{
     TestServer, TestUser,
-    helpers::{base_timestamp, create_empty_variant, get_project_id},
+    helpers::{base_timestamp, create_empty_variant, get_project_id, grant_project_role},
 };
 use bencher_json::{
     AlertUuid, BenchmarkUuid, BoundaryUuid, BranchUuid, DateTime, HeadUuid, JsonAlerts,
-    MeasureUuid, MetricName, MetricUuid, ModelUuid, ReportBenchmarkUuid, ReportUuid, TestbedUuid,
-    ThresholdUuid, VersionUuid,
-    project::{alert::AlertStatus, boundary::BoundaryLimit},
+    JsonProjectKeyCreated, MeasureUuid, MetricName, MetricUuid, ModelUuid, ReportBenchmarkUuid,
+    ReportUuid, TestbedUuid, ThresholdUuid, VersionUuid,
+    project::{
+        alert::{AlertStatus, JsonUpdatedAlerts, MAX_UPDATE_ALERTS},
+        boundary::BoundaryLimit,
+    },
 };
+use bencher_rbac::project::Role;
 use bencher_schema::{MIGRATIONS, context::DbConnection, macros::sql::last_insert_rowid, schema};
 use diesel::{
     ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, connection::SimpleConnection as _,
@@ -298,34 +301,14 @@ async fn seed_project(server: &TestServer, label: &str) -> Fixture {
     let archived = Some(seconds(0));
 
     let mut conn = server.db_conn();
-    diesel::insert_into(schema::version::table)
-        .values((
-            schema::version::uuid.eq(VersionUuid::new()),
-            schema::version::project_id.eq(project_id),
-            schema::version::number.eq(1),
-        ))
-        .execute(&mut conn)
-        .expect("Failed to insert the version");
-    let version_id = last_id(&mut conn);
+    let base = insert_base(&mut conn, project_id);
+    let version_id = base.version;
     let live_branch = insert_branch(&mut conn, project_id, version_id, "live", None);
     let archived_branch = insert_branch(&mut conn, project_id, version_id, "gone", archived);
     let live_testbed = insert_testbed(&mut conn, project_id, "live", None);
     let archived_testbed = insert_testbed(&mut conn, project_id, "gone", archived);
     let live_measure = insert_measure(&mut conn, project_id, "live", None);
     let archived_measure = insert_measure(&mut conn, project_id, "gone", archived);
-    diesel::insert_into(schema::benchmark::table)
-        .values((
-            schema::benchmark::uuid.eq(BenchmarkUuid::new()),
-            schema::benchmark::project_id.eq(project_id),
-            schema::benchmark::name.eq("bench"),
-            schema::benchmark::slug.eq("bench"),
-            schema::benchmark::created.eq(seconds(0)),
-            schema::benchmark::modified.eq(seconds(0)),
-        ))
-        .execute(&mut conn)
-        .expect("Failed to insert the benchmark");
-    let benchmark_id = last_id(&mut conn);
-    let variant_id = create_empty_variant(&mut conn, benchmark_id);
 
     let live = insert_threshold(
         &mut conn,
@@ -378,59 +361,13 @@ async fn seed_project(server: &TestServer, label: &str) -> Fixture {
         } else {
             threshold.model
         };
-        let created = seconds(seed.created);
-        diesel::insert_into(schema::report::table)
-            .values((
-                schema::report::uuid.eq(ReportUuid::new()),
-                schema::report::project_id.eq(project_id),
-                schema::report::head_id.eq(threshold.head),
-                schema::report::version_id.eq(version_id),
-                schema::report::testbed_id.eq(threshold.testbed),
-                schema::report::adapter.eq(0),
-                schema::report::start_time.eq(&created),
-                schema::report::end_time.eq(&created),
-                schema::report::created.eq(&created),
-            ))
-            .execute(&mut conn)
-            .expect("Failed to insert a report");
-        let report_id = last_id(&mut conn);
-        diesel::insert_into(schema::report_benchmark::table)
-            .values((
-                schema::report_benchmark::uuid.eq(ReportBenchmarkUuid::new()),
-                schema::report_benchmark::report_id.eq(report_id),
-                schema::report_benchmark::iteration.eq(0),
-                schema::report_benchmark::benchmark_id.eq(benchmark_id),
-                schema::report_benchmark::variant_id.eq(variant_id),
-            ))
-            .execute(&mut conn)
-            .expect("Failed to insert a report benchmark");
-        let report_benchmark_id = last_id(&mut conn);
-        diesel::insert_into(schema::metric::table)
-            .values((
-                schema::metric::uuid.eq(MetricUuid::new()),
-                schema::metric::report_benchmark_id.eq(report_benchmark_id),
-                schema::metric::measure_id.eq(threshold.measure),
-                schema::metric::name.eq(MetricName::value()),
-                schema::metric::value.eq(1000.0),
-            ))
-            .execute(&mut conn)
-            .expect("Failed to insert a metric");
-        let metric_id = last_id(&mut conn);
-        diesel::insert_into(schema::boundary::table)
-            .values((
-                schema::boundary::uuid.eq(BoundaryUuid::new()),
-                schema::boundary::metric_id.eq(metric_id),
-                schema::boundary::threshold_id.eq(threshold.id),
-                schema::boundary::model_id.eq(model_id),
-                schema::boundary::baseline.eq(Some(1.0)),
-                schema::boundary::upper_limit.eq(Some(100.0)),
-            ))
-            .execute(&mut conn)
-            .expect("Failed to insert a boundary");
-        boundaries.push(SeededBoundary {
-            boundary_id: last_id(&mut conn),
-            threshold_id: threshold.id,
-        });
+        boundaries.push(insert_boundary(
+            &mut conn,
+            &base,
+            threshold,
+            model_id,
+            seed.created,
+        ));
     }
 
     Fixture {
@@ -441,28 +378,159 @@ async fn seed_project(server: &TestServer, label: &str) -> Fixture {
     }
 }
 
+/// What every alert of a seeded project shares: its version, benchmark, and variant.
+struct SeededBase {
+    project: i32,
+    version: i32,
+    benchmark: i32,
+    variant: i32,
+}
+
+fn insert_base(conn: &mut DbConnection, project_id: i32) -> SeededBase {
+    diesel::insert_into(schema::version::table)
+        .values((
+            schema::version::uuid.eq(VersionUuid::new()),
+            schema::version::project_id.eq(project_id),
+            schema::version::number.eq(1),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert the version");
+    let version_id = last_id(conn);
+    diesel::insert_into(schema::benchmark::table)
+        .values((
+            schema::benchmark::uuid.eq(BenchmarkUuid::new()),
+            schema::benchmark::project_id.eq(project_id),
+            schema::benchmark::name.eq("bench"),
+            schema::benchmark::slug.eq("bench"),
+            schema::benchmark::created.eq(seconds(0)),
+            schema::benchmark::modified.eq(seconds(0)),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert the benchmark");
+    let benchmark_id = last_id(conn);
+    let variant_id = create_empty_variant(conn, benchmark_id);
+    SeededBase {
+        project: project_id,
+        version: version_id,
+        benchmark: benchmark_id,
+        variant: variant_id,
+    }
+}
+
+/// A report created `created` seconds after the base timestamp, with one metric that the
+/// threshold checked against the model.
+///
+/// The report starts one second and ends two seconds after it was created, so a window over
+/// the wrong one of the three selects other alerts.
+fn insert_boundary(
+    conn: &mut DbConnection,
+    base: &SeededBase,
+    threshold: SeededThreshold,
+    model_id: i32,
+    created: i64,
+) -> SeededBoundary {
+    diesel::insert_into(schema::report::table)
+        .values((
+            schema::report::uuid.eq(ReportUuid::new()),
+            schema::report::project_id.eq(base.project),
+            schema::report::head_id.eq(threshold.head),
+            schema::report::version_id.eq(base.version),
+            schema::report::testbed_id.eq(threshold.testbed),
+            schema::report::adapter.eq(0),
+            schema::report::start_time.eq(seconds(created + 1)),
+            schema::report::end_time.eq(seconds(created + 2)),
+            schema::report::created.eq(seconds(created)),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert a report");
+    let report_id = last_id(conn);
+    diesel::insert_into(schema::report_benchmark::table)
+        .values((
+            schema::report_benchmark::uuid.eq(ReportBenchmarkUuid::new()),
+            schema::report_benchmark::report_id.eq(report_id),
+            schema::report_benchmark::iteration.eq(0),
+            schema::report_benchmark::benchmark_id.eq(base.benchmark),
+            schema::report_benchmark::variant_id.eq(base.variant),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert a report benchmark");
+    let report_benchmark_id = last_id(conn);
+    diesel::insert_into(schema::metric::table)
+        .values((
+            schema::metric::uuid.eq(MetricUuid::new()),
+            schema::metric::report_benchmark_id.eq(report_benchmark_id),
+            schema::metric::measure_id.eq(threshold.measure),
+            schema::metric::name.eq("offset"),
+            schema::metric::value.eq(1.0),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert the offset metric");
+    diesel::insert_into(schema::metric::table)
+        .values((
+            schema::metric::uuid.eq(MetricUuid::new()),
+            schema::metric::report_benchmark_id.eq(report_benchmark_id),
+            schema::metric::measure_id.eq(threshold.measure),
+            schema::metric::name.eq(MetricName::value()),
+            schema::metric::value.eq(1000.0),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert a metric");
+    let metric_id = last_id(conn);
+    diesel::insert_into(schema::boundary::table)
+        .values((
+            schema::boundary::uuid.eq(BoundaryUuid::new()),
+            schema::boundary::metric_id.eq(metric_id),
+            schema::boundary::threshold_id.eq(threshold.id),
+            schema::boundary::model_id.eq(model_id),
+            schema::boundary::baseline.eq(Some(1.0)),
+            schema::boundary::upper_limit.eq(Some(100.0)),
+        ))
+        .execute(&mut *conn)
+        .expect("Failed to insert a boundary");
+    SeededBoundary {
+        boundary_id: last_id(conn),
+        threshold_id: threshold.id,
+    }
+}
+
 fn insert_alerts(server: &TestServer, fixture: &Fixture) -> Vec<AlertUuid> {
     let mut conn = server.db_conn();
     SEEDS
         .iter()
         .zip(&fixture.boundaries)
         .map(|(seed, boundary)| {
-            let uuid = AlertUuid::new();
-            diesel::insert_into(schema::alert::table)
-                .values((
-                    schema::alert::uuid.eq(&uuid),
-                    schema::alert::project_id.eq(fixture.project_id),
-                    schema::alert::threshold_id.eq(boundary.threshold_id),
-                    schema::alert::boundary_id.eq(boundary.boundary_id),
-                    schema::alert::boundary_limit.eq(BoundaryLimit::Upper),
-                    schema::alert::status.eq(seed.status),
-                    schema::alert::modified.eq(seconds(seed.modified)),
-                ))
-                .execute(&mut conn)
-                .expect("Failed to insert an alert");
-            uuid
+            insert_alert(
+                &mut conn,
+                fixture.project_id,
+                boundary,
+                seed.status,
+                seed.modified,
+            )
         })
         .collect()
+}
+
+fn insert_alert(
+    conn: &mut DbConnection,
+    project_id: i32,
+    boundary: &SeededBoundary,
+    status: AlertStatus,
+    modified: i64,
+) -> AlertUuid {
+    let uuid = AlertUuid::new();
+    diesel::insert_into(schema::alert::table)
+        .values((
+            schema::alert::uuid.eq(&uuid),
+            schema::alert::project_id.eq(project_id),
+            schema::alert::threshold_id.eq(boundary.threshold_id),
+            schema::alert::boundary_id.eq(boundary.boundary_id),
+            schema::alert::boundary_limit.eq(BoundaryLimit::Upper),
+            schema::alert::status.eq(status),
+            schema::alert::modified.eq(seconds(modified)),
+        ))
+        .execute(conn)
+        .expect("Failed to insert an alert");
+    uuid
 }
 
 #[derive(Clone, Copy)]
@@ -775,4 +843,379 @@ async fn seed_alerting_project(server: &TestServer, label: &str) -> (TestUser, S
     assert_eq!(total, 1, "the outlier raised one alert");
     let alert = alerts.into_iter().next().expect("No alert");
     (user, slug, alert)
+}
+
+// PATCH /v0/projects/{project}/console/alerts - the listed alerts of the project change status and
+// are stamped as modified now, while a silenced alert, an alert already in the new status, and
+// another project's alert are left as they are
+#[tokio::test]
+async fn console_alerts_change_the_listed_alerts() {
+    let server = TestServer::new_at(seconds(100)).await;
+    let a = seed_project(&server, "bulklista").await;
+    let b = seed_project(&server, "bulklistb").await;
+    let a_alerts = insert_alerts(&server, &a);
+    let b_alerts = insert_alerts(&server, &b);
+
+    // Active, dismissed, silenced, active on an archived branch, and the other project's active.
+    let listed = [
+        a_alerts[0],
+        a_alerts[3],
+        a_alerts[5],
+        a_alerts[6],
+        b_alerts[0],
+    ];
+    assert_eq!(
+        patch_alerts(
+            &server,
+            &a.user.token,
+            &a.slug,
+            serde_json::json!({ "status": "dismissed", "alerts": listed }),
+        )
+        .await,
+        (StatusCode::OK, Some(2))
+    );
+    assert_eq!(
+        alert_states(&server, &listed),
+        vec![
+            (AlertStatus::Dismissed, seconds(100)),
+            (AlertStatus::Dismissed, seconds(5)),
+            (AlertStatus::Silenced, seconds(6)),
+            (AlertStatus::Dismissed, seconds(100)),
+            (AlertStatus::Active, seconds(3)),
+        ]
+    );
+}
+
+// PATCH /v0/projects/{project}/console/alerts - a filter changes every alert of the project that
+// matches its current status and its created window, inclusive at both ends, and never an alert
+// on an archived branch, testbed, or measure
+#[tokio::test]
+async fn console_alerts_change_every_alert_the_filter_matches() {
+    use AlertStatus::{Active, Dismissed, Silenced};
+
+    let server = TestServer::new().await;
+    let a = seed_project(&server, "bulkfiltera").await;
+    let b = seed_project(&server, "bulkfilterb").await;
+    let a_alerts = insert_alerts(&server, &a);
+    let b_alerts = insert_alerts(&server, &b);
+    let patch =
+        async |body: serde_json::Value| patch_alerts(&server, &a.user.token, &a.slug, body).await;
+    let statuses = |alerts: &[AlertUuid]| -> Vec<AlertStatus> {
+        alert_states(&server, alerts)
+            .into_iter()
+            .map(|(status, _)| status)
+            .collect()
+    };
+    let seeded = vec![
+        Active, Active, Active, Dismissed, Dismissed, Silenced, Active, Dismissed, Active,
+    ];
+
+    assert_eq!(
+        patch(serde_json::json!({ "status": "dismissed", "filter": { "status": "dismissed" } }))
+            .await,
+        (StatusCode::OK, Some(0))
+    );
+    assert_eq!(statuses(&a_alerts), seeded);
+
+    assert_eq!(
+        patch(serde_json::json!({ "status": "dismissed", "filter": { "status": "active" } })).await,
+        (StatusCode::OK, Some(3))
+    );
+    assert_eq!(
+        statuses(&a_alerts),
+        vec![
+            Dismissed, Dismissed, Dismissed, Dismissed, Dismissed, Silenced, Active, Dismissed,
+            Active,
+        ]
+    );
+    assert_eq!(statuses(&b_alerts), seeded);
+
+    assert_eq!(
+        patch(serde_json::json!({
+            "status": "active",
+            "filter": {
+                "start_time": seconds(3).timestamp_millis(),
+                "end_time": seconds(5).timestamp_millis(),
+            },
+        }))
+        .await,
+        (StatusCode::OK, Some(2))
+    );
+    assert_eq!(
+        statuses(&a_alerts),
+        vec![
+            Dismissed, Dismissed, Active, Active, Dismissed, Silenced, Active, Dismissed, Active,
+        ]
+    );
+
+    // Either bound of the window narrows the filter on its own.
+    assert_eq!(
+        patch(serde_json::json!({
+            "status": "active",
+            "filter": { "end_time": seconds(1).timestamp_millis() },
+        }))
+        .await,
+        (StatusCode::OK, Some(1))
+    );
+    assert_eq!(
+        patch(serde_json::json!({
+            "status": "dismissed",
+            "filter": { "start_time": seconds(5).timestamp_millis() },
+        }))
+        .await,
+        (StatusCode::OK, Some(1))
+    );
+    assert_eq!(
+        statuses(&a_alerts),
+        vec![
+            Dismissed, Active, Active, Dismissed, Dismissed, Silenced, Active, Dismissed, Active,
+        ]
+    );
+}
+
+// PATCH /v0/projects/{project}/console/alerts - each dimension of a filter narrows it to the
+// alerts raised on one of the values it lists
+#[tokio::test]
+async fn console_alerts_filter_by_dimension() {
+    use AlertStatus::{Active, Dismissed};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "bulkdimension@example.com")
+        .await;
+    let org = server.create_org(&user, "Org bulkdimension").await;
+    let project = server
+        .create_project(&user, &org, "Project bulkdimension")
+        .await;
+    let slug = project.slug.to_string();
+    let project_id = get_project_id(&server, &slug);
+
+    let mut conn = server.db_conn();
+    let base = insert_base(&mut conn, project_id);
+    let branches = [
+        insert_branch(&mut conn, project_id, base.version, "one", None),
+        insert_branch(&mut conn, project_id, base.version, "two", None),
+    ];
+    let testbeds = [
+        insert_testbed(&mut conn, project_id, "one", None),
+        insert_testbed(&mut conn, project_id, "two", None),
+    ];
+    let measures = [
+        insert_measure(&mut conn, project_id, "one", None),
+        insert_measure(&mut conn, project_id, "two", None),
+    ];
+    // Each threshold after the first differs from it in one dimension.
+    let thresholds = [
+        (branches[0], testbeds[0], measures[0]),
+        (branches[1], testbeds[0], measures[0]),
+        (branches[0], testbeds[1], measures[0]),
+        (branches[0], testbeds[0], measures[1]),
+    ]
+    .map(|(branch, testbed, measure)| {
+        insert_threshold(&mut conn, project_id, branch, testbed, measure)
+    });
+    let alerts = thresholds.map(|threshold| {
+        let boundary = insert_boundary(&mut conn, &base, threshold, threshold.model, 1);
+        insert_alert(&mut conn, project_id, &boundary, Active, 1)
+    });
+    let uuid = |table: &str, id: i32| -> String {
+        #[derive(diesel::QueryableByName)]
+        struct Row {
+            #[diesel(sql_type = diesel::sql_types::Text)]
+            uuid: String,
+        }
+        diesel::sql_query(format!("SELECT uuid FROM {table} WHERE id = ?"))
+            .bind::<diesel::sql_types::Integer, _>(id)
+            .get_result::<Row>(&mut server.db_conn())
+            .expect("Failed to get a UUID")
+            .uuid
+    };
+
+    for (dimension, value, changed) in [
+        ("branches", uuid("branch", branches[1].0), 1),
+        ("testbeds", uuid("testbed", testbeds[1]), 2),
+        ("measures", uuid("measure", measures[1]), 3),
+        ("thresholds", uuid("threshold", thresholds[0].id), 0),
+    ] {
+        assert_eq!(
+            patch_alerts(
+                &server,
+                &user.token,
+                &slug,
+                serde_json::json!({ "status": "dismissed", "filter": { dimension: [value] } }),
+            )
+            .await,
+            (StatusCode::OK, Some(1)),
+            "{dimension}"
+        );
+        let mut expected = [Active; 4];
+        expected[changed] = Dismissed;
+        let statuses: Vec<_> = alert_states(&server, &alerts)
+            .into_iter()
+            .map(|(status, _)| status)
+            .collect();
+        assert_eq!(statuses, expected, "{dimension}");
+
+        assert_eq!(
+            patch_alerts(
+                &server,
+                &user.token,
+                &slug,
+                serde_json::json!({ "status": "active", "alerts": [alerts[changed]] }),
+            )
+            .await,
+            (StatusCode::OK, Some(1)),
+            "{dimension}"
+        );
+    }
+
+    let both = [uuid("branch", branches[0].0), uuid("branch", branches[1].0)];
+    assert_eq!(
+        patch_alerts(
+            &server,
+            &user.token,
+            &slug,
+            serde_json::json!({ "status": "dismissed", "filter": { "branches": both } }),
+        )
+        .await,
+        (StatusCode::OK, Some(4))
+    );
+}
+
+// PATCH /v0/projects/{project}/console/alerts - a request selects its alerts by exactly one of a
+// list and a filter, and each list holds at most 255 entries
+#[tokio::test]
+async fn console_alerts_refuse_an_unclear_selection() {
+    let server = TestServer::new().await;
+    let a = seed_project(&server, "bulkrefuse").await;
+    let uuids = |count: usize| -> Vec<AlertUuid> {
+        std::iter::repeat_with(AlertUuid::new).take(count).collect()
+    };
+
+    let mut requests = vec![
+        (
+            serde_json::json!({ "status": "dismissed" }),
+            (StatusCode::BAD_REQUEST, None),
+        ),
+        (
+            serde_json::json!({ "status": "dismissed", "alerts": [], "filter": {} }),
+            (StatusCode::BAD_REQUEST, None),
+        ),
+        (
+            serde_json::json!({ "status": "dismissed", "alerts": uuids(MAX_UPDATE_ALERTS) }),
+            (StatusCode::OK, Some(0)),
+        ),
+        (
+            serde_json::json!({ "status": "dismissed", "alerts": uuids(MAX_UPDATE_ALERTS + 1) }),
+            (StatusCode::BAD_REQUEST, None),
+        ),
+    ];
+    for dimension in ["branches", "testbeds", "measures", "thresholds"] {
+        requests.push((
+            serde_json::json!({
+                "status": "dismissed",
+                "filter": { dimension: uuids(MAX_UPDATE_ALERTS) },
+            }),
+            (StatusCode::OK, Some(0)),
+        ));
+        requests.push((
+            serde_json::json!({
+                "status": "dismissed",
+                "filter": { dimension: uuids(MAX_UPDATE_ALERTS + 1) },
+            }),
+            (StatusCode::BAD_REQUEST, None),
+        ));
+    }
+    for (body, expected) in requests {
+        assert_eq!(
+            patch_alerts(&server, &a.user.token, &a.slug, body.clone()).await,
+            expected,
+            "{body}"
+        );
+    }
+}
+
+// PATCH /v0/projects/{project}/console/alerts - changing status takes edit permission, which a
+// Developer holds and a Viewer does not, and a project key changes status as it does for one alert
+#[tokio::test]
+async fn console_alerts_take_edit_permission() {
+    let server = TestServer::new().await;
+    let a = seed_project(&server, "bulkauth").await;
+    let a_alerts = insert_alerts(&server, &a);
+    let viewer = server
+        .signup("Test User", "bulkauthviewer@example.com")
+        .await;
+    let developer = server
+        .signup("Test User", "bulkauthdeveloper@example.com")
+        .await;
+    grant_project_role(&server, &viewer, &a.slug, Role::Viewer);
+    grant_project_role(&server, &developer, &a.slug, Role::Developer);
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/keys", a.slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&a.user.token),
+        )
+        .json(&serde_json::json!({ "name": "bulk-key" }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let key: JsonProjectKeyCreated = resp.json().await.expect("Failed to parse response");
+
+    let dismiss =
+        |alert: AlertUuid| serde_json::json!({ "status": "dismissed", "alerts": [alert] });
+    assert_eq!(
+        patch_alerts(&server, &viewer.token, &a.slug, dismiss(a_alerts[0])).await,
+        (StatusCode::FORBIDDEN, None)
+    );
+    assert_eq!(
+        patch_alerts(&server, &developer.token, &a.slug, dismiss(a_alerts[0])).await,
+        (StatusCode::OK, Some(1))
+    );
+    assert_eq!(
+        patch_alerts(&server, key.key.as_ref(), &a.slug, dismiss(a_alerts[1])).await,
+        (StatusCode::OK, Some(1))
+    );
+}
+
+async fn patch_alerts(
+    server: &TestServer,
+    token: &str,
+    slug: &str,
+    body: serde_json::Value,
+) -> (StatusCode, Option<u32>) {
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{slug}/console/alerts")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    if status != StatusCode::OK {
+        return (status, None);
+    }
+    let updated: JsonUpdatedAlerts = resp.json().await.expect("Failed to parse response");
+    (status, Some(updated.changed))
+}
+
+/// The status and modified time of each alert, in the order given.
+fn alert_states(server: &TestServer, alerts: &[AlertUuid]) -> Vec<(AlertStatus, DateTime)> {
+    let mut conn = server.db_conn();
+    alerts
+        .iter()
+        .map(|alert| {
+            schema::alert::table
+                .filter(schema::alert::uuid.eq(alert))
+                .select((schema::alert::status, schema::alert::modified))
+                .first(&mut conn)
+                .expect("Failed to get an alert")
+        })
+        .collect()
 }

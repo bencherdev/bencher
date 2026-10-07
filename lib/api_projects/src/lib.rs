@@ -14,6 +14,7 @@ pub mod alerts;
 mod allowed;
 pub mod benchmarks;
 pub mod branches;
+pub mod console;
 pub mod jobs;
 mod keys;
 pub mod measures;
@@ -191,6 +192,12 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(alerts::proj_alerts_get)?;
         api_description.register(alerts::proj_alert_get)?;
         api_description.register(alerts::proj_alert_patch)?;
+
+        // Console
+        if http_options {
+            api_description.register(console::alerts::proj_console_alerts_options)?;
+        }
+        api_description.register(console::alerts::proj_console_alerts_patch)?;
 
         Ok(())
     }
