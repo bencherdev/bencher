@@ -54,6 +54,29 @@ scripted runs (agents, CI-like checks), use a single run instead:
 npx vitest run
 ```
 
+`vitest.config.ts` defines two projects, and `npx vitest run` runs both:
+
+- `unit` runs every `*.test.ts` and `*.test.tsx` in Node. A file that needs a DOM
+  opts into happy-dom with a `// @vitest-environment happy-dom` comment on its first line.
+- `browser` runs every `*.chromium.test.tsx` (and `*.chromium.test.ts`) in a real,
+  headless Chromium through Vitest browser mode and its Playwright provider. It
+  compiles Solid alone: the site's WASM plugin fails when two projects start it
+  at once, and components need nothing else. Component tests
+  for `@bencherdev/ui` and the new console live here. Install the browser once with
+  `npx playwright install chromium`.
+
+Run one project with `npx vitest run --project unit` or `--project browser`.
+The `*.browser.test.ts` files are happy-dom tests in the `unit` project, not browser tests.
+
+## New Console
+
+The console for BMF v1 projects lives under `src/next/`, built on the design
+system in [`packages/ui`](../../packages/ui/README.md), not Bulma. Every color
+is a token in `packages/ui/src/styles/theme.css`; a test fails when a color
+literal appears anywhere in `packages/ui/src`, `src/next`, or `src/pages/next`.
+`src/next/Head.astro` belongs in the head of every new console page: it loads the
+stylesheet, preloads Inter, and sets the theme before the first paint.
+
 ## Formatting
 
 ```bash

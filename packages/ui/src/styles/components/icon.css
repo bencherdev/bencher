@@ -1,0 +1,28 @@
+@layer ui-components {
+	.ui-icon {
+		display: inline-block;
+		width: 1em;
+		height: 1em;
+		flex: none;
+		vertical-align: -0.125em;
+	}
+
+	/* Sizes are type-scale steps, never pixel literals. Omitting the size
+	   lets the glyph inherit the surrounding font size, so an icon inside a
+	   token or button matches its text. */
+	.ui-icon[data-size="sm"] {
+		font-size: var(--font-size-sm);
+	}
+
+	.ui-icon[data-size="md"] {
+		font-size: var(--font-size-base);
+	}
+
+	.ui-icon[data-size="lg"] {
+		font-size: var(--font-size-lg);
+	}
+
+	.ui-icon[data-size="xl"] {
+		font-size: var(--font-size-xl);
+	}
+}

@@ -1,0 +1,12 @@
+@layer ui-components {
+	.ui-timestamp {
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+
+	a.ui-timestamp:hover {
+		color: var(--color-text-accent);
+	}
+}

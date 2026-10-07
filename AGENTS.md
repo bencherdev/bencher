@@ -12,6 +12,7 @@ Bencher is a continuous benchmarking platform that detects and prevents performa
 - **Bencher API Server** (`services/api`) - see [`services/api/AGENTS.md`](services/api/AGENTS.md)
 - **`bencher` CLI** (`services/cli`) - see [`services/cli/AGENTS.md`](services/cli/AGENTS.md)
 - **Bencher Console** (`services/console`) - see [`services/console/AGENTS.md`](services/console/AGENTS.md)
+- **Design system** (`packages/ui`) - tokens, the Bencher theme, and Solid components for the new console; see [`packages/ui/README.md`](packages/ui/README.md)
 - **Bare Metal `runner`** (`services/runner`) - Bare Metal benchmark runner
 
 Terminology: use the definitions in [`docs/glossary.md`](docs/glossary.md).

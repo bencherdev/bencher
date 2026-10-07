@@ -1,0 +1,35 @@
+@layer ui-components {
+	.ui-avatar {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		border-radius: var(--radius-full);
+		background: var(--color-background-muted);
+		border: var(--border-width) solid var(--color-border);
+		color: var(--color-text-secondary);
+		font-size: 0.625rem;
+		font-weight: var(--font-weight-bold);
+		flex: none;
+	}
+
+	.ui-avatar[data-size="md"] {
+		width: 32px;
+		height: 32px;
+		font-size: var(--font-size-xs);
+	}
+
+	.ui-avatar-group {
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.ui-avatar-group .ui-avatar {
+		box-shadow: 0 0 0 2px var(--color-background-surface);
+	}
+
+	.ui-avatar-group .ui-avatar + .ui-avatar {
+		margin-inline-start: -6px;
+	}
+}
