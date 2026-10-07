@@ -39,6 +39,7 @@ from_client!(
     Index,
     Iteration,
     Jwt,
+    MetricName,
     NonEmpty,
     ResourceName,
     SampleSize,
