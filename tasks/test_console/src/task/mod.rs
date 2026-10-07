@@ -2,8 +2,12 @@ use clap::Parser as _;
 
 use crate::parser::{TaskSub, TaskTask};
 
+#[cfg(feature = "plus")]
+mod e2e;
 mod test_console;
 
+#[cfg(feature = "plus")]
+use e2e::E2e;
 use test_console::TestConsole;
 
 #[derive(Debug)]
@@ -15,6 +19,8 @@ pub struct Task {
 pub enum Sub {
     Dev(TestConsole),
     Prod(TestConsole),
+    #[cfg(feature = "plus")]
+    E2e(E2e),
 }
 
 impl TryFrom<TaskTask> for Task {
@@ -34,6 +40,8 @@ impl TryFrom<TaskSub> for Sub {
         Ok(match sub {
             TaskSub::Dev(test_console) => Self::Dev(TestConsole::dev(test_console)),
             TaskSub::Prod(test_console) => Self::Prod(TestConsole::prod(test_console)),
+            #[cfg(feature = "plus")]
+            TaskSub::E2e(e2e) => Self::E2e(e2e.into()),
         })
     }
 }
@@ -52,6 +60,8 @@ impl Sub {
     pub async fn exec(&self) -> anyhow::Result<()> {
         match self {
             Self::Dev(test_console) | Self::Prod(test_console) => test_console.exec().await,
+            #[cfg(feature = "plus")]
+            Self::E2e(e2e) => e2e.exec().await,
         }
     }
 }

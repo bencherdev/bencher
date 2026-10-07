@@ -1,0 +1,26 @@
+{
+	"coldLoad": {
+		"apiAnswersBeforePaint": 0,
+		"apiRequests": 1,
+		"apiRounds": 1,
+		"cls": 0.00025,
+		"jsBytes": 35700,
+		"deferredJsBytes": 108000,
+		"htmlBytes": 2700,
+		"inlineScriptBytes": 2840,
+		"lateModules": 0
+	},
+	"warmReload": {
+		"apiRequests": 1,
+		"apiRounds": 1,
+		"cls": 0,
+		"jsBytes": 35700,
+		"htmlBytes": 2700,
+		"inlineScriptBytes": 2840,
+		"lateModules": 0
+	},
+	"tabSwitch": {
+		"apiRequests": 0,
+		"jsBytes": 160
+	}
+}

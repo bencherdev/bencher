@@ -9,7 +9,8 @@
 			"src/content/**/*.mdx",
 			"src/chunks/**/*.mdx",
 			"src/middleware.{js,ts}",
-			"src/actions/index.{js,ts}"
+			"src/actions/index.{js,ts}",
+			"sentry.client.config.ts"
 		]
 	}
 }

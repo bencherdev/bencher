@@ -14,8 +14,12 @@
 		font-size: var(--font-size-lg);
 	}
 
+	/* A page title. */
 	.ui-heading[data-size="xl"] {
 		font-size: var(--font-size-xl);
+		font-weight: var(--font-weight-extrabold);
+		letter-spacing: -0.02em;
+		line-height: 1.15;
 	}
 
 	.ui-heading a {

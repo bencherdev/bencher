@@ -1,20 +1,22 @@
 @layer ui-components {
 	.ui-button {
+		--ui-button-size: 36px;
 		appearance: none;
 		position: relative;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		gap: var(--spacing-2);
-		min-height: var(--size-element-md);
-		padding-inline: var(--spacing-4);
-		border: none;
-		border-radius: var(--radius-full);
-		background: var(--color-background-muted);
+		min-height: var(--ui-button-size);
+		padding-inline: 14px;
+		border: var(--border-width) solid var(--color-border-control);
+		border-radius: var(--radius-element);
+		background: transparent;
 		color: var(--color-text-primary);
 		font-size: var(--font-size-sm);
 		font-weight: var(--font-weight-semibold);
 		line-height: 1.2;
+		white-space: nowrap;
 		cursor: pointer;
 		user-select: none;
 		touch-action: manipulation;
@@ -41,33 +43,42 @@
 
 	.ui-button[data-variant="primary"] {
 		background: var(--color-accent);
+		border-color: var(--color-accent);
 		color: var(--color-on-accent);
 	}
 
 	.ui-button[data-variant="ghost"] {
-		background: transparent;
+		border-color: transparent;
 	}
 
 	.ui-button[data-variant="destructive"] {
 		background: var(--color-marker);
+		border-color: var(--color-marker);
 		color: var(--color-on-marker);
 	}
 
 	.ui-button[data-variant="muted"] {
 		background: var(--color-accent-muted);
+		border-color: var(--color-border-accent);
 		color: var(--color-text-accent);
 	}
 
 	.ui-button[data-size="sm"] {
-		min-height: var(--size-element-sm);
-		padding-inline: var(--spacing-3);
+		--ui-button-size: 30px;
+		padding-inline: 10px;
 		font-size: var(--font-size-xs);
 	}
 
 	.ui-button[data-size="lg"] {
-		min-height: var(--size-element-lg);
+		--ui-button-size: var(--spacing-11);
 		padding-inline: var(--spacing-5);
 		font-size: var(--font-size-base);
+	}
+
+	/* A button that is only an icon is square. */
+	.ui-button:has(> .ui-icon:only-child) {
+		min-width: var(--ui-button-size);
+		padding-inline: 0;
 	}
 
 	.ui-button[data-full] {
@@ -76,16 +87,26 @@
 
 	.ui-button[data-selected] {
 		background: var(--color-accent-muted);
+		border-color: var(--color-border-accent);
 		color: var(--color-text-accent);
-		box-shadow: inset 0 0 0 1px var(--color-border-accent);
 	}
 
 	.ui-button:disabled {
-		opacity: 0.55;
+		background: transparent;
+		border-color: var(--color-border);
+		color: var(--color-text-faint);
 		cursor: not-allowed;
 	}
 
 	.ui-button:disabled::after {
 		background: transparent;
+	}
+
+	/* Every button is a full touch target on a narrow screen. */
+	@media (max-width: 767px) {
+		.ui-button,
+		.ui-button[data-size="sm"] {
+			--ui-button-size: var(--spacing-11);
+		}
 	}
 }

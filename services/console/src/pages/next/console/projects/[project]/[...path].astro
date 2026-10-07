@@ -1,0 +1,44 @@
+---
+// Every path under a project answers with this one document: the shell and a
+// skeleton, painted before any script runs. The app routes from there.
+export const prerender = false;
+
+import { BENCHER_API_URL } from "astro:env/server";
+
+import ContentSkeleton from "../../../../../next/ContentSkeleton";
+import Head from "../../../../../next/Head.astro";
+import NextHead from "../../../../../next/astro/NextHead.astro";
+import ShellPaint from "../../../../../next/astro/ShellPaint.astro";
+import { classicPlace, parseNextPath, tabOf } from "../../../../../next/paths";
+import { modulePreloads } from "../../../../../next/preloads";
+import Shell from "../../../../../next/shell/Shell";
+import "../../../../../next/styles/console.css";
+
+const slug = Astro.params.project ?? "";
+const place = parseNextPath(Astro.url.pathname);
+const tab = place && tabOf(place.rest);
+const classic = classicPlace(Astro.url.pathname);
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{slug} | Bencher</title>
+		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+		<NextHead slug={slug} classic={classic} />
+		<Head />
+		{modulePreloads(tab).map((href) => <link rel="modulepreload" href={href} />)}
+	</head>
+	<body>
+		<div id="console" class="console" data-api-url={BENCHER_API_URL}>
+			<Shell slug={slug} tab={tab} />
+			<ContentSkeleton />
+		</div>
+		<ShellPaint slug={slug} />
+		<script>
+			import "../../../../../next/main";
+		</script>
+	</body>
+</html>

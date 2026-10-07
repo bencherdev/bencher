@@ -20,6 +20,7 @@ const description =
 ---
 
 <BaseLayout title={title} description={description}>
+  <slot name="head" slot="head" />
   <ConsoleNavbar slot="navbar" apiUrl={apiUrl} params={params} />
   <AnonRedirect client:only="solid-js" path={redirect ?? "/auth/login"} />
   <div class="columns is-reverse-mobile">
