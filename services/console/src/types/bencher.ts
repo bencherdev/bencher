@@ -697,6 +697,47 @@ export interface JsonConfirm {
 	token: Jwt;
 }
 
+export interface JsonConsoleOrganization {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+}
+
+export interface JsonConsolePermissions {
+	view: boolean;
+	create: boolean;
+	edit: boolean;
+	delete: boolean;
+	manage: boolean;
+}
+
+export enum Visibility {
+	Public = "public",
+	Private = "private",
+}
+
+export interface JsonProject {
+	uuid: Uuid;
+	organization: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	url?: Url;
+	visibility: Visibility;
+	bmf_version: BmfVersion;
+	created: string;
+	modified: string;
+	claimed?: string;
+}
+
+export interface JsonConsoleProject {
+	project: JsonProject;
+	organization: JsonConsoleOrganization;
+	/** What the signed in reader may do with the project. */
+	permissions: JsonConsolePermissions;
+	/** The active alerts the Alerts list shows by default. */
+	active_alerts: number;
+}
+
 export interface JsonCustomer {
 	uuid: Uuid;
 	name: NonEmpty;
@@ -886,11 +927,6 @@ export interface JsonNewPlot {
 	 * At least one measure must be specified, and at most 8.
 	 */
 	measures: Uuid[];
-}
-
-export enum Visibility {
-	Public = "public",
-	Private = "private",
 }
 
 export interface JsonNewProject {
@@ -1122,19 +1158,6 @@ export interface JsonOrganization {
 	slug: Slug;
 	license?: Jwt;
 	sso?: JsonSso[];
-	created: string;
-	modified: string;
-	claimed?: string;
-}
-
-export interface JsonProject {
-	uuid: Uuid;
-	organization: Uuid;
-	name: ResourceName;
-	slug: Slug;
-	url?: Url;
-	visibility: Visibility;
-	bmf_version: BmfVersion;
 	created: string;
 	modified: string;
 	claimed?: string;

@@ -164,6 +164,21 @@ pub async fn get_ls_inner(
     Ok((json_alerts.into(), total_count))
 }
 
+/// The active alerts the Alerts list shows by default, counted.
+pub(crate) fn active_count(
+    conn: &mut DbConnection,
+    query_project: &QueryProject,
+) -> diesel::QueryResult<i64> {
+    get_ls_count(
+        conn,
+        query_project,
+        &ProjAlertsQuery {
+            status: Some(AlertStatus::Active),
+            archived: None,
+        },
+    )
+}
+
 /// Counts what `get_ls_query` lists, joining only what its filters read.
 fn get_ls_count(
     conn: &mut DbConnection,
