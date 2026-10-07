@@ -760,18 +760,56 @@ export interface JsonConsoleOrganization {
 	slug: Slug;
 }
 
-export interface JsonConsolePermissions {
-	view: boolean;
-	create: boolean;
-	edit: boolean;
-	delete: boolean;
-	manage: boolean;
+/** The window a response read, after any clamp. */
+export interface JsonConsoleWindow {
+	start_time: DateTimeMillis;
+	end_time: DateTimeMillis;
+	/**
+	 * Whether the requested start was moved later: a report's history holds a
+	 * bounded number of reports, and an unauthenticated plot reaches back at
+	 * most three months.
+	 */
+	clamped: boolean;
 }
 
-export interface JsonConsolePointReport {
-	uuid: Uuid;
-	version: VersionNumber;
-	hash?: GitHash;
+/** One line's values, aligned to `points`, with null where the line has no point. */
+export interface JsonConsoleSeries {
+	y: (number | null)[];
+	/**
+	 * The baseline the threshold compared each point with.
+	 * Absent when there is none.
+	 */
+	baseline?: (number | null)[];
+	/** Absent when there is no lower limit. */
+	lower?: (number | null)[];
+	/** Absent when there is no upper limit. */
+	upper?: (number | null)[];
+	/** The points that alerted, in point order. */
+	alerts: JsonConsoleAlertPoint[];
+}
+
+/**
+ * One line of a plot: one metric name of one measure of one variant, on one
+ * branch and one testbed.
+ */
+export interface JsonConsolePerfLine {
+	/** An index into `branches`. */
+	branch: number;
+	/** An index into `testbeds`. */
+	testbed: number;
+	/** An index into `benchmarks`. */
+	benchmark: number;
+	/** An index into `variants`. */
+	variant: number;
+	/** An index into `measures`. */
+	measure: number;
+	metric: string;
+	/**
+	 * The model of the threshold that checked the line's latest checked point,
+	 * an index into `models`. Absent when no threshold checked it.
+	 */
+	model?: number;
+	series: JsonConsoleSeries;
 }
 
 /**
@@ -785,6 +823,60 @@ export interface JsonConsolePoints {
 	report: number[];
 	/** The iteration of each point, absent when every point is the first. */
 	iteration?: Iteration[];
+}
+
+export interface JsonConsolePointReport {
+	uuid: Uuid;
+	version: VersionNumber;
+	hash?: GitHash;
+}
+
+export interface JsonConsoleTestbed {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	/** The spec a plot read this testbed's runs on, when the query named one. */
+	spec?: Uuid;
+}
+
+export interface JsonConsoleVariant {
+	uuid: Uuid;
+	/** An index into `benchmarks`. */
+	benchmark: number;
+	parameters: Record<string, string | number | boolean>;
+}
+
+/** The lines of a plot query, drawn as columns aligned to one shared x. */
+export interface JsonConsolePerf {
+	/** The window the query read, after any clamp. */
+	window: JsonConsoleWindow;
+	/**
+	 * The number of lines the query names: the product of its boxes.
+	 * More than `lines` holds when the line cap cut some off.
+	 */
+	total: number;
+	/**
+	 * The lines in the order the boxes name them: branch, testbed, benchmark,
+	 * variant, measure, and metric. A line with no point in the window has only
+	 * nulls.
+	 */
+	lines: JsonConsolePerfLine[];
+	points: JsonConsolePoints;
+	reports: JsonConsolePointReport[];
+	branches: JsonConsoleBranch[];
+	testbeds: JsonConsoleTestbed[];
+	benchmarks: JsonConsoleBenchmark[];
+	variants: JsonConsoleVariant[];
+	measures: JsonConsoleMeasure[];
+	models: JsonConsoleModel[];
+}
+
+export interface JsonConsolePermissions {
+	view: boolean;
+	create: boolean;
+	edit: boolean;
+	delete: boolean;
+	manage: boolean;
 }
 
 export enum Visibility {
@@ -812,12 +904,6 @@ export interface JsonConsoleProject {
 	permissions: JsonConsolePermissions;
 	/** The active alerts the Alerts list shows by default. */
 	active_alerts: number;
-}
-
-export interface JsonConsoleTestbed {
-	uuid: Uuid;
-	name: ResourceName;
-	slug: Slug;
 }
 
 export enum Adapter {
@@ -881,33 +967,6 @@ export interface JsonConsoleReportLink {
 	adapter: Adapter;
 }
 
-/** The window a response read, after any clamp. */
-export interface JsonConsoleWindow {
-	start_time: DateTimeMillis;
-	end_time: DateTimeMillis;
-	/**
-	 * Whether the requested start was moved later, because a history holds a
-	 * bounded number of reports.
-	 */
-	clamped: boolean;
-}
-
-/** One line's values, aligned to `points`, with null where the line has no point. */
-export interface JsonConsoleSeries {
-	y: (number | null)[];
-	/**
-	 * The baseline the threshold compared each point with.
-	 * Absent when there is none.
-	 */
-	baseline?: (number | null)[];
-	/** Absent when there is no lower limit. */
-	lower?: (number | null)[];
-	/** Absent when there is no upper limit. */
-	upper?: (number | null)[];
-	/** The points that alerted, in point order. */
-	alerts: JsonConsoleAlertPoint[];
-}
-
 /** One line of a report: one metric name of one measure of one variant. */
 export interface JsonConsoleReportLine {
 	/** An index into `benchmarks`. */
@@ -930,13 +989,6 @@ export interface JsonConsoleReportLine {
 	alert?: JsonConsoleAlert;
 	/** The line over the window, aligned to `points`. */
 	history: JsonConsoleSeries;
-}
-
-export interface JsonConsoleVariant {
-	uuid: Uuid;
-	/** An index into `benchmarks`. */
-	benchmark: number;
-	parameters: Record<string, string | number | boolean>;
 }
 
 /**
