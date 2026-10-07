@@ -13,11 +13,12 @@ use bencher_json::{
     project::{
         alert::AlertStatus,
         console::{
-            ConsoleLineGroup, ConsoleLineSort, DEFAULT_CONSOLE_LINES_PER_PAGE, JsonConsoleBranch,
-            JsonConsoleLineGroup, JsonConsoleReport, JsonConsoleReportCounts,
-            JsonConsoleReportLine, JsonConsoleReportLink, JsonConsoleReportQueryParams,
-            JsonConsoleSeries, JsonConsoleTestbed, JsonConsoleWindow, MAX_CONSOLE_HISTORY_REPORTS,
-            MAX_CONSOLE_WINDOW_DAYS,
+            ConsoleLineGroup, ConsoleLineSort, DEFAULT_CONSOLE_HISTORY_POINTS,
+            DEFAULT_CONSOLE_LINES_PER_PAGE, JsonConsoleBranch, JsonConsoleLineGroup,
+            JsonConsoleReport, JsonConsoleReportCounts, JsonConsoleReportLine,
+            JsonConsoleReportLink, JsonConsoleReportQueryParams, JsonConsoleSeries,
+            JsonConsoleTestbed, JsonConsoleWindow, MAX_CONSOLE_HISTORY_POINTS,
+            MAX_CONSOLE_HISTORY_REPORTS, MAX_CONSOLE_WINDOW_DAYS,
         },
         head::{JsonVersion, VersionNumber},
         report::{Adapter, Iteration, JsonReportAlertsCounts},
@@ -54,7 +55,7 @@ use serde::Deserialize;
 
 use super::{
     AlertRow, BenchmarkRow, Check, Limits, MeasureRow, ModelRow, PointReport, Points,
-    PointsBuilder, SeriesBuilder, Tables, VariantRow, alert_json, before, unique,
+    PointsBuilder, SeriesBuilder, Tables, Thinned, VariantRow, alert_json, before, thin, unique,
 };
 use crate::perf::DEFAULT_REPORT_HISTORY;
 
@@ -148,6 +149,7 @@ async fn get_inner(
     } = identity(conn, &project, path_params.report)?;
 
     let requested = requested_start(&report, query_params.start_time, query_params.window)?;
+    let points = history_points(query_params.points)?;
     let filters = Filters::new(&query_params)?;
     let (window_reports, window) = history_window(conn, &report, requested)
         .map_err(resource_not_found_err!(Report, (&project, report.uuid)))?;
@@ -178,16 +180,11 @@ async fn get_inner(
     );
 
     let page_lines = page(ordered, query_params.page, query_params.per_page);
-    let History { points, series } = if page_lines.is_empty() {
-        History::default()
-    } else {
-        let rows = history_rows(conn, &window_reports, &page_lines)
-            .map_err(resource_not_found_err!(Metric, (&project, report.uuid)))?;
-        History::new(&window_reports, &page_lines, rows)
-    };
+    let history = page_history(conn, &window_reports, &page_lines, report.id, points)
+        .map_err(resource_not_found_err!(Metric, (&project, report.uuid)))?;
     let lines = page_lines
         .into_iter()
-        .zip(series)
+        .zip(history.series)
         .map(|(line, history)| line_json(&mut tables, line, history))
         .collect();
 
@@ -220,8 +217,8 @@ async fn get_inner(
         total,
         groups,
         lines,
-        points: points.json,
-        reports: points.reports,
+        points: history.points,
+        reports: history.reports,
         benchmarks,
         variants,
         measures,
@@ -249,6 +246,19 @@ fn requested_start(
             "A window is from 1 to {MAX_CONSOLE_WINDOW_DAYS} days, not {days}"
         ))),
         (None, None) => Ok(None),
+    }
+}
+
+/// The size a request asks each line's history to be thinned to.
+fn history_points(points: Option<u16>) -> Result<usize, HttpError> {
+    match points {
+        None => Ok(usize::from(DEFAULT_CONSOLE_HISTORY_POINTS)),
+        Some(points) if (2..=MAX_CONSOLE_HISTORY_POINTS).contains(&points) => {
+            Ok(usize::from(points))
+        },
+        Some(points) => Err(bad_request_error(format!(
+            "A history is from 2 to {MAX_CONSOLE_HISTORY_POINTS} points, not {points}"
+        ))),
     }
 }
 
@@ -1035,6 +1045,23 @@ fn history_rows(
                 .nullable(),
         ))
         .load::<HistoryRow>(conn)
+}
+
+/// The page's lines over the window, each thinned to `points`.
+fn page_history(
+    conn: &mut DbConnection,
+    window_reports: &[PointReport],
+    lines: &[Line],
+    report_id: ReportId,
+    points: usize,
+) -> diesel::QueryResult<Thinned> {
+    let History { points: x, series } = if lines.is_empty() {
+        History::default()
+    } else {
+        let rows = history_rows(conn, window_reports, lines)?;
+        History::new(window_reports, lines, rows)
+    };
+    Ok(thin(x, series, report_id, points))
 }
 
 #[derive(Default)]
