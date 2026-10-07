@@ -1,3 +1,4 @@
+pub mod scrub_day;
 pub mod server;
 
 use bencher_json::{RunnerResourceId, Secret};

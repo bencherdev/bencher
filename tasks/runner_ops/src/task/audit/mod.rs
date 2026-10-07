@@ -11,7 +11,8 @@ use super::framed::{self, Output};
 use super::merge_ssh;
 use super::ssh::Ssh;
 use crate::parser::TaskAudit;
-use crate::parser::server::load_server;
+use crate::parser::scrub_day::{ScrubDay, scrub_day_problems};
+use crate::parser::server::{load_server, load_servers};
 use snapshot::{Sections, Snapshot};
 
 #[derive(Debug)]
@@ -43,13 +44,14 @@ impl TryFrom<TaskAudit> for Audit {
             .as_ref()
             .and_then(|f| f.update_channel)
             .unwrap_or_default();
+        let scrub_day = file.as_ref().and_then(|f| f.scrub_day);
         let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
         let label = runner.map_or_else(|| server.clone(), |runner| runner.to_string());
         Ok(Self {
             runner: Target {
                 label,
                 ssh: Ssh::new(server, ssh, user),
-                desired: Desired::new(update_channel),
+                desired: Desired::new(update_channel, scrub_day),
             },
             against: against.as_ref().map(Target::from_file).transpose()?,
         })
@@ -58,6 +60,15 @@ impl TryFrom<TaskAudit> for Audit {
 
 impl Audit {
     pub fn exec(self) -> anyhow::Result<()> {
+        let fleet: Vec<_> = load_servers()?
+            .into_iter()
+            .map(|(runner, server)| (runner, server.scrub_day))
+            .collect();
+        self.exec_with_fleet(&fleet)
+    }
+
+    /// The audit, with `fleet` the scrub day of every runner in runners.json.
+    fn exec_with_fleet(self, fleet: &[(RunnerResourceId, Option<ScrubDay>)]) -> anyhow::Result<()> {
         let Self { runner, against } = self;
         let (sections, frames) = runner.collect()?;
         let snapshot = Snapshot::new(&sections);
@@ -89,6 +100,7 @@ impl Audit {
             failed += report_health(&reference.label, reference_sections);
             unmet += reference.report_desired(reference_frames);
         }
+        failed += report_scrub_days(fleet);
 
         if failed > 0 || unmet > 0 || differing > 0 {
             anyhow::bail!(
@@ -109,7 +121,7 @@ impl Target {
         Ok(Self {
             label: runner.to_string(),
             ssh: Ssh::new(server, ssh, user),
-            desired: Desired::new(file.update_channel.unwrap_or_default()),
+            desired: Desired::new(file.update_channel.unwrap_or_default(), file.scrub_day),
         })
     }
 
@@ -138,6 +150,19 @@ fn report_health(label: &str, sections: &Sections) -> usize {
         println!("  {finding}");
     }
     findings.iter().filter(|finding| finding.failed()).count()
+}
+
+/// Print whether every runner in runners.json scrubs on its own day, and count the failure.
+fn report_scrub_days(fleet: &[(RunnerResourceId, Option<ScrubDay>)]) -> usize {
+    let problems = scrub_day_problems(fleet);
+    println!("Scrub days in runners.json:");
+    if problems.is_empty() {
+        println!("  ok    every runner scrubs on its own day, at least 2 days from any other");
+    }
+    for problem in &problems {
+        println!("  FAIL  {problem}");
+    }
+    usize::from(!problems.is_empty())
 }
 
 fn report_size(label: &str, snapshot: &Snapshot) {
@@ -170,7 +195,7 @@ mod tests {
         let target = Target {
             label: "runner".to_owned(),
             ssh,
-            desired: Desired::new(UpdateChannel::Stable),
+            desired: Desired::new(UpdateChannel::Stable, None),
         };
         let (_, frames) = target.collect().unwrap();
         assert_eq!(
@@ -187,9 +212,37 @@ mod tests {
     fn the_audit_counts_each_desired_state_difference() {
         let dir = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(dir.path()).unwrap();
-        let desired = Desired::new(UpdateChannel::Stable);
+        let (audit, rows) = absent_rows(dir);
+        assert_eq!(
+            audit.exec_with_fleet(&[]).unwrap_err().to_string(),
+            format!(
+                "Audit found 0 failed health check(s), {rows} desired state difference(s), and 0 differing section(s)"
+            )
+        );
+    }
+
+    #[test]
+    fn the_audit_counts_scrub_days_too_close_as_a_failed_check() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(dir.path()).unwrap();
+        let (audit, rows) = absent_rows(dir);
+        let day = |day| Some(ScrubDay::try_from(day).unwrap());
+        let fleet = [
+            ("runner".parse().unwrap(), day(5)),
+            ("other".parse().unwrap(), day(6)),
+        ];
+        assert_eq!(
+            audit.exec_with_fleet(&fleet).unwrap_err().to_string(),
+            format!(
+                "Audit found 1 failed health check(s), {rows} desired state difference(s), and 0 differing section(s)"
+            )
+        );
+    }
+
+    /// The audit of a healthy runner on which every desired state row is absent, and its number of rows.
+    fn absent_rows(dir: &Utf8Path) -> (Audit, usize) {
+        let desired = Desired::new(UpdateChannel::Stable, None);
         let rows = desired.frames().count();
-        // A healthy runner on which every desired state row is absent.
         let mut reply = fake_output(&health::healthy());
         for (name, _) in desired.frames() {
             reply.push_str(&framed::fake_frame(&name, "absent", Some(0)));
@@ -204,11 +257,6 @@ mod tests {
             },
             against: None,
         };
-        assert_eq!(
-            audit.exec().unwrap_err().to_string(),
-            format!(
-                "Audit found 0 failed health check(s), {rows} desired state difference(s), and 0 differing section(s)"
-            )
-        );
+        (audit, rows)
     }
 }

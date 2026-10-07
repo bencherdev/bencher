@@ -6,11 +6,17 @@ use bencher_json::{Sha256, UpdateChannel};
 use super::framed::{self, Output};
 use super::isolate::{format_cpu_list, parse_cpu_list};
 use super::start::KEY_FILE;
+use crate::parser::scrub_day::ScrubDay;
 
 pub const SSH_HARDENING_PATH: &str = "/etc/ssh/sshd_config.d/hardening.conf";
 pub const UNATTENDED_UPGRADES_PATH: &str = "/etc/apt/apt.conf.d/50unattended-upgrades-local";
 pub const AUTO_UPGRADES_PATH: &str = "/etc/apt/apt.conf.d/20auto-upgrades";
 pub const KERNEL_PIN_PATH: &str = "/etc/apt/preferences.d/bencher-kernels.pref";
+const SCRUB_TIMER: &str = "mdcheck_start.timer";
+// The `zz-` prefix sorts it after the installer's drop-in, which sets a random day.
+const SCRUB_DROP_IN: &str = "/etc/systemd/system/mdcheck_start.timer.d/zz-bencher-scrub.conf";
+// The persistent timer's last trigger, which systemd reads when the timer starts.
+const SCRUB_STAMP: &str = "/var/lib/systemd/timers/stamp-mdcheck_start.timer";
 pub const BENCHER_CGROUP: &str = "/sys/fs/cgroup/bencher";
 const ISOLATED_CPUS: &str = "/sys/devices/system/cpu/isolated";
 /// The controllers the runner enables for its `bencher/` cgroup.
@@ -50,7 +56,7 @@ Pin-Priority: -1";
 pub struct Desired(Vec<Row>);
 
 impl Desired {
-    pub fn new(update_channel: UpdateChannel) -> Self {
+    pub fn new(update_channel: UpdateChannel, scrub_day: Option<ScrubDay>) -> Self {
         let mut rows = vec![
             Row::File(File::root(
                 SSH_HARDENING_PATH,
@@ -77,6 +83,8 @@ impl Desired {
                 None,
             )),
             Row::File(File::root(KEY_FILE, 0o600, Content::Secret, None)),
+            // Before the masks, whose daemon reloads would re-arm the timer on its old calendar.
+            Row::Scrub(scrub_day),
         ];
         rows.extend(MASKED_UNITS.into_iter().map(Row::Masked));
         rows.extend([
@@ -242,6 +250,8 @@ enum Row {
     File(File),
     /// A unit masked and stopped, so it never runs beside a Job.
     Masked(&'static str),
+    /// The monthly RAID scrub, on the runner's scrub day from runners.json with no random delay.
+    Scrub(Option<ScrubDay>),
     /// The runner's own cgroup, which it sets up at startup.
     Cgroup(Cgroup),
     StateDir,
@@ -280,6 +290,7 @@ impl Row {
         match self {
             Self::File(file) => file.path.clone(),
             Self::Masked(unit) => format!("{unit} masked"),
+            Self::Scrub(_) => format!("{SCRUB_TIMER} on the scrub day"),
             Self::Cgroup(Cgroup::Controllers) => format!("{BENCHER_CGROUP} controllers"),
             Self::Cgroup(Cgroup::Cpus) => format!("{BENCHER_CGROUP} CPUs"),
             Self::Cgroup(Cgroup::Partition) => format!("{BENCHER_CGROUP} partition"),
@@ -294,7 +305,7 @@ impl Row {
                 content: Content::Secret,
                 ..
             }) => SetBy::Start,
-            Self::File(_) | Self::Masked(_) => SetBy::Host,
+            Self::File(_) | Self::Masked(_) | Self::Scrub(_) => SetBy::Host,
             Self::Cgroup(_) | Self::StateDir => SetBy::Runner,
             Self::Binary(_) => SetBy::Deploy,
         }
@@ -306,6 +317,9 @@ impl Row {
             Self::File(file) => file.read(),
             Self::Masked(unit) => format!(
                 "printf '%s\\n%s\\n' \"$(systemctl is-enabled {unit} 2>&1)\" \"$(systemctl is-active {unit} 2>&1)\""
+            ),
+            Self::Scrub(_) => format!(
+                "systemctl show {SCRUB_TIMER} -p TimersCalendar -p RandomizedDelayUSec -p ActiveState"
             ),
             Self::Cgroup(cgroup) => if_present(BENCHER_CGROUP, &cgroup.read()),
             Self::StateDir => if_present(
@@ -336,6 +350,8 @@ impl Row {
         match self {
             Self::File(file) => file.problem(text),
             Self::Masked(_) => masked_problem(text),
+            Self::Scrub(Some(day)) => timer_problem(text, *day),
+            Self::Scrub(None) => Some("runners.json sets no scrub_day for this runner".to_owned()),
             Self::Cgroup(Cgroup::Controllers) => controllers_problem(text),
             Self::Cgroup(Cgroup::Cpus) => cpus_problem(text),
             Self::Cgroup(Cgroup::Partition) => {
@@ -351,6 +367,7 @@ impl Row {
         match self {
             Self::File(file) => file.write(),
             Self::Masked(unit) => Some(format!("systemctl mask --now {unit}")),
+            Self::Scrub(day) => scrub_write((*day)?),
             Self::Cgroup(_) | Self::StateDir | Self::Binary(_) => None,
         }
     }
@@ -457,6 +474,66 @@ fn controllers_problem(text: &str) -> Option<String> {
     let enabled: BTreeSet<&str> = text.split_whitespace().collect();
     (enabled != BTreeSet::from(RUNNER_CONTROLLERS))
         .then(|| format!("enables `{text}`, want `{}`", RUNNER_CONTROLLERS.join(" ")))
+}
+
+/// Why the scrub timer is not active on `day` alone with no random delay, if it is not.
+fn timer_problem(show: &str, day: ScrubDay) -> Option<String> {
+    let calendars: Vec<&str> = show
+        .lines()
+        .filter_map(|line| line.strip_prefix("TimersCalendar="))
+        .flat_map(|timers| timers.split("OnCalendar=").skip(1))
+        .map(|calendar| calendar.split(';').next().unwrap_or_default().trim())
+        .collect();
+    let property = |name: &str| {
+        show.lines()
+            .find_map(|line| line.strip_prefix(name)?.strip_prefix('='))
+            .map(str::trim)
+    };
+    let delay = property("RandomizedDelayUSec");
+    let state = property("ActiveState");
+    let want = on_calendar(day);
+    if calendars != [want.as_str()] {
+        Some(format!("runs on [{}], want {want}", calendars.join(", ")))
+    } else if delay != Some("0") {
+        Some(format!(
+            "has a random delay of {}",
+            delay.unwrap_or("unknown")
+        ))
+    } else if state != Some("active") {
+        Some(format!("is {}", state.unwrap_or("in an unknown state")))
+    } else {
+        None
+    }
+}
+
+/// The command that writes the drop-in replacing every calendar of the scrub timer with `day` and starts the timer, with its stamp set to now first, so neither the reload nor the start finds a scrub day it missed; a failed step leaves the timer running only if it was.
+fn scrub_write(day: ScrubDay) -> Option<String> {
+    let install = File::root(
+        SCRUB_DROP_IN,
+        0o644,
+        Content::Text(format!(
+            "[Timer]\nOnCalendar=\nOnCalendar={}\nRandomizedDelaySec=0",
+            on_calendar(day)
+        )),
+        None,
+    )
+    .write()?;
+    Some(format!(
+        "set -e
+if systemctl is-active --quiet {SCRUB_TIMER}; then active=1; else active=; fi
+trap 'if [ -n \"$active\" ]; then systemctl start {SCRUB_TIMER}; fi' EXIT
+touch {SCRUB_STAMP}
+systemctl stop {SCRUB_TIMER}
+{install}
+systemctl daemon-reload
+trap - EXIT
+systemctl start {SCRUB_TIMER}"
+    ))
+}
+
+/// The calendar in the normal form `systemctl show` prints it.
+fn on_calendar(day: ScrubDay) -> String {
+    format!("*-*-{:02} 02:00:00", u8::from(day))
 }
 
 /// `text` is the effective CPU list, a space, and the isolated CPU list, which is empty without isolation.
@@ -707,6 +784,63 @@ mod tests {
         );
     }
 
+    fn day(day: u8) -> ScrubDay {
+        ScrubDay::try_from(day).unwrap()
+    }
+
+    #[test]
+    fn the_scrub_timer_runs_only_on_the_scrub_day() {
+        // `systemctl show` output from systemd 255.
+        let row = Row::Scrub(Some(day(5)));
+        assert_eq!(
+            problem(
+                &row,
+                "TimersCalendar={ OnCalendar=*-*-05 02:00:00 ; next_elapse=Thu 2026-11-05 02:00:00 UTC }\nRandomizedDelayUSec=0\nActiveState=active"
+            ),
+            None
+        );
+        assert_eq!(
+            problem(
+                &row,
+                "TimersCalendar={ OnCalendar=*-*-05 02:00:00 ; next_elapse=(null) }\nRandomizedDelayUSec=0\nActiveState=inactive"
+            )
+            .as_deref(),
+            Some("is inactive")
+        );
+        assert_eq!(
+            problem(
+                &row,
+                "TimersCalendar={ OnCalendar=Sun *-*-01..07 01:00:00 ; next_elapse=(null) }\nRandomizedDelayUSec=1d"
+            )
+            .as_deref(),
+            Some("runs on [Sun *-*-01..07 01:00:00], want *-*-05 02:00:00")
+        );
+        assert_eq!(
+            problem(
+                &row,
+                "TimersCalendar={ OnCalendar=*-*-05 02:00:00 ; next_elapse=(null) }\nTimersCalendar={ OnCalendar=Sun *-*-01..07 01:00:00 ; next_elapse=(null) }\nRandomizedDelayUSec=0"
+            )
+            .as_deref(),
+            Some("runs on [*-*-05 02:00:00, Sun *-*-01..07 01:00:00], want *-*-05 02:00:00")
+        );
+        assert_eq!(
+            problem(
+                &row,
+                "TimersCalendar={ OnCalendar=*-*-05 02:00:00 ; next_elapse=(null) }\nRandomizedDelayUSec=1d"
+            )
+            .as_deref(),
+            Some("has a random delay of 1d")
+        );
+        assert_eq!(
+            problem(&row, "RandomizedDelayUSec=0").as_deref(),
+            Some("runs on [], want *-*-05 02:00:00")
+        );
+        assert_eq!(
+            problem(&Row::Scrub(None), "RandomizedDelayUSec=0").as_deref(),
+            Some("runners.json sets no scrub_day for this runner")
+        );
+    }
+
     #[cfg(target_os = "linux")]
     mod linux {
         use std::fs::{self, Permissions};
@@ -717,6 +851,7 @@ mod tests {
 
         use super::super::*;
         use super::no_checksum;
+        use crate::task::ssh::write_executable;
 
         /// The user and group running the test, which its files belong to.
         fn owner() -> (String, String) {
@@ -823,7 +958,7 @@ mod tests {
             write(&key, "BENCHER_RUNNER_KEY=not-a-real-key\n", 0o644);
 
             let (user, group) = owner();
-            let table = Desired::new(UpdateChannel::Canary);
+            let table = Desired::new(UpdateChannel::Canary, None);
             let read = sh(dir, &table.script().replace(KEY_FILE, key.as_str())).unwrap();
             assert!(!read.contains("not-a-real-key"), "{read}");
             let findings = table.check(&framed::parse(&read), &mut no_checksum);
@@ -872,6 +1007,98 @@ mod tests {
                 fs::read_to_string(&key).unwrap(),
                 "BENCHER_RUNNER_KEY=not-a-real-key\n"
             );
+        }
+
+        #[test]
+        fn host_pins_the_scrub_day_with_its_stamp_touched_before_the_timer_stops() {
+            let dir = tempfile::tempdir().unwrap();
+            let dir = Utf8Path::from_path(dir.path()).unwrap();
+            let write_scrub = scrub_stand_ins(dir);
+            let pinned = "\
+systemctl is-active --quiet mdcheck_start.timer
+touch /var/lib/systemd/timers/stamp-mdcheck_start.timer
+systemctl stop mdcheck_start.timer
+install -D -m 644 -o root -g root /dev/stdin /etc/systemd/system/mdcheck_start.timer.d/zz-bencher-scrub.conf
+[Timer]
+OnCalendar=
+OnCalendar=*-*-05 02:00:00
+RandomizedDelaySec=0
+systemctl daemon-reload
+systemctl start mdcheck_start.timer
+";
+
+            assert_eq!(write_scrub().unwrap(), pinned);
+            write(&dir.join("active"), "", 0o644);
+            assert_eq!(write_scrub().unwrap(), pinned);
+        }
+
+        #[test]
+        fn a_failed_scrub_write_leaves_the_timer_as_it_found_it() {
+            let dir = tempfile::tempdir().unwrap();
+            let dir = Utf8Path::from_path(dir.path()).unwrap();
+            let write_scrub = scrub_stand_ins(dir);
+            let touched = "\
+systemctl is-active --quiet mdcheck_start.timer
+touch /var/lib/systemd/timers/stamp-mdcheck_start.timer
+";
+            let installed = format!(
+                "{touched}systemctl stop mdcheck_start.timer
+install -D -m 644 -o root -g root /dev/stdin /etc/systemd/system/mdcheck_start.timer.d/zz-bencher-scrub.conf
+"
+            );
+            let start = "systemctl start mdcheck_start.timer\n";
+
+            write(&dir.join("fail-touch"), "", 0o644);
+            assert_eq!(write_scrub().unwrap_err(), touched);
+            write(&dir.join("active"), "", 0o644);
+            assert_eq!(write_scrub().unwrap_err(), format!("{touched}{start}"));
+
+            fs::remove_file(dir.join("fail-touch")).unwrap();
+            write(&dir.join("fail-install"), "", 0o644);
+            assert_eq!(write_scrub().unwrap_err(), format!("{installed}{start}"));
+            fs::remove_file(dir.join("active")).unwrap();
+            assert_eq!(write_scrub().unwrap_err(), installed);
+        }
+
+        /// Recording stand-ins for the scrub write's programs, and a run of the write that returns their calls, as `Err` when it fails; the timer is active while `active` exists, and `fail-<program>` fails that program.
+        fn scrub_stand_ins(dir: &Utf8Path) -> impl Fn() -> Result<String, String> {
+            for program in ["systemctl", "install", "touch"] {
+                write_executable(
+                    &dir.join(program),
+                    &format!(
+                        r#"#!/bin/sh
+dir="$(dirname "$0")"
+echo "{program} $*" >> "$dir/calls"
+[ -e "$dir/fail-{program}" ] && exit 1
+case "{program} $1" in
+  "install -D") cat >> "$dir/calls" ;;
+  "systemctl is-active") [ -e "$dir/active" ] ;;
+esac
+"#
+                    ),
+                )
+                .unwrap();
+            }
+            let desired = Desired(vec![Row::Scrub(Some(super::day(5))), Row::Scrub(None)]);
+            let findings: Vec<Finding> = desired
+                .0
+                .iter()
+                .map(|row| Finding {
+                    name: row.name(),
+                    set_by: row.set_by(),
+                    problem: Some("differs".to_owned()),
+                })
+                .collect();
+            let (writes, reloads) = desired.writes(&findings);
+            assert_eq!(writes.len(), 1);
+            assert_eq!(reloads, Vec::<&str>::new());
+            let dir = dir.to_owned();
+            move || {
+                let wrote = sh(&dir, &format!("PATH={dir}:$PATH\n{}", writes[0]));
+                let calls = fs::read_to_string(dir.join("calls")).unwrap();
+                fs::remove_file(dir.join("calls")).unwrap();
+                if wrote.is_ok() { Ok(calls) } else { Err(calls) }
+            }
         }
 
         #[test]
