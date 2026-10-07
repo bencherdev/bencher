@@ -11,5 +11,8 @@ slog.workspace = true
 slog-async.workspace = true
 slog-json.workspace = true
 
+[dev-dependencies]
+serde_json.workspace = true
+
 [lints]
 workspace = true
