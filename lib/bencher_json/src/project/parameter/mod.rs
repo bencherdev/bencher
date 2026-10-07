@@ -60,6 +60,20 @@ impl ParameterSet {
         canonical
     }
 
+    /// Each key with its value, as `key=value`, in key order.
+    pub fn tags(&self) -> impl Iterator<Item = String> + '_ {
+        self.0.iter().map(|(key, value)| {
+            let value = match value {
+                ParameterScalar::Bool(boolean) => boolean.to_string(),
+                ParameterScalar::Number(number) => {
+                    ryu_js::Buffer::new().format(number.into_inner()).to_owned()
+                },
+                ParameterScalar::String(string) => AsRef::<str>::as_ref(string).to_owned(),
+            };
+            format!("{}={value}", key.as_ref())
+        })
+    }
+
     /// Whether this is the empty parameter set.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -417,6 +431,16 @@ mod tests {
 
     fn canonical(parameters: &str) -> String {
         parse(parameters).canonical()
+    }
+
+    // A tag reads the way a row shows it: a string without its quotes and a
+    // number in its canonical spelling.
+    #[test]
+    fn tags_spell_each_value_bare() {
+        let tags = parse(r#"{"simd": "avx2", "size": 16.0, "warm": true, "ratio": 0.5}"#)
+            .tags()
+            .collect::<Vec<_>>();
+        assert_eq!(tags, vec!["ratio=0.5", "simd=avx2", "size=16", "warm=true"]);
     }
 
     /// A one key parameter set holding an exact `f64`, built without a parsing

@@ -20,13 +20,13 @@ use crate::ValidError;
 pub struct DateTime(chrono::DateTime<Utc>);
 
 #[typeshare::typeshare]
-#[derive(Debug, Display, Clone, Copy)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct DateTimeMillis(TimestampMillis);
 
 // Do not typeshare this type in order to obfuscate the i64
 // https://github.com/1Password/typeshare/issues/24
-#[derive(Debug, Display, Clone, Copy, Deserialize)]
+#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct TimestampMillis(i64);
 
@@ -229,6 +229,16 @@ mod tests {
         }
         // Wrapped to `i64` this would be -1000, a valid time.
         serde_json::from_str::<DateTimeMillis>(&(u64::MAX - 999).to_string()).unwrap_err();
+    }
+
+    // A JSON body carries milliseconds as a bare number, which `serde_json` reads as unsigned.
+    #[test]
+    fn date_time_millis_json_round_trip() {
+        let millis = DateTimeMillis::from(DateTime::TEST);
+        let json = serde_json::to_string(&millis).expect("Failed to serialize");
+        assert_eq!(json, "1720678980000");
+        let read: DateTimeMillis = serde_json::from_str(&json).expect("Failed to deserialize");
+        assert_eq!(read, millis);
     }
 
     #[test]
