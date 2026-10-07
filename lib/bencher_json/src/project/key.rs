@@ -41,6 +41,15 @@ pub struct JsonProjectKey {
     pub revoked: Option<DateTime>,
 }
 
+/// A project key by name only, as a report names the key that created it.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPubProjectKey {
+    pub uuid: ProjectKeyUuid,
+    pub name: ResourceName,
+}
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

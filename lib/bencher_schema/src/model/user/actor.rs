@@ -101,6 +101,13 @@ impl ApiActor {
         }
     }
 
+    pub fn project_key_id(&self) -> Option<ProjectKeyId> {
+        match self {
+            Self::Public(_) => None,
+            Self::ProjectKey(project_key_actor) => Some(project_key_actor.key_id),
+        }
+    }
+
     pub async fn from_token(
         log: &Logger,
         context: &ApiContext,

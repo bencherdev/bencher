@@ -1277,7 +1277,7 @@ export interface JsonPlot {
 }
 
 export interface JsonProjectKey {
-	uuid: ProjectKeyUuid;
+	uuid: Uuid;
 	project: Uuid;
 	creator?: Uuid;
 	name: ResourceName;
@@ -1291,13 +1291,19 @@ export interface JsonProjectKey {
 }
 
 export interface JsonProjectKeyCreated {
-	uuid: ProjectKeyUuid;
+	uuid: Uuid;
 	project: Uuid;
 	name: ResourceName;
 	/** The plaintext project key. Only returned once, at creation. */
 	key: ProjectKey;
 	creation: string;
 	expiration: string;
+}
+
+/** A project key by name only, as a report names the key that created it. */
+export interface JsonPubProjectKey {
+	uuid: Uuid;
+	name: ResourceName;
 }
 
 export interface JsonPubUser {
@@ -1394,6 +1400,8 @@ export interface JsonReportWarning {
 export interface JsonReport {
 	uuid: Uuid;
 	user?: JsonPubUser;
+	/** The project key that created the report, if one did. */
+	project_key?: JsonPubProjectKey;
 	project: JsonProject;
 	branch: JsonBranch;
 	testbed: JsonTestbed;
