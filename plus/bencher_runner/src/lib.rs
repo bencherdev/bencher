@@ -42,6 +42,8 @@ pub mod kernel;
 mod local;
 #[cfg(feature = "plus")]
 mod local_isolation;
+#[cfg(all(feature = "plus", test))]
+mod log;
 #[cfg(feature = "plus")]
 mod log_level;
 #[cfg(feature = "plus")]

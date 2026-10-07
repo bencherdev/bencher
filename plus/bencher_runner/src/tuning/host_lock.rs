@@ -9,6 +9,8 @@
 //! kernel releases the lock when the holder exits or dies, so a crashed
 //! runner cannot wedge future runs.
 
+use slog::Logger;
+
 /// Lock file path. `/run` is root-writable tmpfs: it cannot be symlink
 /// attacked like `/tmp` and clears on reboot. Unprivileged runners fail
 /// to open it and proceed unserialized, which is harmless because their
@@ -34,10 +36,14 @@ pub struct HostTuningLock {
 impl HostTuningLock {
     /// Try to take the host tuning lock.
     #[must_use]
-    pub fn acquire() -> Self {
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(unused_variables, reason = "host tuning is Linux-only")
+    )]
+    pub fn acquire(log: &Logger) -> Self {
         #[cfg(target_os = "linux")]
         {
-            Self::acquire_at(camino::Utf8Path::new(LOCK_PATH))
+            Self::acquire_at(log, camino::Utf8Path::new(LOCK_PATH))
         }
         #[cfg(not(target_os = "linux"))]
         {
@@ -52,7 +58,7 @@ impl HostTuningLock {
     /// An unopenable lock file allows tuning: serialization degrades to
     /// the pre-lock behavior instead of disabling tuning outright.
     #[cfg(target_os = "linux")]
-    fn acquire_at(path: &camino::Utf8Path) -> Self {
+    fn acquire_at(log: &Logger, path: &camino::Utf8Path) -> Self {
         use std::os::fd::AsRawFd as _;
 
         let file = match std::fs::OpenOptions::new()
@@ -63,7 +69,13 @@ impl HostTuningLock {
         {
             Ok(file) => file,
             Err(e) => {
-                println!("  Tuning: host lock - unavailable ({path}: {e})");
+                slog::info!(log, "Tuning";
+                    "setting" => "host lock",
+                    "action" => "skipped",
+                    "reason" => "unavailable",
+                    "path" => path.as_str(),
+                    "error" => %e,
+                );
                 return Self {
                     _file: None,
                     allows_tuning: true,
@@ -104,12 +116,19 @@ impl HostTuningLock {
     /// owns the host settings. Otherwise the requested configuration
     /// passes through unchanged.
     #[must_use]
-    #[expect(clippy::print_stdout, reason = "prints why host tuning is skipped")]
-    pub fn effective_tuning(&self, requested: &super::TuningConfig) -> super::TuningConfig {
+    pub fn effective_tuning(
+        &self,
+        log: &Logger,
+        requested: &super::TuningConfig,
+    ) -> super::TuningConfig {
         if self.allows_tuning() {
             requested.clone()
         } else {
-            println!("  Tuning: skipped (another bencher runner is active on this host)");
+            slog::info!(log, "Tuning";
+                "setting" => "all",
+                "action" => "skipped",
+                "reason" => "another bencher runner is active on this host",
+            );
             super::TuningConfig::disabled()
         }
     }
@@ -124,6 +143,7 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use super::*;
+    use crate::log::discard;
 
     fn lock_path() -> (tempfile::TempDir, Utf8PathBuf) {
         let dir = tempfile::tempdir().unwrap();
@@ -134,18 +154,18 @@ mod tests {
     #[test]
     fn first_acquire_allows_tuning() {
         let (_dir, path) = lock_path();
-        let lock = HostTuningLock::acquire_at(&path);
+        let lock = HostTuningLock::acquire_at(&discard(), &path);
         assert!(lock.allows_tuning());
     }
 
     #[test]
     fn contended_lock_denies_tuning() {
         let (_dir, path) = lock_path();
-        let first = HostTuningLock::acquire_at(&path);
+        let first = HostTuningLock::acquire_at(&discard(), &path);
         assert!(first.allows_tuning());
 
         // A second open file description on the same inode contends.
-        let second = HostTuningLock::acquire_at(&path);
+        let second = HostTuningLock::acquire_at(&discard(), &path);
         assert!(!second.allows_tuning());
     }
 
@@ -156,7 +176,7 @@ mod tests {
     #[test]
     fn dropped_lock_can_be_reacquired() {
         let (_dir, path) = lock_path();
-        drop(HostTuningLock::acquire_at(&path));
+        drop(HostTuningLock::acquire_at(&discard(), &path));
 
         // A child another test forks keeps the lock until its exec closes the
         // copy, so the release is awaited rather than probed once.
@@ -170,32 +190,33 @@ mod tests {
         // Unlocking, unlike a drop, releases the lock in any copy a fork took
         // of the probe.
         probe.unlock().unwrap();
-        assert!(HostTuningLock::acquire_at(&path).allows_tuning());
+        assert!(HostTuningLock::acquire_at(&discard(), &path).allows_tuning());
     }
 
     #[test]
     fn unopenable_path_still_allows_tuning() {
-        let lock = HostTuningLock::acquire_at(camino::Utf8Path::new(
-            "/nonexistent/dir/bencher_runner_tuning.lock",
-        ));
+        let lock = HostTuningLock::acquire_at(
+            &discard(),
+            camino::Utf8Path::new("/nonexistent/dir/bencher_runner_tuning.lock"),
+        );
         assert!(lock.allows_tuning());
     }
 
     #[test]
     fn effective_tuning_passes_through_when_held() {
         let (_dir, path) = lock_path();
-        let lock = HostTuningLock::acquire_at(&path);
-        let config = lock.effective_tuning(&crate::tuning::TuningConfig::default());
+        let lock = HostTuningLock::acquire_at(&discard(), &path);
+        let config = lock.effective_tuning(&discard(), &crate::tuning::TuningConfig::default());
         assert!(config.disable_aslr);
     }
 
     #[test]
     fn effective_tuning_disabled_when_contended() {
         let (_dir, path) = lock_path();
-        let _first = HostTuningLock::acquire_at(&path);
-        let second = HostTuningLock::acquire_at(&path);
+        let _first = HostTuningLock::acquire_at(&discard(), &path);
+        let second = HostTuningLock::acquire_at(&discard(), &path);
 
-        let config = second.effective_tuning(&crate::tuning::TuningConfig::default());
+        let config = second.effective_tuning(&discard(), &crate::tuning::TuningConfig::default());
         assert!(!config.disable_aslr);
         assert!(!config.cpuset_partition);
     }

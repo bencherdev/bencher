@@ -6,6 +6,7 @@ import Tuning from "./tuning.mdx";
 [`runner up`][runner up]과 달리, 이 명령은 API 서버에 연결하거나 Job을 청구하지 않습니다.
 단일 Image를 직접 실행하며, 실제 Job을 제출하기 전에 Runner 호스트나
 Image를 테스트하고 디버깅하는 데 유용합니다.
+Image의 출력은 그대로 stdout과 stderr로 가고, Runner 자신의 로그는 한 줄에 객체 하나씩 JSON으로 stderr에 기록됩니다.
 
 ```
 runner run --image <IMAGE> [OPTIONS]

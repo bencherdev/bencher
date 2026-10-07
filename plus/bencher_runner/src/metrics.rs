@@ -1,14 +1,12 @@
 //! Run metrics collection.
 //!
-//! Collects timing and resource usage metrics during benchmark execution.
-//! Metrics are output as structured JSON on stderr for diagnostic purposes.
+//! Collects timing and resource usage metrics during benchmark execution,
+//! logged as the flat fields of one `Run metrics` record.
 
 use camino::Utf8Path;
 
-use serde::{Deserialize, Serialize};
-
 /// Metrics collected during a benchmark run.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct RunMetrics {
     /// Total wall clock time for the VMM execution in milliseconds.
     pub wall_clock_ms: u64,
@@ -20,27 +18,52 @@ pub struct RunMetrics {
     pub transport: String,
 
     /// Cgroup resource usage (if available).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cgroup: Option<CgroupMetrics>,
 }
 
+/// A field that was not measured is left out rather than logged empty.
+impl slog::KV for RunMetrics {
+    fn serialize(
+        &self,
+        record: &slog::Record<'_>,
+        serializer: &mut dyn slog::Serializer,
+    ) -> slog::Result {
+        use slog::SingleKV;
+
+        // `SingleKV` builds the key, whose type depends on slog's features.
+        SingleKV::from(("wall_clock_ms", self.wall_clock_ms)).serialize(record, serializer)?;
+        SingleKV::from(("timed_out", self.timed_out)).serialize(record, serializer)?;
+        SingleKV::from(("transport", self.transport.as_str())).serialize(record, serializer)?;
+        let Some(cgroup) = &self.cgroup else {
+            return Ok(());
+        };
+        for (key, value) in [
+            ("cpu_usage_us", cgroup.cpu_usage_us),
+            ("cpu_user_us", cgroup.cpu_user_us),
+            ("cpu_system_us", cgroup.cpu_system_us),
+            ("memory_peak_bytes", cgroup.memory_peak_bytes),
+        ] {
+            if let Some(value) = value {
+                SingleKV::from((key, value)).serialize(record, serializer)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 /// Resource metrics from cgroup v2.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct CgroupMetrics {
     /// Total CPU usage in microseconds (user + system).
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cpu_usage_us: Option<u64>,
 
     /// User CPU time in microseconds.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cpu_user_us: Option<u64>,
 
     /// System CPU time in microseconds.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub cpu_system_us: Option<u64>,
 
     /// Peak memory usage in bytes.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub memory_peak_bytes: Option<u64>,
 }
 
@@ -63,14 +86,6 @@ pub fn read_cgroup_metrics(cgroup_path: &Utf8Path) -> Option<CgroupMetrics> {
         cpu_system_us: cpu_stat.system_usec,
         memory_peak_bytes: memory_peak,
     })
-}
-
-/// Serialize metrics to the stderr marker format.
-///
-/// Format: `---BENCHER_METRICS:{json}---`
-pub fn format_metrics(metrics: &RunMetrics) -> Option<String> {
-    let json = serde_json::to_string(metrics).ok()?;
-    Some(format!("---BENCHER_METRICS:{json}---"))
 }
 
 #[derive(Default)]
@@ -268,51 +283,5 @@ mod tests {
         assert_eq!(metrics.cpu_user_us, None);
         assert_eq!(metrics.cpu_system_us, None);
         assert_eq!(metrics.memory_peak_bytes, None);
-    }
-
-    // --- format_metrics ---
-
-    #[test]
-    fn format_metrics_round_trip() {
-        let metrics = RunMetrics {
-            wall_clock_ms: 1500,
-            timed_out: false,
-            transport: "vsock".to_owned(),
-            cgroup: Some(CgroupMetrics {
-                cpu_usage_us: Some(1000),
-                cpu_user_us: Some(600),
-                cpu_system_us: Some(400),
-                memory_peak_bytes: Some(2048),
-            }),
-        };
-        let formatted = format_metrics(&metrics).unwrap();
-        assert!(formatted.starts_with("---BENCHER_METRICS:"));
-        assert!(formatted.ends_with("---"));
-
-        // Extract JSON and verify it parses back
-        let json = formatted
-            .strip_prefix("---BENCHER_METRICS:")
-            .unwrap()
-            .strip_suffix("---")
-            .unwrap();
-        let parsed: RunMetrics = serde_json::from_str(json).unwrap();
-        assert_eq!(parsed.wall_clock_ms, 1500);
-        assert!(!parsed.timed_out);
-        assert_eq!(parsed.transport, "vsock");
-        assert_eq!(parsed.cgroup.as_ref().unwrap().cpu_usage_us, Some(1000));
-    }
-
-    #[test]
-    fn format_metrics_no_cgroup() {
-        let metrics = RunMetrics {
-            wall_clock_ms: 500,
-            timed_out: true,
-            transport: "vsock".to_owned(),
-            cgroup: None,
-        };
-        let formatted = format_metrics(&metrics).unwrap();
-        // cgroup should be absent from JSON (skip_serializing_if)
-        assert!(!formatted.contains("\"cgroup\""));
-        assert!(formatted.contains("\"timed_out\":true"));
     }
 }

@@ -8,6 +8,7 @@ use std::os::unix::fs::MetadataExt as _;
 use camino::{Utf8Path, Utf8PathBuf};
 use nix::mount::{MntFlags, MsFlags, mount, umount2};
 use nix::sched::{CloneFlags, unshare};
+use slog::{Logger, info};
 
 use crate::error::JailError;
 use crate::jail::lock::{flock_exclusive, flock_nonblocking};
@@ -37,7 +38,7 @@ pub fn handle_path() -> Utf8PathBuf {
 
 /// Always rebuilt rather than reused, since a handle proven to be a namespace
 /// is not proven empty and a leftover one could hand the VMM host network reach.
-pub fn ensure() -> Result<Utf8PathBuf, JailError> {
+pub fn ensure(log: &Logger) -> Result<Utf8PathBuf, JailError> {
     let handle = handle_path();
 
     fs::create_dir_all(NETNS_DIR).map_err(|e| JailError::NetnsDir {
@@ -45,7 +46,7 @@ pub fn ensure() -> Result<Utf8PathBuf, JailError> {
         source: e,
     })?;
 
-    let _lock = NetnsLock::acquire()?;
+    let _lock = NetnsLock::acquire(log)?;
 
     clear(&handle)?;
 
@@ -99,11 +100,7 @@ struct NetnsLock {
 }
 
 impl NetnsLock {
-    #[expect(
-        clippy::print_stdout,
-        reason = "prints why the runner is waiting, as the jail lock does"
-    )]
-    fn acquire() -> Result<Self, JailError> {
+    fn acquire(log: &Logger) -> Result<Self, JailError> {
         let path = Utf8Path::new(NETNS_LOCK_PATH);
         let file = fs::OpenOptions::new()
             .create(true)
@@ -120,7 +117,7 @@ impl NetnsLock {
         if flock_nonblocking(&file).is_ok() {
             return Ok(Self { _file: file });
         }
-        println!("  Waiting for another bencher runner to release {path}...");
+        info!(log, "Waiting for the network namespace lock"; "path" => path.as_str());
 
         flock_exclusive(&file).map_err(|e| JailError::NetnsLock {
             path: path.to_owned(),

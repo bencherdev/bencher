@@ -1276,6 +1276,7 @@ name = "bencher_runner"
 version = "0.6.13"
 dependencies = [
  "bencher_json",
+ "bencher_logger",
  "bencher_oci",
  "bencher_output_protocol",
  "bencher_rootfs",
@@ -1290,6 +1291,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.0",
+ "slog",
  "tar",
  "tempfile",
  "thiserror 2.0.18",
@@ -1304,12 +1306,14 @@ name = "bencher_runner_cli"
 version = "0.6.13"
 dependencies = [
  "bencher_json",
+ "bencher_logger",
  "bencher_parser",
  "bencher_runner",
  "camino",
  "clap",
  "pretty_assertions",
  "rustls",
+ "slog",
  "thiserror 2.0.18",
  "url",
 ]

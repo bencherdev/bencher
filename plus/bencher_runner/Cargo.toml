@@ -10,6 +10,7 @@ publish = false
 default = []
 plus = [
     "dep:bencher_json",
+    "dep:bencher_logger",
     "bencher_json/client",
     "bencher_json/plus",
     "dep:bencher_oci",
@@ -24,6 +25,7 @@ plus = [
     "dep:serde",
     "dep:serde_json",
     "dep:sha2",
+    "dep:slog",
     "dep:tempfile",
     "dep:thiserror",
     "dep:tungstenite",
@@ -37,6 +39,7 @@ plus = [
 
 [dependencies]
 bencher_json = { workspace = true, optional = true }
+bencher_logger = { workspace = true, optional = true }
 bencher_output_protocol = { workspace = true, optional = true }
 bencher_oci = { workspace = true, optional = true }
 bencher_rootfs = { workspace = true, optional = true }
@@ -47,6 +50,7 @@ rand = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
+slog = { workspace = true, optional = true }
 tempfile = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 tungstenite = { workspace = true, optional = true }

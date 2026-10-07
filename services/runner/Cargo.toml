@@ -20,11 +20,13 @@ plus = [
 
 [dependencies]
 bencher_json = { workspace = true, optional = true }
+bencher_logger.workspace = true
 bencher_parser = { workspace = true, optional = true }
 bencher_runner = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
 clap = { workspace = true, features = ["env"] }
 rustls = { workspace = true, optional = true }
+slog.workspace = true
 thiserror.workspace = true
 url = { workspace = true, optional = true }
 

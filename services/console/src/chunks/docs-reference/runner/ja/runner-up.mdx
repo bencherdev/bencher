@@ -6,6 +6,7 @@ Runner を起動し、ベンチマーク Job をポーリングして実行し�
 これは [セルフホスト型 Runner][self hosted runners] を運用するために使う、長時間実行コマンドです。
 Runner は API サーバーへの単一の [WebSocket 接続][runner protocol] を開き、
 自身の Spec に一致する Job を要求し、それらを実行して結果を報告します。
+Runner は自身のログを 1 行に 1 つのオブジェクトとして JSON 形式で stderr に書き込み、Job の出力はバイト数としてのみ記録します。
 
 ```
 runner up [OPTIONS]

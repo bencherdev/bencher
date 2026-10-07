@@ -57,17 +57,17 @@ impl Runner {
         CliRunner::parse().try_into()
     }
 
-    pub fn exec(self) -> Result<(), RunnerCliError> {
-        self.sub.exec()
+    pub fn exec(self, log: &slog::Logger) -> Result<(), RunnerCliError> {
+        self.sub.exec(log)
     }
 }
 
 #[cfg(feature = "plus")]
 impl Sub {
-    fn exec(self) -> Result<(), RunnerCliError> {
+    fn exec(self, log: &slog::Logger) -> Result<(), RunnerCliError> {
         match self {
-            Self::Up(up) => up.exec(),
-            Self::Run(run) => run.exec(),
+            Self::Up(up) => up.exec(log),
+            Self::Run(run) => run.exec(log),
         }
     }
 }

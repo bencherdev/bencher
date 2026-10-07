@@ -6,6 +6,7 @@ Startet den Runner und fragt Benchmark-Jobs ab und führt sie aus.
 Dies ist der langlaufende Befehl zum Betrieb eines [Self-Hosted Runner][self hosted runners].
 Der Runner öffnet eine einzige [WebSocket-Verbindung][runner protocol] zum API-Server,
 beansprucht Jobs, die zu seinen Specs passen, führt sie aus und meldet die Ergebnisse zurück.
+Der Runner schreibt sein Log als JSON nach stderr, ein Objekt pro Zeile, und protokolliert die Ausgabe eines Jobs nur als Byte-Anzahl.
 
 ```
 runner up [OPTIONS]

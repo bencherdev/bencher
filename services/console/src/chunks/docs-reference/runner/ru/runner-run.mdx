@@ -6,6 +6,7 @@ import Tuning from "./tuning.mdx";
 В отличие от [`runner up`][runner up], это не подключается к API-серверу и не берёт Job.
 Команда запускает один Image напрямую, что удобно для тестирования и отладки хоста Runner
 или Image перед отправкой реальных Job.
+Вывод Image идёт в stdout и stderr как есть, а собственный журнал runner идёт в stderr в формате JSON, по одному объекту на строку.
 
 ```
 runner run --image <IMAGE> [OPTIONS]

@@ -1,6 +1,5 @@
 //! Minimal HTTP/1.1 client for Firecracker's REST API over Unix socket.
 #![expect(
-    clippy::print_stderr,
     clippy::indexing_slicing,
     reason = "low-level HTTP client for Firecracker socket API"
 )]
@@ -12,6 +11,7 @@ use std::time::{Duration, Instant};
 
 use nix::errno::Errno;
 use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr, connect, socket};
+use slog::{Logger, warn};
 
 use crate::firecracker::config::{Action, BootSource, Drive, MachineConfig, VsockConfig};
 use crate::firecracker::error::FirecrackerError;
@@ -26,14 +26,18 @@ pub(crate) const API_RESPONSE_CAP_KIB: usize = 64;
 
 /// Client for the Firecracker REST API.
 pub struct FirecrackerClient<'a> {
+    log: Logger,
     /// Borrowed, so the client cannot outlive the descriptor this path names.
     socket_path: &'a SocketPath,
 }
 
 impl<'a> FirecrackerClient<'a> {
     /// Takes the socket view, since the runner connects from outside the chroot.
-    pub fn new(socket_path: &'a SocketPath) -> Self {
-        Self { socket_path }
+    pub fn new(log: &Logger, socket_path: &'a SocketPath) -> Self {
+        Self {
+            log: log.clone(),
+            socket_path,
+        }
     }
 
     /// `Ok(false)` while Firecracker is not listening yet, and an error for an
@@ -238,9 +242,9 @@ impl<'a> FirecrackerClient<'a> {
                 // since the wait can end up to a tick early.
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {},
                 Err(e) if e.kind() == std::io::ErrorKind::TimedOut => {
-                    eprintln!(
-                        "Warning: Firecracker API read timed out for PUT {path}, {read_bytes} bytes read so far",
-                        read_bytes = response.len()
+                    warn!(self.log, "Firecracker API read timed out";
+                        "path" => path,
+                        "read_bytes" => response.len(),
                     );
                     break;
                 },
@@ -249,18 +253,19 @@ impl<'a> FirecrackerClient<'a> {
         }
 
         if !response.is_empty() && !response_complete(&response) {
-            eprintln!(
-                "Warning: Firecracker API response for PUT {path} may be truncated ({} bytes received)",
-                response.len()
+            warn!(self.log, "Firecracker API response may be truncated";
+                "path" => path,
+                "read_bytes" => response.len(),
             );
         }
 
         let (status, response_body) = parse_http_response(&response)?;
 
         if status >= 300 && response_body.is_empty() {
-            eprintln!(
-                "Warning: Firecracker API returned HTTP {status} with no body for PUT {path} ({} bytes raw response)",
-                response.len()
+            warn!(self.log, "Firecracker API error with no body";
+                "path" => path,
+                "status" => status,
+                "read_bytes" => response.len(),
             );
         }
 
@@ -382,13 +387,14 @@ mod tests {
     use crate::firecracker::config::ActionType;
     use crate::firecracker::test_util::interrupt;
     use crate::jail::JailPaths;
+    use crate::log::discard;
 
     #[test]
     fn an_api_call_that_cannot_reach_the_socket_names_it() {
         // Prevents a call after readiness failing as a bare I/O error that never names the socket.
         let dir = tempfile::tempdir().unwrap();
         let jail = JailPaths::new(Utf8Path::from_path(dir.path()).unwrap()).unwrap();
-        let client = FirecrackerClient::new(jail.api_socket().socket());
+        let client = FirecrackerClient::new(&discard(), jail.api_socket().socket());
 
         let Err(err) = client.put_action(&Action {
             action_type: ActionType::SendCtrlAltDel,
@@ -416,7 +422,7 @@ mod tests {
         let socket = jail.api_socket().socket().clone();
 
         let client = std::thread::spawn(move || {
-            FirecrackerClient::new(&socket).put_action(&Action {
+            FirecrackerClient::new(&discard(), &socket).put_action(&Action {
                 action_type: ActionType::SendCtrlAltDel,
             })
         });
@@ -564,7 +570,8 @@ mod tests {
 
         let started = Instant::now();
         let client = std::thread::spawn(move || {
-            FirecrackerClient::new(&socket).put_action_until(&ctrl_alt_del(), deadline_in_300ms())
+            FirecrackerClient::new(&discard(), &socket)
+                .put_action_until(&ctrl_alt_del(), deadline_in_300ms())
         });
         let (mut stream, _) = vmm.accept().unwrap();
         assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
@@ -595,7 +602,8 @@ mod tests {
 
         let started = Instant::now();
         let client = std::thread::spawn(move || {
-            FirecrackerClient::new(&socket).put_action_until(&ctrl_alt_del(), deadline_in_300ms())
+            FirecrackerClient::new(&discard(), &socket)
+                .put_action_until(&ctrl_alt_del(), deadline_in_300ms())
         });
         let (mut stream, _) = vmm.accept().unwrap();
         assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
@@ -643,7 +651,8 @@ mod tests {
 
         let started = Instant::now();
         let client = std::thread::spawn(move || {
-            FirecrackerClient::new(&socket).put_action_until(&ctrl_alt_del(), deadline_in_300ms())
+            FirecrackerClient::new(&discard(), &socket)
+                .put_action_until(&ctrl_alt_del(), deadline_in_300ms())
         });
         while !client.is_finished() && started.elapsed() < SLOW {
             std::thread::sleep(Duration::from_millis(10));
@@ -675,7 +684,7 @@ mod tests {
         let socket = jail.api_socket().socket().clone();
 
         let client = std::thread::spawn(move || {
-            FirecrackerClient::new(&socket)
+            FirecrackerClient::new(&discard(), &socket)
                 .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
         });
         let (stream, _) = vmm.accept().unwrap();
@@ -703,7 +712,7 @@ mod tests {
 
         let started = Instant::now();
         let client = std::thread::spawn(move || {
-            FirecrackerClient::new(&socket)
+            FirecrackerClient::new(&discard(), &socket)
                 .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
         });
         let (mut stream, _) = vmm.accept().unwrap();
@@ -745,7 +754,7 @@ mod tests {
         let socket = jail.api_socket().socket().clone();
 
         let client = std::thread::spawn(move || {
-            FirecrackerClient::new(&socket)
+            FirecrackerClient::new(&discard(), &socket)
                 .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
         });
         let (mut stream, _) = vmm.accept().unwrap();
@@ -772,7 +781,7 @@ mod tests {
         let socket = jail.api_socket().socket().clone();
 
         let client = std::thread::spawn(move || {
-            FirecrackerClient::new(&socket)
+            FirecrackerClient::new(&discard(), &socket)
                 .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
         });
         let (mut stream, _) = vmm.accept().unwrap();

@@ -41,9 +41,9 @@ impl TryFrom<CliUp> for Up {
 }
 
 impl Up {
-    pub fn exec(self) -> Result<(), RunnerCliError> {
+    pub fn exec(self, log: &slog::Logger) -> Result<(), RunnerCliError> {
         let up = RunnerUp::new(self.config);
-        match up.run() {
+        match up.run(log) {
             Ok(()) | Err(UpError::Shutdown) => Ok(()),
             Err(e) => Err(e.into()),
         }

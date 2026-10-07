@@ -1,8 +1,6 @@
 //! Advisory lock serializing the jail lifecycle across runner processes, so a
 //! sweep never reclaims a chroot another runner's VMM is still using.
 
-#![expect(clippy::print_stdout, reason = "prints why the runner is waiting")]
-
 use std::fs::{File, OpenOptions};
 use std::os::fd::AsRawFd as _;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -10,6 +8,7 @@ use std::sync::{Condvar, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use camino::Utf8Path;
+use slog::{Logger, info};
 
 use crate::error::JailError;
 
@@ -35,13 +34,18 @@ impl JailLock {
     /// The state directory must already exist, since the lock guards its
     /// contents and cannot also guard its creation. A set `cancel` ends the wait
     /// without the lock.
-    pub fn acquire(state_dir: &Utf8Path, cancel: Option<&AtomicBool>) -> Result<Self, JailError> {
-        Self::acquire_with(state_dir, cancel, |path| {
-            println!("  Waiting for another bencher runner to release {path}...");
+    pub fn acquire(
+        log: &Logger,
+        state_dir: &Utf8Path,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<Self, JailError> {
+        Self::acquire_with(log, state_dir, cancel, |path| {
+            info!(log, "Waiting for the jail lock"; "path" => path.as_str());
         })
     }
 
     fn acquire_with<C: FnOnce(&Utf8Path)>(
+        log: &Logger,
         state_dir: &Utf8Path,
         cancel: Option<&AtomicBool>,
         contended: C,
@@ -75,7 +79,7 @@ impl JailLock {
                 return Ok(Self { _file: file });
             }
             if announced.elapsed() >= ANNOUNCE_EVERY {
-                println!("  Still waiting for another bencher runner to release {path}...");
+                info!(log, "Still waiting for the jail lock"; "path" => path.as_str());
                 announced = Instant::now();
             }
         }
@@ -179,6 +183,7 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use super::*;
+    use crate::log::discard;
 
     fn state_in_tmpdir() -> (tempfile::TempDir, Utf8PathBuf) {
         let dir = tempfile::tempdir().unwrap();
@@ -190,7 +195,7 @@ mod tests {
     fn the_lock_can_be_taken() {
         let (_dir, state) = state_in_tmpdir();
 
-        let lock = JailLock::acquire(&state, None).unwrap();
+        let lock = JailLock::acquire(&discard(), &state, None).unwrap();
 
         assert!(state.join(LOCK_FILE).exists());
         drop(lock);
@@ -199,9 +204,9 @@ mod tests {
     #[test]
     fn a_released_lock_can_be_retaken() {
         let (_dir, state) = state_in_tmpdir();
-        drop(JailLock::acquire(&state, None).unwrap());
+        drop(JailLock::acquire(&discard(), &state, None).unwrap());
 
-        JailLock::acquire(&state, None).unwrap();
+        JailLock::acquire(&discard(), &state, None).unwrap();
     }
 
     /// A bound only a broken wait reaches, so a failure is a failure and not a
@@ -213,13 +218,13 @@ mod tests {
         // A contended runner must announce its wait and return holding the
         // lock, or a sweep could run while another runner has a job in flight.
         let (_dir, state) = state_in_tmpdir();
-        let held = JailLock::acquire(&state, None).unwrap();
+        let held = JailLock::acquire(&discard(), &state, None).unwrap();
         let (contended, waiting) = mpsc::sync_channel(1);
 
         let waiter = {
             let state = state.clone();
             std::thread::spawn(move || {
-                JailLock::acquire_with(&state, None, move |_path| {
+                JailLock::acquire_with(&discard(), &state, None, move |_path| {
                     contended.send(()).unwrap();
                 })
             })
@@ -305,7 +310,7 @@ mod tests {
     fn a_missing_state_directory_is_an_error() {
         let (_dir, state) = state_in_tmpdir();
 
-        JailLock::acquire(&state.join("absent"), None).unwrap_err();
+        JailLock::acquire(&discard(), &state.join("absent"), None).unwrap_err();
     }
 
     #[test]
@@ -313,13 +318,13 @@ mod tests {
         // A signal to a runner queued behind a long job must end the wait, not
         // sit it out.
         let (_dir, state) = state_in_tmpdir();
-        let held = JailLock::acquire(&state, None).unwrap();
+        let held = JailLock::acquire(&discard(), &state, None).unwrap();
         let cancel = AtomicBool::new(false);
         let (finished, outcome) = mpsc::sync_channel(1);
 
         std::thread::scope(|scope| {
             scope.spawn(|| {
-                let waited = JailLock::acquire_with(&state, Some(&cancel), |_path| {
+                let waited = JailLock::acquire_with(&discard(), &state, Some(&cancel), |_path| {
                     cancel.store(true, Ordering::SeqCst);
                 });
                 finished.send(waited).unwrap();

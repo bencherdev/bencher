@@ -6,6 +6,7 @@ Runner를 시작하여 벤치마크 Job을 폴링하고 실행합니다.
 [Self-Hosted Runner][self hosted runners]를 운영하는 데 사용하는 장기 실행 명령입니다.
 Runner는 API 서버로 단일 [WebSocket 연결][runner protocol]을 열고,
 자신의 Spec과 일치하는 Job을 청구(claim)하고, 실행한 후, 결과를 다시 보고합니다.
+Runner는 자신의 로그를 한 줄에 객체 하나씩 JSON으로 stderr에 기록하며, Job의 출력은 바이트 수로만 기록합니다.
 
 ```
 runner up [OPTIONS]

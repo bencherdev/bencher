@@ -25,20 +25,6 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::parser::TaskScenarios;
 
-/// Extract the JSON substring between the first `{` and last `}` in a line.
-///
-/// The search targets are ASCII bytes, so the resulting indices are always at
-/// valid UTF-8 boundaries.
-#[expect(
-    clippy::string_slice,
-    reason = "{ and } are ASCII — indices are always UTF-8 safe"
-)]
-fn extract_json_substr(line: &str) -> &str {
-    let start = line.find('{').unwrap_or(0);
-    let end = line.rfind('}').map_or(line.len(), |p| p + 1);
-    &line[start..end]
-}
-
 /// A host-side check run while the runner executes: `Ok(false)` until the VMM
 /// appears, `Ok(true)` once the invariant holds, and `Err` once it is violated.
 type Probe = fn(&Utf8Path) -> Result<bool>;
@@ -1100,65 +1086,6 @@ CMD ["sh", "-c", "set -- $(cat /proc/version) && printf '%s_%s\\n' $1 $2 && prin
         // Telemetry/Metrics scenarios (Item 10)
         // =======================================================================
         Scenario {
-            name: "metrics_output_present",
-            description: "Metrics marker present in stderr",
-            // Verifies the runner outputs ---BENCHER_METRICS:{json}--- on stderr.
-            dockerfile: r#"FROM busybox
-CMD ["printf", "%s_%s\\n", "METRICS", "PRESENT"]"#,
-            extra_args: &["--timeout", "60"],
-            validate: |output| {
-                assert_job_succeeded(output, "METRICS_PRESENT")?;
-                if output.stderr.contains("---BENCHER_METRICS:") && output.stderr.contains("---") {
-                    Ok(())
-                } else {
-                    bail!(
-                        "Expected BENCHER_METRICS marker in stderr.\nstderr: {}\nstdout: {}",
-                        output.stderr,
-                        output.stdout
-                    )
-                }
-            },
-            ..Scenario::default()
-        },
-        Scenario {
-            name: "metrics_wall_clock_reasonable",
-            description: "Wall clock time is within reasonable bounds",
-            // A fast benchmark should have wall clock between 500ms and 60000ms.
-            // This catches cases where timing is broken (e.g., always 0 or absurdly large).
-            dockerfile: r#"FROM busybox
-CMD ["printf", "%s_%s\\n", "FAST", "BENCHMARK"]"#,
-            extra_args: &["--timeout", "60"],
-            validate: |output| {
-                assert_job_succeeded(output, "FAST_BENCHMARK")?;
-                // Parse metrics from stderr
-                let metrics_line = output
-                    .stderr
-                    .lines()
-                    .find(|l| l.contains("---BENCHER_METRICS:"));
-                let Some(line) = metrics_line else {
-                    bail!("No BENCHER_METRICS line found in stderr")
-                };
-                // Extract JSON between markers
-                let json_str = extract_json_substr(line);
-                // Parse wall_clock_ms
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str)
-                    && let Some(wall_ms) = json
-                        .get("wall_clock_ms")
-                        .and_then(serde_json::Value::as_u64)
-                {
-                    if wall_ms < 500 {
-                        bail!("wall_clock_ms too low ({wall_ms}ms), timing may be broken")
-                    }
-                    if wall_ms > 60_000 {
-                        bail!("wall_clock_ms too high ({wall_ms}ms)")
-                    }
-                    return Ok(());
-                }
-                bail!("Could not parse wall_clock_ms from metrics: {json_str}")
-            },
-            ..Scenario::default()
-        },
-        Scenario {
             name: "metrics_timeout_flag",
             description: "Timeout flag set correctly in metrics",
             // When a VM times out, the metrics should include timed_out: true.
@@ -1167,36 +1094,6 @@ CMD ["sleep", "3600"]"#,
             extra_args: &["--timeout", "5"],
             probe: Some(probe_booted),
             validate: assert_timed_out,
-            ..Scenario::default()
-        },
-        Scenario {
-            name: "metrics_transport_type",
-            description: "Transport type reported in metrics",
-            // Verifies the metrics include the transport type (vsock or serial).
-            dockerfile: r#"FROM busybox
-CMD ["printf", "%s_%s\\n", "TRANSPORT", "TEST"]"#,
-            extra_args: &["--timeout", "60"],
-            validate: |output| {
-                assert_job_succeeded(output, "TRANSPORT_TEST")?;
-                let metrics_line = output
-                    .stderr
-                    .lines()
-                    .find(|l| l.contains("---BENCHER_METRICS:"));
-                let Some(line) = metrics_line else {
-                    bail!("No BENCHER_METRICS line found in stderr")
-                };
-                let json_str = extract_json_substr(line);
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str)
-                    && let Some(transport) =
-                        json.get("transport").and_then(serde_json::Value::as_str)
-                {
-                    if transport == "vsock" || transport == "serial" {
-                        return Ok(());
-                    }
-                    bail!("Unexpected transport type: {transport}")
-                }
-                bail!("Could not find transport in metrics: {json_str}")
-            },
             ..Scenario::default()
         },
         // =======================================================================
@@ -1240,10 +1137,7 @@ CMD ["printf", "%s_%s\\n", "CANCELLED_EARLY", "a7f3b2c9"]"#,
                 assert_cancelled(output)?;
                 assert_refused_before_guest(output, "CANCELLED_EARLY_a7f3b2c9")?;
                 anyhow::ensure!(
-                    !output
-                        .stdout
-                        .lines()
-                        .any(|line| line.trim_start().starts_with("Jail: ")),
+                    records_with(&output.stderr, "Jail built").next().is_none(),
                     "The job built its jail after the cancel, so no stage before it honored the cancel.\nstdout: {}\nstderr: {}",
                     output.stdout,
                     output.stderr
@@ -1368,7 +1262,9 @@ CMD ["cmd_arg"]"#,
             extra_args: &["--timeout", "30"],
             validate: |output| {
                 anyhow::ensure!(
-                    output.exit_code == 1 && output.stderr.contains("has no CMD or ENTRYPOINT"),
+                    output.exit_code == 1
+                        && runner_error(output)
+                            .is_some_and(|error| error.contains("has no CMD or ENTRYPOINT")),
                     "Expected the job to fail naming the missing CMD and ENTRYPOINT, got exit code {}.\nstdout: {}\nstderr: {}",
                     output.exit_code,
                     output.stdout,
@@ -2014,8 +1910,8 @@ CMD ["sh", "-c", "printf '%s_%s\\n' ITER DONE && exit 1"]"#,
 CMD ["sh", "-c", "sleep 10 && printf '%s_%s\\n' SPAN DONE"]"#,
             extra_args: &["--timeout", "18", "--iter", "2", "--allow-failure"],
             validate: |output| {
-                let timed_out = output.stderr.lines().any(|line| {
-                    line.contains("---BENCHER_METRICS:") && line.contains(r#""timed_out":true"#)
+                let timed_out = run_metrics(output).any(|metrics| {
+                    metrics.get("timed_out") == Some(&serde_json::Value::Bool(true))
                 });
                 anyhow::ensure!(
                     output.exit_code == 1 && guest_printed(output, "SPAN_DONE") == 1 && timed_out,
@@ -2035,10 +1931,6 @@ CMD ["sh", "-c", "sleep 10 && printf '%s_%s\\n' SPAN DONE"]"#,
 ///
 /// These test the `local_execute` code path (no Firecracker VM).
 /// The OCI image is unpacked and the command runs directly on the host.
-#[expect(
-    clippy::too_many_lines,
-    reason = "Each scenario needs its configuration"
-)]
 fn nosandbox_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
@@ -2083,40 +1975,6 @@ CMD ["sh", "-c", "echo $MY_VAR"]"#,
             ..Scenario::default()
         },
         Scenario {
-            name: "nosandbox_metrics",
-            description: "Non-sandboxed: run metrics on stderr with local transport",
-            // Verifies the local path emits ---BENCHER_METRICS:{json}--- with
-            // transport "local" (it previously emitted no metrics at all).
-            dockerfile: r#"FROM busybox:musl
-CMD ["echo", "local_metrics_test"]"#,
-            sandboxed: false,
-            extra_args: &["--timeout", "60"],
-            validate: |output| {
-                let metrics_line = output
-                    .stderr
-                    .lines()
-                    .find(|l| l.contains("---BENCHER_METRICS:"));
-                let Some(line) = metrics_line else {
-                    bail!(
-                        "No BENCHER_METRICS line found in stderr.\nstderr: {}",
-                        output.stderr
-                    )
-                };
-                let json_str = extract_json_substr(line);
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(json_str)
-                    && let Some(transport) =
-                        json.get("transport").and_then(serde_json::Value::as_str)
-                {
-                    if transport == "local" {
-                        return Ok(());
-                    }
-                    bail!("Unexpected transport type: {transport}")
-                }
-                bail!("Could not find transport in metrics: {json_str}")
-            },
-            ..Scenario::default()
-        },
-        Scenario {
             name: "nosandbox_exit_code",
             description: "Non-sandboxed: non-zero exit code propagation",
             dockerfile: r#"FROM busybox:musl
@@ -2149,8 +2007,8 @@ CMD ["sh", "-c", "sleep 5 && printf '%s_%s\\n' HOST SPAN"]"#,
             sandboxed: false,
             extra_args: &["--timeout", "8", "--iter", "2", "--allow-failure"],
             validate: |output| {
-                let timed_out = output.stderr.lines().any(|line| {
-                    line.contains("---BENCHER_METRICS:") && line.contains(r#""timed_out":true"#)
+                let timed_out = run_metrics(output).any(|metrics| {
+                    metrics.get("timed_out") == Some(&serde_json::Value::Bool(true))
                 });
                 anyhow::ensure!(
                     output.exit_code == 1 && guest_printed(output, "HOST_SPAN") == 1 && timed_out,
@@ -2385,7 +2243,8 @@ fn run_runner_cancelled_twice(
         );
     }
     anyhow::ensure!(
-        output.stdout.contains("Reclaimed 1 stale jail(s)"),
+        records_with(&output.stderr, "Reclaimed stale jails")
+            .any(|record| record.get("count") == Some(&serde_json::Value::from(1))),
         "The next run never reclaimed the jail {} the kill left.\nstdout: {}\nstderr: {}",
         left.0,
         output.stdout,
@@ -2403,7 +2262,7 @@ fn run_runner_cancelled_while_preparing(
 ) -> Result<ScenarioOutput> {
     let mut child = spawn_runner(image_path, args, runner_bin)?;
     let mut streamed = StreamedOutput::start(&mut child);
-    let parsing = streamed.wait_for(|line| line.starts_with("Parsing OCI image config"));
+    let parsing = streamed.wait_for_record("Parsing OCI image config");
     kill_pid(
         child.id(),
         if parsing.is_ok() {
@@ -2664,7 +2523,7 @@ CMD ["printf", "%s_%s\\n", "JAIL_REFUSED", "a7f3b2c9"]"#,
                 // `run_runner_without_unjailed_vmm`.
                 assert_refused_before_guest(output, "JAIL_REFUSED_a7f3b2c9")?;
                 anyhow::ensure!(
-                    output.stderr.contains("is a symbolic link"),
+                    runner_error(output).is_some_and(|error| error.contains("is a symbolic link")),
                     "Expected the refusal to name the symlinked state directory.\nstderr: {}",
                     output.stderr
                 );
@@ -2684,7 +2543,7 @@ CMD ["printf", "%s_%s\\n", "JAIL_NODEV", "a7f3b2c9"]"#,
                 // Without the check the job still fails, later, with KVM blaming
                 // its ACL.
                 anyhow::ensure!(
-                    output.stderr.contains("mounted nodev"),
+                    runner_error(output).is_some_and(|error| error.contains("mounted nodev")),
                     "Expected the refusal to name the nodev mount.\nstderr: {}",
                     output.stderr
                 );
@@ -2725,8 +2584,9 @@ CMD ["printf", "%s_%s\\n", "QUEUED", "a7f3b2c9"]"#,
             validate: |output| {
                 anyhow::ensure!(
                     output.exit_code == 1
-                        && output.stderr.contains("ran out before the VM booted")
-                        && !output.stdout.contains("Booting VM...")
+                        && runner_error(output)
+                            .is_some_and(|error| error.contains("ran out before the VM booted"))
+                        && records_with(&output.stderr, "Booting VM").next().is_none()
                         && guest_printed(output, "QUEUED_a7f3b2c9") == 0,
                     "Expected the run to fail on its timeout before its VM booted, got exit code {}.\nstdout: {}\nstderr: {}",
                     output.exit_code,
@@ -2854,16 +2714,16 @@ fn assert_refused_before_guest(output: &ScenarioOutput, marker: &str) -> Result<
     Ok(())
 }
 
-/// The runner prints this only once the cgroup exists and its cpuset reads back,
+/// The runner logs this only once the cgroup exists and its cpuset reads back,
 /// so the probe cannot pass on a host where no cgroup was made.
 fn assert_cpu_isolation_applied(output: &ScenarioOutput) -> Result<()> {
-    const PINNED: &str = "CPU isolation: Firecracker pinned to cores";
-    if output.stdout.contains(PINNED) {
+    const APPLIED: &str = "CPU isolation applied";
+    if records_with(&output.stderr, APPLIED).any(|record| text(&record, "cores").is_some()) {
         return Ok(());
     }
     bail!(
         "The runner never reported pinning the VMM to benchmark cores, so no cgroup was created \
-         and cgroup placement went unexercised by this run. Expected {PINNED:?}.\nstdout: {}\nstderr: {}",
+         and cgroup placement went unexercised by this run. Expected an {APPLIED:?} record with its cores.\nstdout: {}\nstderr: {}",
         output.stdout,
         output.stderr
     )
@@ -2871,12 +2731,9 @@ fn assert_cpu_isolation_applied(output: &ScenarioOutput) -> Result<()> {
 
 /// Read from the VMM's own cgroup, so a run that never had one reports none.
 fn assert_cgroup_metrics_reported(output: &ScenarioOutput) -> Result<()> {
-    let reported = output
-        .stderr
-        .lines()
-        .find(|line| line.contains("---BENCHER_METRICS:"))
-        .and_then(|line| serde_json::from_str::<serde_json::Value>(extract_json_substr(line)).ok())
-        .and_then(|metrics| metrics.get("cgroup")?.get("cpu_usage_us")?.as_u64())
+    let reported = run_metrics(output)
+        .next()
+        .and_then(|metrics| metrics.get("cpu_usage_us")?.as_u64())
         .is_some();
     if reported {
         return Ok(());
@@ -2890,14 +2747,18 @@ fn assert_cgroup_metrics_reported(output: &ScenarioOutput) -> Result<()> {
 /// A cgroup warning means the Job ran with less confinement than a pinned run
 /// claims: no cpuset, no swap limit, or no cgroup at all.
 fn assert_no_cgroup_warning(output: &ScenarioOutput) -> Result<()> {
-    let warnings: Vec<&str> = output
-        .stderr
-        .lines()
-        .filter(|line| {
-            line.contains("Warning:")
-                && ["cgroup", "cpuset", "controller", "swap"]
-                    .iter()
-                    .any(|word| line.contains(word))
+    let names_a_cgroup = |record: &Record, key| {
+        text(record, key).is_some_and(|text| {
+            let text = text.to_lowercase();
+            ["cgroup", "cpuset", "controller", "swap"]
+                .iter()
+                .any(|word| text.contains(word))
+        })
+    };
+    let warnings: Vec<Record> = records(&output.stderr)
+        .filter(|record| {
+            text(record, "level") == Some("WARN")
+                && (names_a_cgroup(record, "msg") || names_a_cgroup(record, "reason"))
         })
         .collect();
     anyhow::ensure!(
@@ -3084,6 +2945,39 @@ fn guest_printed_to_stderr(output: &ScenarioOutput, marker: &str) -> usize {
         .count()
 }
 
+type Record = serde_json::Map<String, serde_json::Value>;
+
+/// The runner's records: its stderr lines that parse as JSON objects with a
+/// string `level` and `msg`. No scenario image prints one.
+fn records(stderr: &str) -> impl Iterator<Item = Record> + '_ {
+    stderr.lines().filter_map(record_of)
+}
+
+fn record_of(line: &str) -> Option<Record> {
+    let serde_json::Value::Object(record) = serde_json::from_str(line).ok()? else {
+        return None;
+    };
+    (record.get("level")?.is_string() && record.get("msg")?.is_string()).then_some(record)
+}
+
+fn records_with<'a>(stderr: &'a str, msg: &'a str) -> impl Iterator<Item = Record> + 'a {
+    records(stderr).filter(move |record| text(record, "msg") == Some(msg))
+}
+
+fn text<'a>(record: &'a Record, key: &str) -> Option<&'a str> {
+    record.get(key)?.as_str()
+}
+
+/// The error the runner failed with, from its final record.
+fn runner_error(output: &ScenarioOutput) -> Option<String> {
+    records_with(&output.stderr, "Runner failed")
+        .find_map(|record| text(&record, "error").map(str::to_owned))
+}
+
+fn run_metrics(output: &ScenarioOutput) -> impl Iterator<Item = Record> + '_ {
+    records_with(&output.stderr, "Run metrics")
+}
+
 fn vmm_reported_an_error(output: &ScenarioOutput) -> bool {
     output.stderr.contains("[firecracker] Error")
 }
@@ -3095,10 +2989,7 @@ fn assert_guest_exited(output: &ScenarioOutput, marker: &str, code: i32) -> Resu
     anyhow::ensure!(
         output.exit_code == 1
             && guest_printed(output, marker) > 0
-            && output
-                .stderr
-                .lines()
-                .any(|line| line.starts_with("Error:") && line.ends_with(&reported)),
+            && runner_error(output).is_some_and(|error| error.ends_with(&reported)),
         "Expected '{marker}' in the guest output and the job to fail with the guest's exit code {code}, got exit code {}.\nstdout: {}\nstderr: {}",
         output.exit_code,
         output.stdout,
@@ -3107,21 +2998,20 @@ fn assert_guest_exited(output: &ScenarioOutput, marker: &str, code: i32) -> Resu
     Ok(())
 }
 
-/// The runner prints the guest's stdout after it starts waiting for the
-/// results, and the guest's stderr after its metrics line, so a silent guest
-/// leaves only blank lines there besides the runner's error.
+/// The runner's stdout is only the guest's, and every line of its stderr is a
+/// record but the guest's, so a silent guest leaves no other line.
 fn assert_guest_exited_silently(output: &ScenarioOutput, code: i32) -> Result<()> {
     let reported = format!("non-zero exit code: {code}");
-    let runner_error = |line: &str| line.starts_with("Error:") && line.ends_with(&reported);
-    let stdout_silent = lines_after(&output.stdout, "Waiting for benchmark results")
-        .is_some_and(|mut lines| lines.all(|line| line.trim().is_empty()));
-    let stderr_silent = lines_after(&output.stderr, "---BENCHER_METRICS:")
-        .is_some_and(|mut lines| lines.all(|line| line.trim().is_empty() || runner_error(line)));
+    let stdout_silent = output.stdout.lines().all(|line| line.trim().is_empty());
+    let stderr_silent = output
+        .stderr
+        .lines()
+        .all(|line| line.trim().is_empty() || record_of(line).is_some());
     anyhow::ensure!(
         output.exit_code == 1
             && stdout_silent
             && stderr_silent
-            && output.stderr.lines().any(runner_error),
+            && runner_error(output).is_some_and(|error| error.ends_with(&reported)),
         "Expected no guest output and the job to fail with the guest's exit code {code}, got exit code {}.\nstdout: {}\nstderr: {}",
         output.exit_code,
         output.stdout,
@@ -3130,22 +3020,11 @@ fn assert_guest_exited_silently(output: &ScenarioOutput, code: i32) -> Result<()
     Ok(())
 }
 
-/// The lines after the first one that starts with `start`, if any does.
-fn lines_after<'a>(text: &'a str, start: &'a str) -> Option<impl Iterator<Item = &'a str>> {
-    let mut lines = text
-        .lines()
-        .skip_while(move |line| !line.starts_with(start));
-    lines.next().map(|_| lines)
-}
-
 /// The runner relays nothing a guest printed before its timeout, so the proof
 /// that one booted is the probe's.
 fn assert_timed_out(output: &ScenarioOutput) -> Result<()> {
-    let timed_out = output
-        .stderr
-        .lines()
-        .find(|line| line.contains("---BENCHER_METRICS:"))
-        .and_then(|line| serde_json::from_str::<serde_json::Value>(extract_json_substr(line)).ok())
+    let timed_out = run_metrics(output)
+        .next()
         .and_then(|metrics| metrics.get("timed_out")?.as_bool());
     anyhow::ensure!(
         output.exit_code == 1 && timed_out == Some(true),
@@ -3159,7 +3038,8 @@ fn assert_timed_out(output: &ScenarioOutput) -> Result<()> {
 
 fn assert_cancelled(output: &ScenarioOutput) -> Result<()> {
     anyhow::ensure!(
-        output.exit_code == 1 && output.stderr.contains("Job cancelled"),
+        output.exit_code == 1
+            && runner_error(output).is_some_and(|error| error.contains("Job cancelled")),
         "Expected the job to end cancelled, got exit code {}.\nstdout: {}\nstderr: {}",
         output.exit_code,
         output.stdout,
@@ -3539,7 +3419,7 @@ fn run_runner_after_orphan(
 
     let output = run_runner(image_path, args, runner_bin)?;
 
-    if !output.stderr.contains(&reaped_line(vmm_pid)) {
+    if !reaped(&output.stderr, vmm_pid) {
         bail!(
             "The next job never reaped the orphaned VMM (pid {vmm_pid}).\nstdout: {}\nstderr: {}",
             output.stdout,
@@ -3580,8 +3460,9 @@ fn stale_cgroup(vm_id: &str) -> Utf8PathBuf {
 const ORPHAN_DOCKERFILE: &str = r#"FROM busybox
 CMD ["sh", "-c", "echo JAIL_ORPHAN_a7f3b2c9 && sleep 600"]"#;
 
-fn reaped_line(pid: u32) -> String {
-    format!("Reaped orphaned VMM (pid {pid})")
+fn reaped(stderr: &str, pid: u32) -> bool {
+    records_with(stderr, "Reaped orphaned VMM")
+        .any(|record| record.get("pid") == Some(&serde_json::Value::from(pid)))
 }
 
 /// A sibling queued on the jail lock takes it between the first runner's two
@@ -3640,7 +3521,7 @@ fn run_runner_beside_sibling_orphan(
     })?;
     println!("  sibling orphaned VMM pid {orphan_pid} between the jobs");
 
-    if !stderr.contains(&reaped_line(orphan_pid)) {
+    if !reaped(&stderr, orphan_pid) {
         bail!(
             "The second job never reaped the sibling's orphaned VMM (pid {orphan_pid}), so it measured beside it.\nstdout: {stdout}\nstderr: {stderr}"
         );
@@ -3670,7 +3551,7 @@ fn run_runner_beside_sibling_orphan(
     })
 }
 
-/// The sibling's jail is read from its stdout, since the first job's may still
+/// The sibling's jail is read from its records, since the first job's may still
 /// be on disk beside it.
 fn orphan_sibling(
     sibling: &mut StreamedOutput,
@@ -3678,14 +3559,13 @@ fn orphan_sibling(
     first_pid: u32,
     first: &mut std::process::Child,
 ) -> Result<(Utf8PathBuf, u32, Utf8PathBuf)> {
-    sibling.wait_for(|line| line.contains("Waiting for another bencher runner"))?;
+    sibling.wait_for_record("Waiting for the jail lock")?;
     anyhow::ensure!(
         find_jailed_vmm(first_jail_root)? == Some(first_pid),
         "The first job's VMM (pid {first_pid}) was gone by the time the sibling waited on the jail lock, so the sibling may be queued behind the second job instead of between the two"
     );
 
-    let jail_line = sibling.wait_for(|line| line.trim_start().starts_with("Jail: "))?;
-    let jail_root = Utf8PathBuf::from(jail_line.trim_start().trim_start_matches("Jail: "));
+    let jail_root = jail_root_of(&sibling.wait_for_record("Jail built")?)?;
     let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
     let pid = loop {
         if let Some(pid) = find_jailed_vmm(&jail_root)? {
@@ -3716,6 +3596,12 @@ fn orphan_sibling(
     Ok((jail_root, pid, cgroup))
 }
 
+fn jail_root_of(jail_built: &Record) -> Result<Utf8PathBuf> {
+    text(jail_built, "jail_root")
+        .map(Utf8PathBuf::from)
+        .with_context(|| format!("The jail record names no jail root: {jail_built:?}"))
+}
+
 const OCCUPIED_CGROUP: &str = "/sys/fs/cgroup/bencher/scenario-occupant";
 
 fn run_runner_beside_occupied_cgroup(
@@ -3729,7 +3615,8 @@ fn run_runner_beside_occupied_cgroup(
     drop(occupant);
 
     anyhow::ensure!(
-        output.stderr.contains(OCCUPIED_CGROUP) && output.stderr.contains(&pid),
+        runner_error(&output)
+            .is_some_and(|error| error.contains(OCCUPIED_CGROUP) && error.contains(&pid)),
         "Expected the refusal to name {OCCUPIED_CGROUP} and pid {pid}.\nstdout: {}\nstderr: {}",
         output.stdout,
         output.stderr
@@ -3755,20 +3642,23 @@ fn run_runner_occupied_mid_build(
     let pid = occupant.child.id().to_string();
     drop(occupant);
 
-    anyhow::ensure!(
-        stderr.contains(OCCUPIED_CGROUP) && stderr.contains(&pid),
-        "Expected the refusal to name {OCCUPIED_CGROUP} and pid {pid}.\nstdout: {stdout}\nstderr: {stderr}"
-    );
-    Ok(ScenarioOutput {
+    let output = ScenarioOutput {
         stdout,
         stderr,
         exit_code: status.code().unwrap_or(-1),
-    })
+    };
+    anyhow::ensure!(
+        runner_error(&output)
+            .is_some_and(|error| error.contains(OCCUPIED_CGROUP) && error.contains(&pid)),
+        "Expected the refusal to name {OCCUPIED_CGROUP} and pid {pid}.\nstdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    );
+    Ok(output)
 }
 
 fn occupy_mid_build(streamed: &mut StreamedOutput) -> Result<Occupant> {
-    let jail_line = streamed.wait_for(|line| line.trim_start().starts_with("Jail: "))?;
-    let jail_root = Utf8PathBuf::from(jail_line.trim_start().trim_start_matches("Jail: "));
+    let jail_root = jail_root_of(&streamed.wait_for_record("Jail built")?)?;
     let occupant = Occupant::start()?;
     // A VMM not yet in its jail has not reached the check after placement.
     anyhow::ensure!(
@@ -3824,7 +3714,7 @@ fn spawn_runner(
         .spawn()?)
 }
 
-/// Far more than a runner prints before any line a scenario waits for; past
+/// Far more than a runner logs before any record a scenario waits for; past
 /// it only a waiter misses lines, never the output.
 const UNREAD_LINES: usize = 1024;
 
@@ -3835,17 +3725,18 @@ struct StreamedOutput {
 }
 
 impl StreamedOutput {
+    /// Streams stderr, where the runner logs, and drains stdout.
     fn start(child: &mut std::process::Child) -> Self {
         let (tx, lines) = mpsc::sync_channel(UNREAD_LINES);
-        let stdout = child.stdout.take();
-        let stdout = std::thread::spawn(move || {
+        let stderr = child.stderr.take();
+        let stderr = std::thread::spawn(move || {
             use std::io::BufRead as _;
 
             let mut output = Vec::new();
-            let Some(stdout) = stdout else {
+            let Some(stderr) = stderr else {
                 return String::new();
             };
-            for line in std::io::BufReader::new(stdout).lines() {
+            for line in std::io::BufReader::new(stderr).lines() {
                 let Ok(line) = line else {
                     break;
                 };
@@ -3856,13 +3747,13 @@ impl StreamedOutput {
             }
             output.join("\n")
         });
-        let stderr = child.stderr.take();
-        let stderr = std::thread::spawn(move || {
+        let stdout = child.stdout.take();
+        let stdout = std::thread::spawn(move || {
             use std::io::Read as _;
 
             let mut buffer = String::new();
-            if let Some(mut stderr) = stderr {
-                drop(stderr.read_to_string(&mut buffer));
+            if let Some(mut stdout) = stdout {
+                drop(stdout.read_to_string(&mut buffer));
             }
             buffer
         });
@@ -3886,11 +3777,18 @@ impl StreamedOutput {
                     }
                 },
                 Err(e) => bail!(
-                    "The line the scenario waits for never came ({e}).\nstdout so far:\n{}",
+                    "The line the scenario waits for never came ({e}).\nstderr so far:\n{}",
                     self.seen.join("\n")
                 ),
             }
         }
+    }
+
+    fn wait_for_record(&mut self, msg: &str) -> Result<Record> {
+        let line = self.wait_for(|line| {
+            record_of(line).is_some_and(|record| text(&record, "msg") == Some(msg))
+        })?;
+        record_of(&line).with_context(|| format!("{line} is no longer a record"))
     }
 
     /// Wait for both readers, once the child has exited.
@@ -4437,7 +4335,7 @@ fn run_runner_with_tuning(
 
     ensure_steering_masks_logged(&stdout, &stderr)?;
 
-    if !stdout.contains("C-states - max exit latency held at 0 us") {
+    if tuned(&stderr, "C-states", "set").next().is_none() {
         println!("  tuning: the runner held no C-state constraint, so none was asserted");
     } else if latency_before.is_none_or(|latency| latency == 0) {
         println!(
@@ -4458,14 +4356,14 @@ fn run_runner_with_tuning(
         );
     }
 
-    if let Some(level) = achieved_partition(&stdout) {
+    if let Some(level) = achieved_partition(&stderr) {
         let partition = Utf8Path::new(BENCHER_CGROUP).join("cpuset.cpus.partition");
         let after = readable_setting(&partition);
         if after.is_none() && level == "member" {
             println!(
                 "  tuning: no cpuset partition file on this host, so the runner's 'member' was not asserted"
             );
-        } else if after.as_deref() != Some(level) {
+        } else if after.as_deref() != Some(level.as_str()) {
             bail!(
                 "The cpuset partition did not persist after the runner exited: {partition} is '{}', but the runner achieved '{level}'.\nstdout: {stdout}\nstderr: {stderr}",
                 after.as_deref().unwrap_or("?")
@@ -4529,18 +4427,30 @@ fn dma_latency() -> Option<i32> {
 /// `run_and_validate` passes `--no-irq-steering`, so the runner logs each mask it left.
 fn ensure_steering_masks_logged(stdout: &str, stderr: &str) -> Result<()> {
     anyhow::ensure!(
-        stdout.contains("default IRQ affinity - left at")
-            && stdout.contains("workqueue cpumask - left at"),
+        tuned(stderr, "default IRQ affinity", "left")
+            .next()
+            .is_some()
+            && tuned(stderr, "workqueue cpumask", "left").next().is_some(),
         "The runner skipped IRQ steering but did not log the masks it left in place.\nstdout: {stdout}\nstderr: {stderr}"
     );
     Ok(())
 }
 
 /// The partition level the runner reports achieving.
-fn achieved_partition(stdout: &str) -> Option<&str> {
-    let (_, rest) = stdout.split_once("cpuset partition - achieved level '")?;
-    let (level, _) = rest.split_once('\'')?;
-    Some(level)
+fn achieved_partition(stderr: &str) -> Option<String> {
+    tuned(stderr, "cpuset partition", "achieved")
+        .find_map(|record| text(&record, "value").map(str::to_owned))
+}
+
+/// The `Tuning` records of `setting` with `action`.
+fn tuned<'a>(
+    stderr: &'a str,
+    setting: &'a str,
+    action: &'a str,
+) -> impl Iterator<Item = Record> + 'a {
+    records_with(stderr, "Tuning").filter(move |record| {
+        text(record, "setting") == Some(setting) && text(record, "action") == Some(action)
+    })
 }
 
 fn tuning_scenarios() -> Vec<Scenario> {
@@ -4741,8 +4651,8 @@ mod tests {
         // A reader that blocked on the full channel would stop draining the
         // pipe once nobody waits, so the child could never finish writing.
         let count = UNREAD_LINES * 64;
-        let mut child = Command::new("seq")
-            .arg(count.to_string())
+        let mut child = Command::new("sh")
+            .args(["-c", &format!("seq {count} >&2")])
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
@@ -4758,9 +4668,9 @@ mod tests {
             }
             std::thread::sleep(Duration::from_millis(10));
         }
-        let (stdout, _stderr) = streamed.join();
+        let (_stdout, stderr) = streamed.join();
 
-        assert_eq!(stdout.lines().count(), count);
+        assert_eq!(stderr.lines().count(), count);
     }
 
     #[test]

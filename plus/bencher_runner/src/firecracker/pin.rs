@@ -12,6 +12,7 @@
 use std::time::{Duration, Instant};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use slog::{Logger, info, warn};
 
 use crate::cpu::{CpuLayout, pin_tid};
 
@@ -31,7 +32,7 @@ const POLL_INTERVAL: Duration = Duration::from_millis(20);
 /// do not exist until `InstanceStart`). The cgroup cpuset is the hard
 /// confinement to benchmark cores; per-thread pinning is a refinement
 /// on top of it that stops migration between those cores.
-pub(super) fn pin_vcpu_threads(fc_pid: u32, layout: &CpuLayout, vcpu_count: u8) {
+pub(super) fn pin_vcpu_threads(log: &Logger, fc_pid: u32, layout: &CpuLayout, vcpu_count: u8) {
     let task_dir = Utf8PathBuf::from(format!("/proc/{fc_pid}/task"));
     let deadline = Instant::now() + DISCOVERY_TIMEOUT;
 
@@ -48,7 +49,7 @@ pub(super) fn pin_vcpu_threads(fc_pid: u32, layout: &CpuLayout, vcpu_count: u8) 
     };
 
     if tasks.is_empty() {
-        eprintln!("Warning: found no Firecracker threads to pin under {task_dir}");
+        warn!(log, "No Firecracker threads to pin"; "task_dir" => task_dir.as_str());
         return;
     }
 
@@ -64,13 +65,19 @@ pub(super) fn pin_vcpu_threads(fc_pid: u32, layout: &CpuLayout, vcpu_count: u8) 
                 }
             },
             Err(e) => {
-                eprintln!("Warning: failed to pin thread '{comm}' (tid {tid}) to core {core}: {e}");
+                warn!(log, "Firecracker thread not pinned";
+                    "thread" => bencher_logger::capped(comm),
+                    "tid" => *tid,
+                    "core" => core,
+                    "error" => %e,
+                );
             },
         }
     }
 
-    println!(
-        "CPU isolation: pinned {pinned_vcpus} of {vcpu_count} vCPU threads to dedicated cores"
+    info!(log, "vCPU threads pinned to dedicated cores";
+        "pinned" => pinned_vcpus,
+        "vcpus" => vcpu_count,
     );
 }
 

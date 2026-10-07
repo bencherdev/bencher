@@ -6,6 +6,7 @@ Pull an [Image][images], create a rootfs, and execute it once on the local host.
 Unlike [`runner up`][runner up], this does not connect to an API server or claim a Job.
 It runs a single Image directly, which is useful for testing and debugging a Runner host
 or an Image before submitting real Jobs.
+The Image's output goes to stdout and stderr as it is, and the runner's own log goes to stderr as JSON, one object per line.
 
 ```
 runner run --image <IMAGE> [OPTIONS]

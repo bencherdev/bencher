@@ -1,16 +1,11 @@
 //! Everything the jail needs that must outlive a single job hangs off one
 //! state directory.
 
-#![expect(clippy::print_stderr, reason = "host preparation prints diagnostics")]
-#![expect(
-    clippy::print_stdout,
-    reason = "the sweep announces a reclamation that outlives the interval"
-)]
-
 use std::fs;
 use std::os::unix::fs::{MetadataExt as _, OpenOptionsExt as _, PermissionsExt as _, fchown};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use slog::{Logger, info, warn};
 
 use crate::error::JailError;
 use crate::jail::lock::LOCK_FILE;
@@ -144,12 +139,12 @@ impl StateDir {
 
     /// Run under the job lock before the job builds its own jail, so anything
     /// found is stale whichever runner process left it.
-    pub fn sweep(&self, _lock: &JailLock) -> Result<(), JailError> {
-        let reclaimed = sweep_jails(&self.jail_parent())?;
+    pub fn sweep(&self, log: &Logger, _lock: &JailLock) -> Result<(), JailError> {
+        let reclaimed = sweep_jails(log, &self.jail_parent())?;
         if reclaimed > 0 {
             // Each held a VMM binary and a full guest rootfs, so an operator
             // should hear about it.
-            println!("  Reclaimed {reclaimed} stale jail(s) from {}", self.root);
+            info!(log, "Reclaimed stale jails"; "count" => reclaimed, "state_dir" => self.root.as_str());
         }
         Ok(())
     }
@@ -385,17 +380,19 @@ const OUR_ROOT_ENTRIES: [&str; 2] = [CHROOT_BASE, LOCK_FILE];
 
 /// Needed because `Drop` never runs on SIGKILL, a crash, or a self-update's
 /// `exec`, and jobs run serially, so anything here is stale.
-fn sweep_jails(jail_parent: &Utf8Path) -> Result<usize, JailError> {
+fn sweep_jails(log: &Logger, jail_parent: &Utf8Path) -> Result<usize, JailError> {
     sweep_jails_with(
+        log,
         jail_parent,
-        super::reap::reap_jailed_vmm,
-        super::cgroup::remove_stale_cgroup,
+        |jail_root| super::reap::reap_jailed_vmm(log, jail_root),
+        |vm_id| super::cgroup::remove_stale_cgroup(log, vm_id),
     )
 }
 
 /// Injectable because a test cannot make a VMM survive a real kill, and the
 /// real cgroup removal would read the host's `/sys/fs/cgroup`.
 fn sweep_jails_with<R, C>(
+    log: &Logger,
     jail_parent: &Utf8Path,
     reap: R,
     remove_cgroup: C,
@@ -404,14 +401,19 @@ where
     R: Fn(&Utf8Path) -> Reaped,
     C: Fn(&VmId) -> Result<(), JailError>,
 {
-    sweep_jails_removing(jail_parent, reap, remove_cgroup, |jail_dir: &Utf8Path| {
-        fs::remove_dir_all(jail_dir)
-    })
+    sweep_jails_removing(
+        log,
+        jail_parent,
+        reap,
+        remove_cgroup,
+        |jail_dir: &Utf8Path| fs::remove_dir_all(jail_dir),
+    )
 }
 
 /// The chroot removal is injectable because root can remove any directory a
 /// test makes, so a failing removal has to be supplied.
 fn sweep_jails_removing<R, C, D>(
+    log: &Logger,
     jail_parent: &Utf8Path,
     reap: R,
     remove_cgroup: C,
@@ -446,15 +448,24 @@ where
 
     for entry in entries {
         let outcome = match entry {
-            Ok(entry) => match jail_id(jail_parent, &entry) {
+            Ok(entry) => match jail_id(log, jail_parent, &entry) {
                 // One reclamation can run for minutes under the lock, and
                 // silence that long looks like a wedge.
                 Ok(Some(vm_id)) => {
                     let jail_dir = jail_parent.join(vm_id.as_str());
                     super::lock::while_waiting(
                         super::lock::ANNOUNCE_EVERY,
-                        || println!("  Still reclaiming stale jail {jail_dir}..."),
-                        || reclaim_one(&jail_dir, &vm_id, &reap, &remove_cgroup, &remove_chroot),
+                        || info!(log, "Still reclaiming a stale jail"; "jail" => jail_dir.as_str()),
+                        || {
+                            reclaim_one(
+                                log,
+                                &jail_dir,
+                                &vm_id,
+                                &reap,
+                                &remove_cgroup,
+                                &remove_chroot,
+                            )
+                        },
                     )
                 },
                 Ok(None) => continue,
@@ -463,8 +474,9 @@ where
             // A listing that breaks off partway leaves jails unexamined, so it
             // fails the sweep rather than passing for one that found nothing.
             Err(e) => {
-                eprintln!(
-                    "Warning: failed to read an entry under {jail_parent}: {e}. Jails there may not have been examined."
+                warn!(log, "Jail entry unreadable, jails may be unexamined";
+                    "jail_parent" => jail_parent.as_str(),
+                    "error" => %e,
                 );
                 Reclamation::Failed(JailError::ReadJailParent {
                     path: jail_parent.to_owned(),
@@ -489,8 +501,9 @@ where
         // failed one announces its own.
         Some(e) => {
             if reclaimed > 0 {
-                eprintln!(
-                    "Reclaimed {reclaimed} stale jail(s) from {jail_parent} before the sweep failed."
+                warn!(log, "Reclaimed stale jails before the sweep failed";
+                    "count" => reclaimed,
+                    "jail_parent" => jail_parent.as_str(),
                 );
             }
             Err(e)
@@ -513,14 +526,19 @@ enum Reclamation {
 
 /// An entry whose kind cannot be read is an error, not `Ok(None)`, since it may
 /// be a jail holding a live VMM.
-fn jail_id(jail_parent: &Utf8Path, entry: &fs::DirEntry) -> Result<Option<VmId>, JailError> {
+fn jail_id(
+    log: &Logger,
+    jail_parent: &Utf8Path,
+    entry: &fs::DirEntry,
+) -> Result<Option<VmId>, JailError> {
     match entry.file_type() {
         Ok(file_type) if file_type.is_dir() => {},
         Ok(_) => return Ok(None),
         Err(e) => {
-            eprintln!(
-                "Warning: cannot tell what {} under {jail_parent} is: {e}. If it is a jail, it was not examined.",
-                entry.file_name().display()
+            warn!(log, "Jail entry kind unreadable, a jail there is unexamined";
+                "entry" => bencher_logger::capped(entry.file_name().display()),
+                "jail_parent" => jail_parent.as_str(),
+                "error" => %e,
             );
             return Err(JailError::ReadJailParent {
                 path: jail_parent.to_owned(),
@@ -533,9 +551,8 @@ fn jail_id(jail_parent: &Utf8Path, entry: &fs::DirEntry) -> Result<Option<VmId>,
     // path that does not exist, and the reap would report a live VMM clear.
     let file_name = entry.file_name();
     let Some(name) = file_name.to_str() else {
-        eprintln!(
-            "Warning: skipping an entry with a non-UTF-8 name under {jail_parent}; the runner did not create it"
-        );
+        // The runner did not create it.
+        warn!(log, "Jail entry with a non-UTF-8 name skipped"; "jail_parent" => jail_parent.as_str());
         return Ok(None);
     };
     // A name this runner could not have minted is skipped too, since the id is
@@ -544,6 +561,7 @@ fn jail_id(jail_parent: &Utf8Path, entry: &fs::DirEntry) -> Result<Option<VmId>,
 }
 
 fn reclaim_one<R, C, D>(
+    log: &Logger,
     jail_dir: &Utf8Path,
     vm_id: &VmId,
     reap: &R,
@@ -560,8 +578,9 @@ where
     match reap(&jail_dir.join(JAIL_ROOT)) {
         Reaped::Clear => {},
         Reaped::StillRunning { pid } => {
-            eprintln!(
-                "Warning: leaving stale jail {jail_dir} in place because VMM pid {pid} is still running on the benchmark cores."
+            warn!(log, "Stale jail kept, its VMM still running on the benchmark cores";
+                "jail" => jail_dir.as_str(),
+                "pid" => pid,
             );
             return Reclamation::Failed(JailError::JailStillRunning {
                 path: jail_dir.to_owned(),
@@ -569,9 +588,7 @@ where
             });
         },
         Reaped::Unexaminable => {
-            eprintln!(
-                "Warning: leaving stale jail {jail_dir} in place because whether a VMM is still running in it could not be determined."
-            );
+            warn!(log, "Stale jail kept, unexaminable"; "jail" => jail_dir.as_str());
             return Reclamation::Failed(JailError::JailUnexaminable {
                 path: jail_dir.to_owned(),
             });
@@ -581,18 +598,15 @@ where
     // The chroot outlives the cgroup because its name is the only handle a
     // later sweep has for finding that cgroup again.
     if let Err(e) = remove_cgroup(vm_id) {
-        eprintln!(
-            "Warning: leaving stale jail {jail_dir} in place because its cgroup could not be removed: {e}"
-        );
+        warn!(log, "Stale jail kept, its cgroup not removed"; "jail" => jail_dir.as_str(), "error" => %e);
         return Reclamation::Failed(e);
     }
 
     match remove_chroot(jail_dir) {
         Ok(()) => Reclamation::Reclaimed,
         Err(e) => {
-            eprintln!(
-                "Warning: failed to sweep stale jail {jail_dir}: {e}. It holds a VMM binary and a full guest rootfs; the next job will try again."
-            );
+            // It holds a VMM binary and a full guest rootfs; the next job tries again.
+            warn!(log, "Stale jail not swept"; "jail" => jail_dir.as_str(), "error" => %e);
             Reclamation::LeftBehind
         },
     }
@@ -604,6 +618,7 @@ mod tests {
     use std::process::Command;
 
     use super::*;
+    use crate::log::discard;
 
     fn temp_root() -> (tempfile::TempDir, Utf8PathBuf) {
         let dir = tempfile::tempdir().unwrap();
@@ -681,6 +696,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
     fn create_takes_ownership_of_a_directory_it_was_handed() {
         // A handed-over directory's owner could chmod the 0700 back and plant
         // links, so it must be chowned to root.
@@ -880,7 +896,7 @@ mod tests {
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
-        drop(JailLock::acquire(state.path(), None).unwrap());
+        drop(JailLock::acquire(&discard(), state.path(), None).unwrap());
         fs::remove_dir_all(state.chroot_base()).unwrap();
 
         state.create().unwrap();
@@ -1145,6 +1161,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
     fn an_operator_controlled_symlinked_root_is_resolved() {
         // The recommended setup, a root-owned link to a root-owned dedicated
         // directory, must resolve and build under the target.
@@ -1179,6 +1196,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
     fn an_interior_symlink_is_refused_even_under_a_resolved_root() {
         // A resolved root must not lower the bar for an interior link.
         if crate::jail::current_euid() != 0 {
@@ -1236,6 +1254,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
     fn a_filesystem_the_jail_cannot_run_from_is_refused_by_its_mount_option() {
         // A `nodev` or `noexec` state filesystem would otherwise fail the job at
         // boot with KVM blaming its ACL.
@@ -1309,7 +1328,13 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(())).unwrap(),
+            sweep_jails_with(
+                &discard(),
+                &state.jail_parent(),
+                |_j| Reaped::Clear,
+                |_v| Ok(())
+            )
+            .unwrap(),
             2
         );
         assert!(
@@ -1337,8 +1362,13 @@ mod tests {
             fs::create_dir_all(state.jail_root(id)).unwrap();
         }
 
-        let reclaimed =
-            sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(())).unwrap();
+        let reclaimed = sweep_jails_with(
+            &discard(),
+            &state.jail_parent(),
+            |_j| Reaped::Clear,
+            |_v| Ok(()),
+        )
+        .unwrap();
 
         assert_eq!(reclaimed, ids.len());
         for id in &ids {
@@ -1361,7 +1391,13 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            sweep_jails_with(&state.jail_parent(), |_j| Reaped::Clear, |_v| Ok(())).unwrap(),
+            sweep_jails_with(
+                &discard(),
+                &state.jail_parent(),
+                |_j| Reaped::Clear,
+                |_v| Ok(())
+            )
+            .unwrap(),
             1
         );
         assert!(
@@ -1385,6 +1421,7 @@ mod tests {
         fs::create_dir_all(state.jail_root(&dead)).unwrap();
 
         let err = sweep_jails_with(
+            &discard(),
             &state.jail_parent(),
             |jail_root| {
                 if jail_root.as_str().contains("live") {
@@ -1422,7 +1459,8 @@ mod tests {
 
         let stuck = |_jail_root: &Utf8Path| Reaped::StillRunning { pid: 7 };
         for attempt in 1..=3 {
-            let err = sweep_jails_with(&state.jail_parent(), stuck, |_vm_id| Ok(())).unwrap_err();
+            let err = sweep_jails_with(&discard(), &state.jail_parent(), stuck, |_vm_id| Ok(()))
+                .unwrap_err();
             assert!(
                 err.to_string().contains('7'),
                 "attempt {attempt} must report the pid"
@@ -1444,6 +1482,7 @@ mod tests {
         fs::create_dir_all(state.jail_root(&clear)).unwrap();
 
         let err = sweep_jails_with(
+            &discard(),
             &state.jail_parent(),
             |_jail_root| Reaped::Clear,
             |vm_id| {
@@ -1481,6 +1520,7 @@ mod tests {
         fs::create_dir_all(state.jail_root(&stuck)).unwrap();
 
         let reclaimed = sweep_jails_removing(
+            &discard(),
             &state.jail_parent(),
             |_jail_root| Reaped::Clear,
             |_vm_id| Ok(()),
@@ -1502,6 +1542,7 @@ mod tests {
         fs::create_dir_all(state.jail_root(&unknown)).unwrap();
 
         let err = sweep_jails_with(
+            &discard(),
             &state.jail_parent(),
             |_jail_root| Reaped::Unexaminable,
             |_vm_id| Ok(()),
@@ -1527,6 +1568,7 @@ mod tests {
             .unwrap();
 
         let reclaimed = sweep_jails_with(
+            &discard(),
             &state.jail_parent(),
             |_jail_root| Reaped::Clear,
             |_vm_id| Ok(()),
@@ -1544,7 +1586,8 @@ mod tests {
         let not_a_dir = root.join("firecracker");
         fs::write(&not_a_dir, b"in the way").unwrap();
 
-        let err = sweep_jails_with(&not_a_dir, |_j| Reaped::Clear, |_v| Ok(())).unwrap_err();
+        let err =
+            sweep_jails_with(&discard(), &not_a_dir, |_j| Reaped::Clear, |_v| Ok(())).unwrap_err();
 
         assert!(
             matches!(err, JailError::ReadJailParent { .. }),
@@ -1556,7 +1599,13 @@ mod tests {
     fn sweep_missing_parent_is_zero() {
         let (_dir, root) = temp_root();
         assert_eq!(
-            sweep_jails_with(&root.join("nope"), |_j| Reaped::Clear, |_v| Ok(())).unwrap(),
+            sweep_jails_with(
+                &discard(),
+                &root.join("nope"),
+                |_j| Reaped::Clear,
+                |_v| Ok(())
+            )
+            .unwrap(),
             0
         );
     }

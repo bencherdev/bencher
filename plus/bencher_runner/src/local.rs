@@ -11,22 +11,17 @@
 //! The `--danger-allow-no-sandbox` flag on `runner up` (or omitting `--sandbox`
 //! on `runner run`) gates this mode to prevent accidental use.
 
-#![expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    reason = "local executor prints progress and diagnostic output"
-)]
-
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use slog::{Logger, info, warn};
 
 use crate::JobDeadline;
 use crate::error::RunnerError;
 use crate::local_isolation::LocalIsolation;
-use crate::metrics::{self, RunMetrics};
+use crate::metrics::RunMetrics;
 use crate::run::{RunOutput, prepare_oci_workspace};
 
 /// Execute a single benchmark run locally on the host system.
@@ -35,15 +30,17 @@ use crate::run::{RunOutput, prepare_oci_workspace};
 /// `std::process::Command` from the unpacked rootfs, until `deadline`. No
 /// sandboxing is applied.
 pub fn local_execute(
+    log: &Logger,
     config: &crate::Config,
     cancel_flag: Option<&AtomicBool>,
     deadline: JobDeadline,
 ) -> Result<RunOutput, RunnerError> {
-    println!("Executing benchmark run (non-sandboxed mode):");
-    println!("  OCI image: {}", config.oci_image);
-    println!("  Timeout: {} seconds", config.timeout_secs);
+    info!(log, "Executing benchmark run, non-sandboxed";
+        "image" => bencher_logger::capped(&config.oci_image),
+        "timeout_secs" => config.timeout_secs,
+    );
 
-    let workspace = prepare_oci_workspace(config)?;
+    let workspace = prepare_oci_workspace(log, config)?;
     // A cancel during the pull ends the job here rather than after a spawn.
     if cancel_flag.is_some_and(|flag| flag.load(Ordering::SeqCst)) {
         return Err(crate::error::ExecutionError::Canceled("job was canceled".to_owned()).into());
@@ -58,7 +55,7 @@ pub fn local_execute(
     })?;
 
     // Execute command from the unpacked rootfs
-    println!("Running command on host...");
+    info!(log, "Running the command on the host");
 
     let Some(program) = oci_config.command.first() else {
         return Err(crate::error::ConfigError::MissingCommand.into());
@@ -92,8 +89,9 @@ pub fn local_execute(
     match canonicalize_within_rootfs(&cwd, &canonical_unpack_dir, config.max_symlinks) {
         Ok(resolved_cwd) => cmd.current_dir(resolved_cwd.as_std_path()),
         Err(err) => {
-            eprintln!(
-                "Warning: failed to resolve working directory {cwd}, falling back to rootfs: {err}"
+            warn!(log, "Working directory unresolved, running from the rootfs";
+                "work_dir" => bencher_logger::capped(&cwd),
+                "error" => bencher_logger::capped(&err),
             );
             cmd.current_dir(canonical_unpack_dir.as_std_path())
         },
@@ -102,7 +100,7 @@ pub fn local_execute(
     // Isolate the benchmark on the benchmark cores (cgroup cpuset with a
     // CPU affinity fallback), mirroring the Firecracker path. Best-effort:
     // failures degrade to no isolation with a warning.
-    let isolation = LocalIsolation::prepare(config.cpu_layout.as_ref());
+    let isolation = LocalIsolation::prepare(log, config.cpu_layout.as_ref());
     isolation.configure_command(&mut cmd);
 
     let start = Instant::now();
@@ -120,14 +118,15 @@ pub fn local_execute(
             // Reap any grandchildren the direct-child kill missed before
             // reading metrics and removing the cgroup.
             isolation.kill_all();
-            emit_run_metrics(start.elapsed(), timed_out, &isolation);
+            log_run_metrics(log, start.elapsed(), timed_out, &isolation);
             return Err(e);
         },
     };
-    emit_run_metrics(start.elapsed(), false, &isolation);
+    log_run_metrics(log, start.elapsed(), false, &isolation);
 
     // Collect output files from the unpacked rootfs
     let output_files = collect_output_files(
+        log,
         config.file_paths.as_deref(),
         &canonical_unpack_dir,
         config.max_symlinks,
@@ -164,20 +163,16 @@ fn spawn_in_time(
     })
 }
 
-/// Output run metrics to stderr in the standard marker format.
-///
-/// Reads cgroup metrics before the isolation (and with it the cgroup)
-/// is dropped.
-fn emit_run_metrics(elapsed: Duration, timed_out: bool, isolation: &LocalIsolation) {
+/// Reads cgroup metrics before the isolation (and with it the cgroup) is
+/// dropped.
+fn log_run_metrics(log: &Logger, elapsed: Duration, timed_out: bool, isolation: &LocalIsolation) {
     let run_metrics = RunMetrics {
         wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
         timed_out,
         transport: "local".to_owned(),
         cgroup: isolation.read_metrics(),
     };
-    if let Some(line) = metrics::format_metrics(&run_metrics) {
-        eprintln!("{line}");
-    }
+    info!(log, "Run metrics"; &run_metrics);
 }
 
 /// Output from waiting on a child process.
@@ -535,6 +530,7 @@ fn canonicalize_within_rootfs(
 /// OCI file paths are specified relative to the container root. We resolve them
 /// relative to `unpack_dir` and validate they don't escape the rootfs.
 fn collect_output_files(
+    log: &Logger,
     file_paths: Option<&[Utf8PathBuf]>,
     unpack_dir: &Utf8Path,
     max_symlinks: u32,
@@ -549,7 +545,10 @@ fn collect_output_files(
         let resolved = match canonicalize_within_rootfs(&host_path, unpack_dir, max_symlinks) {
             Ok(p) => p,
             Err(e) => {
-                eprintln!("Warning: output file {path}: {e}");
+                warn!(log, "Output file unresolved";
+                    "path" => bencher_logger::capped(path),
+                    "error" => bencher_logger::capped(&e),
+                );
                 continue;
             },
         };
@@ -558,7 +557,10 @@ fn collect_output_files(
                 files.push((path.clone(), contents));
             },
             Err(e) => {
-                eprintln!("Warning: failed to read output file {path}: {e}");
+                warn!(log, "Output file unreadable";
+                    "path" => bencher_logger::capped(path),
+                    "error" => %e,
+                );
             },
         }
     }
@@ -603,7 +605,8 @@ mod tests {
             std::fs::write(rootfs.join(path.as_str().trim_start_matches('/')), b"x").unwrap();
         }
 
-        let collected = collect_output_files(Some(&declared), &rootfs, 0).unwrap();
+        let collected =
+            collect_output_files(&crate::log::discard(), Some(&declared), &rootfs, 0).unwrap();
 
         let paths: Vec<Utf8PathBuf> = collected.into_iter().map(|(path, _)| path).collect();
         assert_eq!(paths, declared);

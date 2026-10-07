@@ -17,18 +17,16 @@ use std::fs;
 #[cfg(target_os = "linux")]
 use std::io;
 
+use slog::{Logger, info};
+
 #[cfg(target_os = "linux")]
 const ONLINE_CPUS: &str = "/sys/devices/system/cpu/online";
 
+/// The fallback assumes cores are numbered `0..n`, so on a host whose online
+/// set has gaps the benchmark cores may be wrong.
 #[cfg(target_os = "linux")]
-#[expect(
-    clippy::print_stderr,
-    reason = "a CPU layout the runner had to guess is announced"
-)]
-fn warn_guessed_layout(reason: &str) {
-    eprintln!(
-        "Warning: {reason}. The CPU layout falls back to a core count, which assumes cores are numbered 0..n; on a host whose online set has gaps the benchmark cores may be wrong."
-    );
+fn warn_guessed_layout(log: &Logger, reason: &str) {
+    slog::warn!(log, "CPU layout guessed from the core count"; "reason" => reason);
 }
 
 /// CPU layout for the runner.
@@ -53,14 +51,24 @@ impl CpuLayout {
     /// online set like `0,2,4,6`, and a count-based layout would pin to
     /// offline cores.
     #[must_use]
-    pub fn detect() -> Self {
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(unused_variables, reason = "only Linux reads the online CPU list")
+    )]
+    pub fn detect(log: &Logger) -> Self {
         #[cfg(target_os = "linux")]
         match fs::read_to_string(ONLINE_CPUS) {
             Ok(online) => match parse_cpu_id_list(&online).filter(|ids| !ids.is_empty()) {
                 Some(ids) => return Self::with_cpu_ids(ids),
-                None => warn_guessed_layout(&format!("{ONLINE_CPUS} reads as '{}'", online.trim())),
+                None => warn_guessed_layout(
+                    log,
+                    &bencher_logger::capped(format_args!(
+                        "{ONLINE_CPUS} reads as '{}'",
+                        online.trim()
+                    )),
+                ),
             },
-            Err(e) => warn_guessed_layout(&format!("{ONLINE_CPUS} could not be read: {e}")),
+            Err(e) => warn_guessed_layout(log, &format!("{ONLINE_CPUS} could not be read: {e}")),
         }
 
         Self::with_core_count(Self::available_cores())
@@ -154,6 +162,17 @@ impl CpuLayout {
                 .housekeeping
                 .iter()
                 .all(|h| !self.benchmark.contains(h))
+    }
+
+    pub fn log_isolation(&self, log: &Logger) {
+        if self.has_isolation() {
+            info!(log, "CPU isolation";
+                "housekeeping" => self.housekeeping_cpuset(),
+                "benchmark" => self.benchmark_cpuset(),
+            );
+        } else {
+            info!(log, "CPU isolation disabled"; "reason" => "insufficient cores");
+        }
     }
 }
 

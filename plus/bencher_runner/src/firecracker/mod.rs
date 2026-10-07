@@ -7,13 +7,6 @@
 //! The VMM always runs under the Firecracker jailer, chrooted as an unprivileged
 //! user with no host network; see [`crate::jail`].
 
-#![expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    clippy::use_debug,
-    reason = "Firecracker VM management prints progress and diagnostics"
-)]
-
 mod client;
 pub mod config;
 pub mod error;
@@ -28,6 +21,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use camino::Utf8PathBuf;
+use slog::{Logger, info, warn};
 
 use crate::JobDeadline;
 use crate::cpu::CpuLayout;
@@ -111,6 +105,7 @@ pub struct FirecrackerJobConfig {
     reason = "VM lifecycle steps are sequential and clearer inline"
 )]
 pub fn run_firecracker(
+    log: &Logger,
     config: &FirecrackerJobConfig,
     cancel_flag: Option<&AtomicBool>,
     deadline: JobDeadline,
@@ -121,12 +116,12 @@ pub fn run_firecracker(
     let start_time = Instant::now();
 
     // Step 0: Create cgroup with cpuset if CPU layout is provided
-    let cgroup = cgroup_for_run(config.cpu_layout.as_ref(), || {
-        CgroupManager::new(vm_id, config.cgroup_survived.clone())
+    let cgroup = cgroup_for_run(log, config.cpu_layout.as_ref(), || {
+        CgroupManager::new(log, vm_id, config.cgroup_survived.clone())
     })?;
 
     // Step 1: Start the jailed Firecracker process.
-    println!("Starting jailed Firecracker process...");
+    info!(log, "Starting the jailed Firecracker process");
     let housekeeping_cores = config
         .cpu_layout
         .as_ref()
@@ -134,6 +129,7 @@ pub fn run_firecracker(
         .unwrap_or_default();
     let cgroup_procs = placement_target(cgroup.as_ref())?;
     let mut fc_process = FirecrackerProcess::start(JailedSpawn {
+        log: log.clone(),
         jailer_bin: &config.jailer_bin,
         exec_file: &config.firecracker_bin,
         vm_id,
@@ -157,7 +153,7 @@ pub fn run_firecracker(
     let client = fc_process.client();
 
     // Step 2: Configure VM via REST API
-    println!("Configuring VM...");
+    info!(log, "Configuring VM");
 
     client.put_machine_config(&MachineConfig {
         vcpu_count: config.vcpus,
@@ -183,7 +179,7 @@ pub fn run_firecracker(
     })?;
 
     // Step 3: Create vsock listeners (must be before boot)
-    println!("Setting up vsock listeners...");
+    info!(log, "Setting up vsock listeners");
     let vsock_listener = VsockListener::new(jail.vsock())?;
     vsock_listener
         .chown_to_jail(config.jail_user)
@@ -196,7 +192,7 @@ pub fn run_firecracker(
             deadline.timeout()
         )));
     }
-    println!("Booting VM...");
+    info!(log, "Booting VM");
     client.put_action(&Action {
         action_type: ActionType::InstanceStart,
     })?;
@@ -207,15 +203,14 @@ pub fn run_firecracker(
     if let Some(layout) = &config.cpu_layout
         && layout.has_isolation()
     {
-        pin::pin_vcpu_threads(fc_process.pid(), layout, config.vcpus);
+        pin::pin_vcpu_threads(log, fc_process.pid(), layout, config.vcpus);
     }
 
     // Step 5: Collect results via vsock
     let grace_period = Duration::from_secs(u64::from(u32::from(config.grace_period)));
-    println!(
-        "Waiting for benchmark results (timeout: {:?}, {:.1?} left)...",
-        deadline.timeout(),
-        deadline.remaining()
+    info!(log, "Waiting for benchmark results";
+        "timeout_secs" => deadline.timeout().as_secs(),
+        "remaining_ms" => u64::try_from(deadline.remaining().as_millis()).unwrap_or(u64::MAX),
     );
     let results = match vsock_listener.collect_results(
         deadline,
@@ -235,16 +230,14 @@ pub fn run_firecracker(
                     .as_ref()
                     .and_then(|cg| metrics::read_cgroup_metrics(cg.path())),
             };
-            if let Some(line) = metrics::format_metrics(&run_metrics) {
-                eprintln!("{line}");
-            }
+            info!(log, "Run metrics"; &run_metrics);
             fc_process.kill_after_grace_period(Duration::from_secs(2));
             return Err(e);
         },
     };
     let elapsed = start_time.elapsed();
 
-    // Step 6: Output metrics to stderr
+    // Step 6: Log the metrics
     let run_metrics = RunMetrics {
         wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
         timed_out: false,
@@ -253,9 +246,7 @@ pub fn run_firecracker(
             .as_ref()
             .and_then(|cg| metrics::read_cgroup_metrics(cg.path())),
     };
-    if let Some(line) = metrics::format_metrics(&run_metrics) {
-        eprintln!("{line}");
-    }
+    info!(log, "Run metrics"; &run_metrics);
 
     // Step 7: Kill Firecracker process
     fc_process.kill_after_grace_period(Duration::from_secs(2));
@@ -284,6 +275,7 @@ pub fn run_firecracker(
 /// A layout with isolation gets the VMM a confined cgroup or fails the job,
 /// per the failure policy table in [`crate::jail`].
 fn cgroup_for_run<F>(
+    log: &Logger,
     layout: Option<&CpuLayout>,
     create: F,
 ) -> Result<Option<CgroupManager>, FirecrackerError>
@@ -294,7 +286,7 @@ where
         return Ok(None);
     };
     let cgroup = create().map_err(|e| FirecrackerError::Cgroup(Box::new(e)))?;
-    confine(cgroup, layout).map(Some)
+    confine(log, cgroup, layout).map(Some)
 }
 
 /// Stop at a stage boundary once the job is cancelled, before anything later is
@@ -308,26 +300,29 @@ pub(crate) fn refuse_cancelled(cancel_flag: Option<&AtomicBool>) -> Result<(), F
 
 /// A rejected cpuset is fatal, but an undelegated one only warns and keeps the
 /// cgroup for placement, swap, and metrics.
-fn confine(cgroup: CgroupManager, layout: &CpuLayout) -> Result<CgroupManager, FirecrackerError> {
+fn confine(
+    log: &Logger,
+    cgroup: CgroupManager,
+    layout: &CpuLayout,
+) -> Result<CgroupManager, FirecrackerError> {
     match cgroup
         .apply_cpuset(layout)
         .map_err(|e| FirecrackerError::CpusetFailed(Box::new(e)))?
     {
-        Cpuset::Applied => println!(
-            "CPU isolation: Firecracker pinned to cores {}",
-            layout.benchmark_cpuset()
-        ),
+        Cpuset::Applied => {
+            info!(log, "CPU isolation applied"; "cores" => layout.benchmark_cpuset());
+        },
         // The vCPU threads are still pinned further down, which is gated on
         // the layout rather than on the cgroup.
-        Cpuset::Unavailable(reason) => eprintln!(
-            "Warning: this run has no cgroup cpuset ({reason}), so nothing keeps other work off the benchmark cores and its numbers carry more variance; vCPU threads are still pinned to them"
-        ),
+        Cpuset::Unavailable(reason) => {
+            warn!(log, "No cgroup cpuset, so other work can share the benchmark cores";
+                "reason" => reason,
+            );
+        },
     }
     // Keep VM memory resident: swap adds run-to-run variance
     if let Err(e) = cgroup.disable_swap() {
-        eprintln!(
-            "Warning: this run has no swap limit on its VM cgroup ({e}), so guest memory can be swapped out and its numbers carry more variance"
-        );
+        warn!(log, "No swap limit, so guest memory can be swapped out"; "error" => %e);
     }
     Ok(cgroup)
 }
@@ -376,6 +371,7 @@ fn parse_exit_code(s: &str) -> i32 {
 #[cfg(test)]
 mod tests {
     use crate::error::JailError;
+    use crate::log::discard;
 
     use super::*;
 
@@ -391,7 +387,8 @@ mod tests {
             .into())
         };
 
-        let Err(err) = cgroup_for_run(Some(&CpuLayout::with_core_count(8)), unwritable) else {
+        let Err(err) = cgroup_for_run(&discard(), Some(&CpuLayout::with_core_count(8)), unwritable)
+        else {
             panic!("a job with no VM cgroup must not run");
         };
 
@@ -406,7 +403,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
-        let cgroup = cgroup_for_run(Some(&CpuLayout::with_core_count(8)), || {
+        let cgroup = cgroup_for_run(&discard(), Some(&CpuLayout::with_core_count(8)), || {
             Ok(CgroupManager::detached(root.clone()))
         })
         .unwrap();
@@ -425,6 +422,7 @@ mod tests {
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
         let cgroup = confine(
+            &discard(),
             CgroupManager::detached(root.clone()),
             &CpuLayout::with_core_count(8),
         )

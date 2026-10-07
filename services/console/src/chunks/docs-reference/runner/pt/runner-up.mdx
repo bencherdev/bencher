@@ -6,6 +6,7 @@ Inicia o runner, fazendo polling e executando Jobs de benchmark.
 Este é o comando de longa duração usado para operar um [Self-Hosted Runner][self hosted runners].
 O runner abre uma única [conexão WebSocket][runner protocol] ao servidor de API,
 reivindica Jobs que correspondam às suas Specs, os executa e reporta os resultados de volta.
+O runner escreve seu log no stderr como JSON, um objeto por linha, e registra a saída de um Job apenas como contagens de bytes.
 
 ```
 runner up [OPTIONS]

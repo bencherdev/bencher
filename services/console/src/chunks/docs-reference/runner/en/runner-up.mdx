@@ -6,6 +6,7 @@ Start the runner, polling for and executing benchmark Jobs.
 This is the long-running command used to operate a [Self-Hosted Runner][self hosted runners].
 The runner opens a single [WebSocket connection][runner protocol] to the API server,
 claims Jobs that match its Specs, executes them, and reports the results back.
+The runner writes its log to stderr as JSON, one object per line, and logs a Job's output only as byte counts.
 
 ```
 runner up [OPTIONS]

@@ -1,14 +1,13 @@
 //! Reaping a VMM stranded by a runner that exited without unwinding, which
 //! would otherwise share the next job's cores and silently skew its results.
 
-#![expect(clippy::print_stderr, reason = "reaping prints diagnostics")]
-
 use std::fs;
 use std::os::fd::{AsRawFd as _, FromRawFd as _, OwnedFd};
 use std::os::unix::fs::MetadataExt as _;
 use std::time::{Duration, Instant};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use slog::{Logger, info, warn};
 
 /// Bound on reaps per jail; a healthy jail holds one VMM, so the loop should
 /// run once.
@@ -35,13 +34,15 @@ pub enum Reaped {
 
 /// Kill the VMM still in the jail at `jail_root`, leaving alone any process it
 /// cannot identify rather than risk killing the wrong one.
-pub fn reap_jailed_vmm(jail_root: &Utf8Path) -> Reaped {
-    reap_jailed_vmm_with(jail_root, find_jailed_vmm, reap_one)
+pub fn reap_jailed_vmm(log: &Logger, jail_root: &Utf8Path) -> Reaped {
+    reap_jailed_vmm_with(log, jail_root, find_jailed_vmm, |pid, jail_root| {
+        reap_one(log, pid, jail_root)
+    })
 }
 
 /// `reap_jailed_vmm` with the scan and the kill injectable, so tests reach the
 /// exhaustion path without real jailed processes.
-fn reap_jailed_vmm_with<F, R>(jail_root: &Utf8Path, find: F, reap: R) -> Reaped
+fn reap_jailed_vmm_with<F, R>(log: &Logger, jail_root: &Utf8Path, find: F, reap: R) -> Reaped
 where
     F: Fn(&Utf8Path) -> std::io::Result<Option<u32>>,
     R: Fn(u32, &Utf8Path) -> Reaped,
@@ -58,9 +59,7 @@ where
             },
             Ok(None) => return Reaped::Clear,
             Err(e) => {
-                eprintln!(
-                    "Warning: cannot examine {jail_root} to see whether a VMM is still in it: {e}. It is left in place."
-                );
+                warn!(log, "Jail unexaminable, left in place"; "jail_root" => jail_root.as_str(), "error" => %e);
                 return Reaped::Unexaminable;
             },
         }
@@ -70,30 +69,34 @@ where
     // spawning into the jail, so only a final empty scan reports it clear.
     match find(jail_root) {
         Ok(Some(pid)) => {
-            eprintln!(
-                "Warning: gave up scanning {jail_root} after {MAX_JAILED_PROCESSES} passes; pid {pid} still matches it while every reap reported the jail clear."
+            // Every reap reported the jail clear, yet the pid still matches it.
+            warn!(log, "Jail scan gave up";
+                "jail_root" => jail_root.as_str(),
+                "passes" => MAX_JAILED_PROCESSES,
+                "pid" => pid,
             );
             Reaped::StillRunning { pid }
         },
         Ok(None) => Reaped::Clear,
         Err(e) => {
-            eprintln!(
-                "Warning: cannot examine {jail_root} to see whether a VMM is still in it: {e}. It is left in place."
-            );
+            warn!(log, "Jail unexaminable, left in place"; "jail_root" => jail_root.as_str(), "error" => %e);
             Reaped::Unexaminable
         },
     }
 }
 
-fn reap_one(pid: u32, jail_root: &Utf8Path) -> Reaped {
+fn reap_one(log: &Logger, pid: u32, jail_root: &Utf8Path) -> Reaped {
     // Pin the process with a pidfd before signalling it, so a pid recycled
     // after the check below cannot carry the `SIGKILL` to a stranger.
     let pidfd = match pidfd_open(pid) {
         Ok(Some(pidfd)) => pidfd,
         Ok(None) => return Reaped::Clear,
         Err(e) => {
-            eprintln!(
-                "Warning: cannot pin orphaned VMM (pid {pid}) in {jail_root} to reap it: {e}. It is still running and still holds the benchmark CPUs."
+            // It is still running and still holds the benchmark CPUs.
+            warn!(log, "Orphaned VMM not pinned to reap";
+                "pid" => pid,
+                "jail_root" => jail_root.as_str(),
+                "error" => %e,
             );
             return Reaped::StillRunning { pid };
         },
@@ -106,17 +109,22 @@ fn reap_one(pid: u32, jail_root: &Utf8Path) -> Reaped {
     }
 
     if let Err(e) = pidfd_kill(&pidfd) {
-        eprintln!("Warning: failed to kill orphaned VMM (pid {pid}) in {jail_root}: {e}");
+        warn!(log, "Orphaned VMM not killed";
+            "pid" => pid,
+            "jail_root" => jail_root.as_str(),
+            "error" => %e,
+        );
         return Reaped::StillRunning { pid };
     }
 
     if wait_for_exit(&pidfd) {
-        eprintln!("Reaped orphaned VMM (pid {pid}) left behind in {jail_root}");
+        info!(log, "Reaped orphaned VMM"; "pid" => pid, "jail_root" => jail_root.as_str());
         Reaped::Clear
     } else {
-        eprintln!(
-            "Warning: orphaned VMM (pid {pid}) in {jail_root} did not exit within {} seconds",
-            REAP_TIMEOUT.as_secs()
+        warn!(log, "Orphaned VMM did not exit";
+            "pid" => pid,
+            "jail_root" => jail_root.as_str(),
+            "timeout_secs" => REAP_TIMEOUT.as_secs(),
         );
         Reaped::StillRunning { pid }
     }
@@ -323,6 +331,7 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use super::*;
+    use crate::log::discard;
 
     #[test]
     fn no_process_is_rooted_at_an_ordinary_directory() {
@@ -494,7 +503,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
-        assert_eq!(reap_jailed_vmm(&root), Reaped::Clear);
+        assert_eq!(reap_jailed_vmm(&discard(), &root), Reaped::Clear);
     }
 
     #[test]
@@ -506,6 +515,7 @@ mod tests {
         let scans = std::cell::Cell::new(0);
 
         let reaped = reap_jailed_vmm_with(
+            &discard(),
             &root,
             |_jail_root| {
                 scans.set(scans.get() + 1);
@@ -526,6 +536,7 @@ mod tests {
         let reaps = std::cell::Cell::new(0);
 
         let reaped = reap_jailed_vmm_with(
+            &discard(),
             &root,
             |_jail_root| Ok(Some(7)),
             |_pid, _jail_root| {
@@ -550,6 +561,7 @@ mod tests {
         let scans = std::cell::Cell::new(0);
 
         let reaped = reap_jailed_vmm_with(
+            &discard(),
             &root,
             |_jail_root| {
                 scans.set(scans.get() + 1);
@@ -574,13 +586,17 @@ mod tests {
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
         let reaped = reap_jailed_vmm_with(
+            &discard(),
             &root,
             |_jail_root| Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied)),
             |_pid, _jail_root| Reaped::Clear,
         );
 
         assert_eq!(reaped, Reaped::Unexaminable);
-        assert_eq!(reap_jailed_vmm(&root.join("absent")), Reaped::Clear);
+        assert_eq!(
+            reap_jailed_vmm(&discard(), &root.join("absent")),
+            Reaped::Clear
+        );
     }
 
     #[test]
@@ -591,6 +607,7 @@ mod tests {
         let scans = std::cell::Cell::new(0);
 
         let reaped = reap_jailed_vmm_with(
+            &discard(),
             &root,
             |_jail_root| {
                 scans.set(scans.get() + 1);

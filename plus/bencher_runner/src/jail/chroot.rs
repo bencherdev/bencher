@@ -1,12 +1,11 @@
 //! The per-job chroot, which the runner fills before the jailer runs because
 //! the jailer's `create_dir_all` accepts a path that already exists.
 
-#![expect(clippy::print_stderr, reason = "chroot teardown prints diagnostics")]
-
 use std::fs;
 use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _, lchown};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use slog::{Logger, warn};
 
 use crate::error::JailError;
 use crate::jail::{CgroupSurvived, JailUser, StateDir, VmId};
@@ -14,6 +13,7 @@ use crate::jail::{CgroupSurvived, JailUser, StateDir, VmId};
 /// A job's chroot tree, removed on drop because the jailer cleans up nothing.
 #[derive(Debug)]
 pub struct JailDir {
+    log: Logger,
     dir: Utf8PathBuf,
     root: Utf8PathBuf,
     cgroup_survived: CgroupSurvived,
@@ -22,16 +22,18 @@ pub struct JailDir {
 impl JailDir {
     /// Create the chroot tree for `vm_id` at mode 0700.
     pub fn create(
+        log: &Logger,
         state: &StateDir,
         vm_id: &VmId,
         cgroup_survived: CgroupSurvived,
     ) -> Result<Self, JailError> {
-        Self::create_with(state, vm_id, cgroup_survived, make_private)
+        Self::create_with(log, state, vm_id, cgroup_survived, make_private)
     }
 
     /// `create` with the mode tightening injectable, so a test can fail it with
     /// the tree already on disk.
     fn create_with<P>(
+        log: &Logger,
         state: &StateDir,
         vm_id: &VmId,
         cgroup_survived: CgroupSurvived,
@@ -53,6 +55,7 @@ impl JailDir {
         })?;
         // Built before `make_private` so a failure below is torn down by `Drop`.
         let jail = Self {
+            log: log.clone(),
             dir,
             root,
             cgroup_survived,
@@ -77,19 +80,16 @@ impl Drop for JailDir {
         // The chroot's name is a later sweep's only handle on a cgroup this job
         // could not remove, so it stays for the next job to reclaim both.
         if self.cgroup_survived.is_set() {
-            eprintln!(
-                "Warning: leaving jail {} in place because its cgroup could not be removed. The directory names that cgroup, so the next job sweeps both.",
-                self.dir
-            );
+            warn!(self.log, "Jail kept for its cgroup, left for the next sweep"; "jail" => self.dir.as_str());
             return;
         }
 
         if let Err(e) = fs::remove_dir_all(&self.dir)
             && e.kind() != std::io::ErrorKind::NotFound
         {
-            eprintln!(
-                "Warning: failed to remove jail {}: {e}. It holds a VMM binary and a full guest rootfs; the next job will sweep it.",
-                self.dir
+            warn!(self.log, "Jail not removed, left for the next sweep";
+                "jail" => self.dir.as_str(),
+                "error" => %e,
             );
         }
     }
@@ -135,6 +135,7 @@ pub fn chown_to_jail(path: &Utf8Path, jail_user: JailUser) -> Result<(), JailErr
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::log::discard;
 
     fn vm_id() -> VmId {
         VmId::from_chroot_name("vm-1".to_owned()).unwrap()
@@ -152,7 +153,8 @@ mod tests {
     fn create_builds_a_private_chroot_tree() {
         let (_dir, state) = state_in_tmpdir();
 
-        let jail = JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap();
+        let jail =
+            JailDir::create(&discard(), &state, &vm_id(), CgroupSurvived::default()).unwrap();
 
         assert_eq!(jail.root(), state.jail_root(&vm_id()));
         assert!(jail.root().is_dir());
@@ -167,7 +169,7 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
         fs::create_dir_all(state.jail_root(&vm_id())).unwrap();
 
-        JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap();
+        JailDir::create(&discard(), &state, &vm_id(), CgroupSurvived::default()).unwrap();
     }
 
     #[test]
@@ -175,7 +177,8 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
 
         {
-            let jail = JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap();
+            let jail =
+                JailDir::create(&discard(), &state, &vm_id(), CgroupSurvived::default()).unwrap();
             fs::write(jail.root().join("rootfs.ext4"), b"guest").unwrap();
             fs::create_dir_all(jail.root().join("dev")).unwrap();
         }
@@ -198,7 +201,8 @@ mod tests {
         fs::remove_dir_all(state.jail_parent()).unwrap();
         symlink(&victim, state.jail_parent()).unwrap();
 
-        let err = JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap_err();
+        let err =
+            JailDir::create(&discard(), &state, &vm_id(), CgroupSurvived::default()).unwrap_err();
 
         assert!(
             matches!(err, JailError::SymlinkedStateDir { .. }),
@@ -221,7 +225,7 @@ mod tests {
         let (_dir, state) = state_in_tmpdir();
         fs::write(state.jail_dir(&vm_id()), b"in the way").unwrap();
 
-        JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap_err();
+        JailDir::create(&discard(), &state, &vm_id(), CgroupSurvived::default()).unwrap_err();
     }
 
     #[test]
@@ -230,12 +234,18 @@ mod tests {
         // handing it to `Drop`.
         let (_dir, state) = state_in_tmpdir();
 
-        JailDir::create_with(&state, &vm_id(), CgroupSurvived::default(), |path| {
-            Err(JailError::CreateJail {
-                path: path.to_owned(),
-                source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
-            })
-        })
+        JailDir::create_with(
+            &discard(),
+            &state,
+            &vm_id(),
+            CgroupSurvived::default(),
+            |path| {
+                Err(JailError::CreateJail {
+                    path: path.to_owned(),
+                    source: std::io::Error::from(std::io::ErrorKind::PermissionDenied),
+                })
+            },
+        )
         .unwrap_err();
 
         assert!(
@@ -251,7 +261,7 @@ mod tests {
         // a later sweep nothing to find the cgroup by.
         let (_dir, state) = state_in_tmpdir();
         let cgroup_survived = CgroupSurvived::default();
-        let jail = JailDir::create(&state, &vm_id(), cgroup_survived.clone()).unwrap();
+        let jail = JailDir::create(&discard(), &state, &vm_id(), cgroup_survived.clone()).unwrap();
         fs::write(jail.root().join("rootfs.ext4"), b"guest").unwrap();
 
         cgroup_survived.set();
@@ -264,6 +274,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
     fn a_link_is_handed_over_without_its_target() {
         // Fails if the chown follows a link, handing the jail user its target.
         use std::os::unix::fs::{MetadataExt as _, symlink};
@@ -294,7 +305,8 @@ mod tests {
     #[test]
     fn drop_tolerates_an_already_removed_tree() {
         let (_dir, state) = state_in_tmpdir();
-        let jail = JailDir::create(&state, &vm_id(), CgroupSurvived::default()).unwrap();
+        let jail =
+            JailDir::create(&discard(), &state, &vm_id(), CgroupSurvived::default()).unwrap();
         fs::remove_dir_all(state.jail_dir(&vm_id())).unwrap();
         drop(jail);
     }

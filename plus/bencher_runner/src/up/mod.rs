@@ -1,4 +1,5 @@
 use bencher_json::RunnerResourceId;
+use slog::{Logger, error, info, warn};
 use url::Url;
 
 use crate::cpu::CpuLayout;
@@ -74,58 +75,44 @@ impl Up {
         Self { config }
     }
 
-    #[expect(clippy::print_stdout, reason = "runner CLI startup output")]
     #[cfg_attr(
         not(target_os = "linux"),
         expect(unused_mut, reason = "mut needed on Linux for CPU layout detection")
     )]
-    pub fn run(mut self) -> Result<(), UpError> {
+    pub fn run(mut self, log: &Logger) -> Result<(), UpError> {
         crate::signal::install_handlers();
-
-        println!(
-            "Bencher Runner v{} starting...",
-            bencher_json::BENCHER_API_VERSION
-        );
-        println!("  Host: {}", self.config.host);
-        println!("  Runner: {}", self.config.runner);
-        println!("  Poll timeout: {}s", self.config.poll_timeout_secs);
-        if self.config.allow_no_sandbox {
-            println!("  Non-sandboxed execution: allowed");
-        }
-
-        // Warn about host conditions that limit benchmark accuracy (Linux only)
-        preflight::print_host_warnings();
 
         // The host is prepared on demand, not here, because a runner serving
         // only non-sandboxed specs must come up without root.
-        println!("  State directory: {}", self.config.state_dir);
+        info!(log, "Runner starting";
+            "version" => bencher_json::BENCHER_API_VERSION,
+            "host" => self.config.host.as_str(),
+            "runner" => %self.config.runner,
+            "poll_timeout_secs" => self.config.poll_timeout_secs,
+            "state_dir" => self.config.state_dir.as_str(),
+            "allow_no_sandbox" => self.config.allow_no_sandbox,
+        );
+
+        // Warn about host conditions that limit benchmark accuracy (Linux only)
+        preflight::log_host_warnings(log);
 
         // Serialize host-global tuning across runner processes.
-        let host_lock = crate::tuning::HostTuningLock::acquire();
-        let tuning = host_lock.effective_tuning(&self.config.tuning);
+        let host_lock = crate::tuning::HostTuningLock::acquire(log);
+        let tuning = host_lock.effective_tuning(log, &self.config.tuning);
 
         // Apply host tuning, which persists until the host reboots (no-op on
         // non-Linux). This must happen before CPU layout detection so that SMT
         // changes are reflected in the core count.
-        let _tuning_guard = crate::tuning::apply(&tuning);
+        let _tuning_guard = crate::tuning::apply(log, &tuning);
 
         // Re-detect CPU layout after tuning (SMT may have changed core count).
         // Linux-only: CpuLayout::detect() reads /sys/devices which only exists on Linux.
         #[cfg(target_os = "linux")]
         {
-            self.config.cpu_layout = Some(CpuLayout::detect());
-            if let Some(cpu_layout) = &self.config.cpu_layout {
-                crate::tuning::apply_cpu_scoped(&tuning, cpu_layout);
-                if cpu_layout.has_isolation() {
-                    println!(
-                        "  CPU isolation: housekeeping={}, benchmark={}",
-                        cpu_layout.housekeeping_cpuset(),
-                        cpu_layout.benchmark_cpuset()
-                    );
-                } else {
-                    println!("  CPU isolation: disabled (insufficient cores)");
-                }
-            }
+            let cpu_layout = CpuLayout::detect(log);
+            crate::tuning::apply_cpu_scoped(log, &tuning, &cpu_layout);
+            cpu_layout.log_isolation(log);
+            self.config.cpu_layout = Some(cpu_layout);
         }
 
         let client = RunnerApiClient::new(
@@ -136,16 +123,20 @@ impl Up {
 
         let channel_url = client.channel_url()?;
 
-        println!("Connecting to channel...");
+        info!(log, "Connecting to channel");
 
-        run_driver(&self.config, &channel_url, client.key())
+        run_driver(log, &self.config, &channel_url, client.key())
     }
 }
 
 /// Effect-driven protocol loop. The state machine decides what to do; this
 /// function executes effects and feeds I/O results back.
-#[expect(clippy::print_stdout, reason = "runner CLI status output")]
-fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpError> {
+fn run_driver(
+    log: &Logger,
+    config: &UpConfig,
+    channel_url: &Url,
+    key: &str,
+) -> Result<(), UpError> {
     // Only the canary channel converges by checksum, so stable runners skip
     // the full-binary read and keep their wire format checksum-free.
     let checksum =
@@ -155,7 +146,7 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
             match self_checksum() {
                 Ok(checksum) => Some(checksum),
                 Err(e) => {
-                    println!("  Warning: failed to compute runner binary checksum: {e}");
+                    warn!(log, "Runner checksum failed"; "error" => %e);
                     None
                 },
             }
@@ -166,14 +157,14 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
         .as_ref()
         .and_then(|metadata| metadata.channel)
     {
-        println!("  Update channel: {channel}");
+        info!(log, "Update channel"; "channel" => %channel);
     }
     let mut host = crate::jail::HostPreparation::new();
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
     let mut ws: Option<Arc<Mutex<JobChannel>>> = None;
 
-    drive(&mut sm, crate::signal::stop_requested, |effect| {
-        execute_effect(effect, config, channel_url, key, &mut ws, &mut host)
+    drive(log, &mut sm, crate::signal::stop_requested, |effect| {
+        execute_effect(log, effect, config, channel_url, key, &mut ws, &mut host)
     })
 }
 
@@ -181,8 +172,12 @@ fn run_driver(config: &UpConfig, channel_url: &Url, key: &str) -> Result<(), UpE
 ///
 /// A stop reaches the machine once, ahead of the next effect, which still runs
 /// unless the machine exits first, so a running Job's result can go out.
-#[expect(clippy::print_stdout, reason = "runner CLI status output")]
-fn drive<S, F>(sm: &mut ChannelStateMachine, stopped: S, mut execute: F) -> Result<(), UpError>
+fn drive<S, F>(
+    log: &Logger,
+    sm: &mut ChannelStateMachine,
+    stopped: S,
+    mut execute: F,
+) -> Result<(), UpError>
 where
     S: Fn() -> bool,
     F: FnMut(Effect) -> EffectResult,
@@ -193,7 +188,7 @@ where
     while let Some(effect) = effects.pop_front() {
         if !stop_fed && stopped() {
             stop_fed = true;
-            println!("Shutdown signal received, exiting...");
+            info!(log, "Shutdown signal received");
             effects.push_front(effect);
             for shutdown in sm.step(Input::Shutdown).into_iter().rev() {
                 effects.push_front(shutdown);
@@ -229,12 +224,8 @@ enum EffectResult {
     Exit,
 }
 
-#[expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    reason = "runner CLI status and error output"
-)]
 fn execute_effect(
+    log: &Logger,
     effect: Effect,
     config: &UpConfig,
     channel_url: &Url,
@@ -249,32 +240,32 @@ fn execute_effect(
                 EffectResult::Input(Input::Connected)
             },
             Err(e) => {
-                println!("WebSocket connection failed: {e}");
+                warn!(log, "Channel connection failed"; "error" => bencher_logger::capped(&e));
                 EffectResult::Input(Input::ConnectionFailed)
             },
         },
         Effect::Send(msg) => match try_send(ws.as_ref(), &msg) {
             Ok(()) => EffectResult::Continue,
             Err(e) => {
-                eprintln!("Send failed: {e}");
+                warn!(log, "Channel send failed"; "error" => bencher_logger::capped(&e));
                 EffectResult::Input(Input::ConnectionFailed)
             },
         },
-        Effect::Receive(timeout) => EffectResult::Input(receive_input(ws.as_ref(), timeout)),
+        Effect::Receive(timeout) => EffectResult::Input(receive_input(log, ws.as_ref(), timeout)),
         Effect::WaitForJob(timeout) => {
-            EffectResult::Input(wait_for_job_input(ws.as_ref(), timeout))
+            EffectResult::Input(wait_for_job_input(log, ws.as_ref(), timeout))
         },
         Effect::ExecuteJob(job) => {
             let Some(ws_ref) = ws.as_ref() else {
-                eprintln!("Error: WS not connected during job execution");
+                error!(log, "Channel not connected for the Job"; "job" => %job.uuid);
                 return EffectResult::Input(Input::ConnectionFailed);
             };
-            let result = execute_job(config, &job, ws_ref, host);
+            let result = execute_job(log, config, &job, ws_ref, host);
             EffectResult::Input(Input::JobFinished(result))
         },
         Effect::SleepBeforeReconnect(reason) => {
             let delay = transient_retry_delay();
-            println!("Reconnecting in {} seconds ({reason})...", delay.as_secs());
+            info!(log, "Reconnecting"; "delay_secs" => delay.as_secs(), "reason" => %reason);
             std::thread::sleep(delay);
             EffectResult::Continue
         },
@@ -288,21 +279,21 @@ fn execute_effect(
             EffectResult::Continue
         },
         Effect::ReportOutcome(outcome) => {
-            report_outcome(&outcome);
+            report_outcome(log, &outcome);
             EffectResult::Continue
         },
         Effect::Log(level, msg) => {
-            log_message(level, &msg);
+            log_message(log, level, &msg);
             EffectResult::Continue
         },
         Effect::SelfUpdate {
             version,
             url,
             checksum,
-        } => match self_update(&version, &url, &checksum, config.max_download_size) {
+        } => match self_update(log, &version, &url, &checksum, config.max_download_size) {
             Ok(()) => EffectResult::Exit,
             Err(e) => {
-                eprintln!("Self-update failed: {e}");
+                warn!(log, "Self-update failed"; "error" => bencher_logger::capped(&e));
                 EffectResult::Input(Input::SelfUpdateFailed)
             },
         },
@@ -321,8 +312,7 @@ fn try_send(
     ws_guard.send_message(msg)
 }
 
-#[expect(clippy::print_stderr, reason = "runner CLI connection error output")]
-fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
+fn receive_input(log: &Logger, ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
     let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
     };
@@ -333,14 +323,17 @@ fn receive_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Inpu
         Ok(Some(msg)) => Input::Message(msg),
         Ok(None) => Input::ReceiveTimeout,
         Err(e) => {
-            eprintln!("Connection lost: {e}");
+            warn!(log, "Channel connection lost"; "error" => bencher_logger::capped(&e));
             Input::ConnectionFailed
         },
     }
 }
 
-#[expect(clippy::print_stderr, reason = "runner CLI connection error output")]
-fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) -> Input {
+fn wait_for_job_input(
+    log: &Logger,
+    ws: Option<&Arc<Mutex<JobChannel>>>,
+    timeout: Duration,
+) -> Input {
     let Some(ws_ref) = ws else {
         return Input::ConnectionFailed;
     };
@@ -355,18 +348,13 @@ fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) ->
         // ConnectionFailed is the safer default — the state machine will
         // reconnect either way, and Close on a dead connection is a no-op.
         Err(e) => {
-            eprintln!("Connection lost: {e}");
+            warn!(log, "Channel connection lost"; "error" => bencher_logger::capped(&e));
             Input::ConnectionFailed
         },
     }
 }
 
-#[expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    reason = "runner CLI job outcome output"
-)]
-fn report_outcome(outcome: &state_machine::JobOutcome) {
+fn report_outcome(log: &Logger, outcome: &state_machine::JobOutcome) {
     let state_machine::JobOutcome { job, kind, acked } = outcome;
     match kind {
         state_machine::TerminalKind::Completed {
@@ -374,33 +362,34 @@ fn report_outcome(outcome: &state_machine::JobOutcome) {
             stdout_bytes,
             stderr_bytes,
         } => {
-            println!(
-                "Job {job} completed (exit_code={exit_code}, stdout={stdout_bytes} bytes, stderr={stderr_bytes} bytes)"
+            info!(log, "Job completed";
+                "job" => %job,
+                "exit_code" => *exit_code,
+                "stdout_bytes" => *stdout_bytes,
+                "stderr_bytes" => *stderr_bytes,
             );
         },
         state_machine::TerminalKind::Failed { error } => {
-            println!("Job {job} failed: {error}");
+            info!(log, "Job failed"; "job" => %job, "error" => bencher_logger::capped(error));
         },
         state_machine::TerminalKind::Canceled => {
-            println!("Job {job} was canceled");
+            info!(log, "Job canceled"; "job" => %job);
         },
     }
     if !acked {
-        eprintln!("Warning: did not receive server ACK for job {job}");
+        warn!(log, "No server ACK for the Job"; "job" => %job);
     }
-    println!("Polling for jobs...");
+    info!(log, "Polling for jobs");
 }
 
-#[expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    reason = "runner CLI log output"
-)]
-fn log_message(level: LogLevel, msg: &str) {
+/// The state machine's text, which can quote a server message, goes in a
+/// capped field under one fixed `msg`.
+fn log_message(log: &Logger, level: LogLevel, msg: &str) {
+    let detail = bencher_logger::capped(msg);
     match level {
-        LogLevel::Info => println!("{msg}"),
-        LogLevel::Warn => eprintln!("Warning: {msg}"),
-        LogLevel::Error => eprintln!("Error: {msg}"),
+        LogLevel::Info => info!(log, "Channel"; "detail" => detail),
+        LogLevel::Warn => warn!(log, "Channel"; "detail" => detail),
+        LogLevel::Error => error!(log, "Channel"; "detail" => detail),
     }
 }
 
@@ -429,11 +418,8 @@ impl Drop for CleanupGuard {
     }
 }
 
-#[expect(
-    clippy::print_stdout,
-    reason = "runner CLI self-update progress output"
-)]
 fn self_update(
+    log: &Logger,
     version: &str,
     url: &Url,
     checksum: &bencher_valid::Sha256,
@@ -451,8 +437,10 @@ fn self_update(
         use std::os::unix::fs::PermissionsExt as _;
         use std::os::unix::process::CommandExt as _;
 
-        println!("Updating to version {version}...");
-        println!("  Downloading: {url}");
+        info!(log, "Updating";
+            "version" => bencher_logger::capped(version),
+            "url" => bencher_logger::capped(url),
+        );
 
         let current_exe = std::env::current_exe().map_err(SelfUpdateError::CurrentExe)?;
         let new_path = current_exe.with_extension("new");
@@ -501,7 +489,7 @@ fn self_update(
                 actual,
             });
         }
-        println!("  Checksum verified: {checksum}");
+        info!(log, "Update checksum verified"; "checksum" => %checksum);
 
         std::fs::set_permissions(&new_path, std::fs::Permissions::from_mode(0o755))
             .map_err(SelfUpdateError::FileOp)?;
@@ -520,7 +508,7 @@ fn self_update(
             SelfUpdateError::FileOp(e)
         })?;
 
-        println!("  Binary updated. Restarting...");
+        info!(log, "Update installed, restarting");
 
         let args: Vec<String> = std::env::args().skip(1).collect();
         let err = std::process::Command::new(&current_exe).args(&args).exec();
@@ -689,7 +677,7 @@ mod tests {
             );
             stop.load(Ordering::SeqCst)
         };
-        let result = drive(&mut sm, stopped, |effect| {
+        let result = drive(&crate::log::discard(), &mut sm, stopped, |effect| {
             steps += 1;
             assert!(steps < 100, "the driver never exited, sent: {sent:?}");
             match effect {

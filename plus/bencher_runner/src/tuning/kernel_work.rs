@@ -7,8 +7,9 @@
 //! returns EIO); those are skipped and summarized in a single line.
 
 use camino::Utf8Path;
+use slog::{Logger, info};
 
-use super::{print_left, write_sysctl_with};
+use super::{log_left, log_skipped, write_sysctl_with};
 use crate::cpu::{CpuLayout, format_cpumask};
 
 const DEFAULT_SMP_AFFINITY: &str = "proc/irq/default_smp_affinity";
@@ -18,11 +19,12 @@ const WORKQUEUE_CPUMASK: &str = "sys/devices/virtual/workqueue/cpumask";
 ///
 /// `root` is the filesystem root (`/` in production); tests pass a
 /// tempdir tree containing `proc/` and `sys/` subtrees.
-pub(super) fn steer_kernel_work(layout: &CpuLayout, root: &Utf8Path) {
+pub(super) fn steer_kernel_work(log: &Logger, layout: &CpuLayout, root: &Utf8Path) {
     let housekeeping_mask = format_cpumask(&layout.housekeeping);
 
     // New IRQs default to housekeeping cores.
     write_sysctl_with(
+        log,
         root.join(DEFAULT_SMP_AFFINITY).as_str(),
         &housekeeping_mask,
         "default IRQ affinity",
@@ -31,32 +33,38 @@ pub(super) fn steer_kernel_work(layout: &CpuLayout, root: &Utf8Path) {
 
     // Unbound workqueue workers run on housekeeping cores.
     write_sysctl_with(
+        log,
         root.join(WORKQUEUE_CPUMASK).as_str(),
         &housekeeping_mask,
         "workqueue cpumask",
         same_cpumask,
     );
 
-    steer_existing_irqs(layout, root);
+    steer_existing_irqs(log, layout, root);
 }
 
-/// Print the current value of each mask [`steer_kernel_work`] sets.
-pub(super) fn print_steering(root: &Utf8Path) {
-    print_left(
+/// Log the current value of each mask [`steer_kernel_work`] sets.
+pub(super) fn log_steering(log: &Logger, root: &Utf8Path) {
+    log_left(
+        log,
         root.join(DEFAULT_SMP_AFFINITY).as_str(),
         "default IRQ affinity",
     );
-    print_left(root.join(WORKQUEUE_CPUMASK).as_str(), "workqueue cpumask");
+    log_left(
+        log,
+        root.join(WORKQUEUE_CPUMASK).as_str(),
+        "workqueue cpumask",
+    );
 }
 
 /// Move every movable IRQ to the housekeeping cores.
 ///
 /// Iterates `proc/irq/<N>/smp_affinity_list`, skipping per-IRQ failures
-/// (unmovable IRQs fail with EIO), and prints one summary line.
-fn steer_existing_irqs(layout: &CpuLayout, root: &Utf8Path) {
+/// (unmovable IRQs fail with EIO), and logs one summary record.
+fn steer_existing_irqs(log: &Logger, layout: &CpuLayout, root: &Utf8Path) {
     let irq_dir = root.join("proc/irq");
     let Ok(entries) = std::fs::read_dir(irq_dir.as_std_path()) else {
-        println!("  Tuning: IRQ steering - skipped (cannot read {irq_dir})");
+        log_skipped(log, "IRQ steering", "IRQ directory unreadable");
         return;
     };
 
@@ -93,8 +101,12 @@ fn steer_existing_irqs(layout: &CpuLayout, root: &Utf8Path) {
         moved += 1;
     }
 
-    println!(
-        "  Tuning: IRQ steering - moved {moved} of {total} IRQs to housekeeping cores ({housekeeping_list})"
+    info!(log, "Tuning";
+        "setting" => "IRQ steering",
+        "action" => "set",
+        "value" => housekeeping_list,
+        "moved" => moved,
+        "irqs" => total,
     );
 }
 
@@ -147,7 +159,7 @@ mod tests {
         let (_dir, root) = fake_root();
         let layout = CpuLayout::with_core_count(8);
 
-        steer_kernel_work(&layout, &root);
+        steer_kernel_work(&crate::log::discard(), &layout, &root);
 
         assert_eq!(
             fs::read_to_string(root.join("proc/irq/default_smp_affinity")).unwrap(),
@@ -175,7 +187,7 @@ mod tests {
         fs::create_dir_all(root.join("proc/irq/12/smp_affinity_list")).unwrap();
         let layout = CpuLayout::with_core_count(8);
 
-        steer_kernel_work(&layout, &root);
+        steer_kernel_work(&crate::log::discard(), &layout, &root);
 
         // The unmovable IRQ is skipped; the movable ones are still steered.
         for irq in ["10", "11"] {
@@ -194,7 +206,7 @@ mod tests {
         fs::write(root.join("proc/irq/10/smp_affinity_list"), "0-1\n").unwrap();
         let layout = CpuLayout::with_core_count(8);
 
-        steer_kernel_work(&layout, &root);
+        steer_kernel_work(&crate::log::discard(), &layout, &root);
 
         assert_eq!(
             fs::read_to_string(root.join("proc/irq/10/smp_affinity_list")).unwrap(),
@@ -215,7 +227,7 @@ mod tests {
         .unwrap();
         let layout = CpuLayout::with_core_count(8);
 
-        steer_kernel_work(&layout, &root);
+        steer_kernel_work(&crate::log::discard(), &layout, &root);
 
         assert_eq!(
             fs::read_to_string(root.join("proc/irq/default_smp_affinity")).unwrap(),
@@ -239,7 +251,7 @@ mod tests {
         fs::write(root.join("sys/devices/virtual/workqueue/cpumask"), "000f\n").unwrap();
         let layout = CpuLayout::with_core_count(8);
 
-        steer_kernel_work(&layout, &root);
+        steer_kernel_work(&crate::log::discard(), &layout, &root);
 
         assert_eq!(
             fs::read_to_string(root.join("proc/irq/default_smp_affinity")).unwrap(),
@@ -258,7 +270,7 @@ mod tests {
         fs::write(root.join("proc/irq/not-an-irq/smp_affinity_list"), "0-7\n").unwrap();
         let layout = CpuLayout::with_core_count(8);
 
-        steer_kernel_work(&layout, &root);
+        steer_kernel_work(&crate::log::discard(), &layout, &root);
 
         assert_eq!(
             fs::read_to_string(root.join("proc/irq/not-an-irq/smp_affinity_list")).unwrap(),
