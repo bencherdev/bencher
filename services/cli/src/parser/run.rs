@@ -317,6 +317,8 @@ pub struct CliRunJob {
             "backdate",
             "allow_failure",
             "threshold_measure",
+            "threshold_metric",
+            "threshold_parameters",
             "threshold_test",
             "threshold_min_sample_size",
             "threshold_max_sample_size",
@@ -456,6 +458,11 @@ mod tests {
         ("backdate", &["--backdate", "1700000000"]),
         ("allow_failure", &["--allow-failure"]),
         ("threshold_measure", &["--threshold-measure", "latency"]),
+        ("threshold_metric", &["--threshold-metric", "p99"]),
+        (
+            "threshold_parameters",
+            &["--threshold-parameters", r#"{"size": 1}"#],
+        ),
         ("threshold_test", &["--threshold-test", "t_test"]),
         (
             "threshold_min_sample_size",

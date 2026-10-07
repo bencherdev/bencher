@@ -1,6 +1,6 @@
 use bencher_json::{
-    Boundary, BranchNameId, DateTime, GitHash, MeasureNameId, ProjectResourceId, ReportUuid,
-    SampleSize, TestbedNameId, Window,
+    Boundary, BranchNameId, DateTime, GitHash, MeasureNameId, MetricName, ParameterSet,
+    ProjectResourceId, ReportUuid, SampleSize, TestbedNameId, Window,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -124,6 +124,16 @@ pub struct CliReportThresholds {
     /// To ignore an option for a specific Threshold, use an underscore (`_`).
     #[clap(long)]
     pub threshold_measure: Vec<MeasureNameId>,
+
+    /// Threshold metric name (BMF version 1)
+    /// Any Threshold metric or parameters declare the Thresholds as BMF version 1, where every Threshold needs a metric.
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_metric: Vec<ElidedOption<MetricName>>,
+
+    /// Threshold parameters filter, as a JSON object of the parameters a variant must have (BMF version 1)
+    /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
+    #[clap(long, requires = "threshold_test")]
+    pub threshold_parameters: Vec<ElidedOption<ParameterSet>>,
 
     /// Threshold model test
     #[clap(value_enum, long, requires = "threshold_measure")]
