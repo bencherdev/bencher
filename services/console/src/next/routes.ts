@@ -13,7 +13,11 @@ export const PAGES: Record<PageName, Page> = {
 	Explore: lazy(() => import("./pages/Explore")),
 	Plots: lazy(() => import("./pages/Plots")),
 	Reports: lazy(reportsPage),
-	Report: lazy(() => import("./pages/Report")),
+	// Reading only the default export spares the bundler a namespace object,
+	// whose helper it would load from an unrelated chunk.
+	Report: lazy<Component>(() =>
+		import("./pages/Report").then(({ default: page }) => ({ default: page })),
+	),
 	Alerts: lazy(() => import("./pages/Alerts")),
 	Thresholds: lazy(() => import("./pages/Thresholds")),
 	Settings: lazy(() => import("./pages/Settings")),

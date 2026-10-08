@@ -1,4 +1,5 @@
 import "@bencherdev/ui/styles.css";
+import "./plot.css";
 import { THEME_ATTRIBUTE } from "@bencherdev/ui/ThemeToggle";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
