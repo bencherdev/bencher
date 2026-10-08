@@ -93,24 +93,24 @@ impl Up {
             "allow_no_sandbox" => self.config.allow_no_sandbox,
         );
 
+        #[cfg(target_os = "linux")]
+        let _runner_lock =
+            crate::runner_lock::RunnerLock::acquire(log).map_err(crate::RunnerError::from)?;
+
         // Warn about host conditions that limit benchmark accuracy (Linux only)
         preflight::log_host_warnings(log);
-
-        // Serialize host-global tuning across runner processes.
-        let host_lock = crate::tuning::HostTuningLock::acquire(log);
-        let tuning = host_lock.effective_tuning(log, &self.config.tuning);
 
         // Apply host tuning, which persists until the host reboots (no-op on
         // non-Linux). This must happen before CPU layout detection so that SMT
         // changes are reflected in the core count.
-        let _tuning_guard = crate::tuning::apply(log, &tuning);
+        let _tuning_guard = crate::tuning::apply(log, &self.config.tuning);
 
         // Re-detect CPU layout after tuning (SMT may have changed core count).
         // Linux-only: CpuLayout::detect() reads /sys/devices which only exists on Linux.
         #[cfg(target_os = "linux")]
         {
             let cpu_layout = CpuLayout::detect(log);
-            crate::tuning::apply_cpu_scoped(log, &tuning, &cpu_layout);
+            crate::tuning::apply_cpu_scoped(log, &self.config.tuning, &cpu_layout);
             cpu_layout.log_isolation(log);
             self.config.cpu_layout = Some(cpu_layout);
         }

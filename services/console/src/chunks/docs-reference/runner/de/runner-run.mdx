@@ -40,10 +40,12 @@ Es muss ein absoluter Pfad sein.
 Das Jail, das die Sandbox einschließt, wird unter diesem Verzeichnis erstellt,
 und Jails, die durch eine unsaubere Beendigung zurückgeblieben sind, werden vor jedem Sandbox-Job daraus entfernt.
 Jedes Jail enthält ein vollständiges Gast-Root-Dateisystem und eine Kopie der microVM-Binärdatei,
-und Jobs, die sich ein Zustandsverzeichnis teilen, laufen nacheinander,
+und ein Runner führt seine Jobs nacheinander aus,
 daher braucht dieses Verzeichnis echte Kapazität für ein Jail.
-Ein Sandbox-Job schlägt außerdem sofort fehl, statt zu warten, wenn auf demselben Host ein Job eines Runners mit einem anderen Zustandsverzeichnis oder ein Job ohne Sandbox in einer Bencher-Cgroup läuft.
-Ein Job läuft nur dann in einer solchen Cgroup, wenn sein Runner CPU-Kerne isolieren kann, daher werden die Jobs eines Runners, der das nicht kann, nicht erkannt.
+Auf einem Host läuft immer nur ein Runner, unabhängig von seinem Zustandsverzeichnis:
+Ein als `root` gestarteter Runner hält die Sperre `/run/bencher/runner.lock`, solange er läuft,
+und ein zweiter, als `root` gestarteter beendet sich sofort mit einem Fehler, der diese Sperre nennt; ein Runner, der nicht als `root` läuft, kann die Sperre nicht öffnen und läuft ohne sie.
+Ein Sandbox-Job schlägt weiterhin sofort fehl, wenn auf dem Host ein Prozess in einer anderen Bencher-Cgroup läuft, etwa einer, den ein Runner mit einem anderen Zustandsverzeichnis zurückgelassen hat.
 Ein eigenes Dateisystem oder ein `tmpfs`-Mount wird unterstützt und empfohlen:
 es hält diese Schreiblast von der Systemplatte fern,
 und ein neu erstelltes Dateisystem wird akzeptiert, auch wenn es ein `lost+found`-Verzeichnis mitbringt.

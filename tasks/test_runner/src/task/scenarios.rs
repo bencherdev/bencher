@@ -42,6 +42,9 @@ struct Scenario {
     description: &'static str,
     dockerfile: &'static str,
     extra_args: &'static [&'static str],
+    /// Run two iterations, and plant a stale jail once the first one's jail is
+    /// built, after that one's sweep and long before the second one's.
+    planted_between_jobs: bool,
     /// If set, send SIGTERM to the runner this many seconds after its guest
     /// boots, so the cancel exercises the VM's teardown.
     cancel_after_secs: Option<u64>,
@@ -60,11 +63,14 @@ struct Scenario {
     /// Kill the runner once its VMM is up, then rerun the image; `validate` sees
     /// the second run.
     orphan_then_rerun: bool,
-    /// Leave a sibling's orphan between the two jobs of one runner process,
-    /// whose output `validate` sees.
-    orphan_between_jobs: bool,
-    /// Hold a stand-in process in another cgroup under the runner's base, as a
-    /// runner with another state directory would.
+    /// Start a second runner, with its own state directory, once a first one's
+    /// VMM is up; `validate` sees the second.
+    second_runner: bool,
+    /// Run the image once a `runner up` that never reaches its server is
+    /// waiting on it, long past its startup.
+    held_by_runner_up: bool,
+    /// Hold a stand-in process in another cgroup under the runner's base, as an
+    /// orphan in another state directory would.
     occupied_cgroup: bool,
     /// The same stand-in, placed once the runner has built its jail and before
     /// its VMM exists, so only the check after placement can see it.
@@ -72,8 +78,9 @@ struct Scenario {
     unusable_state_dir: bool,
     /// Point the runner at a state directory on a `nodev` tmpfs.
     nodev_state_dir: bool,
-    /// Queue the run on the jail lock behind a holder until its timeout is gone.
-    queued_past_timeout: bool,
+    /// Stop the runner before its jail until its timeout is gone, then let it go
+    /// on.
+    stopped_past_timeout: bool,
     /// A line the image must print in a plain run first, so a run that prints
     /// nothing cannot pass on a runner that boots no guest.
     control_marker: Option<&'static str>,
@@ -87,6 +94,7 @@ impl Default for Scenario {
             description: "",
             dockerfile: "",
             extra_args: &[],
+            planted_between_jobs: false,
             cancel_after_secs: None,
             cancelled_twice: false,
             cancelled_while_preparing: false,
@@ -95,12 +103,13 @@ impl Default for Scenario {
             probe: None,
             tuning: false,
             orphan_then_rerun: false,
-            orphan_between_jobs: false,
+            second_runner: false,
+            held_by_runner_up: false,
             occupied_cgroup: false,
             occupied_mid_build: false,
             unusable_state_dir: false,
             nodev_state_dir: false,
-            queued_past_timeout: false,
+            stopped_past_timeout: false,
             control_marker: None,
             // Most scenarios are sandboxed, so the few that are not opt out.
             sandboxed: true,
@@ -700,6 +709,8 @@ fn run_and_validate(
 
     let output = if scenario.unusable_state_dir {
         run_runner_without_unjailed_vmm(image_path, &args, runner_bin)
+    } else if scenario.planted_between_jobs {
+        run_runner_planted_between_jobs(image_path, &args, state_dir, runner_bin)
     } else if let Some(secs) = scenario.cancel_after_secs {
         run_runner_with_cancel(
             image_path,
@@ -714,10 +725,12 @@ fn run_and_validate(
         run_runner_cancelled_while_preparing(image_path, &args, runner_bin)
     } else if scenario.orphan_then_rerun {
         run_runner_after_orphan(image_path, &args, state_dir, runner_bin)
-    } else if scenario.orphan_between_jobs {
-        run_runner_beside_sibling_orphan(image_path, &args, state_dir, runner_bin)
-    } else if scenario.queued_past_timeout {
-        run_runner_queued_past_timeout(image_path, &args, state_dir, runner_bin)
+    } else if scenario.second_runner {
+        run_second_runner(image_path, &args, state_dir, runner_bin)
+    } else if scenario.held_by_runner_up {
+        run_runner_beside_runner_up(image_path, &args, runner_bin)
+    } else if scenario.stopped_past_timeout {
+        run_runner_stopped_past_timeout(image_path, &args, runner_bin)
     } else if scenario.occupied_cgroup {
         run_runner_beside_occupied_cgroup(image_path, &args, runner_bin)
     } else if scenario.occupied_mid_build {
@@ -2475,6 +2488,10 @@ fn jail_parent(state_dir: &Utf8Path) -> Utf8PathBuf {
     state_dir.join("jail").join("firecracker")
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "each scenario needs its configuration"
+)]
 fn jail_scenarios() -> Vec<Scenario> {
     let mut scenarios = vec![
         Scenario {
@@ -2567,6 +2584,26 @@ CMD ["printf", "%s_%s\\n", "JAIL_SWEEP", "a7f3b2c9"]"#,
             },
             ..Scenario::default()
         },
+        Scenario {
+            name: "jail_sweep_runs_before_every_job",
+            description: "A stale jail that appears between two iterations of one run is swept by the second, not only by the first",
+            dockerfile: r#"FROM busybox
+CMD ["printf", "%s_%s\\n", "EVERY_JOB", "a7f3b2c9"]"#,
+            planted_between_jobs: true,
+            extra_args: JAIL_ARGS,
+            validate: |output| {
+                assert_job_succeeded(output, "EVERY_JOB_a7f3b2c9")?;
+                let jobs = guest_printed(output, "EVERY_JOB_a7f3b2c9");
+                anyhow::ensure!(
+                    jobs == 2,
+                    "Expected both iterations to run, but the guest ran {jobs} time(s).\nstdout: {}\nstderr: {}",
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
     ];
     scenarios.extend(jail_contention_scenarios());
     scenarios
@@ -2576,10 +2613,10 @@ fn jail_contention_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
             name: "jail_no_boot_past_timeout",
-            description: "A run whose timeout runs out while it queues on the jail lock never boots its VM",
+            description: "A run whose timeout runs out before its VM boots never boots it",
             dockerfile: r#"FROM busybox
 CMD ["printf", "%s_%s\\n", "QUEUED", "a7f3b2c9"]"#,
-            queued_past_timeout: true,
+            stopped_past_timeout: true,
             control_marker: Some("QUEUED_a7f3b2c9"),
             validate: |output| {
                 anyhow::ensure!(
@@ -2598,25 +2635,23 @@ CMD ["printf", "%s_%s\\n", "QUEUED", "a7f3b2c9"]"#,
             ..Scenario::default()
         },
         Scenario {
-            name: "jail_sweep_reclaims_sibling_orphan",
-            description: "An orphan a sibling runner process leaves between two jobs is reaped by the second",
-            // Long enough that the sibling reaches the jail lock while the first
-            // job still holds it.
+            name: "runner_lock_refuses_a_second_runner",
+            description: "A second `runner run` or `runner up` on the host exits at once, naming the runner lock, whatever its state directory",
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "printf '%s_%s\\n' JAIL_SIBLING a7f3b2c9 && sleep 10"]"#,
-            orphan_between_jobs: true,
-            extra_args: JAIL_ARGS,
-            validate: |output| {
-                assert_job_succeeded(output, "JAIL_SIBLING_a7f3b2c9")?;
-                let jobs = guest_printed(output, "JAIL_SIBLING_a7f3b2c9");
-                anyhow::ensure!(
-                    jobs == 2,
-                    "Expected both jobs to run, but the guest ran {jobs} time(s).\nstdout: {}\nstderr: {}",
-                    output.stdout,
-                    output.stderr
-                );
-                assert_no_chroot_remains(&scenario_state_dir())
-            },
+CMD ["printf", "%s_%s\\n", "SECOND_RUNNER", "a7f3b2c9"]"#,
+            second_runner: true,
+            control_marker: Some("SECOND_RUNNER_a7f3b2c9"),
+            validate: |output| assert_refused_by_the_lock(output, "SECOND_RUNNER_a7f3b2c9"),
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "runner_up_holds_the_runner_lock",
+            description: "A `runner up` holds the runner lock for as long as it runs, not only while it starts",
+            dockerfile: r#"FROM busybox
+CMD ["printf", "%s_%s\\n", "BESIDE_UP", "a7f3b2c9"]"#,
+            held_by_runner_up: true,
+            control_marker: Some("BESIDE_UP_a7f3b2c9"),
+            validate: |output| assert_refused_by_the_lock(output, "BESIDE_UP_a7f3b2c9"),
             ..Scenario::default()
         },
         Scenario {
@@ -2642,19 +2677,23 @@ CMD ["printf", "%s_%s\\n", "JAIL_OCCUPIED_MID", "a7f3b2c9"]"#,
     ]
 }
 
-/// Holds the jail lock well past the queued run's timeout.
-const HOLDER_DOCKERFILE: &str = r#"FROM busybox
-CMD ["sh", "-c", "echo JAIL_HOLDER_a7f3b2c9 && sleep 8"]"#;
+/// Spelled here rather than read from the runner, so the product cannot move it
+/// underneath the harness.
+const RUNNER_LOCK: &str = "/run/bencher/runner.lock";
 
-/// Runs the image with a 3 s timeout once a holder's VMM is up in the same
-/// state directory, so the run waits on the jail lock until its time is gone.
-fn run_runner_queued_past_timeout(
+/// Keeps the first runner, and so its lock, alive well past the second's start.
+const HOLDER_DOCKERFILE: &str = r#"FROM busybox
+CMD ["sh", "-c", "echo RUNNER_HOLDER_a7f3b2c9 && sleep 8"]"#;
+
+/// The second runner gets a state directory of its own, so only a lock outside
+/// every state directory can stop it.
+fn run_second_runner(
     image_path: &Utf8Path,
     args: &[&str],
     state_dir: &Utf8Path,
     runner_bin: &Utf8Path,
 ) -> Result<ScenarioOutput> {
-    let holder_image = build_test_image("jail_holder", HOLDER_DOCKERFILE)
+    let holder_image = build_test_image("runner_holder", HOLDER_DOCKERFILE)
         .context("Failed to build the holder's image")?;
     let parent = jail_parent(state_dir);
     let mut holder = spawn_runner(
@@ -2676,12 +2715,31 @@ fn run_runner_queued_past_timeout(
         }
         std::thread::sleep(PROBE_INTERVAL);
     };
+    let second_state = super::work_dir().join("second-state");
+    drop(fs::remove_dir_all(&second_state));
     let output = if held {
-        run_runner(
-            image_path,
-            &[args, &["--timeout", "3"]].concat(),
-            runner_bin,
-        )
+        let second_args: Vec<&str> = args
+            .iter()
+            .map(|arg| {
+                if *arg == state_dir.as_str() {
+                    second_state.as_str()
+                } else {
+                    arg
+                }
+            })
+            .collect();
+        run_runner(image_path, &second_args, runner_bin).and_then(|output| {
+            let up = run_second_runner_up(&second_state, runner_bin)?;
+            anyhow::ensure!(
+                up.exit_code == 1
+                    && runner_error(&up).is_some_and(|error| error.contains(RUNNER_LOCK)),
+                "Expected `runner up` to exit naming {RUNNER_LOCK}, got exit code {}.\nstdout: {}\nstderr: {}",
+                up.exit_code,
+                up.stdout,
+                up.stderr
+            );
+            Ok(output)
+        })
     } else {
         if holder.try_wait()?.is_none() {
             kill_pid(holder.id(), libc::SIGKILL);
@@ -2692,13 +2750,226 @@ fn run_runner_queued_past_timeout(
     };
     let status = holder.wait()?;
     let (stdout, stderr) = holder_output.join();
+    let stranded = reclaim_stranded_jails(&second_state);
+    drop(fs::remove_dir_all(&second_state));
     let output =
         output.with_context(|| format!("holder stdout: {stdout}\nholder stderr: {stderr}"))?;
     anyhow::ensure!(
+        stranded?.is_empty(),
+        "The second runner left a jail behind in {second_state}"
+    );
+    anyhow::ensure!(
         status.success(),
-        "The holder failed, so the lock it held is unproven.\nstdout: {stdout}\nstderr: {stderr}"
+        "The holder failed, so the second runner may have disturbed it.\nstdout: {stdout}\nstderr: {stderr}"
     );
     Ok(output)
+}
+
+/// Syntactically a runner key, for a server that is never reached.
+const PROBE_KEY: &str = "bencher_runner_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
+
+/// Far past the moment a runner fails at its lock, and the daemon retries an
+/// unreachable server for ever.
+const UP_EXITS_WITHIN: Duration = Duration::from_secs(30);
+
+/// `runner up` against an address nothing answers, so only the lock can end it.
+fn run_second_runner_up(state_dir: &Utf8Path, runner_bin: &Utf8Path) -> Result<ScenarioOutput> {
+    let mut child = spawn_runner_up(state_dir, runner_bin)?;
+    let drained = drain_output(&mut child);
+    let deadline = std::time::Instant::now() + UP_EXITS_WITHIN;
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break Some(status);
+        }
+        if std::time::Instant::now() >= deadline {
+            kill_pid(child.id(), libc::SIGKILL);
+            child.wait()?;
+            break None;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    };
+    let (stdout, stderr) = drained.join();
+    let status = status.with_context(|| {
+        format!("`runner up` was still running after {UP_EXITS_WITHIN:?}.\nstdout: {stdout}\nstderr: {stderr}")
+    })?;
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.code().unwrap_or(-1),
+    })
+}
+
+/// A daemon whose server is an address nothing answers, so it retries for ever.
+fn spawn_runner_up(state_dir: &Utf8Path, runner_bin: &Utf8Path) -> Result<std::process::Child> {
+    Ok(Command::new(runner_bin.as_str())
+        .args([
+            "up",
+            "--host",
+            "http://127.0.0.1:9",
+            "--runner",
+            "lock-probe",
+            "--key",
+            PROBE_KEY,
+            "--no-tuning",
+            "--state-dir",
+            state_dir.as_str(),
+        ])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?)
+}
+
+/// How long the daemon has been waiting on its server when the run starts.
+const UP_WAITING_FOR: Duration = Duration::from_secs(2);
+
+/// The run starts once the daemon is past every startup step and waiting on
+/// its server, so only a lock held for the daemon's whole life stops it.
+fn run_runner_beside_runner_up(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let up_state = super::work_dir().join("up-state");
+    drop(fs::remove_dir_all(&up_state));
+    let mut up = spawn_runner_up(&up_state, runner_bin)?;
+    let mut streamed = StreamedOutput::start(&mut up);
+    let output = streamed
+        .wait_for_record("Connecting to channel")
+        .and_then(|_record| {
+            std::thread::sleep(UP_WAITING_FOR);
+            run_runner(image_path, args, runner_bin)
+        });
+    let ran_through = up.try_wait()?.is_none();
+    kill_pid(up.id(), libc::SIGKILL);
+    up.wait()?;
+    let (stdout, stderr) = streamed.join();
+    drop(fs::remove_dir_all(&up_state));
+    let output = output
+        .with_context(|| format!("runner up stdout: {stdout}\nrunner up stderr: {stderr}"))?;
+    anyhow::ensure!(
+        ran_through,
+        "`runner up` exited before the run ended, so it held nothing.\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    Ok(output)
+}
+
+/// The runner's own failure exit, naming the lock, before it built a jail or
+/// ran the guest.
+fn assert_refused_by_the_lock(output: &ScenarioOutput, marker: &str) -> Result<()> {
+    anyhow::ensure!(
+        output.exit_code == 1
+            && runner_error(output).is_some_and(|error| error.contains(RUNNER_LOCK))
+            && records_with(&output.stderr, "Jail built").next().is_none()
+            && guest_printed(output, marker) == 0,
+        "Expected the runner to exit naming {RUNNER_LOCK} before it built a jail, got exit code {}.\nstdout: {}\nstderr: {}",
+        output.exit_code,
+        output.stdout,
+        output.stderr
+    );
+    Ok(())
+}
+
+/// A name the runner could have minted, so its sweep takes the jail for its own.
+const PLANTED_JAIL: &str = "planted-between-jobs";
+
+/// Planted once the first iteration's jail is built, after its sweep, and with
+/// its whole guest still to run before the second iteration's, so only the
+/// second iteration's sweep can reclaim it.
+fn run_runner_planted_between_jobs(
+    image_path: &Utf8Path,
+    args: &[&str],
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let planted = jail_parent(state_dir).join(PLANTED_JAIL);
+    let mut child = spawn_runner(image_path, &[args, &["--iter", "2"]].concat(), runner_bin)?;
+    let mut streamed = StreamedOutput::start(&mut child);
+    let placed = streamed.wait_for_record("Jail built").and_then(|_first| {
+        let root = planted.join("root");
+        fs::create_dir_all(&root)
+            .and_then(|()| fs::write(root.join("rootfs.ext4"), b"stale"))
+            .with_context(|| format!("Failed to plant {planted}"))
+    });
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break Some(status);
+        }
+        if std::time::Instant::now() >= deadline {
+            kill_pid(child.id(), libc::SIGKILL);
+            child.wait()?;
+            break None;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    };
+    let (stdout, stderr) = streamed.join();
+    let left = planted.try_exists();
+    drop(fs::remove_dir_all(&planted));
+    placed.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
+    let status = status.with_context(|| {
+        format!(
+            "The runner did not exit within {PROBE_TIMEOUT:?}.\nstdout: {stdout}\nstderr: {stderr}"
+        )
+    })?;
+    anyhow::ensure!(
+        !left.with_context(|| format!("Failed to check whether {planted} survived"))?
+            && records_with(&stderr, "Reclaimed stale jails")
+                .any(|record| record.get("count") == Some(&serde_json::Value::from(1))),
+        "The second iteration never swept the jail {planted} planted after the first one's sweep.\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.code().unwrap_or(-1),
+    })
+}
+
+/// How long the run is held stopped, well past its 3 s timeout.
+const STOPPED_FOR: Duration = Duration::from_secs(5);
+
+/// Stopped once its image is unpacked, far ahead of the boot, so the run comes
+/// to the check before boot with no time left.
+fn run_runner_stopped_past_timeout(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let mut child = spawn_runner(
+        image_path,
+        &[args, &["--timeout", "3"]].concat(),
+        runner_bin,
+    )?;
+    let mut streamed = StreamedOutput::start(&mut child);
+    let unpacked = streamed.wait_for_record("Writing init config");
+    if unpacked.is_ok() {
+        kill_pid(child.id(), libc::SIGSTOP);
+        std::thread::sleep(STOPPED_FOR);
+        kill_pid(child.id(), libc::SIGCONT);
+    }
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break Some(status);
+        }
+        if std::time::Instant::now() >= deadline {
+            kill_pid(child.id(), libc::SIGKILL);
+            child.wait()?;
+            break None;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    };
+    let (stdout, stderr) = streamed.join();
+    unpacked.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
+    let status = status.with_context(|| {
+        format!(
+            "The runner did not exit within {PROBE_TIMEOUT:?}.\nstdout: {stdout}\nstderr: {stderr}"
+        )
+    })?;
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.code().unwrap_or(-1),
+    })
 }
 
 /// The runner's own failure exit, so a crash or a signal does not read as a
@@ -3464,137 +3735,6 @@ CMD ["sh", "-c", "echo JAIL_ORPHAN_a7f3b2c9 && sleep 600"]"#;
 fn reaped(stderr: &str, pid: u32) -> bool {
     records_with(stderr, "Reaped orphaned VMM")
         .any(|record| record.get("pid") == Some(&serde_json::Value::from(pid)))
-}
-
-/// A sibling queued on the jail lock takes it between the first runner's two
-/// jobs and is killed once its VMM is up, so only a per-job sweep can reap it.
-fn run_runner_beside_sibling_orphan(
-    image_path: &Utf8Path,
-    args: &[&str],
-    state_dir: &Utf8Path,
-    runner_bin: &Utf8Path,
-) -> Result<ScenarioOutput> {
-    let orphan_image = build_test_image("jail_sibling_orphan", ORPHAN_DOCKERFILE)
-        .context("Failed to build the orphan's image")?;
-    let parent = jail_parent(state_dir);
-
-    let mut first_args = args.to_vec();
-    first_args.extend(["--iter", "2"]);
-    let mut first = spawn_runner(image_path, &first_args, runner_bin)?;
-    let first_output = drain_output(&mut first);
-
-    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
-    let first_vmm = loop {
-        if let Some((_, jail_root)) = find_jail(&parent)?
-            && let Some(pid) = find_jailed_vmm(&jail_root)?
-        {
-            break Some((jail_root, pid));
-        }
-        if first.try_wait()?.is_some() || std::time::Instant::now() >= deadline {
-            break None;
-        }
-        std::thread::sleep(PROBE_INTERVAL);
-    };
-    let Some((first_jail_root, first_pid)) = first_vmm else {
-        if first.try_wait()?.is_none() {
-            kill_pid(first.id(), libc::SIGKILL);
-        }
-        drop(first.wait());
-        let (stdout, stderr) = first_output.join();
-        bail!(
-            "The first job's VMM never appeared within {PROBE_TIMEOUT:?}.\nstdout: {stdout}\nstderr: {stderr}"
-        );
-    };
-
-    let mut sibling = spawn_runner(&orphan_image, args, runner_bin)?;
-    let mut sibling_output = StreamedOutput::start(&mut sibling);
-    let orphan = orphan_sibling(&mut sibling_output, &first_jail_root, first_pid, &mut first);
-    kill_pid(sibling.id(), libc::SIGKILL);
-    drop(sibling.wait());
-    let (sibling_stdout, sibling_stderr) = sibling_output.join();
-
-    let status = first.wait()?;
-    let (stdout, stderr) = first_output.join();
-    let (orphan_root, orphan_pid, cgroup) = orphan.with_context(|| {
-        format!(
-            "No orphan was left between the jobs.\nfirst stdout: {stdout}\nfirst stderr: {stderr}\nsibling stdout: {sibling_stdout}\nsibling stderr: {sibling_stderr}"
-        )
-    })?;
-    println!("  sibling orphaned VMM pid {orphan_pid} between the jobs");
-
-    if !reaped(&stderr, orphan_pid) {
-        bail!(
-            "The second job never reaped the sibling's orphaned VMM (pid {orphan_pid}), so it measured beside it.\nstdout: {stdout}\nstderr: {stderr}"
-        );
-    }
-    if is_firecracker(orphan_pid)? {
-        bail!(
-            "The sibling's orphaned VMM (pid {orphan_pid}) is still running after the second job, so the sweep never killed it."
-        );
-    }
-    if orphan_root
-        .try_exists()
-        .with_context(|| format!("Failed to check whether {orphan_root} survived"))?
-    {
-        bail!("The sibling's orphaned chroot {orphan_root} survived the second job");
-    }
-    if cgroup
-        .try_exists()
-        .with_context(|| format!("Failed to check whether {cgroup} survived"))?
-    {
-        bail!("The sibling's orphaned cgroup {cgroup} survived the second job");
-    }
-
-    Ok(ScenarioOutput {
-        stdout,
-        stderr,
-        exit_code: status.code().unwrap_or(-1),
-    })
-}
-
-/// The sibling's jail is read from its records, since the first job's may still
-/// be on disk beside it.
-fn orphan_sibling(
-    sibling: &mut StreamedOutput,
-    first_jail_root: &Utf8Path,
-    first_pid: u32,
-    first: &mut std::process::Child,
-) -> Result<(Utf8PathBuf, u32, Utf8PathBuf)> {
-    sibling.wait_for_record("Waiting for the jail lock")?;
-    anyhow::ensure!(
-        find_jailed_vmm(first_jail_root)? == Some(first_pid),
-        "The first job's VMM (pid {first_pid}) was gone by the time the sibling waited on the jail lock, so the sibling may be queued behind the second job instead of between the two"
-    );
-
-    let jail_root = jail_root_of(&sibling.wait_for_record("Jail built")?)?;
-    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
-    let pid = loop {
-        if let Some(pid) = find_jailed_vmm(&jail_root)? {
-            break pid;
-        }
-        anyhow::ensure!(
-            std::time::Instant::now() < deadline,
-            "The sibling's VMM never appeared in {jail_root} within {PROBE_TIMEOUT:?}"
-        );
-        std::thread::sleep(PROBE_INTERVAL);
-    };
-    anyhow::ensure!(
-        first.try_wait()?.is_none(),
-        "The first runner finished before the sibling's VMM came up, so its second job ran before the orphan existed"
-    );
-
-    let vm_id = jail_root
-        .parent()
-        .and_then(Utf8Path::file_name)
-        .with_context(|| format!("{jail_root} does not name a jail"))?;
-    let cgroup = stale_cgroup(vm_id);
-    anyhow::ensure!(
-        cgroup
-            .try_exists()
-            .with_context(|| format!("Failed to check whether {cgroup} was created"))?,
-        "No cgroup at {cgroup}, so the reap is only half exercised. The runner creates one whenever its CPU layout offers isolation."
-    );
-    Ok((jail_root, pid, cgroup))
 }
 
 fn jail_root_of(jail_built: &Record) -> Result<Utf8PathBuf> {

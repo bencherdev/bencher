@@ -17,8 +17,6 @@
 //! | [`HostPreparation::ensure`]: creating the state directory | fails the job |
 //! | [`HostPreparation::ensure`]: reading `/etc/passwd`, `/etc/group` | ignored: the check is advisory and cannot see a directory service anyway |
 //! | `StateDir::refuse_unusable_mount`: the mount options cannot be read, or include `nodev` or `noexec` | fails the job |
-//! | `vm_execute`: taking the jail lock | fails the job |
-//! | `JailLock::acquire`: a cancel while waiting | fails the job without the lock |
 //! | `vm_execute` and `run_firecracker`: a cancel at a stage boundary before `InstanceStart` | fails the job before the next stage |
 //! | `StateDir::sweep`: a sweep that returns an error | fails the job |
 //! | `refuse_occupied_cgroups`: the cgroup base is absent | nothing to check |
@@ -124,8 +122,6 @@ pub use cgroup::{CgroupManager, Cpuset};
 #[cfg(target_os = "linux")]
 pub use chroot::JailDir;
 #[cfg(target_os = "linux")]
-pub use lock::JailLock;
-#[cfg(target_os = "linux")]
 pub use paths::{ChrootPath, HostPath, JailFile, JailPaths, PinnedSocket, SocketPath};
 #[cfg(target_os = "linux")]
 pub use state::StateDir;
@@ -137,9 +133,6 @@ pub const DEFAULT_STATE_DIR: &str = "/var/lib/bencher-runner";
 
 /// This uid sits in the unallocated gap between `systemd-homed` ids (60001-60513) and
 /// the `DynamicUser` range (61184-65519).
-///
-/// Two runners on one host should each pass their own `--jail-uid`, since VMMs sharing
-/// a uid can signal each other.
 pub const DEFAULT_JAIL_UID: u32 = 61016;
 
 pub const DEFAULT_JAIL_GID: u32 = 61016;
@@ -184,8 +177,7 @@ impl Default for JailUser {
 }
 
 /// The jailer resolves `--chroot-base-dir` against its own working directory,
-/// so a relative state directory builds chroots the sweep never reaches and the
-/// lock never protects.
+/// so a relative state directory builds chroots the sweep never reaches.
 pub fn check_absolute_state_dir(path: &camino::Utf8Path) -> Result<(), crate::error::JailError> {
     if path.is_absolute() {
         Ok(())

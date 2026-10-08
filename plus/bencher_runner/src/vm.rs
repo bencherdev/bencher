@@ -9,8 +9,7 @@ use crate::JobDeadline;
 use crate::error::RunnerError;
 use crate::firecracker::refuse_cancelled;
 use crate::jail::{
-    CgroupSurvived, HostPreparation, JailDir, JailLock, JailPaths, StateDir, VmId, chroot, netns,
-    state,
+    CgroupSurvived, HostPreparation, JailDir, JailPaths, StateDir, VmId, chroot, netns, state,
 };
 use crate::run::{RunOutput, prepare_oci_workspace};
 
@@ -40,8 +39,6 @@ pub fn vm_execute(
     state_dir.refuse_unusable_mount()?;
     refuse_cancelled(cancel_flag)?;
 
-    // Pulled and unpacked before the jail lock, so concurrent runs serialize on
-    // the jail rather than on the download.
     let workspace = prepare_oci_workspace(log, config)?;
     let work_dir = &workspace.work_dir;
     let unpack_dir = &workspace.unpack_dir;
@@ -67,13 +64,10 @@ pub fn vm_execute(
     install_init_binary(unpack_dir)?;
     refuse_cancelled(cancel_flag)?;
 
-    // Declared before the jail guard so it outlives the teardown, because
-    // another runner's sweep removes every chroot it finds.
-    let lock = JailLock::acquire(log, state_dir.path(), cancel_flag)?;
-    // Every job, not once per process: a sibling runner sharing this state
-    // directory can leave an orphan at any time.
-    state_dir.sweep(log, &lock)?;
-    // Runners with other state directories share these cores but not this lock.
+    // Every job, not once per process, so a teardown this runner could not
+    // finish is retried.
+    state_dir.sweep(log)?;
+    // An orphan in another state directory is beyond the sweep.
     crate::jail::refuse_occupied_cgroups(None)?;
     refuse_cancelled(cancel_flag)?;
 

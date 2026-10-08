@@ -12,12 +12,10 @@
 //! Tuning requires a single runner process per host: the sysctls, IRQ
 //! affinities, THP mode, and cpuset partition are host-global, so a
 //! second concurrent runner would rewrite them under the first's Jobs.
-//! [`HostTuningLock`] enforces this: callers acquire it before
-//! [`apply`], and a contended lock disables host tuning for that process.
+//! The runner lock enforces this: a runner takes it before [`apply`].
 
 #[cfg(target_os = "linux")]
 mod dma_latency;
-mod host_lock;
 #[cfg(target_os = "linux")]
 mod kernel_work;
 #[cfg(target_os = "linux")]
@@ -27,7 +25,6 @@ pub mod preflight;
 mod swappiness;
 mod thp;
 
-pub use host_lock::HostTuningLock;
 pub use perf_event_paranoid::PerfEventParanoid;
 pub use swappiness::Swappiness;
 pub use thp::{ParseThpModeError, ThpMode};

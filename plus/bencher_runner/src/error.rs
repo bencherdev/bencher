@@ -16,6 +16,10 @@ pub enum RunnerError {
     #[error("Jail error: {0}")]
     Jail(#[from] JailError),
 
+    #[cfg(target_os = "linux")]
+    #[error("Runner lock error: {0}")]
+    Lock(#[from] LockError),
+
     #[error("Config error: {0}")]
     Config(#[from] ConfigError),
 
@@ -27,6 +31,27 @@ pub enum RunnerError {
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Debug, Error)]
+pub enum LockError {
+    #[error(
+        "Another runner holds the runner lock {path}. A host runs one runner at a time, whatever its state directory, so stop that runner before starting this one."
+    )]
+    Held { path: Utf8PathBuf },
+
+    #[error("Failed to open the runner lock {path}: {source}")]
+    Open {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[error("Failed to take the runner lock {path}: {source}")]
+    Lock {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
 }
 
 #[derive(Debug, Error)]
@@ -155,24 +180,6 @@ pub enum JailError {
     NotRoot { euid: u32 },
 
     #[cfg(target_os = "linux")]
-    #[error("Failed to open the jail lock {path}: {source}")]
-    OpenJailLock {
-        path: Utf8PathBuf,
-        source: std::io::Error,
-    },
-
-    #[cfg(target_os = "linux")]
-    #[error("Failed to take the jail lock {path}: {source}")]
-    JailLock {
-        path: Utf8PathBuf,
-        source: std::io::Error,
-    },
-
-    #[cfg(target_os = "linux")]
-    #[error("Cancelled while waiting for the jail lock {path}")]
-    JailLockCancelled { path: Utf8PathBuf },
-
-    #[cfg(target_os = "linux")]
     #[error("Failed to open the network namespace lock {path}: {source}")]
     OpenNetnsLock {
         path: Utf8PathBuf,
@@ -235,7 +242,7 @@ pub enum JailError {
 
     #[cfg(target_os = "linux")]
     #[error(
-        "The cgroup {cgroup} holds pid(s) {pids}: another Bencher Job, or a VMM a runner left behind, is on the benchmark cores, so this Job fails rather than measure beside it. Runners on one host run their Jobs one at a time."
+        "The cgroup {cgroup} holds pid(s) {pids}: a process a runner left behind, or one some other tool placed there, is on the benchmark cores, so this Job fails rather than measure beside it."
     )]
     CgroupOccupied { cgroup: Utf8PathBuf, pids: String },
 
