@@ -10,6 +10,8 @@ export interface SheetProps
 	title: string;
 	/** The label of the button that closes it. */
 	done?: string;
+	/** Docks to the right on wide screens, beside the page rather than over its foot. */
+	side?: boolean;
 }
 
 /**
@@ -23,6 +25,7 @@ const Sheet = (props: SheetProps) => {
 		"onClose",
 		"title",
 		"done",
+		"side",
 		"class",
 		"children",
 	]);
@@ -44,6 +47,7 @@ const Sheet = (props: SheetProps) => {
 			ref={dialog}
 			class={local.class === undefined ? "ui-sheet" : `ui-sheet ${local.class}`}
 			aria-labelledby={heading}
+			data-side={local.side === true ? "" : undefined}
 			onClose={() => local.onClose()}
 			onClick={(event) => {
 				if (event.target === dialog) {

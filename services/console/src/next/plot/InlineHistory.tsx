@@ -2,7 +2,6 @@ import { createEffect, onMount } from "solid-js";
 import { drawInline, type InlineLine, inlineGeometry } from "./inline";
 import { useNarrow } from "./narrow";
 import { usePalette } from "./theme";
-import "./plot.css";
 
 interface InlineHistoryProps {
 	/** The shared x of the row's page, in milliseconds. */

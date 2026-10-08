@@ -69,6 +69,7 @@ test("a cold load holds the speed ceilings", async ({ page }) => {
 	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
+	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 	expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
 	expect(cost.inlineScriptBytes).toBeLessThanOrEqual(ceiling.inlineScriptBytes);
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
@@ -92,6 +93,7 @@ test("a warm reload holds the speed ceilings", async ({ page }) => {
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 	expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
 	expect(cost.inlineScriptBytes).toBeLessThanOrEqual(ceiling.inlineScriptBytes);
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
@@ -146,6 +148,7 @@ test("a cold load of Reports holds its speed ceilings", async ({ page }) => {
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 	expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
 	expect(cost.inlineScriptBytes).toBeLessThanOrEqual(ceiling.inlineScriptBytes);
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
@@ -203,6 +206,7 @@ test("a cold load of General holds the speed ceilings", async ({ page }) => {
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
@@ -224,6 +228,7 @@ test("a cold load of Keys holds the speed ceilings", async ({ page }) => {
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
@@ -257,3 +262,93 @@ test("moving from General to Keys holds the speed ceilings", async ({
 		ceilings.settingsSectionSwitch.jsBytes,
 	);
 });
+
+/**
+ * Layout shift with a source outside the shell: what the page itself moves.
+ * On a cold load the shell's own alert badge and names arrive after its first
+ * paint, and at narrow widths that alone passes the ceiling.
+ */
+const observePageShift = (page: Page) =>
+	page.addInitScript(() => {
+		const holder = window as Window & { __pageShift?: number };
+		holder.__pageShift = 0;
+		new PerformanceObserver((list) => {
+			for (const entry of list.getEntries()) {
+				const shift = entry as PerformanceEntry & {
+					value: number;
+					hadRecentInput: boolean;
+					sources?: { node?: Node | null }[];
+				};
+				const outside = (shift.sources ?? []).some(
+					({ node }) => !(node instanceof Element && node.closest(".shell")),
+				);
+				if (!shift.hadRecentInput && outside) {
+					holder.__pageShift = (holder.__pageShift ?? 0) + shift.value;
+				}
+			}
+		}).observe({ type: "layout-shift", buffered: true });
+	});
+
+const pageShift = (page: Page) =>
+	page.evaluate(
+		() => (window as Window & { __pageShift?: number }).__pageShift ?? 0,
+	);
+
+// The cold loads of a report, at each width the layout changes at.
+for (const [width, viewport] of [
+	["desktop", undefined],
+	["768", { width: 768, height: 1024 }],
+	["390", { width: 390, height: 844 }],
+] as const) {
+	test.describe(`at ${width}`, () => {
+		if (viewport) {
+			test.use({ viewport });
+		}
+
+		// Kills a report whose lines wait on the shell's request or on its own
+		// code arriving late, a first batch asked for twice, the full plot's code
+		// loaded before a row expands, a page stylesheet of its own, and a page
+		// that shifts as the report arrives.
+		test(`a cold load of a report holds its speed ceilings at ${width}`, async ({
+			page,
+			request,
+		}) => {
+			const response = await request.get(
+				`${seed.api_url}/v0/projects/${hashbrown.slug}/reports?branch=main&testbed=ubuntu-latest&per_page=1`,
+				{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+			);
+			const [newest] = (await response.json()) as { uuid: string }[];
+			await observePageShift(page);
+			const cost = await coldLoad(page, `${REPORTS}/${newest?.uuid}`, () =>
+				expect(
+					page
+						.getByRole("table", { name: /^Lines in report / })
+						.getByRole("checkbox")
+						.first(),
+				).toBeVisible(),
+			);
+			const moved = await pageShift(page);
+			report(`report cold load ${width}`, {
+				...cost,
+				pageShift: moved,
+			} as Cost);
+			const ceiling = ceilings.reportColdLoad;
+			expect(moved).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+				ceiling.apiAnswersBeforePaint,
+			);
+			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+			if (!viewport) {
+				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			}
+			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+			expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
+			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+			expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
+				ceiling.inlineScriptBytes,
+			);
+			expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+		});
+	});
+}

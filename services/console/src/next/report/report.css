@@ -1,0 +1,440 @@
+/* Rows and group headers have the fixed heights LineTable lays out by. */
+
+/* Every box in the head holds its size before the report arrives, so nothing below it moves. */
+.pagehead.rp-head {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: start;
+	gap: 6px 16px;
+}
+.rp-head .ph-title {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+.rp-head > .ph-sub,
+.rp-head > .ro-note {
+	grid-column: 1 / -1;
+}
+.ph-sub.rp-sub {
+	display: block;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+.rp-titlerow {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+	min-height: 24px;
+}
+.rp-titlerow h1 {
+	min-width: 0;
+	margin: 0;
+	overflow-x: clip;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+.rp-alerts {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 24px;
+	padding: 0 9px;
+	border: var(--border-width) solid var(--color-error);
+	border-radius: var(--radius-full);
+	color: var(--color-text-error);
+	font-size: 12px;
+	white-space: nowrap;
+}
+/* Placeholders hold the line boxes of what replaces them. */
+.ui-skeleton.rp-title-skel {
+	display: inline-block;
+	width: 12ch;
+	height: 1lh;
+	vertical-align: top;
+}
+.ui-skeleton.rp-sub-skel {
+	display: block;
+	width: min(48ch, 100%);
+	height: 1lh;
+}
+.rp-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+/* One width whether a neighbor is there, missing, or not yet known. */
+.ui-button.rp-neighbor {
+	width: 180px;
+	gap: 6px;
+	overflow: hidden;
+}
+.console a.rp-neighbor {
+	text-decoration: none;
+}
+.rp-neighbor .muted {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-weight: var(--font-weight-medium);
+}
+.rp-chevron,
+.lr-twist svg {
+	width: 14px;
+	height: 14px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2.4;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+.rp-anchor {
+	position: relative;
+	display: inline-flex;
+}
+.rp-days {
+	width: 76px;
+}
+.rp-filter {
+	width: 200px;
+	margin-left: auto;
+}
+.rp-selbar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	min-height: 36px;
+}
+.rp-selcount {
+	font: 13px var(--font-family-body);
+	color: var(--color-text-secondary);
+	white-space: nowrap;
+}
+.rp-empty,
+.rp-missing {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 48px 24px;
+	border: var(--border-width) solid var(--color-border);
+	border-radius: var(--radius-container);
+	text-align: center;
+}
+.rp-missing p {
+	margin: 0;
+	color: var(--color-text-muted);
+}
+.rp-skeleton {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	padding: 0 10px;
+}
+.rp-skeleton .rp-skeleton-row {
+	height: 20px;
+	margin: 12px 0;
+}
+
+.lr-table {
+	width: 100%;
+	table-layout: fixed;
+	border-collapse: separate;
+	border-spacing: 0;
+	border: var(--border-width) solid var(--color-border-emphasized);
+	border-radius: var(--radius-container);
+	background: var(--color-background-card);
+	overflow: hidden;
+	font-size: 13px;
+}
+.lr-table[aria-busy="true"] tbody {
+	opacity: 0.5;
+	transition: opacity var(--duration-fast) var(--ease-standard) 400ms;
+}
+.lr-c-select,
+.lr-c-twist {
+	width: 34px;
+}
+.lr-c-measure {
+	width: 112px;
+}
+.lr-c-history {
+	width: 164px;
+}
+.lr-c-value {
+	width: 100px;
+}
+.lr-c-delta {
+	width: 132px;
+}
+.lr-c-limit {
+	width: 122px;
+}
+.lr-c-hit {
+	width: 44px;
+}
+.lr-c-numbers {
+	width: 108px;
+}
+.lr-table td,
+.lr-table th {
+	box-sizing: border-box;
+	padding: 0 4px;
+	border-top: var(--border-width) solid var(--color-border);
+	vertical-align: middle;
+	text-align: left;
+	overflow: hidden;
+}
+.lr-table tr > :first-child {
+	padding-left: 10px;
+}
+.lr-table tr > :last-child {
+	padding-right: 10px;
+}
+.lr-table.lr-narrow tr > :first-child,
+.lr-table.lr-narrow tr > :last-child {
+	padding: 0;
+}
+.lr > td {
+	height: 44px;
+}
+.lr-head > th {
+	height: 36px;
+	border-top: 0;
+	font-size: 10.5px;
+	font-weight: var(--font-weight-semibold);
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	white-space: nowrap;
+	color: var(--color-text-eyebrow);
+}
+.lr-table .lr-end {
+	text-align: right;
+	white-space: nowrap;
+}
+.lr-line,
+.lrn-l1 {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	overflow: hidden;
+	white-space: nowrap;
+}
+.lr-line b,
+.lrn-l1 b {
+	font-weight: var(--font-weight-bold);
+}
+.lr.lr-alerting > td,
+.lrn.lr-alerting > td {
+	background: var(--color-error-muted);
+}
+.lr-group > td {
+	height: 38px;
+	padding-left: 42px;
+	background: var(--color-background-muted);
+	font-size: 12.5px;
+	color: var(--color-text-muted);
+	white-space: nowrap;
+}
+.lr-table.lr-narrow .lr-group > td {
+	height: 44px;
+	padding-left: 44px;
+	font-size: 12px;
+}
+.lr-group b {
+	color: var(--color-text-primary);
+}
+.lr-galert {
+	color: var(--color-text-error);
+}
+/* The plot's space, held before it mounts: 1 px of border and the rest. */
+.lr-exrow > td {
+	padding: 0;
+	background: var(--color-background-surface);
+}
+.lr-exrow section {
+	height: 329px;
+	overflow: hidden;
+}
+.lr-table.lr-narrow .lr-exrow section {
+	height: 359px;
+}
+.lr-table .lr-spacer > td {
+	padding: 0;
+	border: 0;
+}
+.lr-more > td {
+	padding: 12px 10px;
+}
+.lr-more .ui-skeleton {
+	width: 40%;
+}
+.lr-failed {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 14px;
+}
+.lr-num {
+	font-family: var(--font-family-code);
+	font-variant-numeric: tabular-nums;
+}
+.lr-worse {
+	color: var(--color-worse);
+}
+.lr-better {
+	color: var(--color-better);
+}
+.lr-tag,
+.lr-ptag {
+	display: inline-flex;
+	align-items: center;
+	height: 20px;
+	padding: 0 6px;
+	border-radius: 4px;
+	background: var(--color-background-tag);
+	font: 500 11.5px var(--font-family-code);
+	color: var(--color-text-secondary);
+	white-space: nowrap;
+}
+.lr-ptag {
+	background: var(--color-background-blue);
+	color: var(--color-text-blue);
+}
+.lr-alertdot {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	fill: var(--color-error);
+}
+.lr-hit {
+	display: inline-grid;
+	place-items: center;
+	min-width: 28px;
+	min-height: 28px;
+	cursor: pointer;
+}
+.lr-cb {
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	accent-color: var(--color-accent);
+	cursor: pointer;
+}
+.lr-twist {
+	appearance: none;
+	display: inline-grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--color-text-muted);
+	cursor: pointer;
+}
+.lr-twist:hover {
+	background: var(--color-overlay-hover);
+	color: var(--color-text-primary);
+}
+.lr-twist[aria-expanded="true"] {
+	color: var(--color-text-accent);
+}
+.lr-twist[aria-expanded="true"] svg {
+	transform: rotate(90deg);
+}
+.lnk.lr-quiet {
+	color: var(--color-text-muted);
+	text-decoration: underline;
+	text-decoration-color: var(--color-border-emphasized);
+	text-underline-offset: 3px;
+}
+
+/* Narrow: two lines per row with the numbers on the right */
+.lrn > td {
+	height: 64px;
+}
+.lrn .lr-hit,
+.lrn .lr-twist {
+	width: 44px;
+	height: 44px;
+}
+.lrn-l1 .lr-tag,
+.lrn-l1 .lr-ptag {
+	height: 19px;
+	padding: 0 5px;
+	font-size: 11px;
+}
+.lrn-l2 {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	margin-top: 4px;
+	font-size: 12px;
+	color: var(--color-text-secondary);
+	white-space: nowrap;
+}
+.lrn-num {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 3px;
+	font-size: 12.5px;
+	white-space: nowrap;
+}
+.lrn-num b {
+	font-size: 13.5px;
+}
+
+@media (max-width: 767px) {
+	.pagehead.rp-head {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.rp-actions {
+		order: 1;
+		margin-top: 4px;
+	}
+	.ui-button.rp-neighbor {
+		flex: 1;
+		width: auto;
+		min-height: 44px;
+	}
+	.rp-filter {
+		width: 100%;
+		margin-left: 0;
+	}
+	.lnk.rp-clear {
+		min-width: 44px;
+		justify-content: center;
+	}
+}
+
+.rp-id {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.rp-sec {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+.rp-sec p,
+.rp-refused {
+	margin: 0;
+}
+.rp-snip {
+	display: block;
+	color: var(--color-text-secondary);
+}
+.rp-snip.rp-flag {
+	color: var(--color-text-primary);
+}

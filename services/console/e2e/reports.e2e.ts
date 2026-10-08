@@ -184,7 +184,7 @@ test("a row opens its report page, its code loaded on hover", async ({
 		new RegExp(`${nextPath(hashbrown.slug, "reports")}/[0-9a-f-]{36}$`),
 	);
 	await expect(
-		page.getByRole("heading", { level: 1, name: "Report", exact: true }),
+		page.getByRole("heading", { level: 1, name: "main · macos-latest" }),
 	).toBeVisible();
 	expect(documents).toEqual([]);
 });
