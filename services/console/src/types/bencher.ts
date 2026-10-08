@@ -1033,6 +1033,123 @@ export interface JsonConsoleReport {
 	models: JsonConsoleModel[];
 }
 
+export interface JsonConsoleThresholdBranch {
+	uuid: Uuid;
+	name: BranchName;
+	slug: Slug;
+	/** The name of the branch that this branch's current head started from. */
+	start_point?: BranchName;
+	archived?: DateTimeMillis;
+}
+
+export interface JsonConsoleThresholdTestbed {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	archived?: DateTimeMillis;
+}
+
+export interface JsonConsoleThresholdMeasure {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	units: ResourceName;
+	archived?: DateTimeMillis;
+}
+
+export interface JsonConsoleThresholdModel {
+	uuid: Uuid;
+	test: ModelTest;
+	min_sample_size?: SampleSize;
+	max_sample_size?: SampleSize;
+	window?: Window;
+	lower_boundary?: Boundary;
+	upper_boundary?: Boundary;
+	created: DateTimeMillis;
+	/**
+	 * When a newer model, or the removal of the threshold's model, replaced it.
+	 * Absent for the current model.
+	 */
+	replaced?: DateTimeMillis;
+}
+
+/**
+ * One threshold as the console's threshold page draws it.
+ * 
+ * The report that declared a threshold or set a model is not recorded.
+ */
+export interface JsonConsoleThreshold {
+	uuid: Uuid;
+	branch: JsonConsoleThresholdBranch;
+	testbed: JsonConsoleThresholdTestbed;
+	measure: JsonConsoleThresholdMeasure;
+	/**
+	 * The variants this threshold checks, in canonical order.
+	 * Absent when the threshold checks every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
+	/**
+	 * The name of the metric this threshold checks.
+	 * Absent when the threshold checks the conventional `value` name.
+	 */
+	metric?: string;
+	/** Absent when the threshold has no model, and so checks nothing. */
+	model?: JsonConsoleThresholdModel;
+	/** Every model the threshold has had, newest first, its current model included. */
+	models: JsonConsoleThresholdModel[];
+	created: DateTimeMillis;
+	modified: DateTimeMillis;
+}
+
+/** A threshold's current model as the list draws it: its test and that test's parameters. */
+export interface JsonConsoleThresholdRowModel {
+	test: ModelTest;
+	min_sample_size?: SampleSize;
+	max_sample_size?: SampleSize;
+	window?: Window;
+	lower_boundary?: Boundary;
+	upper_boundary?: Boundary;
+}
+
+export interface JsonConsoleThresholdRow {
+	uuid: Uuid;
+	/** An index into `branches`. */
+	branch: number;
+	/** An index into `testbeds`. */
+	testbed: number;
+	/** An index into `measures`. */
+	measure: number;
+	/**
+	 * The variants this threshold checks, in canonical order.
+	 * Absent when the threshold checks every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
+	/**
+	 * The name of the metric this threshold checks.
+	 * Absent when the threshold checks the conventional `value` name.
+	 */
+	metric?: string;
+	/** Absent when the threshold has no model, and so checks nothing. */
+	model?: JsonConsoleThresholdRowModel;
+	/** The alerts the threshold raised inside the window, whatever their status now. */
+	raised: number;
+	/** The threshold's alerts that are active now, whenever they were raised. */
+	active: number;
+}
+
+/**
+ * A page of a project's thresholds as the console lists them, oldest first, with the
+ * branches, testbeds, and measures they apply to once each.
+ */
+export interface JsonConsoleThresholds {
+	/** The number of thresholds that match the filters, over every page. */
+	total: number;
+	thresholds: JsonConsoleThresholdRow[];
+	branches: JsonConsoleThresholdBranch[];
+	testbeds: JsonConsoleThresholdTestbed[];
+	measures: JsonConsoleThresholdMeasure[];
+}
+
 export interface JsonCustomer {
 	uuid: Uuid;
 	name: NonEmpty;
