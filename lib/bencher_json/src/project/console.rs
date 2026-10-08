@@ -370,6 +370,127 @@ pub struct JsonConsoleModel {
     pub upper_boundary: Option<Boundary>,
 }
 
+/// How many alerts a page of alerts holds when the request does not say.
+pub const DEFAULT_CONSOLE_ALERTS_PER_PAGE: u8 = 32;
+
+/// The most alerts a page of alerts holds.
+pub const MAX_CONSOLE_ALERTS_PER_PAGE: u8 = 64;
+
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleAlertsQueryParams {
+    /// The alerts to list by their status now.
+    /// Defaults to `active`.
+    pub status: Option<ConsoleAlertStatus>,
+    /// A comma separated list of the branch UUIDs the alerts were raised on.
+    pub branches: Option<String>,
+    /// A comma separated list of the testbed UUIDs the alerts were raised on.
+    pub testbeds: Option<String>,
+    /// A comma separated list of the measure UUIDs the alerts were raised on.
+    pub measures: Option<String>,
+    /// A comma separated list of the threshold UUIDs that raised the alerts.
+    pub thresholds: Option<String>,
+    /// A comma separated list of the report UUIDs that raised the alerts.
+    pub reports: Option<String>,
+    /// The earliest time the report that raised an alert was created, in milliseconds, inclusive.
+    pub start_time: Option<DateTimeMillis>,
+    /// The latest time the report that raised an alert was created, in milliseconds, inclusive.
+    pub end_time: Option<DateTimeMillis>,
+    /// Each alert's history window in whole days before its report's start, from 1 to 366.
+    /// Defaults to four weeks.
+    pub window: Option<u16>,
+    /// The size to thin each alert's history to, from 2 to 256, as a report's lines are.
+    /// Defaults to 64.
+    pub points: Option<u16>,
+    /// The page of alerts to return, starting at 1.
+    pub page: Option<u32>,
+    /// The number of alerts per page, at most 64. Zero returns only the counts.
+    pub per_page: Option<u8>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ConsoleAlertStatus {
+    #[default]
+    Active,
+    /// Dismissed or silenced.
+    Dismissed,
+    All,
+}
+
+/// A page of a project's alerts, grouped by the report that raised them, newest
+/// report first.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleAlerts {
+    /// The number of alerts that match the filters and the status, over every page.
+    pub total: u32,
+    /// The number of alerts that match the filters, by their status now, whatever
+    /// status the request asked for.
+    pub counts: JsonConsoleAlertsCounts,
+    pub groups: Vec<JsonConsoleAlertGroup>,
+    /// The reports of every group's points.
+    pub reports: Vec<JsonConsolePointReport>,
+    pub branches: Vec<JsonConsoleBranch>,
+    pub testbeds: Vec<JsonConsoleTestbed>,
+    pub benchmarks: Vec<JsonConsoleBenchmark>,
+    pub variants: Vec<JsonConsoleVariant>,
+    pub measures: Vec<JsonConsoleMeasure>,
+    pub models: Vec<JsonConsoleModel>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleAlertsCounts {
+    pub active: u32,
+    pub dismissed: u32,
+    pub silenced: u32,
+}
+
+/// The alerts on a page that one report raised, each with its history over a
+/// window that ends at the report.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleAlertGroup {
+    /// The report that raised the alerts.
+    pub uuid: ReportUuid,
+    /// An index into `branches`.
+    pub branch: u32,
+    /// An index into `testbeds`.
+    pub testbed: u32,
+    pub version: JsonVersion,
+    pub start_time: DateTimeMillis,
+    pub end_time: DateTimeMillis,
+    /// When the API took the report.
+    pub created: DateTimeMillis,
+    pub adapter: Adapter,
+    /// The number of the report's alerts that match the filters and the status,
+    /// over every page.
+    pub total: u32,
+    /// The history window, which ends at the report.
+    pub window: JsonConsoleWindow,
+    /// The shared x of the group's histories, whose reports index into `reports`.
+    pub points: JsonConsolePoints,
+    /// The group's alerts on this page, in the order the report's lines are drawn.
+    pub alerts: Vec<JsonConsoleAlertLine>,
+}
+
+/// An alert as the line it raised on, the way the report draws that line.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleAlertLine {
+    /// The line, following the threshold that raised the alert.
+    pub line: JsonConsoleReportLine,
+    /// When the alert last changed status, or was raised.
+    pub modified: DateTimeMillis,
+}
+
 /// The most lines a plot draws.
 pub const MAX_CONSOLE_PLOT_LINES: usize = 64;
 
