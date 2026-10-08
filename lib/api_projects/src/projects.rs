@@ -331,6 +331,8 @@ async fn patch_inner(
         )));
     }
 
+    QueryProject::is_web_url(json_project.url())?;
+
     // Check project visibility
     if let Some(visibility) = json_project.visibility() {
         #[cfg(not(feature = "plus"))]

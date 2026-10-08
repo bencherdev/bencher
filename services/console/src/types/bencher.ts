@@ -1924,7 +1924,7 @@ export interface JsonNewProject {
 	 */
 	slug?: Slug;
 	/**
-	 * The URL for the project.
+	 * The URL for the project. It must use http or https.
 	 * If the project is public, the URL will be accessible listed on its Perf Page.
 	 */
 	url?: Url;

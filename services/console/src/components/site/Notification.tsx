@@ -11,7 +11,7 @@ import {
 	isNotifyText,
 	isNotifyTimeout,
 } from "../../util/notify";
-import { pathname, useSearchParams } from "../../util/url";
+import { pathname, sameOriginUrl, useSearchParams } from "../../util/url";
 
 const Notification = (props: { suppress?: undefined | boolean }) => {
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -27,7 +27,12 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 		if (!isNotifyTimeout(searchParams[NOTIFY_TIMEOUT_PARAM])) {
 			initParams[NOTIFY_TIMEOUT_PARAM] = null;
 		}
-		if (!isNotifyText(searchParams[NOTIFY_LINK_URL_PARAM])) {
+		if (
+			!sameOriginUrl(
+				searchParams[NOTIFY_LINK_URL_PARAM],
+				window.location.origin,
+			)
+		) {
 			initParams[NOTIFY_LINK_URL_PARAM] = null;
 		}
 		if (!isNotifyText(searchParams[NOTIFY_LINK_TEXT_PARAM])) {
@@ -43,7 +48,9 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 	const notifyTimeout = createMemo(() =>
 		Number.parseInt(searchParams[NOTIFY_TIMEOUT_PARAM] ?? `${NOTIFY_TIMEOUT}`),
 	);
-	const notifyLinkUrl = createMemo(() => searchParams[NOTIFY_LINK_URL_PARAM]);
+	const notifyLinkUrl = createMemo(() =>
+		sameOriginUrl(searchParams[NOTIFY_LINK_URL_PARAM], window.location.origin),
+	);
 	const notifyLinkText = createMemo(() => searchParams[NOTIFY_LINK_TEXT_PARAM]);
 	const suppress = createMemo(() =>
 		typeof props.suppress === "boolean" ? props.suppress : false,

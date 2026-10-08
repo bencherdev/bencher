@@ -31,6 +31,8 @@
 - Filter the Reports list by `adapter` and `alerts=active`, and count each Report iteration's `lines`
 - Cap a project at 64 plots: `POST /v0/projects/{project}/plots` refuses another with a 400 until one is deleted
 - Add `--bmf-version` to `bencher project update`, so a server admin can move a Project to BMF version 1
+- **BREAKING CHANGE** Security fix for URL validation: a project URL must now use `http` or `https`, an existing project URL that does not is shown as plain text, and the Console no longer links to a URL with any other scheme
+- Security fix for the Console's embed snippet: it now escapes the project name and title
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects

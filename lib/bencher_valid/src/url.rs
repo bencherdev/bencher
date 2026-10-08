@@ -40,6 +40,12 @@ impl FromStr for Url {
     }
 }
 
+impl Url {
+    pub fn is_web(&self) -> bool {
+        is_valid_web_url(&self.0)
+    }
+}
+
 impl AsRef<str> for Url {
     fn as_ref(&self) -> &str {
         &self.0
@@ -71,10 +77,49 @@ pub fn is_valid_url(url: &str) -> bool {
     ::url::Url::from_str(url).is_ok()
 }
 
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
+pub fn is_valid_web_url(url: &str) -> bool {
+    ::url::Url::from_str(url).is_ok_and(|url| matches!(url.scheme(), "http" | "https"))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::is_valid_url;
+    use super::{is_valid_url, is_valid_web_url};
     use pretty_assertions::assert_eq;
+
+    #[test]
+    fn is_valid_web_url_true() {
+        for url in [
+            "http://example.com",
+            "https://example.com",
+            "HTTPS://example.com",
+            "https://example.com/path?query=string#fragment",
+            "https://user:password@example.com",
+        ] {
+            assert_eq!(true, is_valid_web_url(url), "{url}");
+        }
+    }
+
+    #[test]
+    fn is_valid_web_url_false() {
+        for url in [
+            "",
+            "example.com",
+            "//example.com",
+            "javascript:alert(document.domain)",
+            "JavaScript:alert(document.domain)",
+            " javascript:alert(document.domain)",
+            "java\tscript:alert(document.domain)",
+            "data:text/html,<script>alert(document.domain)</script>",
+            "vbscript:msgbox(1)",
+            "file:///etc/passwd",
+            "ftp://example.com",
+            "mailto:user@example.com",
+            "httpx://example.com",
+        ] {
+            assert_eq!(false, is_valid_web_url(url), "{url}");
+        }
+    }
 
     #[test]
     fn is_valid_url_true() {

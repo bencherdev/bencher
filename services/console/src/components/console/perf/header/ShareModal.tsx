@@ -6,7 +6,6 @@ import {
 	createMemo,
 	createSignal,
 } from "solid-js";
-import { embedHeight } from "../../../../config/types";
 import type {
 	JsonAuthUser,
 	JsonPerfQuery,
@@ -22,6 +21,7 @@ import {
 	PERF_PLOT_EMBED_PARAMS,
 	PERF_PLOT_PARAMS,
 } from "../PerfPanel";
+import { embedTag, imgTag } from "./embed";
 
 export interface Props {
 	apiUrl: string;
@@ -135,20 +135,21 @@ const ShareModal = (props: Props) => {
 			}/perf/${props.project()?.slug}/embed?${perfPlotEmbedParams()}`,
 	);
 
-	const img_tag = createMemo(
-		() =>
-			`<a href="${perf_page_url()}"><img src="${perf_img_url()}" title="${
-				title() ? title() : props.project()?.name
-			}" alt="${title() ? `${title()} for ` : ""}${
-				props.project()?.name
-			} - Bencher" /></a>`,
+	const img_tag = createMemo(() =>
+		imgTag({
+			pageUrl: perf_page_url(),
+			imgUrl: perf_img_url() ?? "",
+			name: props.project()?.name ?? "",
+			title: title(),
+		}),
 	);
 
-	const embed_tag = createMemo(
-		() =>
-			`<iframe src="${perf_embed_url()}" title="${
-				title() ? title() : props.project()?.name
-			}" width="100%" height="${embedHeight}px" allow="fullscreen"></iframe>`,
+	const embed_tag = createMemo(() =>
+		embedTag({
+			embedUrl: perf_embed_url(),
+			name: props.project()?.name ?? "",
+			title: title(),
+		}),
 	);
 
 	return (
