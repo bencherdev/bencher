@@ -19,7 +19,10 @@ pub use job::{
     JsonJobConfig, JsonJobOutput, JsonJobs, JsonNewRunJob, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT,
 };
 pub use job_status::JobStatus;
-pub use websocket::{CloseReason, JsonRunnerMetadata, RunnerMessage, ServerMessage};
+pub use websocket::{
+    CloseReason, JsonPaused, JsonReady, JsonRunnerMetadata, MAX_PAUSE_REASONS,
+    MAX_REPORT_STRING_LEN, MdSyncAction, PauseReason, RunnerMessage, ServerMessage,
+};
 
 crate::typed_uuid::typed_uuid!(RunnerUuid);
 crate::typed_slug::typed_slug!(RunnerSlug, ResourceName);

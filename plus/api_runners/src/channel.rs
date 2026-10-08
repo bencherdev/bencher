@@ -6,10 +6,15 @@
 use std::time::Duration;
 
 use bencher_billing::CustomerId;
+#[cfg(feature = "otel")]
+use bencher_json::runner::PauseReason;
 use bencher_json::{
     DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimedJob, JsonSpec, MeteredPlanId, Priority,
     RunnerResourceId,
-    runner::{CloseReason, JsonIterationOutput, RunnerMessage, ServerMessage},
+    runner::{
+        CloseReason, JsonIterationOutput, JsonPaused, MAX_PAUSE_REASONS, RunnerMessage,
+        ServerMessage,
+    },
 };
 use bencher_oci_storage::OciStorageError;
 use bencher_schema::{
@@ -182,10 +187,10 @@ async fn handle_runner_message(
     billing_state: &mut BillingState,
 ) -> Result<(ServerMessage, Option<CloseReason>), ChannelError> {
     match msg {
-        RunnerMessage::Ready { .. } => {
-            slog::warn!(log, "Unexpected Ready message during job execution"; "job_id" => ?job.id);
+        RunnerMessage::Ready(_) | RunnerMessage::Paused(_) => {
+            slog::warn!(log, "Unexpected Ready or Paused message during job execution"; "job_id" => ?job.id);
             // Ack is the only safe response — Cancel would terminate the job.
-            // The heartbeat timer is NOT reset for Ready (handled by caller).
+            // The heartbeat timer is NOT reset for Ready or Paused (handled by caller).
         },
         RunnerMessage::Running => {
             slog::info!(log, "Job running"; "job_id" => ?job.id);
@@ -1078,8 +1083,9 @@ pub struct RunnerChannelParams {
 ///
 /// ➕ Bencher Plus: Single persistent WebSocket connection for job assignment
 /// and execution. Runner sends `Ready` to request a job, server pushes `Job`
-/// or `NoJob`. During execution, handles `Running`, `Heartbeat`, `Completed`,
-/// `Failed`, and `Canceled` messages.
+/// or `NoJob`. A runner that sends `Paused` instead gets `NoJob` at the end of
+/// its poll and no job. During execution, handles `Running`, `Heartbeat`,
+/// `Completed`, `Failed`, and `Canceled` messages.
 /// Authentication is via runner key in the Authorization header.
 #[channel {
     protocol = WEBSOCKETS,
@@ -1128,12 +1134,13 @@ pub async fn runner_channel(
 
     // Set when graceful shutdown is signalled so we send a Close frame after leaving the loop.
     let mut shutting_down = false;
+    let mut paused = false;
 
     // State machine: Idle -> Executing -> Idle -> ...
     loop {
         // === IDLE STATE ===
-        // Wait for Ready message from runner (also handles terminal message retries)
-        let poll_timeout = match wait_for_ready(
+        // Wait for Ready or Paused from runner (also handles terminal message retries)
+        let (poll_timeout, claim) = match wait_for_ready(
             &log,
             context,
             runner_key.runner_id,
@@ -1144,7 +1151,27 @@ pub async fn runner_channel(
         )
         .await
         {
-            Ok(ReadyOutcome::Ready(poll_timeout)) => poll_timeout,
+            Ok(ReadyOutcome::Ready(poll_timeout)) => {
+                if paused {
+                    paused = false;
+                    slog::info!(log, "Runner pause ended");
+                    #[cfg(feature = "otel")]
+                    state_guard.transition(bencher_otel::RunnerStateKind::Idle);
+                }
+                (poll_timeout, true)
+            },
+            Ok(ReadyOutcome::Paused(pause)) => {
+                if !paused {
+                    paused = true;
+                    slog::info!(log, "Runner pause began"; "reasons" => ?pause.reasons, "since" => %pause.since);
+                    #[cfg(feature = "otel")]
+                    {
+                        state_guard.transition(bencher_otel::RunnerStateKind::Paused);
+                        count_pause(&pause.reasons);
+                    }
+                }
+                (poll_timeout_secs(pause.ready.poll_timeout), false)
+            },
             Ok(ReadyOutcome::UpdateSent) => {
                 #[cfg(feature = "otel")]
                 state_guard.transition(bencher_otel::RunnerStateKind::Updating);
@@ -1163,17 +1190,21 @@ pub async fn runner_channel(
 
         let deadline = tokio::time::Instant::now() + Duration::from_secs(u64::from(poll_timeout));
 
-        // Poll for a job, checking for WS disconnect between polls
-        let claimed_job = poll_for_job(
-            &log,
-            context,
-            &runner_key,
-            deadline,
-            &mut tx,
-            &mut rx,
-            shutdown,
-        )
-        .await;
+        // Poll for a job, or hold a paused runner's poll, checking for WS disconnect between polls
+        let claimed_job = if claim {
+            poll_for_job(
+                &log,
+                context,
+                &runner_key,
+                deadline,
+                &mut tx,
+                &mut rx,
+                shutdown,
+            )
+            .await
+        } else {
+            hold_for_poll(&log, deadline, &mut tx, &mut rx, shutdown).await
+        };
 
         match claimed_job {
             Ok(PollOutcome::Claimed(claimed)) => {
@@ -1286,10 +1317,12 @@ pub async fn runner_channel(
     Ok(())
 }
 
-/// Outcome of waiting for a `RunnerMessage::Ready` message.
+/// Outcome of waiting for a `RunnerMessage::Ready` or `RunnerMessage::Paused` message.
 enum ReadyOutcome {
     /// Runner version matches; proceed with job polling.
     Ready(u32),
+    /// Runner version matches but the runner is paused; hold its poll without claiming.
+    Paused(Box<JsonPaused>),
     /// Runner version is outdated; `Update` message was sent.
     UpdateSent,
     /// The server is shutting down; close the channel so `server.close()` can complete.
@@ -1322,6 +1355,23 @@ impl Drop for RunnerStateGuard {
     }
 }
 
+/// Count a pause that began, once per reason kind.
+#[cfg(feature = "otel")]
+fn count_pause(reasons: &[PauseReason]) {
+    let mut kinds = Vec::with_capacity(reasons.len());
+    for reason in reasons {
+        let kind = match reason {
+            PauseReason::Raid { .. } => bencher_otel::PauseReasonKind::Raid,
+            PauseReason::Maintenance { .. } => bencher_otel::PauseReasonKind::Maintenance,
+            PauseReason::Other => bencher_otel::PauseReasonKind::Other,
+        };
+        if !kinds.contains(&kind) {
+            kinds.push(kind);
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::RunnerPause(kind));
+        }
+    }
+}
+
 const MAX_CHECKSUM_RESPONSE_BYTES: usize = 1024;
 
 /// Fetch the SHA-256 checksum for a runner binary from its companion `.sha256` file.
@@ -1345,7 +1395,7 @@ async fn fetch_runner_checksum(binary_url: url::Url) -> Result<bencher_json::Sha
     hex.parse().map_err(ChannelError::UpdateChecksum)
 }
 
-/// Wait for a `RunnerMessage::Ready` message, returning the poll timeout.
+/// Wait for a `RunnerMessage::Ready` or `RunnerMessage::Paused` message, returning the poll timeout.
 ///
 /// If the runner's version does not match the server's version, sends a
 /// `ServerMessage::Update` with the download URL and checksum, then returns
@@ -1394,10 +1444,7 @@ where
             Message::Text(text) => {
                 let runner_msg: RunnerMessage = serde_json::from_str(&text)?;
                 match runner_msg {
-                    RunnerMessage::Ready {
-                        poll_timeout,
-                        runner,
-                    } => {
+                    RunnerMessage::Ready(ready) => {
                         // Boxed to keep the long-lived `runner_channel` future small;
                         // this runs once per poll cycle, so the allocation is cheap.
                         return Box::pin(handle_ready(
@@ -1405,8 +1452,19 @@ where
                             &context.runner_update,
                             &context.clock,
                             tx,
-                            poll_timeout,
-                            runner.as_ref(),
+                            ready.poll_timeout,
+                            ready.runner.as_ref(),
+                            fetch_runner_checksum,
+                        ))
+                        .await;
+                    },
+                    RunnerMessage::Paused(paused) => {
+                        return Box::pin(handle_paused(
+                            log,
+                            &context.runner_update,
+                            &context.clock,
+                            tx,
+                            paused,
                             fetch_runner_checksum,
                         ))
                         .await;
@@ -1488,7 +1546,10 @@ where
             job_uuid
         },
         // Non-terminal messages are never passed in by the caller.
-        RunnerMessage::Ready { .. } | RunnerMessage::Running | RunnerMessage::Heartbeat => {
+        RunnerMessage::Ready(_)
+        | RunnerMessage::Paused(_)
+        | RunnerMessage::Running
+        | RunnerMessage::Heartbeat => {
             return Ok(());
         },
     };
@@ -1530,32 +1591,93 @@ where
     F: Fn(url::Url) -> Fut,
     Fut: Future<Output = Result<bencher_json::Sha256, ChannelError>>,
 {
-    let timeout = poll_timeout.map_or(DEFAULT_POLL_TIMEOUT, u32::from);
+    let timeout = poll_timeout_secs(poll_timeout);
 
     let Some(runner) = runner else {
         slog::info!(log, "Runner ready (no metadata, skipping auto-update)");
         return Ok(ReadyOutcome::Ready(timeout));
     };
 
-    let channel = runner.channel.unwrap_or_default();
-    let server_version = bencher_json::BENCHER_API_VERSION;
-    slog::info!(log, "Runner ready"; "os" => %runner.os, "arch" => %runner.arch, "version" => &runner.version, "channel" => %channel, "server_version" => server_version);
+    slog::info!(log, "Runner ready"; "os" => %runner.os, "arch" => %runner.arch, "version" => &runner.version, "channel" => %runner.channel.unwrap_or_default(), "server_version" => bencher_json::BENCHER_API_VERSION);
 
+    Ok(
+        if send_update(log, runner_update, clock, tx, runner, &fetch_checksum).await? {
+            ReadyOutcome::UpdateSent
+        } else {
+            ReadyOutcome::Ready(timeout)
+        },
+    )
+}
+
+/// Run the same update check as `handle_ready` for a paused runner, which then gets no job.
+async fn handle_paused<S, F, Fut>(
+    log: &slog::Logger,
+    runner_update: &bencher_schema::context::RunnerUpdate,
+    clock: &bencher_json::Clock,
+    tx: &mut S,
+    mut paused: JsonPaused,
+    fetch_checksum: F,
+) -> Result<ReadyOutcome, ChannelError>
+where
+    S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+    F: Fn(url::Url) -> Fut,
+    Fut: Future<Output = Result<bencher_json::Sha256, ChannelError>>,
+{
+    paused.reasons.truncate(MAX_PAUSE_REASONS);
+    for reason in &mut paused.reasons {
+        reason.cap();
+    }
+    slog::debug!(log, "Runner paused"; "reasons" => ?paused.reasons, "since" => %paused.since);
+
+    if let Some(runner) = &paused.ready.runner
+        && send_update(log, runner_update, clock, tx, runner, &fetch_checksum).await?
+    {
+        return Ok(ReadyOutcome::UpdateSent);
+    }
+    Ok(ReadyOutcome::Paused(Box::new(paused)))
+}
+
+fn poll_timeout_secs(poll_timeout: Option<bencher_json::PollTimeout>) -> u32 {
+    poll_timeout.map_or(DEFAULT_POLL_TIMEOUT, u32::from)
+}
+
+/// Send `ServerMessage::Update` if the runner is due one, and return whether it was sent.
+async fn send_update<S, F, Fut>(
+    log: &slog::Logger,
+    runner_update: &bencher_schema::context::RunnerUpdate,
+    clock: &bencher_json::Clock,
+    tx: &mut S,
+    runner: &bencher_json::runner::JsonRunnerMetadata,
+    fetch_checksum: &F,
+) -> Result<bool, ChannelError>
+where
+    S: futures::Sink<Message, Error = tokio_tungstenite::tungstenite::Error> + Unpin,
+    F: Fn(url::Url) -> Fut,
+    Fut: Future<Output = Result<bencher_json::Sha256, ChannelError>>,
+{
     if runner.os != bencher_json::OperatingSystem::Linux {
-        return Ok(ReadyOutcome::Ready(timeout));
+        return Ok(false);
     }
 
+    let channel = runner.channel.unwrap_or_default();
     let update = match channel {
         bencher_json::UpdateChannel::Stable => {
-            stable_update(log, runner_update, runner, server_version, &fetch_checksum).await?
+            stable_update(
+                log,
+                runner_update,
+                runner,
+                bencher_json::BENCHER_API_VERSION,
+                fetch_checksum,
+            )
+            .await?
         },
         bencher_json::UpdateChannel::Canary => {
-            canary_update(log, runner_update, clock, runner, &fetch_checksum).await?
+            canary_update(log, runner_update, clock, runner, fetch_checksum).await?
         },
     };
 
     let Some(update) = update else {
-        return Ok(ReadyOutcome::Ready(timeout));
+        return Ok(false);
     };
 
     let text = serde_json::to_string(&update)?;
@@ -1566,7 +1688,7 @@ where
         update_channel_kind(channel),
     ));
 
-    Ok(ReadyOutcome::UpdateSent)
+    Ok(true)
 }
 
 /// Stable channel: update when the runner version differs from the server version,
@@ -1736,16 +1858,48 @@ where
     S: futures::Sink<Message> + Unpin,
     R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
+    poll_until(log, Some((context, runner_key)), deadline, tx, rx, shutdown).await
+}
+
+/// Hold a paused runner's poll until the deadline as `poll_for_job` would, but never claim a job.
+async fn hold_for_poll<S, R>(
+    log: &slog::Logger,
+    deadline: tokio::time::Instant,
+    tx: &mut S,
+    rx: &mut R,
+    shutdown: &CancellationToken,
+) -> Result<PollOutcome, ChannelError>
+where
+    S: futures::Sink<Message> + Unpin,
+    R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
+{
+    poll_until(log, None, deadline, tx, rx, shutdown).await
+}
+
+async fn poll_until<S, R>(
+    log: &slog::Logger,
+    claimant: Option<(&ApiContext, &RunnerAuth)>,
+    deadline: tokio::time::Instant,
+    tx: &mut S,
+    rx: &mut R,
+    shutdown: &CancellationToken,
+) -> Result<PollOutcome, ChannelError>
+where
+    S: futures::Sink<Message> + Unpin,
+    R: futures::Stream<Item = Result<Message, tokio_tungstenite::tungstenite::Error>> + Unpin,
+{
     loop {
-        match try_claim_job(context, runner_key).await {
-            Ok(Some((query_job, claimed_job))) => {
-                return Ok(PollOutcome::Claimed(Box::new((query_job, claimed_job))));
-            },
-            Ok(None) => {},
-            Err(e) => {
-                slog::error!(log, "Error claiming job"; "error" => %e);
-                // Continue polling — transient DB errors shouldn't break the channel
-            },
+        if let Some((context, runner_key)) = claimant {
+            match try_claim_job(context, runner_key).await {
+                Ok(Some((query_job, claimed_job))) => {
+                    return Ok(PollOutcome::Claimed(Box::new((query_job, claimed_job))));
+                },
+                Ok(None) => {},
+                Err(e) => {
+                    slog::error!(log, "Error claiming job"; "error" => %e);
+                    // Continue polling: transient DB errors shouldn't break the channel
+                },
+            }
         }
 
         if tokio::time::Instant::now() >= deadline {
@@ -1859,15 +2013,18 @@ where
                 };
 
                 // Reset heartbeat on valid protocol messages, but NOT on
-                // spurious Ready messages — a misbehaving runner could send
-                // periodic Ready to keep the heartbeat alive indefinitely.
-                let is_ready = matches!(runner_msg, RunnerMessage::Ready { .. });
+                // spurious Ready or Paused messages: a misbehaving runner could send
+                // them periodically to keep the heartbeat alive indefinitely.
+                let is_idle = matches!(
+                    runner_msg,
+                    RunnerMessage::Ready(_) | RunnerMessage::Paused(_)
+                );
 
                 let (response, close_reason) =
                     handle_runner_message(log, context, job, runner_msg, &mut billing_state)
                         .await?;
 
-                if !is_ready {
+                if !is_idle {
                     last_heartbeat = tokio::time::Instant::now();
                 }
 
@@ -2142,11 +2299,17 @@ mod tests {
             atomic::{AtomicUsize, Ordering},
         };
 
-        use bencher_json::{Sha256, UpdateChannel, runner::JsonRunnerMetadata};
+        use bencher_json::{
+            Sha256, UpdateChannel,
+            runner::{
+                JsonPaused, JsonReady, JsonRunnerMetadata, MAX_PAUSE_REASONS,
+                MAX_REPORT_STRING_LEN, MdSyncAction, PauseReason,
+            },
+        };
         use bencher_schema::context::RunnerUpdate;
         use futures::{SinkExt as _, channel::mpsc};
 
-        use super::super::{Message, ReadyOutcome, ServerMessage, handle_ready};
+        use super::super::{Message, ReadyOutcome, ServerMessage, handle_paused, handle_ready};
         use crate::channel::ChannelError;
 
         fn test_log() -> slog::Logger {
@@ -2538,6 +2701,104 @@ mod tests {
                 1,
                 "checksum should be fetched once and then served from cache"
             );
+        }
+
+        fn paused(runner: JsonRunnerMetadata, reasons: usize) -> JsonPaused {
+            JsonPaused {
+                reasons: vec![PauseReason::Other; reasons],
+                since: bencher_json::DateTime::TEST,
+                ready: JsonReady::new(None, Some(runner)),
+            }
+        }
+
+        #[tokio::test]
+        async fn paused_stable_version_mismatch_sends_update() {
+            let (mut tx, mut rx) = test_sink();
+            let fetcher = FakeFetcher::ok(published_checksum());
+            let outcome = handle_paused(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                paused(metadata(None, "0.0.0", None), 1),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            assert!(matches!(outcome, ReadyOutcome::UpdateSent));
+            let ServerMessage::Update {
+                version, checksum, ..
+            } = sent_update(&mut rx)
+            else {
+                panic!("Expected an Update message");
+            };
+            assert_eq!(version, bencher_json::BENCHER_API_VERSION);
+            assert_eq!(checksum, published_checksum());
+        }
+
+        #[tokio::test]
+        async fn paused_reasons_are_capped() {
+            let (mut tx, _rx) = test_sink();
+            let fetcher = FakeFetcher::ok(published_checksum());
+            let outcome = handle_paused(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                paused(
+                    metadata(None, bencher_json::BENCHER_API_VERSION, None),
+                    MAX_PAUSE_REASONS + 1,
+                ),
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            let ReadyOutcome::Paused(pause) = outcome else {
+                panic!("Expected Paused");
+            };
+            assert_eq!(pause.reasons.len(), MAX_PAUSE_REASONS);
+        }
+
+        // The pause start is logged from this outcome, so a runner's long strings are cut before it.
+        #[tokio::test]
+        async fn paused_reason_strings_are_capped() {
+            let (mut tx, _rx) = test_sink();
+            let fetcher = FakeFetcher::ok(published_checksum());
+            let long = "m".repeat(1000);
+            let capped = "m".repeat(MAX_REPORT_STRING_LEN);
+            let mut pause = paused(metadata(None, bencher_json::BENCHER_API_VERSION, None), 0);
+            pause.reasons = vec![PauseReason::Raid {
+                array: long.clone(),
+                action: MdSyncAction::Other(long.clone()),
+                done: None,
+                total: None,
+                speed: None,
+            }];
+            let outcome = handle_paused(
+                &test_log(),
+                &RunnerUpdate::new(None),
+                &test_clock(),
+                &mut tx,
+                pause,
+                fetcher.fetch(),
+            )
+            .await
+            .unwrap();
+            let ReadyOutcome::Paused(pause) = outcome else {
+                panic!("Expected Paused");
+            };
+            let [
+                PauseReason::Raid {
+                    array,
+                    action: MdSyncAction::Other(action),
+                    ..
+                },
+            ] = pause.reasons.as_slice()
+            else {
+                panic!("Expected one raid reason, got {:?}", pause.reasons);
+            };
+            assert_eq!(array, &capped);
+            assert_eq!(action, &capped);
         }
     }
 }

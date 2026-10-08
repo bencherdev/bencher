@@ -24,6 +24,7 @@ use bencher_api_tests::TestServer;
 use bencher_json::{
     DateTime, JobStatus, JsonJob, JsonReport, PollTimeout, Priority, ReportUuid,
     project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
+    runner::JsonReady,
 };
 use bencher_schema::{
     context::HeartbeatTasks,
@@ -471,10 +472,10 @@ mod job_spec {
 
         // Try to claim the job via channel WS - should get an error or close
         let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
-        let ready = RunnerMessage::Ready {
-            poll_timeout: Some(PollTimeout::try_from(5).unwrap()),
-            runner: Some(common::runner_metadata()),
-        };
+        let ready = RunnerMessage::Ready(JsonReady::new(
+            Some(PollTimeout::try_from(5).unwrap()),
+            Some(common::runner_metadata()),
+        ));
         send_msg(&mut ws, &ready).await;
 
         // The server should close the connection or send an error
@@ -2685,10 +2686,10 @@ async fn claim_job_invalid_config() {
 
     // Try to claim the job via channel WS — parse_config should fail
     let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(1).unwrap()),
-        runner: Some(common::runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(1).unwrap()),
+        Some(common::runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
 
     // The server should close the connection or not send a valid Job
@@ -3111,10 +3112,10 @@ async fn poll_timeout_delays_nojob() {
     associate_runner_spec(&server, runner_id, spec_id);
 
     let mut ws = connect_channel_ws(&server, runner.uuid, runner_key).await;
-    let ready = RunnerMessage::Ready {
-        poll_timeout: Some(PollTimeout::try_from(2).expect("Invalid poll timeout")),
-        runner: Some(common::runner_metadata()),
-    };
+    let ready = RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(2).expect("Invalid poll timeout")),
+        Some(common::runner_metadata()),
+    ));
     send_msg(&mut ws, &ready).await;
 
     // Pause tokio time so all timers use virtual time.

@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use bencher_json::{
     JobUuid, JsonClaimedJob,
-    runner::{JsonIterationOutput, JsonRunnerMetadata, RunnerMessage, ServerMessage},
+    runner::{JsonIterationOutput, JsonReady, JsonRunnerMetadata, RunnerMessage, ServerMessage},
 };
 use bencher_valid::Sha256;
 use url::Url;
@@ -561,10 +561,10 @@ impl ChannelStateMachine {
             let wait_duration =
                 Duration::from_secs(u64::from(self.poll_timeout_secs) + POLL_TIMEOUT_MARGIN_SECS);
             vec![
-                Effect::Send(RunnerMessage::Ready {
+                Effect::Send(RunnerMessage::Ready(JsonReady::new(
                     poll_timeout,
-                    runner: self.runner.clone(),
-                }),
+                    self.runner.clone(),
+                ))),
                 Effect::WaitForJob(wait_duration),
             ]
         }

@@ -10,7 +10,7 @@ use bencher_api_tests::{TestOrg, TestServer, TestUser};
 use bencher_config::spawn_job_recovery;
 use bencher_json::{
     JobStatus, JobUuid, PlanLevel, PollTimeout,
-    runner::{JobCallbackState, JsonIterationOutput},
+    runner::{JobCallbackState, JsonIterationOutput, JsonReady},
 };
 use bencher_schema::{
     context::HeartbeatTasks,
@@ -83,10 +83,10 @@ async fn setup_timed_job(
     let mut ws = connect_channel_ws(&server, runner.uuid, runner.key.as_ref()).await;
     send_msg(
         &mut ws,
-        &RunnerMessage::Ready {
-            poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-            runner: Some(runner_metadata()),
-        },
+        &RunnerMessage::Ready(JsonReady::new(
+            Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+            Some(runner_metadata()),
+        )),
     )
     .await;
     assert!(
@@ -261,10 +261,10 @@ async fn setup_report_callback(
     let mut ws = connect_channel_ws(&server, runner.uuid, runner.key.as_ref()).await;
     send_msg(
         &mut ws,
-        &RunnerMessage::Ready {
-            poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-            runner: Some(runner_metadata()),
-        },
+        &RunnerMessage::Ready(JsonReady::new(
+            Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+            Some(runner_metadata()),
+        )),
     )
     .await;
     assert!(
@@ -568,10 +568,10 @@ async fn process_submitted(submitted: &Submitted) {
     let mut ws = connect_channel_ws(server, runner.uuid, runner.key.as_ref()).await;
     send_msg(
         &mut ws,
-        &RunnerMessage::Ready {
-            poll_timeout: Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
-            runner: Some(runner_metadata()),
-        },
+        &RunnerMessage::Ready(JsonReady::new(
+            Some(PollTimeout::try_from(5).expect("Invalid poll timeout")),
+            Some(runner_metadata()),
+        )),
     )
     .await;
     let claimed = match ws.next().await {

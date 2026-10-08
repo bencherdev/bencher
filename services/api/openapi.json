@@ -9040,7 +9040,7 @@
           "runners"
         ],
         "summary": "Persistent WebSocket channel for runner lifecycle",
-        "description": "➕ Bencher Plus: Single persistent WebSocket connection for job assignment and execution. Runner sends `Ready` to request a job, server pushes `Job` or `NoJob`. During execution, handles `Running`, `Heartbeat`, `Completed`, `Failed`, and `Canceled` messages. Authentication is via runner key in the Authorization header.",
+        "description": "➕ Bencher Plus: Single persistent WebSocket connection for job assignment and execution. Runner sends `Ready` to request a job, server pushes `Job` or `NoJob`. A runner that sends `Paused` instead gets `NoJob` at the end of its poll and no job. During execution, handles `Running`, `Heartbeat`, `Completed`, `Failed`, and `Canceled` messages. Authentication is via runner key in the Authorization header.",
         "operationId": "runner_channel",
         "parameters": [
           {
