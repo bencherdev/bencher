@@ -6,8 +6,9 @@ use bencher_json::{
     JsonDirection, JsonNewReport, JsonPagination, JsonReport, JsonReports, ProjectResourceId,
     ReportUuid,
     project::{
+        alert::AlertStatus,
         head::VersionNumber,
-        report::{JsonReportQuery, JsonReportQueryParams},
+        report::{JsonReportQuery, JsonReportQueryParams, ReportAlerts},
     },
 };
 use bencher_rbac::project::Permission;
@@ -204,12 +205,36 @@ fn get_ls_query<'q>(
     if let Some(testbed) = query_params.testbed.as_ref() {
         filter_testbed_name_id!(query, testbed);
     }
+    if let Some(adapter) = query_params.adapter {
+        query = query.filter(schema::report::adapter.eq_any(adapter.listed_from()));
+    }
 
     if let Some(start_time) = query_params.start_time {
         query = query.filter(schema::report::start_time.ge(start_time));
     }
     if let Some(end_time) = query_params.end_time {
         query = query.filter(schema::report::end_time.le(end_time));
+    }
+
+    if let Some(alerts) = query_params.alerts {
+        // Drawn from the project's active alerts, which are few, rather than probing every report.
+        let alerting = schema::alert::table
+            .inner_join(
+                schema::boundary::table.on(schema::boundary::id.eq(schema::alert::boundary_id)),
+            )
+            .inner_join(
+                schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)),
+            )
+            .inner_join(
+                schema::report_benchmark::table
+                    .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
+            )
+            .filter(schema::alert::project_id.eq(query_project.id))
+            .filter(schema::alert::status.eq(AlertStatus::Active))
+            .select(schema::report_benchmark::report_id);
+        query = match alerts {
+            ReportAlerts::Active => query.filter(schema::report::id.eq_any(alerting)),
+        };
     }
 
     if let Some(true) = query_params.archived {

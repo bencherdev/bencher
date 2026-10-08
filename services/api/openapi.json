@@ -7249,6 +7249,22 @@
           },
           {
             "in": "query",
+            "name": "adapter",
+            "description": "Filter by adapter, as reports list it: a language adapter such as `rust` is listed as `magic`.",
+            "schema": {
+              "$ref": "#/components/schemas/Adapter"
+            }
+          },
+          {
+            "in": "query",
+            "name": "alerts",
+            "description": "If set to `active`, only return reports with at least one active alert.",
+            "schema": {
+              "$ref": "#/components/schemas/ReportAlerts"
+            }
+          },
+          {
+            "in": "query",
             "name": "archived",
             "description": "If set to `true`, only return reports with an archived branch or testbed. If not set or set to `false`, only returns reports with non-archived branches and testbeds.",
             "schema": {
@@ -17178,6 +17194,13 @@
             "format": "uint32",
             "minimum": 0
           },
+          "lines": {
+            "description": "The number of lines in this iteration: one per variant, measure, and metric name.",
+            "default": 0,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
           "measures": {
             "description": "The number of distinct measures in this iteration.",
             "type": "integer",
@@ -20665,6 +20688,18 @@
             "type": "string",
             "enum": [
               "date_time"
+            ]
+          }
+        ]
+      },
+      "ReportAlerts": {
+        "description": "Which reports to list by their alerts.",
+        "oneOf": [
+          {
+            "description": "Reports with at least one active alert.",
+            "type": "string",
+            "enum": [
+              "active"
             ]
           }
         ]
