@@ -354,6 +354,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    runner_status (runner_id) {
+        runner_id -> Integer,
+        availability -> Integer,
+        reasons -> Text,
+        since -> Nullable<BigInt>,
+        health -> Nullable<Text>,
+        changed -> BigInt,
+    }
+}
+
+diesel::table! {
     series_last_seen (testbed_id, benchmark_id, variant_id, measure_id) {
         organization_id -> Integer,
         project_id -> Integer,
@@ -543,6 +554,7 @@ diesel::joinable!(report_benchmark -> variant (variant_id));
 diesel::joinable!(report_warning -> report (report_id));
 diesel::joinable!(runner_spec -> runner (runner_id));
 diesel::joinable!(runner_spec -> spec (spec_id));
+diesel::joinable!(runner_status -> runner (runner_id));
 diesel::joinable!(series_last_seen -> benchmark (benchmark_id));
 diesel::joinable!(series_last_seen -> measure (measure_id));
 diesel::joinable!(series_last_seen -> organization (organization_id));
@@ -591,6 +603,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     report_warning,
     runner,
     runner_spec,
+    runner_status,
     series_last_seen,
     server,
     spec,

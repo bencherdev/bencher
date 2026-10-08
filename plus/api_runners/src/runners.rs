@@ -23,6 +23,7 @@ use diesel::{
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 
 pub type RunnersPagination = JsonPagination<RunnersSort>;
 
@@ -77,6 +78,7 @@ pub async fn runners_get(
 ) -> Result<ResponseOk<JsonRunners>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
     let (json, total_count) = get_ls_inner(
+        &rqctx.log,
         rqctx.context(),
         pagination_params.into_inner(),
         query_params.into_inner(),
@@ -86,6 +88,7 @@ pub async fn runners_get(
 }
 
 async fn get_ls_inner(
+    log: &Logger,
     context: &ApiContext,
     pagination_params: RunnersPagination,
     query_params: RunnersQuery,
@@ -100,7 +103,7 @@ async fn get_ls_inner(
         let json: Vec<_> = auth_conn!(context, |conn| {
             runners
                 .into_iter()
-                .map(|r| r.into_json(conn))
+                .map(|r| r.into_json(log, conn))
                 .collect::<Result<Vec<_>, _>>()?
         });
         json.into()
@@ -234,17 +237,18 @@ pub async fn runner_get(
     path_params: Path<RunnerParams>,
 ) -> Result<ResponseOk<JsonRunner>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner()).await?;
+    let json = get_one_inner(&rqctx.log, rqctx.context(), path_params.into_inner()).await?;
     Ok(Get::auth_response_ok(json))
 }
 
 async fn get_one_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: RunnerParams,
 ) -> Result<JsonRunner, HttpError> {
     auth_conn!(context, |conn| {
         let query_runner = QueryRunner::from_resource_id(conn, &path_params.runner)?;
-        query_runner.into_json(conn)
+        query_runner.into_json(log, conn)
     })
 }
 
@@ -265,11 +269,18 @@ pub async fn runner_patch(
     body: TypedBody<JsonUpdateRunner>,
 ) -> Result<ResponseOk<JsonRunner>, HttpError> {
     let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = patch_inner(rqctx.context(), path_params.into_inner(), body.into_inner()).await?;
+    let json = patch_inner(
+        &rqctx.log,
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+    )
+    .await?;
     Ok(Patch::auth_response_ok(json))
 }
 
 async fn patch_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: RunnerParams,
     json_runner: JsonUpdateRunner,
@@ -292,6 +303,6 @@ async fn patch_inner(
 
     auth_conn!(context, |conn| {
         let runner = QueryRunner::get(conn, query_runner.id)?;
-        runner.into_json(conn)
+        runner.into_json(log, conn)
     })
 }

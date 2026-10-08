@@ -12479,6 +12479,12 @@
         "type": "string",
         "format": "uuid"
       },
+      "HealthFindingKind": {
+        "type": "string"
+      },
+      "HealthState": {
+        "type": "string"
+      },
       "HeartbeatTimeout": {
         "type": "integer",
         "format": "uint32",
@@ -13246,6 +13252,37 @@
           "uuid"
         ]
       },
+      "JsonHealthFinding": {
+        "description": "One thing wrong with one disk or array.",
+        "type": "object",
+        "properties": {
+          "device": {
+            "description": "The disk or array, such as `nvme0` or `md0`",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What is wrong",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HealthFindingKind"
+              }
+            ]
+          },
+          "state": {
+            "description": "How bad it is",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HealthState"
+              }
+            ]
+          }
+        },
+        "required": [
+          "device",
+          "kind",
+          "state"
+        ]
+      },
       "JsonIndex": {
         "type": "object",
         "properties": {
@@ -13669,6 +13706,40 @@
         },
         "required": [
           "email"
+        ]
+      },
+      "JsonMdArray": {
+        "description": "An md array.",
+        "type": "object",
+        "properties": {
+          "action": {
+            "description": "Its `sync_action`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MdSyncAction"
+              }
+            ]
+          },
+          "array_state": {
+            "description": "Its `array_state`, such as `clean` or `active`",
+            "type": "string"
+          },
+          "degraded": {
+            "description": "Its count of missing members, from `degraded`",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "name": {
+            "description": "The array, such as `md0`",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "array_state",
+          "degraded",
+          "name"
         ]
       },
       "JsonMeasure": {
@@ -15077,6 +15148,88 @@
         },
         "required": [
           "parameters"
+        ]
+      },
+      "JsonNvmeHealth": {
+        "description": "An `NVMe` controller.",
+        "type": "object",
+        "properties": {
+          "log": {
+            "nullable": true,
+            "description": "Its SMART / health log, absent when the runner cannot read it",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonNvmeHealthLog"
+              }
+            ]
+          },
+          "model": {
+            "nullable": true,
+            "description": "Its model number",
+            "type": "string"
+          },
+          "name": {
+            "description": "The controller, such as `nvme0`",
+            "type": "string"
+          },
+          "serial": {
+            "nullable": true,
+            "description": "Its serial number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "JsonNvmeHealthLog": {
+        "description": "The fields of an `NVMe` SMART / health log page that set a finding.",
+        "type": "object",
+        "properties": {
+          "available_spare": {
+            "description": "Available spare, in percent",
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0
+          },
+          "available_spare_threshold": {
+            "description": "Available spare threshold, in percent",
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0
+          },
+          "critical_warning": {
+            "description": "Critical warning bits",
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0
+          },
+          "media_errors": {
+            "description": "Media and data integrity errors",
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
+          "percentage_used": {
+            "description": "Percentage of the rated endurance used, which can pass 100",
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0
+          },
+          "temperature": {
+            "description": "Composite temperature, in kelvin",
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "available_spare",
+          "available_spare_threshold",
+          "critical_warning",
+          "media_errors",
+          "percentage_used",
+          "temperature"
         ]
       },
       "JsonOAuth": {
@@ -17177,6 +17330,15 @@
               "$ref": "#/components/schemas/SpecUuid"
             }
           },
+          "status": {
+            "nullable": true,
+            "description": "The runner's status, absent until it first sends `Ready` or `Paused`",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRunnerStatus"
+              }
+            ]
+          },
           "uuid": {
             "$ref": "#/components/schemas/RunnerUuid"
           }
@@ -17188,6 +17350,44 @@
           "slug",
           "specs",
           "uuid"
+        ]
+      },
+      "JsonRunnerHealth": {
+        "description": "A runner host's disk health, sent with `Ready` and `Paused`.",
+        "type": "object",
+        "properties": {
+          "arrays": {
+            "description": "Every md array on the host",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonMdArray"
+            }
+          },
+          "findings": {
+            "description": "What is wrong, one per disk or array and condition",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonHealthFinding"
+            }
+          },
+          "nvme": {
+            "description": "Every `NVMe` controller on the host",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonNvmeHealth"
+            }
+          },
+          "state": {
+            "description": "The worst state of any finding, `ok` when there is none",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HealthState"
+              }
+            ]
+          }
+        },
+        "required": [
+          "state"
         ]
       },
       "JsonRunnerKey": {
@@ -17389,6 +17589,58 @@
           "plus",
           "total",
           "unclaimed"
+        ]
+      },
+      "JsonRunnerStatus": {
+        "description": "A runner's status, as it last changed",
+        "type": "object",
+        "properties": {
+          "availability": {
+            "description": "Whether the runner takes jobs",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RunnerAvailability"
+              }
+            ]
+          },
+          "changed": {
+            "description": "When the server stored this status, which it does only when the status changes",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "health": {
+            "nullable": true,
+            "description": "The runner host's disk health, absent until the runner reports it",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonRunnerHealth"
+              }
+            ]
+          },
+          "reasons": {
+            "description": "Why the runner is paused, empty when it is ready",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PauseReason"
+            }
+          },
+          "since": {
+            "nullable": true,
+            "description": "When the pause began, by the runner's clock",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          }
+        },
+        "required": [
+          "availability",
+          "changed",
+          "reasons"
         ]
       },
       "JsonRunners": {
@@ -19277,6 +19529,9 @@
           "critical"
         ]
       },
+      "MdSyncAction": {
+        "type": "string"
+      },
       "MeasureSlug": {
         "$ref": "#/components/schemas/Slug"
       },
@@ -19475,6 +19730,101 @@
         },
         "maxProperties": 8
       },
+      "PauseReason": {
+        "description": "Why a runner is paused.",
+        "oneOf": [
+          {
+            "description": "An md array is syncing, rebuilding, reshaping, or scrubbing.",
+            "type": "object",
+            "properties": {
+              "action": {
+                "description": "The array's `sync_action`",
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/MdSyncAction"
+                  }
+                ]
+              },
+              "array": {
+                "description": "The array, such as `md0`",
+                "type": "string"
+              },
+              "done": {
+                "nullable": true,
+                "description": "Sectors done, from `sync_completed`",
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "raid"
+                ]
+              },
+              "speed": {
+                "nullable": true,
+                "description": "KiB per second, from `sync_speed`",
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0
+              },
+              "total": {
+                "nullable": true,
+                "description": "Sectors in total, from `sync_completed`",
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "action",
+              "array",
+              "kind"
+            ]
+          },
+          {
+            "description": "Host maintenance is running or about to run.",
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "maintenance"
+                ]
+              },
+              "lock": {
+                "description": "Another process holds the job lock",
+                "type": "boolean"
+              },
+              "marker": {
+                "description": "The maintenance marker is present",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "kind",
+              "lock",
+              "marker"
+            ]
+          },
+          {
+            "description": "A reason this server does not know.",
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "other"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          }
+        ]
+      },
       "PlanLevel": {
         "type": "string",
         "enum": [
@@ -19640,6 +19990,25 @@
         "additionalProperties": {
           "type": "string"
         }
+      },
+      "RunnerAvailability": {
+        "description": "Whether a runner takes jobs",
+        "oneOf": [
+          {
+            "description": "The runner takes jobs",
+            "type": "string",
+            "enum": [
+              "ready"
+            ]
+          },
+          {
+            "description": "The runner takes no job until every pause reason clears",
+            "type": "string",
+            "enum": [
+              "paused"
+            ]
+          }
+        ]
       },
       "RunnerKey": {
         "type": "string"

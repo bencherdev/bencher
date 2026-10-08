@@ -496,6 +496,28 @@ export type JsonReportResults = JsonReportIteration[];
 
 export type JsonResultsMap = Record<BenchmarkName, JsonMetricsMap>;
 
+/** Whether a runner takes jobs */
+export enum RunnerAvailability {
+	/** The runner takes jobs */
+	Ready = "ready",
+	/** The runner takes no job until every pause reason clears */
+	Paused = "paused",
+}
+
+/** A runner's status, as it last changed */
+export interface JsonRunnerStatus {
+	/** Whether the runner takes jobs */
+	availability: RunnerAvailability;
+	/** Why the runner is paused, empty when it is ready */
+	reasons: Record<string, unknown>[];
+	/** When the pause began, by the runner's clock */
+	since?: string;
+	/** The runner host's disk health, absent until the runner reports it */
+	health?: Record<string, unknown> | undefined;
+	/** When the server stored this status, which it does only when the status changes */
+	changed: string;
+}
+
 /** A benchmark runner */
 export interface JsonRunner {
 	uuid: Uuid;
@@ -504,6 +526,8 @@ export interface JsonRunner {
 	specs: Uuid[];
 	archived?: string;
 	last_heartbeat?: string;
+	/** The runner's status, absent until it first sends `Ready` or `Paused` */
+	status?: JsonRunnerStatus;
 	created: string;
 	modified: string;
 }
