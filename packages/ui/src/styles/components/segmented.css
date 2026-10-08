@@ -1,0 +1,79 @@
+@layer ui-components {
+	.ui-segmented {
+		display: inline-flex;
+		align-items: stretch;
+		min-height: 30px;
+		border: var(--border-width) solid var(--color-border-control);
+		border-radius: 7px;
+		overflow: hidden;
+		flex: none;
+	}
+
+	.ui-segmented[data-full] {
+		display: flex;
+		width: 100%;
+	}
+
+	.ui-segment {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 6px;
+		padding: 0 10px;
+		color: var(--color-text-muted);
+		font-size: 12.5px;
+		font-weight: var(--font-weight-medium);
+		white-space: nowrap;
+		cursor: pointer;
+	}
+
+	.ui-segment + .ui-segment {
+		border-left: var(--border-width) solid var(--color-border);
+	}
+
+	.ui-segmented[data-full] > .ui-segment {
+		flex: 1;
+	}
+
+	/* The radio covers its position, so a press anywhere on it is a press on it. */
+	.ui-segment > input {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		opacity: 0;
+		cursor: inherit;
+	}
+
+	.ui-segment:hover {
+		color: var(--color-text-primary);
+		background: var(--color-overlay-hover);
+	}
+
+	.ui-segment:has(> input:checked) {
+		background: var(--color-accent-muted);
+		color: var(--color-text-primary);
+		font-weight: var(--font-weight-semibold);
+		box-shadow: inset 0 -2px 0 var(--color-stroke-accent);
+	}
+
+	.ui-segment:has(> input:focus-visible) {
+		outline: 2px solid var(--color-focus);
+		outline-offset: -3px;
+	}
+
+	.ui-segment:has(> input:disabled) {
+		color: var(--color-text-faint);
+		cursor: default;
+	}
+
+	@media (max-width: 767px) {
+		.ui-segment {
+			min-height: var(--spacing-11);
+			padding: 0 12px;
+			font-size: 13px;
+		}
+	}
+}

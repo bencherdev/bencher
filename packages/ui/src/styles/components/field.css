@@ -53,6 +53,16 @@
 		padding-block: var(--spacing-1);
 	}
 
+	/* Every input is a full touch target on a narrow screen. */
+	@media (max-width: 767px) {
+		.ui-input,
+		.ui-input[data-size],
+		.ui-select,
+		.ui-select[data-size] {
+			min-height: var(--spacing-11);
+		}
+	}
+
 	.ui-textarea {
 		min-height: 6rem;
 		resize: vertical;

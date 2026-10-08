@@ -37,6 +37,30 @@ export const TABS: readonly { tab: Tab; label: string; segments: string[] }[] =
 export const projectPath = (slug: string, tab?: Tab) =>
 	`${NEXT_PROJECTS}/${slug}/${tab ?? ""}`;
 
+export const reportPath = (slug: string, report: string) =>
+	`${projectPath(slug, "reports")}/${report}`;
+
+const TAB_PAGES = {
+	explore: "Explore",
+	plots: "Plots",
+	reports: "Reports",
+	alerts: "Alerts",
+	thresholds: "Thresholds",
+	settings: "Settings",
+} as const satisfies Record<Tab, string>;
+
+/** A file under `pages/`: each draws one kind of project path. */
+export type PageName = (typeof TAB_PAGES)[Tab] | "Report" | "NotFound";
+
+/** The page that draws a project path, from its segments after the project. */
+export const pageName = (rest: string[]): PageName => {
+	if (rest.length === 2 && rest[0] === "reports") {
+		return "Report";
+	}
+	const tab = tabOf(rest);
+	return tab ? TAB_PAGES[tab] : "NotFound";
+};
+
 export interface ProjectLocation {
 	slug: string;
 	/** The segments after the project. */

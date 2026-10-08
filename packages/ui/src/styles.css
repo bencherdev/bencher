@@ -13,12 +13,16 @@
 @import "./styles/components/banner.css";
 @import "./styles/components/button.css";
 @import "./styles/components/card.css";
+@import "./styles/components/chip.css";
 @import "./styles/components/empty-state.css";
 @import "./styles/components/field.css";
 @import "./styles/components/heading.css";
 @import "./styles/components/icon.css";
 @import "./styles/components/list.css";
+@import "./styles/components/menu.css";
 @import "./styles/components/popover.css";
+@import "./styles/components/segmented.css";
+@import "./styles/components/sheet.css";
 @import "./styles/components/skeleton.css";
 @import "./styles/components/stack.css";
 @import "./styles/components/table.css";

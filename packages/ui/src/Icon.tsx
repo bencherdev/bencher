@@ -5,7 +5,14 @@ import { splitProps } from "solid-js";
  * The enumerated glyph set. Each name carries one meaning. A new name enters
  * the set the way a new component does, when a screen needs it.
  */
-export type IconName = "alerts" | "read-only" | "theme";
+export type IconName =
+	| "alerts"
+	| "check"
+	| "chevron-down"
+	| "key"
+	| "read-only"
+	| "theme"
+	| "user";
 
 // One stroke-drawn set on a shared 24 grid: fill none, round joins, a
 // single stroke width, all on currentColor so the glyph takes the token
@@ -18,6 +25,14 @@ const GLYPHS: Record<IconName, () => JSX.Element> = {
 			<path d="M13.7 21a2 2 0 0 1-3.4 0" />
 		</>
 	),
+	check: () => <path d="M5 12.5l4.5 4.5L19 7.5" />,
+	"chevron-down": () => <path d="M6 9l6 6 6-6" />,
+	key: () => (
+		<>
+			<circle cx="8" cy="15" r="4" />
+			<path d="M11 12l9-9M17 6l3 3M15 8l2 2" />
+		</>
+	),
 	"read-only": () => (
 		<>
 			<rect x="5" y="11" width="14" height="10" rx="2" />
@@ -27,6 +42,12 @@ const GLYPHS: Record<IconName, () => JSX.Element> = {
 	theme: () => (
 		<>
 			<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+		</>
+	),
+	user: () => (
+		<>
+			<circle cx="12" cy="8" r="4" />
+			<path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
 		</>
 	),
 };

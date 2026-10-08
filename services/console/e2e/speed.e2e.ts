@@ -19,6 +19,9 @@ import {
 } from "./speed";
 
 const { hashbrown } = seed.projects;
+// The shell alone: a project path no page draws, so no page data rides along.
+const SHELL = nextPath(hashbrown.slug, "nowhere");
+const REPORTS = nextPath(hashbrown.slug, "reports");
 
 test.use({ storageState: signedIn(seed.member), freezeClock: false });
 
@@ -49,7 +52,7 @@ test("a cold load holds the speed ceilings", async ({ page }) => {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
-	await page.goto(nextPath(hashbrown.slug, "reports"));
+	await page.goto(SHELL);
 	await expect(
 		crumbs(page).getByRole("link", { name: seed.organization.name }),
 	).toBeVisible();
@@ -75,7 +78,7 @@ test("a cold load holds the speed ceilings", async ({ page }) => {
 // draws over it, and a reload that waits on the cache to ask the API.
 test("a warm reload holds the speed ceilings", async ({ page }) => {
 	await observeLayoutShift(page);
-	await page.goto(nextPath(hashbrown.slug, "reports"));
+	await page.goto(SHELL);
 	await ready(page);
 	await settle(page, 1_500);
 
@@ -96,7 +99,7 @@ test("a warm reload holds the speed ceilings", async ({ page }) => {
 
 // Kills a tab switch that refetches the shell or pulls in more than its page.
 test("a tab switch holds the speed ceilings", async ({ page }) => {
-	await page.goto(nextPath(hashbrown.slug, "reports"));
+	await page.goto(SHELL);
 	await ready(page);
 
 	const since = await mark(page);
@@ -110,4 +113,58 @@ test("a tab switch holds the speed ceilings", async ({ page }) => {
 	report("tab switch", cost);
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceilings.tabSwitch.apiRequests);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceilings.tabSwitch.jsBytes);
+});
+
+const reportsReady = async (page: Page) => {
+	await expect(
+		page
+			.getByRole("table", { name: "Reports, newest first" })
+			.getByRole("link")
+			.first(),
+	).toBeVisible();
+	await ready(page);
+};
+
+// Kills a Reports page whose list waits on the shell's request or on its own
+// code arriving late, JavaScript that grows, and rows that move as they arrive.
+test("a cold load of Reports holds its speed ceilings", async ({ page }) => {
+	await observeLayoutShift(page);
+	await page.route(`${seed.api_url}/**`, async (route) => {
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		await route.continue();
+	});
+	await page.goto(REPORTS);
+	await reportsReady(page);
+
+	const cost = await measure(page, seed.api_url);
+	report("reports cold load", cost);
+	const ceiling = ceilings.reportsColdLoad;
+	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+		ceiling.apiAnswersBeforePaint,
+	);
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+	expect(cost.inlineScriptBytes).toBeLessThanOrEqual(ceiling.inlineScriptBytes);
+	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+});
+
+// Kills a switch into Reports that refetches the shell, asks for the list in
+// more than one request, or pulls in more than its page.
+test("a tab switch into Reports holds its speed ceilings", async ({ page }) => {
+	await page.goto(SHELL);
+	await ready(page);
+
+	const since = await mark(page);
+	await tabRow(page).getByRole("link", { name: "Reports" }).click();
+	await reportsReady(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("reports tab switch", cost);
+	const ceiling = ceilings.reportsTabSwitch;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 });

@@ -14,10 +14,10 @@ import {
 import { handOff } from "./handoff";
 import { idbStore } from "./idb";
 import { forgetShell } from "./memory";
-import { parseNextPath, tabOf } from "./paths";
+import { pageName, parseNextPath } from "./paths";
 import { consoleProjectQuery, fetchedVersions } from "./queries";
 import { USER_KEY, isCurrent, readReader, signInHref } from "./reader";
-import { NOT_FOUND, PAGES } from "./routes";
+import { PAGES } from "./routes";
 
 /** The longest the first render waits on the cache and the page's code. */
 const BOOT_WAIT = 100;
@@ -46,8 +46,7 @@ const boot = async (mount: HTMLElement) => {
 
 	// Each build has its own chunk name, so a new console never reads an old cache.
 	const buster = new URL(import.meta.url).pathname;
-	const tab = place && tabOf(place.rest);
-	const page = tab ? PAGES[tab] : NOT_FOUND;
+	const page = PAGES[place ? pageName(place.rest) : "NotFound"];
 	await within(
 		BOOT_WAIT,
 		Promise.all([

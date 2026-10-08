@@ -219,6 +219,48 @@
 	font-size: var(--font-size-xl);
 	line-height: 1.15;
 }
+.eyebrow,
+.crumb-line {
+	font-size: 11px;
+	font-weight: var(--font-weight-semibold);
+	letter-spacing: 0.15em;
+	text-transform: uppercase;
+	line-height: 1.2;
+	color: var(--color-text-eyebrow);
+}
+.ph-sub {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	margin: 0;
+	font-size: 13px;
+	color: var(--color-text-muted);
+}
+.dotsep {
+	margin: 0 5px;
+}
+.toolbar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.toolbar .eyebrow {
+	margin-left: 6px;
+}
+.toolbar .eyebrow:first-child {
+	margin-left: 0;
+}
+.chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.btnrow {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
 
 /* narrow: mark, project, bell, avatar; the tab row scrolls */
 @media (max-width: 767px) {

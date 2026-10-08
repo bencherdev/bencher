@@ -6,8 +6,8 @@
 use anyhow::Context as _;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use bencher_json::{
-    DateTime, Entitlements, JsonAuthUser, JsonOrganization, JsonProject, JsonUser, Jwt, PlanLevel,
-    Secret,
+    DateTime, Entitlements, JsonAuthUser, JsonOrganization, JsonProject, JsonProjectKeyCreated,
+    JsonUser, Jwt, PlanLevel, Secret,
 };
 use bencher_license::Licensor;
 use serde::Serialize;
@@ -48,6 +48,14 @@ const KIB_64: u32 = 1 << 16;
 const MAIN: &str = "main";
 const FEATURE: &str = "feature-simd";
 const TESTBED: &str = "ubuntu-latest";
+
+/// The project key that runs the newest report, on its own testbed so no threshold checks it.
+const KEY: &str = "GitHub Actions";
+const KEY_TESTBED: &str = "macos-latest";
+const KEY_ADAPTER: &str = "magic";
+/// Half an hour after the newest `main` report, on the same commit: 2026-09-13T21:46:00Z.
+const KEY_REPORT: i64 = LAST_MAIN_REPORT + 30 * 60;
+const KEY_DURATION: i64 = 4 * 60 + 12;
 /// The short form of the newest `main` report's hash.
 const LAST_MAIN_HASH: &str = "9c1f2e4";
 
@@ -166,6 +174,7 @@ impl Seed {
         }
 
         report_history(&api, &hashbrown, token).await?;
+        key_report(&api, &hashbrown, token).await?;
         check_alerts(&api, &hashbrown, token).await?;
 
         Ok(Self {
@@ -263,6 +272,49 @@ fn report_body(
         "results": [results],
         "settings": { "adapter": "json" },
     }))
+}
+
+/// A run by a project key rather than a person: two variants with both measures, four lines.
+async fn key_report(api: &Api, project: &JsonProject, token: &str) -> anyhow::Result<()> {
+    let path = format!("/v0/projects/{}/keys", project.slug);
+    let key: JsonProjectKeyCreated = api
+        .send(
+            Method::Post,
+            &path,
+            token,
+            &serde_json::json!({ "name": KEY }),
+        )
+        .await?;
+    let results = serde_json::json!({
+        "blake3": [{
+            "parameters": ALERTING.parameters(),
+            "measures": {
+                "latency": { "value": 15.2 },
+                "throughput": { "value": 4311.6 },
+            },
+        }],
+        "xxh3": [{
+            "parameters": { "input_bytes": KIB_64, "simd": "avx2" },
+            "measures": {
+                "latency": { "value": 2.9 },
+                "throughput": { "value": 22_598.6 },
+            },
+        }],
+    });
+    let report = serde_json::json!({
+        "branch": MAIN,
+        "hash": main_hash(MAIN_REPORTS - 1),
+        "testbed": KEY_TESTBED,
+        "start_time": DateTime::try_from(KEY_REPORT)?,
+        "end_time": DateTime::try_from(KEY_REPORT + KEY_DURATION)?,
+        "results": [results.to_string()],
+        "settings": { "adapter": KEY_ADAPTER },
+    });
+    let path = format!("/v0/projects/{}/reports", project.slug);
+    let _json: serde_json::Value = api
+        .send(Method::Post, &path, key.key.as_ref(), &report)
+        .await?;
+    Ok(())
 }
 
 fn latency_threshold() -> serde_json::Value {
