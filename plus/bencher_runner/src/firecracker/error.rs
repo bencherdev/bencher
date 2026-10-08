@@ -113,8 +113,8 @@ pub enum FirecrackerError {
     #[error("Cgroup placement failed: {0}")]
     CgroupPlacement(#[source] crate::error::JailError),
 
-    /// Fatal, since a VMM outside its cgroup runs unconfined and unseen by the
-    /// occupancy check; see the failure policy table in [`crate::jail`].
+    /// Fatal, since a VMM outside its cgroup runs unconfined and beyond the kill
+    /// that reaps it; see the failure policy table in [`crate::jail`].
     /// Boxed because [`crate::error::RunnerError`] in turn contains this type.
     #[error("Failed to create the cgroup the VMM runs in: {0}")]
     Cgroup(#[source] Box<crate::error::RunnerError>),
@@ -133,9 +133,6 @@ pub enum FirecrackerError {
 
     #[error("Failed to pin the Firecracker API socket: {0}")]
     PinApiSocket(#[source] crate::error::JailError),
-
-    #[error(transparent)]
-    CoresOccupied(crate::error::JailError),
 
     #[error("Jail ownership failed: {0}")]
     Chown(#[source] crate::error::JailError),

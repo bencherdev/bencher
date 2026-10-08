@@ -14,8 +14,10 @@ Runner のセルフホストは、次のような場合に適しています。
 Runner、Spec、Sandbox、Job がどのように組み合わさるかの概念的な概要については、
 [Bare Metal の概要][bare metal] を参照してください。
 
-> 🐰 Firecracker のサンドボックス化には、[KVM][kvm] が有効になった Linux が必要で、
+> 🐰 Firecracker のサンドボックス化には、[KVM][kvm] が有効で、`/sys/fs/cgroup` に書き込み可能な cgroup v2 階層がある Linux 5.14 以降が必要で、
 > Runner は `root` として実行する必要があります。
+> サンドボックス化された各 Job は、CPU コア数にかかわらず `/sys/fs/cgroup/bencher` の下にある専用の cgroup で実行され、`cpuset`、`memory`、`pids` コントローラーが有効になります。
+> Runner は Job のプロセスをその cgroup の `cgroup.kill` で終了させますが、これは古いカーネルにはありません。その場合 Runner は起動時に終了するか、`--danger-allow-no-sandbox` 付きで起動していれば、サンドボックス化された各 Job を失敗させます。
 > サンドボックス化された各 Job を動かす Firecracker プロセスは非特権ユーザーとして chroot に閉じ込められ、
 > その閉じ込めの構築には、KVM を有効にするだけでは得られない権限が必要です。
 > サンドボックスなしの Spec のみを提供する Runner は、サポートされている任意のホスト上で実行できます。

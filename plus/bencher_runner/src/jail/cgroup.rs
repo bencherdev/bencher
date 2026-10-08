@@ -1,6 +1,8 @@
 //! Cgroup v2 management for resource limits.
 
 use std::fs;
+use std::path::Path;
+use std::time::{Duration, Instant};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use slog::{Logger, info, warn};
@@ -8,10 +10,11 @@ use slog::{Logger, info, warn};
 use crate::RunnerError;
 use crate::cpu::CpuLayout;
 use crate::error::JailError;
-use crate::jail::{CgroupSurvived, VmId};
+use crate::jail::VmId;
+use crate::runner_lock::RunnerLock;
 
 /// Default cgroup v2 mount point.
-const CGROUP_ROOT: &str = "/sys/fs/cgroup";
+pub(crate) const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 
 /// Bencher cgroup hierarchy base.
 pub(crate) const BENCHER_CGROUP_BASE: &str = "bencher";
@@ -21,29 +24,17 @@ pub struct CgroupManager {
     log: Logger,
     cgroup_path: Utf8PathBuf,
     created: bool,
-    /// Raised when this cgroup could not be removed, which holds the chroot that
-    /// names it for the next job's sweep.
-    cgroup_survived: CgroupSurvived,
     controllers: Controllers,
 }
 
 impl CgroupManager {
     /// Create a new cgroup for the given microVM.
-    pub fn new(
-        log: &Logger,
-        vm_id: &VmId,
-        cgroup_survived: CgroupSurvived,
-    ) -> Result<Self, RunnerError> {
-        Self::new_at(log, Utf8Path::new(CGROUP_ROOT), vm_id, cgroup_survived)
+    pub fn new(log: &Logger, vm_id: &VmId) -> Result<Self, RunnerError> {
+        Self::new_at(log, Utf8Path::new(CGROUP_ROOT), vm_id)
     }
 
     /// Takes the cgroup root so a test can stand a scratch cgroup in for it.
-    fn new_at(
-        log: &Logger,
-        cgroup_root: &Utf8Path,
-        vm_id: &VmId,
-        cgroup_survived: CgroupSurvived,
-    ) -> Result<Self, RunnerError> {
+    fn new_at(log: &Logger, cgroup_root: &Utf8Path, vm_id: &VmId) -> Result<Self, RunnerError> {
         let parent = cgroup_root.join(BENCHER_CGROUP_BASE);
         let cgroup_path = parent.join(vm_id.as_str());
 
@@ -79,7 +70,6 @@ impl CgroupManager {
             log: log.clone(),
             cgroup_path,
             created,
-            cgroup_survived,
             controllers,
         })
     }
@@ -93,7 +83,6 @@ impl CgroupManager {
             log: crate::log::discard(),
             cgroup_path,
             created: false,
-            cgroup_survived: CgroupSurvived::default(),
             controllers: Controllers::enabled(),
         }
     }
@@ -262,52 +251,29 @@ impl CgroupManager {
         &self.cgroup_path
     }
 
-    /// SIGKILL every process in this cgroup's subtree (best-effort).
+    /// SIGKILL every process in this cgroup's subtree (best-effort), so a
+    /// timed out or cancelled local run leaves no grandchild behind.
     ///
-    /// Writes `1` to `cgroup.kill` (Linux 5.14+). Reaps grandchildren
-    /// that survive a direct-child kill, e.g. on timeout or cancellation,
-    /// so no stray work lingers on benchmark cores and the cgroup can be
-    /// removed.
-    ///
-    /// Best effort is sound because anything this misses makes
-    /// [`Self::cleanup`]'s `rmdir` fail, which keeps the chroot for the next
-    /// job's sweep.
+    /// Best effort is sound because [`Self::cleanup`] kills the subtree again.
     pub fn kill_all(&self) {
-        if let Err(e) = self.write_file("cgroup.kill", "1") {
+        if let Err(e) = self.write_file(CGROUP_KILL, "1") {
             warn!(self.log, "Cgroup subtree not killed"; "cgroup" => self.cgroup_path.as_str(), "error" => %e);
         }
     }
 
-    /// Clean up the cgroup.
-    ///
-    /// A refused `rmdir` raises `cgroup_survived` instead of returning an error,
-    /// so the chroot that names the cgroup is kept for the next job's sweep.
+    /// Kill whatever is left in the cgroup and remove it, leaving one that
+    /// will not go to the next sweep, which finds it under the base.
     pub fn cleanup(&mut self) {
         if !self.created {
             return;
         }
-        // A stat that failed is not a cgroup that is gone, so it raises the
-        // signal too.
-        match self.cgroup_path.try_exists() {
-            Ok(false) => self.created = false,
-            Ok(true) => {
-                if let Err(e) = fs::remove_dir(&self.cgroup_path) {
-                    // Something is still in it, so the next job sweeps it with the jail that names it.
-                    warn!(self.log, "Cgroup not removed, left for the next sweep";
-                        "cgroup" => self.cgroup_path.as_str(),
-                        "error" => %e,
-                    );
-                    self.cgroup_survived.set();
-                } else {
-                    self.created = false;
-                }
-            },
+        match kill_cgroup(self.cgroup_path.as_std_path()) {
+            Ok(_removed) => self.created = false,
             Err(e) => {
-                warn!(self.log, "Cgroup unreadable, left for the next sweep";
+                warn!(self.log, "Cgroup not removed, left for the next sweep";
                     "cgroup" => self.cgroup_path.as_str(),
                     "error" => %e,
                 );
-                self.cgroup_survived.set();
             },
         }
     }
@@ -560,17 +526,9 @@ impl ScratchCgroup {
 #[cfg(test)]
 impl Drop for ScratchCgroup {
     fn drop(&mut self) {
-        fn remove(cgroup: &Utf8Path) {
-            if let Ok(entries) = cgroup.read_dir_utf8() {
-                for entry in entries.flatten() {
-                    if entry.file_type().is_ok_and(|kind| kind.is_dir()) {
-                        remove(entry.path());
-                    }
-                }
-            }
-            drop(fs::remove_dir(cgroup));
-        }
-        remove(&self.0);
+        // Killed first, since a populated scratch cgroup left under the real
+        // root fails every later run on the host.
+        drop(kill_cgroup(self.0.as_std_path()));
     }
 }
 
@@ -593,134 +551,265 @@ fn parse_cpuset(cpuset: &str) -> Option<std::collections::BTreeSet<usize>> {
     Some(cpus)
 }
 
-/// How long to retry a stale cgroup's `rmdir` while the reap before it lands.
-const REMOVE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
-
-const REMOVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50);
-
-/// Remove the cgroup a swept jail left behind, only after its VMM has been
-/// reaped, since `rmdir` fails on a cgroup that still holds a process.
-pub(crate) fn remove_stale_cgroup(log: &Logger, vm_id: &VmId) -> Result<(), JailError> {
-    remove_stale_cgroup_at(log, vm_cgroup(vm_id.as_str()))
-}
-
-/// Refuse to measure while another Bencher cgroup holds a process.
-///
-/// Checked again once this job's VMM is placed, skipping `own`.
-pub(crate) fn refuse_occupied_cgroups(own: Option<&VmId>) -> Result<(), JailError> {
-    refuse_occupied_cgroups_at(
-        &Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE),
-        own.map(VmId::as_str),
+/// What a runner holding the lock does before its first Job: a sandboxed one
+/// needs `cgroup.kill`, and every orphan stops at once rather than at the first
+/// sandboxed Job.
+pub(crate) fn prepare_at_startup(
+    log: &Logger,
+    lock: &RunnerLock,
+    sandboxed: bool,
+) -> Result<(), JailError> {
+    prepare_at_startup_with(
+        log,
+        lock,
+        sandboxed,
+        require_cgroup_kill,
+        reclaim_orphaned_cgroups,
     )
 }
 
-fn refuse_occupied_cgroups_at(base: &Utf8Path, own: Option<&str>) -> Result<(), JailError> {
+/// The check and the sweep are parameters, so tests reach every branch
+/// without root.
+pub(crate) fn prepare_at_startup_with<C, S>(
+    log: &Logger,
+    lock: &RunnerLock,
+    sandboxed: bool,
+    check: C,
+    sweep: S,
+) -> Result<(), JailError>
+where
+    C: FnOnce() -> Result<(), JailError>,
+    S: FnOnce(&Logger) -> Result<usize, JailError>,
+{
+    // Without the lock a cgroup under the base may hold a root runner's Job.
+    if !lock.is_held() {
+        return Ok(());
+    }
+    if sandboxed {
+        check()?;
+    }
+    // Only a warning, since a runner serving Jobs with no sandbox must start
+    // anyway, and the next sandboxed Job's sweep tries again.
+    if let Err(e) = sweep(log) {
+        warn!(log, "Orphaned cgroups not reclaimed at startup"; "error" => %e);
+    }
+    Ok(())
+}
+
+/// Every cgroup but the root has `cgroup.kill` from Linux 5.14, and without it
+/// no orphan could be killed and no Job's cgroup emptied.
+pub(crate) fn require_cgroup_kill() -> Result<(), JailError> {
+    require_cgroup_kill_at(Utf8Path::new(CGROUP_ROOT))
+}
+
+/// Probed in the base the kill works in, made if need be, since the root
+/// cgroup has no `cgroup.kill` on any kernel.
+pub(crate) fn require_cgroup_kill_at(cgroup_root: &Utf8Path) -> Result<(), JailError> {
+    let base = cgroup_root.join(BENCHER_CGROUP_BASE);
+    fs::create_dir_all(&base).map_err(|source| JailError::CreateCgroup {
+        path: base.clone(),
+        source,
+    })?;
+    let kill = base.join(CGROUP_KILL);
+    match kill.try_exists() {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(JailError::NoCgroupKill { path: kill }),
+        Err(source) => Err(JailError::ReadCgroup { path: kill, source }),
+    }
+}
+
+/// Under the runner lock every cgroup under the base is an orphan, whatever left
+/// it there, so each is killed and removed; one that holds the runner itself is
+/// skipped, since its kill would end the runner.
+pub(crate) fn reclaim_orphaned_cgroups(log: &Logger) -> Result<usize, JailError> {
+    reclaim_orphaned_cgroups_in(log, Utf8Path::new(CGROUP_ROOT))
+}
+
+/// The cgroup root is a parameter, so a test can stand a directory in for it.
+pub(crate) fn reclaim_orphaned_cgroups_in(
+    log: &Logger,
+    cgroup_root: &Utf8Path,
+) -> Result<usize, JailError> {
+    let own = Utf8Path::new("/proc/self/cgroup");
+    let own = fs::read_to_string(own).map_err(|source| JailError::ReadCgroup {
+        path: own.to_owned(),
+        source,
+    })?;
+    reclaim_orphaned_cgroups_at(
+        log,
+        &cgroup_root.join(BENCHER_CGROUP_BASE),
+        &own,
+        kill_cgroup,
+    )
+}
+
+/// The base, the runner's own `/proc/self/cgroup`, and the kill are
+/// parameters, so tests reach every path without a real orphan.
+fn reclaim_orphaned_cgroups_at<K>(
+    log: &Logger,
+    base: &Utf8Path,
+    own: &str,
+    kill: K,
+) -> Result<usize, JailError>
+where
+    K: Fn(&Path) -> Result<bool, JailError>,
+{
     let read_failed = |source| JailError::ReadCgroup {
         path: base.to_owned(),
         source,
     };
     let entries = match fs::read_dir(base) {
         Ok(entries) => entries,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(0),
         Err(e) => return Err(read_failed(e)),
     };
+    let runner = runner_cgroup(own);
+
+    let mut reclaimed = 0;
+    // One cgroup that will not go must not leave every other orphan running.
+    let mut failure = None;
     for entry in entries {
         let entry = entry.map_err(read_failed)?;
-        if !entry.file_type().map_err(read_failed)?.is_dir()
-            || own.is_some_and(|own| entry.file_name() == own)
-        {
+        if !entry.file_type().map_err(read_failed)?.is_dir() {
             continue;
         }
+        if runner.is_some_and(|runner| entry.file_name() == runner) {
+            continue;
+        }
+        // The listed path itself, never one rebuilt from its name, which need
+        // not be UTF-8.
         let cgroup = entry.path();
-        let pids = subtree_pids(&cgroup)?;
-        if !pids.is_empty() {
-            return Err(JailError::CgroupOccupied {
-                cgroup: Utf8PathBuf::from(cgroup.to_string_lossy().into_owned()),
-                pids: pids
-                    .iter()
-                    .map(u32::to_string)
-                    .collect::<Vec<_>>()
-                    .join(", "),
+        let outcome = is_populated(&cgroup)
+            .and_then(|populated| kill(&cgroup).map(|removed| (populated, removed)));
+        match outcome {
+            Ok((populated, true)) => {
+                info!(log, "Reclaimed a stale cgroup";
+                    "cgroup" => bencher_logger::capped(cgroup.display()),
+                    "populated" => populated,
+                );
+                reclaimed += 1;
+            },
+            // Gone before its kill, so something else reclaimed it.
+            Ok((_, false)) => {},
+            Err(e) => {
+                warn!(log, "Stale cgroup not reclaimed";
+                    "cgroup" => bencher_logger::capped(cgroup.display()),
+                    "error" => %e,
+                );
+                failure.get_or_insert(e);
+            },
+        }
+    }
+    failure.map_or(Ok(reclaimed), Err)
+}
+
+/// The cgroup just below the base that a `/proc/self/cgroup` listing places
+/// the runner in or under.
+fn runner_cgroup(own: &str) -> Option<&str> {
+    own.lines()
+        .find_map(|line| line.strip_prefix("0::/"))?
+        .strip_prefix(BENCHER_CGROUP_BASE)?
+        .strip_prefix('/')?
+        .split('/')
+        .next()
+}
+
+const CGROUP_KILL: &str = "cgroup.kill";
+
+/// Far beyond the milliseconds a kill takes, even with a thousand forks racing
+/// it.
+const KILL_TIMEOUT: Duration = Duration::from_secs(5);
+
+const KILL_INTERVAL: Duration = Duration::from_millis(10);
+
+/// SIGKILL the cgroup's whole subtree with one write, which also reaches every
+/// fork and is safe against migration, then wait for it to empty and remove it.
+/// `Ok(false)` is a cgroup gone before this removed it.
+pub(crate) fn kill_cgroup(cgroup: &Path) -> Result<bool, JailError> {
+    kill_cgroup_within(cgroup, KILL_TIMEOUT)
+}
+
+fn kill_cgroup_within(cgroup: &Path, timeout: Duration) -> Result<bool, JailError> {
+    if let Err(source) = fs::write(cgroup.join(CGROUP_KILL), "1") {
+        return if is_gone(cgroup) {
+            Ok(false)
+        } else {
+            Err(JailError::KillCgroup {
+                path: shown(cgroup),
+                source,
+            })
+        };
+    }
+    let deadline = Instant::now() + timeout;
+    while is_populated(cgroup)? {
+        if Instant::now() >= deadline {
+            return Err(JailError::CgroupNotEmptied {
+                path: shown(cgroup),
+                timeout_secs: timeout.as_secs(),
             });
         }
+        std::thread::sleep(KILL_INTERVAL);
     }
-    Ok(())
+    match remove_tree(cgroup) {
+        Ok(()) => Ok(true),
+        Err(_) if is_gone(cgroup) => Ok(false),
+        Err(source) => Err(JailError::RemoveCgroup {
+            path: shown(cgroup),
+            source,
+        }),
+    }
 }
 
-/// A cgroup gone since it was listed holds nothing.
-fn subtree_pids(cgroup: &std::path::Path) -> Result<Vec<u32>, JailError> {
-    let read_failed = |source| JailError::ReadCgroup {
-        path: Utf8PathBuf::from(cgroup.to_string_lossy().into_owned()),
-        source,
+/// Children first, since `rmdir` refuses a cgroup that still has one.
+fn remove_tree(cgroup: &Path) -> std::io::Result<()> {
+    for entry in fs::read_dir(cgroup)? {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            remove_tree(&entry.path())?;
+        }
+    }
+    fs::remove_dir(cgroup)
+}
+
+/// Only a stat that succeeded counts as gone.
+fn is_gone(cgroup: &Path) -> bool {
+    cgroup.try_exists().is_ok_and(|exists| !exists)
+}
+
+/// Whether the cgroup or any cgroup below it holds a live process; a cgroup
+/// gone since it was listed holds none.
+fn is_populated(cgroup: &Path) -> Result<bool, JailError> {
+    let path = cgroup.join("cgroup.events");
+    let events = match fs::read_to_string(&path) {
+        Ok(events) => events,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(source) => {
+            return Err(JailError::ReadCgroup {
+                path: shown(&path),
+                source,
+            });
+        },
     };
-    let procs = match fs::read_to_string(cgroup.join("cgroup.procs")) {
-        Ok(procs) => procs,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(e) => return Err(read_failed(e)),
-    };
-    let mut pids = procs
+    match events
         .lines()
-        .map(|line| line.trim().parse::<u32>())
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| read_failed(std::io::Error::new(std::io::ErrorKind::InvalidData, e)))?;
-    let entries = match fs::read_dir(cgroup) {
-        Ok(entries) => entries,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(pids),
-        Err(e) => return Err(read_failed(e)),
-    };
-    for entry in entries {
-        let entry = entry.map_err(read_failed)?;
-        if entry.file_type().map_err(read_failed)?.is_dir() {
-            pids.extend(subtree_pids(&entry.path())?);
-        }
-    }
-    Ok(pids)
-}
-
-/// The cgroup and the chroot share this id, so a sweep holding either can
-/// find the other.
-pub(crate) fn vm_cgroup(vm_id: &str) -> Utf8PathBuf {
-    Utf8PathBuf::from(CGROUP_ROOT)
-        .join(BENCHER_CGROUP_BASE)
-        .join(vm_id)
-}
-
-/// Takes the path so tests can exercise the retry policy outside
-/// `/sys/fs/cgroup`.
-fn remove_stale_cgroup_at(log: &Logger, path: Utf8PathBuf) -> Result<(), JailError> {
-    // The caller deletes the chroot, the only handle a later sweep has, on
-    // `Ok`, so a failed stat must not pass for "already gone".
-    match path.try_exists() {
-        Ok(false) => return Ok(()),
-        Ok(true) => {},
-        Err(e) => return Err(JailError::StaleCgroup { path, source: e }),
-    }
-
-    let deadline = std::time::Instant::now() + REMOVE_TIMEOUT;
-    loop {
-        match fs::remove_dir(&path) {
-            Ok(()) => {
-                info!(log, "Removed a stale cgroup"; "cgroup" => path.as_str());
-                return Ok(());
-            },
-            // Someone else removed it first; only a stat that succeeded counts.
-            Err(_) if path.try_exists().is_ok_and(|exists| !exists) => return Ok(()),
-            // Only `EBUSY` clears with waiting, and retrying anything else would
-            // cost the full timeout on every job, since the kept chroot brings
-            // each sweep back here.
-            Err(e) if !is_contended(&e) || std::time::Instant::now() >= deadline => {
-                // An error rather than a warning, so the next job sweeps again.
-                return Err(JailError::StaleCgroup { path, source: e });
-            },
-            Err(_) => std::thread::sleep(REMOVE_INTERVAL),
-        }
+        .find_map(|line| line.strip_prefix("populated "))
+    {
+        Some("0") => Ok(false),
+        Some("1") => Ok(true),
+        _ => Err(JailError::ReadCgroup {
+            path: shown(&path),
+            source: std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("no populated line in {events:?}"),
+            ),
+        }),
     }
 }
 
-/// `EBUSY` is a cgroup still holding a process or a live child, the only
-/// `rmdir` refusal that waiting can clear.
-fn is_contended(e: &std::io::Error) -> bool {
-    e.raw_os_error() == Some(libc::EBUSY)
+/// Lossy, so only for an error message: a name that is not UTF-8 is shown, never
+/// used.
+fn shown(path: &Path) -> Utf8PathBuf {
+    Utf8PathBuf::from(path.to_string_lossy().into_owned())
 }
 
 /// Matches whole lines: pid `7` must not be satisfied by pid `70`.
@@ -732,6 +821,9 @@ pub(crate) fn procs_contains_pid(procs: &str, pid: u32) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::ffi::OsStr;
+    use std::os::unix::ffi::OsStrExt as _;
+
     use camino::Utf8PathBuf;
 
     use super::*;
@@ -837,7 +929,6 @@ mod tests {
             log: discard(),
             cgroup_path: root.join("bencher").join("vm"),
             created: false,
-            cgroup_survived: CgroupSurvived::default(),
             controllers: Controllers {
                 cpuset: not_offered_by(&root),
                 memory: Controller::Enabled,
@@ -867,7 +958,6 @@ mod tests {
             log: discard(),
             cgroup_path: root.clone(),
             created: false,
-            cgroup_survived: CgroupSurvived::default(),
             controllers: Controllers {
                 cpuset: Controller::Enabled,
                 memory: not_offered_by(&root),
@@ -1115,13 +1205,7 @@ mod tests {
             fs::write(scratch.path().join(SUBTREE_CONTROL), controller).unwrap();
         }
 
-        let manager = CgroupManager::new_at(
-            &discard(),
-            scratch.path(),
-            &VmId::new(),
-            CgroupSurvived::default(),
-        )
-        .unwrap();
+        let manager = CgroupManager::new_at(&discard(), scratch.path(), &VmId::new()).unwrap();
 
         assert!(
             manager.path().join("cpuset.cpus.effective").exists(),
@@ -1210,8 +1294,8 @@ mod tests {
     }
 
     #[test]
-    fn a_cgroup_that_already_existed_is_not_ours_to_remove() {
-        // Removing a cgroup this did not create would delete someone else's.
+    fn a_cgroup_that_already_existed_is_not_ours_to_kill() {
+        // Killing a cgroup this did not create would end someone else's work.
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
@@ -1219,136 +1303,302 @@ mod tests {
             log: discard(),
             cgroup_path: root.join("ours"),
             created: true,
-            cgroup_survived: CgroupSurvived::default(),
             controllers: Controllers::enabled(),
         };
         let theirs = CgroupManager {
             log: discard(),
             cgroup_path: root.join("theirs"),
             created: false,
-            cgroup_survived: CgroupSurvived::default(),
             controllers: Controllers::enabled(),
         };
         fs::create_dir_all(ours.path()).unwrap();
         fs::create_dir_all(theirs.path()).unwrap();
+        let ours_path = ours.path().to_owned();
         let theirs_path = theirs.path().to_owned();
 
         drop(ours);
         drop(theirs);
 
-        assert!(!root.join("ours").exists(), "we remove what we created");
-        assert!(theirs_path.exists(), "we leave what we did not create");
+        assert_eq!(
+            fs::read_to_string(ours_path.join(CGROUP_KILL)).unwrap(),
+            "1",
+            "we kill what we created"
+        );
+        assert!(
+            !theirs_path.join(CGROUP_KILL).exists(),
+            "we leave what we did not create"
+        );
     }
 
     #[test]
-    fn only_a_contended_cgroup_is_worth_waiting_out() {
-        let errno = std::io::Error::from_raw_os_error;
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
+    fn a_cgroup_of_forking_orphans_is_emptied_and_removed() {
+        // Kills a kill by pid, which misses every fork since the listing and
+        // every process in a cgroup below the one listed.
+        use std::io::Write as _;
+        use std::os::unix::process::ExitStatusExt as _;
+        use std::process::{Child, Command, Stdio};
 
-        assert!(is_contended(&errno(libc::EBUSY)));
-        assert!(!is_contended(&errno(libc::EPERM)));
-        assert!(!is_contended(&errno(libc::EROFS)));
-        assert!(!is_contended(&errno(libc::ENOTEMPTY)));
-        assert!(!is_contended(&std::io::Error::other("no errno at all")));
-    }
-
-    #[test]
-    fn a_removal_that_will_never_succeed_does_not_spend_the_budget() {
-        // Retrying a refusal other than `EBUSY` would cost the full timeout on
-        // every job's sweep of a host where nothing is going to change.
-        let dir = tempfile::tempdir().unwrap();
-        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let stuck = root.join("stuck");
-        fs::create_dir_all(stuck.join("occupant")).unwrap();
-
-        let start = std::time::Instant::now();
-        remove_stale_cgroup_at(&discard(), stuck.clone()).unwrap_err();
+        if crate::jail::current_euid() != 0 {
+            eprintln!(
+                "skipped a_cgroup_of_forking_orphans_is_emptied_and_removed: a cgroup needs root"
+            );
+            return;
+        }
+        let scratch = ScratchCgroup::new("bencher-runner-kill");
+        fs::write(scratch.path().join(SUBTREE_CONTROL), "+pids").unwrap();
+        let orphans = scratch.path().join("orphans");
+        let nested = orphans.join("nested");
+        fs::create_dir(&orphans).unwrap();
+        fs::create_dir(&nested).unwrap();
+        // A cap, so a broken kill cannot fork the host to death.
+        fs::write(orphans.join("pids.max"), "8192").unwrap();
+        // Blocks on its input until it is placed, so every fork lands inside.
+        let fork_in = |cgroup: &Utf8Path| -> Child {
+            let mut forker = Command::new("/bin/sh")
+                .args([
+                    "-c",
+                    "read go; while :; do /bin/true; (setsid sleep 300 &); done",
+                ])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap();
+            fs::write(cgroup.join("cgroup.procs"), forker.id().to_string()).unwrap();
+            forker.stdin.take().unwrap().write_all(b"go\n").unwrap();
+            forker
+        };
+        let mut forkers = [fork_in(&orphans), fork_in(&nested)];
+        std::thread::sleep(Duration::from_millis(500));
+        assert!(
+            is_populated(orphans.as_std_path()).unwrap(),
+            "the orphans are running"
+        );
 
         assert!(
-            start.elapsed() < REMOVE_TIMEOUT,
-            "a refusal that will not change is not waited out"
+            kill_cgroup(orphans.as_std_path()).unwrap(),
+            "this kill removed it"
         );
-        assert!(stuck.exists(), "and the cgroup is left for the next sweep");
-    }
 
-    #[test]
-    fn a_stale_cgroup_that_is_already_gone_is_nothing_to_remove() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-
-        remove_stale_cgroup_at(&discard(), root.join("absent")).unwrap();
-    }
-
-    #[test]
-    fn an_empty_stale_cgroup_is_removed() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let stale = root.join("stale");
-        fs::create_dir_all(&stale).unwrap();
-
-        remove_stale_cgroup_at(&discard(), stale.clone()).unwrap();
-
-        assert!(!stale.exists());
-    }
-
-    fn cgroup_base(cgroups: &[(&str, &str)]) -> (tempfile::TempDir, Utf8PathBuf) {
-        let dir = tempfile::tempdir().unwrap();
-        let base = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        for (cgroup, procs) in cgroups {
-            let path = base.join(cgroup);
-            fs::create_dir_all(&path).unwrap();
-            fs::write(path.join("cgroup.procs"), procs).unwrap();
+        assert!(!orphans.exists(), "an emptied cgroup is removed");
+        for forker in &mut forkers {
+            assert_eq!(forker.wait().unwrap().signal(), Some(libc::SIGKILL));
         }
+    }
+
+    fn cgroup_base(cgroups: &[&str]) -> (tempfile::TempDir, Utf8PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let base = Utf8PathBuf::try_from(dir.path().join(BENCHER_CGROUP_BASE)).unwrap();
+        fs::create_dir(&base).unwrap();
+        for cgroup in cgroups {
+            fs::create_dir_all(base.join(cgroup)).unwrap();
+        }
+        // A control file of the base itself, which is never a cgroup to kill.
+        fs::write(base.join("cgroup.procs"), "").unwrap();
         (dir, base)
     }
 
     #[test]
-    fn a_process_in_another_bencher_cgroup_fails_the_job() {
-        // Measuring beside another job's process, nested or not, would report
-        // contended numbers.
-        for (cgroup, pid) in [("vm-a", "vm-a"), ("vm-a/nested", "vm-a")] {
-            let (_dir, base) = cgroup_base(&[("vm-a", ""), (cgroup, "4242\n")]);
+    fn every_orphan_is_killed_but_the_cgroup_holding_the_runner() {
+        // Kills a sweep that skips an orphan, or kills the runner along with
+        // one.
+        let (_dir, base) = cgroup_base(&["vm-1", "local-2", "own"]);
+        let killed = std::cell::RefCell::new(Vec::new());
 
-            let err = refuse_occupied_cgroups_at(&base, None)
-                .unwrap_err()
-                .to_string();
+        let reclaimed =
+            reclaim_orphaned_cgroups_at(&discard(), &base, "0::/bencher/own/nested\n", |cgroup| {
+                killed
+                    .borrow_mut()
+                    .push(cgroup.file_name().unwrap().to_owned());
+                Ok(true)
+            })
+            .unwrap();
 
-            assert!(err.contains(pid), "names the cgroup: {err}");
-            assert!(err.contains("4242"), "names the pid: {err}");
-        }
+        let mut killed = killed.into_inner();
+        killed.sort();
+        assert_eq!(killed, ["local-2", "vm-1"]);
+        assert_eq!(reclaimed, 2);
     }
 
     #[test]
-    fn the_base_itself_and_empty_cgroups_do_not_fail_the_job() {
-        let (_dir, base) = cgroup_base(&[("vm-b", ""), ("local-c", "")]);
-        fs::write(base.join("cgroup.procs"), "1\n").unwrap();
+    fn an_orphan_that_will_not_go_fails_the_sweep_after_the_rest() {
+        // Kills a sweep that stops at the first failure, leaving later orphans
+        // running, or that reports success over a survivor. Two of three fail,
+        // so a failure comes before the last whatever the listing's order.
+        let (_dir, base) = cgroup_base(&["a", "b", "c"]);
+        let killed = std::cell::RefCell::new(0);
 
-        refuse_occupied_cgroups_at(&base, None).unwrap();
-        refuse_occupied_cgroups_at(&base.join("absent"), None).unwrap();
+        let swept = reclaim_orphaned_cgroups_at(&discard(), &base, "0::/\n", |cgroup| {
+            *killed.borrow_mut() += 1;
+            if cgroup.file_name() == Some(OsStr::new("b")) {
+                Ok(true)
+            } else {
+                Err(JailError::CgroupNotEmptied {
+                    path: shown(cgroup),
+                    timeout_secs: 5,
+                })
+            }
+        });
+
+        assert!(
+            matches!(swept, Err(JailError::CgroupNotEmptied { .. })),
+            "{swept:?}"
+        );
+        assert_eq!(killed.into_inner(), 3, "every orphan is tried");
     }
 
     #[test]
     fn a_base_that_cannot_be_listed_is_not_an_empty_one() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let not_a_dir = root.join("bencher");
-        fs::write(&not_a_dir, b"in the way").unwrap();
+        let (_dir, base) = cgroup_base(&[]);
+        let never = |_cgroup: &Path| -> Result<bool, JailError> { panic!("nothing to kill") };
 
-        refuse_occupied_cgroups_at(&not_a_dir, None).unwrap_err();
+        assert_eq!(
+            reclaim_orphaned_cgroups_at(&discard(), &base.join("absent"), "", never).unwrap(),
+            0
+        );
+        reclaim_orphaned_cgroups_at(&discard(), &base.join("cgroup.procs"), "", never).unwrap_err();
     }
 
     #[test]
-    fn the_check_after_placement_skips_only_the_jobs_own_cgroup() {
-        // Skipping nothing refuses every job its own VMM; skipping more misses a
-        // job that started alongside this one.
-        let (_dir, base) = cgroup_base(&[("own", "7\n"), ("other", "")]);
-        refuse_occupied_cgroups_at(&base, Some("own")).unwrap();
-        refuse_occupied_cgroups_at(&base, None).unwrap_err();
+    fn a_cgroup_is_empty_only_when_its_events_say_so() {
+        // Kills a reading that takes a missing or garbled line for an empty
+        // cgroup, which would remove one still running.
+        let dir = tempfile::tempdir().unwrap();
+        let cgroup = dir.path();
 
-        fs::write(base.join("other").join("cgroup.procs"), "8\n").unwrap();
-        let err = refuse_occupied_cgroups_at(&base, Some("own"))
-            .unwrap_err()
-            .to_string();
-        assert!(err.contains("other") && err.contains('8'), "{err}");
+        for (events, populated) in [("populated 1\nfrozen 0\n", true), ("populated 0\n", false)] {
+            fs::write(cgroup.join("cgroup.events"), events).unwrap();
+            assert_eq!(is_populated(cgroup).unwrap(), populated, "{events}");
+        }
+        fs::write(cgroup.join("cgroup.events"), "frozen 0\n").unwrap();
+        is_populated(cgroup).unwrap_err();
+        assert!(
+            !is_populated(&cgroup.join("gone")).unwrap(),
+            "a cgroup gone since it was listed holds nothing"
+        );
+    }
+
+    #[test]
+    fn an_orphan_whose_name_is_not_utf8_is_killed_not_skipped() {
+        // Kills a sweep that rebuilds the path from a lossy name, which names
+        // nothing, so the kill finds it gone and the orphan runs on.
+        let (_dir, base) = cgroup_base(&[]);
+        let odd = base.as_std_path().join(OsStr::from_bytes(b"odd-\xff"));
+        fs::create_dir(&odd).unwrap();
+        let killed = std::cell::RefCell::new(Vec::new());
+
+        let reclaimed = reclaim_orphaned_cgroups_at(&discard(), &base, "0::/\n", |cgroup| {
+            killed.borrow_mut().push(cgroup.to_owned());
+            Ok(true)
+        })
+        .unwrap();
+
+        assert_eq!(killed.into_inner(), [odd], "the kill gets the listed path");
+        assert_eq!(reclaimed, 1);
+    }
+
+    #[test]
+    fn only_a_cgroup_this_sweep_removed_counts_as_reclaimed() {
+        // Kills a sweep that counts, and logs, a cgroup gone before its kill.
+        let (_dir, base) = cgroup_base(&["gone", "killed"]);
+
+        let reclaimed = reclaim_orphaned_cgroups_at(&discard(), &base, "0::/\n", |cgroup| {
+            Ok(cgroup.file_name() == Some(OsStr::new("killed")))
+        })
+        .unwrap();
+
+        assert_eq!(reclaimed, 1);
+    }
+
+    #[test]
+    fn a_cgroup_gone_before_its_kill_is_not_an_error() {
+        // Kills a kill that fails the sweep over a cgroup that is already gone.
+        let dir = tempfile::tempdir().unwrap();
+
+        assert!(!kill_cgroup(&dir.path().join("gone")).unwrap());
+    }
+
+    #[test]
+    fn a_cgroup_that_will_not_empty_is_given_up_on_at_the_bound() {
+        // Kills a wait for `populated 0` that ignores its bound, which would
+        // hold a sweep, and every Job after it, for ever.
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("cgroup.events"), "populated 1\n").unwrap();
+        let started = Instant::now();
+
+        let err = kill_cgroup_within(dir.path(), Duration::from_millis(50)).unwrap_err();
+
+        assert!(matches!(err, JailError::CgroupNotEmptied { .. }), "{err}");
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "{:?}",
+            started.elapsed()
+        );
+    }
+
+    #[test]
+    fn a_kernel_without_cgroup_kill_is_refused_by_name() {
+        // Kills a startup that lets a sandboxed runner serve one Job on a kernel
+        // that cannot kill the next one's orphans.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        let err = require_cgroup_kill_at(&root).unwrap_err();
+
+        assert!(matches!(err, JailError::NoCgroupKill { .. }), "{err}");
+        assert!(err.to_string().contains("Linux 5.14"), "{err}");
+        fs::write(root.join(BENCHER_CGROUP_BASE).join(CGROUP_KILL), "").unwrap();
+        require_cgroup_kill_at(&root).unwrap();
+    }
+
+    #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
+    fn an_orphan_whose_name_is_not_utf8_is_emptied_and_removed() {
+        // Kills a sweep that loses a cgroup whose name is not UTF-8, which
+        // only root can make and which holds a live process.
+        use std::os::unix::process::ExitStatusExt as _;
+        use std::process::{Command, Stdio};
+
+        if crate::jail::current_euid() != 0 {
+            eprintln!(
+                "skipped an_orphan_whose_name_is_not_utf8_is_emptied_and_removed: a cgroup needs root"
+            );
+            return;
+        }
+        let scratch = ScratchCgroup::new("bencher-runner-odd");
+        let odd = scratch
+            .path()
+            .as_std_path()
+            .join(OsStr::from_bytes(b"odd-\xff"));
+        fs::create_dir(&odd).unwrap();
+        let mut orphan = Command::new("sleep")
+            .arg("300")
+            .stdin(Stdio::null())
+            .spawn()
+            .unwrap();
+        fs::write(odd.join("cgroup.procs"), orphan.id().to_string()).unwrap();
+
+        let reclaimed =
+            reclaim_orphaned_cgroups_at(&discard(), scratch.path(), "0::/\n", kill_cgroup);
+
+        let ended = (0..500).find_map(|_| {
+            let status = orphan.try_wait().unwrap();
+            if status.is_none() {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            status
+        });
+        if ended.is_none() {
+            drop(orphan.kill());
+            drop(orphan.wait());
+        }
+        assert_eq!(reclaimed.unwrap(), 1);
+        assert!(!odd.exists(), "the cgroup is removed");
+        assert_eq!(
+            ended.and_then(|status| status.signal()),
+            Some(libc::SIGKILL)
+        );
     }
 
     #[test]
@@ -1358,55 +1608,6 @@ mod tests {
         assert!(!procs_contains_pid("70\n701\n", 7));
         assert!(!procs_contains_pid("", 7));
         assert!(!procs_contains_pid("\n", 7));
-    }
-
-    #[test]
-    fn a_cgroup_that_will_not_go_away_holds_its_chroot() {
-        // Warning alone would let the chroot that names this cgroup go, leaving
-        // a later sweep nothing to find it by.
-        let dir = tempfile::tempdir().unwrap();
-        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let survived = CgroupSurvived::default();
-        let mut manager = CgroupManager {
-            log: discard(),
-            cgroup_path: root.join("stuck"),
-            created: true,
-            cgroup_survived: survived.clone(),
-            controllers: Controllers::enabled(),
-        };
-        fs::create_dir_all(manager.path()).unwrap();
-        fs::write(manager.path().join("cgroup.procs"), "42\n").unwrap();
-
-        manager.cleanup();
-
-        assert!(
-            survived.is_set(),
-            "a cgroup that outlives its job holds the chroot that names it"
-        );
-        assert!(manager.path().exists());
-    }
-
-    #[test]
-    fn a_removed_cgroup_leaves_the_signal_alone() {
-        let dir = tempfile::tempdir().unwrap();
-        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let survived = CgroupSurvived::default();
-        let mut manager = CgroupManager {
-            log: discard(),
-            cgroup_path: root.join("gone"),
-            created: true,
-            cgroup_survived: survived.clone(),
-            controllers: Controllers::enabled(),
-        };
-        fs::create_dir_all(manager.path()).unwrap();
-
-        manager.cleanup();
-
-        assert!(!manager.path().exists());
-        assert!(
-            !survived.is_set(),
-            "a clean teardown must not hold the chroot back"
-        );
     }
 
     #[test]

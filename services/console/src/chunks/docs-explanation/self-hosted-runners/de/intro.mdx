@@ -14,8 +14,10 @@ das Verknüpfen beider und das Starten des `runner`-Binary.
 Einen konzeptionellen Überblick darüber, wie Runner, Specs, Sandboxes und Jobs zusammenpassen,
 finden Sie in der [Bare Metal-Übersicht][bare metal].
 
-> 🐰 Firecracker-Sandboxing erfordert Linux mit aktiviertem [KVM][kvm],
+> 🐰 Firecracker-Sandboxing erfordert Linux 5.14 oder neuer mit aktiviertem [KVM][kvm] und einer beschreibbaren cgroup-v2-Hierarchie unter `/sys/fs/cgroup`,
 > und der Runner muss als `root` laufen.
+> Jeder Sandbox-Job läuft in einer eigenen Cgroup unter `/sys/fs/cgroup/bencher`, unabhängig von der Zahl der CPU-Kerne, mit aktivierten Controllern `cpuset`, `memory` und `pids`.
+> Der Runner beendet die Prozesse eines Jobs über `cgroup.kill` dieser Cgroup, das ältere Kernel nicht haben: Dort beendet sich ein Runner beim Start, oder er lässt, mit `--danger-allow-no-sandbox` gestartet, jeden Sandbox-Job fehlschlagen.
 > Der Firecracker-Prozess hinter jedem Sandbox-Job wird in einem Chroot als unprivilegierter Benutzer eingesperrt,
 > und der Aufbau dieser Isolierung benötigt Rechte, die das Aktivieren von KVM allein nicht gewährt.
 > Ein Runner, der nur Specs ohne Sandbox bedient, kann auf jedem unterstützten Host laufen.

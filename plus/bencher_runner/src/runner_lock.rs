@@ -17,7 +17,7 @@ const RUNNER_LOCK_PATH: &str = "/run/bencher/runner.lock";
 /// it.
 #[must_use]
 pub(crate) struct RunnerLock {
-    _file: Option<File>,
+    file: Option<File>,
 }
 
 impl RunnerLock {
@@ -42,7 +42,7 @@ impl RunnerLock {
                     "path" => path.as_str(),
                     "error" => %e,
                 );
-                return Ok(Self { _file: None });
+                return Ok(Self { file: None });
             },
             Err(source) => {
                 return Err(LockError::Open {
@@ -52,7 +52,7 @@ impl RunnerLock {
             },
         };
         match file.try_lock() {
-            Ok(()) => Ok(Self { _file: Some(file) }),
+            Ok(()) => Ok(Self { file: Some(file) }),
             Err(TryLockError::WouldBlock) => Err(LockError::Held {
                 path: path.to_owned(),
             }),
@@ -61,6 +61,12 @@ impl RunnerLock {
                 source,
             }),
         }
+    }
+
+    /// Only a runner holding the lock may take what it finds under the cgroup
+    /// base for an orphan.
+    pub(crate) fn is_held(&self) -> bool {
+        self.file.is_some()
     }
 }
 
@@ -84,6 +90,7 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use super::*;
+    use crate::error::JailError;
     use crate::log::discard;
 
     const ROOT_EUID: u32 = 0;
@@ -224,6 +231,74 @@ mod tests {
         std::fs::write(&not_a_dir, b"").unwrap();
 
         drop(RunnerLock::acquire_at(&discard(), &not_a_dir.join("runner.lock"), 1000).unwrap());
+    }
+
+    #[test]
+    fn a_runner_without_the_lock_neither_checks_nor_sweeps() {
+        // Kills a startup that takes the cgroups under the base for orphans
+        // without the lock, when they may hold a root runner's Jobs.
+        let (dir, _path) = lock_path();
+        let not_a_dir = Utf8PathBuf::try_from(dir.path().join("file")).unwrap();
+        std::fs::write(&not_a_dir, b"").unwrap();
+        let unheld =
+            RunnerLock::acquire_at(&discard(), &not_a_dir.join("runner.lock"), 1000).unwrap();
+
+        crate::jail::prepare_at_startup_with(
+            &discard(),
+            &unheld,
+            true,
+            || panic!("checked the kernel"),
+            |_log| panic!("swept the cgroups"),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn only_a_sandboxed_runner_needs_the_kill_to_start() {
+        // Kills a check that stops a runner serving only Jobs with no sandbox,
+        // and a sandboxed one that starts without it.
+        let (_dir, path) = lock_path();
+        let held = RunnerLock::acquire_at(&discard(), &path, ROOT_EUID).unwrap();
+        let refused = || {
+            Err(JailError::NoCgroupKill {
+                path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/cgroup.kill"),
+            })
+        };
+        let swept = std::cell::Cell::new(0);
+        let sweep = |_log: &Logger| {
+            swept.set(swept.get() + 1);
+            Ok(0)
+        };
+
+        let err = crate::jail::prepare_at_startup_with(&discard(), &held, true, refused, sweep)
+            .unwrap_err();
+        assert!(matches!(err, JailError::NoCgroupKill { .. }), "{err}");
+        assert_eq!(swept.get(), 0, "a refused runner sweeps nothing");
+
+        crate::jail::prepare_at_startup_with(&discard(), &held, false, refused, sweep).unwrap();
+        assert_eq!(swept.get(), 1, "a runner with no sandbox still sweeps");
+    }
+
+    #[test]
+    fn a_sweep_that_fails_at_startup_still_lets_the_runner_start() {
+        // Kills a startup that a stuck orphan stops, although the next
+        // sandboxed Job's sweep tries again.
+        let (_dir, path) = lock_path();
+        let held = RunnerLock::acquire_at(&discard(), &path, ROOT_EUID).unwrap();
+
+        crate::jail::prepare_at_startup_with(
+            &discard(),
+            &held,
+            true,
+            || Ok(()),
+            |_log| {
+                Err(JailError::CgroupNotEmptied {
+                    path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/stuck"),
+                    timeout_secs: 5,
+                })
+            },
+        )
+        .unwrap();
     }
 
     #[test]

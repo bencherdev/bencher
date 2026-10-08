@@ -48,7 +48,7 @@ portanto este diretório precisa de capacidade real para uma jail.
 Um host executa um único Runner por vez, seja qual for o seu diretório de estado:
 um Runner iniciado como `root` mantém o bloqueio `/run/bencher/runner.lock` enquanto está em execução,
 e um segundo iniciado como `root` encerra imediatamente com um erro que nomeia esse bloqueio; um Runner que não é `root` não consegue abrir o bloqueio e é executado sem ele.
-Um Job com sandbox ainda falha imediatamente se um processo estiver em execução em outro cgroup do Bencher no host, como um que um Runner com outro diretório de estado deixou para trás.
+Ao iniciar, e de novo antes de cada Job com sandbox, um Runner iniciado como `root` encerra qualquer processo ainda em execução em um cgroup sob `/sys/fs/cgroup/bencher`, como a sandbox de um Runner encerrado no meio de um Job, seja qual for o diretório de estado desse Runner.
 Um sistema de arquivos dedicado ou uma montagem `tmpfs` é suportado e recomendado:
 mantém essa carga de escrita fora do disco do sistema,
 e um sistema de arquivos recém-criado é aceito mesmo que venha com um diretório `lost+found`.
