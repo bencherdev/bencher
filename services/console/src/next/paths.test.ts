@@ -3,8 +3,10 @@ import {
 	NEXT_PROJECTS,
 	classicHref,
 	nextHref,
+	pageName,
 	parseNextPath,
 	projectPath,
+	reportPath,
 	tabOf,
 } from "./paths";
 
@@ -132,4 +134,24 @@ describe("nextHref", () => {
 		).toBeUndefined();
 		expect(nextHref(place("/console/projects/hashbrown/nope"))).toBeUndefined();
 	});
+});
+
+describe("pageName", () => {
+	// Kills a report opened on the Reports list, a deeper path taken for a
+	// report, and a tab's path drawn by another tab's page.
+	test("names the page that draws a project path", () => {
+		expect(pageName([])).toBe("Explore");
+		expect(pageName(["reports"])).toBe("Reports");
+		expect(pageName(["reports", "abc"])).toBe("Report");
+		expect(pageName(["reports", "abc", "def"])).toBe("Reports");
+		expect(pageName(["branches", "main"])).toBe("Settings");
+		expect(pageName(["nope"])).toBe("NotFound");
+	});
+});
+
+// Kills a report link outside the project's Reports.
+test("reportPath is the report under its project's Reports", () => {
+	expect(reportPath("hashbrown", "abc")).toBe(
+		`${NEXT_PROJECTS}/hashbrown/reports/abc`,
+	);
 });

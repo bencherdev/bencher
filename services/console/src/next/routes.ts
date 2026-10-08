@@ -1,29 +1,53 @@
-import type { RouteDefinition } from "@solidjs/router";
-import { type Component, lazy } from "solid-js";
-import { TABS, type Tab } from "./paths";
+import type { RouteDefinition, RoutePreloadFunc } from "@solidjs/router";
+import { useQueryClient } from "@tanstack/solid-query";
+import { type Component, lazy, useContext } from "solid-js";
+import { type PageName, TABS, pageName } from "./paths";
+import { ProjectContext } from "./project";
 
 type Page = Component & { preload: () => Promise<unknown> };
 
-/** Each tab's page is its own chunk, loaded on first need or when a link to it is hovered. */
-export const PAGES: Record<Tab, Page> = {
-	explore: lazy(() => import("./pages/Explore")),
-	plots: lazy(() => import("./pages/Plots")),
-	reports: lazy(() => import("./pages/Reports")),
-	alerts: lazy(() => import("./pages/Alerts")),
-	thresholds: lazy(() => import("./pages/Thresholds")),
-	settings: lazy(() => import("./pages/Settings")),
+const reportsPage = () => import("./pages/Reports");
+
+/** Each page is its own chunk, loaded on first need or when a link to it is hovered. */
+export const PAGES: Record<PageName, Page> = {
+	Explore: lazy(() => import("./pages/Explore")),
+	Plots: lazy(() => import("./pages/Plots")),
+	Reports: lazy(reportsPage),
+	Report: lazy(() => import("./pages/Report")),
+	Alerts: lazy(() => import("./pages/Alerts")),
+	Thresholds: lazy(() => import("./pages/Thresholds")),
+	Settings: lazy(() => import("./pages/Settings")),
+	NotFound: lazy(() => import("./pages/NotFound")),
 };
 
-export const NOT_FOUND: Page = lazy(() => import("./pages/NotFound"));
+// A link to Reports hovered, focused, or touched starts its first batch too.
+const reportsData: RoutePreloadFunc = ({ params, location }) => {
+	const client = useQueryClient();
+	const project = useContext(ProjectContext);
+	const slug = params.project;
+	if (!(project && slug)) {
+		return;
+	}
+	reportsPage()
+		.then(({ prefetch }) =>
+			prefetch(client, project.api, slug, location.search),
+		)
+		.catch(() => {});
+};
 
 /** Relative to the router's base, the new console's project path. */
 export const ROUTES: RouteDefinition[] = [
-	{ path: "/:project", component: PAGES.explore },
-	...TABS.flatMap(({ tab, segments }) =>
-		segments.map((segment) => ({
-			path: `/:project/${segment}/*rest`,
-			component: PAGES[tab],
-		})),
+	{ path: "/:project", component: PAGES.Explore },
+	{ path: "/:project/reports/:report", component: PAGES.Report },
+	...TABS.flatMap(({ segments }) =>
+		segments.map((segment) => {
+			const page = pageName([segment]);
+			return {
+				path: `/:project/${segment}/*rest`,
+				component: PAGES[page],
+				...(page === "Reports" ? { preload: reportsData } : {}),
+			};
+		}),
 	),
-	{ path: "/:project/*rest", component: NOT_FOUND },
+	{ path: "/:project/*rest", component: PAGES.NotFound },
 ];

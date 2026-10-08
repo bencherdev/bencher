@@ -1,4 +1,4 @@
-import type { Tab } from "./paths";
+import type { PageName } from "./paths";
 
 /** The modules a page of the new console loads, as built. */
 interface Preloads {
@@ -16,20 +16,11 @@ const BUILT: unknown = Reflect.get(
 	"value",
 );
 
-const PAGE_FILES: Record<Tab, string> = {
-	explore: "Explore",
-	plots: "Plots",
-	reports: "Reports",
-	alerts: "Alerts",
-	thresholds: "Thresholds",
-	settings: "Settings",
-};
-
-/** Every module the page for `tab` loads, so the document can ask for all of them at once. */
-export const modulePreloads = (tab: Tab | undefined): string[] => {
+/** Every module `page` loads, so the document can ask for all of them at once. */
+export const modulePreloads = (page: PageName): string[] => {
 	if (typeof BUILT !== "object" || BUILT === null) {
 		return [];
 	}
 	const { entry, pages } = BUILT as Preloads;
-	return [...entry, ...(pages[tab ? PAGE_FILES[tab] : "NotFound"] ?? [])];
+	return [...entry, ...(pages[page] ?? [])];
 };

@@ -1,26 +1,30 @@
 @layer ui-components {
 	.ui-table-scroll {
 		overflow-x: auto;
-		border: var(--border-width) solid var(--color-border);
+		border: var(--border-width) solid var(--color-border-emphasized);
 		border-radius: var(--radius-container);
+		background: var(--color-background-card);
 	}
 
 	.ui-table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: var(--font-size-sm);
+		font-size: 13px;
 	}
 
 	.ui-table th,
 	.ui-table td {
-		padding: var(--spacing-2) var(--spacing-3);
+		padding: 9px 10px;
 		text-align: start;
 		white-space: nowrap;
 	}
 
 	.ui-table thead th {
-		color: var(--color-text-secondary);
-		font-weight: var(--font-weight-medium);
+		color: var(--color-text-eyebrow);
+		font-size: 10.5px;
+		font-weight: var(--font-weight-semibold);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
 		border-block-end: var(--border-width) solid var(--color-border);
 	}
 
@@ -31,5 +35,79 @@
 
 	.ui-table tbody tr + tr td {
 		border-block-start: var(--border-width) solid var(--color-border);
+	}
+
+	.ui-table [data-align="end"] {
+		text-align: end;
+	}
+
+	/* A table with `data-fold` folds each row into two lines on a narrow screen:
+	   cells marked `l1` and `l2` on the left, the numbers in `n1` and `n2` on the
+	   right, and `hide` dropped. */
+	@media (max-width: 767px) {
+		.ui-table[data-fold] thead {
+			display: none;
+		}
+
+		.ui-table[data-fold],
+		.ui-table[data-fold] tbody {
+			display: block;
+		}
+
+		.ui-table[data-fold] tbody tr {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto;
+			align-items: center;
+			column-gap: var(--spacing-3);
+			min-height: 56px;
+			padding: 10px 14px;
+		}
+
+		.ui-table[data-fold] tbody tr + tr {
+			border-block-start: var(--border-width) solid var(--color-border);
+		}
+
+		.ui-table[data-fold] td {
+			display: block;
+			padding: 0;
+			border: 0;
+		}
+
+		.ui-table[data-fold] tbody tr + tr td {
+			border: 0;
+		}
+
+		.ui-table[data-fold] td[data-fold="hide"] {
+			display: none;
+		}
+
+		.ui-table[data-fold] td[data-fold="l1"] {
+			grid-area: 1 / 1;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			font-weight: var(--font-weight-semibold);
+		}
+
+		.ui-table[data-fold] td[data-fold="l2"] {
+			grid-area: 2 / 1;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			color: var(--color-text-muted);
+			font-size: 12px;
+		}
+
+		.ui-table[data-fold] td[data-fold="n1"] {
+			grid-area: 1 / 2;
+			text-align: end;
+		}
+
+		.ui-table[data-fold] td[data-fold="n2"] {
+			grid-area: 2 / 2;
+			text-align: end;
+			color: var(--color-text-muted);
+			font-size: 12px;
+		}
 	}
 }

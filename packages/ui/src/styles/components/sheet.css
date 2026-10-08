@@ -1,0 +1,51 @@
+@layer ui-components {
+	.ui-sheet {
+		inset-block: auto 0;
+		width: 100%;
+		max-width: none;
+		max-height: calc(100% - 64px);
+		margin: 0;
+		padding: 0;
+		border: 0;
+		border-block-start: var(--border-width) solid var(--color-border-emphasized);
+		border-radius: 16px 16px 0 0;
+		background: var(--color-background-surface);
+		color: var(--color-text-primary);
+		box-shadow: 0 -20px 60px var(--color-shadow);
+	}
+
+	.ui-sheet[open] {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.ui-sheet::backdrop {
+		background: var(--color-scrim);
+	}
+
+	.ui-sheet-head {
+		display: flex;
+		flex: none;
+		align-items: center;
+		gap: var(--spacing-2);
+		min-height: 52px;
+		padding: 6px 6px 6px 16px;
+		border-block-end: var(--border-width) solid var(--color-border);
+	}
+
+	.ui-sheet-title {
+		flex: 1;
+		margin: 0;
+		font-size: var(--font-size-base);
+		font-weight: var(--font-weight-bold);
+	}
+
+	.ui-sheet-body {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-3);
+		min-height: 0;
+		padding: 12px 16px 24px;
+		overflow-y: auto;
+	}
+}
