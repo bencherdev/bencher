@@ -116,12 +116,16 @@ impl From<Create> for JsonNewPlot {
                 YAxis::Linear => bencher_client::types::YAxis::Linear,
                 YAxis::Log => bencher_client::types::YAxis::Log,
             },
+            layout: None,
             window: window.into(),
             branches: branches.into_iter().map(Into::into).collect(),
             testbeds: testbeds.into_iter().map(Into::into).collect(),
             benchmarks: benchmarks.into_iter().map(Into::into).collect(),
             parameters: None,
             measures: measures.into_iter().map(Into::into).collect(),
+            metrics: None,
+            hidden: None,
+            focus: None,
         }
     }
 }
