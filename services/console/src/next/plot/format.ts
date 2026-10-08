@@ -29,7 +29,7 @@ export const formatDelta = (
 	if (baseline === 0) {
 		return null;
 	}
-	const delta = (value - baseline) / baseline;
+	const delta = (value - baseline) / Math.abs(baseline);
 	const percent = Math.abs(delta * 100).toFixed(1);
 	const text = `${delta < 0 && percent !== "0.0" ? "-" : "+"}${percent}%`;
 	if (Math.abs(delta) < TONE_THRESHOLD) {

@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
 import type {
 	JsonOrganization,
+	JsonPlot,
 	JsonProject,
 	JsonProjectKeyCreated,
+	JsonReport,
 } from "../src/types/bencher";
 import { seed } from "./fixtures";
 
@@ -118,3 +120,37 @@ export const createReport = (
 		},
 	);
 };
+
+/** A version 1 run of the member's, two minutes long from `start`. */
+export const postReport = (
+	request: APIRequestContext,
+	project: string,
+	{
+		branch = "main",
+		testbed = "ubuntu-latest",
+		start,
+		results,
+	}: { branch?: string; testbed?: string; start: string; results: unknown },
+) =>
+	send<JsonReport>(
+		request,
+		"POST",
+		`/v0/projects/${project}/reports`,
+		seed.member.token,
+		{
+			branch,
+			testbed,
+			start_time: start,
+			end_time: new Date(Date.parse(start) + 2 * 60 * 1000).toISOString(),
+			results: [JSON.stringify(results)],
+			settings: { adapter: "json" },
+		},
+	);
+
+/** A project's pinned plots, top first. */
+export const listPlots = async (request: APIRequestContext, project: string) =>
+	(await (
+		await request.get(`${seed.api_url}/v0/projects/${project}/plots`, {
+			headers: { Authorization: `Bearer ${seed.member.token}` },
+		})
+	).json()) as JsonPlot[];

@@ -15,7 +15,7 @@ const PLACEHOLDER = "@@BENCHER_NEXT_PRELOADS@@";
  * @returns {import("astro").AstroIntegration}
  */
 const nextPreloads = () => {
-	/** @type {{ entry: string[], pages: Record<string, string[]> } | undefined} */
+	/** @type {{ entry: string[], pages: Record<string, string[]>, parts: Record<string, string[]> } | undefined} */
 	let preloads;
 	/** @type {URL | undefined} */
 	let serverDir;
@@ -57,19 +57,31 @@ const nextPreloads = () => {
 					closure(chunk.fileName, entry);
 				}
 			}
+			/** @type {(fileName: string) => string[]} */
+			const own = (fileName) =>
+				[...closure(fileName)]
+					.filter((file) => !entry.has(file))
+					.map((file) => `/${file}`);
 			/** @type {Record<string, string[]>} */
 			const pages = {};
+			// What a page loads only for some of its links, such as Explore's plot.
+			/** @type {Record<string, string[]>} */
+			const parts = {};
 			for (const chunk of chunks.values()) {
-				const page = chunk.facadeModuleId?.match(
-					/\/src\/next\/pages\/(\w+)\.tsx$/,
-				)?.[1];
-				if (chunk.isDynamicEntry && page) {
-					pages[page] = [...closure(chunk.fileName)]
-						.filter((file) => !entry.has(file))
-						.map((file) => `/${file}`);
+				const module = chunk.facadeModuleId?.match(
+					/\/src\/next\/(\w+)\/(\w+)\.tsx$/,
+				);
+				if (!(chunk.isDynamicEntry && module)) {
+					continue;
+				}
+				const [, dir, name] = module;
+				if (dir === "pages" && name) {
+					pages[name] = own(chunk.fileName);
+				} else {
+					parts[`${dir}/${name}`] = own(chunk.fileName);
 				}
 			}
-			preloads = { entry: [...entry].map((file) => `/${file}`), pages };
+			preloads = { entry: [...entry].map((file) => `/${file}`), pages, parts };
 		},
 	};
 

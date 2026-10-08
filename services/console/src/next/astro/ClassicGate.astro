@@ -1,6 +1,6 @@
 ---
 import { VERSION_KEY } from "../memory";
-import { nextHref } from "../paths";
+import { nextHref, projectPath } from "../paths";
 
 interface Props {
 	slug: string | undefined;
@@ -8,6 +8,8 @@ interface Props {
 
 const { slug } = Astro.props;
 const next = nextHref({ pathname: Astro.url.pathname, hash: "" });
+// The perf page's query is Explore's, read as the page loads.
+const search = slug !== undefined && next === projectPath(slug, "explore");
 
 // A classic project page whose project the reader has seen on version 1 moves
 // to the new console before the page loads anything.
@@ -15,11 +17,11 @@ const next = nextHref({ pathname: Astro.url.pathname, hash: "" });
 
 {
 	slug && next && (
-		<script is:inline define:vars={{ slug, next, VERSION_KEY }}>
+		<script is:inline define:vars={{ slug, next, search, VERSION_KEY }}>
 			try {
 				var versions = JSON.parse(localStorage.getItem(VERSION_KEY) || "{}");
 				if (versions && versions[slug] === 1) {
-					location.replace(next + location.hash);
+					location.replace(next + (search ? location.search : "") + location.hash);
 				}
 			} catch (_) {}
 		</script>
