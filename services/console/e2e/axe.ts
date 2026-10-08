@@ -5,8 +5,9 @@ import { THEME_KEY, expect } from "./fixtures";
 type AxePage = ConstructorParameters<typeof AxeBuilder>[0]["page"];
 
 /**
- * Scan the page at `path` with axe in the dark and the light theme, after
- * `ready` resolves in each.
+ * Scan the page at `path` with axe in the dark and the light theme, once
+ * `ready` resolves in each and no animation runs: a control easing between
+ * two states shows a contrast it never has at rest.
  */
 export const axeInBothThemes = async (
 	page: Page,
@@ -22,6 +23,11 @@ export const axeInBothThemes = async (
 		await page.reload();
 		await ready();
 		await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+		await page.waitForFunction(() =>
+			document
+				.getAnimations()
+				.every((animation) => animation.playState !== "running"),
+		);
 		// The axe integration types `page` against its own copy of Playwright.
 		const { violations } = await new AxeBuilder({
 			page: page as unknown as AxePage,

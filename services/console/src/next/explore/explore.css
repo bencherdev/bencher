@@ -1,0 +1,429 @@
+/* explore: the query panel above the plot, and the lists blank Explore starts from */
+.ex-qp {
+	display: flex;
+	flex-direction: column;
+	border: var(--border-width) solid var(--color-border);
+	border-radius: var(--radius-container);
+	background: var(--color-background-card);
+}
+.ex-qp > * {
+	padding: 10px 14px;
+	border-bottom: var(--border-width) solid var(--color-border);
+}
+.ex-qp > :last-child {
+	border-bottom: 0;
+}
+.ex-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	min-height: 52px;
+}
+.ex-title {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 10px;
+	min-width: 0;
+}
+.ex-title .crumb-line {
+	flex-basis: 100%;
+}
+.ex-pill {
+	display: inline-flex;
+	align-items: center;
+	height: 24px;
+	padding: 0 9px;
+	border: var(--border-width) solid var(--color-warning);
+	border-radius: var(--radius-full);
+	background: var(--color-warning-muted);
+	color: var(--color-text-warning);
+	font-size: 12px;
+}
+.ex-confirm,
+.ex-cap {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 14px;
+	margin: 0;
+	font-size: 12.5px;
+}
+.ex-confirm {
+	background: var(--color-success-muted);
+}
+.ex-confirm svg {
+	color: var(--color-text-success);
+}
+.ex-confirm .grow {
+	flex: 1 1 240px;
+	min-width: 0;
+}
+.ex-cap {
+	background: var(--color-warning-muted);
+}
+.ex-cap b {
+	color: var(--color-text-warning);
+}
+.ex-ctl {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+.ex-ctl .eyebrow:not(:first-child) {
+	margin-left: 8px;
+}
+.ex-range {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+.ex-editor {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.9fr) repeat(
+			2,
+			minmax(0, 1fr)
+		);
+	gap: 10px;
+}
+.ex-box {
+	display: flex;
+	margin: 0;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+	padding: 10px 12px;
+	border: var(--border-width) solid var(--color-border);
+	border-radius: 10px;
+	background: var(--color-background-card);
+}
+.ex-box.ex-start {
+	border-color: var(--color-border-accent);
+	box-shadow: inset 0 0 0 1px var(--color-border-accent);
+}
+.ex-eh {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 8px;
+	margin-bottom: 4px;
+	color: var(--color-text-eyebrow);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+.ex-hint {
+	overflow: hidden;
+	color: var(--color-text-faint);
+	font-size: 11.5px;
+	font-weight: 500;
+	letter-spacing: 0;
+	text-transform: none;
+	text-align: right;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ex-hint.ex-on {
+	color: var(--color-text-accent);
+	font-weight: 600;
+}
+.ex-val,
+.ex-set {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 30px;
+	padding-left: 8px;
+	border-radius: 6px;
+	background: var(--color-overlay-hover);
+	font-size: 13px;
+}
+.ex-ellip {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ex-k,
+.ex-pc,
+.ex-n {
+	flex: none;
+	color: var(--color-text-muted);
+	font: 11.5px var(--font-family-code);
+	white-space: nowrap;
+}
+.ex-n {
+	margin-left: auto;
+}
+/* Units yield their room before the remove control does. */
+.ex-k {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+/* As wide for "0 variants" as for "12 variants", so an answer never rewraps the tags. */
+.ex-pc {
+	min-width: 7.5em;
+	margin-left: auto;
+	text-align: right;
+}
+.ex-pc.ex-zero {
+	color: var(--color-text-warning);
+}
+.ex-set.ex-covered {
+	background: transparent;
+	outline: var(--border-width) dashed var(--color-warning);
+	outline-offset: -1px;
+}
+.ex-tags {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	min-width: 0;
+}
+.ex-tag {
+	display: inline-flex;
+	align-items: center;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 4px;
+	background: var(--color-background-blue);
+	color: var(--color-text-blue);
+	font: 500 11px var(--font-family-code);
+	white-space: nowrap;
+}
+.ex-x {
+	display: inline-grid;
+	place-items: center;
+	flex: none;
+	width: 28px;
+	height: 28px;
+	margin-left: auto;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--color-text-muted);
+	cursor: pointer;
+}
+.ex-set .ex-x {
+	margin-left: 0;
+}
+.ex-x:hover {
+	background: var(--color-overlay-hover);
+	color: var(--color-text-primary);
+}
+.ex-or,
+.ex-all {
+	margin: 0;
+	padding: 2px 6px;
+	color: var(--color-text-muted);
+	font-size: 11.5px;
+}
+.ex-or {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+.ex-anchor {
+	position: relative;
+}
+.ex-add {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	min-height: 30px;
+	padding: 0 8px;
+	border: var(--border-width) dashed var(--color-border-control);
+	border-radius: 6px;
+	background: transparent;
+	color: var(--color-text-secondary);
+	font: 12.5px var(--font-family-body);
+	text-align: left;
+	cursor: pointer;
+}
+.ex-add:hover {
+	background: var(--color-overlay-hover);
+	color: var(--color-text-primary);
+}
+.ex-add.ex-hot {
+	border-style: solid;
+	border-color: var(--color-border-accent);
+	background: var(--color-accent-muted);
+	color: var(--color-text-primary);
+}
+.ex-none {
+	margin: 0;
+	padding: 8px;
+	color: var(--color-text-muted);
+	font-size: 12.5px;
+}
+.ex-note {
+	margin: 0;
+	color: var(--color-text-secondary);
+	font-size: 12.5px;
+}
+.ex-plot {
+	position: relative;
+}
+/* One row over the plot's head, so a failure moves nothing and hides no line. */
+.ex-failed {
+	position: absolute;
+	z-index: 1;
+	top: 0;
+	right: 10px;
+	left: 10px;
+	border-radius: var(--radius-element);
+	background: var(--color-background-body);
+}
+.ex-failed .load-error {
+	flex-wrap: nowrap;
+	padding-block: 0;
+}
+/* Dimmed only once the wait is noticeable, like a skeleton. */
+.ex-plot[aria-busy="true"] .pl-body {
+	opacity: 0.5;
+	transition: opacity var(--duration-fast) var(--ease-standard) 400ms;
+}
+.ex-startcard {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.ex-startcard .seclabel {
+	margin: 0;
+}
+.ex-cols {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+	gap: 12px;
+}
+/* Each list holds the rows it can show before they arrive, at every width. */
+.ex-list {
+	--ex-head: 36px;
+	--ex-row: 52px;
+	display: flex;
+	flex-direction: column;
+	min-height: calc(var(--ex-head) + var(--ex-rows) * var(--ex-row));
+	border: var(--border-width) solid var(--color-border);
+	border-radius: var(--radius-container);
+	background: var(--color-background-card);
+	overflow: hidden;
+}
+.ex-sh {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: var(--ex-head);
+	padding: 4px 12px 0;
+}
+.ex-sh h3 {
+	margin: 0;
+	color: var(--color-text-eyebrow);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+}
+.ex-sh a {
+	margin-left: auto;
+	font-size: 12px;
+}
+.console a.ex-srow {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: var(--ex-row);
+	padding: 6px 12px;
+	border-top: var(--border-width) solid var(--color-border);
+	color: var(--color-text-primary);
+	font-size: 13px;
+	text-decoration: none;
+}
+.console a.ex-srow:hover {
+	background: var(--color-overlay-hover);
+}
+.ex-srow .grow {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.ex-sline {
+	display: flex;
+	align-items: center;
+	gap: 4px 6px;
+	overflow: hidden;
+	white-space: nowrap;
+}
+.ex-sub {
+	overflow: hidden;
+	color: var(--color-text-muted);
+	font-size: 11.5px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ex-alertdot {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--color-error);
+}
+.ex-skel {
+	margin: 18px 12px;
+}
+.ex-leave {
+	display: flex;
+	gap: 8px;
+	color: var(--color-text-primary);
+}
+.ex-warn {
+	display: inline-flex;
+	flex: none;
+	color: var(--color-text-warning);
+}
+@media (max-width: 767px) {
+	.ex-editor {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.ex-x {
+		width: 44px;
+		height: 44px;
+	}
+	.ex-add,
+	.ex-val,
+	.ex-set {
+		min-height: 44px;
+	}
+	.ex-list {
+		--ex-head: 44px;
+		--ex-row: 56px;
+	}
+	.ex-sh {
+		padding-top: 0;
+	}
+	.ex-sh a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+	}
+	/* A row of its own, held before the shell says what the reader may do. */
+	.ex-actions {
+		width: 100%;
+		min-height: 44px;
+	}
+	.ex-chips {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}

@@ -2,7 +2,7 @@ import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
 import { createMemo, createResource } from "solid-js";
 import { rememberVersion } from "../../next/memory";
-import { nextHref } from "../../next/paths";
+import { nextHref, projectPath } from "../../next/paths";
 import type { JsonAuthUser, JsonProject } from "../../types/bencher";
 import { httpGet } from "../../util/http";
 import { type InitValid, init_valid, validJwt } from "../../util/valid";
@@ -72,6 +72,11 @@ const versionGate = (slug: string, version: number) => {
 	rememberVersion(localStorage, slug, version);
 	const next = version === 1 && nextHref(window.location);
 	if (next) {
-		window.location.replace(next);
+		// The perf page's query is Explore's, by the same names.
+		window.location.replace(
+			next === projectPath(slug, "explore")
+				? `${next}${window.location.search}`
+				: next,
+		);
 	}
 };

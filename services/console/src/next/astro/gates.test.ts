@@ -117,6 +117,20 @@ describe("ClassicGate", () => {
 		expect((await classic(URL_, {})).replaced).toEqual([]);
 	});
 
+	// Kills a classic perf link that arrives in Explore without its query.
+	test("the perf page goes to Explore with its query", async () => {
+		expect(
+			(
+				await classic(
+					"https://bencher.dev/console/projects/hashbrown/perf?branches=b&x_axis=version",
+					versions("hashbrown", 1),
+				)
+			).replaced,
+		).toEqual([
+			"/next/console/projects/hashbrown/explore?branches=b&x_axis=version",
+		]);
+	});
+
 	// Kills a classic page sent to "Page not found" under /next/.
 	test("a page the new console does not have stays", async () => {
 		expect(

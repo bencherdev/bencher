@@ -6,6 +6,8 @@ interface Preloads {
 	entry: string[];
 	/** Each page's own modules, by the page's file name. */
 	pages: Record<string, string[]>;
+	/** Modules a page imports only when it needs them, by their path under `src/next`. */
+	parts: Record<string, string[]>;
 }
 
 // The build writes the client's module graph over this placeholder once the
@@ -16,11 +18,23 @@ const BUILT: unknown = Reflect.get(
 	"value",
 );
 
-/** Every module `page` loads, so the document can ask for all of them at once. */
-export const modulePreloads = (page: PageName): string[] => {
+/**
+ * Every module `page` loads, and those of the `parts` it imports on demand
+ * that this link needs, so the document can ask for all of them at once.
+ */
+export const modulePreloads = (
+	page: PageName,
+	parts: readonly string[] = [],
+): string[] => {
 	if (typeof BUILT !== "object" || BUILT === null) {
 		return [];
 	}
-	const { entry, pages } = BUILT as Preloads;
-	return [...entry, ...(pages[page] ?? [])];
+	const built = BUILT as Preloads;
+	return [
+		...new Set([
+			...built.entry,
+			...(built.pages[page] ?? []),
+			...parts.flatMap((part) => built.parts[part] ?? []),
+		]),
+	];
 };
