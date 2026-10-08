@@ -25,7 +25,7 @@ use bencher_schema::{
         organization::OrganizationId,
         runner::{
             JobId, JobTimeout, QueryJob, QueryRunner, QueryRunnerStatus, RunnerId, RunnerReport,
-            UpdateJob,
+            StatusChange, UpdateJob,
         },
         spec::QuerySpec,
     },
@@ -1515,7 +1515,8 @@ where
     }
 }
 
-/// Note that the runner is alive and store its status if it changed, without failing the channel.
+/// Note that the runner is alive, store its status if it changed, and mail admins about news,
+/// without failing the channel.
 async fn record_status(
     log: &slog::Logger,
     context: &ApiContext,
@@ -1523,17 +1524,34 @@ async fn record_status(
     report: RunnerReport,
 ) {
     let now = context.clock.now();
-    let conn = write_conn!(context);
-    if let Err(e) = QueryRunner::record_heartbeat(conn, runner_id, now) {
-        slog::warn!(log, "Failed to record runner heartbeat"; "error" => %e);
-    }
-    match QueryRunnerStatus::record(conn, runner_id, report, now) {
+    let change = {
+        let conn = write_conn!(context);
+        if let Err(e) = QueryRunner::record_heartbeat(conn, runner_id, now) {
+            slog::warn!(log, "Failed to record runner heartbeat"; "error" => %e);
+        }
+        QueryRunnerStatus::record(conn, runner_id, report, now)
+    };
+    match change {
         Ok(Some(change)) => {
             slog::info!(log, "Runner status changed"; "availability" => ?change.new.availability, "health" => ?change.new.health.as_ref().map(|health| &health.0.state));
+            if let Err(e) = notify_admins(log, context, runner_id, &change).await {
+                slog::warn!(log, "Failed to mail admins about a runner status change"; "error" => %e);
+            }
         },
         Ok(None) => {},
         Err(e) => slog::warn!(log, "Failed to record runner status"; "error" => %e),
     }
+}
+
+async fn notify_admins(
+    log: &slog::Logger,
+    context: &ApiContext,
+    runner_id: RunnerId,
+    change: &StatusChange,
+) -> Result<(), HttpError> {
+    let conn = auth_conn!(context);
+    let runner = QueryRunner::get(conn, runner_id)?;
+    change.notify(log, conn, &context.messenger, runner.name.as_ref())
 }
 
 /// Handle a terminal message (Completed/Failed/Canceled) received during Idle,

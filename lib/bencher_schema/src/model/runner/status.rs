@@ -16,12 +16,19 @@ use diesel::{
     sql_types::Text,
     sqlite::{Sqlite, SqliteValue},
 };
+use dropshot::HttpError;
+use slog::Logger;
 
 use super::RunnerId;
 use crate::{
-    context::DbConnection,
+    context::{Body, DbConnection, Message, Messenger, RunnerStatusBody},
+    model::user::QueryUser,
     schema::{self, runner_status as runner_status_table},
 };
+
+/// How long a runner stays paused before server admins hear about it.
+pub const PAUSE_NOTICE_HOURS: i64 = 12;
+const PAUSE_NOTICE_SECS: i64 = PAUSE_NOTICE_HOURS * 60 * 60;
 
 /// A runner's status, one row per runner, written only when it changes.
 #[derive(Debug, Clone, diesel::Queryable, diesel::Selectable, diesel::Insertable)]
@@ -51,6 +58,24 @@ pub struct StatusChange {
     pub new: QueryRunnerStatus,
 }
 
+/// What server admins hear about a runner.
+#[derive(Debug, Clone)]
+pub enum RunnerNotice {
+    /// Its disk health changed state, or gained a finding while not `ok`.
+    Health {
+        was: Option<HealthState>,
+        health: JsonRunnerHealth,
+        new: Vec<JsonHealthFinding>,
+    },
+    /// It has been paused for longer than `PAUSE_NOTICE_HOURS`.
+    LongPause {
+        since: DateTime,
+        reasons: Vec<PauseReason>,
+    },
+    /// It takes jobs again after a long pause.
+    PauseEnded { since: DateTime },
+}
+
 impl QueryRunnerStatus {
     pub fn get(conn: &mut DbConnection, runner_id: RunnerId) -> QueryResult<Option<Self>> {
         schema::runner_status::table
@@ -60,7 +85,8 @@ impl QueryRunnerStatus {
             .optional()
     }
 
-    /// Store the report if it changes the runner's availability, pause reason kinds, health state, or findings.
+    /// Store the report if it changes the runner's availability, pause reason kinds, health state or findings,
+    /// or long pause.
     pub fn record(
         conn: &mut DbConnection,
         runner_id: RunnerId,
@@ -130,6 +156,15 @@ impl QueryRunnerStatus {
             || self.reasons.kinds() != old.reasons.kinds()
             || self.health.as_ref().map(StoredHealth::coarse)
                 != old.health.as_ref().map(StoredHealth::coarse)
+            || self.long_pause() != old.long_pause()
+    }
+
+    // Measured to `changed`, so a stored row stays long once it is written long.
+    fn long_pause(&self) -> bool {
+        self.availability == RunnerAvailability::Paused
+            && self.since.is_some_and(|since| {
+                self.changed.timestamp().saturating_sub(since.timestamp()) > PAUSE_NOTICE_SECS
+            })
     }
 }
 
@@ -174,6 +209,15 @@ impl RunnerReport {
         } else {
             old.and_then(|old| old.health.clone())
         };
+        // A runner that restarts mid-pause reports a new start; the server's pause has not ended.
+        let since = if let Some(old) = old
+            && old.availability == RunnerAvailability::Paused
+            && availability == RunnerAvailability::Paused
+        {
+            old.since
+        } else {
+            since
+        };
         QueryRunnerStatus {
             runner_id,
             availability,
@@ -183,6 +227,108 @@ impl RunnerReport {
             changed: now,
         }
     }
+}
+
+impl StatusChange {
+    /// Mail every server admin about this change, if it is news.
+    pub fn notify(
+        &self,
+        log: &Logger,
+        conn: &mut DbConnection,
+        messenger: &Messenger,
+        runner: &str,
+    ) -> Result<(), HttpError> {
+        let notices = self.notices();
+        if notices.is_empty() {
+            return Ok(());
+        }
+        let admins = QueryUser::get_admins(conn)?;
+        for notice in notices {
+            for admin in &admins {
+                let body = RunnerStatusBody {
+                    admin: admin.name.clone().into(),
+                    runner: runner.to_owned(),
+                    notice: notice.clone(),
+                };
+                let message = Message {
+                    to_name: Some(admin.name.clone().into()),
+                    to_email: admin.email.clone().into(),
+                    subject: Some(body.subject()),
+                    body: Some(Body::RunnerStatus(body)),
+                };
+                messenger.send(log, message);
+            }
+        }
+        Ok(())
+    }
+
+    /// Mail on a health state change, a new finding while not `ok`, a pause that grew long, and a long pause's end.
+    pub fn notices(&self) -> Vec<RunnerNotice> {
+        let mut notices = Vec::new();
+        if let Some(notice) = self.health_notice() {
+            notices.push(notice);
+        }
+        let old_long = self.old.as_ref().is_some_and(QueryRunnerStatus::long_pause);
+        if !old_long
+            && self.new.long_pause()
+            && let Some(since) = self.new.since
+        {
+            notices.push(RunnerNotice::LongPause {
+                since,
+                reasons: self.new.reasons.0.clone(),
+            });
+        }
+        if old_long
+            && self.new.availability == RunnerAvailability::Ready
+            && let Some(since) = self.old.as_ref().and_then(|old| old.since)
+        {
+            notices.push(RunnerNotice::PauseEnded { since });
+        }
+        notices
+    }
+
+    fn health_notice(&self) -> Option<RunnerNotice> {
+        let health = &self.new.health.as_ref()?.0;
+        if !is_known(&health.state) {
+            return None;
+        }
+        let old = self
+            .old
+            .as_ref()
+            .and_then(|old| old.health.as_ref())
+            .map(|old| &old.0);
+        let was = old
+            .map(|old| &old.state)
+            .filter(|state| is_known(state))
+            .cloned();
+        let new: Vec<JsonHealthFinding> = health
+            .findings
+            .iter()
+            .filter(|finding| {
+                !old.is_some_and(|old| {
+                    old.findings
+                        .iter()
+                        .any(|seen| seen.device == finding.device && seen.kind == finding.kind)
+                })
+            })
+            .cloned()
+            .collect();
+        let state_changed = was.as_ref() != Some(&health.state)
+            && (was.is_some() || health.state != HealthState::Ok);
+        let new_trouble = health.state != HealthState::Ok && !new.is_empty();
+        (state_changed || new_trouble).then(|| RunnerNotice::Health {
+            was,
+            health: health.clone(),
+            new,
+        })
+    }
+}
+
+fn is_known(state: &HealthState) -> bool {
+    matches!(
+        state,
+        HealthState::Ok | HealthState::Warning | HealthState::Failing
+    )
 }
 
 /// Pause reasons, stored as JSON.

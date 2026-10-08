@@ -1,9 +1,12 @@
 mod button;
 mod new_user;
+mod runner_status;
 mod server_stats;
 
 pub use button::ButtonBody;
 pub use new_user::NewUserBody;
+#[cfg(feature = "plus")]
+pub use runner_status::RunnerStatusBody;
 #[cfg(feature = "plus")]
 pub use server_stats::ServerStatsBody;
 use slog::Logger;
@@ -19,6 +22,8 @@ pub enum Body {
     NewUser(NewUserBody),
     #[cfg(feature = "plus")]
     ServerStats(ServerStatsBody),
+    #[cfg(feature = "plus")]
+    RunnerStatus(RunnerStatusBody),
 }
 
 impl FmtBody for Body {
@@ -28,6 +33,8 @@ impl FmtBody for Body {
             Self::NewUser(body) => body.text(),
             #[cfg(feature = "plus")]
             Self::ServerStats(body) => body.text(),
+            #[cfg(feature = "plus")]
+            Self::RunnerStatus(body) => body.text(),
         }
     }
 
@@ -37,6 +44,8 @@ impl FmtBody for Body {
             Self::NewUser(body) => body.html(log),
             #[cfg(feature = "plus")]
             Self::ServerStats(body) => body.html(log),
+            #[cfg(feature = "plus")]
+            Self::RunnerStatus(body) => body.html(log),
         }
     }
 }

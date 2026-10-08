@@ -3,9 +3,9 @@ mod email;
 mod message;
 
 use bencher_json::system::config::JsonSmtp;
-#[cfg(feature = "plus")]
-pub use body::ServerStatsBody;
 pub use body::{Body, ButtonBody, NewUserBody};
+#[cfg(feature = "plus")]
+pub use body::{RunnerStatusBody, ServerStatsBody};
 pub use email::Email;
 pub use message::Message;
 use slog::{Logger, info};
