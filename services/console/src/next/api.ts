@@ -24,8 +24,16 @@ interface ApiResponse<T> {
 	headers: Headers;
 }
 
+export type Method = "POST" | "PATCH" | "DELETE";
+
 export interface Api {
 	get<T>(path: string, signal?: AbortSignal): Promise<ApiResponse<T>>;
+	/** A change, with its body as JSON; an empty answer resolves to `undefined`. */
+	send<T>(
+		method: Method,
+		path: string,
+		body?: unknown,
+	): Promise<ApiResponse<T>>;
 }
 
 export const createApi = ({
@@ -41,17 +49,28 @@ export const createApi = ({
 	expiration?: number;
 	now?: () => number;
 	fetch?: typeof globalThis.fetch;
-}): Api => ({
-	async get<T>(path: string, signal?: AbortSignal) {
+}): Api => {
+	const request = async <T>(
+		path: string,
+		init: { method?: Method; body?: unknown; signal?: AbortSignal | undefined },
+	): Promise<ApiResponse<T>> => {
 		// The API answers an expired token with a 400, so the client does not ask.
 		if (now() >= expiration) {
 			throw new ApiError(undefined, "unauthorized", "The session has ended");
 		}
+		const headers: Record<string, string> = {
+			Authorization: `Bearer ${token}`,
+		};
+		if (init.body !== undefined) {
+			headers["Content-Type"] = "application/json";
+		}
 		let response: Response;
 		try {
 			response = await fetch(`${url}${path}`, {
-				headers: { Authorization: `Bearer ${token}` },
-				signal: signal ?? null,
+				...(init.method ? { method: init.method } : {}),
+				headers,
+				...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+				signal: init.signal ?? null,
 			});
 		} catch (error) {
 			if (error instanceof DOMException && error.name === "AbortError") {
@@ -63,9 +82,17 @@ export const createApi = ({
 			const body = await response.text().catch(() => "");
 			throw new ApiError(response.status, kindOf(response.status, body), body);
 		}
-		return { data: (await response.json()) as T, headers: response.headers };
-	},
-});
+		const text = await response.text();
+		return {
+			data: (text ? JSON.parse(text) : undefined) as T,
+			headers: response.headers,
+		};
+	};
+	return {
+		get: (path, signal) => request(path, { signal }),
+		send: (method, path, body) => request(path, { method, body }),
+	};
+};
 
 // The API answers a token it cannot validate, badly signed or expired, with a
 // 400 that says so, rather than a 401.

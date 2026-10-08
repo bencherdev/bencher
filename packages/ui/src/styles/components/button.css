@@ -51,6 +51,12 @@
 		border-color: transparent;
 	}
 
+	/* Opens a confirmation for what cannot be undone; the confirming press is `destructive`. */
+	.ui-button[data-variant="danger"] {
+		border-color: var(--color-error);
+		color: var(--color-text-error);
+	}
+
 	.ui-button[data-variant="destructive"] {
 		background: var(--color-marker);
 		border-color: var(--color-marker);

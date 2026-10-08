@@ -116,4 +116,45 @@ describe("createApi", () => {
 			.catch((error: unknown) => error);
 		expect(error).toBe(abort);
 	});
+
+	// Kills a change sent without its body, its method, or the reader's token.
+	test("sends a change as JSON with the bearer token", async () => {
+		calls = [];
+		const { data } = await api(respond(200, { name: "Hash Browns" })).send<{
+			name: string;
+		}>("PATCH", "/v0/projects/hashbrown", { name: "Hash Browns" });
+		expect(data).toEqual({ name: "Hash Browns" });
+		const [call] = calls;
+		expect(call?.url).toBe("https://api.example.com/v0/projects/hashbrown");
+		expect(call?.init?.method).toBe("PATCH");
+		expect(call?.init?.body).toBe('{"name":"Hash Browns"}');
+		const headers = new Headers(call?.init?.headers);
+		expect(headers.get("authorization")).toBe("Bearer tok");
+		expect(headers.get("content-type")).toBe("application/json");
+	});
+
+	// Kills a delete that fails on the API's empty answer.
+	test("a change answered with no body resolves", async () => {
+		calls = [];
+		const deleted = await api(
+			async (url: string | URL | Request, init?: RequestInit) => {
+				calls.push({ url: String(url), init });
+				return new Response(null, { status: 204 });
+			},
+		).send("DELETE", "/v0/projects/hashbrown");
+		expect(deleted.data).toBeUndefined();
+		expect(calls[0]?.init?.method).toBe("DELETE");
+		expect(calls[0]?.init?.body).toBeUndefined();
+	});
+
+	// Kills a refused change that loses the status a page explains it by.
+	test("a refused change keeps its status and the API's message", async () => {
+		const error = await api(respond(402, { message: "No plan" }))
+			.send("PATCH", "/v0/projects/hashbrown", { visibility: "private" })
+			.catch((error: ApiError) => error);
+		expect(error).toBeInstanceOf(ApiError);
+		expect((error as ApiError).status).toBe(402);
+		expect((error as ApiError).kind).toBe("client");
+		expect((error as ApiError).message).toContain("No plan");
+	});
 });

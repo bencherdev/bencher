@@ -85,6 +85,8 @@ type Place = Pick<URL, "pathname" | "hash">;
 // The classic perf page and Explore are the same place.
 const CLASSIC_PERF = "perf";
 const NEXT_EXPLORE = "explore";
+// The classic keys list is Settings' Keys.
+const KEYS = "keys";
 
 // A redirect between the consoles keeps the place and drops the query: each
 // console reads its own, and the classic one adds paging to its lists.
@@ -123,6 +125,10 @@ export const nextHref = ({ pathname, hash }: Place) => {
 	const { slug, rest } = place;
 	if (rest[0] === CLASSIC_PERF) {
 		return projectPath(slug, NEXT_EXPLORE);
+	}
+	// Keys are one list in Settings, with no page of their own.
+	if (rest[0] === KEYS) {
+		return `${NEXT_PROJECTS}/${slug}/${KEYS}`;
 	}
 	if (!tabOf(rest)) {
 		return undefined;

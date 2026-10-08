@@ -84,6 +84,14 @@ describe("classicHref", () => {
 		}
 	});
 
+	// Kills a version 0 project sent from the new Keys page to a classic page
+	// that does not exist.
+	test("sends Settings' Keys to the classic keys list", () => {
+		expect(classicHref(place("/next/console/projects/hashbrown/keys"))).toBe(
+			"/console/projects/hashbrown/keys",
+		);
+	});
+
 	// Kills a redirect out of a page the new console does not own.
 	test("leaves paths outside the new console alone", () => {
 		expect(classicHref(place("/console/projects/x"))).toBeUndefined();
@@ -107,6 +115,20 @@ describe("nextHref", () => {
 		expect(nextHref(place("/console/projects/hashbrown/perf?branches=x"))).toBe(
 			"/next/console/projects/hashbrown/explore",
 		);
+	});
+
+	// Kills a classic key page sent to a path the new console does not draw:
+	// keys live in Settings, as one list.
+	test("sends the classic key pages to Settings' Keys", () => {
+		for (const rest of [
+			"keys",
+			"keys/add",
+			"keys/0e5a0c32-8d3f-4b52-9a7e-3f8e0f1c2d4b",
+		]) {
+			expect(nextHref(place(`/console/projects/hashbrown/${rest}`))).toBe(
+				`${NEXT_PROJECTS}/hashbrown/keys`,
+			);
+		}
 	});
 
 	// Kills a reader sent to a creation form the new console does not have.
