@@ -36,6 +36,7 @@ use bencher_schema::model::{
 pub mod alerts;
 pub mod perf;
 pub mod report;
+pub mod thresholds;
 
 /// The longest that three calendar months run, and so the furthest back an
 /// unauthenticated plot reaches from now.

@@ -1,6 +1,9 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, MetricName, Model};
+use bencher_valid::{
+    Boundary, BranchName, DateTime, DateTimeMillis, MetricName, Model, ModelTest, ResourceName,
+    SampleSize, Window,
+};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -9,8 +12,9 @@ use serde::{
 };
 
 use crate::{
-    BranchNameId, JsonBranch, JsonMeasure, JsonModel, JsonTestbed, MeasureNameId, ParameterFilter,
-    ProjectUuid, TestbedNameId,
+    BranchNameId, BranchSlug, BranchUuid, JsonBranch, JsonMeasure, JsonModel, JsonTestbed,
+    MeasureNameId, MeasureSlug, MeasureUuid, ModelUuid, ParameterFilter, ProjectUuid,
+    TestbedNameId, TestbedSlug, TestbedUuid,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -158,6 +162,179 @@ impl JsonThresholdQuery {
     pub fn measure(&self) -> Option<String> {
         self.measure.as_ref().map(to_urlencoded)
     }
+}
+
+/// How many thresholds a page of the console's list holds when the request does not say.
+pub const DEFAULT_CONSOLE_THRESHOLDS_PER_PAGE: u8 = 64;
+
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleThresholdsQueryParams {
+    /// Only the thresholds on this branch.
+    pub branch: Option<BranchUuid>,
+    /// Only the thresholds on this testbed.
+    pub testbed: Option<TestbedUuid>,
+    /// Only the thresholds on this measure.
+    pub measure: Option<MeasureUuid>,
+    /// If set to `true`, only the thresholds with an archived branch, testbed, or measure.
+    /// Otherwise, only the thresholds with none of them archived.
+    pub archived: Option<bool>,
+    /// The earliest time a counted alert was raised, in milliseconds, inclusive.
+    pub start_time: Option<DateTimeMillis>,
+    /// The latest time a counted alert was raised, in milliseconds, inclusive.
+    pub end_time: Option<DateTimeMillis>,
+    /// The page of thresholds to return, starting at 1.
+    pub page: Option<u32>,
+    /// The number of thresholds per page, 64 when not given.
+    pub per_page: Option<u8>,
+}
+
+/// A page of a project's thresholds as the console lists them, oldest first, with the
+/// branches, testbeds, and measures they apply to once each.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleThresholds {
+    /// The number of thresholds that match the filters, over every page.
+    pub total: u32,
+    pub thresholds: Vec<JsonConsoleThresholdRow>,
+    pub branches: Vec<JsonConsoleThresholdBranch>,
+    pub testbeds: Vec<JsonConsoleThresholdTestbed>,
+    pub measures: Vec<JsonConsoleThresholdMeasure>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleThresholdRow {
+    pub uuid: ThresholdUuid,
+    /// An index into `branches`.
+    pub branch: u32,
+    /// An index into `testbeds`.
+    pub testbed: u32,
+    /// An index into `measures`.
+    pub measure: u32,
+    /// The variants this threshold checks, in canonical order.
+    /// Absent when the threshold checks every variant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
+    /// The name of the metric this threshold checks.
+    /// Absent when the threshold checks the conventional `value` name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<MetricName>,
+    /// Absent when the threshold has no model, and so checks nothing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<JsonConsoleThresholdRowModel>,
+    /// The alerts the threshold raised inside the window, whatever their status now.
+    pub raised: u32,
+    /// The threshold's alerts that are active now, whenever they were raised.
+    pub active: u32,
+}
+
+/// One threshold as the console's threshold page draws it.
+///
+/// The report that declared a threshold or set a model is not recorded.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleThreshold {
+    pub uuid: ThresholdUuid,
+    pub branch: JsonConsoleThresholdBranch,
+    pub testbed: JsonConsoleThresholdTestbed,
+    pub measure: JsonConsoleThresholdMeasure,
+    /// The variants this threshold checks, in canonical order.
+    /// Absent when the threshold checks every variant.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameters: Option<ParameterFilter>,
+    /// The name of the metric this threshold checks.
+    /// Absent when the threshold checks the conventional `value` name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metric: Option<MetricName>,
+    /// Absent when the threshold has no model, and so checks nothing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<JsonConsoleThresholdModel>,
+    /// Every model the threshold has had, newest first, its current model included.
+    pub models: Vec<JsonConsoleThresholdModel>,
+    pub created: DateTimeMillis,
+    pub modified: DateTimeMillis,
+}
+
+/// A threshold's current model as the list draws it: its test and that test's parameters.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleThresholdRowModel {
+    pub test: ModelTest,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_sample_size: Option<SampleSize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_sample_size: Option<SampleSize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window: Option<Window>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lower_boundary: Option<Boundary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upper_boundary: Option<Boundary>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleThresholdModel {
+    pub uuid: ModelUuid,
+    pub test: ModelTest,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_sample_size: Option<SampleSize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_sample_size: Option<SampleSize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window: Option<Window>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lower_boundary: Option<Boundary>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upper_boundary: Option<Boundary>,
+    pub created: DateTimeMillis,
+    /// When a newer model, or the removal of the threshold's model, replaced it.
+    /// Absent for the current model.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub replaced: Option<DateTimeMillis>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleThresholdBranch {
+    pub uuid: BranchUuid,
+    pub name: BranchName,
+    pub slug: BranchSlug,
+    /// The name of the branch that this branch's current head started from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_point: Option<BranchName>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archived: Option<DateTimeMillis>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleThresholdTestbed {
+    pub uuid: TestbedUuid,
+    pub name: ResourceName,
+    pub slug: TestbedSlug,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archived: Option<DateTimeMillis>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleThresholdMeasure {
+    pub uuid: MeasureUuid,
+    pub name: ResourceName,
+    pub slug: MeasureSlug,
+    pub units: ResourceName,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archived: Option<DateTimeMillis>,
 }
 
 #[derive(Debug, Clone, Serialize)]
