@@ -1,0 +1,80 @@
+@layer ui-components {
+	.ui-dialog {
+		width: min(520px, calc(100% - var(--spacing-8)));
+		max-width: none;
+		max-height: calc(100% - var(--spacing-12));
+		margin: 96px auto auto;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		background: var(--color-background-surface);
+		color: var(--color-text-primary);
+		border: var(--border-width) solid var(--color-border-emphasized);
+		border-radius: var(--radius-container);
+		box-shadow: 0 24px 72px var(--color-shadow);
+		overflow: auto;
+	}
+
+	.ui-dialog:not([open]) {
+		display: none;
+	}
+
+	/* A form inside keeps the head, body, and foot as the dialog's own rows. */
+	.ui-dialog-form {
+		display: contents;
+	}
+
+	.ui-dialog::backdrop {
+		background: var(--color-scrim);
+	}
+
+	.ui-dialog-head {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-2);
+		padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) 18px;
+		border-bottom: var(--border-width) solid var(--color-border);
+	}
+
+	.ui-dialog-head > :first-child {
+		flex: 1;
+		min-width: 0;
+		margin: 0;
+		font-size: 17px;
+		font-weight: var(--font-weight-bold);
+		letter-spacing: -0.01em;
+		line-height: 1.25;
+		overflow-wrap: anywhere;
+	}
+
+	.ui-dialog-body {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		padding: var(--spacing-4) 18px;
+	}
+
+	.ui-dialog-foot {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+		gap: var(--spacing-2);
+		padding: var(--spacing-3) 18px;
+		border-top: var(--border-width) solid var(--color-border);
+	}
+
+	/* A sheet from the bottom edge on a narrow screen. */
+	@media (max-width: 767px) {
+		.ui-dialog {
+			width: 100%;
+			max-height: calc(100% - var(--spacing-8));
+			margin: auto 0 0;
+			border-radius: 16px 16px 0 0;
+		}
+
+		.ui-dialog-foot > * {
+			flex: 1;
+		}
+	}
+}

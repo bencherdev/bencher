@@ -168,3 +168,92 @@ test("a tab switch into Reports holds its speed ceilings", async ({ page }) => {
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 });
+
+/** Load `path` cold, the API slower than the first paint, and measure it once `shown` resolves. */
+const coldLoad = async (
+	page: Page,
+	path: string,
+	shown: () => Promise<void>,
+): Promise<Cost> => {
+	await observeLayoutShift(page);
+	await page.route(`${seed.api_url}/**`, async (route) => {
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		await route.continue();
+	});
+	await page.goto(path);
+	await shown();
+	await ready(page);
+	return measure(page, seed.api_url);
+};
+
+// Kills a General section that asks the API for what the shell's request
+// already holds, and one that shifts as the project arrives.
+test("a cold load of General holds the speed ceilings", async ({ page }) => {
+	const cost = await coldLoad(page, nextPath(hashbrown.slug, "settings"), () =>
+		expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
+			hashbrown.name,
+		),
+	);
+	report("settings cold load", cost);
+	const ceiling = ceilings.settingsColdLoad;
+	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+		ceiling.apiAnswersBeforePaint,
+	);
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+});
+
+// Kills key lists that wait on the shell's request, a third request for the
+// other status, and a table that shifts as the keys arrive.
+test("a cold load of Keys holds the speed ceilings", async ({ page }) => {
+	const cost = await coldLoad(
+		page,
+		nextPath(hashbrown.slug, "settings/keys"),
+		() =>
+			expect(page.getByRole("table", { name: "Active keys" })).toBeVisible(),
+	);
+	report("keys cold load", cost);
+	const ceiling = ceilings.keysColdLoad;
+	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+		ceiling.apiAnswersBeforePaint,
+	);
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+});
+
+// Kills a section switch that loads more code or refetches the shell.
+test("moving from General to Keys holds the speed ceilings", async ({
+	page,
+}) => {
+	await page.goto(nextPath(hashbrown.slug, "settings"));
+	await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
+		hashbrown.name,
+	);
+	await ready(page);
+
+	const since = await mark(page);
+	await page
+		.getByRole("navigation", { name: "Settings", exact: true })
+		.getByRole("link", { name: "Keys" })
+		.click();
+	await expect(page.getByRole("table", { name: "Active keys" })).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("settings section switch", cost);
+	expect(cost.apiRequests).toBeLessThanOrEqual(
+		ceilings.settingsSectionSwitch.apiRequests,
+	);
+	expect(cost.apiRounds).toBeLessThanOrEqual(
+		ceilings.settingsSectionSwitch.apiRounds,
+	);
+	expect(cost.jsBytes).toBeLessThanOrEqual(
+		ceilings.settingsSectionSwitch.jsBytes,
+	);
+});

@@ -43,3 +43,14 @@ test("only a response fetched on this load settles a project's version", async (
 	await fetching;
 	expect(versions()).toEqual({ hashbrown: 1 });
 });
+
+// Kills a version taken from the console's own writes to the cache, such as
+// an optimistic rename built on a restored response.
+test("a write to the cache settles no version", () => {
+	const client = new QueryClient();
+	const versions = fetchedVersions(client);
+	client.setQueryData(["console", "project", "hashbrown"], {
+		project: { bmf_version: 0 },
+	});
+	expect(versions()).toEqual({});
+});

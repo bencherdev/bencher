@@ -4,7 +4,13 @@ import { splitProps } from "solid-js";
 export interface ButtonProps
 	extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
 	/** The one filled accent button per view is `primary`. */
-	variant?: "primary" | "secondary" | "ghost" | "destructive" | "muted";
+	variant?:
+		| "primary"
+		| "secondary"
+		| "ghost"
+		| "danger"
+		| "destructive"
+		| "muted";
 	size?: "sm" | "md" | "lg";
 	/** Stretch to the container width. */
 	full?: boolean;

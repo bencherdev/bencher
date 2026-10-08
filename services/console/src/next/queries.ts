@@ -28,9 +28,11 @@ export const fetchedVersions = (client: QueryClient) => {
 	const [versions, setVersions] = createSignal<Record<string, BmfVersion>>({});
 	client.getQueryCache().subscribe((event) => {
 		const [scope, kind, slug] = event.query.queryKey;
+		// `manual` is the console's own write, which can rest on a restored response.
 		if (
 			event.type !== "updated" ||
 			event.action.type !== "success" ||
+			event.action.manual ||
 			scope !== "console" ||
 			kind !== "project" ||
 			typeof slug !== "string"
