@@ -7249,6 +7249,23 @@
           },
           {
             "in": "query",
+            "name": "active_alerts",
+            "description": "If set to `true`, only return reports with at least one active alert. If set to `false`, only return reports without an active alert.",
+            "schema": {
+              "nullable": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "adapter",
+            "description": "Filter by adapter, as reports list it: a language adapter such as `rust` is listed as `magic`.",
+            "schema": {
+              "$ref": "#/components/schemas/Adapter"
+            }
+          },
+          {
+            "in": "query",
             "name": "archived",
             "description": "If set to `true`, only return reports with an archived branch or testbed. If not set or set to `false`, only returns reports with non-archived branches and testbeds.",
             "schema": {
@@ -17174,6 +17191,13 @@
         "properties": {
           "benchmarks": {
             "description": "The number of results in this iteration: one per variant, so one per benchmark for a benchmark that reports a single variant.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "lines": {
+            "description": "The number of lines in this iteration: one per variant, measure, and metric name.",
+            "default": 0,
             "type": "integer",
             "format": "uint32",
             "minimum": 0

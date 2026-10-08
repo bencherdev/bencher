@@ -1829,6 +1829,8 @@ export interface JsonReportIterationCounts {
 	benchmarks: number;
 	/** The number of distinct measures in this iteration. */
 	measures: number;
+	/** The number of lines in this iteration: one per variant, measure, and metric name. */
+	lines?: number;
 }
 
 /** Counts for a report. */

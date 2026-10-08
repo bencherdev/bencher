@@ -95,8 +95,10 @@ impl From<List> for JsonReportQuery {
         Self {
             branch,
             testbed,
+            adapter: None,
             start_time,
             end_time,
+            active_alerts: None,
             archived: archived.then_some(archived),
             expand: expand.then_some(expand),
         }
