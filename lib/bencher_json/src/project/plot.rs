@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{DateTime, Index, ResourceName, Window};
+use bencher_valid::{DateTime, Index, MetricName, ResourceName, Window};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{
@@ -10,7 +10,6 @@ use serde::{
 
 use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ParameterFilter, ProjectUuid, TestbedUuid};
 
-#[cfg(feature = "schema")]
 use super::perf::MAX_DIMENSION_ENTRIES;
 
 crate::typed_uuid::typed_uuid!(PlotUuid);
@@ -43,6 +42,11 @@ pub struct JsonNewPlot {
     /// Defaults to `auto` when omitted.
     #[serde(default)]
     pub y_axis: YAxis,
+    /// How the plot lays out two or more measures:
+    /// `dual` draws them on one chart with a y-axis each, and `stacked` draws each on its own chart.
+    /// If not set, the plot uses the default layout.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<PlotLayout>,
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.
     pub window: Window,
@@ -68,6 +72,20 @@ pub struct JsonNewPlot {
     /// At least one measure must be specified, and at most 8.
     #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub measures: Vec<MeasureUuid>,
+    /// The metrics to draw, by name.
+    /// If not set, or set to an empty list, the plot draws every metric.
+    /// At most 8 names may be specified.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metrics: Option<MetricFilter>,
+    /// The keys of the lines to hide.
+    /// If not set, or set to an empty list, the plot hides no line.
+    /// At most 64 keys may be specified.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<LineKeys>,
+    /// The key of the line to focus.
+    /// If not set, the plot focuses no line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus: Option<LineKey>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,6 +111,10 @@ pub struct JsonPlot {
     pub upper_boundary: bool,
     pub x_axis: XAxis,
     pub y_axis: YAxis,
+    /// The layout of the plot's measures.
+    /// Absent when the plot uses the default layout.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<PlotLayout>,
     pub window: Window,
     pub branches: Vec<BranchUuid>,
     pub testbeds: Vec<TestbedUuid>,
@@ -102,6 +124,18 @@ pub struct JsonPlot {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parameters: Option<ParameterFilter>,
     pub measures: Vec<MeasureUuid>,
+    /// The metrics this plot draws, by name.
+    /// Absent when the plot draws every metric.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub metrics: Option<MetricFilter>,
+    /// The keys of the lines this plot hides.
+    /// Absent when the plot hides no line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<LineKeys>,
+    /// The key of the line this plot focuses.
+    /// Absent when the plot focuses no line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focus: Option<LineKey>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -136,6 +170,11 @@ pub struct JsonPlotPatch {
     pub x_axis: Option<XAxis>,
     /// The y-axis scale to use for the plot.
     pub y_axis: Option<YAxis>,
+    /// How the plot lays out two or more measures.
+    /// Set to `null` to use the default layout.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<PlotLayout>"))]
+    pub layout: Option<Option<PlotLayout>>,
     /// The window of time for the plot, in seconds.
     /// Metrics outside of this window will be omitted.
     pub window: Option<Window>,
@@ -165,6 +204,23 @@ pub struct JsonPlotPatch {
     /// At least one measure must be specified, and at most 8.
     #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub measures: Option<Vec<MeasureUuid>>,
+    /// The metrics to draw, by name.
+    /// Replaces the current metrics for the plot.
+    /// Set to `null` or to an empty list to draw every metric again.
+    /// At most 8 names may be specified.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metrics: Option<MetricFilter>,
+    /// The keys of the lines to hide.
+    /// Replaces the current hidden lines for the plot.
+    /// Set to `null` or to an empty list to hide no line.
+    /// At most 64 keys may be specified.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<LineKeys>,
+    /// The key of the line to focus.
+    /// Set to `null` to focus no line.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<LineKey>"))]
+    pub focus: Option<Option<LineKey>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -178,6 +234,9 @@ pub struct JsonPlotPatchNull {
     pub upper_boundary: Option<bool>,
     pub x_axis: Option<XAxis>,
     pub y_axis: Option<YAxis>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<PlotLayout>"))]
+    pub layout: Option<Option<PlotLayout>>,
     pub window: Option<Window>,
     #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub branches: Option<Vec<BranchUuid>>,
@@ -189,6 +248,13 @@ pub struct JsonPlotPatchNull {
     pub parameters: Option<ParameterFilter>,
     #[cfg_attr(feature = "schema", schemars(length(max = "MAX_DIMENSION_ENTRIES")))]
     pub measures: Option<Vec<MeasureUuid>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metrics: Option<MetricFilter>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<LineKeys>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<LineKey>"))]
+    pub focus: Option<Option<LineKey>>,
 }
 
 impl<'de> Deserialize<'de> for JsonUpdatePlot {
@@ -205,12 +271,16 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
         const UPPER_BOUNDARY_FIELD: &str = "upper_boundary";
         const X_AXIS_FIELD: &str = "x_axis";
         const Y_AXIS_FIELD: &str = "y_axis";
+        const LAYOUT_FIELD: &str = "layout";
         const WINDOW_FIELD: &str = "window";
         const BRANCHES_FIELD: &str = "branches";
         const TESTBEDS_FIELD: &str = "testbeds";
         const BENCHMARKS_FIELD: &str = "benchmarks";
         const PARAMETERS_FIELD: &str = "parameters";
         const MEASURES_FIELD: &str = "measures";
+        const METRICS_FIELD: &str = "metrics";
+        const HIDDEN_FIELD: &str = "hidden";
+        const FOCUS_FIELD: &str = "focus";
         const FIELDS: &[&str] = &[
             INDEX_FIELD,
             TITLE_FIELD,
@@ -220,12 +290,16 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
             UPPER_BOUNDARY_FIELD,
             X_AXIS_FIELD,
             Y_AXIS_FIELD,
+            LAYOUT_FIELD,
             WINDOW_FIELD,
             BRANCHES_FIELD,
             TESTBEDS_FIELD,
             BENCHMARKS_FIELD,
             PARAMETERS_FIELD,
             MEASURES_FIELD,
+            METRICS_FIELD,
+            HIDDEN_FIELD,
+            FOCUS_FIELD,
         ];
 
         #[derive(Deserialize)]
@@ -239,12 +313,16 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
             UpperBoundary,
             XAxis,
             YAxis,
+            Layout,
             Window,
             Branches,
             Testbeds,
             Benchmarks,
             Parameters,
             Measures,
+            Metrics,
+            Hidden,
+            Focus,
         }
 
         struct UpdatePlotVisitor;
@@ -269,12 +347,16 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                 let mut upper_boundary = None;
                 let mut x_axis = None;
                 let mut y_axis = None;
+                let mut layout = None;
                 let mut window = None;
                 let mut branches = None;
                 let mut testbeds = None;
                 let mut benchmarks = None;
                 let mut parameters: Option<Option<ParameterFilter>> = None;
                 let mut measures = None;
+                let mut metrics: Option<Option<MetricFilter>> = None;
+                let mut hidden: Option<Option<LineKeys>> = None;
+                let mut focus = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
@@ -326,6 +408,12 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                             }
                             y_axis = Some(map.next_value()?);
                         },
+                        Field::Layout => {
+                            if layout.is_some() {
+                                return Err(de::Error::duplicate_field(LAYOUT_FIELD));
+                            }
+                            layout = Some(map.next_value()?);
+                        },
                         Field::Window => {
                             if window.is_some() {
                                 return Err(de::Error::duplicate_field(WINDOW_FIELD));
@@ -362,11 +450,31 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                             }
                             measures = Some(map.next_value()?);
                         },
+                        Field::Metrics => {
+                            if metrics.is_some() {
+                                return Err(de::Error::duplicate_field(METRICS_FIELD));
+                            }
+                            metrics = Some(map.next_value()?);
+                        },
+                        Field::Hidden => {
+                            if hidden.is_some() {
+                                return Err(de::Error::duplicate_field(HIDDEN_FIELD));
+                            }
+                            hidden = Some(map.next_value()?);
+                        },
+                        Field::Focus => {
+                            if focus.is_some() {
+                                return Err(de::Error::duplicate_field(FOCUS_FIELD));
+                            }
+                            focus = Some(map.next_value()?);
+                        },
                     }
                 }
 
-                // An explicit null clears the filter, as an empty list does.
+                // An explicit null clears a list, as an empty list does.
                 let parameters = parameters.map(Option::unwrap_or_default);
+                let metrics = metrics.map(Option::unwrap_or_default);
+                let hidden = hidden.map(Option::unwrap_or_default);
 
                 Ok(match title {
                     Some(Some(title)) => Self::Value::Patch(JsonPlotPatch {
@@ -378,12 +486,16 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         upper_boundary,
                         x_axis,
                         y_axis,
+                        layout,
                         window,
                         branches,
                         testbeds,
                         benchmarks,
                         parameters,
                         measures,
+                        metrics,
+                        hidden,
+                        focus,
                     }),
                     Some(None) => Self::Value::Null(JsonPlotPatchNull {
                         index,
@@ -394,12 +506,16 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         upper_boundary,
                         x_axis,
                         y_axis,
+                        layout,
                         window,
                         branches,
                         testbeds,
                         benchmarks,
                         parameters,
                         measures,
+                        metrics,
+                        hidden,
+                        focus,
                     }),
                     None => Self::Value::Patch(JsonPlotPatch {
                         index,
@@ -410,12 +526,16 @@ impl<'de> Deserialize<'de> for JsonUpdatePlot {
                         upper_boundary,
                         x_axis,
                         y_axis,
+                        layout,
                         window,
                         branches,
                         testbeds,
                         benchmarks,
                         parameters,
                         measures,
+                        metrics,
+                        hidden,
+                        focus,
                     }),
                 })
             }
@@ -570,9 +690,301 @@ mod plot_y_axis {
     }
 }
 
+/// How a plot lays out two or more measures.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
+#[serde(rename_all = "snake_case")]
+#[repr(i32)]
+pub enum PlotLayout {
+    /// One chart, with a y-axis for each measure.
+    Dual = DUAL_INT,
+    /// One chart for each measure.
+    Stacked = STACKED_INT,
+}
+
+const DUAL_INT: i32 = 0;
+const STACKED_INT: i32 = 1;
+
+#[cfg(feature = "db")]
+mod plot_layout {
+    use super::{DUAL_INT, PlotLayout, STACKED_INT};
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum PlotLayoutError {
+        #[error("Invalid plot layout value: {0}")]
+        Invalid(i32),
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for PlotLayout
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Dual => DUAL_INT.to_sql(out),
+                Self::Stacked => STACKED_INT.to_sql(out),
+            }
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for PlotLayout
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            match i32::from_sql(bytes)? {
+                DUAL_INT => Ok(Self::Dual),
+                STACKED_INT => Ok(Self::Stacked),
+                value => Err(Box::new(PlotLayoutError::Invalid(value))),
+            }
+        }
+    }
+}
+
+/// The most lines one plot may hide.
+pub const MAX_HIDDEN_LINES: usize = 64;
+
+/// The most characters in a line key.
+pub const MAX_LINE_KEY_LEN: usize = 16;
+
+/// The metrics a plot draws, by name, in the order they were first named.
+///
+/// The empty list draws every metric, so it is stored as `NULL`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
+pub struct MetricFilter(Vec<MetricName>);
+
+impl MetricFilter {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[must_use]
+    pub fn names(&self) -> &[MetricName] {
+        &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for MetricFilter {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // The cap bounds what was written, before duplicates collapse.
+        let names = Vec::<MetricName>::deserialize(deserializer)?;
+        if names.len() > MAX_DIMENSION_ENTRIES {
+            return Err(de::Error::custom(format!(
+                "A plot may draw at most {MAX_DIMENSION_ENTRIES} metrics, found {}",
+                names.len()
+            )));
+        }
+        Ok(Self(first_occurrences(names)))
+    }
+}
+
+/// The keys of the lines a plot hides, in the order they were first named.
+///
+/// The empty list hides no line, so it is stored as `NULL`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
+pub struct LineKeys(Vec<LineKey>);
+
+impl LineKeys {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[must_use]
+    pub fn keys(&self) -> &[LineKey] {
+        &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for LineKeys {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // The cap bounds what was written, before duplicates collapse.
+        let keys = Vec::<LineKey>::deserialize(deserializer)?;
+        if keys.len() > MAX_HIDDEN_LINES {
+            return Err(de::Error::custom(format!(
+                "A plot may hide at most {MAX_HIDDEN_LINES} lines, found {}",
+                keys.len()
+            )));
+        }
+        Ok(Self(first_occurrences(keys)))
+    }
+}
+
+fn first_occurrences<T: PartialEq>(items: Vec<T>) -> Vec<T> {
+    let mut unique = Vec::with_capacity(items.len());
+    for item in items {
+        if !unique.contains(&item) {
+            unique.push(item);
+        }
+    }
+    unique
+}
+
+/// An opaque key naming one line of a plot.
+/// A line key is 1 to 16 URL-safe characters: `A-Z`, `a-z`, `0-9`, `-`, and `_`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
+pub struct LineKey(String);
+
+#[derive(Debug, thiserror::Error)]
+#[error(
+    "Invalid line key {0:?}: a line key is 1 to {max} characters of A-Z, a-z, 0-9, - and _",
+    max = MAX_LINE_KEY_LEN
+)]
+pub struct LineKeyError(String);
+
+impl TryFrom<String> for LineKey {
+    type Error = LineKeyError;
+
+    fn try_from(key: String) -> Result<Self, Self::Error> {
+        let valid = (1..=MAX_LINE_KEY_LEN).contains(&key.len())
+            && key
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_');
+        if valid {
+            Ok(Self(key))
+        } else {
+            Err(LineKeyError(key))
+        }
+    }
+}
+
+impl std::str::FromStr for LineKey {
+    type Err = LineKeyError;
+
+    fn from_str(key: &str) -> Result<Self, Self::Err> {
+        Self::try_from(key.to_owned())
+    }
+}
+
+impl AsRef<str> for LineKey {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Lists of names and keys, written out by hand because a newtype over a `Vec` does not
+/// derive to the array the wire carries.
+#[cfg(feature = "schema")]
+mod list_schema {
+    use schemars::{
+        JsonSchema,
+        r#gen::SchemaGenerator,
+        schema::{ArrayValidation, InstanceType, Schema, SchemaObject},
+    };
+
+    use super::{
+        LineKey, LineKeys, MAX_DIMENSION_ENTRIES, MAX_HIDDEN_LINES, MetricFilter, MetricName,
+    };
+
+    fn array_of<T: JsonSchema>(generator: &mut SchemaGenerator, max_items: usize) -> Schema {
+        SchemaObject {
+            instance_type: Some(InstanceType::Array.into()),
+            array: Some(Box::new(ArrayValidation {
+                items: Some(generator.subschema_for::<T>().into()),
+                max_items: u32::try_from(max_items).ok(),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+        .into()
+    }
+
+    impl JsonSchema for MetricFilter {
+        fn schema_name() -> String {
+            "MetricFilter".to_owned()
+        }
+
+        fn json_schema(generator: &mut SchemaGenerator) -> Schema {
+            array_of::<MetricName>(generator, MAX_DIMENSION_ENTRIES)
+        }
+    }
+
+    impl JsonSchema for LineKeys {
+        fn schema_name() -> String {
+            "LineKeys".to_owned()
+        }
+
+        fn json_schema(generator: &mut SchemaGenerator) -> Schema {
+            array_of::<LineKey>(generator, MAX_HIDDEN_LINES)
+        }
+    }
+}
+
+/// Lists are stored as JSON text, and a line key as itself.
+#[cfg(feature = "db")]
+mod view_db {
+    use diesel::{
+        deserialize::{self, FromSql},
+        serialize::{self, IsNull, Output, ToSql},
+        sql_types::Text,
+        sqlite::{Sqlite, SqliteValue},
+    };
+
+    use super::{LineKey, LineKeys, MetricFilter};
+
+    macro_rules! json_text {
+        ($name:ident) => {
+            impl ToSql<Text, Sqlite> for $name {
+                fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Sqlite>) -> serialize::Result {
+                    out.set_value(serde_json::to_string(self)?);
+                    Ok(IsNull::No)
+                }
+            }
+
+            impl FromSql<Text, Sqlite> for $name {
+                fn from_sql(mut bytes: SqliteValue<'_, '_, '_>) -> deserialize::Result<Self> {
+                    Ok(serde_json::from_str(bytes.read_text())?)
+                }
+            }
+        };
+    }
+
+    json_text!(MetricFilter);
+    json_text!(LineKeys);
+
+    impl ToSql<Text, Sqlite> for LineKey {
+        fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Sqlite>) -> serialize::Result {
+            out.set_value(self.0.as_str());
+            Ok(IsNull::No)
+        }
+    }
+
+    impl FromSql<Text, Sqlite> for LineKey {
+        fn from_sql(mut bytes: SqliteValue<'_, '_, '_>) -> deserialize::Result<Self> {
+            Ok(bytes.read_text().parse()?)
+        }
+    }
+}
+
 #[cfg(all(test, any(feature = "server", feature = "client")))]
 mod tests {
-    use super::{JsonUpdatePlot, XAxis, YAxis};
+    use super::{
+        JsonUpdatePlot, LineKey, LineKeys, MAX_HIDDEN_LINES, MetricFilter, PlotLayout, XAxis, YAxis,
+    };
+    use crate::project::perf::MAX_DIMENSION_ENTRIES;
 
     #[test]
     fn y_axis_serde_round_trip() {
@@ -626,6 +1038,10 @@ mod tests {
         assert!(patch.benchmarks.is_none());
         assert!(patch.parameters.is_none());
         assert!(patch.measures.is_none());
+        assert!(patch.layout.is_none());
+        assert!(patch.metrics.is_none());
+        assert!(patch.hidden.is_none());
+        assert!(patch.focus.is_none());
     }
 
     #[test]
@@ -738,5 +1154,88 @@ mod tests {
         };
         let parameters = patch.parameters.expect("parameters was written");
         assert_eq!(parameters.canonical(), r#"[{"size":1}]"#);
+    }
+
+    #[test]
+    fn deserialize_view_fields_set_and_clear() {
+        let update: JsonUpdatePlot = serde_json::from_str(
+            r#"{"metrics": ["p99"], "hidden": ["a1"], "focus": "a1", "layout": "stacked"}"#,
+        )
+        .unwrap();
+        let JsonUpdatePlot::Patch(patch) = update else {
+            panic!("expected Patch variant");
+        };
+        assert_eq!(patch.metrics.unwrap().names().len(), 1);
+        assert_eq!(patch.hidden.unwrap().keys().len(), 1);
+        assert_eq!(patch.focus, Some(Some("a1".parse().unwrap())));
+        assert_eq!(patch.layout, Some(Some(PlotLayout::Stacked)));
+
+        let update: JsonUpdatePlot = serde_json::from_str(
+            r#"{"metrics": null, "hidden": null, "focus": null, "layout": null}"#,
+        )
+        .unwrap();
+        let JsonUpdatePlot::Patch(patch) = update else {
+            panic!("expected Patch variant");
+        };
+        assert!(patch.metrics.unwrap().is_empty());
+        assert!(patch.hidden.unwrap().is_empty());
+        assert_eq!(patch.focus, Some(None));
+        assert_eq!(patch.layout, Some(None));
+    }
+
+    #[test]
+    fn deserialize_null_title_carries_view_fields() {
+        let update: JsonUpdatePlot = serde_json::from_str(
+            r#"{"title": null, "metrics": ["p99"], "hidden": [], "focus": null, "layout": "dual"}"#,
+        )
+        .unwrap();
+        let JsonUpdatePlot::Null(patch) = update else {
+            panic!("expected Null variant");
+        };
+        assert_eq!(patch.metrics.unwrap().names().len(), 1);
+        assert!(patch.hidden.unwrap().is_empty());
+        assert_eq!(patch.focus, Some(None));
+        assert_eq!(patch.layout, Some(Some(PlotLayout::Dual)));
+    }
+
+    #[test]
+    fn deserialize_duplicate_view_field_errors() {
+        for body in [
+            r#"{"metrics": [], "metrics": []}"#,
+            r#"{"hidden": [], "hidden": []}"#,
+            r#"{"focus": null, "focus": null}"#,
+            r#"{"layout": null, "layout": null}"#,
+        ] {
+            serde_json::from_str::<JsonUpdatePlot>(body).unwrap_err();
+        }
+    }
+
+    #[test]
+    fn line_key_is_url_safe() {
+        for key in ["a", "0123456789abcdef", "A-_z"] {
+            key.parse::<LineKey>().unwrap();
+        }
+        for key in ["", "0123456789abcdefg", "a/b", "a.b", "a b", "\u{e9}"] {
+            key.parse::<LineKey>().unwrap_err();
+        }
+    }
+
+    #[test]
+    fn view_lists_cap_before_duplicates_collapse() {
+        let names = |n: usize| serde_json::to_string(&vec!["p99"; n]).unwrap();
+        let metrics: MetricFilter = serde_json::from_str(&names(MAX_DIMENSION_ENTRIES)).unwrap();
+        assert_eq!(metrics.names().len(), 1);
+        serde_json::from_str::<MetricFilter>(&names(MAX_DIMENSION_ENTRIES + 1)).unwrap_err();
+
+        let keys = |n: usize| serde_json::to_string(&vec!["k"; n]).unwrap();
+        let hidden: LineKeys = serde_json::from_str(&keys(MAX_HIDDEN_LINES)).unwrap();
+        assert_eq!(hidden.keys().len(), 1);
+        serde_json::from_str::<LineKeys>(&keys(MAX_HIDDEN_LINES + 1)).unwrap_err();
+
+        let ordered: MetricFilter = serde_json::from_str(r#"["p99", "value", "p99"]"#).unwrap();
+        assert_eq!(
+            serde_json::to_string(&ordered).unwrap(),
+            r#"["p99","value"]"#
+        );
     }
 }

@@ -212,8 +212,12 @@ diesel::table! {
         upper_boundary -> Bool,
         x_axis -> Integer,
         y_axis -> Integer,
+        layout -> Nullable<Integer>,
         window -> BigInt,
         parameters -> Nullable<Jsonb>,
+        metrics -> Nullable<Text>,
+        hidden -> Nullable<Text>,
+        focus -> Nullable<Text>,
         created -> BigInt,
         modified -> BigInt,
     }

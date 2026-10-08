@@ -1281,6 +1281,14 @@ export enum YAxis {
 	Log = "log",
 }
 
+/** How a plot lays out two or more measures. */
+export enum PlotLayout {
+	/** One chart, with a y-axis for each measure. */
+	Dual = "dual",
+	/** One chart for each measure. */
+	Stacked = "stacked",
+}
+
 export interface JsonNewPlot {
 	/**
 	 * The index of the plot.
@@ -1307,6 +1315,12 @@ export interface JsonNewPlot {
 	 * Defaults to `auto` when omitted.
 	 */
 	y_axis?: YAxis;
+	/**
+	 * How the plot lays out two or more measures:
+	 * `dual` draws them on one chart with a y-axis each, and `stacked` draws each on its own chart.
+	 * If not set, the plot uses the default layout.
+	 */
+	layout?: PlotLayout;
 	/**
 	 * The window of time for the plot, in seconds.
 	 * Metrics outside of this window will be omitted.
@@ -1339,6 +1353,23 @@ export interface JsonNewPlot {
 	 * At least one measure must be specified, and at most 8.
 	 */
 	measures: Uuid[];
+	/**
+	 * The metrics to draw, by name.
+	 * If not set, or set to an empty list, the plot draws every metric.
+	 * At most 8 names may be specified.
+	 */
+	metrics?: string[];
+	/**
+	 * The keys of the lines to hide.
+	 * If not set, or set to an empty list, the plot hides no line.
+	 * At most 64 keys may be specified.
+	 */
+	hidden?: string[];
+	/**
+	 * The key of the line to focus.
+	 * If not set, the plot focuses no line.
+	 */
+	focus?: string;
 }
 
 export interface JsonNewProject {
@@ -1719,6 +1750,11 @@ export interface JsonPlot {
 	upper_boundary: boolean;
 	x_axis: XAxis;
 	y_axis: YAxis;
+	/**
+	 * The layout of the plot's measures.
+	 * Absent when the plot uses the default layout.
+	 */
+	layout?: PlotLayout;
 	window: Window;
 	branches: Uuid[];
 	testbeds: Uuid[];
@@ -1729,6 +1765,21 @@ export interface JsonPlot {
 	 */
 	parameters?: Record<string, string | number | boolean>[];
 	measures: Uuid[];
+	/**
+	 * The metrics this plot draws, by name.
+	 * Absent when the plot draws every metric.
+	 */
+	metrics?: string[];
+	/**
+	 * The keys of the lines this plot hides.
+	 * Absent when the plot hides no line.
+	 */
+	hidden?: string[];
+	/**
+	 * The key of the line this plot focuses.
+	 * Absent when the plot focuses no line.
+	 */
+	focus?: string;
 	created: string;
 	modified: string;
 }
