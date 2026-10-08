@@ -34,6 +34,7 @@ use bencher_schema::model::{
 };
 
 pub mod alerts;
+pub mod dimensions;
 pub mod perf;
 pub mod report;
 pub mod thresholds;

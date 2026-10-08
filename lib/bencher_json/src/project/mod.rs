@@ -19,6 +19,7 @@ pub mod boundary;
 pub mod branch;
 pub mod console;
 pub mod console_project;
+pub mod dimension;
 pub mod head;
 pub mod key;
 pub mod measure;
