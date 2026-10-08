@@ -219,6 +219,16 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(console::alerts::proj_console_alerts_patch)?;
         api_description.register(console::thresholds::proj_console_thresholds_get)?;
         api_description.register(console::thresholds::proj_console_threshold_get)?;
+        if http_options {
+            api_description.register(console::dimensions::proj_console_branches_options)?;
+            api_description.register(console::dimensions::proj_console_testbeds_options)?;
+            api_description.register(console::dimensions::proj_console_benchmarks_options)?;
+            api_description.register(console::dimensions::proj_console_measures_options)?;
+        }
+        api_description.register(console::dimensions::proj_console_branches_get)?;
+        api_description.register(console::dimensions::proj_console_testbeds_get)?;
+        api_description.register(console::dimensions::proj_console_benchmarks_get)?;
+        api_description.register(console::dimensions::proj_console_measures_get)?;
 
         Ok(())
     }
