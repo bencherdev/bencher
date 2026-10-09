@@ -15,6 +15,7 @@ Type=simple
 ExecStart=/usr/local/bin/runner up
 Restart=always
 RestartSec=5
+SyslogLevelPrefix=no
 
 [Install]
 WantedBy=multi-user.target";

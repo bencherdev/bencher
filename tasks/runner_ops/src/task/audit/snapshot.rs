@@ -14,7 +14,7 @@ use crate::task::framed::Output;
 const RUNNER_NAME: &str = "BENCHER_RUNNER=";
 const RUNNER_UNIT: &str = "/etc/systemd/system/bencher-runner.service";
 // The unit lines runner ops writes and the privileges the runner depends on; `BENCHER_RUNNER=` cannot match the key.
-const RUNNER_UNIT_LINES: &str = r"^(\[|Description=|After=|Wants=|Type=|ExecStart=|Restart=|RestartSec=|WantedBy=|User=|Delegate=|EnvironmentFile=|Environment=BENCHER_(HOST|RUNNER|UPDATE_CHANNEL|DANGER_ALLOW_NO_SANDBOX)=)";
+const RUNNER_UNIT_LINES: &str = r"^(\[|Description=|After=|Wants=|Type=|ExecStart=|Restart=|RestartSec=|SyslogLevelPrefix=|WantedBy=|User=|Delegate=|EnvironmentFile=|Environment=BENCHER_(HOST|RUNNER|UPDATE_CHANNEL|DANGER_ALLOW_NO_SANDBOX)=)";
 const INSTALLED_PACKAGES: &str =
     r"dpkg-query -W -f='${db:Status-Status} ${binary:Package} ${Version}\n'";
 const KEEP_INSTALLED: &str = r#"awk '$1 == "installed" { print $2, $3 }'"#;
@@ -555,7 +555,7 @@ mod tests {
         std::fs::write(
             &unit,
             format!(
-                "[Service]\nExecStart=/usr/local/bin/runner up --key {KEY}\nExecStart=/usr/local/bin/runner up\nPrivateTmp=yes\n"
+                "[Service]\nExecStart=/usr/local/bin/runner up --key {KEY}\nExecStart=/usr/local/bin/runner up\nSyslogLevelPrefix=no\nPrivateTmp=yes\n"
             ),
         )
         .unwrap();
@@ -576,7 +576,7 @@ mod tests {
         assert_eq!(
             String::from_utf8(output.stdout).unwrap(),
             format!(
-                "{unit}:[Service]\n{unit}:ExecStart=/usr/local/bin/runner up\n{unit}.d/credentials.conf:Environment=BENCHER_RUNNER=runner-a\n{unit}.d/credentials.conf:EnvironmentFile=/etc/bencher-runner/key.env\n"
+                "{unit}:[Service]\n{unit}:ExecStart=/usr/local/bin/runner up\n{unit}:SyslogLevelPrefix=no\n{unit}.d/credentials.conf:Environment=BENCHER_RUNNER=runner-a\n{unit}.d/credentials.conf:EnvironmentFile=/etc/bencher-runner/key.env\n"
             )
         );
     }
