@@ -14,6 +14,7 @@
 //! - Network isolation
 
 use std::fs;
+use std::os::fd::OwnedFd;
 use std::path::Path;
 use std::process::Command;
 use std::sync::mpsc;
@@ -448,13 +449,42 @@ fn reap_new_strays(
     state_dirs: &[&Utf8Path],
 ) -> Result<Vec<String>> {
     let jails = scenario_jails(state_dirs)?;
+    let strays: Vec<u32> = stray_processes()?.difference(before).copied().collect();
+    reap_strays(strays, Pidfd::open, |pid| belongs_to_scenario(pid, &jails))
+}
+
+/// Each stray is pinned before its membership is checked and signalled only
+/// through the pin, so a pid recycled after the scan is never killed, and one
+/// that cannot be pinned is reported and left running.
+fn reap_strays<O, B>(
+    strays: impl IntoIterator<Item = u32>,
+    open: O,
+    mut belongs: B,
+) -> Result<Vec<String>>
+where
+    O: Fn(u32) -> std::io::Result<Option<Pidfd>>,
+    B: FnMut(u32) -> Result<Option<bool>>,
+{
     let mut stranded = Vec::new();
     let mut killed = Vec::new();
-    for pid in stray_processes()?.difference(before).copied() {
-        match belongs_to_scenario(pid, &jails)? {
+    for pid in strays {
+        let pidfd = match open(pid) {
+            Ok(Some(pidfd)) => pidfd,
+            Ok(None) => continue,
+            Err(e) => {
+                stranded.push(format!(
+                    "process {pid}, left running since no pidfd could pin it for the kill ({e})"
+                ));
+                continue;
+            },
+        };
+        match belongs(pid)? {
             Some(true) => {
-                kill_pid(pid, libc::SIGKILL);
-                killed.push(pid);
+                // A pinned process that has already exited fails the kill, and
+                // leaves nothing to wait for.
+                if pidfd.kill().is_ok() {
+                    killed.push(pidfd);
+                }
                 stranded.push(format!("process {pid}"));
             },
             Some(false) => stranded.push(format!(
@@ -464,14 +494,117 @@ fn reap_new_strays(
         }
     }
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
-    while killed
-        .iter()
-        .any(|pid| Utf8Path::new(&format!("/proc/{pid}")).exists())
-        && std::time::Instant::now() < deadline
-    {
+    while killed.iter().any(Pidfd::is_running) && std::time::Instant::now() < deadline {
         std::thread::sleep(PROBE_INTERVAL);
     }
     Ok(stranded)
+}
+
+/// A descriptor pinned to one process, so a signal sent through it never
+/// reaches another that takes the same pid later.
+struct Pidfd(OwnedFd);
+
+impl Pidfd {
+    /// `Ok(None)` when the process is already gone.
+    #[cfg(target_os = "linux")]
+    fn open(pid: u32) -> std::io::Result<Option<Self>> {
+        use std::os::fd::FromRawFd as _;
+
+        let pid = libc::pid_t::try_from(pid).map_err(|_err| {
+            std::io::Error::new(std::io::ErrorKind::InvalidInput, "pid out of range")
+        })?;
+        #[expect(
+            unsafe_code,
+            reason = "pidfd_open has no std wrapper; it takes plain integers"
+        )]
+        // SAFETY: `pidfd_open` touches no memory, and each argument is widened to
+        // `c_long` because `syscall` is variadic.
+        let raw = unsafe {
+            libc::syscall(
+                libc::SYS_pidfd_open,
+                libc::c_long::from(pid),
+                libc::c_long::from(0i32),
+            )
+        };
+        if raw < 0 {
+            let error = std::io::Error::last_os_error();
+            return if error.raw_os_error() == Some(libc::ESRCH) {
+                Ok(None)
+            } else {
+                Err(error)
+            };
+        }
+        let raw = libc::c_int::try_from(raw)
+            .map_err(|_err| std::io::Error::other("pidfd out of descriptor range"))?;
+        #[expect(
+            unsafe_code,
+            reason = "taking ownership of a descriptor this call just created"
+        )]
+        // SAFETY: `raw` is a fresh descriptor returned by the syscall above and is
+        // owned by nothing else.
+        let fd = unsafe { OwnedFd::from_raw_fd(raw) };
+        Ok(Some(Self(fd)))
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    fn open(_pid: u32) -> std::io::Result<Option<Self>> {
+        Err(std::io::ErrorKind::Unsupported.into())
+    }
+
+    #[cfg(target_os = "linux")]
+    fn kill(&self) -> std::io::Result<()> {
+        use std::os::fd::AsRawFd as _;
+
+        #[expect(
+            unsafe_code,
+            reason = "pidfd_send_signal has no std wrapper; the fd is owned and valid"
+        )]
+        // SAFETY: the descriptor is open for the call, a null `siginfo` asks the
+        // kernel to synthesize one, and each integer is widened to `c_long` for
+        // `syscall`.
+        let ret = unsafe {
+            libc::syscall(
+                libc::SYS_pidfd_send_signal,
+                libc::c_long::from(self.0.as_raw_fd()),
+                libc::c_long::from(libc::SIGKILL),
+                std::ptr::null::<libc::siginfo_t>(),
+                libc::c_long::from(0i32),
+            )
+        };
+        if ret == 0 {
+            Ok(())
+        } else {
+            Err(std::io::Error::last_os_error())
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    #[expect(
+        clippy::unused_self,
+        reason = "only Linux has pidfds, so elsewhere none is ever opened"
+    )]
+    fn kill(&self) -> std::io::Result<()> {
+        Err(std::io::ErrorKind::Unsupported.into())
+    }
+
+    /// A failed `poll` reads as running, so no wait ends early on it.
+    fn is_running(&self) -> bool {
+        use std::os::fd::AsRawFd as _;
+
+        let mut poll_fd = libc::pollfd {
+            fd: self.0.as_raw_fd(),
+            events: libc::POLLIN,
+            revents: 0,
+        };
+        #[expect(
+            unsafe_code,
+            reason = "poll has no std wrapper; the fd is owned and valid"
+        )]
+        // SAFETY: `poll` touches only the one entry passed, and the descriptor is
+        // open for the call.
+        let ready = unsafe { libc::poll(&raw mut poll_fd, 1, 0) };
+        ready <= 0 || (poll_fd.revents & libc::POLLIN) == 0
+    }
 }
 
 struct ScenarioJail {
@@ -503,11 +636,24 @@ fn scenario_jails(state_dirs: &[&Utf8Path]) -> Result<Vec<ScenarioJail>> {
 /// Rooted in one of the scenario's jails, or in its cgroup or the stand-in's;
 /// `None` once the process has exited.
 fn belongs_to_scenario(pid: u32, jails: &[ScenarioJail]) -> Result<Option<bool>> {
-    let listing = match fs::read_to_string(format!("/proc/{pid}/cgroup")) {
-        Ok(listing) => listing,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(e) => return Err(e).with_context(|| format!("Failed to read the cgroup of pid {pid}")),
-    };
+    belongs_with_cgroup(
+        pid,
+        fs::read_to_string(format!("/proc/{pid}/cgroup")),
+        jails,
+    )
+}
+
+fn belongs_with_cgroup(
+    pid: u32,
+    listing: std::io::Result<String>,
+    jails: &[ScenarioJail],
+) -> Result<Option<bool>> {
+    if let Err(e) = &listing
+        && gone(e)
+    {
+        return Ok(None);
+    }
+    let listing = listing.with_context(|| format!("Failed to read the cgroup of pid {pid}"))?;
     let cgroup = bencher_cgroup_name(&listing);
     if cgroup.is_some() && cgroup == Utf8Path::new(OCCUPIED_CGROUP).file_name() {
         return Ok(Some(true));
@@ -3575,15 +3721,24 @@ impl StreamedOutput {
 /// Checks the command as well as the pid, so a recycled pid does not read as an
 /// unreaped VMM.
 fn is_firecracker(pid: u32) -> Result<bool> {
-    match fs::read_to_string(format!("/proc/{pid}/comm")) {
-        Ok(comm) => Ok(comm.trim() == "firecracker"),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
-        Err(e) => Err(e).with_context(|| {
-            format!(
-                "Failed to read the command of pid {pid}, so whether the VMM was reaped is unknown"
-            )
-        }),
+    is_firecracker_comm(fs::read_to_string(format!("/proc/{pid}/comm"))).with_context(|| {
+        format!("Failed to read the command of pid {pid}, so whether the VMM was reaped is unknown")
+    })
+}
+
+fn is_firecracker_comm(comm: std::io::Result<String>) -> std::io::Result<bool> {
+    if let Err(e) = &comm
+        && gone(e)
+    {
+        return Ok(false);
     }
+    comm.map(|comm| comm.trim() == "firecracker")
+}
+
+/// A process reaped since the scan has either no `/proc` entry or one whose
+/// read fails with `ESRCH`, and either way is gone.
+fn gone(error: &std::io::Error) -> bool {
+    error.kind() == std::io::ErrorKind::NotFound || error.raw_os_error() == Some(libc::ESRCH)
 }
 
 struct DrainedOutput {
@@ -3876,15 +4031,11 @@ fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<Vec<String>> {
         if let Some(pid) = find_jailed_vmm(&jail_root)? {
             stranded.push(format!("VMM pid {pid}"));
             println!("  reclaiming VMM (pid {pid}) stranded in {vm_id}");
-            kill_pid(pid, libc::SIGKILL);
-            let deadline = std::time::Instant::now() + Duration::from_secs(5);
-            while is_firecracker(pid)? && std::time::Instant::now() < deadline {
-                std::thread::sleep(PROBE_INTERVAL);
-            }
-            anyhow::ensure!(
-                !is_firecracker(pid)?,
-                "A VMM stranded in {vm_id} (pid {pid}) would not die, so it would run on through every scenario that follows"
-            );
+            reap_jailed(pid, Pidfd::open, |pid| rooted_in(pid, &jail_root)).with_context(|| {
+                format!(
+                    "The VMM stranded in {vm_id} (pid {pid}) was not reclaimed, so it would run on through every scenario that follows"
+                )
+            })?;
         }
 
         // Nothing else will come looking for the cgroup once its jail directory
@@ -3908,6 +4059,39 @@ fn reclaim_stranded_jails(state_dir: &Utf8Path) -> Result<Vec<String>> {
     }
 
     Ok(stranded)
+}
+
+/// Pinned, then checked against the jail again, so a pid recycled since the
+/// scan is never signalled.
+fn reap_jailed<O, R>(pid: u32, open: O, rooted: R) -> Result<()>
+where
+    O: FnOnce(u32) -> std::io::Result<Option<Pidfd>>,
+    R: FnOnce(u32) -> bool,
+{
+    let Some(vmm) = open(pid).context("No pidfd could pin it, so it was left running")? else {
+        return Ok(());
+    };
+    if !rooted(pid) {
+        return Ok(());
+    }
+    // A kill that fails shows up as a VMM still running at the deadline.
+    drop(vmm.kill());
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while vmm.is_running() && std::time::Instant::now() < deadline {
+        std::thread::sleep(PROBE_INTERVAL);
+    }
+    anyhow::ensure!(
+        !vmm.is_running(),
+        "It was still running 5 seconds after a SIGKILL"
+    );
+    Ok(())
+}
+
+fn rooted_in(pid: u32, jail_root: &Utf8Path) -> bool {
+    fs::metadata(jail_root)
+        .ok()
+        .zip(fs::metadata(format!("/proc/{pid}/root")).ok())
+        .is_some_and(|(jail, root)| same_object(&root, &jail))
 }
 
 /// Clearing a parent's `cpuset.cpus` fails with `EIO` while a descendant holds a
@@ -4400,5 +4584,299 @@ mod tests {
 
             assert!(!writable_setting(&path, "1"));
         }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_stray_is_killed_through_its_pin() {
+        // Fails if the kill sent through the pidfd does not land, so the stray
+        // would run on into the next scenario.
+        use std::os::unix::process::ExitStatusExt as _;
+
+        let mut stray = Command::new("sleep").arg("600").spawn().unwrap();
+        let pid = stray.id();
+
+        let stranded = reap_strays([pid], Pidfd::open, |_pid| Ok(Some(true))).unwrap();
+
+        let exited = exits_soon(&mut stray);
+        drop(stray.kill());
+        let status = stray.wait().unwrap();
+        assert!(exited, "the stray outlived its reap");
+        assert_eq!(status.signal(), Some(libc::SIGKILL));
+        assert_eq!(stranded, [format!("process {pid}")]);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_recycled_pid_is_never_signalled() {
+        // Fails if the reaper signals by pid, or pins the process only after its
+        // check: the stray exits after the scan and a bystander takes its pid.
+        if !is_root() {
+            println!(
+                "skipped a_recycled_pid_is_never_signalled: handing out a chosen pid needs root"
+            );
+            return;
+        }
+        let mut stray = Command::new("sleep").arg("600").spawn().unwrap();
+        let pid = stray.id();
+        let mut bystander = None;
+
+        reap_strays([pid], Pidfd::open, |_pid| {
+            stray.kill()?;
+            stray.wait()?;
+            bystander = Some(spawn_with_pid(pid)?);
+            Ok(Some(true))
+        })
+        .unwrap();
+
+        let mut bystander = bystander.unwrap();
+        let killed = exits_soon(&mut bystander);
+        drop(bystander.kill());
+        drop(bystander.wait());
+        assert!(!killed, "the bystander that took pid {pid} was killed");
+    }
+
+    #[test]
+    fn a_stray_no_pidfd_can_pin_is_reported_and_left_running() {
+        // Fails if the reaper falls back to a kill by pid, which a recycled pid
+        // would carry to a stranger.
+        let mut stray = Command::new("sleep").arg("600").spawn().unwrap();
+        let pid = stray.id();
+
+        let stranded = reap_strays(
+            [pid],
+            |_pid| Err(std::io::ErrorKind::Unsupported.into()),
+            |_pid| Ok(Some(true)),
+        )
+        .unwrap();
+
+        let killed = exits_soon(&mut stray);
+        drop(stray.kill());
+        drop(stray.wait());
+        assert!(!killed, "the stray was killed without a pin");
+        assert_eq!(stranded.len(), 1, "{stranded:?}");
+        assert!(
+            stranded[0].starts_with(&format!("process {pid}, left running")),
+            "{stranded:?}"
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_process_reaped_as_its_command_is_read_is_gone() {
+        // Fails if a pid that exits mid-scan fails the scan, or if any other
+        // failed read passes for a process that is gone.
+        let (_pid, reaped) = read_once_reaped("comm");
+
+        assert!(!is_firecracker_comm(Err(reaped)).unwrap());
+        is_firecracker_comm(fs::read_to_string("/")).unwrap_err();
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_stray_reaped_as_its_cgroup_is_read_is_gone() {
+        // Fails if a pinned stray that its parent reaps mid-check fails the
+        // reap, or if any other failed read passes for a stray that is gone.
+        let (pid, reaped) = read_once_reaped("cgroup");
+
+        assert_eq!(belongs_with_cgroup(pid, Err(reaped), &[]).unwrap(), None);
+        belongs_with_cgroup(pid, fs::read_to_string("/"), &[]).unwrap_err();
+    }
+
+    /// Opens `/proc/<pid>/<file>` of a live process, reaps it, then reads:
+    /// the error a read racing the reap meets.
+    #[cfg(target_os = "linux")]
+    fn read_once_reaped(file: &str) -> (u32, std::io::Error) {
+        use std::io::Read as _;
+
+        let mut process = Command::new("sleep").arg("600").spawn().unwrap();
+        let pid = process.id();
+        let mut open = fs::File::open(format!("/proc/{pid}/{file}")).unwrap();
+        process.kill().unwrap();
+        process.wait().unwrap();
+        let reaped = open.read(&mut [0; 16]).unwrap_err();
+        assert_eq!(reaped.raw_os_error(), Some(libc::ESRCH), "{reaped}");
+        (pid, reaped)
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_vmm_still_in_its_jail_is_reaped() {
+        // Fails if the reclaim's kill does not land; any process is rooted at `/`.
+        let mut vmm = Command::new("sleep").arg("600").spawn().unwrap();
+
+        let reaped = reap_jailed(vmm.id(), Pidfd::open, |pid| {
+            rooted_in(pid, Utf8Path::new("/"))
+        });
+
+        let exited = exits_soon(&mut vmm);
+        drop(vmm.kill());
+        drop(vmm.wait());
+        reaped.unwrap();
+        assert!(exited, "the VMM outlived its reclaim");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_process_outside_the_jail_is_never_reclaimed() {
+        // Fails if the reclaim kills without checking the pinned process against
+        // the jail, as it must when the scanned pid was recycled.
+        let dir = tempfile::tempdir().unwrap();
+        let jail_root = Utf8Path::from_path(dir.path()).unwrap();
+        let mut bystander = Command::new("sleep").arg("600").spawn().unwrap();
+
+        let reaped = reap_jailed(bystander.id(), Pidfd::open, |pid| rooted_in(pid, jail_root));
+
+        let killed = exits_soon(&mut bystander);
+        drop(bystander.kill());
+        drop(bystander.wait());
+        reaped.unwrap();
+        assert!(!killed, "the bystander was killed");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_stray_is_signalled_through_its_pin_not_its_pid() {
+        // Fails if the reaper signals by pid: the pin holds a decoy, so a kill by
+        // pid reaches the stray instead.
+        let mut stray = Command::new("sleep").arg("600").spawn().unwrap();
+        let mut decoy = Command::new("sleep").arg("600").spawn().unwrap();
+        let decoy_pid = decoy.id();
+
+        let reaped = reap_strays(
+            [stray.id()],
+            |_pid| Pidfd::open(decoy_pid),
+            |_pid| Ok(Some(true)),
+        );
+
+        let stray_killed = exits_soon(&mut stray);
+        let decoy_killed = exits_soon(&mut decoy);
+        for child in [&mut stray, &mut decoy] {
+            drop(child.kill());
+            drop(child.wait());
+        }
+        reaped.unwrap();
+        assert!(!stray_killed, "the stray was signalled by its pid");
+        assert!(decoy_killed, "the process the pin holds outlived the reap");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_stray_is_pinned_before_its_check() {
+        // Fails if the reaper pins a stray only after checking it, so the check
+        // could read a process that is gone by the time of the pin.
+        let mut stray = Command::new("sleep").arg("600").spawn().unwrap();
+        let pinned = std::cell::Cell::new(false);
+
+        let reaped = reap_strays(
+            [stray.id()],
+            |pid| {
+                pinned.set(true);
+                Pidfd::open(pid)
+            },
+            |_pid| {
+                anyhow::ensure!(pinned.get(), "checked before it was pinned");
+                Ok(Some(true))
+            },
+        );
+
+        drop(stray.kill());
+        drop(stray.wait());
+        reaped.unwrap();
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_recycled_vmm_pid_is_never_reclaimed() {
+        // Fails if the reclaim signals by pid after its check, or checks the jail
+        // before it pins: the VMM exits during the check and a bystander takes its pid.
+        if !is_root() {
+            println!(
+                "skipped a_recycled_vmm_pid_is_never_reclaimed: handing out a chosen pid needs root"
+            );
+            return;
+        }
+        let mut vmm = Command::new("sleep").arg("600").spawn().unwrap();
+        let pid = vmm.id();
+        let mut bystander = None;
+
+        let reaped = reap_jailed(pid, Pidfd::open, |_pid| {
+            drop(vmm.kill());
+            drop(vmm.wait());
+            bystander = Some(spawn_with_pid(pid));
+            true
+        });
+
+        let mut bystander = bystander.unwrap().unwrap();
+        let killed = exits_soon(&mut bystander);
+        drop(bystander.kill());
+        drop(bystander.wait());
+        reaped.unwrap();
+        assert!(!killed, "the bystander that took pid {pid} was killed");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_vmm_is_reclaimed_only_through_a_pin_taken_before_its_check() {
+        // Fails if the reclaim signals by pid, which reaches the VMM rather than the
+        // decoy its pin holds, or checks the jail before it pins.
+        let mut vmm = Command::new("sleep").arg("600").spawn().unwrap();
+        let mut decoy = Command::new("sleep").arg("600").spawn().unwrap();
+        let decoy_pid = decoy.id();
+        let pinned = std::cell::Cell::new(false);
+
+        let reaped = reap_jailed(
+            vmm.id(),
+            |_pid| {
+                pinned.set(true);
+                Pidfd::open(decoy_pid)
+            },
+            |_pid| pinned.get(),
+        );
+
+        let vmm_killed = exits_soon(&mut vmm);
+        let decoy_killed = exits_soon(&mut decoy);
+        for child in [&mut vmm, &mut decoy] {
+            drop(child.kill());
+            drop(child.wait());
+        }
+        reaped.unwrap();
+        assert!(!vmm_killed, "the VMM was signalled by its pid");
+        assert!(
+            decoy_killed,
+            "the process the pin holds outlived the reclaim"
+        );
+    }
+
+    /// Whether `child` exits within a second, as a SIGKILL sent to it makes it.
+    fn exits_soon(child: &mut std::process::Child) -> bool {
+        let deadline = std::time::Instant::now() + Duration::from_secs(1);
+        while std::time::Instant::now() < deadline {
+            if child.try_wait().unwrap().is_some() {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        false
+    }
+
+    /// Hands `pid` to a fresh `sleep` through `ns_last_pid`, retrying while
+    /// another process, such as a parallel test's, takes or holds it first.
+    #[cfg(target_os = "linux")]
+    fn spawn_with_pid(pid: u32) -> std::io::Result<std::process::Child> {
+        let deadline = std::time::Instant::now() + Duration::from_secs(30);
+        while std::time::Instant::now() < deadline {
+            fs::write("/proc/sys/kernel/ns_last_pid", (pid - 1).to_string())?;
+            let mut child = Command::new("sleep").arg("600").spawn()?;
+            if child.id() == pid {
+                return Ok(child);
+            }
+            drop(child.kill());
+            drop(child.wait());
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        Err(std::io::Error::other(format!(
+            "pid {pid} was never handed out again"
+        )))
     }
 }
