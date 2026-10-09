@@ -52,6 +52,18 @@ pub enum LockError {
         path: Utf8PathBuf,
         source: std::io::Error,
     },
+
+    #[error("Failed to open the job lock {path}: {source}")]
+    OpenJob {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
+
+    #[error("Failed to take the job lock {path}: {source}")]
+    LockJob {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
 }
 
 #[derive(Debug, Error)]

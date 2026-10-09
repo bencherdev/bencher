@@ -167,6 +167,8 @@ pub enum Effect {
     Connect,
     /// Probe the host. Driver feeds `Input::Probed`.
     Probe,
+    /// Release the job lock a clear probe took, so host maintenance may run.
+    ReleaseJobLock,
     /// A pause began, for these reasons.
     PauseBegan(Vec<PauseReason>),
     /// A pause ended.
@@ -407,7 +409,11 @@ impl ChannelStateMachine {
                     Effect::ExecuteJob(job),
                 ]
             },
-            Input::Message(ServerMessage::NoJob) => self.resolve_idle(),
+            Input::Message(ServerMessage::NoJob) => {
+                let mut effects = vec![Effect::ReleaseJobLock];
+                effects.extend(self.resolve_idle());
+                effects
+            },
             Input::Message(ServerMessage::Update {
                 version,
                 url,
@@ -415,6 +421,7 @@ impl ChannelStateMachine {
             }) => {
                 self.state = ChannelState::Updating;
                 vec![
+                    Effect::ReleaseJobLock,
                     Effect::Log(
                         LogLevel::Info,
                         format!("Server requested update to version {version}"),
@@ -429,13 +436,15 @@ impl ChannelStateMachine {
             },
             Input::ReceiveTimeout => {
                 self.state = ChannelState::Disconnected;
-                let mut effects = vec![Effect::Close];
+                let mut effects = vec![Effect::ReleaseJobLock, Effect::Close];
                 effects.extend(self.reconnect(ReconnectReason::PollingTimeout));
                 effects
             },
             Input::ConnectionFailed => {
                 self.state = ChannelState::Disconnected;
-                self.reconnect(ReconnectReason::PollingConnectionLost)
+                let mut effects = vec![Effect::ReleaseJobLock];
+                effects.extend(self.reconnect(ReconnectReason::PollingConnectionLost));
+                effects
             },
             input @ (Input::Connected
             | Input::Message(ServerMessage::Ack { .. } | ServerMessage::Cancel)
@@ -452,14 +461,21 @@ impl ChannelStateMachine {
                 let (msg, kind) = build_terminal_message(job_uuid, result);
                 self.in_flight = Some(msg.clone());
                 self.state = ChannelState::AwaitingTerminalAck { job_uuid, kind };
-                vec![Effect::Send(msg), Effect::Receive(ACK_TIMEOUT)]
+                vec![
+                    Effect::ReleaseJobLock,
+                    Effect::Send(msg),
+                    Effect::Receive(ACK_TIMEOUT),
+                ]
             },
+            // `Running` was not sent, so the Job never ran.
             Input::ConnectionFailed => {
                 if self.stopping {
                     return self.exit();
                 }
                 self.state = ChannelState::Disconnected;
-                self.reconnect(ReconnectReason::ExecutingConnectionLost)
+                let mut effects = vec![Effect::ReleaseJobLock];
+                effects.extend(self.reconnect(ReconnectReason::ExecutingConnectionLost));
+                effects
             },
             input @ (Input::Connected
             | Input::Message(_)
@@ -1625,13 +1641,14 @@ mod tests {
     fn awaiting_job_timeout_effects_are_ordered() {
         let mut sm = test_sm().with_state(ChannelState::AwaitingJob);
         let effects = sm.step(Input::ReceiveTimeout);
-        assert_eq!(effects.len(), 3);
-        assert!(matches!(effects[0], Effect::Close));
+        assert_eq!(effects.len(), 4);
+        assert!(matches!(effects[0], Effect::ReleaseJobLock));
+        assert!(matches!(effects[1], Effect::Close));
         assert!(matches!(
-            effects[1],
+            effects[2],
             Effect::SleepBeforeReconnect(ReconnectReason::PollingTimeout)
         ));
-        assert!(matches!(effects[2], Effect::Connect));
+        assert!(matches!(effects[3], Effect::Connect));
     }
 
     // --- Unexpected message during Executing ---
@@ -1700,7 +1717,10 @@ mod tests {
         assert_eq!(*sm.state(), ChannelState::AwaitingJob);
 
         let effects = sm.step(Input::Message(ServerMessage::NoJob));
-        assert!(matches!(effects.as_slice(), [Effect::Probe]), "{effects:?}");
+        assert!(
+            matches!(effects.as_slice(), [Effect::ReleaseJobLock, Effect::Probe]),
+            "{effects:?}"
+        );
 
         let effects = sm.step(clear());
         assert!(
@@ -1898,5 +1918,82 @@ mod tests {
             ) && !effects.iter().any(|e| matches!(e, Effect::HoldOff(_))),
             "{effects:?}"
         );
+    }
+
+    // --- Job lock ---
+
+    fn releases(effects: &[Effect]) -> usize {
+        effects
+            .iter()
+            .filter(|e| matches!(e, Effect::ReleaseJobLock))
+            .count()
+    }
+
+    #[test]
+    fn the_job_lock_is_held_from_ready_until_the_job_finishes() {
+        // Kills a release before the Job ends, which lets maintenance run
+        // during it, and a lock kept past the Job.
+        let mut sm = test_sm();
+        let effects = probed(&mut sm, Input::Connected);
+        assert_eq!(releases(&effects), 0, "{effects:?}");
+        let job = test_claimed_job();
+        let effects = sm.step(Input::Message(ServerMessage::Job(job)));
+        assert_eq!(releases(&effects), 0, "{effects:?}");
+
+        let effects = sm.step(Input::JobFinished(JobFinishResult::Completed {
+            exit_code: 0,
+            results: vec![],
+        }));
+        assert!(
+            matches!(
+                effects.as_slice(),
+                [
+                    Effect::ReleaseJobLock,
+                    Effect::Send(RunnerMessage::Completed { .. }),
+                    ..
+                ]
+            ),
+            "released before the result goes out: {effects:?}"
+        );
+    }
+
+    #[test]
+    fn the_job_lock_is_released_whenever_no_job_follows() {
+        // Kills a lock kept through a `NoJob`, an update, a timeout, or a lost
+        // connection, any of which holds maintenance off for good.
+        let update = || {
+            Input::Message(ServerMessage::Update {
+                version: "99.0.0".to_owned(),
+                url: "https://example.com/runner".parse().unwrap(),
+                checksum: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+                    .parse()
+                    .unwrap(),
+            })
+        };
+        for (input, state) in [
+            (
+                Input::Message(ServerMessage::NoJob),
+                ChannelState::AwaitingJob,
+            ),
+            (update(), ChannelState::AwaitingJob),
+            (Input::ReceiveTimeout, ChannelState::AwaitingJob),
+            (Input::ConnectionFailed, ChannelState::AwaitingJob),
+            // `Running` failed to send, so the Job never ran.
+            (
+                Input::ConnectionFailed,
+                ChannelState::Executing {
+                    job_uuid: test_job_uuid(),
+                },
+            ),
+        ] {
+            let case = format!("{input:?} in {state:?}");
+            let mut sm = test_sm().with_state(state);
+            let effects = sm.step(input);
+            assert_eq!(releases(&effects), 1, "{case}: {effects:?}");
+            assert!(
+                matches!(effects.first(), Some(Effect::ReleaseJobLock)),
+                "released first: {case}: {effects:?}"
+            );
+        }
     }
 }

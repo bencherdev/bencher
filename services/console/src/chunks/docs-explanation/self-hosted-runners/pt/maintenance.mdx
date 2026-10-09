@@ -1,0 +1,47 @@
+## Manutenção do host
+
+Um Runner e a manutenção do seu host, como atualizações de pacotes ou uma verificação de RAID, se revezam, de modo que a manutenção nunca roda durante um Job.
+Eles se revezam por meio de `/run/bencher`, um diretório que um Runner iniciado como `root` cria apenas para `root`:
+
+- **O bloqueio de Job**, `/run/bencher/job.lock`.
+  O Runner o obtém antes de pedir um Job e o mantém até essa consulta terminar sem Job ou terminar o Job que ela trouxer.
+  A manutenção espera pelo bloqueio, então só começa entre Jobs,
+  e um Runner que encontra o bloqueio em uso não aceita nenhum Job até que ele fique livre.
+- **Marcadores de manutenção**, `/run/bencher/maintenance` ou `/run/bencher/maintenance.<name>`.
+  A manutenção cria seu próprio marcador antes de esperar pelo bloqueio e o remove quando termina.
+  Enquanto existir algum marcador, o Runner não pede nenhum Job e deixa o bloqueio livre,
+  então a manutenção em espera começa assim que terminar a consulta atual do Runner, ou o Job que essa consulta trouxer.
+
+Enquanto espera pela manutenção, um Runner fica pausado: continua conectado e continua se atualizando.
+`runner run` também espera pelo bloqueio de Job, e avisa, mas roda, enquanto existir um marcador ou um array md estiver sincronizando.
+Um Runner que não é `root` não consegue abrir o bloqueio de Job nem ver os marcadores, então aceita Jobs sem eles.
+
+Com o systemd, um drop-in faz uma unidade de manutenção esperar sua vez.
+Por exemplo, `/etc/systemd/system/fstrim.service.d/zz-bencher-quiet.conf` envolve o próprio comando da unidade em `flock -F`.
+O `ExecStart=` vazio apaga esse comando, então a linha seguinte deve repeti-lo exatamente:
+
+```ini
+[Service]
+ExecStartPre=+/usr/bin/install -d -m 0700 /run/bencher
+ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
+ExecStart=
+ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
+ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
+TimeoutStartSec=infinity
+```
+
+### Esvaziar um Runner
+
+Para esvaziar um Runner, crie o marcador simples como `root`:
+
+```sh
+touch /run/bencher/maintenance
+```
+
+O Runner termina sua consulta atual, no máximo `--poll-timeout` segundos, e qualquer Job em execução ou trazido por essa consulta, e depois não aceita nenhum outro Job até o marcador sumir:
+
+```sh
+rm /run/bencher/maintenance
+```
+
+`/run` é esvaziado na inicialização, então uma reinicialização também remove o marcador.

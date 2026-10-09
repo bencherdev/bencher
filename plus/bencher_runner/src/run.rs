@@ -139,6 +139,10 @@ pub fn run_with_args(log: &Logger, args: &RunArgs) -> Result<(), RunnerError> {
     let runner_lock = crate::runner_lock::RunnerLock::acquire(log)?;
     #[cfg(target_os = "linux")]
     crate::jail::prepare_at_startup(log, &runner_lock, args.sandbox.is_some())?;
+    #[cfg(target_os = "linux")]
+    let Some(_job_lock) = wait_for_turn(log)? else {
+        return Err(crate::error::ExecutionError::Canceled("run was canceled".to_owned()).into());
+    };
 
     // Warn about host conditions that limit benchmark accuracy (Linux only)
     preflight::log_host_warnings(log);
@@ -216,6 +220,28 @@ pub fn run_with_args(log: &Logger, args: &RunArgs) -> Result<(), RunnerError> {
         }
     }
     Ok(())
+}
+
+/// A run chose its moment, so it warns but runs through a RAID sync or a
+/// maintenance marker, and waits out only maintenance that holds the job lock.
+#[cfg(target_os = "linux")]
+fn wait_for_turn(
+    log: &Logger,
+) -> Result<Option<crate::job_lock::JobLock>, crate::error::LockError> {
+    use bencher_json::runner::PauseReason;
+
+    use crate::host::{SYSFS, md};
+    use crate::maintenance::{RUN_DIR, marker_present};
+
+    for reason in md::raid_reasons(&md::arrays(Utf8Path::new(SYSFS))) {
+        if let PauseReason::Raid { array, action, .. } = reason {
+            warn!(log, "Running during a RAID sync"; "array" => array, "action" => ?action);
+        }
+    }
+    if marker_present(std::path::Path::new(RUN_DIR)) {
+        warn!(log, "Running although host maintenance is due"; "path" => RUN_DIR);
+    }
+    crate::job_lock::JobLock::wait(log, crate::signal::stop_requested)
 }
 
 /// The benchmark's output is the product of `runner run`, so it goes out raw.

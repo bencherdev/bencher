@@ -1,0 +1,47 @@
+## Host-Wartung
+
+Ein Runner und die Wartung seines Hosts, etwa Paket-Upgrades oder ein RAID-Scrub, wechseln sich ab, sodass Wartung nie während eines Jobs läuft.
+Sie wechseln sich über `/run/bencher` ab, ein Verzeichnis, das ein als `root` gestarteter Runner nur für `root` anlegt:
+
+- **Die Job-Sperre**, `/run/bencher/job.lock`.
+  Der Runner nimmt sie, bevor er nach einem Job fragt, und hält sie, bis diese Abfrage ohne Job endet oder der Job, den sie bringt, endet.
+  Wartung wartet auf die Sperre und beginnt daher nur zwischen Jobs,
+  und ein Runner, der die Sperre belegt vorfindet, nimmt keinen Job an, bis sie frei ist.
+- **Wartungsmarker**, `/run/bencher/maintenance` oder `/run/bencher/maintenance.<name>`.
+  Wartung legt ihren eigenen Marker an, bevor sie auf die Sperre wartet, und entfernt ihn, wenn sie fertig ist.
+  Solange ein Marker existiert, fragt der Runner nach keinem Job und lässt die Sperre frei,
+  sodass wartende Wartung beginnt, sobald die laufende Abfrage des Runners oder der Job, den diese bringt, endet.
+
+Während er auf Wartung wartet, ist ein Runner pausiert: Er bleibt verbunden und aktualisiert sich weiterhin selbst.
+`runner run` wartet ebenfalls auf die Job-Sperre und warnt, läuft aber, solange ein Marker existiert oder ein md-Array synchronisiert.
+Ein Runner, der nicht `root` ist, kann weder die Job-Sperre öffnen noch die Marker sehen und nimmt Jobs daher ohne sie an.
+
+Mit systemd sorgt ein Drop-in dafür, dass eine Wartungs-Unit sich einreiht.
+Zum Beispiel umschließt `/etc/systemd/system/fstrim.service.d/zz-bencher-quiet.conf` den eigenen Befehl der Unit mit `flock -F`.
+Das leere `ExecStart=` löscht diesen Befehl, daher muss die nächste Zeile ihn exakt wiederholen:
+
+```ini
+[Service]
+ExecStartPre=+/usr/bin/install -d -m 0700 /run/bencher
+ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
+ExecStart=
+ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
+ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
+TimeoutStartSec=infinity
+```
+
+### Einen Runner leeren
+
+Um einen Runner zu leeren, legen Sie als `root` den einfachen Marker an:
+
+```sh
+touch /run/bencher/maintenance
+```
+
+Der Runner beendet seine laufende Abfrage, höchstens `--poll-timeout` Sekunden, und jeden Job, der läuft oder den diese Abfrage bringt, und nimmt danach keinen weiteren Job an, bis der Marker entfernt ist:
+
+```sh
+rm /run/bencher/maintenance
+```
+
+`/run` wird beim Booten geleert, daher entfernt auch ein Neustart den Marker.

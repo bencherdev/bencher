@@ -70,9 +70,11 @@ impl RunnerLock {
     }
 }
 
-fn open(path: &Utf8Path) -> std::io::Result<File> {
+/// Root's alone, directory and file, since any process that can open a lock
+/// file can hold the lock.
+pub(crate) fn open(path: &Utf8Path) -> std::io::Result<File> {
     if let Some(dir) = path.parent() {
-        DirBuilder::new().recursive(true).mode(0o755).create(dir)?;
+        DirBuilder::new().recursive(true).mode(0o700).create(dir)?;
     }
     OpenOptions::new()
         .write(true)
