@@ -5,7 +5,7 @@ use slog::{Logger, error, info, warn};
 use url::Url;
 
 use crate::cpu::CpuLayout;
-use crate::host::md;
+use crate::host::{health::Health, md};
 use crate::log_level::SandboxLogLevel;
 use crate::maintenance::RUN_DIR;
 use crate::tuning::{TuningConfig, preflight};
@@ -178,6 +178,7 @@ fn run_driver(
     let mut host = Host {
         preparation: crate::jail::HostPreparation::new(),
         turn: Turn::default(),
+        health: Health::default(),
     };
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
     let mut ws: Option<Arc<Mutex<JobChannel>>> = None;
@@ -290,6 +291,7 @@ fn execute_effect(
             Utf8Path::new(RUN_DIR),
             config.raid_pause,
             &mut host.turn,
+            &mut host.health,
         ))),
         Effect::ReleaseJobLock => {
             host.turn.release();
@@ -363,6 +365,7 @@ fn execute_effect(
 struct Host {
     preparation: crate::jail::HostPreparation,
     turn: Turn,
+    health: Health,
 }
 
 /// The runner's turn at the job lock, held from a clear probe until the
@@ -396,10 +399,12 @@ fn probe(
     run_dir: &Utf8Path,
     raid_pause: bool,
     turn: &mut Turn,
+    health: &mut Health,
 ) -> Probe {
     turn.release();
+    let arrays = md::arrays(sysfs);
     let mut reasons = if raid_pause {
-        md::raid_reasons(&md::arrays(sysfs))
+        md::raid_reasons(&arrays)
     } else {
         Vec::new()
     };
@@ -414,6 +419,7 @@ fn probe(
     }
     Probe {
         reasons,
+        health: Some(health.read(log, sysfs, &arrays)),
         now: bencher_json::DateTime::now(),
     }
 }
@@ -824,11 +830,32 @@ mod tests {
                 &run_dir,
                 raid_pause,
                 &mut Turn::default(),
+                &mut Health::default(),
             )
         };
         assert_eq!(probe(true).reasons.len(), 1);
         assert_eq!(probe(false).reasons, []);
         drop(dir);
+    }
+
+    #[test]
+    fn every_probe_reports_md_health() {
+        // Kills a probe that sends no health, or reads none with the RAID
+        // pause off.
+        let (_dir, sysfs) = md::tests::sysfs(&[("md0", "idle", "none", "none")]);
+        std::fs::write(sysfs.join("block/md0/md/degraded"), "1\n").unwrap();
+        let probe = probe(
+            &crate::log::discard(),
+            &sysfs,
+            &sysfs.join("run"),
+            false,
+            &mut Turn::default(),
+            &mut Health::default(),
+        );
+        assert_eq!(
+            probe.health.map(|health| health.state),
+            Some(bencher_json::runner::HealthState::Failing)
+        );
     }
 
     #[cfg(target_os = "linux")]
@@ -840,17 +867,18 @@ mod tests {
         let run_dir = sysfs.join("run");
         let log = crate::log::discard();
         let mut turn = Turn::default();
+        let mut health = Health::default();
 
-        let paused = probe(&log, &sysfs, &run_dir, true, &mut turn);
+        let paused = probe(&log, &sysfs, &run_dir, true, &mut turn, &mut health);
         assert_eq!(paused.reasons.len(), 1, "{:?}", paused.reasons);
         assert!(turn.lock.is_none());
 
-        let clear = probe(&log, &sysfs, &run_dir, false, &mut turn);
+        let clear = probe(&log, &sysfs, &run_dir, false, &mut turn, &mut health);
         assert_eq!(clear.reasons, []);
         assert!(turn.lock.is_some());
 
         std::fs::write(run_dir.join("maintenance"), b"").unwrap();
-        let maintenance = probe(&log, &sysfs, &run_dir, false, &mut turn);
+        let maintenance = probe(&log, &sysfs, &run_dir, false, &mut turn, &mut health);
         assert_eq!(
             maintenance.reasons,
             [PauseReason::Maintenance {
@@ -875,6 +903,7 @@ mod tests {
             &run_dir,
             false,
             &mut host.turn,
+            &mut host.health,
         );
         assert_eq!(clear.reasons, []);
         assert!(host.turn.lock.is_some());
@@ -988,6 +1017,7 @@ mod tests {
                 })),
                 Effect::Probe => EffectResult::Input(Input::Probed(Probe {
                     reasons: Vec::new(),
+                    health: None,
                     now: bencher_json::DateTime::now(),
                 })),
                 Effect::Exit => EffectResult::Exit,

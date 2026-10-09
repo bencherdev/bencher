@@ -1,6 +1,6 @@
 //! md RAID arrays, read from sysfs.
 
-use bencher_json::runner::{MdSyncAction, PauseReason};
+use bencher_json::runner::{JsonMdArray, MdSyncAction, PauseReason};
 use camino::Utf8Path;
 
 /// An md array's sync state.
@@ -12,6 +12,9 @@ pub(crate) struct MdArray {
     pub completed: SyncCompleted,
     /// KiB per second.
     pub speed: Option<u64>,
+    /// Missing members.
+    pub degraded: Option<u32>,
+    pub array_state: Option<String>,
 }
 
 /// An array's `sync_completed`.
@@ -71,7 +74,19 @@ impl MdArray {
             action: read("sync_action").map(|action| parse_action(&action)),
             completed,
             speed: read("sync_speed").and_then(|speed| speed.parse().ok()),
+            degraded: read("degraded").and_then(|degraded| degraded.parse().ok()),
+            array_state: read("array_state"),
         })
+    }
+
+    /// An array with no sync thread, such as raid0, reads as idle.
+    pub(crate) fn json(&self) -> JsonMdArray {
+        JsonMdArray {
+            name: self.name.clone(),
+            array_state: self.array_state.clone().unwrap_or_default(),
+            degraded: self.degraded.unwrap_or_default(),
+            action: self.action.clone().unwrap_or(MdSyncAction::Idle),
+        }
     }
 
     /// `sync_action` alone can read `recover` while no recovery can run, so
@@ -241,6 +256,8 @@ pub(crate) mod tests {
                 action: None,
                 completed: SyncCompleted::None,
                 speed: None,
+                degraded: None,
+                array_state: None,
             }]
         );
         assert_eq!(raid_reasons(&arrays), []);
