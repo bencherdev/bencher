@@ -1,7 +1,9 @@
-use std::process::Command;
+use std::io::Write as _;
+use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
+use anyhow::Context as _;
 use camino::{Utf8Path, Utf8PathBuf};
 
 const REBOOT_POLL_INTERVAL: Duration = Duration::from_secs(10);
@@ -47,13 +49,30 @@ impl Ssh {
 
     /// Run a command on the remote server, returning stdout without printing the command or its output.
     pub fn run_quiet(&self, command: &str) -> anyhow::Result<String> {
-        let output = Command::new("ssh")
+        self.run_quiet_with_stdin(command, &Stdin(String::new()))
+    }
+
+    /// Like [`Ssh::run_quiet`], with `stdin` sent to the command, which keeps it out of every command line.
+    pub fn run_quiet_with_stdin(&self, command: &str, stdin: &Stdin) -> anyhow::Result<String> {
+        let mut child = Command::new("ssh")
             .args(self.ssh_options())
             .arg(self.destination())
             .arg(command)
-            .output()?;
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+        // Written in full before any output is read, and closed for the command to see its end.
+        let written = child
+            .stdin
+            .take()
+            .map(|mut pipe| pipe.write_all(stdin.0.as_bytes()));
+        let output = child.wait_with_output()?;
 
         if output.status.success() {
+            written
+                .transpose()
+                .context("Failed to send stdin over SSH")?;
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -163,3 +182,6 @@ impl Ssh {
         }
     }
 }
+
+/// What a command reads on its stdin, a type apart from the command so the two cannot trade places.
+pub struct Stdin(pub String);
