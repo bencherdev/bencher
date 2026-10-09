@@ -25,8 +25,8 @@ pub struct RunOutput {
     pub stdout: String,
     /// Stderr output from the benchmark.
     pub stderr: String,
-    /// Optional output files: path → contents.
-    pub output_files: Option<HashMap<Utf8PathBuf, Vec<u8>>>,
+    /// Optional output files as (path, contents), in the Job's declared order.
+    pub output_files: Option<Vec<(Utf8PathBuf, Vec<u8>)>>,
 }
 
 /// Arguments for the `run` subcommand.

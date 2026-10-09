@@ -17,7 +17,6 @@
     reason = "local executor prints progress and diagnostic output"
 )]
 
-use std::collections::HashMap;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -539,10 +538,10 @@ fn collect_output_files(
     file_paths: Option<&[Utf8PathBuf]>,
     unpack_dir: &Utf8Path,
     max_symlinks: u32,
-) -> Option<HashMap<Utf8PathBuf, Vec<u8>>> {
+) -> Option<Vec<(Utf8PathBuf, Vec<u8>)>> {
     let paths = file_paths?;
 
-    let mut files = HashMap::with_capacity(paths.len());
+    let mut files = Vec::with_capacity(paths.len());
     for path in paths {
         // Resolve the OCI-relative path within the unpacked rootfs
         let host_path = unpack_dir.join(path.as_str().trim_start_matches('/'));
@@ -556,7 +555,7 @@ fn collect_output_files(
         };
         match std::fs::read(resolved.as_std_path()) {
             Ok(contents) => {
-                files.insert(path.clone(), contents);
+                files.push((path.clone(), contents));
             },
             Err(e) => {
                 eprintln!("Warning: failed to read output file {path}: {e}");
@@ -569,6 +568,8 @@ fn collect_output_files(
 
 #[cfg(test)]
 mod tests {
+    use camino::Utf8PathBuf;
+
     use super::*;
     use crate::error::ExecutionError;
 
@@ -587,5 +588,24 @@ mod tests {
             ),
             "a process with no time left is never spawned, got: {result:?}"
         );
+    }
+
+    #[test]
+    fn output_files_are_collected_in_the_declared_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let rootfs = Utf8PathBuf::try_from(dir.path().canonicalize().unwrap()).unwrap();
+        // Descending, and enough files that neither a sorted nor a hashed order matches.
+        let declared: Vec<Utf8PathBuf> = (0..32)
+            .rev()
+            .map(|n| Utf8PathBuf::from(format!("/{n}.out")))
+            .collect();
+        for path in &declared {
+            std::fs::write(rootfs.join(path.as_str().trim_start_matches('/')), b"x").unwrap();
+        }
+
+        let collected = collect_output_files(Some(&declared), &rootfs, 0).unwrap();
+
+        let paths: Vec<Utf8PathBuf> = collected.into_iter().map(|(path, _)| path).collect();
+        assert_eq!(paths, declared);
     }
 }
