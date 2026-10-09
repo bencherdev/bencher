@@ -1,5 +1,5 @@
 import { exploreSearch } from "../query/selection";
-import type { AlertLine } from "./alerts";
+import type { AlertLine } from "../alerts/lines";
 import type { AlertsWindow } from "./search";
 
 const DAY_SECONDS = 86_400;

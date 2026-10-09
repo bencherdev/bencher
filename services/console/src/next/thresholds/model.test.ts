@@ -1,13 +1,6 @@
 import { describe, expect, test } from "vitest";
-import {
-	archivedBy,
-	durationText,
-	filterSets,
-	filterSummary,
-	historySpan,
-	modelRows,
-	modelText,
-} from "./model";
+import { archivedBy, filterSets, filterSummary, historySpan } from "./model";
+import { durationText, modelRows, modelText } from "./text";
 
 const DAY = 86_400;
 

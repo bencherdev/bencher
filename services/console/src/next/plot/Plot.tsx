@@ -61,6 +61,8 @@ export interface PlotProps {
 	reportHref?: (uuid: string) => string;
 	/** The frame to hold before the data arrives. */
 	reserve?: { lines: number; measures: number };
+	/** No data is on its way: the frame says so instead of that it is loading. */
+	failed?: boolean;
 }
 
 interface Cursor {
@@ -416,7 +418,11 @@ const Plot = (props: PlotProps) => {
 										<div
 											class="pl-skel"
 											role="img"
-											aria-label="Loading the plot"
+											aria-label={
+												props.failed
+													? "The plot did not load"
+													: "Loading the plot"
+											}
 										/>
 									</div>
 								</div>

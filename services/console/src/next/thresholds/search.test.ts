@@ -127,18 +127,18 @@ describe("a threshold's link", () => {
 });
 
 describe("a threshold's alerts request", () => {
-	// Kills the status left to the API's default, the threshold sent under another name, and each row's history not following the window.
-	test("names the threshold, the status, the window, and each row's history", () => {
+	// Kills the status left to the API's default, the threshold sent under another name, each row's history not following the window, and a batch asked for by page number.
+	test("names the threshold, the status, the window, each row's history, and where the batch starts", () => {
 		expect(
 			Object.fromEntries(
-				alertsParams(BRANCH, DEFAULT_VIEW, NOW, { page: 2, perPage: 16 }),
+				alertsParams(BRANCH, DEFAULT_VIEW, NOW, { offset: 30, perPage: 16 }),
 			),
 		).toEqual({
 			thresholds: BRANCH,
 			status: "all",
 			start_time: String(NOW - 28 * DAY),
 			window: "28",
-			page: "2",
+			offset: "30",
 			per_page: "16",
 		});
 	});

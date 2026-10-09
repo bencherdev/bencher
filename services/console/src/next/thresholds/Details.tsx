@@ -5,28 +5,25 @@ import type {
 	JsonConsoleThresholdModel,
 } from "../../types/bencher";
 import Code from "../report/Code";
-import {
-	archivedBy,
-	dayText,
-	filterSets,
-	historySpan,
-	modelRows,
-	modelText,
-} from "./model";
+import { archivedBy, dayText, filterSets, historySpan } from "./model";
 import { VALUE } from "./rows";
 import Sets from "./Sets";
 import { declarationSnippet } from "./snippet";
+import { modelRows, modelText } from "./text";
+import { NEXT_PROJECTS } from "../paths";
+import { runHost } from "../project";
 
-// Bencher Cloud's API, which `bencher run` reports to unless told otherwise.
-const CLOUD = "https://api.bencher.dev";
 const CHANGE = "th-change";
 
 /** What the threshold applies to, its model, and every model it has had. */
 export const Cards = (props: {
+	slug: string;
 	threshold: JsonConsoleThreshold;
 	now: number;
 }) => {
 	const archived = () => archivedBy(props.threshold);
+	const inspect = (dimension: string, slug: string) =>
+		`${NEXT_PROJECTS}/${props.slug}/${dimension}/${slug}`;
 	return (
 		<div class="th-cards">
 			<Card
@@ -42,7 +39,9 @@ export const Cards = (props: {
 					<div class="kv">
 						<dt>branch</dt>
 						<dd>
-							{props.threshold.branch.name}
+							<a href={inspect("branches", props.threshold.branch.slug)}>
+								{props.threshold.branch.name}
+							</a>
 							<Show when={props.threshold.branch.start_point}>
 								{(from) => <span class="th-quiet">, from {from()}</span>}
 							</Show>
@@ -50,12 +49,18 @@ export const Cards = (props: {
 					</div>
 					<div class="kv">
 						<dt>testbed</dt>
-						<dd>{props.threshold.testbed.name}</dd>
+						<dd>
+							<a href={inspect("testbeds", props.threshold.testbed.slug)}>
+								{props.threshold.testbed.name}
+							</a>
+						</dd>
 					</div>
 					<div class="kv">
 						<dt>measure</dt>
 						<dd>
-							{props.threshold.measure.name}
+							<a href={inspect("measures", props.threshold.measure.slug)}>
+								{props.threshold.measure.name}
+							</a>
 							<span class="th-quiet">, {props.threshold.measure.units}</span>
 						</dd>
 					</div>
@@ -170,7 +175,7 @@ const HistoryRow = (props: {
 export const Change = (props: {
 	slug: string;
 	threshold: JsonConsoleThreshold;
-	host: string;
+	host: string | undefined;
 }) => {
 	const where = () =>
 		`${props.threshold.branch.name} · ${props.threshold.testbed.name}`;
@@ -183,7 +188,7 @@ export const Change = (props: {
 					project: props.slug,
 					branch: props.threshold.branch.name,
 					testbed: props.threshold.testbed.name,
-					host: props.host === CLOUD ? undefined : props.host,
+					host: runHost(props.host),
 				},
 				{
 					measure: props.threshold.measure.slug,

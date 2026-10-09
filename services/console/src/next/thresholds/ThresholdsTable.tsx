@@ -13,13 +13,8 @@ import {
 import { projectPath } from "../paths";
 import { useNarrow } from "../plot/narrow";
 import { type Range, visibleRange } from "../reports/rows";
-import {
-	archivedBy,
-	dayText,
-	filterSets,
-	filterSummary,
-	modelText,
-} from "./model";
+import { archivedBy, dayText, filterSets, filterSummary } from "./model";
+import { modelText } from "./text";
 import { ROW_HEIGHT } from "./query";
 import Sets from "./Sets";
 import type { ThresholdRow } from "./rows";

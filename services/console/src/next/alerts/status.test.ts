@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { AlertLine } from "./rows";
-import { alertLinesOf } from "./rows";
+import { type AlertLine, alertLinesOf } from "./lines";
 import {
 	type Changes,
 	begin,

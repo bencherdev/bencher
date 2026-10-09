@@ -21,13 +21,13 @@ import type { JsonConsoleThresholds } from "../../types/bencher";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import { type Range, loadMore } from "../reports/rows";
-import Controls, { type FilterNames } from "../thresholds/Controls";
 import {
 	type Dimension,
+	type FilterNames,
 	nameQuery,
-	screenBatch,
-	thresholdsQuery,
-} from "../thresholds/query";
+} from "../reports/DimensionFilters";
+import Controls from "../thresholds/Controls";
+import { screenBatch, thresholdsQuery } from "../thresholds/query";
 import { type ThresholdRow, rowsOf } from "../thresholds/rows";
 import {
 	DEFAULT_SEARCH,

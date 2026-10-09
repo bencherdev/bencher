@@ -3,7 +3,6 @@ import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
 import Skeleton from "@bencherdev/ui/Skeleton";
-import type { QueryObserverResult } from "@tanstack/solid-query";
 import {
 	For,
 	Match,
@@ -13,7 +12,6 @@ import {
 	createEffect,
 	createMemo,
 	createSignal,
-	mapArray,
 	on,
 } from "solid-js";
 import type {
@@ -24,13 +22,20 @@ import { ApiError } from "../api";
 import { projectPath, reportPath } from "../paths";
 import { formatDate, formatWhen } from "../plot/format";
 import { useNarrow } from "../plot/narrow";
+import { FIRST, useAlertBatches } from "../alerts/batches";
+import { useFold } from "../alerts/fold";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import LineTable from "../report/LineTable";
 import { plotOf } from "../report/lines";
 import AlertControls from "../thresholds/AlertControls";
-import { type AlertLine, alertLinesOf } from "../thresholds/alerts";
+import AlertActions from "../alerts/AlertActions";
+import { useRowStatus } from "../alerts/rowStatus";
+import { type AlertLine, alertLinesOf } from "../alerts/lines";
+import { distinctLines, visibleLines, withKept } from "../alerts/rows";
+import { withPending } from "../alerts/status";
+import { lineLabel } from "../report/row";
 import { Cards, Change } from "../thresholds/Details";
 import { archivedBy, dayText, filterSummary } from "../thresholds/model";
 import { alertsBatch, alertsQuery, thresholdQuery } from "../thresholds/query";
@@ -46,15 +51,13 @@ import {
 
 const SKELETON_ROWS = 4;
 
-type Batch = QueryObserverResult<JsonConsoleAlerts>;
-
 /** A threshold: what it applies to, its model and their history, how to change it, and the alerts it raised. */
 const Threshold = () => {
-	const { api, slug } = useProject();
+	const { api, slug, host } = useProject();
 	const params = useParams<{ threshold: string }>();
 	const location = useLocation();
 	const navigate = useNavigate();
-	const narrow = useNarrow();
+	const fold = useFold();
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
 	const view = createMemo(() =>
 		decodeView(new URLSearchParams(location.search)),
@@ -75,60 +78,61 @@ const Threshold = () => {
 	const data = () => threshold().data;
 
 	const perPage = alertsBatch();
-	const alertsKey = createMemo(
-		() => `${params.threshold}?${encodeView(view())}`,
-	);
-	// Later batches belong to the view that asked for them, so a new view drops them before they could ask again.
-	const [more, setMore] = createSignal({ key: "", count: 1 });
-	createComputed(
-		on(alertsKey, (key) => setMore({ key, count: 1 }), { defer: true }),
-	);
-	const queries = createMemo(
-		mapArray(
-			() =>
-				Array.from(
-					{ length: more().key === alertsKey() ? more().count : 1 },
-					(_, index) => index + 1,
-				),
-			(page) =>
-				useQueryResult(() => ({
-					...alertsQuery(api, slug(), params.threshold, view(), {
-						page,
-						perPage,
-					}),
-					enabled: valid(),
-				})),
+	const { batches, loaded, next, first, busy, loading, nearEnd, reread } =
+		useAlertBatches({
+			view: () => `${params.threshold}?${encodeView(view())}`,
+			query: (start) => ({
+				...alertsQuery(api, slug(), params.threshold, view(), {
+					...start,
+					perPage,
+				}),
+				enabled: valid(),
+			}),
+			alerts: (alerts) => alerts,
+			perPage,
+			inView: (): number => rows.inView(listed(), view().status),
+			keysInView: (alerts) =>
+				rows
+					.linesInView(linesOfBatch(alerts), view().status)
+					.map(({ key }) => key),
+			inFlight: (): number => rows.inFlight(),
+		});
+	const listed = createMemo(() =>
+		distinctLines(
+			loaded().map((batch) => (batch.data ? linesOfBatch(batch.data) : [])),
 		),
 	);
-	const batches = () => queries().map((batch) => batch());
-	const loaded = createMemo(() => {
-		const ready: Batch[] = [];
-		for (const batch of batches()) {
-			if (batch.data === undefined) {
-				break;
+	let table: HTMLElement | undefined;
+	let status: HTMLElement | undefined;
+	const rows = useRowStatus({
+		cached: () => ["console", "threshold", slug(), params.threshold, "alerts"],
+		reread,
+		first: () =>
+			alertsQuery(api, slug(), params.threshold, view(), {
+				...FIRST,
+				perPage,
+			}).queryKey,
+		filters: () =>
+			`${params.threshold}?${encodeView({ ...view(), status: "active" })}`,
+		shown: () => lines(),
+		table: () => table,
+		empty: () => status?.querySelector<HTMLElement>("input:checked"),
+		keep: (from, to) => {
+			const kept = resolved.get(from);
+			if (kept) {
+				resolved.set(to, kept);
 			}
-			ready.push(batch);
-		}
-		return ready;
+		},
 	});
-	const next = () => batches()[loaded().length];
-	const first = () => loaded()[0]?.data;
-	const busy = () => batches()[0]?.isPlaceholderData === true;
 	const lines = createMemo(() =>
-		loaded().flatMap((batch) => (batch.data ? linesOfBatch(batch.data) : [])),
+		visibleLines(
+			withKept(listed(), rows.kept()),
+			view().status,
+			rows.statusOf,
+			rows.keptHere,
+		),
 	);
-	const nearEnd = () => {
-		const last = loaded().at(-1)?.data;
-		if (
-			last &&
-			next() === undefined &&
-			lines().length < last.total &&
-			last.groups.reduce((sum, group) => sum + group.alerts.length, 0) ===
-				perPage
-		) {
-			setMore({ key: alertsKey(), count: batches().length + 1 });
-		}
-	};
+	const canEdit = () => bootstrap().data?.permissions.edit === true;
 	const [now, setNow] = createSignal(Date.now());
 	createComputed(
 		on(
@@ -159,7 +163,7 @@ const Threshold = () => {
 	const [explorer, setExplorer] =
 		createSignal<typeof import("../thresholds/explore")["exploreSearchOf"]>();
 	createEffect(() => {
-		if (lines().length > 0 && !explorer()) {
+		if (listed().length > 0 && !explorer()) {
 			import("../thresholds/explore")
 				.then(({ exploreSearchOf }) => setExplorer(() => exploreSearchOf))
 				.catch(() => {});
@@ -167,8 +171,8 @@ const Threshold = () => {
 	});
 	const explore = () => {
 		const search = explorer();
-		return search && lines().length > 0
-			? `${projectPath(slug(), "explore")}${search(lines(), view().window)}`
+		return search && listed().length > 0
+			? `${projectPath(slug(), "explore")}${search(listed(), view().window)}`
 			: undefined;
 	};
 
@@ -241,14 +245,8 @@ const Threshold = () => {
 					<Match when={data()}>
 						{(threshold) => (
 							<>
-								<Cards threshold={threshold()} now={now()} />
-								<Change
-									slug={slug()}
-									threshold={threshold()}
-									host={
-										document.getElementById("console")?.dataset.apiUrl ?? ""
-									}
-								/>
+								<Cards slug={slug()} threshold={threshold()} now={now()} />
+								<Change slug={slug()} threshold={threshold()} host={host} />
 								<section class="th-alerts" aria-labelledby="th-alerts">
 									<div class="th-alerts-head">
 										<h2 class="seclabel" id="th-alerts">
@@ -261,30 +259,59 @@ const Threshold = () => {
 													<Skeleton size="text" class="th-summary-skel" />
 												}
 											>
-												{(counts) => (
-													<>
-														{counts().active} active ·{" "}
-														{counts().dismissed + counts().silenced} dismissed{" "}
-														{windowText()}
-													</>
-												)}
+												{(counts) => {
+													const shown = () =>
+														withPending(counts(), [rows.pending()]);
+													return (
+														<>
+															{shown().active} active ·{" "}
+															{shown().dismissed + shown().silenced} dismissed{" "}
+															{windowText()}
+														</>
+													);
+												}}
 											</Show>
 										</span>
 									</div>
-									<AlertControls view={view()} now={now()} onView={setView} />
+									<AlertControls
+										view={view()}
+										now={now()}
+										onView={setView}
+										statusRef={(element) => {
+											status = element;
+										}}
+									/>
+									<Show when={rows.notice()}>
+										{(notice) => (
+											<Banner status="error" role="alert" class="load-error">
+												<span class="grow">
+													{notice() === "partial"
+														? "Some alerts did not change, so the list is read again."
+														: "The alert did not change: the Bencher API did not answer."}
+												</span>
+											</Banner>
+										)}
+									</Show>
 									<Alerts
 										slug={slug()}
 										threshold={threshold()}
 										view={view()}
 										lines={lines()}
 										total={first()?.total}
-										narrow={narrow()}
+										rows={Math.max(
+											lines().length,
+											(first()?.total ?? 0) + lines().length - listed().length,
+										)}
+										narrow={fold()}
+										tableRef={(element) => {
+											table = element;
+										}}
 										history={history()}
 										expanded={expanded()}
 										onExpand={expand}
 										onNearEnd={nearEnd}
 										busy={busy()}
-										loading={next()?.isFetching ?? false}
+										loading={loading()}
 										failed={
 											first() === undefined &&
 											batches()[0]?.isLoadingError === true
@@ -293,6 +320,9 @@ const Threshold = () => {
 											(batch === "first" ? batches()[0] : next())?.refetch()
 										}
 										nextFailed={next()?.isLoadingError === true}
+										statusOf={rows.statusOf}
+										changed={rows.changed}
+										onChange={canEdit() ? rows.change : undefined}
 									/>
 								</section>
 							</>
@@ -383,7 +413,10 @@ const Alerts = (props: {
 	view: ThresholdView;
 	lines: AlertLine[];
 	total: number | undefined;
+	/** The rows the list counts: the view's total and the rows kept or let go on this page. */
+	rows: number;
 	narrow: boolean;
+	tableRef: (element: HTMLElement) => void;
 	history: string;
 	expanded: ReadonlySet<string>;
 	onExpand: (line: { key: string }, open: boolean) => void;
@@ -395,9 +428,19 @@ const Alerts = (props: {
 	/** The batch after the loaded ones failed. */
 	nextFailed: boolean;
 	onRetry: (batch: "first" | "next") => void;
+	statusOf: (line: AlertLine) => AlertLine["status"];
+	changed: (line: AlertLine) => boolean;
+	/** Without it the reader cannot change an alert's status. */
+	onChange?:
+		| ((status: "active" | "dismissed", line: AlertLine) => void)
+		| undefined;
 }) => (
 	<Switch>
-		<Match when={props.total === 0 && !props.busy}>
+		<Match
+			when={
+				props.total !== undefined && props.lines.length === 0 && !props.busy
+			}
+		>
 			<div class="th-empty">
 				<Heading level={3} size="base">
 					{props.view.status === "active"
@@ -412,36 +455,69 @@ const Alerts = (props: {
 			</div>
 		</Match>
 		<Match when={props.lines.length > 0}>
-			<LineTable
-				label="Alerts this threshold raised"
-				slots={props.lines}
-				rows={props.total ?? props.lines.length}
-				narrow={props.narrow}
-				metrics={false}
-				history={`History, ${props.history}`}
-				expanded={props.expanded}
-				onExpand={props.onExpand}
-				aside={{
-					label: "Report",
-					column: "th-c-report",
-					cell: (line) => (
-						<ReportCell slug={props.slug} line={line as AlertLine} />
-					),
-				}}
-				plot={(line) => ({
-					data: plotOf(
-						line,
-						props.threshold.branch.name,
-						props.threshold.testbed.name,
-					),
-					note: `${props.history}, ending at its report`,
-					reportHref: (uuid) => reportPath(props.slug, uuid),
-				})}
-				onNearEnd={props.onNearEnd}
-				busy={props.busy}
-				loading={props.loading}
-				onRetry={props.nextFailed ? () => props.onRetry("next") : undefined}
-			/>
+			<div class="lr-alerts" ref={props.tableRef}>
+				<LineTable
+					label="Alerts this threshold raised"
+					slots={props.lines}
+					rows={props.rows}
+					narrow={props.narrow}
+					metrics={false}
+					history={`History, ${props.history}`}
+					expanded={props.expanded}
+					onExpand={props.onExpand}
+					aside={{
+						label: "Report",
+						column: "th-c-report",
+						cell: (line) => (
+							<ReportCell slug={props.slug} line={line as AlertLine} />
+						),
+					}}
+					dimmed={(line) => props.statusOf(line as AlertLine) !== "active"}
+					actions={{
+						cell: (line) => {
+							const alert = line as AlertLine;
+							const change = props.onChange;
+							return (
+								<AlertActions
+									name={
+										lineLabel(
+											{
+												benchmark: line.benchmark.name,
+												parameters: line.parameters,
+												measure: line.measure.name,
+												metric: line.metric,
+											},
+											false,
+										).name
+									}
+									status={props.statusOf(alert)}
+									justNow={props.changed(alert)}
+									modified={alert.modified}
+									onDismiss={change && (() => change("dismissed", alert))}
+									onReactivate={change && (() => change("active", alert))}
+								/>
+							);
+						},
+						// An editor's rows never read their status here, so a change keeps their controls and the focus.
+						narrow: (line) =>
+							props.onChange !== undefined ||
+							props.statusOf(line as AlertLine) !== "active",
+					}}
+					plot={(line) => ({
+						data: plotOf(
+							line,
+							props.threshold.branch.name,
+							props.threshold.testbed.name,
+						),
+						note: `${props.history}, ending at its report`,
+						reportHref: (uuid) => reportPath(props.slug, uuid),
+					})}
+					onNearEnd={props.onNearEnd}
+					busy={props.busy}
+					loading={props.loading}
+					onRetry={props.nextFailed ? () => props.onRetry("next") : undefined}
+				/>
+			</div>
 		</Match>
 		<Match when={props.failed}>
 			<Banner status="error" role="alert" class="load-error">
@@ -464,26 +540,30 @@ const Alerts = (props: {
 	</Switch>
 );
 
-/** The report an alert came from, and its status once it is no longer active. */
+/** The report an alert came from. */
 const ReportCell = (props: { slug: string; line: AlertLine }) => {
 	const narrow = useNarrow();
-	const shown = () =>
+	const when = () =>
 		narrow()
 			? formatDate(props.line.report.start)
-			: [formatWhen(props.line.report.start), props.line.report.hash]
-					.filter(Boolean)
-					.join(" · ");
+			: formatWhen(props.line.report.start);
+	const hash = () => (narrow() ? undefined : props.line.report.hash);
 	return (
 		<span class="th-report">
 			<a
 				href={reportPath(props.slug, props.line.report.uuid)}
-				aria-label={`${shown()}, open the report`}
+				aria-label={`${[when(), hash()].filter(Boolean).join(" · ")}, open the report`}
 			>
-				{shown()}
+				{when()}
+				<Show when={hash()}>
+					{(shown) => (
+						<>
+							{" "}
+							<span class="th-report-hash">· {shown()}</span>
+						</>
+					)}
+				</Show>
 			</a>
-			<Show when={props.line.status !== "active"}>
-				<span class="th-quiet"> · {props.line.status}</span>
-			</Show>
 		</span>
 	);
 };

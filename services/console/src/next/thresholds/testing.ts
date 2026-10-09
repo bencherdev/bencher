@@ -221,6 +221,33 @@ export const alertsFixture = (
 		...fields,
 	}) as unknown as JsonConsoleAlerts;
 
+/** A batch of the alerts numbered `ids` in the newest report, out of `total`: alert `n` is `alert-n`, active, on benchmark `bench-n`. */
+export const namedAlerts = (ids: readonly number[], total: number) => {
+	const fixture = alertsFixture();
+	return {
+		...fixture,
+		total,
+		groups: fixture.groups.slice(0, 1).map((group) => ({
+			...group,
+			total: ids.length,
+			alerts: ids.map((id, index) => ({
+				line: line(index, { uuid: `alert-${id}`, status: "active" }),
+				modified: START,
+			})),
+		})),
+		benchmarks: ids.map((id) => ({
+			uuid: `bench-${id}-uuid`,
+			name: `bench-${id}`,
+			slug: `bench-${id}`,
+		})),
+		variants: ids.map((id, index) => ({
+			uuid: `v-bench-${id}`,
+			benchmark: index,
+			parameters: {},
+		})),
+	} as unknown as JsonConsoleAlerts;
+};
+
 /** A batch of `count` active alerts from the `from`th, all in the newest report, out of `total`. */
 export const alertsPage = (from: number, count: number, total: number) => {
 	const fixture = alertsFixture();

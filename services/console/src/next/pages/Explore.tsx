@@ -248,13 +248,24 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			: "The API did not answer.";
 	};
 	const [PlotView, setPlotView] = createSignal(loadedPlot());
-	const wantPlot = () => {
+	const [plotMissing, setPlotMissing] = createSignal(false);
+	const wantPlot = (retry = false) => {
 		if (!PlotView()) {
+			setPlotMissing(false);
 			loadPlot()
 				.then((view) => setPlotView(() => view))
-				.catch(() => {});
+				.catch(() => {
+					// A failed module, the chunk or one it imports, stays failed for the page's life: only reading the page again loads it.
+					if (retry) {
+						window.location.reload();
+					} else {
+						setPlotMissing(true);
+					}
+				});
 		}
 	};
+	const plotFailure = () =>
+		refused() ?? (plotMissing() ? "The plot did not load." : undefined);
 	createEffect(() => {
 		if (drawsPlot(query())) {
 			wantPlot();
@@ -597,7 +608,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			readOnly={props.readOnly}
 			onQuery={(next) => edit(next)}
 			onFirstBenchmark={first}
-			onBenchmarks={wantPlot}
+			onBenchmarks={() => wantPlot()}
 		/>
 	);
 
@@ -678,15 +689,21 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			</section>
 			<Show when={drawable(query())}>
 				<section class="ex-plot" aria-label="Plot" aria-busy={busy()}>
-					<Show when={refused()}>
+					<Show when={plotFailure()}>
 						{(text) => (
 							<div class="ex-failed">
 								<Banner status="error" role="alert" class="load-error">
 									<span class="grow">{text()}</span>
 									<Button
 										size="lg"
-										disabled={perf().isFetching}
-										onClick={() => void perf().refetch()}
+										disabled={refused() !== undefined && perf().isFetching}
+										onClick={() => {
+											if (plotMissing()) {
+												wantPlot(true);
+											} else {
+												void perf().refetch();
+											}
+										}}
 									>
 										Retry
 									</Button>
@@ -700,7 +717,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 							<PlotFrame
 								reserve={reserve()}
 								layout={layout()}
-								loading={!refused()}
+								loading={!plotFailure()}
 							/>
 						}
 					>

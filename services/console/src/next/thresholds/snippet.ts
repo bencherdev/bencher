@@ -1,6 +1,6 @@
 import type { ParameterSet } from "../report/row";
 import { json, quote } from "../report/snippet";
-import type { ModelLike } from "./model";
+import type { ModelLike } from "./text";
 
 /** A threshold as a run declares it: `measure` is the measure's slug. */
 export interface Declaration {

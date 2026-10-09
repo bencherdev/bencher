@@ -42,26 +42,6 @@
 	gap: 6px;
 }
 
-/* Positioned, so the table's hidden header labels stay inside the box that clips them. */
-.al-scroll {
-	position: relative;
-	overflow-x: auto;
-}
-/* The alert row's columns, as the board sizes them, leave a dismissed row room for its status and Reactivate. */
-.al-scroll .lr-c-measure,
-.al-scroll .lr-c-limit {
-	width: 104px;
-}
-.al-scroll .lr-c-value {
-	width: 92px;
-}
-.al-scroll .lr-c-delta {
-	width: 124px;
-}
-.al-scroll .lr-c-act {
-	width: 196px;
-}
-
 .lr-table .al-group > td {
 	height: 44px;
 	padding: 0 10px 0 0;

@@ -23,7 +23,7 @@
 	},
 	"tabSwitch": {
 		"apiRequests": 0,
-		"jsBytes": 12700
+		"jsBytes": 12750
 	},
 	"reportsColdLoad": {
 		"apiAnswersBeforePaint": 0,
@@ -46,7 +46,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 50100,
+		"jsBytes": 50150,
 		"stylesheets": 1,
 		"lateModules": 0
 	},
@@ -55,7 +55,7 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 50100,
+		"jsBytes": 50150,
 		"stylesheets": 1,
 		"lateModules": 0
 	},
@@ -69,7 +69,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 56420,
+		"jsBytes": 56830,
 		"stylesheets": 1,
 		"htmlBytes": 2780,
 		"lateModules": 0
@@ -79,7 +79,7 @@
 		"apiRequests": 5,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 56420,
+		"jsBytes": 56830,
 		"stylesheets": 1,
 		"htmlBytes": 2790,
 		"lateModules": 0
@@ -98,14 +98,14 @@
 	"thresholdsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 15250
+		"jsBytes": 15650
 	},
 	"thresholdsColdLoad": {
 		"apiAnswersBeforePaint": 0,
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 52050,
+		"jsBytes": 52500,
 		"stylesheets": 1,
 		"htmlBytes": 2830,
 		"inlineScriptBytes": 2840,
@@ -116,7 +116,7 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 68050,
+		"jsBytes": 73200,
 		"stylesheets": 1,
 		"htmlBytes": 2940,
 		"inlineScriptBytes": 2950,
@@ -127,7 +127,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 96350,
+		"jsBytes": 96550,
 		"htmlBytes": 2880,
 		"inlineScriptBytes": 2840,
 		"lateModules": 0
@@ -142,7 +142,7 @@
 		"apiRequests": 4,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 62000,
+		"jsBytes": 62250,
 		"lateModules": 0
 	},
 	"exploreKeyToggle": {
@@ -153,7 +153,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 68900,
+		"jsBytes": 71010,
 		"stylesheets": 1,
 		"htmlBytes": 2870,
 		"inlineScriptBytes": 2840,
@@ -169,7 +169,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 89500,
+		"jsBytes": 89600,
 		"deferredJsBytes": 108000,
 		"htmlBytes": 2850,
 		"inlineScriptBytes": 2885,

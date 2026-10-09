@@ -178,8 +178,31 @@
 .lr-c-act {
 	width: 156px;
 }
+/* Positioned, so the table's hidden header labels stay inside the box that clips them. */
+.lr-alerts {
+	position: relative;
+	overflow-x: auto;
+}
+/* An alert row's columns, as the board sizes them, leave a dismissed row room for its status and Reactivate. */
+.lr-alerts .lr-c-measure,
+.lr-alerts .lr-c-limit {
+	width: 104px;
+}
+.lr-alerts .lr-c-value {
+	width: 92px;
+}
+.lr-alerts .lr-c-delta {
+	width: 124px;
+}
+.lr-alerts .lr-c-act {
+	width: 196px;
+}
 .lr-c-hit {
 	width: 44px;
+}
+/* A narrow row without a checkbox gives its lines the checkbox's room. */
+.lr-c-gap {
+	width: 12px;
 }
 .lr-c-numbers {
 	width: 108px;
@@ -364,16 +387,13 @@
 	height: 64px;
 }
 .lrn.lrn-act > td {
-	height: 84px;
+	height: 108px;
 }
-/* A control on a row's third line keeps a 44 px target without a taller line. */
 .lrn .lr-act .lnk {
-	position: relative;
-}
-.lrn .lr-act .lnk::after {
-	content: "";
-	position: absolute;
-	inset: -12px -8px;
+	flex: none;
+	justify-content: center;
+	min-width: 44px;
+	min-height: 44px;
 }
 .lrn .lr-hit,
 .lrn .lr-twist {
@@ -433,6 +453,15 @@
 }
 .lr-state {
 	color: var(--color-text-muted);
+}
+/* On a narrow phone the status gives way, so the control beside it stays whole. */
+.lrn .lr-act .lr-state {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.lrn .lr-act .dotsep {
+	display: none;
 }
 
 @media (max-width: 767px) {

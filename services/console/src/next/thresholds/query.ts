@@ -3,6 +3,7 @@ import type {
 	JsonConsoleThreshold,
 	JsonConsoleThresholds,
 } from "../../types/bencher";
+import type { Batch as AlertsBatch } from "../alerts/search";
 import type { Api } from "../api";
 import { NARROW } from "../plot/narrow";
 import { batchSize } from "../reports/rows";
@@ -93,17 +94,13 @@ export const alertsQuery = (
 	slug: string,
 	threshold: string,
 	view: ThresholdView,
-	batch: Batch,
+	batch: AlertsBatch & { round: number },
 ) => ({
 	queryKey: [
-		"console",
-		"threshold",
-		slug,
-		threshold,
-		"alerts",
-		encodeView(view),
+		...alertsViewKey(slug, threshold, view),
 		batch.perPage,
-		batch.page,
+		batch.offset,
+		batch.round,
 	] as const,
 	queryFn: async ({ signal }: { signal: AbortSignal }) =>
 		(
@@ -117,28 +114,18 @@ export const alertsQuery = (
 		previous: JsonConsoleAlerts | undefined,
 		query: { queryKey: readonly unknown[] } | undefined,
 	) =>
-		batch.page === 1 && query?.queryKey[3] === threshold ? previous : undefined,
+		batch.offset === 0 && batch.round === 0 && query?.queryKey[3] === threshold
+			? previous
+			: undefined,
 });
 
-export type Dimension = "branches" | "testbeds" | "measures";
-
-/** The name of a branch, a testbed, or a measure, by UUID, as the Reports list keys names by slug. */
-export const nameKey = (resource: Dimension, slug: string, uuid: string) =>
-	["console", resource, slug, "name", uuid] as const;
-
-export const nameQuery = (
-	api: Api,
-	slug: string,
-	resource: Dimension,
-	uuid: string | undefined,
-) => ({
-	queryKey: nameKey(resource, slug, uuid ?? ""),
-	queryFn: async ({ signal }: { signal: AbortSignal }) =>
-		(
-			await api.get<{ name: string }>(
-				`/v0/projects/${encodeURIComponent(slug)}/${resource}/${encodeURIComponent(uuid ?? "")}`,
-				signal,
-			)
-		).data.name,
-	enabled: uuid !== undefined,
-});
+/** Every batch of one view of the alerts a threshold raised. */
+const alertsViewKey = (slug: string, threshold: string, view: ThresholdView) =>
+	[
+		"console",
+		"threshold",
+		slug,
+		threshold,
+		"alerts",
+		encodeView(view),
+	] as const;

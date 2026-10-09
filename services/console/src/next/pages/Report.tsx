@@ -57,7 +57,7 @@ const SKELETON_ROWS = 8;
 
 /** A report as one row per line, each with its history over a window ending at the report. */
 const Report = () => {
-	const { api, slug } = useProject();
+	const { api, slug, host } = useProject();
 	const params = useParams<{ report: string }>();
 	const location = useLocation();
 	const navigate = useNavigate();
@@ -356,7 +356,7 @@ const Report = () => {
 							report={report().uuid}
 							branch={report().branch.name}
 							testbed={report().testbed.name}
-							host={document.getElementById("console")?.dataset.apiUrl ?? ""}
+							host={host}
 							onClose={() => setSheet()}
 						/>
 					)}

@@ -23,6 +23,7 @@ const AlertControls = (props: {
 	view: ThresholdView;
 	now: number;
 	onView: (view: ThresholdView) => void;
+	statusRef?: (status: HTMLDivElement) => void;
 }) => {
 	const narrow = useNarrow();
 	const [menu, setMenu] = createSignal(false);
@@ -48,6 +49,7 @@ const AlertControls = (props: {
 					onChange={pick}
 				/>
 				<Segmented
+					ref={props.statusRef}
 					name="th-alerts-status"
 					full={narrow()}
 					aria-label="Status"

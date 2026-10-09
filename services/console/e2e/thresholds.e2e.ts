@@ -1,8 +1,14 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import type { JsonConsoleThresholds } from "../src/types/bencher";
-import { createProject } from "./api";
+import { createManyAlerts, createProject } from "./api";
 import { axeInBothThemes } from "./axe";
 import { expect, nextPath, seed, settle, signedIn, test } from "./fixtures";
+import {
+	alertsTopToBottom,
+	dismissWhileNextBatchIsOut,
+	manyAlertNames,
+	refocusThenReread,
+} from "./overtake";
 
 const { hashbrown } = seed.projects;
 
@@ -260,7 +266,10 @@ test("a row opens the threshold, its model, and the alerts it raised", async ({
 		.filter({
 			has: page.getByRole("button", { name: `Expand ${DISMISSED}` }),
 		});
-	await expect(dismissedRow).toContainText("dismissed");
+	await expect(dismissedRow).toContainText(/Dismissed [A-Z][a-z]{2} \d+/);
+	await expect(
+		dismissedRow.getByRole("button", { name: /^Reactivate the alert on / }),
+	).toBeVisible();
 	await expect(
 		dismissedRow.getByRole("link", { name: /, open the report$/ }),
 	).toHaveAttribute(
@@ -435,6 +444,121 @@ test("Thresholds and a threshold pass axe in both themes", async ({
 			alertsTable(page).getByRole("button", { name: `Expand ${ALERTING}` }),
 		).toBeVisible();
 		await settle(page);
+	});
+});
+
+// Kills a threshold page that scrolls sideways between tablet and desktop
+// widths, and an alert row's controls drawn past the edge of the screen or of
+// the list that holds them.
+for (const width of [768, 820, 900, 980, 1024]) {
+	test(`at ${width} px the threshold page scrolls nothing sideways and keeps every control in view`, async ({
+		page,
+		request,
+	}) => {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto(
+			thresholdPath(
+				hashbrown.slug,
+				await latencyThreshold(request),
+				"?status=all",
+			),
+		);
+		await alertsTable(page).scrollIntoViewIfNeeded();
+		await expect(
+			alertsTable(page).getByRole("button", {
+				name: `Reactivate the alert on ${DISMISSED}`,
+			}),
+		).toBeVisible();
+		await settle(page);
+		const measured = await page.evaluate(() => {
+			const list = document
+				.querySelector('table[aria-label="Alerts this threshold raised"]')
+				?.parentElement?.getBoundingClientRect();
+			const right = Math.min(window.innerWidth, list?.right ?? 0);
+			const controls = [
+				...document.querySelectorAll(
+					'table[aria-label="Alerts this threshold raised"] :is(button, a)',
+				),
+			];
+			return {
+				page: document.documentElement.scrollWidth,
+				controls: controls.length,
+				out: controls
+					.filter((control) => {
+						const box = control.getBoundingClientRect();
+						return (
+							box.right > right + 0.5 || box.left < (list?.left ?? 0) - 0.5
+						);
+					})
+					.map((control) => control.getAttribute("aria-label")),
+			};
+		});
+		expect(measured.page).toBeLessThanOrEqual(width);
+		expect(measured.controls).toBeGreaterThan(0);
+		expect(measured.out).toEqual([]);
+	});
+}
+
+test.describe("a list longer than a batch", () => {
+	test.use({ viewport: { width: 1280, height: 400 } });
+
+	// Kills a next batch the API read after a dismissal it took while that
+	// batch was on its way, which starts an alert late and is never asked for
+	// again from the recounted offset, so that alert is never drawn.
+	test("a dismissal the API takes while the next batch is on its way skips and repeats no alert", async ({
+		page,
+		request,
+	}) => {
+		const project = await createManyAlerts(request, 60);
+		const response = await request.get(
+			`${seed.api_url}/v0/console/projects/${project.slug}/thresholds`,
+			{ headers: headers() },
+		);
+		const { thresholds: [threshold] = [] } =
+			(await response.json()) as JsonConsoleThresholds;
+		const label = "Alerts this threshold raised";
+		const offsets = await dismissWhileNextBatchIsOut(
+			page,
+			thresholdPath(project.slug, threshold?.uuid ?? "", "?status=active"),
+			label,
+		);
+		expect(
+			await alertsTopToBottom(page, label, "bench-59 n=0 Latency"),
+		).toEqual(manyAlertNames(60));
+		const [, size = 0] = offsets;
+		expect(offsets.slice(0, 3)).toEqual([0, size, size - 1]);
+	});
+
+	// Kills later batches read again from the offsets they were first asked
+	// from, on returning to the window or by a reread after a change the API
+	// made to no alert, rather than only the first batch, then each later one
+	// from its recounted offset.
+	test("after dismissals, returning to the window reads only the first batch again, and a reread recounts each later batch", async ({
+		page,
+		request,
+	}) => {
+		const project = await createManyAlerts(request, 60);
+		const response = await request.get(
+			`${seed.api_url}/v0/console/projects/${project.slug}/thresholds`,
+			{ headers: headers() },
+		);
+		const { thresholds: [threshold] = [] } =
+			(await response.json()) as JsonConsoleThresholds;
+		const label = "Alerts this threshold raised";
+		const { size, focus, reread } = await refocusThenReread(
+			page,
+			request,
+			project.slug,
+			thresholdPath(project.slug, threshold?.uuid ?? "", "?status=active"),
+			label,
+		);
+		expect(focus).toEqual([0]);
+		expect(
+			await alertsTopToBottom(page, label, "bench-59 n=0 Latency"),
+		).toEqual(
+			manyAlertNames(60).filter((name) => name !== "bench-03 n=0 Latency"),
+		);
+		expect(reread()).toEqual([0, size, 2 * size, 3 * size]);
 	});
 });
 

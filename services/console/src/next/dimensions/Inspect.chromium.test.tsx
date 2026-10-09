@@ -60,7 +60,7 @@ const threshold = (testbed: string): JsonThreshold =>
 		branch: { name: "412/merge" },
 		testbed: { name: testbed },
 		measure: { name: "Latency" },
-		model: { test: "t_test" },
+		model: { test: "t_test", upper_boundary: 0.99, max_sample_size: 64 },
 	}) as unknown as JsonThreshold;
 
 const variant = (uuid: string, parameters: JsonVariant["parameters"]) =>
@@ -215,8 +215,8 @@ const show = async (
 
 // Kills a page that drops its start point's name, its head, the reports'
 // total, or the thresholds on it, an Explore link for nothing, threshold links
-// named only by their testbed, a row taken from the first match alone, and an
-// All reports link that keeps the default window.
+// named only by their testbed, a threshold's model cut to its test, a row taken
+// from the first match alone, and an All reports link that keeps the default window.
 test("a branch's page shows its start point, head, recent reports, and thresholds", async () => {
 	const { api } = branchApi(false);
 	dispose = (await show(api, "branches", "412-merge")).dispose;
@@ -247,6 +247,9 @@ test("a branch's page shows its start point, head, recent reports, and threshold
 			"/next/console/projects/hashbrown/thresholds/threshold-macos-arm64",
 		);
 	expectNameStartsWithText(link.element());
+	await expect
+		.element(thresholds.getByRole("row").nth(1))
+		.toHaveTextContent("t_test · upper_boundary 0.99 · max_sample_size 64");
 	const recent = page.getByRole("table", { name: "Recent reports" });
 	await expect.element(recent).toHaveTextContent(/linux-x86-64/);
 	const reports = recent.getByRole("link").elements();

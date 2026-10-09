@@ -243,6 +243,7 @@ const Tile = (props: {
 							}
 							reserve={RESERVE}
 							label={label()}
+							failed={props.failed ?? false}
 						/>
 					);
 				}}

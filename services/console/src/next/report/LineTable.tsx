@@ -24,7 +24,7 @@ const RowPlot = lazy(() => import("./RowPlot"));
 /** The fixed heights the list lays out by, wide and narrow; report.css draws the same. */
 export const HEIGHTS = {
 	wide: { group: 38, line: 44, plot: 330, actions: 0 },
-	narrow: { group: 44, line: 64, plot: 360, actions: 20 },
+	narrow: { group: 44, line: 64, plot: 360, actions: 44 },
 } as const;
 
 /** Pixels drawn above and below the screen, so a quick scroll never shows a gap. */
@@ -215,7 +215,7 @@ const LineTable = (props: LineTableProps) => {
 				}
 			>
 				<colgroup>
-					<col class="lr-c-hit" />
+					<col class={props.selected === undefined ? "lr-c-gap" : "lr-c-hit"} />
 					<col />
 					<col class="lr-c-numbers" />
 					<col class="lr-c-hit" />

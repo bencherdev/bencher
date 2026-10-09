@@ -224,7 +224,7 @@ const PinDialog = (props: {
 							up to the newest report.
 						</span>
 					</div>
-					<fieldset class="fset" disabled={known() === undefined}>
+					<fieldset class="fset">
 						<legend class="flab">Position on Plots</legend>
 						<div class="radios">
 							<label class="radio">
@@ -232,6 +232,7 @@ const PinDialog = (props: {
 									type="radio"
 									name="pin-position"
 									checked={placing().at === "top"}
+									disabled={known() === undefined}
 									onChange={() => setPosition({ at: "top" })}
 								/>
 								Top
@@ -241,6 +242,7 @@ const PinDialog = (props: {
 									type="radio"
 									name="pin-position"
 									checked={placing().at === "bottom"}
+									disabled={known() === undefined}
 									onChange={() => setPosition({ at: "bottom" })}
 								/>
 								Bottom
@@ -285,11 +287,27 @@ const PinDialog = (props: {
 								</span>
 							</div>
 						</div>
-						<span class="fhelp">
-							{known() === undefined
-								? "Reading the order of the pinned plots."
-								: `Plots holds ${order().length} ${order().length === 1 ? "pinned plot" : "pinned plots"}; a project keeps up to ${PLOTS_LIMIT}.`}
-						</span>
+						<Show
+							when={known() === undefined && asked().isError}
+							fallback={
+								<span class="fhelp">
+									{known() === undefined
+										? "Reading the order of the pinned plots."
+										: `Plots holds ${order().length} ${order().length === 1 ? "pinned plot" : "pinned plots"}; a project keeps up to ${PLOTS_LIMIT}.`}
+								</span>
+							}
+						>
+							<span class="fhelp plots-dorder" role="alert">
+								The order of the pinned plots did not load.
+								<Button
+									size="sm"
+									disabled={asked().isFetching}
+									onClick={() => void asked().refetch()}
+								>
+									Retry
+								</Button>
+							</span>
+						</Show>
 					</fieldset>
 					<div class="field">
 						<span class="flab">Saved with it</span>
