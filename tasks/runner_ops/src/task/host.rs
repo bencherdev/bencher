@@ -27,12 +27,13 @@ impl TryFrom<TaskHost> for Host {
             .as_ref()
             .and_then(|f| f.update_channel)
             .unwrap_or_default();
+        let scrub_day = file.as_ref().and_then(|f| f.scrub_day);
         let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
         let label = runner.map_or_else(|| server.clone(), |runner| runner.to_string());
         Ok(Self {
             label,
             ssh: Ssh::new(server, ssh, user),
-            desired: Desired::new(update_channel),
+            desired: Desired::new(update_channel, scrub_day),
         })
     }
 }
@@ -91,7 +92,7 @@ mod tests {
         let dir = Utf8Path::from_path(dir.path()).unwrap();
         // A runner on which no write takes, since every read prints nothing.
         let ssh = Ssh::stand_in(dir, "#!/bin/sh\n").unwrap();
-        let error = host(&ssh, "runner", &Desired::new(UpdateChannel::Stable))
+        let error = host(&ssh, "runner", &Desired::new(UpdateChannel::Stable, None))
             .unwrap_err()
             .to_string();
         assert!(

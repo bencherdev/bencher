@@ -31,12 +31,13 @@ impl TryFrom<TaskProvision> for Provision {
             .as_ref()
             .and_then(|f| f.update_channel)
             .unwrap_or_default();
+        let scrub_day = file.as_ref().and_then(|f| f.scrub_day);
         let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
         let label = runner.map_or_else(|| server.clone(), |runner| runner.to_string());
         Ok(Self {
             label,
             ssh: Ssh::new(server, ssh, user),
-            desired: Desired::new(update_channel),
+            desired: Desired::new(update_channel, scrub_day),
             runner_binary,
         })
     }
@@ -89,7 +90,7 @@ esac
         let error = Provision {
             label: "runner".to_owned(),
             ssh,
-            desired: Desired::new(UpdateChannel::Stable),
+            desired: Desired::new(UpdateChannel::Stable, None),
             runner_binary: None,
         }
         .exec()
