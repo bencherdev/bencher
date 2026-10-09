@@ -46,7 +46,7 @@ cargo ops provision <runner>
 
 ### CPU isolation boot args
 
-Configure `isolcpus=`/`nohz_full=`/`rcu_nocbs=` kernel boot args for the benchmark cores via a GRUB drop-in (`/etc/default/grub.d/zz-bencher-isolation.cfg`, named to sort after provider drop-ins that overwrite `GRUB_CMDLINE_LINUX_DEFAULT`), then reboot the server and verify. This clears the runner preflight notice about missing isolation boot args. Idempotent: exits early if the cmdline already has the args (presence-only; it will not re-scope an existing CPU list, even with `--cpus`). The benchmark CPU list defaults to `1-(nproc-1)` (CPU 0 is housekeeping); override with `--cpus`.
+Configure `isolcpus=`/`nohz_full=`/`rcu_nocbs=` kernel boot args for the benchmark cores via a GRUB drop-in (`/etc/default/grub.d/zz-bencher-isolation.cfg`, named to sort after provider drop-ins that overwrite `GRUB_CMDLINE_LINUX_DEFAULT`), then reboot the server and verify. This clears the runner preflight notice about missing isolation boot args. Idempotent: exits early if the cmdline already has the args (presence-only; it will not re-scope an existing CPU list, even with `--cpus`). The benchmark CPU list defaults to the lowest logical CPU of each physical core, read from the sysfs SMT sibling lists, leaving out the core with CPU 0 for housekeeping: `1-5` on a 6-core Intel part where CPU N pairs with CPU N+6, and `2,4,6,...` where siblings are interleaved, whether SMT is on or already off. Override with `--cpus`; every listed CPU must exist (`/sys/devices/system/cpu/present`) and CPU 0 is not allowed.
 
 ```bash
 cargo ops isolate <runner>
