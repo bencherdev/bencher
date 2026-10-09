@@ -38,6 +38,15 @@ impl Ssh {
     /// Run a command on the remote server, returning stdout.
     pub fn run(&self, command: &str) -> anyhow::Result<String> {
         println!("ssh: {command}");
+        let stdout = self.run_quiet(command)?;
+        if !stdout.is_empty() {
+            println!("{stdout}");
+        }
+        Ok(stdout)
+    }
+
+    /// Run a command on the remote server, returning stdout without printing the command or its output.
+    pub fn run_quiet(&self, command: &str) -> anyhow::Result<String> {
         let output = Command::new("ssh")
             .args(self.ssh_options())
             .arg(self.destination())
@@ -45,11 +54,7 @@ impl Ssh {
             .output()?;
 
         if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-            if !stdout.is_empty() {
-                println!("{stdout}");
-            }
-            Ok(stdout)
+            Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr);
             anyhow::bail!(
