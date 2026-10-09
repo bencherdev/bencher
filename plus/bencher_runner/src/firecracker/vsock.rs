@@ -8,12 +8,13 @@ use std::io::Read as _;
 use std::os::fd::AsFd as _;
 use std::os::unix::net::UnixListener;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use camino::Utf8Path;
 use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 
 use crate::firecracker::error::FirecrackerError;
+use crate::firecracker::refuse_cancelled;
 use crate::jail::chroot::chown_to_jail;
 use crate::jail::{JailFile, JailUser};
 
@@ -26,6 +27,9 @@ use crate::jail::{JailFile, JailUser};
 )]
 static POLL_TIMEOUT: std::sync::LazyLock<PollTimeout> =
     std::sync::LazyLock::new(|| PollTimeout::try_from(50).expect("50ms fits in PollTimeout"));
+
+/// Silence this long ends a result stream with what has arrived.
+const READ_IDLE_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Vsock port constants matching bencher-init.
 mod ports {
@@ -94,8 +98,13 @@ impl VsockListener {
 
     /// Collect results from the guest via vsock connections.
     ///
-    /// Waits up to `timeout` for the guest to send results on all ports.
-    /// The exit code port is mandatory; stdout, stderr, and output file are optional.
+    /// Waits up to `timeout` for the guest to send results on all ports, which
+    /// also bounds every read. The exit code port is mandatory; stdout, stderr,
+    /// and output file are optional.
+    ///
+    /// Once the exit code lands, waits `grace_period` and then gives the final
+    /// pass its own `grace_period`, since the guest sends its output files
+    /// after its exit code.
     ///
     /// `max_data_size` limits how many bytes are read per port, matching the
     /// guest-side `max_output_size` so both sides enforce the same cap.
@@ -113,8 +122,15 @@ impl VsockListener {
         cancel_flag: Option<&AtomicBool>,
         grace_period: Duration,
     ) -> Result<VsockResults, FirecrackerError> {
-        let start = std::time::Instant::now();
+        let start = Instant::now();
         let poll_timeout = *POLL_TIMEOUT;
+        let bound = ReadBound {
+            start,
+            window: timeout,
+            setting: "timeout",
+            idle_timeout: READ_IDLE_TIMEOUT,
+            cancel_flag,
+        };
 
         let mut stdout_data: Option<Vec<u8>> = None;
         let mut stderr_data: Option<Vec<u8>> = None;
@@ -181,48 +197,90 @@ impl VsockListener {
                     .revents()
                     .is_some_and(|r| r.intersects(PollFlags::POLLIN))
             {
-                stdout_data = try_accept_and_read(&self.stdout_listener, max_data_size);
+                stdout_data = try_accept_and_read(
+                    &self.stdout_listener,
+                    ports::STDOUT,
+                    max_data_size,
+                    bound,
+                )?;
             }
             if stderr_data.is_none()
                 && fds[1]
                     .revents()
                     .is_some_and(|r| r.intersects(PollFlags::POLLIN))
             {
-                stderr_data = try_accept_and_read(&self.stderr_listener, max_data_size);
+                stderr_data = try_accept_and_read(
+                    &self.stderr_listener,
+                    ports::STDERR,
+                    max_data_size,
+                    bound,
+                )?;
             }
             if exit_code_data.is_none()
                 && fds[2]
                     .revents()
                     .is_some_and(|r| r.intersects(PollFlags::POLLIN))
             {
-                exit_code_data = try_accept_and_read(&self.exit_code_listener, max_data_size);
-            }
-            if output_files_data.is_none()
-                && fds[3]
-                    .revents()
-                    .is_some_and(|r| r.intersects(PollFlags::POLLIN))
-            {
-                output_files_data = try_accept_and_read(&self.output_files_listener, max_data_size);
+                exit_code_data = try_accept_and_read(
+                    &self.exit_code_listener,
+                    ports::EXIT_CODE,
+                    max_data_size,
+                    bound,
+                )?;
             }
 
-            // Exit code is the signal that results are complete
+            // Exit code is the signal that results are complete; output files
+            // follow it, so they are left to the final pass
             if exit_code_data.is_some() {
                 // Give a brief window for remaining data to arrive.
                 // The grace period balances latency vs reliability for stdout/stderr
                 // that may still be in flight when the exit code lands.
                 std::thread::sleep(grace_period);
+                let bound = ReadBound {
+                    start: Instant::now(),
+                    window: grace_period,
+                    setting: "grace period",
+                    ..bound
+                };
                 // Final collection pass
                 if stdout_data.is_none() {
-                    stdout_data = try_accept_and_read(&self.stdout_listener, max_data_size);
+                    stdout_data = try_accept_and_read(
+                        &self.stdout_listener,
+                        ports::STDOUT,
+                        max_data_size,
+                        bound,
+                    )?;
                 }
                 if stderr_data.is_none() {
-                    stderr_data = try_accept_and_read(&self.stderr_listener, max_data_size);
+                    stderr_data = try_accept_and_read(
+                        &self.stderr_listener,
+                        ports::STDERR,
+                        max_data_size,
+                        bound,
+                    )?;
                 }
                 if output_files_data.is_none() {
-                    output_files_data =
-                        try_accept_and_read(&self.output_files_listener, max_data_size);
+                    output_files_data = try_accept_and_read(
+                        &self.output_files_listener,
+                        ports::OUTPUT_FILES,
+                        max_data_size,
+                        bound,
+                    )?;
                 }
                 break;
+            }
+
+            if output_files_data.is_none()
+                && fds[3]
+                    .revents()
+                    .is_some_and(|r| r.intersects(PollFlags::POLLIN))
+            {
+                output_files_data = try_accept_and_read(
+                    &self.output_files_listener,
+                    ports::OUTPUT_FILES,
+                    max_data_size,
+                    bound,
+                )?;
             }
         }
 
@@ -295,16 +353,39 @@ fn bind_nonblocking(vsock: &JailFile, port: u32) -> Result<UnixListener, Firecra
 ///
 /// Reading stops once `max_data_size` bytes have been accumulated.
 #[expect(clippy::indexing_slicing, reason = "buf slice bounded by bytes read")]
-fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<Vec<u8>> {
-    let (mut stream, _) = listener.accept().ok()?;
+fn try_accept_and_read(
+    listener: &UnixListener,
+    port: u32,
+    max_data_size: usize,
+    bound: ReadBound<'_>,
+) -> Result<Option<Vec<u8>>, FirecrackerError> {
+    let ReadBound {
+        start,
+        window,
+        setting,
+        idle_timeout,
+        cancel_flag,
+    } = bound;
+    let Ok((mut stream, _)) = listener.accept() else {
+        return Ok(None);
+    };
 
-    // Set blocking with a read timeout for the data stream
+    // Set blocking; each read sets its own timeout below
     drop(stream.set_nonblocking(false));
-    drop(stream.set_read_timeout(Some(Duration::from_secs(5))));
 
     let mut data = Vec::new();
     let mut buf = [0u8; 8192];
     loop {
+        refuse_cancelled(cancel_flag)?;
+        let remaining = window.saturating_sub(start.elapsed());
+        if remaining.is_zero() {
+            return Err(FirecrackerError::Timeout(format!(
+                "the guest's {} stream was still open at the deadline ({setting} {window:?})",
+                ports::stream(port)
+            )));
+        }
+        let wait = remaining.min(idle_timeout);
+        stream.set_read_timeout(Some(wait))?;
         match stream.read(&mut buf) {
             Ok(0) => break,
             Ok(n) => {
@@ -318,13 +399,29 @@ fn try_accept_and_read(listener: &UnixListener, max_data_size: usize) -> Option<
             // A read with a timeout is interrupted by any signal rather than
             // restarted.
             Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {},
+            // The deadline, not silence, cut this wait short, and a wait can end
+            // a tick early, so the check above decides.
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock && wait < idle_timeout => {},
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
             Err(e) if e.kind() == std::io::ErrorKind::TimedOut => break,
             Err(_) => break,
         }
     }
 
-    Some(data)
+    Ok(Some(data))
+}
+
+/// What ends a result read before the guest closes its stream.
+#[derive(Clone, Copy)]
+struct ReadBound<'a> {
+    start: Instant,
+    /// Fails a read still open this long after `start`, however the guest
+    /// paces its bytes.
+    window: Duration,
+    /// Names `window` in that failure, so the user knows which to raise.
+    setting: &'static str,
+    idle_timeout: Duration,
+    cancel_flag: Option<&'a AtomicBool>,
 }
 
 #[cfg(test)]
@@ -581,7 +678,16 @@ mod tests {
         listener.set_nonblocking(true).unwrap();
 
         // No connection pending
-        assert!(try_accept_and_read(&listener, TEST_MAX_DATA_SIZE).is_none());
+        assert!(
+            try_accept_and_read(
+                &listener,
+                ports::STDOUT,
+                TEST_MAX_DATA_SIZE,
+                bound_within(SLOW)
+            )
+            .unwrap()
+            .is_none()
+        );
     }
 
     #[test]
@@ -599,7 +705,14 @@ mod tests {
         // Brief delay to ensure the connection is ready
         std::thread::sleep(Duration::from_millis(10));
 
-        let data = try_accept_and_read(&listener, TEST_MAX_DATA_SIZE).unwrap();
+        let data = try_accept_and_read(
+            &listener,
+            ports::STDOUT,
+            TEST_MAX_DATA_SIZE,
+            bound_within(SLOW),
+        )
+        .unwrap()
+        .unwrap();
         assert_eq!(data, b"hello");
     }
 
@@ -616,7 +729,14 @@ mod tests {
 
         std::thread::sleep(Duration::from_millis(10));
 
-        let data = try_accept_and_read(&listener, TEST_MAX_DATA_SIZE).unwrap();
+        let data = try_accept_and_read(
+            &listener,
+            ports::STDOUT,
+            TEST_MAX_DATA_SIZE,
+            bound_within(SLOW),
+        )
+        .unwrap()
+        .unwrap();
         assert_eq!(data, Vec::<u8>::new());
     }
 
@@ -635,7 +755,9 @@ mod tests {
 
         std::thread::sleep(Duration::from_millis(10));
 
-        let data = try_accept_and_read(&listener, max_size).unwrap();
+        let data = try_accept_and_read(&listener, ports::STDOUT, max_size, bound_within(SLOW))
+            .unwrap()
+            .unwrap();
         assert_eq!(
             data.len(),
             max_size,
@@ -657,12 +779,19 @@ mod tests {
         let mut stream = UnixStream::connect(&path).unwrap();
         stream.write_all(b"first ").unwrap();
 
-        let reader = std::thread::spawn(move || try_accept_and_read(&listener, TEST_MAX_DATA_SIZE));
+        let reader = std::thread::spawn(move || {
+            try_accept_and_read(
+                &listener,
+                ports::STDOUT,
+                TEST_MAX_DATA_SIZE,
+                bound_within(SLOW),
+            )
+        });
         interrupt(&reader);
         drop(stream.write_all(b"second"));
         drop(stream);
 
-        let data = reader.join().unwrap().unwrap();
+        let data = reader.join().unwrap().unwrap().unwrap();
         assert_eq!(
             String::from_utf8_lossy(&data),
             "first second",
@@ -689,5 +818,337 @@ mod tests {
             matches!(err, FirecrackerError::Cancelled),
             "error should be Cancelled, got: {err}"
         );
+    }
+
+    #[test]
+    fn a_trickling_guest_is_cut_off_at_the_deadline() {
+        // Prevents a guest that paces its bytes inside the idle timeout holding
+        // the job, and its own VM, past the timeout.
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
+        let stdout = UnixStream::connect(format!("{base}_{}", ports::STDOUT)).unwrap();
+        let guest = std::thread::spawn(move || trickle(stdout));
+
+        let started = Instant::now();
+        let result = listener.collect_results(
+            Duration::from_millis(300),
+            TEST_MAX_DATA_SIZE,
+            None,
+            TEST_GRACE_PERIOD,
+        );
+        let held = started.elapsed();
+
+        assert!(
+            held < SLOW,
+            "the read must end at the deadline, held {held:?}"
+        );
+        assert!(
+            matches!(result, Err(FirecrackerError::Timeout(_))),
+            "a stream still open at the deadline is a timeout, got: {result:?}"
+        );
+        drop(listener);
+        guest.join().unwrap();
+    }
+
+    #[test]
+    fn a_trickle_after_the_exit_code_is_cut_off_too() {
+        // Prevents the final pass reopening the hold: the guest sends its exit
+        // code and then trickles its output files.
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
+        let guest = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            send_to_port(&base, ports::EXIT_CODE, b"0");
+            std::thread::sleep(Duration::from_millis(100));
+            trickle(UnixStream::connect(format!("{base}_{}", ports::OUTPUT_FILES)).unwrap());
+        });
+
+        let started = Instant::now();
+        let result = listener.collect_results(
+            Duration::from_secs(1),
+            TEST_MAX_DATA_SIZE,
+            None,
+            Duration::from_millis(300),
+        );
+        let held = started.elapsed();
+
+        assert!(held < SLOW, "the final pass must end, held {held:?}");
+        assert!(
+            matches!(result, Err(FirecrackerError::Timeout(_))),
+            "a stream still open at the deadline is a timeout, got: {result:?}"
+        );
+        drop(listener);
+        guest.join().unwrap();
+    }
+
+    #[test]
+    fn results_sent_in_a_grace_period_past_the_timeout_are_kept() {
+        // Prevents the final pass sharing the job's deadline, which a grace
+        // period longer than the time left has already spent.
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
+        let guest = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            send_to_port(&base, ports::EXIT_CODE, b"0");
+            std::thread::sleep(Duration::from_millis(100));
+            send_to_port(&base, ports::STDOUT, b"late output");
+        });
+
+        let results = listener
+            .collect_results(
+                Duration::from_secs(1),
+                TEST_MAX_DATA_SIZE,
+                None,
+                Duration::from_millis(1500),
+            )
+            .unwrap();
+        guest.join().unwrap();
+
+        assert_eq!(results.exit_code, "0");
+        assert_eq!(results.stdout, "late output");
+    }
+
+    #[test]
+    fn output_files_seen_with_the_exit_code_get_the_grace_period() {
+        // Prevents output files that land in the same poll as the exit code
+        // being read under the job's deadline, which their transfer can cross.
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
+        let guest = std::thread::spawn(move || {
+            // A stderr still being read keeps the host from polling until the
+            // exit code and output files are both waiting.
+            let mut stderr = UnixStream::connect(format!("{base}_{}", ports::STDERR)).unwrap();
+            stderr.write_all(b"warming").unwrap();
+            std::thread::sleep(Duration::from_millis(200));
+            send_to_port(&base, ports::EXIT_CODE, b"0");
+            let mut files = UnixStream::connect(format!("{base}_{}", ports::OUTPUT_FILES)).unwrap();
+            std::thread::sleep(Duration::from_millis(20));
+            drop(stderr);
+            for _ in 0..50 {
+                if files.write_all(b"x").is_err() {
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(20));
+            }
+        });
+
+        let results = listener
+            .collect_results(
+                Duration::from_secs(1),
+                TEST_MAX_DATA_SIZE,
+                None,
+                Duration::from_secs(1),
+            )
+            .unwrap();
+        guest.join().unwrap();
+
+        assert_eq!(results.exit_code, "0");
+        assert_eq!(results.output_files, Some(vec![b'x'; 50]));
+    }
+
+    #[test]
+    fn a_stream_opened_late_gets_only_the_time_left() {
+        // Prevents each read getting a fresh timeout, which lets a guest that
+        // opens its streams one after another hold the job for several.
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
+        let timeout = Duration::from_secs(2);
+        let late = Duration::from_millis(1300);
+        let guest = std::thread::spawn(move || {
+            std::thread::sleep(late);
+            trickle(UnixStream::connect(format!("{base}_{}", ports::STDOUT)).unwrap());
+        });
+
+        let started = Instant::now();
+        let result = listener.collect_results(timeout, TEST_MAX_DATA_SIZE, None, TEST_GRACE_PERIOD);
+        let held = started.elapsed();
+
+        assert!(
+            held < timeout + late / 2,
+            "the read must end at the job's deadline, not a timeout after it opened, held {held:?}"
+        );
+        assert!(
+            matches!(result, Err(FirecrackerError::Timeout(_))),
+            "a stream still open at the deadline is a timeout, got: {result:?}"
+        );
+        drop(listener);
+        guest.join().unwrap();
+    }
+
+    #[test]
+    fn a_huge_timeout_still_collects_results() {
+        // Prevents a deadline computed as an `Instant`, which overflows on a
+        // timeout `runner run` accepts.
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
+        send_to_port(&base, ports::EXIT_CODE, b"0");
+
+        let results = listener
+            .collect_results(
+                Duration::from_secs(u64::MAX),
+                TEST_MAX_DATA_SIZE,
+                None,
+                TEST_GRACE_PERIOD,
+            )
+            .unwrap();
+
+        assert_eq!(results.exit_code, "0");
+    }
+
+    #[test]
+    fn a_cancel_mid_read_ends_the_job() {
+        // Prevents a guest that keeps its stream open hiding a cancel.
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
+        let stdout = UnixStream::connect(format!("{base}_{}", ports::STDOUT)).unwrap();
+        let guest = std::thread::spawn(move || trickle(stdout));
+        let cancel_flag = AtomicBool::new(false);
+
+        let started = Instant::now();
+        let result = std::thread::scope(|scope| {
+            scope.spawn(|| {
+                std::thread::sleep(Duration::from_millis(200));
+                cancel_flag.store(true, Ordering::SeqCst);
+            });
+            listener.collect_results(
+                Duration::from_secs(30),
+                TEST_MAX_DATA_SIZE,
+                Some(&cancel_flag),
+                TEST_GRACE_PERIOD,
+            )
+        });
+        let held = started.elapsed();
+
+        assert!(held < SLOW, "a cancel must end the read, held {held:?}");
+        assert!(
+            matches!(result, Err(FirecrackerError::Cancelled)),
+            "error should be Cancelled, got: {result:?}"
+        );
+        drop(listener);
+        guest.join().unwrap();
+    }
+
+    #[test]
+    fn a_silent_guest_ends_the_read() {
+        // Prevents retrying the idle timeout, which holds a silent stream until
+        // the deadline and fails a job that sent everything it had.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let mut guest = UnixStream::connect(&path).unwrap();
+        guest.write_all(b"partial").unwrap();
+
+        let data = try_accept_and_read(
+            &listener,
+            ports::STDOUT,
+            TEST_MAX_DATA_SIZE,
+            ReadBound {
+                idle_timeout: Duration::from_millis(50),
+                ..bound_within(Duration::from_secs(3))
+            },
+        )
+        .unwrap()
+        .unwrap();
+
+        assert_eq!(data, b"partial");
+        drop(guest);
+    }
+
+    #[test]
+    fn a_silent_guest_is_cut_off_at_the_deadline() {
+        // Prevents a deadline that ends the read returning what it has as if the
+        // stream had closed.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let mut guest = UnixStream::connect(&path).unwrap();
+        guest.write_all(b"partial").unwrap();
+
+        let started = Instant::now();
+        let reader = std::thread::spawn(move || {
+            try_accept_and_read(
+                &listener,
+                ports::STDOUT,
+                TEST_MAX_DATA_SIZE,
+                bound_within(Duration::from_millis(300)),
+            )
+        });
+        while !reader.is_finished() && started.elapsed() < SLOW {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let held = started.elapsed();
+
+        assert!(
+            held < SLOW,
+            "the read must end at the deadline, held {held:?}"
+        );
+        let result = reader.join().unwrap();
+        assert!(
+            matches!(result, Err(FirecrackerError::Timeout(_))),
+            "a stream still open at the deadline is a timeout, got: {result:?}"
+        );
+        drop(guest);
+    }
+
+    #[test]
+    fn a_signal_mid_read_does_not_extend_the_deadline() {
+        // Prevents an interrupted read retrying into a fresh window.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.sock");
+        let listener = UnixListener::bind(&path).unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let mut guest = UnixStream::connect(&path).unwrap();
+        guest.write_all(b"first ").unwrap();
+
+        let started = Instant::now();
+        let reader = std::thread::spawn(move || {
+            try_accept_and_read(
+                &listener,
+                ports::STDOUT,
+                TEST_MAX_DATA_SIZE,
+                bound_within(Duration::from_millis(300)),
+            )
+        });
+        while !reader.is_finished() && started.elapsed() < SLOW {
+            interrupt(&reader);
+        }
+        let held = started.elapsed();
+
+        assert!(
+            held < SLOW,
+            "signals must not hold the read past the deadline, held {held:?}"
+        );
+        let result = reader.join().unwrap();
+        assert!(
+            matches!(result, Err(FirecrackerError::Timeout(_))),
+            "a stream still open at the deadline is a timeout, got: {result:?}"
+        );
+        drop(guest);
+    }
+
+    /// Long past every deadline these tests set, and well short of the
+    /// stand-in guest's trickle.
+    const SLOW: Duration = Duration::from_secs(3);
+
+    /// Production's bound for a read with `within` left before the deadline.
+    fn bound_within(within: Duration) -> ReadBound<'static> {
+        ReadBound {
+            start: Instant::now(),
+            window: within,
+            setting: "timeout",
+            idle_timeout: READ_IDLE_TIMEOUT,
+            cancel_flag: None,
+        }
+    }
+
+    /// Sends a byte every 20 ms, well inside the idle timeout, until the host
+    /// closes the stream or 8 s pass.
+    fn trickle(mut stream: UnixStream) {
+        let started = Instant::now();
+        while started.elapsed() < Duration::from_secs(8) && stream.write_all(b"x").is_ok() {
+            std::thread::sleep(Duration::from_millis(20));
+        }
     }
 }
