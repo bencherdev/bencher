@@ -238,7 +238,14 @@ mod tests {
             "the waiter must hold the lock it returned with"
         );
         drop(taken);
-        flock_nonblocking(&probe).unwrap();
+        // A child another test forks keeps the lock until its exec closes the
+        // copy, so the release is awaited rather than probed once.
+        let dropped = Instant::now();
+        while let Err(e) = flock_nonblocking(&probe) {
+            assert_eq!(e.kind(), std::io::ErrorKind::WouldBlock, "{e}");
+            assert!(dropped.elapsed() < NEVER, "a dropped lock must be released");
+            std::thread::sleep(Duration::from_millis(1));
+        }
     }
 
     #[test]
