@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bencher_json::{Cpu, Disk, GracePeriod, Memory, Sandbox};
+use bencher_json::{Cpu, Disk, Memory, Sandbox};
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
@@ -58,8 +58,8 @@ pub struct Config {
 
     /// Paths to output files the benchmark will produce.
     ///
-    /// If specified, the files will be read by the init process and sent to
-    /// the host via vsock port 5005 using a length-prefixed binary protocol.
+    /// If specified, the files will be read by the init process and left on
+    /// the results drive using a length-prefixed binary protocol.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub file_paths: Option<Vec<Utf8PathBuf>>,
 
@@ -87,11 +87,11 @@ pub struct Config {
     #[serde(default)]
     pub file_size: bool,
 
-    /// Maximum size in bytes for collected stdout/stderr.
+    /// Maximum size in bytes for collected stdout, stderr, and output files.
     ///
     /// This limit is enforced on both sides: the guest-side init process
-    /// truncates output at this size, and the host-side vsock reader stops
-    /// reading at the same cap. Defaults to 25 MiB.
+    /// truncates each at this size, and the host sizes the results drive for
+    /// it and refuses a record over it. Defaults to 25 MiB.
     #[serde(default = "default_max_output_size")]
     pub max_output_size: usize,
 
@@ -118,13 +118,6 @@ pub struct Config {
     /// Defaults to 40.
     #[serde(default = "default_max_symlinks")]
     pub max_symlinks: u32,
-
-    /// Grace period in seconds after exit code arrives before final
-    /// collection of remaining stdout/stderr/output files.
-    ///
-    /// Defaults to 1 second.
-    #[serde(default = "default_grace_period")]
-    pub grace_period: GracePeriod,
 
     /// URL scheme for registry requests (HTTP or HTTPS).
     ///
@@ -227,10 +220,6 @@ const fn default_max_symlinks() -> u32 {
     40
 }
 
-fn default_grace_period() -> GracePeriod {
-    GracePeriod::MIN
-}
-
 fn default_state_dir() -> Utf8PathBuf {
     Utf8PathBuf::from(crate::jail::DEFAULT_STATE_DIR)
 }
@@ -263,7 +252,6 @@ impl Config {
             max_file_count: default_max_file_count(),
             max_content_size: default_max_content_size(),
             max_symlinks: default_max_symlinks(),
-            grace_period: default_grace_period(),
             registry_scheme: RegistryScheme::default(),
             cpu_layout: None,
             sandbox_log_level: SandboxLogLevel::default(),
@@ -340,8 +328,8 @@ impl Config {
     /// Set the output file paths (inside the guest VM).
     ///
     /// When set, the files will be read by the init process after the
-    /// benchmark completes and sent to the host via vsock port 5005
-    /// using a length-prefixed binary protocol.
+    /// benchmark completes and left on the results drive using a
+    /// length-prefixed binary protocol.
     #[must_use]
     pub fn with_file_paths(mut self, file_paths: Vec<Utf8PathBuf>) -> Self {
         self.file_paths = Some(file_paths);
@@ -443,13 +431,6 @@ impl Config {
     #[must_use]
     pub fn with_max_symlinks(mut self, max_symlinks: u32) -> Self {
         self.max_symlinks = max_symlinks;
-        self
-    }
-
-    /// Set the grace period after exit code before final collection.
-    #[must_use]
-    pub fn with_grace_period(mut self, grace_period: GracePeriod) -> Self {
-        self.grace_period = grace_period;
         self
     }
 
@@ -586,7 +567,6 @@ mod tests {
             max_file_count,
             max_content_size,
             max_symlinks,
-            grace_period,
             registry_scheme,
             cpu_layout,
             sandbox_log_level,
@@ -606,7 +586,6 @@ mod tests {
         assert_eq!(max_file_count, default_max_file_count());
         assert_eq!(max_content_size, default_max_content_size());
         assert_eq!(max_symlinks, default_max_symlinks());
-        assert_eq!(grace_period, default_grace_period());
         assert!(kernel.is_none());
         assert!(token.is_none());
         assert!(entrypoint.is_none());

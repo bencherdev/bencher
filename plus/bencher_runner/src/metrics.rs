@@ -14,7 +14,7 @@ pub struct RunMetrics {
     /// Whether the execution timed out.
     pub timed_out: bool,
 
-    /// Transport used to collect results ("vsock" or "serial").
+    /// How the results came back: "drive" from a VM, "local" from the host.
     pub transport: String,
 
     /// Cgroup resource usage (if available).

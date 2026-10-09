@@ -12,9 +12,9 @@ pub mod config;
 pub mod error;
 mod pin;
 mod process;
+mod results;
 #[cfg(test)]
 mod test_util;
-mod vsock;
 
 pub use crate::log_level::SandboxLogLevel;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -29,23 +29,16 @@ use crate::jail::{CgroupManager, Cpuset, JailPaths, JailUser, VmId};
 use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
+pub use results::ResultsDrive;
 
-/// Guest CID (Context ID) for the Firecracker VM.
-///
-/// In the vsock address space:
-/// - CID 0 is reserved (hypervisor)
-/// - CID 1 is reserved (host in some implementations)
-/// - CID 2 is the host
-/// - CID 3+ are guests
-///
-/// Firecracker assigns CID 3 to the single guest VM by convention.
-const GUEST_CID: u32 = 3;
+/// How long past the Job's timeout a guest may take to write its results and
+/// power off, well inside the server's grace for a Job past its timeout.
+const SHUTDOWN_ALLOWANCE: Duration = Duration::from_secs(5);
 
 use crate::run::RunOutput;
 
-use config::{Action, ActionType, BootSource, Drive, MachineConfig, VsockConfig};
+use config::{Action, ActionType, BootSource, Drive, MachineConfig};
 use process::{FirecrackerProcess, JailedSpawn};
-use vsock::VsockListener;
 
 /// Configuration for a Firecracker-based benchmark run.
 #[derive(Debug)]
@@ -75,10 +68,8 @@ pub struct FirecrackerJobConfig {
     pub max_file_count: u32,
     /// Maximum content size in bytes for a single output file.
     pub max_content_size: u64,
-    /// Maximum data size in bytes per vsock port.
-    pub max_output_size: usize,
-    /// Grace period after exit code before final collection.
-    pub grace_period: bencher_json::GracePeriod,
+    /// Made in the jail before the VMM starts, and read once it is gone.
+    pub results: ResultsDrive,
 }
 
 /// Run a benchmark inside a jailed Firecracker microVM.
@@ -87,16 +78,17 @@ pub struct FirecrackerJobConfig {
 /// 1. Creates the VM's cgroup, with a cpuset when the layout isolates cores
 /// 2. Starts Firecracker under the jailer, placed in the cgroup before exec
 /// 3. Verifies the placement landed
-/// 4. Configures the VM via REST API
-/// 5. Creates vsock listeners for result collection and hands them to the jail
-/// 6. Boots the VM
-/// 7. Collects results via vsock
-/// 8. Cleans up (including cgroup)
+/// 4. Configures the VM via REST API, with the results drive after the rootfs
+/// 5. Boots the VM
+/// 6. Waits for the guest to power off, which it does once its results are on
+///    the drive
+/// 7. Kills whatever is left in the cgroup, then reads the results
 ///
-/// Returns the benchmark output including exit code and stdout.
+/// On a timeout or a cancel it kills the cgroup instead, and the results are
+/// discarded.
 ///
-/// The VM boots only with time left on `deadline`, and its results must arrive
-/// before it runs out.
+/// The VM boots only with time left on `deadline`, and has until
+/// [`SHUTDOWN_ALLOWANCE`] after it runs out to power off.
 #[expect(
     clippy::too_many_lines,
     reason = "VM lifecycle steps are sequential and clearer inline"
@@ -167,19 +159,15 @@ pub fn run_firecracker(
         is_read_only: false,
     })?;
 
-    client.put_vsock(&VsockConfig {
-        guest_cid: GUEST_CID,
-        uds_path: jail.vsock().chroot().clone(),
+    // The guest's second drive, `/dev/vdb`.
+    client.put_drive(&Drive {
+        drive_id: "results".to_owned(),
+        path_on_host: jail.results().chroot().clone(),
+        is_root_device: false,
+        is_read_only: false,
     })?;
 
-    // Step 3: Create vsock listeners (must be before boot)
-    info!(log, "Setting up vsock listeners");
-    let vsock_listener = VsockListener::new(jail.vsock())?;
-    vsock_listener
-        .chown_to_jail(config.jail_user)
-        .map_err(FirecrackerError::Chown)?;
-
-    // Step 4: Boot the VM
+    // Step 3: Boot the VM
     if deadline.remaining().is_zero() {
         return Err(FirecrackerError::Timeout(format!(
             "the timeout ran out before the VM booted (timeout {:?})",
@@ -200,66 +188,47 @@ pub fn run_firecracker(
         pin::pin_vcpu_threads(log, fc_process.pid(), layout, config.vcpus);
     }
 
-    // Step 5: Collect results via vsock
-    let grace_period = Duration::from_secs(u64::from(u32::from(config.grace_period)));
-    info!(log, "Waiting for benchmark results";
+    // Step 4: Wait for the guest to power off
+    info!(log, "Waiting for the VM to power off";
         "timeout_secs" => deadline.timeout().as_secs(),
         "remaining_ms" => u64::try_from(deadline.remaining().as_millis()).unwrap_or(u64::MAX),
+        "shutdown_allowance_secs" => SHUTDOWN_ALLOWANCE.as_secs(),
     );
-    let results = match vsock_listener.collect_results(
-        deadline,
-        config.max_output_size,
-        cancel_flag,
-        grace_period,
-    ) {
-        Ok(results) => results,
-        Err(e) => {
-            let elapsed = start_time.elapsed();
-            // Output metrics on timeout or cancellation
-            let run_metrics = RunMetrics {
-                wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
-                timed_out: matches!(e, FirecrackerError::Timeout(_)),
-                transport: "vsock".to_owned(),
-                cgroup: metrics::read_cgroup_metrics(cgroup.path()),
-            };
-            info!(log, "Run metrics"; &run_metrics);
-            fc_process.kill_after_grace_period(Duration::from_secs(2));
-            return Err(e);
-        },
-    };
+    let ended =
+        match fc_process.wait_for_exit(deadline.extended_by(SHUTDOWN_ALLOWANCE), cancel_flag) {
+            Ok(Some(status)) => Ok(status),
+            Ok(None) => Err(FirecrackerError::Timeout(format!(
+                "VM execution timed out after {:?}",
+                deadline.timeout()
+            ))),
+            Err(e) => Err(e),
+        };
     let elapsed = start_time.elapsed();
-
-    // Step 6: Log the metrics
     let run_metrics = RunMetrics {
         wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
-        timed_out: false,
-        transport: "vsock".to_owned(),
+        timed_out: matches!(ended, Err(FirecrackerError::Timeout(_))),
+        transport: "drive".to_owned(),
         cgroup: metrics::read_cgroup_metrics(cgroup.path()),
     };
     info!(log, "Run metrics"; &run_metrics);
-
-    // Step 7: Kill Firecracker process
-    fc_process.kill_after_grace_period(Duration::from_secs(2));
-
-    // Parse exit code from string, defaulting to 1 on parse failure
-    let exit_code = parse_exit_code(&results.exit_code);
-
-    // Decode output files from the length-prefixed binary protocol
-    let output_files = match results.output_files {
-        Some(data) if !data.is_empty() => Some(decode_output_files(
-            &data,
-            config.max_file_count,
-            config.max_content_size,
-        )?),
-        _ => None,
+    let status = match ended {
+        Ok(status) => status,
+        Err(e) => {
+            // One write kills the VMM and anything it started.
+            if let Err(kill) = cgroup.empty() {
+                warn!(log, "VM cgroup not emptied, left to the teardown"; "error" => %kill);
+            }
+            return Err(e);
+        },
     };
+    // A guest stops itself however it likes, so a failed stop after a whole
+    // record still reports that record.
+    info!(log, "VMM exited"; "status" => %status);
 
-    Ok(RunOutput {
-        exit_code,
-        stdout: results.stdout,
-        stderr: results.stderr,
-        output_files,
-    })
+    // Step 5: Read the results the guest left
+    config
+        .results
+        .read_from_emptied_jail(&cgroup, config.max_file_count, config.max_content_size)
 }
 
 /// Every run gets a cgroup or fails the job, since placement and the kill need
@@ -336,21 +305,6 @@ fn verify_placement(cgroup: &CgroupManager, pid: u32) -> Result<(), FirecrackerE
             cgroup: cgroup.path().to_owned(),
         })
     }
-}
-
-/// Decode the length-prefixed binary protocol for multiple output files.
-fn decode_output_files(
-    data: &[u8],
-    max_file_count: u32,
-    max_content_size: u64,
-) -> Result<Vec<(Utf8PathBuf, Vec<u8>)>, FirecrackerError> {
-    bencher_output_protocol::decode(data, max_file_count, max_content_size)
-        .map_err(|source| FirecrackerError::DecodeOutputFiles { source })
-}
-
-/// Parse an exit code string to i32, defaulting to 1 on failure.
-fn parse_exit_code(s: &str) -> i32 {
-    s.parse::<i32>().unwrap_or(1)
 }
 
 #[cfg(test)]
@@ -461,46 +415,6 @@ mod tests {
         let cgroup = CgroupManager::detached(root);
 
         verify_placement(&cgroup, 123).unwrap();
-    }
-
-    #[test]
-    fn output_files_decode_in_the_order_the_guest_sent_them() {
-        // Descending, and enough files that neither a sorted nor a hashed order matches.
-        let paths: Vec<Utf8PathBuf> = (0..32)
-            .rev()
-            .map(|n| Utf8PathBuf::from(format!("/{n}.out")))
-            .collect();
-        let files: Vec<(&camino::Utf8Path, &[u8])> = paths
-            .iter()
-            .map(|path| (path.as_path(), b"x".as_slice()))
-            .collect();
-        let data = bencher_output_protocol::encode(&files).unwrap();
-
-        let decoded = decode_output_files(&data, 32, 1).unwrap();
-
-        let decoded_paths: Vec<Utf8PathBuf> = decoded.into_iter().map(|(path, _)| path).collect();
-        assert_eq!(decoded_paths, paths);
-    }
-
-    #[test]
-    fn parse_exit_code_zero() {
-        assert_eq!(parse_exit_code("0"), 0);
-    }
-
-    #[test]
-    fn parse_exit_code_nonzero() {
-        assert_eq!(parse_exit_code("1"), 1);
-        assert_eq!(parse_exit_code("137"), 137);
-    }
-
-    #[test]
-    fn parse_exit_code_invalid() {
-        assert_eq!(parse_exit_code("not_a_number"), 1);
-    }
-
-    #[test]
-    fn parse_exit_code_empty() {
-        assert_eq!(parse_exit_code(""), 1);
     }
 
     #[test]

@@ -57,7 +57,7 @@ pub enum FirecrackerError {
         body: String,
     },
 
-    /// Timeout waiting for Firecracker to be ready or VM to complete.
+    /// Timeout waiting for Firecracker to be ready or VM to power off.
     #[error("Timeout: {0}")]
     Timeout(String),
 
@@ -82,23 +82,31 @@ pub enum FirecrackerError {
         source: std::io::Error,
     },
 
-    /// A path already taken lands here, since nothing is unlinked first.
-    #[error("Failed to bind the vsock {stream} listener (port {port}): {source}")]
-    BindVsock {
-        stream: &'static str,
-        port: u32,
+    #[error(
+        "A results drive for a --max-output-size of {max_output_size} bytes would be larger than a file can be"
+    )]
+    ResultsDriveTooLarge { max_output_size: usize },
+
+    #[error("Failed to create the results drive {path}: {source}")]
+    CreateResultsDrive {
+        path: camino::Utf8PathBuf,
         source: std::io::Error,
     },
 
-    #[error("Failed to set the vsock {stream} listener (port {port}) non-blocking: {source}")]
-    VsockNonblocking {
-        stream: &'static str,
-        port: u32,
-        source: std::io::Error,
-    },
+    #[error("Failed to wait for the VMM to exit: {0}")]
+    WaitVmm(#[source] std::io::Error),
 
-    #[error("Failed to poll the vsock listeners: {source}")]
-    PollVsock { source: nix::errno::Errno },
+    /// Fatal, since a process left in the jail can still write the drive.
+    #[error("The jail could not be emptied before its results were read: {0}")]
+    JailNotEmptied(#[source] crate::error::JailError),
+
+    #[error(
+        "The guest stopped without results: the VM powered off before the guest wrote them, so the benchmark rebooted or crashed the guest, or the guest's init failed before it could report"
+    )]
+    NoResults,
+
+    #[error("Failed to read the guest's results: {0}")]
+    ReadResults(#[source] bencher_output_protocol::results::ReadError),
 
     #[error("Failed to decode the output files the guest sent: {source}")]
     DecodeOutputFiles {

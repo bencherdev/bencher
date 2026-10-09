@@ -10,27 +10,20 @@ use std::path::Path;
 use std::process::ExitCode;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use bencher_output_protocol::results::{self, Record};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Deserialize;
-
-/// Vsock ports for result communication.
-mod ports {
-    pub const STDOUT: u32 = 5000;
-    pub const STDERR: u32 = 5001;
-    pub const EXIT_CODE: u32 = 5002;
-    pub const OUTPUT_FILES: u32 = 5005;
-}
-
-/// Vsock CID for host.
-const VSOCK_CID_HOST: u32 = 2;
 
 /// Config file path.
 const CONFIG_PATH: &str = "/etc/bencher/config.json";
 
+/// The drive after the root device, which the host reads once the guest is gone.
+const RESULTS_DRIVE: &str = "/dev/vdb";
+
 /// Signal flag for graceful shutdown.
 static SHUTDOWN_REQUESTED: AtomicBool = AtomicBool::new(false);
 
-/// Default maximum output size: 25 MiB, matching the host-side vsock `MAX_DATA_SIZE`.
+/// Default maximum output size: 25 MiB, matching the host's default.
 const fn default_max_output_size() -> usize {
     25 * 1024 * 1024
 }
@@ -48,7 +41,7 @@ struct Config {
     env: Vec<(String, String)>,
     /// Optional output file paths to send back.
     file_paths: Option<Vec<Utf8PathBuf>>,
-    /// Maximum size in bytes for collected stdout/stderr.
+    /// Maximum size in bytes for collected stdout, stderr, and output files.
     #[serde(default = "default_max_output_size")]
     max_output_size: usize,
 }
@@ -142,7 +135,8 @@ fn serial_write(data: &[u8]) {
     }
 }
 
-/// Main entry point for the init process.
+/// Main entry point for the init process, which leaves the benchmark's record on
+/// the results drive and reboots, on every path.
 pub fn run() -> ExitCode {
     console_log("starting...");
 
@@ -151,21 +145,45 @@ pub fn run() -> ExitCode {
         console_log("warning: not running as PID 1");
     }
 
-    if let Err(e) = run_init() {
+    let record = run_init().unwrap_or_else(|e| {
         console_log(&format!("fatal error: {e}"));
-        // Try to send error via vsock before dying
-        let error_msg = format!("init error: {e}");
-        drop(send_vsock(ports::STDERR, error_msg.as_bytes()));
-        drop(send_vsock(ports::EXIT_CODE, b"1"));
-        poweroff();
-        return ExitCode::FAILURE;
-    }
+        Record {
+            exit_code: 1,
+            stderr: format!("init error: {e}").into_bytes(),
+            ..Record::default()
+        }
+    });
 
-    console_log("completed successfully");
-    ExitCode::SUCCESS
+    // Not closed before the reboot, so the record never relies on the writeback
+    // of a last close.
+    let _drive = match write_record(&record) {
+        Ok(drive) => {
+            console_log("results written");
+            Some(drive)
+        },
+        Err(e) => {
+            console_log(&format!("results not written: {e}"));
+            None
+        },
+    };
+
+    console_log("rebooting...");
+    // SAFETY: `reboot` takes a plain command and touches no memory.
+    unsafe {
+        libc::reboot(libc::RB_AUTOBOOT);
+    }
+    // Only a failed reboot gets here: init exiting panics the kernel, and
+    // `panic=1` reboots it.
+    ExitCode::FAILURE
 }
 
-fn run_init() -> Result<(), InitError> {
+fn write_record(record: &Record) -> io::Result<File> {
+    let mut drive = fs::OpenOptions::new().write(true).open(RESULTS_DRIVE)?;
+    results::write(&mut drive, record)?;
+    Ok(drive)
+}
+
+fn run_init() -> Result<Record, InitError> {
     console_log("mounting filesystems...");
     // Step 1: Mount essential filesystems
     mount_filesystems()?;
@@ -203,31 +221,21 @@ fn run_init() -> Result<(), InitError> {
         result.stderr.len()
     ));
 
-    // Step 7: Send results via vsock, fall back to serial
-    console_log("sending results via vsock...");
-    match send_results(&result, config.file_paths.as_deref()) {
-        Ok(()) => console_log("results sent via vsock"),
-        Err(e) => {
-            console_log(&format!(
-                "vsock failed ({e}), falling back to serial output"
-            ));
-            output_results_serial(&result);
-        },
-    }
+    // Step 7: Read the output files
+    let mut output_files = config
+        .file_paths
+        .as_deref()
+        .map(encode_output_files)
+        .unwrap_or_default();
+    // Cut at the cap the host sized the drive for, which fails the host's decode.
+    output_files.truncate(config.max_output_size);
 
-    // Step 8: Shutdown
-    // Exit the init process. Since we're PID 1, this causes a kernel panic:
-    //   "Attempted to kill init!"
-    // With panic=1 in cmdline, the kernel reboots after 1 second.
-    // Firecracker ends that reboot as a clean stop: an i8042 reset on x86
-    // (`reboot=k`), PSCI on aarch64.
-    console_log("exiting (will trigger kernel panic → reboot → VM shutdown)...");
-    // SAFETY: sync() has no unsafe preconditions; it flushes filesystem buffers.
-    unsafe {
-        libc::sync();
-    }
-    // Return Ok to let main() exit with ExitCode::SUCCESS
-    Ok(())
+    Ok(Record {
+        exit_code: result.exit_code,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        output_files,
+    })
 }
 
 /// Remount the root filesystem read-write.
@@ -708,34 +716,6 @@ fn wait_for_child(
     }
 }
 
-/// Send benchmark results via vsock.
-fn send_results(
-    result: &BenchmarkResult,
-    file_paths: Option<&[Utf8PathBuf]>,
-) -> Result<(), InitError> {
-    // Send stdout
-    send_vsock(ports::STDOUT, &result.stdout)?;
-
-    // Send stderr
-    send_vsock(ports::STDERR, &result.stderr)?;
-
-    // Send exit code
-    let exit_code_str = result.exit_code.to_string();
-    send_vsock(ports::EXIT_CODE, exit_code_str.as_bytes())?;
-
-    // Send output files if specified, using the length-prefixed binary protocol
-    if let Some(paths) = file_paths
-        && !paths.is_empty()
-    {
-        let encoded = encode_output_files(paths);
-        if !encoded.is_empty() {
-            send_vsock(ports::OUTPUT_FILES, &encoded)?;
-        }
-    }
-
-    Ok(())
-}
-
 /// Encode output files using the length-prefixed binary protocol.
 ///
 /// Files that don't exist or fail to read are silently skipped.
@@ -767,214 +747,6 @@ fn encode_output_files(paths: &[Utf8PathBuf]) -> Vec<u8> {
     }
 }
 
-/// Close a file descriptor, logging any error.
-fn close_fd(fd: RawFd) {
-    // SAFETY: fd is a valid file descriptor passed by the caller.
-    let ret = unsafe { libc::close(fd) };
-    if ret != 0 {
-        console_log(&format!(
-            "warning: close(fd={fd}) failed: {}",
-            io::Error::last_os_error()
-        ));
-    }
-}
-
-/// Vsock connect/send timeout in seconds.
-const VSOCK_TIMEOUT_SECS: i64 = 2;
-
-/// Send data via vsock to the host.
-#[expect(
-    clippy::cast_possible_truncation,
-    reason = "size_of values and AF_VSOCK constant are known to fit in target types"
-)]
-#[expect(
-    clippy::cast_sign_loss,
-    reason = "write return value is checked > 0 before casting to usize"
-)]
-fn send_vsock(port: u32, data: &[u8]) -> Result<(), InitError> {
-    // Create vsock socket
-    // SAFETY: Creating a vsock socket with standard parameters.
-    let fd = unsafe { libc::socket(libc::AF_VSOCK, libc::SOCK_STREAM, 0) };
-    if fd < 0 {
-        return Err(InitError::Vsock(format!(
-            "socket: {}",
-            io::Error::last_os_error()
-        )));
-    }
-
-    // Set send timeout to prevent blocking indefinitely on connect and write.
-    // On Linux, SO_SNDTIMEO also affects connect() timeout.
-    let timeout = libc::timeval {
-        tv_sec: VSOCK_TIMEOUT_SECS,
-        tv_usec: 0,
-    };
-    // SAFETY: timeout is a valid timeval struct; size matches the type.
-    let ret = unsafe {
-        libc::setsockopt(
-            fd,
-            libc::SOL_SOCKET,
-            libc::SO_SNDTIMEO,
-            std::ptr::from_ref(&timeout).cast(),
-            size_of::<libc::timeval>() as u32,
-        )
-    };
-    if ret != 0 {
-        close_fd(fd);
-        return Err(InitError::Vsock(format!(
-            "setsockopt SO_SNDTIMEO: {}",
-            io::Error::last_os_error()
-        )));
-    }
-
-    // Connect to host
-    let addr = libc::sockaddr_vm {
-        svm_family: libc::AF_VSOCK as libc::sa_family_t,
-        svm_reserved1: 0,
-        svm_port: port,
-        svm_cid: VSOCK_CID_HOST,
-        svm_zero: [0; 4],
-    };
-
-    // SAFETY: addr is a valid sockaddr_vm struct; size matches the type.
-    let ret = unsafe {
-        libc::connect(
-            fd,
-            std::ptr::from_ref(&addr).cast(),
-            size_of::<libc::sockaddr_vm>() as u32,
-        )
-    };
-
-    if ret != 0 {
-        close_fd(fd);
-        return Err(InitError::Vsock(format!(
-            "connect to port {port}: {}",
-            io::Error::last_os_error()
-        )));
-    }
-
-    // Send data with retry for EINTR
-    let mut sent = 0;
-    while sent < data.len() {
-        let remaining_data = data.get(sent..).unwrap_or_default();
-        // SAFETY: remaining_data is a valid byte slice; fd is a connected vsock socket.
-        let n = unsafe { libc::write(fd, remaining_data.as_ptr().cast(), remaining_data.len()) };
-        if n < 0 {
-            let err = io::Error::last_os_error();
-            // Retry on EINTR (signal interrupted)
-            if err.raw_os_error() == Some(libc::EINTR) {
-                continue;
-            }
-            close_fd(fd);
-            return Err(InitError::Vsock(format!("write to port {port}: {err}")));
-        }
-        if n == 0 {
-            close_fd(fd);
-            return Err(InitError::Vsock(format!(
-                "write to port {port}: connection closed"
-            )));
-        }
-        sent += n as usize;
-    }
-
-    close_fd(fd);
-    Ok(())
-}
-
-/// Output benchmark results via serial port.
-///
-/// This is the fallback when vsock is unavailable. The output format uses
-/// markers so the VMM can parse results from the serial stream:
-///
-/// ```text
-/// ---BENCHER_STDOUT_BEGIN---
-/// <stdout content>
-/// ---BENCHER_STDOUT_END---
-/// ---BENCHER_STDERR_BEGIN---
-/// <stderr content>
-/// ---BENCHER_STDERR_END---
-/// ---BENCHER_EXIT_CODE:<code>---
-/// ```
-#[cfg(target_arch = "x86_64")]
-fn output_results_serial(result: &BenchmarkResult) {
-    serial_write(b"---BENCHER_STDOUT_BEGIN---\n");
-    serial_write(&result.stdout);
-    serial_write(b"\n---BENCHER_STDOUT_END---\n");
-
-    serial_write(b"---BENCHER_STDERR_BEGIN---\n");
-    serial_write(&result.stderr);
-    serial_write(b"\n---BENCHER_STDERR_END---\n");
-
-    let exit_line = format!("---BENCHER_EXIT_CODE:{}---\n", result.exit_code);
-    serial_write(exit_line.as_bytes());
-
-    // Write the done marker LAST. The VMM uses this (not the exit code marker)
-    // as the shutdown trigger, ensuring all preceding data is captured.
-    serial_write(b"---BENCHER_DONE---\n");
-}
-
-/// Output benchmark results via stderr (non-x86_64 fallback).
-///
-/// On non-x86_64, we don't have direct serial port access, so fall back
-/// to stderr with the same marker format.
-#[cfg(not(target_arch = "x86_64"))]
-fn output_results_serial(result: &BenchmarkResult) {
-    eprintln!("---BENCHER_STDOUT_BEGIN---");
-    eprint!("{}", String::from_utf8_lossy(&result.stdout));
-    eprintln!("\n---BENCHER_STDOUT_END---");
-    eprintln!("---BENCHER_STDERR_BEGIN---");
-    eprint!("{}", String::from_utf8_lossy(&result.stderr));
-    eprintln!("\n---BENCHER_STDERR_END---");
-    eprintln!("---BENCHER_EXIT_CODE:{}---", result.exit_code);
-    eprintln!("---BENCHER_DONE---");
-}
-
-/// Shut down the system.
-///
-/// Writes to I/O port 0x604 (QEMU/Firecracker exit port) to signal the VMM
-/// that the guest is done. This triggers `VcpuExit::IoOut` which the VMM
-/// handles as a shutdown. Falls back to `reboot(RB_POWER_OFF)` if the
-/// port write doesn't cause an exit.
-#[cfg_attr(
-    target_arch = "x86_64",
-    expect(
-        clippy::inline_asm_x86_intel_syntax,
-        reason = "Intel syntax is clearer for x86 I/O port access"
-    )
-)]
-fn poweroff() {
-    // SAFETY: sync() has no unsafe preconditions; it flushes filesystem buffers.
-    unsafe {
-        libc::sync();
-    }
-
-    // Write to I/O port 0x604 to signal shutdown to the VMM.
-    // This is the standard exit port used by Firecracker and QEMU.
-    //
-    #[cfg(target_arch = "x86_64")]
-    #[expect(
-        clippy::multiple_unsafe_ops_per_block,
-        reason = "iopl grant and port write are a single privileged I/O operation"
-    )]
-    // SAFETY: iopl(3) enables I/O port access. Writing to port 0x604 signals
-    // the VMM (Firecracker/QEMU) to shut down the guest.
-    unsafe {
-        // Get I/O port access (requires iopl >= 1)
-        let _ = libc::iopl(3);
-        std::arch::asm!(
-            "out dx, al",
-            in("dx") 0x604u16,
-            in("al") 0x00u8,
-            options(nostack, nomem, preserves_flags)
-        );
-    }
-
-    // Fallback: use reboot syscall
-    // SAFETY: Valid reboot command to power off the system.
-    unsafe {
-        libc::reboot(libc::RB_POWER_OFF);
-    }
-}
-
 /// Init errors.
 #[derive(Debug, thiserror::Error)]
 enum InitError {
@@ -988,6 +760,4 @@ enum InitError {
     Fork(String),
     #[error("io: {0}")]
     Io(String),
-    #[error("vsock: {0}")]
-    Vsock(String),
 }

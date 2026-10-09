@@ -62,8 +62,6 @@ pub struct RunArgs {
     pub allow_failure: bool,
     /// Host tuning configuration.
     pub tuning: TuningConfig,
-    /// Grace period in seconds after exit code before final collection.
-    pub grace_period: bencher_json::GracePeriod,
     /// Sandbox process log level.
     pub sandbox_log_level: crate::SandboxLogLevel,
     /// Sandbox mode for benchmark execution.
@@ -117,7 +115,6 @@ fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::er
         .with_entrypoint_opt(args.entrypoint.clone())
         .with_cmd_opt(args.cmd.clone())
         .with_env_opt(args.env.clone());
-    config = config.with_grace_period(args.grace_period);
     config.sandbox_log_level = args.sandbox_log_level;
     config = config.with_sandbox(args.sandbox);
     config = config.with_state_dir(args.state_dir.clone());
@@ -431,7 +428,7 @@ pub fn resolve_oci_config(
 ///
 /// * `config` - The benchmark run configuration
 /// * `cancel_flag` - Optional cancellation flag; if set to `true`, the run
-///   will be aborted as soon as the vsock polling loop detects it.
+///   will be aborted at its next stage or while it waits for the VM.
 ///
 /// # Returns
 ///

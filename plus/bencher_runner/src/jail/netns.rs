@@ -1,6 +1,5 @@
 //! An empty network namespace for the VMM process, so a compromised Firecracker
-//! cannot reach the host network; vsock still works because its host side is
-//! Unix domain sockets.
+//! cannot reach the host network.
 
 use std::fs;
 use std::os::fd::AsRawFd as _;

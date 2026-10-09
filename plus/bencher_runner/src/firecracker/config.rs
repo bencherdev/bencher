@@ -36,14 +36,6 @@ pub struct Drive {
     pub is_read_only: bool,
 }
 
-/// Vsock device configuration.
-#[derive(Debug, Serialize)]
-pub struct VsockConfig {
-    /// Guest CID (must be >= 3 for Firecracker).
-    pub guest_cid: u32,
-    pub uds_path: ChrootPath,
-}
-
 /// VM action request.
 #[derive(Debug, Serialize)]
 pub struct Action {
@@ -56,6 +48,4 @@ pub struct Action {
 pub enum ActionType {
     /// Start the VM instance.
     InstanceStart,
-    /// Send Ctrl+Alt+Del to the guest (graceful shutdown).
-    SendCtrlAltDel,
 }

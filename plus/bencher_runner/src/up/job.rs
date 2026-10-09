@@ -88,7 +88,7 @@ pub fn execute_job(
         None
     };
 
-    // Execute benchmark iterations, passing cancel_flag so the vsock poll loop
+    // Execute benchmark iterations, passing cancel_flag so the wait for the VM
     // can abort early when the server cancels or the runner stops.
     let iterations = run_iterations(
         log,
@@ -411,7 +411,6 @@ fn build_config_from_job(
         max_output_size,
         max_file_count,
         max_symlinks,
-        grace_period,
         sandbox_log_level,
         state_dir,
         jail_user,
@@ -476,11 +475,6 @@ fn build_config_from_job(
     // Pass through max symlinks if configured
     if let Some(max_symlinks) = *max_symlinks {
         runner_config = runner_config.with_max_symlinks(max_symlinks);
-    }
-
-    // Pass through grace period if configured
-    if let Some(grace_period) = *grace_period {
-        runner_config = runner_config.with_grace_period(grace_period);
     }
 
     // Pass through sandbox log level
@@ -699,7 +693,6 @@ mod tests {
             max_output_size: None,
             max_file_count: None,
             max_symlinks: None,
-            grace_period: None,
             sandbox_log_level: crate::SandboxLogLevel::default(),
             allow_no_sandbox: false,
             no_auto_update: false,

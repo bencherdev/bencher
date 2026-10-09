@@ -140,10 +140,6 @@ pub struct CliRun {
     #[arg(long)]
     pub allow_failure: bool,
 
-    /// Grace period in seconds after exit code before final collection (default: 1).
-    #[arg(long, default_value = "1")]
-    pub grace_period: bencher_runner::GracePeriod,
-
     /// Sandbox process log level; requires --sandbox (default: warning).
     #[arg(long, default_value = "warning", requires = "sandbox")]
     pub sandbox_log_level: bencher_runner::SandboxLogLevel,

@@ -17,10 +17,6 @@ const SUN_PATH_LEN: usize = 108;
 /// Linux accepts 108 unterminated bytes.
 const MAX_SOCKET_PATH: usize = SUN_PATH_LEN - 1;
 
-/// Room for the widest `_<port>` suffix a `u32` prints, reserved on every
-/// socket path so [`SocketPath::with_port`] cannot exceed the limit.
-const PORT_SUFFIX_RESERVE: usize = "_4294967295".len();
-
 /// A path as the runner sees it: the host filesystem, outside the chroot.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HostPath(Utf8PathBuf);
@@ -67,10 +63,9 @@ impl std::fmt::Display for ChrootPath {
 pub struct SocketPath(String);
 
 impl SocketPath {
-    /// Check a path against the `sun_path` limit with [`PORT_SUFFIX_RESERVE`]
-    /// already spent, so [`Self::with_port`] can never exceed it.
+    /// Check a path against the `sun_path` limit.
     fn new(path: String) -> Result<Self, JailError> {
-        let length = path.len() + PORT_SUFFIX_RESERVE;
+        let length = path.len();
         if length > MAX_SOCKET_PATH {
             return Err(JailError::SocketPathTooLong {
                 path,
@@ -84,12 +79,6 @@ impl SocketPath {
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
-    }
-
-    /// This path with a vsock port appended, within the limit by construction.
-    #[must_use]
-    pub fn with_port(&self, port: u32) -> String {
-        format!("{}_{port}", self.0)
     }
 }
 
@@ -167,7 +156,7 @@ pub struct JailPaths {
     api_socket: JailFile,
     kernel: JailFile,
     rootfs: JailFile,
-    vsock: JailFile,
+    results: JailFile,
 }
 
 impl JailPaths {
@@ -199,7 +188,7 @@ impl JailPaths {
             api_socket: file("api.sock")?,
             kernel: file("vmlinux")?,
             rootfs: file("rootfs.ext4")?,
-            vsock: file("v.sock")?,
+            results: file("results.img")?,
             _dir: dir,
         })
     }
@@ -225,10 +214,10 @@ impl JailPaths {
         &self.rootfs
     }
 
-    /// The base path of the vsock Unix domain sockets.
+    /// The drive the guest leaves its results on.
     #[must_use]
-    pub fn vsock(&self) -> &JailFile {
-        &self.vsock
+    pub fn results(&self) -> &JailFile {
+        &self.results
     }
 }
 
@@ -250,7 +239,7 @@ mod tests {
             paths.api_socket(),
             paths.kernel(),
             paths.rootfs(),
-            paths.vsock(),
+            paths.results(),
         ] {
             let relative = Utf8Path::new(file.chroot().as_str())
                 .strip_prefix("/")
@@ -307,27 +296,6 @@ mod tests {
     }
 
     #[test]
-    fn every_socket_view_fits_the_sun_path_limit_with_its_widest_port() {
-        // A base admitted without the reserve would fit bare and fail at `bind`
-        // once it took a port.
-        let (_dir, paths) = jail_in_tmpdir();
-        for file in [
-            paths.api_socket(),
-            paths.kernel(),
-            paths.rootfs(),
-            paths.vsock(),
-        ] {
-            assert!(
-                file.socket().as_str().len() <= MAX_SOCKET_PATH,
-                "{} must fit sun_path",
-                file.socket()
-            );
-            let widest = file.socket().with_port(u32::MAX);
-            assert!(widest.len() <= MAX_SOCKET_PATH, "{widest} must fit");
-        }
-    }
-
-    #[test]
     fn the_socket_view_survives_a_jail_root_far_past_the_limit() {
         // Fails if the socket view is built from the host path rather than the
         // descriptor.
@@ -353,19 +321,7 @@ mod tests {
         let message = err.to_string();
 
         assert!(message.contains("107"), "the limit is named: {message}");
-        assert!(message.contains("171"), "the length is named: {message}");
-    }
-
-    #[test]
-    fn a_base_that_fits_only_while_it_is_bare_is_refused() {
-        // Admitted bare, this base would be over the limit the moment it took
-        // a port.
-        let widest = MAX_SOCKET_PATH - PORT_SUFFIX_RESERVE;
-        let fits = "/a".repeat(48);
-        assert_eq!(fits.len(), widest);
-
-        SocketPath::new(fits).unwrap();
-        SocketPath::new(format!("{}b", "/a".repeat(48))).unwrap_err();
+        assert!(message.contains("160"), "the length is named: {message}");
     }
 
     #[test]
@@ -387,6 +343,13 @@ mod tests {
             matches!(err, JailError::NotASocket { .. }),
             "a link is refused, not followed: {err}"
         );
+    }
+
+    #[test]
+    fn a_socket_path_at_the_limit_is_accepted_and_one_past_it_refused() {
+        // Kills an off-by-one at the limit, either way.
+        SocketPath::new("a".repeat(MAX_SOCKET_PATH)).unwrap();
+        SocketPath::new("a".repeat(MAX_SOCKET_PATH + 1)).unwrap_err();
     }
 
     #[test]

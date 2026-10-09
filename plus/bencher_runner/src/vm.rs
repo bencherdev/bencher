@@ -7,7 +7,7 @@ use slog::{Logger, info};
 
 use crate::JobDeadline;
 use crate::error::RunnerError;
-use crate::firecracker::refuse_cancelled;
+use crate::firecracker::{ResultsDrive, refuse_cancelled};
 use crate::jail::{HostPreparation, JailDir, JailPaths, StateDir, VmId, chroot, netns, state};
 use crate::run::{RunOutput, prepare_oci_workspace};
 
@@ -114,7 +114,8 @@ pub fn vm_execute(
     Ok(run_output)
 }
 
-/// Build the Firecracker job config: stage the binaries and convert types.
+/// Build the Firecracker job config: stage the binaries, make the results
+/// drive, and convert types.
 fn build_firecracker_config(
     log: &Logger,
     config: &crate::Config,
@@ -160,6 +161,14 @@ fn build_firecracker_config(
     )]
     let memory_mib = config.memory.to_mib() as u32;
 
+    // Like the rootfs, and before any guest code runs, so the host holds the
+    // drive it made.
+    let results = ResultsDrive::create(
+        jail.results().host().as_path(),
+        config.jail_user,
+        config.max_output_size,
+    )?;
+
     Ok(crate::firecracker::FirecrackerJobConfig {
         firecracker_bin,
         jailer_bin,
@@ -175,8 +184,7 @@ fn build_firecracker_config(
         log_level: config.sandbox_log_level,
         max_file_count: config.max_file_count,
         max_content_size: config.max_content_size,
-        max_output_size: config.max_output_size,
-        grace_period: config.grace_period,
+        results,
     })
 }
 

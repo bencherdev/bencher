@@ -53,7 +53,6 @@ impl TryFrom<CliRun> for Run {
                 iter: task.iter,
                 allow_failure: task.allow_failure,
                 tuning,
-                grace_period: task.grace_period,
                 sandbox_log_level: task.sandbox_log_level,
                 sandbox: task.sandbox,
                 state_dir: task.state_dir,

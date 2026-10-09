@@ -192,7 +192,6 @@ ureq = { version = "3.3", default-features = false, features = ["rustls-no-provi
 url = "2.5"
 urlencoding = "2.1"
 uuid = "1.22"
-vsock = "0.5"
 wasm-bindgen = "0.2"
 wasm-bindgen-test = "0.3"
 windows = "0.62"
