@@ -23,6 +23,11 @@ on:
         required: false
       R2_SECRET_ACCESS_KEY:
         required: false
+      # Absent on fork and Dependabot pull requests, which then pull from Docker Hub anonymously.
+      DOCKER_HUB_USERNAME:
+        required: false
+      DOCKER_HUB_PULL_TOKEN:
+        required: false
 
 env:
   GITHUB_REGISTRY: ghcr.io
@@ -48,10 +53,18 @@ jobs:
             platform: linux/arm64
             suffix: arm64
     runs-on: ${{ matrix.runner }}
+    env:
+      HAS_DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN != '' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Log in to Docker Hub
+        if: env.HAS_DOCKER_HUB_PULL_TOKEN == 'true'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Log in to the Container registry
@@ -114,7 +127,15 @@ jobs:
     # Fork builds do not push per-arch images, so there is nothing to assemble.
     if: ${{ !inputs.is-fork }}
     runs-on: ubuntu-22.04
+    env:
+      HAS_DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN != '' }}
     steps:
+      - name: Log in to Docker Hub
+        if: env.HAS_DOCKER_HUB_PULL_TOKEN == 'true'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Log in to the Container registry
@@ -143,10 +164,18 @@ jobs:
             platform: linux/arm64
             suffix: arm64
     runs-on: ${{ matrix.runner }}
+    env:
+      HAS_DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN != '' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Log in to Docker Hub
+        if: env.HAS_DOCKER_HUB_PULL_TOKEN == 'true'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Log in to the Container registry
@@ -196,7 +225,15 @@ jobs:
     # Fork builds do not push per-arch images, so there is nothing to assemble.
     if: ${{ !inputs.is-fork }}
     runs-on: ubuntu-22.04
+    env:
+      HAS_DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN != '' }}
     steps:
+      - name: Log in to Docker Hub
+        if: env.HAS_DOCKER_HUB_PULL_TOKEN == 'true'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Log in to the Container registry
@@ -225,10 +262,18 @@ jobs:
             platform: linux/arm64
             suffix: arm64
     runs-on: ${{ matrix.runner }}
+    env:
+      HAS_DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN != '' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Log in to Docker Hub
+        if: env.HAS_DOCKER_HUB_PULL_TOKEN == 'true'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Log in to the Container registry
@@ -280,7 +325,15 @@ jobs:
     # Fork builds do not push per-arch images, so there is nothing to assemble.
     if: ${{ !inputs.is-fork }}
     runs-on: ubuntu-22.04
+    env:
+      HAS_DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN != '' }}
     steps:
+      - name: Log in to Docker Hub
+        if: env.HAS_DOCKER_HUB_PULL_TOKEN == 'true'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Log in to the Container registry

@@ -12,6 +12,12 @@ on:
       zig-build-version:
         type: string
         required: true
+    secrets:
+      # Absent on fork and Dependabot pull requests, which then pull from Docker Hub anonymously.
+      DOCKER_HUB_USERNAME:
+        required: false
+      DOCKER_HUB_PULL_TOKEN:
+        required: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -21,6 +27,8 @@ jobs:
   test_runner_scenarios:
     name: Test Runner Scenarios
     runs-on: ubuntu-22.04
+    env:
+      HAS_DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN != '' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -67,9 +75,16 @@ jobs:
           sudo "$RUNNER_UNIT_TESTS" || status=$?
           if [ "$existed" = no ] && [ -d /sys/fs/cgroup/bencher ]; then sudo rmdir /sys/fs/cgroup/bencher; fi
           exit "$status"
+      - name: Log in to Docker Hub
+        if: env.HAS_DOCKER_HUB_PULL_TOKEN == 'true'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
       - name: Run scenarios
         # Only the test runs are elevated, so cargo's cache and target directory are never left root-owned.
-        run: sudo BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios
+        # DOCKER_CONFIG points the scenarios' image builds, which run as root, at the Docker Hub login above.
+        run: sudo DOCKER_CONFIG="$HOME/.docker" BENCHER_RUNNER_BIN=./target/debug/runner ./target/debug/test_runner scenarios
 
   build_runner:
     name: Build Runner (${{ matrix.build }})

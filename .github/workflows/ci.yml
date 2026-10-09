@@ -133,6 +133,9 @@ jobs:
       mold-version: "2.34.1"
       zig-version: "0.13.0"
       zig-build-version: "0.23.4"
+    secrets:
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
 
   # Cloud deploys and publishes what devel CI built for this commit, never a build of its own.
   # Every check runs in this one job, so a missing build fails the run before anything deploys.
@@ -311,6 +314,8 @@ jobs:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
       BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
       BENCHER_CALLBACK_TOKEN: ${{ secrets.BENCHER_CALLBACK_TOKEN }}
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
 
   build:
     name: Build
@@ -342,6 +347,8 @@ jobs:
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
 
   docker:
     name: Docker
@@ -359,6 +366,8 @@ jobs:
     secrets:
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
 
   nix:
     name: Nix
@@ -462,10 +471,18 @@ jobs:
       packages: write
     if: ${{ github.ref == 'refs/heads/devel' }}
     runs-on: ubuntu-22.04
+    env:
+      HAS_DOCKER_HUB_PULL_TOKEN: ${{ secrets.DOCKER_HUB_PULL_TOKEN != '' }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Log in to Docker Hub
+        if: env.HAS_DOCKER_HUB_PULL_TOKEN == 'true'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PULL_TOKEN }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
       - name: Setup Docker buildx

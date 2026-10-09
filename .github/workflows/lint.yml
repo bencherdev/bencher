@@ -87,12 +87,13 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: EmbarkStudios/cargo-deny-action@6c8f9facfa5047ec02d8485b6bf52b587b7777d1 # v2.0.18
+      # Not `cargo-deny-action`: its container image pulls from Docker Hub before any step can log in.
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
-          log-level: warn
-          command: check
-          arguments: --locked
-          command-arguments: bans licenses sources
+          tool: cargo-deny@0.19.5
+      - name: Run cargo deny
+        run: cargo deny --log-level warn --manifest-path ./Cargo.toml --locked check bans licenses sources
 
   cargo_deny_advisories:
     name: Cargo Deny Advisories
@@ -102,12 +103,12 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: EmbarkStudios/cargo-deny-action@6c8f9facfa5047ec02d8485b6bf52b587b7777d1 # v2.0.18
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
-          log-level: warn
-          command: check
-          arguments: --locked
-          command-arguments: advisories
+          tool: cargo-deny@0.19.5
+      - name: Run cargo deny
+        run: cargo deny --log-level warn --manifest-path ./Cargo.toml --locked check advisories
 
   zizmor:
     name: Zizmor
