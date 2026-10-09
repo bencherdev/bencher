@@ -29,7 +29,7 @@ Omítelo para ejecución en el host sin sandbox.
 
 ### `--timeout <TIMEOUT>`
 
-El tiempo de espera de ejecución en segundos.
+El tiempo de espera de ejecución en segundos, compartido por todas las iteraciones desde el inicio de la ejecución.
 Por defecto, se usa `300`.
 
 ### `--state-dir <STATE_DIR>`
@@ -80,6 +80,7 @@ Por defecto, se usa `1`.
 ### `--allow-failure`
 
 Permite un fallo de benchmark sin cortocircuitar las iteraciones restantes.
+Si se agota el tiempo, la ejecución termina igualmente por tiempo de espera agotado.
 
 ### `--entrypoint <ENTRYPOINT>`
 

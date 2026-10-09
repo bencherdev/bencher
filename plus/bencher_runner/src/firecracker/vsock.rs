@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 use camino::Utf8Path;
 use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 
+use crate::JobDeadline;
 use crate::firecracker::error::FirecrackerError;
 use crate::firecracker::refuse_cancelled;
 use crate::jail::chroot::chown_to_jail;
@@ -102,7 +103,7 @@ impl VsockListener {
 
     /// Collect results from the guest via vsock connections.
     ///
-    /// Waits up to `timeout` for the guest to send results on all ports, which
+    /// Waits until `deadline` for the guest to send results on all ports, which
     /// also bounds every read. The exit code port is mandatory; stdout, stderr,
     /// and output file are optional.
     ///
@@ -121,12 +122,13 @@ impl VsockListener {
     )]
     pub fn collect_results(
         &self,
-        timeout: Duration,
+        deadline: JobDeadline,
         max_data_size: usize,
         cancel_flag: Option<&AtomicBool>,
         grace_period: Duration,
     ) -> Result<VsockResults, FirecrackerError> {
-        let start = Instant::now();
+        let start = deadline.started_at();
+        let timeout = deadline.timeout();
         let poll_timeout = *POLL_TIMEOUT;
         let bound = ReadBound {
             start,
@@ -575,7 +577,7 @@ mod tests {
 
         let results = listener
             .collect_results(
-                Duration::from_secs(5),
+                JobDeadline::start(Duration::from_secs(5)),
                 TEST_MAX_DATA_SIZE,
                 None,
                 TEST_GRACE_PERIOD,
@@ -601,7 +603,7 @@ mod tests {
 
         let results = listener
             .collect_results(
-                Duration::from_secs(5),
+                JobDeadline::start(Duration::from_secs(5)),
                 TEST_MAX_DATA_SIZE,
                 None,
                 TEST_GRACE_PERIOD,
@@ -621,7 +623,7 @@ mod tests {
 
         // No data sent — should timeout with an error
         let result = listener.collect_results(
-            Duration::from_millis(200),
+            JobDeadline::start(Duration::from_millis(200)),
             TEST_MAX_DATA_SIZE,
             None,
             TEST_GRACE_PERIOD,
@@ -648,7 +650,7 @@ mod tests {
 
         let results = listener
             .collect_results(
-                Duration::from_secs(5),
+                JobDeadline::start(Duration::from_secs(5)),
                 TEST_MAX_DATA_SIZE,
                 None,
                 TEST_GRACE_PERIOD,
@@ -678,7 +680,7 @@ mod tests {
 
         let results = listener
             .collect_results(
-                Duration::from_secs(5),
+                JobDeadline::start(Duration::from_secs(5)),
                 TEST_MAX_DATA_SIZE,
                 None,
                 TEST_GRACE_PERIOD,
@@ -827,7 +829,7 @@ mod tests {
         let cancel_flag = AtomicBool::new(true);
 
         let result = listener.collect_results(
-            Duration::from_secs(5),
+            JobDeadline::start(Duration::from_secs(5)),
             TEST_MAX_DATA_SIZE,
             Some(&cancel_flag),
             Duration::from_secs(1),
@@ -851,7 +853,7 @@ mod tests {
 
         let started = Instant::now();
         let result = listener.collect_results(
-            Duration::from_millis(300),
+            JobDeadline::start(Duration::from_millis(300)),
             TEST_MAX_DATA_SIZE,
             None,
             TEST_GRACE_PERIOD,
@@ -885,7 +887,7 @@ mod tests {
 
         let started = Instant::now();
         let result = listener.collect_results(
-            Duration::from_secs(1),
+            JobDeadline::start(Duration::from_secs(1)),
             TEST_MAX_DATA_SIZE,
             None,
             Duration::from_millis(300),
@@ -916,7 +918,7 @@ mod tests {
 
         let results = listener
             .collect_results(
-                Duration::from_secs(1),
+                JobDeadline::start(Duration::from_secs(1)),
                 TEST_MAX_DATA_SIZE,
                 None,
                 Duration::from_millis(1500),
@@ -954,7 +956,7 @@ mod tests {
 
         let results = listener
             .collect_results(
-                Duration::from_secs(1),
+                JobDeadline::start(Duration::from_secs(1)),
                 TEST_MAX_DATA_SIZE,
                 None,
                 Duration::from_secs(1),
@@ -980,12 +982,46 @@ mod tests {
         });
 
         let started = Instant::now();
-        let result = listener.collect_results(timeout, TEST_MAX_DATA_SIZE, None, TEST_GRACE_PERIOD);
+        let result = listener.collect_results(
+            JobDeadline::start(timeout),
+            TEST_MAX_DATA_SIZE,
+            None,
+            TEST_GRACE_PERIOD,
+        );
         let held = started.elapsed();
 
         assert!(
             held < timeout + late / 2,
             "the read must end at the job's deadline, not a timeout after it opened, held {held:?}"
+        );
+        assert!(
+            matches!(result, Err(FirecrackerError::Timeout(_))),
+            "a stream still open at the deadline is a timeout, got: {result:?}"
+        );
+        drop(listener);
+        guest.join().unwrap();
+    }
+
+    #[test]
+    fn time_the_job_spent_before_collection_is_not_given_back() {
+        // Prevents collection starting its own clock, which gives every VM of a
+        // Job the whole timeout however much of it the Job has already used.
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
+        let stdout = UnixStream::connect(format!("{base}_{}", ports::STDOUT)).unwrap();
+        let guest = std::thread::spawn(move || trickle(stdout));
+        let deadline = JobDeadline::start(Duration::from_millis(1500));
+        let used = Duration::from_secs(1);
+        std::thread::sleep(used);
+
+        let started = Instant::now();
+        let result =
+            listener.collect_results(deadline, TEST_MAX_DATA_SIZE, None, TEST_GRACE_PERIOD);
+        let held = started.elapsed();
+
+        assert!(
+            held < used,
+            "collection must end when the Job's time runs out, held {held:?}"
         );
         assert!(
             matches!(result, Err(FirecrackerError::Timeout(_))),
@@ -1005,7 +1041,7 @@ mod tests {
 
         let results = listener
             .collect_results(
-                Duration::from_secs(u64::MAX),
+                JobDeadline::start(Duration::from_secs(u64::MAX)),
                 TEST_MAX_DATA_SIZE,
                 None,
                 TEST_GRACE_PERIOD,
@@ -1031,7 +1067,7 @@ mod tests {
                 cancel_flag.store(true, Ordering::SeqCst);
             });
             listener.collect_results(
-                Duration::from_secs(30),
+                JobDeadline::start(Duration::from_secs(30)),
                 TEST_MAX_DATA_SIZE,
                 Some(&cancel_flag),
                 TEST_GRACE_PERIOD,
@@ -1063,7 +1099,7 @@ mod tests {
                 cancel_flag.store(true, Ordering::SeqCst);
             });
             listener.collect_results(
-                Duration::from_secs(30),
+                JobDeadline::start(Duration::from_secs(30)),
                 TEST_MAX_DATA_SIZE,
                 Some(&cancel_flag),
                 Duration::from_secs(5),

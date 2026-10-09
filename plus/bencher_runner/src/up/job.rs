@@ -3,13 +3,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use bencher_json::JsonClaimedJob;
 use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
+use bencher_json::{JobUuid, JsonClaimedJob};
 use camino::Utf8PathBuf;
 
 use super::UpConfig;
 use super::state_machine::JobFinishResult;
 use super::websocket::JobChannel;
+use crate::{JobDeadline, RunnerError};
 
 // NUL bytes are invalid in file paths on all OSes (POSIX and Windows),
 // so this key can never collide with a real file collected from the VM.
@@ -46,6 +47,9 @@ pub fn execute_job(
     ws: &Arc<Mutex<JobChannel>>,
     host: &mut crate::jail::HostPreparation,
 ) -> JobFinishResult {
+    // The Runner has just sent `Running`, which starts the server's clock too.
+    let deadline = JobDeadline::start(Duration::from_secs(job.config.timeout.as_secs()));
+
     // Only allow jobs with a known sandbox type or explicit opt-in for non-sandboxed.
     if let Err(reason) = check_sandbox_allowed(job.spec.sandbox, config.allow_no_sandbox) {
         return JobFinishResult::Failed {
@@ -71,13 +75,6 @@ pub fn execute_job(
     let stop_flag = Arc::new(AtomicBool::new(false));
     let heartbeat = spawn_heartbeat_thread(config, ws, &cancel_flag, &stop_flag);
 
-    // Execute benchmark iterations — pass cancel_flag so the vsock poll loop
-    // can abort early when the server sends a cancellation message.
-    let mut iterations = Iterations {
-        results: Vec::with_capacity(iter_count),
-        ..Iterations::default()
-    };
-
     let build_time = job_config.build_time;
     let file_size = job_config.file_size;
     let benchmark_name = if build_time {
@@ -92,51 +89,31 @@ pub fn execute_job(
         None
     };
 
-    for iteration in 0..iter_count {
-        if cancel_flag.load(Ordering::SeqCst) {
-            break;
-        }
-        println!(
-            "Starting iteration {}/{iter_count} for job {}",
-            iteration + 1,
-            job.uuid
-        );
-        let start = build_time.then(std::time::Instant::now);
-        let result = crate::execute(&job_config, host, Some(cancel_flag.as_ref()));
-        let elapsed = start.map(|s| s.elapsed());
-        match result {
-            Ok(output) => {
-                iterations.last_exit_code = output.exit_code;
-                if !output.stdout.is_empty() {
-                    iterations.last_stdout_preview = Some(output.stdout.clone());
-                }
-                let failed = output.exit_code != 0 && !allow_failure;
-                iterations.results.push(output_to_iteration(
-                    output,
-                    elapsed,
-                    file_size,
-                    benchmark_name.as_ref(),
-                ));
-                if failed {
-                    iterations.failure = Some(format!(
-                        "Benchmark exited with non-zero exit code: {}",
-                        iterations.last_exit_code
-                    ));
-                    break;
-                }
-            },
-            Err(e) if allow_failure => {
-                eprintln!(
-                    "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
-                    iteration + 1
-                );
-            },
-            Err(e) => {
-                iterations.failure = Some(e.to_string());
-                break;
-            },
-        }
-    }
+    // Execute benchmark iterations, passing cancel_flag so the vsock poll loop
+    // can abort early when the server sends a cancellation message.
+    let iterations = run_iterations(
+        job.uuid,
+        iter_count,
+        allow_failure,
+        deadline,
+        &cancel_flag,
+        |deadline| {
+            let start = build_time.then(std::time::Instant::now);
+            let output = crate::execute_with_deadline(
+                &job_config,
+                host,
+                Some(cancel_flag.as_ref()),
+                deadline,
+            )?;
+            let elapsed = start.map(|s| s.elapsed());
+            Ok(output_to_iteration(
+                output,
+                elapsed,
+                file_size,
+                benchmark_name.as_ref(),
+            ))
+        },
+    );
 
     // Stop heartbeat thread
     stop_flag.store(true, Ordering::SeqCst);
@@ -149,6 +126,77 @@ pub fn execute_job(
         println!("Job {} was canceled by server", job.uuid);
     }
     iterations.finish(canceled)
+}
+
+/// Runs the Job's iterations, each with what is left of `deadline`, until one
+/// fails, the server cancels, or the time runs out.
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "runner CLI output"
+)]
+fn run_iterations<F>(
+    job: JobUuid,
+    iter_count: usize,
+    allow_failure: bool,
+    deadline: JobDeadline,
+    cancel_flag: &AtomicBool,
+    mut run: F,
+) -> Iterations
+where
+    F: FnMut(JobDeadline) -> Result<JsonIterationOutput, RunnerError>,
+{
+    let mut iterations = Iterations {
+        results: Vec::with_capacity(iter_count),
+        ..Iterations::default()
+    };
+    for iteration in 0..iter_count {
+        if cancel_flag.load(Ordering::SeqCst) {
+            break;
+        }
+        if deadline.remaining().is_zero() {
+            iterations.failure = Some(format!(
+                "Job timed out after {}s, before iteration {}/{iter_count}",
+                deadline.timeout().as_secs(),
+                iteration + 1
+            ));
+            break;
+        }
+        println!(
+            "Starting iteration {}/{iter_count} for job {job}",
+            iteration + 1
+        );
+        match run(deadline) {
+            Ok(output) => {
+                iterations.last_exit_code = output.exit_code;
+                if let Some(stdout) = &output.stdout {
+                    iterations.last_stdout_preview = Some(stdout.clone());
+                }
+                let failed = output.exit_code != 0 && !allow_failure;
+                iterations.results.push(output);
+                if failed {
+                    iterations.failure = Some(format!(
+                        "Benchmark exited with non-zero exit code: {}",
+                        iterations.last_exit_code
+                    ));
+                    break;
+                }
+            },
+            // A failure with no time left ends the Job, since no later
+            // iteration could run either.
+            Err(e) if allow_failure && !deadline.remaining().is_zero() => {
+                eprintln!(
+                    "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
+                    iteration + 1
+                );
+            },
+            Err(e) => {
+                iterations.failure = Some(e.to_string());
+                break;
+            },
+        }
+    }
+    iterations
 }
 
 /// What a Job's iterations leave behind for its outcome.
@@ -500,8 +548,8 @@ mod tests {
     use super::*;
     use camino::Utf8PathBuf;
 
+    use crate::ExecutionError;
     use crate::units::mib_to_bytes;
-    use crate::{ExecutionError, RunnerError};
     use bencher_json::{Cpu, Disk, Memory};
 
     /// Construct a `JsonClaimedJob` for testing by building the JSON
@@ -955,6 +1003,152 @@ mod tests {
             matches!(outcome, JobFinishResult::Canceled),
             "a Job the server canceled ends canceled, got: {outcome:?}"
         );
+    }
+
+    // --- run_iterations ---
+
+    #[test]
+    fn each_iteration_gets_only_what_is_left_of_the_jobs_timeout() {
+        // Prevents each iteration getting the whole timeout, which lets a Job
+        // with several iterations run past the server's limit.
+        let pace = Duration::from_millis(200);
+        let mut left = Vec::new();
+
+        let iterations = run_iterations(
+            test_job_uuid(),
+            3,
+            false,
+            JobDeadline::start(Duration::from_mins(1)),
+            &AtomicBool::new(false),
+            |deadline| {
+                left.push(deadline.remaining());
+                std::thread::sleep(pace);
+                Ok(iteration_output())
+            },
+        );
+
+        assert_eq!(iterations.results.len(), 3, "every iteration had time");
+        for (earlier, later) in left.iter().zip(left.iter().skip(1)) {
+            assert!(
+                *later <= earlier.saturating_sub(pace),
+                "an iteration must not get back time the one before it used: {left:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn no_iteration_starts_once_the_jobs_timeout_has_run_out() {
+        // Prevents a VM booting with no time left, after the server's limit.
+        let mut started = 0;
+
+        let iterations = run_iterations(
+            test_job_uuid(),
+            3,
+            false,
+            JobDeadline::start(Duration::from_secs(1)),
+            &AtomicBool::new(false),
+            |deadline| {
+                started += 1;
+                if started == 2 {
+                    spend(deadline);
+                }
+                Ok(iteration_output())
+            },
+        );
+
+        assert_eq!(started, 2, "the third iteration had no time to run");
+        let outcome = iterations.finish(false);
+        let JobFinishResult::Failed { error, results } = outcome else {
+            panic!("a Job out of time ends failed, got: {outcome:?}");
+        };
+        assert!(error.contains("timed out"), "the error says why: {error}");
+        assert_eq!(
+            results.len(),
+            2,
+            "the finished iterations' results are kept"
+        );
+    }
+
+    #[test]
+    fn running_out_of_time_ends_the_job_whatever_allow_failure_says() {
+        // Prevents allow_failure skipping a timeout in the last iteration,
+        // which reports a Job that ran out of time as completed.
+        let mut started = 0;
+
+        let iterations = run_iterations(
+            test_job_uuid(),
+            2,
+            true,
+            JobDeadline::start(Duration::from_secs(1)),
+            &AtomicBool::new(false),
+            |deadline| {
+                started += 1;
+                if started == 1 {
+                    return Ok(iteration_output());
+                }
+                spend(deadline);
+                Err(ExecutionError::Timeout("the guest was still running".to_owned()).into())
+            },
+        );
+
+        let outcome = iterations.finish(false);
+        let JobFinishResult::Failed { error, results } = outcome else {
+            panic!("a Job out of time ends failed, got: {outcome:?}");
+        };
+        assert!(
+            error.contains("the guest was still running"),
+            "the iteration's own error is kept: {error}"
+        );
+        assert_eq!(results.len(), 1, "the finished iteration's result is kept");
+    }
+
+    #[test]
+    fn allow_failure_still_skips_a_failure_with_time_left() {
+        // Prevents the timeout check swallowing allow_failure for every failure.
+        let mut started = 0;
+
+        let iterations = run_iterations(
+            test_job_uuid(),
+            2,
+            true,
+            JobDeadline::start(Duration::from_mins(1)),
+            &AtomicBool::new(false),
+            |_deadline| {
+                started += 1;
+                if started == 1 {
+                    return Err(
+                        ExecutionError::Setup("the image would not unpack".to_owned()).into(),
+                    );
+                }
+                Ok(iteration_output())
+            },
+        );
+
+        let outcome = iterations.finish(false);
+        assert!(
+            matches!(&outcome, JobFinishResult::Completed { results, .. } if results.len() == 1),
+            "a failure with time left is skipped, got: {outcome:?}"
+        );
+    }
+
+    fn test_job_uuid() -> JobUuid {
+        "550e8400-e29b-41d4-a716-446655440000".parse().unwrap()
+    }
+
+    fn iteration_output() -> JsonIterationOutput {
+        JsonIterationOutput {
+            exit_code: 0,
+            stdout: Some("ran".to_owned()),
+            stderr: None,
+            output: None,
+        }
+    }
+
+    /// Stands in for an iteration that runs until the Job is out of time.
+    fn spend(deadline: JobDeadline) {
+        while !deadline.remaining().is_zero() {
+            std::thread::sleep(Duration::from_millis(10));
+        }
     }
 
     // --- build_config_from_job: build_time / file_size ---
