@@ -17,6 +17,8 @@ pub struct JsonConsoleProject {
     pub permissions: JsonConsolePermissions,
     /// The active alerts the Alerts list shows by default.
     pub active_alerts: u32,
+    /// The project's pinned plots, which Plots lists.
+    pub plots: u32,
 }
 
 #[typeshare::typeshare]

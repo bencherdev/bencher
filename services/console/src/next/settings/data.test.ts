@@ -44,6 +44,7 @@ const bootstrap: JsonConsoleProject = {
 		manage: true,
 	},
 	active_alerts: 1,
+	plots: 0,
 };
 
 const storage = () => {

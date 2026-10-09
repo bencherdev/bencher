@@ -133,20 +133,11 @@ async fn get_inner(
     )?;
     let conn = actor_conn!(context, api_actor);
 
-    let JsonConsolePerfQuery { perf, metrics } = query;
     let JsonPerfQuery {
-        branches,
-        heads,
-        testbeds,
-        #[cfg(feature = "plus")]
-        specs,
-        benchmarks,
-        parameters,
-        measures,
         start_time,
         end_time,
-    } = perf;
-
+        ..
+    } = query.perf;
     let end_time = end_time.unwrap_or_else(|| context.clock.now());
     if let Some(start_time) = start_time
         && start_time.timestamp() > end_time.timestamp()
@@ -167,26 +158,45 @@ async fn get_inner(
         end_time: end_time.into(),
         clamped,
     };
-    let read_window = Window {
-        start_time,
-        end_time,
-    };
+    let read_window = Window::new(start_time, end_time);
+    draw(conn, &project, query, read_window, window)
+}
 
+/// The lines of a plot query over a window already resolved, as `window` echoes it.
+pub(super) fn draw(
+    conn: &mut DbConnection,
+    project: &QueryProject,
+    query: JsonConsolePerfQuery,
+    read_window: Window,
+    window: JsonConsoleWindow,
+) -> Result<JsonConsolePerf, HttpError> {
+    let JsonConsolePerfQuery { perf, metrics } = query;
+    let JsonPerfQuery {
+        branches,
+        heads,
+        testbeds,
+        #[cfg(feature = "plus")]
+        specs,
+        benchmarks,
+        parameters,
+        measures,
+        ..
+    } = perf;
     let boxes = Boxes {
-        branches: branch_heads(conn, &project, &branches, &heads)
-            .map_err(resource_not_found_err!(Branch, &project))?,
+        branches: branch_heads(conn, project, &branches, &heads)
+            .map_err(resource_not_found_err!(Branch, project))?,
         testbeds: testbed_specs(
             conn,
-            &project,
+            project,
             &testbeds,
             #[cfg(feature = "plus")]
             &specs,
         )
-        .map_err(resource_not_found_err!(Testbed, &project))?,
-        benchmarks: benchmark_variants(conn, &project, &benchmarks, parameters.as_deref())
-            .map_err(resource_not_found_err!(Benchmark, &project))?,
-        measures: measure_rows(conn, &project, &measures)
-            .map_err(resource_not_found_err!(Measure, &project))?,
+        .map_err(resource_not_found_err!(Testbed, project))?,
+        benchmarks: benchmark_variants(conn, project, &benchmarks, parameters.as_deref())
+            .map_err(resource_not_found_err!(Benchmark, project))?,
+        measures: measure_rows(conn, project, &measures)
+            .map_err(resource_not_found_err!(Measure, project))?,
     };
     let series = boxes.series();
 
@@ -194,7 +204,7 @@ async fn get_inner(
         Some(metrics) => Names::Every(first_of_each(metrics, Clone::clone)),
         None => Names::Reported(
             reported_names(conn, &boxes, &series, read_window)
-                .map_err(resource_not_found_err!(Metric, &project))?,
+                .map_err(resource_not_found_err!(Metric, project))?,
         ),
     };
     let lines_of = |series: &Series| names.of(&boxes, *series).len();
@@ -214,19 +224,28 @@ async fn get_inner(
         Vec::new()
     } else {
         plot_rows(conn, &boxes, read_series, names.named(), read_window)
-            .map_err(resource_not_found_err!(Metric, &project))?
+            .map_err(resource_not_found_err!(Metric, project))?
     };
 
     let plot = Plot::new(&boxes, read_series, &names, rows);
     let models =
-        plot_models(conn, &plot.model_ids()).map_err(resource_not_found_err!(Model, &project))?;
+        plot_models(conn, &plot.model_ids()).map_err(resource_not_found_err!(Model, project))?;
     Ok(plot.into_json(&boxes, &models, window, total))
 }
 
 #[derive(Clone, Copy)]
-struct Window {
+pub(super) struct Window {
     start_time: DateTime,
     end_time: DateTime,
+}
+
+impl Window {
+    pub(super) const fn new(start_time: DateTime, end_time: DateTime) -> Self {
+        Self {
+            start_time,
+            end_time,
+        }
+    }
 }
 
 /// The metric names each series draws.
