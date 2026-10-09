@@ -1,5 +1,6 @@
 use camino::Utf8Path;
 
+use super::desired::RUNNER_CONTROLLERS;
 use super::ssh::Ssh;
 use super::stop::stop_service;
 
@@ -24,22 +25,24 @@ pub fn deploy(ssh: &Ssh, runner_binary: Option<&Utf8Path>) -> anyhow::Result<()>
 
     let has_kvm = ssh.check("test -c /dev/kvm")?;
     if !has_kvm {
-        anyhow::bail!("/dev/kvm not found — KVM is required");
+        anyhow::bail!("/dev/kvm not found: KVM is required");
     }
     println!("  KVM: available");
 
     let has_cgroups_v2 = ssh.check("test -f /sys/fs/cgroup/cgroup.controllers")?;
     if !has_cgroups_v2 {
-        anyhow::bail!("cgroups v2 not available — required for runner");
+        anyhow::bail!("cgroups v2 not available: required for runner");
     }
     println!("  cgroups v2: available");
 
     let controllers = ssh.run("cat /sys/fs/cgroup/cgroup.controllers")?;
     let controllers = controllers.trim();
-    for required in ["cpu", "memory", "pids"] {
-        if !controllers.split_whitespace().any(|c| c == required) {
-            anyhow::bail!("Required cgroup controller '{required}' not found in: {controllers}");
-        }
+    let missing = missing_controllers(controllers);
+    if !missing.is_empty() {
+        anyhow::bail!(
+            "Required cgroup controllers {} not found in: {controllers}",
+            missing.join(" ")
+        );
     }
     println!("  cgroup controllers: {controllers}");
 
@@ -68,4 +71,26 @@ pub fn deploy(ssh: &Ssh, runner_binary: Option<&Utf8Path>) -> anyhow::Result<()>
     println!("Runner deployed successfully");
 
     Ok(())
+}
+
+/// The controllers the runner enables for its cgroup that the root does not offer.
+fn missing_controllers(controllers: &str) -> Vec<&'static str> {
+    RUNNER_CONTROLLERS
+        .into_iter()
+        .filter(|required| !controllers.split_whitespace().any(|c| c == *required))
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn controllers_need_cpuset_not_cpu() {
+        assert_eq!(
+            missing_controllers("cpuset memory pids"),
+            Vec::<&str>::new()
+        );
+        assert_eq!(missing_controllers("cpu io memory pids"), ["cpuset"]);
+    }
 }

@@ -2,8 +2,11 @@ mod apt;
 mod audit;
 mod deploy;
 mod deploy_setup;
+mod desired;
 mod download;
+mod framed;
 mod harden;
+mod host;
 mod install_os;
 mod isolate;
 mod logs;
@@ -21,6 +24,7 @@ use crate::parser::server::{Server, load_server};
 use crate::parser::{TaskRunnerOps, TaskSub};
 use audit::Audit;
 use deploy::Deploy;
+use host::Host;
 use isolate::Isolate;
 use logs::Logs;
 use provision::Provision;
@@ -43,6 +47,7 @@ pub struct Task {
 enum Sub {
     Provision(Provision),
     Isolate(Isolate),
+    Host(Host),
     Deploy(Deploy),
     Version(Version),
     Start(Start),
@@ -68,6 +73,7 @@ impl TryFrom<TaskSub> for Sub {
         Ok(match sub {
             TaskSub::Provision(provision) => Self::Provision(provision.try_into()?),
             TaskSub::Isolate(isolate) => Self::Isolate(isolate.try_into()?),
+            TaskSub::Host(host) => Self::Host(host.try_into()?),
             TaskSub::Deploy(deploy) => Self::Deploy(deploy.try_into()?),
             TaskSub::Version(version) => Self::Version(version.try_into()?),
             TaskSub::Start(start) => Self::Start(start.try_into()?),
@@ -93,6 +99,7 @@ impl Sub {
         match self {
             Self::Provision(provision) => provision.exec(),
             Self::Isolate(isolate) => isolate.exec(),
+            Self::Host(host) => host.exec(),
             Self::Deploy(deploy) => deploy.exec(),
             Self::Version(version) => version.exec(),
             Self::Start(start) => start.exec(),

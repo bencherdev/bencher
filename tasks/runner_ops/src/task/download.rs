@@ -68,6 +68,25 @@ pub fn download(
     Ok((binary_path, temp_dir))
 }
 
+/// The sha256 the release of the update channel publishes for its runner binary.
+pub fn published_checksum(update_channel: UpdateChannel) -> anyhow::Result<Sha256> {
+    let tag = release_tag(update_channel, latest_release_tag)?;
+    let name = format!("{}.sha256", binary_name(&tag));
+    let published = gh(&[
+        "release",
+        "download",
+        &tag,
+        "--repo",
+        REPO,
+        "--pattern",
+        &name,
+        "--output",
+        "-",
+    ])?;
+    let published = String::from_utf8_lossy(&published);
+    parse_checksum(&published).with_context(|| format!("invalid checksum in {name}: {published}"))
+}
+
 fn binary_name(version: &str) -> String {
     format!("runner-{version}-linux-x86-64")
 }
@@ -128,7 +147,10 @@ struct RunView {
 }
 
 fn gh(args: &[&str]) -> anyhow::Result<Vec<u8>> {
-    let output = Command::new("gh").args(args).output()?;
+    let output = Command::new("gh")
+        .args(args)
+        .output()
+        .context("failed to run gh")?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!("gh {} failed: {stderr}", args.join(" "));
@@ -140,11 +162,7 @@ fn gh(args: &[&str]) -> anyhow::Result<Vec<u8>> {
 fn verify_checksum(binary: &Utf8Path, checksum_file: &Utf8Path) -> anyhow::Result<Sha256> {
     let published = std::fs::read_to_string(checksum_file)
         .with_context(|| format!("failed to read {checksum_file}"))?;
-    let expected: Sha256 = published
-        .split_whitespace()
-        .next()
-        .unwrap_or_default()
-        .parse()
+    let expected = parse_checksum(&published)
         .with_context(|| format!("invalid checksum in {checksum_file}: {published}"))?;
     let contents = std::fs::read(binary).with_context(|| format!("failed to read {binary}"))?;
     let actual: Sha256 = hex::encode(sha2::Sha256::digest(contents)).parse()?;
@@ -153,6 +171,15 @@ fn verify_checksum(binary: &Utf8Path, checksum_file: &Utf8Path) -> anyhow::Resul
         "{binary} has sha256 {actual}, but {checksum_file} publishes {expected}"
     );
     Ok(expected)
+}
+
+/// The first field of a `sha256sum` line.
+fn parse_checksum(published: &str) -> anyhow::Result<Sha256> {
+    Ok(published
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+        .parse()?)
 }
 
 #[cfg(test)]
