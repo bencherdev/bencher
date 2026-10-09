@@ -25,6 +25,7 @@ import {
 } from "./data";
 import { VARIANT_IMPACT } from "./impact";
 import { Actions, Impact, focusRow } from "./RowTable";
+import { thresholdLinkName } from "./threshold";
 import { shortDate, shortDay } from "./time";
 import { parametersInUse, shownTotal, shownVariants, tagsOf } from "./variants";
 
@@ -204,7 +205,7 @@ const RecentReportsTable = (props: {
 											<a
 												class="dm-link"
 												href={reportPath(props.slug, report.uuid)}
-												aria-label={`Report on ${report.branch.name}, ${report.testbed.name}, ${shortDate(report.start_time)}`}
+												aria-label={`${shortDate(report.start_time)}, report on ${report.branch.name}, ${report.testbed.name}`}
 											>
 												{shortDate(report.start_time)}
 											</a>
@@ -756,7 +757,10 @@ const ThresholdsCard = (props: {
 												<a
 													class="dm-link"
 													href={thresholdPath(props.slug, threshold.uuid)}
-													aria-label={`Threshold for ${threshold.measure.name} on ${threshold.branch.name}, ${threshold.testbed.name}`}
+													aria-label={thresholdLinkName(
+														props.first.of(threshold),
+														threshold,
+													)}
 												>
 													{props.first.of(threshold)}
 												</a>

@@ -199,7 +199,7 @@ test("Archived lists a threshold whose branch was archived, and a measure filter
 	await expect(rows(page).first().getByRole("cell").first()).toHaveText(
 		/^retired · archived [A-Z][a-z]{2} \d{1,2}$/,
 	);
-	await page.getByRole("button", { name: "Filter by branch, any" }).click();
+	await page.getByRole("button", { name: "branch any" }).click();
 	await expect(
 		page.getByRole("menuitemradio", { name: "retired" }),
 	).toBeVisible();
@@ -207,15 +207,15 @@ test("Archived lists a threshold whose branch was archived, and a measure filter
 	await page.keyboard.press("Escape");
 
 	await page.getByRole("radio", { name: "Active" }).click();
-	await page.getByRole("button", { name: "Filter by measure, any" }).click();
+	await page.getByRole("button", { name: "measure any" }).click();
 	await page.getByRole("menuitemradio", { name: "Throughput" }).click();
 	await expect(heading(page)).toHaveText("1 threshold");
 	await expect(
-		page.getByRole("button", { name: "Filter by measure, Throughput" }),
+		page.getByRole("button", { name: "measure Throughput" }),
 	).toBeVisible();
 	await page.reload();
 	await expect(
-		page.getByRole("button", { name: "Filter by measure, Throughput" }),
+		page.getByRole("button", { name: "measure Throughput" }),
 	).toBeVisible();
 	await expect(rows(page)).toHaveCount(1);
 });
@@ -262,7 +262,7 @@ test("a row opens the threshold, its model, and the alerts it raised", async ({
 		});
 	await expect(dismissedRow).toContainText("dismissed");
 	await expect(
-		dismissedRow.getByRole("link", { name: /^Open the report from / }),
+		dismissedRow.getByRole("link", { name: /, open the report$/ }),
 	).toHaveAttribute(
 		"href",
 		new RegExp(`${nextPath(hashbrown.slug, "reports")}/[0-9a-f-]{36}$`),
@@ -277,7 +277,7 @@ test("a row opens the threshold, its model, and the alerts it raised", async ({
 	await expect(
 		page
 			.getByRole("region", { name: `${ALERTING}, full plot` })
-			.getByRole("button", { name: /^Hide / }),
+			.getByRole("button", { name: /: hide its line$/ }),
 	).toBeVisible();
 });
 
@@ -429,6 +429,8 @@ test("Thresholds and a threshold pass axe in both themes", async ({
 	});
 	const uuid = await latencyThreshold(request);
 	await axeInBothThemes(page, thresholdPath(hashbrown.slug, uuid), async () => {
+		// On a phone the alerts sit below the cards, and only rows on screen are drawn.
+		await alertsTable(page).scrollIntoViewIfNeeded();
 		await expect(
 			alertsTable(page).getByRole("button", { name: `Expand ${ALERTING}` }),
 		).toBeVisible();
@@ -457,7 +459,9 @@ test.describe("on a phone", () => {
 		const row = await rows(page).first().boundingBox();
 		expect(row?.height).toBeGreaterThanOrEqual(44);
 
-		const windowChip = page.getByRole("button", { name: "Alerts in 4 weeks" });
+		const windowChip = page.getByRole("button", {
+			name: "Alerts in 4w, 4 weeks",
+		});
 		await windowChip.click();
 		await page.getByRole("menuitemradio", { name: "1 week" }).click();
 		await expect(page).toHaveURL(/[?&]window=1w(&|$)/);
@@ -466,11 +470,11 @@ test.describe("on a phone", () => {
 		await filters.click();
 		const sheet = page.getByRole("dialog", { name: "Filters" });
 		await expect(
-			sheet.getByRole("button", { name: "Filter by testbed, any" }),
+			sheet.getByRole("button", { name: "testbed any" }),
 		).toBeVisible();
 		await sheet.getByRole("button", { name: "Done" }).click();
 		for (const target of [
-			page.getByRole("button", { name: "Alerts in 1 week" }),
+			page.getByRole("button", { name: "Alerts in 1w, 1 week" }),
 			filters,
 			page.getByRole("radio", { name: "Archived" }).locator(".."),
 		]) {
@@ -486,7 +490,7 @@ test.describe("on a phone", () => {
 			alertsTable(page).getByRole("button", { name: `Expand ${ALERTING}` }),
 		).toBeVisible();
 		await expect(
-			page.getByRole("button", { name: "Window, 4 weeks" }),
+			page.getByRole("button", { name: "Window 4w, 4 weeks" }),
 		).toBeVisible();
 		const width = await page.evaluate(
 			() => document.documentElement.scrollWidth,

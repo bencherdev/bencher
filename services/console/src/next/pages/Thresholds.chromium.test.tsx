@@ -15,6 +15,7 @@ import { ProjectContext } from "../project";
 import { fakeApi } from "../reports/testing";
 import { screenBatch } from "../thresholds/query";
 import { thresholdsFixture } from "../thresholds/testing";
+import { expectNameStartsWithText } from "../ui/testing";
 import Thresholds from "./Thresholds";
 
 // Relative to the router base, as the app routes it.
@@ -140,7 +141,7 @@ test("a row reads its threshold from the batch's tables", async () => {
 	await expect
 		.element(
 			row.getByRole("link", {
-				name: "Threshold on 412/merge, ubuntu-latest, Throughput, p99, filtered to 2 parameter sets",
+				name: "412/merge, threshold on 412/merge, ubuntu-latest, Throughput, p99, filtered to 2 parameter sets",
 			}),
 		)
 		.toHaveAttribute(
@@ -227,7 +228,7 @@ test("a filter in the link names its chip from a request beside the list's", asy
 	mount(api, client(), `${PATH}?branch=${MAIN}`);
 
 	await expect
-		.element(page.getByRole("button", { name: "Filter by branch, main" }))
+		.element(page.getByRole("button", { name: "branch main" }))
 		.toBeVisible();
 	expect(requests.map((url) => url.pathname)).toContain(
 		"/v0/console/projects/hashbrown/thresholds",
@@ -364,14 +365,10 @@ test("a picked branch, testbed, or measure is named from its option, not asked f
 		["testbed", "Bare metal"],
 		["measure", "Throughput"],
 	] as const) {
-		await page
-			.getByRole("button", { name: `Filter by ${filter}, any` })
-			.click();
+		await page.getByRole("button", { name: `${filter} any` }).click();
 		await page.getByRole("menuitemradio", { name }).click();
 		await expect
-			.element(
-				page.getByRole("button", { name: `Filter by ${filter}, ${name}` }),
-			)
+			.element(page.getByRole("button", { name: `${filter} ${name}` }))
 			.toBeInTheDocument();
 	}
 	await expect
@@ -396,12 +393,12 @@ test("a filter in a cold link holds its chip's place until its name answers", as
 	mount(api, client(), `${PATH}?branch=${MAIN}`);
 
 	await expect
-		.element(page.getByRole("button", { name: "Filter by branch, …" }))
+		.element(page.getByRole("button", { name: "branch …" }))
 		.toBeVisible();
 	expect(page.getByText(MAIN).query()).toBeNull();
 	answer?.();
 	await expect
-		.element(page.getByRole("button", { name: "Filter by branch, main" }))
+		.element(page.getByRole("button", { name: "branch main" }))
 		.toBeVisible();
 });
 
@@ -443,6 +440,27 @@ test("a row says its testbed was archived, on a phone too", async () => {
 	);
 });
 
+// Kills a row link named by anything but the text it shows first, wide or on a
+// phone, where it shows more of the row.
+test("a row's link is named by the text it shows first, on a phone too", async () => {
+	const { api } = fakeApi(() => batch(0, 2, 2));
+	for (const [width, height] of [
+		[1280, 720],
+		[390, 844],
+	] as const) {
+		await page.viewport(width, height);
+		mount(api, client());
+		await expect
+			.poll(() => document.querySelectorAll("a.th-link").length)
+			.toBe(2);
+		for (const link of document.querySelectorAll("a.th-link")) {
+			expectNameStartsWithText(link);
+		}
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
 // Kills a Status control that keeps its own width on a phone.
 test("on a phone, Status spans the page", async () => {
 	await page.viewport(390, 844);
@@ -480,7 +498,7 @@ test("under Archived, a filter menu lists archived branches too, in name order",
 			.filter((url) => url.pathname.endsWith("/branches"))
 			.map((url) => url.searchParams.get("archived"));
 
-	await page.getByRole("button", { name: "Filter by branch, any" }).click();
+	await page.getByRole("button", { name: "branch any" }).click();
 	await expect
 		.element(page.getByRole("menuitemradio", { name: "main" }))
 		.toBeVisible();
@@ -489,7 +507,7 @@ test("under Archived, a filter menu lists archived branches too, in name order",
 	await userEvent.keyboard("{Escape}");
 
 	await page.getByRole("radio", { name: "Archived" }).click();
-	await page.getByRole("button", { name: "Filter by branch, any" }).click();
+	await page.getByRole("button", { name: "branch any" }).click();
 	await expect
 		.element(page.getByRole("menuitemradio", { name: "legacy" }))
 		.toBeVisible();

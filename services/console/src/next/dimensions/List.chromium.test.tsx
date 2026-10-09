@@ -5,6 +5,7 @@ import { page, userEvent } from "vitest/browser";
 import type { JsonConsoleBranchRow } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import { type Sent, bootstrapOf, mount } from "../settings/testing";
+import { expectNameStartsWithText } from "../ui/testing";
 import List from "./List";
 
 let dispose: (() => void) | undefined;
@@ -860,6 +861,21 @@ test("the filter's link holds the text without its spaces", async () => {
 	await expect
 		.poll(() => mounted.history.get())
 		.toBe("/hashbrown/branches?search=simd");
+});
+
+// Kills a sort direction named by anything but the order it shows first, for
+// sorting by name and by date.
+test("the sort direction is named by the order it shows", async () => {
+	const fake = api();
+	dispose = show(fake.api).dispose;
+	await expect.element(rowOf("main")).toBeVisible();
+	const direction = () =>
+		document.querySelector<HTMLButtonElement>("button.dm-direction");
+	await expect.element(page.getByText("A to Z")).toBeVisible();
+	expectNameStartsWithText(direction());
+	await page.getByRole("radio", { name: "Created" }).click();
+	await expect.element(page.getByText("Newest first")).toBeVisible();
+	expectNameStartsWithText(direction());
 });
 
 // Kills a first load that fails behind a skeleton forever.

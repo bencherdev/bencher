@@ -76,7 +76,7 @@ test("rows are newest first and read each report, a run by a project key include
 	await expect(byPerson.getByRole("img", { name: "User" })).toBeVisible();
 
 	await expect(byKey.getByRole("link")).toHaveAccessibleName(
-		`Report on main, macos-latest, magic, Sep 13, 2026, 21:46, ${seed.last_main_hash}`,
+		`main, report on main, macos-latest, magic, Sep 13, 2026, 21:46, ${seed.last_main_hash}`,
 	);
 	await expect(byKey.getByRole("cell").first().locator("time")).toHaveAttribute(
 		"title",
@@ -94,7 +94,7 @@ test("a filter and the window narrow the rows and survive a reload", async ({
 	await settle(page);
 	const requests = listRequests(page);
 
-	await page.getByRole("button", { name: "Filter by branch, any" }).click();
+	await page.getByRole("button", { name: "branch any" }).click();
 	await page.getByRole("menuitemradio", { name: "main" }).click();
 	await expect(heading(page)).toHaveText("13 reports");
 	await settle(page);
@@ -112,9 +112,7 @@ test("a filter and the window narrow the rows and survive a reload", async ({
 	await expect(heading(page)).toHaveText("4 reports");
 	await expect(rows(page)).toHaveCount(4);
 	await expect(page.getByRole("radio", { name: "1w" })).toBeChecked();
-	await expect(
-		page.getByRole("button", { name: "Filter by branch, main" }),
-	).toBeVisible();
+	await expect(page.getByRole("button", { name: "branch main" })).toBeVisible();
 
 	await page.getByRole("radio", { name: "All" }).click();
 	await expect(heading(page)).toHaveText("25 reports");
@@ -220,7 +218,7 @@ test("a filter menu loading its options leaves the page and the typing alone", a
 		await route.continue();
 	});
 
-	await page.getByRole("button", { name: "Filter by branch, any" }).click();
+	await page.getByRole("button", { name: "branch any" }).click();
 	const search = page.getByRole("searchbox", { name: "Search branches" });
 	await expect(search).toBeFocused();
 	await page.keyboard.type("fea", { delay: 30 });
@@ -296,7 +294,7 @@ test.describe("narrow", () => {
 			(row?.x ?? 0) + (row?.width ?? 0) - 40,
 		);
 
-		const windowChip = page.getByRole("button", { name: "Window, 4 weeks" });
+		const windowChip = page.getByRole("button", { name: "Window 4w, 4 weeks" });
 		await windowChip.click();
 		await page.getByRole("menuitemradio", { name: "1 week" }).click();
 		await expect(heading(page)).toHaveText("7 reports");
@@ -304,7 +302,7 @@ test.describe("narrow", () => {
 		await page.getByRole("button", { name: "Filters, none applied" }).click();
 		const sheet = page.getByRole("dialog", { name: "Filters" });
 		await expect(sheet).toBeVisible();
-		await sheet.getByRole("button", { name: "Filter by branch, any" }).click();
+		await sheet.getByRole("button", { name: "branch any" }).click();
 		const search = sheet.getByRole("searchbox", { name: "Search branches" });
 		expect((await search.boundingBox())?.height).toBeGreaterThanOrEqual(44);
 		await sheet.getByRole("menuitemradio", { name: "feature-simd" }).click();
@@ -314,7 +312,7 @@ test.describe("narrow", () => {
 				document.querySelector("dialog")?.matches(":modal"),
 			),
 		).toBe(true);
-		await sheet.getByRole("button", { name: "Filter by adapter, any" }).click();
+		await sheet.getByRole("button", { name: "adapter any" }).click();
 		await expect(
 			sheet.getByRole("menuitemradio", { name: "Any adapter" }),
 		).toBeVisible();
@@ -328,14 +326,14 @@ test.describe("narrow", () => {
 		await expect(filtersChip).toBeVisible();
 
 		for (const target of [
-			page.getByRole("button", { name: "Window, 1 week" }),
+			page.getByRole("button", { name: "Window 1w, 1 week" }),
 			filtersChip,
 		]) {
 			const size = await target.boundingBox();
 			expect(size?.height).toBeGreaterThanOrEqual(44);
 		}
 
-		await page.getByRole("button", { name: "Window, 1 week" }).click();
+		await page.getByRole("button", { name: "Window 1w, 1 week" }).click();
 		await page.getByRole("menuitemradio", { name: "Custom range" }).click();
 		for (const label of ["From", "To"]) {
 			const size = await page.getByLabel(label, { exact: true }).boundingBox();

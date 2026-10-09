@@ -20,7 +20,12 @@ const Leave = (props: {
 	>
 		<div class="ui-dialog-head">
 			<h2 id="ex-leave-title">Leave without saving?</h2>
-			<Button variant="ghost" aria-label="Keep editing" onClick={props.onStay}>
+			<Button
+				variant="ghost"
+				iconOnly
+				aria-label="Keep editing"
+				onClick={props.onStay}
+			>
 				<Icon name="close" />
 			</Button>
 		</div>

@@ -216,7 +216,7 @@ const Plotted = (props: PublicProps) => {
 						aria-expanded={open()}
 						onClick={() => setOpen(!open())}
 					>
-						<span>{open() ? "Hide query" : "Show query"}</span>
+						{open() ? "Hide query" : "Show query"}
 						<Icon name="chevron-down" />
 					</Button>
 				</div>

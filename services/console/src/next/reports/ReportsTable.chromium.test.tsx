@@ -7,6 +7,7 @@ import { page } from "vitest/browser";
 import type { JsonReport } from "../../types/bencher";
 import ReportsTable from "./ReportsTable";
 import type { Range } from "./rows";
+import { expectNameStartsWithText } from "../ui/testing";
 import { reportFixture } from "./testing";
 
 const NOW = Date.parse("2026-09-14T00:00:00Z");
@@ -159,8 +160,9 @@ test("a row reads its report", async () => {
 			"/next/console/projects/hashbrown/reports/00000000-0000-4000-8000-000000000000",
 		);
 	expect(link.element().getAttribute("aria-label")).toMatch(
-		/^Report on main, macos-latest, magic, Sep 1[34], 2026, \d\d:46, 9c1f2e4$/,
+		/^main, report on main, macos-latest, magic, Sep 1[34], 2026, \d\d:46, 9c1f2e4$/,
 	);
+	expectNameStartsWithText(link.element());
 });
 
 // Kills a narrow row that keeps every column, is shorter than a touch

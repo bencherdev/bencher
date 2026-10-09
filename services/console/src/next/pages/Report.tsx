@@ -493,14 +493,13 @@ const Neighbor = (props: {
 						data-variant="secondary"
 						data-size="sm"
 						href={props.href(link().uuid)}
-						aria-label={`${text()} report on ${props.report?.branch.name}, ${props.report?.testbed.name}: ${when()}, ${shortHash(link().hash) ?? link().adapter}`}
+						aria-label={`${text()} ${when()}: the report on ${props.report?.branch.name}, ${props.report?.testbed.name}, ${shortHash(link().hash) ?? link().adapter}`}
 						onPointerEnter={intent}
 						onFocus={intent}
 						onTouchStart={intent}
 					>
 						<Show when={props.side === "previous"}>{chevron()}</Show>
-						{text()}
-						<span class="muted">{when()}</span>
+						{text()} <span class="muted">{when()}</span>
 						<Show when={props.side === "next"}>{chevron()}</Show>
 					</a>
 				);
@@ -547,7 +546,7 @@ const Selection = (props: {
 					data-variant="primary"
 					data-size="sm"
 					href={href()}
-					aria-label={`Open ${plural(props.count, "line")} in Explore`}
+					aria-label={`Open ${props.count} in Explore`}
 				>
 					{props.narrow
 						? `Open ${props.count}`

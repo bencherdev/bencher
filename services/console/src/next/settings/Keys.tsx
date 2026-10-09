@@ -380,7 +380,12 @@ const NewKey = (props: {
 			>
 				<div class="ui-dialog-head">
 					<h2 id="nk-title">New key</h2>
-					<Button variant="ghost" aria-label="Close" onClick={props.onDismiss}>
+					<Button
+						variant="ghost"
+						iconOnly
+						aria-label="Close"
+						onClick={props.onDismiss}
+					>
 						<Icon name="close" />
 					</Button>
 				</div>
@@ -545,7 +550,12 @@ const Revoke = (props: {
 		>
 			<div class="ui-dialog-head">
 				<h2 id="rk-title">Revoke {props.target.name}?</h2>
-				<Button variant="ghost" aria-label="Close" onClick={props.onDismiss}>
+				<Button
+					variant="ghost"
+					iconOnly
+					aria-label="Close"
+					onClick={props.onDismiss}
+				>
 					<Icon name="close" />
 				</Button>
 			</div>

@@ -17,7 +17,7 @@ const { hashbrown } = seed.projects;
 const plot = (page: Page) => page.getByRole("figure");
 const box = (page: Page, name: string) => page.getByRole("group", { name });
 const keyEntries = (page: Page) =>
-	page.getByRole("button", { name: /^(Hide|Show) / });
+	page.getByRole("button", { name: /: (hide|show) its line$/ });
 const params = (page: Page) => new URL(page.url()).searchParams;
 
 test.use({ storageState: signedIn(seed.member), timezoneId: "UTC" });
@@ -453,7 +453,9 @@ test("hidden and focused lines travel in the link", async ({
 }) => {
 	const { query } = await twoLines(request);
 	await page.goto(explore(hashbrown.slug, query));
-	await page.getByRole("button", { name: /^Hide blake3 simd=sse4\.2/ }).click();
+	await page
+		.getByRole("button", { name: /^blake3 simd=sse4\.2.*: hide its line$/ })
+		.click();
 	await page.getByRole("button", { name: /^Focus blake3 simd=avx2/ }).click();
 	await expect(page).toHaveURL(/hide=/);
 	await expect(page).toHaveURL(/focus=/);
@@ -461,7 +463,9 @@ test("hidden and focused lines travel in the link", async ({
 	const other = await context.newPage();
 	await other.goto(page.url());
 	await expect(
-		other.getByRole("button", { name: /^Show blake3 simd=sse4\.2/ }),
+		other.getByRole("button", {
+			name: /^blake3 simd=sse4\.2.*: show its line$/,
+		}),
 	).toBeVisible();
 	await expect(
 		other.getByRole("button", { name: /^Focus blake3 simd=avx2/ }),
@@ -575,7 +579,9 @@ test("Pin to Plots pins the shown line by its full name, and Undo removes it", a
 	const { project, query } = await pinnable(request);
 	await page.goto(explore(project.slug, { ...query, sets: [] }));
 	await expect(plot(page)).toHaveAccessibleName("2 lines");
-	await page.getByRole("button", { name: /^Hide hash size=2/ }).click();
+	await page
+		.getByRole("button", { name: /^hash size=2.*: hide its line$/ })
+		.click();
 
 	await page.getByRole("button", { name: "Pin to Plots" }).click();
 	const confirmation = page.getByRole("status").filter({ hasText: "Pinned" });

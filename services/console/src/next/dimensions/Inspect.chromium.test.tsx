@@ -14,6 +14,7 @@ import { reportFixture } from "../reports/testing";
 import { type Sent, bootstrapOf, mount } from "../settings/testing";
 import type { Dimension } from "./dimension";
 import Inspect from "./Inspect";
+import { expectNameStartsWithText } from "../ui/testing";
 
 let dispose: (() => void) | undefined;
 
@@ -236,19 +237,23 @@ test("a branch's page shows its start point, head, recent reports, and threshold
 		.element(page.getByRole("list", { name: "On this branch" }))
 		.toHaveTextContent(/3\s*reports\s*2\s*thresholds/);
 	const thresholds = page.getByRole("table", { name: "Thresholds" });
+	const link = thresholds.getByRole("link", {
+		name: "macos-arm64, threshold for Latency on 412/merge, macos-arm64",
+	});
 	await expect
-		.element(
-			thresholds.getByRole("link", {
-				name: "Threshold for Latency on 412/merge, macos-arm64",
-			}),
-		)
+		.element(link)
 		.toHaveAttribute(
 			"href",
 			"/next/console/projects/hashbrown/thresholds/threshold-macos-arm64",
 		);
-	await expect
-		.element(page.getByRole("table", { name: "Recent reports" }))
-		.toHaveTextContent(/linux-x86-64/);
+	expectNameStartsWithText(link.element());
+	const recent = page.getByRole("table", { name: "Recent reports" });
+	await expect.element(recent).toHaveTextContent(/linux-x86-64/);
+	const reports = recent.getByRole("link").elements();
+	expect(reports.length).toBeGreaterThan(0);
+	for (const report of reports) {
+		expectNameStartsWithText(report);
+	}
 	await expect
 		.element(page.getByRole("link", { name: "All reports on 412/merge" }))
 		.toHaveAttribute(

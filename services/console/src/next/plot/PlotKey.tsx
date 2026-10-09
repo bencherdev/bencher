@@ -86,7 +86,7 @@ export const PlotKey = (props: PlotKeyProps) => {
 								<button
 									type="button"
 									class="pl-ktog"
-									aria-label={`${hidden() ? "Show" : "Hide"} ${name().text}`}
+									aria-label={`${name().text}: ${hidden() ? "show" : "hide"} its line`}
 									onClick={() => props.onToggle(line)}
 								>
 									<Show when={!hidden()} fallback={<EyeOff />}>
@@ -98,10 +98,20 @@ export const PlotKey = (props: PlotKeyProps) => {
 									</Show>
 									<b>{name().benchmark}</b>
 									<Index each={name().tags}>
-										{(tag) => <span class="pl-tag">{tag()}</span>}
+										{(tag) => (
+											<>
+												{" "}
+												<span class="pl-tag">{tag()}</span>
+											</>
+										)}
 									</Index>
 									<Index each={name().detail}>
-										{(detail) => <span class="pl-km">{detail()}</span>}
+										{(detail) => (
+											<>
+												{" "}
+												<span class="pl-km">{detail()}</span>
+											</>
+										)}
 									</Index>
 									<Show when={props.lines[line]?.alerting}>
 										<span class="pl-alertdot" aria-hidden="true" />

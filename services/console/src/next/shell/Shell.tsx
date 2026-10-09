@@ -22,11 +22,15 @@ interface ShellProps {
  * The breadcrumb bar and the tab row. Astro renders it with nothing loaded for
  * the first paint, and the app renders it again with what it knows; the
  * `data-shell` hooks are where `ShellPaint.astro` fills in remembered values
- * between the two, so the swap moves nothing.
+ * between the two, so the swap moves nothing. A space that never draws comes
+ * before each badge, so the tab's text reads "Alerts 3", as its name does.
  */
 const Shell = (props: ShellProps) => {
+	// On a phone the bell shows only its count, so its name starts there.
 	const alertsLabel = () =>
-		props.alerts ? `Alerts, ${props.alerts} active` : "Alerts";
+		props.alerts
+			? `${props.alerts} active ${props.alerts === 1 ? "alert" : "alerts"}`
+			: "Alerts";
 	return (
 		<header class="shell">
 			<div class="bar">
@@ -75,6 +79,7 @@ const Shell = (props: ShellProps) => {
 				>
 					<Icon name="alerts" />
 					<Show when={props.alerts}>
+						{" "}
 						<span class="badge" aria-hidden="true">
 							{props.alerts}
 						</span>
@@ -108,6 +113,7 @@ const Shell = (props: ShellProps) => {
 							>
 								{label}
 								<Show when={tab === "alerts" && props.alerts}>
+									{" "}
 									<span class="badge" aria-hidden="true">
 										{props.alerts}
 									</span>

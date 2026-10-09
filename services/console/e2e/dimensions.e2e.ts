@@ -200,13 +200,13 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 			.poll(() => rowNames(branches))
 			.toEqual(["devel", "main", "feature-simd"]);
 		await page
-			.getByRole("button", { name: "Sort direction: Newest first" })
+			.getByRole("button", { name: "Newest first, sort direction" })
 			.click();
 		await expect
 			.poll(() => rowNames(branches))
 			.toEqual(["feature-simd", "main", "devel"]);
 		await expect(
-			page.getByRole("button", { name: "Sort direction: Oldest first" }),
+			page.getByRole("button", { name: "Oldest first, sort direction" }),
 		).toBeVisible();
 
 		// The sort is in the link, so a reload keeps it.
@@ -478,8 +478,10 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 			nextPath(hashbrown.slug, "branches/main"),
 			async () => {
 				await expect(
-					page.getByRole("table", { name: "Thresholds" }).getByRole("row"),
-				).toHaveCount(2);
+					page
+						.getByRole("table", { name: "Thresholds" })
+						.getByRole("link", { name: /, threshold for / }),
+				).toHaveCount(1);
 				await settle(page);
 			},
 		);
@@ -487,9 +489,13 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 			page,
 			nextPath(hashbrown.slug, "benchmarks/blake3"),
 			async () => {
+				// A phone's table has no header row.
 				await expect(
-					page.getByRole("table", { name: "Active variants" }).getByRole("row"),
-				).toHaveCount(9);
+					page
+						.getByRole("table", { name: "Active variants" })
+						.getByRole("row")
+						.filter({ has: page.getByRole("cell") }),
+				).toHaveCount(8);
 				await settle(page);
 			},
 		);
@@ -545,7 +551,7 @@ test.describe("narrow", () => {
 				.all()),
 			page.getByRole("searchbox", { name: "Filter branches" }),
 			page.getByRole("radio", { name: "Name" }).locator(".."),
-			page.getByRole("button", { name: /^Sort direction/ }),
+			page.getByRole("button", { name: /, sort direction$/ }),
 			status(page, /^Active/).locator(".."),
 			row.getByRole("button", { name: "Archive feature-simd" }),
 		];

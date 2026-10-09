@@ -28,7 +28,7 @@ const Chip = (props: ChipProps) => {
 			{...rest}
 		>
 			<Show when={local.label}>
-				<span class="ui-chip-key">{local.label}</span>
+				<span class="ui-chip-key">{local.label}</span>{" "}
 			</Show>
 			{local.children}
 			<Show when={local.caret}>

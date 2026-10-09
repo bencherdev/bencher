@@ -26,7 +26,7 @@ test("the narrow bar keeps the mark, the project, the bell, and the avatar, and 
 
 	const mark = bar.getByRole("link", { name: "Bencher, home" });
 	const project = crumbs(page).getByRole("link", { name: hashbrown.name });
-	const bell = bar.getByRole("link", { name: "Alerts, 1 active" });
+	const bell = bar.getByRole("link", { name: "1 active alert" });
 	const avatar = bar.getByRole("link", { name: "Account" });
 	for (const control of [mark, project, bell, avatar]) {
 		await expect(control).toBeVisible();

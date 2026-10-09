@@ -8,6 +8,7 @@ import { page, userEvent } from "vitest/browser";
 import Plot, { type PlotProps } from "./Plot";
 import { middle, near, pixelAt, rowsOf, settle, tokenRgb } from "./pixels";
 import { returnSyncKey, takeSyncKey } from "./sync";
+import { expectNameStartsWithText, shownText } from "../ui/testing";
 import { DAY, START, testData, testLine } from "./testing";
 import type { PlotData } from "./types";
 
@@ -146,7 +147,7 @@ describe("Plot", () => {
 			return fillText.apply(this, args);
 		};
 		try {
-			await page.getByRole("button", { name: "Hide sha256" }).click();
+			await page.getByRole("button", { name: "sha256: hide its line" }).click();
 			await settle();
 		} finally {
 			CanvasRenderingContext2D.prototype.fillText = fillText;
@@ -174,7 +175,9 @@ describe("Plot", () => {
 		await settle();
 		const before = (await plotArea("2 lines, Latency")).box.left;
 
-		await page.getByRole("button", { name: /^Hide sha256/ }).click();
+		await page
+			.getByRole("button", { name: /^sha256.*: hide its line$/ })
+			.click();
 		await settle();
 
 		const latency = await plotArea("1 line, Latency");
@@ -193,16 +196,16 @@ describe("Plot", () => {
 			[],
 		);
 
-		await page.getByRole("button", { name: "Hide sha256" }).click();
+		await page.getByRole("button", { name: "sha256: hide its line" }).click();
 		await settle();
 
 		expect(hidden()).toEqual(["mid"]);
 		expect(rowsOf(canvas, column, box.top, box.bottom, series(2))).toEqual([]);
 		await expect
-			.element(page.getByRole("button", { name: "Show sha256" }))
+			.element(page.getByRole("button", { name: "sha256: show its line" }))
 			.toBeInTheDocument();
 		await expect
-			.element(page.getByRole("button", { name: "Hide sha256" }))
+			.element(page.getByRole("button", { name: "sha256: hide its line" }))
 			.not.toBeInTheDocument();
 		await expect.element(page.getByText("1 hidden")).toBeInTheDocument();
 	});
@@ -301,12 +304,12 @@ describe("Plot", () => {
 		};
 		expect(bandAt()).toBe(false);
 
-		await page.getByRole("button", { name: "Hide blake3" }).hover();
+		await page.getByRole("button", { name: "blake3: hide its line" }).hover();
 		await settle();
 		expect(bandAt()).toBe(true);
 		expect(focused()).toBeNull();
 
-		await page.getByRole("button", { name: "Hide sha256" }).hover();
+		await page.getByRole("button", { name: "sha256: hide its line" }).hover();
 		await settle();
 		expect(bandAt()).toBe(false);
 	});
@@ -339,7 +342,7 @@ describe("Plot", () => {
 		});
 		await expect.element(status).toHaveTextContent("50.00 µs");
 
-		await page.getByRole("button", { name: "Hide blake3" }).hover();
+		await page.getByRole("button", { name: "blake3: hide its line" }).hover();
 		await expect.element(status).not.toHaveTextContent("µs");
 	});
 
@@ -582,7 +585,9 @@ describe("Plot", () => {
 		await settle();
 		const figure = root.querySelector("figure") as HTMLElement;
 		const before = figure.getBoundingClientRect();
-		expect(page.getByRole("button", { name: /^Hide/ }).query()).toBeNull();
+		expect(
+			page.getByRole("button", { name: /: hide its line$/ }).query(),
+		).toBeNull();
 
 		setData(
 			testData(
@@ -617,7 +622,8 @@ describe("Plot", () => {
 		);
 		mount({ data });
 		await settle();
-		const toggles = () => page.getByRole("button", { name: /^Hide/ }).all();
+		const toggles = () =>
+			page.getByRole("button", { name: /: hide its line$/ }).all();
 		expect(toggles()).toHaveLength(12);
 
 		await page.getByRole("button", { name: "Show all 14" }).click();
@@ -625,6 +631,38 @@ describe("Plot", () => {
 		await expect
 			.element(page.getByRole("button", { name: "Show fewer" }))
 			.toHaveAttribute("aria-expanded", "true");
+	});
+
+	// Kills a toggle named "Hide hash size=1" over "hash size=1", or tags run
+	// into the benchmark ("hashsize=1"), so voice control cannot reach it.
+	test("names each key toggle first by the line it shows, shown or hidden", async () => {
+		const data = testData([
+			testLine({
+				id: "one",
+				benchmark: "hash",
+				parameters: { size: 1 },
+				y: [1, 2],
+			}),
+			testLine({
+				id: "two",
+				benchmark: "hash",
+				parameters: { size: 2 },
+				testbed: "macos",
+				y: [2, 3],
+			}),
+		]);
+		mount({ data, focused: null });
+		await settle();
+		const toggles = page.getByRole("button", { name: /: hide its line$/ });
+		expect(toggles.all()).toHaveLength(2);
+		for (const toggle of toggles.all()) {
+			expectNameStartsWithText(toggle.element());
+		}
+		expect(shownText(toggles.first().element())).toBe("hash size=1 linux");
+		await toggles.first().click();
+		const shown = page.getByRole("button", { name: /: show its line$/ });
+		await expect.element(shown).toBeVisible();
+		expectNameStartsWithText(shown.element());
 	});
 
 	test("lists alerting lines first in the key", async () => {
@@ -642,10 +680,10 @@ describe("Plot", () => {
 		mount({ data, focused: null });
 		await settle();
 		const names = page
-			.getByRole("button", { name: /^Hide/ })
+			.getByRole("button", { name: /: hide its line$/ })
 			.all()
 			.map((button) => button.element().getAttribute("aria-label"));
-		expect(names).toEqual(["Hide xxh3", "Hide crc32c"]);
+		expect(names).toEqual(["xxh3: hide its line", "crc32c: hide its line"]);
 	});
 
 	// Kills alert markers drawn only for the focused line.
@@ -779,7 +817,9 @@ describe("Plot on a phone", () => {
 		);
 		mount({ data }, 382);
 		await settle();
-		expect(page.getByRole("button", { name: /^Hide/ }).all()).toHaveLength(6);
+		expect(
+			page.getByRole("button", { name: /: hide its line$/ }).all(),
+		).toHaveLength(6);
 		await expect
 			.element(page.getByRole("button", { name: "Show all 8" }))
 			.toBeInTheDocument();
@@ -826,7 +866,9 @@ describe("Plot axes", () => {
 			return fillText.apply(this, args);
 		};
 		try {
-			await page.getByRole("button", { name: /^Hide sha256/ }).click();
+			await page
+				.getByRole("button", { name: /^sha256.*: hide its line$/ })
+				.click();
 			await settle();
 		} finally {
 			CanvasRenderingContext2D.prototype.fillText = fillText;
@@ -847,7 +889,7 @@ describe("Plot axes", () => {
 		await settle();
 		const before = (await plotArea()).box.left;
 
-		await page.getByRole("button", { name: "Hide sha256" }).click();
+		await page.getByRole("button", { name: "sha256: hide its line" }).click();
 		await settle();
 
 		expect((await plotArea()).box.left).toBe(before);

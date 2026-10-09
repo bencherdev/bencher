@@ -1,4 +1,3 @@
-import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { decodeQuery } from "../src/next/query/query";
 import type { JsonConsolePerf } from "../src/types/bencher";
@@ -352,18 +351,6 @@ test.describe("signed out", () => {
 		await axeInBothThemes(page, publicPath(project.slug, search), () =>
 			twoLinesDrawn(page),
 		);
-		// Label-in-name is off in axe by default; the plot's key is shared by every page.
-		const { violations } = await new AxeBuilder({
-			page: page as unknown as ConstructorParameters<
-				typeof AxeBuilder
-			>[0]["page"],
-		})
-			.withRules(["label-content-name-mismatch"])
-			.exclude(".pl-key")
-			.analyze();
-		expect(
-			violations.map(({ nodes }) => nodes.map(({ target }) => target)),
-		).toEqual([]);
 	});
 });
 

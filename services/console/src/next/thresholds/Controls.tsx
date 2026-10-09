@@ -45,8 +45,7 @@ const Controls = (props: {
 	let windowChip: HTMLButtonElement | undefined;
 	const windowId = createUniqueId();
 	const choice = () => windowLabel(props.search.window);
-	const long = () =>
-		WINDOW_CHOICES.find(({ value }) => value === choice())?.long ?? "";
+	const shown = () => WINDOW_CHOICES.find(({ value }) => value === choice());
 	const pick = (value: Choice) => {
 		const window = pickWindow(value, props.search.window, props.now);
 		if (window) {
@@ -94,10 +93,10 @@ const Controls = (props: {
 							caret
 							aria-haspopup="menu"
 							aria-expanded={windowMenu()}
-							aria-label={`Alerts in ${long()}`}
+							aria-label={`Alerts in ${shown()?.label}, ${shown()?.long}`}
 							onClick={() => setWindowMenu(!windowMenu())}
 						>
-							{WINDOW_CHOICES.find(({ value }) => value === choice())?.label}
+							{shown()?.label}
 						</Chip>
 						<Show when={windowMenu()}>
 							<Menu
