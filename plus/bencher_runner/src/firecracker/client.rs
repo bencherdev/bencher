@@ -6,12 +6,19 @@
 )]
 
 use std::io::{Read as _, Write as _};
+use std::os::fd::AsRawFd as _;
 use std::os::unix::net::UnixStream;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+
+use nix::errno::Errno;
+use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr, connect, socket};
 
 use crate::firecracker::config::{Action, BootSource, Drive, MachineConfig, VsockConfig};
 use crate::firecracker::error::FirecrackerError;
 use crate::jail::SocketPath;
+
+/// Longest one API call may take, from its connect to the end of the response.
+const API_CALL_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Client for the Firecracker REST API.
 pub struct FirecrackerClient<'a> {
@@ -28,7 +35,10 @@ impl<'a> FirecrackerClient<'a> {
     /// `Ok(false)` while Firecracker is not listening yet, and an error for an
     /// address that waiting cannot fix.
     pub fn try_ready(&self) -> Result<bool, FirecrackerError> {
-        match UnixStream::connect(self.socket_path.as_str()) {
+        match connect_until(
+            self.socket_path.as_str(),
+            Instant::now() + Duration::from_secs(1),
+        ) {
             Ok(mut stream) => {
                 drop(stream.set_read_timeout(Some(Duration::from_secs(1))));
                 drop(stream.set_write_timeout(Some(Duration::from_secs(1))));
@@ -58,7 +68,8 @@ impl<'a> FirecrackerClient<'a> {
             context: "serialize machine config",
             source: e,
         })?;
-        let (status, response_body) = self.http_put("/machine-config", &body)?;
+        let (status, response_body) =
+            self.http_put("/machine-config", &body, Instant::now() + API_CALL_TIMEOUT)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
                 status,
@@ -74,7 +85,8 @@ impl<'a> FirecrackerClient<'a> {
             context: "serialize boot source",
             source: e,
         })?;
-        let (status, response_body) = self.http_put("/boot-source", &body)?;
+        let (status, response_body) =
+            self.http_put("/boot-source", &body, Instant::now() + API_CALL_TIMEOUT)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
                 status,
@@ -91,7 +103,8 @@ impl<'a> FirecrackerClient<'a> {
             source: e,
         })?;
         let path = format!("/drives/{}", config.drive_id);
-        let (status, response_body) = self.http_put(&path, &body)?;
+        let (status, response_body) =
+            self.http_put(&path, &body, Instant::now() + API_CALL_TIMEOUT)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
                 status,
@@ -107,7 +120,8 @@ impl<'a> FirecrackerClient<'a> {
             context: "serialize vsock",
             source: e,
         })?;
-        let (status, response_body) = self.http_put("/vsock", &body)?;
+        let (status, response_body) =
+            self.http_put("/vsock", &body, Instant::now() + API_CALL_TIMEOUT)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
                 status,
@@ -119,11 +133,20 @@ impl<'a> FirecrackerClient<'a> {
 
     /// Perform a VM action (start, shutdown, etc.).
     pub fn put_action(&self, action: &Action) -> Result<(), FirecrackerError> {
+        self.put_action_until(action, Instant::now() + API_CALL_TIMEOUT)
+    }
+
+    /// For a caller whose own deadline has to cover the call.
+    pub fn put_action_until(
+        &self,
+        action: &Action,
+        deadline: Instant,
+    ) -> Result<(), FirecrackerError> {
         let body = serde_json::to_string(action).map_err(|e| FirecrackerError::ApiEncoding {
             context: "serialize action",
             source: e,
         })?;
-        let (status, response_body) = self.http_put("/actions", &body)?;
+        let (status, response_body) = self.http_put("/actions", &body, deadline)?;
         if status >= 300 {
             return Err(FirecrackerError::Api {
                 status,
@@ -143,16 +166,27 @@ impl<'a> FirecrackerClient<'a> {
     /// Send an HTTP PUT request over the Unix socket.
     ///
     /// Returns the HTTP status code and response body.
-    fn http_put(&self, path: &str, json_body: &str) -> Result<(u16, String), FirecrackerError> {
+    fn http_put(
+        &self,
+        path: &str,
+        json_body: &str,
+        deadline: Instant,
+    ) -> Result<(u16, String), FirecrackerError> {
+        let timed_out =
+            || FirecrackerError::Timeout(format!("Firecracker did not answer PUT {path} in time"));
         // Only failures about the socket itself name it; errors on an
         // established stream stay plain I/O.
-        let mut stream =
-            UnixStream::connect(self.socket_path.as_str()).map_err(|e| self.unusable(e))?;
+        let mut stream = connect_until(self.socket_path.as_str(), deadline).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::WouldBlock {
+                timed_out()
+            } else {
+                self.unusable(e)
+            }
+        })?;
+        // The request fits the empty socket buffer, so this bounds a write
+        // that never waits in practice.
         stream
-            .set_read_timeout(Some(Duration::from_secs(5)))
-            .map_err(|e| self.unusable(e))?;
-        stream
-            .set_write_timeout(Some(Duration::from_secs(5)))
+            .set_write_timeout(Some(time_left(deadline).ok_or_else(timed_out)?))
             .map_err(|e| self.unusable(e))?;
 
         let request = format!(
@@ -172,6 +206,10 @@ impl<'a> FirecrackerClient<'a> {
         let mut response = Vec::with_capacity(4096);
         let mut buf = [0u8; 4096];
         loop {
+            let wait = time_left(deadline).ok_or_else(timed_out)?;
+            stream
+                .set_read_timeout(Some(wait))
+                .map_err(|e| self.unusable(e))?;
             match stream.read(&mut buf) {
                 Ok(0) => break,
                 Ok(n) => {
@@ -184,13 +222,9 @@ impl<'a> FirecrackerClient<'a> {
                 // A read with a timeout is interrupted by any signal rather
                 // than restarted.
                 Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {},
-                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    eprintln!(
-                        "Warning: Firecracker API read terminated early (WouldBlock) for PUT {path}, {read_bytes} bytes read so far",
-                        read_bytes = response.len()
-                    );
-                    break;
-                },
+                // The check above decides whether the deadline has passed,
+                // since the wait can end up to a tick early.
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {},
                 Err(e) if e.kind() == std::io::ErrorKind::TimedOut => {
                     eprintln!(
                         "Warning: Firecracker API read timed out for PUT {path}, {read_bytes} bytes read so far",
@@ -220,6 +254,39 @@ impl<'a> FirecrackerClient<'a> {
 
         Ok((status, response_body))
     }
+}
+
+/// Like `UnixStream::connect`, but a full listen backlog is waited on only
+/// until `deadline`, failing with `WouldBlock`.
+fn connect_until(path: &str, deadline: Instant) -> std::io::Result<UnixStream> {
+    let address = UnixAddr::new(path)?;
+    let stream = UnixStream::from(socket(
+        AddressFamily::Unix,
+        SockType::Stream,
+        SockFlag::SOCK_CLOEXEC,
+        None,
+    )?);
+    loop {
+        let Some(left) = time_left(deadline) else {
+            return Err(std::io::ErrorKind::WouldBlock.into());
+        };
+        // Linux waits on a full backlog for at most the send timeout.
+        stream.set_write_timeout(Some(left))?;
+        match connect(stream.as_raw_fd(), &address) {
+            Ok(()) => break,
+            Err(Errno::EINTR) => {},
+            Err(errno) => return Err(errno.into()),
+        }
+    }
+    // Otherwise the caller's writes inherit what was left of the connect's wait.
+    stream.set_write_timeout(None)?;
+    Ok(stream)
+}
+
+/// `None` once `deadline` has passed, since a socket timeout cannot be zero.
+fn time_left(deadline: Instant) -> Option<Duration> {
+    let left = deadline.saturating_duration_since(Instant::now());
+    (!left.is_zero()).then_some(left)
 }
 
 /// The errors a booting VMM produces; any other describes the address itself.
@@ -292,6 +359,8 @@ fn parse_http_response(data: &[u8]) -> Result<(u16, String), FirecrackerError> {
 
 #[cfg(test)]
 mod tests {
+    use std::os::unix::net::UnixListener;
+
     use camino::Utf8Path;
 
     use super::*;
@@ -326,8 +395,6 @@ mod tests {
     #[test]
     fn a_signal_while_waiting_for_the_response_does_not_fail_the_call() {
         // Prevents a signal or stop during an API call failing the job's VM setup.
-        use std::os::unix::net::UnixListener;
-
         let dir = tempfile::tempdir().unwrap();
         let jail = JailPaths::new(Utf8Path::from_path(dir.path()).unwrap()).unwrap();
         let vmm = UnixListener::bind(jail.api_socket().host().as_path()).unwrap();
@@ -471,5 +538,165 @@ mod tests {
         let (status, body) = parse_http_response(data).unwrap();
         assert_eq!(status, 200);
         assert_eq!(body, "");
+    }
+
+    #[test]
+    fn a_trickling_vmm_cannot_hold_an_api_call() {
+        // Prevents a VMM that paces its response holding the job thread, as the
+        // teardown request after a timed out job would.
+        let (_dir, jail, vmm) = vmm_in_tmpdir();
+        let socket = jail.api_socket().socket().clone();
+
+        let started = Instant::now();
+        let client = std::thread::spawn(move || {
+            FirecrackerClient::new(&socket).put_action_until(&ctrl_alt_del(), deadline_in_300ms())
+        });
+        let (mut stream, _) = vmm.accept().unwrap();
+        assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
+        drop(stream.write_all(b"HTTP/1.1 204 No Content\r\n"));
+        while !client.is_finished() && started.elapsed() < SLOW && stream.write_all(b"X").is_ok() {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let held = started.elapsed();
+        drop(stream);
+
+        assert!(
+            held < SLOW,
+            "the call must end at its deadline, held {held:?}"
+        );
+        let result = client.join().unwrap();
+        assert!(
+            matches!(result, Err(FirecrackerError::Timeout(_))),
+            "an unfinished response is a timeout, got: {result:?}"
+        );
+    }
+
+    #[test]
+    fn a_silent_vmm_fails_the_call_at_its_deadline() {
+        // Prevents acting on a response cut short, as if a status line alone
+        // were a 204.
+        let (_dir, jail, vmm) = vmm_in_tmpdir();
+        let socket = jail.api_socket().socket().clone();
+
+        let started = Instant::now();
+        let client = std::thread::spawn(move || {
+            FirecrackerClient::new(&socket).put_action_until(&ctrl_alt_del(), deadline_in_300ms())
+        });
+        let (mut stream, _) = vmm.accept().unwrap();
+        assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
+        drop(stream.write_all(b"HTTP/1.1 204 No Content\r\n"));
+        while !client.is_finished() && started.elapsed() < SLOW {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let held = started.elapsed();
+        drop(stream);
+
+        assert!(
+            held < SLOW,
+            "the call must end at its deadline, held {held:?}"
+        );
+        let result = client.join().unwrap();
+        assert!(
+            matches!(result, Err(FirecrackerError::Timeout(_))),
+            "an unfinished response is a timeout, got: {result:?}"
+        );
+    }
+
+    #[test]
+    fn a_vmm_that_never_accepts_cannot_hold_the_connect() {
+        // Prevents a connect that waits on a full listen backlog outlasting the
+        // call's deadline.
+        use nix::sys::socket::{
+            AddressFamily, Backlog, SockFlag, SockType, UnixAddr, bind, listen, socket,
+        };
+
+        let dir = tempfile::tempdir().unwrap();
+        let jail = JailPaths::new(Utf8Path::from_path(dir.path()).unwrap()).unwrap();
+        let host = jail.api_socket().host().as_path();
+        let vmm = socket(
+            AddressFamily::Unix,
+            SockType::Stream,
+            SockFlag::SOCK_CLOEXEC,
+            None,
+        )
+        .unwrap();
+        bind(vmm.as_raw_fd(), &UnixAddr::new(host.as_str()).unwrap()).unwrap();
+        listen(&vmm, Backlog::new(0).unwrap()).unwrap();
+        // A backlog of zero holds one connection, so this fills it.
+        let _queued = UnixStream::connect(host).unwrap();
+        let socket = jail.api_socket().socket().clone();
+
+        let started = Instant::now();
+        let client = std::thread::spawn(move || {
+            FirecrackerClient::new(&socket).put_action_until(&ctrl_alt_del(), deadline_in_300ms())
+        });
+        while !client.is_finished() && started.elapsed() < SLOW {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let held = started.elapsed();
+        // Wakes a connect that is still waiting.
+        drop(vmm);
+
+        assert!(
+            held < SLOW,
+            "the connect must end at the deadline, held {held:?}"
+        );
+        let result = client.join().unwrap();
+        assert!(
+            matches!(result, Err(FirecrackerError::Timeout(_))),
+            "a connect that never completes is a timeout, got: {result:?}"
+        );
+    }
+
+    #[test]
+    fn a_reset_connection_fails_the_call_at_once() {
+        // Prevents retrying every error, which turns a reset into a wait for the
+        // deadline.
+        use std::os::fd::AsFd as _;
+
+        use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
+
+        let (_dir, jail, vmm) = vmm_in_tmpdir();
+        let socket = jail.api_socket().socket().clone();
+
+        let client = std::thread::spawn(move || {
+            FirecrackerClient::new(&socket)
+                .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
+        });
+        let (stream, _) = vmm.accept().unwrap();
+        let mut request = [PollFd::new(stream.as_fd(), PollFlags::POLLIN)];
+        poll(&mut request, PollTimeout::try_from(1000).unwrap()).unwrap();
+        // Closing with the request unread resets the client's end.
+        drop(stream);
+
+        let result = client.join().unwrap();
+        assert!(
+            matches!(
+                &result,
+                Err(FirecrackerError::Io(e)) if e.kind() == std::io::ErrorKind::ConnectionReset
+            ),
+            "a reset is an I/O error, got: {result:?}"
+        );
+    }
+
+    /// Long past every deadline these tests set, and short of
+    /// `API_CALL_TIMEOUT`, so a call that ignores its deadline fails.
+    const SLOW: Duration = Duration::from_secs(3);
+
+    fn vmm_in_tmpdir() -> (tempfile::TempDir, JailPaths, UnixListener) {
+        let dir = tempfile::tempdir().unwrap();
+        let jail = JailPaths::new(Utf8Path::from_path(dir.path()).unwrap()).unwrap();
+        let vmm = UnixListener::bind(jail.api_socket().host().as_path()).unwrap();
+        (dir, jail, vmm)
+    }
+
+    fn deadline_in_300ms() -> Instant {
+        Instant::now() + Duration::from_millis(300)
+    }
+
+    fn ctrl_alt_del() -> Action {
+        Action {
+            action_type: ActionType::SendCtrlAltDel,
+        }
     }
 }

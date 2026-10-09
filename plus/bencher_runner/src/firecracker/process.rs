@@ -135,17 +135,20 @@ impl FirecrackerProcess {
     }
 
     /// Send Ctrl+Alt+Del and wait for graceful shutdown, then SIGKILL.
+    ///
+    /// The grace covers the request too, so a VMM that never answers cannot
+    /// stretch it.
     pub fn kill_after_grace_period(&mut self, grace: Duration) {
+        let deadline = std::time::Instant::now() + grace;
         // Try graceful shutdown via API
         let action = Action {
             action_type: ActionType::SendCtrlAltDel,
         };
-        drop(self.client().put_action(&action));
+        drop(self.client().put_action_until(&action, deadline));
 
         // Wait for the process to exit gracefully
-        let start = std::time::Instant::now();
         let poll_interval = Duration::from_millis(100);
-        while start.elapsed() < grace {
+        while std::time::Instant::now() < deadline {
             if let Ok(Some(_)) = self.jailed.child.try_wait() {
                 self.jailed.join_stderr_thread();
                 return;
@@ -591,5 +594,41 @@ mod tests {
                 "{forbidden} must not be passed: {args:?}"
             );
         }
+    }
+
+    #[test]
+    fn the_teardown_request_counts_against_the_kill_grace() {
+        // Prevents a VMM that paces its answer to Ctrl+Alt+Del holding the
+        // teardown that follows a timed out job.
+        use std::io::{Read as _, Write as _};
+        use std::os::unix::net::UnixListener;
+        use std::time::Instant;
+
+        let (_dir, jail) = jail_in_tmpdir();
+        let vmm = UnixListener::bind(jail.api_socket().host().as_path()).unwrap();
+        let child = Command::new("/bin/sleep").arg("30").spawn().unwrap();
+        let mut process = FirecrackerProcess {
+            jailed: process_around(child, &jail),
+            api: PinnedSocket::pin(jail.api_socket().socket()).unwrap(),
+        };
+
+        let started = Instant::now();
+        let held = std::thread::scope(|scope| {
+            scope.spawn(|| {
+                let (mut stream, _) = vmm.accept().unwrap();
+                drop(stream.read(&mut [0u8; 512]));
+                drop(stream.write_all(b"HTTP/1.1 204 No Content\r\n"));
+                while started.elapsed() < Duration::from_secs(8) && stream.write_all(b"X").is_ok() {
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+            });
+            process.kill_after_grace_period(Duration::from_millis(300));
+            started.elapsed()
+        });
+
+        assert!(
+            held < Duration::from_secs(3),
+            "the request must end with the grace, held {held:?}"
+        );
     }
 }
