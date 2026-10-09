@@ -78,9 +78,18 @@ export const persistCache = (
 ) => {
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	let saving: Promise<void> = Promise.resolve();
+	// Each query's data as last saved: structural sharing keeps an answer that
+	// changed nothing identical, so a poll hearing the same writes nothing.
+	let saved = new Map<string, unknown>();
 	const save = () => {
 		clearTimeout(timer);
 		timer = undefined;
+		saved = new Map(
+			client
+				.getQueryCache()
+				.getAll()
+				.map(({ queryHash, state }) => [queryHash, state.data]),
+		);
 		saving = store
 			.set(reader, { buster, savedAt: now(), state: dehydrate(client) })
 			.catch(() => {});
@@ -96,7 +105,9 @@ export const persistCache = (
 			timer = setTimeout(save);
 		} else if (
 			event.type === "removed" ||
-			(event.type === "updated" && event.action.type === "success")
+			(event.type === "updated" &&
+				event.action.type === "success" &&
+				saved.get(event.query.queryHash) !== event.query.state.data)
 		) {
 			schedule();
 		}
