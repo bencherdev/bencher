@@ -45,7 +45,7 @@ Runner 的持久状态目录。
 无论状态目录如何，一台主机同一时间只运行一个 Runner：
 以 `root` 身份启动的 Runner 在运行期间一直持有锁 `/run/bencher/runner.lock`，
 以 `root` 身份启动的第二个 Runner 会立即退出，并报出指明该锁的错误；不以 `root` 身份运行的 Runner 无法打开该锁，会在没有锁的情况下运行。
-如果主机上另一个 Bencher cgroup 中正在运行某个进程，例如使用其他状态目录的 Runner 遗留下的进程，沙箱 Job 仍会立即失败。
+以 `root` 身份启动的 Runner 在启动时以及每个沙箱 Job 之前，都会终止仍在 `/sys/fs/cgroup/bencher` 下的 cgroup 中运行的任何进程，例如在 Job 中途被终止的 Runner 留下的沙箱，无论该 Runner 使用哪个状态目录。
 支持并推荐使用专用文件系统或 `tmpfs` 挂载：
 这能让写入负载远离系统磁盘，
 并且刚创建的文件系统即使带有 `lost+found` 目录也会被接受。

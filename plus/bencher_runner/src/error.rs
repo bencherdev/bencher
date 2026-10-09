@@ -201,18 +201,6 @@ pub enum JailError {
 
     #[cfg(target_os = "linux")]
     #[error(
-        "A stale jail at {path} still has VMM pid {pid} running in it. It is executing untrusted guest code on the benchmark cores, so any measurement taken now is contended. The jail is left in place until it can be reaped."
-    )]
-    JailStillRunning { path: Utf8PathBuf, pid: u32 },
-
-    #[cfg(target_os = "linux")]
-    #[error(
-        "A stale jail at {path} could not be examined, so whether a VMM is still running in it is unknown. It is left in place, and a jail that cannot be checked is not a jail that has been cleared."
-    )]
-    JailUnexaminable { path: Utf8PathBuf },
-
-    #[cfg(target_os = "linux")]
-    #[error(
         "The kernel narrowed the cgroup cpuset at {path}: asked for cpus {requested}, got {effective}. The benchmark would not have run on the cores it claims."
     )]
     CpusetNarrowed {
@@ -233,18 +221,34 @@ pub enum JailError {
 
     #[cfg(target_os = "linux")]
     #[error(
-        "Failed to remove the stale cgroup {path}: {source}. Stale cgroups accumulate under the parent, and one that cannot be removed usually means something is still running in it."
+        "{path} does not exist, so this kernel cannot kill a cgroup's processes. Sandboxed Jobs need Linux 5.14 or later: the runner ends each Job, and anything a runner left behind, through cgroup.kill. Upgrade the kernel, or run only Jobs with no sandbox."
     )]
-    StaleCgroup {
+    NoCgroupKill { path: Utf8PathBuf },
+
+    #[cfg(target_os = "linux")]
+    #[error(
+        "Failed to kill the processes in the cgroup {path}: {source}. The kill is a write to its cgroup.kill, which needs Linux 5.14 or later."
+    )]
+    KillCgroup {
         path: Utf8PathBuf,
         source: std::io::Error,
     },
 
     #[cfg(target_os = "linux")]
     #[error(
-        "The cgroup {cgroup} holds pid(s) {pids}: a process a runner left behind, or one some other tool placed there, is on the benchmark cores, so this Job fails rather than measure beside it."
+        "The cgroup {path} still held a process {timeout_secs} s after its kill, so something on the benchmark cores will not die."
     )]
-    CgroupOccupied { cgroup: Utf8PathBuf, pids: String },
+    CgroupNotEmptied {
+        path: Utf8PathBuf,
+        timeout_secs: u64,
+    },
+
+    #[cfg(target_os = "linux")]
+    #[error("Failed to remove the cgroup {path}: {source}")]
+    RemoveCgroup {
+        path: Utf8PathBuf,
+        source: std::io::Error,
+    },
 
     #[cfg(target_os = "linux")]
     #[error("Failed to open the jail chroot {path}: {source}")]

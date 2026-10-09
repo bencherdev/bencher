@@ -3,6 +3,7 @@
 //! Unix domain sockets.
 
 use std::fs;
+use std::os::fd::AsRawFd as _;
 use std::os::unix::fs::MetadataExt as _;
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -11,7 +12,6 @@ use nix::sched::{CloneFlags, unshare};
 use slog::{Logger, info};
 
 use crate::error::JailError;
-use crate::jail::lock::{flock_exclusive, flock_nonblocking};
 
 /// iproute2's `NETNS_RUN_DIR`, so operators see the namespace in
 /// `ip netns list`.
@@ -124,6 +124,33 @@ impl NetnsLock {
             source: e,
         })?;
         Ok(Self { _file: file })
+    }
+}
+
+fn flock_exclusive(file: &fs::File) -> std::io::Result<()> {
+    flock(file, libc::LOCK_EX)
+}
+
+fn flock_nonblocking(file: &fs::File) -> std::io::Result<()> {
+    flock(file, libc::LOCK_EX | libc::LOCK_NB)
+}
+
+fn flock(file: &fs::File, operation: libc::c_int) -> std::io::Result<()> {
+    loop {
+        #[expect(
+            unsafe_code,
+            reason = "flock has no std wrapper; the fd is owned and valid"
+        )]
+        // SAFETY: `file` is an open, owned descriptor for the duration of the
+        // call; flock does not touch memory.
+        let ret = unsafe { libc::flock(file.as_raw_fd(), operation) };
+        if ret == 0 {
+            return Ok(());
+        }
+        let err = std::io::Error::last_os_error();
+        if err.kind() != std::io::ErrorKind::Interrupted {
+            return Err(err);
+        }
     }
 }
 

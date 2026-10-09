@@ -45,7 +45,7 @@ so this directory needs real capacity for one jail.
 A host runs one Runner at a time, whatever its state directory:
 a Runner started as `root` holds the lock `/run/bencher/runner.lock` for as long as it runs,
 and a second one started as `root` exits at once with an error naming that lock; a Runner that is not `root` cannot open the lock and runs without it.
-A sandboxed Job still fails at once if a process is running in another Bencher cgroup on the host, such as one a Runner with another state directory left behind.
+When a Runner started as `root` comes up, and again before each sandboxed Job, it kills any process still running in a cgroup under `/sys/fs/cgroup/bencher`, such as the sandbox of a Runner killed mid-Job, whatever that Runner's state directory.
 A dedicated filesystem or a `tmpfs` mount is supported and recommended:
 it keeps that write traffic off the system disk,
 and a freshly created filesystem is accepted even though it arrives with a `lost+found` directory.

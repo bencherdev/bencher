@@ -19,43 +19,38 @@
 //! | `StateDir::refuse_unusable_mount`: the mount options cannot be read, or include `nodev` or `noexec` | fails the job |
 //! | `vm_execute` and `run_firecracker`: a cancel at a stage boundary before `InstanceStart` | fails the job before the next stage |
 //! | `StateDir::sweep`: a sweep that returns an error | fails the job |
-//! | `refuse_occupied_cgroups`: the cgroup base is absent | nothing to check |
-//! | `refuse_occupied_cgroups`: the base, an entry, or a `cgroup.procs` cannot be read or parsed | fails the job |
-//! | `refuse_occupied_cgroups`: a cgroup gone since it was listed | ignored: gone holds nothing |
-//! | `refuse_occupied_cgroups`, before the jail and again once the VMM is placed: another cgroup holds a process | fails the job, before the guest runs |
+//! | `prepare_at_startup`: the runner does not hold the lock | neither checks nor sweeps: a cgroup under the base may hold a root runner's Job |
+//! | `require_cgroup_kill`, at the startup of a runner that serves only sandboxed Jobs: no `cgroup.kill` in the base, or the base cannot be made | the runner exits, naming Linux 5.14 |
+//! | `require_cgroup_kill`, before each sandboxed Job: the same | fails the job, naming Linux 5.14 |
+//! | `reclaim_orphaned_cgroups`, at startup: any failure | warns: the next sandboxed job's sweep tries again |
+//! | `reclaim_orphaned_cgroups`: the cgroup base is absent | nothing to reclaim |
+//! | `reclaim_orphaned_cgroups`: the base, an entry, or the runner's own `/proc/self/cgroup` cannot be read | fails the sweep |
+//! | `reclaim_orphaned_cgroups`: a cgroup that holds the runner itself | skipped: its kill would end the runner |
+//! | `reclaim_orphaned_cgroups`: a cgroup whose name is not UTF-8 | killed like any other, through the path the listing gave |
+//! | `reclaim_orphaned_cgroups`: a cgroup gone before its kill | not counted or logged as reclaimed: something else removed it |
+//! | `reclaim_orphaned_cgroups`: one cgroup cannot be reclaimed | fails the sweep, once every other cgroup has been tried |
+//! | `kill_cgroup`: the cgroup is gone | ignored: that is the goal state |
+//! | `kill_cgroup`: `cgroup.kill` cannot be written, as before Linux 5.14 | an error: fails the sweep, and a teardown warns and leaves it to the next sweep |
+//! | `kill_cgroup`: `cgroup.events` cannot be read or has no `populated` line | the same: an unreadable cgroup is not an empty one |
+//! | `kill_cgroup`: the cgroup still holds a process when the bound runs out | the same |
+//! | `kill_cgroup`: `rmdir` of the emptied cgroup or a cgroup below it | the same |
 //! | `sweep_jails`: the jail parent is absent | nothing to sweep |
 //! | `sweep_jails`: the jail parent cannot be read | fails the job |
 //! | `sweep_jails`: an entry cannot be read | fails the job |
 //! | `sweep_jails`: an entry's kind cannot be read | fails the job: it may be a jail |
 //! | `sweep_jails`: a name that is not UTF-8 | ignored: every name here is a UUID this runner minted, so it is not ours |
 //! | `sweep_jails`: a name this runner could not have minted | ignored: same reason, and the id is joined into a chroot path and a cgroup path |
-//! | `sweep_jails`: the reap reports a live VMM | fails the job |
-//! | `sweep_jails`: the reap could not examine the jail | fails the job |
-//! | `sweep_jails`: removing the cgroup | fails the job, and the chroot is kept because its name is the cgroup's only handle |
 //! | `sweep_jails`: removing the chroot | left to the next job's sweep |
-//! | `reap_jailed_vmm`: the jail root is absent | clear: nothing can be chrooted into a directory that is not there |
-//! | `reap_jailed_vmm`: the jail root cannot be stat'ed | reported unexaminable, which fails the job |
-//! | `reap_jailed_vmm`: `/proc` cannot be listed | reported unexaminable |
-//! | `reap_jailed_vmm`: a `/proc/<pid>/root` cannot be read | ignored: that process is gone or is not this jail's |
-//! | `reap_jailed_vmm`: a jail's `cgroup.procs` cannot be read while scanning | reported unexaminable, which fails the job |
-//! | `reap_jailed_vmm`: a jail's `cgroup.procs` cannot be read while re-checking a pid | ignored: that process is gone or is not this jail's |
-//! | `reap_jailed_vmm`: pinning or signalling the VMM | reported still running, which fails the job |
-//! | `reap_jailed_vmm`: a VMM that will not exit | reported still running |
-//! | `reap_jailed_vmm`: the rescan bound runs out | reported still running |
-//! | `reap_jailed_vmm`: a `poll` of the pidfd that fails or answers nothing | reported still running, which fails the job |
-//! | `reap_jailed_vmm`: a `poll` of the pidfd a signal interrupts | retried: the signal reports an arrival in this process and says nothing about the one being watched |
+//! | `reclaim_orphaned_cgroups`: the orphan's chroot is in another state directory | left: only a runner with that state directory sweeps it, and it costs disk, not fidelity |
 //! | `JailDir::create`: the state tree fails its re-check at job time | fails the job: the chroot would otherwise be built through a component swapped since preparation |
 //! | `JailDir::create`: a step that fails once the tree exists | fails the job, and the guard that already took the tree reclaims it |
 //! | `JailDir` teardown: the chroot is already gone | ignored: that is the goal state |
 //! | `JailDir` teardown: removing the chroot | left to the next job's sweep |
-//! | `JailDir` teardown: this job's own cgroup survived | keeps the chroot, since its name is the cgroup's only handle |
-//! | `CgroupManager` teardown: the cgroup cannot be stat'ed | keeps the chroot for the next job's sweep: it is treated as still there |
-//! | `CgroupManager` teardown: `rmdir` of the cgroup | keeps the chroot for the next job's sweep |
+//! | `CgroupManager` teardown: `kill_cgroup` fails | warns: the next sweep finds the cgroup under the base |
 //! | `CgroupManager` creation: the cgroup cannot be stat'ed | fails the job: this decides whether `Drop` may remove it |
-//! | `cgroup_for_run`: the VM cgroup cannot be created, for any reason | fails the job: a VMM outside its cgroup runs unconfined, unmetered, and unseen by `refuse_occupied_cgroups` |
-//! | `cgroup_for_run`: the CPU layout offers no isolation | runs with no VM cgroup, which startup announced as CPU isolation disabled |
+//! | `cgroup_for_run`: the VM cgroup cannot be created, for any reason | fails the job: a VMM outside its cgroup runs unconfined, unmetered, and beyond the kill that reaps it |
+//! | `cgroup_for_run`: the CPU layout offers no isolation | runs in a VM cgroup with no cpuset, which startup announced as CPU isolation disabled |
 //! | `run_firecracker`: the VMM cannot be placed in its cgroup before exec, or is not in it after | fails the job |
-//! | `remove_stale_cgroup`: the cgroup cannot be stat'ed | fails the job: the caller deletes the chroot on an `Ok` here |
 //! | `StateDir::create`: the chroot tree cannot be stat'ed | fails the job: the 0700 chmod follows |
 //! | `StateDir::create`: taking a directory of the tree for root (the chown to 0:0) | fails the job; `EPERM` alone is ignored: it refuses exactly a process that never builds a jail, since root is checked by name before any of this runs |
 //! | `StateDir::new`: the root is a symlink proven the operator's own choice (parent root-only-writable, single hop to an absolute canonical target, that target's whole ancestry root-only-writable) | followed: no unprivileged user influenced or can race it, and the populated check still runs on the target |
@@ -94,40 +89,33 @@
 //!
 //! `CgroupManager::kill_all` is in neither table: the jailed path never calls
 //! it, and where the non-sandboxed path does, a failure is warned and any
-//! survivor is caught by the cgroup `rmdir` above.
+//! survivor is caught by the teardown's kill above.
 
 #[cfg(target_os = "linux")]
 mod cgroup;
 #[cfg(target_os = "linux")]
 pub mod chroot;
 #[cfg(target_os = "linux")]
-pub mod lock;
-#[cfg(target_os = "linux")]
 pub mod netns;
 #[cfg(target_os = "linux")]
 pub mod paths;
 #[cfg(target_os = "linux")]
-pub mod reap;
-#[cfg(target_os = "linux")]
 pub mod state;
 
-#[cfg(all(test, target_os = "linux"))]
-pub(crate) use cgroup::ScratchCgroup;
 #[cfg(target_os = "linux")]
 pub(crate) use cgroup::{
-    BENCHER_CGROUP_BASE, Controllers, effective_mems, ensure_controllers, refuse_occupied_cgroups,
+    BENCHER_CGROUP_BASE, Controllers, effective_mems, ensure_controllers, prepare_at_startup,
 };
 #[cfg(target_os = "linux")]
 pub use cgroup::{CgroupManager, Cpuset};
+#[cfg(all(test, target_os = "linux"))]
+pub(crate) use cgroup::{ScratchCgroup, prepare_at_startup_with};
 #[cfg(target_os = "linux")]
 pub use chroot::JailDir;
 #[cfg(target_os = "linux")]
 pub use paths::{ChrootPath, HostPath, JailFile, JailPaths, PinnedSocket, SocketPath};
 #[cfg(target_os = "linux")]
 pub use state::StateDir;
-
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 pub const DEFAULT_STATE_DIR: &str = "/var/lib/bencher-runner";
 
@@ -207,8 +195,8 @@ impl VmId {
         Self(format!("local-{}", uuid::Uuid::new_v4()))
     }
 
-    /// `None` for a name this runner could not have minted, since callers join
-    /// the id into both a chroot path and a `/sys/fs/cgroup` path.
+    /// `None` for a name this runner could not have minted, since the sweep
+    /// joins the id into a chroot path.
     #[cfg(target_os = "linux")]
     #[must_use]
     pub(crate) fn from_chroot_name(name: String) -> Option<Self> {
@@ -246,22 +234,6 @@ pub struct HostPreparation {
         expect(dead_code, reason = "host preparation is Linux-only")
     )]
     warned_jail_user: bool,
-}
-
-/// Set when this job's cgroup outlives teardown, so the chroot is kept: its
-/// name is the next sweep's only handle on that cgroup.
-#[derive(Debug, Clone, Default)]
-pub struct CgroupSurvived(Arc<AtomicBool>);
-
-impl CgroupSurvived {
-    pub fn set(&self) {
-        self.0.store(true, Ordering::SeqCst);
-    }
-
-    #[cfg(target_os = "linux")]
-    fn is_set(&self) -> bool {
-        self.0.load(Ordering::SeqCst)
-    }
 }
 
 impl HostPreparation {

@@ -63,6 +63,8 @@ struct Scenario {
     /// Kill the runner once its VMM is up, then rerun the image; `validate` sees
     /// the second run.
     orphan_then_rerun: bool,
+    /// The same, with the killed runner in a state directory of its own.
+    orphan_elsewhere_then_rerun: bool,
     /// Start a second runner, with its own state directory, once a first one's
     /// VMM is up; `validate` sees the second.
     second_runner: bool,
@@ -70,11 +72,17 @@ struct Scenario {
     /// waiting on it, long past its startup.
     held_by_runner_up: bool,
     /// Hold a stand-in process in another cgroup under the runner's base, as an
-    /// orphan in another state directory would.
+    /// orphan in another state directory would, placed while the runner is
+    /// stopped between its startup and its job's sweep.
     occupied_cgroup: bool,
-    /// The same stand-in, placed once the runner has built its jail and before
-    /// its VMM exists, so only the check after placement can see it.
-    occupied_mid_build: bool,
+    /// The same stand-in, in place before the runner starts.
+    occupied_at_start: bool,
+    /// The same stand-in, in place before a `runner up` that never gets a Job
+    /// starts.
+    occupied_at_up_start: bool,
+    /// Run the runner, then a `runner up`, in a mount namespace whose cgroup
+    /// root is an empty tmpfs, as on a kernel without `cgroup.kill`.
+    without_cgroup_kill: bool,
     unusable_state_dir: bool,
     /// Point the runner at a state directory on a `nodev` tmpfs.
     nodev_state_dir: bool,
@@ -103,10 +111,13 @@ impl Default for Scenario {
             probe: None,
             tuning: false,
             orphan_then_rerun: false,
+            orphan_elsewhere_then_rerun: false,
             second_runner: false,
             held_by_runner_up: false,
             occupied_cgroup: false,
-            occupied_mid_build: false,
+            occupied_at_start: false,
+            occupied_at_up_start: false,
+            without_cgroup_kill: false,
             unusable_state_dir: false,
             nodev_state_dir: false,
             stopped_past_timeout: false,
@@ -724,17 +735,21 @@ fn run_and_validate(
     } else if scenario.cancelled_while_preparing {
         run_runner_cancelled_while_preparing(image_path, &args, runner_bin)
     } else if scenario.orphan_then_rerun {
-        run_runner_after_orphan(image_path, &args, state_dir, runner_bin)
+        run_runner_after_orphan(image_path, &args, state_dir, state_dir, runner_bin)
+    } else if scenario.orphan_elsewhere_then_rerun {
+        run_runner_after_orphan_elsewhere(image_path, &args, state_dir, runner_bin)
     } else if scenario.second_runner {
         run_second_runner(image_path, &args, state_dir, runner_bin)
     } else if scenario.held_by_runner_up {
         run_runner_beside_runner_up(image_path, &args, runner_bin)
     } else if scenario.stopped_past_timeout {
         run_runner_stopped_past_timeout(image_path, &args, runner_bin)
-    } else if scenario.occupied_cgroup {
-        run_runner_beside_occupied_cgroup(image_path, &args, runner_bin)
-    } else if scenario.occupied_mid_build {
-        run_runner_occupied_mid_build(image_path, &args, runner_bin)
+    } else if scenario.occupied_at_up_start {
+        run_runner_up_beside_occupied_cgroup(runner_bin)
+    } else if scenario.without_cgroup_kill {
+        run_runner_without_cgroup_kill(image_path, &args, scenario.sandboxed, runner_bin)
+    } else if scenario.occupied_cgroup || scenario.occupied_at_start {
+        run_runner_beside_occupied_cgroup(image_path, &args, scenario.occupied_at_start, runner_bin)
     } else if let Some(probe) = scenario.probe {
         run_runner_with_probe(image_path, &args, probe, state_dir, runner_bin)
     } else if scenario.tuning {
@@ -2609,6 +2624,10 @@ CMD ["printf", "%s_%s\\n", "EVERY_JOB", "a7f3b2c9"]"#,
     scenarios
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "each scenario needs its configuration"
+)]
 fn jail_contention_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
@@ -2655,23 +2674,76 @@ CMD ["printf", "%s_%s\\n", "BESIDE_UP", "a7f3b2c9"]"#,
             ..Scenario::default()
         },
         Scenario {
-            name: "jail_occupied_cgroup_fails_the_job",
-            description: "A process in another Bencher cgroup fails the job rather than share its cores",
+            name: "jail_occupied_cgroup_is_killed",
+            description: "A process in another Bencher cgroup is killed, and its cgroup removed, before the job runs",
             dockerfile: r#"FROM busybox
 CMD ["printf", "%s_%s\\n", "JAIL_OCCUPIED", "a7f3b2c9"]"#,
             occupied_cgroup: true,
             extra_args: JAIL_ARGS,
-            validate: |output| assert_refused_before_guest(output, "JAIL_OCCUPIED_a7f3b2c9"),
+            validate: |output| assert_job_succeeded(output, "JAIL_OCCUPIED_a7f3b2c9"),
             ..Scenario::default()
         },
         Scenario {
-            name: "jail_occupied_mid_build_fails_the_job",
-            description: "A process that joins another Bencher cgroup while the jail is built fails the job before its guest runs",
+            name: "occupied_cgroup_is_killed_at_startup",
+            description: "A process in a Bencher cgroup is killed, and its cgroup removed, when a runner starts, even one that runs no sandbox",
+            dockerfile: r#"FROM busybox:musl
+CMD ["printf", "%s_%s\\n", "OCCUPIED_AT_START", "a7f3b2c9"]"#,
+            occupied_at_start: true,
+            sandboxed: false,
+            extra_args: &["--timeout", "60"],
+            validate: |output| assert_job_succeeded(output, "OCCUPIED_AT_START_a7f3b2c9"),
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "occupied_cgroup_is_killed_at_runner_up_startup",
+            description: "A process in a Bencher cgroup is killed, and its cgroup removed, when a `runner up` starts, before any Job",
             dockerfile: r#"FROM busybox
-CMD ["printf", "%s_%s\\n", "JAIL_OCCUPIED_MID", "a7f3b2c9"]"#,
-            occupied_mid_build: true,
+CMD ["true"]"#,
+            occupied_at_up_start: true,
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "startup_refuses_a_kernel_without_cgroup_kill",
+            description: "A sandboxed `runner run` or `runner up` on a kernel without cgroup.kill exits at startup, naming Linux 5.14",
+            dockerfile: r#"FROM busybox
+CMD ["printf", "%s_%s\\n", "NO_KILL", "a7f3b2c9"]"#,
+            without_cgroup_kill: true,
+            validate: |output| {
+                anyhow::ensure!(
+                    output.exit_code == 1
+                        && runner_error(output).is_some_and(|error| error.contains("Linux 5.14"))
+                        && records_with(&output.stderr, "Executing benchmark run")
+                            .next()
+                            .is_none()
+                        && guest_printed(output, "NO_KILL_a7f3b2c9") == 0,
+                    "Expected the runner to exit at startup naming Linux 5.14, before any Job, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "nosandbox_starts_on_a_kernel_without_cgroup_kill",
+            description: "A `runner run` or `runner up` that may run Jobs with no sandbox starts on a kernel without cgroup.kill",
+            dockerfile: r#"FROM busybox:musl
+CMD ["printf", "%s_%s\\n", "NO_KILL_HOST", "a7f3b2c9"]"#,
+            without_cgroup_kill: true,
+            sandboxed: false,
+            extra_args: &["--timeout", "60"],
+            validate: |output| assert_job_succeeded(output, "NO_KILL_HOST_a7f3b2c9"),
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "jail_sweep_kills_an_orphan_of_another_state_dir",
+            description: "A VMM orphaned by a runner with another state directory is killed by the next job",
+            dockerfile: r#"FROM busybox
+CMD ["printf", "%s_%s\\n", "JAIL_ELSEWHERE", "a7f3b2c9"]"#,
+            orphan_elsewhere_then_rerun: true,
             extra_args: JAIL_ARGS,
-            validate: |output| assert_refused_before_guest(output, "JAIL_OCCUPIED_MID_a7f3b2c9"),
+            validate: |output| assert_job_succeeded(output, "JAIL_ELSEWHERE_a7f3b2c9"),
             ..Scenario::default()
         },
     ]
@@ -3607,8 +3679,7 @@ fn check_cgroup_membership(vm_id: &str, pid: u32) -> Result<()> {
     let procs = fs::read_to_string(&procs_path).with_context(|| {
         format!(
             "No cgroup at {procs_path}, so cgroup placement was not exercised at all. \
-             The runner creates one whenever its CPU layout offers isolation, which needs \
-             two or more online CPUs and the cpuset controller delegated to this cgroup tree."
+             The runner creates one for every sandboxed run."
         )
     })?;
 
@@ -3625,17 +3696,21 @@ fn check_cgroup_membership(vm_id: &str, pid: u32) -> Result<()> {
 
 /// SIGKILL, because it never unwinds: `Drop` cannot reclaim the chroot, so only
 /// the sweep can.
+/// The orphan's runner uses `orphan_state`, which is `state_dir` itself or a
+/// state directory of its own.
 fn run_runner_after_orphan(
     image_path: &Utf8Path,
     args: &[&str],
     state_dir: &Utf8Path,
+    orphan_state: &Utf8Path,
     runner_bin: &Utf8Path,
 ) -> Result<ScenarioOutput> {
-    let parent = jail_parent(state_dir);
+    let parent = jail_parent(orphan_state);
     let orphan_image = build_test_image("jail_orphan", ORPHAN_DOCKERFILE)
         .context("Failed to build the orphan's image")?;
 
-    let mut child = spawn_runner(&orphan_image, args, runner_bin)?;
+    let orphan_args = with_state_dir(args, state_dir, orphan_state);
+    let mut child = spawn_runner(&orphan_image, &orphan_args, runner_bin)?;
 
     let readers = drain_output(&mut child);
 
@@ -3685,24 +3760,26 @@ fn run_runner_after_orphan(
         cgroup
             .try_exists()
             .with_context(|| format!("Failed to check whether {cgroup} was created"))?,
-        "No cgroup at {cgroup}, so the reap is only half exercised. The runner creates one whenever its CPU layout offers isolation."
+        "No cgroup at {cgroup}, so the kill is not exercised. The runner creates one for every sandboxed run."
     );
     println!("  orphaned jail {vm_id} (VMM pid {vmm_pid}), running a second job...");
 
     let output = run_runner(image_path, args, runner_bin)?;
 
-    if !reaped(&output.stderr, vmm_pid) {
+    if !reclaimed(&output.stderr, &cgroup) {
         bail!(
-            "The next job never reaped the orphaned VMM (pid {vmm_pid}).\nstdout: {}\nstderr: {}",
+            "The next job never killed the orphaned VMM (pid {vmm_pid}) through its cgroup {cgroup}.\nstdout: {}\nstderr: {}",
             output.stdout,
             output.stderr
         );
     }
 
     // `try_exists`, since `exists` reads an error as absence and would pass this.
-    if jail_root
-        .try_exists()
-        .with_context(|| format!("Failed to check whether {jail_root} survived"))?
+    // Only a runner with the orphan's state directory sweeps its chroot.
+    if orphan_state == state_dir
+        && jail_root
+            .try_exists()
+            .with_context(|| format!("Failed to check whether {jail_root} survived"))?
     {
         bail!("The orphaned chroot {jail_root} survived the next job, so it was never swept");
     }
@@ -3732,81 +3809,243 @@ fn stale_cgroup(vm_id: &str) -> Utf8PathBuf {
 const ORPHAN_DOCKERFILE: &str = r#"FROM busybox
 CMD ["sh", "-c", "echo JAIL_ORPHAN_a7f3b2c9 && sleep 600"]"#;
 
-fn reaped(stderr: &str, pid: u32) -> bool {
-    records_with(stderr, "Reaped orphaned VMM")
-        .any(|record| record.get("pid") == Some(&serde_json::Value::from(pid)))
+/// A record of the cgroup killed while it still held a process.
+fn reclaimed(stderr: &str, cgroup: &Utf8Path) -> bool {
+    records_with(stderr, "Reclaimed a stale cgroup").any(|record| {
+        text(&record, "cgroup") == Some(cgroup.as_str())
+            && record.get("populated") == Some(&serde_json::Value::Bool(true))
+    })
 }
 
-fn jail_root_of(jail_built: &Record) -> Result<Utf8PathBuf> {
-    text(jail_built, "jail_root")
-        .map(Utf8PathBuf::from)
-        .with_context(|| format!("The jail record names no jail root: {jail_built:?}"))
+/// The orphan's runner gets a state directory of its own, so only a sweep of
+/// every Bencher cgroup, not of its own chroots, can find it.
+fn run_runner_after_orphan_elsewhere(
+    image_path: &Utf8Path,
+    args: &[&str],
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let elsewhere = super::work_dir().join("orphan-state");
+    drop(fs::remove_dir_all(&elsewhere));
+    let output = run_runner_after_orphan(image_path, args, state_dir, &elsewhere, runner_bin);
+    // Whatever the outcome, since a red run leaves the orphan running there.
+    let stranded = reclaim_stranded_jails(&elsewhere);
+    drop(fs::remove_dir_all(&elsewhere));
+    let output = output?;
+    stranded.with_context(|| format!("Failed to reclaim what the orphan left in {elsewhere}"))?;
+    Ok(output)
+}
+
+/// `args` with its state directory swapped for `to`.
+fn with_state_dir<'a>(args: &[&'a str], from: &Utf8Path, to: &'a Utf8Path) -> Vec<&'a str> {
+    args.iter()
+        .map(|arg| {
+            if *arg == from.as_str() {
+                to.as_str()
+            } else {
+                arg
+            }
+        })
+        .collect()
 }
 
 const OCCUPIED_CGROUP: &str = "/sys/fs/cgroup/bencher/scenario-occupant";
 
-fn run_runner_beside_occupied_cgroup(
-    image_path: &Utf8Path,
-    args: &[&str],
-    runner_bin: &Utf8Path,
-) -> Result<ScenarioOutput> {
-    let occupant = Occupant::start()?;
-    let output = run_runner(image_path, args, runner_bin)?;
-    let pid = occupant.child.id().to_string();
+/// A daemon that never reaches its server never gets a Job, so only its startup
+/// sweep can reach the stand-in.
+fn run_runner_up_beside_occupied_cgroup(runner_bin: &Utf8Path) -> Result<ScenarioOutput> {
+    use std::os::unix::process::ExitStatusExt as _;
+
+    let mut occupant = Occupant::start()?;
+    let up_state = super::work_dir().join("up-state");
+    drop(fs::remove_dir_all(&up_state));
+    let mut up = spawn_runner_up(&up_state, runner_bin)?;
+    let mut streamed = StreamedOutput::start(&mut up);
+    let waiting = streamed.wait_for_record("Connecting to channel");
+    kill_pid(up.id(), libc::SIGKILL);
+    up.wait()?;
+    let (stdout, stderr) = streamed.join();
+    drop(fs::remove_dir_all(&up_state));
+    waiting.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
+    let ended = occupant.child.try_wait()?;
+    let cgroup_left = occupant.cgroup.try_exists();
     drop(occupant);
 
     anyhow::ensure!(
-        runner_error(&output)
-            .is_some_and(|error| error.contains(OCCUPIED_CGROUP) && error.contains(&pid)),
-        "Expected the refusal to name {OCCUPIED_CGROUP} and pid {pid}.\nstdout: {}\nstderr: {}",
-        output.stdout,
-        output.stderr
+        ended.and_then(|status| status.signal()) == Some(libc::SIGKILL)
+            && !cgroup_left.with_context(|| format!("Failed to check {OCCUPIED_CGROUP}"))?
+            && reclaimed(&stderr, Utf8Path::new(OCCUPIED_CGROUP)),
+        "Expected `runner up` to kill the stand-in (it ended with {ended:?}) and remove {OCCUPIED_CGROUP} as it started.\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: 0,
+    })
+}
+
+/// The cgroup root seen by the runner, as by a kernel without `cgroup.kill`:
+/// an empty tmpfs in a mount namespace of its own, so the host's is untouched.
+const NO_CGROUP_KILL: &str = "mount -t tmpfs no-cgroup-kill /sys/fs/cgroup && exec \"$0\" \"$@\"";
+
+/// `runner run` first, whose output `validate` sees, then `runner up`: a
+/// sandboxed one must exit at startup, and one that may run Jobs with no
+/// sandbox must reach its server.
+fn run_runner_without_cgroup_kill(
+    image_path: &Utf8Path,
+    args: &[&str],
+    sandboxed: bool,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let unshared = |runner_args: &[&str]| {
+        let mut command = Command::new("unshare");
+        command
+            .args([
+                "--mount",
+                "--propagation",
+                "private",
+                "--",
+                "sh",
+                "-c",
+                NO_CGROUP_KILL,
+            ])
+            .arg(runner_bin.as_str())
+            .args(runner_args)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped());
+        command
+    };
+    let run = unshared(&[&["run", "--image", image_path.as_str()], args].concat())
+        .output()
+        .context("Failed to run the runner without cgroup.kill")?;
+    let output = ScenarioOutput {
+        stdout: String::from_utf8_lossy(&run.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&run.stderr).into_owned(),
+        exit_code: run.status.code().unwrap_or(-1),
+    };
+
+    let up_state = super::work_dir().join("up-state");
+    drop(fs::remove_dir_all(&up_state));
+    let mut up_args = vec![
+        "up",
+        "--host",
+        "http://127.0.0.1:9",
+        "--runner",
+        "lock-probe",
+        "--key",
+        PROBE_KEY,
+        "--no-tuning",
+        "--state-dir",
+        up_state.as_str(),
+    ];
+    if !sandboxed {
+        up_args.push("--danger-allow-no-sandbox");
+    }
+    let mut up = unshared(&up_args).spawn()?;
+    let mut streamed = StreamedOutput::start(&mut up);
+    let started = if sandboxed {
+        let deadline = std::time::Instant::now() + UP_EXITS_WITHIN;
+        loop {
+            if let Some(status) = up.try_wait()? {
+                break Ok(status);
+            }
+            if std::time::Instant::now() >= deadline {
+                break Err(anyhow::anyhow!(
+                    "`runner up` was still running after {UP_EXITS_WITHIN:?}"
+                ));
+            }
+            std::thread::sleep(PROBE_INTERVAL);
+        }
+        .map(|status| status.code() == Some(1))
+    } else {
+        streamed
+            .wait_for_record("Connecting to channel")
+            .map(|_record| true)
+    };
+    drop(up.kill());
+    up.wait()?;
+    let (up_stdout, up_stderr) = streamed.join();
+    drop(fs::remove_dir_all(&up_state));
+    let refused = up_stderr.contains("Linux 5.14");
+    anyhow::ensure!(
+        started.with_context(|| format!("stdout: {up_stdout}\nstderr: {up_stderr}"))?
+            && refused == sandboxed,
+        "Expected `runner up` to {} on a kernel without cgroup.kill.\nstdout: {up_stdout}\nstderr: {up_stderr}",
+        if sandboxed {
+            "exit at startup naming Linux 5.14"
+        } else {
+            "start and reach its server"
+        }
     );
     Ok(output)
 }
 
-/// The stand-in joins after the check before the jail and before the VMM
-/// exists, so the refusal can only come from the check after placement.
-fn run_runner_occupied_mid_build(
+/// Placed at start, only the runner's startup sweep can reach the stand-in;
+/// placed mid-run, only its job's sweep can.
+fn run_runner_beside_occupied_cgroup(
     image_path: &Utf8Path,
     args: &[&str],
+    at_start: bool,
     runner_bin: &Utf8Path,
 ) -> Result<ScenarioOutput> {
+    use std::os::unix::process::ExitStatusExt as _;
+
+    let early = if at_start {
+        Some(Occupant::start()?)
+    } else {
+        None
+    };
     let mut child = spawn_runner(image_path, args, runner_bin)?;
     let mut streamed = StreamedOutput::start(&mut child);
-    let occupant = occupy_mid_build(&mut streamed);
-    let status = child.wait()?;
+    let occupant = match early {
+        Some(occupant) => Ok(occupant),
+        None => streamed
+            .wait_for_record("Writing init config")
+            .and_then(|_record| {
+                kill_pid(child.id(), libc::SIGSTOP);
+                let occupant = Occupant::start();
+                kill_pid(child.id(), libc::SIGCONT);
+                occupant
+            }),
+    };
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    let status = loop {
+        if let Some(status) = child.try_wait()? {
+            break Some(status);
+        }
+        if std::time::Instant::now() >= deadline {
+            kill_pid(child.id(), libc::SIGKILL);
+            child.wait()?;
+            break None;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    };
     let (stdout, stderr) = streamed.join();
-    let occupant = occupant.with_context(|| {
-        format!("No occupant was placed mid build.\nstdout: {stdout}\nstderr: {stderr}")
+    let mut occupant = occupant
+        .with_context(|| format!("No stand-in was placed.\nstdout: {stdout}\nstderr: {stderr}"))?;
+    let status = status.with_context(|| {
+        format!(
+            "The runner did not exit within {PROBE_TIMEOUT:?}.\nstdout: {stdout}\nstderr: {stderr}"
+        )
     })?;
-    let pid = occupant.child.id().to_string();
-    drop(occupant);
-
     let output = ScenarioOutput {
         stdout,
         stderr,
         exit_code: status.code().unwrap_or(-1),
     };
+    let ended = occupant.child.try_wait()?;
+    let cgroup_left = occupant.cgroup.try_exists();
+    drop(occupant);
+
     anyhow::ensure!(
-        runner_error(&output)
-            .is_some_and(|error| error.contains(OCCUPIED_CGROUP) && error.contains(&pid)),
-        "Expected the refusal to name {OCCUPIED_CGROUP} and pid {pid}.\nstdout: {}\nstderr: {}",
+        ended.and_then(|status| status.signal()) == Some(libc::SIGKILL)
+            && !cgroup_left.with_context(|| format!("Failed to check {OCCUPIED_CGROUP}"))?
+            && reclaimed(&output.stderr, Utf8Path::new(OCCUPIED_CGROUP)),
+        "Expected the runner to kill the stand-in (it ended with {ended:?}) and remove {OCCUPIED_CGROUP}.\nstdout: {}\nstderr: {}",
         output.stdout,
         output.stderr
     );
     Ok(output)
-}
-
-fn occupy_mid_build(streamed: &mut StreamedOutput) -> Result<Occupant> {
-    let jail_root = jail_root_of(&streamed.wait_for_record("Jail built")?)?;
-    let occupant = Occupant::start()?;
-    // A VMM not yet in its jail has not reached the check after placement.
-    anyhow::ensure!(
-        find_jailed_vmm(&jail_root)?.is_none(),
-        "The VMM was already up when the stand-in arrived, so the check after placement went untested"
-    );
-    Ok(occupant)
 }
 
 struct Occupant {

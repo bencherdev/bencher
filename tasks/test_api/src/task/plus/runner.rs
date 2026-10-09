@@ -391,8 +391,8 @@ impl Drop for ElevatedRunner {
         if let Some(reader) = self.reader.take() {
             let _join = reader.join();
         }
-        // The cgroups first: they are named by the jail directories in the
-        // state directory, which is removed next.
+        // The cgroups first, while the jail directories that name them are
+        // still there to find them by.
         remove_elevated_cgroups(&self.state_dir);
         remove_elevated_state_dir(&self.state_dir);
     }
@@ -423,8 +423,8 @@ fn elevated_state_dir(runner_bin: &std::ffi::OsStr) -> std::path::PathBuf {
         .join("test-api-runner-state")
 }
 
-/// Remove the cgroups a killed daemon leaves, which the runner's own sweep can
-/// never find once the state directory that names them is gone.
+/// Remove the cgroups a killed daemon leaves, rather than leave them on the host
+/// until the next root runner starts and sweeps them.
 fn remove_elevated_cgroups(state_dir: &std::path::Path) {
     let jail_parent = state_dir.join("jail").join("firecracker");
     let _status = Command::new("sudo")

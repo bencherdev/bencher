@@ -139,7 +139,9 @@ pub fn run_with_args(log: &Logger, args: &RunArgs) -> Result<(), RunnerError> {
     crate::signal::install_cancel_handlers();
 
     #[cfg(target_os = "linux")]
-    let _runner_lock = crate::runner_lock::RunnerLock::acquire(log)?;
+    let runner_lock = crate::runner_lock::RunnerLock::acquire(log)?;
+    #[cfg(target_os = "linux")]
+    crate::jail::prepare_at_startup(log, &runner_lock, args.sandbox.is_some())?;
 
     // Warn about host conditions that limit benchmark accuracy (Linux only)
     preflight::log_host_warnings(log);

@@ -45,7 +45,7 @@ daher braucht dieses Verzeichnis echte Kapazität für ein Jail.
 Auf einem Host läuft immer nur ein Runner, unabhängig von seinem Zustandsverzeichnis:
 Ein als `root` gestarteter Runner hält die Sperre `/run/bencher/runner.lock`, solange er läuft,
 und ein zweiter, als `root` gestarteter beendet sich sofort mit einem Fehler, der diese Sperre nennt; ein Runner, der nicht als `root` läuft, kann die Sperre nicht öffnen und läuft ohne sie.
-Ein Sandbox-Job schlägt weiterhin sofort fehl, wenn auf dem Host ein Prozess in einer anderen Bencher-Cgroup läuft, etwa einer, den ein Runner mit einem anderen Zustandsverzeichnis zurückgelassen hat.
+Beim Start und erneut vor jedem Sandbox-Job beendet ein als `root` gestarteter Runner jeden Prozess, der noch in einer Cgroup unter `/sys/fs/cgroup/bencher` läuft, etwa die Sandbox eines Runners, der mitten in einem Job beendet wurde, unabhängig vom Zustandsverzeichnis dieses Runners.
 Ein eigenes Dateisystem oder ein `tmpfs`-Mount wird unterstützt und empfohlen:
 es hält diese Schreiblast von der Systemplatte fern,
 und ein neu erstelltes Dateisystem wird akzeptiert, auch wenn es ein `lost+found`-Verzeichnis mitbringt.

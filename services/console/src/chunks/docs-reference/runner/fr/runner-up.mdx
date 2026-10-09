@@ -48,7 +48,7 @@ ce répertoire a donc besoin d'une capacité réelle pour une prison.
 Un hôte n'exécute qu'un Runner à la fois, quel que soit son répertoire d'état :
 un Runner démarré en tant que `root` détient le verrou `/run/bencher/runner.lock` tant qu'il s'exécute,
 et un second démarré en tant que `root` se termine immédiatement avec une erreur qui nomme ce verrou ; un Runner qui n'est pas `root` ne peut pas ouvrir le verrou et s'exécute sans lui.
-Un Job avec bac à sable échoue toujours immédiatement si un processus s'exécute dans un autre cgroup Bencher sur l'hôte, par exemple un processus laissé par un Runner ayant un autre répertoire d'état.
+Au démarrage, puis avant chaque Job avec bac à sable, un Runner démarré en tant que `root` tue tout processus encore en cours d'exécution dans un cgroup sous `/sys/fs/cgroup/bencher`, comme le bac à sable d'un Runner tué en plein Job, quel que soit le répertoire d'état de ce Runner.
 Un système de fichiers dédié ou un montage `tmpfs` est pris en charge et recommandé :
 il maintient cette charge d'écriture hors du disque système,
 et un système de fichiers fraîchement créé est accepté même s'il arrive avec un répertoire `lost+found`.

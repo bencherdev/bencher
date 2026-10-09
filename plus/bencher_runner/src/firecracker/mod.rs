@@ -25,7 +25,7 @@ use slog::{Logger, info, warn};
 
 use crate::JobDeadline;
 use crate::cpu::CpuLayout;
-use crate::jail::{CgroupManager, CgroupSurvived, Cpuset, JailPaths, JailUser, VmId};
+use crate::jail::{CgroupManager, Cpuset, JailPaths, JailUser, VmId};
 use crate::metrics::{self, RunMetrics};
 
 pub use error::FirecrackerError;
@@ -61,9 +61,6 @@ pub struct FirecrackerJobConfig {
     pub chroot_base_dir: Utf8PathBuf,
     /// Handle of the empty network namespace the VMM joins.
     pub netns: Utf8PathBuf,
-    /// Shared with the chroot guard of the same id, so a cgroup this job cannot
-    /// remove keeps the chroot a later sweep finds it by.
-    pub cgroup_survived: CgroupSurvived,
     /// Number of vCPUs.
     pub vcpus: u8,
     /// Memory size in MiB.
@@ -87,7 +84,7 @@ pub struct FirecrackerJobConfig {
 /// Run a benchmark inside a jailed Firecracker microVM.
 ///
 /// This function:
-/// 1. Optionally creates a cgroup with cpuset for CPU isolation
+/// 1. Creates the VM's cgroup, with a cpuset when the layout isolates cores
 /// 2. Starts Firecracker under the jailer, placed in the cgroup before exec
 /// 3. Verifies the placement landed
 /// 4. Configures the VM via REST API
@@ -115,9 +112,9 @@ pub fn run_firecracker(
 
     let start_time = Instant::now();
 
-    // Step 0: Create cgroup with cpuset if CPU layout is provided
+    // Step 0: Create the cgroup, which every jailed process is born in
     let cgroup = cgroup_for_run(log, config.cpu_layout.as_ref(), || {
-        CgroupManager::new(log, vm_id, config.cgroup_survived.clone())
+        CgroupManager::new(log, vm_id)
     })?;
 
     // Step 1: Start the jailed Firecracker process.
@@ -127,7 +124,7 @@ pub fn run_firecracker(
         .as_ref()
         .map(|l| l.housekeeping.clone())
         .unwrap_or_default();
-    let cgroup_procs = placement_target(cgroup.as_ref())?;
+    let cgroup_procs = placement_target(&cgroup)?;
     let mut fc_process = FirecrackerProcess::start(JailedSpawn {
         log: log.clone(),
         jailer_bin: &config.jailer_bin,
@@ -139,15 +136,12 @@ pub fn run_firecracker(
         api_socket: jail.api_socket(),
         log_level: config.log_level.as_str(),
         housekeeping_cores,
-        cgroup_procs,
+        cgroup_procs: Some(cgroup_procs),
     })?;
 
     // Step 1b: Verify the placement landed, which is race free because `spawn`
     // returns only after the exec, and catches a write to the wrong cgroup.
-    verify_placement(cgroup.as_ref(), fc_process.pid())?;
-    // Placed now, so a process that joined another Bencher cgroup while the
-    // jail was built is seen before the guest runs.
-    crate::jail::refuse_occupied_cgroups(Some(vm_id)).map_err(FirecrackerError::CoresOccupied)?;
+    verify_placement(&cgroup, fc_process.pid())?;
     refuse_cancelled(cancel_flag)?;
 
     let client = fc_process.client();
@@ -226,9 +220,7 @@ pub fn run_firecracker(
                 wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
                 timed_out: matches!(e, FirecrackerError::Timeout(_)),
                 transport: "vsock".to_owned(),
-                cgroup: cgroup
-                    .as_ref()
-                    .and_then(|cg| metrics::read_cgroup_metrics(cg.path())),
+                cgroup: metrics::read_cgroup_metrics(cgroup.path()),
             };
             info!(log, "Run metrics"; &run_metrics);
             fc_process.kill_after_grace_period(Duration::from_secs(2));
@@ -242,9 +234,7 @@ pub fn run_firecracker(
         wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
         timed_out: false,
         transport: "vsock".to_owned(),
-        cgroup: cgroup
-            .as_ref()
-            .and_then(|cg| metrics::read_cgroup_metrics(cg.path())),
+        cgroup: metrics::read_cgroup_metrics(cgroup.path()),
     };
     info!(log, "Run metrics"; &run_metrics);
 
@@ -272,21 +262,22 @@ pub fn run_firecracker(
     })
 }
 
-/// A layout with isolation gets the VMM a confined cgroup or fails the job,
-/// per the failure policy table in [`crate::jail`].
+/// Every run gets a cgroup or fails the job, since placement and the kill need
+/// no controller, and a layout with isolation confines it too, per the failure
+/// policy table in [`crate::jail`].
 fn cgroup_for_run<F>(
     log: &Logger,
     layout: Option<&CpuLayout>,
     create: F,
-) -> Result<Option<CgroupManager>, FirecrackerError>
+) -> Result<CgroupManager, FirecrackerError>
 where
     F: FnOnce() -> Result<CgroupManager, crate::RunnerError>,
 {
-    let Some(layout) = layout.filter(|layout| layout.has_isolation()) else {
-        return Ok(None);
-    };
     let cgroup = create().map_err(|e| FirecrackerError::Cgroup(Box::new(e)))?;
-    confine(log, cgroup, layout).map(Some)
+    match layout.filter(|layout| layout.has_isolation()) {
+        Some(layout) => confine(log, cgroup, layout),
+        None => Ok(cgroup),
+    }
 }
 
 /// Stop at a stage boundary once the job is cancelled, before anything later is
@@ -327,19 +318,13 @@ fn confine(
     Ok(cgroup)
 }
 
-fn placement_target(
-    cgroup: Option<&CgroupManager>,
-) -> Result<Option<std::fs::File>, FirecrackerError> {
+fn placement_target(cgroup: &CgroupManager) -> Result<std::fs::File, FirecrackerError> {
     cgroup
-        .map(CgroupManager::open_procs)
-        .transpose()
+        .open_procs()
         .map_err(FirecrackerError::CgroupPlacement)
 }
 
-fn verify_placement(cgroup: Option<&CgroupManager>, pid: u32) -> Result<(), FirecrackerError> {
-    let Some(cgroup) = cgroup else {
-        return Ok(());
-    };
+fn verify_placement(cgroup: &CgroupManager, pid: u32) -> Result<(), FirecrackerError> {
     let placed = cgroup
         .contains_pid(pid)
         .map_err(FirecrackerError::CgroupPlacement)?;
@@ -377,8 +362,8 @@ mod tests {
 
     #[test]
     fn a_vm_cgroup_that_cannot_be_created_fails_the_job() {
-        // A VMM outside its cgroup runs unconfined, unmetered, and unseen by the
-        // occupancy check, so no reason to lack one degrades.
+        // A VMM outside its cgroup runs unconfined, unmetered, and beyond the
+        // kill that reaps it, so no reason to lack one degrades.
         let unwritable = || {
             Err(JailError::CreateCgroup {
                 path: Utf8PathBuf::from("/sys/fs/cgroup/bencher/vm-1"),
@@ -408,11 +393,28 @@ mod tests {
         })
         .unwrap();
 
-        assert_eq!(
-            cgroup.map(|cg| cg.path().to_owned()),
-            Some(root),
-            "a cgroup that was created is kept"
-        );
+        assert_eq!(cgroup.path(), root, "a cgroup that was created is kept");
+    }
+
+    #[test]
+    fn a_run_whose_layout_isolates_nothing_still_gets_its_cgroup() {
+        // Kills a run with no cgroup on a one-core layout, or on `runner run`'s
+        // missing one, whose VMM the kill could then never reach.
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        for layout in [Some(CpuLayout::with_core_count(1)), None] {
+            let cgroup = cgroup_for_run(&discard(), layout.as_ref(), || {
+                Ok(CgroupManager::detached(root.clone()))
+            })
+            .unwrap();
+
+            assert_eq!(cgroup.path(), root, "{layout:?}");
+            assert!(
+                !root.join("memory.swap.max").exists(),
+                "a layout with no isolation is not confined: {layout:?}"
+            );
+        }
     }
 
     #[test]
@@ -437,27 +439,13 @@ mod tests {
     }
 
     #[test]
-    fn no_cgroup_skips_placement() {
-        // Prevents a host with no cgroup from failing the job at placement.
-        assert!(
-            placement_target(None).unwrap().is_none(),
-            "no cgroup means nothing to place through"
-        );
-    }
-
-    #[test]
-    fn no_cgroup_skips_verification() {
-        verify_placement(None, 1).unwrap();
-    }
-
-    #[test]
     fn a_cgroup_without_the_pid_aborts() {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         std::fs::write(root.join("cgroup.procs"), "999\n").unwrap();
         let cgroup = CgroupManager::detached(root);
 
-        let err = verify_placement(Some(&cgroup), 123).unwrap_err();
+        let err = verify_placement(&cgroup, 123).unwrap_err();
 
         assert!(
             matches!(err, FirecrackerError::CgroupMissingPid { pid: 123, .. }),
@@ -472,7 +460,7 @@ mod tests {
         std::fs::write(root.join("cgroup.procs"), "123\n456\n").unwrap();
         let cgroup = CgroupManager::detached(root);
 
-        verify_placement(Some(&cgroup), 123).unwrap();
+        verify_placement(&cgroup, 123).unwrap();
     }
 
     #[test]

@@ -8,9 +8,7 @@ use slog::{Logger, info};
 use crate::JobDeadline;
 use crate::error::RunnerError;
 use crate::firecracker::refuse_cancelled;
-use crate::jail::{
-    CgroupSurvived, HostPreparation, JailDir, JailPaths, StateDir, VmId, chroot, netns, state,
-};
+use crate::jail::{HostPreparation, JailDir, JailPaths, StateDir, VmId, chroot, netns, state};
 use crate::run::{RunOutput, prepare_oci_workspace};
 
 /// Execute a single benchmark run in a jailed Firecracker microVM, which gets
@@ -67,8 +65,6 @@ pub fn vm_execute(
     // Every job, not once per process, so a teardown this runner could not
     // finish is retried.
     state_dir.sweep(log)?;
-    // An orphan in another state directory is beyond the sweep.
-    crate::jail::refuse_occupied_cgroups(None)?;
     refuse_cancelled(cancel_flag)?;
 
     // Rebuilt per job rather than once per daemon lifetime: the handle lives
@@ -78,10 +74,7 @@ pub fn vm_execute(
     // Minted before any artifact exists, because the jail root is a function of
     // the VM id and the artifacts are built inside it.
     let vm_id = VmId::new();
-    // Shared by this job's cgroup and chroot: a cgroup that outlives its
-    // teardown keeps the chroot that names it.
-    let cgroup_survived = CgroupSurvived::default();
-    let jail_dir = JailDir::create(log, &state_dir, &vm_id, cgroup_survived.clone())?;
+    let jail_dir = JailDir::create(log, &state_dir, &vm_id)?;
     let jail = JailPaths::new(jail_dir.root())?;
     info!(log, "Jail built"; "jail_root" => jail.root().as_str());
 
@@ -112,16 +105,8 @@ pub fn vm_execute(
     chroot::grant_jail_read(kernel_dest)?;
 
     // Step 7-8: Build Firecracker config and run the microVM
-    let fc_config = build_firecracker_config(
-        log,
-        config,
-        work_dir,
-        vm_id,
-        &state_dir,
-        jail,
-        netns,
-        cgroup_survived,
-    )?;
+    let fc_config =
+        build_firecracker_config(log, config, work_dir, vm_id, &state_dir, jail, netns)?;
 
     refuse_cancelled(cancel_flag)?;
     let run_output = run_firecracker(log, &fc_config, cancel_flag, deadline)?;
@@ -130,10 +115,6 @@ pub fn vm_execute(
 }
 
 /// Build the Firecracker job config: stage the binaries and convert types.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "each argument is one part of the VM's config"
-)]
 fn build_firecracker_config(
     log: &Logger,
     config: &crate::Config,
@@ -142,7 +123,6 @@ fn build_firecracker_config(
     state_dir: &StateDir,
     jail: JailPaths,
     netns: Utf8PathBuf,
-    cgroup_survived: CgroupSurvived,
 ) -> Result<crate::firecracker::FirecrackerJobConfig, RunnerError> {
     // Staged outside the jail under a fixed name: the jailer copies
     // `--exec-file` in itself, rejects a hardlinked one, and derives the chroot
@@ -188,7 +168,6 @@ fn build_firecracker_config(
         jail_user: config.jail_user,
         chroot_base_dir: state_dir.chroot_base(),
         netns,
-        cgroup_survived,
         vcpus,
         memory_mib,
         boot_args: config.kernel_cmdline.clone(),

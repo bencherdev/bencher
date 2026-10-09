@@ -94,8 +94,13 @@ impl Up {
         );
 
         #[cfg(target_os = "linux")]
-        let _runner_lock =
+        let runner_lock =
             crate::runner_lock::RunnerLock::acquire(log).map_err(crate::RunnerError::from)?;
+        #[cfg(target_os = "linux")]
+        // A runner that may run Jobs with no sandbox still serves those on a
+        // kernel without `cgroup.kill`.
+        crate::jail::prepare_at_startup(log, &runner_lock, !self.config.allow_no_sandbox)
+            .map_err(crate::RunnerError::from)?;
 
         // Warn about host conditions that limit benchmark accuracy (Linux only)
         preflight::log_host_warnings(log);
