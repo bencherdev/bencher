@@ -190,6 +190,7 @@ impl Seed {
         report_history(&api, &hashbrown, token).await?;
         key_report(&api, &hashbrown, token).await?;
         check_alerts(&api, &hashbrown, token).await?;
+        pins(&api, &hashbrown, token).await?;
 
         Ok(Self {
             api_url: api_url.to_owned(),
@@ -459,6 +460,69 @@ async fn check_alerts(api: &Api, project: &JsonProject, token: &str) -> anyhow::
         "Expected one dismissed alert beside it, found {}",
         all.len()
     );
+    Ok(())
+}
+
+/// Three pins on Plots, top first, each at its own window: the first holds the active alert.
+async fn pins(api: &Api, project: &JsonProject, token: &str) -> anyhow::Result<()> {
+    let uuid = async |dimension: &str, field: &str, value: &str| -> anyhow::Result<String> {
+        let path = format!("/v0/projects/{}/{dimension}?per_page=64", project.slug);
+        let list: Vec<serde_json::Value> = api.get(&path, token).await?;
+        list.iter()
+            .find(|entry| entry.get(field).and_then(serde_json::Value::as_str) == Some(value))
+            .and_then(|entry| entry.get("uuid").and_then(serde_json::Value::as_str))
+            .map(ToOwned::to_owned)
+            .with_context(|| format!("No {dimension} with {field} {value}"))
+    };
+    let branch = uuid("branches", "name", MAIN).await?;
+    let testbed = uuid("testbeds", "name", TESTBED).await?;
+    let latency = uuid("measures", "slug", "latency").await?;
+    let throughput = uuid("measures", "slug", "throughput").await?;
+    let path = format!("/v0/projects/{}/plots", project.slug);
+    // Each pin goes to the top, so the last pinned is first.
+    for (title, benchmark, parameters, measures, days) in [
+        (
+            "crc32c, Latency and Throughput on main",
+            "crc32c",
+            None,
+            vec![latency.clone(), throughput],
+            92,
+        ),
+        (
+            "xxh3, Latency on main",
+            "xxh3",
+            None,
+            vec![latency.clone()],
+            7,
+        ),
+        (
+            "blake3 input_bytes=65536 threads=1, Latency on main",
+            ALERTING.benchmark,
+            Some(serde_json::json!([{ "input_bytes": KIB_64, "threads": 1 }])),
+            vec![latency.clone()],
+            28,
+        ),
+    ] {
+        let mut body = serde_json::json!({
+            "title": title,
+            "lower_value": false,
+            "upper_value": false,
+            "lower_boundary": false,
+            "upper_boundary": false,
+            "x_axis": "date_time",
+            "layout": "dual",
+            "window": days * 24 * 60 * 60,
+            "branches": [branch],
+            "testbeds": [testbed],
+            "benchmarks": [uuid("benchmarks", "name", benchmark).await?],
+            "measures": measures,
+            "metrics": ["value"],
+        });
+        if let (Some(parameters), Some(object)) = (parameters, body.as_object_mut()) {
+            object.insert("parameters".to_owned(), parameters);
+        }
+        let _plot: serde_json::Value = api.send(Method::Post, &path, token, &body).await?;
+    }
     Ok(())
 }
 

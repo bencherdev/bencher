@@ -1,0 +1,265 @@
+/* Plots: pinned plots as tiles, a grid on wide screens and one column on narrow ones. */
+.plots-head {
+	display: flex;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+.plots-head .ph-title {
+	display: flex;
+	flex: 1 1 360px;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+.plots-head .btnrow {
+	min-height: 36px;
+	align-items: center;
+}
+
+.plots-window {
+	min-height: 36px;
+}
+
+.plots-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(540px, 100%), 1fr));
+	gap: 12px;
+}
+
+/* A tile holds the height of its largest key, so nothing moves as lines arrive. */
+.plots-tile {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 425px;
+	overflow: hidden;
+	border: var(--border-width) solid var(--color-border-emphasized);
+	border-radius: var(--radius-container);
+	background: var(--color-background-card);
+}
+.plots-tile.plots-preview {
+	border-color: var(--color-stroke-accent);
+	box-shadow: inset 0 0 0 1px var(--color-stroke-accent);
+}
+.plots-thead {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 10px;
+	height: 44px;
+	padding: 0 6px 0 14px;
+	border-bottom: var(--border-width) solid var(--color-border);
+}
+.plots-ttl {
+	min-width: 0;
+	margin: 0;
+	overflow: hidden;
+	font-size: 13.5px;
+	font-weight: var(--font-weight-bold);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.plots-meta {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	color: var(--color-text-muted);
+	font-size: 12px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.plots-alert {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: var(--radius-full);
+	background: var(--color-error);
+}
+.plots-more {
+	position: relative;
+	flex: none;
+}
+.plots-dots {
+	display: inline-grid;
+	place-items: center;
+	width: 32px;
+	height: 32px;
+	border: 0;
+	border-radius: var(--radius-inner);
+	background: transparent;
+	color: var(--color-text-muted);
+	cursor: pointer;
+}
+.plots-dots:hover {
+	background: var(--color-overlay-hover);
+	color: var(--color-text-primary);
+}
+.plots-tfoot {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 8px;
+	height: 33px;
+	margin-top: auto;
+	padding: 0 10px 0 14px;
+	border-top: var(--border-width) solid var(--color-border);
+	color: var(--color-text-muted);
+	font-size: 12px;
+}
+.plots-tfoot .dotsep {
+	margin: 0 -3px;
+}
+
+@media (max-width: 767px) {
+	.plots-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.plots-tile {
+		min-height: 536px;
+	}
+	.plots-dots {
+		width: 44px;
+		height: 44px;
+	}
+	.plots-tfoot {
+		height: 45px;
+	}
+	.plots-tfoot .lnk {
+		min-height: 44px;
+	}
+}
+
+/* The pin dialog: the preview beside the fields, stacked on narrow screens. */
+.plots-dbody {
+	display: grid;
+	grid-template-columns: 360px minmax(0, 1fr);
+	gap: 18px;
+}
+.plots-dprev,
+.plots-dfields {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
+}
+.plots-dprev {
+	gap: 6px;
+}
+.plots-drow {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.plots-count {
+	width: 80px;
+}
+.plots-kv {
+	margin: 0;
+}
+.plots-dfail {
+	margin: 0;
+	padding: 0 18px 12px;
+}
+
+@media (max-width: 767px) {
+	.plots-dbody {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.plots-confirm {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 14px;
+	margin: 0;
+	padding: 8px 12px;
+	border: var(--border-width) solid var(--color-success);
+	border-radius: var(--radius-element);
+	background: var(--color-success-muted);
+	font-size: 12.5px;
+}
+.plots-confirm svg {
+	color: var(--color-text-success);
+}
+.plots-confirm .grow {
+	flex: 1 1 240px;
+	min-width: 0;
+}
+
+.plots-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 48px 24px;
+	text-align: center;
+}
+.plots-empty h2 {
+	margin: 0;
+	font-size: 18px;
+}
+.plots-empty p {
+	max-width: 56ch;
+	margin: 0;
+	color: var(--color-text-muted);
+}
+
+.plots-reorder {
+	padding: 0;
+}
+.plots-reo-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: 44px;
+	padding: 0 14px;
+	border-bottom: var(--border-width) solid var(--color-border);
+}
+.plots-reo-head h2 {
+	margin: 0;
+}
+.plots-reo {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.plots-reo li {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 64px;
+	padding: 8px 8px 8px 14px;
+	border-top: var(--border-width) solid var(--color-border);
+}
+.plots-reo li:first-child {
+	border-top: 0;
+}
+.plots-num {
+	width: 2ch;
+	font-family: var(--font-family-code);
+	font-size: 12px;
+}
+.plots-reo-name {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+.plots-reo-name b {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.plots-status {
+	min-height: 1.5em;
+	margin: 0;
+	padding: 8px 14px;
+	border-top: var(--border-width) solid var(--color-border);
+}
+.plots-frame {
+	flex: 1;
+}

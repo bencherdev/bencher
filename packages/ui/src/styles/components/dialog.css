@@ -16,6 +16,10 @@
 		overflow: hidden;
 	}
 
+	.ui-dialog[data-size="wide"] {
+		width: min(880px, calc(100% - var(--spacing-8)));
+	}
+
 	.ui-dialog:not([open]) {
 		display: none;
 	}

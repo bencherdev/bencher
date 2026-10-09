@@ -24,6 +24,7 @@ const pinned = (canPin: boolean) => {
 				source={undefined}
 				ready={true}
 				canPin={canPin}
+				full={false}
 				hasLines={true}
 				working={false}
 				shared={false}
@@ -31,6 +32,7 @@ const pinned = (canPin: boolean) => {
 				onShare={() => {}}
 				onPin={() => {}}
 				onUndo={() => {}}
+				onEdit={() => {}}
 				onDiscard={() => {}}
 				onSave={() => {}}
 				onSaveNew={() => {}}

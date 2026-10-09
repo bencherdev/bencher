@@ -59,6 +59,23 @@
 		background: var(--color-accent-muted);
 	}
 
+	.ui-menu-item:disabled {
+		background: transparent;
+		color: var(--color-text-faint);
+		cursor: default;
+	}
+
+	.ui-menu-item[data-tone="danger"] {
+		color: var(--color-text-error);
+	}
+
+	.ui-menu-sep {
+		flex: none;
+		margin: 4px 0;
+		border: 0;
+		border-top: var(--border-width) solid var(--color-border);
+	}
+
 	.ui-menu-item:focus-visible {
 		outline-offset: -2px;
 	}

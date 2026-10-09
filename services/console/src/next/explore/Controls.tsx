@@ -1,16 +1,9 @@
 import Segmented from "@bencherdev/ui/Segmented";
-import TextInput from "@bencherdev/ui/TextInput";
-import { Match, Show, Switch, createUniqueId } from "solid-js";
-import type { ExploreQuery, QueryWindow } from "../query/query";
+import { Match, Show, Switch } from "solid-js";
+import type { ExploreQuery } from "../query/query";
+import CustomRange from "./CustomRange";
 import { LINE_CAP, lineCapWarning, measuresLayout } from "./layout";
-import {
-	PRESETS,
-	type WindowChoice,
-	customRange,
-	dateValue,
-	pickWindow,
-	windowChoice,
-} from "./window";
+import { PRESETS, type WindowChoice, pickWindow, windowChoice } from "./window";
 
 const X_AXES = [
 	{ value: "date", label: "Report date" },
@@ -141,50 +134,3 @@ const Controls = (props: {
 };
 
 export default Controls;
-
-const CustomRange = (props: {
-	window: QueryWindow & { start: number };
-	now: number;
-	onWindow: (window: QueryWindow) => void;
-}) => {
-	const from = createUniqueId();
-	const to = createUniqueId();
-	const end = () => props.window.end ?? props.now;
-	const change = (first: string, last: string) => {
-		const window = customRange(first, last);
-		if (window) {
-			props.onWindow(window);
-		}
-	};
-	return (
-		<fieldset class="ex-range">
-			<legend class="sr-only">Custom window</legend>
-			<label class="eyebrow" for={from}>
-				From
-			</label>
-			<TextInput
-				id={from}
-				type="date"
-				size="sm"
-				value={dateValue(props.window.start)}
-				max={dateValue(end())}
-				onChange={(event) =>
-					change(event.currentTarget.value, dateValue(end()))
-				}
-			/>
-			<label class="eyebrow" for={to}>
-				To
-			</label>
-			<TextInput
-				id={to}
-				type="date"
-				size="sm"
-				value={dateValue(end())}
-				min={dateValue(props.window.start)}
-				onChange={(event) =>
-					change(dateValue(props.window.start), event.currentTarget.value)
-				}
-			/>
-		</fieldset>
-	);
-};

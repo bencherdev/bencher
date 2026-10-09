@@ -340,7 +340,8 @@ const Plot = (props: PlotProps) => {
 		onCleanup(() => observer.disconnect());
 	});
 
-	const keyMax = () => (narrow() ? NARROW_KEY_MAX : KEY_MAX[size()]);
+	const keyMax = () =>
+		narrow() ? Math.min(NARROW_KEY_MAX, KEY_MAX[size()]) : KEY_MAX[size()];
 	const alerts = () =>
 		lines().filter((line, index) => line.alerting && !hidden().has(index))
 			.length;

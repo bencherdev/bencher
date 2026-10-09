@@ -56,6 +56,8 @@ const Header = (props: {
 	ready: boolean;
 	/** The reader may pin and save. */
 	canPin: boolean;
+	/** The project keeps as many pins as it may. */
+	full: boolean;
 	hasLines: boolean;
 	working: boolean;
 	shared: boolean;
@@ -63,6 +65,7 @@ const Header = (props: {
 	onShare: () => void;
 	onPin: () => void;
 	onUndo: () => void;
+	onEdit: () => void;
 	onDiscard: () => void;
 	onSave: () => void;
 	onSaveNew: () => void;
@@ -116,11 +119,11 @@ const Header = (props: {
 										<Button
 											size="sm"
 											variant="primary"
-											disabled={!props.hasLines || props.working}
+											disabled={!props.hasLines || props.working || props.full}
 											onClick={() => props.onPin()}
 										>
 											<PinIcon />
-											Pin to Plots
+											{props.full ? "Plots is full" : "Pin to Plots"}
 										</Button>
 									</Show>
 								</>
@@ -136,7 +139,7 @@ const Header = (props: {
 								</Button>
 								<Button
 									size="sm"
-									disabled={!props.hasLines || props.working}
+									disabled={!props.hasLines || props.working || props.full}
 									onClick={() => props.onSaveNew()}
 								>
 									Save as new
@@ -178,6 +181,9 @@ const Header = (props: {
 						</span>
 						<button type="button" class="lnk" onClick={() => props.onUndo()}>
 							Undo
+						</button>
+						<button type="button" class="lnk" onClick={() => props.onEdit()}>
+							Edit
 						</button>
 						<a class="lnk" href={props.plotsHref}>
 							Open Plots
