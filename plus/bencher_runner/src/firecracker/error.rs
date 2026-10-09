@@ -70,7 +70,7 @@ pub enum FirecrackerError {
     SocketNotReady(std::time::Duration),
 
     #[error(
-        "The jailed process exited ({status}) before the Firecracker API socket appeared. The jailer execs Firecracker in place, so this is the jailer or the VMM it became; its diagnostics are above, prefixed [firecracker]"
+        "The jailed process exited ({status}) before the Firecracker API socket appeared. The jailer execs Firecracker in place, so this is the jailer or the VMM it became; its diagnostics are the `VMM stderr` records above"
     )]
     JailedProcessExited { status: std::process::ExitStatus },
 
