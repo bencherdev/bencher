@@ -20,6 +20,10 @@ use crate::jail::SocketPath;
 /// Longest one API call may take, from its connect to the end of the response.
 const API_CALL_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// Far above any answer an honest Firecracker gives, so only a compromised VMM
+/// fails a call on it.
+pub(crate) const API_RESPONSE_CAP_KIB: usize = 64;
+
 /// Client for the Firecracker REST API.
 pub struct FirecrackerClient<'a> {
     /// Borrowed, so the client cannot outlive the descriptor this path names.
@@ -214,8 +218,16 @@ impl<'a> FirecrackerClient<'a> {
                 Ok(0) => break,
                 Ok(n) => {
                     response.extend_from_slice(&buf[..n]);
-                    // Check if we have the full response (look for end of headers + body)
-                    if response_complete(&response) {
+                    // A declared length past the cap fails at once, before its body arrives.
+                    let length = response_length(&response);
+                    if response.len() > API_RESPONSE_CAP_KIB * 1024
+                        || length.is_some_and(|length| length > API_RESPONSE_CAP_KIB * 1024)
+                    {
+                        return Err(FirecrackerError::ApiResponseTooLarge {
+                            path: path.to_owned(),
+                        });
+                    }
+                    if length.is_some_and(|length| response.len() >= length) {
                         break;
                     }
                 },
@@ -302,10 +314,13 @@ fn is_not_listening_yet(error: &std::io::Error) -> bool {
 
 /// Check if we have received a complete HTTP response.
 fn response_complete(data: &[u8]) -> bool {
-    let header_end = find_header_end(data);
-    let Some(header_end) = header_end else {
-        return false;
-    };
+    response_length(data).is_some_and(|length| data.len() >= length)
+}
+
+/// The length of the whole response, as its headers declare it once they end.
+fn response_length(data: &[u8]) -> Option<usize> {
+    let header_end = find_header_end(data)?;
+    let body_start = header_end + 4; // Skip \r\n\r\n
 
     let headers = String::from_utf8_lossy(&data[..header_end]);
 
@@ -315,14 +330,14 @@ fn response_complete(data: &[u8]) -> bool {
         if let Some(value) = lower.strip_prefix("content-length:")
             && let Ok(len) = value.trim().parse::<usize>()
         {
-            let body_start = header_end + 4; // Skip \r\n\r\n
-            return data.len() >= body_start + len;
+            // Saturating, since a length that overflows is just past the cap.
+            return Some(body_start.saturating_add(len));
         }
     }
 
     // No Content-Length, check for Transfer-Encoding: chunked or assume complete
     // For Firecracker's simple responses, no Content-Length usually means empty body
-    true
+    Some(body_start)
 }
 
 /// Find the end of HTTP headers (position of first \r\n in \r\n\r\n sequence).
@@ -676,6 +691,104 @@ mod tests {
                 Err(FirecrackerError::Io(e)) if e.kind() == std::io::ErrorKind::ConnectionReset
             ),
             "a reset is an I/O error, got: {result:?}"
+        );
+    }
+
+    #[test]
+    fn an_endless_response_fails_the_call_at_the_cap() {
+        // Prevents a VMM that never ends its answer growing the runner's memory
+        // for as long as the deadline allows.
+        let (_dir, jail, vmm) = vmm_in_tmpdir();
+        let socket = jail.api_socket().socket().clone();
+
+        let started = Instant::now();
+        let client = std::thread::spawn(move || {
+            FirecrackerClient::new(&socket)
+                .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
+        });
+        let (mut stream, _) = vmm.accept().unwrap();
+        assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
+        // Headers that never end, the one answer no declared length cuts short,
+        // so only the cap can end the read.
+        drop(stream.write_all(b"HTTP/1.1 200 OK\r\nX-Padding: "));
+        let mut sent = 0;
+        while sent < 16 * 1024 * 1024
+            && started.elapsed() < SLOW
+            && let Ok(n) = stream.write(&[b'X'; 4096])
+        {
+            sent += n;
+        }
+        drop(stream);
+
+        let result = client.join().unwrap();
+        assert!(
+            matches!(result, Err(FirecrackerError::ApiResponseTooLarge { .. })),
+            "an answer past the cap fails the call, got: {result:?}"
+        );
+        let message = result.unwrap_err().to_string();
+        assert!(
+            message.contains(&format!("{API_RESPONSE_CAP_KIB} KiB")),
+            "the error must name the cap: {message}"
+        );
+        // The cap, plus at most a socket buffer in flight.
+        assert!(
+            sent < 1024 * 1024,
+            "the call must stop reading at the cap, but took {sent} bytes"
+        );
+    }
+
+    #[test]
+    fn a_complete_response_over_the_cap_fails_the_call() {
+        // Prevents checking the cap only while the response is unfinished,
+        // which lets one that ends past the cap through.
+        let (_dir, jail, vmm) = vmm_in_tmpdir();
+        let socket = jail.api_socket().socket().clone();
+
+        let client = std::thread::spawn(move || {
+            FirecrackerClient::new(&socket)
+                .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
+        });
+        let (mut stream, _) = vmm.accept().unwrap();
+        assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
+        // Its blank line, which completes it, is its last byte, one past the cap.
+        let head = "HTTP/1.1 200 OK\r\nX-Padding: ";
+        let end = "\r\n\r\n";
+        let padding = "X".repeat(API_RESPONSE_CAP_KIB * 1024 + 1 - head.len() - end.len());
+        drop(stream.write_all(format!("{head}{padding}{end}").as_bytes()));
+        drop(stream);
+
+        let result = client.join().unwrap();
+        assert!(
+            matches!(result, Err(FirecrackerError::ApiResponseTooLarge { .. })),
+            "an answer past the cap fails the call, got: {result:?}"
+        );
+    }
+
+    #[test]
+    fn a_declared_length_past_the_cap_fails_the_call_at_once() {
+        // Prevents a declared length that overflows panicking the client, and
+        // one past the cap waiting on its body.
+        let (_dir, jail, vmm) = vmm_in_tmpdir();
+        let socket = jail.api_socket().socket().clone();
+
+        let client = std::thread::spawn(move || {
+            FirecrackerClient::new(&socket)
+                .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
+        });
+        let (mut stream, _) = vmm.accept().unwrap();
+        assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
+        let head = format!(
+            "HTTP/1.1 204 No Content\r\nContent-Length: {}\r\n\r\n",
+            usize::MAX
+        );
+        drop(stream.write_all(head.as_bytes()));
+
+        // Joined with the stream still open, so only an error at once ends the call.
+        let result = client.join().unwrap();
+        drop(stream);
+        assert!(
+            matches!(result, Err(FirecrackerError::ApiResponseTooLarge { .. })),
+            "a declared length past the cap fails the call, got: {result:?}"
         );
     }
 
