@@ -1517,6 +1517,56 @@ async fn console_alerts_list_what_dismiss_all_changes() {
     }
 }
 
+// GET /v0/projects/{project}/console/alerts - the list says when the API read it, and Dismiss all
+// ending then leaves an alert raised after the read active
+// Kills: a read time that is not the API's clock when it read the list, which lets Dismiss all
+// change an alert the list never counted.
+#[tokio::test]
+async fn console_alerts_list_says_when_it_was_read() {
+    let server = TestServer::new().await;
+    let fixture = seed_project(&server, "readtime").await;
+    let alerts = insert_alerts(&server, &fixture);
+
+    let before = DateTime::now().timestamp_millis();
+    let listed = console_alerts(&server, &fixture, "?per_page=64").await;
+    let after = DateTime::now().timestamp_millis();
+    let read = i64::from(listed.read_time);
+    assert!(
+        before <= read && read <= after,
+        "{before} <= {read} <= {after}"
+    );
+    let counted = listed_alerts(&listed);
+    assert_eq!(counted.len(), 3);
+
+    // The first alert listed now looks raised in the second after the read.
+    let (later, _) = fixture
+        .boundaries
+        .iter()
+        .zip(&alerts)
+        .find(|(_, alert)| counted.first() == Some(*alert))
+        .expect("the listed alerts are seeded");
+    set_created(
+        &server,
+        later,
+        DateTime::try_from(DateTime::from(listed.read_time).timestamp() + 1).expect("a time"),
+    );
+    assert_eq!(
+        patch_alerts(
+            &server,
+            &fixture.user.token,
+            &fixture.slug,
+            serde_json::json!({
+                "status": "dismissed",
+                "filter": { "status": "active", "end_time": listed.read_time },
+            }),
+        )
+        .await,
+        (StatusCode::OK, Some(2))
+    );
+    let active = console_alerts(&server, &fixture, "?per_page=64").await;
+    assert_eq!(listed_alerts(&active), counted[..1]);
+}
+
 // GET /v0/projects/{project}/console/alerts - each status lists its alerts newest report first,
 // Dismissed with the silenced alerts and All with every alert, while the counts stay the same
 // Kills: a Dismissed list without silenced alerts, an All list without them, counts taken from the
@@ -1597,6 +1647,65 @@ async fn console_alerts_list_in_pages() {
     assert_eq!(counted.total, 6);
     assert!(counted.groups.is_empty());
     assert!(counted.reports.is_empty() && counted.benchmarks.is_empty());
+}
+
+// GET /v0/projects/{project}/console/alerts - an offset starts the page after that many alerts,
+// so a list whose alerts leave it as they change pages on without skipping or repeating one
+// Kills: an offset ignored or read as a page number, and a request that names both an offset and
+// a page answered instead of refused.
+#[tokio::test]
+async fn console_alerts_list_from_an_offset() {
+    let server = TestServer::new().await;
+    let fixture = seed_project(&server, "listoffset").await;
+    let alerts = insert_alerts(&server, &fixture);
+    let sorted = |mut alerts: Vec<AlertUuid>| {
+        alerts.sort_unstable();
+        alerts
+    };
+
+    let page_two = console_alerts(&server, &fixture, "?status=all&per_page=4&page=2").await;
+    let from_four = console_alerts(&server, &fixture, "?status=all&per_page=4&offset=4").await;
+    assert_eq!(listed_alerts(&from_four), listed_alerts(&page_two));
+    assert_eq!(from_four.total, 6);
+    // An offset need not fall on a page's edge.
+    let head = console_alerts(&server, &fixture, "?status=all&per_page=3&offset=0").await;
+    let tail = console_alerts(&server, &fixture, "?status=all&per_page=3&offset=3").await;
+    let all = console_alerts(&server, &fixture, "?status=all").await;
+    assert_eq!(
+        sorted([listed_alerts(&head), listed_alerts(&tail)].concat()),
+        sorted(listed_alerts(&all))
+    );
+
+    // Dismissing an alert the first page of Active showed moves the rest up by one.
+    let first = console_alerts(&server, &fixture, "?per_page=2").await;
+    let shown = listed_alerts(&first);
+    assert_eq!(first.total, 3);
+    let dismissed = *shown.first().expect("the first page shows an alert");
+    assert_eq!(
+        patch_alerts(
+            &server,
+            &fixture.user.token,
+            &fixture.slug,
+            serde_json::json!({ "status": "dismissed", "alerts": [dismissed] }),
+        )
+        .await,
+        (StatusCode::OK, Some(1))
+    );
+    let rest = console_alerts(&server, &fixture, "?per_page=2&offset=1").await;
+    assert_eq!(
+        sorted([shown, listed_alerts(&rest)].concat()),
+        sorted(alerts.iter().take(3).copied().collect()),
+        "no alert skipped or repeated"
+    );
+
+    let (status, text) = try_console_alerts(
+        &server,
+        &fixture.user.token,
+        &fixture.slug,
+        "?page=2&offset=4",
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{text}");
 }
 
 // GET /v0/projects/{project}/console/alerts - each alert says when it last changed status, or
