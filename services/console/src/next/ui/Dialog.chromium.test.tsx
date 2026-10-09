@@ -2,10 +2,14 @@ import "@bencherdev/ui/styles.css";
 import Dialog from "@bencherdev/ui/Dialog";
 import { Show, createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 let dispose: (() => void) | undefined;
+
+beforeEach(async () => {
+	await page.viewport(1280, 720);
+});
 
 afterEach(() => {
 	dispose?.();
@@ -100,3 +104,59 @@ test("without onDismiss, even repeated Escapes leave it open", async () => {
 	expect(dialog()?.open).toBe(true);
 	expect(dialog()?.matches(":modal")).toBe(true);
 });
+
+/** A dialog with a body taller than a short screen, and a foot to answer it. */
+const tall = () => {
+	const root = document.createElement("div");
+	document.body.append(root);
+	dispose = render(
+		() => (
+			<Dialog aria-labelledby="title" onDismiss={() => {}}>
+				<div class="ui-dialog-head">
+					<h2 id="title">Dismiss 3 alerts?</h2>
+				</div>
+				<div class="ui-dialog-body">
+					{Array.from({ length: 30 }, (_, index) => (
+						<p>Line {index}</p>
+					))}
+				</div>
+				<div class="ui-dialog-foot">
+					<button type="button">Cancel</button>
+					<button type="button">Confirm</button>
+				</div>
+			</Dialog>
+		),
+		root,
+	);
+	return root.querySelector("dialog") as HTMLDialogElement;
+};
+
+// Kills a dialog that runs past the bottom of a short screen, which leaves
+// its foot reachable only by keyboard, and one whose head and foot scroll away
+// with its body.
+test.each([
+	[844, 390],
+	[1280, 500],
+	[390, 600],
+])(
+	"at %i by %i the dialog fits, its body scrolls, and its foot is in reach",
+	async (width, height) => {
+		await page.viewport(width, height);
+		const dialog = tall();
+		const box = dialog.getBoundingClientRect();
+		expect(box.top).toBeGreaterThanOrEqual(0);
+		expect(box.bottom).toBeLessThanOrEqual(window.innerHeight);
+		const confirm = page.getByRole("button", { name: "Confirm" }).element();
+		const button = confirm.getBoundingClientRect();
+		expect(
+			document.elementFromPoint(
+				button.x + button.width / 2,
+				button.y + button.height / 2,
+			),
+		).toBe(confirm);
+		const body = dialog.querySelector(".ui-dialog-body") as HTMLElement;
+		expect(body.scrollHeight).toBeGreaterThan(body.clientHeight);
+		const head = dialog.querySelector(".ui-dialog-head") as HTMLElement;
+		expect(head.getBoundingClientRect().top).toBeCloseTo(box.top + 1, 0);
+	},
+);

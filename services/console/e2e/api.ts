@@ -154,3 +154,116 @@ export const listPlots = async (request: APIRequestContext, project: string) =>
 			headers: { Authorization: `Bearer ${seed.member.token}` },
 		})
 	).json()) as JsonPlot[];
+
+/** A threshold that alerts on any latency over 150, once a line has one value before. */
+const STATIC_THRESHOLD = {
+	models: [
+		{
+			measure: "latency",
+			metric: "value",
+			model: { test: "static", upper_boundary: 150 },
+		},
+	],
+};
+
+const benchmarks = (count: number) =>
+	Array.from(
+		{ length: count },
+		(_, index) => `bench-${String(index).padStart(2, "0")}`,
+	);
+
+/** A run of `count` benchmarks on one branch, `high` of them over the threshold. */
+const alertingReport = (
+	branch: string,
+	minutes: number,
+	high: readonly string[],
+	extra: Record<string, unknown> = {},
+	count = 3,
+) => {
+	const start = Date.parse(seed.now) - minutes * 60 * 1_000;
+	const results = Object.fromEntries(
+		benchmarks(count).map((benchmark) => [
+			benchmark,
+			[
+				{
+					parameters: { n: 0 },
+					measures: {
+						latency: { value: high.includes(benchmark) ? 200 : 100 },
+					},
+				},
+			],
+		]),
+	);
+	return {
+		branch,
+		hash: `a1e2${String(minutes).padStart(36, "0")}`,
+		testbed: "ubuntu-latest",
+		start_time: new Date(start).toISOString(),
+		end_time: new Date(start + 60_000).toISOString(),
+		results: [JSON.stringify(results)],
+		settings: { adapter: "json" },
+		thresholds: STATIC_THRESHOLD,
+		...extra,
+	};
+};
+
+/**
+ * A project of its own with three active alerts in two `main` reports, the
+ * older raising two, and one alert on `feature` silenced when its head reset.
+ */
+export const createAlerts = async (request: APIRequestContext) => {
+	const project = await createProject(request);
+	const post = (body: unknown) =>
+		send<{ uuid: string }>(
+			request,
+			"POST",
+			`/v0/projects/${project.slug}/reports`,
+			seed.member.token,
+			body,
+		);
+	await post(alertingReport("main", 300, []));
+	const older = await post(
+		alertingReport("main", 240, ["bench-00", "bench-01"]),
+	);
+	const newer = await post(alertingReport("main", 180, ["bench-02"]));
+	await post(alertingReport("feature", 120, []));
+	const silenced = await post(alertingReport("feature", 60, ["bench-00"]));
+	await post(
+		alertingReport("feature", 30, [], { start_point: { reset: true } }),
+	);
+	return { project, older, newer, silenced };
+};
+
+/** One more `main` run of the project's, posted now, raising an alert on each of `high`. */
+export const raiseAlerts = (
+	request: APIRequestContext,
+	slug: string,
+	minutes: number,
+	high: readonly string[],
+) =>
+	send<{ uuid: string }>(
+		request,
+		"POST",
+		`/v0/projects/${slug}/reports`,
+		seed.member.token,
+		alertingReport("main", minutes, high),
+	);
+
+/** A project of its own whose one `main` report raised `count` alerts. */
+export const createManyAlerts = async (
+	request: APIRequestContext,
+	count: number,
+) => {
+	const project = await createProject(request);
+	const post = (body: unknown) =>
+		send<{ uuid: string }>(
+			request,
+			"POST",
+			`/v0/projects/${project.slug}/reports`,
+			seed.member.token,
+			body,
+		);
+	await post(alertingReport("main", 120, [], {}, count));
+	await post(alertingReport("main", 60, benchmarks(count), {}, count));
+	return project;
+};

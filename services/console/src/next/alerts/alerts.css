@@ -1,0 +1,187 @@
+/* Alerts: the count with Dismiss all beside it, each report's row in the list, and the narrow controls. */
+
+/* Every box in the head holds its size before the alerts arrive, so nothing below it moves. */
+.al-titlerow {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-height: 32px;
+}
+.al-titlerow h1 {
+	margin: 0;
+	white-space: nowrap;
+}
+.ui-button.al-all {
+	margin-left: auto;
+}
+.ui-skeleton.al-title-skel {
+	display: inline-block;
+	width: 8ch;
+	height: 1lh;
+	vertical-align: top;
+}
+.ph-sub.al-sub {
+	display: block;
+	min-height: 1lh;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+.ui-skeleton.al-sub-skel {
+	display: inline-block;
+	width: 32ch;
+	height: 1lh;
+	vertical-align: top;
+}
+.al-narrow {
+	display: none;
+}
+.al-filters {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+/* Positioned, so the table's hidden header labels stay inside the box that clips them. */
+.al-scroll {
+	position: relative;
+	overflow-x: auto;
+}
+/* The alert row's columns, as the board sizes them, leave a dismissed row room for its status and Reactivate. */
+.al-scroll .lr-c-measure,
+.al-scroll .lr-c-limit {
+	width: 104px;
+}
+.al-scroll .lr-c-value {
+	width: 92px;
+}
+.al-scroll .lr-c-delta {
+	width: 124px;
+}
+.al-scroll .lr-c-act {
+	width: 196px;
+}
+
+.lr-table .al-group > td {
+	height: 44px;
+	padding: 0 10px 0 0;
+	background: var(--color-background-muted);
+	border-top-color: var(--color-border-emphasized);
+}
+.al-ghead {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	height: 43px;
+}
+.al-ghead .lr-hit {
+	flex: none;
+	width: 34px;
+}
+.al-gtitle {
+	display: flex;
+	flex: 1;
+	align-items: baseline;
+	gap: 2px 10px;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+}
+.al-gname {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	gap: 6px;
+}
+.al-gname b {
+	font-size: 13.5px;
+}
+.al-gmeta {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 12.5px;
+	color: var(--color-text-muted);
+}
+.al-gacts {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	white-space: nowrap;
+}
+.al-gacts .lnk:disabled {
+	color: var(--color-text-muted);
+	cursor: default;
+}
+.lr-table.lr-narrow .al-group > td {
+	height: 88px;
+	padding: 0;
+}
+.lr-table.lr-narrow .al-ghead .lr-hit {
+	width: 44px;
+	height: 44px;
+}
+.lr-table.lr-narrow .al-gtitle {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0;
+}
+.lr-table.lr-narrow .al-gmeta {
+	max-width: 100%;
+	font-size: 12px;
+}
+.al-gfoot {
+	display: flex;
+	align-items: center;
+	height: 44px;
+	padding: 0 12px 0 44px;
+}
+.al-gfoot .al-gacts {
+	flex: 1;
+	justify-content: space-between;
+}
+.al-gfoot .lnk {
+	min-height: 44px;
+}
+.al-gfoot .dotsep {
+	display: none;
+}
+
+.al-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 48px 24px;
+	text-align: center;
+}
+.al-empty p {
+	margin: 0;
+	color: var(--color-text-muted);
+}
+.al-skeleton {
+	display: flex;
+	flex-direction: column;
+	padding: 0 10px;
+}
+.al-skeleton .al-skeleton-row {
+	height: 20px;
+	margin: 12px 0;
+}
+
+@media (max-width: 767px) {
+	.al-wide {
+		display: none;
+	}
+	.al-narrow {
+		display: flex;
+	}
+	.al-controls .al-status {
+		width: 100%;
+	}
+	/* Dismiss all is a 44 px target here, and the row holds its height before it arrives. */
+	.al-titlerow {
+		min-height: 44px;
+	}
+}

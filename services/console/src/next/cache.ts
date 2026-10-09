@@ -90,7 +90,11 @@ export const persistCache = (
 		timer ??= setTimeout(save, delay);
 	};
 	const unsubscribe = client.getQueryCache().subscribe((event) => {
-		if (
+		// A reload before the delay would restore what the reader's write replaced as fresh.
+		if (event.type === "updated" && event.action.type === "invalidate") {
+			clearTimeout(timer);
+			timer = setTimeout(save);
+		} else if (
 			event.type === "removed" ||
 			(event.type === "updated" && event.action.type === "success")
 		) {
