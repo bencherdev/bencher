@@ -5,7 +5,8 @@ Por padrão, ele desabilita ASLR, o NMI watchdog, SMT / hyper-threading e o turb
 define o governor de escalonamento de CPU como `performance`, a swappiness como `10` e `perf_event_paranoid` como `-1`.
 Em um host que o `runner` não ajustou desde a última reinicialização, as flags abaixo mantêm otimizações individuais nos padrões do host.
 
-O ajuste do host persiste até que o host seja reiniciado: cada configuração é uma escrita apenas em tempo de execução que o `runner` não reverte ao sair.
+O ajuste do host persiste até que o host seja reiniciado: cada configuração é uma escrita apenas em tempo de execução que o `runner` não reverte ao sair, exceto a retenção dos C-states, que termina quando o `runner` sai.
+Após uma execução com ajuste, uma flag que pula qualquer outra configuração passa a valer a partir da próxima reinicialização: até lá, a configuração mantém o valor ajustado, e o `runner` registra esse valor ao iniciar.
 Reinicie um host compartilhado depois de remover o `runner`.
 
 ### `--no-tuning`
@@ -14,19 +15,47 @@ Desabilita todas as otimizações de ajuste do host.
 
 ### `--aslr`
 
-Mantém o ASLR habilitado (padrão: desabilitado para benchmarks).
+Não desabilita o ASLR (padrão: desabilitado para benchmarks).
 
 ### `--nmi-watchdog`
 
-Mantém o NMI watchdog habilitado (padrão: desabilitado para benchmarks).
+Não desabilita o NMI watchdog (padrão: desabilitado para benchmarks).
 
 ### `--smt`
 
-Mantém o SMT / hyper-threading habilitado (padrão: desabilitado para benchmarks).
+Não desabilita o SMT / hyper-threading (padrão: desabilitado para benchmarks).
 
 ### `--turbo`
 
-Mantém o turbo boost habilitado (padrão: desabilitado para benchmarks).
+Não desabilita o turbo boost (padrão: desabilitado para benchmarks).
+
+### `--numa-balancing`
+
+Não desabilita o balanceamento NUMA automático (padrão: desabilitado para benchmarks).
+
+### `--timer-migration`
+
+Não desabilita a migração de timers (padrão: desabilitada para benchmarks).
+
+### `--soft-watchdog`
+
+Não desabilita o soft lockup watchdog (padrão: desabilitado para benchmarks).
+
+### `--ksm`
+
+Não desabilita o KSM, kernel samepage merging (padrão: desabilitado para benchmarks).
+
+### `--cstates`
+
+Não desabilita os C-states profundos (padrão: desabilitados para benchmarks).
+
+### `--no-irq-steering`
+
+Não direciona as IRQs de dispositivos e as workqueues do kernel para os núcleos de housekeeping.
+
+### `--no-cpuset-partition`
+
+Não desacopla os núcleos de benchmark do escalonador por meio de uma partição cpuset isolada.
 
 ### `--swappiness <SWAPPINESS>`
 
@@ -42,3 +71,9 @@ Por padrão, `performance` é usado.
 
 Define o valor de `perf_event_paranoid`.
 Por padrão, `-1` é usado.
+
+### `--thp <THP>`
+
+Define o modo de transparent hugepage do host: `never`, `madvise`, `always` ou `leave`.
+Use `leave` para manter o modo atual do host.
+Por padrão, `never` é usado.

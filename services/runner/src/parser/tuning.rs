@@ -14,6 +14,9 @@ use clap::Args;
     reason = "CLI flags map to independent tuning knobs"
 )]
 #[derive(Args, Debug)]
+#[command(
+    after_help = "Host tuning persists until the host reboots, except the C-state hold, which ends when the runner exits. After a tuned run, a flag that skips any other setting takes effect from the next reboot, and the runner logs that setting's current value at startup."
+)]
 pub struct CliTuning {
     /// Disable all host tuning optimizations.
     #[arg(long)]
@@ -31,7 +34,7 @@ pub struct CliTuning {
     #[arg(long)]
     pub smt: bool,
 
-    /// Do not disable turboboost (default: disabled for benchmarks).
+    /// Do not disable turbo boost (default: disabled for benchmarks).
     #[arg(long)]
     pub turbo: bool,
 

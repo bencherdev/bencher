@@ -5,7 +5,8 @@ Standardmäßig deaktiviert er ASLR, den NMI-Watchdog, SMT / Hyper-Threading und
 setzt den CPU-Scaling-Governor auf `performance`, Swappiness auf `10` und `perf_event_paranoid` auf `-1`.
 Auf einem Host, auf den der `runner` seit dem letzten Neustart kein Host-Tuning angewendet hat, belassen die folgenden Flags einzelne Optimierungen stattdessen bei ihren Host-Standardwerten.
 
-Das Host-Tuning bleibt bis zum Neustart des Hosts bestehen: Jede Einstellung ist ein reiner Laufzeit-Schreibvorgang, den der `runner` beim Beenden nicht zurücksetzt.
+Das Host-Tuning bleibt bis zum Neustart des Hosts bestehen: Jede Einstellung ist ein reiner Laufzeit-Schreibvorgang, den der `runner` beim Beenden nicht zurücksetzt, mit Ausnahme der C-State-Sperre, die endet, wenn sich der `runner` beendet.
+Nach einem Lauf mit Host-Tuning wirkt ein Flag, das eine andere Einstellung überspringt, erst ab dem nächsten Neustart: Bis dahin behält die Einstellung ihren getunten Wert, und der `runner` protokolliert diesen Wert beim Start.
 Starten Sie einen gemeinsam genutzten Host neu, nachdem Sie den `runner` entfernt haben.
 
 ### `--no-tuning`
@@ -14,19 +15,47 @@ Deaktiviert alle Host-Tuning-Optimierungen.
 
 ### `--aslr`
 
-Belässt ASLR aktiviert (Standard: für Benchmarks deaktiviert).
+Deaktiviert ASLR nicht (Standard: für Benchmarks deaktiviert).
 
 ### `--nmi-watchdog`
 
-Belässt den NMI-Watchdog aktiviert (Standard: für Benchmarks deaktiviert).
+Deaktiviert den NMI-Watchdog nicht (Standard: für Benchmarks deaktiviert).
 
 ### `--smt`
 
-Belässt SMT / Hyper-Threading aktiviert (Standard: für Benchmarks deaktiviert).
+Deaktiviert SMT / Hyper-Threading nicht (Standard: für Benchmarks deaktiviert).
 
 ### `--turbo`
 
-Belässt Turbo Boost aktiviert (Standard: für Benchmarks deaktiviert).
+Deaktiviert Turbo Boost nicht (Standard: für Benchmarks deaktiviert).
+
+### `--numa-balancing`
+
+Deaktiviert das automatische NUMA-Balancing nicht (Standard: für Benchmarks deaktiviert).
+
+### `--timer-migration`
+
+Deaktiviert die Timer-Migration nicht (Standard: für Benchmarks deaktiviert).
+
+### `--soft-watchdog`
+
+Deaktiviert den Soft-Lockup-Watchdog nicht (Standard: für Benchmarks deaktiviert).
+
+### `--ksm`
+
+Deaktiviert KSM, das Kernel Samepage Merging, nicht (Standard: für Benchmarks deaktiviert).
+
+### `--cstates`
+
+Deaktiviert tiefe C-States nicht (Standard: für Benchmarks deaktiviert).
+
+### `--no-irq-steering`
+
+Lenkt Geräte-IRQs und Kernel-Workqueues nicht auf Housekeeping-Kerne.
+
+### `--no-cpuset-partition`
+
+Löst Benchmark-Kerne nicht über eine isolierte cpuset-Partition vom Scheduler.
 
 ### `--swappiness <SWAPPINESS>`
 
@@ -42,3 +71,9 @@ Standardmäßig wird `performance` verwendet.
 
 Setzt den `perf_event_paranoid`-Wert.
 Standardmäßig wird `-1` verwendet.
+
+### `--thp <THP>`
+
+Setzt den Transparent-Hugepage-Modus des Hosts: `never`, `madvise`, `always` oder `leave`.
+Mit `leave` bleibt der aktuelle Modus des Hosts erhalten.
+Standardmäßig wird `never` verwendet.
