@@ -186,8 +186,10 @@ fn default_disk() -> Disk {
 /// backing deterministic.
 ///
 /// On x86, `reboot=k` resets through the i8042, which Firecracker ends as a
-/// clean stop. aarch64 resets through PSCI and needs `keep_bootcon` for console
-/// output during boot.
+/// clean stop, so the controller stays and only its probing goes: the `i8042`
+/// options are Firecracker's own defaults, and `dumbkbd` skips the keyboard
+/// probe that otherwise holds every boot for about 0.45 s. aarch64 resets
+/// through PSCI and needs `keep_bootcon` for console output during boot.
 fn default_kernel_cmdline() -> String {
     #[cfg(target_arch = "aarch64")]
     {
@@ -195,7 +197,7 @@ fn default_kernel_cmdline() -> String {
     }
     #[cfg(not(target_arch = "aarch64"))]
     {
-        "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda rw init=/init norandmaps nokaslr transparent_hugepage=never".to_owned()
+        "console=ttyS0 reboot=k panic=1 pci=off i8042.noaux i8042.nomux i8042.dumbkbd root=/dev/vda rw init=/init norandmaps nokaslr transparent_hugepage=never".to_owned()
     }
 }
 

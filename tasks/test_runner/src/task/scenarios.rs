@@ -1416,6 +1416,27 @@ CMD ["printf", "%s_%s\\n", "CLEAN", "STOP"]"#,
             ..Scenario::default()
         },
         Scenario {
+            name: "the_guest_kernel_does_not_probe_its_keyboard",
+            description: "The guest kernel registers its keyboard without the probe that held every boot for about half a second",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "dmesg | grep -E 'serio: i8042 KBD port|input: AT .* keyboard' && printf '%s_%s\\n' KERNEL LOG"]"#,
+            extra_args: &["--timeout", "60"],
+            validate: |output| {
+                assert_job_succeeded(output, "KERNEL_LOG")?;
+                let port = kernel_log_micros(output, "serio: i8042 KBD port");
+                let keyboard = kernel_log_micros(output, "input: AT");
+                anyhow::ensure!(
+                    port.zip(keyboard).is_some_and(|(port, keyboard)| {
+                        keyboard.saturating_sub(port) < NO_KEYBOARD_PROBE_MICROS
+                    }),
+                    "Expected the keyboard within {NO_KEYBOARD_PROBE_MICROS} us of its port, so with no probe between them.\nstdout: {}",
+                    output.stdout
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
             name: "a_guest_that_reboots_before_its_results_fails_at_once",
             description: "A guest that powers off before it writes its results fails the run at once, not at its timeout",
             // The control run prints the marker, and the real run reboots before
@@ -3453,6 +3474,25 @@ fn vmm_reported_an_error(output: &ScenarioOutput) -> bool {
 fn vmm_exit_status(output: &ScenarioOutput) -> Option<String> {
     records_with(&output.stderr, "VMM exited")
         .find_map(|record| text(&record, "status").map(str::to_owned))
+}
+
+/// Far under the half second the keyboard probe takes, and far over the few
+/// milliseconds a keyboard takes to register without one.
+const NO_KEYBOARD_PROBE_MICROS: u64 = 200_000;
+
+/// The kernel's timestamp, in microseconds since boot, on the first line of its
+/// log the guest printed that contains `needle`.
+fn kernel_log_micros(output: &ScenarioOutput, needle: &str) -> Option<u64> {
+    let line = output.stdout.lines().find(|line| line.contains(needle))?;
+    let (stamp, _) = line.trim_start().strip_prefix('[')?.split_once(']')?;
+    let (seconds, micros) = stamp.trim().split_once('.')?;
+    Some(
+        seconds
+            .parse::<u64>()
+            .ok()?
+            .saturating_mul(1_000_000)
+            .saturating_add(micros.parse().ok()?),
+    )
 }
 
 /// The runner relays what the guest printed, then fails the job with the
