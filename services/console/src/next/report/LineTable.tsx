@@ -1,5 +1,6 @@
 import Button from "@bencherdev/ui/Button";
 import {
+	type Component,
 	For,
 	type JSX,
 	Show,
@@ -22,8 +23,8 @@ const RowPlot = lazy(() => import("./RowPlot"));
 
 /** The fixed heights the list lays out by, wide and narrow; report.css draws the same. */
 export const HEIGHTS = {
-	wide: { group: 38, line: 44, plot: 330 },
-	narrow: { group: 44, line: 64, plot: 360 },
+	wide: { group: 38, line: 44, plot: 330, actions: 0 },
+	narrow: { group: 44, line: 64, plot: 360, actions: 20 },
 } as const;
 
 /** Pixels drawn above and below the screen, so a quick scroll never shows a gap. */
@@ -49,6 +50,18 @@ interface LineTableProps {
 		column: string;
 		cell: (line: ReportLine) => JSX.Element;
 	};
+	/** A page's own header for each group, drawn at its own heights. */
+	group?: {
+		height: { wide: number; narrow: number };
+		row: Component<{ group: GroupRow; index: number; columns: number }>;
+	};
+	/** Each line's own controls: a last column when wide, and when narrow a third line for the lines `narrow` names. */
+	actions?: {
+		cell: (line: ReportLine) => JSX.Element;
+		narrow: (line: ReportLine) => boolean;
+	};
+	/** The lines drawn dimmed. */
+	dimmed?: (line: ReportLine) => boolean;
 	plot: (line: ReportLine) => {
 		data: PlotData;
 		note: string;
@@ -69,14 +82,24 @@ interface LineTableProps {
  */
 const LineTable = (props: LineTableProps) => {
 	const heights = () => (props.narrow ? HEIGHTS.narrow : HEIGHTS.wide);
-	const columns = () => (props.narrow ? COLUMNS.narrow : COLUMNS.wide);
+	const columns = () =>
+		props.narrow
+			? COLUMNS.narrow
+			: COLUMNS.wide + (props.actions === undefined ? 0 : 1);
 	const open = (slot: Slot) => !isGroup(slot) && props.expanded.has(slot.key);
+	/** Whether a line draws its controls: always in their column when wide, on a line of their own when narrow. */
+	const acts = (line: ReportLine) =>
+		props.actions !== undefined &&
+		(!props.narrow || props.actions.narrow(line));
 	const offsets = createMemo(() =>
 		offsetsOf(
 			props.slots.map((slot) =>
 				isGroup(slot)
-					? heights().group
-					: heights().line + (open(slot) ? heights().plot : 0),
+					? (props.group?.height[props.narrow ? "narrow" : "wide"] ??
+						heights().group)
+					: heights().line +
+						(acts(slot) ? heights().actions : 0) +
+						(open(slot) ? heights().plot : 0),
 			),
 		),
 	);
@@ -156,6 +179,9 @@ const LineTable = (props: LineTableProps) => {
 							<col class="lr-c-value" />
 							<col class="lr-c-delta" />
 							<col class="lr-c-limit" />
+							<Show when={props.actions}>
+								<col class="lr-c-act" />
+							</Show>
 						</colgroup>
 						<thead>
 							<tr class="lr-head" aria-rowindex={1}>
@@ -178,6 +204,11 @@ const LineTable = (props: LineTableProps) => {
 								<th scope="col" class="lr-end">
 									Limit
 								</th>
+								<Show when={props.actions}>
+									<th scope="col">
+										<span class="sr-only">Actions</span>
+									</th>
+								</Show>
 							</tr>
 						</thead>
 					</>
@@ -202,8 +233,9 @@ const LineTable = (props: LineTableProps) => {
 						const aside = isGroup(slot)
 							? undefined
 							: untrack(() => props.aside?.cell(slot));
+						const Header = props.group?.row ?? Group;
 						return isGroup(slot) ? (
-							<Group group={slot} index={index()} columns={columns()} />
+							<Header group={slot} index={index()} columns={columns()} />
 						) : (
 							<LineRow
 								line={slot}
@@ -220,6 +252,10 @@ const LineTable = (props: LineTableProps) => {
 								onExpand={(expanded) => props.onExpand(slot, expanded)}
 								onNoThreshold={() => props.onNoThreshold?.(slot)}
 								aside={aside}
+								dimmed={props.dimmed?.(slot) === true}
+								actions={
+									acts(slot) ? () => props.actions?.cell(slot) : undefined
+								}
 								onIntent={() => {
 									RowPlot.preload();
 								}}

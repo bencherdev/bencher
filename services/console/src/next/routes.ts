@@ -23,7 +23,9 @@ export const PAGES: Record<PageName, Page> = {
 	Report: lazy<Component>(() =>
 		import("./pages/Report").then(({ default: page }) => ({ default: page })),
 	),
-	Alerts: lazy(() => import("./pages/Alerts")),
+	Alerts: lazy<Component>(() =>
+		import("./pages/Alerts").then(({ default: page }) => ({ default: page })),
+	),
 	Thresholds: lazy(() => import("./pages/Thresholds")),
 	Threshold: lazy(() => import("./pages/Threshold")),
 	Settings: lazy(() => import("./pages/Settings")),

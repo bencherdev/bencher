@@ -762,3 +762,88 @@ for (const [width, viewport] of [
 		}
 	});
 }
+
+// The cold loads of Alerts, at each width the layout changes at.
+for (const [width, viewport] of [
+	["desktop", undefined],
+	["768", { width: 768, height: 1024 }],
+	["390", { width: 390, height: 844 }],
+] as const) {
+	test.describe(`Alerts at ${width}`, () => {
+		if (viewport) {
+			test.use({ viewport });
+		}
+
+		// Kills alerts that wait on the shell's request or on their own code
+		// arriving late, a first batch asked for twice, a filter name asked for
+		// with no filter set, the full plot's code loaded before a row expands, a
+		// page stylesheet of its own, and a page that shifts as its alerts arrive.
+		test(`a cold load of Alerts holds its speed ceilings at ${width}`, async ({
+			page,
+		}) => {
+			await observePageShift(page);
+			const cost = await coldLoad(
+				page,
+				nextPath(hashbrown.slug, "alerts"),
+				() =>
+					expect(
+						page
+							.getByRole("table", { name: /^Alerts/ })
+							.getByRole("checkbox")
+							.last(),
+					).toBeVisible(),
+			);
+			const moved = await pageShift(page);
+			report(`alerts cold load ${width}`, {
+				...cost,
+				pageShift: moved,
+			} as Cost);
+			const ceiling = ceilings.alertsColdLoad;
+			expect(moved).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+				ceiling.apiAnswersBeforePaint,
+			);
+			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+			if (!viewport) {
+				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			}
+			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+			expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
+			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+			expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
+				ceiling.inlineScriptBytes,
+			);
+			expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+		});
+	});
+}
+
+// Kills a status switch that asks for more than its first batch, chains a
+// second round, or loads more code.
+test("a status switch on Alerts asks once", async ({ page }) => {
+	await page.goto(nextPath(hashbrown.slug, "alerts"));
+	await expect(
+		page
+			.getByRole("table", { name: /^Alerts/ })
+			.getByRole("checkbox")
+			.last(),
+	).toBeVisible();
+	await ready(page);
+
+	const since = await mark(page);
+	await page.getByRole("radio", { name: "Dismissed" }).check();
+	await expect(
+		page
+			.getByRole("table", { name: /^Alerts/ })
+			.getByRole("button", { name: /^Reactivate the alert on sha256/ }),
+	).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("alerts status switch", cost);
+	const ceiling = ceilings.alertsViewSwitch;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+});
