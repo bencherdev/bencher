@@ -18,6 +18,9 @@ use crate::firecracker::refuse_cancelled;
 use crate::jail::chroot::chown_to_jail;
 use crate::jail::{JailFile, JailUser};
 
+/// How often the poll loop and the grace period check for a cancel.
+const POLL_INTERVAL: Duration = Duration::from_millis(50);
+
 /// Poll timeout for vsock listeners (50ms).
 ///
 /// Using `LazyLock` because `PollTimeout::try_from` is not const.
@@ -25,8 +28,9 @@ use crate::jail::{JailFile, JailUser};
     clippy::expect_used,
     reason = "50ms is a valid PollTimeout; infallible in practice"
 )]
-static POLL_TIMEOUT: std::sync::LazyLock<PollTimeout> =
-    std::sync::LazyLock::new(|| PollTimeout::try_from(50).expect("50ms fits in PollTimeout"));
+static POLL_TIMEOUT: std::sync::LazyLock<PollTimeout> = std::sync::LazyLock::new(|| {
+    PollTimeout::try_from(POLL_INTERVAL).expect("50ms fits in PollTimeout")
+});
 
 /// Silence this long ends a result stream with what has arrived.
 const READ_IDLE_TIMEOUT: Duration = Duration::from_secs(5);
@@ -235,7 +239,7 @@ impl VsockListener {
                 // Give a brief window for remaining data to arrive.
                 // The grace period balances latency vs reliability for stdout/stderr
                 // that may still be in flight when the exit code lands.
-                std::thread::sleep(grace_period);
+                sleep_unless_cancelled(grace_period, cancel_flag)?;
                 let bound = ReadBound {
                     start: Instant::now(),
                     window: grace_period,
@@ -422,6 +426,22 @@ struct ReadBound<'a> {
     setting: &'static str,
     idle_timeout: Duration,
     cancel_flag: Option<&'a AtomicBool>,
+}
+
+/// Sleeps for `period` in poll-sized slices, so a cancel ends the wait.
+fn sleep_unless_cancelled(
+    period: Duration,
+    cancel_flag: Option<&AtomicBool>,
+) -> Result<(), FirecrackerError> {
+    let start = Instant::now();
+    loop {
+        refuse_cancelled(cancel_flag)?;
+        let remaining = period.saturating_sub(start.elapsed());
+        if remaining.is_zero() {
+            return Ok(());
+        }
+        std::thread::sleep(remaining.min(POLL_INTERVAL));
+    }
 }
 
 #[cfg(test)]
@@ -1026,6 +1046,39 @@ mod tests {
         );
         drop(listener);
         guest.join().unwrap();
+    }
+
+    #[test]
+    fn a_cancel_during_the_grace_period_ends_the_job() {
+        // Prevents a long grace period hiding a cancel.
+        let (_dir, jail, listener) = listener_in_tmpdir();
+        let base = jail.vsock().host().to_string();
+        send_to_port(&base, ports::EXIT_CODE, b"0");
+        let cancel_flag = AtomicBool::new(false);
+
+        let started = Instant::now();
+        let result = std::thread::scope(|scope| {
+            scope.spawn(|| {
+                std::thread::sleep(Duration::from_millis(200));
+                cancel_flag.store(true, Ordering::SeqCst);
+            });
+            listener.collect_results(
+                Duration::from_secs(30),
+                TEST_MAX_DATA_SIZE,
+                Some(&cancel_flag),
+                Duration::from_secs(5),
+            )
+        });
+        let held = started.elapsed();
+
+        assert!(
+            held < SLOW,
+            "a cancel must end the grace period, held {held:?}"
+        );
+        assert!(
+            matches!(result, Err(FirecrackerError::Cancelled)),
+            "error should be Cancelled, got: {result:?}"
+        );
     }
 
     #[test]
