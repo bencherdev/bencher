@@ -571,17 +571,10 @@ impl QueryReport {
         let series_billing = plan_kind.metered_series_billing();
 
         let mut report_results = ReportResults::new(
-            self.project_id,
+            self,
             branch_id,
-            self.head_id,
-            self.testbed_id,
-            self.spec_id,
-            self.id,
             #[cfg(feature = "plus")]
-            results::SeriesCacheContext {
-                organization_id: query_project.organization_id,
-                report_created: self.created,
-            },
+            query_project.organization_id,
         );
         let mut processed = report_results
             .process(

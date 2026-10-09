@@ -153,6 +153,18 @@ async fn alerts_list_and_count_by_project() {
 async fn migration_backfills_and_round_trips_every_alert() {
     let server = TestServer::new().await;
     let a = seed_project(&server, "migrationa").await;
+    // A report that raised nothing, so no report of the second project shares an identifier
+    // with its report benchmark or its boundary.
+    server
+        .db_conn()
+        .batch_execute(&format!(
+            "INSERT INTO report(uuid, project_id, head_id, version_id, testbed_id, adapter, start_time, end_time, created)
+            SELECT '{}', project_id, head_id, version_id, testbed_id, adapter, start_time, end_time, created
+            FROM report WHERE id = {}",
+            ReportUuid::new(),
+            a.boundaries[0].report_id
+        ))
+        .expect("Failed to insert a report that raised nothing");
     let b = seed_project(&server, "migrationb").await;
 
     let mut conn = server.db_conn();
@@ -171,17 +183,25 @@ async fn migration_backfills_and_round_trips_every_alert() {
                 ))
                 .execute(&mut conn)
                 .expect("Failed to insert an alert without its project");
-            expected.push((uuid, fixture.project_id, boundary.threshold_id));
+            expected.push((
+                uuid,
+                fixture.project_id,
+                boundary.report_id,
+                boundary.threshold_id,
+                boundary.created,
+            ));
         }
     }
     apply_migration(&mut conn);
 
-    let alerts: Vec<(AlertUuid, i32, i32)> = schema::alert::table
+    let alerts: Vec<(AlertUuid, i32, i32, i32, DateTime)> = schema::alert::table
         .order(schema::alert::id.asc())
         .select((
             schema::alert::uuid,
             schema::alert::project_id,
+            schema::alert::report_id,
             schema::alert::threshold_id,
+            schema::alert::created,
         ))
         .load(&mut conn)
         .expect("Failed to load the alerts");
@@ -191,6 +211,111 @@ async fn migration_backfills_and_round_trips_every_alert() {
     revert_migration(&mut conn);
     apply_migration(&mut conn);
     assert_eq!(capture(&server, &[&a, &b]).await, before);
+}
+
+// POST /v0/projects/{project}/reports - an alert keeps the report that raised it and when that
+// report was created
+// Kills: an alert stamped with another row's identifier or with the wall clock.
+#[tokio::test]
+async fn alerts_keep_the_report_that_raised_them() {
+    let server = TestServer::new_at(seconds(100)).await;
+    let user = server.signup("Test User", "keepreport@example.com").await;
+    let org = server.create_org(&user, "Org keepreport").await;
+    let project = server
+        .create_project(&user, &org, "Project keepreport")
+        .await;
+    let slug = project.slug.to_string();
+    let post = async |path: String, body: serde_json::Value| {
+        let resp = server
+            .client
+            .post(server.api_url(&path))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let status = resp.status();
+        assert_eq!(
+            status,
+            StatusCode::CREATED,
+            "POST {path}: {}",
+            resp.text().await.expect("Failed to read the response")
+        );
+    };
+    for (resource, body) in [
+        (
+            "branches",
+            serde_json::json!({ "name": "main", "slug": "main" }),
+        ),
+        (
+            "testbeds",
+            serde_json::json!({ "name": "localhost", "slug": "localhost" }),
+        ),
+        (
+            "measures",
+            serde_json::json!({ "name": "latency", "slug": "latency", "units": "ns" }),
+        ),
+        (
+            "thresholds",
+            serde_json::json!({
+                "branch": "main",
+                "testbed": "localhost",
+                "measure": "latency",
+                "test": "static",
+                "upper_boundary": 100.0,
+            }),
+        ),
+    ] {
+        post(format!("/v0/projects/{slug}/{resource}"), body).await;
+    }
+    // Two benchmarks a report, so a report's identifier is none of its rows'.
+    for (day, value) in [10.0, 10.0, 1000.0].into_iter().enumerate() {
+        let results = serde_json::json!({
+            "one": { "latency": { "value": value } },
+            "two": { "latency": { "value": value } },
+        });
+        post(
+            format!("/v0/projects/{slug}/reports"),
+            serde_json::json!({
+                "branch": "main",
+                "testbed": "localhost",
+                "start_time": format!("2024-01-{:02}T00:00:00Z", day + 1),
+                "end_time": format!("2024-01-{:02}T00:01:00Z", day + 1),
+                "results": [serde_json::to_string(&results).expect("Failed to serialize results")],
+            }),
+        )
+        .await;
+    }
+
+    let mut conn = server.db_conn();
+    let raised: Vec<((i32, DateTime), (i32, DateTime))> = schema::alert::table
+        .inner_join(schema::boundary::table.on(schema::boundary::id.eq(schema::alert::boundary_id)))
+        .inner_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
+        .inner_join(
+            schema::report_benchmark::table
+                .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
+        )
+        .inner_join(
+            schema::report::table.on(schema::report::id.eq(schema::report_benchmark::report_id)),
+        )
+        .select((
+            (schema::alert::report_id, schema::alert::created),
+            (schema::report::id, schema::report::created),
+        ))
+        .load(&mut conn)
+        .expect("Failed to load the alerts");
+    assert_eq!(raised.len(), 2, "the outliers raised two alerts");
+    for (kept, report) in raised {
+        assert_eq!(kept, report);
+        assert_eq!(
+            report.1,
+            seconds(100),
+            "the report was created by the clock"
+        );
+    }
 }
 
 #[tokio::test]
@@ -287,6 +412,8 @@ struct Fixture {
 struct SeededBoundary {
     boundary_id: i32,
     threshold_id: i32,
+    report_id: i32,
+    created: DateTime,
 }
 
 /// The live threshold's model was replaced after the first seed's boundary, so not
@@ -493,6 +620,8 @@ fn insert_boundary(
     SeededBoundary {
         boundary_id: last_id(conn),
         threshold_id: threshold.id,
+        report_id,
+        created: seconds(created),
     }
 }
 
@@ -525,10 +654,12 @@ fn insert_alert(
         .values((
             schema::alert::uuid.eq(&uuid),
             schema::alert::project_id.eq(project_id),
+            schema::alert::report_id.eq(boundary.report_id),
             schema::alert::threshold_id.eq(boundary.threshold_id),
             schema::alert::boundary_id.eq(boundary.boundary_id),
             schema::alert::boundary_limit.eq(BoundaryLimit::Upper),
             schema::alert::status.eq(status),
+            schema::alert::created.eq(boundary.created),
             schema::alert::modified.eq(seconds(modified)),
         ))
         .execute(conn)
@@ -618,10 +749,12 @@ fn insert_report_alerts(
             (
                 schema::alert::uuid.eq(AlertUuid::new()),
                 schema::alert::project_id.eq(base.project),
+                schema::alert::report_id.eq(report_id),
                 schema::alert::threshold_id.eq(threshold.id),
                 schema::alert::boundary_id.eq(*boundary_id),
                 schema::alert::boundary_limit.eq(BoundaryLimit::Upper),
                 schema::alert::status.eq(AlertStatus::Active),
+                schema::alert::created.eq(seconds(4)),
                 schema::alert::modified.eq(seconds(4)),
             )
         })
@@ -1780,22 +1913,17 @@ fn list_query(status: &str, filter: &serde_json::Value) -> String {
     format!("?{}", pairs.join("&"))
 }
 
+/// An alert keeps when its report was created, so the two move together.
 fn set_created(server: &TestServer, boundary: &SeededBoundary, created: DateTime) {
     let mut conn = server.db_conn();
-    let report_id: i32 = schema::boundary::table
-        .inner_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
-        .inner_join(
-            schema::report_benchmark::table
-                .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
-        )
-        .filter(schema::boundary::id.eq(boundary.boundary_id))
-        .select(schema::report_benchmark::report_id)
-        .first(&mut conn)
-        .expect("Failed to get the boundary's report");
-    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+    diesel::update(schema::report::table.filter(schema::report::id.eq(boundary.report_id)))
         .set(schema::report::created.eq(created))
         .execute(&mut conn)
         .expect("Failed to set when the report was created");
+    diesel::update(schema::alert::table.filter(schema::alert::report_id.eq(boundary.report_id)))
+        .set(schema::alert::created.eq(created))
+        .execute(&mut conn)
+        .expect("Failed to set when the report's alerts were created");
 }
 
 async fn try_console_alerts(

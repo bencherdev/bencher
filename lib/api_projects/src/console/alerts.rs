@@ -46,8 +46,8 @@ use bencher_schema::{
 use diesel::{
     BoolExpressionMethods as _, BoxableExpression, ExpressionMethods as _, JoinOnDsl as _,
     QueryDsl as _, RunQueryDsl as _, SelectableExpression, SelectableHelper as _,
-    dsl::{count_star, exists},
-    sql_types::Bool,
+    dsl::count_star,
+    sql_types::{Bool, Integer},
     sqlite::Sqlite,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
@@ -281,26 +281,17 @@ fn page_keys(
 ) -> Result<Vec<(ReportId, AlertId)>, HttpError> {
     let offset = i64::from(query.page - 1).saturating_mul(i64::from(query.per_page));
     schema::alert::table
-        .inner_join(schema::boundary::table.on(schema::boundary::id.eq(schema::alert::boundary_id)))
-        .inner_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
-        .inner_join(
-            schema::report_benchmark::table
-                .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
-        )
-        .inner_join(
-            schema::report::table.on(schema::report::id.eq(schema::report_benchmark::report_id)),
-        )
         .filter(selected(project_id, query)?)
         // The alert identifier only places a page's edges inside a report; the report's own
         // order is drawn after.
         .order((
-            schema::report::created.desc(),
-            schema::report::id.desc(),
+            schema::alert::created.desc(),
+            schema::alert::report_id.desc(),
             schema::alert::id.asc(),
         ))
         .offset(offset)
         .limit(i64::from(query.per_page))
-        .select((schema::report::id, schema::alert::id))
+        .select((schema::alert::report_id, schema::alert::id))
         .load::<(ReportId, AlertId)>(conn)
         .map_err(resource_not_found_err!(Alert, project_id))
 }
@@ -356,7 +347,7 @@ fn group_rows(
         .inner_join(schema::model::table.on(schema::model::id.eq(schema::boundary::model_id)))
         // The page's reports are the project's, and reading from them spares a walk over the
         // project's alerts by status.
-        .filter(schema::report::id.eq_any(report_ids))
+        .filter(schema::alert::report_id.eq_any(report_ids))
         .filter(raised_alerts_with(project_id, query, ThresholdIndex::Skip)?)
         .select((
             (schema::alert::id, schema::alert::modified),
@@ -428,18 +419,17 @@ fn group_rows(
 
 type Selected<QS> = Box<dyn BoxableExpression<QS, Sqlite, SqlType = Bool>>;
 
-/// The alerts the request lists, by the rules of [`matching`], over a query that joins each
-/// alert to the report that raised it.
+/// The alerts the request lists, by the rules of [`matching`].
 fn selected<QS: 'static>(
     project_id: ProjectId,
     query: &AlertsQuery,
 ) -> Result<Selected<QS>, HttpError>
 where
     schema::alert::project_id: SelectableExpression<QS>,
+    schema::alert::report_id: SelectableExpression<QS>,
     schema::alert::threshold_id: SelectableExpression<QS>,
     schema::alert::status: SelectableExpression<QS>,
-    schema::report::uuid: SelectableExpression<QS>,
-    schema::report::created: SelectableExpression<QS>,
+    schema::alert::created: SelectableExpression<QS>,
 {
     Ok(Box::new(
         schema::alert::project_id
@@ -454,10 +444,10 @@ fn raised_alerts<QS: 'static>(
     query: &AlertsQuery,
 ) -> Result<Selected<QS>, HttpError>
 where
+    schema::alert::report_id: SelectableExpression<QS>,
     schema::alert::threshold_id: SelectableExpression<QS>,
     schema::alert::status: SelectableExpression<QS>,
-    schema::report::uuid: SelectableExpression<QS>,
-    schema::report::created: SelectableExpression<QS>,
+    schema::alert::created: SelectableExpression<QS>,
 {
     raised_alerts_with(project_id, query, ThresholdIndex::Use)
 }
@@ -468,10 +458,10 @@ fn raised_alerts_with<QS: 'static>(
     index: ThresholdIndex,
 ) -> Result<Selected<QS>, HttpError>
 where
+    schema::alert::report_id: SelectableExpression<QS>,
     schema::alert::threshold_id: SelectableExpression<QS>,
     schema::alert::status: SelectableExpression<QS>,
-    schema::report::uuid: SelectableExpression<QS>,
-    schema::report::created: SelectableExpression<QS>,
+    schema::alert::created: SelectableExpression<QS>,
 {
     let JsonAlertsFilter {
         status: _,
@@ -495,13 +485,13 @@ where
         ConsoleAlertStatus::All => {},
     }
     if !reports.is_empty() {
-        selected = Box::new(selected.and(schema::report::uuid.eq_any(reports)));
+        selected = Box::new(selected.and(schema::alert::report_id.eq_any(listed_reports(reports))));
     }
     if let Some(start_time) = start_time {
-        selected = Box::new(selected.and(schema::report::created.ge(DateTime::from(start_time))));
+        selected = Box::new(selected.and(schema::alert::created.ge(DateTime::from(start_time))));
     }
     if let Some(end_time) = end_time {
-        selected = Box::new(selected.and(schema::report::created.le(DateTime::from(end_time))));
+        selected = Box::new(selected.and(schema::alert::created.le(DateTime::from(end_time))));
     }
     Ok(selected)
 }
@@ -1092,8 +1082,8 @@ type Selection = Selected<schema::alert::table>;
 /// The alerts of the project that the filter matches, leaving out those on an archived
 /// branch, testbed, or measure as the alert list does.
 ///
-/// Dismiss all holds the write lock, so the alert rows are read by their own columns and only
-/// a window reaches through to the reports that raised them.
+/// Dismiss all holds the write lock, so the reports and the window are read from the alert rows'
+/// own columns.
 fn matching(project_id: ProjectId, filter: JsonAlertsFilter) -> Result<Selection, HttpError> {
     let JsonAlertsFilter {
         status,
@@ -1111,44 +1101,27 @@ fn matching(project_id: ProjectId, filter: JsonAlertsFilter) -> Result<Selection
     if let Some(status) = status {
         selection = Box::new(selection.and(schema::alert::status.eq(status)));
     }
-
-    let alert_report = || {
-        schema::boundary::table
-            .inner_join(
-                schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)),
-            )
-            .inner_join(
-                schema::report_benchmark::table
-                    .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
-            )
-            .inner_join(
-                schema::report::table
-                    .on(schema::report::id.eq(schema::report_benchmark::report_id)),
-            )
-            .filter(schema::boundary::id.eq(schema::alert::boundary_id))
-            .select(schema::boundary::id)
-    };
     if !reports.is_empty() {
-        selection = Box::new(selection.and(exists(
-            alert_report().filter(schema::report::uuid.eq_any(reports)),
-        )));
+        selection =
+            Box::new(selection.and(schema::alert::report_id.eq_any(listed_reports(reports))));
     }
-    let since = start_time.map(|start_time| schema::report::created.ge(DateTime::from(start_time)));
-    let until = end_time.map(|end_time| schema::report::created.le(DateTime::from(end_time)));
-    match (since, until) {
-        (Some(since), Some(until)) => {
-            selection = Box::new(selection.and(exists(alert_report().filter(since).filter(until))));
-        },
-        (Some(since), None) => {
-            selection = Box::new(selection.and(exists(alert_report().filter(since))));
-        },
-        (None, Some(until)) => {
-            selection = Box::new(selection.and(exists(alert_report().filter(until))));
-        },
-        (None, None) => {},
+    if let Some(start_time) = start_time {
+        selection = Box::new(selection.and(schema::alert::created.ge(DateTime::from(start_time))));
+    }
+    if let Some(end_time) = end_time {
+        selection = Box::new(selection.and(schema::alert::created.le(DateTime::from(end_time))));
     }
 
     Ok(selection)
+}
+
+fn listed_reports(
+    reports: Vec<ReportUuid>,
+) -> schema::report::BoxedQuery<'static, Sqlite, Integer> {
+    schema::report::table
+        .filter(schema::report::uuid.eq_any(reports))
+        .select(schema::report::id)
+        .into_boxed()
 }
 
 /// The alerts whose threshold is on the listed branches, testbeds, and measures and is one of

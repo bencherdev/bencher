@@ -768,10 +768,12 @@ fn perf_query(
                     schema::alert::id,
                     schema::alert::uuid,
                     schema::alert::project_id,
+                    schema::alert::report_id,
                     schema::alert::threshold_id,
                     schema::alert::boundary_id,
                     schema::alert::boundary_limit,
                     schema::alert::status,
+                    schema::alert::created,
                     schema::alert::modified,
                 )
                     .nullable(),
