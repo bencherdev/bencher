@@ -1,6 +1,10 @@
 use super::apt;
 use super::ssh::Ssh;
 
+pub const SSH_HARDENING_PATH: &str = "/etc/ssh/sshd_config.d/hardening.conf";
+pub const UNATTENDED_UPGRADES_PATH: &str = "/etc/apt/apt.conf.d/50unattended-upgrades-local";
+pub const AUTO_UPGRADES_PATH: &str = "/etc/apt/apt.conf.d/20auto-upgrades";
+
 const SSH_HARDENING_CONF: &str = "\
 PasswordAuthentication no
 ChallengeResponseAuthentication no
@@ -37,7 +41,7 @@ pub fn harden(ssh: &Ssh) -> anyhow::Result<()> {
     // Harden SSH
     println!("Hardening SSH configuration...");
     ssh.run(&format!(
-        "cat > /etc/ssh/sshd_config.d/hardening.conf << 'SSHD_EOF'\n{SSH_HARDENING_CONF}\nSSHD_EOF"
+        "cat > {SSH_HARDENING_PATH} << 'SSHD_EOF'\n{SSH_HARDENING_CONF}\nSSHD_EOF"
     ))?;
     ssh.run("systemctl reload ssh")?;
 
@@ -52,10 +56,10 @@ pub fn harden(ssh: &Ssh) -> anyhow::Result<()> {
     // Unattended upgrades
     println!("Configuring unattended upgrades...");
     ssh.run(&format!(
-        "cat > /etc/apt/apt.conf.d/50unattended-upgrades-local << 'UU_EOF'\n{UNATTENDED_UPGRADES_CONF}\nUU_EOF"
+        "cat > {UNATTENDED_UPGRADES_PATH} << 'UU_EOF'\n{UNATTENDED_UPGRADES_CONF}\nUU_EOF"
     ))?;
     ssh.run(&format!(
-        "cat > /etc/apt/apt.conf.d/20auto-upgrades << 'AU_EOF'\n{AUTO_UPGRADES_CONF}\nAU_EOF"
+        "cat > {AUTO_UPGRADES_PATH} << 'AU_EOF'\n{AUTO_UPGRADES_CONF}\nAU_EOF"
     ))?;
 
     println!("Server hardening complete");

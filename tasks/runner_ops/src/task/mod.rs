@@ -1,4 +1,5 @@
 mod apt;
+mod audit;
 mod deploy;
 mod deploy_setup;
 mod download;
@@ -18,6 +19,7 @@ use clap::Parser as _;
 
 use crate::parser::server::{Server, load_server};
 use crate::parser::{TaskRunnerOps, TaskSub};
+use audit::Audit;
 use deploy::Deploy;
 use isolate::Isolate;
 use logs::Logs;
@@ -46,6 +48,7 @@ enum Sub {
     Start(Start),
     Stop(Stop),
     Logs(Logs),
+    Audit(Audit),
 }
 
 impl TryFrom<TaskRunnerOps> for Task {
@@ -70,6 +73,7 @@ impl TryFrom<TaskSub> for Sub {
             TaskSub::Start(start) => Self::Start(start.try_into()?),
             TaskSub::Stop(stop) => Self::Stop(stop.try_into()?),
             TaskSub::Logs(logs) => Self::Logs(logs.try_into()?),
+            TaskSub::Audit(audit) => Self::Audit(audit.try_into()?),
         })
     }
 }
@@ -94,6 +98,7 @@ impl Sub {
             Self::Start(start) => start.exec(),
             Self::Stop(stop) => stop.exec(),
             Self::Logs(logs) => logs.exec(),
+            Self::Audit(audit) => audit.exec(),
         }
     }
 }

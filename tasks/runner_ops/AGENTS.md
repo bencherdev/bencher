@@ -10,6 +10,17 @@ Optional per-runner fields:
 
 - `"update_channel": "canary"` puts the runner on the canary update channel: it self-updates to the rolling canary build published on each `cloud` branch deploy, instead of waiting for versioned releases. Omit (or use `"stable"`) for release-only updates. The channel is written to the systemd drop-in as `BENCHER_UPDATE_CHANNEL` by `deploy` and `start`, and `deploy` installs that channel's release; both commands also accept an `--update-channel` flag that overrides the file.
 
+## Add a runner
+
+1. Add the runner's entry to `runners.json`.
+2. `cargo ops provision <runner>` installs the OS from the rescue system and hardens it.
+3. `cargo ops isolate <runner>` sets the CPU isolation boot args and reboots. The runner service is not installed yet, and `isolate` says so.
+4. Wait for the RAID1 initial sync to complete; the runner must take no jobs before then. `cargo ops audit <runner>` reports the sync until it is done (until `deploy` installs the runner, it also reports the runner service as not active and the `runner unit` and `runner binary` sections as failed, which is expected).
+5. `cargo ops deploy <runner>` installs the binary of the runner's update channel, checked against its release's checksum. `cargo ops audit <runner>` prints the deployed binary's sha256 under `runner binary`.
+6. `cargo ops audit <runner> --against <existing-runner>` until it is clean.
+
+Unattended upgrades install new kernels without rebooting, so a new runner can boot a newer kernel than the rest of the fleet; audit shows it as a `kernel` difference and a pending reboot on the older runners. Kernel parity needs a coordinated reboot of every runner.
+
 ## Common Operations
 
 ### Deploy the release of the runner's channel
@@ -40,6 +51,8 @@ cargo ops logs <runner> --follow
 
 ### Full provisioning (new server)
 
+See [Add a runner](#add-a-runner) for the full sequence.
+
 ```bash
 cargo ops provision <runner>
 ```
@@ -51,6 +64,15 @@ Configure `isolcpus=`/`nohz_full=`/`rcu_nocbs=` kernel boot args for the benchma
 ```bash
 cargo ops isolate <runner>
 cargo ops isolate <runner> --cpus 1-5
+```
+
+### Audit
+
+Read-only. Collects a snapshot from each runner over one SSH connection, prints how many sections and lines it audited, and checks its health: every section has output and its command exited 0, runner service active, no pending reboot, RAID arrays active and neither syncing nor degraded, no auto-removable packages, and isolation args on the kernel cmdline. Without `--against` it prints the snapshot; with `--against` it prints only the differing lines of each section (`~ order differs` when the same lines come in another order), including non-zero exit statuses, after normalizing the runner name, the root UUID, and the RAID member order. Exits non-zero on any failed check or difference. The runner unit is read through an allowlist of its lines, never `systemctl cat`, and any line holding a runner key is dropped on the server and again on parse, so the key never leaves the runner. The reference runner resolves from `runners.json` only.
+
+```bash
+cargo ops audit <runner>
+cargo ops audit <runner> --against <reference-runner>
 ```
 
 ## How It Works
