@@ -106,9 +106,9 @@ test("a tab switch holds the speed ceilings", async ({ page }) => {
 	await ready(page);
 
 	const since = await mark(page);
-	await tabRow(page).getByRole("link", { name: "Thresholds" }).click();
+	await tabRow(page).getByRole("link", { name: "Plots" }).click();
 	await expect(
-		page.getByRole("heading", { level: 1, name: "Thresholds" }),
+		page.getByRole("heading", { level: 1, name: "Plots" }),
 	).toBeVisible();
 	await settle(page);
 
@@ -577,3 +577,119 @@ test("an Explore key toggle fits in a frame", async ({ page, request }) => {
 	const cost = await measure(page, seed.api_url, since);
 	expect(cost.apiRequests).toBe(0);
 });
+
+const THRESHOLDS = nextPath(hashbrown.slug, "thresholds");
+
+// Kills a switch into Thresholds that refetches the shell, asks for the list in
+// more than one request, or pulls in more than its page.
+test("a tab switch into Thresholds holds its speed ceilings", async ({
+	page,
+}) => {
+	await page.goto(SHELL);
+	await ready(page);
+
+	const since = await mark(page);
+	await tabRow(page).getByRole("link", { name: "Thresholds" }).click();
+	await expect(
+		page.getByRole("table", { name: /^Thresholds, with the alerts/ }),
+	).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("thresholds tab switch", cost);
+	const ceiling = ceilings.thresholdsTabSwitch;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+});
+
+// The cold loads of Thresholds and of a threshold, at each width the layout changes at.
+for (const [width, viewport] of [
+	["desktop", undefined],
+	["768", { width: 768, height: 1024 }],
+	["390", { width: 390, height: 844 }],
+] as const) {
+	test.describe(`thresholds at ${width}`, () => {
+		if (viewport) {
+			test.use({ viewport });
+		}
+
+		const holds = (
+			cost: Cost,
+			moved: number,
+			ceiling: typeof ceilings.thresholdsColdLoad,
+		) => {
+			expect(moved).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+				ceiling.apiAnswersBeforePaint,
+			);
+			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+			if (!viewport) {
+				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			}
+			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+			expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
+			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+			expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
+				ceiling.inlineScriptBytes,
+			);
+			expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+		};
+
+		// Kills a list that waits on the shell's request or on its own code
+		// arriving late, a page stylesheet of its own, and rows or a count that
+		// move the page as they arrive.
+		test(`a cold load of Thresholds holds its speed ceilings at ${width}`, async ({
+			page,
+		}) => {
+			await observePageShift(page);
+			const cost = await coldLoad(page, THRESHOLDS, () =>
+				expect(
+					page
+						.getByRole("table", { name: /^Thresholds, with the alerts/ })
+						.getByRole("link")
+						.first(),
+				).toBeVisible(),
+			);
+			const moved = await pageShift(page);
+			report(`thresholds cold load ${width}`, {
+				...cost,
+				pageShift: moved,
+			} as Cost);
+			holds(cost, moved, ceilings.thresholdsColdLoad);
+		});
+
+		// Kills a threshold whose alerts wait on the threshold's own request, a
+		// row's full plot loaded before a row expands, and cards or rows that
+		// move the page as they arrive.
+		test(`a cold load of a threshold holds its speed ceilings at ${width}`, async ({
+			page,
+			request,
+		}) => {
+			const response = await request.get(
+				`${seed.api_url}/v0/projects/${hashbrown.slug}/console/thresholds`,
+				{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+			);
+			const {
+				thresholds: [threshold],
+			} = (await response.json()) as { thresholds: { uuid: string }[] };
+			await observePageShift(page);
+			const cost = await coldLoad(
+				page,
+				`${THRESHOLDS}/${threshold?.uuid}`,
+				// The alerts sit below the cards, out of view on a phone, so their count says they arrived.
+				() =>
+					expect(
+						page.getByText(/^\d+ active · \d+ dismissed in the last 4 weeks$/),
+					).toBeVisible(),
+			);
+			const moved = await pageShift(page);
+			report(`threshold cold load ${width}`, {
+				...cost,
+				pageShift: moved,
+			} as Cost);
+			holds(cost, moved, ceilings.thresholdColdLoad);
+		});
+	});
+}

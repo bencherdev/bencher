@@ -187,3 +187,17 @@ test("a narrow row's controls are 44 px targets", async () => {
 		expect(height).toBeGreaterThanOrEqual(44);
 	}
 });
+
+// Kills an aside that only the wide row draws, or that leaves the measure beside it.
+test("an aside takes the measure's place in both layouts", async () => {
+	for (const narrow of [false, true]) {
+		mount({ narrow, aside: <a href="/report">Sep 13</a> });
+		const row = page.getByRole("row");
+		await expect
+			.element(row.getByRole("link", { name: "Sep 13" }))
+			.toBeVisible();
+		expect(row.element().textContent).not.toContain("Latency");
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});

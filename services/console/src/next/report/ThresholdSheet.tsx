@@ -1,7 +1,7 @@
-import Button from "@bencherdev/ui/Button";
 import Sheet from "@bencherdev/ui/Sheet";
 import type { QueryObserverResult } from "@tanstack/solid-query";
-import { For, Match, Show, Switch, createSignal, onCleanup } from "solid-js";
+import { For, Match, Show, Switch } from "solid-js";
+import Code from "./Code";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import type { ReportLine } from "./lines";
@@ -157,46 +157,3 @@ const Count = (props: { count: QueryObserverResult<number> }) => (
 		</Match>
 	</Switch>
 );
-
-const Code = (props: {
-	/** What Copy copies, for its accessible name. */
-	name: string;
-	text: string;
-	code: readonly { text: string; flag: boolean }[];
-}) => {
-	const [copy, setCopy] = createSignal<"copied" | "refused">();
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	onCleanup(() => clearTimeout(timer));
-	const write = async () => {
-		clearTimeout(timer);
-		try {
-			await navigator.clipboard.writeText(props.text);
-		} catch {
-			setCopy("refused");
-			return;
-		}
-		setCopy("copied");
-		timer = setTimeout(() => setCopy(), 2_000);
-	};
-	return (
-		<>
-			<div class="code">
-				<For each={props.code}>
-					{(row) => (
-						<span class="rp-snip" classList={{ "rp-flag": row.flag }}>
-							{row.text}
-						</span>
-					)}
-				</For>
-				<Button size="sm" aria-label={`Copy ${props.name}`} onClick={write}>
-					{copy() === "copied" ? "Copied" : "Copy"}
-				</Button>
-			</div>
-			<Show when={copy() === "refused"}>
-				<p class="sm rp-refused" role="alert">
-					The browser refused to copy; select the command to copy it.
-				</p>
-			</Show>
-		</>
-	);
-};
