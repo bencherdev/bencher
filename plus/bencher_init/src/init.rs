@@ -219,7 +219,8 @@ fn run_init() -> Result<(), InitError> {
     // Exit the init process. Since we're PID 1, this causes a kernel panic:
     //   "Attempted to kill init!"
     // With panic=1 in cmdline, the kernel reboots after 1 second.
-    // With reboot=t, the reboot triggers a triple-fault → VcpuExit::Shutdown.
+    // Firecracker ends that reboot as a clean stop: an i8042 reset on x86
+    // (`reboot=k`), PSCI on aarch64.
     console_log("exiting (will trigger kernel panic → reboot → VM shutdown)...");
     // SAFETY: sync() has no unsafe preconditions; it flushes filesystem buffers.
     unsafe {
