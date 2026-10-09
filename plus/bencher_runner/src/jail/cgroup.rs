@@ -606,9 +606,7 @@ pub(crate) fn remove_stale_cgroup(log: &Logger, vm_id: &VmId) -> Result<(), Jail
 
 /// Refuse to measure while another Bencher cgroup holds a process.
 ///
-/// Checked again once this job's VMM is placed, skipping `own`: each of two jobs
-/// that start together is placed before that check, so at least one sees the
-/// other.
+/// Checked again once this job's VMM is placed, skipping `own`.
 pub(crate) fn refuse_occupied_cgroups(own: Option<&VmId>) -> Result<(), JailError> {
     refuse_occupied_cgroups_at(
         &Utf8PathBuf::from(CGROUP_ROOT).join(BENCHER_CGROUP_BASE),

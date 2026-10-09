@@ -40,10 +40,12 @@ Deve ser um caminho absoluto.
 A jail que confina o sandbox é criada sob este diretório,
 e as jails deixadas por um encerramento não limpo são removidas dele antes de cada Job com sandbox.
 Cada jail contém um sistema de arquivos raiz completo do convidado e uma cópia do binário da microVM,
-e os Jobs que compartilham um diretório de estado são executados um de cada vez,
+e um Runner executa os seus Jobs um de cada vez,
 portanto este diretório precisa de capacidade real para uma jail.
-Um Job com sandbox também falha imediatamente, em vez de esperar a sua vez, se um Job de um Runner com outro diretório de estado, ou um Job sem sandbox, estiver em execução em um cgroup do Bencher no mesmo host.
-Um Job só é executado em um cgroup assim quando o seu Runner consegue isolar núcleos de CPU, então os Jobs de um Runner que não consegue não são detectados.
+Um host executa um único Runner por vez, seja qual for o seu diretório de estado:
+um Runner iniciado como `root` mantém o bloqueio `/run/bencher/runner.lock` enquanto está em execução,
+e um segundo iniciado como `root` encerra imediatamente com um erro que nomeia esse bloqueio; um Runner que não é `root` não consegue abrir o bloqueio e é executado sem ele.
+Um Job com sandbox ainda falha imediatamente se um processo estiver em execução em outro cgroup do Bencher no host, como um que um Runner com outro diretório de estado deixou para trás.
 Um sistema de arquivos dedicado ou uma montagem `tmpfs` é suportado e recomendado:
 mantém essa carga de escrita fora do disco do sistema,
 e um sistema de arquivos recém-criado é aceito mesmo que venha com um diretório `lost+found`.

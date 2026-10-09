@@ -138,15 +138,16 @@ pub fn run_with_args(log: &Logger, args: &RunArgs) -> Result<(), RunnerError> {
     // runner and stranding the VMM.
     crate::signal::install_cancel_handlers();
 
+    #[cfg(target_os = "linux")]
+    let _runner_lock = crate::runner_lock::RunnerLock::acquire(log)?;
+
     // Warn about host conditions that limit benchmark accuracy (Linux only)
     preflight::log_host_warnings(log);
 
-    // Serialize host-global tuning across runner processes.
-    let host_lock = crate::tuning::HostTuningLock::acquire(log);
-    let tuning = host_lock.effective_tuning(log, &args.tuning);
+    let tuning = &args.tuning;
 
     // Apply host tuning, which persists until the host reboots (no-op on non-Linux)
-    let _tuning_guard = crate::tuning::apply(log, &tuning);
+    let _tuning_guard = crate::tuning::apply(log, tuning);
 
     let mut config = build_config_from_run_args(args)?;
 
@@ -158,7 +159,7 @@ pub fn run_with_args(log: &Logger, args: &RunArgs) -> Result<(), RunnerError> {
     #[cfg(target_os = "linux")]
     {
         let cpu_layout = crate::cpu::CpuLayout::detect(log);
-        crate::tuning::apply_cpu_scoped(log, &tuning, &cpu_layout);
+        crate::tuning::apply_cpu_scoped(log, tuning, &cpu_layout);
         cpu_layout.log_isolation(log);
         if cpu_layout.has_isolation() {
             config = config.with_cpu_layout(cpu_layout);

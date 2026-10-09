@@ -42,10 +42,12 @@ Runner 的持久状态目录。
 限制沙箱的 jail 在该目录下创建，
 非正常退出遗留的 jail 会在每个沙箱 Job 运行前从中清除。
 每个 jail 都保存着完整的客户机根文件系统和一份 microVM 二进制文件副本，
-而共享同一状态目录的 Job 一次只运行一个，
+而 Runner 一次只运行一个 Job，
 因此该目录只需为一个 jail 准备真实的容量。
-如果同一主机上的 Bencher cgroup 中正在运行使用其他状态目录的 Runner 的 Job，或未使用沙箱的 Job，沙箱 Job 会立即失败，而不会排队等待。
-只有当 Runner 能够隔离 CPU 核心时，Job 才会在这样的 cgroup 中运行，因此无法隔离的 Runner 的 Job 不会被发现。
+无论状态目录如何，一台主机同一时间只运行一个 Runner：
+以 `root` 身份启动的 Runner 在运行期间一直持有锁 `/run/bencher/runner.lock`，
+以 `root` 身份启动的第二个 Runner 会立即退出，并报出指明该锁的错误；不以 `root` 身份运行的 Runner 无法打开该锁，会在没有锁的情况下运行。
+如果主机上另一个 Bencher cgroup 中正在运行某个进程，例如使用其他状态目录的 Runner 遗留下的进程，沙箱 Job 仍会立即失败。
 支持并推荐使用专用文件系统或 `tmpfs` 挂载：
 这能让写入负载远离系统磁盘，
 并且刚创建的文件系统即使带有 `lost+found` 目录也会被接受。

@@ -493,7 +493,7 @@ fn remove_elevated_state_dir(state_dir: &std::path::Path) {
 }
 
 /// Kills the whole process group through `sudo`, because the handle is `sudo`
-/// itself and killing it alone would leave a root daemon holding the jail lock.
+/// itself and killing it alone would leave a root daemon holding the runner lock.
 fn kill_elevated_runner(child: &mut std::process::Child) {
     let pid = child.id();
     let _status = Command::new("sudo")

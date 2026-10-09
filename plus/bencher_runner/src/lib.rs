@@ -50,6 +50,8 @@ mod log_level;
 pub mod metrics;
 #[cfg(feature = "plus")]
 mod run;
+#[cfg(all(feature = "plus", target_os = "linux"))]
+mod runner_lock;
 #[cfg(feature = "plus")]
 mod signal;
 #[cfg(feature = "plus")]
@@ -67,6 +69,8 @@ pub use bencher_json::{Cpu, Disk, GracePeriod, Memory};
 pub use config::Config;
 #[cfg(feature = "plus")]
 pub use deadline::JobDeadline;
+#[cfg(all(feature = "plus", target_os = "linux"))]
+pub use error::LockError;
 #[cfg(feature = "plus")]
 pub use error::{ConfigError, ExecutionError, JailError, RunnerError};
 #[cfg(feature = "plus")]

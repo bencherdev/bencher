@@ -8,9 +8,8 @@ use camino::{Utf8Path, Utf8PathBuf};
 use slog::{Logger, info, warn};
 
 use crate::error::JailError;
-use crate::jail::lock::LOCK_FILE;
+use crate::jail::VmId;
 use crate::jail::reap::Reaped;
-use crate::jail::{JailLock, VmId};
 
 const CHROOT_BASE: &str = "jail";
 
@@ -137,9 +136,9 @@ impl StateDir {
         Ok(())
     }
 
-    /// Run under the job lock before the job builds its own jail, so anything
-    /// found is stale whichever runner process left it.
-    pub fn sweep(&self, log: &Logger, _lock: &JailLock) -> Result<(), JailError> {
+    /// Run before the job builds its own jail, so under the runner lock
+    /// anything found is stale.
+    pub fn sweep(&self, log: &Logger) -> Result<(), JailError> {
         let reclaimed = sweep_jails(log, &self.jail_parent())?;
         if reclaimed > 0 {
             // Each held a VMM binary and a full guest rootfs, so an operator
@@ -375,8 +374,11 @@ fn make_private(dir: &Utf8Path) -> Result<(), JailError> {
 const BENIGN_ENTRIES: [&str; 1] = ["lost+found"];
 
 /// Never proof of ownership, only tolerated so the runner's own leftovers, such
-/// as the lock after `rm -rf <state_dir>/jail`, cannot disown its root.
-const OUR_ROOT_ENTRIES: [&str; 2] = [CHROOT_BASE, LOCK_FILE];
+/// as the old lock after `rm -rf <state_dir>/jail`, cannot disown its root.
+const OUR_ROOT_ENTRIES: [&str; 2] = [CHROOT_BASE, LEGACY_LOCK_FILE];
+
+/// Left in every state directory by runners from before the runner lock.
+const LEGACY_LOCK_FILE: &str = ".lock";
 
 /// Needed because `Drop` never runs on SIGKILL, a crash, or a self-update's
 /// `exec`, and jobs run serially, so anything here is stale.
@@ -449,8 +451,8 @@ where
     for entry in entries {
         let outcome = match entry {
             Ok(entry) => match jail_id(log, jail_parent, &entry) {
-                // One reclamation can run for minutes under the lock, and
-                // silence that long looks like a wedge.
+                // One reclamation can run for minutes, and silence that long
+                // looks like a wedge.
                 Ok(Some(vm_id)) => {
                     let jail_dir = jail_parent.join(vm_id.as_str());
                     super::lock::while_waiting(
@@ -890,13 +892,13 @@ mod tests {
     }
 
     #[test]
-    fn a_root_holding_only_the_lock_is_ours() {
-        // The real lock left by `rm -rf <state_dir>/jail` must not stop a
-        // rebuild, which also pins the guard to the lock module's file name.
+    fn a_root_holding_only_the_old_lock_is_ours() {
+        // The lock an older runner left must not stop a rebuild after
+        // `rm -rf <state_dir>/jail`.
         let (_dir, root) = temp_root();
         let state = StateDir::new(root.join("state")).unwrap();
         state.create().unwrap();
-        drop(JailLock::acquire(&discard(), state.path(), None).unwrap());
+        fs::write(state.path().join(".lock"), b"").unwrap();
         fs::remove_dir_all(state.chroot_base()).unwrap();
 
         state.create().unwrap();

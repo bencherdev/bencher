@@ -40,10 +40,12 @@ Debe ser una ruta absoluta.
 La jaula que confina el sandbox se crea dentro de este directorio,
 y las jaulas que quedaron tras una salida no limpia se eliminan de él antes de cada Job con sandbox.
 Cada jaula contiene un sistema de archivos raíz completo del huésped y una copia del binario de la microVM,
-y los Jobs que comparten un directorio de estado se ejecutan de uno en uno,
+y un Runner ejecuta sus Jobs de uno en uno,
 por lo que este directorio necesita capacidad real para una jaula.
-Un Job con sandbox también falla de inmediato, en lugar de esperar su turno, si un Job de un Runner con otro directorio de estado, o un Job sin sandbox, se está ejecutando en un cgroup de Bencher en el mismo host.
-Un Job solo se ejecuta en un cgroup así cuando su Runner puede aislar núcleos de CPU, así que los Jobs de un Runner que no puede no se detectan.
+Un host ejecuta un solo Runner a la vez, sea cual sea su directorio de estado:
+un Runner iniciado como `root` mantiene el bloqueo `/run/bencher/runner.lock` mientras se ejecuta,
+y un segundo iniciado como `root` sale de inmediato con un error que nombra ese bloqueo; un Runner que no es `root` no puede abrir el bloqueo y se ejecuta sin él.
+Un Job con sandbox sigue fallando de inmediato si un proceso se está ejecutando en otro cgroup de Bencher en el host, como uno que dejó atrás un Runner con otro directorio de estado.
 Se admite y se recomienda un sistema de archivos dedicado o un montaje `tmpfs`:
 mantiene esa carga de escritura fuera del disco del sistema,
 y se acepta un sistema de archivos recién creado aunque llegue con un directorio `lost+found`.
