@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use bencher_json::{Sha256, UpdateChannel};
+use bencher_runner::maintenance::{JOB_LOCK, MARKER, RUN_DIR};
 
 use super::framed::{self, Output};
 use super::isolate::{format_cpu_list, parse_cpu_list};
@@ -61,6 +62,28 @@ const MASKED_UNITS: [&str; 34] = [
     "snapd.core-fixup.service",
     "snapd.recovery-chooser-trigger.service",
     "snapd.system-shutdown.service",
+];
+/// Has a maintenance unit take turns with the runner's Jobs; `zz-` sorts it after any other drop-in.
+const QUIET_DROP_IN: &str = "zz-bencher-quiet.conf";
+/// Each maintenance unit and its own command, which the drop-in runs under the runner's job lock.
+const QUIET_UNITS: [(&str, &str); 5] = [
+    ("apt-daily.service", "/usr/lib/apt/apt.systemd.daily update"),
+    (
+        "apt-daily-upgrade.service",
+        "/usr/lib/apt/apt.systemd.daily install",
+    ),
+    (
+        "fstrim.service",
+        "/sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported",
+    ),
+    (
+        "mdcheck_start.service",
+        "/usr/share/mdadm/mdcheck --duration ${MDADM_CHECK_DURATION}",
+    ),
+    (
+        "mdcheck_continue.service",
+        "/usr/share/mdadm/mdcheck --continue --duration ${MDADM_CHECK_DURATION}",
+    ),
 ];
 const ABSENT: &str = "absent";
 const FRAME: &str = "desired ";
@@ -122,6 +145,17 @@ impl Desired {
             // Before the masks, whose daemon reloads would re-arm the timer on its old calendar.
             Row::Scrub(scrub_day),
         ];
+        for (unit, command) in QUIET_UNITS {
+            rows.extend([
+                Row::File(File::root(
+                    &quiet_drop_in_path(unit),
+                    0o644,
+                    Content::Text(quiet_drop_in(command)),
+                    Some("systemctl daemon-reload"),
+                )),
+                Row::Vendor { unit, command },
+            ]);
+        }
         rows.extend(MASKED_UNITS.into_iter().map(Row::Masked));
         rows.extend([
             Row::Cgroup(Cgroup::Controllers),
@@ -268,6 +302,8 @@ enum SetBy {
     Start,
     Deploy,
     Runner,
+    /// The distribution's own unit, whose command a drop-in restates.
+    Vendor,
 }
 
 impl fmt::Display for SetBy {
@@ -277,6 +313,9 @@ impl fmt::Display for SetBy {
             Self::Start => "`cargo ops start`",
             Self::Deploy => "`cargo ops deploy`",
             Self::Runner => "the runner",
+            Self::Vendor => {
+                "the unit's package or another drop-in; restate the package's command in the drop-in, and set it in no other"
+            },
         })
     }
 }
@@ -293,6 +332,11 @@ enum Row {
     StateDir,
     /// The installed runner binary, checked against the checksum its channel's release publishes.
     Binary(UpdateChannel),
+    /// A maintenance unit's own command, which its drop-in restates, so a package update that changes it shows.
+    Vendor {
+        unit: &'static str,
+        command: &'static str,
+    },
 }
 
 #[derive(Debug)]
@@ -332,6 +376,7 @@ impl Row {
             Self::Cgroup(Cgroup::Partition) => format!("{BENCHER_CGROUP} partition"),
             Self::StateDir => STATE_DIR.to_owned(),
             Self::Binary(channel) => format!("{RUNNER_BINARY} ({channel})"),
+            Self::Vendor { unit, .. } => format!("{unit} command"),
         }
     }
 
@@ -344,6 +389,7 @@ impl Row {
             Self::File(_) | Self::Masked(_) | Self::Scrub(_) => SetBy::Host,
             Self::Cgroup(_) | Self::StateDir => SetBy::Runner,
             Self::Binary(_) => SetBy::Deploy,
+            Self::Vendor { .. } => SetBy::Vendor,
         }
     }
 
@@ -365,6 +411,11 @@ impl Row {
                 ),
             ),
             Self::Binary(_) => if_present(RUNNER_BINARY, &format!("sha256sum {RUNNER_BINARY}")),
+            // The unit file itself, since `systemctl show` gives the drop-in's command, then every other drop-in's.
+            Self::Vendor { unit, .. } => format!(
+                "(grep '^ExecStart=' \"$(systemctl show -p FragmentPath --value {unit})\" && for drop_in in $(systemctl show -p DropInPaths --value {unit}); do [ \"$drop_in\" = {ours} ] || grep -EH '^[[:space:]]*ExecStart[[:space:]]*=' \"$drop_in\" || [ $? = 1 ] || exit; done)",
+                ours = quiet_drop_in_path(unit),
+            ),
         }
     }
 
@@ -395,6 +446,7 @@ impl Row {
             },
             Self::StateDir => state_dir_problem(text),
             Self::Binary(channel) => binary_problem(text, *channel, published),
+            Self::Vendor { command, .. } => vendor_problem(text, command),
         }
     }
 
@@ -407,7 +459,7 @@ impl Row {
                 "systemctl mask --now {unit} && if systemctl is-failed --quiet {unit}; then systemctl reset-failed {unit}; fi"
             )),
             Self::Scrub(day) => scrub_write((*day)?),
-            Self::Cgroup(_) | Self::StateDir | Self::Binary(_) => None,
+            Self::Cgroup(_) | Self::StateDir | Self::Binary(_) | Self::Vendor { .. } => None,
         }
     }
 
@@ -617,6 +669,51 @@ fn state_dir_problem(text: &str) -> Option<String> {
             problems.push(format!("is mounted {option}"));
         }
     }
+    (!problems.is_empty()).then(|| problems.join("; "))
+}
+
+fn quiet_drop_in_path(unit: &str) -> String {
+    format!("/etc/systemd/system/{unit}.d/{QUIET_DROP_IN}")
+}
+
+/// Waits for the runner's job lock, behind a marker of its own (`%n`, the unit) that the runner pauses for.
+fn quiet_drop_in(command: &str) -> String {
+    let marker = format!("{RUN_DIR}/{MARKER}.%n");
+    format!(
+        "[Service]
+ExecStartPre=+/usr/bin/install -d -m 0700 {RUN_DIR}
+ExecStartPre=+/usr/bin/touch {marker}
+ExecStart=
+ExecStart=/usr/bin/flock -F {RUN_DIR}/{JOB_LOCK} {command}
+ExecStopPost=+/usr/bin/rm -f {marker}
+TimeoutStartSec=infinity"
+    )
+}
+
+/// `text` is the unit file's `ExecStart=` lines, which must be the one command the drop-in wraps, then any other
+/// drop-in's, after its path, of which there must be none.
+fn vendor_problem(text: &str, command: &str) -> Option<String> {
+    let (lines, others): (Vec<&str>, Vec<&str>) = text
+        .lines()
+        .partition(|line| line.starts_with("ExecStart="));
+    let want = format!("ExecStart={command}");
+    let mut problems = Vec::new();
+    if lines != [want.as_str()] {
+        problems.push(format!(
+            "runs `{}`, but the drop-in wraps `{want}`",
+            lines.join("`, `")
+        ));
+    }
+    let mut drop_ins: Vec<&str> = others
+        .into_iter()
+        .map(|line| line.split_once(':').map_or(line, |(path, _)| path))
+        .collect();
+    drop_ins.dedup();
+    problems.extend(
+        drop_ins
+            .into_iter()
+            .map(|path| format!("`{path}` also sets `ExecStart=`")),
+    );
     (!problems.is_empty()).then(|| problems.join("; "))
 }
 
@@ -893,6 +990,107 @@ mod tests {
             .position(|write| write.starts_with("systemctl mask"))
             .unwrap();
         assert!(scrub < first_mask, "{writes:#?}");
+    }
+
+    #[test]
+    fn a_vendor_command_that_changed_fails_the_audit() {
+        // Kills a drift check that passes a changed command, a prefix of it, or
+        // a second command, any of which the drop-in would not run.
+        let row = Row::Vendor {
+            unit: "fstrim.service",
+            command: "/sbin/fstrim --verbose",
+        };
+        assert_eq!(problem(&row, "ExecStart=/sbin/fstrim --verbose\n"), None);
+        assert_eq!(
+            problem(&row, "ExecStart=/usr/sbin/fstrim --verbose").as_deref(),
+            Some(
+                "runs `ExecStart=/usr/sbin/fstrim --verbose`, but the drop-in wraps `ExecStart=/sbin/fstrim --verbose`"
+            )
+        );
+        assert!(problem(&row, "ExecStart=/sbin/fstrim --verbose --all").is_some());
+        assert!(problem(&row, "ExecStart=/sbin/fstrim").is_some());
+        assert!(
+            problem(
+                &row,
+                "ExecStart=/sbin/fstrim --verbose\nExecStart=/sbin/fstrim --verbose"
+            )
+            .is_some()
+        );
+    }
+
+    #[test]
+    fn host_writes_each_quiet_drop_in_and_reloads_systemd_once() {
+        // Kills a drop-in that takes effect only at the next reboot, a missing
+        // unit, and a drift check that `host` would try to write.
+        let quiet = Desired(
+            Desired::new(UpdateChannel::Stable, Some(day(5)))
+                .0
+                .into_iter()
+                .filter(|row| match row {
+                    Row::File(file) => file.path.ends_with(QUIET_DROP_IN),
+                    Row::Vendor { .. } => true,
+                    Row::Masked(_)
+                    | Row::Scrub(_)
+                    | Row::Cgroup(_)
+                    | Row::StateDir
+                    | Row::Binary(_) => false,
+                })
+                .collect(),
+        );
+        let (writes, reloads) = quiet.writes(&quiet.check(&BTreeMap::new(), &mut no_checksum));
+        assert_eq!(writes.len(), QUIET_UNITS.len(), "{writes:#?}");
+        let written: Vec<&str> = writes
+            .iter()
+            .filter_map(|write| {
+                write
+                    .split_whitespace()
+                    .find(|word| word.ends_with(QUIET_DROP_IN))
+            })
+            .collect();
+        assert_eq!(
+            written,
+            [
+                "/etc/systemd/system/apt-daily.service.d/zz-bencher-quiet.conf",
+                "/etc/systemd/system/apt-daily-upgrade.service.d/zz-bencher-quiet.conf",
+                "/etc/systemd/system/fstrim.service.d/zz-bencher-quiet.conf",
+                "/etc/systemd/system/mdcheck_start.service.d/zz-bencher-quiet.conf",
+                "/etc/systemd/system/mdcheck_continue.service.d/zz-bencher-quiet.conf",
+            ]
+        );
+        assert_eq!(reloads, ["systemctl daemon-reload"]);
+    }
+
+    #[test]
+    fn each_drop_in_removes_the_marker_it_touches_where_the_runner_looks() {
+        // Kills a drop-in that removes another marker than it touched, which
+        // pauses the runner until a reboot, and a marker the runner never
+        // sees, which lets maintenance wait unseen.
+        for (unit, command) in QUIET_UNITS {
+            let drop_in = quiet_drop_in(command);
+            let path_after = |program: &str| {
+                drop_in
+                    .lines()
+                    .find(|line| line.contains(program))
+                    .and_then(|line| line.split_whitespace().last())
+                    .unwrap_or_else(|| panic!("no {program} in {drop_in}"))
+                    .replace("%n", unit)
+            };
+            let touched = path_after("/usr/bin/touch ");
+            assert_eq!(path_after("/usr/bin/rm "), touched, "{unit}");
+
+            let marker = std::path::Path::new(&touched);
+            assert_eq!(
+                marker.parent(),
+                Some(std::path::Path::new(RUN_DIR)),
+                "{unit}"
+            );
+            let run_dir = tempfile::tempdir().unwrap();
+            std::fs::write(run_dir.path().join(marker.file_name().unwrap()), b"").unwrap();
+            assert!(
+                bencher_runner::maintenance::marker_present(run_dir.path()),
+                "{touched}"
+            );
+        }
     }
 
     #[cfg(target_os = "linux")]
@@ -1235,6 +1433,113 @@ esac
             );
             fs::write(dir.join("isolated"), "1-5\n").unwrap();
             assert!(!check().iter().any(Finding::failed));
+        }
+
+        #[test]
+        fn the_vendor_command_is_read_from_the_unit_file() {
+            // Kills a read of the effective command, which is the drop-in's
+            // own once it is installed, so a vendor change never shows.
+            let dir = tempfile::tempdir().unwrap();
+            let dir = Utf8Path::from_path(dir.path()).unwrap();
+            let unit = dir.join("fstrim.service");
+            write_executable(
+                &dir.join("systemctl"),
+                &format!(
+                    r#"#!/bin/sh
+case "$*" in
+  "show -p FragmentPath --value fstrim.service") echo {unit} ;;
+  "show -p DropInPaths --value fstrim.service") echo ;;
+  "show -p ExecStart --value fstrim.service") echo "/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim" ;;
+  *) exit 1 ;;
+esac
+"#
+                ),
+            )
+            .unwrap();
+            let desired = Desired(vec![Row::Vendor {
+                unit: "fstrim.service",
+                command: "/sbin/fstrim",
+            }]);
+            let script = format!("PATH={dir}:$PATH\n{}", desired.script());
+            let check =
+                || desired.check(&framed::parse(&sh(dir, &script).unwrap()), &mut no_checksum);
+
+            write(
+                &unit,
+                "[Service]\nType=oneshot\nExecStartPre=-/usr/bin/true\nExecStart=/sbin/fstrim\n",
+                0o644,
+            );
+            assert!(!check().iter().any(Finding::failed), "{:?}", check());
+            write(&unit, "[Service]\nExecStart=/usr/sbin/fstrim\n", 0o644);
+            assert!(check().iter().all(Finding::failed), "{:?}", check());
+        }
+
+        #[test]
+        fn another_drop_in_that_sets_the_command_fails_the_audit() {
+            // Kills an audit that misses another drop-in's `ExecStart=`, which
+            // either the drop-in silently replaces or replaces the drop-in, one
+            // that fails on the drop-in itself or on a drop-in that sets no
+            // command, and one that passes a drop-in it could not read.
+            let dir = tempfile::tempdir().unwrap();
+            let dir = Utf8Path::from_path(dir.path()).unwrap();
+            let unit = dir.join("fstrim.service");
+            let drop_ins = dir.join("drop-ins");
+            write(&unit, "[Service]\nExecStart=/sbin/fstrim\n", 0o644);
+            write_executable(
+                &dir.join("systemctl"),
+                &format!(
+                    r#"#!/bin/sh
+case "$*" in
+  "show -p FragmentPath --value fstrim.service") echo {unit} ;;
+  "show -p DropInPaths --value fstrim.service") cat {drop_ins} ;;
+  *) exit 1 ;;
+esac
+"#
+                ),
+            )
+            .unwrap();
+            let desired = Desired(vec![Row::Vendor {
+                unit: "fstrim.service",
+                command: "/sbin/fstrim",
+            }]);
+            let script = format!("PATH={dir}:$PATH\n{}", desired.script());
+            let check = |paths: &[&Utf8Path]| {
+                let paths: Vec<&str> = paths.iter().map(|path| path.as_str()).collect();
+                write(&drop_ins, &paths.join(" "), 0o644);
+                let mut findings =
+                    desired.check(&framed::parse(&sh(dir, &script).unwrap()), &mut no_checksum);
+                findings.pop().unwrap()
+            };
+            let ours = quiet_drop_in_path("fstrim.service");
+            let ours = Utf8Path::new(&ours);
+            let quiet = dir.join("nice.conf");
+            write(&quiet, "[Service]\nNice=10\n", 0o644);
+            let quiet = quiet.as_path();
+
+            assert!(!check(&[ours]).failed(), "{}", check(&[ours]));
+            assert!(!check(&[quiet, ours]).failed(), "{}", check(&[quiet, ours]));
+            let unread = dir.join("gone.conf");
+            let finding = check(&[unread.as_path(), ours]);
+            assert!(
+                finding
+                    .problem
+                    .as_deref()
+                    .is_some_and(|problem| problem.starts_with("could not be read")),
+                "{finding}"
+            );
+            for content in [
+                "[Service]\nExecStart=\nExecStart=/sbin/fstrim --all\n",
+                "[Service]\n  ExecStart = /sbin/fstrim --all\n",
+            ] {
+                let other = dir.join("override.conf");
+                write(&other, content, 0o644);
+                let finding = check(&[other.as_path(), ours]);
+                assert_eq!(
+                    finding.problem.as_deref(),
+                    Some(format!("`{other}` also sets `ExecStart=`").as_str()),
+                    "{content:?}"
+                );
+            }
         }
     }
 }

@@ -6919,6 +6919,7 @@ version = "0.6.13"
 dependencies = [
  "anyhow",
  "bencher_json",
+ "bencher_runner",
  "camino",
  "clap",
  "hex",
