@@ -44,6 +44,8 @@ interface LineRowProps {
 	onNoThreshold?: () => void;
 	/** Hovering or focusing the expand control, before the click. */
 	onIntent?: () => void;
+	/** What the row shows in the measure's place, such as the report an alert came from. */
+	aside?: JSX.Element;
 	/** What the row expands into, drawn in a row of its own under it. */
 	children?: JSX.Element;
 }
@@ -182,7 +184,7 @@ const LineRow = (props: LineRowProps) => {
 								{name()}
 							</div>
 						</td>
-						<td>{props.line.measure.name}</td>
+						<td>{props.aside ?? props.line.measure.name}</td>
 						<td>{history()}</td>
 						<td class="lr-end lr-num">{numbers().value}</td>
 						<td class="lr-num">{delta()}</td>
@@ -203,7 +205,7 @@ const LineRow = (props: LineRowProps) => {
 					<td title={label().name}>
 						<div class="lrn-l1">{name()}</div>
 						<div class="lrn-l2">
-							<span>{props.line.measure.name}</span>
+							<span>{props.aside ?? props.line.measure.name}</span>
 							{history()}
 							<Show when={props.line.guard} fallback={noThreshold()}>
 								<span class="lr-num muted">limit {numbers().limit}</span>

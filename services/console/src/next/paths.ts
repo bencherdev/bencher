@@ -50,12 +50,19 @@ const TAB_PAGES = {
 } as const satisfies Record<Tab, string>;
 
 /** A file under `pages/`: each draws one kind of project path. */
-export type PageName = (typeof TAB_PAGES)[Tab] | "Report" | "NotFound";
+export type PageName =
+	| (typeof TAB_PAGES)[Tab]
+	| "Report"
+	| "Threshold"
+	| "NotFound";
 
 /** The page that draws a project path, from its segments after the project. */
 export const pageName = (rest: string[]): PageName => {
 	if (rest.length === 2 && rest[0] === "reports") {
 		return "Report";
+	}
+	if (rest.length === 2 && rest[0] === "thresholds") {
+		return "Threshold";
 	}
 	const tab = tabOf(rest);
 	return tab ? TAB_PAGES[tab] : "NotFound";
