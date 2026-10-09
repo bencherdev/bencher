@@ -419,6 +419,9 @@ pub struct JsonConsoleAlertsQueryParams {
     pub points: Option<u16>,
     /// The page of alerts to return, starting at 1.
     pub page: Option<u32>,
+    /// The number of alerts to skip before the page, in place of `page`, for a list whose
+    /// alerts leave it as their status changes.
+    pub offset: Option<u32>,
     /// The number of alerts per page, at most 64. Zero returns only the counts.
     pub per_page: Option<u8>,
 }
@@ -446,6 +449,9 @@ pub struct JsonConsoleAlerts {
     /// The number of alerts that match the filters, by their status now, whatever
     /// status the request asked for.
     pub counts: JsonConsoleAlertsCounts,
+    /// When the API read the alerts. Dismiss all takes it as the end of its window, so it
+    /// changes no alert raised after the list was read.
+    pub read_time: DateTimeMillis,
     pub groups: Vec<JsonConsoleAlertGroup>,
     /// The reports of every group's points.
     pub reports: Vec<JsonConsolePointReport>,

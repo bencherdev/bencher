@@ -8,8 +8,9 @@ use std::{
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk};
 use bencher_json::{
-    BranchName, BranchSlug, BranchUuid, DateTime, GitHash, HeadUuid, MeasureUuid, MetricName,
-    ProjectResourceId, ReportUuid, ResourceName, TestbedSlug, TestbedUuid, ThresholdUuid,
+    BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, GitHash, HeadUuid, MeasureUuid,
+    MetricName, ProjectResourceId, ReportUuid, ResourceName, TestbedSlug, TestbedUuid,
+    ThresholdUuid,
     project::{
         alert::{
             AlertStatus, JsonAlertsFilter, JsonUpdateAlerts, JsonUpdatedAlerts, MAX_UPDATE_ALERTS,
@@ -144,14 +145,28 @@ async fn get_inner(
     }
     let conn = actor_conn!(context, api_actor);
 
+    // Before the counts, so an alert raised as they are read falls after it, never uncounted.
+    let read_time = context.clock.now().into();
     let counts = counts(conn, project.id, &query)?;
     let total = status_total(query.status, counts);
     if query.per_page == 0 || total == 0 {
-        return Ok(alerts_json(total, counts, Page::default(), Vec::new()));
+        return Ok(alerts_json(
+            total,
+            counts,
+            read_time,
+            Page::default(),
+            Vec::new(),
+        ));
     }
     let keys = page_keys(conn, project.id, &query)?;
     let Some(&(_, first_alert)) = keys.first() else {
-        return Ok(alerts_json(total, counts, Page::default(), Vec::new()));
+        return Ok(alerts_json(
+            total,
+            counts,
+            read_time,
+            Page::default(),
+            Vec::new(),
+        ));
     };
     let report_ids = unique_ids(keys.iter().map(|(report_id, _)| *report_id));
     let rows = group_rows(conn, project.id, &query, &report_ids)?;
@@ -159,7 +174,7 @@ async fn get_inner(
     let histories = page
         .histories(conn, &query)
         .map_err(resource_not_found_err!(Metric, project.id))?;
-    Ok(alerts_json(total, counts, page, histories))
+    Ok(alerts_json(total, counts, read_time, page, histories))
 }
 
 /// A request read and checked before anything is read for it.
@@ -169,7 +184,8 @@ struct AlertsQuery {
     filter: JsonAlertsFilter,
     window: Duration,
     points: usize,
-    page: u32,
+    /// The alerts before the page.
+    offset: i64,
     per_page: u8,
 }
 
@@ -187,6 +203,7 @@ impl AlertsQuery {
             window,
             points,
             page,
+            offset,
             per_page,
         } = query_params;
         if let (Some(start_time), Some(end_time)) = (start_time, end_time)
@@ -202,6 +219,17 @@ impl AlertsQuery {
                 "A page is at most {MAX_CONSOLE_ALERTS_PER_PAGE} alerts, not {per_page}"
             )));
         }
+        let offset = match (page, offset) {
+            (Some(page), Some(offset)) => {
+                return Err(bad_request_error(format!(
+                    "Ask for a page ({page}) or an offset ({offset}), not both"
+                )));
+            },
+            (None, Some(offset)) => i64::from(offset),
+            (page, None) => {
+                i64::from(page.unwrap_or(1).max(1) - 1).saturating_mul(i64::from(per_page))
+            },
+        };
         Ok(Self {
             status: status.unwrap_or_default(),
             filter: JsonAlertsFilter {
@@ -216,7 +244,7 @@ impl AlertsQuery {
             },
             window: window_length(window)?.unwrap_or(DEFAULT_REPORT_HISTORY),
             points: history_points(points)?,
-            page: page.unwrap_or(1).max(1),
+            offset,
             per_page,
         })
     }
@@ -279,7 +307,6 @@ fn page_keys(
     project_id: ProjectId,
     query: &AlertsQuery,
 ) -> Result<Vec<(ReportId, AlertId)>, HttpError> {
-    let offset = i64::from(query.page - 1).saturating_mul(i64::from(query.per_page));
     schema::alert::table
         .filter(selected(project_id, query)?)
         // The alert identifier only places a page's edges inside a report; the report's own
@@ -289,7 +316,7 @@ fn page_keys(
             schema::alert::report_id.desc(),
             schema::alert::id.asc(),
         ))
-        .offset(offset)
+        .offset(query.offset)
         .limit(i64::from(query.per_page))
         .select((schema::alert::report_id, schema::alert::id))
         .load::<(ReportId, AlertId)>(conn)
@@ -847,6 +874,7 @@ fn group_window(
 fn alerts_json(
     total: u32,
     counts: JsonConsoleAlertsCounts,
+    read_time: DateTimeMillis,
     page: Page,
     histories: Vec<GroupHistory>,
 ) -> JsonConsoleAlerts {
@@ -925,6 +953,7 @@ fn alerts_json(
     JsonConsoleAlerts {
         total,
         counts,
+        read_time,
         groups,
         reports,
         branches: dimensions.branches,
