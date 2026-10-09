@@ -8,22 +8,27 @@ use std::os::unix::process::CommandExt as _;
 use std::process::{Child, Command, ExitStatus};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use camino::Utf8Path;
+use camino::{Utf8Path, Utf8PathBuf};
 use nix::errno::Errno;
 use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 use slog::{Logger, info, warn};
 
 use crate::JobDeadline;
-use crate::firecracker::client::FirecrackerClient;
 use crate::firecracker::error::{FirecrackerError, PreExec};
+use crate::firecracker::pin::{self, Task};
 use crate::firecracker::refuse_cancelled;
-use crate::jail::{JailFile, JailUser, PinnedSocket, VmId};
+use crate::jail::{JailFile, JailUser, VmId};
 
-/// Generous because it covers the jailer building the chroot on a busy host; a
-/// jailer that dies is caught when it exits, not at this deadline.
-const API_SOCKET_TIMEOUT: Duration = Duration::from_secs(30);
+/// Generous because it covers the jailer building the chroot on a busy host
+/// before Firecracker reads its configuration; a jailer or VMM that dies is
+/// caught when it exits, not at this bound.
+const VCPU_START_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// How often the wait for the vCPU threads looks for them, which bounds how
+/// long the guest runs before its vCPUs can be pinned.
+const VCPU_POLL: Duration = Duration::from_millis(1);
 
 /// How often the wait for the VMM to exit looks at the cancel flag.
 const CANCEL_POLL: Duration = Duration::from_millis(50);
@@ -47,7 +52,8 @@ pub struct JailedSpawn<'a> {
     pub chroot_base_dir: &'a Utf8Path,
     /// Handle of the empty network namespace the VMM joins.
     pub netns: &'a Utf8Path,
-    pub api_socket: &'a JailFile,
+    /// What Firecracker boots the VM from, at once and with no API server.
+    pub vm_config: &'a JailFile,
     pub log_level: &'a str,
     /// Cores the stderr reader thread is pinned to.
     pub housekeeping_cores: Vec<usize>,
@@ -55,20 +61,19 @@ pub struct JailedSpawn<'a> {
     pub cgroup_procs: Option<File>,
 }
 
-/// A running, jailed Firecracker process.
-pub struct FirecrackerProcess {
-    jailed: JailedChild,
-    /// Pinned before any guest code ran, so every API call after that reaches
-    /// Firecracker's own socket whatever the jail has done to its name.
-    api: PinnedSocket,
+/// How the wait for the vCPU threads ended, short of an error.
+#[derive(Debug)]
+pub enum Started {
+    /// Every vCPU thread runs: the VMM's threads at that moment.
+    Vcpus(Vec<Task>),
+    /// A clean exit, which Firecracker makes only once its guest stopped itself,
+    /// so the guest ran while the runner was not looking.
+    Exited(ExitStatus),
 }
 
-/// Kills and reaps the jailer's child on drop, guarding it before there is an
-/// API socket to pin.
-struct JailedChild {
-    log: Logger,
+/// A running, jailed Firecracker process, killed and reaped on drop.
+pub struct FirecrackerProcess {
     child: Child,
-    api_socket: JailFile,
     stderr_thread: Option<StderrReader>,
 }
 
@@ -76,11 +81,13 @@ struct JailedChild {
 /// it must outlive the VMM.
 struct StderrReader {
     socket: Arc<UnixStream>,
-    thread: Option<std::thread::JoinHandle<()>>,
+    /// Ends with the last line it read.
+    thread: Option<std::thread::JoinHandle<Option<String>>>,
 }
 
 impl FirecrackerProcess {
-    /// Start Firecracker under the jailer and wait for its API socket.
+    /// Start Firecracker under the jailer, which boots the VM from its
+    /// configuration file at once.
     pub fn start(spawn: JailedSpawn<'_>) -> Result<Self, FirecrackerError> {
         let args = jailer_args(&spawn);
 
@@ -94,7 +101,7 @@ impl FirecrackerProcess {
             jail_user: _,
             chroot_base_dir: _,
             netns: _,
-            api_socket,
+            vm_config: _,
             log_level: _,
             housekeeping_cores,
             cgroup_procs,
@@ -109,122 +116,81 @@ impl FirecrackerProcess {
         let command = jailer_command(jailer_bin, &args, cgroup_procs);
         // Guarded at once, since `Child::drop` neither kills nor reaps and any
         // error below would otherwise leave the VMM running.
-        let mut jailed = JailedChild::spawn(&log, command, api_socket, housekeeping_cores)
-            .map_err(|e| FirecrackerError::Spawn {
-                path: jailer_bin.to_owned(),
-                pre_exec,
-                source: e,
-            })?;
-
-        jailed.wait_for_ready(API_SOCKET_TIMEOUT)?;
-        // Now, while only Firecracker has run: readiness proves it bound this
-        // socket, and no guest code runs before `InstanceStart`.
-        let api = PinnedSocket::pin(api_socket.socket()).map_err(FirecrackerError::PinApiSocket)?;
-
-        Ok(Self { jailed, api })
-    }
-
-    /// Get a client for the Firecracker REST API.
-    pub fn client(&self) -> FirecrackerClient<'_> {
-        FirecrackerClient::new(&self.jailed.log, self.api.path())
+        Self::spawn(&log, command, housekeeping_cores).map_err(|e| FirecrackerError::Spawn {
+            path: jailer_bin.to_owned(),
+            pre_exec,
+            source: e,
+        })
     }
 
     /// Get the PID of the Firecracker process.
     pub fn pid(&self) -> u32 {
-        self.jailed.child.id()
+        self.child.id()
+    }
+
+    /// Wait for the VMM to start all `vcpus` vCPU threads, which it does once
+    /// it has accepted its configuration and boots the guest; `Ok(None)` once
+    /// `deadline` runs out.
+    pub fn wait_for_vcpus(
+        &mut self,
+        vcpus: u8,
+        deadline: JobDeadline,
+        cancel_flag: Option<&AtomicBool>,
+    ) -> Result<Option<Started>, FirecrackerError> {
+        let task_dir = self.task_dir();
+        self.wait_for_vcpus_in(&task_dir, vcpus, VCPU_START_TIMEOUT, deadline, cancel_flag)
+    }
+
+    /// Where the VMM's threads are listed.
+    pub fn task_dir(&self) -> Utf8PathBuf {
+        Utf8PathBuf::from(format!("/proc/{}/task", self.pid()))
+    }
+
+    /// Takes the thread list and the bound, so a test can stand in for both.
+    fn wait_for_vcpus_in(
+        &mut self,
+        task_dir: &Utf8Path,
+        vcpus: u8,
+        bound: Duration,
+        deadline: JobDeadline,
+        cancel_flag: Option<&AtomicBool>,
+    ) -> Result<Option<Started>, FirecrackerError> {
+        // Nothing has reaped the child, so its pid cannot name another process.
+        let pidfd = pidfd_open(self.child.id()).map_err(FirecrackerError::WaitVmm)?;
+        let started = Instant::now();
+        loop {
+            refuse_cancelled(cancel_flag)?;
+            let tasks = pin::read_tasks(task_dir);
+            let running = pin::vcpus_in(&tasks);
+            if running >= usize::from(vcpus) {
+                return Ok(Some(Started::Vcpus(tasks)));
+            }
+            if deadline.remaining().is_zero() {
+                return Ok(None);
+            }
+            if started.elapsed() >= bound {
+                return Err(FirecrackerError::VcpusNotStarted {
+                    started: running,
+                    vcpus,
+                    waited: bound,
+                });
+            }
+            if exits_within(&pidfd, VCPU_POLL).map_err(FirecrackerError::WaitVmm)? {
+                let status = self.child.wait().map_err(FirecrackerError::WaitVmm)?;
+                let line = self.join_stderr_thread();
+                if status.success() {
+                    return Ok(Some(Started::Exited(status)));
+                }
+                return Err(FirecrackerError::ExitedBeforeBoot { status, line });
+            }
+        }
     }
 
     /// Wait for the VMM to exit, which is `Ok(None)` once `deadline` runs out,
     /// and stop at a cancel.
-    pub fn wait_for_exit(
-        &mut self,
-        deadline: JobDeadline,
-        cancel_flag: Option<&AtomicBool>,
-    ) -> Result<Option<ExitStatus>, FirecrackerError> {
-        self.jailed.wait_for_exit(deadline, cancel_flag)
-    }
-}
-
-impl JailedChild {
-    fn spawn(
-        log: &Logger,
-        command: Command,
-        api_socket: &JailFile,
-        housekeeping_cores: Vec<usize>,
-    ) -> std::io::Result<Self> {
-        let vmm = log.clone();
-        // A VMM does not choose its records' level.
-        Self::spawn_with(
-            log,
-            command,
-            api_socket,
-            housekeeping_cores,
-            move |line, cut| {
-                if cut {
-                    info!(vmm, "VMM stderr"; "line" => line, "cut" => true);
-                } else {
-                    info!(vmm, "VMM stderr"; "line" => line);
-                }
-            },
-        )
-    }
-
-    /// Hands the child one end of a socket pair as its stderr and reads the
-    /// other on a thread, since a pipe gives the owner no way to end that read.
-    fn spawn_with<F>(
-        log: &Logger,
-        mut command: Command,
-        api_socket: &JailFile,
-        housekeeping_cores: Vec<usize>,
-        on_line: F,
-    ) -> std::io::Result<Self>
-    where
-        F: FnMut(String, bool) + Send + 'static,
-    {
-        let (writer, stderr) = StderrReader::spawn(log, housekeeping_cores, on_line)?;
-        command.stderr(OwnedFd::from(writer));
-        let child = command.spawn()?;
-        Ok(Self {
-            log: log.clone(),
-            child,
-            api_socket: api_socket.clone(),
-            stderr_thread: Some(stderr),
-        })
-    }
-
-    /// Gives up the moment the jailer dies, so its failure is not reported as a
-    /// socket timeout.
-    fn wait_for_ready(&mut self, timeout: Duration) -> Result<(), FirecrackerError> {
-        let start = std::time::Instant::now();
-        let poll_interval = Duration::from_millis(50);
-
-        while start.elapsed() < timeout {
-            if FirecrackerClient::new(&self.log, self.api_socket.socket()).try_ready()? {
-                return Ok(());
-            }
-            if let Some(status) = self.exited() {
-                return Err(FirecrackerError::JailedProcessExited { status });
-            }
-            std::thread::sleep(poll_interval);
-        }
-
-        // Once more, since a process that exited during the last sleep would
-        // otherwise be reported as a timeout.
-        if let Some(status) = self.exited() {
-            return Err(FirecrackerError::JailedProcessExited { status });
-        }
-
-        Err(FirecrackerError::SocketNotReady(timeout))
-    }
-
-    /// A failed `try_wait` counts as still running, since every caller polls in
-    /// a bounded loop that ends in its own error.
-    fn exited(&mut self) -> Option<ExitStatus> {
-        self.child.try_wait().unwrap_or(None)
-    }
-
+    ///
     /// Wakes the moment the child exits, through a pidfd rather than a sleep.
-    fn wait_for_exit(
+    pub fn wait_for_exit(
         &mut self,
         deadline: JobDeadline,
         cancel_flag: Option<&AtomicBool>,
@@ -241,31 +207,61 @@ impl JailedChild {
                 .map_err(FirecrackerError::WaitVmm)?
             {
                 let status = self.child.wait().map_err(FirecrackerError::WaitVmm)?;
-                self.join_stderr_thread();
+                drop(self.join_stderr_thread());
                 return Ok(Some(status));
             }
         }
+    }
+
+    fn spawn(
+        log: &Logger,
+        command: Command,
+        housekeeping_cores: Vec<usize>,
+    ) -> std::io::Result<Self> {
+        let vmm = log.clone();
+        // A VMM does not choose its records' level.
+        Self::spawn_with(log, command, housekeeping_cores, move |line, cut| {
+            if cut {
+                info!(vmm, "VMM stderr"; "line" => line, "cut" => true);
+            } else {
+                info!(vmm, "VMM stderr"; "line" => line);
+            }
+        })
+    }
+
+    /// Hands the child one end of a socket pair as its stderr and reads the
+    /// other on a thread, since a pipe gives the owner no way to end that read.
+    fn spawn_with<F>(
+        log: &Logger,
+        mut command: Command,
+        housekeeping_cores: Vec<usize>,
+        on_line: F,
+    ) -> std::io::Result<Self>
+    where
+        F: FnMut(String, bool) + Send + 'static,
+    {
+        let (writer, stderr) = StderrReader::spawn(log, housekeeping_cores, on_line)?;
+        command.stderr(OwnedFd::from(writer));
+        let child = command.spawn()?;
+        Ok(Self {
+            child,
+            stderr_thread: Some(stderr),
+        })
     }
 
     /// Force-kill the Firecracker process.
     fn kill(&mut self) {
         drop(self.child.kill());
         drop(self.child.wait());
-        self.join_stderr_thread();
-    }
-
-    /// Clean up socket files.
-    ///
-    /// Unlinks through the host view, since from `Drop` the socket view may name
-    /// a closed descriptor and delete an unrelated file.
-    fn cleanup(&self) {
-        drop(std::fs::remove_file(self.api_socket.host().as_path()));
+        drop(self.join_stderr_thread());
     }
 
     /// Call only once the VMM is reaped, since stopping the reader cuts a live
     /// VMM's log.
-    fn join_stderr_thread(&mut self) {
-        drop(self.stderr_thread.take());
+    fn join_stderr_thread(&mut self) -> Option<String> {
+        self.stderr_thread
+            .take()
+            .and_then(|mut reader| reader.finish())
     }
 }
 
@@ -289,7 +285,12 @@ impl StderrReader {
             if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
                 warn!(log, "Thread not pinned to housekeeping cores"; "thread" => "VMM stderr reader", "error" => %e);
             }
-            forward_capped_lines(&*read, &mut on_line);
+            let mut last = None;
+            forward_capped_lines(&*read, |line, cut| {
+                on_line(line.clone(), cut);
+                last = Some(line);
+            });
+            last
         });
         Ok((
             writer,
@@ -299,16 +300,21 @@ impl StderrReader {
             },
         ))
     }
+
+    /// Ends the read once what the VMM wrote has been read, even if a process
+    /// it left behind still holds its end, so the join cannot hang, and returns
+    /// the last line read.
+    fn finish(&mut self) -> Option<String> {
+        drop(self.socket.shutdown(Shutdown::Read));
+        self.thread
+            .take()
+            .and_then(|thread| thread.join().ok().flatten())
+    }
 }
 
 impl Drop for StderrReader {
-    /// Ends the read once what the VMM wrote has been read, even if a process
-    /// it left behind still holds its end, so the join cannot hang.
     fn drop(&mut self) {
-        drop(self.socket.shutdown(Shutdown::Read));
-        if let Some(thread) = self.thread.take() {
-            drop(thread.join());
-        }
+        drop(self.finish());
     }
 }
 
@@ -322,10 +328,9 @@ impl Drop for StopReading<'_> {
     }
 }
 
-impl Drop for JailedChild {
+impl Drop for FirecrackerProcess {
     fn drop(&mut self) {
         self.kill();
-        self.cleanup();
     }
 }
 
@@ -349,8 +354,9 @@ fn jailer_args(spawn: &JailedSpawn<'_>) -> Vec<String> {
         "--".to_owned(),
         // `--id` is not forwarded: the jailer already passes it, and
         // Firecracker rejects the duplicate.
-        "--api-sock".to_owned(),
-        spawn.api_socket.chroot().as_str().to_owned(),
+        "--no-api".to_owned(),
+        "--config-file".to_owned(),
+        spawn.vm_config.chroot().as_str().to_owned(),
         "--level".to_owned(),
         spawn.log_level.to_owned(),
     ]
@@ -470,12 +476,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use camino::{Utf8Path, Utf8PathBuf};
-
     use std::sync::atomic::Ordering;
 
     use super::*;
-    use crate::firecracker::config::{Action, ActionType};
     use crate::jail::JailPaths;
     use crate::log::discard;
 
@@ -489,7 +492,7 @@ mod tests {
             jail_user: JailUser::new(4242, 4243).unwrap(),
             chroot_base_dir: Utf8Path::new("/var/lib/bencher-runner/jail"),
             netns: Utf8Path::new("/run/netns/bencher-jail"),
-            api_socket: jail.api_socket(),
+            vm_config: jail.vm_config(),
             log_level: "Warning",
             housekeeping_cores: Vec::new(),
             cgroup_procs: None,
@@ -505,22 +508,30 @@ mod tests {
         VmId::from_chroot_name("vm-1".to_owned()).unwrap()
     }
 
-    /// The jail root has to exist: the paths hold a descriptor on it.
     fn jail_in_tmpdir() -> (tempfile::TempDir, JailPaths) {
         let dir = tempfile::tempdir().unwrap();
-        let root = Utf8Path::from_path(dir.path()).unwrap();
-        let jail = JailPaths::new(root).unwrap();
+        let jail = JailPaths::new(Utf8Path::from_path(dir.path()).unwrap());
         (dir, jail)
     }
 
-    /// The jail has to outlive the guard this returns, since the socket view
-    /// names its descriptor.
-    fn process_around(child: Child, jail: &JailPaths) -> JailedChild {
-        JailedChild {
-            log: discard(),
+    fn process_around(child: Child) -> FirecrackerProcess {
+        FirecrackerProcess {
             child,
-            api_socket: jail.api_socket().clone(),
             stderr_thread: None,
+        }
+    }
+
+    fn sleeping() -> FirecrackerProcess {
+        process_around(Command::new("/bin/sleep").arg("30").spawn().unwrap())
+    }
+
+    /// Up to 3 s, so a child that never exits fails the test that waits on it.
+    fn wait_until_exited(process: &mut FirecrackerProcess) {
+        let started = Instant::now();
+        while process.child.try_wait().unwrap().is_none()
+            && started.elapsed() < Duration::from_secs(3)
+        {
+            std::thread::sleep(Duration::from_millis(10));
         }
     }
 
@@ -560,7 +571,7 @@ mod tests {
     }
 
     #[test]
-    fn only_the_api_socket_and_level_are_forwarded() {
+    fn only_the_config_file_and_level_are_forwarded() {
         let args = args();
         let separator = args
             .iter()
@@ -571,8 +582,9 @@ mod tests {
             args.get(separator + 1..),
             Some(
                 [
-                    "--api-sock".to_owned(),
-                    "/api.sock".to_owned(),
+                    "--no-api".to_owned(),
+                    "--config-file".to_owned(),
+                    "/vm-config.json".to_owned(),
                     "--level".to_owned(),
                     "Warning".to_owned(),
                 ]
@@ -582,12 +594,12 @@ mod tests {
     }
 
     #[test]
-    fn the_api_socket_is_the_chroot_view() {
+    fn the_config_file_is_the_chroot_view() {
         // Prevents passing the host view, which the confined Firecracker cannot reach.
         let (_dir, jail) = jail_in_tmpdir();
         let args = jailer_args(&spawn_for(&jail, &vm_id()));
 
-        assert_eq!(value_of(&args, "--api-sock"), Some("/api.sock"));
+        assert_eq!(value_of(&args, "--config-file"), Some("/vm-config.json"));
         let jail_root = jail.root().as_str();
         assert!(
             !args.iter().any(|arg| arg.contains(jail_root)),
@@ -596,96 +608,9 @@ mod tests {
     }
 
     #[test]
-    fn a_swapped_api_socket_name_is_never_followed() {
-        // Prevents the runner, as root, following an `api.sock` swapped for a
-        // link to a host socket.
-        use std::io::{Read as _, Write as _};
-        use std::os::unix::fs::symlink;
-        use std::os::unix::net::{UnixListener, UnixStream};
-
-        let (dir, jail) = jail_in_tmpdir();
-        let api_sock = jail.api_socket().host().as_path();
-        let vmm = UnixListener::bind(api_sock).unwrap();
-        let trap_path = Utf8Path::from_path(dir.path()).unwrap().join("trap.sock");
-        let trap = UnixListener::bind(&trap_path).unwrap();
-        trap.set_nonblocking(true).unwrap();
-        let child = Command::new("/bin/sh")
-            .args(["-c", "sleep 30"])
-            .spawn()
-            .unwrap();
-        let process = FirecrackerProcess {
-            jailed: process_around(child, &jail),
-            api: PinnedSocket::pin(jail.api_socket().socket()).unwrap(),
-        };
-
-        std::fs::remove_file(api_sock).unwrap();
-        symlink(&trap_path, api_sock).unwrap();
-
-        let request = std::thread::scope(|scope| {
-            let answered = scope.spawn(|| {
-                let (mut stream, _) = vmm.accept().unwrap();
-                let mut request = [0u8; 512];
-                let read = stream.read(&mut request).unwrap();
-                if read > 0 {
-                    stream
-                        .write_all(b"HTTP/1.1 204 No Content\r\n\r\n")
-                        .unwrap();
-                }
-                String::from_utf8_lossy(request.get(..read).unwrap_or_default()).into_owned()
-            });
-            let sent = process.client().put_action(&Action {
-                action_type: ActionType::InstanceStart,
-            });
-            if sent.is_err() {
-                drop(UnixStream::connect(process.api.path().as_str()));
-            }
-            answered.join().unwrap()
-        });
-
-        assert!(
-            request.starts_with("PUT /actions "),
-            "the request must reach the socket that was pinned, got: {request:?}"
-        );
-        assert_eq!(
-            trap.accept().map(|_| ()).unwrap_err().kind(),
-            std::io::ErrorKind::WouldBlock,
-            "nothing may connect through the swapped name"
-        );
-    }
-
-    #[test]
-    fn a_child_that_is_still_running_is_not_reported_exited() {
-        // Prevents an inverted verdict that turns every slow boot into `JailedProcessExited`.
-        let (_dir, jail) = jail_in_tmpdir();
-        let child = Command::new("/bin/sh")
-            .args(["-c", "sleep 30"])
-            .spawn()
-            .unwrap();
-
-        let mut process = process_around(child, &jail);
-
-        assert!(process.exited().is_none());
-    }
-
-    #[test]
-    fn a_child_that_exited_is_reported_exited() {
-        let (_dir, jail) = jail_in_tmpdir();
-        let mut child = Command::new("/bin/sh")
-            .args(["-c", "exit 3"])
-            .spawn()
-            .unwrap();
-        child.wait().unwrap();
-
-        let mut process = process_around(child, &jail);
-
-        assert_eq!(process.exited().and_then(|status| status.code()), Some(3));
-    }
-
-    #[test]
     fn a_process_left_holding_stderr_cannot_hold_the_teardown() {
         // Prevents the teardown waiting on a stderr that a process the VMM left
         // behind keeps open.
-        let (_dir, jail) = jail_in_tmpdir();
         let mut command = Command::new("/bin/sh");
         // The shell exits at once, and the sleep it leaves behind keeps stderr.
         command
@@ -694,22 +619,14 @@ mod tests {
             .stdout(std::process::Stdio::null());
         let reading = Arc::new(());
         let token = Arc::clone(&reading);
-        let mut jailed = JailedChild::spawn_with(
-            &discard(),
-            command,
-            jail.api_socket(),
-            Vec::new(),
-            move |_line, _cut| {
+        let mut jailed =
+            FirecrackerProcess::spawn_with(&discard(), command, Vec::new(), move |_line, _cut| {
                 drop(Arc::clone(&token));
-            },
-        )
-        .unwrap();
-        let started = std::time::Instant::now();
-        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
-            std::thread::sleep(Duration::from_millis(10));
-        }
+            })
+            .unwrap();
+        wait_until_exited(&mut jailed);
 
-        let started = std::time::Instant::now();
+        let started = Instant::now();
         jailed.kill();
         let held = started.elapsed();
 
@@ -728,7 +645,6 @@ mod tests {
     fn stderr_the_vmm_wrote_is_still_read() {
         // Prevents the VMM's stderr bypassing the reader, which loses its log
         // or mixes it into the runner's own.
-        let (_dir, jail) = jail_in_tmpdir();
         let mut command = Command::new("/bin/sh");
         command
             .args(["-c", "echo one >&2; echo two >&2"])
@@ -736,20 +652,12 @@ mod tests {
             .stdout(std::process::Stdio::null());
         let lines = Arc::new(std::sync::Mutex::new(Vec::new()));
         let sink = Arc::clone(&lines);
-        let mut jailed = JailedChild::spawn_with(
-            &discard(),
-            command,
-            jail.api_socket(),
-            Vec::new(),
-            move |line, cut| {
+        let mut jailed =
+            FirecrackerProcess::spawn_with(&discard(), command, Vec::new(), move |line, cut| {
                 sink.lock().unwrap().push((line, cut));
-            },
-        )
-        .unwrap();
-        let started = std::time::Instant::now();
-        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
-            std::thread::sleep(Duration::from_millis(10));
-        }
+            })
+            .unwrap();
+        wait_until_exited(&mut jailed);
 
         jailed.kill();
 
@@ -768,27 +676,18 @@ mod tests {
     fn a_reader_that_panics_fails_the_vmm_writes() {
         // Prevents a reader that panics leaving the VMM blocked on a full
         // socket instead of failing its writes.
-        let (_dir, jail) = jail_in_tmpdir();
         let mut command = Command::new("/bin/sh");
         command
             .args(["-c", "echo first >&2; head -c 4194304 /dev/zero >&2"])
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null());
-        let mut jailed = JailedChild::spawn_with(
-            &discard(),
-            command,
-            jail.api_socket(),
-            Vec::new(),
-            |_line, _cut| {
+        let mut jailed =
+            FirecrackerProcess::spawn_with(&discard(), command, Vec::new(), |_line, _cut| {
                 panic!("the reader fails");
-            },
-        )
-        .unwrap();
-        let started = std::time::Instant::now();
-        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
-            std::thread::sleep(Duration::from_millis(10));
-        }
-        let exited = jailed.exited();
+            })
+            .unwrap();
+        wait_until_exited(&mut jailed);
+        let exited = jailed.child.try_wait().unwrap();
 
         jailed.kill();
 
@@ -802,7 +701,6 @@ mod tests {
     fn a_stderr_line_over_the_cap_is_cut_and_the_next_line_kept() {
         // Prevents a cut that keeps more than the cap or drops the lines after
         // it, and a line that is not UTF-8 ending the read.
-        let (_dir, jail) = jail_in_tmpdir();
         let mut command = Command::new("/bin/sh");
         command
             .args([
@@ -813,20 +711,12 @@ mod tests {
             .stdout(std::process::Stdio::null());
         let lines = Arc::new(std::sync::Mutex::new(Vec::new()));
         let sink = Arc::clone(&lines);
-        let mut jailed = JailedChild::spawn_with(
-            &discard(),
-            command,
-            jail.api_socket(),
-            Vec::new(),
-            move |line, cut| {
+        let mut jailed =
+            FirecrackerProcess::spawn_with(&discard(), command, Vec::new(), move |line, cut| {
                 sink.lock().unwrap().push((line, cut));
-            },
-        )
-        .unwrap();
-        let started = std::time::Instant::now();
-        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
-            std::thread::sleep(Duration::from_millis(10));
-        }
+            })
+            .unwrap();
+        wait_until_exited(&mut jailed);
 
         jailed.kill();
 
@@ -849,7 +739,6 @@ mod tests {
     fn a_vmm_line_is_one_record() {
         // Fails if a VMM line is printed rather than logged, cut past what one
         // journald line holds once escaped, or followed by a record of its own.
-        let (_dir, jail) = jail_in_tmpdir();
         let mut command = Command::new("/bin/sh");
         command
             .args([
@@ -860,11 +749,8 @@ mod tests {
             .stdout(std::process::Stdio::null());
         let sink = Sink::default();
         let log = bencher_logger::runner_logger_to(sink.clone());
-        let mut jailed = JailedChild::spawn(&log, command, jail.api_socket(), Vec::new()).unwrap();
-        let started = std::time::Instant::now();
-        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
-            std::thread::sleep(Duration::from_millis(10));
-        }
+        let mut jailed = FirecrackerProcess::spawn(&log, command, Vec::new()).unwrap();
+        wait_until_exited(&mut jailed);
 
         jailed.kill();
 
@@ -995,7 +881,7 @@ mod tests {
         let stand_in = root.join("jailer");
         std::fs::write(
             &stand_in,
-            format!("#!/bin/sh\n/bin/cat /proc/self/cgroup > {reported}\n"),
+            format!("#!/bin/sh\n/bin/cat /proc/self/cgroup > {reported}\nexit 7\n"),
         )
         .unwrap();
         std::fs::set_permissions(&stand_in, std::fs::Permissions::from_mode(0o755)).unwrap();
@@ -1009,13 +895,12 @@ mod tests {
                 .unwrap(),
         );
 
-        let Err(err) = FirecrackerProcess::start(spawn) else {
-            panic!("the stand-in serves no API");
-        };
+        let mut vmm = FirecrackerProcess::start(spawn).unwrap();
+        let result = vmm.wait_for_vcpus(1, JobDeadline::start(Duration::from_secs(30)), None);
 
         assert!(
-            matches!(err, FirecrackerError::JailedProcessExited { .. }),
-            "{err}"
+            matches!(result, Err(FirecrackerError::ExitedBeforeBoot { .. })),
+            "the stand-in boots no VM: {result:?}"
         );
         let relative = scratch.0.strip_prefix(CGROUP_ROOT).unwrap();
         assert_eq!(
@@ -1067,14 +952,14 @@ mod tests {
     #[test]
     fn a_vmm_that_exits_is_seen_at_once() {
         // Kills a wait that sleeps out its deadline, or one that misses the exit.
-        let (_dir, jail) = jail_in_tmpdir();
-        let child = Command::new("/bin/sh")
-            .args(["-c", "exit 3"])
-            .spawn()
-            .unwrap();
-        let mut jailed = process_around(child, &jail);
+        let mut jailed = process_around(
+            Command::new("/bin/sh")
+                .args(["-c", "exit 3"])
+                .spawn()
+                .unwrap(),
+        );
 
-        let started = std::time::Instant::now();
+        let started = Instant::now();
         let status = jailed
             .wait_for_exit(JobDeadline::start(Duration::from_secs(30)), None)
             .unwrap();
@@ -1088,11 +973,9 @@ mod tests {
     fn a_vmm_still_running_at_its_deadline_is_left_to_the_kill() {
         // Kills a wait with no deadline, which holds a Job whose guest never
         // powers off.
-        let (_dir, jail) = jail_in_tmpdir();
-        let child = Command::new("/bin/sleep").arg("30").spawn().unwrap();
-        let mut jailed = process_around(child, &jail);
+        let mut jailed = sleeping();
 
-        let started = std::time::Instant::now();
+        let started = Instant::now();
         let status = jailed
             .wait_for_exit(JobDeadline::start(Duration::from_millis(300)), None)
             .unwrap();
@@ -1103,25 +986,219 @@ mod tests {
             waited >= Duration::from_millis(300) && waited < Duration::from_secs(3),
             "waited {waited:?}"
         );
-        assert!(jailed.exited().is_none(), "the wait itself kills nothing");
+        assert!(
+            jailed.child.try_wait().unwrap().is_none(),
+            "the wait itself kills nothing"
+        );
     }
 
     #[test]
     fn a_cancel_ends_the_wait() {
         // Kills a wait blind to the cancel flag, which holds a canceled Job to
         // its deadline.
-        let (_dir, jail) = jail_in_tmpdir();
-        let child = Command::new("/bin/sleep").arg("30").spawn().unwrap();
-        let mut jailed = process_around(child, &jail);
+        let mut jailed = sleeping();
         let cancel = AtomicBool::new(false);
 
-        let started = std::time::Instant::now();
+        let started = Instant::now();
         let result = std::thread::scope(|scope| {
             scope.spawn(|| {
                 std::thread::sleep(Duration::from_millis(200));
                 cancel.store(true, Ordering::SeqCst);
             });
             jailed.wait_for_exit(JobDeadline::start(Duration::from_secs(30)), Some(&cancel))
+        });
+
+        assert!(
+            matches!(result, Err(FirecrackerError::Cancelled)),
+            "{result:?}"
+        );
+        let waited = started.elapsed();
+        assert!(waited < Duration::from_secs(3), "waited {waited:?}");
+    }
+
+    /// A stand-in for `/proc/<pid>/task`, one thread per name.
+    fn threads_named(names: &[&str]) -> (tempfile::TempDir, Utf8PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+        for (tid, name) in (100..).zip(names) {
+            let task = root.join(format!("{tid}"));
+            std::fs::create_dir(&task).unwrap();
+            std::fs::write(task.join("comm"), format!("{name}\n")).unwrap();
+        }
+        (dir, root)
+    }
+
+    const FAR_OFF: Duration = Duration::from_secs(30);
+
+    #[test]
+    fn a_vmm_that_starts_its_vcpus_is_seen_with_its_threads() {
+        // Kills a wait that never sees the vCPU threads, which fails every Job
+        // at the bound, and one that returns without the threads to pin.
+        let (_dir, tasks) = threads_named(&["firecracker", "fc_vcpu 0", "fc_vcpu 1"]);
+        let mut vmm = sleeping();
+
+        let started = Instant::now();
+        let found = vmm
+            .wait_for_vcpus_in(
+                &tasks,
+                2,
+                Duration::from_secs(10),
+                JobDeadline::start(FAR_OFF),
+                None,
+            )
+            .unwrap();
+
+        let Some(Started::Vcpus(found)) = &found else {
+            panic!("expected the vCPU threads, got {found:?}");
+        };
+        let mut found = found.clone();
+        found.sort_unstable();
+        assert_eq!(
+            found,
+            [
+                (100, "firecracker".to_owned()),
+                (101, "fc_vcpu 0".to_owned()),
+                (102, "fc_vcpu 1".to_owned()),
+            ]
+        );
+        let waited = started.elapsed();
+        assert!(waited < Duration::from_secs(3), "waited {waited:?}");
+    }
+
+    #[test]
+    fn a_vmm_short_of_its_vcpus_fails_the_job_at_the_bound() {
+        // Kills a wait with no bound, which holds a Job whose VMM never boots
+        // to its timeout, and one that counts any thread as a vCPU.
+        let (_dir, tasks) = threads_named(&["firecracker", "fc_vcpu 0"]);
+        let mut vmm = sleeping();
+
+        let started = Instant::now();
+        let result = vmm.wait_for_vcpus_in(
+            &tasks,
+            2,
+            Duration::from_millis(300),
+            JobDeadline::start(FAR_OFF),
+            None,
+        );
+
+        assert!(
+            matches!(
+                result,
+                Err(FirecrackerError::VcpusNotStarted {
+                    started: 1,
+                    vcpus: 2,
+                    ..
+                })
+            ),
+            "{result:?}"
+        );
+        let waited = started.elapsed();
+        assert!(
+            waited >= Duration::from_millis(300) && waited < Duration::from_secs(3),
+            "waited {waited:?}"
+        );
+    }
+
+    #[test]
+    fn a_vmm_that_exits_before_its_vcpus_fails_at_once_with_its_last_line() {
+        // Kills a wait blind to the exit, which reports a configuration
+        // Firecracker refused only at the bound, and an error that drops what
+        // it said.
+        let (_dir, tasks) = threads_named(&[]);
+        let mut command = Command::new("/bin/sh");
+        command
+            .args(["-c", "echo first >&2; echo 'Error: refused' >&2; exit 3"])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null());
+        let mut vmm =
+            FirecrackerProcess::spawn_with(&discard(), command, Vec::new(), |_line, _cut| {})
+                .unwrap();
+
+        let started = Instant::now();
+        let result = vmm.wait_for_vcpus_in(
+            &tasks,
+            1,
+            Duration::from_secs(10),
+            JobDeadline::start(FAR_OFF),
+            None,
+        );
+
+        let Err(FirecrackerError::ExitedBeforeBoot { status, line }) = result else {
+            panic!("expected the exit, got {result:?}");
+        };
+        assert_eq!(status.code(), Some(3));
+        assert_eq!(line.as_deref(), Some("Error: refused"));
+        let waited = started.elapsed();
+        assert!(waited < Duration::from_secs(3), "waited {waited:?}");
+    }
+
+    #[test]
+    fn a_vmm_that_exits_cleanly_before_its_vcpus_are_seen_ran() {
+        // Kills reading every exit before the vCPU threads as a refusal, which
+        // fails a Job whose guest ran and powered off while the runner was
+        // off-CPU, and discards its results.
+        let (_dir, tasks) = threads_named(&[]);
+        let mut vmm = process_around(
+            Command::new("/bin/sh")
+                .args(["-c", "exit 0"])
+                .spawn()
+                .unwrap(),
+        );
+
+        let result = vmm.wait_for_vcpus_in(
+            &tasks,
+            1,
+            Duration::from_secs(10),
+            JobDeadline::start(FAR_OFF),
+            None,
+        );
+
+        assert!(
+            matches!(&result, Ok(Some(Started::Exited(status))) if status.success()),
+            "{result:?}"
+        );
+    }
+
+    #[test]
+    fn a_deadline_that_runs_out_before_the_vcpus_ends_their_wait() {
+        // Kills a vCPU wait blind to the Job's deadline.
+        let (_dir, tasks) = threads_named(&[]);
+        let mut vmm = sleeping();
+
+        let started = Instant::now();
+        let result = vmm.wait_for_vcpus_in(
+            &tasks,
+            1,
+            Duration::from_secs(10),
+            JobDeadline::start(Duration::from_millis(300)),
+            None,
+        );
+
+        assert!(matches!(result, Ok(None)), "{result:?}");
+        let waited = started.elapsed();
+        assert!(waited < Duration::from_secs(3), "waited {waited:?}");
+    }
+
+    #[test]
+    fn a_cancel_ends_the_wait_for_the_vcpus() {
+        // Kills a vCPU wait blind to the cancel flag.
+        let (_dir, tasks) = threads_named(&[]);
+        let mut vmm = sleeping();
+        let cancel = AtomicBool::new(false);
+
+        let started = Instant::now();
+        let result = std::thread::scope(|scope| {
+            scope.spawn(|| {
+                std::thread::sleep(Duration::from_millis(200));
+                cancel.store(true, Ordering::SeqCst);
+            });
+            vmm.wait_for_vcpus_in(
+                &tasks,
+                1,
+                Duration::from_secs(10),
+                JobDeadline::start(FAR_OFF),
+                Some(&cancel),
+            )
         });
 
         assert!(

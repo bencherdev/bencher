@@ -17,7 +17,7 @@
 //! | [`HostPreparation::ensure`]: creating the state directory | fails the job |
 //! | [`HostPreparation::ensure`]: reading `/etc/passwd`, `/etc/group` | ignored: the check is advisory and cannot see a directory service anyway |
 //! | `StateDir::refuse_unusable_mount`: the mount options cannot be read, or include `nodev` or `noexec` | fails the job |
-//! | `vm_execute` and `run_firecracker`: a cancel at a stage boundary before `InstanceStart` | fails the job before the next stage |
+//! | `vm_execute` and `run_firecracker`: a cancel at a stage boundary before the VMM starts | fails the job before the next stage |
 //! | `StateDir::sweep`: a sweep that returns an error | fails the job |
 //! | `prepare_at_startup`: the runner does not hold the lock | neither checks nor sweeps: a cgroup under the base may hold a root runner's Job |
 //! | `require_cgroup_kill`, at the startup of a runner that serves only sandboxed Jobs: no `cgroup.kill` in the base, or the base cannot be made | the runner exits, naming Linux 5.14 |
@@ -50,8 +50,13 @@
 //! | `CgroupManager` creation: the cgroup cannot be stat'ed | fails the job: this decides whether `Drop` may remove it |
 //! | `cgroup_for_run`: the VM cgroup cannot be created, for any reason | fails the job: a VMM outside its cgroup runs unconfined, unmetered, and beyond the kill that reaps it |
 //! | `cgroup_for_run`: the CPU layout offers no isolation | runs in a VM cgroup with no cpuset, which startup announced as CPU isolation disabled |
-//! | `run_firecracker`: the VMM cannot be placed in its cgroup before exec, or is not in it after | fails the job |
+//! | `run_firecracker`: the VMM cannot be placed in its cgroup before exec, or is not in it after | fails the job; a VMM that already exited has left `cgroup.procs`, so its `/proc/<pid>/cgroup` decides |
 //! | `ResultsDrive::create`: the results drive cannot be sized, made, given to the jail user, or opened | fails the job |
+//! | `VmConfig::write`: the VM configuration cannot be made, written, or made readable in the jail | fails the job |
+//! | `wait_for_vcpus`: the VMM exits with an error before its vCPU threads are seen | fails the job at once, with the VMM's exit status and its last line on stderr: the jailer or Firecracker refused the jail or the configuration |
+//! | `wait_for_vcpus`: the VMM exits cleanly before its vCPU threads are seen | read as any other exit: Firecracker exits cleanly only once its guest stopped itself, so the guest ran while the runner was off-CPU, and its record decides; warns that nothing was pinned |
+//! | `wait_for_vcpus`: the vCPU threads have not all started within `VCPU_START_TIMEOUT` | fails the job: a VMM that has not booted its guest by then is stuck, and its vCPUs could not be pinned before the guest runs |
+//! | `wait_for_vcpus`: a thread list that cannot be read | counts as no vCPU threads yet, so the wait ends at the VMM's exit or its bound |
 //! | `run_firecracker`: the VMM still runs when the Job's timeout and the shutdown allowance run out, or the Job is canceled | kills the VM cgroup and fails the job as timed out or canceled, discarding its results |
 //! | `run_firecracker`: the VM cgroup cannot be emptied after a timeout or a cancel | warns: the job has already failed, and the teardown kills the cgroup again |
 //! | `run_firecracker`: the VM cgroup cannot be emptied once the VMM has exited | fails the job: a process left in the jail can still write the results drive |
@@ -90,8 +95,8 @@
 //! | `metrics`: a cgroup that is not there | no metrics, reported as absent |
 //! | `metrics`: a field that cannot be read or parsed | absent, never zero |
 //! | `tuning::preflight`: any check that cannot be performed | ignored: advisory only, and nothing reads it to decide whether the host can measure. A quiet preflight is not evidence of a quiet host |
-//! | `pin_vcpu_threads`: a thread list that cannot be read | declares the absence: it reports how many of the vCPUs it pinned |
-//! | `FirecrackerClient`: a status line that cannot be parsed | fails the request: no status is invented for a response Firecracker did not send |
+//! | `pin_vcpu_threads`: a thread that cannot be pinned | declares the absence: it reports how many of the vCPUs it pinned |
+//! | `pin_threads_again`: a thread that cannot be pinned | declares the absence: it reports how many threads it pinned |
 //! | `find_binary`: a candidate path that cannot be stat'ed | ignored: the search is a list of guesses, and finding nothing is reported by name |
 //!
 //! `CgroupManager::kill_all` is in neither table: the jailed path never calls
@@ -120,7 +125,7 @@ pub(crate) use cgroup::{ScratchCgroup, prepare_at_startup_with};
 #[cfg(target_os = "linux")]
 pub use chroot::JailDir;
 #[cfg(target_os = "linux")]
-pub use paths::{ChrootPath, HostPath, JailFile, JailPaths, PinnedSocket, SocketPath};
+pub use paths::{ChrootPath, HostPath, JailFile, JailPaths};
 #[cfg(target_os = "linux")]
 pub use state::StateDir;
 

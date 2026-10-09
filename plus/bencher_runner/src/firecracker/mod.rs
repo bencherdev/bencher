@@ -1,22 +1,20 @@
 //! Firecracker microVM integration.
 //!
 //! This module manages Firecracker microVMs for running benchmarks in isolation.
-//! Instead of a custom VMM, we use Firecracker as an external process controlled
-//! via its REST API over a Unix domain socket.
+//! Instead of a custom VMM, we use Firecracker as an external process, which
+//! boots the VM from a configuration file in its jail and runs no API server.
 //!
 //! The VMM always runs under the Firecracker jailer, chrooted as an unprivileged
 //! user with no host network; see [`crate::jail`].
 
-mod client;
 pub mod config;
 pub mod error;
 mod pin;
 mod process;
 mod results;
-#[cfg(test)]
-mod test_util;
 
 pub use crate::log_level::SandboxLogLevel;
+use std::process::ExitStatus;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
@@ -35,10 +33,16 @@ pub use results::ResultsDrive;
 /// power off, well inside the server's grace for a Job past its timeout.
 const SHUTDOWN_ALLOWANCE: Duration = Duration::from_secs(5);
 
+/// How long after the first pin the VMM's threads are pinned again: long
+/// enough for vCPU 0's first run to start KVM's NX recovery worker, and far
+/// short of the guest's init.
+const REPIN_AFTER: Duration = Duration::from_millis(50);
+
 use crate::run::RunOutput;
 
-use config::{Action, ActionType, BootSource, Drive, MachineConfig};
-use process::{FirecrackerProcess, JailedSpawn};
+use config::{BootSource, Drive, MachineConfig, VmConfig};
+use pin::Task;
+use process::{FirecrackerProcess, JailedSpawn, Started};
 
 /// Configuration for a Firecracker-based benchmark run.
 #[derive(Debug)]
@@ -76,10 +80,12 @@ pub struct FirecrackerJobConfig {
 ///
 /// This function:
 /// 1. Creates the VM's cgroup, with a cpuset when the layout isolates cores
-/// 2. Starts Firecracker under the jailer, placed in the cgroup before exec
-/// 3. Verifies the placement landed
-/// 4. Configures the VM via REST API, with the results drive after the rootfs
-/// 5. Boots the VM
+/// 2. Writes the VM's configuration into the jail, with the results drive
+///    after the rootfs
+/// 3. Starts Firecracker under the jailer, placed in the cgroup before exec,
+///    which boots the VM
+/// 4. Verifies the placement landed
+/// 5. Waits for the vCPU threads and pins them
 /// 6. Waits for the guest to power off, which it does once its results are on
 ///    the drive
 /// 7. Kills whatever is left in the cgroup, then reads the results
@@ -109,14 +115,51 @@ pub fn run_firecracker(
         CgroupManager::new(log, vm_id)
     })?;
 
-    // Step 1: Start the jailed Firecracker process.
-    info!(log, "Starting the jailed Firecracker process");
+    // Step 1: The configuration Firecracker boots the VM from
+    VmConfig {
+        boot_source: BootSource {
+            kernel_image_path: jail.kernel().chroot().clone(),
+            boot_args: config.boot_args.clone(),
+        },
+        drives: vec![
+            Drive {
+                drive_id: "rootfs".to_owned(),
+                path_on_host: jail.rootfs().chroot().clone(),
+                is_root_device: true,
+                is_read_only: false,
+            },
+            // The guest's second drive, `/dev/vdb`.
+            Drive {
+                drive_id: "results".to_owned(),
+                path_on_host: jail.results().chroot().clone(),
+                is_root_device: false,
+                is_read_only: false,
+            },
+        ],
+        machine_config: MachineConfig {
+            vcpu_count: config.vcpus,
+            mem_size_mib: config.memory_mib,
+            smt: false,
+        },
+    }
+    .write(jail.vm_config().host().as_path())?;
+
+    // Step 2: Start the jailed Firecracker process, which boots the VM, so
+    // this is the last point a Job out of time or canceled stops before it.
     let housekeeping_cores = config
         .cpu_layout
         .as_ref()
         .map(|l| l.housekeeping.clone())
         .unwrap_or_default();
     let cgroup_procs = placement_target(&cgroup)?;
+    if deadline.remaining().is_zero() {
+        return Err(FirecrackerError::Timeout(format!(
+            "the timeout ran out before the VM booted (timeout {:?})",
+            deadline.timeout()
+        )));
+    }
+    refuse_cancelled(cancel_flag)?;
+    info!(log, "Booting VM");
     let mut fc_process = FirecrackerProcess::start(JailedSpawn {
         log: log.clone(),
         jailer_bin: &config.jailer_bin,
@@ -125,84 +168,69 @@ pub fn run_firecracker(
         jail_user: config.jail_user,
         chroot_base_dir: &config.chroot_base_dir,
         netns: &config.netns,
-        api_socket: jail.api_socket(),
+        vm_config: jail.vm_config(),
         log_level: config.log_level.as_str(),
         housekeeping_cores,
         cgroup_procs: Some(cgroup_procs),
     })?;
 
-    // Step 1b: Verify the placement landed, which is race free because `spawn`
-    // returns only after the exec, and catches a write to the wrong cgroup.
+    // Step 2b: Verify the placement landed, which is race free because `spawn`
+    // returns only after the exec, and catches a write to the wrong cgroup; a
+    // VMM that already exited is found by where it ran.
     verify_placement(&cgroup, fc_process.pid())?;
-    refuse_cancelled(cancel_flag)?;
 
-    let client = fc_process.client();
+    // Step 3: Wait for the vCPU threads, which start only once Firecracker has
+    // accepted its configuration, and pin them to dedicated benchmark cores
+    // before the guest's init runs: a required companion to the isolated
+    // cpuset partition, which has no load balancing between cores.
+    let until = deadline.extended_by(SHUTDOWN_ALLOWANCE);
+    let ended = match fc_process.wait_for_vcpus(config.vcpus, until, cancel_flag) {
+        Ok(Some(Started::Vcpus(threads))) => {
+            let pinning = config
+                .cpu_layout
+                .as_ref()
+                .filter(|layout| layout.has_isolation());
+            if let Some(layout) = pinning {
+                pin::pin_vcpu_threads(log, &threads, layout, config.vcpus);
+            }
 
-    // Step 2: Configure VM via REST API
-    info!(log, "Configuring VM");
-
-    client.put_machine_config(&MachineConfig {
-        vcpu_count: config.vcpus,
-        mem_size_mib: config.memory_mib,
-        smt: false,
-    })?;
-
-    client.put_boot_source(&BootSource {
-        kernel_image_path: jail.kernel().chroot().clone(),
-        boot_args: config.boot_args.clone(),
-    })?;
-
-    client.put_drive(&Drive {
-        drive_id: "rootfs".to_owned(),
-        path_on_host: jail.rootfs().chroot().clone(),
-        is_root_device: true,
-        is_read_only: false,
-    })?;
-
-    // The guest's second drive, `/dev/vdb`.
-    client.put_drive(&Drive {
-        drive_id: "results".to_owned(),
-        path_on_host: jail.results().chroot().clone(),
-        is_root_device: false,
-        is_read_only: false,
-    })?;
-
-    // Step 3: Boot the VM
-    if deadline.remaining().is_zero() {
-        return Err(FirecrackerError::Timeout(format!(
-            "the timeout ran out before the VM booted (timeout {:?})",
+            // Step 4: Wait for the guest to power off
+            info!(log, "Waiting for the VM to power off";
+                "timeout_secs" => deadline.timeout().as_secs(),
+                "remaining_ms" => u64::try_from(deadline.remaining().as_millis()).unwrap_or(u64::MAX),
+                "shutdown_allowance_secs" => SHUTDOWN_ALLOWANCE.as_secs(),
+            );
+            match pinning {
+                Some(layout) => {
+                    let task_dir = fc_process.task_dir();
+                    repin_then_wait(
+                        until,
+                        |deadline| fc_process.wait_for_exit(deadline, cancel_flag),
+                        || pin::read_tasks(&task_dir),
+                        |threads| pin::pin_threads_again(log, threads, layout),
+                    )
+                },
+                None => fc_process.wait_for_exit(until, cancel_flag),
+            }
+        },
+        Ok(Some(Started::Exited(status))) => {
+            warn!(
+                log,
+                "The VM ran and powered off before its vCPU threads were seen, so none was pinned"
+            );
+            Ok(Some(status))
+        },
+        Ok(None) => Ok(None),
+        Err(e) => Err(e),
+    };
+    let ended = match ended {
+        Ok(Some(status)) => Ok(status),
+        Ok(None) => Err(FirecrackerError::Timeout(format!(
+            "VM execution timed out after {:?}",
             deadline.timeout()
-        )));
-    }
-    info!(log, "Booting VM");
-    client.put_action(&Action {
-        action_type: ActionType::InstanceStart,
-    })?;
-
-    // Pin vCPU threads (spawned during InstanceStart) to dedicated
-    // benchmark cores. Required companion to the isolated cpuset
-    // partition, which has no load balancing between cores.
-    if let Some(layout) = &config.cpu_layout
-        && layout.has_isolation()
-    {
-        pin::pin_vcpu_threads(log, fc_process.pid(), layout, config.vcpus);
-    }
-
-    // Step 4: Wait for the guest to power off
-    info!(log, "Waiting for the VM to power off";
-        "timeout_secs" => deadline.timeout().as_secs(),
-        "remaining_ms" => u64::try_from(deadline.remaining().as_millis()).unwrap_or(u64::MAX),
-        "shutdown_allowance_secs" => SHUTDOWN_ALLOWANCE.as_secs(),
-    );
-    let ended =
-        match fc_process.wait_for_exit(deadline.extended_by(SHUTDOWN_ALLOWANCE), cancel_flag) {
-            Ok(Some(status)) => Ok(status),
-            Ok(None) => Err(FirecrackerError::Timeout(format!(
-                "VM execution timed out after {:?}",
-                deadline.timeout()
-            ))),
-            Err(e) => Err(e),
-        };
+        ))),
+        Err(e) => Err(e),
+    };
     let elapsed = start_time.elapsed();
     let run_metrics = RunMetrics {
         wall_clock_ms: u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
@@ -229,6 +257,28 @@ pub fn run_firecracker(
     config
         .results
         .read_from_emptied_jail(&cgroup, config.max_file_count, config.max_content_size)
+}
+
+/// Pin the VMM's threads again after [`REPIN_AFTER`], read anew so any started
+/// since the first pass is among them, then wait for the VMM to exit by
+/// `until`. The wait, the thread list, and the pin are parameters, so a test
+/// can stand in for each.
+fn repin_then_wait<W, R, P>(
+    until: JobDeadline,
+    mut wait: W,
+    mut threads: R,
+    mut pin_again: P,
+) -> Result<Option<ExitStatus>, FirecrackerError>
+where
+    W: FnMut(JobDeadline) -> Result<Option<ExitStatus>, FirecrackerError>,
+    R: FnMut() -> Vec<Task>,
+    P: FnMut(&[Task]),
+{
+    if let Some(status) = wait(JobDeadline::start(REPIN_AFTER.min(until.remaining())))? {
+        return Ok(Some(status));
+    }
+    pin_again(&threads());
+    wait(until)
 }
 
 /// Every run gets a cgroup or fails the job, since placement and the kill need
@@ -389,6 +439,54 @@ mod tests {
             std::fs::read_to_string(root.join("memory.swap.max")).unwrap(),
             "0",
             "swap is off without a cpuset too"
+        );
+    }
+
+    #[test]
+    fn the_second_pass_pins_a_thread_started_after_the_first() {
+        // Kills a second pass that pins a thread list read before its wait, or
+        // none, which leaves a thread started since, as KVM's NX recovery
+        // worker, on whatever cores it inherited.
+        use std::os::unix::process::ExitStatusExt as _;
+
+        let started_since = std::cell::Cell::new(false);
+        let mut waits = 0;
+        let mut pinned = Vec::new();
+
+        let status = repin_then_wait(
+            JobDeadline::start(Duration::from_secs(30)),
+            |_deadline| {
+                waits += 1;
+                if waits == 1 {
+                    // The worker starts while the second pass waits.
+                    started_since.set(true);
+                    Ok(None)
+                } else {
+                    Ok(Some(ExitStatus::from_raw(0)))
+                }
+            },
+            || {
+                let mut threads = vec![
+                    (100, "firecracker".to_owned()),
+                    (101, "fc_vcpu 0".to_owned()),
+                ];
+                if started_since.get() {
+                    threads.push((102, "kvm-nx-lpage-re".to_owned()));
+                }
+                threads
+            },
+            |threads| pinned.push(threads.to_vec()),
+        )
+        .unwrap();
+
+        assert!(status.is_some_and(|status| status.success()), "{status:?}");
+        assert_eq!(
+            pinned,
+            [vec![
+                (100, "firecracker".to_owned()),
+                (101, "fc_vcpu 0".to_owned()),
+                (102, "kvm-nx-lpage-re".to_owned()),
+            ]]
         );
     }
 

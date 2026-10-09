@@ -228,14 +228,28 @@ impl CgroupManager {
     }
 
     /// Catches a `pre_exec` join that succeeded against the wrong cgroup, which
-    /// the spawn itself would not report.
+    /// the spawn itself would not report. A process that has exited is gone
+    /// from `cgroup.procs`, so an unreaped one is found by where it ran.
     pub fn contains_pid(&self, pid: u32) -> Result<bool, JailError> {
         let path = self.cgroup_path.join("cgroup.procs");
         let procs = fs::read_to_string(&path).map_err(|e| JailError::ReadCgroup {
             path: path.clone(),
             source: e,
         })?;
-        Ok(procs_contains_pid(&procs, pid))
+        Ok(procs_contains_pid(&procs, pid) || self.ran_in(pid))
+    }
+
+    /// Whether `/proc/<pid>/cgroup` names this cgroup, which it still does
+    /// for a zombie.
+    fn ran_in(&self, pid: u32) -> bool {
+        let Ok(relative) = self.cgroup_path.strip_prefix(CGROUP_ROOT) else {
+            return false;
+        };
+        fs::read_to_string(format!("/proc/{pid}/cgroup")).is_ok_and(|listing| {
+            listing
+                .lines()
+                .any(|line| line.strip_prefix("0::/") == Some(relative.as_str()))
+        })
     }
 
     /// Write to a cgroup file.
@@ -1638,6 +1652,56 @@ mod tests {
 
         manager.open_procs().unwrap_err();
         manager.contains_pid(1).unwrap_err();
+    }
+
+    #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
+    fn a_process_that_exited_unreaped_is_still_found_in_its_cgroup() {
+        // Kills reading only `cgroup.procs`, which a process leaves as it exits,
+        // so a VMM whose guest ran and powered off while the runner was off-CPU
+        // failed its placement check, and a fallback that finds any cgroup.
+        use std::io::Write as _;
+        use std::process::{Command, Stdio};
+
+        if crate::jail::current_euid() != 0 {
+            eprintln!(
+                "skipped a_process_that_exited_unreaped_is_still_found_in_its_cgroup: a cgroup needs root"
+            );
+            return;
+        }
+        let ran_in = ScratchCgroup::new("bencher-runner-exited");
+        let elsewhere = ScratchCgroup::new("bencher-runner-elsewhere");
+        let mut child = Command::new("/bin/sh")
+            .args(["-c", "read go"])
+            .stdin(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let pid = child.id();
+        fs::write(ran_in.path().join("cgroup.procs"), pid.to_string()).unwrap();
+        child.stdin.take().unwrap().write_all(b"go\n").unwrap();
+        let started = Instant::now();
+        while !fs::read_to_string(format!("/proc/{pid}/stat"))
+            .unwrap()
+            .contains(") Z ")
+            && started.elapsed() < Duration::from_secs(3)
+        {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(
+            !procs_contains_pid(
+                &fs::read_to_string(ran_in.path().join("cgroup.procs")).unwrap(),
+                pid
+            ),
+            "the exited process must have left the listing, or this proves nothing"
+        );
+
+        let found = CgroupManager::detached(ran_in.path().to_owned()).contains_pid(pid);
+        let found_elsewhere =
+            CgroupManager::detached(elsewhere.path().to_owned()).contains_pid(pid);
+        child.wait().unwrap();
+
+        assert!(found.unwrap(), "found where it ran");
+        assert!(!found_elsewhere.unwrap(), "not found where it never ran");
     }
 
     #[test]
