@@ -251,36 +251,6 @@ pub enum JailError {
     },
 
     #[cfg(target_os = "linux")]
-    #[error("Failed to open the jail chroot {path}: {source}")]
-    OpenJailRoot {
-        path: Utf8PathBuf,
-        source: std::io::Error,
-    },
-
-    #[cfg(target_os = "linux")]
-    #[error(
-        "The socket path {path} is {length} bytes, over the {limit} byte sun_path limit for a Unix domain socket"
-    )]
-    SocketPathTooLong {
-        path: String,
-        length: usize,
-        limit: usize,
-    },
-
-    #[cfg(target_os = "linux")]
-    #[error("Failed to pin the socket {path}: {source}")]
-    PinSocket {
-        path: crate::jail::SocketPath,
-        source: std::io::Error,
-    },
-
-    #[cfg(target_os = "linux")]
-    #[error(
-        "{path} is not a socket, so the runner will not connect through it: something replaced the socket before the guest started"
-    )]
-    NotASocket { path: crate::jail::SocketPath },
-
-    #[cfg(target_os = "linux")]
     #[error("Failed to create jail chroot {path}: {source}")]
     CreateJail {
         path: Utf8PathBuf,

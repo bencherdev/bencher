@@ -33,53 +33,34 @@ pub enum FirecrackerError {
         source: std::io::Error,
     },
 
-    #[error("Firecracker API {context}: {source}")]
-    ApiEncoding {
-        context: &'static str,
-        source: serde_json::Error,
+    #[error("Failed to write the VM configuration {path}: {source}")]
+    WriteVmConfig {
+        path: camino::Utf8PathBuf,
+        source: std::io::Error,
     },
 
-    #[error("Firecracker API response malformed: {0}")]
-    MalformedResponse(&'static str),
-
-    #[error(
-        "Firecracker's response to PUT {path} exceeded {kib} KiB",
-        kib = super::client::API_RESPONSE_CAP_KIB
-    )]
-    ApiResponseTooLarge { path: String },
-
-    /// Firecracker API returned an error.
-    #[error("Firecracker API error: {status} {body}")]
-    Api {
-        /// HTTP status code.
-        status: u16,
-        /// Response body.
-        body: String,
-    },
-
-    /// Timeout waiting for Firecracker to be ready or VM to power off.
+    /// Timeout waiting for the VM to power off.
     #[error("Timeout: {0}")]
     Timeout(String),
 
-    /// I/O error communicating with Firecracker.
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-
-    /// Firecracker API socket not ready.
-    #[error("Firecracker API socket not ready after {0:?}")]
-    SocketNotReady(std::time::Duration),
+    /// The jailer execs Firecracker in place, so this is either of them, and
+    /// either one refusing what it was given.
+    #[error(
+        "Firecracker exited ({status}) before it booted the VM, so the jailer refused the jail or Firecracker refused the VM's configuration. Its last line on stderr: {}",
+        .line.as_deref().unwrap_or("(none)")
+    )]
+    ExitedBeforeBoot {
+        status: std::process::ExitStatus,
+        line: Option<String>,
+    },
 
     #[error(
-        "The jailed process exited ({status}) before the Firecracker API socket appeared. The jailer execs Firecracker in place, so this is the jailer or the VMM it became; its diagnostics are the `VMM stderr` records above"
+        "Firecracker started {started} of the VM's {vcpus} vCPU threads within {waited:?}, so it has not booted the VM"
     )]
-    JailedProcessExited { status: std::process::ExitStatus },
-
-    /// Unlike [`Self::SocketNotReady`], waiting will not help.
-    #[error("Firecracker API socket {path} is unusable: {source}")]
-    SocketUnusable {
-        /// The checked type, since an over-long `sun_path` is the usual cause.
-        path: crate::jail::SocketPath,
-        source: std::io::Error,
+    VcpusNotStarted {
+        started: usize,
+        vcpus: u8,
+        waited: std::time::Duration,
     },
 
     #[error(
@@ -138,9 +119,6 @@ pub enum FirecrackerError {
     /// Boxed because [`crate::error::RunnerError`] in turn contains this type.
     #[error("Failed to confine Firecracker to the benchmark cores: {0}")]
     CpusetFailed(#[source] Box<crate::error::RunnerError>),
-
-    #[error("Failed to pin the Firecracker API socket: {0}")]
-    PinApiSocket(#[source] crate::error::JailError),
 
     #[error("Jail ownership failed: {0}")]
     Chown(#[source] crate::error::JailError),

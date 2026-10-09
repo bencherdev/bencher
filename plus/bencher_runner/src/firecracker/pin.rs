@@ -4,62 +4,52 @@
 //! even without one, vCPU threads migrating between benchmark cores adds
 //! run-to-run variance (cold caches, TLB refills). Firecracker names its
 //! vCPU threads `fc_vcpu {index}`; each is pinned to its own benchmark
-//! core, and the remaining VMM/API threads are pinned to the last
-//! benchmark core (housekeeping cores are outside the VM cgroup cpuset,
-//! so pinning there would fail with EINVAL). All of this is best-effort
-//! with warnings.
+//! core, and the remaining VMM threads are pinned to the last benchmark
+//! core (housekeeping cores are outside the VM cgroup cpuset, so pinning
+//! there would fail with EINVAL). Each pin is best-effort with warnings.
 
-use std::time::{Duration, Instant};
-
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::Utf8Path;
 use slog::{Logger, info, warn};
 
 use crate::cpu::{CpuLayout, pin_tid};
 
-/// How long to wait for all vCPU threads to appear after `InstanceStart`.
-const DISCOVERY_TIMEOUT: Duration = Duration::from_millis(500);
+/// A thread of the VMM: its id and its name.
+pub(super) type Task = (libc::pid_t, String);
 
-/// Poll interval while waiting for vCPU threads.
-const POLL_INTERVAL: Duration = Duration::from_millis(20);
-
-/// Pin the Firecracker process's threads to dedicated benchmark cores.
+/// Pin the threads the VMM had once its vCPU threads started.
 ///
-/// Polls `/proc/<pid>/task/*/comm` until `vcpu_count` vCPU threads appear
-/// (they are spawned during `InstanceStart`) or the discovery timeout
-/// elapses, then pins whatever was found.
-///
-/// vCPU threads necessarily run for a moment before being pinned (they
-/// do not exist until `InstanceStart`). The cgroup cpuset is the hard
-/// confinement to benchmark cores; per-thread pinning is a refinement
-/// on top of it that stops migration between those cores.
-pub(super) fn pin_vcpu_threads(log: &Logger, fc_pid: u32, layout: &CpuLayout, vcpu_count: u8) {
-    let task_dir = Utf8PathBuf::from(format!("/proc/{fc_pid}/task"));
-    let deadline = Instant::now() + DISCOVERY_TIMEOUT;
+/// The guest kernel runs on its vCPUs for the moment between their start and
+/// this, confined from birth to the benchmark cores by the cgroup cpuset;
+/// per-thread pinning is a refinement on top that stops migration between them.
+pub(super) fn pin_vcpu_threads(log: &Logger, tasks: &[Task], layout: &CpuLayout, vcpu_count: u8) {
+    let (_, pinned_vcpus) = pin_threads(log, tasks, layout);
+    info!(log, "vCPU threads pinned to dedicated cores";
+        "pinned" => pinned_vcpus,
+        "vcpus" => vcpu_count,
+    );
+}
 
-    let tasks = loop {
-        let tasks = read_tasks(&task_dir);
-        let vcpus_found = tasks
-            .iter()
-            .filter(|(_, comm)| parse_vcpu_comm(comm).is_some())
-            .count();
-        if vcpus_found >= usize::from(vcpu_count) || Instant::now() >= deadline {
-            break tasks;
-        }
-        std::thread::sleep(POLL_INTERVAL);
-    };
+/// Pin every thread the VMM has now, which reaches one started since the
+/// first pass, as KVM's NX recovery worker is once vCPU 0 first runs.
+pub(super) fn pin_threads_again(log: &Logger, tasks: &[Task], layout: &CpuLayout) {
+    let (pinned, _) = pin_threads(log, tasks, layout);
+    info!(log, "VMM threads pinned again";
+        "pinned" => pinned,
+        "threads" => tasks.len(),
+    );
+}
 
-    if tasks.is_empty() {
-        warn!(log, "No Firecracker threads to pin"; "task_dir" => task_dir.as_str());
-        return;
-    }
-
+/// Returns how many threads, and how many vCPU threads, were pinned.
+fn pin_threads(log: &Logger, tasks: &[Task], layout: &CpuLayout) -> (usize, usize) {
+    let mut pinned = 0usize;
     let mut pinned_vcpus = 0usize;
-    for (tid, comm) in &tasks {
+    for (tid, comm) in tasks {
         let Some(core) = assign_core(comm, &layout.benchmark) else {
             continue;
         };
         match pin_tid(*tid, &[core]) {
             Ok(()) => {
+                pinned += 1;
                 if parse_vcpu_comm(comm).is_some() {
                     pinned_vcpus += 1;
                 }
@@ -74,17 +64,21 @@ pub(super) fn pin_vcpu_threads(log: &Logger, fc_pid: u32, layout: &CpuLayout, vc
             },
         }
     }
+    (pinned, pinned_vcpus)
+}
 
-    info!(log, "vCPU threads pinned to dedicated cores";
-        "pinned" => pinned_vcpus,
-        "vcpus" => vcpu_count,
-    );
+/// How many of `tasks` are vCPU threads.
+pub(super) fn vcpus_in(tasks: &[Task]) -> usize {
+    tasks
+        .iter()
+        .filter(|(_, comm)| parse_vcpu_comm(comm).is_some())
+        .count()
 }
 
 /// Read all (tid, comm) pairs under a `/proc/<pid>/task` directory.
 ///
 /// Threads that exit mid-scan are silently skipped.
-fn read_tasks(task_dir: &Utf8Path) -> Vec<(libc::pid_t, String)> {
+pub(super) fn read_tasks(task_dir: &Utf8Path) -> Vec<Task> {
     let Ok(entries) = std::fs::read_dir(task_dir.as_std_path()) else {
         return Vec::new();
     };
@@ -112,11 +106,11 @@ fn parse_vcpu_comm(comm: &str) -> Option<usize> {
 /// Choose the benchmark core for a Firecracker thread.
 ///
 /// vCPU `N` gets its own core (`benchmark[N % len]`); all other threads
-/// (VMM, API server) share the last benchmark core, keeping them off the
-/// cores running the earlier vCPUs. When the vCPU count equals the
-/// benchmark core count, the highest-index vCPU therefore shares its
-/// core with the VMM threads and sees more scheduling noise than its
-/// peers; the lower-index vCPUs keep dedicated cores.
+/// share the last benchmark core, keeping them off the cores running the
+/// earlier vCPUs. When the vCPU count equals the benchmark core count, the
+/// highest-index vCPU therefore shares its core with the VMM threads and
+/// sees more scheduling noise than its peers; the lower-index vCPUs keep
+/// dedicated cores.
 fn assign_core(comm: &str, benchmark: &[usize]) -> Option<usize> {
     let &last = benchmark.last()?;
     match parse_vcpu_comm(comm) {
@@ -127,6 +121,8 @@ fn assign_core(comm: &str, benchmark: &[usize]) -> Option<usize> {
 
 #[cfg(test)]
 mod tests {
+    use camino::Utf8PathBuf;
+
     use super::*;
 
     #[test]
@@ -139,7 +135,6 @@ mod tests {
     #[test]
     fn rejects_non_vcpu_comm() {
         assert_eq!(parse_vcpu_comm("firecracker"), None);
-        assert_eq!(parse_vcpu_comm("fc_api"), None);
         assert_eq!(parse_vcpu_comm("fc_vcpu"), None);
         assert_eq!(parse_vcpu_comm("fc_vcpu x"), None);
         assert_eq!(parse_vcpu_comm(""), None);
@@ -164,7 +159,6 @@ mod tests {
     fn assigns_vmm_threads_to_last_core() {
         let benchmark = vec![2, 3, 4, 5];
         assert_eq!(assign_core("firecracker", &benchmark), Some(5));
-        assert_eq!(assign_core("fc_api", &benchmark), Some(5));
     }
 
     #[test]

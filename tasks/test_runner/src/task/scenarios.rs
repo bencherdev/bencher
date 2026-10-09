@@ -1437,6 +1437,74 @@ CMD ["sh", "-c", "dmesg | grep -E 'serio: i8042 KBD port|input: AT .* keyboard' 
             ..Scenario::default()
         },
         Scenario {
+            name: "a_configuration_firecracker_refuses_fails_the_job_plainly",
+            description: "A VM configuration Firecracker refuses fails the Job at once, saying so and with Firecracker's own error",
+            // Firecracker boots at most 32 vCPUs, which the runner does not check.
+            dockerfile: r#"FROM busybox
+CMD ["printf", "%s_%s\\n", "TOO_MANY", "VCPUS"]"#,
+            extra_args: &["--timeout", "20", "--vcpus", "64"],
+            control_marker: Some("TOO_MANY_VCPUS"),
+            validate: |output| {
+                let error = runner_error(output).unwrap_or_default();
+                let timed_out = run_metrics(output)
+                    .next()
+                    .and_then(|metrics| metrics.get("timed_out")?.as_bool());
+                anyhow::ensure!(
+                    output.exit_code == 1
+                        && error.contains("exited (exit status: 1) before it booted the VM")
+                        && error.contains("refused the VM's configuration")
+                        && error.contains("InvalidVcpuCount")
+                        && timed_out == Some(false)
+                        && guest_printed(output, "TOO_MANY_VCPUS") == 0,
+                    "Expected the run to fail at once on Firecracker's refusal, naming it, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "the_vcpus_are_pinned_before_the_benchmark_starts",
+            description: "Every vCPU thread, then every VMM thread again, is pinned before the benchmark starts, though the guest boots as Firecracker starts",
+            // The guest's uptime is at most the time since the runner started
+            // Firecracker, so a pin sooner after that start came first.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "printf 'UPTIME %s\\n' $(cut -d ' ' -f 1 /proc/uptime)"]"#,
+            extra_args: &["--timeout", "60", "--vcpus", "2"],
+            validate: |output| {
+                let booted = records_with(&output.stderr, "Booting VM")
+                    .next()
+                    .as_ref()
+                    .and_then(time_of_day_micros);
+                let pinned = |msg: &str| {
+                    let record = records_with(&output.stderr, msg).next()?;
+                    let after = micros_between(booted?, time_of_day_micros(&record)?);
+                    Some((after, record.get("pinned")?.as_u64()?))
+                };
+                let vcpus = pinned("vCPU threads pinned to dedicated cores");
+                let again = pinned("VMM threads pinned again");
+                let uptime = guest_uptime_micros(output);
+                let before_the_benchmark = |pass: Option<(u64, u64)>, at_least: u64| {
+                    pass.zip(uptime).is_some_and(|((after, pinned), uptime)| {
+                        after < uptime && pinned >= at_least
+                    })
+                };
+                anyhow::ensure!(
+                    output.exit_code == 0
+                        && vcpus.is_some_and(|(_, pinned)| pinned == 2)
+                        && before_the_benchmark(vcpus, 2)
+                        && before_the_benchmark(again, 3),
+                    "Expected both vCPU threads pinned, then the VMM's threads again, each sooner after Firecracker started than the guest's uptime when its benchmark ran, got {vcpus:?} and {again:?} (us, pinned) against {uptime:?} us.\nstdout: {}\nstderr: {}",
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
             name: "a_guest_that_reboots_before_its_results_fails_at_once",
             description: "A guest that powers off before it writes its results fails the run at once, not at its timeout",
             // The control run prints the marker, and the real run reboots before
@@ -2530,8 +2598,8 @@ fn probe_booted(state_dir: &Utf8Path) -> Result<bool> {
     Ok(find_jailed_vmm(&jail_root)?.is_some_and(has_vcpu_threads))
 }
 
-/// Firecracker names each vCPU thread `fc_vcpu <n>` and starts them at
-/// `InstanceStart`.
+/// Firecracker names each vCPU thread `fc_vcpu <n>` and starts them once it
+/// has accepted its configuration.
 fn has_vcpu_threads(pid: u32) -> bool {
     fs::read_dir(format!("/proc/{pid}/task")).is_ok_and(|tasks| {
         tasks.flatten().any(|task| {
@@ -3474,6 +3542,43 @@ fn vmm_reported_an_error(output: &ScenarioOutput) -> bool {
 fn vmm_exit_status(output: &ScenarioOutput) -> Option<String> {
     records_with(&output.stderr, "VMM exited")
         .find_map(|record| text(&record, "status").map(str::to_owned))
+}
+
+/// Microseconds in a day, so two records either side of midnight subtract.
+const DAY_MICROS: u64 = 86_400_000_000;
+
+/// The time of day a record was logged, in microseconds.
+fn time_of_day_micros(record: &Record) -> Option<u64> {
+    let (_, time) = text(record, "ts")?.split_once('T')?;
+    let (clock, fraction) = time.strip_suffix('Z')?.split_once('.')?;
+    let mut fields = clock.split(':').map(str::parse::<u64>);
+    let (Some(Ok(hours)), Some(Ok(minutes)), Some(Ok(seconds)), None) =
+        (fields.next(), fields.next(), fields.next(), fields.next())
+    else {
+        return None;
+    };
+    let micros: String = fraction
+        .chars()
+        .chain(std::iter::repeat('0'))
+        .take(6)
+        .collect();
+    Some(((hours * 60 + minutes) * 60 + seconds) * 1_000_000 + micros.parse::<u64>().ok()?)
+}
+
+fn micros_between(earlier: u64, later: u64) -> u64 {
+    later
+        .checked_sub(earlier)
+        .unwrap_or_else(|| later + DAY_MICROS - earlier)
+}
+
+/// The guest's `/proc/uptime` as its benchmark printed it, in microseconds.
+fn guest_uptime_micros(output: &ScenarioOutput) -> Option<u64> {
+    let uptime = output
+        .stdout
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("UPTIME "))?;
+    let (seconds, hundredths) = uptime.split_once('.')?;
+    Some(seconds.parse::<u64>().ok()? * 1_000_000 + hundredths.parse::<u64>().ok()? * 10_000)
 }
 
 /// Far under the half second the keyboard probe takes, and far over the few

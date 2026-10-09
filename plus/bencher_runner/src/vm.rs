@@ -75,7 +75,7 @@ pub fn vm_execute(
     // the VM id and the artifacts are built inside it.
     let vm_id = VmId::new();
     let jail_dir = JailDir::create(log, &state_dir, &vm_id)?;
-    let jail = JailPaths::new(jail_dir.root())?;
+    let jail = JailPaths::new(jail_dir.root());
     info!(log, "Jail built"; "jail_root" => jail.root().as_str());
 
     // Everything Firecracker reads has to be inside the chroot, so the kernel
