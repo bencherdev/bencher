@@ -369,12 +369,14 @@ fn wait_for_job_input(ws: Option<&Arc<Mutex<JobChannel>>>, timeout: Duration) ->
 fn report_outcome(outcome: &state_machine::JobOutcome) {
     let state_machine::JobOutcome { job, kind, acked } = outcome;
     match kind {
-        state_machine::TerminalKind::Completed { exit_code, output } => {
-            println!("Job {job} completed (exit_code={exit_code})");
-            if let Some(out) = output {
-                let preview: String = out.chars().take(200).collect();
-                println!("  Output: {preview}");
-            }
+        state_machine::TerminalKind::Completed {
+            exit_code,
+            stdout_bytes,
+            stderr_bytes,
+        } => {
+            println!(
+                "Job {job} completed (exit_code={exit_code}, stdout={stdout_bytes} bytes, stderr={stderr_bytes} bytes)"
+            );
         },
         state_machine::TerminalKind::Failed { error } => {
             println!("Job {job} failed: {error}");

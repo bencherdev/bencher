@@ -178,9 +178,6 @@ where
         match run(deadline) {
             Ok(output) => {
                 iterations.last_exit_code = output.exit_code;
-                if let Some(stdout) = &output.stdout {
-                    iterations.last_stdout_preview = Some(stdout.clone());
-                }
                 let failed = output.exit_code != 0 && !allow_failure;
                 iterations.results.push(output);
                 if failed {
@@ -213,7 +210,6 @@ where
 struct Iterations {
     results: Vec<JsonIterationOutput>,
     last_exit_code: i32,
-    last_stdout_preview: Option<String>,
     /// Why the iterations stopped early.
     failure: Option<String>,
 }
@@ -225,7 +221,6 @@ impl Iterations {
         let Self {
             results,
             last_exit_code,
-            last_stdout_preview,
             failure,
         } = self;
         if canceled {
@@ -236,7 +231,6 @@ impl Iterations {
         }
         JobFinishResult::Completed {
             exit_code: last_exit_code,
-            output: last_stdout_preview,
             results,
         }
     }

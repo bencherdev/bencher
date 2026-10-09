@@ -53,7 +53,8 @@ pub enum ChannelState {
 pub enum TerminalKind {
     Completed {
         exit_code: i32,
-        output: Option<String>,
+        stdout_bytes: usize,
+        stderr_bytes: usize,
     },
     Failed {
         error: String,
@@ -85,7 +86,6 @@ pub enum Input {
 pub enum JobFinishResult {
     Completed {
         exit_code: i32,
-        output: Option<String>,
         results: Vec<JsonIterationOutput>,
     },
     Failed {
@@ -634,16 +634,24 @@ fn build_terminal_message(
     result: JobFinishResult,
 ) -> (RunnerMessage, TerminalKind) {
     match result {
-        JobFinishResult::Completed {
-            exit_code,
-            output,
-            results,
-        } => {
+        JobFinishResult::Completed { exit_code, results } => {
+            let kind = TerminalKind::Completed {
+                exit_code,
+                stdout_bytes: results
+                    .iter()
+                    .filter_map(|result| result.stdout.as_ref())
+                    .map(String::len)
+                    .sum(),
+                stderr_bytes: results
+                    .iter()
+                    .filter_map(|result| result.stderr.as_ref())
+                    .map(String::len)
+                    .sum(),
+            };
             let msg = RunnerMessage::Completed {
                 job: job_uuid,
                 results,
             };
-            let kind = TerminalKind::Completed { exit_code, output };
             (msg, kind)
         },
         JobFinishResult::Failed { error, results } => {
@@ -898,11 +906,16 @@ mod tests {
     fn job_completed_sends_terminal_and_awaits_ack() {
         let job_uuid = test_job_uuid();
         let mut sm = test_sm().with_state(ChannelState::Executing { job_uuid });
+        let iteration = |stdout: &str, stderr: Option<&str>| JsonIterationOutput {
+            exit_code: 0,
+            stdout: Some(stdout.to_owned()),
+            stderr: stderr.map(ToOwned::to_owned),
+            output: None,
+        };
 
         let effects = sm.step(Input::JobFinished(JobFinishResult::Completed {
             exit_code: 0,
-            output: Some("hello".to_owned()),
-            results: vec![],
+            results: vec![iteration("hello", Some("oops")), iteration("hi!", None)],
         }));
         assert!(
             effects
@@ -910,13 +923,22 @@ mod tests {
                 .any(|e| matches!(e, Effect::Send(RunnerMessage::Completed { .. })))
         );
         assert!(effects.iter().any(|e| matches!(e, Effect::Receive(_))));
-        assert!(matches!(
-            sm.state(),
-            ChannelState::AwaitingTerminalAck {
-                kind: TerminalKind::Completed { exit_code: 0, .. },
-                ..
-            }
-        ));
+        // Fails if the counts cover only one iteration or swap the streams.
+        assert!(
+            matches!(
+                sm.state(),
+                ChannelState::AwaitingTerminalAck {
+                    kind: TerminalKind::Completed {
+                        exit_code: 0,
+                        stdout_bytes: 8,
+                        stderr_bytes: 4,
+                    },
+                    ..
+                }
+            ),
+            "{:?}",
+            sm.state()
+        );
         assert!(sm.in_flight.is_some());
     }
 
@@ -986,7 +1008,8 @@ mod tests {
                 job_uuid,
                 kind: TerminalKind::Completed {
                     exit_code: 0,
-                    output: None,
+                    stdout_bytes: 0,
+                    stderr_bytes: 0,
                 },
             })
             .with_in_flight(test_completed_msg());
@@ -1017,7 +1040,8 @@ mod tests {
                 job_uuid,
                 kind: TerminalKind::Completed {
                     exit_code: 0,
-                    output: None,
+                    stdout_bytes: 0,
+                    stderr_bytes: 0,
                 },
             })
             .with_in_flight(test_completed_msg());
@@ -1048,7 +1072,8 @@ mod tests {
                 job_uuid,
                 kind: TerminalKind::Completed {
                     exit_code: 0,
-                    output: None,
+                    stdout_bytes: 0,
+                    stderr_bytes: 0,
                 },
             })
             .with_in_flight(test_completed_msg());
@@ -1080,7 +1105,8 @@ mod tests {
                 job_uuid,
                 kind: TerminalKind::Completed {
                     exit_code: 0,
-                    output: None,
+                    stdout_bytes: 0,
+                    stderr_bytes: 0,
                 },
             })
             .with_in_flight(test_completed_msg());
@@ -1104,7 +1130,6 @@ mod tests {
         // Job finishes → SM prepares terminal message
         let effects = sm.step(Input::JobFinished(JobFinishResult::Completed {
             exit_code: 0,
-            output: None,
             results: vec![],
         }));
         assert!(
@@ -1291,7 +1316,6 @@ mod tests {
         // Job completes
         let _effects = sm.step(Input::JobFinished(JobFinishResult::Completed {
             exit_code: 0,
-            output: None,
             results: vec![],
         }));
         assert!(matches!(
@@ -1325,7 +1349,6 @@ mod tests {
         // Job completes
         let _effects = sm.step(Input::JobFinished(JobFinishResult::Completed {
             exit_code: 0,
-            output: None,
             results: vec![],
         }));
 
@@ -1381,7 +1404,6 @@ mod tests {
 
         let effects = sm.step(Input::JobFinished(JobFinishResult::Completed {
             exit_code: 0,
-            output: None,
             results: vec![],
         }));
         let recv = effects
