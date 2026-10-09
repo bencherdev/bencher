@@ -117,12 +117,12 @@ gcloud compute ssh bencher-vmm-test --zone=us-central1-a --project=bencher-41131
 
 | Crate                     | Path                            | Role                                                                  |
 | ------------------------- | ------------------------------- | --------------------------------------------------------------------- |
-| `bencher_runner`          | `plus/bencher_runner/`          | Core runner library (Firecracker VM management, vsock, jail, metrics) |
+| `bencher_runner`          | `plus/bencher_runner/`          | Core runner library (Firecracker VM management, jail, metrics)        |
 | `bencher_runner_cli`      | `services/runner/`              | Runner CLI binary (`runner run`, `runner up`)                         |
 | `bencher_init`            | `plus/bencher_init/`            | Statically linked init binary that runs inside the VM guest           |
 | `bencher_oci`             | `plus/bencher_oci/`             | OCI image parsing and layer extraction                                |
 | `bencher_rootfs`          | `plus/bencher_rootfs/`          | Rootfs creation (ext4 image from OCI layers)                          |
-| `bencher_output_protocol` | `plus/bencher_output_protocol/` | Length-prefixed binary protocol for multi-file output over vsock      |
+| `bencher_output_protocol` | `plus/bencher_output_protocol/` | The guest's results record and its multi-file output protocol         |
 | `test_runner`             | `tasks/test_runner/`            | Test harness (`cargo test-runner` task)                               |
 
 ## Common Failure Patterns

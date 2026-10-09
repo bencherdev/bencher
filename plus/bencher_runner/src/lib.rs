@@ -7,7 +7,8 @@
 //! - OCI image pulling and unpacking
 //! - Firecracker microVM lifecycle (sandboxed mode)
 //! - Direct host execution (non-sandboxed mode)
-//! - Result collection via vsock (sandboxed) or stdout/stderr (non-sandboxed)
+//! - Result collection from the results drive (sandboxed) or stdout/stderr
+//!   (non-sandboxed)
 
 // Suppress unused crate warnings on non-Linux or without plus
 #![cfg_attr(
@@ -64,7 +65,7 @@ pub mod up;
 mod vm;
 
 #[cfg(feature = "plus")]
-pub use bencher_json::{Cpu, Disk, GracePeriod, Memory};
+pub use bencher_json::{Cpu, Disk, Memory};
 #[cfg(feature = "plus")]
 pub use config::Config;
 #[cfg(feature = "plus")]

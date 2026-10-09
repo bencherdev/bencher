@@ -13,7 +13,7 @@ use nix::errno::Errno;
 use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr, connect, socket};
 use slog::{Logger, warn};
 
-use crate::firecracker::config::{Action, BootSource, Drive, MachineConfig, VsockConfig};
+use crate::firecracker::config::{Action, BootSource, Drive, MachineConfig};
 use crate::firecracker::error::FirecrackerError;
 use crate::jail::SocketPath;
 
@@ -122,34 +122,14 @@ impl<'a> FirecrackerClient<'a> {
         Ok(())
     }
 
-    /// Configure the vsock device.
-    pub fn put_vsock(&self, config: &VsockConfig) -> Result<(), FirecrackerError> {
-        let body = serde_json::to_string(config).map_err(|e| FirecrackerError::ApiEncoding {
-            context: "serialize vsock",
-            source: e,
-        })?;
-        let (status, response_body) =
-            self.http_put("/vsock", &body, Instant::now() + API_CALL_TIMEOUT)?;
-        if status >= 300 {
-            return Err(FirecrackerError::Api {
-                status,
-                body: response_body,
-            });
-        }
-        Ok(())
-    }
-
-    /// Perform a VM action (start, shutdown, etc.).
+    /// Perform a VM action.
     pub fn put_action(&self, action: &Action) -> Result<(), FirecrackerError> {
         self.put_action_until(action, Instant::now() + API_CALL_TIMEOUT)
     }
 
-    /// For a caller whose own deadline has to cover the call.
-    pub fn put_action_until(
-        &self,
-        action: &Action,
-        deadline: Instant,
-    ) -> Result<(), FirecrackerError> {
+    /// Takes its deadline, so a test can bound the call far below
+    /// `API_CALL_TIMEOUT`.
+    fn put_action_until(&self, action: &Action, deadline: Instant) -> Result<(), FirecrackerError> {
         let body = serde_json::to_string(action).map_err(|e| FirecrackerError::ApiEncoding {
             context: "serialize action",
             source: e,
@@ -397,7 +377,7 @@ mod tests {
         let client = FirecrackerClient::new(&discard(), jail.api_socket().socket());
 
         let Err(err) = client.put_action(&Action {
-            action_type: ActionType::SendCtrlAltDel,
+            action_type: ActionType::InstanceStart,
         }) else {
             panic!("nothing is listening on this path");
         };
@@ -423,7 +403,7 @@ mod tests {
 
         let client = std::thread::spawn(move || {
             FirecrackerClient::new(&discard(), &socket).put_action(&Action {
-                action_type: ActionType::SendCtrlAltDel,
+                action_type: ActionType::InstanceStart,
             })
         });
         let (mut stream, _) = vmm.accept().unwrap();
@@ -563,15 +543,14 @@ mod tests {
 
     #[test]
     fn a_trickling_vmm_cannot_hold_an_api_call() {
-        // Prevents a VMM that paces its response holding the job thread, as the
-        // teardown request after a timed out job would.
+        // Prevents a VMM that paces its response holding the job thread.
         let (_dir, jail, vmm) = vmm_in_tmpdir();
         let socket = jail.api_socket().socket().clone();
 
         let started = Instant::now();
         let client = std::thread::spawn(move || {
             FirecrackerClient::new(&discard(), &socket)
-                .put_action_until(&ctrl_alt_del(), deadline_in_300ms())
+                .put_action_until(&instance_start(), deadline_in_300ms())
         });
         let (mut stream, _) = vmm.accept().unwrap();
         assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
@@ -603,7 +582,7 @@ mod tests {
         let started = Instant::now();
         let client = std::thread::spawn(move || {
             FirecrackerClient::new(&discard(), &socket)
-                .put_action_until(&ctrl_alt_del(), deadline_in_300ms())
+                .put_action_until(&instance_start(), deadline_in_300ms())
         });
         let (mut stream, _) = vmm.accept().unwrap();
         assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
@@ -652,7 +631,7 @@ mod tests {
         let started = Instant::now();
         let client = std::thread::spawn(move || {
             FirecrackerClient::new(&discard(), &socket)
-                .put_action_until(&ctrl_alt_del(), deadline_in_300ms())
+                .put_action_until(&instance_start(), deadline_in_300ms())
         });
         while !client.is_finished() && started.elapsed() < SLOW {
             std::thread::sleep(Duration::from_millis(10));
@@ -685,7 +664,7 @@ mod tests {
 
         let client = std::thread::spawn(move || {
             FirecrackerClient::new(&discard(), &socket)
-                .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
+                .put_action_until(&instance_start(), Instant::now() + Duration::from_secs(30))
         });
         let (stream, _) = vmm.accept().unwrap();
         let mut request = [PollFd::new(stream.as_fd(), PollFlags::POLLIN)];
@@ -713,7 +692,7 @@ mod tests {
         let started = Instant::now();
         let client = std::thread::spawn(move || {
             FirecrackerClient::new(&discard(), &socket)
-                .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
+                .put_action_until(&instance_start(), Instant::now() + Duration::from_secs(30))
         });
         let (mut stream, _) = vmm.accept().unwrap();
         assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
@@ -755,7 +734,7 @@ mod tests {
 
         let client = std::thread::spawn(move || {
             FirecrackerClient::new(&discard(), &socket)
-                .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
+                .put_action_until(&instance_start(), Instant::now() + Duration::from_secs(30))
         });
         let (mut stream, _) = vmm.accept().unwrap();
         assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
@@ -782,7 +761,7 @@ mod tests {
 
         let client = std::thread::spawn(move || {
             FirecrackerClient::new(&discard(), &socket)
-                .put_action_until(&ctrl_alt_del(), Instant::now() + Duration::from_secs(30))
+                .put_action_until(&instance_start(), Instant::now() + Duration::from_secs(30))
         });
         let (mut stream, _) = vmm.accept().unwrap();
         assert!(stream.read(&mut [0u8; 512]).unwrap() > 0);
@@ -816,9 +795,9 @@ mod tests {
         Instant::now() + Duration::from_millis(300)
     }
 
-    fn ctrl_alt_del() -> Action {
+    fn instance_start() -> Action {
         Action {
-            action_type: ActionType::SendCtrlAltDel,
+            action_type: ActionType::InstanceStart,
         }
     }
 }

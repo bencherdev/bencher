@@ -827,7 +827,7 @@ CMD ["sh", "-c", "echo CWD=$(pwd)"]"#,
         },
         Scenario {
             name: "file_output",
-            description: "Output file collection via vsock",
+            description: "Output file collected from the results drive",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "printf '{\"result\": %d}\\n' $((6 * 7)) > /tmp/output.json && cat /tmp/output.json"]"#,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
@@ -845,12 +845,25 @@ CMD ["sh", "-c", "printf '%s_%s\\n' EXIT CODE; exit 42"]"#,
         },
         Scenario {
             name: "timeout_handling",
-            description: "VM killed after timeout",
+            description: "VM killed once its timeout and shutdown allowance run out",
             dockerfile: r#"FROM busybox
 CMD ["sleep", "3600"]"#,
             extra_args: &["--timeout", "5"],
             probe: Some(probe_booted),
-            validate: assert_timed_out,
+            validate: |output| {
+                assert_timed_out(output)?;
+                // The VM's span starts after the image is prepared, so only the
+                // allowance can take it more than a second past the timeout.
+                let wall_clock_ms = run_metrics(output)
+                    .next()
+                    .and_then(|metrics| metrics.get("wall_clock_ms")?.as_u64());
+                anyhow::ensure!(
+                    wall_clock_ms.is_some_and(|ms| ms > 6_000),
+                    "Expected the VM to run on past its 5 s timeout, for {wall_clock_ms:?} ms.\nstderr: {}",
+                    output.stderr
+                );
+                Ok(())
+            },
             ..Scenario::default()
         },
         Scenario {
@@ -1362,9 +1375,8 @@ CMD ["/usr/bin/hello"]"#,
         Scenario {
             name: "rapid_exit",
             description: "Instantly exiting process doesn't lose results",
-            // The process exits immediately. This tests whether the vsock
-            // listener is set up before the guest finishes, and whether
-            // results are collected even for very short-lived processes.
+            // The process exits immediately. This tests whether results are
+            // collected even for very short-lived processes.
             dockerfile: r#"FROM busybox
 CMD ["printf", "%s_%s\\n", "RAPID", "EXIT"]"#,
             extra_args: &["--timeout", "60"],
@@ -1391,13 +1403,126 @@ CMD ["sh", "-c", "printf '%s_%s\\n' SIGNAL EXIT; exit 137"]"#,
             dockerfile: r#"FROM busybox
 CMD ["printf", "%s_%s\\n", "CLEAN", "STOP"]"#,
             extra_args: &["--timeout", "60"],
-            // The runner discards the VMM's exit status, so a VMM it kills after
-            // the 2 s teardown passes too.
             validate: |output| {
                 assert_job_succeeded(output, "CLEAN_STOP")?;
                 anyhow::ensure!(
-                    !vmm_reported_an_error(output),
-                    "Expected Firecracker to stop without an error.\nstderr: {}",
+                    !vmm_reported_an_error(output)
+                        && vmm_exit_status(output).as_deref() == Some("exit status: 0"),
+                    "Expected Firecracker to exit 0 without an error.\nstderr: {}",
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "a_guest_that_reboots_before_its_results_fails_at_once",
+            description: "A guest that powers off before it writes its results fails the run at once, not at its timeout",
+            // The control run prints the marker, and the real run reboots before
+            // init writes anything.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "[ -n \"$REBOOT_EARLY\" ] && reboot -f; printf '%s_%s\\n' EARLY REBOOT"]"#,
+            extra_args: &["--timeout", "20", "--env", "REBOOT_EARLY=1"],
+            control_marker: Some("EARLY_REBOOT"),
+            probe: Some(probe_booted),
+            validate: |output| {
+                let metrics = run_metrics(output).next();
+                let field = |key: &str| {
+                    metrics
+                        .as_ref()
+                        .and_then(|metrics| metrics.get(key).cloned())
+                };
+                anyhow::ensure!(
+                    output.exit_code == 1
+                        && runner_error(output)
+                            .is_some_and(|error| error.contains("stopped without results"))
+                        && field("timed_out") == Some(serde_json::Value::Bool(false))
+                        && field("wall_clock_ms")
+                            .and_then(|ms| ms.as_u64())
+                            .is_some_and(|ms| ms < 10_000)
+                        && guest_printed(output, "EARLY_REBOOT") == 0,
+                    "Expected the run to fail at once with no results, well inside its 20 s timeout, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "a_guest_finishing_inside_its_shutdown_allowance_keeps_its_results",
+            description: "A guest that finishes just past its timeout, inside the shutdown allowance, keeps its results",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "sleep 6 && printf '%s_%s\\n' LATE DONE"]"#,
+            extra_args: &["--timeout", "5"],
+            validate: |output| {
+                assert_job_succeeded(output, "LATE_DONE")?;
+                let metrics = run_metrics(output).next();
+                let field = |key: &str| {
+                    metrics
+                        .as_ref()
+                        .and_then(|metrics| metrics.get(key).cloned())
+                };
+                // Past the timeout, so the allowance and not the timeout kept it.
+                anyhow::ensure!(
+                    field("timed_out") == Some(serde_json::Value::Bool(false))
+                        && field("wall_clock_ms")
+                            .and_then(|ms| ms.as_u64())
+                            .is_some_and(|ms| ms > 5_000),
+                    "Expected the VM to run past its 5 s timeout and still report.\nstderr: {}",
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "a_record_the_benchmark_forges_is_discarded_on_a_timeout",
+            description: "A record the benchmark writes to the results drive itself is discarded when the run times out",
+            // A well-formed record of stdout `FORGED`, then a hang.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "printf FORGED | dd of=/dev/vdb bs=4096 seek=1 conv=fsync 2>/dev/null; printf 'BNCHRES1\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x06\\x00\\x00\\x00\\x00\\x00\\x00\\x00' | dd of=/dev/vdb conv=fsync 2>/dev/null; sleep 3600"]"#,
+            extra_args: &["--timeout", "5"],
+            probe: Some(probe_booted),
+            validate: |output| {
+                assert_timed_out(output)?;
+                anyhow::ensure!(
+                    !output.stdout.contains("FORGED"),
+                    "Expected nothing the guest left on a timeout.\nstdout: {}",
+                    output.stdout
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "an_init_error_is_reported_and_the_guest_still_powers_off",
+            description: "A guest whose init fails reports the error and powers off, rather than halting until its timeout",
+            // The image's working directory is gone by the time the guest runs,
+            // so init fails before the benchmark.
+            dockerfile: r#"FROM busybox
+WORKDIR /gone
+RUN rmdir /gone
+CMD ["printf", "%s_%s\\n", "NEVER", "RUN"]"#,
+            extra_args: &["--timeout", "20"],
+            validate: |output| {
+                let timed_out = run_metrics(output)
+                    .next()
+                    .and_then(|metrics| metrics.get("timed_out")?.as_bool());
+                anyhow::ensure!(
+                    output.exit_code == 1
+                        && runner_error(output)
+                            .is_some_and(|error| error.ends_with("non-zero exit code: 1"))
+                        && output
+                            .stderr
+                            .lines()
+                            .any(|line| line.starts_with("init error: io: chdir to /gone"))
+                        && timed_out == Some(false)
+                        && guest_printed(output, "NEVER_RUN") == 0,
+                    "Expected init's error as the guest's stderr and the run to fail with exit code 1 before its timeout, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
                     output.stderr
                 );
                 Ok(())
@@ -1412,15 +1537,13 @@ CMD ["printf", "%s_%s\\n", "CLEAN", "STOP"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo triple > /sys/kernel/reboot/type && printf '%s_%s\\n' REBOOT $(cat /sys/kernel/reboot/type)"]"#,
             extra_args: &["--timeout", "60"],
+            // The guest's results are on its drive before it resets, so the run
+            // still reports them.
             validate: |output| {
+                assert_job_succeeded(output, "REBOOT_triple")?;
                 anyhow::ensure!(
-                    guest_printed(output, "REBOOT_triple") > 0,
-                    "Expected the guest to set its reboot type to triple.\nstdout: {}\nstderr: {}",
-                    output.stdout,
-                    output.stderr
-                );
-                anyhow::ensure!(
-                    vmm_reported_an_error(output),
+                    vmm_reported_an_error(output)
+                        && vmm_exit_status(output).is_some_and(|status| status != "exit status: 0"),
                     "Expected Firecracker to stop with an error.\nstderr: {}",
                     output.stderr
                 );
@@ -1467,7 +1590,7 @@ CMD ["printf", "%s_%s\\n", "NO", "FILE"]"#,
         },
         Scenario {
             name: "large_file_output",
-            description: "Large output file (~2 MB) transferred via vsock",
+            description: "Large output file (~2 MB) returned on the results drive",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "dd if=/dev/urandom bs=1024 count=2048 2>/dev/null | base64 > /tmp/output.json && printf '%s_%s\\n' LARGE FILE"]"#,
             extra_args: &["--timeout", "60", "--output", "/tmp/output.json"],
@@ -1491,7 +1614,7 @@ CMD ["sh", "-c", "printf '%s_%s\\n' ALL STDOUT && printf '%s_%s\\n' ALL STDERR >
         },
         Scenario {
             name: "multi_file_output",
-            description: "Multiple output files collected via vsock",
+            description: "Multiple output files collected from the results drive",
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo '{\"result\": 1}' > /tmp/a.json && echo '{\"result\": 2}' > /tmp/b.json && printf '%s_%s\\n' MULTI FILE"]"#,
             extra_args: &[
@@ -1932,11 +2055,12 @@ CMD ["sh", "-c", "printf '%s_%s\\n' ITER DONE && exit 1"]"#,
         Scenario {
             name: "timeout_spans_iterations",
             description: "One timeout spans every iteration, and running out ends the run even with --allow-failure",
-            // One iteration fits in the timeout and two do not, so only a
-            // timeout given to each iteration lets the second finish.
+            // One iteration fits in the timeout and two do not, even with the
+            // shutdown allowance, so only a timeout given to each iteration lets
+            // the second finish.
             dockerfile: r#"FROM busybox
-CMD ["sh", "-c", "sleep 10 && printf '%s_%s\\n' SPAN DONE"]"#,
-            extra_args: &["--timeout", "18", "--iter", "2", "--allow-failure"],
+CMD ["sh", "-c", "sleep 13 && printf '%s_%s\\n' SPAN DONE"]"#,
+            extra_args: &["--timeout", "20", "--iter", "2", "--allow-failure"],
             validate: |output| {
                 let timed_out = run_metrics(output).any(|metrics| {
                     metrics.get("timed_out") == Some(&serde_json::Value::Bool(true))
@@ -3324,6 +3448,11 @@ fn run_metrics(output: &ScenarioOutput) -> impl Iterator<Item = Record> + '_ {
 fn vmm_reported_an_error(output: &ScenarioOutput) -> bool {
     records_with(&output.stderr, "VMM stderr")
         .any(|record| text(&record, "line").is_some_and(|line| line.starts_with("Error")))
+}
+
+fn vmm_exit_status(output: &ScenarioOutput) -> Option<String> {
+    records_with(&output.stderr, "VMM exited")
+        .find_map(|record| text(&record, "status").map(str::to_owned))
 }
 
 /// The runner relays what the guest printed, then fails the job with the

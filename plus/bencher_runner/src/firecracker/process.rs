@@ -2,24 +2,31 @@
 
 use std::fs::File;
 use std::net::Shutdown;
-use std::os::fd::OwnedFd;
+use std::os::fd::{AsFd as _, FromRawFd as _, OwnedFd};
 use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt as _;
-use std::process::{Child, Command};
+use std::process::{Child, Command, ExitStatus};
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use camino::Utf8Path;
+use nix::errno::Errno;
+use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 use slog::{Logger, info, warn};
 
+use crate::JobDeadline;
 use crate::firecracker::client::FirecrackerClient;
-use crate::firecracker::config::{Action, ActionType};
 use crate::firecracker::error::{FirecrackerError, PreExec};
+use crate::firecracker::refuse_cancelled;
 use crate::jail::{JailFile, JailUser, PinnedSocket, VmId};
 
 /// Generous because it covers the jailer building the chroot on a busy host; a
 /// jailer that dies is caught when it exits, not at this deadline.
 const API_SOCKET_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// How often the wait for the VMM to exit looks at the cancel flag.
+const CANCEL_POLL: Duration = Duration::from_millis(50);
 
 /// Far above any line an honest VMM or jailer writes, yet short enough that a
 /// cut line's record stays one journald line: 7,168 bytes escaped at up to 6
@@ -127,30 +134,14 @@ impl FirecrackerProcess {
         self.jailed.child.id()
     }
 
-    /// Send Ctrl+Alt+Del and wait for graceful shutdown, then SIGKILL.
-    ///
-    /// The grace covers the request too, so a VMM that never answers cannot
-    /// stretch it.
-    pub fn kill_after_grace_period(&mut self, grace: Duration) {
-        let deadline = std::time::Instant::now() + grace;
-        // Try graceful shutdown via API
-        let action = Action {
-            action_type: ActionType::SendCtrlAltDel,
-        };
-        drop(self.client().put_action_until(&action, deadline));
-
-        // Wait for the process to exit gracefully
-        let poll_interval = Duration::from_millis(100);
-        while std::time::Instant::now() < deadline {
-            if let Ok(Some(_)) = self.jailed.child.try_wait() {
-                self.jailed.join_stderr_thread();
-                return;
-            }
-            std::thread::sleep(poll_interval);
-        }
-
-        // Force kill if still running
-        self.jailed.kill();
+    /// Wait for the VMM to exit, which is `Ok(None)` once `deadline` runs out,
+    /// and stop at a cancel.
+    pub fn wait_for_exit(
+        &mut self,
+        deadline: JobDeadline,
+        cancel_flag: Option<&AtomicBool>,
+    ) -> Result<Option<ExitStatus>, FirecrackerError> {
+        self.jailed.wait_for_exit(deadline, cancel_flag)
     }
 }
 
@@ -228,8 +219,32 @@ impl JailedChild {
 
     /// A failed `try_wait` counts as still running, since every caller polls in
     /// a bounded loop that ends in its own error.
-    fn exited(&mut self) -> Option<std::process::ExitStatus> {
+    fn exited(&mut self) -> Option<ExitStatus> {
         self.child.try_wait().unwrap_or(None)
+    }
+
+    /// Wakes the moment the child exits, through a pidfd rather than a sleep.
+    fn wait_for_exit(
+        &mut self,
+        deadline: JobDeadline,
+        cancel_flag: Option<&AtomicBool>,
+    ) -> Result<Option<ExitStatus>, FirecrackerError> {
+        // Nothing has reaped the child, so its pid cannot name another process.
+        let pidfd = pidfd_open(self.child.id()).map_err(FirecrackerError::WaitVmm)?;
+        loop {
+            refuse_cancelled(cancel_flag)?;
+            let remaining = deadline.remaining();
+            if remaining.is_zero() {
+                return Ok(None);
+            }
+            if exits_within(&pidfd, remaining.min(CANCEL_POLL))
+                .map_err(FirecrackerError::WaitVmm)?
+            {
+                let status = self.child.wait().map_err(FirecrackerError::WaitVmm)?;
+                self.join_stderr_thread();
+                return Ok(Some(status));
+            }
+        }
     }
 
     /// Force-kill the Firecracker process.
@@ -372,6 +387,51 @@ fn place_in_cgroup(mut procs: &File) -> std::io::Result<()> {
     procs.write_all(b"0")
 }
 
+fn pidfd_open(pid: u32) -> std::io::Result<OwnedFd> {
+    let pid = libc::pid_t::try_from(pid).map_err(|_err| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "pid out of range")
+    })?;
+    #[expect(
+        unsafe_code,
+        reason = "pidfd_open has no std wrapper; it takes plain integers"
+    )]
+    // SAFETY: `pidfd_open` touches no memory, and each argument is widened to
+    // `c_long` because `syscall` is variadic.
+    let raw = unsafe {
+        libc::syscall(
+            libc::SYS_pidfd_open,
+            libc::c_long::from(pid),
+            libc::c_long::from(0i32),
+        )
+    };
+    if raw < 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    let raw = libc::c_int::try_from(raw)
+        .map_err(|_err| std::io::Error::other("pidfd out of descriptor range"))?;
+    #[expect(
+        unsafe_code,
+        reason = "taking ownership of a descriptor this call just created"
+    )]
+    // SAFETY: `raw` is a fresh descriptor the syscall above returned, owned by
+    // nothing else.
+    Ok(unsafe { OwnedFd::from_raw_fd(raw) })
+}
+
+/// A poll a signal cut short counts as no exit yet, since the caller asks again.
+fn exits_within(pidfd: &OwnedFd, timeout: Duration) -> std::io::Result<bool> {
+    let timeout = PollTimeout::try_from(timeout).unwrap_or(PollTimeout::MAX);
+    let mut fds = [PollFd::new(pidfd.as_fd(), PollFlags::POLLIN)];
+    match poll(&mut fds, timeout) {
+        Ok(_) => {
+            let [fd] = fds;
+            Ok(fd.revents().is_some_and(|r| r.contains(PollFlags::POLLIN)))
+        },
+        Err(Errno::EINTR) => Ok(false),
+        Err(e) => Err(e.into()),
+    }
+}
+
 /// Hands each line to `on_line` without its newline until EOF, keeping at most
 /// `STDERR_LINE_CAP` bytes of a line, with whether it was cut.
 fn forward_capped_lines<R, F>(stderr: R, mut on_line: F)
@@ -412,7 +472,10 @@ where
 mod tests {
     use camino::{Utf8Path, Utf8PathBuf};
 
+    use std::sync::atomic::Ordering;
+
     use super::*;
+    use crate::firecracker::config::{Action, ActionType};
     use crate::jail::JailPaths;
     use crate::log::discard;
 
@@ -571,7 +634,7 @@ mod tests {
                 String::from_utf8_lossy(request.get(..read).unwrap_or_default()).into_owned()
             });
             let sent = process.client().put_action(&Action {
-                action_type: ActionType::SendCtrlAltDel,
+                action_type: ActionType::InstanceStart,
             });
             if sent.is_err() {
                 drop(UnixStream::connect(process.api.path().as_str()));
@@ -895,7 +958,7 @@ mod tests {
 
     #[test]
     fn the_jailed_process_inherits_no_environment() {
-        // Prevents `BENCHER_RUNNER_KEY` reaching a VMM that could write it out over vsock.
+        // Prevents `BENCHER_RUNNER_KEY` reaching a VMM that could write it into the guest's results.
         let env_bin = Utf8Path::new("/usr/bin/env");
         let inherited = Command::new(env_bin).output().unwrap();
         assert!(
@@ -1002,38 +1065,70 @@ mod tests {
     }
 
     #[test]
-    fn the_teardown_request_counts_against_the_kill_grace() {
-        // Prevents a VMM that paces its answer to Ctrl+Alt+Del holding the
-        // teardown that follows a timed out job.
-        use std::io::{Read as _, Write as _};
-        use std::os::unix::net::UnixListener;
-        use std::time::Instant;
-
+    fn a_vmm_that_exits_is_seen_at_once() {
+        // Kills a wait that sleeps out its deadline, or one that misses the exit.
         let (_dir, jail) = jail_in_tmpdir();
-        let vmm = UnixListener::bind(jail.api_socket().host().as_path()).unwrap();
-        let child = Command::new("/bin/sleep").arg("30").spawn().unwrap();
-        let mut process = FirecrackerProcess {
-            jailed: process_around(child, &jail),
-            api: PinnedSocket::pin(jail.api_socket().socket()).unwrap(),
-        };
+        let child = Command::new("/bin/sh")
+            .args(["-c", "exit 3"])
+            .spawn()
+            .unwrap();
+        let mut jailed = process_around(child, &jail);
 
-        let started = Instant::now();
-        let held = std::thread::scope(|scope| {
+        let started = std::time::Instant::now();
+        let status = jailed
+            .wait_for_exit(JobDeadline::start(Duration::from_secs(30)), None)
+            .unwrap();
+
+        assert_eq!(status.and_then(|status| status.code()), Some(3));
+        let waited = started.elapsed();
+        assert!(waited < Duration::from_secs(5), "waited {waited:?}");
+    }
+
+    #[test]
+    fn a_vmm_still_running_at_its_deadline_is_left_to_the_kill() {
+        // Kills a wait with no deadline, which holds a Job whose guest never
+        // powers off.
+        let (_dir, jail) = jail_in_tmpdir();
+        let child = Command::new("/bin/sleep").arg("30").spawn().unwrap();
+        let mut jailed = process_around(child, &jail);
+
+        let started = std::time::Instant::now();
+        let status = jailed
+            .wait_for_exit(JobDeadline::start(Duration::from_millis(300)), None)
+            .unwrap();
+
+        assert!(status.is_none(), "{status:?}");
+        let waited = started.elapsed();
+        assert!(
+            waited >= Duration::from_millis(300) && waited < Duration::from_secs(3),
+            "waited {waited:?}"
+        );
+        assert!(jailed.exited().is_none(), "the wait itself kills nothing");
+    }
+
+    #[test]
+    fn a_cancel_ends_the_wait() {
+        // Kills a wait blind to the cancel flag, which holds a canceled Job to
+        // its deadline.
+        let (_dir, jail) = jail_in_tmpdir();
+        let child = Command::new("/bin/sleep").arg("30").spawn().unwrap();
+        let mut jailed = process_around(child, &jail);
+        let cancel = AtomicBool::new(false);
+
+        let started = std::time::Instant::now();
+        let result = std::thread::scope(|scope| {
             scope.spawn(|| {
-                let (mut stream, _) = vmm.accept().unwrap();
-                drop(stream.read(&mut [0u8; 512]));
-                drop(stream.write_all(b"HTTP/1.1 204 No Content\r\n"));
-                while started.elapsed() < Duration::from_secs(8) && stream.write_all(b"X").is_ok() {
-                    std::thread::sleep(Duration::from_millis(20));
-                }
+                std::thread::sleep(Duration::from_millis(200));
+                cancel.store(true, Ordering::SeqCst);
             });
-            process.kill_after_grace_period(Duration::from_millis(300));
-            started.elapsed()
+            jailed.wait_for_exit(JobDeadline::start(Duration::from_secs(30)), Some(&cancel))
         });
 
         assert!(
-            held < Duration::from_secs(3),
-            "the request must end with the grace, held {held:?}"
+            matches!(result, Err(FirecrackerError::Cancelled)),
+            "{result:?}"
         );
+        let waited = started.elapsed();
+        assert!(waited < Duration::from_secs(3), "waited {waited:?}");
     }
 }

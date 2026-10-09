@@ -6,8 +6,8 @@
 //! - Signal handling (SIGTERM for graceful shutdown)
 //! - Running the benchmark command
 //! - Zombie reaping
-//! - Sending results via vsock
-//! - Clean shutdown
+//! - Writing results to the results drive
+//! - Rebooting, which ends the VM
 //!
 //! This binary is Linux-only and designed to run as the init process
 //! inside a minimal VM guest.

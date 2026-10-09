@@ -251,6 +251,13 @@ impl CgroupManager {
         &self.cgroup_path
     }
 
+    /// SIGKILL every process in this cgroup's subtree and wait until none is
+    /// left, keeping the cgroup for [`Self::cleanup`] to remove.
+    pub fn empty(&self) -> Result<(), JailError> {
+        empty_cgroup(self.cgroup_path.as_std_path())?;
+        Ok(())
+    }
+
     /// SIGKILL every process in this cgroup's subtree (best-effort), so a
     /// timed out or cancelled local run leaves no grandchild behind.
     ///
@@ -730,6 +737,26 @@ pub(crate) fn kill_cgroup(cgroup: &Path) -> Result<bool, JailError> {
 }
 
 fn kill_cgroup_within(cgroup: &Path, timeout: Duration) -> Result<bool, JailError> {
+    if !empty_cgroup_within(cgroup, timeout)? {
+        return Ok(false);
+    }
+    match remove_tree(cgroup) {
+        Ok(()) => Ok(true),
+        Err(_) if is_gone(cgroup) => Ok(false),
+        Err(source) => Err(JailError::RemoveCgroup {
+            path: shown(cgroup),
+            source,
+        }),
+    }
+}
+
+/// The kill alone, leaving the cgroup in place. `Ok(false)` is a cgroup gone
+/// before the kill.
+fn empty_cgroup(cgroup: &Path) -> Result<bool, JailError> {
+    empty_cgroup_within(cgroup, KILL_TIMEOUT)
+}
+
+fn empty_cgroup_within(cgroup: &Path, timeout: Duration) -> Result<bool, JailError> {
     if let Err(source) = fs::write(cgroup.join(CGROUP_KILL), "1") {
         return if is_gone(cgroup) {
             Ok(false)
@@ -750,14 +777,7 @@ fn kill_cgroup_within(cgroup: &Path, timeout: Duration) -> Result<bool, JailErro
         }
         std::thread::sleep(KILL_INTERVAL);
     }
-    match remove_tree(cgroup) {
-        Ok(()) => Ok(true),
-        Err(_) if is_gone(cgroup) => Ok(false),
-        Err(source) => Err(JailError::RemoveCgroup {
-            path: shown(cgroup),
-            source,
-        }),
-    }
+    Ok(true)
 }
 
 /// Children first, since `rmdir` refuses a cgroup that still has one.

@@ -1,8 +1,8 @@
 //! Output file wire protocol for Bencher benchmark VMs.
 //!
 //! This crate provides pure encode/decode logic for the length-prefixed binary
-//! protocol used to transfer output files between the guest VM and the host
-//! via vsock.
+//! protocol used to transfer output files from the guest VM to the host, inside
+//! the guest's [`results`] record.
 //!
 //! Wire format:
 //! ```text
@@ -13,6 +13,8 @@
 //!   [u64 content_len, little-endian]
 //!   [content_len bytes of file content]
 //! ```
+
+pub mod results;
 
 use camino::{Utf8Path, Utf8PathBuf};
 

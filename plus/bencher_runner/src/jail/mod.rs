@@ -51,6 +51,13 @@
 //! | `cgroup_for_run`: the VM cgroup cannot be created, for any reason | fails the job: a VMM outside its cgroup runs unconfined, unmetered, and beyond the kill that reaps it |
 //! | `cgroup_for_run`: the CPU layout offers no isolation | runs in a VM cgroup with no cpuset, which startup announced as CPU isolation disabled |
 //! | `run_firecracker`: the VMM cannot be placed in its cgroup before exec, or is not in it after | fails the job |
+//! | `ResultsDrive::create`: the results drive cannot be sized, made, given to the jail user, or opened | fails the job |
+//! | `run_firecracker`: the VMM still runs when the Job's timeout and the shutdown allowance run out, or the Job is canceled | kills the VM cgroup and fails the job as timed out or canceled, discarding its results |
+//! | `run_firecracker`: the VM cgroup cannot be emptied after a timeout or a cancel | warns: the job has already failed, and the teardown kills the cgroup again |
+//! | `run_firecracker`: the VM cgroup cannot be emptied once the VMM has exited | fails the job: a process left in the jail can still write the results drive |
+//! | `run_firecracker`: the VMM exits with an error | logged: the guest's record decides the run, since the guest stops itself however it likes |
+//! | `ResultsDrive::read`: the drive holds no record | fails the job at once: the guest stopped without results |
+//! | `ResultsDrive::read`: a field over its cap, or a drive cut short inside its record | fails the job |
 //! | `StateDir::create`: the chroot tree cannot be stat'ed | fails the job: the 0700 chmod follows |
 //! | `StateDir::create`: taking a directory of the tree for root (the chown to 0:0) | fails the job; `EPERM` alone is ignored: it refuses exactly a process that never builds a jail, since root is checked by name before any of this runs |
 //! | `StateDir::new`: the root is a symlink proven the operator's own choice (parent root-only-writable, single hop to an absolute canonical target, that target's whole ancestry root-only-writable) | followed: no unprivileged user influenced or can race it, and the populated check still runs on the target |
