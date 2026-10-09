@@ -260,27 +260,42 @@ test.describe("signed out", () => {
 		await expect(page.getByRole("figure")).toHaveAccessibleName("3 lines");
 	});
 
-	// Kills a public plot that asks for, or offers, more than its three months.
-	test("a window past three months comes back as three months", async ({
+	// Kills a link's own range rewritten to a preset before it is asked for,
+	// and one past three months the API cut short with nothing on the page
+	// saying so.
+	test("a 120-day link asks for its own range and draws its last 92 days, saying so", async ({
 		page,
 		request,
 	}) => {
 		const { project, search } = await twoRecentLines(request);
-		const asked = perfRequests(page);
-		await page.goto(publicPath(project.slug, `${search}&window=52w`));
+		const end = Date.now();
+		const start = end - 120 * DAY;
+		const range = `${search}&start_time=${start}&end_time=${end}`;
+		const opened = page.waitForResponse((response) => isPerf(response.url()));
+		await page.goto(publicPath(project.slug, range));
+		const answer = await opened;
+		const asked = new URL(answer.request().url()).searchParams;
+		expect(Number(asked.get("start_time"))).toBe(start);
+		expect(Number(asked.get("end_time"))).toBe(end);
+		const { window }: JsonConsolePerf = await answer.json();
+		expect(window.clamped).toBe(true);
+		// The API starts a window on a whole second.
+		expect(Math.floor((window.end_time - window.start_time) / 1000)).toBe(
+			(92 * DAY) / 1000,
+		);
 		await twoLinesDrawn(page);
+		// The note takes the place of the window's reach, so nothing moves.
+		const reach = page.locator(".muted.sm").filter({ hasText: /3 months/ });
+		await expect(reach).toHaveText(/^cut to its last 3 months/);
 		await expect(
 			page
 				.getByRole("radiogroup", { name: "Window" })
-				.getByRole("radio", { name: "3m" }),
-		).toBeChecked();
+				.getByRole("radio", { checked: true }),
+		).toHaveCount(0);
 		expect(decodeQuery(new URL(page.url()).search).window).toEqual({
-			seconds: (92 * DAY) / 1000,
+			start,
+			end,
 		});
-		const [perf] = asked;
-		const start = Number(perf?.searchParams.get("start_time"));
-		const end = Number(perf?.searchParams.get("end_time"));
-		expect(end - start).toBe(92 * DAY);
 	});
 
 	// Kills a classic perf link left on the classic page for a version 1

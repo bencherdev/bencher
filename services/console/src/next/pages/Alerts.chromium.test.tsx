@@ -655,6 +655,43 @@ test("a reread that leaves out the focused row moves the focus to the row now in
 	expect(document.activeElement?.closest("tr")).toBe(rows()[1]);
 });
 
+// Kills a reread on returning to the window that draws the rows anew, which
+// drops the focus and redraws every open plot. The reread answers as the API
+// does under Active: the dismissed alert left out and its report counted one
+// less.
+test("returning to the window after a change reads the list again and keeps its rows, plots, and focus", async () => {
+	let read = 0;
+	const { api, answered, lists } = fakeApi(() =>
+		read++ === 0
+			? three()
+			: alertsFixture([{ report: 0, alerts: [{ alert: 1 }, { alert: 3 }] }]),
+	);
+	mount(api);
+	await expect.element(heading()).toHaveTextContent("3 active");
+	await page
+		.getByRole("button", { name: `Expand ${NAME}` })
+		.first()
+		.click();
+	const plot = page.getByRole("region", { name: `${NAME}, full plot` });
+	await expect.element(plot).toBeVisible();
+	const drawn = plot.element();
+	const row = dismissButtons().nth(1).element().closest("tr");
+	await press(dismissButtons().nth(1));
+	await expect.poll(answered).toBe(1);
+	await expect.poll(focusedName).toBe(`Reactivate the alert on ${NAME}`);
+	focusManager.setFocused(false);
+	focusManager.setFocused(true);
+	try {
+		await expect.poll(() => lists().length).toBe(2);
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(focusedName()).toBe(`Reactivate the alert on ${NAME}`);
+		expect(document.activeElement?.closest("tr")).toBe(row);
+		expect(plot.element()).toBe(drawn);
+	} finally {
+		focusManager.setFocused(undefined);
+	}
+});
+
 // Kills rows drawn anew when the API's answer is written, which drops the
 // focus a row's Dismiss handed to its Reactivate.
 test("a row's Reactivate keeps the focus once the API answers its Dismiss", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { decodeQuery } from "../query/query";
-import { publicPlotHref, publicQuery, publicWindow } from "./query";
+import { publicPlotHref } from "./query";
 
 const DAY = 24 * 60 * 60;
 const NOW = Date.UTC(2026, 8, 14);
@@ -26,7 +26,7 @@ describe("publicPlotHref", () => {
 			reports_page: "2",
 		});
 		const href = new URL(
-			publicPlotHref("hashbrown", `?${classic}`, NOW),
+			publicPlotHref("hashbrown", `?${classic}`),
 			"https://bencher.dev",
 		);
 		expect(href.pathname).toBe("/next/perf/hashbrown");
@@ -50,55 +50,19 @@ describe("publicPlotHref", () => {
 		});
 	});
 
-	// Kills a classic range that reaches the public plot unchanged, which no
-	// Window position names and the API cuts short without saying.
-	test("a classic range becomes the public window that holds it", () => {
-		const href = publicPlotHref(
-			"hashbrown",
-			`?start_time=${NOW - 10 * DAY * 1000}&end_time=${NOW}`,
-			NOW,
-		);
-		expect(decodeQuery(new URL(href, "https://bencher.dev").search).window).toEqual({
-			seconds: 28 * DAY,
-			end: NOW,
-		});
-	});
-});
-
-describe("publicQuery", () => {
-	// Kills a long window drawn past the reach the public plot offers.
-	test("a window past three months comes back as three months", () => {
-		expect(publicQuery("?window=26w", NOW).window).toEqual({
-			seconds: 92 * DAY,
-		});
-		expect(
-			publicQuery(`?start_time=${NOW - 365 * DAY * 1000}`, NOW).window,
-		).toEqual({ seconds: 92 * DAY });
-	});
-});
-
-describe("publicWindow", () => {
-	// Kills always taking the longest or the shortest preset, a window moved
-	// off where it ended, and a preset rewritten.
-	test("the smallest preset that holds the window, ending where it ended", () => {
-		expect(publicWindow({ seconds: 3 * DAY }, NOW)).toEqual({
-			seconds: 7 * DAY,
-		});
-		expect(publicWindow({ seconds: 7 * DAY, end: NOW }, NOW)).toEqual({
-			seconds: 7 * DAY,
-			end: NOW,
-		});
-		expect(publicWindow({ seconds: 8 * DAY }, NOW)).toEqual({
-			seconds: 28 * DAY,
-		});
-		expect(
-			publicWindow({ start: NOW - 40 * DAY * 1000, end: NOW - DAY }, NOW),
-		).toEqual({ seconds: 92 * DAY, end: NOW - DAY });
-		expect(publicWindow({ start: NOW - 5 * DAY * 1000 }, NOW)).toEqual({
-			seconds: 7 * DAY,
-		});
-		expect(
-			publicWindow({ start: NOW - 30 * DAY * 1000, end: NOW - 25 * DAY * 1000 }, NOW),
-		).toEqual({ seconds: 7 * DAY, end: NOW - 25 * DAY * 1000 });
+	// Kills a link's own range moved to a preset, so a pull request's link
+	// draws another window than its run's, and a range cut short here rather
+	// than by the API, which says so.
+	test("a classic range keeps its own start and end, past three months too", () => {
+		for (const days of [10, 120]) {
+			const start = NOW - days * DAY * 1000;
+			const href = publicPlotHref(
+				"hashbrown",
+				`?start_time=${start}&end_time=${NOW - DAY * 1000}`,
+			);
+			expect(
+				decodeQuery(new URL(href, "https://bencher.dev").search).window,
+			).toEqual({ start, end: NOW - DAY * 1000 });
+		}
 	});
 });

@@ -573,6 +573,49 @@ test.describe("Dismiss all", () => {
 	});
 });
 
+// Kills a row whose identity holds its report's count of alerts: returning to
+// the window after a dismiss under Active reads the list again, the API counts
+// the report one less, and the report's other rows, with an open plot, were
+// drawn anew.
+test("returning to the window after a dismiss keeps the report's other rows, their open plot, and the focus", async ({
+	page,
+	request,
+}) => {
+	const { project } = await createAlerts(request);
+	await page.goto(alerts(project.slug));
+	await expect(dismiss(table(page), line("bench-01"))).toBeVisible();
+	await table(page)
+		.getByRole("button", { name: `Expand ${line("bench-00")}` })
+		.click();
+	const plot = page.getByRole("region", {
+		name: `${line("bench-00")}, full plot`,
+	});
+	await expect(plot).toBeVisible();
+	await plot.evaluate((section) => {
+		section.setAttribute("data-drawn", "before");
+	});
+	await dismiss(table(page), line("bench-01")).focus();
+	await page.keyboard.press("Enter");
+	await expect(reactivate(table(page), line("bench-01"))).toBeFocused();
+	await settle(page);
+	const reread = page.waitForResponse(
+		(response) =>
+			/\/v0\/console\/projects\/[^/]+\/alerts/.test(response.url()) &&
+			response.request().method() === "GET",
+	);
+	// The reader returns to the window, which reads stale views again.
+	await page.evaluate(() =>
+		document.dispatchEvent(new Event("visibilitychange", { bubbles: true })),
+	);
+	const { groups } = (await (await reread).json()) as {
+		groups: { total: number }[];
+	};
+	expect(groups.map(({ total }) => total)).toContain(1);
+	await settle(page);
+	await expect(plot).toHaveAttribute("data-drawn", "before");
+	await expect(reactivate(table(page), line("bench-01"))).toBeFocused();
+});
+
 // Kills a page that scrolls sideways between tablet and desktop widths, and
 // row or group controls drawn past the edge of the screen or of the list.
 for (const width of [768, 1024]) {

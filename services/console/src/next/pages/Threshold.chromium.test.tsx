@@ -387,6 +387,49 @@ test("under Active, a dismissed row keeps its place and the focus through a rere
 	}
 });
 
+// Kills a row drawn anew when the list is read again after a change and
+// answers the alert with the status the page gave it, which drops the focus
+// the row's Dismiss handed to its Reactivate.
+test("under All, a reread that answers a dismissed row as the page drew it keeps the focus", async () => {
+	const {
+		api: answered,
+		cache,
+		reads,
+	} = editing((_, read) => {
+		const batch = alertsPage(0, 3, 3);
+		const group = batch.groups[0];
+		const entry = group?.alerts[0];
+		if (read > 0 && group && entry?.line.alert) {
+			group.alerts[0] = {
+				modified: entry.modified + 5_000,
+				line: {
+					...entry.line,
+					alert: { ...entry.line.alert, status: "dismissed" },
+				},
+			} as typeof entry;
+		}
+		return batch;
+	});
+	mount(answered, cache);
+	const first = alertsTable()
+		.getByRole("button", { name: /^Dismiss the alert on/ })
+		.first();
+	await expect.element(first).toBeVisible();
+	(first.element() as HTMLElement).focus();
+	await userEvent.keyboard("{Enter}");
+	await expect.poll(focusedName).toMatch(/^Reactivate the alert on/);
+	await wait(100);
+	const focused = document.activeElement;
+	refocus();
+	try {
+		await expect.poll(reads).toBe(2);
+		await wait(100);
+		expect(document.activeElement).toBe(focused);
+	} finally {
+		focusManager.setFocused(undefined);
+	}
+});
+
 // Kills a row reactivated under Dismissed that stays, where the Alerts page
 // lets it go, and the focus dropped to the page with it rather than handed to
 // the row now in its place.

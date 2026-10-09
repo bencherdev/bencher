@@ -29,6 +29,14 @@ export interface AlertLine extends ReportLine {
 	modified: number;
 }
 
+// The line each alert resolved to, and what it was resolved from: a batch read
+// again with the same answer for an alert keeps the alert's objects, so its row
+// keeps its line, its open plot, and the focus.
+const resolved = new WeakMap<
+	JsonConsoleAlerts["groups"][number]["alerts"][number],
+	{ line: AlertLine; from: readonly unknown[] }
+>();
+
 /** Each alert of a batch, in its group's order, resolved against the batch's tables. */
 export const alertLinesOf = (batch: JsonConsoleAlerts): AlertLine[] =>
 	batch.groups.flatMap((group) => {
@@ -50,7 +58,8 @@ export const alertLinesOf = (batch: JsonConsoleAlerts): AlertLine[] =>
 			adapter: group.adapter,
 			total: group.total,
 		};
-		return group.alerts.flatMap(({ line, modified }) => {
+		return group.alerts.flatMap((entry) => {
+			const { line, modified } = entry;
 			const benchmark = batch.benchmarks[line.benchmark];
 			const variant = batch.variants[line.variant];
 			const measure = batch.measures[line.measure];
@@ -59,38 +68,61 @@ export const alertLinesOf = (batch: JsonConsoleAlerts): AlertLine[] =>
 			}
 			const model =
 				line.model === undefined ? undefined : batch.models[line.model];
-			return [
-				{
-					key: line.alert.uuid,
-					line: lineKey({
-						branch: branch.uuid,
-						testbed: testbed.uuid,
-						benchmark: benchmark.uuid,
-						parameters: variant.parameters,
-						measure: measure.uuid,
-						metric: line.metric,
-					}),
-					branch,
-					testbed,
-					benchmark,
-					variant: variant.uuid,
-					parameters: variant.parameters,
-					measure,
-					metric: line.metric,
-					value: line.value,
-					baseline: line.baseline,
-					lower_limit: line.lower_limit,
-					upper_limit: line.upper_limit,
-					// A row alerts while its alert is active; the rest say their status.
-					alert: line.alert.status === "active" ? line.alert : undefined,
-					guard: guardOf(model),
-					history: alignSeries(line.history, points.x.length),
-					points,
-					report,
-					status: line.alert.status,
-					modified,
-				},
+			const { total, ...drawn } = report;
+			const from = [
+				branch,
+				testbed,
+				benchmark,
+				variant,
+				measure,
+				model,
+				points.x,
+				points.report,
+				points.reports,
+				...Object.values(drawn),
 			];
+			const known = resolved.get(entry);
+			if (
+				known &&
+				known.from.length === from.length &&
+				known.from.every((part, index) => part === from[index])
+			) {
+				// The total is its group header's alone, so the row keeps its object.
+				known.line.report = report;
+				return [known.line];
+			}
+			const resolvedLine: AlertLine = {
+				key: line.alert.uuid,
+				line: lineKey({
+					branch: branch.uuid,
+					testbed: testbed.uuid,
+					benchmark: benchmark.uuid,
+					parameters: variant.parameters,
+					measure: measure.uuid,
+					metric: line.metric,
+				}),
+				branch,
+				testbed,
+				benchmark,
+				variant: variant.uuid,
+				parameters: variant.parameters,
+				measure,
+				metric: line.metric,
+				value: line.value,
+				baseline: line.baseline,
+				lower_limit: line.lower_limit,
+				upper_limit: line.upper_limit,
+				// A row alerts while its alert is active; the rest say their status.
+				alert: line.alert.status === "active" ? line.alert : undefined,
+				guard: guardOf(model),
+				history: alignSeries(line.history, points.x.length),
+				points,
+				report,
+				status: line.alert.status,
+				modified,
+			};
+			resolved.set(entry, { line: resolvedLine, from });
+			return [resolvedLine];
 		});
 	});
 

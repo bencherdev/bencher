@@ -22,11 +22,16 @@ export interface Kept {
 	after: string | undefined;
 }
 
-/** The list's rows, with each kept row the list no longer holds back after the row it followed. */
+/**
+ * The list's rows, each kept row as the object drawn when it changed, and each
+ * kept row the list no longer holds back after the row it followed.
+ */
 export const withKept = (
-	rows: readonly AlertLine[],
+	listedRows: readonly AlertLine[],
 	kept: readonly Kept[],
 ): AlertLine[] => {
+	const drawn = new Map(kept.map(({ line }) => [line.key, line]));
+	const rows = listedRows.map((row) => drawn.get(row.key) ?? row);
 	const listed = new Set(rows.map(({ key }) => key));
 	const following = new Map<string | undefined, AlertLine[]>();
 	for (const { line, after } of kept) {

@@ -124,6 +124,15 @@
 	border-radius: var(--radius-element);
 	font-size: 20px;
 }
+.badge[data-empty] {
+	visibility: hidden;
+}
+/* As wide as 99+, the most it shows, so the tab never moves when a count arrives. */
+.tab .badge {
+	box-sizing: content-box;
+	width: 3ch;
+	font-variant-numeric: tabular-nums;
+}
 .bell .badge {
 	position: absolute;
 	top: 4px;

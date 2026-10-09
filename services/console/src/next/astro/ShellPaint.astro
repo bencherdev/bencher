@@ -37,15 +37,15 @@ const { slug } = Astro.props;
 			if (seen.alerts > 0) {
 				var tab = document.querySelector('[data-shell="alerts"]');
 				var bell = document.querySelector('[data-shell="bell"]');
-				tab.setAttribute("aria-label", "Alerts " + seen.alerts + " active");
-				bell.setAttribute("aria-label", seen.alerts + " active alert" + (seen.alerts > 1 ? "s" : ""));
-				[tab, bell].forEach(function (link) {
-					var badge = document.createElement("span");
-					badge.className = "badge";
-					badge.setAttribute("aria-hidden", "true");
-					badge.textContent = seen.alerts;
-					link.append(" ", badge);
-				});
+				var held = document.querySelector('[data-shell="badge"]');
+				var count = seen.alerts > 99 ? "99+" : seen.alerts;
+				tab.setAttribute("aria-label", "Alerts " + count + " active");
+				bell.setAttribute("aria-label", count + " active alert" + (seen.alerts > 1 ? "s" : ""));
+				held.textContent = count;
+				held.removeAttribute("data-empty");
+				var badge = held.cloneNode(true);
+				badge.removeAttribute("data-shell");
+				bell.append(" ", badge);
 			}
 		}
 		var tabs = document.querySelector(".tabs");

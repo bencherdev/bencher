@@ -180,10 +180,13 @@ const coldLoad = async (
 	page: Page,
 	path: string,
 	shown: () => Promise<void>,
+	delay: (url: string) => number = () => 500,
 ): Promise<Cost> => {
 	await observeLayoutShift(page);
 	await page.route(`${seed.api_url}/**`, async (route) => {
-		await new Promise((resolve) => setTimeout(resolve, 500));
+		await new Promise((resolve) =>
+			setTimeout(resolve, delay(route.request().url())),
+		);
 		await route.continue();
 	});
 	await page.goto(path);
@@ -232,6 +235,55 @@ test("a cold load of Keys holds the speed ceilings", async ({ page }) => {
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
+// Kills the shell's late badge and names, or a page's own data, moving the
+// layout on a narrow screen, where the pages above are not measured.
+for (const [width, viewport] of [
+	["768", { width: 768, height: 1024 }],
+	["390", { width: 390, height: 844 }],
+] as const) {
+	test.describe(`narrow cold loads at ${width}`, () => {
+		test.use({ viewport });
+		for (const [name, path, shown, ceiling] of [
+			[
+				"the shell",
+				SHELL,
+				(page: Page) =>
+					expect(
+						tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
+					).toBeVisible(),
+				ceilings.coldLoad,
+			],
+			["Reports", REPORTS, reportsReady, ceilings.reportsColdLoad],
+			[
+				"General",
+				nextPath(hashbrown.slug, "settings"),
+				(page: Page) =>
+					expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
+						hashbrown.name,
+					),
+				ceilings.settingsColdLoad,
+			],
+			[
+				"Keys",
+				nextPath(hashbrown.slug, "keys"),
+				(page: Page) =>
+					expect(
+						page.getByRole("table", { name: "Active keys" }),
+					).toBeVisible(),
+				ceilings.keysColdLoad,
+			],
+		] as const) {
+			test(`a cold load of ${name} moves nothing at ${width}`, async ({
+				page,
+			}) => {
+				const cost = await coldLoad(page, path, () => shown(page));
+				report(`${name} cold load ${width}`, cost);
+				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			});
+		}
+	});
+}
+
 // Kills a section switch that loads more code or refetches the shell.
 test("moving from General to Keys holds the speed ceilings", async ({
 	page,
@@ -266,11 +318,7 @@ test("moving from General to Keys holds the speed ceilings", async ({
 const twoLinesShown = (page: Page) =>
 	expect(page.getByRole("figure")).toHaveAccessibleName("2 lines");
 
-/**
- * Layout shift with a source outside the shell: what the page itself moves.
- * On a cold load the shell's own alert badge and names arrive after its first
- * paint, and at narrow widths that alone passes the ceiling.
- */
+/** Layout shift with a source outside the shell: what the page itself moves. */
 const observePageShift = (page: Page) =>
 	page.addInitScript(() => {
 		const holder = window as Window & { __pageShift?: number };
@@ -342,9 +390,7 @@ for (const [width, viewport] of [
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
-			if (!viewport) {
-				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
-			}
+			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
@@ -352,6 +398,52 @@ for (const [width, viewport] of [
 				ceiling.inlineScriptBytes,
 			);
 			expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+		});
+
+		test.describe("as a viewer", () => {
+			test.use({ storageState: signedIn(seed.outsider) });
+
+			// Kills a viewer's Read only pill that the title and its alerts push
+			// along when the report answers after the bootstrap, the order of
+			// every move to a report within the console.
+			test(`a viewer's cold load of a report, its bootstrap answering first, holds its speed ceilings at ${width}`, async ({
+				page,
+				request,
+			}) => {
+				const response = await request.get(
+					`${seed.api_url}/v0/projects/${hashbrown.slug}/reports?branch=main&testbed=ubuntu-latest&per_page=1`,
+					{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+				);
+				const [newest] = (await response.json()) as { uuid: string }[];
+				await observePageShift(page);
+				const cost = await coldLoad(
+					page,
+					`${REPORTS}/${newest?.uuid}`,
+					async () => {
+						await expect(
+							page.getByTitle(
+								"Read only. Ask a project Maintainer for access.",
+							),
+						).toBeVisible();
+						await expect(
+							page.getByRole("table", { name: /^Lines in report / }),
+						).toBeVisible();
+					},
+					(url) =>
+						/\/v0\/console\/projects\/[^/]+\/reports\//.test(url) ? 1_000 : 500,
+				);
+				const moved = await pageShift(page);
+				report(`viewer report cold load ${width}`, {
+					...cost,
+					pageShift: moved,
+				} as Cost);
+				const ceiling = ceilings.reportColdLoad;
+				expect(moved).toBeLessThanOrEqual(ceiling.cls);
+				expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+				expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+				expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+			});
 		});
 	});
 }
@@ -389,9 +481,7 @@ for (const [width, viewport] of [
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
-			if (!viewport) {
-				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
-			}
+			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
 			expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
@@ -438,9 +528,7 @@ for (const [width, viewport] of [
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
-			if (!viewport) {
-				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
-			}
+			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
 			expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
@@ -482,9 +570,7 @@ for (const [width, viewport] of [
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
-			if (!viewport) {
-				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
-			}
+			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 		});
@@ -673,9 +759,7 @@ for (const [width, viewport] of [
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
-			if (!viewport) {
-				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
-			}
+			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
@@ -799,9 +883,7 @@ for (const [width, viewport] of [
 				);
 				expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 				expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
-				if (!viewport) {
-					expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
-				}
+				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 				expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 				expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 				expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
@@ -853,9 +935,7 @@ for (const [width, viewport] of [
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
-			if (!viewport) {
-				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
-			}
+			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);

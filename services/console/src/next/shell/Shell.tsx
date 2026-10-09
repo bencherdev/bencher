@@ -22,14 +22,18 @@ interface ShellProps {
  * The breadcrumb bar and the tab row. Astro renders it with nothing loaded for
  * the first paint, and the app renders it again with what it knows; the
  * `data-shell` hooks are where `ShellPaint.astro` fills in remembered values
- * between the two, so the swap moves nothing. A space that never draws comes
- * before each badge, so the tab's text reads "Alerts 3", as its name does.
+ * between the two, so the swap moves nothing. The Alerts tab holds its badge's
+ * place with or without a count, and a space that never draws comes before
+ * each badge, so the tab's text reads "Alerts 3", as its name does.
  */
 const Shell = (props: ShellProps) => {
+	/** The count a badge shows, two digits at most. */
+	const count = () =>
+		props.alerts ? (props.alerts > 99 ? "99+" : String(props.alerts)) : "";
 	// On a phone the bell shows only its count, so its name starts there.
 	const alertsLabel = () =>
 		props.alerts
-			? `${props.alerts} active ${props.alerts === 1 ? "alert" : "alerts"}`
+			? `${count()} active ${props.alerts === 1 ? "alert" : "alerts"}`
 			: "Alerts";
 	return (
 		<header class="shell">
@@ -81,7 +85,7 @@ const Shell = (props: ShellProps) => {
 					<Show when={props.alerts}>
 						{" "}
 						<span class="badge" aria-hidden="true">
-							{props.alerts}
+							{count()}
 						</span>
 					</Show>
 				</a>
@@ -106,16 +110,21 @@ const Shell = (props: ShellProps) => {
 								aria-current={tab === props.tab ? "page" : undefined}
 								aria-label={
 									tab === "alerts" && props.alerts
-										? `Alerts ${props.alerts} active`
+										? `Alerts ${count()} active`
 										: undefined
 								}
 								data-shell={tab === "alerts" ? "alerts" : undefined}
 							>
 								{label}
-								<Show when={tab === "alerts" && props.alerts}>
+								<Show when={tab === "alerts"}>
 									{" "}
-									<span class="badge" aria-hidden="true">
-										{props.alerts}
+									<span
+										class="badge"
+										aria-hidden="true"
+										data-shell="badge"
+										data-empty={props.alerts ? undefined : ""}
+									>
+										{count()}
 									</span>
 								</Show>
 							</a>
