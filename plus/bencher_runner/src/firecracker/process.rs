@@ -2,8 +2,12 @@
 #![expect(clippy::print_stderr, reason = "process management prints diagnostics")]
 
 use std::fs::File;
+use std::net::Shutdown;
+use std::os::fd::OwnedFd;
+use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt as _;
 use std::process::{Child, Command};
+use std::sync::Arc;
 use std::time::Duration;
 
 use camino::Utf8Path;
@@ -51,7 +55,14 @@ pub struct FirecrackerProcess {
 struct JailedChild {
     child: Child,
     api_socket: JailFile,
-    stderr_thread: Option<std::thread::JoinHandle<()>>,
+    stderr_thread: Option<StderrReader>,
+}
+
+/// Prints the VMM's stderr from a thread that dropping this stops and joins,
+/// so it must outlive the VMM.
+struct StderrReader {
+    socket: Arc<UnixStream>,
+    thread: Option<std::thread::JoinHandle<()>>,
 }
 
 impl FirecrackerProcess {
@@ -80,41 +91,17 @@ impl FirecrackerProcess {
             PreExec::Nothing
         };
 
-        let mut command = jailer_command(jailer_bin, &args, cgroup_procs);
-        let child = command.spawn().map_err(|e| FirecrackerError::Spawn {
-            path: jailer_bin.to_owned(),
-            pre_exec,
-            source: e,
-        })?;
-
+        let command = jailer_command(jailer_bin, &args, cgroup_procs);
         // Guarded at once, since `Child::drop` neither kills nor reaps and any
         // error below would otherwise leave the VMM running.
-        let mut jailed = JailedChild {
-            child,
-            api_socket: api_socket.clone(),
-            stderr_thread: None,
-        };
-
-        // Spawn a thread to read stderr line-by-line
-        let stderr = jailed.child.stderr.take().ok_or(FirecrackerError::Stdio(
-            "stderr was piped but not available",
-        ))?;
-        let stderr_thread = std::thread::spawn(move || {
-            use std::io::BufRead as _;
-
-            // Pin to housekeeping cores to avoid benchmark interference
-            if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
-                eprintln!("Warning: failed to pin stderr reader thread: {e}");
-            }
-            let reader = std::io::BufReader::new(stderr);
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => eprintln!("[firecracker] {line}"),
-                    Err(_) => break,
+        let mut jailed =
+            JailedChild::spawn(command, api_socket, housekeeping_cores).map_err(|e| {
+                FirecrackerError::Spawn {
+                    path: jailer_bin.to_owned(),
+                    pre_exec,
+                    source: e,
                 }
-            }
-        });
-        jailed.stderr_thread = Some(stderr_thread);
+            })?;
 
         jailed.wait_for_ready(API_SOCKET_TIMEOUT)?;
         // Now, while only Firecracker has run: readiness proves it bound this
@@ -162,6 +149,37 @@ impl FirecrackerProcess {
 }
 
 impl JailedChild {
+    fn spawn(
+        command: Command,
+        api_socket: &JailFile,
+        housekeeping_cores: Vec<usize>,
+    ) -> std::io::Result<Self> {
+        Self::spawn_with(command, api_socket, housekeeping_cores, |line| {
+            eprintln!("[firecracker] {line}");
+        })
+    }
+
+    /// Hands the child one end of a socket pair as its stderr and reads the
+    /// other on a thread, since a pipe gives the owner no way to end that read.
+    fn spawn_with<F>(
+        mut command: Command,
+        api_socket: &JailFile,
+        housekeeping_cores: Vec<usize>,
+        on_line: F,
+    ) -> std::io::Result<Self>
+    where
+        F: FnMut(String) + Send + 'static,
+    {
+        let (writer, stderr) = StderrReader::spawn(housekeeping_cores, on_line)?;
+        command.stderr(OwnedFd::from(writer));
+        let child = command.spawn()?;
+        Ok(Self {
+            child,
+            api_socket: api_socket.clone(),
+            stderr_thread: Some(stderr),
+        })
+    }
+
     /// Gives up the moment the jailer dies, so its failure is not reported as a
     /// socket timeout.
     fn wait_for_ready(&mut self, timeout: Duration) -> Result<(), FirecrackerError> {
@@ -208,11 +226,68 @@ impl JailedChild {
         drop(std::fs::remove_file(self.api_socket.host().as_path()));
     }
 
-    /// Join the stderr reader thread if it exists.
+    /// Call only once the VMM is reaped, since stopping the reader cuts a live
+    /// VMM's log.
     fn join_stderr_thread(&mut self) {
-        if let Some(handle) = self.stderr_thread.take() {
-            drop(handle.join());
+        drop(self.stderr_thread.take());
+    }
+}
+
+impl StderrReader {
+    /// Returns the end the child writes to.
+    fn spawn<F>(
+        housekeeping_cores: Vec<usize>,
+        mut on_line: F,
+    ) -> std::io::Result<(UnixStream, Self)>
+    where
+        F: FnMut(String) + Send + 'static,
+    {
+        let (writer, reader) = UnixStream::pair()?;
+        let socket = Arc::new(reader);
+        let read = Arc::clone(&socket);
+        let thread = std::thread::spawn(move || {
+            use std::io::BufRead as _;
+
+            let _stop = StopReading(&read);
+            // Pin to housekeeping cores to avoid benchmark interference
+            if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
+                eprintln!("Warning: failed to pin stderr reader thread: {e}");
+            }
+            for line in std::io::BufReader::new(&*read).lines() {
+                match line {
+                    Ok(line) => on_line(line),
+                    Err(_) => break,
+                }
+            }
+        });
+        Ok((
+            writer,
+            Self {
+                socket,
+                thread: Some(thread),
+            },
+        ))
+    }
+}
+
+impl Drop for StderrReader {
+    /// Ends the read once what the VMM wrote has been read, even if a process
+    /// it left behind still holds its end, so the join cannot hang.
+    fn drop(&mut self) {
+        drop(self.socket.shutdown(Shutdown::Read));
+        if let Some(thread) = self.thread.take() {
+            drop(thread.join());
         }
+    }
+}
+
+/// Shuts down the read side when the reader thread ends, by a break or a
+/// panic, so the VMM's later writes fail with `EPIPE` rather than block.
+struct StopReading<'a>(&'a UnixStream);
+
+impl Drop for StopReading<'_> {
+    fn drop(&mut self) {
+        drop(self.0.shutdown(Shutdown::Read));
     }
 }
 
@@ -258,8 +333,7 @@ fn jailer_command(jailer_bin: &Utf8Path, args: &[String], cgroup_procs: Option<F
         .args(args)
         .env_clear()
         .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::piped());
+        .stdout(std::process::Stdio::null());
     if let Some(procs) = cgroup_procs {
         #[expect(
             unsafe_code,
@@ -487,6 +561,139 @@ mod tests {
         let mut process = process_around(child, &jail);
 
         assert_eq!(process.exited().and_then(|status| status.code()), Some(3));
+    }
+
+    #[test]
+    fn a_process_left_holding_stderr_cannot_hold_the_teardown() {
+        // Prevents the teardown waiting on a stderr that a process the VMM left
+        // behind keeps open.
+        let (_dir, jail) = jail_in_tmpdir();
+        let mut command = Command::new("/bin/sh");
+        // The shell exits at once, and the sleep it leaves behind keeps stderr.
+        command
+            .args(["-c", "sleep 8 &"])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null());
+        let reading = Arc::new(());
+        let token = Arc::clone(&reading);
+        let mut jailed =
+            JailedChild::spawn_with(command, jail.api_socket(), Vec::new(), move |_line| {
+                drop(Arc::clone(&token));
+            })
+            .unwrap();
+        let started = std::time::Instant::now();
+        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        let started = std::time::Instant::now();
+        jailed.kill();
+        let held = started.elapsed();
+
+        assert!(
+            held < Duration::from_secs(3),
+            "the teardown must not wait on stderr, held {held:?}"
+        );
+        assert_eq!(
+            Arc::strong_count(&reading),
+            1,
+            "the reader must have finished when the teardown returns"
+        );
+    }
+
+    #[test]
+    fn stderr_the_vmm_wrote_is_still_read() {
+        // Prevents the VMM's stderr bypassing the reader, which loses its log
+        // or mixes it into the runner's own.
+        let (_dir, jail) = jail_in_tmpdir();
+        let mut command = Command::new("/bin/sh");
+        command
+            .args(["-c", "echo one >&2; echo two >&2"])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null());
+        let lines = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let sink = Arc::clone(&lines);
+        let mut jailed =
+            JailedChild::spawn_with(command, jail.api_socket(), Vec::new(), move |line| {
+                sink.lock().unwrap().push(line);
+            })
+            .unwrap();
+        let started = std::time::Instant::now();
+        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+
+        jailed.kill();
+
+        assert_eq!(
+            Arc::strong_count(&lines),
+            1,
+            "the reader must have finished"
+        );
+        assert_eq!(*lines.lock().unwrap(), ["one", "two"]);
+    }
+
+    #[test]
+    fn a_reader_that_stops_at_a_bad_line_fails_the_vmm_writes() {
+        // Prevents a reader that ends at a line that is not UTF-8 leaving the
+        // VMM blocked on a full socket instead of failing its writes.
+        let (_dir, jail) = jail_in_tmpdir();
+        let mut command = Command::new("/bin/sh");
+        command
+            .args([
+                "-c",
+                "printf 'first\\n\\377\\n' >&2; head -c 4194304 /dev/zero >&2",
+            ])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null());
+        let lines = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let sink = Arc::clone(&lines);
+        let mut jailed =
+            JailedChild::spawn_with(command, jail.api_socket(), Vec::new(), move |line| {
+                sink.lock().unwrap().push(line);
+            })
+            .unwrap();
+        let started = std::time::Instant::now();
+        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let exited = jailed.exited();
+
+        jailed.kill();
+
+        assert!(
+            exited.is_some(),
+            "the VMM must not block on a stderr nobody reads"
+        );
+        assert_eq!(*lines.lock().unwrap(), ["first"]);
+    }
+
+    #[test]
+    fn a_reader_that_panics_fails_the_vmm_writes() {
+        // Prevents a reader that panics leaving the VMM blocked on a full
+        // socket instead of failing its writes.
+        let (_dir, jail) = jail_in_tmpdir();
+        let mut command = Command::new("/bin/sh");
+        command
+            .args(["-c", "echo first >&2; head -c 4194304 /dev/zero >&2"])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null());
+        let mut jailed = JailedChild::spawn_with(command, jail.api_socket(), Vec::new(), |_line| {
+            panic!("the reader fails");
+        })
+        .unwrap();
+        let started = std::time::Instant::now();
+        while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let exited = jailed.exited();
+
+        jailed.kill();
+
+        assert!(
+            exited.is_some(),
+            "the VMM must not block on a stderr nobody reads"
+        );
     }
 
     #[test]
