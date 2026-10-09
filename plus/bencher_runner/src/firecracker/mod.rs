@@ -19,6 +19,8 @@ pub mod config;
 pub mod error;
 mod pin;
 mod process;
+#[cfg(test)]
+mod test_util;
 mod vsock;
 
 use std::collections::HashMap;
