@@ -1,3 +1,4 @@
+mod apt;
 mod deploy;
 mod deploy_setup;
 mod download;
