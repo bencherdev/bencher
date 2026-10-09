@@ -24,6 +24,8 @@ pub struct JsonConsoleDimensionsQueryParams {
     pub direction: Option<JsonDirection>,
     /// The page to return, starting at 1.
     pub page: Option<u32>,
+    /// The number of rows to skip, instead of a page.
+    pub offset: Option<u32>,
     /// The number of rows per page, 64 when not given.
     pub per_page: Option<u8>,
 }

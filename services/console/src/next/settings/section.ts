@@ -7,19 +7,13 @@ export const SECTIONS: readonly {
 	path: string;
 }[] = [
 	{ section: "general", label: "General", path: "settings" },
-	{ section: "dimensions", label: "Dimensions", path: "settings/dimensions" },
+	{ section: "dimensions", label: "Dimensions", path: "branches" },
 	{ section: "keys", label: "Keys", path: "settings/keys" },
 ];
 
-// The dimension lists and pages keep their classic paths.
-const DIMENSIONS = ["branches", "testbeds", "benchmarks", "measures"];
-
-/** The section a path under Settings belongs to; the classic keys path is Keys. */
+/** The section of Settings' page a path draws; the classic keys path is Keys. */
 export const sectionOf = (rest: string[]): Section | undefined => {
 	const [first, second, ...more] = rest;
-	if (first && DIMENSIONS.includes(first)) {
-		return "dimensions";
-	}
 	if (first === "keys") {
 		return second === undefined ? "keys" : undefined;
 	}
@@ -29,8 +23,6 @@ export const sectionOf = (rest: string[]): Section | undefined => {
 	switch (second) {
 		case undefined:
 			return "general";
-		case "dimensions":
-			return "dimensions";
 		case "keys":
 			return "keys";
 		default:

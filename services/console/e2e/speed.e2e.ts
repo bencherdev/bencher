@@ -693,3 +693,72 @@ for (const [width, viewport] of [
 		});
 	});
 }
+
+// The cold loads of a dimension list and a dimension's page, at each width
+// the layout changes at.
+for (const [width, viewport] of [
+	["desktop", undefined],
+	["768", { width: 768, height: 1024 }],
+	["390", { width: 390, height: 844 }],
+] as const) {
+	test.describe(`dimensions at ${width}`, () => {
+		if (viewport) {
+			test.use({ viewport });
+		}
+
+		// Kills a list or a page whose requests wait on the shell's or chain
+		// into a second round, code found late, a stylesheet of its own, and a
+		// page that shifts as its data arrives.
+		for (const [name, path, shown, ceiling] of [
+			[
+				"branches",
+				"branches",
+				(page: Page) =>
+					page
+						.getByRole("table", { name: "Active branches" })
+						.getByRole("link", { name: "main", exact: true }),
+				ceilings.branchesColdLoad,
+			],
+			[
+				"branch",
+				"branches/main",
+				(page: Page) =>
+					page.getByRole("link", {
+						name: "Threshold for Latency on main, ubuntu-latest",
+					}),
+				ceilings.branchColdLoad,
+			],
+		] as const) {
+			test(`a cold load of ${name} holds its speed ceilings at ${width}`, async ({
+				page,
+			}) => {
+				await observePageShift(page);
+				const cost = await coldLoad(
+					page,
+					nextPath(hashbrown.slug, path),
+					async () => {
+						await expect(shown(page)).toBeVisible();
+					},
+				);
+				const moved = await pageShift(page);
+				report(`${name} cold load ${width}`, {
+					...cost,
+					pageShift: moved,
+				} as Cost);
+				expect(moved).toBeLessThanOrEqual(ceiling.cls);
+				expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+					ceiling.apiAnswersBeforePaint,
+				);
+				expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+				expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+				if (!viewport) {
+					expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+				}
+				expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+				expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
+				expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+				expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+			});
+		}
+	});
+}

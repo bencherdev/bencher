@@ -3,6 +3,14 @@ const CLASSIC_PROJECTS = "/console/projects";
 /** The new console serves BMF v1 projects here until version 0 retires. */
 export const NEXT_PROJECTS = `/next${CLASSIC_PROJECTS}`;
 
+/** The dimension lists keep their classic paths, each page under its list. */
+export const DIMENSIONS = [
+	"branches",
+	"testbeds",
+	"benchmarks",
+	"measures",
+] as const;
+
 export type Tab =
 	| "explore"
 	| "plots"
@@ -23,14 +31,7 @@ export const TABS: readonly { tab: Tab; label: string; segments: string[] }[] =
 			tab: "settings",
 			label: "Settings",
 			// Dimensions and keys live in Settings.
-			segments: [
-				"settings",
-				"branches",
-				"testbeds",
-				"benchmarks",
-				"measures",
-				"keys",
-			],
+			segments: ["settings", ...DIMENSIONS, "keys"],
 		},
 	];
 
@@ -54,6 +55,7 @@ export type PageName =
 	| (typeof TAB_PAGES)[Tab]
 	| "Report"
 	| "Threshold"
+	| "Dimensions"
 	| "NotFound";
 
 /** The page that draws a project path, from its segments after the project. */
@@ -63,6 +65,9 @@ export const pageName = (rest: string[]): PageName => {
 	}
 	if (rest.length === 2 && rest[0] === "thresholds") {
 		return "Threshold";
+	}
+	if (DIMENSIONS.some((dimension) => dimension === rest[0])) {
+		return "Dimensions";
 	}
 	const tab = tabOf(rest);
 	return tab ? TAB_PAGES[tab] : "NotFound";

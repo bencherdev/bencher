@@ -168,8 +168,25 @@ describe("pageName", () => {
 		expect(pageName(["reports", "abc", "def"])).toBe("Reports");
 		expect(pageName(["thresholds", "abc"])).toBe("Threshold");
 		expect(pageName(["thresholds", "abc", "def"])).toBe("Thresholds");
-		expect(pageName(["branches", "main"])).toBe("Settings");
+		expect(pageName(["branches", "main"])).toBe("Dimensions");
 		expect(pageName(["nope"])).toBe("NotFound");
+	});
+
+	// Kills a dimension list or page drawn by Settings, whose chunk would then
+	// carry them, and Settings or Keys drawn by the dimensions' page.
+	test("the dimension lists and their pages are one page, beside Settings", () => {
+		for (const dimension of [
+			"branches",
+			"testbeds",
+			"benchmarks",
+			"measures",
+		]) {
+			expect(pageName([dimension])).toBe("Dimensions");
+			expect(pageName([dimension, "a-slug"])).toBe("Dimensions");
+		}
+		expect(pageName(["settings"])).toBe("Settings");
+		expect(pageName(["settings", "keys"])).toBe("Settings");
+		expect(pageName(["keys"])).toBe("Settings");
 	});
 });
 
