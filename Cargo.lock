@@ -1105,6 +1105,7 @@ dependencies = [
 name = "bencher_logger"
 version = "0.6.13"
 dependencies = [
+ "serde_json",
  "slog",
  "slog-async",
  "slog-json",
