@@ -721,14 +721,25 @@ pub fn create_alert(
         .select((schema::threshold::project_id, schema::threshold::id))
         .first(conn)
         .expect("Failed to get the boundary's threshold");
+    let (report_id, created): (ReportId, DateTime) = schema::boundary::table
+        .inner_join(
+            schema::metric::table
+                .inner_join(schema::report_benchmark::table.inner_join(schema::report::table)),
+        )
+        .filter(schema::boundary::id.eq(boundary_id))
+        .select((schema::report::id, schema::report::created))
+        .first(conn)
+        .expect("Failed to get the boundary's report");
     diesel::insert_into(schema::alert::table)
         .values((
             schema::alert::uuid.eq(alert_uuid),
             schema::alert::project_id.eq(project_id),
+            schema::alert::report_id.eq(report_id),
             schema::alert::threshold_id.eq(threshold_id),
             schema::alert::boundary_id.eq(boundary_id),
             schema::alert::boundary_limit.eq(boundary_limit),
             schema::alert::status.eq(status),
+            schema::alert::created.eq(created),
             schema::alert::modified.eq(DateTime::TEST),
         ))
         .execute(conn)

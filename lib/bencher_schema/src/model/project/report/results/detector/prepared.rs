@@ -1,4 +1,4 @@
-use bencher_json::{BoundaryUuid, project::boundary::BoundaryLimit};
+use bencher_json::{BoundaryUuid, DateTime, project::boundary::BoundaryLimit};
 use diesel::RunQueryDsl as _;
 
 use crate::macros::sql::last_insert_rowid;
@@ -7,6 +7,7 @@ use crate::{
     model::project::{
         ProjectId,
         metric::MetricId,
+        report::ReportId,
         threshold::{
             ThresholdId,
             alert::InsertAlert,
@@ -34,7 +35,13 @@ pub struct PreparedDetection {
 impl PreparedDetection {
     /// Write this prepared detection (boundary + optional alert) into the database
     /// using the provided connection (expected to be within a transaction).
-    pub fn write(self, conn: &mut DbConnection, metric_id: MetricId) -> diesel::QueryResult<()> {
+    pub fn write(
+        self,
+        conn: &mut DbConnection,
+        report_id: ReportId,
+        report_created: DateTime,
+        metric_id: MetricId,
+    ) -> diesel::QueryResult<()> {
         let Self {
             project_id,
             threshold_id,
@@ -64,7 +71,15 @@ impl PreparedDetection {
         let boundary_id = diesel::select(last_insert_rowid()).get_result::<BoundaryId>(conn)?;
 
         if !ignore_benchmark && let Some(boundary_limit) = outlier {
-            InsertAlert::insert(conn, project_id, threshold_id, boundary_id, boundary_limit)?;
+            InsertAlert::insert(
+                conn,
+                project_id,
+                report_id,
+                report_created,
+                threshold_id,
+                boundary_id,
+                boundary_limit,
+            )?;
         }
 
         Ok(())
@@ -73,7 +88,7 @@ impl PreparedDetection {
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{BoundaryUuid, project::boundary::BoundaryLimit};
+    use bencher_json::{BoundaryUuid, DateTime, project::boundary::BoundaryLimit};
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use crate::{
@@ -81,6 +96,7 @@ mod tests {
         model::project::{
             ProjectId,
             metric::MetricId,
+            report::ReportId,
             threshold::{ThresholdId, model::ModelId},
         },
         schema,
@@ -94,10 +110,10 @@ mod tests {
     use super::PreparedDetection;
 
     /// Set up the full entity chain needed for `PreparedDetection::write` tests.
-    /// Returns `(project_id, threshold_id, model_id, metric_id)`.
+    /// Returns `(project_id, threshold_id, model_id, report_id, metric_id)`.
     fn setup_prepared_detection_entities(
         conn: &mut DbConnection,
-    ) -> (ProjectId, ThresholdId, ModelId, MetricId) {
+    ) -> (ProjectId, ThresholdId, ModelId, ReportId, MetricId) {
         let base = create_base_entities(conn);
         let branch = create_branch_with_head(
             conn,
@@ -173,13 +189,19 @@ mod tests {
             100.0,
         );
 
-        (base.project_id, threshold_id, model_id, metric_id)
+        (
+            base.project_id,
+            threshold_id,
+            model_id,
+            report_id,
+            metric_id,
+        )
     }
 
     #[test]
     fn prepared_detection_write_inserts_boundary() {
         let mut conn = setup_test_db();
-        let (project_id, threshold_id, model_id, metric_id) =
+        let (project_id, threshold_id, model_id, report_id, metric_id) =
             setup_prepared_detection_entities(&mut conn);
 
         let detection = PreparedDetection {
@@ -194,8 +216,10 @@ mod tests {
             ignore_benchmark: false,
         };
 
-        conn.immediate_transaction(|conn| detection.write(conn, metric_id))
-            .expect("Failed to write detection");
+        conn.immediate_transaction(|conn| {
+            detection.write(conn, report_id, DateTime::TEST, metric_id)
+        })
+        .expect("Failed to write detection");
 
         // Assert 1 boundary row exists with correct fields
         let boundary_count: i64 = schema::boundary::table
@@ -218,7 +242,7 @@ mod tests {
     #[test]
     fn prepared_detection_write_creates_alert_on_outlier() {
         let mut conn = setup_test_db();
-        let (project_id, threshold_id, model_id, metric_id) =
+        let (project_id, threshold_id, model_id, report_id, metric_id) =
             setup_prepared_detection_entities(&mut conn);
 
         let detection = PreparedDetection {
@@ -233,8 +257,10 @@ mod tests {
             ignore_benchmark: false,
         };
 
-        conn.immediate_transaction(|conn| detection.write(conn, metric_id))
-            .expect("Failed to write detection");
+        conn.immediate_transaction(|conn| {
+            detection.write(conn, report_id, DateTime::TEST, metric_id)
+        })
+        .expect("Failed to write detection");
 
         // Assert 1 boundary exists
         let boundary_count: i64 = schema::boundary::table
@@ -255,7 +281,7 @@ mod tests {
     #[test]
     fn prepared_detection_write_skips_alert_when_ignore_benchmark() {
         let mut conn = setup_test_db();
-        let (project_id, threshold_id, model_id, metric_id) =
+        let (project_id, threshold_id, model_id, report_id, metric_id) =
             setup_prepared_detection_entities(&mut conn);
 
         let detection = PreparedDetection {
@@ -270,8 +296,10 @@ mod tests {
             ignore_benchmark: true,
         };
 
-        conn.immediate_transaction(|conn| detection.write(conn, metric_id))
-            .expect("Failed to write detection");
+        conn.immediate_transaction(|conn| {
+            detection.write(conn, report_id, DateTime::TEST, metric_id)
+        })
+        .expect("Failed to write detection");
 
         // Assert 1 boundary exists
         let boundary_count: i64 = schema::boundary::table

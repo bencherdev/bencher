@@ -959,10 +959,12 @@ fn insert_alert(
         .values((
             schema::alert::uuid.eq(AlertUuid::new()),
             schema::alert::project_id.eq(base.project),
+            schema::alert::report_id.eq(report),
             schema::alert::threshold_id.eq(threshold.id),
             schema::alert::boundary_id.eq(boundary),
             schema::alert::boundary_limit.eq(BoundaryLimit::Upper),
             schema::alert::status.eq(status),
+            schema::alert::created.eq(seconds(created)),
             schema::alert::modified.eq(seconds(created)),
         ))
         .execute(conn)
