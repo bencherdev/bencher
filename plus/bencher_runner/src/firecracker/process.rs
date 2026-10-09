@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use camino::Utf8Path;
+use slog::{Logger, warn};
 
 use crate::firecracker::client::FirecrackerClient;
 use crate::firecracker::config::{Action, ActionType};
@@ -28,6 +29,7 @@ const STDERR_LINE_CAP_KIB: usize = 15;
 
 #[derive(Debug)]
 pub struct JailedSpawn<'a> {
+    pub log: Logger,
     /// The jailer binary, which runs as root and execs Firecracker in place.
     pub jailer_bin: &'a Utf8Path,
     /// Outside the jail, since the jailer copies it in itself and refuses a
@@ -58,6 +60,7 @@ pub struct FirecrackerProcess {
 /// Kills and reaps the jailer's child on drop, guarding it before there is an
 /// API socket to pin.
 struct JailedChild {
+    log: Logger,
     child: Child,
     api_socket: JailFile,
     stderr_thread: Option<StderrReader>,
@@ -78,6 +81,7 @@ impl FirecrackerProcess {
         // Destructured rather than read field by field so that adding a field
         // without deciding what it does here is a build error.
         let JailedSpawn {
+            log,
             jailer_bin,
             exec_file: _,
             vm_id: _,
@@ -99,13 +103,11 @@ impl FirecrackerProcess {
         let command = jailer_command(jailer_bin, &args, cgroup_procs);
         // Guarded at once, since `Child::drop` neither kills nor reaps and any
         // error below would otherwise leave the VMM running.
-        let mut jailed =
-            JailedChild::spawn(command, api_socket, housekeeping_cores).map_err(|e| {
-                FirecrackerError::Spawn {
-                    path: jailer_bin.to_owned(),
-                    pre_exec,
-                    source: e,
-                }
+        let mut jailed = JailedChild::spawn(&log, command, api_socket, housekeeping_cores)
+            .map_err(|e| FirecrackerError::Spawn {
+                path: jailer_bin.to_owned(),
+                pre_exec,
+                source: e,
             })?;
 
         jailed.wait_for_ready(API_SOCKET_TIMEOUT)?;
@@ -118,7 +120,7 @@ impl FirecrackerProcess {
 
     /// Get a client for the Firecracker REST API.
     pub fn client(&self) -> FirecrackerClient<'_> {
-        FirecrackerClient::new(self.api.path())
+        FirecrackerClient::new(&self.jailed.log, self.api.path())
     }
 
     /// Get the PID of the Firecracker process.
@@ -155,11 +157,12 @@ impl FirecrackerProcess {
 
 impl JailedChild {
     fn spawn(
+        log: &Logger,
         command: Command,
         api_socket: &JailFile,
         housekeeping_cores: Vec<usize>,
     ) -> std::io::Result<Self> {
-        Self::spawn_with(command, api_socket, housekeeping_cores, |line| {
+        Self::spawn_with(log, command, api_socket, housekeeping_cores, |line| {
             eprintln!("[firecracker] {line}");
         })
     }
@@ -167,6 +170,7 @@ impl JailedChild {
     /// Hands the child one end of a socket pair as its stderr and reads the
     /// other on a thread, since a pipe gives the owner no way to end that read.
     fn spawn_with<F>(
+        log: &Logger,
         mut command: Command,
         api_socket: &JailFile,
         housekeeping_cores: Vec<usize>,
@@ -175,10 +179,11 @@ impl JailedChild {
     where
         F: FnMut(String) + Send + 'static,
     {
-        let (writer, stderr) = StderrReader::spawn(housekeeping_cores, on_line)?;
+        let (writer, stderr) = StderrReader::spawn(log, housekeeping_cores, on_line)?;
         command.stderr(OwnedFd::from(writer));
         let child = command.spawn()?;
         Ok(Self {
+            log: log.clone(),
             child,
             api_socket: api_socket.clone(),
             stderr_thread: Some(stderr),
@@ -192,7 +197,7 @@ impl JailedChild {
         let poll_interval = Duration::from_millis(50);
 
         while start.elapsed() < timeout {
-            if FirecrackerClient::new(self.api_socket.socket()).try_ready()? {
+            if FirecrackerClient::new(&self.log, self.api_socket.socket()).try_ready()? {
                 return Ok(());
             }
             if let Some(status) = self.exited() {
@@ -241,6 +246,7 @@ impl JailedChild {
 impl StderrReader {
     /// Returns the end the child writes to.
     fn spawn<F>(
+        log: &Logger,
         housekeeping_cores: Vec<usize>,
         mut on_line: F,
     ) -> std::io::Result<(UnixStream, Self)>
@@ -250,11 +256,12 @@ impl StderrReader {
         let (writer, reader) = UnixStream::pair()?;
         let socket = Arc::new(reader);
         let read = Arc::clone(&socket);
+        let log = log.clone();
         let thread = std::thread::spawn(move || {
             let _stop = StopReading(&read);
             // Pin to housekeeping cores to avoid benchmark interference
             if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
-                eprintln!("Warning: failed to pin stderr reader thread: {e}");
+                warn!(log, "Thread not pinned to housekeeping cores"; "thread" => "VMM stderr reader", "error" => %e);
             }
             forward_capped_lines(&*read, &mut on_line);
         });
@@ -400,9 +407,11 @@ mod tests {
 
     use super::*;
     use crate::jail::JailPaths;
+    use crate::log::discard;
 
     fn spawn_for<'a>(jail: &'a JailPaths, vm_id: &'a VmId) -> JailedSpawn<'a> {
         JailedSpawn {
+            log: discard(),
             jailer_bin: Utf8Path::new("/tmp/work/jailer"),
             exec_file: Utf8Path::new("/tmp/work/firecracker"),
             vm_id,
@@ -438,6 +447,7 @@ mod tests {
     /// names its descriptor.
     fn process_around(child: Child, jail: &JailPaths) -> JailedChild {
         JailedChild {
+            log: discard(),
             child,
             api_socket: jail.api_socket().clone(),
             stderr_thread: None,
@@ -614,11 +624,16 @@ mod tests {
             .stdout(std::process::Stdio::null());
         let reading = Arc::new(());
         let token = Arc::clone(&reading);
-        let mut jailed =
-            JailedChild::spawn_with(command, jail.api_socket(), Vec::new(), move |_line| {
+        let mut jailed = JailedChild::spawn_with(
+            &discard(),
+            command,
+            jail.api_socket(),
+            Vec::new(),
+            move |_line| {
                 drop(Arc::clone(&token));
-            })
-            .unwrap();
+            },
+        )
+        .unwrap();
         let started = std::time::Instant::now();
         while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
             std::thread::sleep(Duration::from_millis(10));
@@ -651,11 +666,16 @@ mod tests {
             .stdout(std::process::Stdio::null());
         let lines = Arc::new(std::sync::Mutex::new(Vec::new()));
         let sink = Arc::clone(&lines);
-        let mut jailed =
-            JailedChild::spawn_with(command, jail.api_socket(), Vec::new(), move |line| {
+        let mut jailed = JailedChild::spawn_with(
+            &discard(),
+            command,
+            jail.api_socket(),
+            Vec::new(),
+            move |line| {
                 sink.lock().unwrap().push(line);
-            })
-            .unwrap();
+            },
+        )
+        .unwrap();
         let started = std::time::Instant::now();
         while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
             std::thread::sleep(Duration::from_millis(10));
@@ -681,9 +701,15 @@ mod tests {
             .args(["-c", "echo first >&2; head -c 4194304 /dev/zero >&2"])
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null());
-        let mut jailed = JailedChild::spawn_with(command, jail.api_socket(), Vec::new(), |_line| {
-            panic!("the reader fails");
-        })
+        let mut jailed = JailedChild::spawn_with(
+            &discard(),
+            command,
+            jail.api_socket(),
+            Vec::new(),
+            |_line| {
+                panic!("the reader fails");
+            },
+        )
         .unwrap();
         let started = std::time::Instant::now();
         while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
@@ -714,11 +740,16 @@ mod tests {
             .stdout(std::process::Stdio::null());
         let lines = Arc::new(std::sync::Mutex::new(Vec::new()));
         let sink = Arc::clone(&lines);
-        let mut jailed =
-            JailedChild::spawn_with(command, jail.api_socket(), Vec::new(), move |line| {
+        let mut jailed = JailedChild::spawn_with(
+            &discard(),
+            command,
+            jail.api_socket(),
+            Vec::new(),
+            move |line| {
                 sink.lock().unwrap().push(line);
-            })
-            .unwrap();
+            },
+        )
+        .unwrap();
         let started = std::time::Instant::now();
         while jailed.exited().is_none() && started.elapsed() < Duration::from_secs(3) {
             std::thread::sleep(Duration::from_millis(10));

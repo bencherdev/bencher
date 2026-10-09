@@ -76,11 +76,15 @@ pub fn detect(root: &Utf8Path) -> Vec<PreflightWarning> {
     warnings
 }
 
-/// Detect and print preflight warnings for the live host (Linux only).
-pub fn print_host_warnings() {
+/// Detect and log preflight warnings for the live host (Linux only).
+#[cfg_attr(
+    not(target_os = "linux"),
+    expect(unused_variables, reason = "only Linux hosts are checked")
+)]
+pub fn log_host_warnings(log: &slog::Logger) {
     #[cfg(target_os = "linux")]
     for warning in detect(Utf8Path::new("/")) {
-        println!("  Preflight: {warning}");
+        slog::warn!(log, "Preflight"; "warning" => %warning);
     }
 }
 

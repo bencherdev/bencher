@@ -45,17 +45,11 @@ pub fn unpack(image_dir: &Utf8Path, target_dir: &Utf8Path) -> Result<(), OciErro
     std::fs::create_dir_all(target_dir)?;
 
     // Extract layers in order
-    for (i, layer) in manifest.manifest.layers().iter().enumerate() {
+    for layer in manifest.manifest.layers() {
         let digest = layer.digest().to_string();
         let blob_path = digest_to_blob_path(image_dir, &digest)?;
 
         let compression = detect_layer_media_type(layer.media_type())?;
-
-        tracing_log(format!(
-            "Extracting layer {}/{}: {digest}",
-            i + 1,
-            manifest.layers.len()
-        ));
 
         extract_layer(
             Utf8Path::from_path(blob_path.as_std_path())
@@ -66,21 +60,6 @@ pub fn unpack(image_dir: &Utf8Path, target_dir: &Utf8Path) -> Result<(), OciErro
     }
 
     Ok(())
-}
-
-/// Simple logging helper (prints to stderr in debug builds).
-#[expect(
-    clippy::print_stderr,
-    clippy::needless_pass_by_value,
-    reason = "debug-only stderr logging, takes ownership to drop in release"
-)]
-fn tracing_log(msg: String) {
-    #[cfg(debug_assertions)]
-    eprintln!("[bencher_oci] {msg}");
-
-    // Suppress unused variable warning in release builds
-    #[cfg(not(debug_assertions))]
-    drop(msg);
 }
 
 /// Verify a blob's digest.

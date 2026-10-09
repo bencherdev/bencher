@@ -6,6 +6,7 @@ Baixa uma [Image][images], cria um rootfs e a executa uma vez no host local.
 Diferente de [`runner up`][runner up], isso não se conecta a um servidor de API nem reivindica um Job.
 Ele executa uma única Image diretamente, o que é útil para testar e depurar um host Runner
 ou uma Image antes de enviar Jobs reais.
+A saída da Image vai para stdout e stderr como está, e o log do próprio runner vai para stderr como JSON, um objeto por linha.
 
 ```
 runner run --image <IMAGE> [OPTIONS]

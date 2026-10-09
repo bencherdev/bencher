@@ -6,14 +6,10 @@
 //! runtime equivalent of the `isolcpus=` boot argument. Per-run cgroups
 //! created under the partition inherit it automatically.
 
-#![expect(
-    clippy::print_stderr,
-    reason = "partition setup prints best-effort warnings"
-)]
-
 use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
+use slog::{Logger, warn};
 
 use crate::cpu::CpuLayout;
 use crate::error::JailError;
@@ -61,30 +57,34 @@ impl BencherPartition {
     /// so the partition outlives the runner until the host reboots.
     /// Best-effort: any failure degrades to [`PartitionLevel::Member`],
     /// which matches the behavior before partitions were introduced.
-    pub(super) fn apply(&self, layout: &CpuLayout) -> PartitionLevel {
-        self.apply_with(layout, ensure_controllers)
+    pub(super) fn apply(&self, log: &Logger, layout: &CpuLayout) -> PartitionLevel {
+        self.apply_with(log, layout, |root| ensure_controllers(log, root))
     }
 
     /// The controllers step is injectable because only cgroupfs gives its
     /// writes their meaning.
-    fn apply_with<E>(&self, layout: &CpuLayout, ensure: E) -> PartitionLevel
+    fn apply_with<E>(&self, log: &Logger, layout: &CpuLayout, ensure: E) -> PartitionLevel
     where
         E: FnOnce(&Utf8Path) -> Result<Controllers, JailError>,
     {
         if let Err(e) = fs::create_dir_all(&self.path) {
-            eprintln!("Warning: failed to create cgroup {}: {e}", self.path);
+            warn!(log, "Cgroup not created"; "cgroup" => self.path.as_str(), "error" => %e);
             return PartitionLevel::Member;
         }
 
         // The bencher cgroup has cpuset files only once the root enables cpuset.
-        if !report_controllers(ensure(&self.root)) {
+        if !report_controllers(log, ensure(&self.root)) {
             return PartitionLevel::Member;
         }
 
         // A partition needs explicit cpus and mems. Mems mirror the
         // root's effective nodes so multi-node NUMA hosts are not forced
         // onto node 0.
-        if !write_unless_set(&self.path.join("cpuset.cpus"), &layout.benchmark_cpuset()) {
+        if !write_unless_set(
+            log,
+            &self.path.join("cpuset.cpus"),
+            &layout.benchmark_cpuset(),
+        ) {
             return PartitionLevel::Member;
         }
         // An unreadable node set degrades to member rather than guessing one,
@@ -92,20 +92,20 @@ impl BencherPartition {
         let mems = match effective_mems(&self.root) {
             Ok(mems) => mems,
             Err(e) => {
-                eprintln!(
-                    "Warning: failed to read the cgroup root's effective memory nodes ({e}); no cpuset partition"
+                warn!(log, "No cpuset partition, the cgroup root's memory nodes are unreadable";
+                    "error" => %e,
                 );
                 return PartitionLevel::Member;
             },
         };
-        if !write_unless_set(&self.path.join("cpuset.mems"), &mems) {
+        if !write_unless_set(log, &self.path.join("cpuset.mems"), &mems) {
             return PartitionLevel::Member;
         }
 
         let partition_path = self.partition_path();
         if let Err(e) = fs::read_to_string(&partition_path) {
             // Missing on kernels without cpuset partition support.
-            eprintln!("Warning: cpuset partitions unavailable ({partition_path}: {e})");
+            warn!(log, "Cpuset partitions unavailable"; "path" => partition_path.as_str(), "error" => %e);
             return PartitionLevel::Member;
         }
 
@@ -116,14 +116,14 @@ impl BencherPartition {
             match try_partition_mode(&partition_path, mode) {
                 Ok(()) => return level,
                 Err(e) => {
-                    eprintln!("Warning: cpuset partition mode '{mode}' not achieved: {e}");
+                    warn!(log, "Cpuset partition mode not achieved"; "mode" => mode, "error" => %e);
                 },
             }
         }
 
         // A refused mode reads back as `<mode> invalid (...)` until replaced.
         if let Err(e) = fs::write(&partition_path, "member") {
-            eprintln!("Warning: failed to write cpuset partition mode 'member' back: {e}");
+            warn!(log, "Cpuset partition mode not written back"; "mode" => "member", "error" => %e);
         }
         PartitionLevel::Member
     }
@@ -135,19 +135,19 @@ impl BencherPartition {
 
 /// Warns for each controller Jobs will lack, naming it and the cgroup that
 /// withheld it, and returns whether they get a cpuset.
-fn report_controllers(controllers: Result<Controllers, JailError>) -> bool {
+fn report_controllers(log: &Logger, controllers: Result<Controllers, JailError>) -> bool {
     let controllers = match controllers {
         Ok(controllers) => controllers,
         Err(e) => {
-            eprintln!("Warning: failed to enable the cgroup controllers Jobs use: {e}");
+            warn!(log, "Cgroup controllers Jobs use not enabled"; "error" => %e);
             return false;
         },
     };
     if let Some(absence) = controllers.memory_absence() {
-        eprintln!("Warning: Jobs will have no swap limit: {absence}");
+        warn!(log, "Jobs will have no swap limit"; "reason" => %absence);
     }
     if let Some(absence) = controllers.cpuset_absence() {
-        eprintln!("Warning: Jobs will have no cgroup cpuset: {absence}");
+        warn!(log, "Jobs will have no cgroup cpuset"; "reason" => %absence);
         return false;
     }
     true
@@ -198,11 +198,11 @@ fn verify_partition_state(path: &Utf8Path, mode: &str) -> Result<(), JailError> 
 /// Write `value` to a cgroup file unless it already holds it.
 ///
 /// Returns false (with a warning) when the file cannot be read or written.
-fn write_unless_set(path: &Utf8Path, value: &str) -> bool {
+fn write_unless_set(log: &Logger, path: &Utf8Path, value: &str) -> bool {
     let current = match fs::read_to_string(path) {
         Ok(current) => current.trim().to_owned(),
         Err(e) => {
-            eprintln!("Warning: failed to read {path}: {e}");
+            warn!(log, "Cgroup file unreadable"; "path" => path.as_str(), "error" => %e);
             return false;
         },
     };
@@ -212,7 +212,7 @@ fn write_unless_set(path: &Utf8Path, value: &str) -> bool {
     }
 
     if let Err(e) = fs::write(path, value) {
-        eprintln!("Warning: failed to write {path}: {e}");
+        warn!(log, "Cgroup file not written"; "path" => path.as_str(), "error" => %e);
         return false;
     }
     true
@@ -223,13 +223,14 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use crate::cpu::CpuLayout;
+    use crate::log::discard;
 
     use super::*;
 
     /// Only cgroupfs gives the controller writes their meaning, so a tempfile
     /// tree takes them as done.
     fn apply_on_tree(root: &Utf8Path, layout: &CpuLayout) -> PartitionLevel {
-        BencherPartition::new(root).apply_with(layout, |_| Ok(Controllers::enabled()))
+        BencherPartition::new(root).apply_with(&discard(), layout, |_| Ok(Controllers::enabled()))
     }
 
     /// A fake cgroup v2 tree mirroring what the kernel exposes.
@@ -300,7 +301,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let layout = CpuLayout::with_core_count(8);
-        let level = BencherPartition::new(&root).apply(&layout);
+        let level = BencherPartition::new(&root).apply(&discard(), &layout);
 
         assert_eq!(level, PartitionLevel::Member);
     }
@@ -383,8 +384,9 @@ mod tests {
         // Going on would fail on the missing `cpuset.cpus` and blame the file.
         let (_dir, root) = fake_cgroup_root();
         let layout = CpuLayout::with_core_count(8);
-        let level = BencherPartition::new(&root)
-            .apply_with(&layout, |root| Ok(Controllers::without_cpuset(root)));
+        let level = BencherPartition::new(&root).apply_with(&discard(), &layout, |root| {
+            Ok(Controllers::without_cpuset(root))
+        });
 
         assert_eq!(level, PartitionLevel::Member);
         assert_eq!(
@@ -395,6 +397,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
     fn a_partition_mode_the_kernel_refuses_is_written_back_to_member() {
         // Otherwise the file reads `root invalid (...)` for the life of the
         // runner. A cgroup whose parent is not a partition root admits neither
@@ -405,7 +408,7 @@ mod tests {
             );
             return;
         }
-        let layout = CpuLayout::detect();
+        let layout = CpuLayout::detect(&discard());
         if !layout.has_isolation() {
             eprintln!(
                 "skipped a_partition_mode_the_kernel_refuses_is_written_back_to_member: this host has no core to partition"
@@ -414,7 +417,7 @@ mod tests {
         }
         let scratch = crate::jail::ScratchCgroup::new("bencher-runner-partition");
 
-        let level = BencherPartition::new(scratch.path()).apply(&layout);
+        let level = BencherPartition::new(scratch.path()).apply(&discard(), &layout);
         let partition =
             fs::read_to_string(scratch.path().join("bencher/cpuset.cpus.partition")).unwrap();
 

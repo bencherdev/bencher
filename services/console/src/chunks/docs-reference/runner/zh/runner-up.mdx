@@ -6,6 +6,7 @@ import Tuning from "./tuning.mdx";
 这是用于操作 [Self-Hosted Runner][self hosted runners] 的长时间运行命令。
 runner 向 API 服务器打开单个 [WebSocket 连接][runner protocol]，
 认领与其 Spec 匹配的 Job，执行它们，并将结果报告回去。
+runner 以 JSON 格式将日志写入 stderr，每行一个对象，并且只以字节数记录 Job 的输出。
 
 ```
 runner up [OPTIONS]

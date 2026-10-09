@@ -9,16 +9,9 @@
 //! Everything here is best-effort: without root or cgroup v2 the cgroup
 //! steps are skipped with a warning and only CPU affinity is applied.
 
-#![cfg_attr(
-    target_os = "linux",
-    expect(
-        clippy::print_stdout,
-        clippy::print_stderr,
-        reason = "isolation setup prints status and best-effort warnings"
-    )
-)]
-
 use std::process::Command;
+
+use slog::Logger;
 
 use crate::cpu::CpuLayout;
 use crate::metrics::CgroupMetrics;
@@ -47,7 +40,9 @@ impl LocalIsolation {
     /// Never fails: on any setup error (non-root, no cgroup v2) it warns
     /// and falls back to affinity-only isolation, or no isolation at all
     /// when the layout has none.
-    pub(crate) fn prepare(layout: Option<&CpuLayout>) -> Self {
+    pub(crate) fn prepare(log: &Logger, layout: Option<&CpuLayout>) -> Self {
+        use slog::{info, warn};
+
         let Some(layout) = layout.filter(|layout| layout.has_isolation()) else {
             return Self {
                 cgroup: None,
@@ -62,7 +57,7 @@ impl LocalIsolation {
         // No chroot names this cgroup and no sweep walks it, so nothing can
         // finish a teardown it leaves undone.
         let unwatched = crate::jail::CgroupSurvived::default();
-        let cgroup = match crate::jail::CgroupManager::new(&run_id, unwatched) {
+        let cgroup = match crate::jail::CgroupManager::new(log, &run_id, unwatched) {
             Ok(cgroup) => {
                 // Best effort, unlike the sandboxed path: a local run claims no
                 // confinement, so a lost cpuset degrades its numbers rather
@@ -70,20 +65,20 @@ impl LocalIsolation {
                 match cgroup.apply_cpuset(layout) {
                     Ok(crate::jail::Cpuset::Applied) => {},
                     Ok(crate::jail::Cpuset::Unavailable(reason)) => {
-                        eprintln!("Warning: this local run has no CPU isolation ({reason})");
+                        warn!(log, "No cgroup cpuset for the local run"; "reason" => reason);
                     },
-                    Err(e) => eprintln!("Warning: failed to apply cpuset for local run: {e}"),
+                    Err(e) => {
+                        warn!(log, "Cgroup cpuset not applied for the local run"; "error" => %e);
+                    },
                 }
                 // Keep benchmark memory resident, mirroring the Firecracker path
                 if let Err(e) = cgroup.disable_swap() {
-                    eprintln!("Warning: failed to disable swap for local run: {e}");
+                    warn!(log, "No swap limit for the local run"; "error" => %e);
                 }
                 Some(cgroup)
             },
             Err(e) => {
-                eprintln!(
-                    "Warning: failed to create cgroup for local run (falling back to CPU affinity only): {e}"
-                );
+                warn!(log, "No cgroup for the local run, CPU affinity only"; "error" => %e);
                 None
             },
         };
@@ -95,17 +90,14 @@ impl LocalIsolation {
             {
                 Ok(file) => Some(file),
                 Err(e) => {
-                    eprintln!("Warning: failed to open cgroup.procs for local run: {e}");
+                    warn!(log, "No cgroup.procs for the local run"; "error" => %e);
                     None
                 },
             }
         });
 
         if procs.is_some() {
-            println!(
-                "CPU isolation: benchmark pinned to cores {}",
-                layout.benchmark_cpuset()
-            );
+            info!(log, "CPU isolation applied"; "cores" => layout.benchmark_cpuset());
         }
 
         Self {
@@ -200,7 +192,7 @@ pub(crate) struct LocalIsolation;
     reason = "non-Linux stub mirrors the Linux method signatures"
 )]
 impl LocalIsolation {
-    pub(crate) fn prepare(_layout: Option<&CpuLayout>) -> Self {
+    pub(crate) fn prepare(_log: &Logger, _layout: Option<&CpuLayout>) -> Self {
         Self
     }
 
@@ -219,7 +211,7 @@ mod tests {
 
     #[test]
     fn no_layout_is_noop() {
-        let isolation = LocalIsolation::prepare(None);
+        let isolation = LocalIsolation::prepare(&crate::log::discard(), None);
         // Without a cgroup, killing the subtree is a no-op.
         isolation.kill_all();
         assert!(isolation.read_metrics().is_none());
@@ -234,7 +226,7 @@ mod tests {
     #[test]
     fn layout_without_isolation_is_noop() {
         let layout = CpuLayout::with_core_count(1);
-        let isolation = LocalIsolation::prepare(Some(&layout));
+        let isolation = LocalIsolation::prepare(&crate::log::discard(), Some(&layout));
         assert!(isolation.read_metrics().is_none());
         #[cfg(target_os = "linux")]
         {
@@ -245,7 +237,7 @@ mod tests {
 
     #[test]
     fn noop_isolation_leaves_command_spawnable() {
-        let isolation = LocalIsolation::prepare(None);
+        let isolation = LocalIsolation::prepare(&crate::log::discard(), None);
         let mut cmd = Command::new("echo");
         isolation.configure_command(&mut cmd);
         let status = cmd
@@ -261,7 +253,7 @@ mod tests {
         // Cgroup creation may succeed (root CI) or fall back (unprivileged);
         // either way the configured command must still spawn and succeed.
         let layout = CpuLayout::with_core_count(2);
-        let isolation = LocalIsolation::prepare(Some(&layout));
+        let isolation = LocalIsolation::prepare(&crate::log::discard(), Some(&layout));
         assert_eq!(isolation.benchmark, vec![1]);
 
         let mut cmd = Command::new("true");

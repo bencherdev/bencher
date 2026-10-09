@@ -1,14 +1,9 @@
-#![expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    reason = "runner prints progress and diagnostic output"
-)]
-
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use camino::{Utf8Path, Utf8PathBuf};
+use slog::{Logger, info, warn};
 
 use bencher_json::Iteration;
 
@@ -138,20 +133,20 @@ fn build_config_from_run_args(args: &RunArgs) -> Result<crate::Config, crate::er
     not(target_os = "linux"),
     expect(unused_mut, reason = "config only mutated on Linux for CPU isolation")
 )]
-pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
+pub fn run_with_args(log: &Logger, args: &RunArgs) -> Result<(), RunnerError> {
     // A signal cancels the job through its teardown rather than killing the
     // runner and stranding the VMM.
     crate::signal::install_cancel_handlers();
 
     // Warn about host conditions that limit benchmark accuracy (Linux only)
-    preflight::print_host_warnings();
+    preflight::log_host_warnings(log);
 
     // Serialize host-global tuning across runner processes.
-    let host_lock = crate::tuning::HostTuningLock::acquire();
-    let tuning = host_lock.effective_tuning(&args.tuning);
+    let host_lock = crate::tuning::HostTuningLock::acquire(log);
+    let tuning = host_lock.effective_tuning(log, &args.tuning);
 
     // Apply host tuning, which persists until the host reboots (no-op on non-Linux)
-    let _tuning_guard = crate::tuning::apply(&tuning);
+    let _tuning_guard = crate::tuning::apply(log, &tuning);
 
     let mut config = build_config_from_run_args(args)?;
 
@@ -162,17 +157,11 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
     // only gates the tuning knobs (including the partition and steering).
     #[cfg(target_os = "linux")]
     {
-        let cpu_layout = crate::cpu::CpuLayout::detect();
-        crate::tuning::apply_cpu_scoped(&tuning, &cpu_layout);
+        let cpu_layout = crate::cpu::CpuLayout::detect(log);
+        crate::tuning::apply_cpu_scoped(log, &tuning, &cpu_layout);
+        cpu_layout.log_isolation(log);
         if cpu_layout.has_isolation() {
-            println!(
-                "  CPU isolation: housekeeping={}, benchmark={}",
-                cpu_layout.housekeeping_cpuset(),
-                cpu_layout.benchmark_cpuset()
-            );
             config = config.with_cpu_layout(cpu_layout);
-        } else {
-            println!("  CPU isolation: disabled (insufficient cores)");
         }
     }
 
@@ -196,16 +185,14 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
             .into());
         }
         match execute_with_deadline(
+            log,
             &config,
             &mut host,
             Some(crate::signal::stop_flag()),
             deadline,
         ) {
             Ok(output) => {
-                println!("{}", output.stdout);
-                if !output.stderr.is_empty() {
-                    eprintln!("{}", output.stderr);
-                }
+                print_product(&output);
                 if output.exit_code != 0 && !args.allow_failure {
                     return Err(RunnerError::NonZeroExitCode(output.exit_code));
                 }
@@ -217,9 +204,10 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
                     && !crate::signal::stop_requested()
                     && !deadline.remaining().is_zero()
                 {
-                    eprintln!(
-                        "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
-                        iteration + 1
+                    warn!(log, "Iteration failed, skipped under allow_failure";
+                        "iteration" => iteration + 1,
+                        "iterations" => iter_count,
+                        "error" => bencher_logger::capped(&e),
                     );
                     continue;
                 }
@@ -228,6 +216,19 @@ pub fn run_with_args(args: &RunArgs) -> Result<(), RunnerError> {
         }
     }
     Ok(())
+}
+
+/// The benchmark's output is the product of `runner run`, so it goes out raw.
+#[expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "the benchmark's output is the product of `runner run`"
+)]
+fn print_product(output: &RunOutput) {
+    println!("{}", output.stdout);
+    if !output.stderr.is_empty() {
+        eprintln!("{}", output.stderr);
+    }
 }
 
 /// Workspace created by [`prepare_oci_workspace`]: temp directory, work/unpack
@@ -251,7 +252,10 @@ pub(crate) struct OciWorkspace {
 ///
 /// Shared between `local_execute` and `vm_execute` to avoid duplicating this
 /// setup sequence.
-pub(crate) fn prepare_oci_workspace(config: &crate::Config) -> Result<OciWorkspace, RunnerError> {
+pub(crate) fn prepare_oci_workspace(
+    log: &Logger,
+    config: &crate::Config,
+) -> Result<OciWorkspace, RunnerError> {
     // Create a temporary work directory
     let temp_dir = tempfile::tempdir().map_err(crate::error::ConfigError::TempDir)?;
     let work_dir =
@@ -262,6 +266,7 @@ pub(crate) fn prepare_oci_workspace(config: &crate::Config) -> Result<OciWorkspa
 
     // Resolve OCI image (local path or pull from registry)
     let oci_image_path = resolve_oci_image(
+        log,
         &config.oci_image,
         config.token.as_ref().map(AsRef::as_ref),
         config.registry_scheme,
@@ -269,18 +274,18 @@ pub(crate) fn prepare_oci_workspace(config: &crate::Config) -> Result<OciWorkspa
     )?;
 
     // Parse OCI image config to get the command
-    println!("Parsing OCI image config...");
+    info!(log, "Parsing OCI image config");
     let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
     let oci_config = resolve_oci_config(&oci_image, config)?;
 
-    println!("  Command: {}", oci_config.command.join(" "));
-    println!("  WorkDir: {}", oci_config.working_dir);
-    if !oci_config.env.is_empty() {
-        println!("  Env: {} variables", oci_config.env.len());
-    }
+    info!(log, "OCI image config";
+        "command" => bencher_logger::capped(oci_config.command.join(" ")),
+        "work_dir" => bencher_logger::capped(&oci_config.working_dir),
+        "env_vars" => oci_config.env.len(),
+    );
 
     // Unpack OCI image layers into the rootfs directory
-    println!("Unpacking OCI image to {unpack_dir}...");
+    info!(log, "Unpacking OCI image"; "unpack_dir" => unpack_dir.as_str());
     bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
 
     Ok(OciWorkspace {
@@ -309,6 +314,7 @@ pub(crate) fn prepare_oci_workspace(config: &crate::Config) -> Result<OciWorkspa
 ///
 /// Path to the local OCI image directory.
 pub fn resolve_oci_image(
+    log: &Logger,
     oci_image: &str,
     token: Option<&str>,
     scheme: bencher_oci::RegistryScheme,
@@ -318,12 +324,12 @@ pub fn resolve_oci_image(
 
     // If it's a local path that exists, use it directly
     if path.exists() {
-        println!("Using local OCI image: {oci_image}");
+        info!(log, "Using a local OCI image"; "image" => bencher_logger::capped(oci_image));
         return Ok(path.to_owned());
     }
 
     // Otherwise, treat as a registry reference
-    println!("Parsing registry reference: {oci_image}");
+    info!(log, "Parsing registry reference"; "image" => bencher_logger::capped(oci_image));
     let image_ref = bencher_oci::ImageReference::parse(oci_image)
         .map_err(|e| bencher_oci::OciError::InvalidReference(e.to_string()))?;
 
@@ -331,21 +337,20 @@ pub fn resolve_oci_image(
     let image_dir = pull_dir.join("oci-image");
 
     // Pull from registry
-    println!("Pulling from registry: {}", image_ref.full_name());
+    info!(log, "Pulling from registry"; "image" => bencher_logger::capped(image_ref.full_name()));
 
     // Create pull directory if it doesn't exist
     std::fs::create_dir_all(pull_dir)?;
 
+    info!(log, "Registry client"; "authenticated" => token.is_some());
     let mut client = if let Some(t) = token {
-        println!("  Using authenticated client");
         bencher_oci::RegistryClient::with_token(t)?.with_scheme(scheme)
     } else {
-        println!("  Using anonymous client");
         bencher_oci::RegistryClient::new()?.with_scheme(scheme)
     };
 
     client.pull(&image_ref, &image_dir)?;
-    println!("Image pulled to: {image_dir}");
+    info!(log, "Image pulled"; "image_dir" => image_dir.as_str());
 
     Ok(image_dir)
 }
@@ -429,12 +434,13 @@ pub fn resolve_oci_config(
 ///
 /// The benchmark output including exit code and stdout.
 pub fn execute(
+    log: &Logger,
     config: &crate::Config,
     host: &mut crate::jail::HostPreparation,
     cancel_flag: Option<&AtomicBool>,
 ) -> Result<RunOutput, RunnerError> {
     let deadline = JobDeadline::start(Duration::from_secs(config.timeout_secs));
-    execute_with_deadline(config, host, cancel_flag, deadline)
+    execute_with_deadline(log, config, host, cancel_flag, deadline)
 }
 
 /// Like [`execute`], but the run has only what is left of `deadline`, which
@@ -447,6 +453,7 @@ pub fn execute(
     )
 )]
 pub fn execute_with_deadline(
+    log: &Logger,
     config: &crate::Config,
     host: &mut crate::jail::HostPreparation,
     cancel_flag: Option<&AtomicBool>,
@@ -456,7 +463,7 @@ pub fn execute_with_deadline(
         Some(bencher_json::Sandbox::Firecracker) => {
             #[cfg(target_os = "linux")]
             {
-                crate::vm::vm_execute(config, host, cancel_flag, deadline)
+                crate::vm::vm_execute(log, config, host, cancel_flag, deadline)
             }
             #[cfg(not(target_os = "linux"))]
             {
@@ -466,6 +473,6 @@ pub fn execute_with_deadline(
                 .into())
             }
         },
-        None => crate::local::local_execute(config, cancel_flag, deadline),
+        None => crate::local::local_execute(log, config, cancel_flag, deadline),
     }
 }

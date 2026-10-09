@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     io::{self, BufWriter, Stderr, Write},
     sync::Mutex,
 };
@@ -9,6 +10,10 @@ use slog_json::Json;
 /// journald's default `LineMax`, newline included: a longer line splits into
 /// records, and a leading `<N>` in the tail sets that record's priority.
 const LINE_MAX: usize = 48 * 1024;
+
+/// Text from outside the runner is cut to this many bytes, so its escaped
+/// form, at most 6 bytes per byte, keeps a record under [`LINE_MAX`].
+pub const FIELD_CAP: usize = 7 * 1024;
 
 pub fn bootstrap_logger() -> Logger {
     let drain = Mutex::new(json()).fuse();
@@ -31,6 +36,13 @@ pub fn runner_logger() -> Logger {
 pub fn runner_logger_to<W: Write + Send + 'static>(io: W) -> Logger {
     let drain = Mutex::new(runner_json(io)).fuse();
     Logger::root(drain, slog::o!())
+}
+
+/// `value`, displayed and cut to [`FIELD_CAP`] bytes at a character boundary.
+pub fn capped<T: Display>(value: T) -> String {
+    let mut text = value.to_string();
+    text.truncate(text.floor_char_boundary(FIELD_CAP));
+    text
 }
 
 /// Writes each record as one flushed JSON line; `serde_json` escapes C0 control characters, so a logged value cannot split it.
@@ -183,5 +195,15 @@ mod tests {
             record["record_bytes"].as_u64().unwrap() > 100 * 1024,
             "{record}"
         );
+    }
+
+    #[test]
+    fn a_long_value_is_cut_at_a_char_boundary() {
+        // The cap falls inside a 3-byte `€`: fails if the cut panics there, as a plain
+        // `truncate` does, or keeps other than the whole characters that fit.
+        let len = capped("€".repeat(FIELD_CAP)).len();
+
+        assert!(len <= FIELD_CAP, "{len} bytes");
+        assert!(len + '€'.len_utf8() > FIELD_CAP, "{len} bytes");
     }
 }

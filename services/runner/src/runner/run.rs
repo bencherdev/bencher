@@ -64,8 +64,8 @@ impl TryFrom<CliRun> for Run {
 }
 
 impl Run {
-    pub fn exec(self) -> Result<(), RunnerCliError> {
-        bencher_runner::run_with_args(&self.args)?;
+    pub fn exec(self, log: &slog::Logger) -> Result<(), RunnerCliError> {
+        bencher_runner::run_with_args(log, &self.args)?;
         Ok(())
     }
 }

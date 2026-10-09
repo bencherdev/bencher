@@ -1,10 +1,9 @@
 //! Cgroup v2 management for resource limits.
 
-#![expect(clippy::print_stderr, reason = "cgroup setup prints diagnostics")]
-
 use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
+use slog::{Logger, info, warn};
 
 use crate::RunnerError;
 use crate::cpu::CpuLayout;
@@ -19,6 +18,7 @@ pub(crate) const BENCHER_CGROUP_BASE: &str = "bencher";
 
 /// A cgroup manager for a single run.
 pub struct CgroupManager {
+    log: Logger,
     cgroup_path: Utf8PathBuf,
     created: bool,
     /// Raised when this cgroup could not be removed, which holds the chroot that
@@ -29,12 +29,17 @@ pub struct CgroupManager {
 
 impl CgroupManager {
     /// Create a new cgroup for the given microVM.
-    pub fn new(vm_id: &VmId, cgroup_survived: CgroupSurvived) -> Result<Self, RunnerError> {
-        Self::new_at(Utf8Path::new(CGROUP_ROOT), vm_id, cgroup_survived)
+    pub fn new(
+        log: &Logger,
+        vm_id: &VmId,
+        cgroup_survived: CgroupSurvived,
+    ) -> Result<Self, RunnerError> {
+        Self::new_at(log, Utf8Path::new(CGROUP_ROOT), vm_id, cgroup_survived)
     }
 
     /// Takes the cgroup root so a test can stand a scratch cgroup in for it.
     fn new_at(
+        log: &Logger,
         cgroup_root: &Utf8Path,
         vm_id: &VmId,
         cgroup_survived: CgroupSurvived,
@@ -48,7 +53,7 @@ impl CgroupManager {
         })?;
 
         // On every Job, since `bencher/` may be new since startup.
-        let controllers = ensure_controllers(cgroup_root)?;
+        let controllers = ensure_controllers(log, cgroup_root)?;
 
         // Create this run's cgroup, claiming it only when a stat shows it was
         // absent, because `Drop` removes whatever this claims.
@@ -71,6 +76,7 @@ impl CgroupManager {
         };
 
         Ok(Self {
+            log: log.clone(),
             cgroup_path,
             created,
             cgroup_survived,
@@ -84,6 +90,7 @@ impl CgroupManager {
     #[must_use]
     pub fn detached(cgroup_path: Utf8PathBuf) -> Self {
         Self {
+            log: crate::log::discard(),
             cgroup_path,
             created: false,
             cgroup_survived: CgroupSurvived::default(),
@@ -267,7 +274,7 @@ impl CgroupManager {
     /// job's sweep.
     pub fn kill_all(&self) {
         if let Err(e) = self.write_file("cgroup.kill", "1") {
-            eprintln!("Warning: failed to kill cgroup subtree: {e}");
+            warn!(self.log, "Cgroup subtree not killed"; "cgroup" => self.cgroup_path.as_str(), "error" => %e);
         }
     }
 
@@ -285,9 +292,10 @@ impl CgroupManager {
             Ok(false) => self.created = false,
             Ok(true) => {
                 if let Err(e) = fs::remove_dir(&self.cgroup_path) {
-                    eprintln!(
-                        "Warning: failed to remove cgroup {}: {e}. Something is still in it, so the next job sweeps it along with the jail that names it.",
-                        self.cgroup_path
+                    // Something is still in it, so the next job sweeps it with the jail that names it.
+                    warn!(self.log, "Cgroup not removed, left for the next sweep";
+                        "cgroup" => self.cgroup_path.as_str(),
+                        "error" => %e,
                     );
                     self.cgroup_survived.set();
                 } else {
@@ -295,9 +303,9 @@ impl CgroupManager {
                 }
             },
             Err(e) => {
-                eprintln!(
-                    "Warning: cannot tell whether cgroup {} is still there: {e}. It is treated as still there, so the next job sweeps it along with the jail that names it.",
-                    self.cgroup_path
+                warn!(self.log, "Cgroup unreadable, left for the next sweep";
+                    "cgroup" => self.cgroup_path.as_str(),
+                    "error" => %e,
                 );
                 self.cgroup_survived.set();
             },
@@ -339,13 +347,17 @@ pub(crate) fn effective_mems(cgroup: &Utf8Path) -> Result<String, std::io::Error
 /// One per write because a write is all or nothing, and once `bencher/`
 /// enables a controller the kernel refuses systemd's removal of it from the
 /// root with `EBUSY`.
-pub(crate) fn ensure_controllers(cgroup_root: &Utf8Path) -> Result<Controllers, JailError> {
-    ensure_controllers_with(cgroup_root, |path, value| fs::write(path, value))
+pub(crate) fn ensure_controllers(
+    log: &Logger,
+    cgroup_root: &Utf8Path,
+) -> Result<Controllers, JailError> {
+    ensure_controllers_with(log, cgroup_root, |path, value| fs::write(path, value))
 }
 
 /// The writer is injectable because only cgroupfs gives these writes their
 /// meaning, so the unit tests stand in a fake of it.
 fn ensure_controllers_with<W>(
+    log: &Logger,
     cgroup_root: &Utf8Path,
     mut write: W,
 ) -> Result<Controllers, JailError>
@@ -383,8 +395,10 @@ where
         .filter(|controller| !CONTROLLERS.contains(controller))
     {
         if let Err(e) = write(&subtree_control, &format!("-{other}")) {
-            eprintln!(
-                "Warning: the {other} controller could not be disabled in {subtree_control}, so Jobs run with it: {e}"
+            warn!(log, "Cgroup controller not disabled, so Jobs run with it";
+                "controller" => other,
+                "path" => subtree_control.as_str(),
+                "error" => %e,
             );
         }
     }
@@ -586,8 +600,8 @@ const REMOVE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50
 
 /// Remove the cgroup a swept jail left behind, only after its VMM has been
 /// reaped, since `rmdir` fails on a cgroup that still holds a process.
-pub(crate) fn remove_stale_cgroup(vm_id: &VmId) -> Result<(), JailError> {
-    remove_stale_cgroup_at(vm_cgroup(vm_id.as_str()))
+pub(crate) fn remove_stale_cgroup(log: &Logger, vm_id: &VmId) -> Result<(), JailError> {
+    remove_stale_cgroup_at(log, vm_cgroup(vm_id.as_str()))
 }
 
 /// Refuse to measure while another Bencher cgroup holds a process.
@@ -675,7 +689,7 @@ pub(crate) fn vm_cgroup(vm_id: &str) -> Utf8PathBuf {
 
 /// Takes the path so tests can exercise the retry policy outside
 /// `/sys/fs/cgroup`.
-fn remove_stale_cgroup_at(path: Utf8PathBuf) -> Result<(), JailError> {
+fn remove_stale_cgroup_at(log: &Logger, path: Utf8PathBuf) -> Result<(), JailError> {
     // The caller deletes the chroot, the only handle a later sweep has, on
     // `Ok`, so a failed stat must not pass for "already gone".
     match path.try_exists() {
@@ -688,7 +702,7 @@ fn remove_stale_cgroup_at(path: Utf8PathBuf) -> Result<(), JailError> {
     loop {
         match fs::remove_dir(&path) {
             Ok(()) => {
-                eprintln!("Removed stale cgroup {path} left by a previous runner");
+                info!(log, "Removed a stale cgroup"; "cgroup" => path.as_str());
                 return Ok(());
             },
             // Someone else removed it first; only a stat that succeeded counts.
@@ -723,6 +737,7 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use super::*;
+    use crate::log::discard;
 
     fn cpuset_tree(effective: &str) -> (tempfile::TempDir, CgroupManager) {
         // The mems written here derive from a parent with no
@@ -821,6 +836,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let manager = CgroupManager {
+            log: discard(),
             cgroup_path: root.join("bencher").join("vm"),
             created: false,
             cgroup_survived: CgroupSurvived::default(),
@@ -850,6 +866,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let manager = CgroupManager {
+            log: discard(),
             cgroup_path: root.clone(),
             created: false,
             cgroup_survived: CgroupSurvived::default(),
@@ -941,7 +958,7 @@ mod tests {
 
     fn ensure_logged(cgroupfs: &FakeCgroupfs) -> (Controllers, Vec<(Utf8PathBuf, String)>) {
         let mut writes = Vec::new();
-        let controllers = ensure_controllers_with(&cgroupfs.root, |path, value| {
+        let controllers = ensure_controllers_with(&discard(), &cgroupfs.root, |path, value| {
             writes.push((path.to_owned(), value.to_owned()));
             cgroupfs.write(path, value)
         })
@@ -1016,7 +1033,7 @@ mod tests {
         let cgroupfs =
             FakeCgroupfs::new(EVERY_CONTROLLER, "cpuset memory pids", "cpuset memory pids");
 
-        let controllers = ensure_controllers_with(&cgroupfs.root, |_, _| {
+        let controllers = ensure_controllers_with(&discard(), &cgroupfs.root, |_, _| {
             Err(std::io::Error::from_raw_os_error(libc::EACCES))
         })
         .unwrap();
@@ -1053,7 +1070,7 @@ mod tests {
         let cgroupfs = FakeCgroupfs::new(EVERY_CONTROLLER, "memory pids", "");
         let root = cgroupfs.root_subtree_control();
 
-        let controllers = ensure_controllers_with(&cgroupfs.root, |path, value| {
+        let controllers = ensure_controllers_with(&discard(), &cgroupfs.root, |path, value| {
             if *path == root && value == "+cpuset" {
                 Err(std::io::Error::from_raw_os_error(libc::EACCES))
             } else {
@@ -1077,11 +1094,14 @@ mod tests {
         let cgroupfs = FakeCgroupfs::new(EVERY_CONTROLLER, "memory pids", "");
         fs::remove_file(cgroupfs.root.join("cgroup.controllers")).unwrap();
 
-        ensure_controllers_with(&cgroupfs.root, |path, value| cgroupfs.write(path, value))
-            .unwrap_err();
+        ensure_controllers_with(&discard(), &cgroupfs.root, |path, value| {
+            cgroupfs.write(path, value)
+        })
+        .unwrap_err();
     }
 
     #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
     fn a_root_systemd_left_idle_still_gives_the_vm_cgroup_its_controllers() {
         // Stands a scratch cgroup in for a root systemd keeps at `memory pids`
         // between logins, so a host that enables every controller in its real
@@ -1097,8 +1117,13 @@ mod tests {
             fs::write(scratch.path().join(SUBTREE_CONTROL), controller).unwrap();
         }
 
-        let manager =
-            CgroupManager::new_at(scratch.path(), &VmId::new(), CgroupSurvived::default()).unwrap();
+        let manager = CgroupManager::new_at(
+            &discard(),
+            scratch.path(),
+            &VmId::new(),
+            CgroupSurvived::default(),
+        )
+        .unwrap();
 
         assert!(
             manager.path().join("cpuset.cpus.effective").exists(),
@@ -1193,12 +1218,14 @@ mod tests {
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
         let ours = CgroupManager {
+            log: discard(),
             cgroup_path: root.join("ours"),
             created: true,
             cgroup_survived: CgroupSurvived::default(),
             controllers: Controllers::enabled(),
         };
         let theirs = CgroupManager {
+            log: discard(),
             cgroup_path: root.join("theirs"),
             created: false,
             cgroup_survived: CgroupSurvived::default(),
@@ -1236,7 +1263,7 @@ mod tests {
         fs::create_dir_all(stuck.join("occupant")).unwrap();
 
         let start = std::time::Instant::now();
-        remove_stale_cgroup_at(stuck.clone()).unwrap_err();
+        remove_stale_cgroup_at(&discard(), stuck.clone()).unwrap_err();
 
         assert!(
             start.elapsed() < REMOVE_TIMEOUT,
@@ -1250,7 +1277,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
 
-        remove_stale_cgroup_at(root.join("absent")).unwrap();
+        remove_stale_cgroup_at(&discard(), root.join("absent")).unwrap();
     }
 
     #[test]
@@ -1260,7 +1287,7 @@ mod tests {
         let stale = root.join("stale");
         fs::create_dir_all(&stale).unwrap();
 
-        remove_stale_cgroup_at(stale.clone()).unwrap();
+        remove_stale_cgroup_at(&discard(), stale.clone()).unwrap();
 
         assert!(!stale.exists());
     }
@@ -1343,6 +1370,7 @@ mod tests {
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let survived = CgroupSurvived::default();
         let mut manager = CgroupManager {
+            log: discard(),
             cgroup_path: root.join("stuck"),
             created: true,
             cgroup_survived: survived.clone(),
@@ -1366,6 +1394,7 @@ mod tests {
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let survived = CgroupSurvived::default();
         let mut manager = CgroupManager {
+            log: discard(),
             cgroup_path: root.join("gone"),
             created: true,
             cgroup_survived: survived.clone(),

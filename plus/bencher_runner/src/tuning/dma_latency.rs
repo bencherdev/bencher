@@ -9,8 +9,9 @@
 //! unlike per-cpu `cpuidle/state*/disable` writes.
 
 use camino::Utf8Path;
+use slog::{Logger, info};
 
-use super::TuningGuard;
+use super::{TuningGuard, log_failed, log_skipped};
 
 /// PM `QoS` device node.
 pub(super) const CPU_DMA_LATENCY: &str = "/dev/cpu_dma_latency";
@@ -26,28 +27,29 @@ const ZERO_LATENCY: [u8; 4] = [0; 4];
 /// The opened file is pushed onto the guard so the constraint stays active
 /// until the guard drops. Missing device nodes (e.g., kernels without
 /// `CONFIG_CPU_IDLE`) are skipped with an informational message.
-pub(super) fn hold_dma_latency(guard: &mut TuningGuard, path: &Utf8Path) {
+pub(super) fn hold_dma_latency(log: &Logger, guard: &mut TuningGuard, path: &Utf8Path) {
     use std::io::Write as _;
 
     if !path.exists() {
-        println!("  Tuning: C-states - skipped (path not found)");
+        log_skipped(log, "C-states", "path not found");
         return;
     }
 
     let mut file = match std::fs::OpenOptions::new().write(true).open(path) {
         Ok(file) => file,
         Err(e) => {
-            println!("  Tuning: C-states - skipped (open failed: {e})");
+            log_failed(log, "C-states", "open failed", &e);
             return;
         },
     };
 
     if let Err(e) = file.write_all(&ZERO_LATENCY) {
-        println!("  Tuning: C-states - skipped (write failed: {e})");
+        log_failed(log, "C-states", "write failed", &e);
         return;
     }
 
-    println!("  Tuning: C-states - max exit latency held at 0 us (released on exit)");
+    // The value is the maximum exit latency in microseconds, held until the runner exits.
+    info!(log, "Tuning"; "setting" => "C-states", "action" => "set", "value" => "0");
     guard.held_fds.push(file);
 }
 
@@ -68,7 +70,11 @@ mod tests {
         std::fs::write(&path, [0xffu8; 4]).unwrap();
 
         let mut guard = empty_guard();
-        hold_dma_latency(&mut guard, Utf8Path::new(path.to_str().unwrap()));
+        hold_dma_latency(
+            &crate::log::discard(),
+            &mut guard,
+            Utf8Path::new(path.to_str().unwrap()),
+        );
 
         assert_eq!(guard.held_fds.len(), 1);
         // The write starts at offset 0 and covers all 4 original bytes.
@@ -79,7 +85,11 @@ mod tests {
     #[test]
     fn skips_missing_path() {
         let mut guard = empty_guard();
-        hold_dma_latency(&mut guard, Utf8Path::new("/nonexistent/cpu_dma_latency"));
+        hold_dma_latency(
+            &crate::log::discard(),
+            &mut guard,
+            Utf8Path::new("/nonexistent/cpu_dma_latency"),
+        );
         assert!(guard.held_fds.is_empty());
     }
 
@@ -90,7 +100,11 @@ mod tests {
         std::fs::write(&path, []).unwrap();
 
         let mut guard = empty_guard();
-        hold_dma_latency(&mut guard, Utf8Path::new(path.to_str().unwrap()));
+        hold_dma_latency(
+            &crate::log::discard(),
+            &mut guard,
+            Utf8Path::new(path.to_str().unwrap()),
+        );
         assert_eq!(guard.held_fds.len(), 1);
         // Dropping the guard must not panic and releases the fd.
         drop(guard);

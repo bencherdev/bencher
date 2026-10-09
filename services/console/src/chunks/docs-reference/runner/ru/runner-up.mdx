@@ -6,6 +6,7 @@ import Tuning from "./tuning.mdx";
 Это долго работающая команда, используемая для работы с [Self-Hosted Runner][self hosted runners].
 Runner открывает одно [WebSocket-соединение][runner protocol] с API-сервером,
 берёт Job, соответствующие его Spec, выполняет их и сообщает результаты обратно.
+Runner пишет свой журнал в stderr в формате JSON, по одному объекту на строку, а вывод Job записывает только как количество байтов.
 
 ```
 runner up [OPTIONS]

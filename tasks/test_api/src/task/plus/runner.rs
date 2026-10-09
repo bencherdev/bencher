@@ -218,13 +218,12 @@ impl RunnerTest {
                 "test-runner-no-sandbox",
                 "--danger-allow-no-sandbox",
             ])
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::piped())
             .spawn()?;
 
-        let no_sandbox_reader_handle = wait_for_stdout_ready(
+        let no_sandbox_reader_handle = wait_for_polling(
             &mut no_sandbox_child,
-            "Polling for jobs",
             "no-sandbox-runner",
             std::time::Duration::from_secs(30),
         );
@@ -362,8 +361,8 @@ impl ElevatedRunner {
             ])
             .arg("--state-dir")
             .arg(&state_dir)
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::inherit());
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::piped());
         // Its own process group, so teardown can signal the runner even
         // though the child handle is sudo, which may exec the runner in
         // place or fork it depending on version and configuration.
@@ -376,9 +375,8 @@ impl ElevatedRunner {
             reader: None,
             state_dir,
         };
-        runner.reader = Some(wait_for_stdout_ready(
+        runner.reader = Some(wait_for_polling(
             &mut runner.child,
-            "Polling for jobs",
             "runner",
             std::time::Duration::from_secs(30),
         ));
@@ -389,7 +387,7 @@ impl ElevatedRunner {
 impl Drop for ElevatedRunner {
     fn drop(&mut self) {
         kill_elevated_runner(&mut self.child);
-        // The kill closes the daemon's stdout, which ends the reader.
+        // The kill closes the daemon's stderr, which ends the reader.
         if let Some(reader) = self.reader.take() {
             let _join = reader.join();
         }
@@ -1724,17 +1722,16 @@ fn musl_target_triple() -> anyhow::Result<&'static str> {
     }
 }
 
-/// Waits for a child process to print a line containing `sentinel` to stdout.
+/// Waits for a daemon to log that it is polling for jobs.
 ///
-/// Spawns a reader thread that forwards all stdout lines to the test console
-/// (prefixed with `[{label}]`) and sets a flag when the sentinel is found.
+/// Spawns a reader thread that forwards all stderr lines to the test console
+/// (prefixed with `[{label}]`) and sets a flag once one says so.
 /// Returns the reader thread handle for cleanup after the test.
 ///
-/// Panics if the sentinel is not found within `timeout`.
+/// Panics if no such line arrives within `timeout`.
 #[cfg(feature = "plus")]
-fn wait_for_stdout_ready(
+fn wait_for_polling(
     child: &mut std::process::Child,
-    sentinel: &str,
     label: &str,
     timeout: std::time::Duration,
 ) -> std::thread::JoinHandle<()> {
@@ -1743,21 +1740,20 @@ fn wait_for_stdout_ready(
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::time::Instant;
 
-    let stdout = child
-        .stdout
+    let stderr = child
+        .stderr
         .take()
-        .expect("stdout should be piped for readiness detection");
+        .expect("stderr should be piped for readiness detection");
     let ready = Arc::new(AtomicBool::new(false));
     let ready_clone = Arc::clone(&ready);
-    let thread_sentinel = sentinel.to_owned();
     let thread_label = label.to_owned();
 
     let handle = std::thread::spawn(move || {
-        let reader = std::io::BufReader::new(stdout);
+        let reader = std::io::BufReader::new(stderr);
         for line in reader.lines() {
             let Ok(line) = line else { break };
             println!("[{thread_label}] {line}");
-            if line.contains(&thread_sentinel) {
+            if polling(&line) {
                 ready_clone.store(true, Ordering::SeqCst);
             }
         }
@@ -1767,12 +1763,26 @@ fn wait_for_stdout_ready(
     while !ready.load(Ordering::SeqCst) {
         assert!(
             start.elapsed() < timeout,
-            "Timed out waiting for '{sentinel}' from [{label}]"
+            "Timed out waiting for [{label}] to poll for jobs"
         );
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
 
     handle
+}
+
+/// The daemon first says it is polling in the channel's own record, and again
+/// after each Job.
+#[cfg(feature = "plus")]
+fn polling(line: &str) -> bool {
+    const POLLING: &str = "Polling for jobs";
+    let Ok(serde_json::Value::Object(record)) = serde_json::from_str(line) else {
+        return false;
+    };
+    let field = |key| record.get(key).and_then(serde_json::Value::as_str);
+    field("msg") == Some(POLLING)
+        || (field("msg") == Some("Channel")
+            && field("detail").is_some_and(|detail| detail.contains(POLLING)))
 }
 
 #[cfg(all(test, unix))]

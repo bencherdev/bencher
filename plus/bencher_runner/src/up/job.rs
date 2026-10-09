@@ -3,9 +3,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use bencher_json::JsonClaimedJob;
 use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
-use bencher_json::{JobUuid, JsonClaimedJob};
 use camino::Utf8PathBuf;
+use slog::{Logger, error, info, o, warn};
 
 use super::UpConfig;
 use super::state_machine::JobFinishResult;
@@ -35,18 +36,15 @@ fn check_sandbox_allowed(
     }
 }
 
-#[expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    clippy::use_debug,
-    reason = "runner CLI output for job execution status"
-)]
+/// Every record of the Job carries its `job`.
 pub fn execute_job(
+    log: &Logger,
     config: &UpConfig,
     job: &JsonClaimedJob,
     ws: &Arc<Mutex<JobChannel>>,
     host: &mut crate::jail::HostPreparation,
 ) -> JobFinishResult {
+    let log = &log.new(o!("job" => job.uuid.to_string()));
     // The Runner has just sent `Running`, which starts the server's clock too.
     let deadline = JobDeadline::start(Duration::from_secs(job.config.timeout.as_secs()));
 
@@ -73,8 +71,8 @@ pub fn execute_job(
 
     let cancel_flag = Arc::new(AtomicBool::new(false));
     let stop_flag = Arc::new(AtomicBool::new(false));
-    let heartbeat = spawn_heartbeat_thread(config, ws, &cancel_flag, &stop_flag);
-    let stop_watcher = spawn_stop_watcher(config, &cancel_flag, &stop_flag);
+    let heartbeat = spawn_heartbeat_thread(log, config, ws, &cancel_flag, &stop_flag);
+    let stop_watcher = spawn_stop_watcher(log, config, &cancel_flag, &stop_flag);
 
     let build_time = job_config.build_time;
     let file_size = job_config.file_size;
@@ -82,7 +80,7 @@ pub fn execute_job(
         match build_benchmark_name(job) {
             Ok(name) => Some(name),
             Err(e) => {
-                eprintln!("Warning: failed to derive benchmark name for build time: {e}");
+                warn!(log, "No benchmark name for the build time"; "error" => bencher_logger::capped(&e));
                 None
             },
         }
@@ -93,7 +91,7 @@ pub fn execute_job(
     // Execute benchmark iterations, passing cancel_flag so the vsock poll loop
     // can abort early when the server cancels or the runner stops.
     let iterations = run_iterations(
-        job.uuid,
+        log,
         iter_count,
         allow_failure,
         deadline,
@@ -101,6 +99,7 @@ pub fn execute_job(
         |deadline| {
             let start = build_time.then(std::time::Instant::now);
             let output = crate::execute_with_deadline(
+                log,
                 &job_config,
                 host,
                 Some(cancel_flag.as_ref()),
@@ -108,6 +107,7 @@ pub fn execute_job(
             )?;
             let elapsed = start.map(|s| s.elapsed());
             Ok(output_to_iteration(
+                log,
                 output,
                 elapsed,
                 file_size,
@@ -118,34 +118,29 @@ pub fn execute_job(
 
     // Stop the heartbeat and stop watcher threads
     stop_flag.store(true, Ordering::SeqCst);
-    if let Err(panic) = heartbeat.join() {
-        eprintln!("Warning: heartbeat thread panicked: {panic:?}");
+    if heartbeat.join().is_err() {
+        warn!(log, "Thread panicked"; "thread" => "heartbeat");
     }
-    let stopped = stop_watcher.join().unwrap_or_else(|panic| {
-        eprintln!("Warning: stop watcher thread panicked: {panic:?}");
+    let stopped = stop_watcher.join().unwrap_or_else(|_panic| {
+        warn!(log, "Thread panicked"; "thread" => "stop watcher");
         false
     });
     if stopped {
-        println!("Job {} stopped with the runner", job.uuid);
+        info!(log, "Job stopped with the runner");
         return iterations.stopped();
     }
 
     let canceled = cancel_flag.load(Ordering::SeqCst);
     if canceled {
-        println!("Job {} was canceled by server", job.uuid);
+        info!(log, "Job canceled by the server");
     }
     iterations.finish(canceled)
 }
 
 /// Runs the Job's iterations, each with what is left of `deadline`, until one
 /// fails, the server cancels, or the time runs out.
-#[expect(
-    clippy::print_stdout,
-    clippy::print_stderr,
-    reason = "runner CLI output"
-)]
 fn run_iterations<F>(
-    job: JobUuid,
+    log: &Logger,
     iter_count: usize,
     allow_failure: bool,
     deadline: JobDeadline,
@@ -171,10 +166,7 @@ where
             ));
             break;
         }
-        println!(
-            "Starting iteration {}/{iter_count} for job {job}",
-            iteration + 1
-        );
+        info!(log, "Starting iteration"; "iteration" => iteration + 1, "iterations" => iter_count);
         match run(deadline) {
             Ok(output) => {
                 iterations.last_exit_code = output.exit_code;
@@ -191,9 +183,10 @@ where
             // A failure with no time left ends the Job, since no later
             // iteration could run either.
             Err(e) if allow_failure && !deadline.remaining().is_zero() => {
-                eprintln!(
-                    "Iteration {}/{iter_count} failed (allow_failure=true, skipping): {e}",
-                    iteration + 1
+                warn!(log, "Iteration failed, skipped under allow_failure";
+                    "iteration" => iteration + 1,
+                    "iterations" => iter_count,
+                    "error" => bencher_logger::capped(&e),
                 );
             },
             Err(e) => {
@@ -270,13 +263,19 @@ fn build_benchmark_name(
 }
 
 fn output_to_iteration(
+    log: &Logger,
     output: crate::RunOutput,
     build_time: Option<Duration>,
     file_size: bool,
     benchmark_name: Option<&bencher_json::BenchmarkName>,
 ) -> JsonIterationOutput {
-    let file_output =
-        build_metric_output(build_time, file_size, output.output_files, benchmark_name);
+    let file_output = build_metric_output(
+        log,
+        build_time,
+        file_size,
+        output.output_files,
+        benchmark_name,
+    );
     JsonIterationOutput {
         exit_code: output.exit_code,
         stdout: if output.stdout.is_empty() {
@@ -293,8 +292,8 @@ fn output_to_iteration(
     }
 }
 
-#[expect(clippy::print_stderr, reason = "runner CLI warning output")]
 fn build_metric_output(
+    log: &Logger,
     build_time: Option<Duration>,
     file_size: bool,
     output_files: Option<Vec<(Utf8PathBuf, Vec<u8>)>>,
@@ -338,7 +337,10 @@ fn build_metric_output(
                     ));
                 },
                 Err(e) => {
-                    eprintln!("Warning: skipping file size metric for {path}: {e}");
+                    warn!(log, "File size metric skipped";
+                        "path" => bencher_logger::capped(path),
+                        "error" => bencher_logger::capped(&e),
+                    );
                 },
             }
         }
@@ -369,7 +371,7 @@ fn build_metric_output(
     let bmf_json = match serde_json::to_string(&results) {
         Ok(json) => json,
         Err(e) => {
-            eprintln!("Warning: failed to serialize build metrics: {e}");
+            warn!(log, "Metrics not serialized"; "error" => bencher_logger::capped(&e));
             return None;
         },
     };
@@ -490,8 +492,8 @@ fn build_config_from_job(
     Ok(runner_config)
 }
 
-#[expect(clippy::print_stderr, reason = "runner CLI warning output")]
 fn spawn_heartbeat_thread(
+    log: &Logger,
     config: &UpConfig,
     ws: &Arc<Mutex<JobChannel>>,
     cancel_flag: &Arc<AtomicBool>,
@@ -501,20 +503,21 @@ fn spawn_heartbeat_thread(
     let cancel_heartbeat = Arc::clone(cancel_flag);
     let stop_heartbeat = Arc::clone(stop_flag);
     let housekeeping_cores = housekeeping_cores(config);
+    let log = log.clone();
     std::thread::spawn(move || {
         if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
-            eprintln!("Warning: failed to pin heartbeat thread to housekeeping cores: {e}");
+            warn!(log, "Thread not pinned to housekeeping cores"; "thread" => "heartbeat", "error" => %e);
         }
-        heartbeat_loop(&ws_heartbeat, &cancel_heartbeat, &stop_heartbeat);
+        heartbeat_loop(&log, &ws_heartbeat, &cancel_heartbeat, &stop_heartbeat);
     })
 }
 
-#[expect(
-    clippy::print_stderr,
-    clippy::use_debug,
-    reason = "runner CLI error output for heartbeat failures"
-)]
-fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_flag: &AtomicBool) {
+fn heartbeat_loop(
+    log: &Logger,
+    ws: &Arc<Mutex<JobChannel>>,
+    cancel_flag: &AtomicBool,
+    stop_flag: &AtomicBool,
+) {
     loop {
         std::thread::sleep(Duration::from_secs(1));
 
@@ -525,7 +528,7 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
         let mut ws_guard = match ws.lock() {
             Ok(guard) => guard,
             Err(e) => {
-                eprintln!("ERROR: heartbeat lock poisoned: {e}");
+                error!(log, "Heartbeat lock poisoned"; "error" => %e);
                 break;
             },
         };
@@ -545,7 +548,9 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
             Ok(Some(
                 msg @ (ServerMessage::Job(_) | ServerMessage::NoJob | ServerMessage::Update { .. }),
             )) => {
-                eprintln!("Warning: unexpected {msg:?} during job execution heartbeat");
+                warn!(log, "Unexpected server message during the Job";
+                    "detail" => bencher_logger::capped(format!("{msg:?}")),
+                );
             },
             Err(_) => break,
         }
@@ -557,8 +562,8 @@ const STOP_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 /// Turns the runner's stop into the Job's cancel, so the teardown kills the
 /// VMM before the service manager's stop timeout kills the runner.
-#[expect(clippy::print_stderr, reason = "runner CLI warning output")]
 fn spawn_stop_watcher(
+    log: &Logger,
     config: &UpConfig,
     cancel_flag: &Arc<AtomicBool>,
     done_flag: &Arc<AtomicBool>,
@@ -566,9 +571,10 @@ fn spawn_stop_watcher(
     let cancel = Arc::clone(cancel_flag);
     let done = Arc::clone(done_flag);
     let housekeeping_cores = housekeeping_cores(config);
+    let log = log.clone();
     std::thread::spawn(move || {
         if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
-            eprintln!("Warning: failed to pin stop watcher thread to housekeeping cores: {e}");
+            warn!(log, "Thread not pinned to housekeeping cores"; "thread" => "stop watcher", "error" => %e);
         }
         cancel_on_stop(crate::signal::stop_flag(), &cancel, &done)
     })
@@ -604,6 +610,7 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use crate::ExecutionError;
+    use crate::log::discard;
     use crate::units::mib_to_bytes;
     use bencher_json::{Cpu, Disk, Memory};
 
@@ -1070,7 +1077,7 @@ mod tests {
         let mut left = Vec::new();
 
         let iterations = run_iterations(
-            test_job_uuid(),
+            &discard(),
             3,
             false,
             JobDeadline::start(Duration::from_mins(1)),
@@ -1097,7 +1104,7 @@ mod tests {
         let mut started = 0;
 
         let iterations = run_iterations(
-            test_job_uuid(),
+            &discard(),
             3,
             false,
             JobDeadline::start(Duration::from_secs(1)),
@@ -1131,7 +1138,7 @@ mod tests {
         let mut started = 0;
 
         let iterations = run_iterations(
-            test_job_uuid(),
+            &discard(),
             2,
             true,
             JobDeadline::start(Duration::from_secs(1)),
@@ -1163,7 +1170,7 @@ mod tests {
         let mut started = 0;
 
         let iterations = run_iterations(
-            test_job_uuid(),
+            &discard(),
             2,
             true,
             JobDeadline::start(Duration::from_mins(1)),
@@ -1257,10 +1264,6 @@ mod tests {
         };
         assert_eq!(error, "the runner stopped", "the user sees why");
         assert_eq!(results.len(), 1, "the finished iteration's result is kept");
-    }
-
-    fn test_job_uuid() -> JobUuid {
-        "550e8400-e29b-41d4-a716-446655440000".parse().unwrap()
     }
 
     fn iteration_output() -> JsonIterationOutput {
@@ -1378,7 +1381,7 @@ mod tests {
     #[test]
     fn output_no_metrics_no_files() {
         let output = test_output("hello stdout", None);
-        let result = output_to_iteration(output, None, false, None);
+        let result = output_to_iteration(&discard(), output, None, false, None);
         assert_eq!(result.exit_code, 0);
         assert_eq!(result.stdout.as_deref(), Some("hello stdout"));
         assert_eq!(result.stderr.as_deref(), Some("some stderr"));
@@ -1388,7 +1391,7 @@ mod tests {
     #[test]
     fn output_no_metrics_with_files() {
         let output = test_output("hello", Some(vec![("/tmp/out.json", b"{\"data\":1}")]));
-        let result = output_to_iteration(output, None, false, None);
+        let result = output_to_iteration(&discard(), output, None, false, None);
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         assert_eq!(files.len(), 1);
@@ -1403,7 +1406,7 @@ mod tests {
         let name = default_benchmark_name();
         let duration = Duration::from_millis(3140);
         let output = test_output("hello", None);
-        let result = output_to_iteration(output, Some(duration), false, Some(&name));
+        let result = output_to_iteration(&discard(), output, Some(duration), false, Some(&name));
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         assert_eq!(files.len(), 1);
@@ -1425,7 +1428,7 @@ mod tests {
         let name = default_benchmark_name();
         let duration = Duration::from_secs(1);
         let output = test_output("hello", Some(vec![("/tmp/out.json", b"file data")]));
-        let result = output_to_iteration(output, Some(duration), false, Some(&name));
+        let result = output_to_iteration(&discard(), output, Some(duration), false, Some(&name));
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         assert!(files.values().any(|v| v.contains("build-time")));
@@ -1435,7 +1438,7 @@ mod tests {
     #[test]
     fn output_file_size_with_files() {
         let output = test_output("hello", Some(vec![("/tmp/out.bin", &[0u8; 1024])]));
-        let result = output_to_iteration(output, None, true, None);
+        let result = output_to_iteration(&discard(), output, None, true, None);
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
@@ -1458,7 +1461,13 @@ mod tests {
             .map(|path| (path.as_str(), b"x".as_slice()))
             .chain(last.iter().map(|path| (path.as_str(), b"xx".as_slice())))
             .collect();
-        let result = output_to_iteration(test_output("hello", Some(files)), None, true, None);
+        let result = output_to_iteration(
+            &discard(),
+            test_output("hello", Some(files)),
+            None,
+            true,
+            None,
+        );
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
@@ -1482,7 +1491,7 @@ mod tests {
     #[test]
     fn output_file_size_no_files() {
         let output = test_output("hello", None);
-        let result = output_to_iteration(output, None, true, None);
+        let result = output_to_iteration(&discard(), output, None, true, None);
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         assert!(result.output.is_none());
     }
@@ -1492,7 +1501,7 @@ mod tests {
         let name: bencher_json::BenchmarkName = "-c cargo bench".parse().unwrap();
         let duration = Duration::from_millis(2500);
         let output = test_output("hello", Some(vec![("/tmp/result.bin", &[0u8; 512])]));
-        let result = output_to_iteration(output, Some(duration), true, Some(&name));
+        let result = output_to_iteration(&discard(), output, Some(duration), true, Some(&name));
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
@@ -1511,7 +1520,13 @@ mod tests {
     fn output_build_time_wins_over_a_file_of_the_same_name() {
         let name: bencher_json::BenchmarkName = "make".parse().unwrap();
         let output = test_output("hello", Some(vec![("/out/make", b"binary")]));
-        let result = output_to_iteration(output, Some(Duration::from_secs(2)), true, Some(&name));
+        let result = output_to_iteration(
+            &discard(),
+            output,
+            Some(Duration::from_secs(2)),
+            true,
+            Some(&name),
+        );
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
@@ -1531,7 +1546,7 @@ mod tests {
         let name = default_benchmark_name();
         let duration = Duration::from_secs(5);
         let output = test_output("hello", None);
-        let result = output_to_iteration(output, Some(duration), true, Some(&name));
+        let result = output_to_iteration(&discard(), output, Some(duration), true, Some(&name));
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
@@ -1544,7 +1559,13 @@ mod tests {
         let name = default_benchmark_name();
         let mut output = test_output("hello", None);
         output.exit_code = 42;
-        let result = output_to_iteration(output, Some(Duration::from_secs(1)), true, Some(&name));
+        let result = output_to_iteration(
+            &discard(),
+            output,
+            Some(Duration::from_secs(1)),
+            true,
+            Some(&name),
+        );
         assert_eq!(result.exit_code, 42);
     }
 
@@ -1552,7 +1573,13 @@ mod tests {
     fn output_preserves_stderr() {
         let name = default_benchmark_name();
         let output = test_output("hello", None);
-        let result = output_to_iteration(output, Some(Duration::from_secs(1)), false, Some(&name));
+        let result = output_to_iteration(
+            &discard(),
+            output,
+            Some(Duration::from_secs(1)),
+            false,
+            Some(&name),
+        );
         assert_eq!(result.stderr.as_deref(), Some("some stderr"));
     }
 
@@ -1561,7 +1588,7 @@ mod tests {
         let name: bencher_json::BenchmarkName = "/bin/sh -c cargo build".parse().unwrap();
         let duration = Duration::from_millis(1500);
         let output = test_output("hello", None);
-        let result = output_to_iteration(output, Some(duration), false, Some(&name));
+        let result = output_to_iteration(&discard(), output, Some(duration), false, Some(&name));
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
@@ -1574,7 +1601,7 @@ mod tests {
         let name: bencher_json::BenchmarkName = "/bin/sh -c cargo bench".parse().unwrap();
         let duration = Duration::from_millis(1500);
         let output = test_output("hello", None);
-        let result = output_to_iteration(output, Some(duration), false, Some(&name));
+        let result = output_to_iteration(&discard(), output, Some(duration), false, Some(&name));
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
@@ -1585,7 +1612,7 @@ mod tests {
     fn output_no_build_time_no_benchmark_name() {
         let duration = Duration::from_millis(1500);
         let output = test_output("hello", None);
-        let result = output_to_iteration(output, Some(duration), false, None);
+        let result = output_to_iteration(&discard(), output, Some(duration), false, None);
         // build_time duration is set but no benchmark_name → no build-time metric
         assert!(result.output.is_none());
     }

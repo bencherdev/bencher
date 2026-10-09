@@ -284,10 +284,11 @@ impl HostPreparation {
     #[cfg(target_os = "linux")]
     pub fn ensure(
         &mut self,
+        log: &slog::Logger,
         state_dir: &camino::Utf8Path,
         jail_user: JailUser,
     ) -> Result<(), crate::error::JailError> {
-        self.ensure_as(current_euid(), state_dir, jail_user)
+        self.ensure_as(log, current_euid(), state_dir, jail_user)
     }
 
     /// The uid is a parameter so tests reach past the root check without
@@ -295,6 +296,7 @@ impl HostPreparation {
     #[cfg(target_os = "linux")]
     fn ensure_as(
         &mut self,
+        log: &slog::Logger,
         euid: u32,
         state_dir: &camino::Utf8Path,
         jail_user: JailUser,
@@ -304,7 +306,7 @@ impl HostPreparation {
         check_root(euid)?;
         StateDir::new(state_dir.to_owned())?.create()?;
         if !self.warned_jail_user {
-            warn_on_named_account(jail_user);
+            warn_on_named_account(log, jail_user);
             self.warned_jail_user = true;
         }
         Ok(())
@@ -314,6 +316,7 @@ impl HostPreparation {
     #[cfg(not(target_os = "linux"))]
     pub fn ensure(
         &mut self,
+        _log: &slog::Logger,
         _state_dir: &camino::Utf8Path,
         _jail_user: JailUser,
     ) -> Result<(), crate::error::JailError> {
@@ -343,17 +346,19 @@ pub(crate) fn current_euid() -> u32 {
 /// A warning rather than a refusal, because only the operator can tell a
 /// deliberately created account from an id the host allocated elsewhere.
 #[cfg(target_os = "linux")]
-#[expect(clippy::print_stderr, reason = "host preparation prints diagnostics")]
-fn warn_on_named_account(jail_user: JailUser) {
+fn warn_on_named_account(log: &slog::Logger, jail_user: JailUser) {
     let (uid, gid) = (jail_user.uid(), jail_user.gid());
+    // That account can signal the jailed VMM.
     if let Some(name) = passwd_name(uid) {
-        eprintln!(
-            "Warning: jail uid {uid} belongs to the existing account '{name}'. That account can signal the jailed VMM; pass --jail-uid to pick an unallocated id."
+        slog::warn!(log, "Jail uid belongs to an existing account, pass --jail-uid to pick an unallocated id";
+            "uid" => uid,
+            "account" => bencher_logger::capped(name),
         );
     }
     if let Some(name) = group_name(gid) {
-        eprintln!(
-            "Warning: jail gid {gid} belongs to the existing group '{name}'. Pass --jail-gid to pick an unallocated id."
+        slog::warn!(log, "Jail gid belongs to an existing group, pass --jail-gid to pick an unallocated id";
+            "gid" => gid,
+            "group" => bencher_logger::capped(name),
         );
     }
 }
@@ -391,6 +396,7 @@ fn lookup_name_in(database: &str, id: u32) -> Option<String> {
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::*;
+    use crate::log::discard;
 
     const ROOT_EUID: u32 = 0;
 
@@ -405,7 +411,7 @@ mod tests {
         let mut host = HostPreparation::new();
         for attempt in 1..=3 {
             let err = host
-                .ensure_as(1000, &state_dir, JailUser::default())
+                .ensure_as(&discard(), 1000, &state_dir, JailUser::default())
                 .unwrap_err();
             let message = err.to_string();
             assert!(
@@ -442,12 +448,12 @@ mod tests {
         assert!(!state_dir.exists(), "startup has not prepared anything");
 
         let mut host = HostPreparation::new();
-        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+        host.ensure_as(&discard(), ROOT_EUID, &state_dir, JailUser::default())
             .unwrap();
         assert!(state_dir.join("jail").is_dir(), "the first job prepares");
 
         std::fs::remove_dir_all(&state_dir).unwrap();
-        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+        host.ensure_as(&discard(), ROOT_EUID, &state_dir, JailUser::default())
             .unwrap();
         assert!(
             state_dir.join("jail").join("firecracker").is_dir(),
@@ -467,14 +473,14 @@ mod tests {
         let mut host = HostPreparation::new();
         for attempt in 1..=3 {
             assert!(
-                host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+                host.ensure_as(&discard(), ROOT_EUID, &state_dir, JailUser::default())
                     .is_err(),
                 "attempt {attempt} must fail"
             );
         }
 
         std::fs::remove_dir(state_dir.join("someone-elses-data")).unwrap();
-        host.ensure_as(ROOT_EUID, &state_dir, JailUser::default())
+        host.ensure_as(&discard(), ROOT_EUID, &state_dir, JailUser::default())
             .unwrap();
         assert!(state_dir.join("jail").is_dir());
     }
