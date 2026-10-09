@@ -75,6 +75,10 @@ pub struct CliUp {
     #[arg(long, env = "BENCHER_DANGER_ALLOW_NO_SANDBOX")]
     pub danger_allow_no_sandbox: bool,
 
+    /// Keep taking Jobs while an md RAID array syncs, rebuilds, or scrubs.
+    #[arg(long)]
+    pub no_raid_pause: bool,
+
     /// Disable automatic updates from the server.
     #[arg(long, env = "BENCHER_NO_AUTO_UPDATE")]
     pub no_auto_update: bool,

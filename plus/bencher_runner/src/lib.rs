@@ -31,6 +31,8 @@ mod error;
 pub mod firecracker;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod firecracker_bin;
+#[cfg(feature = "plus")]
+mod host;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod init;
 #[cfg(feature = "plus")]

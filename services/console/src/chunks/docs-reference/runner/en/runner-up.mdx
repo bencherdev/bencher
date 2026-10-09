@@ -90,6 +90,14 @@ Can also be set with the `BENCHER_DANGER_ALLOW_NO_SANDBOX` environment variable.
 The log level for the sandbox process.
 By default, `warning` is used.
 
+### `--no-raid-pause`
+
+Keep taking Jobs while an md RAID array on the host resyncs, recovers, checks, repairs, or reshapes.
+By default, the Runner checks its md arrays before it asks for each Job,
+and while any of them runs one of these it pauses: it takes no new Job until the sync is done,
+and it never stops a Job that is already running.
+A paused Runner stays connected and still updates itself.
+
 ### `--no-auto-update`
 
 Disable automatic updates from the server.
