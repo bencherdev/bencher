@@ -25,7 +25,43 @@ const STATE_DIR: &str = "/var/lib/bencher-runner";
 const STATE_DIR_STAT: &str = "700 root:root directory";
 const RUNNER_BINARY: &str = "/usr/local/bin/runner";
 const ROOT: &str = "root";
-const MASKED_UNITS: [&str; 0] = [];
+// Units with no use on a runner that could wake during a Job; each socket, path, or timer comes before any service it starts.
+const MASKED_UNITS: [&str; 34] = [
+    "thermald.service",
+    "man-db.timer",
+    "motd-news.timer",
+    "update-notifier-download.timer",
+    "update-notifier-motd.timer",
+    "e2scrub_all.timer",
+    "sysstat-collect.timer",
+    "sysstat-summary.timer",
+    "sysstat.service",
+    "ua-timer.timer",
+    "ua-reboot-cmds.service",
+    "ubuntu-advantage.service",
+    "apport-autoreport.path",
+    "apport-autoreport.timer",
+    "apport-forward.socket",
+    "apport.service",
+    "multipathd.socket",
+    "multipathd.service",
+    "iscsid.socket",
+    "open-iscsi.service",
+    "open-vm-tools.service",
+    "vgauth.service",
+    "lxd-installer.socket",
+    "gpu-manager.service",
+    "pollinate.service",
+    "snapd.socket",
+    "snapd.service",
+    "snapd.seeded.service",
+    "snapd.snap-repair.timer",
+    "snapd.apparmor.service",
+    "snapd.autoimport.service",
+    "snapd.core-fixup.service",
+    "snapd.recovery-chooser-trigger.service",
+    "snapd.system-shutdown.service",
+];
 const ABSENT: &str = "absent";
 const FRAME: &str = "desired ";
 
@@ -366,7 +402,10 @@ impl Row {
     fn write(&self) -> Option<String> {
         match self {
             Self::File(file) => file.write(),
-            Self::Masked(unit) => Some(format!("systemctl mask --now {unit}")),
+            // Stopping a running unit leaves it failed, which reads the whole system as degraded.
+            Self::Masked(unit) => Some(format!(
+                "systemctl mask --now {unit} && if systemctl is-failed --quiet {unit}; then systemctl reset-failed {unit}; fi"
+            )),
             Self::Scrub(day) => scrub_write((*day)?),
             Self::Cgroup(_) | Self::StateDir | Self::Binary(_) => None,
         }
@@ -841,6 +880,21 @@ mod tests {
         );
     }
 
+    #[test]
+    fn host_pins_the_scrub_day_before_a_mask_reloads_systemd() {
+        let desired = Desired::new(UpdateChannel::Stable, Some(day(5)));
+        let (writes, _) = desired.writes(&desired.check(&BTreeMap::new(), &mut no_checksum));
+        let scrub = writes
+            .iter()
+            .position(|write| write.contains(SCRUB_DROP_IN))
+            .unwrap();
+        let first_mask = writes
+            .iter()
+            .position(|write| write.starts_with("systemctl mask"))
+            .unwrap();
+        assert!(scrub < first_mask, "{writes:#?}");
+    }
+
     #[cfg(target_os = "linux")]
     mod linux {
         use std::fs::{self, Permissions};
@@ -1099,6 +1153,60 @@ esac
                 fs::remove_file(dir.join("calls")).unwrap();
                 if wrote.is_ok() { Ok(calls) } else { Err(calls) }
             }
+        }
+
+        #[test]
+        fn host_masks_and_stops_every_listed_unit_leaving_none_failed() {
+            let dir = tempfile::tempdir().unwrap();
+            let dir = Utf8Path::from_path(dir.path()).unwrap();
+            // A stand-in for systemctl that keeps the masked and failed units in files: every timer runs, so stopping it leaves it failed, and `gpu-manager` is not installed, so it cannot be reset.
+            write_executable(
+                &dir.join("systemctl"),
+                r#"#!/bin/sh
+state="$(dirname "$0")/masked"
+failed="$(dirname "$0")/failed"
+masked() { grep -qx "$1" "$state" 2>/dev/null; }
+failed() { grep -qx "$1" "$failed" 2>/dev/null; }
+case "$1 $2" in
+  "is-enabled $2") if masked "$2"; then echo masked; exit 1; else echo enabled; fi ;;
+  "is-active $2") if failed "$2"; then echo failed; exit 3; elif masked "$2"; then echo inactive; exit 3; else echo active; fi ;;
+  "mask --now") echo "$3" >> "$state"; case "$3" in *.timer) echo "$3" >> "$failed" ;; esac ;;
+  "is-failed --quiet") failed "$3" ;;
+  "reset-failed gpu-manager.service") exit 1 ;;
+  "reset-failed $2") grep -vx "$2" "$failed" > "$failed.new"; mv "$failed.new" "$failed" ;;
+  *) exit 1 ;;
+esac
+"#,
+            )
+            .unwrap();
+            let fake = |script: &str| sh(dir, &format!("PATH={dir}:$PATH\n{script}"));
+            let masks = || {
+                Desired(
+                    Desired::new(UpdateChannel::Canary, None)
+                        .0
+                        .into_iter()
+                        .filter(|row| matches!(row, Row::Masked(_)))
+                        .collect(),
+                )
+            };
+            let masked = || fs::read_to_string(dir.join("masked")).unwrap();
+            let failed = || fs::read_to_string(dir.join("failed")).unwrap();
+
+            let findings = masks()
+                .apply(fake, fake, &mut no_checksum)
+                .unwrap()
+                .findings;
+            assert_eq!(findings.len(), MASKED_UNITS.len());
+            assert!(
+                findings.iter().all(|finding| !finding.failed()),
+                "{findings:?}"
+            );
+            assert_eq!(masked(), format!("{}\n", MASKED_UNITS.join("\n")));
+            assert_eq!(failed(), "");
+
+            masks().apply(fake, fake, &mut no_checksum).unwrap();
+            assert_eq!(masked(), format!("{}\n", MASKED_UNITS.join("\n")));
+            assert_eq!(failed(), "");
         }
 
         #[test]
