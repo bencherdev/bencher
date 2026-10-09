@@ -8,6 +8,8 @@ interface Preloads {
 	pages: Record<string, string[]>;
 	/** Modules a page imports only when it needs them, by their path under `src/next`. */
 	parts: Record<string, string[]>;
+	/** The public plot's page, which has an entry of its own. */
+	perf: { entry: string[]; parts: Record<string, string[]> };
 }
 
 // The build writes the client's module graph over this placeholder once the
@@ -35,6 +37,20 @@ export const modulePreloads = (
 			...built.entry,
 			...(built.pages[page] ?? []),
 			...parts.flatMap((part) => built.parts[part] ?? []),
+		]),
+	];
+};
+
+/** Every module the public plot's page loads, and those of the `parts` this link needs. */
+export const perfPreloads = (parts: readonly string[] = []): string[] => {
+	if (typeof BUILT !== "object" || BUILT === null) {
+		return [];
+	}
+	const { perf } = BUILT as Preloads;
+	return [
+		...new Set([
+			...perf.entry,
+			...parts.flatMap((part) => perf.parts[part] ?? []),
 		]),
 	];
 };

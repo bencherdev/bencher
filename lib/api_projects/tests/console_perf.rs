@@ -883,8 +883,8 @@ async fn console_perf_series_carry_limits_and_alerts() {
 }
 
 // Kills: an end that does not bound the window, a default start other than four
-// weeks before the end, and an unauthenticated window that reaches back past
-// three months or is not echoed.
+// weeks before the end, and an unauthenticated window longer than three months
+// that is drawn whole or is not echoed.
 #[tokio::test]
 async fn console_perf_window_and_clamp() {
     let server = TestServer::new_at(at(NOW)).await;
@@ -941,7 +941,7 @@ async fn console_perf_window_and_clamp() {
     assert_eq!(
         i64::from(clamped.window.start_time),
         millis("2023-11-30T00:00:00Z"),
-        "92 days before now"
+        "92 days before its end, now"
     );
     assert_eq!(
         x(&clamped).len(),
@@ -951,7 +951,7 @@ async fn console_perf_window_and_clamp() {
 }
 
 // Kills: a start after the end that is served rather than refused, and an
-// unauthenticated window wholly out of reach echoed inverted rather than empty.
+// unauthenticated window wholly older than three months that is not drawn.
 #[tokio::test]
 async fn console_perf_window_edges() {
     let server = TestServer::new_at(at(NOW)).await;
@@ -979,27 +979,90 @@ async fn console_perf_window_edges() {
         try_console_perf(&server, &fixture.slug, &inverted, Some(&fixture.token)).await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{text}");
 
-    let out_of_reach = Query {
+    let long_ago = Query {
         start_time: Some("2023-10-01T00:00:00Z"),
         end_time: Some("2023-11-15T00:00:00Z"),
         ..alpha_latency(&old)
     };
-    let (status, text) = try_console_perf(&server, &fixture.slug, &out_of_reach, None).await;
+    let (status, text) = try_console_perf(&server, &fixture.slug, &long_ago, None).await;
     assert_eq!(status, StatusCode::OK, "{text}");
-    let empty: JsonConsolePerf = serde_json::from_str(&text).expect("Failed to parse");
-    assert!(empty.window.clamped);
+    let drawn: JsonConsolePerf = serde_json::from_str(&text).expect("Failed to parse");
+    assert!(!drawn.window.clamped);
     assert_eq!(
-        i64::from(empty.window.start_time),
-        millis("2023-11-15T00:00:00Z"),
-        "an empty window at its end"
+        i64::from(drawn.window.start_time),
+        millis("2023-10-01T00:00:00Z")
     );
     assert_eq!(
-        i64::from(empty.window.end_time),
+        i64::from(drawn.window.end_time),
         millis("2023-11-15T00:00:00Z")
     );
-    assert_eq!(x(&empty), Vec::<i64>::new());
-    assert_eq!(empty.total, 1, "the queried line is still drawn");
-    assert_eq!(empty.lines[0].series.y, Vec::new());
+    assert_eq!(x(&drawn), vec![millis("2023-11-01T00:00:00Z")]);
+}
+
+// Kills: an unauthenticated window clamped by how far back it reaches rather
+// than by its length, and a long one cut anywhere but the three months ending
+// at its end.
+#[tokio::test]
+async fn console_perf_unauthenticated_window_by_length() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "length").await;
+    let mut reports = Vec::new();
+    for time in [
+        "2023-08-01T00:00:00Z",
+        "2023-09-01T00:00:00Z",
+        "2023-11-26T00:00:00Z",
+        "2023-12-10T00:00:00Z",
+    ] {
+        let alpha = variant("alpha", serde_json::json!({ "size": 2 }), latency(99.0));
+        reports.push(post(&server, &fixture, Post::main(time, results(&[alpha]))).await);
+    }
+
+    // 28 days, ending 70 days before now.
+    let month = Query {
+        start_time: Some("2023-11-24T00:00:00Z"),
+        end_time: Some("2023-12-22T00:00:00Z"),
+        ..alpha_latency(&reports[0])
+    };
+    let (status, text) = try_console_perf(&server, &fixture.slug, &month, None).await;
+    assert_eq!(status, StatusCode::OK, "{text}");
+    let whole: JsonConsolePerf = serde_json::from_str(&text).expect("Failed to parse");
+    assert!(!whole.window.clamped);
+    assert_eq!(
+        i64::from(whole.window.start_time),
+        millis("2023-11-24T00:00:00Z")
+    );
+    assert_eq!(
+        x(&whole),
+        vec![
+            millis("2023-11-26T00:00:00Z"),
+            millis("2023-12-10T00:00:00Z"),
+        ]
+    );
+
+    // 120 days, ending 100 days before now.
+    let long = Query {
+        start_time: Some("2023-07-25T00:00:00Z"),
+        end_time: Some("2023-11-22T00:00:00Z"),
+        ..alpha_latency(&reports[0])
+    };
+    let (status, text) = try_console_perf(&server, &fixture.slug, &long, None).await;
+    assert_eq!(status, StatusCode::OK, "{text}");
+    let cut: JsonConsolePerf = serde_json::from_str(&text).expect("Failed to parse");
+    assert!(cut.window.clamped);
+    assert_eq!(
+        i64::from(cut.window.start_time),
+        millis("2023-08-22T00:00:00Z"),
+        "92 days before its end"
+    );
+    assert_eq!(
+        i64::from(cut.window.end_time),
+        millis("2023-11-22T00:00:00Z")
+    );
+    assert_eq!(
+        x(&cut),
+        vec![millis("2023-09-01T00:00:00Z")],
+        "the report from August is cut"
+    );
 }
 
 // Kills: a box entry named twice that draws its lines twice or counts them twice.

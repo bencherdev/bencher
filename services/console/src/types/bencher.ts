@@ -747,8 +747,8 @@ export interface JsonConsoleWindow {
 	end_time: DateTimeMillis;
 	/**
 	 * Whether the requested start was moved later: a report's history holds a
-	 * bounded number of reports, and an unauthenticated plot reaches back at
-	 * most three months.
+	 * bounded number of reports, and an unauthenticated plot reads at most
+	 * three months.
 	 */
 	clamped: boolean;
 }

@@ -1,5 +1,5 @@
 import Segmented from "@bencherdev/ui/Segmented";
-import { Match, Show, Switch } from "solid-js";
+import { type JSX, Match, Show, Switch, children } from "solid-js";
 import type { ExploreQuery } from "../query/query";
 import CustomRange from "./CustomRange";
 import { LINE_CAP, lineCapWarning, measuresLayout } from "./layout";
@@ -30,6 +30,10 @@ const Controls = (props: {
 	total: number | undefined;
 	now: () => number;
 	onQuery: (query: ExploreQuery) => void;
+	/** For a reader who has no custom window, whose presets end now: how far back they reach. */
+	reach?: JSX.Element;
+	/** What ends the row. */
+	children?: JSX.Element;
 }) => {
 	const layout = () =>
 		measuresLayout(props.query.measures.length, props.query.layout);
@@ -37,6 +41,18 @@ const Controls = (props: {
 		props.total === undefined ? undefined : lineCapWarning(props.total);
 	const set = (change: Partial<ExploreQuery>) =>
 		props.onQuery({ ...props.query, ...change });
+	const reach = children(() => props.reach);
+	const presetsOnly = () => reach() !== undefined;
+	const pick = (choice: WindowChoice) => {
+		const { end: _end, ...unended } = props.query.window;
+		set({
+			window: pickWindow(
+				presetsOnly() ? unended : props.query.window,
+				choice,
+				props.now(),
+			),
+		});
+	};
 	return (
 		<>
 			<div class="ex-ctl">
@@ -66,12 +82,17 @@ const Controls = (props: {
 				<Segmented
 					name="explore-window"
 					aria-label="Window"
-					options={WINDOWS}
-					value={windowChoice(props.query.window)}
-					onChange={(choice) =>
-						set({ window: pickWindow(props.query.window, choice, props.now()) })
+					options={presetsOnly() ? WINDOWS.slice(0, -1) : WINDOWS}
+					value={
+						presetsOnly() && props.query.window.end !== undefined
+							? undefined
+							: windowChoice(props.query.window)
 					}
+					onChange={pick}
 				/>
+				<Show when={presetsOnly()}>
+					<span class="muted sm">{reach()}</span>
+				</Show>
 				<Show when={"start" in props.query.window && props.query.window}>
 					{(window) => (
 						<CustomRange
@@ -98,6 +119,7 @@ const Controls = (props: {
 						<span class="muted sm">three or more measures always stack</span>
 					</Match>
 				</Switch>
+				{props.children}
 			</div>
 			<Show when={cap()}>
 				{(warning) => (

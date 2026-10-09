@@ -16,5 +16,6 @@ const { title, titleFmt, description, published, modified, image, canonical } =
 ---
 
 <BaseLayout title={title} titleFmt={titleFmt} description={description} published={published} modified={modified} perfImage={image} canonical={canonical ?? Astro.url.pathname}>
+  <slot name="head" slot="head" />
   <slot />
 </BaseLayout>

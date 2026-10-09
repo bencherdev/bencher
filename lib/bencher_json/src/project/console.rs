@@ -176,8 +176,8 @@ pub struct JsonConsoleWindow {
     pub start_time: DateTimeMillis,
     pub end_time: DateTimeMillis,
     /// Whether the requested start was moved later: a report's history holds a
-    /// bounded number of reports, and an unauthenticated plot reaches back at
-    /// most three months.
+    /// bounded number of reports, and an unauthenticated plot reads at most
+    /// three months.
     pub clamped: bool,
 }
 

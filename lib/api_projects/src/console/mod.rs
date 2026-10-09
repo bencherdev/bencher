@@ -11,7 +11,7 @@ use bencher_json::{
     ResourceName, SampleSize, VariantUuid, Window,
 };
 use bencher_json::{
-    BenchmarkUuid, Clock, DateTime, DateTimeMillis, GitHash, ModelTest, ModelUuid, ReportUuid,
+    BenchmarkUuid, DateTime, DateTimeMillis, GitHash, ModelTest, ModelUuid, ReportUuid,
     ThresholdUuid,
     project::{
         alert::AlertStatus,
@@ -41,17 +41,17 @@ pub mod plots;
 pub mod report;
 pub mod thresholds;
 
-/// The longest that three calendar months run, and so the furthest back an
-/// unauthenticated plot reaches from now.
-const PUBLIC_REACH: Duration = Duration::from_hours(92 * 24);
+/// The longest that three calendar months run, and so the longest window an
+/// unauthenticated plot reads.
+const PUBLIC_WINDOW: Duration = Duration::from_hours(92 * 24);
 
-/// Move a start that reaches further back than an unauthenticated request may up
-/// to the limit, and say whether it moved.
-fn clamp_start(clock: &Clock, api_actor: &ApiActor, start_time: DateTime) -> (DateTime, bool) {
+/// Cut an unauthenticated window longer than the limit to the limit ending at its
+/// end, and say whether it was cut.
+fn clamp_start(api_actor: &ApiActor, start_time: DateTime, end_time: DateTime) -> (DateTime, bool) {
     if api_actor.is_auth() {
         return (start_time, false);
     }
-    match before(clock.now(), PUBLIC_REACH) {
+    match before(end_time, PUBLIC_WINDOW) {
         Some(floor) if start_time.timestamp() < floor.timestamp() => (floor, true),
         Some(_) | None => (start_time, false),
     }

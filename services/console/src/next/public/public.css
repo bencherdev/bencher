@@ -1,0 +1,109 @@
+/* the public plot, and the setup card of a project with no reports */
+
+/* The page's head marks a stored reader before the first paint. */
+:root:not([data-reader]) .pu-in,
+:root[data-reader] .pu-out {
+	display: none;
+}
+.pu-auth {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.pu-qhead {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+	min-height: 52px;
+}
+/* One line that never grows as the names arrive. */
+.pu-sum {
+	display: flex;
+	flex: 1;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+	height: 24px;
+	overflow: hidden;
+}
+.pu-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	height: 24px;
+	padding: 0 9px;
+	border: var(--border-width) solid var(--color-border);
+	border-radius: var(--radius-full);
+	color: var(--color-text-muted);
+	font-size: 12px;
+	white-space: nowrap;
+}
+.pu-k {
+	font-family: var(--font-family-code);
+	font-size: 10.5px;
+}
+.pu-sumskel {
+	width: 320px;
+	max-width: 100%;
+}
+.pu-ro {
+	grid-column: 1 / -1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.pu-qhead [aria-expanded="true"] > .ui-icon {
+	transform: rotate(180deg);
+}
+.pu-locked {
+	max-width: 560px;
+	padding-top: 80px;
+}
+.pu-lockcard {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 14px;
+	padding: 28px;
+	border: var(--border-width) solid var(--color-border);
+	border-radius: var(--radius-container);
+	background: var(--color-background-card);
+}
+.pu-lockcard h1 {
+	margin: 0;
+}
+.pu-lock {
+	display: inline-grid;
+	place-items: center;
+	width: 48px;
+	height: 48px;
+	border: var(--border-width) solid var(--color-border-emphasized);
+	border-radius: var(--radius-full);
+	color: var(--color-text-muted);
+	font-size: 20px;
+}
+@media (max-width: 767px) {
+	.pu-signup {
+		display: none;
+	}
+	.pu-qhead {
+		flex-wrap: wrap;
+		padding-block: 12px;
+	}
+	.pu-sum {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-rows: repeat(3, 24px);
+		height: auto;
+		flex-basis: 100%;
+		order: 1;
+	}
+	.pu-locked {
+		padding-top: 32px;
+	}
+	.pu-lockcard {
+		padding: 18px;
+	}
+}

@@ -84,7 +84,7 @@ pub async fn proj_console_perf_options(
 /// Only the first 64 lines are drawn, and the response counts them all.
 /// If there is no `start_time`, then the four weeks before the end are queried.
 /// If the project is public, then the user does not need to be authenticated,
-/// and an unauthenticated window reaches back at most three months.
+/// and an unauthenticated window longer than three months is cut to the three months ending at its end.
 /// If the project is private, then the user must be authenticated and have `view` permissions for the project,
 /// or provide a valid project key for the project.
 #[endpoint {
@@ -149,12 +149,9 @@ async fn get_inner(
     let requested = start_time
         .or_else(|| before(end_time, DEFAULT_REPORT_HISTORY))
         .unwrap_or(end_time);
-    let (start_time, clamped) = clamp_start(&context.clock, api_actor, requested);
-    // A window that ends before the reach reads nothing, and is echoed as empty
-    // rather than inverted.
-    let reachable = start_time.timestamp() <= end_time.timestamp();
+    let (start_time, clamped) = clamp_start(api_actor, requested, end_time);
     let window = JsonConsoleWindow {
-        start_time: if reachable { start_time } else { end_time }.into(),
+        start_time: start_time.into(),
         end_time: end_time.into(),
         clamped,
     };

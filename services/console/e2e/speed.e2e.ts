@@ -6,10 +6,12 @@ import {
 	seed,
 	settle,
 	signedIn,
+	signedOut,
 	tabRow,
 	test,
 } from "./fixtures";
 import { explore, twoLines } from "./explore";
+import { publicPath, twoLinesDrawn, twoRecentLines } from "./public";
 import ceilings from "./speed-ceilings.json" with { type: "json" };
 import {
 	type Cost,
@@ -893,3 +895,64 @@ test("a status switch on Alerts asks once", async ({ page }) => {
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 });
+
+// The public plot: a crawled and shared page that paints from its document and
+// one stylesheet, then asks the API once.
+for (const [width, viewport] of [
+	["desktop", undefined],
+	["768", { width: 768, height: 1024 }],
+	["390", { width: 390, height: 844 }],
+] as const) {
+	test.describe(`the public plot at ${width}`, () => {
+		test.use({ storageState: signedOut, ...(viewport ? { viewport } : {}) });
+
+		// Kills a public page that waits on the API or on code to paint, asks
+		// the API twice or in two rounds, finds code late, carries a
+		// stylesheet of its own, or shifts as the plot arrives.
+		test(`a cold public plot holds its speed ceilings at ${width}`, async ({
+			page,
+			request,
+		}) => {
+			const { project, search } = await twoRecentLines(request);
+			await observeLayoutShift(page);
+			await page.route(`${seed.api_url}/**`, async (route) => {
+				await new Promise((resolve) => setTimeout(resolve, 500));
+				await route.continue();
+			});
+			await page.goto(publicPath(project.slug, search));
+			await twoLinesDrawn(page);
+			await loadedAndIdle(page);
+			await settle(page);
+			const cost = await measure(page, seed.api_url);
+			// What the first paint waited on: the stylesheet, and nothing else.
+			const blocking = await page.evaluate(() =>
+				(
+					performance.getEntriesByType(
+						"resource",
+					) as (PerformanceResourceTiming & {
+						renderBlockingStatus?: string;
+					})[]
+				)
+					.filter((entry) => entry.renderBlockingStatus === "blocking")
+					.map((entry) => entry.name),
+			);
+			report(`public plot cold load ${width}`, {
+				...cost,
+				blocking: blocking.length,
+			} as Cost);
+			const ceiling = ceilings.publicColdLoad;
+			expect(blocking).toHaveLength(1);
+			expect(blocking[0]).toMatch(/\.css$/);
+			expect(cost.apiAnswersBeforePaint).toBe(0);
+			expect(cost.apiRequests).toBe(1);
+			expect(cost.apiRounds).toBe(1);
+			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+			expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
+				ceiling.inlineScriptBytes,
+			);
+			expect(cost.lateModules).toBe(0);
+		});
+	});
+}

@@ -4,10 +4,13 @@ import { nextHref, projectPath } from "../paths";
 
 interface Props {
 	slug: string | undefined;
+	/** Where the page goes instead of its place under /next/, query and all. */
+	next?: string | undefined;
 }
 
 const { slug } = Astro.props;
-const next = nextHref({ pathname: Astro.url.pathname, hash: "" });
+const next =
+	Astro.props.next ?? nextHref({ pathname: Astro.url.pathname, hash: "" });
 // The perf page's query is Explore's, read as the page loads.
 const search = slug !== undefined && next === projectPath(slug, "explore");
 
