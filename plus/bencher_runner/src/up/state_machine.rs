@@ -210,6 +210,8 @@ pub struct ChannelStateMachine {
     pending_retry_count: u32,
     /// Message currently in flight (sent, waiting for ACK).
     in_flight: Option<RunnerMessage>,
+    /// Shutdown arrived while a Job's result was owed, so exit once it is sent.
+    stopping: bool,
 }
 
 impl ChannelStateMachine {
@@ -221,6 +223,7 @@ impl ChannelStateMachine {
             pending_result: None,
             pending_retry_count: 0,
             in_flight: None,
+            stopping: false,
         }
     }
 
@@ -245,10 +248,8 @@ impl ChannelStateMachine {
             return vec![];
         }
 
-        // Shutdown from any state
         if matches!(input, Input::Shutdown) {
-            self.state = ChannelState::ShutDown;
-            return vec![Effect::Close, Effect::Exit];
+            return self.shut_down(state);
         }
 
         match state {
@@ -407,6 +408,9 @@ impl ChannelStateMachine {
                 vec![Effect::Send(msg), Effect::Receive(ACK_TIMEOUT)]
             },
             Input::ConnectionFailed => {
+                if self.stopping {
+                    return self.exit();
+                }
                 self.state = ChannelState::Disconnected;
                 vec![
                     Effect::SleepBeforeReconnect(ReconnectReason::ExecutingConnectionLost),
@@ -478,13 +482,19 @@ impl ChannelStateMachine {
             },
             Input::ConnectionFailed => {
                 self.pending_result = self.in_flight.take();
+                let report = Effect::ReportOutcome(JobOutcome {
+                    job: job_uuid,
+                    kind,
+                    acked: false,
+                });
+                if self.stopping {
+                    let mut effects = vec![report];
+                    effects.extend(self.exit());
+                    return effects;
+                }
                 self.state = ChannelState::Disconnected;
                 vec![
-                    Effect::ReportOutcome(JobOutcome {
-                        job: job_uuid,
-                        kind,
-                        acked: false,
-                    }),
+                    report,
                     Effect::SleepBeforeReconnect(ReconnectReason::TerminalAckConnectionLost),
                     Effect::Connect,
                 ]
@@ -518,6 +528,29 @@ impl ChannelStateMachine {
 
     // --- Helpers ---
 
+    /// Exits at once, unless a Job's result is still owed: then the Job runs
+    /// on (the runner's stop cancels it), and the machine exits once its result
+    /// is sent rather than polling for another.
+    fn shut_down(&mut self, state: ChannelState) -> Vec<Effect> {
+        if matches!(
+            state,
+            ChannelState::Executing { .. } | ChannelState::AwaitingTerminalAck { .. }
+        ) {
+            self.stopping = true;
+            self.state = state;
+            return vec![Effect::Log(
+                LogLevel::Info,
+                "Stopping once the running Job's result is sent".to_owned(),
+            )];
+        }
+        self.exit()
+    }
+
+    fn exit(&mut self) -> Vec<Effect> {
+        self.state = ChannelState::ShutDown;
+        vec![Effect::Close, Effect::Exit]
+    }
+
     /// Log an unexpected (state, input) combination and restore the state.
     fn unexpected(&mut self, state: ChannelState, input: &Input) -> Vec<Effect> {
         let msg = format!("Unexpected input {input:?} in state {state:?}");
@@ -526,8 +559,12 @@ impl ChannelStateMachine {
     }
 
     /// Resolve the idle decision point: if there's a pending result to retry,
-    /// send it; otherwise send Ready and wait for a job.
+    /// send it; otherwise send Ready and wait for a job. A shutdown that waited
+    /// on a Job's result exits here instead.
     fn resolve_idle(&mut self) -> Vec<Effect> {
+        if self.stopping {
+            return self.exit();
+        }
         if let Some(pending) = self.pending_result.take() {
             self.pending_retry_count += 1;
             if self.pending_retry_count > MAX_PENDING_RESULT_RETRIES {
@@ -626,6 +663,37 @@ fn build_terminal_message(
     }
 }
 
+/// A claimed Job for tests, shared with the driver's.
+#[cfg(test)]
+pub(super) fn test_claimed_job() -> Box<JsonClaimedJob> {
+    let json = serde_json::json!({
+        "uuid": "550e8400-e29b-41d4-a716-446655440000",
+        "spec": {
+            "uuid": "00000000-0000-0000-0000-000000000001",
+            "name": "test-spec",
+            "slug": "test-spec",
+            "os": "linux",
+            "architecture": "x86_64",
+            "cpu": 2,
+            "memory": 0x4000_0000u64,
+            "disk": 0x2_8000_0000i64,
+            "network": false,
+            "created": "2025-01-01T00:00:00Z",
+            "modified": "2025-01-01T00:00:00Z"
+        },
+        "config": {
+            "registry": "https://registry.bencher.dev",
+            "project": "11111111-2222-3333-4444-555555555555",
+            "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+            "timeout": 300
+        },
+        "oci_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+        "timeout": 300,
+        "created": "2025-01-01T00:00:00Z"
+    });
+    Box::new(serde_json::from_value(json).unwrap())
+}
+
 #[cfg(test)]
 mod tests {
     use bencher_valid::{Architecture, OperatingSystem};
@@ -658,35 +726,6 @@ mod tests {
             job: test_job_uuid(),
             results: vec![],
         }
-    }
-
-    fn test_claimed_job() -> Box<JsonClaimedJob> {
-        let json = serde_json::json!({
-            "uuid": "550e8400-e29b-41d4-a716-446655440000",
-            "spec": {
-                "uuid": "00000000-0000-0000-0000-000000000001",
-                "name": "test-spec",
-                "slug": "test-spec",
-                "os": "linux",
-                "architecture": "x86_64",
-                "cpu": 2,
-                "memory": 0x4000_0000u64,
-                "disk": 0x2_8000_0000i64,
-                "network": false,
-                "created": "2025-01-01T00:00:00Z",
-                "modified": "2025-01-01T00:00:00Z"
-            },
-            "config": {
-                "registry": "https://registry.bencher.dev",
-                "project": "11111111-2222-3333-4444-555555555555",
-                "digest": "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
-                "timeout": 300
-            },
-            "oci_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0In0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
-            "timeout": 300,
-            "created": "2025-01-01T00:00:00Z"
-        });
-        Box::new(serde_json::from_value(json).unwrap())
     }
 
     // --- Connection ---
@@ -1144,14 +1183,85 @@ mod tests {
     }
 
     #[test]
-    fn shutdown_during_execution_closes() {
-        let mut sm = test_sm().with_state(ChannelState::Executing {
-            job_uuid: test_job_uuid(),
-        });
+    fn shutdown_during_execution_exits_once_the_result_is_acked() {
+        // Prevents a shutdown dropping the running Job's result, which leaves
+        // the server to find out only when the Job's heartbeat times out.
+        let job_uuid = test_job_uuid();
+        let mut sm = test_sm().with_state(ChannelState::Executing { job_uuid });
+
         let effects = sm.step(Input::Shutdown);
-        assert!(effects.iter().any(|e| matches!(e, Effect::Close)));
-        assert!(effects.iter().any(|e| matches!(e, Effect::Exit)));
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::Close | Effect::Exit)),
+            "the Job's result is still owed: {effects:?}"
+        );
+        assert_eq!(*sm.state(), ChannelState::Executing { job_uuid });
+
+        let effects = sm.step(Input::JobFinished(JobFinishResult::Failed {
+            error: "the runner stopped".to_owned(),
+            results: vec![],
+        }));
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::Send(RunnerMessage::Failed { .. }))),
+            "the result goes out: {effects:?}"
+        );
+
+        let effects = sm.step(Input::Message(ServerMessage::Ack {
+            job: Some(job_uuid),
+        }));
+        assert!(
+            matches!(effects.last(), Some(Effect::Exit)),
+            "exits once the result is acked: {effects:?}"
+        );
+        assert!(
+            !effects.iter().any(|e| matches!(e, Effect::Send(_))),
+            "polls for no other Job: {effects:?}"
+        );
         assert_eq!(*sm.state(), ChannelState::ShutDown);
+    }
+
+    #[test]
+    fn shutdown_during_execution_exits_when_the_result_goes_unacked() {
+        // Prevents a shutting down runner retrying or reconnecting, which holds
+        // it past the service manager's stop timeout.
+        let job_uuid = test_job_uuid();
+        let awaiting_ack = || ChannelState::AwaitingTerminalAck {
+            job_uuid,
+            kind: TerminalKind::Failed {
+                error: "the runner stopped".to_owned(),
+            },
+        };
+        for (state, input) in [
+            (awaiting_ack(), Input::ReceiveTimeout),
+            (awaiting_ack(), Input::ConnectionFailed),
+            (awaiting_ack(), Input::Message(ServerMessage::NoJob)),
+            (
+                ChannelState::Executing { job_uuid },
+                Input::ConnectionFailed,
+            ),
+        ] {
+            let case = format!("{input:?} in {state:?}");
+            let mut sm = test_sm()
+                .with_state(state)
+                .with_in_flight(test_completed_msg());
+            sm.step(Input::Shutdown);
+
+            let effects = sm.step(input);
+
+            assert!(
+                matches!(effects.last(), Some(Effect::Exit)),
+                "{case}: {effects:?}"
+            );
+            assert!(
+                !effects
+                    .iter()
+                    .any(|e| matches!(e, Effect::Send(_) | Effect::Connect)),
+                "{case}: {effects:?}"
+            );
+        }
     }
 
     #[test]

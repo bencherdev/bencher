@@ -74,6 +74,7 @@ pub fn execute_job(
     let cancel_flag = Arc::new(AtomicBool::new(false));
     let stop_flag = Arc::new(AtomicBool::new(false));
     let heartbeat = spawn_heartbeat_thread(config, ws, &cancel_flag, &stop_flag);
+    let stop_watcher = spawn_stop_watcher(config, &cancel_flag, &stop_flag);
 
     let build_time = job_config.build_time;
     let file_size = job_config.file_size;
@@ -90,7 +91,7 @@ pub fn execute_job(
     };
 
     // Execute benchmark iterations, passing cancel_flag so the vsock poll loop
-    // can abort early when the server sends a cancellation message.
+    // can abort early when the server cancels or the runner stops.
     let iterations = run_iterations(
         job.uuid,
         iter_count,
@@ -115,10 +116,18 @@ pub fn execute_job(
         },
     );
 
-    // Stop heartbeat thread
+    // Stop the heartbeat and stop watcher threads
     stop_flag.store(true, Ordering::SeqCst);
     if let Err(panic) = heartbeat.join() {
         eprintln!("Warning: heartbeat thread panicked: {panic:?}");
+    }
+    let stopped = stop_watcher.join().unwrap_or_else(|panic| {
+        eprintln!("Warning: stop watcher thread panicked: {panic:?}");
+        false
+    });
+    if stopped {
+        println!("Job {} stopped with the runner", job.uuid);
+        return iterations.stopped();
     }
 
     let canceled = cancel_flag.load(Ordering::SeqCst);
@@ -229,6 +238,14 @@ impl Iterations {
             exit_code: last_exit_code,
             output: last_stdout_preview,
             results,
+        }
+    }
+
+    /// The runner's stop is why the Job failed, whatever ended its iterations.
+    fn stopped(self) -> JobFinishResult {
+        JobFinishResult::Failed {
+            error: "the runner stopped".to_owned(),
+            results: self.results,
         }
     }
 }
@@ -487,11 +504,7 @@ fn spawn_heartbeat_thread(
     let ws_heartbeat = Arc::clone(ws);
     let cancel_heartbeat = Arc::clone(cancel_flag);
     let stop_heartbeat = Arc::clone(stop_flag);
-    let housekeeping_cores = config
-        .cpu_layout
-        .as_ref()
-        .map(|l| l.housekeeping.clone())
-        .unwrap_or_default();
+    let housekeeping_cores = housekeeping_cores(config);
     std::thread::spawn(move || {
         if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
             eprintln!("Warning: failed to pin heartbeat thread to housekeeping cores: {e}");
@@ -541,6 +554,50 @@ fn heartbeat_loop(ws: &Arc<Mutex<JobChannel>>, cancel_flag: &AtomicBool, stop_fl
             Err(_) => break,
         }
     }
+}
+
+/// How often the stop watcher looks for the runner's stop.
+const STOP_POLL_INTERVAL: Duration = Duration::from_millis(50);
+
+/// Turns the runner's stop into the Job's cancel, so the teardown kills the
+/// VMM before the service manager's stop timeout kills the runner.
+#[expect(clippy::print_stderr, reason = "runner CLI warning output")]
+fn spawn_stop_watcher(
+    config: &UpConfig,
+    cancel_flag: &Arc<AtomicBool>,
+    done_flag: &Arc<AtomicBool>,
+) -> std::thread::JoinHandle<bool> {
+    let cancel = Arc::clone(cancel_flag);
+    let done = Arc::clone(done_flag);
+    let housekeeping_cores = housekeeping_cores(config);
+    std::thread::spawn(move || {
+        if let Err(e) = crate::cpu::pin_current_thread(&housekeeping_cores) {
+            eprintln!("Warning: failed to pin stop watcher thread to housekeeping cores: {e}");
+        }
+        cancel_on_stop(crate::signal::stop_flag(), &cancel, &done)
+    })
+}
+
+/// Sets `cancel_flag` once `runner_stop` is set, until the Job is `done`.
+/// True only if the stop ended the Job, not a cancel the server sent first.
+fn cancel_on_stop(runner_stop: &AtomicBool, cancel_flag: &AtomicBool, done: &AtomicBool) -> bool {
+    loop {
+        if done.load(Ordering::SeqCst) {
+            return false;
+        }
+        if runner_stop.load(Ordering::SeqCst) {
+            return !cancel_flag.swap(true, Ordering::SeqCst);
+        }
+        std::thread::sleep(STOP_POLL_INTERVAL);
+    }
+}
+
+fn housekeeping_cores(config: &UpConfig) -> Vec<usize> {
+    config
+        .cpu_layout
+        .as_ref()
+        .map(|l| l.housekeeping.clone())
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -1129,6 +1186,79 @@ mod tests {
             matches!(&outcome, JobFinishResult::Completed { results, .. } if results.len() == 1),
             "a failure with time left is skipped, got: {outcome:?}"
         );
+    }
+
+    // --- the runner's stop ---
+
+    #[test]
+    fn a_runner_stop_cancels_the_running_job() {
+        // Prevents a stop that leaves the Job running, so the service
+        // manager's stop timeout kills the runner and strands the VMM.
+        let runner_stop = AtomicBool::new(false);
+        let cancel_flag = AtomicBool::new(false);
+
+        let stopped = std::thread::scope(|scope| {
+            scope.spawn(|| {
+                std::thread::sleep(STOP_POLL_INTERVAL * 2);
+                runner_stop.store(true, Ordering::SeqCst);
+            });
+            cancel_on_stop(&runner_stop, &cancel_flag, &AtomicBool::new(false))
+        });
+
+        assert!(
+            cancel_flag.load(Ordering::SeqCst),
+            "the stop cancels the Job"
+        );
+        assert!(stopped, "the stop is why the Job ended");
+    }
+
+    #[test]
+    fn a_cancel_the_server_sent_first_stays_a_cancel() {
+        // Prevents the stop claiming a Job the server already canceled, which
+        // reports it failed.
+        let stopped = cancel_on_stop(
+            &AtomicBool::new(true),
+            &AtomicBool::new(true),
+            &AtomicBool::new(false),
+        );
+
+        assert!(!stopped, "the server's cancel came first");
+    }
+
+    #[test]
+    fn a_stop_once_the_job_is_done_leaves_its_outcome() {
+        // Prevents a stop after the last iteration throwing away a Job that
+        // finished.
+        let cancel_flag = AtomicBool::new(false);
+
+        let stopped = cancel_on_stop(&AtomicBool::new(true), &cancel_flag, &AtomicBool::new(true));
+
+        assert!(
+            !stopped && !cancel_flag.load(Ordering::SeqCst),
+            "the Job ended on its own"
+        );
+    }
+
+    #[test]
+    fn a_job_the_runner_stopped_fails_with_why() {
+        // Prevents a stopped Job reporting the cancel its teardown left, or
+        // losing the results of the iterations that finished.
+        let iterations = Iterations {
+            results: vec![iteration_output()],
+            failure: Some(
+                RunnerError::from(ExecutionError::Canceled("job was canceled".to_owned()))
+                    .to_string(),
+            ),
+            ..Iterations::default()
+        };
+
+        let outcome = iterations.stopped();
+
+        let JobFinishResult::Failed { error, results } = outcome else {
+            panic!("a stopped Job ends failed, got: {outcome:?}");
+        };
+        assert_eq!(error, "the runner stopped", "the user sees why");
+        assert_eq!(results.len(), 1, "the finished iteration's result is kept");
     }
 
     fn test_job_uuid() -> JobUuid {
