@@ -1,26 +1,18 @@
 //! Host system tuning for benchmark accuracy.
 //!
 //! Applies system-level optimizations (ASLR, CPU governor, SMT, etc.)
-//! to reduce benchmark noise. All settings are restored on drop via
-//! a RAII guard. Missing sysfs/procfs files are skipped with an
+//! to reduce benchmark noise. Missing sysfs/procfs files are skipped with an
 //! informational message - this handles ARM and other platforms
 //! where certain controls do not exist.
 //!
-//! # Crash safety
-//!
-//! Restoration only happens on clean shutdown (guard drop). On SIGKILL
-//! or panic-abort, sysctl writes, IRQ affinities, THP mode, and the
-//! cpuset partition stay applied. Worse, the next run then reads the
-//! already-tuned value as "current", saves nothing, and a later clean
-//! exit cannot restore the true pre-tuning value; a reboot (or manual
-//! reset) recovers it. Two mechanisms self-heal by construction: the
-//! `/dev/cpu_dma_latency` fd releases its PM `QoS` constraint when the
-//! process dies, and per-run cgroups are removed by their own cleanup.
+//! Tuning is never reverted: every write is runtime-only and persists until
+//! the host reboots. The one exception is the C-state hold, which the kernel
+//! releases when the process exits.
 //!
 //! Tuning requires a single runner process per host: the sysctls, IRQ
 //! affinities, THP mode, and cpuset partition are host-global, so a
-//! second concurrent runner's shutdown would restore them out from under
-//! the first. [`HostTuningLock`] enforces this: callers acquire it before
+//! second concurrent runner would rewrite them under the first's Jobs.
+//! [`HostTuningLock`] enforces this: callers acquire it before
 //! [`apply`], and a contended lock disables host tuning for that process.
 
 #![cfg_attr(
@@ -147,107 +139,35 @@ impl TuningConfig {
 // Linux implementation
 // ---------------------------------------------------------------------------
 
+/// Holds the C-state constraint, which the kernel releases when the process
+/// exits.
 #[cfg(target_os = "linux")]
-struct SavedSetting {
-    path: Utf8PathBuf,
-    value: String,
-    label: String,
-}
-
-/// RAII guard that restores host settings on drop.
-#[cfg(target_os = "linux")]
+#[must_use]
 pub struct TuningGuard {
-    saved: Vec<SavedSetting>,
-    /// Removed rather than reset, because an empty cgroup left carrying a stale
-    /// cpuset is residue nothing else reads.
-    remove_if_empty: Vec<Utf8PathBuf>,
-    /// File descriptors held open for the lifetime of the guard
-    /// (e.g., the PM `QoS` constraint on `/dev/cpu_dma_latency`).
-    /// Dropped after the saved settings are restored.
     held_fds: Vec<std::fs::File>,
 }
 
-#[cfg(target_os = "linux")]
-impl TuningGuard {
-    /// Record a file to restore to `value` when the guard drops.
-    ///
-    /// Restoration happens in reverse recording order, so dependent writes
-    /// (e.g., a cpuset partition mode that must be reverted before its
-    /// cpuset can shrink) are undone correctly.
-    pub(crate) fn save_restore(&mut self, path: Utf8PathBuf, value: String, label: String) {
-        self.saved.push(SavedSetting { path, value, label });
-    }
-
-    pub(crate) fn remove_when_empty(&mut self, path: Utf8PathBuf) {
-        self.remove_if_empty.push(path);
-    }
-}
-
-#[cfg(target_os = "linux")]
-impl Drop for TuningGuard {
-    fn drop(&mut self) {
-        for setting in self.saved.iter().rev() {
-            restore(&setting.path, &setting.value, &setting.label);
-        }
-        // After the settings, so a cgroup whose removal fails still has its
-        // values put back.
-        for path in &self.remove_if_empty {
-            remove_empty_cgroup(path);
-        }
-    }
-}
-
-/// Failing is correct here: `rmdir` refuses with `EBUSY` while a task or a
-/// concurrent runner's job still uses the cgroup.
-#[cfg(target_os = "linux")]
-#[expect(clippy::print_stdout, reason = "tuning reports what it unwound")]
-fn remove_empty_cgroup(path: &Utf8Path) {
-    match std::fs::remove_dir(path) {
-        Ok(()) => println!("  Tuning: removed the cgroup {path}"),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {},
-        Err(e) => println!("  Tuning: left the cgroup {path} in place: {e}"),
-    }
-}
-
-/// Apply host tuning. Returns a guard that restores settings on drop.
+/// Apply host tuning. Returns a guard that holds the C-state constraint.
 #[cfg(target_os = "linux")]
 pub fn apply(config: &TuningConfig) -> TuningGuard {
     let mut guard = TuningGuard {
-        saved: Vec::new(),
         held_fds: Vec::new(),
-        remove_if_empty: Vec::new(),
     };
 
     if config.disable_aslr {
-        write_sysctl(
-            &mut guard,
-            "/proc/sys/kernel/randomize_va_space",
-            "0",
-            "ASLR",
-        );
+        write_sysctl("/proc/sys/kernel/randomize_va_space", "0", "ASLR");
     }
 
     if config.disable_nmi_watchdog {
-        write_sysctl(
-            &mut guard,
-            "/proc/sys/kernel/nmi_watchdog",
-            "0",
-            "NMI watchdog",
-        );
+        write_sysctl("/proc/sys/kernel/nmi_watchdog", "0", "NMI watchdog");
     }
 
     if let Some(val) = config.swappiness {
-        write_sysctl(
-            &mut guard,
-            "/proc/sys/vm/swappiness",
-            &val.to_string(),
-            "swappiness",
-        );
+        write_sysctl("/proc/sys/vm/swappiness", &val.to_string(), "swappiness");
     }
 
     if let Some(val) = config.perf_event_paranoid {
         write_sysctl(
-            &mut guard,
             "/proc/sys/kernel/perf_event_paranoid",
             &val.to_string(),
             "perf_event_paranoid",
@@ -255,46 +175,31 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
     }
 
     if let Some(gov) = &config.governor {
-        set_cpu_governor(&mut guard, gov);
+        set_cpu_governor(gov);
     }
 
     if config.disable_smt {
-        set_smt(&mut guard);
+        set_smt();
     }
 
     if config.disable_turbo {
-        set_turbo(&mut guard);
+        set_turbo();
     }
 
     if config.disable_numa_balancing {
-        write_sysctl(
-            &mut guard,
-            "/proc/sys/kernel/numa_balancing",
-            "0",
-            "NUMA balancing",
-        );
+        write_sysctl("/proc/sys/kernel/numa_balancing", "0", "NUMA balancing");
     }
 
     if config.disable_timer_migration {
-        write_sysctl(
-            &mut guard,
-            "/proc/sys/kernel/timer_migration",
-            "0",
-            "timer migration",
-        );
+        write_sysctl("/proc/sys/kernel/timer_migration", "0", "timer migration");
     }
 
     if config.disable_soft_watchdog {
-        write_sysctl(
-            &mut guard,
-            "/proc/sys/kernel/soft_watchdog",
-            "0",
-            "soft watchdog",
-        );
+        write_sysctl("/proc/sys/kernel/soft_watchdog", "0", "soft watchdog");
     }
 
     if config.disable_ksm {
-        write_sysctl(&mut guard, "/sys/kernel/mm/ksm/run", "0", "KSM");
+        write_sysctl("/sys/kernel/mm/ksm/run", "0", "KSM");
     }
 
     if config.disable_cstates {
@@ -303,13 +208,11 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
 
     if let Some(value) = config.thp.sysfs_value() {
         write_bracketed_sysctl(
-            &mut guard,
             "/sys/kernel/mm/transparent_hugepage/enabled",
             value,
             "THP enabled",
         );
         write_bracketed_sysctl(
-            &mut guard,
             "/sys/kernel/mm/transparent_hugepage/defrag",
             value,
             "THP defrag",
@@ -322,24 +225,29 @@ pub fn apply(config: &TuningConfig) -> TuningGuard {
 /// Apply CPU-layout-scoped tuning (IRQ and workqueue steering).
 ///
 /// Must be called after [`apply`] and after [`CpuLayout::detect`], because
-/// [`apply`] may disable SMT and change the core count. Settings are saved
-/// on the same guard and restored on drop.
+/// [`apply`] may disable SMT and change the core count.
 #[cfg(target_os = "linux")]
-pub fn apply_cpu_scoped(config: &TuningConfig, layout: &CpuLayout, guard: &mut TuningGuard) {
+pub fn apply_cpu_scoped(config: &TuningConfig, layout: &CpuLayout) {
+    apply_cpu_scoped_at(config, layout, Utf8Path::new("/"));
+}
+
+/// Like [`apply_cpu_scoped`], under the filesystem root `root`.
+#[cfg(target_os = "linux")]
+fn apply_cpu_scoped_at(config: &TuningConfig, layout: &CpuLayout, root: &Utf8Path) {
     if config.cpuset_partition && layout.has_isolation() {
-        let bencher = partition::BencherPartition::new(Utf8Path::new("/sys/fs/cgroup"));
-        let level = bencher.apply(layout, guard);
+        let bencher = partition::BencherPartition::new(&root.join("sys/fs/cgroup"));
+        let level = bencher.apply(layout);
         println!("  Tuning: cpuset partition - achieved level '{level}'");
     }
 
     if config.steer_kernel_work && layout.has_isolation() {
-        kernel_work::steer_kernel_work(guard, layout, Utf8Path::new("/"));
+        kernel_work::steer_kernel_work(layout, root);
     }
 }
 
-/// Read current value, write new value, and push restore entry onto the guard.
+/// Read the current value and write the new one unless it already holds.
 #[cfg(target_os = "linux")]
-fn write_sysctl(guard: &mut TuningGuard, path: &str, value: &str, label: &str) {
+fn write_sysctl(path: &str, value: &str, label: &str) {
     let path = Utf8PathBuf::from(path);
 
     if !path.exists() {
@@ -366,20 +274,14 @@ fn write_sysctl(guard: &mut TuningGuard, path: &str, value: &str, label: &str) {
     }
 
     println!("  Tuning: {label} - set to {value} (was {current})");
-    guard.saved.push(SavedSetting {
-        path,
-        value: current,
-        label: label.to_owned(),
-    });
 }
 
 /// Like [`write_sysctl`], but for files using the bracketed selection
 /// format (e.g., `always [madvise] never` under
 /// `/sys/kernel/mm/transparent_hugepage/`). The current value is the
-/// bracketed token; writes take the plain token, so save and restore
-/// work with the parsed value.
+/// bracketed token; writes take the plain token.
 #[cfg(target_os = "linux")]
-fn write_bracketed_sysctl(guard: &mut TuningGuard, path: &str, value: &str, label: &str) {
+fn write_bracketed_sysctl(path: &str, value: &str, label: &str) {
     let path = Utf8PathBuf::from(path);
 
     if !path.exists() {
@@ -414,11 +316,6 @@ fn write_bracketed_sysctl(guard: &mut TuningGuard, path: &str, value: &str, labe
     }
 
     println!("  Tuning: {label} - set to {value} (was {current})");
-    guard.saved.push(SavedSetting {
-        path,
-        value: current,
-        label: label.to_owned(),
-    });
 }
 
 /// Extract the selected token from a bracketed sysfs value like
@@ -432,7 +329,7 @@ fn parse_bracketed_value(content: &str) -> Option<&str> {
 
 /// Set the CPU scaling governor on all CPUs.
 #[cfg(target_os = "linux")]
-fn set_cpu_governor(guard: &mut TuningGuard, target: &str) {
+fn set_cpu_governor(target: &str) {
     let base = Utf8Path::new("/sys/devices/system/cpu");
     let Ok(entries) = std::fs::read_dir(base) else {
         println!("  Tuning: CPU governor - skipped (cannot read {base})");
@@ -473,19 +370,12 @@ fn set_cpu_governor(guard: &mut TuningGuard, target: &str) {
         }
 
         println!("  Tuning: CPU governor ({name_str}) - set to {target} (was {current})");
-        let gov_utf8_path = Utf8PathBuf::try_from(gov_path)
-            .unwrap_or_else(|p| Utf8PathBuf::from(p.into_path_buf().to_string_lossy().as_ref()));
-        guard.saved.push(SavedSetting {
-            path: gov_utf8_path,
-            value: current,
-            label: format!("CPU governor ({name_str})"),
-        });
     }
 }
 
 /// Disable SMT (simultaneous multi-threading / hyper-threading).
 #[cfg(target_os = "linux")]
-fn set_smt(guard: &mut TuningGuard) {
+fn set_smt() {
     let path = Utf8PathBuf::from("/sys/devices/system/cpu/smt/control");
 
     if !path.exists() {
@@ -512,31 +402,17 @@ fn set_smt(guard: &mut TuningGuard) {
     }
 
     println!("  Tuning: SMT - disabled (was {current})");
-    guard.saved.push(SavedSetting {
-        path,
-        value: current,
-        label: "SMT".to_owned(),
-    });
 }
 
 /// Disable turboboost. Tries Intel pstate first, then generic cpufreq.
 #[cfg(target_os = "linux")]
-fn set_turbo(guard: &mut TuningGuard) {
+fn set_turbo() {
     if Utf8Path::new(INTEL_NO_TURBO).exists() {
-        write_sysctl(guard, INTEL_NO_TURBO, "1", "turboboost (Intel)");
+        write_sysctl(INTEL_NO_TURBO, "1", "turboboost (Intel)");
     } else if Utf8Path::new(CPUFREQ_BOOST).exists() {
-        write_sysctl(guard, CPUFREQ_BOOST, "0", "turboboost (generic)");
+        write_sysctl(CPUFREQ_BOOST, "0", "turboboost (generic)");
     } else {
         println!("  Tuning: turboboost - skipped (not available on this platform)");
-    }
-}
-
-/// Restore a single setting. Used by the Drop impl.
-#[cfg(target_os = "linux")]
-fn restore(path: &Utf8Path, value: &str, label: &str) {
-    match std::fs::write(path.as_str(), value) {
-        Ok(()) => println!("  Tuning: {label} - restored to {value}"),
-        Err(e) => println!("  Tuning: {label} - restore failed: {e}"),
     }
 }
 
@@ -546,6 +422,7 @@ fn restore(path: &Utf8Path, value: &str, label: &str) {
 
 /// Stub guard for non-Linux platforms (no-op).
 #[cfg(not(target_os = "linux"))]
+#[must_use]
 pub struct TuningGuard;
 
 /// No-op on non-Linux - returns a stub guard.
@@ -556,7 +433,7 @@ pub fn apply(_config: &TuningConfig) -> TuningGuard {
 
 /// No-op on non-Linux.
 #[cfg(not(target_os = "linux"))]
-pub fn apply_cpu_scoped(_config: &TuningConfig, _layout: &CpuLayout, _guard: &mut TuningGuard) {}
+pub fn apply_cpu_scoped(_config: &TuningConfig, _layout: &CpuLayout) {}
 
 #[cfg(test)]
 mod tests {
@@ -606,38 +483,42 @@ mod tests {
     }
 
     #[test]
-    fn apply_cpu_scoped_disabled_saves_nothing() {
-        let config = TuningConfig::disabled();
-        let layout = CpuLayout::with_core_count(8);
-        let mut guard = apply(&config);
-        apply_cpu_scoped(&config, &layout, &mut guard);
-        #[cfg(target_os = "linux")]
-        assert!(guard.saved.is_empty());
-    }
-
-    #[test]
-    fn apply_cpu_scoped_no_isolation_saves_nothing() {
-        let config = TuningConfig::default();
-        let layout = CpuLayout::with_core_count(1);
-        // Empty guard from a disabled config; the single-core layout means
-        // apply_cpu_scoped must not touch anything.
-        let mut guard = apply(&TuningConfig::disabled());
-        apply_cpu_scoped(&config, &layout, &mut guard);
-        #[cfg(target_os = "linux")]
-        assert!(guard.saved.is_empty());
-    }
-
-    #[test]
-    fn apply_returns_guard() {
-        // On any platform, apply should return without panic
-        let config = TuningConfig::default();
-        let _guard = apply(&config);
-    }
-
-    #[test]
     fn apply_disabled_returns_guard() {
         let config = TuningConfig::disabled();
         let _guard = apply(&config);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn the_opt_outs_leave_the_partition_and_the_steering_masks_alone() {
+        // Kills dropping `--no-cpuset-partition` or `--no-irq-steering` from its gate.
+        let (_dir, root) = fake_host_root();
+        let before = tree(&root);
+        let config = TuningConfig {
+            cpuset_partition: false,
+            steer_kernel_work: false,
+            ..TuningConfig::default()
+        };
+
+        apply_cpu_scoped_at(&config, &CpuLayout::with_core_count(8), &root);
+
+        assert_eq!(tree(&root), before);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn a_single_cpu_skips_cpu_scoped_tuning() {
+        // Kills dropping `has_isolation` from either gate.
+        let (_dir, root) = fake_host_root();
+        let before = tree(&root);
+
+        apply_cpu_scoped_at(
+            &TuningConfig::default(),
+            &CpuLayout::with_core_count(1),
+            &root,
+        );
+
+        assert_eq!(tree(&root), before);
     }
 
     #[test]
@@ -651,101 +532,18 @@ mod tests {
 
     #[cfg(target_os = "linux")]
     #[test]
-    fn guard_drop_restores_via_tempfile() {
-        use std::fs;
-
-        let dir = tempfile::tempdir().unwrap();
-        let path = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let file_path = path.join("test_sysctl");
-        fs::write(&file_path, "original").unwrap();
-
-        {
-            let mut guard = TuningGuard {
-                saved: Vec::new(),
-                held_fds: Vec::new(),
-                remove_if_empty: Vec::new(),
-            };
-            guard.saved.push(SavedSetting {
-                path: file_path.clone(),
-                value: "original".to_owned(),
-                label: "test".to_owned(),
-            });
-            // Simulate the tuning having changed the value
-            fs::write(&file_path, "changed").unwrap();
-            assert_eq!(fs::read_to_string(&file_path).unwrap(), "changed");
-        }
-        // Guard dropped - should restore
-        assert_eq!(fs::read_to_string(&file_path).unwrap(), "original");
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn guard_restores_in_reverse_order() {
-        use std::fs;
-
-        let dir = tempfile::tempdir().unwrap();
-        let base = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
-        let path1 = base.join("first");
-        let path2 = base.join("second");
-        fs::write(&path1, "a").unwrap();
-        fs::write(&path2, "b").unwrap();
-
-        {
-            let mut guard = TuningGuard {
-                saved: Vec::new(),
-                held_fds: Vec::new(),
-                remove_if_empty: Vec::new(),
-            };
-            guard.saved.push(SavedSetting {
-                path: path1.clone(),
-                value: "a_orig".to_owned(),
-                label: "first".to_owned(),
-            });
-            guard.saved.push(SavedSetting {
-                path: path2.clone(),
-                value: "b_orig".to_owned(),
-                label: "second".to_owned(),
-            });
-        }
-        // Both should be restored
-        assert_eq!(fs::read_to_string(&path1).unwrap(), "a_orig");
-        assert_eq!(fs::read_to_string(&path2).unwrap(), "b_orig");
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn write_sysctl_skips_missing_path() {
-        let mut guard = TuningGuard {
-            saved: Vec::new(),
-            held_fds: Vec::new(),
-            remove_if_empty: Vec::new(),
-        };
-        write_sysctl(&mut guard, "/nonexistent/path/value", "0", "test");
-        assert!(
-            guard.saved.is_empty(),
-            "should not save anything for missing path"
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn write_sysctl_skips_if_already_set() {
+    fn a_restart_leaves_an_already_set_value_unwritten() {
+        // Kills dropping the equality check: the kernel prints a newline the
+        // runner never writes, so a rewrite loses it.
         use std::fs;
 
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("value");
-        fs::write(&path, "0").unwrap();
+        fs::write(&path, "0\n").unwrap();
 
-        let mut guard = TuningGuard {
-            saved: Vec::new(),
-            held_fds: Vec::new(),
-            remove_if_empty: Vec::new(),
-        };
-        write_sysctl(&mut guard, path.to_str().unwrap(), "0", "test");
-        assert!(
-            guard.saved.is_empty(),
-            "should not save when value already matches"
-        );
+        write_sysctl(path.to_str().unwrap(), "0", "test");
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), "0\n");
     }
 
     #[cfg(target_os = "linux")]
@@ -769,22 +567,15 @@ mod tests {
 
     #[cfg(target_os = "linux")]
     #[test]
-    fn write_bracketed_sysctl_saves_and_writes() {
+    fn write_bracketed_sysctl_writes_the_plain_token() {
         use std::fs;
 
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("enabled");
         fs::write(&path, "always [madvise] never\n").unwrap();
 
-        let mut guard = TuningGuard {
-            saved: Vec::new(),
-            held_fds: Vec::new(),
-            remove_if_empty: Vec::new(),
-        };
-        write_bracketed_sysctl(&mut guard, path.to_str().unwrap(), "never", "test");
+        write_bracketed_sysctl(path.to_str().unwrap(), "never", "test");
 
-        assert_eq!(guard.saved.len(), 1);
-        assert_eq!(guard.saved[0].value, "madvise");
         assert_eq!(fs::read_to_string(&path).unwrap(), "never");
     }
 
@@ -797,14 +588,8 @@ mod tests {
         let path = dir.path().join("enabled");
         fs::write(&path, "always madvise [never]\n").unwrap();
 
-        let mut guard = TuningGuard {
-            saved: Vec::new(),
-            held_fds: Vec::new(),
-            remove_if_empty: Vec::new(),
-        };
-        write_bracketed_sysctl(&mut guard, path.to_str().unwrap(), "never", "test");
+        write_bracketed_sysctl(path.to_str().unwrap(), "never", "test");
 
-        assert!(guard.saved.is_empty());
         // The file is untouched (still in the kernel's bracketed format)
         assert_eq!(
             fs::read_to_string(&path).unwrap(),
@@ -821,35 +606,63 @@ mod tests {
         let path = dir.path().join("enabled");
         fs::write(&path, "garbage\n").unwrap();
 
-        let mut guard = TuningGuard {
-            saved: Vec::new(),
-            held_fds: Vec::new(),
-            remove_if_empty: Vec::new(),
-        };
-        write_bracketed_sysctl(&mut guard, path.to_str().unwrap(), "never", "test");
+        write_bracketed_sysctl(path.to_str().unwrap(), "never", "test");
 
-        assert!(guard.saved.is_empty());
         assert_eq!(fs::read_to_string(&path).unwrap(), "garbage\n");
     }
 
     #[cfg(target_os = "linux")]
     #[test]
-    fn write_sysctl_saves_and_writes() {
+    fn write_sysctl_writes_the_target() {
         use std::fs;
 
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("value");
         fs::write(&path, "60").unwrap();
 
-        let mut guard = TuningGuard {
-            saved: Vec::new(),
-            held_fds: Vec::new(),
-            remove_if_empty: Vec::new(),
-        };
-        write_sysctl(&mut guard, path.to_str().unwrap(), "10", "test");
+        write_sysctl(path.to_str().unwrap(), "10", "test");
 
-        assert_eq!(guard.saved.len(), 1);
-        assert_eq!(guard.saved[0].value, "60");
         assert_eq!(fs::read_to_string(&path).unwrap(), "10");
+    }
+
+    /// A fake untuned host holding the files CPU-scoped tuning writes.
+    #[cfg(target_os = "linux")]
+    fn fake_host_root() -> (tempfile::TempDir, Utf8PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
+
+        for (path, contents) in [
+            ("sys/fs/cgroup/cgroup.controllers", "cpuset memory pids\n"),
+            ("sys/fs/cgroup/cgroup.subtree_control", "\n"),
+            ("proc/irq/default_smp_affinity", "ff\n"),
+            ("proc/irq/10/smp_affinity_list", "0-7\n"),
+            ("sys/devices/virtual/workqueue/cpumask", "ff\n"),
+        ] {
+            let path = root.join(path);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, contents).unwrap();
+        }
+
+        (dir, root)
+    }
+
+    /// Every path under `root` with its contents, `None` for a directory.
+    #[cfg(target_os = "linux")]
+    fn tree(root: &Utf8Path) -> std::collections::BTreeMap<Utf8PathBuf, Option<String>> {
+        let mut tree = std::collections::BTreeMap::new();
+        let mut dirs = vec![root.to_owned()];
+        while let Some(dir) = dirs.pop() {
+            for entry in dir.read_dir_utf8().unwrap() {
+                let path = entry.unwrap().into_path();
+                if path.is_dir() {
+                    tree.insert(path.clone(), None);
+                    dirs.push(path);
+                } else {
+                    let contents = std::fs::read_to_string(&path).unwrap();
+                    tree.insert(path, Some(contents));
+                }
+            }
+        }
+        tree
     }
 }

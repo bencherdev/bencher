@@ -3,7 +3,10 @@
 Antes de cada benchmark, o `runner` aplica ajustes ao host para reduzir o ruído de medição.
 Por padrão, ele desabilita ASLR, o NMI watchdog, SMT / hyper-threading e o turbo boost;
 define o governor de escalonamento de CPU como `performance`, a swappiness como `10` e `perf_event_paranoid` como `-1`.
-As flags abaixo mantêm otimizações individuais nos padrões do host.
+Em um host que o `runner` não ajustou desde a última reinicialização, as flags abaixo mantêm otimizações individuais nos padrões do host.
+
+O ajuste do host persiste até que o host seja reiniciado: cada configuração é uma escrita apenas em tempo de execução que o `runner` não reverte ao sair.
+Reinicie um host compartilhado depois de remover o `runner`.
 
 ### `--no-tuning`
 

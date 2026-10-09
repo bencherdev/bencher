@@ -4,7 +4,7 @@ use clap::Args;
 /// Host tuning flags shared by `run` and `up` subcommands.
 ///
 /// Flag polarity: hardware features that tuning disables use positive
-/// keep-enabled flags naming the feature (`--smt`, `--turbo`,
+/// flags naming the feature, which skip disabling it (`--smt`, `--turbo`,
 /// `--cstates`, `--ksm`); actions the runner itself performs use `--no-`
 /// flags naming the skipped action (`--no-irq-steering`,
 /// `--no-cpuset-partition`), since a bare `--irq-steering` would read
@@ -19,39 +19,39 @@ pub struct CliTuning {
     #[arg(long)]
     pub no_tuning: bool,
 
-    /// Keep ASLR enabled (default: disabled for benchmarks).
+    /// Do not disable ASLR (default: disabled for benchmarks).
     #[arg(long)]
     pub aslr: bool,
 
-    /// Keep NMI watchdog enabled (default: disabled for benchmarks).
+    /// Do not disable the NMI watchdog (default: disabled for benchmarks).
     #[arg(long)]
     pub nmi_watchdog: bool,
 
-    /// Keep SMT / hyper-threading enabled (default: disabled for benchmarks).
+    /// Do not disable SMT / hyper-threading (default: disabled for benchmarks).
     #[arg(long)]
     pub smt: bool,
 
-    /// Keep turboboost enabled (default: disabled for benchmarks).
+    /// Do not disable turboboost (default: disabled for benchmarks).
     #[arg(long)]
     pub turbo: bool,
 
-    /// Keep automatic NUMA balancing enabled (default: disabled for benchmarks).
+    /// Do not disable automatic NUMA balancing (default: disabled for benchmarks).
     #[arg(long)]
     pub numa_balancing: bool,
 
-    /// Keep timer migration enabled (default: disabled for benchmarks).
+    /// Do not disable timer migration (default: disabled for benchmarks).
     #[arg(long)]
     pub timer_migration: bool,
 
-    /// Keep the soft lockup watchdog enabled (default: disabled for benchmarks).
+    /// Do not disable the soft lockup watchdog (default: disabled for benchmarks).
     #[arg(long)]
     pub soft_watchdog: bool,
 
-    /// Keep kernel samepage merging (KSM) enabled (default: disabled for benchmarks).
+    /// Do not disable KSM, kernel samepage merging (default: disabled for benchmarks).
     #[arg(long)]
     pub ksm: bool,
 
-    /// Keep deep C-states enabled (default: disabled for benchmarks).
+    /// Do not disable deep C-states (default: disabled for benchmarks).
     #[arg(long)]
     pub cstates: bool,
 
@@ -77,8 +77,8 @@ pub struct CliTuning {
     pub perf_event_paranoid: Option<i32>,
 
     /// Set host transparent hugepage mode: never, madvise, always,
-    /// or leave (default: never). Use "leave" to preserve the host
-    /// configuration.
+    /// or leave (default: never). Use "leave" to keep the host's current
+    /// mode.
     #[arg(long)]
     pub thp: Option<ThpMode>,
 }

@@ -77,11 +77,7 @@ impl Up {
     #[expect(clippy::print_stdout, reason = "runner CLI startup output")]
     #[cfg_attr(
         not(target_os = "linux"),
-        expect(
-            unused_mut,
-            unused_variables,
-            reason = "mut and tuning guard needed on Linux for CPU layout detection"
-        )
+        expect(unused_mut, reason = "mut needed on Linux for CPU layout detection")
     )]
     pub fn run(mut self) -> Result<(), UpError> {
         crate::signal::install_handlers();
@@ -104,15 +100,14 @@ impl Up {
         // only non-sandboxed specs must come up without root.
         println!("  State directory: {}", self.config.state_dir);
 
-        // Serialize host-global tuning across runner processes. Declared
-        // before the guard so the lock releases only after restore completes.
+        // Serialize host-global tuning across runner processes.
         let host_lock = crate::tuning::HostTuningLock::acquire();
         let tuning = host_lock.effective_tuning(&self.config.tuning);
 
-        // Apply host tuning - guard restores settings on drop (no-op on non-Linux).
-        // This must happen before CPU layout detection so that SMT changes
-        // are reflected in the core count.
-        let mut tuning_guard = crate::tuning::apply(&tuning);
+        // Apply host tuning, which persists until the host reboots (no-op on
+        // non-Linux). This must happen before CPU layout detection so that SMT
+        // changes are reflected in the core count.
+        let _tuning_guard = crate::tuning::apply(&tuning);
 
         // Re-detect CPU layout after tuning (SMT may have changed core count).
         // Linux-only: CpuLayout::detect() reads /sys/devices which only exists on Linux.
@@ -120,7 +115,7 @@ impl Up {
         {
             self.config.cpu_layout = Some(CpuLayout::detect());
             if let Some(cpu_layout) = &self.config.cpu_layout {
-                crate::tuning::apply_cpu_scoped(&tuning, cpu_layout, &mut tuning_guard);
+                crate::tuning::apply_cpu_scoped(&tuning, cpu_layout);
                 if cpu_layout.has_isolation() {
                     println!(
                         "  CPU isolation: housekeeping={}, benchmark={}",

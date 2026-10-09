@@ -2,7 +2,7 @@
 //!
 //! Host tuning mutates host-global state (sysctls, IRQ affinities, THP,
 //! the cpuset partition). Two concurrent runner processes would fight:
-//! the second one's shutdown restores settings out from under the first.
+//! the second one's tuning rewrites settings under the first's Jobs.
 //! An advisory `flock` turns the single-runner assumption into an
 //! enforced invariant: a runner that cannot take the lock skips host
 //! tuning with a warning and keeps only its per-run isolation. The
@@ -18,8 +18,8 @@ const LOCK_PATH: &str = "/run/bencher_runner_tuning.lock";
 
 /// Holds the host tuning lock (or records why it could not be taken).
 ///
-/// Must be declared before the `TuningGuard` at the call site so the
-/// lock is released only after the guard has restored all settings.
+/// Held for the life of the runner, so no other runner tunes the host while
+/// this one runs Jobs.
 /// On non-Linux platforms this is a no-op that always allows tuning,
 /// mirroring tuning itself being a no-op there.
 pub struct HostTuningLock {

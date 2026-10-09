@@ -15,7 +15,6 @@ use std::fs;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-use super::TuningGuard;
 use crate::cpu::CpuLayout;
 use crate::error::JailError;
 use crate::jail::{BENCHER_CGROUP_BASE, Controllers, effective_mems, ensure_controllers};
@@ -58,22 +57,17 @@ impl BencherPartition {
     /// cores, verifying the kernel accepted it.
     ///
     /// Falls back `isolated` -> `root` -> `member` when the kernel reports
-    /// the partition as invalid (read-back verification). All writes are
-    /// recorded on the guard and restored in reverse order on drop.
+    /// the partition as invalid (read-back verification). Nothing is reverted,
+    /// so the partition outlives the runner until the host reboots.
     /// Best-effort: any failure degrades to [`PartitionLevel::Member`],
     /// which matches the behavior before partitions were introduced.
-    pub(super) fn apply(&self, layout: &CpuLayout, guard: &mut TuningGuard) -> PartitionLevel {
-        self.apply_with(layout, guard, ensure_controllers)
+    pub(super) fn apply(&self, layout: &CpuLayout) -> PartitionLevel {
+        self.apply_with(layout, ensure_controllers)
     }
 
     /// The controllers step is injectable because only cgroupfs gives its
     /// writes their meaning.
-    fn apply_with<E>(
-        &self,
-        layout: &CpuLayout,
-        guard: &mut TuningGuard,
-        ensure: E,
-    ) -> PartitionLevel
+    fn apply_with<E>(&self, layout: &CpuLayout, ensure: E) -> PartitionLevel
     where
         E: FnOnce(&Utf8Path) -> Result<Controllers, JailError>,
     {
@@ -81,11 +75,6 @@ impl BencherPartition {
             eprintln!("Warning: failed to create cgroup {}: {e}", self.path);
             return PartitionLevel::Member;
         }
-
-        // Removed on the way out whoever created it, because clearing
-        // `cpuset.cpus` is refused with `EIO` while a descendant holds a task,
-        // so the restore alone cannot always undo this.
-        guard.remove_when_empty(self.path.clone());
 
         // The bencher cgroup has cpuset files only once the root enables cpuset.
         if !report_controllers(ensure(&self.root)) {
@@ -95,12 +84,7 @@ impl BencherPartition {
         // A partition needs explicit cpus and mems. Mems mirror the
         // root's effective nodes so multi-node NUMA hosts are not forced
         // onto node 0.
-        if !save_and_write(
-            guard,
-            &self.path.join("cpuset.cpus"),
-            &layout.benchmark_cpuset(),
-            "bencher cpuset.cpus",
-        ) {
+        if !write_unless_set(&self.path.join("cpuset.cpus"), &layout.benchmark_cpuset()) {
             return PartitionLevel::Member;
         }
         // An unreadable node set degrades to member rather than guessing one,
@@ -114,34 +98,16 @@ impl BencherPartition {
                 return PartitionLevel::Member;
             },
         };
-        if !save_and_write(
-            guard,
-            &self.path.join("cpuset.mems"),
-            &mems,
-            "bencher cpuset.mems",
-        ) {
+        if !write_unless_set(&self.path.join("cpuset.mems"), &mems) {
             return PartitionLevel::Member;
         }
 
         let partition_path = self.path.join("cpuset.cpus.partition");
-        let original = match fs::read_to_string(&partition_path) {
-            Ok(value) => partition_mode_token(&value).to_owned(),
-            Err(e) => {
-                // Missing on kernels without cpuset partition support.
-                eprintln!("Warning: cpuset partitions unavailable ({partition_path}: {e})");
-                return PartitionLevel::Member;
-            },
-        };
-
-        // Save the restore entry before attempting any mode write: a write
-        // can succeed at the syscall level while the kernel rejects the
-        // partition in the read-back, and the file must still revert on
-        // drop. Restoring an unchanged value is a harmless no-op.
-        guard.save_restore(
-            partition_path.clone(),
-            original,
-            "bencher cpuset partition".to_owned(),
-        );
+        if let Err(e) = fs::read_to_string(&partition_path) {
+            // Missing on kernels without cpuset partition support.
+            eprintln!("Warning: cpuset partitions unavailable ({partition_path}: {e})");
+            return PartitionLevel::Member;
+        }
 
         for (mode, level) in [
             ("isolated", PartitionLevel::Isolated),
@@ -207,16 +173,6 @@ fn try_partition_mode(path: &Utf8Path, mode: &str) -> Result<(), JailError> {
     verify_partition_state(path, mode)
 }
 
-/// Extract the mode token from a `cpuset.cpus.partition` read-back.
-///
-/// A healthy partition reads back as just the mode (`member`, `root`,
-/// `isolated`); a rejected one as `<mode> invalid (<reason>)`. Only the
-/// mode token is a valid value to write back on restore. An empty or
-/// unreadable value falls back to the kernel default `member`.
-fn partition_mode_token(state: &str) -> &str {
-    state.split_whitespace().next().unwrap_or("member")
-}
-
 /// Read back a partition file and check the kernel reports exactly `mode`.
 fn verify_partition_state(path: &Utf8Path, mode: &str) -> Result<(), JailError> {
     let state = fs::read_to_string(path).map_err(|e| JailError::WriteCgroup {
@@ -235,12 +191,10 @@ fn verify_partition_state(path: &Utf8Path, mode: &str) -> Result<(), JailError> 
     }
 }
 
-/// Save the current value of a cgroup file on the guard, then write `value`.
+/// Write `value` to a cgroup file unless it already holds it.
 ///
-/// An empty current value is saved as a newline so the restore write is
-/// not a zero-byte no-op (clearing `cpuset.cpus` requires writing `"\n"`).
 /// Returns false (with a warning) when the file cannot be read or written.
-fn save_and_write(guard: &mut TuningGuard, path: &Utf8Path, value: &str, label: &str) -> bool {
+fn write_unless_set(path: &Utf8Path, value: &str) -> bool {
     let current = match fs::read_to_string(path) {
         Ok(current) => current.trim().to_owned(),
         Err(e) => {
@@ -257,13 +211,6 @@ fn save_and_write(guard: &mut TuningGuard, path: &Utf8Path, value: &str, label: 
         eprintln!("Warning: failed to write {path}: {e}");
         return false;
     }
-
-    let restore_value = if current.is_empty() {
-        "\n".to_owned()
-    } else {
-        current
-    };
-    guard.save_restore(path.to_owned(), restore_value, label.to_owned());
     true
 }
 
@@ -272,22 +219,13 @@ mod tests {
     use camino::Utf8PathBuf;
 
     use crate::cpu::CpuLayout;
-    use crate::tuning::{TuningConfig, TuningGuard};
 
     use super::*;
 
-    fn empty_guard() -> TuningGuard {
-        crate::tuning::apply(&TuningConfig::disabled())
-    }
-
     /// Only cgroupfs gives the controller writes their meaning, so a tempfile
     /// tree takes them as done.
-    fn apply_on_tree(
-        root: &Utf8Path,
-        layout: &CpuLayout,
-        guard: &mut TuningGuard,
-    ) -> PartitionLevel {
-        BencherPartition::new(root).apply_with(layout, guard, |_| Ok(Controllers::enabled()))
+    fn apply_on_tree(root: &Utf8Path, layout: &CpuLayout) -> PartitionLevel {
+        BencherPartition::new(root).apply_with(layout, |_| Ok(Controllers::enabled()))
     }
 
     /// A fake cgroup v2 tree mirroring what the kernel exposes.
@@ -308,9 +246,7 @@ mod tests {
     fn partition_applies_isolated() {
         let (_dir, root) = fake_cgroup_root();
         let layout = CpuLayout::with_core_count(8);
-        let mut guard = empty_guard();
-
-        let level = apply_on_tree(&root, &layout, &mut guard);
+        let level = apply_on_tree(&root, &layout);
 
         assert_eq!(level, PartitionLevel::Isolated);
         assert_eq!(
@@ -333,40 +269,12 @@ mod tests {
         let (_dir, root) = fake_cgroup_root();
         fs::write(root.join("cpuset.mems.effective"), "0-1\n").unwrap();
         let layout = CpuLayout::with_core_count(8);
-        let mut guard = empty_guard();
-
-        let level = apply_on_tree(&root, &layout, &mut guard);
+        let level = apply_on_tree(&root, &layout);
 
         assert_eq!(level, PartitionLevel::Isolated);
         assert_eq!(
             fs::read_to_string(root.join("bencher/cpuset.mems")).unwrap(),
             "0-1"
-        );
-    }
-
-    #[test]
-    fn partition_restores_on_guard_drop() {
-        let (_dir, root) = fake_cgroup_root();
-        let layout = CpuLayout::with_core_count(8);
-
-        {
-            let mut guard = empty_guard();
-            let level = apply_on_tree(&root, &layout, &mut guard);
-            assert_eq!(level, PartitionLevel::Isolated);
-        }
-
-        // Partition demoted back, cpus and mems cleared (newline write).
-        assert_eq!(
-            fs::read_to_string(root.join("bencher/cpuset.cpus.partition")).unwrap(),
-            "member"
-        );
-        assert_eq!(
-            fs::read_to_string(root.join("bencher/cpuset.cpus")).unwrap(),
-            "\n"
-        );
-        assert_eq!(
-            fs::read_to_string(root.join("bencher/cpuset.mems")).unwrap(),
-            "\n"
         );
     }
 
@@ -378,9 +286,7 @@ mod tests {
         fs::remove_file(root.join("bencher/cpuset.cpus.partition")).unwrap();
         fs::create_dir_all(root.join("bencher/cpuset.cpus.partition")).unwrap();
         let layout = CpuLayout::with_core_count(8);
-        let mut guard = empty_guard();
-
-        let level = apply_on_tree(&root, &layout, &mut guard);
+        let level = apply_on_tree(&root, &layout);
 
         assert_eq!(level, PartitionLevel::Member);
     }
@@ -390,18 +296,39 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let root = Utf8PathBuf::try_from(dir.path().to_path_buf()).unwrap();
         let layout = CpuLayout::with_core_count(8);
-        let mut guard = empty_guard();
-
-        let level = BencherPartition::new(&root).apply(&layout, &mut guard);
+        let level = BencherPartition::new(&root).apply(&layout);
 
         assert_eq!(level, PartitionLevel::Member);
     }
 
     #[test]
-    fn partition_restore_entry_saved_before_mode_writes() {
+    fn a_restart_finds_the_partition_in_place() {
+        // Kills dropping the equality check: the kernel prints a newline the
+        // runner never writes, so a rewrite loses it.
         let (_dir, root) = fake_cgroup_root();
-        // A previous run (or crash) left the partition file dirty: the
-        // kernel reports rejected partitions inline in the read-back.
+        fs::write(root.join("bencher/cpuset.cpus"), "2-7\n").unwrap();
+        fs::write(root.join("bencher/cpuset.mems"), "0\n").unwrap();
+        fs::write(root.join("bencher/cpuset.cpus.partition"), "isolated\n").unwrap();
+        let layout = CpuLayout::with_core_count(8);
+
+        let level = apply_on_tree(&root, &layout);
+
+        assert_eq!(level, PartitionLevel::Isolated);
+        assert_eq!(
+            fs::read_to_string(root.join("bencher/cpuset.cpus")).unwrap(),
+            "2-7\n"
+        );
+        assert_eq!(
+            fs::read_to_string(root.join("bencher/cpuset.mems")).unwrap(),
+            "0\n"
+        );
+    }
+
+    #[test]
+    fn a_partition_left_invalid_is_applied_again() {
+        // Kills trusting the mode token alone: a refused partition reads back
+        // as `<mode> invalid (<reason>)`.
+        let (_dir, root) = fake_cgroup_root();
         fs::write(
             root.join("bencher/cpuset.cpus.partition"),
             "isolated invalid (Cpu list not exclusive)\n",
@@ -409,29 +336,13 @@ mod tests {
         .unwrap();
         let layout = CpuLayout::with_core_count(8);
 
-        {
-            let mut guard = empty_guard();
-            let level = apply_on_tree(&root, &layout, &mut guard);
-            assert_eq!(level, PartitionLevel::Isolated);
-        }
+        let level = apply_on_tree(&root, &layout);
 
-        // The restore writes back the normalized mode token, never the
-        // full dirty state (which is not a valid value to write).
+        assert_eq!(level, PartitionLevel::Isolated);
         assert_eq!(
             fs::read_to_string(root.join("bencher/cpuset.cpus.partition")).unwrap(),
             "isolated"
         );
-    }
-
-    #[test]
-    fn partition_mode_token_normalizes_states() {
-        assert_eq!(partition_mode_token("member\n"), "member");
-        assert_eq!(partition_mode_token("isolated\n"), "isolated");
-        assert_eq!(
-            partition_mode_token("isolated invalid (Cpu list not exclusive)\n"),
-            "isolated"
-        );
-        assert_eq!(partition_mode_token(""), "member");
     }
 
     #[test]
@@ -468,11 +379,8 @@ mod tests {
         // Going on would fail on the missing `cpuset.cpus` and blame the file.
         let (_dir, root) = fake_cgroup_root();
         let layout = CpuLayout::with_core_count(8);
-        let mut guard = empty_guard();
-
-        let level = BencherPartition::new(&root).apply_with(&layout, &mut guard, |root| {
-            Ok(Controllers::without_cpuset(root))
-        });
+        let level = BencherPartition::new(&root)
+            .apply_with(&layout, |root| Ok(Controllers::without_cpuset(root)));
 
         assert_eq!(level, PartitionLevel::Member);
         assert_eq!(
@@ -501,12 +409,10 @@ mod tests {
             return;
         }
         let scratch = crate::jail::ScratchCgroup::new("bencher-runner-partition");
-        let mut guard = empty_guard();
 
-        let level = BencherPartition::new(scratch.path()).apply(&layout, &mut guard);
+        let level = BencherPartition::new(scratch.path()).apply(&layout);
         let partition =
             fs::read_to_string(scratch.path().join("bencher/cpuset.cpus.partition")).unwrap();
-        drop(guard);
 
         assert_eq!(level, PartitionLevel::Member);
         assert_eq!(partition.trim(), "member");

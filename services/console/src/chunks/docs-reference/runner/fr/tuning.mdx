@@ -3,7 +3,10 @@
 Avant chaque benchmark, le `runner` applique un réglage de l'hôte pour réduire le bruit de mesure.
 Par défaut, il désactive l'ASLR, le NMI watchdog, le SMT / hyper-threading et le turbo boost ;
 règle le gouverneur de mise à l'échelle du CPU sur `performance`, la swappiness sur `10`, et `perf_event_paranoid` sur `-1`.
-Les drapeaux ci-dessous conservent au contraire les optimisations individuelles à leurs valeurs par défaut de l'hôte.
+Sur un hôte que le `runner` n'a pas réglé depuis son dernier redémarrage, les drapeaux ci-dessous conservent au contraire les optimisations individuelles à leurs valeurs par défaut de l'hôte.
+
+Le réglage de l'hôte persiste jusqu'au redémarrage de l'hôte : chaque paramètre est une écriture valable uniquement à l'exécution, que le `runner` n'annule pas lorsqu'il se termine.
+Redémarrez un hôte partagé après avoir retiré le `runner`.
 
 ### `--no-tuning`
 
