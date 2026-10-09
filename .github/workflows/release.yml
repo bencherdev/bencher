@@ -129,6 +129,12 @@ jobs:
           name: ${{ env.RUNNER_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}
 
       # Push multi-arch images to GHCR & Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
@@ -138,12 +144,6 @@ jobs:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Tag & Push API Image to GHCR & Docker Hub
         run: |
