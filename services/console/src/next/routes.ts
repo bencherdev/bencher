@@ -16,7 +16,11 @@ export const PAGES: Record<PageName, Page> = {
 	Explore: lazy<Component>(() =>
 		import("./pages/Explore").then(({ default: page }) => ({ default: page })),
 	),
-	Plots: lazy(() => import("./pages/Plots")),
+	// Every pinned plot draws, so the plot's code starts with the page's rather than a round after it.
+	Plots: lazy(() => {
+		import("./plot/Plot").catch(() => {});
+		return import("./pages/Plots");
+	}),
 	Reports: lazy(reportsPage),
 	// Reading only the default export spares the bundler a namespace object,
 	// whose helper it would load from an unrelated chunk.

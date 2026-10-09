@@ -87,6 +87,8 @@ console's dependencies (`npm ci`), `wasm-pack`, and Playwright's Chromium
 (`npx playwright install chromium`).
 
 The speed ceilings in `e2e/speed-ceilings.json` fail the suite above them.
+They measure the Node adapter build this task serves; the Cloudflare build that
+production serves runs a few bytes larger per stylesheet and script.
 Set one at the measured value plus a small margin, and only ever lower it.
 
 ## New Console
@@ -95,8 +97,8 @@ The console for BMF v1 projects lives under `src/next/`, built on the design
 system in [`packages/ui`](../../packages/ui/README.md), not Bulma. Every color
 is a token in `packages/ui/src/styles/theme.css`; a test fails when a color
 literal appears anywhere in `packages/ui/src`, `src/next`, or `src/pages/next`.
-`src/next/Head.astro` belongs in the head of every new console page: it loads the
-stylesheet, preloads Inter, and sets the theme before the first paint.
+`src/next/Head.astro` belongs in the head of every new console page: it preloads
+Inter and sets the theme before the first paint.
 
 Every path under a project is served by
 `src/pages/next/console/projects/[project]/[...path].astro`. Its inline scripts
@@ -109,12 +111,20 @@ After the client build, `src/next/build/preloads.mjs` writes the client's module
 graph over a placeholder in the server bundle, and the page renders a
 `modulepreload` link for every module it will load (`src/next/preloads.ts`), so
 module loading is one round deep. A dev server has no graph and renders none.
-A page component must live at `src/next/pages/<Name>.tsx` to be found.
+A page component must live at `src/next/pages/<Name>.tsx` to be found. A lazy
+import's preload list leaves out what its importer already loaded.
 
-A stylesheet imported anywhere in the app's module graph, a lazy page's chunk
-included, is linked from the head of every `/next/` page and blocks its first
-paint. Page styles therefore go in `src/next/styles/console.css`, which every
-page already loads.
+`SHARED_FILES` in `astro.config.mjs` merges small modules the pages load together
+into one file per set, and only lazy chunks keep a name in their file name. A
+group takes its modules' imports with it, so a runtime import added to one of
+its modules moves into that file; the speed ceilings catch the growth.
+
+A stylesheet imported anywhere in a page's module graph, a lazy page's chunk
+included, is linked from that page's head and blocks its first paint. One that
+both `/next/` pages import leaves each page's sheet for a file (or, when small,
+an inline style) of its own, so the console's page imports the design system's
+stylesheet and every page's styles, and the public plot imports only
+`src/next/public/page.css`, which gathers what it draws.
 
 ## Sentry
 

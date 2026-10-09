@@ -1,8 +1,8 @@
+import { canonicalParameters } from "../query/parameters";
 import {
 	type ExploreQuery,
 	MAX_ENTRIES,
 	type Parameters,
-	canonicalParameters,
 } from "../query/query";
 
 /** What each box adds: a UUID, a parameter set, or a metric name. */

@@ -11,7 +11,7 @@ import Frame from "../settings/Frame";
 import General from "../settings/General";
 import Keys from "../settings/Keys";
 import { sectionOf } from "../settings/section";
-import Placeholder from "./Placeholder";
+import NotFound from "./NotFound";
 
 /** General and Keys, with Dimensions beside them in the rail. */
 const Settings = () => {
@@ -35,7 +35,7 @@ const Settings = () => {
 	});
 	return (
 		<Show when={bootstrap().data} fallback={<ContentSkeleton />}>
-			<Switch fallback={<Placeholder title="Page not found" />}>
+			<Switch fallback={<NotFound />}>
 				<Match when={section() === "general"}>
 					<Frame slug={slug()} section="general">
 						<General />

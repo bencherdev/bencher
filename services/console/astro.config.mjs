@@ -22,6 +22,30 @@ const BENCHER_CHAT_URL = "https://discord.gg/yGEsdUh7R4";
 const BENCHER_CALENDLY_URL = "https://calendly.com/bencher/demo";
 const BENCHER_GITHUB_URL = "https://github.com/bencherdev/bencher";
 
+// Modules the console's pages load together, merged into one file per set:
+// each extra file costs a request and a gzip dictionary of its own.
+const SHARED_FILES = [
+	{
+		name: "solid",
+		priority: 3,
+		test: /[\\/]node_modules[\\/]solid-js[\\/](dist[\\/]solid|web[\\/]dist[\\/]web)\.js$/,
+	},
+	{
+		name: "common",
+		priority: 2,
+		test: /[\\/](packages[\\/]ui[\\/]src[\\/](TextInput|Segmented)\.tsx|src[\\/]next[\\/](plot[\\/]narrow|query[\\/]parameters)\.ts)$/,
+	},
+	{
+		name: "line",
+		priority: 1,
+		test: /[\\/]src[\\/]next[\\/](query[\\/]line|plot[\\/]format)\.ts$/,
+	},
+	{
+		name: "memory",
+		test: /[\\/]src[\\/]next[\\/](memory|paths)\.ts$/,
+	},
+];
+
 // https://astro.build/config
 export default defineConfig({
 	// https://docs.astro.build/en/reference/configuration-reference/#site
@@ -224,6 +248,24 @@ export default defineConfig({
 		server: {
 			fs: {
 				allow: [".", "../../packages/ui"],
+			},
+		},
+		environments: {
+			client: {
+				build: {
+					rolldownOptions: {
+						output: {
+							// A shared file's name is repeated in every import of it and
+							// every preload list, so only lazy pages and parts keep theirs.
+							entryFileNames: "assets/[hash].js",
+							chunkFileNames: (chunk) =>
+								chunk.isDynamicEntry
+									? "assets/[name].[hash].js"
+									: "assets/[hash].js",
+							codeSplitting: { groups: SHARED_FILES },
+						},
+					},
+				},
 			},
 		},
 	},

@@ -1,9 +1,5 @@
-import {
-	type ExploreQuery,
-	blankQuery,
-	canonicalParameters,
-	encodeQuery,
-} from "../query/query";
+import { canonicalParameters } from "../query/parameters";
+import { type ExploreQuery, blankQuery, encodeQuery } from "../query/query";
 
 /** Whether the query names what the plot query needs: a branch, a testbed, a benchmark, and a measure. */
 export const drawable = (query: ExploreQuery): boolean =>
