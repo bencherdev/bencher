@@ -518,6 +518,44 @@ fn apply_migration(conn: &mut DbConnection) {
         .expect("Failed to enable foreign keys");
 }
 
+// Kills: a plot created past the limit, a limit off by one either way, a limit
+// that counts plots since deleted, and one that counts other projects' plots.
+#[tokio::test]
+async fn plot_create_keeps_at_most_64_plots() {
+    let f = fixture("plotlimit").await;
+    let org = f.server.create_org(&f.user, "Other Org").await;
+    let other = f.server.create_project(&f.user, &org, "Other").await;
+    diesel::insert_into(schema::plot::table)
+        .values((
+            schema::plot::uuid.eq(PlotUuid::new().to_string()),
+            schema::plot::project_id.eq(get_project_id(&f.server, other.slug.as_ref())),
+            schema::plot::rank.eq(1i64),
+            schema::plot::lower_value.eq(false),
+            schema::plot::upper_value.eq(false),
+            schema::plot::lower_boundary.eq(false),
+            schema::plot::upper_boundary.eq(false),
+            schema::plot::x_axis.eq(0),
+            schema::plot::y_axis.eq(0),
+            schema::plot::window.eq(604_800i64),
+            schema::plot::created.eq(0i64),
+            schema::plot::modified.eq(0i64),
+        ))
+        .execute(&mut db_conn(&f.server))
+        .expect("Failed to insert another project's plot");
+    let mut first = None;
+    for _ in 0..64 {
+        first = Some(f.create(&json!({})).await);
+    }
+    let (status, body) = f.try_create(&json!({})).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    assert!(body.contains("at most 64 plots"), "{body}");
+
+    let first = uuid_of(&first.expect("a plot"));
+    let (status, body) = f.send(Method::DELETE, f.plot_url(first), None).await;
+    assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+    f.create(&json!({})).await;
+}
+
 // The migration down and up keeps every plot, column for column, with its components,
 // its table, and its index; only the view it kept is dropped on the way down.
 // The server keeps serving on its own threads while this test's connection holds a lock.

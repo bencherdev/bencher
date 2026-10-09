@@ -43,6 +43,7 @@ export const bootstrapOf = (
 		...permissions,
 	},
 	active_alerts: 1,
+	plots: 0,
 });
 
 export interface Sent {

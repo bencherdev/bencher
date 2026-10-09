@@ -1119,6 +1119,94 @@ export interface JsonConsolePermissions {
 	manage: boolean;
 }
 
+export enum XAxis {
+	DateTime = "date_time",
+	Version = "version",
+}
+
+export enum YAxis {
+	/** Automatically adapt the y-axis scale to the data spread. */
+	Auto = "auto",
+	/** A linear y-axis scale that shows true magnitudes. */
+	Linear = "linear",
+	/** A logarithmic y-axis scale. */
+	Log = "log",
+}
+
+/** How a plot lays out two or more measures. */
+export enum PlotLayout {
+	/** One chart, with a y-axis for each measure. */
+	Dual = "dual",
+	/** One chart for each measure. */
+	Stacked = "stacked",
+}
+
+export interface JsonPlot {
+	uuid: Uuid;
+	project: Uuid;
+	title?: ResourceName;
+	lower_value: boolean;
+	upper_value: boolean;
+	lower_boundary: boolean;
+	upper_boundary: boolean;
+	x_axis: XAxis;
+	y_axis: YAxis;
+	/**
+	 * The layout of the plot's measures.
+	 * Absent when the plot uses the default layout.
+	 */
+	layout?: PlotLayout;
+	window: Window;
+	branches: Uuid[];
+	testbeds: Uuid[];
+	benchmarks: Uuid[];
+	/**
+	 * The variants this plot draws, in canonical order.
+	 * Absent when the plot draws every variant.
+	 */
+	parameters?: Record<string, string | number | boolean>[];
+	measures: Uuid[];
+	/**
+	 * The metrics this plot draws, by name.
+	 * Absent when the plot draws every metric.
+	 */
+	metrics?: string[];
+	/**
+	 * The keys of the lines this plot hides.
+	 * Absent when the plot hides no line.
+	 */
+	hidden?: string[];
+	/**
+	 * The key of the line this plot focuses.
+	 * Absent when the plot focuses no line.
+	 */
+	focus?: string;
+	created: string;
+	modified: string;
+}
+
+/** A pinned plot as saved, with the lines it draws. */
+export interface JsonConsolePlot {
+	plot: JsonPlot;
+	perf: JsonConsolePerf;
+}
+
+export interface JsonConsolePlotTitle {
+	uuid: Uuid;
+	title?: ResourceName;
+}
+
+/**
+ * A page of a project's pinned plots, each with its lines, and the order of
+ * every pinned plot.
+ */
+export interface JsonConsolePlots {
+	/** Every pinned plot of the project, top first. */
+	order: JsonConsolePlotTitle[];
+	/** The page's plots, top first. */
+	plots: JsonConsolePlot[];
+}
+
 export enum Visibility {
 	Public = "public",
 	Private = "private",
@@ -1144,6 +1232,8 @@ export interface JsonConsoleProject {
 	permissions: JsonConsolePermissions;
 	/** The active alerts the Alerts list shows by default. */
 	active_alerts: number;
+	/** The project's pinned plots, which Plots lists. */
+	plots: number;
 }
 
 /** Counts for the alerts of a report. */
@@ -1467,28 +1557,6 @@ export interface JsonNewPlan {
 	entitlements?: Entitlements;
 	self_hosted?: Uuid;
 	remote?: boolean;
-}
-
-export enum XAxis {
-	DateTime = "date_time",
-	Version = "version",
-}
-
-export enum YAxis {
-	/** Automatically adapt the y-axis scale to the data spread. */
-	Auto = "auto",
-	/** A linear y-axis scale that shows true magnitudes. */
-	Linear = "linear",
-	/** A logarithmic y-axis scale. */
-	Log = "log",
-}
-
-/** How a plot lays out two or more measures. */
-export enum PlotLayout {
-	/** One chart, with a y-axis for each measure. */
-	Dual = "dual",
-	/** One chart for each measure. */
-	Stacked = "stacked",
 }
 
 export interface JsonNewPlot {
@@ -1940,50 +2008,6 @@ export interface JsonPlan {
 	 */
 	cancel_at_period_end: boolean;
 	license?: JsonLicense;
-}
-
-export interface JsonPlot {
-	uuid: Uuid;
-	project: Uuid;
-	title?: ResourceName;
-	lower_value: boolean;
-	upper_value: boolean;
-	lower_boundary: boolean;
-	upper_boundary: boolean;
-	x_axis: XAxis;
-	y_axis: YAxis;
-	/**
-	 * The layout of the plot's measures.
-	 * Absent when the plot uses the default layout.
-	 */
-	layout?: PlotLayout;
-	window: Window;
-	branches: Uuid[];
-	testbeds: Uuid[];
-	benchmarks: Uuid[];
-	/**
-	 * The variants this plot draws, in canonical order.
-	 * Absent when the plot draws every variant.
-	 */
-	parameters?: Record<string, string | number | boolean>[];
-	measures: Uuid[];
-	/**
-	 * The metrics this plot draws, by name.
-	 * Absent when the plot draws every metric.
-	 */
-	metrics?: string[];
-	/**
-	 * The keys of the lines this plot hides.
-	 * Absent when the plot hides no line.
-	 */
-	hidden?: string[];
-	/**
-	 * The key of the line this plot focuses.
-	 * Absent when the plot focuses no line.
-	 */
-	focus?: string;
-	created: string;
-	modified: string;
 }
 
 export interface JsonProjectKey {

@@ -26,6 +26,7 @@ use super::{
     boundary::BoundaryLimit,
     head::{JsonVersion, VersionNumber},
     perf::{JsonPerfQueryParams, MAX_DIMENSION_ENTRIES},
+    plot::{JsonPlot, PlotUuid},
     report::{Adapter, Iteration, JsonReportAlertsCounts},
 };
 
@@ -651,6 +652,55 @@ pub struct JsonConsolePerfLine {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<u32>,
     pub series: JsonConsoleSeries,
+}
+
+/// How many pinned plots a page of Plots holds when the request does not say.
+pub const DEFAULT_CONSOLE_PLOTS_PER_PAGE: u8 = 8;
+
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsolePlotsQueryParams {
+    /// The page of plots to draw, starting at 1.
+    pub page: Option<u32>,
+    /// The number of plots per page, 8 when not given.
+    /// Zero draws none and returns only the order of every plot.
+    pub per_page: Option<u8>,
+    /// The start of the window every plot on the page draws, in milliseconds.
+    /// Defaults to each plot's own window before the end.
+    pub start_time: Option<DateTimeMillis>,
+    /// The end of the window every plot on the page draws, in milliseconds.
+    /// Defaults to now.
+    pub end_time: Option<DateTimeMillis>,
+}
+
+/// A page of a project's pinned plots, each with its lines, and the order of
+/// every pinned plot.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsolePlots {
+    /// Every pinned plot of the project, top first.
+    pub order: Vec<JsonConsolePlotTitle>,
+    /// The page's plots, top first.
+    pub plots: Vec<JsonConsolePlot>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsolePlotTitle {
+    pub uuid: PlotUuid,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<ResourceName>,
+}
+
+/// A pinned plot as saved, with the lines it draws.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsolePlot {
+    pub plot: JsonPlot,
+    pub perf: JsonConsolePerf,
 }
 
 #[cfg(test)]

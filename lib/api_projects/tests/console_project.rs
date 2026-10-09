@@ -283,6 +283,41 @@ async fn console_project_counts_the_active_alerts() {
     );
 }
 
+// Kills a count that reads another project's plots, or none.
+#[tokio::test]
+async fn console_project_counts_the_pinned_plots() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "consoleprojplots@example.com")
+        .await;
+    let org = server.create_org(&user, "Plots Org").await;
+    let project = server.create_project(&user, &org, "Plots Project").await;
+    let other = server.create_project(&user, &org, "Other Project").await;
+    let mut conn = server.db_conn();
+    for (slug, rank) in [(&project.slug, 1i64), (&project.slug, 2), (&other.slug, 1)] {
+        diesel::insert_into(schema::plot::table)
+            .values((
+                schema::plot::uuid.eq(bencher_json::PlotUuid::new().to_string()),
+                schema::plot::project_id.eq(get_project_id(&server, slug.as_ref())),
+                schema::plot::rank.eq(rank),
+                schema::plot::lower_value.eq(false),
+                schema::plot::upper_value.eq(false),
+                schema::plot::lower_boundary.eq(false),
+                schema::plot::upper_boundary.eq(false),
+                schema::plot::x_axis.eq(0),
+                schema::plot::y_axis.eq(0),
+                schema::plot::window.eq(604_800i64),
+                schema::plot::created.eq(0i64),
+                schema::plot::modified.eq(0i64),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert a plot");
+    }
+
+    assert_eq!(console(&server, &project.slug, &user).await.plots, 2);
+    assert_eq!(console(&server, &other.slug, &user).await.plots, 1);
+}
+
 // A failed count is the server's fault, never an alert the reader cannot find.
 // Kills mapping the count's error to an Alert 404.
 #[tokio::test]
