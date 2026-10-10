@@ -1059,14 +1059,17 @@ fn get_report_counts(
             // Every measure with a metric row, whatever it named, because that is
             // exactly the set the loaded results carry.
             diesel::dsl::count(schema::metric::measure_id).aggregate_distinct(),
+            // A metric row is one variant, measure, and metric name: one line.
+            diesel::dsl::count(schema::metric::id),
         ))
-        .load::<(Iteration, i64, i64)>(conn)
+        .load::<(Iteration, i64, i64, i64)>(conn)
         .map_err(resource_not_found_err!(ReportBenchmark, report_id))?
         .into_iter()
         .map(
-            |(_iteration, benchmarks, measures)| JsonReportIterationCounts {
+            |(_iteration, benchmarks, measures, lines)| JsonReportIterationCounts {
                 benchmarks: u32::try_from(benchmarks).unwrap_or(u32::MAX),
                 measures: u32::try_from(measures).unwrap_or(u32::MAX),
+                lines: u32::try_from(lines).unwrap_or(u32::MAX),
             },
         )
         .collect();
@@ -1110,9 +1113,15 @@ fn report_counts(results: &JsonReportResults, alerts: &JsonReportAlerts) -> Json
                         .map(|report_measure| report_measure.measure.uuid)
                 })
                 .collect::<HashSet<_>>();
+            let lines = iteration
+                .iter()
+                .flat_map(|result| &result.measures)
+                .map(|report_measure| report_measure.metrics.len())
+                .sum::<usize>();
             JsonReportIterationCounts {
                 benchmarks: u32::try_from(iteration.len()).unwrap_or(u32::MAX),
                 measures: u32::try_from(measures.len()).unwrap_or(u32::MAX),
+                lines: u32::try_from(lines).unwrap_or(u32::MAX),
             }
         })
         .collect();
@@ -1503,6 +1512,15 @@ mod tests {
             measure_two,
             4.0,
         );
+        // A second metric name on a measure is one more line, not one more measure
+        create_named_metric(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000096",
+            report_benchmark,
+            measure_one,
+            &"p99".parse().expect("Failed to parse the metric name"),
+            4.5,
+        );
 
         // Iteration 1: two benchmarks, only the first measure
         let report_benchmark = create_report_benchmark(
@@ -1558,10 +1576,12 @@ mod tests {
                 JsonReportIterationCounts {
                     benchmarks: 2,
                     measures: 2,
+                    lines: 5,
                 },
                 JsonReportIterationCounts {
                     benchmarks: 2,
                     measures: 1,
+                    lines: 2,
                 },
             ]
         );
@@ -1803,6 +1823,7 @@ mod tests {
             vec![JsonReportIterationCounts {
                 benchmarks: 2,
                 measures: 1,
+                lines: 2,
             }]
         );
         assert_eq!(
@@ -1900,6 +1921,7 @@ mod tests {
             vec![JsonReportIterationCounts {
                 benchmarks: 1,
                 measures: 2,
+                lines: 2,
             }],
             "the measure that named no point estimate is counted by both"
         );

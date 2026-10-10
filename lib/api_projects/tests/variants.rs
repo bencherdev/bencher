@@ -1045,7 +1045,7 @@ async fn report_response_echoes_metrics_and_separates_variants() {
     // query, and both have to see two variants rather than one benchmark.
     assert_eq!(
         response.pointer("/counts/results/0"),
-        Some(&serde_json::json!({ "benchmarks": 2, "measures": 2 })),
+        Some(&serde_json::json!({ "benchmarks": 2, "measures": 2, "lines": 7 })),
     );
 
     let variants: Vec<ParameterSet> = results
@@ -1304,7 +1304,7 @@ async fn value_less_measure_is_stored_billed_and_echoed() {
     // report.
     assert_eq!(
         response.pointer("/counts/results/0"),
-        Some(&serde_json::json!({ "benchmarks": 1, "measures": 2 })),
+        Some(&serde_json::json!({ "benchmarks": 1, "measures": 2, "lines": 3 })),
     );
 
     // The legacy metric-count meter is a separate question that

@@ -19,8 +19,10 @@ use bencher_api_tests::{
 use bencher_json::{
     BenchmarkName, BenchmarkUuid, BoundaryUuid, HeadUuid, JsonProjectKeyCreated, JsonReport,
     JsonReports, MAX_PARAMETER_KEYS, MeasureUuid, MetricName, MetricUuid, ModelUuid, ParameterSet,
-    ProjectKeyUuid, ReportBenchmarkUuid, Slug, ThresholdUuid, UserUuid, VersionUuid,
-    project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
+    ProjectKeyUuid, ReportBenchmarkUuid, ReportUuid, Slug, ThresholdUuid, UserUuid, VersionUuid,
+    project::report::{
+        JsonReportIterationCounts, JsonReportWarning, ReportWarningAction, ReportWarningResource,
+    },
 };
 #[cfg(feature = "plus")]
 use bencher_json::{BranchName, PlanLevel};
@@ -540,8 +542,8 @@ fn assert_counts(counts: &serde_json::Value) {
         counts,
         &serde_json::json!({
             "results": [
-                { "benchmarks": 2, "measures": 1 },
-                { "benchmarks": 2, "measures": 1 }
+                { "benchmarks": 2, "measures": 1, "lines": 2 },
+                { "benchmarks": 2, "measures": 1, "lines": 2 }
             ],
             "alerts": { "total": 0, "active": 0 }
         })
@@ -997,7 +999,7 @@ async fn reports_post_warns_of_metric_names_past_the_cap() {
 #[cfg(feature = "plus")]
 #[tokio::test]
 async fn reports_post_over_the_license_keeps_its_warnings() {
-    use bencher_json::{Entitlements, PlanLevel, ReportUuid, project::Visibility};
+    use bencher_json::{Entitlements, PlanLevel, project::Visibility};
 
     let server = TestServer::new().await;
     let user = server
@@ -1108,6 +1110,232 @@ async fn reports_list_omits_warnings() {
         assert_eq!(listed.results.is_some(), expand, "expand: {expand}");
         assert!(listed.warnings.is_none(), "expand: {expand}");
     }
+}
+
+/// List a project's reports, returning their UUIDs in the order listed and the total count.
+async fn list_reports(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    query: &str,
+) -> (Vec<ReportUuid>, u64) {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/reports{query}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "{query}");
+    let total = resp
+        .headers()
+        .get("x-total-count")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse().ok())
+        .expect("No total count");
+    let reports: JsonReports = resp.json().await.expect("Failed to parse response");
+    (
+        reports.0.into_iter().map(|report| report.uuid).collect(),
+        total,
+    )
+}
+
+async fn post_report_body(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    body: &serde_json::Value,
+) -> JsonReport {
+    let (status, text) = try_post_ingest(server, token, project_slug, body).await;
+    assert_eq!(status, StatusCode::CREATED, "{text}");
+    serde_json::from_str(&text).expect("Failed to parse the report")
+}
+
+const BMF_V0: &str = r#"{"bench_one": {"latency": {"value": 100.0}}}"#;
+const RUST_BENCH: &str = "test bench_one ... bench:       3,161 ns/iter (+/- 975)\n";
+
+/// A report run with `adapter`, starting `minute` minutes into the day.
+fn adapted_report(adapter: &str, results: &str, minute: u32) -> serde_json::Value {
+    serde_json::json!({
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": format!("2024-01-01T00:{minute:02}:00Z"),
+        "end_time": format!("2024-01-01T00:{minute:02}:30Z"),
+        "results": [results],
+        "settings": { "adapter": adapter },
+    })
+}
+
+// GET /v0/projects/{project}/reports?adapter= - the adapter as the list names it, so a language
+// adapter is found under magic, and the total counts only what matches
+#[tokio::test]
+async fn reports_list_filters_by_adapter_as_listed() {
+    let server = TestServer::new().await;
+    let (token, slug) = ingest_project(&server, "adapterfilter").await;
+    let mut posted = Vec::new();
+    for (minute, (adapter, results)) in [
+        ("json", BMF_V0),
+        ("rust", RUST_BENCH),
+        ("magic", BMF_V0),
+        ("rust_bench", RUST_BENCH),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let minute = u32::try_from(minute).expect("Too many reports");
+        let report = adapted_report(adapter, results, minute);
+        posted.push(post_report_body(&server, &token, &slug, &report).await.uuid);
+    }
+    let [json, rust, magic, rust_bench] = posted.as_slice() else {
+        panic!("Expected four reports");
+    };
+
+    for (adapter, expected) in [
+        ("json", vec![*json]),
+        ("magic", vec![*magic, *rust]),
+        ("rust", vec![*magic, *rust]),
+        ("rust_bench", vec![*rust_bench]),
+        ("go_bench", Vec::new()),
+    ] {
+        let (listed, total) =
+            list_reports(&server, &token, &slug, &format!("?adapter={adapter}")).await;
+        assert_eq!(listed, expected, "{adapter}");
+        assert_eq!(
+            total,
+            u64::try_from(expected.len()).expect("Too many reports"),
+            "{adapter}"
+        );
+    }
+}
+
+// GET /v0/projects/{project}/reports?active_alerts= - only the reports with an alert that is still
+// active, or only the rest, whatever their other alerts
+#[tokio::test]
+async fn reports_list_filters_by_active_alerts() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "reportactivealerts@example.com")
+        .await;
+    let org = server.create_org(&user, "Report Active Alerts Org").await;
+    let project = server
+        .create_project(&user, &org, "Report Active Alerts Project")
+        .await;
+    let slug = project.slug.to_string();
+
+    let report = |day: usize, one: f64, two: f64| {
+        let results = serde_json::json!({
+            "bench_one": { "latency": { "value": one } },
+            "bench_two": { "latency": { "value": two } },
+        });
+        serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": format!("2024-01-{day:02}T00:00:00Z"),
+            "end_time": format!("2024-01-{day:02}T00:01:00Z"),
+            "results": [results.to_string()],
+        })
+    };
+    let mut reports = Vec::new();
+    for (day, value) in [10.0, 10.1, 9.9, 10.0, 10.2].into_iter().enumerate() {
+        let body = report(day + 1, value, value);
+        reports.push(post_report_body(&server, &user.token, &slug, &body).await);
+        if day == 0 {
+            let resp = server
+                .client
+                .post(server.api_url(&format!("/v0/projects/{slug}/thresholds")))
+                .header(
+                    bencher_json::AUTHORIZATION,
+                    bencher_json::bearer_header(&user.token),
+                )
+                .json(&serde_json::json!({
+                    "branch": "main",
+                    "testbed": "localhost",
+                    "measure": "latency",
+                    "test": "t_test",
+                    "min_sample_size": 2,
+                    "max_sample_size": 64,
+                    "upper_boundary": 0.98,
+                }))
+                .send()
+                .await
+                .expect("Request failed");
+            assert_eq!(resp.status(), StatusCode::CREATED);
+        }
+    }
+    // Each jump raises one alert; the first is dismissed.
+    let dismissed = post_report_body(&server, &user.token, &slug, &report(6, 1000.0, 10.0)).await;
+    let active = post_report_body(&server, &user.token, &slug, &report(7, 10.1, 1000.0)).await;
+    let alerts = |report: &JsonReport| report.alerts.clone().expect("No alerts");
+    assert_eq!(alerts(&dismissed).len(), 1);
+    assert_eq!(alerts(&active).len(), 1);
+    for alert in alerts(&dismissed) {
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/projects/{slug}/alerts/{}", alert.uuid)))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&serde_json::json!({ "status": "dismissed" }))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    let (listed, total) = list_reports(&server, &user.token, &slug, "?active_alerts=true").await;
+    assert_eq!(listed, vec![active.uuid]);
+    assert_eq!(total, 1);
+
+    let mut rest: Vec<_> = reports.iter().map(|report| report.uuid).collect();
+    rest.push(dismissed.uuid);
+    rest.reverse();
+    let (listed, total) = list_reports(&server, &user.token, &slug, "?active_alerts=false").await;
+    assert_eq!(listed, rest);
+    assert_eq!(total, 6);
+}
+
+// GET /v0/projects/{project}/reports - each iteration counts its lines, one per variant, measure,
+// and metric name, alike when the report is posted and when the list collapses it
+#[tokio::test]
+async fn reports_count_the_lines_of_each_iteration() {
+    let server = TestServer::new().await;
+    let (token, slug) = ingest_project(&server, "reportlines").await;
+    let results = serde_json::json!({
+        "bench_one": [{ "measures": { "latency": { "value": 1.0, "p99": 2.0 } } }],
+        "bench_two": [{ "measures": { "latency": { "value": 3.0 } } }],
+    });
+    let posted = post_report_body(
+        &server,
+        &token,
+        &slug,
+        &ingest_report(&[results.to_string()], 1),
+    )
+    .await;
+    let counts = vec![JsonReportIterationCounts {
+        benchmarks: 2,
+        measures: 1,
+        lines: 3,
+    }];
+    assert_eq!(posted.counts.results, counts);
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{slug}/reports")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let reports: JsonReports = resp.json().await.expect("Failed to parse response");
+    let listed = reports.0.first().expect("Reports are empty");
+    assert_eq!(listed.counts.results, counts);
 }
 
 // DELETE /v0/projects/{project}/reports/{report} - deleting a report deletes its warnings
