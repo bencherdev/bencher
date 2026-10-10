@@ -7,6 +7,7 @@ use bencher_json::{
     ParameterSet, PlanLevel, ReportUuid, ResourceName, TestbedUuid, TokenUuid, VariantUuid,
     VersionUuid,
 };
+use bencher_rbac::project::Role;
 use bencher_schema::{context::DbConnection, model::user::UserId, schema};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
@@ -265,6 +266,29 @@ pub fn seed_token(server: &TestServer, user: &TestUser, name: &str) -> TestToken
         .expect("Failed to insert token");
 
     TestToken { uuid, token: jwt }
+}
+
+/// Give a user a role on a project directly in the database, since the API stores only the
+/// Maintainer role.
+#[expect(clippy::expect_used, reason = "test helper granting a project role")]
+pub fn grant_project_role(server: &TestServer, user: &TestUser, project_slug: &str, role: Role) {
+    let mut conn = server.db_conn();
+    let user_id: UserId = schema::user::table
+        .filter(schema::user::uuid.eq(&user.uuid))
+        .select(schema::user::id)
+        .first(&mut conn)
+        .expect("Failed to get user ID");
+    let now = base_timestamp();
+    diesel::insert_into(schema::project_role::table)
+        .values((
+            schema::project_role::user_id.eq(user_id),
+            schema::project_role::project_id.eq(get_project_id(server, project_slug)),
+            schema::project_role::role.eq(role.to_string()),
+            schema::project_role::created.eq(&now),
+            schema::project_role::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to grant the project role");
 }
 
 /// Insert a metric as its named rows.
