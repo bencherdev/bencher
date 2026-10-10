@@ -7,6 +7,7 @@ use url::Url;
 use crate::cpu::CpuLayout;
 use crate::host::md;
 use crate::log_level::SandboxLogLevel;
+use crate::maintenance::RUN_DIR;
 use crate::tuning::{TuningConfig, preflight};
 
 mod api_client;
@@ -105,6 +106,12 @@ impl Up {
         // kernel without `cgroup.kill`.
         crate::jail::prepare_at_startup(log, &runner_lock, !self.config.allow_no_sandbox)
             .map_err(crate::RunnerError::from)?;
+        #[cfg(target_os = "linux")]
+        if crate::jail::current_euid() != 0 {
+            warn!(log, "Job lock not taken, so host maintenance may run during a Job";
+                "path" => RUN_DIR,
+            );
+        }
 
         // Warn about host conditions that limit benchmark accuracy (Linux only)
         preflight::log_host_warnings(log);
@@ -168,7 +175,10 @@ fn run_driver(
     {
         info!(log, "Update channel"; "channel" => %channel);
     }
-    let mut host = crate::jail::HostPreparation::new();
+    let mut host = Host {
+        preparation: crate::jail::HostPreparation::new(),
+        turn: Turn::default(),
+    };
     let mut sm = ChannelStateMachine::new(config.poll_timeout_secs, runner_metadata);
     let mut ws: Option<Arc<Mutex<JobChannel>>> = None;
 
@@ -253,7 +263,7 @@ fn execute_effect(
     channel_url: &Url,
     key: &str,
     ws: &mut Option<Arc<Mutex<JobChannel>>>,
-    host: &mut crate::jail::HostPreparation,
+    host: &mut Host,
     stopped: impl Fn() -> bool,
 ) -> EffectResult {
     match effect {
@@ -275,9 +285,16 @@ fn execute_effect(
             },
         },
         Effect::Probe => EffectResult::Input(Input::Probed(probe(
+            log,
             Utf8Path::new(crate::host::SYSFS),
+            Utf8Path::new(RUN_DIR),
             config.raid_pause,
+            &mut host.turn,
         ))),
+        Effect::ReleaseJobLock => {
+            host.turn.release();
+            EffectResult::Continue
+        },
         Effect::PauseBegan(reasons) => {
             log_pause_began(log, &reasons);
             EffectResult::Continue
@@ -300,7 +317,7 @@ fn execute_effect(
                 error!(log, "Channel not connected for the Job"; "job" => %job.uuid);
                 return EffectResult::Input(Input::ConnectionFailed);
             };
-            let result = execute_job(log, config, &job, ws_ref, host);
+            let result = execute_job(log, config, &job, ws_ref, &mut host.preparation);
             EffectResult::Input(Input::JobFinished(result))
         },
         Effect::SleepBeforeReconnect(reason) => {
@@ -341,13 +358,60 @@ fn execute_effect(
     }
 }
 
-/// What the host says about taking a Job, read at the idle decision point.
-fn probe(sysfs: &Utf8Path, raid_pause: bool) -> Probe {
-    let reasons = if raid_pause {
+/// What the driver keeps of the host between effects.
+#[derive(Default)]
+struct Host {
+    preparation: crate::jail::HostPreparation,
+    turn: Turn,
+}
+
+/// The runner's turn at the job lock, held from a clear probe until the
+/// state machine releases it.
+#[derive(Default)]
+struct Turn {
+    lock: Option<TurnLock>,
+}
+
+#[cfg(target_os = "linux")]
+type TurnLock = crate::job_lock::JobLock;
+/// Only Linux hosts have a job lock.
+#[cfg(not(target_os = "linux"))]
+enum TurnLock {}
+
+impl Turn {
+    fn release(&mut self) {
+        self.lock = None;
+    }
+}
+
+/// What the host says about taking a Job, read at the idle decision point;
+/// the job lock is kept only when there is no reason to pause.
+#[cfg_attr(
+    not(target_os = "linux"),
+    expect(unused_variables, unused_mut, reason = "the job lock is Linux only")
+)]
+fn probe(
+    log: &Logger,
+    sysfs: &Utf8Path,
+    run_dir: &Utf8Path,
+    raid_pause: bool,
+    turn: &mut Turn,
+) -> Probe {
+    turn.release();
+    let mut reasons = if raid_pause {
         md::raid_reasons(&md::arrays(sysfs))
     } else {
         Vec::new()
     };
+    #[cfg(target_os = "linux")]
+    match crate::job_lock::JobLock::take_at(log, run_dir, crate::jail::current_euid()) {
+        Ok(lock) => {
+            if reasons.is_empty() {
+                turn.lock = Some(lock);
+            }
+        },
+        Err(reason) => reasons.push(reason),
+    }
     Probe {
         reasons,
         now: bencher_json::DateTime::now(),
@@ -751,9 +815,81 @@ mod tests {
     fn no_raid_pause_takes_jobs_through_a_sync() {
         // Kills a probe that pauses for a sync despite `--no-raid-pause`, or
         // never pauses for one.
+        let (dir, sysfs) = md::tests::sysfs(&[("md0", "check", "1 / 2", "100")]);
+        let run_dir = sysfs.join("run");
+        let probe = |raid_pause| {
+            probe(
+                &crate::log::discard(),
+                &sysfs,
+                &run_dir,
+                raid_pause,
+                &mut Turn::default(),
+            )
+        };
+        assert_eq!(probe(true).reasons.len(), 1);
+        assert_eq!(probe(false).reasons, []);
+        drop(dir);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn the_job_lock_is_kept_only_by_a_clear_probe() {
+        // Kills a runner that keeps the job lock through a pause, which holds
+        // maintenance off while no Job runs, and one that drops it when clear.
         let (_dir, sysfs) = md::tests::sysfs(&[("md0", "check", "1 / 2", "100")]);
-        assert_eq!(probe(&sysfs, true).reasons.len(), 1);
-        assert_eq!(probe(&sysfs, false).reasons, []);
+        let run_dir = sysfs.join("run");
+        let log = crate::log::discard();
+        let mut turn = Turn::default();
+
+        let paused = probe(&log, &sysfs, &run_dir, true, &mut turn);
+        assert_eq!(paused.reasons.len(), 1, "{:?}", paused.reasons);
+        assert!(turn.lock.is_none());
+
+        let clear = probe(&log, &sysfs, &run_dir, false, &mut turn);
+        assert_eq!(clear.reasons, []);
+        assert!(turn.lock.is_some());
+
+        std::fs::write(run_dir.join("maintenance"), b"").unwrap();
+        let maintenance = probe(&log, &sysfs, &run_dir, false, &mut turn);
+        assert_eq!(
+            maintenance.reasons,
+            [PauseReason::Maintenance {
+                marker: true,
+                lock: false,
+            }]
+        );
+        assert!(turn.lock.is_none());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn the_driver_releases_the_job_lock_when_told() {
+        // Kills a driver that ignores `ReleaseJobLock`, so a runner that loses
+        // its server mid-poll holds maintenance off until a connect succeeds.
+        let (_dir, sysfs) = md::tests::sysfs(&[]);
+        let run_dir = sysfs.join("run");
+        let mut host = host();
+        let clear = probe(
+            &crate::log::discard(),
+            &sysfs,
+            &run_dir,
+            false,
+            &mut host.turn,
+        );
+        assert_eq!(clear.reasons, []);
+        assert!(host.turn.lock.is_some());
+
+        execute(Effect::ReleaseJobLock, &mut host, || false);
+        // A child another test forks keeps a copy of the lock until its exec.
+        let lock = std::fs::File::open(run_dir.join(crate::maintenance::JOB_LOCK)).unwrap();
+        let started = Instant::now();
+        while lock.try_lock().is_err() {
+            assert!(
+                started.elapsed() < Duration::from_secs(30),
+                "the driver kept the job lock"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+        }
     }
 
     #[test]
@@ -785,11 +921,7 @@ mod tests {
     }
 
     /// Runs one effect as the driver does, with no channel.
-    fn execute(
-        effect: Effect,
-        host: &mut crate::jail::HostPreparation,
-        stopped: impl Fn() -> bool,
-    ) -> EffectResult {
+    fn execute(effect: Effect, host: &mut Host, stopped: impl Fn() -> bool) -> EffectResult {
         execute_effect(
             &crate::log::discard(),
             effect,
@@ -802,8 +934,8 @@ mod tests {
         )
     }
 
-    fn host() -> crate::jail::HostPreparation {
-        crate::jail::HostPreparation::new()
+    fn host() -> Host {
+        Host::default()
     }
 
     // --- drive ---
@@ -866,7 +998,8 @@ mod tests {
                 | Effect::SelfUpdate { .. }
                 | Effect::PauseBegan(_)
                 | Effect::PauseEnded
-                | Effect::HoldOff(_) => EffectResult::Continue,
+                | Effect::HoldOff(_)
+                | Effect::ReleaseJobLock => EffectResult::Continue,
             }
         });
 

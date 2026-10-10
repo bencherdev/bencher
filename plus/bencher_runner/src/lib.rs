@@ -40,6 +40,8 @@ pub mod jail;
 #[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod jailer_bin;
 #[cfg(all(feature = "plus", target_os = "linux"))]
+mod job_lock;
+#[cfg(all(feature = "plus", target_os = "linux"))]
 pub mod kernel;
 #[cfg(feature = "plus")]
 mod local;
@@ -49,6 +51,7 @@ mod local_isolation;
 mod log;
 #[cfg(feature = "plus")]
 mod log_level;
+pub mod maintenance;
 #[cfg(feature = "plus")]
 pub mod metrics;
 #[cfg(feature = "plus")]

@@ -1,0 +1,47 @@
+## Host Maintenance
+
+A Runner and its host's maintenance, such as package upgrades or a RAID scrub, take turns, so maintenance never runs during a Job.
+They take turns through `/run/bencher`, a directory that a Runner started as `root` creates for `root` alone:
+
+- **The job lock**, `/run/bencher/job.lock`.
+  The Runner takes it before it asks for a Job and holds it until that poll ends with no Job or the Job it brings ends.
+  Maintenance waits for the lock, so it starts only between Jobs,
+  and a Runner that finds the lock held takes no Job until it is free.
+- **Maintenance markers**, `/run/bencher/maintenance` or `/run/bencher/maintenance.<name>`.
+  Maintenance creates its own marker before it waits for the lock and removes it when it is done.
+  While any marker exists, the Runner asks for no Job and leaves the lock free,
+  so waiting maintenance starts once the Runner's current poll, or the Job that poll brings, ends.
+
+While it waits for maintenance, a Runner is paused: it stays connected and still updates itself.
+`runner run` waits for the job lock as well, and warns but runs while a marker exists or an md array syncs.
+A Runner that is not `root` can neither open the job lock nor see the markers, so it takes Jobs without them.
+
+With systemd, a drop-in has a maintenance unit take its turn.
+For example, `/etc/systemd/system/fstrim.service.d/zz-bencher-quiet.conf` wraps the unit's own command in `flock -F`.
+The empty `ExecStart=` clears that command, so the next line must repeat it exactly:
+
+```ini
+[Service]
+ExecStartPre=+/usr/bin/install -d -m 0700 /run/bencher
+ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
+ExecStart=
+ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
+ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
+TimeoutStartSec=infinity
+```
+
+### Drain a Runner
+
+To drain a Runner, create the plain marker as `root`:
+
+```sh
+touch /run/bencher/maintenance
+```
+
+The Runner finishes its current poll, at most `--poll-timeout` seconds, and any Job running or brought by that poll, then takes no other Job until the marker is gone:
+
+```sh
+rm /run/bencher/maintenance
+```
+
+`/run` is emptied at boot, so a reboot removes the marker too.

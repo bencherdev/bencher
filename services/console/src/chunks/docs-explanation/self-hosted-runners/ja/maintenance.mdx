@@ -1,0 +1,47 @@
+## ホストのメンテナンス
+
+Runner とそのホストのメンテナンス（パッケージのアップグレードや RAID スクラブなど）は交代で実行されるため、メンテナンスが Job の実行中に走ることはありません。
+交代は `/run/bencher` を通じて行われます。これは `root` として起動した Runner が `root` 専用に作成するディレクトリです。
+
+- **Job ロック**、`/run/bencher/job.lock`。
+  Runner は Job を要求する前にこれを取得し、そのポーリングが Job なしで終わるか、届いた Job が終わるまで保持します。
+  メンテナンスはこのロックを待つため、Job と Job の間にしか始まりません。
+  また、ロックが保持されているのを見つけた Runner は、ロックが空くまで Job を受け付けません。
+- **メンテナンスマーカー**、`/run/bencher/maintenance` または `/run/bencher/maintenance.<name>`。
+  メンテナンスはロックを待つ前に自分のマーカーを作成し、完了したら削除します。
+  マーカーが存在する間、Runner は Job を要求せずロックを空けておくため、
+  待機中のメンテナンスは Runner の現在のポーリング、またはそのポーリングで届いた Job が終わり次第始まります。
+
+メンテナンスを待つ間、Runner は一時停止しています。接続は維持され、自己更新も引き続き行います。
+`runner run` も Job ロックを待ち、マーカーが存在する間や md アレイが同期している間は警告を出しつつ実行します。
+`root` ではない Runner は Job ロックを開くこともマーカーを見ることもできないため、それらなしで Job を受け付けます。
+
+systemd では、ドロップインによってメンテナンスユニットに順番を待たせます。
+たとえば `/etc/systemd/system/fstrim.service.d/zz-bencher-quiet.conf` は、ユニット自身のコマンドを `flock -F` で包みます。
+空の `ExecStart=` はそのコマンドを消去するため、次の行でそれを正確に繰り返す必要があります。
+
+```ini
+[Service]
+ExecStartPre=+/usr/bin/install -d -m 0700 /run/bencher
+ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
+ExecStart=
+ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
+ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
+TimeoutStartSec=infinity
+```
+
+### Runner をドレインする
+
+Runner をドレインするには、`root` として単純なマーカーを作成します。
+
+```sh
+touch /run/bencher/maintenance
+```
+
+Runner は現在のポーリング（最大 `--poll-timeout` 秒）と、実行中の Job またはそのポーリングで届いた Job を終えた後、マーカーがなくなるまで次の Job を受け付けません。
+
+```sh
+rm /run/bencher/maintenance
+```
+
+`/run` は起動時に空になるため、再起動でもマーカーは削除されます。

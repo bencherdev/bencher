@@ -1,0 +1,47 @@
+## 호스트 유지 관리
+
+Runner와 호스트의 유지 관리(패키지 업그레이드나 RAID 스크럽 등)는 번갈아 실행되므로, 유지 관리가 Job 실행 중에 실행되는 일은 없습니다.
+번갈아 실행하는 데는 `/run/bencher`를 사용합니다. 이 디렉터리는 `root`로 시작된 Runner가 `root` 전용으로 만듭니다.
+
+- **Job 잠금**, `/run/bencher/job.lock`.
+  Runner는 Job을 요청하기 전에 이를 가져오고, 그 폴링이 Job 없이 끝나거나 받은 Job이 끝날 때까지 보유합니다.
+  유지 관리는 이 잠금을 기다리므로 Job과 Job 사이에만 시작되며,
+  잠금이 보유된 것을 발견한 Runner는 잠금이 풀릴 때까지 Job을 받지 않습니다.
+- **유지 관리 마커**, `/run/bencher/maintenance` 또는 `/run/bencher/maintenance.<name>`.
+  유지 관리는 잠금을 기다리기 전에 자신의 마커를 만들고, 끝나면 이를 제거합니다.
+  마커가 하나라도 있는 동안 Runner는 Job을 요청하지 않고 잠금을 비워 두므로,
+  대기 중인 유지 관리는 Runner의 현재 폴링 또는 그 폴링으로 받은 Job이 끝나는 즉시 시작됩니다.
+
+유지 관리를 기다리는 동안 Runner는 일시 중지 상태입니다. 연결을 유지하며 계속 스스로 업데이트합니다.
+`runner run`도 Job 잠금을 기다리며, 마커가 있거나 md 어레이가 동기화 중일 때는 경고를 출력하지만 실행합니다.
+`root`가 아닌 Runner는 Job 잠금을 열 수도 마커를 볼 수도 없으므로, 이들 없이 Job을 받습니다.
+
+systemd에서는 드롭인으로 유지 관리 유닛이 차례를 기다리게 합니다.
+예를 들어 `/etc/systemd/system/fstrim.service.d/zz-bencher-quiet.conf`는 유닛 자체의 명령을 `flock -F`로 감쌉니다.
+빈 `ExecStart=`가 그 명령을 지우므로, 다음 줄에서 정확히 같은 명령을 반복해야 합니다.
+
+```ini
+[Service]
+ExecStartPre=+/usr/bin/install -d -m 0700 /run/bencher
+ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
+ExecStart=
+ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
+ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
+TimeoutStartSec=infinity
+```
+
+### Runner 비우기
+
+Runner를 비우려면 `root`로 기본 마커를 만드세요.
+
+```sh
+touch /run/bencher/maintenance
+```
+
+Runner는 현재 폴링(최대 `--poll-timeout`초)과 실행 중이거나 그 폴링으로 받은 Job을 마친 뒤, 마커가 없어질 때까지 다른 Job을 받지 않습니다.
+
+```sh
+rm /run/bencher/maintenance
+```
+
+`/run`은 부팅 시 비워지므로, 재부팅해도 마커가 제거됩니다.

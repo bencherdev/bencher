@@ -71,6 +71,9 @@ struct Scenario {
     /// Run the image once a `runner up` that never reaches its server is
     /// waiting on it, long past its startup.
     held_by_runner_up: bool,
+    /// Run sandboxed while the harness holds the job lock, then on the host
+    /// beside a maintenance marker; `validate` sees the second run.
+    behind_the_job_lock: bool,
     /// Hold a stand-in process in another cgroup under the runner's base, as an
     /// orphan in another state directory would, placed while the runner is
     /// stopped between its startup and its job's sweep.
@@ -114,6 +117,7 @@ impl Default for Scenario {
             orphan_elsewhere_then_rerun: false,
             second_runner: false,
             held_by_runner_up: false,
+            behind_the_job_lock: false,
             occupied_cgroup: false,
             occupied_at_start: false,
             occupied_at_up_start: false,
@@ -742,6 +746,8 @@ fn run_and_validate(
         run_second_runner(image_path, &args, state_dir, runner_bin)
     } else if scenario.held_by_runner_up {
         run_runner_beside_runner_up(image_path, &args, runner_bin)
+    } else if scenario.behind_the_job_lock {
+        run_runner_behind_the_job_lock(image_path, &args, state_dir, runner_bin)
     } else if scenario.stopped_past_timeout {
         run_runner_stopped_past_timeout(image_path, &args, runner_bin)
     } else if scenario.occupied_at_up_start {
@@ -2887,6 +2893,18 @@ CMD ["printf", "%s_%s\\n", "BESIDE_UP", "a7f3b2c9"]"#,
             ..Scenario::default()
         },
         Scenario {
+            name: "runner_run_takes_its_turn_at_the_job_lock",
+            description: "A `runner run` waits out a job lock held elsewhere and keeps it from its VMM and its benchmark, and warns but runs beside a maintenance marker",
+            dockerfile: r#"FROM busybox:musl
+CMD ["sh", "-c", "ls -l /proc/$$/fd && printf '%s_%s\\n' JOB_TURN a7f3b2c9 && sleep 2"]"#,
+            behind_the_job_lock: true,
+            // The first run adds the sandbox itself; the second needs none, so
+            // its benchmark is the runner's own child.
+            sandboxed: false,
+            validate: assert_ran_beside_the_marker,
+            ..Scenario::default()
+        },
+        Scenario {
             name: "jail_occupied_cgroup_is_killed",
             description: "A process in another Bencher cgroup is killed, and its cgroup removed, before the job runs",
             dockerfile: r#"FROM busybox
@@ -3148,6 +3166,252 @@ fn assert_refused_by_the_lock(output: &ScenarioOutput, marker: &str) -> Result<(
             && guest_printed(output, marker) == 0,
         "Expected the runner to exit naming {RUNNER_LOCK} before it built a jail, got exit code {}.\nstdout: {}\nstderr: {}",
         output.exit_code,
+        output.stdout,
+        output.stderr
+    );
+    Ok(())
+}
+
+/// Spelled here, like the runner lock, so the product cannot move them
+/// underneath the harness.
+const JOB_LOCK: &str = "/run/bencher/job.lock";
+const MAINTENANCE_MARKER: &str = "/run/bencher/maintenance";
+
+const WAITING_FOR_MAINTENANCE: &str = "Waiting for host maintenance to finish";
+const MAINTENANCE_DUE: &str = "Running although host maintenance is due";
+
+/// Printed only once the benchmark has listed its descriptors.
+const JOB_TURN: &str = "JOB_TURN_a7f3b2c9";
+
+/// How long maintenance keeps the lock once the runner waits for it.
+const JOB_LOCK_HELD_FOR: Duration = Duration::from_secs(2);
+
+/// The first run proves the wait and the second the marker's warning, on the
+/// host, where a descriptor leaked past exec reaches the benchmark.
+fn run_runner_behind_the_job_lock(
+    image_path: &Utf8Path,
+    args: &[&str],
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let sandboxed = [args, &["--sandbox", "firecracker", "--timeout", "60"]].concat();
+    let waited =
+        run_runner_while_the_job_lock_is_held(image_path, &sandboxed, state_dir, runner_bin)?;
+    assert_waited_its_turn(&waited)?;
+    let _marker = MaintenanceMarker::place()?;
+    run_runner_bounded(
+        image_path,
+        &[args, &["--timeout", "60"]].concat(),
+        runner_bin,
+    )
+}
+
+/// The runner must neither build its jail while the harness holds the lock nor
+/// hand the lock on to its VMM once it has its turn.
+fn run_runner_while_the_job_lock_is_held(
+    image_path: &Utf8Path,
+    args: &[&str],
+    state_dir: &Utf8Path,
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let parent = jail_parent(state_dir);
+    let held = hold_job_lock()?;
+    let mut child = spawn_runner(image_path, args, runner_bin)?;
+    let mut streamed = StreamedOutput::start(&mut child);
+    // Either record, so a runner that never waits fails once it builds its jail.
+    let waited = streamed
+        .wait_for(|line| {
+            record_of(line).is_some_and(|record| {
+                matches!(
+                    text(&record, "msg"),
+                    Some(WAITING_FOR_MAINTENANCE | "Jail built")
+                )
+            })
+        })
+        .and_then(|first| {
+            anyhow::ensure!(
+                record_of(&first)
+                    .is_some_and(|record| text(&record, "msg") == Some(WAITING_FOR_MAINTENANCE)),
+                "The runner built its jail while maintenance held the job lock"
+            );
+            std::thread::sleep(JOB_LOCK_HELD_FOR);
+            anyhow::ensure!(
+                child.try_wait()?.is_none()
+                    && !streamed.has_logged("Jail built")
+                    && find_jail(&parent)?.is_none(),
+                "The runner went on while maintenance held the job lock"
+            );
+            Ok(())
+        });
+    drop(held);
+    let kept = waited.and_then(|()| vmm_holds_no_job_lock(&parent, &mut child));
+    // Only while unreaped, since a reaped pid may already be another's.
+    if kept.is_err() && matches!(child.try_wait(), Ok(None)) {
+        kill_pid(child.id(), libc::SIGKILL);
+    }
+    let status = exit_within(&mut child, PROBE_TIMEOUT);
+    let (stdout, stderr) = streamed.join();
+    let context = || format!("stdout: {stdout}\nstderr: {stderr}");
+    kept.with_context(context)?;
+    let status = status.with_context(context)?;
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.code().unwrap_or(-1),
+    })
+}
+
+/// Maintenance's hold: an open file description of the harness's own, which
+/// `flock` sets against the runner's until it is dropped.
+fn hold_job_lock() -> Result<fs::File> {
+    use std::os::unix::fs::{DirBuilderExt as _, OpenOptionsExt as _};
+
+    // The runner's own modes, so creating either loosens nothing.
+    let lock = Utf8Path::new(JOB_LOCK);
+    if let Some(dir) = lock.parent() {
+        fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(dir)
+            .with_context(|| format!("Failed to create {dir}"))?;
+    }
+    let file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .open(lock)
+        .with_context(|| format!("Failed to open {JOB_LOCK}"))?;
+    file.try_lock()
+        .with_context(|| format!("Something else holds {JOB_LOCK}, so the harness cannot"))?;
+    Ok(file)
+}
+
+/// Once the VMM is up, neither it nor the jailer it was exec'd from holds a
+/// descriptor of the job lock.
+fn vmm_holds_no_job_lock(parent: &Utf8Path, child: &mut std::process::Child) -> Result<()> {
+    let lock = fs::metadata(JOB_LOCK).with_context(|| format!("Failed to stat {JOB_LOCK}"))?;
+    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
+    loop {
+        if let Some((_, jail_root)) = find_jail(parent)?
+            && let Some(pid) = find_jailed_vmm(&jail_root)?
+        {
+            anyhow::ensure!(!holds(pid, &lock)?, "The VMM, pid {pid}, holds {JOB_LOCK}");
+            return Ok(());
+        }
+        anyhow::ensure!(
+            child.try_wait()?.is_none() && std::time::Instant::now() < deadline,
+            "The jailed VMM was never observed within {PROBE_TIMEOUT:?}"
+        );
+        std::thread::sleep(PROBE_INTERVAL);
+    }
+}
+
+/// Whether a descriptor of `pid` is open on `file`, which none is once it has
+/// exited.
+fn holds(pid: u32, file: &fs::Metadata) -> Result<bool> {
+    let fds = match fs::read_dir(format!("/proc/{pid}/fd")) {
+        Ok(fds) => fds,
+        Err(e) if gone(&e) => return Ok(false),
+        Err(e) => {
+            return Err(e).with_context(|| format!("Failed to read the descriptors of pid {pid}"));
+        },
+    };
+    Ok(fds
+        .filter_map(Result::ok)
+        .any(|fd| fs::metadata(fd.path()).is_ok_and(|target| same_object(&target, file))))
+}
+
+/// The exit status, or an error once `within` has passed and the child is
+/// killed.
+fn exit_within(
+    child: &mut std::process::Child,
+    within: Duration,
+) -> Result<std::process::ExitStatus> {
+    let deadline = std::time::Instant::now() + within;
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Ok(status);
+        }
+        if std::time::Instant::now() >= deadline {
+            kill_pid(child.id(), libc::SIGKILL);
+            child.wait()?;
+            bail!("The runner was still running after {within:?}");
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    }
+}
+
+/// One wait for the lock, then the Job, and no warning, since no marker was
+/// there.
+fn assert_waited_its_turn(output: &ScenarioOutput) -> Result<()> {
+    assert_job_succeeded(output, JOB_TURN)?;
+    anyhow::ensure!(
+        records_with(&output.stderr, WAITING_FOR_MAINTENANCE).count() == 1
+            && records_with(&output.stderr, MAINTENANCE_DUE)
+                .next()
+                .is_none(),
+        "Expected one wait for the job lock and no warning that maintenance is due.\nstdout: {}\nstderr: {}",
+        output.stdout,
+        output.stderr
+    );
+    Ok(())
+}
+
+/// A marker of the harness's own, removed on drop; one already there is never
+/// taken over, so another's is never removed.
+struct MaintenanceMarker;
+
+impl MaintenanceMarker {
+    fn place() -> Result<Self> {
+        use std::os::unix::fs::OpenOptionsExt as _;
+
+        fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(0o600)
+            .open(MAINTENANCE_MARKER)
+            .with_context(|| format!("Failed to create {MAINTENANCE_MARKER}"))?;
+        Ok(Self)
+    }
+}
+
+impl Drop for MaintenanceMarker {
+    fn drop(&mut self) {
+        drop(fs::remove_file(MAINTENANCE_MARKER));
+    }
+}
+
+/// Bounded by the harness, since a runner held up before its Job's timeout
+/// starts would otherwise never end.
+fn run_runner_bounded(
+    image_path: &Utf8Path,
+    args: &[&str],
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let mut child = spawn_runner(image_path, args, runner_bin)?;
+    let drained = drain_output(&mut child);
+    let status = exit_within(&mut child, PROBE_TIMEOUT);
+    let (stdout, stderr) = drained.join();
+    let status = status.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.code().unwrap_or(-1),
+    })
+}
+
+/// The marker draws one warning and no wait, and the benchmark, the runner's
+/// own child on the host, holds no descriptor of the job lock.
+fn assert_ran_beside_the_marker(output: &ScenarioOutput) -> Result<()> {
+    assert_job_succeeded(output, JOB_TURN)?;
+    anyhow::ensure!(
+        records_with(&output.stderr, MAINTENANCE_DUE).count() == 1
+            && records_with(&output.stderr, WAITING_FOR_MAINTENANCE)
+                .next()
+                .is_none()
+            && !output.stdout.lines().any(|line| line.contains(JOB_LOCK)),
+        "Expected one warning that maintenance is due, no wait, and no descriptor of {JOB_LOCK} in the benchmark.\nstdout: {}\nstderr: {}",
         output.stdout,
         output.stderr
     );
@@ -4443,6 +4707,14 @@ impl StreamedOutput {
             record_of(line).is_some_and(|record| text(&record, "msg") == Some(msg))
         })?;
         record_of(&line).with_context(|| format!("{line} is no longer a record"))
+    }
+
+    /// Whether the runner has logged `msg` by now, without waiting for it.
+    fn has_logged(&mut self, msg: &str) -> bool {
+        self.seen.extend(self.lines.try_iter());
+        self.seen
+            .iter()
+            .any(|line| record_of(line).is_some_and(|record| text(&record, "msg") == Some(msg)))
     }
 
     /// Wait for both readers, once the child has exited.

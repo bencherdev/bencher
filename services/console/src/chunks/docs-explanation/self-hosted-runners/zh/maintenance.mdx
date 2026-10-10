@@ -1,0 +1,47 @@
+## 主机维护
+
+Runner 与其主机的维护（例如软件包升级或 RAID 巡检）轮流进行，因此维护绝不会在 Job 运行期间进行。
+轮流通过 `/run/bencher` 实现，这是一个以 `root` 启动的 Runner 只为 `root` 创建的目录：
+
+- **Job 锁**，`/run/bencher/job.lock`。
+  Runner 在请求 Job 之前获取它，并持有到该轮询无 Job 结束或其带来的 Job 结束。
+  维护会等待这个锁，因此只在 Job 之间开始，
+  而发现锁被占用的 Runner 在锁释放之前不接受任何 Job。
+- **维护标记**，`/run/bencher/maintenance` 或 `/run/bencher/maintenance.<name>`。
+  维护在等待锁之前创建自己的标记，完成后将其删除。
+  只要存在任何标记，Runner 就不请求 Job 并让锁保持空闲，
+  因此等待中的维护会在 Runner 当前的轮询或该轮询带来的 Job 结束后立即开始。
+
+在等待维护期间，Runner 处于暂停状态：它保持连接，并继续自我更新。
+`runner run` 也会等待 Job 锁；在存在标记或 md 阵列正在同步时，它会发出警告但仍然运行。
+不是 `root` 的 Runner 既无法打开 Job 锁，也看不到标记，因此在没有它们的情况下接受 Job。
+
+在 systemd 中，可以用一个 drop-in 让维护单元等待轮到自己。
+例如，`/etc/systemd/system/fstrim.service.d/zz-bencher-quiet.conf` 用 `flock -F` 包装该单元自身的命令。
+空的 `ExecStart=` 会清除该命令，因此下一行必须原样重复它：
+
+```ini
+[Service]
+ExecStartPre=+/usr/bin/install -d -m 0700 /run/bencher
+ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
+ExecStart=
+ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
+ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
+TimeoutStartSec=infinity
+```
+
+### 排空 Runner
+
+要排空一个 Runner，请以 `root` 身份创建普通标记：
+
+```sh
+touch /run/bencher/maintenance
+```
+
+Runner 会完成当前的轮询（最多 `--poll-timeout` 秒）以及正在运行或由该轮询带来的 Job，之后在标记消失之前不再接受其他 Job：
+
+```sh
+rm /run/bencher/maintenance
+```
+
+`/run` 在启动时会被清空，因此重启也会删除该标记。
