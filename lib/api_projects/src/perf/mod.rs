@@ -61,7 +61,7 @@ use serde::Deserialize;
 pub mod img;
 
 // 4 weeks, a whole number of weeks so the window always spans the same weekday mix.
-const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(672);
+pub(crate) const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(672);
 
 /// A permutation is one (branch, testbed, benchmark, measure), and each one is a
 /// query of its own, so this bounds the work a request can ask for.
