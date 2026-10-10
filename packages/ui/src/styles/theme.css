@@ -1,0 +1,213 @@
+/*
+ * The Bencher theme: every color in the design system, and the only file
+ * that may write one. Dark is the default; light redefines the same tokens.
+ */
+@layer ui-tokens {
+	:root {
+		color-scheme: dark;
+
+		/* Accent. Fills that carry white text use the deep orange in both
+		   themes; strokes and the focus ring use the brand orange. */
+		--color-accent: #c25200;
+		--color-accent-hover: #a94700;
+		--color-on-accent: #ffffff;
+		--color-accent-muted: rgba(237, 103, 4, 0.1);
+		--color-border-accent: rgba(237, 103, 4, 0.45);
+		--color-stroke-accent: #ed6704;
+		--color-focus: #ed6704;
+		--color-text-accent: #ed6704;
+		--color-text-accent-hover: #f39a52;
+
+		/* Backgrounds. */
+		--color-background-body: #141517;
+		--color-background-surface: #1b1c1f;
+		--color-background-popover: #1b1c1f;
+		--color-background-card: rgba(255, 255, 255, 0.025);
+		--color-background-muted: rgba(255, 255, 255, 0.04);
+		--color-background-plot: #1a1b1d;
+		--color-background-tag: rgba(255, 255, 255, 0.06);
+		--color-background-inverted: #f2f2f2;
+		--color-scrim: rgba(0, 0, 0, 0.5);
+
+		/* Text. */
+		--color-text-primary: #f2f2f2;
+		--color-text-secondary: #c8c8c8;
+		--color-text-muted: #a0a0a0;
+		--color-text-eyebrow: #aaaaaa;
+		--color-text-faint: #949494;
+		--color-text-disabled: #949494;
+		--color-text-inverted: #141517;
+
+		/* Borders and overlays. */
+		--color-border: rgba(255, 255, 255, 0.1);
+		--color-border-emphasized: rgba(255, 255, 255, 0.32);
+		--color-border-control: rgba(255, 255, 255, 0.45);
+		--color-overlay-hover: rgba(255, 255, 255, 0.05);
+		--color-overlay-pressed: rgba(255, 255, 255, 0.1);
+		--color-skeleton: rgba(255, 255, 255, 0.07);
+		--color-shadow: rgba(0, 0, 0, 0.5);
+
+		/* Feedback. */
+		--color-success: #22c55e;
+		--color-success-muted: rgba(34, 197, 94, 0.12);
+		--color-text-success: #8fe3a8;
+		--color-warning: #f59e0b;
+		--color-warning-muted: rgba(245, 158, 11, 0.1);
+		--color-text-warning: #ffd88a;
+		--color-error: #ef4444;
+		--color-error-muted: rgba(239, 68, 68, 0.12);
+		--color-text-error: #ffb4b4;
+		--color-marker: #dc2626;
+		--color-on-marker: #ffffff;
+		--color-worse: #ff7a7a;
+		--color-better: #22c55e;
+
+		/* Hues, for enumerated meanings only. Blue is the parameter tag. */
+		--color-background-blue: rgba(122, 162, 247, 0.12);
+		--color-text-blue: #a9c0ff;
+		--color-border-blue: #2c4a74;
+		--color-background-teal: #12332f;
+		--color-text-teal: #5cc3b5;
+		--color-border-teal: #1e4f49;
+		--color-background-green: #16331c;
+		--color-text-green: #6cc584;
+		--color-border-green: #24512e;
+		--color-background-yellow: #38300f;
+		--color-text-yellow: #d3b04a;
+		--color-border-yellow: #574a1a;
+		--color-background-orange: #3d2812;
+		--color-text-orange: #de9857;
+		--color-border-orange: #5d3d1d;
+		--color-background-red: #421d1d;
+		--color-text-red: #e88787;
+		--color-border-red: #663030;
+		--color-background-pink: #40202f;
+		--color-text-pink: #e386b4;
+		--color-border-pink: #64304a;
+		--color-background-purple: #291f47;
+		--color-text-purple: #a794e8;
+		--color-border-purple: #40336b;
+		--color-background-gray: #262623;
+		--color-text-gray: #b3b3aa;
+		--color-border-gray: #3c3c37;
+
+		/* Plot series, in fixed slot order, then the plot's own chrome. */
+		--color-data-categorical-1: #9bc3fe;
+		--color-data-categorical-2: #fec07d;
+		--color-data-categorical-3: #e968a1;
+		--color-data-categorical-4: #71ca5d;
+		--color-data-categorical-5: #b385fb;
+		--color-data-categorical-6: #c6ae30;
+		--color-data-categorical-7: #32a5d4;
+		--color-data-categorical-8: #6bf1e2;
+		--color-data-dim: #45474c;
+		--color-data-grid: rgba(255, 255, 255, 0.07);
+
+		/* Avatar gradient. */
+		--color-avatar-start: #444444;
+		--color-avatar-end: #222222;
+
+		/* Code. */
+		--color-syntax-background: rgba(0, 0, 0, 0.35);
+	}
+
+	:root[data-theme="light"] {
+		color-scheme: light;
+
+		/* The brand orange falls under 3:1 on the light ground, so light
+		   strokes use the deep orange. */
+		--color-accent: #c25200;
+		--color-accent-hover: #a94700;
+		--color-on-accent: #ffffff;
+		--color-accent-muted: rgba(237, 103, 4, 0.08);
+		--color-border-accent: rgba(237, 103, 4, 0.5);
+		--color-stroke-accent: #c25200;
+		--color-focus: #c25200;
+		--color-text-accent: #b04900;
+		--color-text-accent-hover: #8f3b00;
+
+		--color-background-body: #f7f7f5;
+		--color-background-surface: #ffffff;
+		--color-background-popover: #ffffff;
+		--color-background-card: rgba(0, 0, 0, 0.02);
+		--color-background-muted: rgba(0, 0, 0, 0.03);
+		--color-background-plot: #f2f2f0;
+		--color-background-tag: rgba(0, 0, 0, 0.06);
+		--color-background-inverted: #151515;
+		--color-scrim: rgba(0, 0, 0, 0.28);
+
+		--color-text-primary: #151515;
+		--color-text-secondary: #2e2e2e;
+		--color-text-muted: #575757;
+		--color-text-eyebrow: #5f5f5f;
+		--color-text-faint: #666666;
+		--color-text-disabled: #666666;
+		--color-text-inverted: #f7f7f5;
+
+		--color-border: rgba(0, 0, 0, 0.08);
+		--color-border-emphasized: rgba(0, 0, 0, 0.25);
+		--color-border-control: rgba(0, 0, 0, 0.5);
+		--color-overlay-hover: rgba(0, 0, 0, 0.04);
+		--color-overlay-pressed: rgba(0, 0, 0, 0.08);
+		--color-skeleton: rgba(0, 0, 0, 0.07);
+		--color-shadow: rgba(0, 0, 0, 0.18);
+
+		--color-success: #16a34a;
+		--color-success-muted: rgba(22, 163, 74, 0.1);
+		--color-text-success: #166534;
+		--color-warning: #b45309;
+		--color-warning-muted: rgba(217, 119, 6, 0.09);
+		--color-text-warning: #8a5b00;
+		--color-error: #dc2626;
+		--color-error-muted: rgba(220, 38, 38, 0.08);
+		--color-text-error: #b91c1c;
+		--color-marker: #dc2626;
+		--color-on-marker: #ffffff;
+		--color-worse: #b91c1c;
+		--color-better: #166534;
+
+		--color-background-blue: rgba(47, 95, 216, 0.1);
+		--color-text-blue: #2f4fb0;
+		--color-border-blue: #bcd5f2;
+		--color-background-teal: #ddf2ef;
+		--color-text-teal: #0e6e63;
+		--color-border-teal: #b5e0da;
+		--color-background-green: #e1f2e4;
+		--color-text-green: #1c7a34;
+		--color-border-green: #bfe2c6;
+		--color-background-yellow: #faf0cf;
+		--color-text-yellow: #8a6400;
+		--color-border-yellow: #ecd894;
+		--color-background-orange: #fcead9;
+		--color-text-orange: #a35312;
+		--color-border-orange: #f2cfa8;
+		--color-background-red: #fbe3e3;
+		--color-text-red: #b03030;
+		--color-border-red: #f2bebe;
+		--color-background-pink: #fae5ef;
+		--color-text-pink: #b02e69;
+		--color-border-pink: #f0bcd6;
+		--color-background-purple: #ece6fa;
+		--color-text-purple: #5b3fb5;
+		--color-border-purple: #d2c5f0;
+		--color-background-gray: #eeeeeb;
+		--color-text-gray: #55554e;
+		--color-border-gray: #d8d8d2;
+
+		--color-data-categorical-1: #3475d3;
+		--color-data-categorical-2: #8f5805;
+		--color-data-categorical-3: #c3457f;
+		--color-data-categorical-4: #348e1a;
+		--color-data-categorical-5: #7141b0;
+		--color-data-categorical-6: #8d7a00;
+		--color-data-categorical-7: #1082ab;
+		--color-data-categorical-8: #005a52;
+		--color-data-dim: #cdcdc7;
+		--color-data-grid: rgba(0, 0, 0, 0.08);
+
+		--color-avatar-start: #dddddd;
+		--color-avatar-end: #bbbbbb;
+
+		--color-syntax-background: rgba(0, 0, 0, 0.05);
+	}
+}

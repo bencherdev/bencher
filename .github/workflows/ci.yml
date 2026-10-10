@@ -57,6 +57,7 @@ jobs:
             console:
               - 'rust-toolchain.toml'
               - 'services/console/**'
+              - 'packages/**'
               - 'lib/bencher_valid/**'
             action:
               - 'services/action/**'
@@ -77,6 +78,7 @@ jobs:
               - 'services/api/Dockerfile'
               - 'services/cli/Dockerfile'
               - 'services/console/Dockerfile'
+              - 'packages/**'
               - 'docker/**'
             runner:
               - 'rust-toolchain.toml'

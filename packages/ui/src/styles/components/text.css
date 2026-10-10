@@ -1,0 +1,26 @@
+@layer ui-components {
+	.ui-text {
+		font-size: var(--font-size-base);
+		color: var(--color-text-primary);
+	}
+
+	.ui-text[data-size="xs"] {
+		font-size: var(--font-size-xs);
+	}
+
+	.ui-text[data-size="sm"] {
+		font-size: var(--font-size-sm);
+	}
+
+	.ui-text[data-tone="secondary"] {
+		color: var(--color-text-secondary);
+	}
+
+	.ui-text[data-tone="disabled"] {
+		color: var(--color-text-disabled);
+	}
+
+	a.ui-text:hover {
+		color: var(--color-text-accent);
+	}
+}

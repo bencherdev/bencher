@@ -1,0 +1,40 @@
+@layer ui-base {
+	html {
+		scroll-behavior: smooth;
+	}
+
+	/* A person who asked for less motion gets none of it here either: their
+	 * scrolls land at once. This is the one declaration every scripted scroll
+	 * reads, so a call site names a destination and never an animation. */
+	@media (prefers-reduced-motion: reduce) {
+		html {
+			scroll-behavior: auto;
+		}
+	}
+
+	body {
+		background: var(--color-background-body);
+		color: var(--color-text-primary);
+		font-family: var(--font-family-body);
+		font-size: var(--font-size-base);
+		line-height: 1.5;
+		-webkit-font-smoothing: antialiased;
+	}
+
+	a {
+		color: var(--color-text-accent);
+		text-decoration: none;
+	}
+
+	code,
+	pre,
+	kbd,
+	samp {
+		font-family: var(--font-family-code);
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--color-focus);
+		outline-offset: 2px;
+	}
+}

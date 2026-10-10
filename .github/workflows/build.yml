@@ -154,6 +154,7 @@ jobs:
         working-directory: ./services/console
         run: |
           npm install --include=dev
+          npx playwright install --with-deps --only-shell chromium
           npx vitest run
 
   build_console:
