@@ -46,6 +46,10 @@ interface LineRowProps {
 	onIntent?: () => void;
 	/** What the row shows in the measure's place, such as the report an alert came from. */
 	aside?: JSX.Element;
+	/** No longer alerting, as a dismissed alert: drawn in the muted color, never faded. */
+	dimmed?: boolean;
+	/** Draws the row's own controls: a last cell when wide, a third line when narrow. */
+	actions?: (() => JSX.Element) | undefined;
 	/** What the row expands into, drawn in a row of its own under it. */
 	children?: JSX.Element;
 }
@@ -76,7 +80,10 @@ const LineRow = (props: LineRowProps) => {
 			UNITS,
 		);
 	const region = () => `lr-ex-${props.line.key}`;
-	const alerting = () => props.line.alert !== undefined;
+	const alerting = () => props.line.alert !== undefined && !props.dimmed;
+	const columns = () =>
+		(props.narrow ? COLUMNS.narrow : COLUMNS.wide) +
+		(props.actions === undefined || props.narrow ? 0 : 1);
 
 	const select = () => (
 		<Show when={props.onSelect}>
@@ -134,6 +141,7 @@ const LineRow = (props: LineRowProps) => {
 		<InlineHistory
 			x={props.line.points.x}
 			line={props.line.history}
+			muted={props.dimmed === true}
 			label={`${label().name}, history`}
 		/>
 	);
@@ -174,7 +182,7 @@ const LineRow = (props: LineRowProps) => {
 				fallback={
 					<tr
 						class="lr"
-						classList={{ "lr-alerting": alerting() }}
+						classList={{ "lr-alerting": alerting(), "lr-dim": props.dimmed }}
 						aria-rowindex={props.index}
 					>
 						<td>{select()}</td>
@@ -193,12 +201,19 @@ const LineRow = (props: LineRowProps) => {
 								<span class="lr-num">{numbers().limit}</span>
 							</Show>
 						</td>
+						<Show when={props.actions}>
+							{(actions) => <td class="lr-act">{actions()()}</td>}
+						</Show>
 					</tr>
 				}
 			>
 				<tr
 					class="lrn"
-					classList={{ "lr-alerting": alerting() }}
+					classList={{
+						"lr-alerting": alerting(),
+						"lr-dim": props.dimmed,
+						"lrn-act": props.actions !== undefined,
+					}}
 					aria-rowindex={props.index}
 				>
 					<td>{select()}</td>
@@ -211,6 +226,9 @@ const LineRow = (props: LineRowProps) => {
 								<span class="lr-num muted">limit {numbers().limit}</span>
 							</Show>
 						</div>
+						<Show when={props.actions}>
+							{(actions) => <div class="lrn-l2 lr-act">{actions()()}</div>}
+						</Show>
 					</td>
 					<td>
 						<div class="lrn-num">
@@ -223,7 +241,7 @@ const LineRow = (props: LineRowProps) => {
 			</Show>
 			<Show when={props.expanded}>
 				<tr class="lr-exrow" aria-rowindex={props.index + 1}>
-					<td colSpan={props.narrow ? COLUMNS.narrow : COLUMNS.wide}>
+					<td colSpan={columns()}>
 						<section id={region()} aria-label={`${label().name}, full plot`}>
 							{props.children}
 						</section>
