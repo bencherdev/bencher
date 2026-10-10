@@ -191,6 +191,9 @@ pub struct JsonAlertsFilter {
     /// The thresholds that raised the alerts.
     #[serde(default)]
     pub thresholds: Vec<ThresholdUuid>,
+    /// The reports that raised the alerts.
+    #[serde(default)]
+    pub reports: Vec<ReportUuid>,
     /// The earliest time an alert was created, in milliseconds, inclusive.
     #[serde(default)]
     pub start_time: Option<DateTimeMillis>,

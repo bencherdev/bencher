@@ -45,9 +45,9 @@ use bencher_schema::{
     schema,
 };
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
+    BoolExpressionMethods as _, BoxableExpression, ExpressionMethods as _, JoinOnDsl as _,
     NullableExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _,
+    SelectableHelper as _, sql_types::Bool, sqlite::Sqlite,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
@@ -238,19 +238,27 @@ fn requested_start(
             "Ask for either a start time or a window, not both",
         )),
         (Some(start_time), None) => Ok(Some(start_time.into())),
-        (None, Some(days)) if (1..=MAX_CONSOLE_WINDOW_DAYS).contains(&days) => Ok(before(
-            report.start_time,
-            Duration::from_hours(24 * u64::from(days)),
-        )),
-        (None, Some(days)) => Err(bad_request_error(format!(
+        (None, window) => {
+            Ok(window_length(window)?.and_then(|length| before(report.start_time, length)))
+        },
+    }
+}
+
+/// The length of a window of whole days.
+pub(super) fn window_length(window: Option<u16>) -> Result<Option<Duration>, HttpError> {
+    match window {
+        Some(days) if (1..=MAX_CONSOLE_WINDOW_DAYS).contains(&days) => {
+            Ok(Some(Duration::from_hours(24 * u64::from(days))))
+        },
+        Some(days) => Err(bad_request_error(format!(
             "A window is from 1 to {MAX_CONSOLE_WINDOW_DAYS} days, not {days}"
         ))),
-        (None, None) => Ok(None),
+        None => Ok(None),
     }
 }
 
 /// The size a request asks each line's history to be thinned to.
-fn history_points(points: Option<u16>) -> Result<usize, HttpError> {
+pub(super) fn history_points(points: Option<u16>) -> Result<usize, HttpError> {
     match points {
         None => Ok(usize::from(DEFAULT_CONSOLE_HISTORY_POINTS)),
         Some(points) if (2..=MAX_CONSOLE_HISTORY_POINTS).contains(&points) => {
@@ -523,30 +531,13 @@ fn window_reports(
     report: &QueryReport,
     window_start: DateTime,
 ) -> diesel::QueryResult<(Vec<PointReport>, bool)> {
-    let QueryReport {
-        id,
-        head_id,
-        testbed_id,
-        end_time,
-        ..
-    } = *report;
     let mut reports = schema::report::table
         .inner_join(
             schema::head_version::table
                 .on(schema::head_version::version_id.eq(schema::report::version_id)),
         )
         .inner_join(schema::version::table.on(schema::version::id.eq(schema::report::version_id)))
-        .filter(schema::head_version::head_id.eq(head_id))
-        .filter(schema::report::testbed_id.eq(testbed_id))
-        .filter(schema::report::start_time.ge(window_start))
-        // Implied by the start, and what bounds the index range from below.
-        .filter(schema::report::end_time.ge(window_start))
-        .filter(schema::report::end_time.le(end_time))
-        .filter(
-            schema::report::end_time
-                .lt(end_time)
-                .or(schema::report::id.le(id)),
-        )
+        .filter(window_holds(report, window_start))
         .order((schema::report::end_time.desc(), schema::report::id.desc()))
         .limit(i64::try_from(MAX_CONSOLE_HISTORY_REPORTS + 1).unwrap_or(i64::MAX))
         .select((
@@ -585,6 +576,46 @@ fn window_reports(
     Ok((reports, capped))
 }
 
+/// The reports a report's window holds: on its head and testbed, started inside the window,
+/// and ended by the report.
+pub(super) fn window_holds(
+    report: &QueryReport,
+    window_start: DateTime,
+) -> Box<dyn BoxableExpression<WindowSource, Sqlite, SqlType = Bool>> {
+    let QueryReport {
+        id,
+        head_id,
+        testbed_id,
+        end_time,
+        ..
+    } = *report;
+    Box::new(
+        schema::head_version::head_id
+            .eq(head_id)
+            .and(schema::report::testbed_id.eq(testbed_id))
+            .and(schema::report::start_time.ge(window_start))
+            // Implied by the start, and what bounds the index range from below.
+            .and(schema::report::end_time.ge(window_start))
+            .and(schema::report::end_time.le(end_time))
+            .and(
+                schema::report::end_time
+                    .lt(end_time)
+                    .or(schema::report::id.le(id)),
+            ),
+    )
+}
+
+/// A report joined to the heads that hold its version, and to its version.
+pub(super) type WindowSource = diesel::dsl::InnerJoinQuerySource<
+    diesel::dsl::InnerJoinQuerySource<
+        schema::report::table,
+        schema::head_version::table,
+        diesel::dsl::Eq<schema::head_version::version_id, schema::report::version_id>,
+    >,
+    schema::version::table,
+    diesel::dsl::Eq<schema::version::id, schema::report::version_id>,
+>;
+
 /// One metric of the report, once per threshold that checked it.
 type LineRow = (
     Iteration,
@@ -595,7 +626,7 @@ type LineRow = (
     Option<(BoundaryRow, ThresholdUuid, ModelRow, Option<AlertRow>)>,
 );
 
-type BoundaryRow = (ThresholdId, Option<f64>, Option<f64>, Option<f64>);
+pub(super) type BoundaryRow = (ThresholdId, Option<f64>, Option<f64>, Option<f64>);
 
 fn line_rows(conn: &mut DbConnection, report_id: ReportId) -> diesel::QueryResult<Vec<LineRow>> {
     schema::report_benchmark::table
@@ -676,14 +707,25 @@ fn line_rows(conn: &mut DbConnection, report_id: ReportId) -> diesel::QueryResul
 
 /// A line: one metric name of one measure of one variant.
 #[derive(Clone, PartialEq, Eq, Hash)]
-struct LineKey {
+pub(super) struct LineKey {
     variant: VariantId,
     measure: MeasureId,
     metric: MetricName,
 }
 
+impl LineKey {
+    pub(super) fn of_row(row: &HistoryRow) -> Self {
+        let (_, _, variant, measure, metric, ..) = row;
+        Self {
+            variant: *variant,
+            measure: *measure,
+            metric: metric.clone(),
+        }
+    }
+}
+
 /// A line as its row shows it in this report.
-struct Line {
+pub(super) struct Line {
     benchmark: BenchmarkRow,
     variant: VariantRow,
     measure: MeasureRow,
@@ -694,7 +736,27 @@ struct Line {
 }
 
 impl Line {
-    fn key(&self) -> LineKey {
+    pub(super) fn new(
+        benchmark: BenchmarkRow,
+        variant: VariantRow,
+        measure: MeasureRow,
+        metric: MetricName,
+        iteration: Iteration,
+        value: f64,
+        check: Option<Check>,
+    ) -> Self {
+        Self {
+            benchmark,
+            variant,
+            measure,
+            metric,
+            iteration,
+            value,
+            check,
+        }
+    }
+
+    pub(super) fn key(&self) -> LineKey {
         LineKey {
             variant: self.variant.0,
             measure: self.measure.0,
@@ -723,7 +785,7 @@ impl Line {
 
     /// Benchmark, variant parameters, measure, and metric name, with the row
     /// identifiers last so the order is total.
-    fn cmp_name(&self, other: &Self) -> Ordering {
+    pub(super) fn cmp_name(&self, other: &Self) -> Ordering {
         let (benchmark_id, _, benchmark_name, _) = &self.benchmark;
         let (variant_id, _, parameters) = &self.variant;
         let (measure_id, _, measure_name, _, _) = &self.measure;
@@ -929,7 +991,11 @@ fn group_json(
     }
 }
 
-fn line_json(tables: &mut Tables, line: Line, history: JsonConsoleSeries) -> JsonConsoleReportLine {
+pub(super) fn line_json(
+    tables: &mut Tables,
+    line: Line,
+    history: JsonConsoleSeries,
+) -> JsonConsoleReportLine {
     let Line {
         benchmark,
         variant,
@@ -976,7 +1042,7 @@ fn line_json(tables: &mut Tables, line: Line, history: JsonConsoleSeries) -> Jso
 
 /// Each metric of the page's lines in the window's reports, with the boundary
 /// and alert of the threshold its line follows.
-type HistoryRow = (
+pub(super) type HistoryRow = (
     ReportId,
     Iteration,
     VariantId,
@@ -989,40 +1055,38 @@ type HistoryRow = (
 
 /// One statement for every line of the page: the window's reports crossed with
 /// the page's variants and measures, each pair an index seek.
-fn history_rows(
+pub(super) fn history_rows(
     conn: &mut DbConnection,
     window_reports: &[PointReport],
     lines: &[Line],
 ) -> diesel::QueryResult<Vec<HistoryRow>> {
-    let report_ids = window_reports
-        .iter()
-        .map(|report| report.id)
-        .collect::<Vec<_>>();
-    let variant_ids = unique(lines.iter().map(|line| line.variant.0));
-    let measure_ids = unique(lines.iter().map(|line| line.measure.0));
-    let threshold_ids = unique(
-        lines
-            .iter()
-            .filter_map(|line| line.check.as_ref().map(|check| check.threshold_id)),
-    );
-    schema::metric::table
+    windows_history_rows(conn, &[(window_reports, lines)])
+}
+
+/// One statement for the lines of many windows: each window's reports crossed
+/// with the variants of its own lines.
+pub(super) fn windows_history_rows(
+    conn: &mut DbConnection,
+    windows: &[(&[PointReport], &[Line])],
+) -> diesel::QueryResult<Vec<HistoryRow>> {
+    let lines = || windows.iter().flat_map(|(_, lines)| lines.iter());
+    let measure_ids = unique(lines().map(|line| line.measure.0));
+    let threshold_ids =
+        unique(lines().filter_map(|line| line.check.as_ref().map(|check| check.threshold_id)));
+    let mut query = schema::metric::table
         .inner_join(
             schema::report_benchmark::table
                 .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
         )
         // The threshold filter belongs in the join, so a point with no boundary
-        // from these thresholds still comes back.
+        // from these thresholds still comes back; `+ 0` reads a metric's few
+        // boundaries instead of seeking every threshold.
         .left_join(
             schema::boundary::table.on(schema::boundary::metric_id
                 .eq(schema::metric::id)
-                .and(schema::boundary::threshold_id.eq_any(threshold_ids))),
+                .and((schema::boundary::threshold_id + 0).eq_any(threshold_ids))),
         )
         .left_join(schema::alert::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
-        .filter(schema::report_benchmark::report_id.eq_any(report_ids))
-        .filter(schema::report_benchmark::variant_id.eq_any(variant_ids))
-        // SQLite would otherwise drive the read off `index_metric_measure`,
-        // which spans every report the measure was ever in.
-        .filter((schema::metric::measure_id + 0).eq_any(measure_ids))
         .select((
             schema::report_benchmark::report_id,
             schema::report_benchmark::iteration,
@@ -1044,6 +1108,23 @@ fn history_rows(
             )
                 .nullable(),
         ))
+        .into_boxed();
+    for (window_reports, lines) in windows {
+        let report_ids = window_reports
+            .iter()
+            .map(|report| report.id)
+            .collect::<Vec<_>>();
+        let variant_ids = unique(lines.iter().map(|line| line.variant.0));
+        query = query.or_filter(
+            schema::report_benchmark::report_id
+                .eq_any(report_ids)
+                .and(schema::report_benchmark::variant_id.eq_any(variant_ids)),
+        );
+    }
+    query
+        // SQLite would otherwise drive the read off `index_metric_measure`,
+        // which spans every report the measure was ever in.
+        .filter((schema::metric::measure_id + 0).eq_any(measure_ids))
         .load::<HistoryRow>(conn)
 }
 
@@ -1065,33 +1146,33 @@ fn page_history(
 }
 
 #[derive(Default)]
-struct History {
+pub(super) struct History {
     points: Points,
     series: Vec<JsonConsoleSeries>,
 }
 
 impl History {
-    fn new(window_reports: &[PointReport], lines: &[Line], rows: Vec<HistoryRow>) -> Self {
+    pub(super) fn new(
+        window_reports: &[PointReport],
+        lines: &[Line],
+        rows: Vec<HistoryRow>,
+    ) -> Self {
         let reports = window_reports
             .iter()
             .map(|report| (report.id, report))
             .collect::<HashMap<_, _>>();
-        let line_index = lines
-            .iter()
-            .enumerate()
-            .map(|(position, line)| (line.key(), position))
-            .collect::<HashMap<_, _>>();
+        // Two alerts can raise on one line, and each is its own row.
+        let mut line_index: HashMap<LineKey, Vec<usize>> = HashMap::new();
+        for (position, line) in lines.iter().enumerate() {
+            line_index.entry(line.key()).or_default().push(position);
+        }
         // The variants and measures cross, so keep only the rows of a page line.
         let rows = rows
             .into_iter()
             .filter_map(|row| {
-                let (_, _, variant, measure, metric, ..) = &row;
-                let key = LineKey {
-                    variant: *variant,
-                    measure: *measure,
-                    metric: metric.clone(),
-                };
-                line_index.get(&key).map(|position| (*position, row))
+                line_index
+                    .get(&LineKey::of_row(&row))
+                    .map(|positions| (positions, row))
             })
             .collect::<Vec<_>>();
 
@@ -1107,28 +1188,30 @@ impl History {
             .iter()
             .map(|_| SeriesBuilder::new(points.json.x.len()))
             .collect::<Vec<_>>();
-        for (position, (report_id, iteration, _, _, _, value, boundary, alert)) in rows {
-            let (Some(point), Some(builder), Some(line)) = (
-                points.index.get(&(report_id, iteration)).copied(),
-                series.get_mut(position),
-                lines.get(position),
-            ) else {
+        for (positions, (report_id, iteration, _, _, _, value, boundary, alert)) in rows {
+            let Some(point) = points.index.get(&(report_id, iteration)).copied() else {
                 continue;
             };
-            builder.value(point, value);
-            let followed = line.check.as_ref().map(|check| check.threshold_id);
-            if let Some((threshold_id, baseline, lower_limit, upper_limit)) = boundary
-                && followed == Some(threshold_id)
-            {
-                builder.limits(
-                    point,
-                    Limits {
-                        baseline,
-                        lower_limit,
-                        upper_limit,
-                    },
-                    alert_json(alert),
-                );
+            for position in positions {
+                let (Some(builder), Some(line)) = (series.get_mut(*position), lines.get(*position))
+                else {
+                    continue;
+                };
+                builder.value(point, value);
+                let followed = line.check.as_ref().map(|check| check.threshold_id);
+                if let Some((threshold_id, baseline, lower_limit, upper_limit)) = boundary
+                    && followed == Some(threshold_id)
+                {
+                    builder.limits(
+                        point,
+                        Limits {
+                            baseline,
+                            lower_limit,
+                            upper_limit,
+                        },
+                        alert_json(alert),
+                    );
+                }
             }
         }
 
@@ -1136,6 +1219,10 @@ impl History {
             points,
             series: series.into_iter().map(SeriesBuilder::build).collect(),
         }
+    }
+
+    pub(super) fn thin(self, report_id: ReportId, points: usize) -> Thinned {
+        thin(self.points, self.series, report_id, points)
     }
 }
 
