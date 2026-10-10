@@ -998,6 +998,20 @@ export interface JsonConsoleBranches {
 	branches: JsonConsoleBranchRow[];
 }
 
+/**
+ * A benchmark's newest report, where Explore starts a query that names only
+ * the benchmark.
+ */
+export interface JsonConsoleLatestReport {
+	uuid: Uuid;
+	branch: JsonConsoleBranch;
+	testbed: JsonConsoleTestbed;
+	version: JsonVersion;
+	start_time: DateTimeMillis;
+	/** The measures the benchmark reported in it, in name order. */
+	measures: JsonConsoleMeasure[];
+}
+
 /** A group of lines and its totals, which hold whichever page is loaded. */
 export interface JsonConsoleLineGroup {
 	/** The group's benchmark or measure, an index into `benchmarks` or `measures`. */
