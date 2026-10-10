@@ -48,7 +48,8 @@ let dispose: (() => void) | undefined;
 
 const mount = (client: QueryClient, api: Api) => {
 	const history = createMemoryHistory();
-	history.set({ value: `${NEXT_PROJECTS}/hashbrown/reports` });
+	// A path no page draws, so the page reads nothing but the shell's answer.
+	history.set({ value: `${NEXT_PROJECTS}/hashbrown/nowhere` });
 	const root = document.createElement("div");
 	root.className = "console";
 	document.body.append(root);
@@ -76,7 +77,8 @@ const mount = (client: QueryClient, api: Api) => {
 	return root;
 };
 
-const heading = () => page.getByRole("heading", { level: 1, name: "Reports" });
+const heading = () =>
+	page.getByRole("heading", { level: 1, name: "Page not found" });
 const busy = (root: Element) => root.querySelector('[aria-busy="true"]');
 
 afterEach(() => {
@@ -88,7 +90,7 @@ afterEach(() => {
 describe("the layout", () => {
 	// Kills a page that paints before the shell's answer says what the reader may do.
 	test("a project never seen shows the skeleton until the shell answers", async () => {
-		await PAGES.reports.preload();
+		await PAGES.NotFound.preload();
 		const { api, answers } = heldApi();
 		const root = mount(new QueryClient(), api);
 

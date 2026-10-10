@@ -1,0 +1,233 @@
+/* The Reports list. Rows have fixed heights, since only the rows on screen are drawn. */
+
+.reports-narrow {
+	display: none;
+}
+.reports-anchor {
+	position: relative;
+	display: inline-flex;
+}
+.reports-count {
+	margin: 0;
+}
+.reports-count-skel {
+	display: inline-block;
+	width: 8ch;
+	height: 1.15em;
+	vertical-align: top;
+}
+
+.reports-more td {
+	padding: 14px 10px;
+}
+.reports-table tbody tr.reports-spacer td {
+	padding: 0;
+	border: 0;
+}
+.reports-table tbody tr.reports-row {
+	position: relative;
+	height: 40px;
+}
+.reports-table tbody tr.reports-row > td {
+	height: 40px;
+	padding-block: 0;
+	line-height: 20px;
+}
+.reports-table tbody tr.reports-row:hover td {
+	background: var(--color-overlay-hover);
+}
+/* Dimmed only once the wait is noticeable, like a skeleton. */
+.reports-table[aria-busy="true"] tbody {
+	opacity: 0.5;
+	transition: opacity var(--duration-fast) var(--ease-standard) 400ms;
+}
+.reports-branch,
+.reports-testbed {
+	max-width: 240px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.console a.reports-link {
+	color: var(--color-text-primary);
+	font-weight: var(--font-weight-semibold);
+}
+.console a.reports-link:hover {
+	color: var(--color-text-accent);
+}
+/* The whole row opens the report. */
+.reports-link::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+}
+.reports-link:focus-visible {
+	outline: none;
+}
+.reports-link:focus-visible::after {
+	outline: 2px solid var(--color-focus);
+	outline-offset: -2px;
+}
+.reports-hash {
+	font: 12.5px var(--font-family-code);
+	color: var(--color-text-secondary);
+}
+.reports-alerts {
+	vertical-align: middle;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	white-space: nowrap;
+}
+.reports-active {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 24px;
+	padding: 0 9px;
+	border: var(--border-width) solid var(--color-error);
+	border-radius: var(--radius-full);
+	color: var(--color-text-error);
+	font-size: 12px;
+}
+.reports-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--color-error);
+}
+.reports-quiet {
+	color: var(--color-text-muted);
+	font-size: 12px;
+}
+.reports-by {
+	vertical-align: middle;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--color-text-secondary);
+}
+.reports-by [role="img"] {
+	display: inline-flex;
+	color: var(--color-text-muted);
+}
+.reports-more .ui-skeleton {
+	width: 40%;
+}
+.reports-failed {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 14px;
+	white-space: normal;
+}
+
+.reports-skeleton {
+	display: flex;
+	flex-direction: column;
+	gap: 22px;
+	padding: 14px 10px;
+}
+.reports-skeleton-row:nth-child(odd) {
+	width: 70%;
+}
+.reports-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 48px 24px;
+	text-align: center;
+}
+.reports-empty p {
+	margin: 0;
+	max-width: 56ch;
+	color: var(--color-text-muted);
+}
+.reports-empty .btnrow {
+	justify-content: center;
+}
+
+.reports-range {
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	gap: 12px;
+}
+.reports-date {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.reports-date .ui-input {
+	width: auto;
+}
+.reports-search.ui-input {
+	width: auto;
+	margin: 4px 4px 6px;
+}
+.reports-sheet-filters {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 10px;
+}
+.reports-sheet-filters .reports-anchor {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+@media (max-width: 767px) {
+	.reports-wide {
+		display: none;
+	}
+	.reports-narrow {
+		display: flex;
+	}
+	.reports-table.ui-table[data-fold] tbody tr.reports-row {
+		grid-template-columns: auto auto minmax(0, 1fr) auto;
+		box-sizing: border-box;
+		height: 60px;
+		min-height: 60px;
+	}
+	.reports-table.ui-table[data-fold] tbody tr.reports-row > td {
+		height: auto;
+		line-height: 1.4;
+	}
+	.reports-table.ui-table[data-fold] tbody tr.reports-row > td.reports-hash {
+		grid-area: 1 / 2;
+		padding-left: 6px;
+		font-size: 12px;
+	}
+	.reports-table.ui-table[data-fold] tbody tr.reports-row > td.reports-adapter {
+		grid-area: 2 / 2;
+		color: var(--color-text-muted);
+		font-size: 12px;
+	}
+	.reports-table.ui-table[data-fold]
+		tbody
+		tr.reports-row
+		> td.reports-adapter::before {
+		content: "·" / "";
+		margin: 0 6px;
+	}
+	.reports-table.ui-table[data-fold] tbody tr.reports-row > td[data-fold="n1"] {
+		grid-area: 1 / 4;
+	}
+	.reports-table.ui-table[data-fold] tbody tr.reports-row > td[data-fold="n2"] {
+		grid-area: 2 / 4;
+	}
+	.reports-table.ui-table[data-fold] tbody tr.reports-spacer {
+		display: block;
+		min-height: 0;
+		padding: 0;
+		border: 0;
+	}
+	.reports-branch,
+	.reports-testbed {
+		max-width: none;
+	}
+}
