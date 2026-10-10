@@ -84,3 +84,37 @@ export const projectStatus = async (request: APIRequestContext, slug: string) =>
 			headers: { Authorization: `Bearer ${seed.member.token}` },
 		})
 	).status();
+
+/** A report of `benchmarks` times `variants` lines of one measure, on main, an hour before the seed's now. */
+export const createReport = (
+	request: APIRequestContext,
+	project: string,
+	{ benchmarks, variants }: { benchmarks: number; variants: number },
+) => {
+	const name = (index: number) => `bench-${String(index).padStart(2, "0")}`;
+	const results = Object.fromEntries(
+		Array.from({ length: benchmarks }, (_, benchmark) => [
+			name(benchmark),
+			Array.from({ length: variants }, (_, n) => ({
+				parameters: { n },
+				measures: { latency: { value: 100 + n } },
+			})),
+		]),
+	);
+	const start = Date.parse(seed.now) - 60 * 60 * 1_000;
+	return send<{ uuid: string }>(
+		request,
+		"POST",
+		`/v0/projects/${project}/reports`,
+		seed.member.token,
+		{
+			branch: "main",
+			hash: "1e2e000000000000000000000000000000000000",
+			testbed: "ubuntu-latest",
+			start_time: new Date(start).toISOString(),
+			end_time: new Date(start + 60_000).toISOString(),
+			results: [JSON.stringify(results)],
+			settings: { adapter: "json" },
+		},
+	);
+};
