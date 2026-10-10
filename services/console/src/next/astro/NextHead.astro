@@ -1,0 +1,35 @@
+---
+import { VERSION_KEY } from "../memory";
+import type { ClassicPlace } from "../paths";
+import { USER_KEY } from "../reader";
+
+interface Props {
+	slug: string;
+	/** The same place in the classic console. */
+	classic: ClassicPlace | undefined;
+}
+
+const { slug, classic } = Astro.props;
+
+// Runs before the first paint and before any module loads: the version gate
+// from memory, and a reader who is not signed in.
+---
+
+<script
+	is:inline
+	define:vars={{ slug, classic, VERSION_KEY, USER_KEY }}
+>
+	try {
+		var versions = JSON.parse(localStorage.getItem(VERSION_KEY) || "{}");
+		if (classic && versions && versions[slug] === 0) {
+			location.replace(classic.path + (classic.hash ? location.hash : ""));
+		} else if (!localStorage.getItem(USER_KEY)) {
+			location.replace(
+				"/auth/login?" +
+					new URLSearchParams({
+						back: btoa(location.pathname + location.search + location.hash),
+					}),
+			);
+		}
+	} catch (_) {}
+</script>
