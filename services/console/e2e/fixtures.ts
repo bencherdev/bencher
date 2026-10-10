@@ -15,6 +15,8 @@ export interface Seed {
 	now: string;
 	admin: JsonAuthUser;
 	member: JsonAuthUser;
+	/** A member of nothing, signed in with a user key. */
+	outsider: JsonAuthUser;
 	organization: SeedProject;
 	projects: {
 		hashbrown: SeedProject;

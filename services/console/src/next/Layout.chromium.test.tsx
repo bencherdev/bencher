@@ -40,6 +40,9 @@ const heldApi = () => {
 					resolve({ data: data as T, headers: new Headers() }),
 				);
 			}),
+		send: async () => {
+			throw new Error("The layout sends no changes");
+		},
 	};
 	return { api, answers };
 };

@@ -48,6 +48,9 @@ export const fakeApi = (
 			}
 			return { data: data as T, headers };
 		},
+		send: async () => {
+			throw new Error("Reports send no changes");
+		},
 	};
 	return { api, requests };
 };

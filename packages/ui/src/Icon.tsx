@@ -9,10 +9,12 @@ export type IconName =
 	| "alerts"
 	| "check"
 	| "chevron-down"
+	| "close"
 	| "key"
 	| "read-only"
 	| "theme"
-	| "user";
+	| "user"
+	| "warning";
 
 // One stroke-drawn set on a shared 24 grid: fill none, round joins, a
 // single stroke width, all on currentColor so the glyph takes the token
@@ -27,6 +29,7 @@ const GLYPHS: Record<IconName, () => JSX.Element> = {
 	),
 	check: () => <path d="M5 12.5l4.5 4.5L19 7.5" />,
 	"chevron-down": () => <path d="M6 9l6 6 6-6" />,
+	close: () => <path d="M6 6l12 12M18 6L6 18" />,
 	key: () => (
 		<>
 			<circle cx="8" cy="15" r="4" />
@@ -50,6 +53,7 @@ const GLYPHS: Record<IconName, () => JSX.Element> = {
 			<path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" />
 		</>
 	),
+	warning: () => <path d="M12 3l9.5 17h-19zM12 10v4M12 17.5v.01" />,
 };
 
 export interface IconProps

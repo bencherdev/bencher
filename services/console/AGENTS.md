@@ -111,6 +111,11 @@ graph over a placeholder in the server bundle, and the page renders a
 module loading is one round deep. A dev server has no graph and renders none.
 A page component must live at `src/next/pages/<Name>.tsx` to be found.
 
+A stylesheet imported anywhere in the app's module graph, a lazy page's chunk
+included, is linked from the head of every `/next/` page and blocks its first
+paint. Page styles therefore go in `src/next/styles/console.css`, which every
+page already loads.
+
 ## Sentry
 
 The browser SDK loads from `sentry.client.config.ts` as a dynamic import, so no
