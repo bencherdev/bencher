@@ -19,6 +19,7 @@
 - Email server admins when a Runner's disk health changes or shows a new problem, when a Runner stays paused for more than 12 hours, and when it takes Jobs again
 - Pause a Bare Metal Runner between Jobs while an md RAID array on its host resyncs, recovers, checks, repairs, or reshapes: it takes no new Job until the sync is done and never stops a running one. Start `runner up` with `--no-raid-pause` to keep taking Jobs
 - Have a Bare Metal Runner take turns with host maintenance: it holds `/run/bencher/job.lock` through each Job, and pauses while another process holds the lock or a marker named `/run/bencher/maintenance` or `/run/bencher/maintenance.<name>` exists, so `touch /run/bencher/maintenance` drains it. `runner run` waits for the lock too. `/run/bencher` is now `root`'s alone
+- Report a Bare Metal Runner's disk health with each `ready` and `paused`: its md arrays at every poll, and its NVMe drives' SMART / health logs at most hourly, which needs `root`
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects

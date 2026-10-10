@@ -10,8 +10,8 @@ use std::time::Duration;
 use bencher_json::{
     DateTime, JobUuid, JsonClaimedJob,
     runner::{
-        JsonIterationOutput, JsonPaused, JsonReady, JsonRunnerMetadata, PauseReason, RunnerMessage,
-        ServerMessage,
+        JsonIterationOutput, JsonPaused, JsonReady, JsonRunnerHealth, JsonRunnerMetadata,
+        PauseReason, RunnerMessage, ServerMessage,
     },
 };
 use bencher_valid::Sha256;
@@ -93,6 +93,8 @@ pub enum Input {
 pub struct Probe {
     /// Why the runner should take no Job, empty when it may.
     pub reasons: Vec<PauseReason>,
+    /// The host's disk health, sent with `Ready` and `Paused`.
+    pub health: Option<JsonRunnerHealth>,
     /// When the probe ran, by the runner's clock.
     pub now: DateTime,
 }
@@ -657,10 +659,15 @@ impl ChannelStateMachine {
     /// Send `Paused` while the probe found any reason to take no Job, else
     /// `Ready`, and wait for the server's answer either way.
     fn send_ready_or_paused(&mut self, probe: Probe) -> Vec<Effect> {
-        let Probe { reasons, now } = probe;
-        let ready = JsonReady::new(
+        let Probe {
+            reasons,
+            health,
+            now,
+        } = probe;
+        let ready = JsonReady::new_with_health(
             bencher_valid::PollTimeout::try_from(self.poll_timeout_secs).ok(),
             self.runner.clone(),
+            health,
         );
         let mut effects = Vec::new();
         let msg = if reasons.is_empty() {
@@ -833,6 +840,7 @@ pub(super) fn test_claimed_job() -> Box<JsonClaimedJob> {
 
 #[cfg(test)]
 mod tests {
+    use bencher_json::runner::HealthState;
     use bencher_valid::{Architecture, OperatingSystem};
 
     use super::*;
@@ -883,6 +891,7 @@ mod tests {
     fn clear() -> Input {
         Input::Probed(Probe {
             reasons: Vec::new(),
+            health: None,
             now: at(0),
         })
     }
@@ -890,6 +899,7 @@ mod tests {
     fn busy(now: DateTime) -> Input {
         Input::Probed(Probe {
             reasons: vec![raid()],
+            health: None,
             now,
         })
     }
@@ -1995,5 +2005,49 @@ mod tests {
                 "released first: {case}: {effects:?}"
             );
         }
+    }
+
+    // --- Health ---
+
+    #[test]
+    fn the_probes_health_rides_on_ready_and_paused() {
+        // Kills health dropped from either message, which leaves the server
+        // with a stale report while the disks change.
+        let health = |state| JsonRunnerHealth {
+            state,
+            findings: Vec::new(),
+            arrays: Vec::new(),
+            nvme: Vec::new(),
+        };
+        let sent_health = |effects: &[Effect]| {
+            effects.iter().find_map(|e| {
+                if let Effect::Send(RunnerMessage::Ready(ready)) = e {
+                    Some(ready.health.clone())
+                } else if let Effect::Send(RunnerMessage::Paused(paused)) = e {
+                    Some(paused.ready.health.clone())
+                } else {
+                    None
+                }
+            })
+        };
+        let mut sm = test_sm();
+        sm.step(Input::Connected);
+        let effects = sm.step(Input::Probed(Probe {
+            reasons: Vec::new(),
+            health: Some(health(HealthState::Ok)),
+            now: at(0),
+        }));
+        assert_eq!(sent_health(&effects), Some(Some(health(HealthState::Ok))));
+
+        sm.step(Input::Message(ServerMessage::NoJob));
+        let effects = sm.step(Input::Probed(Probe {
+            reasons: vec![raid()],
+            health: Some(health(HealthState::Failing)),
+            now: at(60),
+        }));
+        assert_eq!(
+            sent_health(&effects),
+            Some(Some(health(HealthState::Failing)))
+        );
     }
 }

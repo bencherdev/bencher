@@ -67,6 +67,7 @@ libc = { workspace = true }
 nix = { workspace = true, features = [
     "feature",
     "fs",
+    "ioctl",
     "mount",
     "poll",
     "sched",
