@@ -66,7 +66,11 @@ npx vitest run
   `npx playwright install chromium`.
 
 Run one project with `npx vitest run --project unit` or `--project browser`.
+Browser mode opens a 414 by 896 viewport, which is inside the console's narrow
+media query, so a test of a desktop layout sets `page.viewport` first.
 The `*.browser.test.ts` files are happy-dom tests in the `unit` project, not browser tests.
+Every frame budget in a browser test goes through `budget` in `src/next/budget.ts`,
+which scales it by `BENCHER_SPEED_FACTOR` (1 when unset; the CI job sets it for its slower runners).
 
 ### End to end
 

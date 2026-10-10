@@ -60,6 +60,7 @@
 		"solid-devtools": "^0.34.5",
 		"solid-js": "^1.9.14",
 		"typescript": "^6.0.3",
+		"uplot": "^1.6.32",
 		"vite-plugin-wasm-pack": "^0.1.12"
 	},
 	"devDependencies": {
