@@ -717,12 +717,67 @@ export interface JsonConsoleBenchmark {
 	slug: Slug;
 }
 
+export interface JsonConsoleBenchmarkRow {
+	uuid: Uuid;
+	name: BenchmarkName;
+	slug: Slug;
+	/** Its active variants that have a report. */
+	variants: number;
+	created: DateTimeMillis;
+	archived?: DateTimeMillis;
+	/** When the API took its newest report. */
+	last_report?: DateTimeMillis;
+}
+
+/** A page of a project's benchmarks as the console lists them. */
+export interface JsonConsoleBenchmarks {
+	/** The benchmarks that match the request, over every page. */
+	total: number;
+	/** Every active benchmark, whatever the search. */
+	active: number;
+	/** Every archived benchmark, whatever the search. */
+	archived: number;
+	benchmarks: JsonConsoleBenchmarkRow[];
+}
+
 export interface JsonConsoleBranch {
 	uuid: Uuid;
 	name: BranchName;
 	slug: Slug;
 	/** The head the lines come from: a report's own, or the one a plot read. */
 	head: Uuid;
+}
+
+export interface JsonConsoleBranchRow {
+	uuid: Uuid;
+	name: BranchName;
+	slug: Slug;
+	/** The branch its current head started from. */
+	start_point?: BranchName;
+	/** The hash of the version its newest report ran on. */
+	hash?: GitHash;
+	created: DateTimeMillis;
+	archived?: DateTimeMillis;
+	/** When the API took its newest report. */
+	last_report?: DateTimeMillis;
+	/**
+	 * The thresholds on it whose testbed and measure are active:
+	 * active while it is, archived with it, and back when it is unarchived.
+	 */
+	thresholds: number;
+	/** The thresholds on it that an archived testbed or measure holds archived either way. */
+	held_thresholds: number;
+}
+
+/** A page of a project's branches as the console lists them. */
+export interface JsonConsoleBranches {
+	/** The branches that match the request, over every page. */
+	total: number;
+	/** Every active branch, whatever the search. */
+	active: number;
+	/** Every archived branch, whatever the search. */
+	archived: number;
+	branches: JsonConsoleBranchRow[];
 }
 
 /** A group of lines and its totals, which hold whichever page is loaded. */
@@ -740,6 +795,35 @@ export interface JsonConsoleMeasure {
 	name: ResourceName;
 	slug: Slug;
 	units: ResourceName;
+}
+
+export interface JsonConsoleMeasureRow {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	units: ResourceName;
+	created: DateTimeMillis;
+	archived?: DateTimeMillis;
+	/** When the API took the report of the newest value stored for it. */
+	last_report?: DateTimeMillis;
+	/**
+	 * The thresholds on it whose branch and testbed are active:
+	 * active while it is, archived with it, and back when it is unarchived.
+	 */
+	thresholds: number;
+	/** The thresholds on it that an archived branch or testbed holds archived either way. */
+	held_thresholds: number;
+}
+
+/** A page of a project's measures as the console lists them. */
+export interface JsonConsoleMeasures {
+	/** The measures that match the request, over every page. */
+	total: number;
+	/** Every active measure, whatever the search. */
+	active: number;
+	/** Every archived measure, whatever the search. */
+	archived: number;
+	measures: JsonConsoleMeasureRow[];
 }
 
 /** A threshold model, which the line or series it checked refers to by index. */
@@ -1031,6 +1115,36 @@ export interface JsonConsoleReport {
 	variants: JsonConsoleVariant[];
 	measures: JsonConsoleMeasure[];
 	models: JsonConsoleModel[];
+}
+
+export interface JsonConsoleTestbedRow {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	/** The name of the spec it runs on. */
+	spec?: ResourceName;
+	created: DateTimeMillis;
+	archived?: DateTimeMillis;
+	/** When the API took the report that ended last on it. */
+	last_report?: DateTimeMillis;
+	/**
+	 * The thresholds on it whose branch and measure are active:
+	 * active while it is, archived with it, and back when it is unarchived.
+	 */
+	thresholds: number;
+	/** The thresholds on it that an archived branch or measure holds archived either way. */
+	held_thresholds: number;
+}
+
+/** A page of a project's testbeds as the console lists them. */
+export interface JsonConsoleTestbeds {
+	/** The testbeds that match the request, over every page. */
+	total: number;
+	/** Every active testbed, whatever the search. */
+	active: number;
+	/** Every archived testbed, whatever the search. */
+	archived: number;
+	testbeds: JsonConsoleTestbedRow[];
 }
 
 export interface JsonConsoleThresholdBranch {
