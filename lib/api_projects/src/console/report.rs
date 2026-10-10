@@ -54,7 +54,7 @@ use serde::Deserialize;
 
 use super::{
     AlertRow, BenchmarkRow, Check, Limits, MeasureRow, ModelRow, PointReport, Points,
-    PointsBuilder, SeriesBuilder, Tables, VariantRow, alert_json, before,
+    PointsBuilder, SeriesBuilder, Tables, VariantRow, alert_json, before, unique,
 };
 use crate::perf::DEFAULT_REPORT_HISTORY;
 
@@ -421,6 +421,8 @@ fn identity(
             uuid: testbed_uuid,
             name: testbed_name,
             slug: testbed_slug,
+            #[cfg(feature = "plus")]
+            spec: None,
         },
     })
 }
@@ -1108,11 +1110,6 @@ impl History {
             series: series.into_iter().map(SeriesBuilder::build).collect(),
         }
     }
-}
-
-fn unique<T: Copy + Eq + Hash, I: Iterator<Item = T>>(items: I) -> Vec<T> {
-    let mut seen = HashSet::new();
-    items.filter(|item| seen.insert(*item)).collect()
 }
 
 fn report_counts(lines: &[Line], alerts: JsonReportAlertsCounts) -> JsonConsoleReportCounts {
