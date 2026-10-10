@@ -596,6 +596,28 @@ export interface JsonAccept {
 	invite: Jwt;
 }
 
+/**
+ * The alerts that match every given field.
+ * 
+ * An empty or absent list matches every value, and each list holds at most 255 entries.
+ */
+export interface JsonAlertsFilter {
+	/** The current status of the alerts. */
+	status?: AlertStatus;
+	/** The branches the alerts were raised on. */
+	branches?: Uuid[];
+	/** The testbeds the alerts were raised on. */
+	testbeds?: Uuid[];
+	/** The measures the alerts were raised on. */
+	measures?: Uuid[];
+	/** The thresholds that raised the alerts. */
+	thresholds?: Uuid[];
+	/** The earliest time an alert was created, in milliseconds, inclusive. */
+	start_time?: DateTimeMillis;
+	/** The latest time an alert was created, in milliseconds, inclusive. */
+	end_time?: DateTimeMillis;
+}
+
 export interface JsonAuthAck {
 	email: Email;
 }
@@ -1474,6 +1496,20 @@ export interface JsonUpdateAlert {
 	status?: UpdateAlertStatus;
 }
 
+/**
+ * A status change for many alerts at once, selected by either `alerts` or `filter`.
+ * 
+ * Silenced alerts never change, and an alert already in the new status is left as it is.
+ */
+export interface JsonUpdateAlerts {
+	/** The new status of the alerts. */
+	status: UpdateAlertStatus;
+	/** The alerts to change, at most 255. */
+	alerts?: Uuid[];
+	/** Change every alert that matches. */
+	filter?: JsonAlertsFilter;
+}
+
 export interface JsonUpdatePlan {
 	/**
 	 * Update the subscription's scheduled cancellation. Set to `false` to resume
@@ -1546,6 +1582,11 @@ export interface JsonUpdateUserKey {
 	 * Maximum length is 64 characters.
 	 */
 	name?: ResourceName;
+}
+
+export interface JsonUpdatedAlerts {
+	/** The number of alerts whose status changed. */
+	changed: number;
 }
 
 export enum UsageKind {

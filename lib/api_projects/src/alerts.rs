@@ -259,7 +259,7 @@ fn get_ls_query<'q>(
     .select(QueryAlert::as_select())
 }
 
-fn archived_filter<QS>(
+pub(crate) fn archived_filter<QS>(
     archived: Option<bool>,
 ) -> Box<dyn BoxableExpression<QS, diesel::sqlite::Sqlite, SqlType = diesel::sql_types::Bool>>
 where
