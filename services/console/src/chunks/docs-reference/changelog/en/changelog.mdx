@@ -22,6 +22,7 @@
 - Report a Bare Metal Runner's disk health with each `ready` and `paused`: its md arrays at every poll, and its NVMe drives' SMART / health logs at most hourly, which needs `root`
 - Record the project key that creates a Report, which the Report now names in `project_key`
 - Deleting a Project now requires the Maintainer role, which Organization Leaders and server admins hold
+- Add `--threshold-metric` and `--threshold-parameters` to `bencher run` and `bencher report create` to declare the metric and the parameters a Threshold checks
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects
