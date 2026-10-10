@@ -90,6 +90,14 @@ Kann auch mit der Umgebungsvariable `BENCHER_DANGER_ALLOW_NO_SANDBOX` gesetzt we
 Das Log-Level für den Sandbox-Prozess.
 Standardmäßig wird `warning` verwendet.
 
+### `--no-raid-pause`
+
+Weiterhin Jobs annehmen, während ein md-RAID-Array auf dem Host resynchronisiert, wiederherstellt, prüft, repariert oder umformt.
+Standardmäßig prüft der Runner seine md-Arrays, bevor er nach jedem Job fragt,
+und solange eines davon einen dieser Vorgänge ausführt, pausiert er: Er nimmt keinen neuen Job an, bis die Synchronisierung abgeschlossen ist,
+und er stoppt nie einen Job, der bereits läuft.
+Ein pausierter Runner bleibt verbunden und aktualisiert sich weiterhin selbst.
+
 ### `--no-auto-update`
 
 Deaktiviert automatische Updates vom Server.

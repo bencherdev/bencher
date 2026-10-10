@@ -1,8 +1,11 @@
 use bencher_json::RunnerResourceId;
+use bencher_json::runner::PauseReason;
+use camino::Utf8Path;
 use slog::{Logger, error, info, warn};
 use url::Url;
 
 use crate::cpu::CpuLayout;
+use crate::host::md;
 use crate::log_level::SandboxLogLevel;
 use crate::tuning::{TuningConfig, preflight};
 
@@ -18,11 +21,11 @@ use api_client::RunnerApiClient;
 use bencher_json::runner::{RunnerMessage, ServerMessage};
 use error::{SelfChecksumError, SelfUpdateError, WebSocketError};
 use job::execute_job;
-use state_machine::{ChannelStateMachine, Effect, Input, LogLevel};
+use state_machine::{ChannelStateMachine, Effect, Input, LogLevel, Probe};
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use websocket::JobChannel;
 
 const TRANSIENT_RETRY_BASE: Duration = Duration::from_secs(5);
@@ -54,6 +57,8 @@ pub struct UpConfig {
     pub sandbox_log_level: SandboxLogLevel,
     /// Whether to allow non-sandboxed execution.
     pub allow_no_sandbox: bool,
+    /// Take no Job while an md array syncs, rebuilds, or scrubs.
+    pub raid_pause: bool,
     /// Disable auto-update: do not send runner metadata to the server.
     pub no_auto_update: bool,
     /// Update channel for automatic updates.
@@ -89,6 +94,7 @@ impl Up {
             "poll_timeout_secs" => self.config.poll_timeout_secs,
             "state_dir" => self.config.state_dir.as_str(),
             "allow_no_sandbox" => self.config.allow_no_sandbox,
+            "raid_pause" => self.config.raid_pause,
         );
 
         #[cfg(target_os = "linux")]
@@ -167,7 +173,16 @@ fn run_driver(
     let mut ws: Option<Arc<Mutex<JobChannel>>> = None;
 
     drive(log, &mut sm, crate::signal::stop_requested, |effect| {
-        execute_effect(log, effect, config, channel_url, key, &mut ws, &mut host)
+        execute_effect(
+            log,
+            effect,
+            config,
+            channel_url,
+            key,
+            &mut ws,
+            &mut host,
+            crate::signal::stop_requested,
+        )
     })
 }
 
@@ -227,6 +242,10 @@ enum EffectResult {
     Exit,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the driver's state, borrowed for one effect"
+)]
 fn execute_effect(
     log: &Logger,
     effect: Effect,
@@ -235,6 +254,7 @@ fn execute_effect(
     key: &str,
     ws: &mut Option<Arc<Mutex<JobChannel>>>,
     host: &mut crate::jail::HostPreparation,
+    stopped: impl Fn() -> bool,
 ) -> EffectResult {
     match effect {
         Effect::Connect => match JobChannel::connect(channel_url, key) {
@@ -253,6 +273,23 @@ fn execute_effect(
                 warn!(log, "Channel send failed"; "error" => bencher_logger::capped(&e));
                 EffectResult::Input(Input::ConnectionFailed)
             },
+        },
+        Effect::Probe => EffectResult::Input(Input::Probed(probe(
+            Utf8Path::new(crate::host::SYSFS),
+            config.raid_pause,
+        ))),
+        Effect::PauseBegan(reasons) => {
+            log_pause_began(log, &reasons);
+            EffectResult::Continue
+        },
+        Effect::PauseEnded => {
+            info!(log, "Pause ended");
+            EffectResult::Continue
+        },
+        Effect::HoldOff(hold) => {
+            info!(log, "Holding off the reconnect while paused"; "hold_secs" => hold.as_secs());
+            sleep_unless_stopped(hold, stopped);
+            EffectResult::Continue
         },
         Effect::Receive(timeout) => EffectResult::Input(receive_input(log, ws.as_ref(), timeout)),
         Effect::WaitForJob(timeout) => {
@@ -301,6 +338,59 @@ fn execute_effect(
             },
         },
         Effect::Exit => EffectResult::Exit,
+    }
+}
+
+/// What the host says about taking a Job, read at the idle decision point.
+fn probe(sysfs: &Utf8Path, raid_pause: bool) -> Probe {
+    let reasons = if raid_pause {
+        md::raid_reasons(&md::arrays(sysfs))
+    } else {
+        Vec::new()
+    };
+    Probe {
+        reasons,
+        now: bencher_json::DateTime::now(),
+    }
+}
+
+fn log_pause_began(log: &Logger, reasons: &[PauseReason]) {
+    for reason in reasons {
+        match reason {
+            PauseReason::Raid {
+                array,
+                action,
+                done,
+                total,
+                speed,
+            } => {
+                let percent = done
+                    .zip(*total)
+                    .and_then(|(done, total)| done.saturating_mul(100).checked_div(total));
+                info!(log, "Paused for a RAID sync";
+                    "array" => array,
+                    "action" => ?action,
+                    "percent" => percent,
+                    "speed_kib" => speed,
+                );
+            },
+            PauseReason::Maintenance { marker, lock } => {
+                info!(log, "Paused for host maintenance"; "marker" => marker, "lock" => lock);
+            },
+            PauseReason::Other => {},
+        }
+    }
+}
+
+/// A stop ends the wait within a second, since a paused hold lasts a whole poll.
+fn sleep_unless_stopped(duration: Duration, stopped: impl Fn() -> bool) {
+    let deadline = Instant::now() + duration;
+    while !stopped() {
+        let left = deadline.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            break;
+        }
+        std::thread::sleep(left.min(Duration::from_secs(1)));
     }
 }
 
@@ -657,6 +747,65 @@ mod tests {
         assert_eq!(metadata.checksum, Some(checksum));
     }
 
+    #[test]
+    fn no_raid_pause_takes_jobs_through_a_sync() {
+        // Kills a probe that pauses for a sync despite `--no-raid-pause`, or
+        // never pauses for one.
+        let (_dir, sysfs) = md::tests::sysfs(&[("md0", "check", "1 / 2", "100")]);
+        assert_eq!(probe(&sysfs, true).reasons.len(), 1);
+        assert_eq!(probe(&sysfs, false).reasons, []);
+    }
+
+    #[test]
+    fn a_paused_reconnect_holds_off_for_the_whole_hold() {
+        // Kills a hold that does not sleep, which reconnects a paused runner
+        // every few seconds.
+        let hold = Duration::from_millis(300);
+        let started = Instant::now();
+        execute(Effect::HoldOff(hold), &mut host(), || false);
+        assert!(started.elapsed() >= hold, "{:?}", started.elapsed());
+    }
+
+    #[test]
+    fn a_stop_ends_a_hold_within_one_slice() {
+        // Kills a hold that a stop cannot end, which keeps a stopped runner up
+        // for a whole poll.
+        let asked = std::cell::Cell::new(false);
+        let started = Instant::now();
+        execute(
+            Effect::HoldOff(Duration::from_secs(10)),
+            &mut host(),
+            || asked.replace(true),
+        );
+        let elapsed = started.elapsed();
+        assert!(
+            (Duration::from_secs(1)..Duration::from_secs(3)).contains(&elapsed),
+            "{elapsed:?}"
+        );
+    }
+
+    /// Runs one effect as the driver does, with no channel.
+    fn execute(
+        effect: Effect,
+        host: &mut crate::jail::HostPreparation,
+        stopped: impl Fn() -> bool,
+    ) -> EffectResult {
+        execute_effect(
+            &crate::log::discard(),
+            effect,
+            &job::tests::test_up_config(),
+            &Url::parse("ws://localhost/").unwrap(),
+            "",
+            &mut None,
+            host,
+            stopped,
+        )
+    }
+
+    fn host() -> crate::jail::HostPreparation {
+        crate::jail::HostPreparation::new()
+    }
+
     // --- drive ---
 
     #[test]
@@ -705,12 +854,19 @@ mod tests {
                 Effect::Receive(_) => EffectResult::Input(Input::Message(ServerMessage::Ack {
                     job: Some(job_uuid),
                 })),
+                Effect::Probe => EffectResult::Input(Input::Probed(Probe {
+                    reasons: Vec::new(),
+                    now: bencher_json::DateTime::now(),
+                })),
                 Effect::Exit => EffectResult::Exit,
                 Effect::SleepBeforeReconnect(_)
                 | Effect::Close
                 | Effect::ReportOutcome(_)
                 | Effect::Log(..)
-                | Effect::SelfUpdate { .. } => EffectResult::Continue,
+                | Effect::SelfUpdate { .. }
+                | Effect::PauseBegan(_)
+                | Effect::PauseEnded
+                | Effect::HoldOff(_) => EffectResult::Continue,
             }
         });
 

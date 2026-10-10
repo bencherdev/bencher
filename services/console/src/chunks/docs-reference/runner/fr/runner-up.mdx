@@ -90,6 +90,14 @@ Peut aussi être défini avec la variable d'environnement `BENCHER_DANGER_ALLOW_
 Le niveau de journalisation du processus de sandbox.
 Par défaut, `warning` est utilisé.
 
+### `--no-raid-pause`
+
+Continuer à accepter des Jobs pendant qu'une grappe RAID md de l'hôte se resynchronise, se reconstruit, se vérifie, se répare ou se remodèle.
+Par défaut, le Runner vérifie ses grappes md avant de demander chaque Job,
+et tant que l'une d'elles effectue l'une de ces opérations, il se met en pause : il n'accepte aucun nouveau Job avant la fin de la synchronisation,
+et il n'arrête jamais un Job déjà en cours.
+Un Runner en pause reste connecté et continue de se mettre à jour.
+
 ### `--no-auto-update`
 
 Désactive les mises à jour automatiques depuis le serveur.

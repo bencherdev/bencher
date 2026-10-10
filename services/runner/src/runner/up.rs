@@ -29,6 +29,7 @@ impl TryFrom<CliUp> for Up {
                 max_symlinks: task.max_symlinks,
                 sandbox_log_level: task.sandbox_log_level,
                 allow_no_sandbox: task.danger_allow_no_sandbox,
+                raid_pause: !task.no_raid_pause,
                 no_auto_update: task.no_auto_update,
                 update_channel: task.update_channel,
                 max_download_size: task.max_download_size,
@@ -46,5 +47,31 @@ impl Up {
             Ok(()) | Err(UpError::Shutdown) => Ok(()),
             Err(e) => Err(e.into()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser as _;
+
+    use super::Up;
+    use crate::parser::CliUp;
+
+    fn up(extra: &[&str]) -> Up {
+        let args = [
+            "up",
+            "--key",
+            "bencher_runner_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
+            "--runner",
+            "00000000-0000-0000-0000-000000000000",
+        ];
+        Up::try_from(CliUp::try_parse_from(args.iter().chain(extra)).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn the_raid_pause_is_on_unless_turned_off() {
+        // Kills an inverted `--no-raid-pause`, and a pause that is off by default.
+        assert!(up(&[]).config.raid_pause);
+        assert!(!up(&["--no-raid-pause"]).config.raid_pause);
     }
 }

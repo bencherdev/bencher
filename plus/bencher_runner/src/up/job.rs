@@ -407,6 +407,7 @@ fn build_config_from_job(
         update_channel: _,
         max_download_size: _,
         allow_no_sandbox: _,
+        raid_pause: _,
         cpu_layout,
         max_output_size,
         max_file_count,
@@ -597,7 +598,7 @@ fn housekeeping_cores(config: &UpConfig) -> Vec<usize> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use std::collections::HashMap;
 
     use super::*;
@@ -680,7 +681,7 @@ mod tests {
 
     // --- build_config_from_job ---
 
-    fn test_up_config() -> UpConfig {
+    pub(crate) fn test_up_config() -> UpConfig {
         UpConfig {
             host: url::Url::parse("https://api.bencher.dev").unwrap(),
             key: "bencher_runner_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh"
@@ -695,6 +696,7 @@ mod tests {
             max_symlinks: None,
             sandbox_log_level: crate::SandboxLogLevel::default(),
             allow_no_sandbox: false,
+            raid_pause: true,
             no_auto_update: false,
             update_channel: bencher_valid::UpdateChannel::default(),
             max_download_size: None,

@@ -17,6 +17,7 @@
 - **BREAKING CHANGE** `POST /v0/runners/{runner}/specs` and `bencher runner spec add` now return the Runner, with its updated `specs`, instead of the Spec. Older CLI versions still add the Spec but cannot parse the new response, so update the CLI before using `bencher runner spec add`
 - Show a Runner's last heartbeat and its latest status (taking Jobs or paused, why it is paused, and its disk health) on the admin Runner endpoints and in `bencher system runner view`
 - Email server admins when a Runner's disk health changes or shows a new problem, when a Runner stays paused for more than 12 hours, and when it takes Jobs again
+- Pause a Bare Metal Runner between Jobs while an md RAID array on its host resyncs, recovers, checks, repairs, or reshapes: it takes no new Job until the sync is done and never stops a running one. Start `runner up` with `--no-raid-pause` to keep taking Jobs
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects

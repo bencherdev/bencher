@@ -8,8 +8,11 @@
 use std::time::Duration;
 
 use bencher_json::{
-    JobUuid, JsonClaimedJob,
-    runner::{JsonIterationOutput, JsonReady, JsonRunnerMetadata, RunnerMessage, ServerMessage},
+    DateTime, JobUuid, JsonClaimedJob,
+    runner::{
+        JsonIterationOutput, JsonPaused, JsonReady, JsonRunnerMetadata, PauseReason, RunnerMessage,
+        ServerMessage,
+    },
 };
 use bencher_valid::Sha256;
 use url::Url;
@@ -33,7 +36,9 @@ pub enum ChannelState {
     Disconnected,
     /// Pending result sent, waiting for server ACK.
     AwaitingPendingAck,
-    /// `Ready` sent, waiting for `Job` or `NoJob`.
+    /// The host is being probed, to send `Ready` or `Paused`.
+    Probing,
+    /// `Ready` or `Paused` sent, waiting for `Job` or `NoJob`.
     AwaitingJob,
     /// Job executing. Heartbeat thread is active.
     Executing { job_uuid: JobUuid },
@@ -79,6 +84,17 @@ pub enum Input {
     Shutdown,
     /// Self-update download/verify/exec failed.
     SelfUpdateFailed,
+    /// The host probe finished.
+    Probed(Probe),
+}
+
+/// What the host probe found at the idle decision point.
+#[derive(Debug)]
+pub struct Probe {
+    /// Why the runner should take no Job, empty when it may.
+    pub reasons: Vec<PauseReason>,
+    /// When the probe ran, by the runner's clock.
+    pub now: DateTime,
 }
 
 /// Result of job execution, produced by the driver.
@@ -149,6 +165,14 @@ impl std::fmt::Display for ReconnectReason {
 pub enum Effect {
     /// Establish WebSocket connection.
     Connect,
+    /// Probe the host. Driver feeds `Input::Probed`.
+    Probe,
+    /// A pause began, for these reasons.
+    PauseBegan(Vec<PauseReason>),
+    /// A pause ended.
+    PauseEnded,
+    /// Wait this long before a reconnect while paused, ahead of its usual delay.
+    HoldOff(Duration),
     /// Send a runner message over the WebSocket.
     Send(RunnerMessage),
     /// Wait for a server message with timeout (for ACK).
@@ -212,6 +236,14 @@ pub struct ChannelStateMachine {
     in_flight: Option<RunnerMessage>,
     /// Shutdown arrived while a Job's result was owed, so exit once it is sent.
     stopping: bool,
+    /// Set from the probe that began a pause until one finds the host clear.
+    pause: Option<Pause>,
+}
+
+#[derive(Debug)]
+struct Pause {
+    since: DateTime,
+    reasons: Vec<PauseReason>,
 }
 
 impl ChannelStateMachine {
@@ -224,6 +256,7 @@ impl ChannelStateMachine {
             pending_retry_count: 0,
             in_flight: None,
             stopping: false,
+            pause: None,
         }
     }
 
@@ -255,6 +288,7 @@ impl ChannelStateMachine {
         match state {
             ChannelState::Disconnected => self.handle_disconnected(&input),
             ChannelState::AwaitingPendingAck => self.handle_awaiting_pending_ack(input),
+            ChannelState::Probing => self.handle_probing(input),
             ChannelState::AwaitingJob => self.handle_awaiting_job(input),
             ChannelState::Executing { job_uuid } => self.handle_executing(job_uuid, input),
             ChannelState::AwaitingTerminalAck { job_uuid, kind } => {
@@ -280,16 +314,14 @@ impl ChannelStateMachine {
             },
             Input::ConnectionFailed => {
                 self.state = ChannelState::Disconnected;
-                vec![
-                    Effect::SleepBeforeReconnect(ReconnectReason::ConnectFailed),
-                    Effect::Connect,
-                ]
+                self.reconnect(ReconnectReason::ConnectFailed)
             },
             input @ (Input::Message(_)
             | Input::ReceiveTimeout
             | Input::JobFinished(_)
             | Input::Shutdown
-            | Input::SelfUpdateFailed) => self.unexpected(ChannelState::Disconnected, input),
+            | Input::SelfUpdateFailed
+            | Input::Probed(_)) => self.unexpected(ChannelState::Disconnected, input),
         }
     }
 
@@ -310,38 +342,49 @@ impl ChannelStateMachine {
             Input::ReceiveTimeout => {
                 self.pending_result = self.in_flight.take();
                 self.state = ChannelState::Disconnected;
-                vec![
+                let mut effects = vec![
                     Effect::Log(LogLevel::Warn, "Retry ACK timed out".to_owned()),
                     Effect::Close,
-                    Effect::SleepBeforeReconnect(ReconnectReason::PendingAckTimeout),
-                    Effect::Connect,
-                ]
+                ];
+                effects.extend(self.reconnect(ReconnectReason::PendingAckTimeout));
+                effects
             },
             Input::Message(other) => {
                 self.pending_result = self.in_flight.take();
                 self.state = ChannelState::Disconnected;
-                vec![
+                let mut effects = vec![
                     Effect::Log(
                         LogLevel::Warn,
                         format!("Expected ACK for pending result, got {other:?}"),
                     ),
                     Effect::Close,
-                    Effect::SleepBeforeReconnect(ReconnectReason::PendingAckUnexpectedMessage),
-                    Effect::Connect,
-                ]
+                ];
+                effects.extend(self.reconnect(ReconnectReason::PendingAckUnexpectedMessage));
+                effects
             },
             Input::ConnectionFailed => {
                 self.pending_result = self.in_flight.take();
                 self.state = ChannelState::Disconnected;
-                vec![
-                    Effect::SleepBeforeReconnect(ReconnectReason::PendingAckConnectionLost),
-                    Effect::Connect,
-                ]
+                self.reconnect(ReconnectReason::PendingAckConnectionLost)
             },
             input @ (Input::Connected
             | Input::JobFinished(_)
             | Input::Shutdown
-            | Input::SelfUpdateFailed) => self.unexpected(ChannelState::AwaitingPendingAck, &input),
+            | Input::SelfUpdateFailed
+            | Input::Probed(_)) => self.unexpected(ChannelState::AwaitingPendingAck, &input),
+        }
+    }
+
+    fn handle_probing(&mut self, input: Input) -> Vec<Effect> {
+        match input {
+            Input::Probed(probe) => self.send_ready_or_paused(probe),
+            input @ (Input::Connected
+            | Input::ConnectionFailed
+            | Input::Message(_)
+            | Input::ReceiveTimeout
+            | Input::JobFinished(_)
+            | Input::Shutdown
+            | Input::SelfUpdateFailed) => self.unexpected(ChannelState::Probing, &input),
         }
     }
 
@@ -349,6 +392,14 @@ impl ChannelStateMachine {
         match input {
             Input::Message(ServerMessage::Job(job)) => {
                 let job_uuid = job.uuid;
+                // The server holds a paused runner's poll without claiming.
+                if let Some(pause) = &self.pause {
+                    let error = format!(
+                        "The runner was paused for {}, so it ran no Job",
+                        describe(&pause.reasons)
+                    );
+                    return self.fail_unrun(job_uuid, error);
+                }
                 self.state = ChannelState::Executing { job_uuid };
                 vec![
                     Effect::Log(LogLevel::Info, format!("Received job: {job_uuid}")),
@@ -378,24 +429,20 @@ impl ChannelStateMachine {
             },
             Input::ReceiveTimeout => {
                 self.state = ChannelState::Disconnected;
-                vec![
-                    Effect::Close,
-                    Effect::SleepBeforeReconnect(ReconnectReason::PollingTimeout),
-                    Effect::Connect,
-                ]
+                let mut effects = vec![Effect::Close];
+                effects.extend(self.reconnect(ReconnectReason::PollingTimeout));
+                effects
             },
             Input::ConnectionFailed => {
                 self.state = ChannelState::Disconnected;
-                vec![
-                    Effect::SleepBeforeReconnect(ReconnectReason::PollingConnectionLost),
-                    Effect::Connect,
-                ]
+                self.reconnect(ReconnectReason::PollingConnectionLost)
             },
             input @ (Input::Connected
             | Input::Message(ServerMessage::Ack { .. } | ServerMessage::Cancel)
             | Input::JobFinished(_)
             | Input::Shutdown
-            | Input::SelfUpdateFailed) => self.unexpected(ChannelState::AwaitingJob, &input),
+            | Input::SelfUpdateFailed
+            | Input::Probed(_)) => self.unexpected(ChannelState::AwaitingJob, &input),
         }
     }
 
@@ -412,18 +459,14 @@ impl ChannelStateMachine {
                     return self.exit();
                 }
                 self.state = ChannelState::Disconnected;
-                vec![
-                    Effect::SleepBeforeReconnect(ReconnectReason::ExecutingConnectionLost),
-                    Effect::Connect,
-                ]
+                self.reconnect(ReconnectReason::ExecutingConnectionLost)
             },
             input @ (Input::Connected
             | Input::Message(_)
             | Input::ReceiveTimeout
             | Input::Shutdown
-            | Input::SelfUpdateFailed) => {
-                self.unexpected(ChannelState::Executing { job_uuid }, &input)
-            },
+            | Input::SelfUpdateFailed
+            | Input::Probed(_)) => self.unexpected(ChannelState::Executing { job_uuid }, &input),
         }
     }
 
@@ -493,16 +536,15 @@ impl ChannelStateMachine {
                     return effects;
                 }
                 self.state = ChannelState::Disconnected;
-                vec![
-                    report,
-                    Effect::SleepBeforeReconnect(ReconnectReason::TerminalAckConnectionLost),
-                    Effect::Connect,
-                ]
+                let mut effects = vec![report];
+                effects.extend(self.reconnect(ReconnectReason::TerminalAckConnectionLost));
+                effects
             },
             input @ (Input::Connected
             | Input::JobFinished(_)
             | Input::Shutdown
-            | Input::SelfUpdateFailed) => {
+            | Input::SelfUpdateFailed
+            | Input::Probed(_)) => {
                 self.unexpected(ChannelState::AwaitingTerminalAck { job_uuid, kind }, &input)
             },
         }
@@ -512,17 +554,15 @@ impl ChannelStateMachine {
         match input {
             Input::SelfUpdateFailed => {
                 self.state = ChannelState::Disconnected;
-                vec![
-                    Effect::SleepBeforeReconnect(ReconnectReason::SelfUpdateFailed),
-                    Effect::Connect,
-                ]
+                self.reconnect(ReconnectReason::SelfUpdateFailed)
             },
             input @ (Input::Connected
             | Input::ConnectionFailed
             | Input::Message(_)
             | Input::ReceiveTimeout
             | Input::JobFinished(_)
-            | Input::Shutdown) => self.unexpected(ChannelState::Updating, &input),
+            | Input::Shutdown
+            | Input::Probed(_)) => self.unexpected(ChannelState::Updating, &input),
         }
     }
 
@@ -559,8 +599,8 @@ impl ChannelStateMachine {
     }
 
     /// Resolve the idle decision point: if there's a pending result to retry,
-    /// send it; otherwise send Ready and wait for a job. A shutdown that waited
-    /// on a Job's result exits here instead.
+    /// send it; otherwise probe the host for `Ready` or `Paused`. A shutdown
+    /// that waited on a Job's result exits here instead.
     fn resolve_idle(&mut self) -> Vec<Effect> {
         if self.stopping {
             return self.exit();
@@ -593,18 +633,78 @@ impl ChannelStateMachine {
                 Effect::Receive(ACK_TIMEOUT),
             ]
         } else {
-            let poll_timeout = bencher_valid::PollTimeout::try_from(self.poll_timeout_secs).ok();
-            self.state = ChannelState::AwaitingJob;
-            let wait_duration =
-                Duration::from_secs(u64::from(self.poll_timeout_secs) + POLL_TIMEOUT_MARGIN_SECS);
-            vec![
-                Effect::Send(RunnerMessage::Ready(JsonReady::new(
-                    poll_timeout,
-                    self.runner.clone(),
-                ))),
-                Effect::WaitForJob(wait_duration),
-            ]
+            self.state = ChannelState::Probing;
+            vec![Effect::Probe]
         }
+    }
+
+    /// Send `Paused` while the probe found any reason to take no Job, else
+    /// `Ready`, and wait for the server's answer either way.
+    fn send_ready_or_paused(&mut self, probe: Probe) -> Vec<Effect> {
+        let Probe { reasons, now } = probe;
+        let ready = JsonReady::new(
+            bencher_valid::PollTimeout::try_from(self.poll_timeout_secs).ok(),
+            self.runner.clone(),
+        );
+        let mut effects = Vec::new();
+        let msg = if reasons.is_empty() {
+            if self.pause.take().is_some() {
+                effects.push(Effect::PauseEnded);
+            }
+            RunnerMessage::Ready(ready)
+        } else {
+            let since = if let Some(pause) = &self.pause {
+                pause.since
+            } else {
+                effects.push(Effect::PauseBegan(reasons.clone()));
+                now
+            };
+            self.pause = Some(Pause {
+                since,
+                reasons: reasons.clone(),
+            });
+            RunnerMessage::Paused(JsonPaused {
+                reasons,
+                since,
+                ready,
+            })
+        };
+        self.state = ChannelState::AwaitingJob;
+        effects.extend([
+            Effect::Send(msg),
+            Effect::WaitForJob(Duration::from_secs(
+                u64::from(self.poll_timeout_secs) + POLL_TIMEOUT_MARGIN_SECS,
+            )),
+        ]);
+        effects
+    }
+
+    /// Report a Job failed without running it, through the usual ACK and retry.
+    fn fail_unrun(&mut self, job_uuid: JobUuid, error: String) -> Vec<Effect> {
+        let log = Effect::Log(LogLevel::Warn, format!("Received job {job_uuid}: {error}"));
+        let (msg, kind) = build_terminal_message(
+            job_uuid,
+            JobFinishResult::Failed {
+                error,
+                results: Vec::new(),
+            },
+        );
+        self.in_flight = Some(msg.clone());
+        self.state = ChannelState::AwaitingTerminalAck { job_uuid, kind };
+        vec![log, Effect::Send(msg), Effect::Receive(ACK_TIMEOUT)]
+    }
+
+    /// While paused, a reconnect first waits out one poll, so a server that
+    /// closes on `Paused` sees no more connects than polls.
+    fn reconnect(&self, reason: ReconnectReason) -> Vec<Effect> {
+        let mut effects = Vec::new();
+        if self.pause.is_some() {
+            effects.push(Effect::HoldOff(Duration::from_secs(u64::from(
+                self.poll_timeout_secs,
+            ))));
+        }
+        effects.extend([Effect::SleepBeforeReconnect(reason), Effect::Connect]);
+        effects
     }
 
     #[cfg(test)]
@@ -669,6 +769,19 @@ fn build_terminal_message(
             (msg, kind)
         },
     }
+}
+
+/// What a pause is for, such as `a RAID sync on md0, host maintenance`.
+fn describe(reasons: &[PauseReason]) -> String {
+    reasons
+        .iter()
+        .map(|reason| match reason {
+            PauseReason::Raid { array, .. } => format!("a RAID sync on {array}"),
+            PauseReason::Maintenance { .. } => "host maintenance".to_owned(),
+            PauseReason::Other => "an unknown reason".to_owned(),
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// A claimed Job for tests, shared with the driver's.
@@ -736,6 +849,66 @@ mod tests {
         }
     }
 
+    // 06:23 UTC, 11 July 2024, plus `secs`.
+    fn at(secs: i64) -> DateTime {
+        DateTime::try_from(1_720_678_980 + secs).unwrap()
+    }
+
+    fn raid() -> PauseReason {
+        PauseReason::Raid {
+            array: "md0".to_owned(),
+            action: bencher_json::runner::MdSyncAction::Check,
+            done: Some(10),
+            total: Some(100),
+            speed: Some(2048),
+        }
+    }
+
+    fn clear() -> Input {
+        Input::Probed(Probe {
+            reasons: Vec::new(),
+            now: at(0),
+        })
+    }
+
+    fn busy(now: DateTime) -> Input {
+        Input::Probed(Probe {
+            reasons: vec![raid()],
+            now,
+        })
+    }
+
+    /// Steps `input`, which must end in a host probe, then answers the probe clear.
+    fn probed(sm: &mut ChannelStateMachine, input: Input) -> Vec<Effect> {
+        let mut effects = sm.step(input);
+        assert!(
+            matches!(effects.last(), Some(Effect::Probe)),
+            "expected a probe: {effects:?}"
+        );
+        assert_eq!(*sm.state(), ChannelState::Probing);
+        effects.extend(sm.step(clear()));
+        effects
+    }
+
+    /// A machine that sent `Paused` for a RAID sync since `at(0)`.
+    fn paused_sm() -> ChannelStateMachine {
+        let mut sm = test_sm();
+        sm.step(Input::Connected);
+        sm.step(busy(at(0)));
+        assert_eq!(*sm.state(), ChannelState::AwaitingJob);
+        sm
+    }
+
+    fn sent_paused(effects: &[Effect]) -> Option<&JsonPaused> {
+        effects.iter().find_map(|e| {
+            if let Effect::Send(RunnerMessage::Paused(paused)) = e {
+                Some(paused)
+            } else {
+                None
+            }
+        })
+    }
+
     // --- Connection ---
 
     #[test]
@@ -748,7 +921,7 @@ mod tests {
     #[test]
     fn connected_without_pending_sends_ready() {
         let mut sm = test_sm();
-        let effects = sm.step(Input::Connected);
+        let effects = probed(&mut sm, Input::Connected);
         assert!(
             effects
                 .iter()
@@ -796,7 +969,7 @@ mod tests {
             .with_in_flight(test_completed_msg());
         sm.pending_retry_count = 2;
 
-        let effects = sm.step(Input::Message(ServerMessage::Ack { job: None }));
+        let effects = probed(&mut sm, Input::Message(ServerMessage::Ack { job: None }));
         assert!(
             effects
                 .iter()
@@ -830,7 +1003,7 @@ mod tests {
     fn pending_dropped_after_max_retries() {
         let mut sm = test_sm().with_pending(test_completed_msg(), MAX_PENDING_RESULT_RETRIES);
 
-        let effects = sm.step(Input::Connected);
+        let effects = probed(&mut sm, Input::Connected);
         assert!(
             effects
                 .iter()
@@ -867,7 +1040,7 @@ mod tests {
     #[test]
     fn no_job_returns_to_awaiting_job() {
         let mut sm = test_sm().with_state(ChannelState::AwaitingJob);
-        let effects = sm.step(Input::Message(ServerMessage::NoJob));
+        let effects = probed(&mut sm, Input::Message(ServerMessage::NoJob));
         assert!(
             effects
                 .iter()
@@ -1304,7 +1477,7 @@ mod tests {
         let mut sm = test_sm();
 
         // Connect
-        let _effects = sm.step(Input::Connected);
+        let _effects = probed(&mut sm, Input::Connected);
         assert_eq!(*sm.state(), ChannelState::AwaitingJob);
 
         // Receive job
@@ -1324,9 +1497,12 @@ mod tests {
         ));
 
         // Receive ACK
-        let effects = sm.step(Input::Message(ServerMessage::Ack {
-            job: Some(job_uuid),
-        }));
+        let effects = probed(
+            &mut sm,
+            Input::Message(ServerMessage::Ack {
+                job: Some(job_uuid),
+            }),
+        );
         assert_eq!(*sm.state(), ChannelState::AwaitingJob);
         let outcome = effects
             .iter()
@@ -1383,7 +1559,7 @@ mod tests {
                 checksum: None,
             }),
         );
-        let effects = sm.step(Input::Connected);
+        let effects = probed(&mut sm, Input::Connected);
         let wait = effects
             .iter()
             .find_map(|e| {
@@ -1478,7 +1654,7 @@ mod tests {
     #[test]
     fn pending_dropped_after_max_retries_sends_ready() {
         let mut sm = test_sm().with_pending(test_completed_msg(), MAX_PENDING_RESULT_RETRIES);
-        let effects = sm.step(Input::Connected);
+        let effects = probed(&mut sm, Input::Connected);
         // Verify both the drop log and the Ready message are present
         assert!(
             effects
@@ -1494,5 +1670,233 @@ mod tests {
         assert_eq!(*sm.state(), ChannelState::AwaitingJob);
         assert!(sm.pending_result.is_none());
         assert!(sm.in_flight.is_none());
+    }
+
+    // --- Pause ---
+
+    #[test]
+    fn a_busy_probe_pauses_and_a_clear_one_sends_ready() {
+        // Kills a probe whose reasons are ignored, a `Paused` missing what
+        // `Ready` carries (the server's update check needs the metadata), and
+        // a `NoJob` that answers without probing again.
+        let mut sm = test_sm();
+        assert!(matches!(
+            sm.step(Input::Connected).last(),
+            Some(Effect::Probe)
+        ));
+
+        let effects = sm.step(busy(at(0)));
+        let paused = sent_paused(&effects).expect("a busy probe sends Paused");
+        assert_eq!(paused.reasons, [raid()]);
+        assert_eq!(paused.since, at(0));
+        assert_eq!(paused.ready.poll_timeout.map(u32::from), Some(30));
+        assert!(paused.ready.runner.is_some());
+        assert!(effects.iter().any(|e| matches!(e, Effect::WaitForJob(_))));
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::Send(RunnerMessage::Ready(_))))
+        );
+        assert_eq!(*sm.state(), ChannelState::AwaitingJob);
+
+        let effects = sm.step(Input::Message(ServerMessage::NoJob));
+        assert!(matches!(effects.as_slice(), [Effect::Probe]), "{effects:?}");
+
+        let effects = sm.step(clear());
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::Send(RunnerMessage::Ready(_))))
+        );
+        assert!(sent_paused(&effects).is_none());
+    }
+
+    #[test]
+    fn a_pause_keeps_its_start_and_is_logged_once_each_way() {
+        // Kills a `since` that restarts with every probe or survives the
+        // pause's end, and a start or end logged on every poll.
+        let mut sm = paused_sm();
+        let no_job = || Input::Message(ServerMessage::NoJob);
+        let began = |effects: &[Effect]| {
+            effects
+                .iter()
+                .filter(|e| matches!(e, Effect::PauseBegan(_)))
+                .count()
+        };
+        let ended = |effects: &[Effect]| {
+            effects
+                .iter()
+                .filter(|e| matches!(e, Effect::PauseEnded))
+                .count()
+        };
+
+        sm.step(no_job());
+        let effects = sm.step(busy(at(60)));
+        assert_eq!(sent_paused(&effects).unwrap().since, at(0));
+        assert_eq!(began(&effects), 0);
+        assert_eq!(ended(&effects), 0);
+
+        sm.step(no_job());
+        let effects = sm.step(clear());
+        assert_eq!(ended(&effects), 1);
+
+        sm.step(no_job());
+        let effects = sm.step(clear());
+        assert_eq!(ended(&effects), 0);
+
+        sm.step(no_job());
+        let effects = sm.step(busy(at(180)));
+        assert_eq!(sent_paused(&effects).unwrap().since, at(180));
+        assert_eq!(began(&effects), 1);
+    }
+
+    #[test]
+    fn a_paused_runner_still_updates() {
+        // Kills a pause that ignores the server's `Update`, which would strand
+        // a paused runner on its version.
+        let mut sm = paused_sm();
+        let effects = sm.step(Input::Message(ServerMessage::Update {
+            version: "99.0.0".to_owned(),
+            url: "https://example.com/runner".parse().unwrap(),
+            checksum: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+                .parse()
+                .unwrap(),
+        }));
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::SelfUpdate { .. }))
+        );
+        assert_eq!(*sm.state(), ChannelState::Updating);
+    }
+
+    #[test]
+    fn a_job_after_a_pause_fails_without_running() {
+        // Kills a paused runner that runs a Job the server sent it anyway.
+        let mut sm = paused_sm();
+        let job = test_claimed_job();
+        let job_uuid = job.uuid;
+
+        let effects = sm.step(Input::Message(ServerMessage::Job(job)));
+        assert!(
+            !effects.iter().any(|e| matches!(
+                e,
+                Effect::ExecuteJob(_) | Effect::Send(RunnerMessage::Running)
+            )),
+            "{effects:?}"
+        );
+        assert!(
+            effects.iter().any(|e| matches!(
+                e,
+                Effect::Send(RunnerMessage::Failed { job, error, .. })
+                    if *job == job_uuid && error.contains("a RAID sync on md0")
+            )),
+            "{effects:?}"
+        );
+        assert!(matches!(
+            sm.state(),
+            ChannelState::AwaitingTerminalAck {
+                kind: TerminalKind::Failed { .. },
+                ..
+            }
+        ));
+
+        let effects = sm.step(Input::Message(ServerMessage::Ack {
+            job: Some(job_uuid),
+        }));
+        assert!(matches!(effects.last(), Some(Effect::Probe)), "{effects:?}");
+    }
+
+    #[test]
+    fn reconnects_hold_off_a_poll_only_while_paused() {
+        // Kills a paused runner that reconnects every few seconds to a server
+        // that closes on `Paused`, tripping its connect limit, on any path that
+        // reconnects while paused, a hold of other than one poll, and a hold
+        // that outlives the pause.
+        const POLL: u32 = 55;
+        let held = |effects: &[Effect], reason: ReconnectReason| {
+            assert!(
+                matches!(
+                    effects,
+                    [.., Effect::HoldOff(hold), Effect::SleepBeforeReconnect(r), Effect::Connect]
+                        if *hold == Duration::from_secs(u64::from(POLL)) && *r == reason
+                ),
+                "{reason}: {effects:?}"
+            );
+        };
+        let mut sm = ChannelStateMachine::new(POLL, None);
+        sm.step(Input::Connected);
+        sm.step(busy(at(0)));
+
+        // A server that does not know `Paused` closes the channel.
+        held(
+            &sm.step(Input::ConnectionFailed),
+            ReconnectReason::PollingConnectionLost,
+        );
+        // A connect the server's limiter refuses.
+        held(
+            &sm.step(Input::ConnectionFailed),
+            ReconnectReason::ConnectFailed,
+        );
+        sm.step(Input::Connected);
+        sm.step(busy(at(60)));
+        held(
+            &sm.step(Input::ReceiveTimeout),
+            ReconnectReason::PollingTimeout,
+        );
+
+        // A new server has the paused runner update, and the update fails.
+        sm.step(Input::Connected);
+        sm.step(busy(at(120)));
+        sm.step(Input::Message(ServerMessage::Update {
+            version: "99.0.0".to_owned(),
+            url: "https://example.com/runner".parse().unwrap(),
+            checksum: "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
+                .parse()
+                .unwrap(),
+        }));
+        held(
+            &sm.step(Input::SelfUpdateFailed),
+            ReconnectReason::SelfUpdateFailed,
+        );
+
+        // The result of a Job failed unrun is lost with the connection, and
+        // each resend at the next connect fails another way.
+        sm.step(Input::Connected);
+        sm.step(busy(at(180)));
+        sm.step(Input::Message(ServerMessage::Job(test_claimed_job())));
+        held(
+            &sm.step(Input::ConnectionFailed),
+            ReconnectReason::TerminalAckConnectionLost,
+        );
+        for (input, reason) in [
+            (Input::ReceiveTimeout, ReconnectReason::PendingAckTimeout),
+            (
+                Input::Message(ServerMessage::NoJob),
+                ReconnectReason::PendingAckUnexpectedMessage,
+            ),
+            (
+                Input::ConnectionFailed,
+                ReconnectReason::PendingAckConnectionLost,
+            ),
+        ] {
+            sm.step(Input::Connected);
+            assert_eq!(*sm.state(), ChannelState::AwaitingPendingAck);
+            held(&sm.step(input), reason);
+        }
+
+        sm.step(Input::Connected);
+        sm.step(Input::Message(ServerMessage::Ack {
+            job: Some(test_job_uuid()),
+        }));
+        sm.step(clear());
+        let effects = sm.step(Input::ConnectionFailed);
+        assert!(
+            matches!(
+                effects.as_slice(),
+                [.., Effect::SleepBeforeReconnect(_), Effect::Connect]
+            ) && !effects.iter().any(|e| matches!(e, Effect::HoldOff(_))),
+            "{effects:?}"
+        );
     }
 }
