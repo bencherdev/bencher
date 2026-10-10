@@ -39,6 +39,12 @@ pub const MAX_CONSOLE_HISTORY_REPORTS: usize = 256;
 /// The longest window a report page asks for in days.
 pub const MAX_CONSOLE_WINDOW_DAYS: u16 = 366;
 
+/// The size a line's history is thinned to when the request does not say.
+pub const DEFAULT_CONSOLE_HISTORY_POINTS: u16 = 64;
+
+/// The largest size a request may ask a line's history to be thinned to.
+pub const MAX_CONSOLE_HISTORY_POINTS: u16 = 256;
+
 #[derive(Debug, Clone, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConsoleReportQueryParams {
@@ -59,6 +65,12 @@ pub struct JsonConsoleReportQueryParams {
     /// Only the lines whose variant carries every key and value of this JSON
     /// parameter set.
     pub parameters: Option<String>,
+    /// The size to thin each line's history to, from 2 to 256.
+    /// A longer history keeps the lowest and highest value of each stretch of it,
+    /// plus every alerting point and the report's own point, which can take it past
+    /// this size.
+    /// Defaults to 64.
+    pub points: Option<u16>,
     /// How to group the lines.
     pub group: Option<ConsoleLineGroup>,
     /// How to order the lines inside each group.
@@ -245,11 +257,16 @@ pub struct JsonConsolePointReport {
     pub hash: Option<GitHash>,
 }
 
-/// One line's values, aligned to `points`, with null where the line has no point.
+/// One line's values, aligned to `points` with null where the line has no
+/// point, or, for a thinned line, one per position in `index`.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConsoleSeries {
+    /// The position in `points` of each value, present only when the line was
+    /// thinned.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub index: Option<Vec<u32>>,
     #[typeshare(typescript(type = "(number | null)[]"))]
     pub y: Vec<Option<f64>>,
     /// The baseline the threshold compared each point with.
@@ -273,7 +290,7 @@ pub struct JsonConsoleSeries {
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConsoleAlertPoint {
-    /// An index into the points.
+    /// A position in the series' columns.
     pub index: u32,
     pub uuid: AlertUuid,
     pub limit: BoundaryLimit,

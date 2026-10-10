@@ -227,6 +227,7 @@ impl SeriesBuilder {
         let present =
             |column: Vec<Option<f64>>| column.iter().any(Option::is_some).then_some(column);
         JsonConsoleSeries {
+            index: None,
             y,
             baseline: present(baseline),
             lower: present(lower),
@@ -396,4 +397,211 @@ impl Tables {
 fn unique<T: Copy + Eq + Hash, I: Iterator<Item = T>>(items: I) -> Vec<T> {
     let mut seen = HashSet::new();
     items.filter(|item| seen.insert(*item)).collect()
+}
+
+/// A history cut down to what its row can draw, on the points some line keeps.
+struct Thinned {
+    points: JsonConsolePoints,
+    reports: Vec<JsonConsolePointReport>,
+    series: Vec<JsonConsoleSeries>,
+}
+
+/// Thin every series with more than `limit` values to the lowest and highest
+/// value of each of `limit / 2` equal stretches of its values, every alerting
+/// point, and the report's own points, then keep only the points some series
+/// still has a value at.
+fn thin(points: Points, series: Vec<JsonConsoleSeries>, report: ReportId, limit: usize) -> Thinned {
+    let Points {
+        json,
+        reports,
+        index,
+    } = points;
+    let own = index
+        .iter()
+        .filter(|((report_id, _), _)| *report_id == report)
+        .map(|(_, point)| *point)
+        .collect::<BTreeSet<_>>();
+    let kept = series
+        .iter()
+        .map(|series| kept_points(series, &own, limit))
+        .collect::<Vec<_>>();
+    let used = series
+        .iter()
+        .zip(&kept)
+        .flat_map(|(series, kept)| match kept {
+            Some(kept) => kept.clone(),
+            None => present(series),
+        })
+        .collect::<BTreeSet<_>>();
+    if kept.iter().all(Option::is_none) && used.len() == json.x.len() {
+        return Thinned {
+            points: json,
+            reports,
+            series,
+        };
+    }
+    let position = used
+        .iter()
+        .enumerate()
+        .map(|(position, point)| (*point, position))
+        .collect::<HashMap<_, _>>();
+    let (points, reports) = keep_points(json, &reports, &used);
+    let series = series
+        .into_iter()
+        .zip(kept)
+        .map(|(series, kept)| match kept {
+            Some(kept) => {
+                let index = kept
+                    .iter()
+                    .filter_map(|point| position.get(point).copied().map(to_index))
+                    .collect();
+                keep_series(series, &kept, Some(index))
+            },
+            None => keep_series(series, &used.iter().copied().collect::<Vec<_>>(), None),
+        })
+        .collect();
+    Thinned {
+        points,
+        reports,
+        series,
+    }
+}
+
+/// The points a series has a value at.
+fn present(series: &JsonConsoleSeries) -> Vec<usize> {
+    series
+        .y
+        .iter()
+        .enumerate()
+        .filter_map(|(point, y)| y.is_some().then_some(point))
+        .collect()
+}
+
+/// The points a thinned series keeps, or `None` when it fits.
+fn kept_points(
+    series: &JsonConsoleSeries,
+    own: &BTreeSet<usize>,
+    limit: usize,
+) -> Option<Vec<usize>> {
+    let values = present(series);
+    if values.len() <= limit {
+        return None;
+    }
+    let stretches = limit.div_euclid(2).max(1);
+    let mut kept = BTreeSet::new();
+    for stretch in 0..stretches {
+        let bound = |stretch: usize| {
+            stretch
+                .saturating_mul(values.len())
+                .checked_div(stretches)
+                .unwrap_or_default()
+        };
+        let Some(points) = values.get(bound(stretch)..bound(stretch + 1)) else {
+            continue;
+        };
+        let value = |point: &usize| series.y.get(*point).copied().flatten();
+        let mut lowest: Option<(usize, f64)> = None;
+        let mut highest: Option<(usize, f64)> = None;
+        for point in points {
+            let Some(value) = value(point) else {
+                continue;
+            };
+            if lowest.is_none_or(|(_, low)| value < low) {
+                lowest = Some((*point, value));
+            }
+            if highest.is_none_or(|(_, high)| value > high) {
+                highest = Some((*point, value));
+            }
+        }
+        kept.extend(lowest.into_iter().chain(highest).map(|(point, _)| point));
+    }
+    kept.extend(series.alerts.iter().map(|alert| alert.index as usize));
+    kept.extend(
+        own.iter()
+            .copied()
+            .filter(|point| values.binary_search(point).is_ok()),
+    );
+    Some(kept.into_iter().collect())
+}
+
+/// The shared x and its reports table on only the points in `used`.
+fn keep_points(
+    json: JsonConsolePoints,
+    reports: &[JsonConsolePointReport],
+    used: &BTreeSet<usize>,
+) -> (JsonConsolePoints, Vec<JsonConsolePointReport>) {
+    let JsonConsolePoints {
+        x,
+        report,
+        iteration,
+    } = json;
+    let mut table = Vec::new();
+    let mut table_index = HashMap::new();
+    let mut points = JsonConsolePoints::default();
+    let mut iterations = Vec::new();
+    for point in used {
+        let (Some(x), Some(report_index)) = (x.get(*point), report.get(*point)) else {
+            continue;
+        };
+        let Some(entry) = reports.get(*report_index as usize) else {
+            continue;
+        };
+        let new_index = *table_index.entry(*report_index).or_insert_with(|| {
+            table.push(entry.clone());
+            to_index(table.len() - 1)
+        });
+        points.x.push(*x);
+        points.report.push(new_index);
+        if let Some(iteration) = iteration
+            .as_ref()
+            .and_then(|iteration| iteration.get(*point))
+        {
+            iterations.push(*iteration);
+        }
+    }
+    if iterations.iter().any(|iteration| iteration.0 != 0) {
+        points.iteration = Some(iterations);
+    }
+    (points, table)
+}
+
+/// A series on only the given points, with its alerts pointing into the columns
+/// that remain.
+fn keep_series(
+    series: JsonConsoleSeries,
+    points: &[usize],
+    index: Option<Vec<u32>>,
+) -> JsonConsoleSeries {
+    let JsonConsoleSeries {
+        index: _,
+        y,
+        baseline,
+        lower,
+        upper,
+        alerts,
+    } = series;
+    let keep = |column: Vec<Option<f64>>| {
+        points
+            .iter()
+            .map(|point| column.get(*point).copied().flatten())
+            .collect::<Vec<_>>()
+    };
+    let alerts = alerts
+        .into_iter()
+        .filter_map(|alert| {
+            let position = points.binary_search(&(alert.index as usize)).ok()?;
+            Some(JsonConsoleAlertPoint {
+                index: to_index(position),
+                ..alert
+            })
+        })
+        .collect();
+    JsonConsoleSeries {
+        index,
+        y: keep(y),
+        baseline: baseline.map(keep),
+        lower: lower.map(keep),
+        upper: upper.map(keep),
+        alerts,
+    }
 }
