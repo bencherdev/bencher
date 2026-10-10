@@ -932,6 +932,11 @@ export interface JsonConsoleAlerts {
 	 * status the request asked for.
 	 */
 	counts: JsonConsoleAlertsCounts;
+	/**
+	 * When the API read the alerts. Dismiss all takes it as the end of its window, so it
+	 * changes no alert raised after the list was read.
+	 */
+	read_time: DateTimeMillis;
 	groups: JsonConsoleAlertGroup[];
 	/** The reports of every group's points. */
 	reports: JsonConsolePointReport[];
