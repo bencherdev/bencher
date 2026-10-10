@@ -1,7 +1,7 @@
 import type { Layout } from "../query/query";
 
 /** The most lines a plot draws, as the plot query caps them. */
-const LINE_CAP = 64;
+export const LINE_CAP = 64;
 /** Where the line count starts to show, an eighth below the cap. */
 const NEAR_CAP = 56;
 

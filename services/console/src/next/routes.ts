@@ -10,7 +10,12 @@ const reportsPage = () => import("./pages/Reports");
 
 /** Each page is its own chunk, loaded on first need or when a link to it is hovered. */
 export const PAGES: Record<PageName, Page> = {
-	Explore: lazy(() => import("./pages/Explore")),
+	// Reading only the default export spares the bundler a namespace object,
+	// whose helper it would load from an unrelated chunk: Explore's chunk also
+	// holds code its plot shares.
+	Explore: lazy<Component>(() =>
+		import("./pages/Explore").then(({ default: page }) => ({ default: page })),
+	),
 	Plots: lazy(() => import("./pages/Plots")),
 	Reports: lazy(reportsPage),
 	// Reading only the default export spares the bundler a namespace object,
