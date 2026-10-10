@@ -23,6 +23,7 @@
 - Record the project key that creates a Report, which the Report now names in `project_key`
 - Deleting a Project now requires the Maintainer role, which Organization Leaders and server admins hold
 - Add `--threshold-metric` and `--threshold-parameters` to `bencher run` and `bencher report create` to declare the metric and the parameters a Threshold checks
+- Add optional `metrics`, `hidden`, `focus`, and `layout` fields to plots, so a pinned plot keeps the metrics it draws, the lines it hides, the line it focuses, and how it lays out its measures; set them with `POST /v0/projects/{project}/plots`, and change them, or clear them with `null`, with `PATCH /v0/projects/{project}/plots/{plot}`
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects

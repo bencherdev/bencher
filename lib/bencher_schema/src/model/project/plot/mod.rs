@@ -3,7 +3,10 @@ use bencher_json::{
     ParameterFilter, PlotUuid, ResourceName, TestbedUuid, Window,
     project::{
         perf::MAX_DIMENSION_ENTRIES,
-        plot::{JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, XAxis, YAxis},
+        plot::{
+            JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, LineKey, LineKeys, MetricFilter,
+            PlotLayout, XAxis, YAxis,
+        },
     },
 };
 use bencher_rank::{Rank, RankGenerator, Ranked};
@@ -102,8 +105,12 @@ pub struct QueryPlot {
     pub upper_boundary: bool,
     pub x_axis: XAxis,
     pub y_axis: YAxis,
+    pub layout: Option<PlotLayout>,
     pub window: Window,
     pub parameters: Option<ParameterFilter>,
+    pub metrics: Option<MetricFilter>,
+    pub hidden: Option<LineKeys>,
+    pub focus: Option<LineKey>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -171,8 +178,12 @@ impl QueryPlot {
                     upper_boundary: None,
                     x_axis: None,
                     y_axis: None,
+                    layout: None,
                     window: None,
                     parameters: None,
+                    metrics: None,
+                    hidden: None,
+                    focus: None,
                     modified: now,
                 };
                 diesel::update(plot_table::table.filter(plot_table::id.eq(plot.id)))
@@ -230,8 +241,12 @@ impl QueryPlot {
                 upper_boundary: None,
                 x_axis: None,
                 y_axis: None,
+                layout: None,
                 window: None,
                 parameters: None,
+                metrics: None,
+                hidden: None,
+                focus: None,
                 modified,
             };
             diesel::update(plot_table::table.filter(plot_table::id.eq(plot.id)))
@@ -271,8 +286,12 @@ impl QueryPlot {
             upper_boundary,
             x_axis,
             y_axis,
+            layout,
             window,
             parameters,
+            metrics,
+            hidden,
+            focus,
             created,
             modified,
             ..
@@ -287,12 +306,16 @@ impl QueryPlot {
             upper_boundary,
             x_axis,
             y_axis,
+            layout,
             window,
             branches,
             testbeds,
             benchmarks,
             parameters,
             measures,
+            metrics,
+            hidden,
+            focus,
             created,
             modified,
         })
@@ -313,60 +336,28 @@ impl QueryPlot {
             upper_boundary,
             x_axis,
             y_axis,
+            layout,
             window,
             branches,
             testbeds,
             benchmarks,
             parameters,
             measures,
+            metrics,
+            hidden,
+            focus,
         } = update.into();
 
         // Phase 1: resolve the provided component UUIDs to IDs.
-        // A `None` list leaves that component unchanged; a `Some` list replaces it.
-        let branch_ids = match branches {
-            Some(uuids) => Some(resolve_component_ids!(
-                context,
-                query_project,
-                uuids,
-                QueryBranch,
-                "branch",
-                "branches"
-            )),
-            None => None,
-        };
-        let testbed_ids = match testbeds {
-            Some(uuids) => Some(resolve_component_ids!(
-                context,
-                query_project,
-                uuids,
-                QueryTestbed,
-                "testbed",
-                "testbeds"
-            )),
-            None => None,
-        };
-        let benchmark_ids = match benchmarks {
-            Some(uuids) => Some(resolve_component_ids!(
-                context,
-                query_project,
-                uuids,
-                QueryBenchmark,
-                "benchmark",
-                "benchmarks"
-            )),
-            None => None,
-        };
-        let measure_ids = match measures {
-            Some(uuids) => Some(resolve_component_ids!(
-                context,
-                query_project,
-                uuids,
-                QueryMeasure,
-                "measure",
-                "measures"
-            )),
-            None => None,
-        };
+        let component_ids = UpdateComponentIds::resolve(
+            context,
+            query_project,
+            branches,
+            testbeds,
+            benchmarks,
+            measures,
+        )
+        .await?;
 
         // Phase 2: apply everything atomically in a single write transaction:
         // recompute the rank when a new index is requested (which may
@@ -388,18 +379,22 @@ impl QueryPlot {
                 upper_boundary,
                 x_axis,
                 y_axis,
+                layout,
                 window,
                 parameters: parameters.map(canonical_parameters),
+                metrics: metrics.map(canonical_metrics),
+                hidden: hidden.map(canonical_hidden),
+                focus,
                 modified,
             };
             Self::apply_update(
                 conn,
                 self.id,
                 &update_plot,
-                branch_ids.as_deref(),
-                testbed_ids.as_deref(),
-                benchmark_ids.as_deref(),
-                measure_ids.as_deref(),
+                component_ids.branches.as_deref(),
+                component_ids.testbeds.as_deref(),
+                component_ids.benchmarks.as_deref(),
+                component_ids.measures.as_deref(),
             )
         })
         .map_err(resource_conflict_err!(Plot, self))?;
@@ -475,8 +470,12 @@ pub struct InsertPlot {
     pub upper_boundary: bool,
     pub x_axis: XAxis,
     pub y_axis: YAxis,
+    pub layout: Option<PlotLayout>,
     pub window: Window,
     pub parameters: Option<ParameterFilter>,
+    pub metrics: Option<MetricFilter>,
+    pub hidden: Option<LineKeys>,
+    pub focus: Option<LineKey>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -499,12 +498,16 @@ impl InsertPlot {
             upper_boundary,
             x_axis,
             y_axis,
+            layout,
             window,
             branches,
             testbeds,
             benchmarks,
             parameters,
             measures,
+            metrics,
+            hidden,
+            focus,
         } = plot;
 
         // Phase 1: Resolve UUIDs to IDs via read connections
@@ -556,8 +559,12 @@ impl InsertPlot {
             upper_boundary,
             x_axis,
             y_axis,
+            layout,
             window,
             parameters: parameters.and_then(canonical_parameters),
+            metrics: metrics.and_then(canonical_metrics),
+            hidden: hidden.and_then(canonical_hidden),
+            focus,
             created: timestamp,
             modified: timestamp,
         };
@@ -596,8 +603,12 @@ pub struct UpdatePlot {
     pub upper_boundary: Option<bool>,
     pub x_axis: Option<XAxis>,
     pub y_axis: Option<YAxis>,
+    pub layout: Option<Option<PlotLayout>>,
     pub window: Option<Window>,
     pub parameters: Option<Option<ParameterFilter>>,
+    pub metrics: Option<Option<MetricFilter>>,
+    pub hidden: Option<Option<LineKeys>>,
+    pub focus: Option<Option<LineKey>>,
     pub modified: DateTime,
 }
 
@@ -605,8 +616,16 @@ fn canonical_parameters(parameters: ParameterFilter) -> Option<ParameterFilter> 
     (!parameters.is_match_all()).then_some(parameters)
 }
 
+fn canonical_metrics(metrics: MetricFilter) -> Option<MetricFilter> {
+    (!metrics.is_empty()).then_some(metrics)
+}
+
+fn canonical_hidden(hidden: LineKeys) -> Option<LineKeys> {
+    (!hidden.is_empty()).then_some(hidden)
+}
+
 /// The fields of a [`JsonUpdatePlot`], unified across its `Patch` and `Null`
-/// variants. A `Some(None)` title clears the current title.
+/// variants. A `Some(None)` title, layout, or focus clears it.
 #[expect(
     clippy::option_option,
     reason = "None = not specified, Some(None) = explicitly unset"
@@ -620,12 +639,16 @@ struct UpdatePlotFields {
     upper_boundary: Option<bool>,
     x_axis: Option<XAxis>,
     y_axis: Option<YAxis>,
+    layout: Option<Option<PlotLayout>>,
     window: Option<Window>,
     branches: Option<Vec<BranchUuid>>,
     testbeds: Option<Vec<TestbedUuid>>,
     benchmarks: Option<Vec<BenchmarkUuid>>,
     parameters: Option<ParameterFilter>,
     measures: Option<Vec<MeasureUuid>>,
+    metrics: Option<MetricFilter>,
+    hidden: Option<LineKeys>,
+    focus: Option<Option<LineKey>>,
 }
 
 impl From<JsonUpdatePlot> for UpdatePlotFields {
@@ -641,12 +664,16 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     upper_boundary,
                     x_axis,
                     y_axis,
+                    layout,
                     window,
                     branches,
                     testbeds,
                     benchmarks,
                     parameters,
                     measures,
+                    metrics,
+                    hidden,
+                    focus,
                 } = patch;
                 Self {
                     index,
@@ -657,12 +684,16 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     upper_boundary,
                     x_axis,
                     y_axis,
+                    layout,
                     window,
                     branches,
                     testbeds,
                     benchmarks,
                     parameters,
                     measures,
+                    metrics,
+                    hidden,
+                    focus,
                 }
             },
             JsonUpdatePlot::Null(patch_null) => {
@@ -675,12 +706,16 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     upper_boundary,
                     x_axis,
                     y_axis,
+                    layout,
                     window,
                     branches,
                     testbeds,
                     benchmarks,
                     parameters,
                     measures,
+                    metrics,
+                    hidden,
+                    focus,
                 } = patch_null;
                 Self {
                     index,
@@ -691,15 +726,90 @@ impl From<JsonUpdatePlot> for UpdatePlotFields {
                     upper_boundary,
                     x_axis,
                     y_axis,
+                    layout,
                     window,
                     branches,
                     testbeds,
                     benchmarks,
                     parameters,
                     measures,
+                    metrics,
+                    hidden,
+                    focus,
                 }
             },
         }
+    }
+}
+
+/// The component IDs an update replaces.
+/// A `None` list leaves that component unchanged; a `Some` list replaces it.
+struct UpdateComponentIds {
+    branches: Option<Vec<BranchId>>,
+    testbeds: Option<Vec<TestbedId>>,
+    benchmarks: Option<Vec<BenchmarkId>>,
+    measures: Option<Vec<MeasureId>>,
+}
+
+impl UpdateComponentIds {
+    async fn resolve(
+        context: &ApiContext,
+        query_project: &QueryProject,
+        branches: Option<Vec<BranchUuid>>,
+        testbeds: Option<Vec<TestbedUuid>>,
+        benchmarks: Option<Vec<BenchmarkUuid>>,
+        measures: Option<Vec<MeasureUuid>>,
+    ) -> Result<Self, HttpError> {
+        let branches = match branches {
+            Some(uuids) => Some(resolve_component_ids!(
+                context,
+                query_project,
+                uuids,
+                QueryBranch,
+                "branch",
+                "branches"
+            )),
+            None => None,
+        };
+        let testbeds = match testbeds {
+            Some(uuids) => Some(resolve_component_ids!(
+                context,
+                query_project,
+                uuids,
+                QueryTestbed,
+                "testbed",
+                "testbeds"
+            )),
+            None => None,
+        };
+        let benchmarks = match benchmarks {
+            Some(uuids) => Some(resolve_component_ids!(
+                context,
+                query_project,
+                uuids,
+                QueryBenchmark,
+                "benchmark",
+                "benchmarks"
+            )),
+            None => None,
+        };
+        let measures = match measures {
+            Some(uuids) => Some(resolve_component_ids!(
+                context,
+                query_project,
+                uuids,
+                QueryMeasure,
+                "measure",
+                "measures"
+            )),
+            None => None,
+        };
+        Ok(Self {
+            branches,
+            testbeds,
+            benchmarks,
+            measures,
+        })
     }
 }
 
@@ -1008,8 +1118,12 @@ mod tests {
                     upper_boundary: false,
                     x_axis: XAxis::DateTime,
                     y_axis: YAxis::Auto,
+                    layout: None,
                     window: bencher_json::Window::try_from(2_592_000u32).unwrap(),
                     parameters: None,
+                    metrics: None,
+                    hidden: None,
+                    focus: None,
                     created: timestamp,
                     modified: timestamp,
                 };
@@ -1185,8 +1299,12 @@ mod tests {
             upper_boundary: None,
             x_axis: None,
             y_axis: None,
+            layout: None,
             window: None,
             parameters: None,
+            metrics: None,
+            hidden: None,
+            focus: None,
             modified: DateTime::TEST,
         }
     }
@@ -1255,8 +1373,12 @@ mod tests {
             upper_boundary: None,
             x_axis: Some(XAxis::Version),
             y_axis: Some(YAxis::Log),
+            layout: None,
             window: None,
             parameters: None,
+            metrics: None,
+            hidden: None,
+            focus: None,
             modified: DateTime::TEST,
         };
         QueryPlot::apply_update(&mut conn, plot_id, &update_plot, None, None, None, None)
@@ -1301,8 +1423,12 @@ mod tests {
             upper_boundary: false,
             x_axis: XAxis::DateTime,
             y_axis: YAxis::Log,
+            layout: None,
             window: bencher_json::Window::try_from(2_592_000u32).unwrap(),
             parameters: None,
+            metrics: None,
+            hidden: None,
+            focus: None,
             created: timestamp,
             modified: timestamp,
         };

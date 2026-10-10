@@ -14255,12 +14255,39 @@
             },
             "maxItems": 8
           },
+          "focus": {
+            "nullable": true,
+            "description": "The key of the line to focus. If not set, the plot focuses no line.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineKey"
+              }
+            ]
+          },
+          "hidden": {
+            "nullable": true,
+            "description": "The keys of the lines to hide. If not set, or set to an empty list, the plot hides no line. At most 64 keys may be specified.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineKeys"
+              }
+            ]
+          },
           "index": {
             "nullable": true,
             "description": "The index of the plot. Maximum index is 64.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Index"
+              }
+            ]
+          },
+          "layout": {
+            "nullable": true,
+            "description": "How the plot lays out two or more measures: `dual` draws them on one chart with a y-axis each, and `stacked` draws each on its own chart. If not set, the plot uses the default layout.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlotLayout"
               }
             ]
           },
@@ -14279,6 +14306,15 @@
               "$ref": "#/components/schemas/MeasureUuid"
             },
             "maxItems": 8
+          },
+          "metrics": {
+            "nullable": true,
+            "description": "The metrics to draw, by name. If not set, or set to an empty list, the plot draws every metric. At most 8 names may be specified.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricFilter"
+              }
+            ]
           },
           "parameters": {
             "nullable": true,
@@ -15841,6 +15877,33 @@
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "focus": {
+            "nullable": true,
+            "description": "The key of the line this plot focuses. Absent when the plot focuses no line.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineKey"
+              }
+            ]
+          },
+          "hidden": {
+            "nullable": true,
+            "description": "The keys of the lines this plot hides. Absent when the plot hides no line.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineKeys"
+              }
+            ]
+          },
+          "layout": {
+            "nullable": true,
+            "description": "The layout of the plot's measures. Absent when the plot uses the default layout.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlotLayout"
+              }
+            ]
+          },
           "lower_boundary": {
             "type": "boolean"
           },
@@ -15852,6 +15915,15 @@
             "items": {
               "$ref": "#/components/schemas/MeasureUuid"
             }
+          },
+          "metrics": {
+            "nullable": true,
+            "description": "The metrics this plot draws, by name. Absent when the plot draws every metric.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricFilter"
+              }
+            ]
           },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
@@ -15940,12 +16012,39 @@
             },
             "maxItems": 8
           },
+          "focus": {
+            "nullable": true,
+            "description": "The key of the line to focus. Set to `null` to focus no line.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineKey"
+              }
+            ]
+          },
+          "hidden": {
+            "nullable": true,
+            "description": "The keys of the lines to hide. Replaces the current hidden lines for the plot. Set to `null` or to an empty list to hide no line. At most 64 keys may be specified.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineKeys"
+              }
+            ]
+          },
           "index": {
             "nullable": true,
             "description": "The new index for the plot. Maximum index is 64.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Index"
+              }
+            ]
+          },
+          "layout": {
+            "nullable": true,
+            "description": "How the plot lays out two or more measures. Set to `null` to use the default layout.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlotLayout"
               }
             ]
           },
@@ -15967,6 +16066,15 @@
               "$ref": "#/components/schemas/MeasureUuid"
             },
             "maxItems": 8
+          },
+          "metrics": {
+            "nullable": true,
+            "description": "The metrics to draw, by name. Replaces the current metrics for the plot. Set to `null` or to an empty list to draw every metric again. At most 8 names may be specified.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricFilter"
+              }
+            ]
           },
           "parameters": {
             "nullable": true,
@@ -16053,11 +16161,35 @@
             },
             "maxItems": 8
           },
+          "focus": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineKey"
+              }
+            ]
+          },
+          "hidden": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LineKeys"
+              }
+            ]
+          },
           "index": {
             "nullable": true,
             "allOf": [
               {
                 "$ref": "#/components/schemas/Index"
+              }
+            ]
+          },
+          "layout": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlotLayout"
               }
             ]
           },
@@ -16076,6 +16208,14 @@
               "$ref": "#/components/schemas/MeasureUuid"
             },
             "maxItems": 8
+          },
+          "metrics": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MetricFilter"
+              }
+            ]
           },
           "parameters": {
             "nullable": true,
@@ -19543,6 +19683,17 @@
       "LastFour": {
         "type": "string"
       },
+      "LineKey": {
+        "description": "An opaque key naming one line of a plot. A line key is 1 to 16 URL-safe characters: `A-Z`, `a-z`, `0-9`, `-`, and `_`.",
+        "type": "string"
+      },
+      "LineKeys": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/LineKey"
+        },
+        "maxItems": 64
+      },
       "LogLevel": {
         "type": "string",
         "enum": [
@@ -19568,6 +19719,13 @@
         "type": "integer",
         "format": "uint64",
         "minimum": 0
+      },
+      "MetricFilter": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/MetricName"
+        },
+        "maxItems": 8
       },
       "MetricName": {
         "description": "The name of a single scalar inside a metric.\n\nEvery name is equal on the wire. `value`, `lower_value`, and `upper_value` are conventional, not privileged: they are the names the metric triple maps onto, and the names the console knows well enough to draw a band.",
@@ -19870,6 +20028,25 @@
           "paused",
           "trialing",
           "unpaid"
+        ]
+      },
+      "PlotLayout": {
+        "description": "How a plot lays out two or more measures.",
+        "oneOf": [
+          {
+            "description": "One chart, with a y-axis for each measure.",
+            "type": "string",
+            "enum": [
+              "dual"
+            ]
+          },
+          {
+            "description": "One chart for each measure.",
+            "type": "string",
+            "enum": [
+              "stacked"
+            ]
+          }
         ]
       },
       "PlotUuid": {
