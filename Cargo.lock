@@ -277,6 +277,7 @@ dependencies = [
  "bencher_rbac",
  "bencher_schema",
  "diesel",
+ "diesel_migrations",
  "dropshot",
  "http",
  "serde_json",

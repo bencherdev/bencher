@@ -50,6 +50,7 @@ use crate::{
             ProjectId, QueryProject,
             benchmark::QueryBenchmark,
             branch::version::{InsertVersion, QueryVersion},
+            key::{ProjectKeyId, QueryProjectKey},
             measure::QueryMeasure,
             metric::{QueryMetric, bound_join, metric_lower_value, metric_upper_value},
             testbed::{QueryTestbed, ResolvedTestbed, TestbedId},
@@ -117,6 +118,7 @@ pub struct QueryReport {
     pub uuid: ReportUuid,
     pub idempotency_key: Option<ReportIdempotencyKey>,
     pub user_id: Option<UserId>,
+    pub project_key_id: Option<ProjectKeyId>,
     pub project_id: ProjectId,
     pub head_id: HeadId,
     pub version_id: VersionId,
@@ -311,7 +313,7 @@ impl QueryReport {
             // Create a new report and add it to the database
             let insert_report = InsertReport::from_json(
                 idempotency_key,
-                api_actor.user_id(),
+                api_actor,
                 project_id,
                 head_id,
                 version_id,
@@ -468,6 +470,7 @@ impl QueryReport {
             uuid,
             idempotency_key: _,
             user_id,
+            project_key_id,
             project_id,
             head_id,
             version_id,
@@ -482,6 +485,11 @@ impl QueryReport {
         let query_project = QueryProject::get(conn, project_id)?;
         let user = if let Some(user_id) = user_id {
             Some(QueryUser::get(conn, user_id)?.into_pub_json())
+        } else {
+            None
+        };
+        let project_key = if let Some(project_key_id) = project_key_id {
+            Some(QueryProjectKey::get(conn, project_key_id)?.into_pub_json())
         } else {
             None
         };
@@ -519,6 +527,7 @@ impl QueryReport {
         Ok(JsonReport {
             uuid,
             user,
+            project_key,
             project,
             branch,
             testbed,
@@ -1256,6 +1265,7 @@ pub struct InsertReport {
     pub uuid: ReportUuid,
     pub idempotency_key: Option<ReportIdempotencyKey>,
     pub user_id: Option<UserId>,
+    pub project_key_id: Option<ProjectKeyId>,
     pub project_id: ProjectId,
     pub head_id: HeadId,
     pub version_id: VersionId,
@@ -1274,7 +1284,7 @@ impl InsertReport {
     #[expect(clippy::too_many_arguments, reason = "report has many dimensions")]
     pub fn from_json(
         idempotency_key: Option<ReportIdempotencyKey>,
-        user_id: Option<UserId>,
+        api_actor: &ApiActor,
         project_id: ProjectId,
         head_id: HeadId,
         version_id: VersionId,
@@ -1287,7 +1297,8 @@ impl InsertReport {
         Self {
             uuid: ReportUuid::new(),
             idempotency_key,
-            user_id,
+            user_id: api_actor.user_id(),
+            project_key_id: api_actor.project_key_id(),
             project_id,
             head_id,
             version_id,

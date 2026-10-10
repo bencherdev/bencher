@@ -298,6 +298,7 @@ diesel::table! {
         uuid -> Text,
         idempotency_key -> Nullable<Text>,
         user_id -> Nullable<Integer>,
+        project_key_id -> Nullable<Integer>,
         project_id -> Integer,
         head_id -> Integer,
         version_id -> Integer,
@@ -544,6 +545,7 @@ diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
 diesel::joinable!(report -> head (head_id));
 diesel::joinable!(report -> project (project_id));
+diesel::joinable!(report -> project_key (project_key_id));
 diesel::joinable!(report -> spec (spec_id));
 diesel::joinable!(report -> testbed (testbed_id));
 diesel::joinable!(report -> user (user_id));
