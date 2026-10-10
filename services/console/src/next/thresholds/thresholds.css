@@ -1,0 +1,332 @@
+/* Thresholds and a threshold. List rows have fixed heights, since only the rows on screen are drawn. */
+
+.th-narrow {
+	display: none;
+}
+.th-count {
+	margin: 0;
+}
+.ui-skeleton.th-count-skel {
+	display: inline-block;
+	width: 10ch;
+	height: 1.15em;
+	vertical-align: top;
+}
+.th-filters {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.th-table tbody tr.th-row {
+	position: relative;
+	height: 40px;
+}
+.th-table tbody tr.th-row > td {
+	height: 40px;
+	max-width: 240px;
+	padding-block: 0;
+	line-height: 20px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.th-table tbody tr.th-row > td.th-model {
+	max-width: 360px;
+}
+.th-table tbody tr.th-row:hover td {
+	background: var(--color-overlay-hover);
+}
+.th-table tbody tr.th-spacer td {
+	padding: 0;
+	border: 0;
+}
+.th-table[aria-busy="true"] tbody {
+	opacity: 0.5;
+	transition: opacity var(--duration-fast) var(--ease-standard) 400ms;
+}
+.console a.th-link {
+	color: var(--color-text-primary);
+	font-weight: var(--font-weight-semibold);
+}
+.console a.th-link:hover {
+	color: var(--color-text-accent);
+}
+/* The whole row opens the threshold. */
+.th-link::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+}
+.th-link:focus-visible {
+	outline: none;
+}
+.th-link:focus-visible::after {
+	outline: 2px solid var(--color-focus);
+	outline-offset: -2px;
+}
+.th-from,
+.th-quiet,
+.th-or {
+	color: var(--color-text-muted);
+	font-weight: var(--font-weight-normal);
+}
+.th-or {
+	font-size: 10px;
+	font-weight: var(--font-weight-bold);
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+.th-mono {
+	font: 12.5px var(--font-family-code);
+}
+.th-counts {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	white-space: nowrap;
+}
+.th-active {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 24px;
+	padding: 0 9px;
+	border: var(--border-width) solid var(--color-error);
+	border-radius: var(--radius-full);
+	color: var(--color-text-error);
+	font-size: 12px;
+}
+.th-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--color-error);
+}
+.th-table tbody tr.th-more > td {
+	padding: 14px 10px;
+}
+.th-table .th-more .ui-skeleton {
+	width: 40%;
+}
+.th-skeleton {
+	display: flex;
+	flex-direction: column;
+	gap: 22px;
+	padding: 14px 10px;
+}
+.th-skeleton-row:nth-child(odd) {
+	width: 70%;
+}
+.th-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	padding: 40px 24px;
+	text-align: center;
+}
+.th-empty p {
+	margin: 0;
+	max-width: 56ch;
+	color: var(--color-text-muted);
+}
+
+/* A threshold: every box in the head holds its size before the threshold arrives. */
+.pagehead.th-head {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: start;
+	gap: 6px 16px;
+}
+.th-head .ph-title {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+.th-head > .ph-sub {
+	grid-column: 1 / -1;
+}
+.th-titlerow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	min-height: 24px;
+}
+.th-titlerow h1 {
+	min-width: 0;
+	margin: 0;
+	overflow-x: clip;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+.ui-skeleton.th-title-skel {
+	display: inline-block;
+	width: 16ch;
+	height: 1lh;
+	vertical-align: top;
+}
+.ui-skeleton.th-sub-skel {
+	display: block;
+	width: min(20ch, 100%);
+	height: 1lh;
+}
+.th-pill {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	height: 24px;
+	padding: 0 9px;
+	border: var(--border-width) solid var(--color-border-emphasized);
+	border-radius: var(--radius-full);
+	color: var(--color-text-secondary);
+	font-size: 12px;
+	white-space: nowrap;
+}
+.th-pill.th-pill-ok {
+	border-color: var(--color-success);
+	color: var(--color-text-success);
+}
+.th-pill.th-pill-on {
+	border-color: var(--color-border-accent);
+	background: var(--color-accent-muted);
+	color: var(--color-text-primary);
+}
+.th-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+	gap: 12px;
+	align-items: start;
+}
+.ui-card.th-card {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+.th-card dl {
+	margin: 0;
+}
+.th-note {
+	margin: 0;
+	font-size: 12.5px;
+	color: var(--color-text-muted);
+}
+.th-history {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.th-history li {
+	padding: 8px 0;
+	border-bottom: var(--border-width) solid var(--color-border);
+	font-size: 12.5px;
+	line-height: 1.7;
+}
+.th-history li:last-child {
+	border-bottom: 0;
+}
+.th-history li.th-replaced .th-mono {
+	color: var(--color-text-secondary);
+}
+.th-change-body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+	gap: 18px;
+	align-items: start;
+}
+.th-change-text {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	font-size: 13px;
+	color: var(--color-text-secondary);
+}
+.th-change-text p {
+	margin: 0;
+}
+.th-declared {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+.th-alerts {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.th-alerts-head {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 4px 12px;
+}
+.th-summary {
+	font-size: 12.5px;
+}
+.ui-skeleton.th-summary-skel {
+	display: inline-block;
+	width: 24ch;
+	height: 1lh;
+	vertical-align: top;
+}
+.th-c-report {
+	width: 220px;
+}
+.th-report {
+	display: block;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+/* Text color, since an active alert's row is tinted. */
+.console .th-report a {
+	color: var(--color-text-primary);
+}
+.console .th-report a:hover {
+	color: var(--color-text-accent-hover);
+}
+.th-alerts-skeleton {
+	display: flex;
+	flex-direction: column;
+	padding: 0 10px;
+}
+.th-alerts-skeleton .rp-skeleton-row {
+	height: 20px;
+	margin: 12px 0;
+}
+
+@media (max-width: 767px) {
+	.th-wide {
+		display: none;
+	}
+	.th-narrow {
+		display: flex;
+	}
+	.th-table.ui-table[data-fold] tbody tr.th-row {
+		box-sizing: border-box;
+		height: 60px;
+		min-height: 60px;
+	}
+	.th-table.ui-table[data-fold] tbody tr.th-row > td {
+		height: auto;
+		max-width: none;
+		line-height: 1.4;
+	}
+	.th-table.ui-table[data-fold] tbody tr.th-spacer {
+		display: block;
+		min-height: 0;
+		padding: 0;
+		border: 0;
+	}
+	.th-change-body {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

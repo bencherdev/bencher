@@ -100,12 +100,12 @@ const snippet = (
 };
 
 // Spaced for reading, with keys in the API's order.
-const json = (parameters: ParameterSet) =>
+export const json = (parameters: ParameterSet) =>
 	`{${parameterEntries(parameters)
 		.map(([key, value]) => `${JSON.stringify(key)}: ${JSON.stringify(value)}`)
 		.join(", ")}}`;
 
 const SHELL_SAFE = /^[A-Za-z0-9_@%+=:,./-]+$/;
 
-const quote = (value: string) =>
+export const quote = (value: string) =>
 	SHELL_SAFE.test(value) ? value : `'${value.replaceAll("'", `'\\''`)}'`;

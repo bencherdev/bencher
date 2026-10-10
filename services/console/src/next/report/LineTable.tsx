@@ -43,6 +43,12 @@ interface LineTableProps {
 	selected?: ReadonlySet<string> | undefined;
 	onSelect?: (line: ReportLine, selected: boolean) => void;
 	onNoThreshold?: (line: ReportLine) => void;
+	/** A column in the measure's place: its header, its width's class, and each row's cell. */
+	aside?: {
+		label: string;
+		column: string;
+		cell: (line: ReportLine) => JSX.Element;
+	};
 	plot: (line: ReportLine) => {
 		data: PlotData;
 		note: string;
@@ -145,7 +151,7 @@ const LineTable = (props: LineTableProps) => {
 							<col class="lr-c-select" />
 							<col class="lr-c-twist" />
 							<col />
-							<col class="lr-c-measure" />
+							<col class={props.aside?.column ?? "lr-c-measure"} />
 							<col class="lr-c-history" />
 							<col class="lr-c-value" />
 							<col class="lr-c-delta" />
@@ -160,7 +166,7 @@ const LineTable = (props: LineTableProps) => {
 									<span class="sr-only">Expand</span>
 								</th>
 								<th scope="col">Line</th>
-								<th scope="col">Measure</th>
+								<th scope="col">{props.aside?.label ?? "Measure"}</th>
 								<th scope="col">{props.history}</th>
 								<th scope="col" class="lr-end">
 									Value
@@ -193,6 +199,9 @@ const LineTable = (props: LineTableProps) => {
 						let plot: ReturnType<LineTableProps["plot"]> | undefined;
 						const plotOf = (line: ReportLine) =>
 							(plot ??= untrack(() => props.plot(line)));
+						const aside = isGroup(slot)
+							? undefined
+							: untrack(() => props.aside?.cell(slot));
 						return isGroup(slot) ? (
 							<Group group={slot} index={index()} columns={columns()} />
 						) : (
@@ -210,6 +219,7 @@ const LineTable = (props: LineTableProps) => {
 								expanded={props.expanded.has(slot.key)}
 								onExpand={(expanded) => props.onExpand(slot, expanded)}
 								onNoThreshold={() => props.onNoThreshold?.(slot)}
+								aside={aside}
 								onIntent={() => {
 									RowPlot.preload();
 								}}

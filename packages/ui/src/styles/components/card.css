@@ -7,4 +7,8 @@
 		padding: var(--spacing-4);
 		color: inherit;
 	}
+
+	.ui-card[data-variant="soft"] {
+		background: var(--color-background-card);
+	}
 }

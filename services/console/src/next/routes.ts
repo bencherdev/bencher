@@ -25,6 +25,7 @@ export const PAGES: Record<PageName, Page> = {
 	),
 	Alerts: lazy(() => import("./pages/Alerts")),
 	Thresholds: lazy(() => import("./pages/Thresholds")),
+	Threshold: lazy(() => import("./pages/Threshold")),
 	Settings: lazy(() => import("./pages/Settings")),
 	NotFound: lazy(() => import("./pages/NotFound")),
 };
@@ -48,6 +49,7 @@ const reportsData: RoutePreloadFunc = ({ params, location }) => {
 export const ROUTES: RouteDefinition[] = [
 	{ path: "/:project", component: PAGES.Explore },
 	{ path: "/:project/reports/:report", component: PAGES.Report },
+	{ path: "/:project/thresholds/:threshold", component: PAGES.Threshold },
 	...TABS.flatMap(({ segments }) =>
 		segments.map((segment) => {
 			const page = pageName([segment]);

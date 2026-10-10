@@ -46,7 +46,7 @@ import inter from "@bencherdev/ui/fonts/inter-latin-wght-normal.woff2?url";
 - **ThemeToggle** `storageKey`. Switches `data-theme` between light and dark and stores the choice under `storageKey`.
 - **Token** `tone` (hue), `variant` (`soft` | `strong`), `dot`. Enumerated metadata only: statuses, roles, parameters (`blue`). `strong` inverts for a high-contrast chip. Never decoration; use text for prose.
 - **Banner** `status` (`neutral` | `info` | `success` | `warning` | `error`). Inline feedback in the surface it describes. No toasts.
-- **Card** `as` (`article` | `div` | `section` | `form`). One self-contained unit. Never wraps a list row, never nests.
+- **Card** `as` (`article` | `div` | `section` | `form`), `variant` (`soft`). One self-contained unit. Never wraps a list row, never nests. The default is the raised surface; `soft` sits on the page's card ground, for cards laid out side by side on a page.
 - **List** / **ListItem** `href` on the item makes the whole row a link. Dense, scannable, edge-to-edge rows with dividers; 48px minimum.
 - **Field** `label`, `for`. A label over one control.
 - **TextInput** `size`; controlled via `value` and `onInput`. Its font is 14px on a wide screen and 16px on a narrow one, where phones zoom into anything smaller. Every input and select is 44px tall on a narrow screen, whatever its size.
