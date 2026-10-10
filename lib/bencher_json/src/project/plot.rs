@@ -14,6 +14,9 @@ use super::perf::MAX_DIMENSION_ENTRIES;
 
 crate::typed_uuid::typed_uuid!(PlotUuid);
 
+/// The most plots a project keeps.
+pub const MAX_PLOTS: u8 = 64;
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
