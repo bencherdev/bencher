@@ -8,15 +8,13 @@ use bencher_adapter::{
     },
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, BmfVersion, MeasureNameId, MetricName, ParameterSet, Slug,
+    BenchmarkName, BenchmarkNameId, BmfVersion, DateTime, MeasureNameId, MetricName, ParameterSet,
+    Slug,
     project::report::{Adapter, Iteration, JsonReportSettings, ReportWarningResource},
 };
 use diesel::RunQueryDsl as _;
 use dropshot::HttpError;
 use slog::Logger;
-
-#[cfg(feature = "plus")]
-use bencher_json::DateTime;
 
 use crate::macros::sql::last_insert_rowid;
 use crate::model::spec::SpecId;
@@ -46,7 +44,7 @@ pub mod detector;
 
 use detector::{Detector, PreparedDetection, Threshold};
 
-use super::{ReportId, warning::ReportWarnings};
+use super::{QueryReport, ReportId, warning::ReportWarnings};
 
 /// `ReportResults` is used to process the report results.
 pub struct ReportResults {
@@ -56,11 +54,12 @@ pub struct ReportResults {
     pub testbed_id: TestbedId,
     pub spec_id: Option<SpecId>,
     pub report_id: ReportId,
-    // The owning organization and report end time written into the active-series cache
-    // on ingest. Bundled so they travel together and the constructor stays within its
-    // argument count.
+    /// When the API took the report, which its alerts keep and each series takes as `last_seen`,
+    /// so a far-future `end_time` cannot dodge active-series billing.
+    pub report_created: DateTime,
+    /// Denormalized into each `series_last_seen` row so a billing read is a single index scan.
     #[cfg(feature = "plus")]
-    pub series_cache: SeriesCacheContext,
+    pub organization_id: OrganizationId,
     /// `None` is a new item the creation ceiling refused, which the report skips.
     pub benchmark_cache: HashMap<BenchmarkNameId, Option<BenchmarkId>>,
     pub variant_cache: HashMap<(BenchmarkId, ParameterSet), Option<VariantId>>,
@@ -68,38 +67,22 @@ pub struct ReportResults {
     pub threshold_cache: HashMap<MeasureId, Vec<Threshold>>,
 }
 
-/// The report context the active-series cache write needs.
-///
-/// It carries the owning organization (denormalized into each `series_last_seen` row so
-/// a billing read is a single index scan) and the report's server-side creation time
-/// (written as each ingested series' `last_seen`). Creation time, not the user-supplied
-/// `end_time`, is used so a report cannot dodge active-series billing by claiming a
-/// far-future `end_time`.
-#[cfg(feature = "plus")]
-pub struct SeriesCacheContext {
-    pub organization_id: OrganizationId,
-    pub report_created: DateTime,
-}
-
 impl ReportResults {
     pub fn new(
-        project_id: ProjectId,
+        report: &QueryReport,
         branch_id: BranchId,
-        head_id: HeadId,
-        testbed_id: TestbedId,
-        spec_id: Option<SpecId>,
-        report_id: ReportId,
-        #[cfg(feature = "plus")] series_cache: SeriesCacheContext,
+        #[cfg(feature = "plus")] organization_id: OrganizationId,
     ) -> Self {
         Self {
-            project_id,
+            project_id: report.project_id,
             branch_id,
-            head_id,
-            testbed_id,
-            spec_id,
-            report_id,
+            head_id: report.head_id,
+            testbed_id: report.testbed_id,
+            spec_id: report.spec_id,
+            report_id: report.id,
+            report_created: report.created,
             #[cfg(feature = "plus")]
-            series_cache,
+            organization_id,
             benchmark_cache: HashMap::new(),
             variant_cache: HashMap::new(),
             measure_cache: HashMap::new(),
@@ -315,7 +298,7 @@ impl ReportResults {
                 // The series this variant touches, taken before it is written out.
                 #[cfg(feature = "plus")]
                 let variant_series = prepared.series_keys(self.testbed_id);
-                write_variant(conn, prepared)?;
+                write_variant(conn, prepared, self.report_created)?;
                 #[cfg(feature = "plus")]
                 series_keys.extend(variant_series);
             }
@@ -330,10 +313,10 @@ impl ReportResults {
             for series in series_keys {
                 upsert_series_last_seen(
                     conn,
-                    self.series_cache.organization_id,
+                    self.organization_id,
                     self.project_id,
                     series,
-                    self.series_cache.report_created,
+                    self.report_created,
                 )?;
             }
 
@@ -532,11 +515,13 @@ impl PreparedVariant {
 fn write_variant(
     conn: &mut crate::context::DbConnection,
     prepared: PreparedVariant,
+    report_created: DateTime,
 ) -> diesel::QueryResult<()> {
     let PreparedVariant {
         insert_report_benchmark,
         measures,
     } = prepared;
+    let report_id = insert_report_benchmark.report_id;
 
     diesel::insert_into(schema::report_benchmark::table)
         .values(&insert_report_benchmark)
@@ -568,7 +553,7 @@ fn write_variant(
                 .execute(conn)?;
             let metric_id = diesel::select(last_insert_rowid()).get_result(conn)?;
             for prepared_detection in prepared_detections {
-                prepared_detection.write(conn, metric_id)?;
+                prepared_detection.write(conn, report_id, report_created, metric_id)?;
             }
         }
 

@@ -26,6 +26,7 @@ use crate::{
             benchmark::QueryBenchmark,
             branch::{head::HeadId, version::VersionId},
             metric::{QueryMetric, bound_join, metric_lower_value, metric_upper_value},
+            report::ReportId,
             variant::QueryVariant,
         },
         spec::SpecId,
@@ -41,10 +42,12 @@ pub struct QueryAlert {
     pub id: AlertId,
     pub uuid: AlertUuid,
     pub project_id: ProjectId,
+    pub report_id: ReportId,
     pub threshold_id: ThresholdId,
     pub boundary_id: BoundaryId,
     pub boundary_limit: BoundaryLimit,
     pub status: AlertStatus,
+    pub created: DateTime,
     pub modified: DateTime,
 }
 
@@ -295,19 +298,23 @@ pub struct AlertContext {
 pub struct InsertAlert {
     pub uuid: AlertUuid,
     pub project_id: ProjectId,
+    pub report_id: ReportId,
     pub threshold_id: ThresholdId,
     pub boundary_id: BoundaryId,
     pub boundary_limit: BoundaryLimit,
     pub status: AlertStatus,
+    pub created: DateTime,
     pub modified: DateTime,
 }
 
 impl InsertAlert {
-    /// Insert a new alert for the given boundary.
+    /// Insert a new alert for the given boundary, raised by the report created at `created`.
     /// Must be called within a transaction.
     pub fn insert(
         conn: &mut DbConnection,
         project_id: ProjectId,
+        report_id: ReportId,
+        created: DateTime,
         threshold_id: ThresholdId,
         boundary_id: BoundaryId,
         boundary_limit: BoundaryLimit,
@@ -315,10 +322,12 @@ impl InsertAlert {
         let insert_alert = Self {
             uuid: AlertUuid::new(),
             project_id,
+            report_id,
             threshold_id,
             boundary_id,
             boundary_limit,
             status: AlertStatus::default(),
+            created,
             modified: DateTime::now(),
         };
 
