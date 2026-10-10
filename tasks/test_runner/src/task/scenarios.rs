@@ -42,8 +42,9 @@ struct Scenario {
     description: &'static str,
     dockerfile: &'static str,
     extra_args: &'static [&'static str],
-    /// Run two iterations, and plant a stale jail once the first one's jail is
-    /// built, after that one's sweep and long before the second one's.
+    /// Run two iterations, and plant a stale jail and a stand-in in another
+    /// cgroup once the first one's jail is built, after that one's sweep and
+    /// long before the second one's.
     planted_between_jobs: bool,
     /// If set, send SIGTERM to the runner this many seconds after its guest
     /// boots, so the cancel exercises the VM's teardown.
@@ -2820,7 +2821,7 @@ CMD ["printf", "%s_%s\\n", "JAIL_SWEEP", "a7f3b2c9"]"#,
         },
         Scenario {
             name: "jail_sweep_runs_before_every_job",
-            description: "A stale jail that appears between two iterations of one run is swept by the second, not only by the first",
+            description: "A stale jail and a live orphan that appear during the first of two iterations are swept by the second, after the first's teardown and before its own jail",
             dockerfile: r#"FROM busybox
 CMD ["printf", "%s_%s\\n", "EVERY_JOB", "a7f3b2c9"]"#,
             planted_between_jobs: true,
@@ -3421,15 +3422,17 @@ fn assert_ran_beside_the_marker(output: &ScenarioOutput) -> Result<()> {
 /// A name the runner could have minted, so its sweep takes the jail for its own.
 const PLANTED_JAIL: &str = "planted-between-jobs";
 
-/// Planted once the first iteration's jail is built, after its sweep, and with
-/// its whole guest still to run before the second iteration's, so only the
-/// second iteration's sweep can reclaim it.
+/// Planted, with a stand-in, once the first iteration's jail is built: after
+/// its sweep, and with its whole guest still to run before the second
+/// iteration's, so only the second iteration's sweep can reclaim them.
 fn run_runner_planted_between_jobs(
     image_path: &Utf8Path,
     args: &[&str],
     state_dir: &Utf8Path,
     runner_bin: &Utf8Path,
 ) -> Result<ScenarioOutput> {
+    use std::os::unix::process::ExitStatusExt as _;
+
     let planted = jail_parent(state_dir).join(PLANTED_JAIL);
     let mut child = spawn_runner(image_path, &[args, &["--iter", "2"]].concat(), runner_bin)?;
     let mut streamed = StreamedOutput::start(&mut child);
@@ -3437,40 +3440,60 @@ fn run_runner_planted_between_jobs(
         let root = planted.join("root");
         fs::create_dir_all(&root)
             .and_then(|()| fs::write(root.join("rootfs.ext4"), b"stale"))
-            .with_context(|| format!("Failed to plant {planted}"))
+            .with_context(|| format!("Failed to plant {planted}"))?;
+        Occupant::start()
     });
-    let deadline = std::time::Instant::now() + PROBE_TIMEOUT;
-    let status = loop {
-        if let Some(status) = child.try_wait()? {
-            break Some(status);
-        }
-        if std::time::Instant::now() >= deadline {
-            kill_pid(child.id(), libc::SIGKILL);
-            child.wait()?;
-            break None;
-        }
-        std::thread::sleep(PROBE_INTERVAL);
-    };
+    let status = exit_within(&mut child, PROBE_TIMEOUT);
     let (stdout, stderr) = streamed.join();
     let left = planted.try_exists();
+    // Before any `?`, so a red run leaves no jail; the stand-in goes with its
+    // drop on every path.
     drop(fs::remove_dir_all(&planted));
-    placed.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
-    let status = status.with_context(|| {
-        format!(
-            "The runner did not exit within {PROBE_TIMEOUT:?}.\nstdout: {stdout}\nstderr: {stderr}"
-        )
-    })?;
+    let mut occupant = placed.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
+    let status = status.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
+    let ended = occupant.child.try_wait()?;
+    let cgroup_left = occupant.cgroup.try_exists();
+    drop(occupant);
     anyhow::ensure!(
         !left.with_context(|| format!("Failed to check whether {planted} survived"))?
-            && records_with(&stderr, "Reclaimed stale jails")
-                .any(|record| record.get("count") == Some(&serde_json::Value::from(1))),
-        "The second iteration never swept the jail {planted} planted after the first one's sweep.\nstdout: {stdout}\nstderr: {stderr}"
+            && ended.and_then(|status| status.signal()) == Some(libc::SIGKILL)
+            && !cgroup_left.with_context(|| format!("Failed to check {OCCUPIED_CGROUP}"))?,
+        "The second iteration never swept the jail {planted}, or the stand-in in {OCCUPIED_CGROUP} (it ended with {ended:?}), placed after the first one's sweep.\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    let swept = second_job_before_its_jail(&stderr).unwrap_or_default();
+    anyhow::ensure!(
+        records_with(&swept, "Reclaimed stale jails")
+            .any(|record| record.get("count") == Some(&serde_json::Value::from(1)))
+            && reclaimed(&swept, Utf8Path::new(OCCUPIED_CGROUP)),
+        "Expected the jail and the stand-in's cgroup reclaimed after the second iteration began and before its jail was built, not by the first one's teardown.\nstdout: {stdout}\nstderr: {stderr}"
     );
     Ok(ScenarioOutput {
         stdout,
         stderr,
         exit_code: status.code().unwrap_or(-1),
     })
+}
+
+/// The second iteration's lines from its first record, which follows the first
+/// iteration's teardown, up to its own jail.
+fn second_job_before_its_jail(stderr: &str) -> Option<String> {
+    let mut lines = stderr.lines();
+    lines
+        .by_ref()
+        .filter(|line| is_record(line, "Executing benchmark run"))
+        .nth(1)?;
+    let mut window = Vec::new();
+    for line in lines {
+        if is_record(line, "Jail built") {
+            return Some(window.join("\n"));
+        }
+        window.push(line);
+    }
+    None
+}
+
+fn is_record(line: &str, msg: &str) -> bool {
+    record_of(line).is_some_and(|record| text(&record, "msg") == Some(msg))
 }
 
 /// How long the run is held stopped, well past its 3 s timeout.
@@ -4592,14 +4615,18 @@ struct Occupant {
 }
 
 impl Occupant {
+    /// The process comes first, so the drop undoes whatever a failure leaves.
     fn start() -> Result<Self> {
-        let cgroup = Utf8PathBuf::from(OCCUPIED_CGROUP);
-        fs::create_dir_all(&cgroup).with_context(|| format!("Failed to create {cgroup}"))?;
         let child = Command::new("sleep")
             .arg("600")
             .spawn()
             .context("Failed to start the stand-in process")?;
-        let occupant = Self { child, cgroup };
+        let occupant = Self {
+            child,
+            cgroup: Utf8PathBuf::from(OCCUPIED_CGROUP),
+        };
+        fs::create_dir_all(&occupant.cgroup)
+            .with_context(|| format!("Failed to create {}", occupant.cgroup))?;
         fs::write(
             occupant.cgroup.join("cgroup.procs"),
             occupant.child.id().to_string(),
