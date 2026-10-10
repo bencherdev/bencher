@@ -7,9 +7,6 @@ test("each path under Settings belongs to one section", () => {
 	expect(sectionOf(["settings"])).toBe("general");
 	expect(sectionOf(["settings", "keys"])).toBe("keys");
 	expect(sectionOf(["keys"])).toBe("keys");
-	expect(sectionOf(["settings", "dimensions"])).toBe("dimensions");
-	expect(sectionOf(["branches", "main"])).toBe("dimensions");
-	expect(sectionOf(["measures"])).toBe("dimensions");
 	expect(sectionOf(["settings", "nope"])).toBeUndefined();
 	expect(sectionOf(["keys", "abc"])).toBeUndefined();
 });

@@ -9,7 +9,6 @@ import { useQueryResult } from "../query";
 import { keysQuery } from "../settings/data";
 import Frame from "../settings/Frame";
 import General from "../settings/General";
-import Head from "../settings/Head";
 import Keys from "../settings/Keys";
 import { sectionOf } from "../settings/section";
 import Placeholder from "./Placeholder";
@@ -45,11 +44,6 @@ const Settings = () => {
 				<Match when={section() === "keys"}>
 					<Frame slug={slug()} section="keys">
 						<Keys />
-					</Frame>
-				</Match>
-				<Match when={section() === "dimensions"}>
-					<Frame slug={slug()} section="dimensions">
-						<Head slug={slug()} title="Dimensions" readOnly={false} />
 					</Frame>
 				</Match>
 			</Switch>

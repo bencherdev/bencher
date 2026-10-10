@@ -470,6 +470,53 @@ async fn console_branches_page_and_search() {
     }
 }
 
+// GET /v0/projects/{project}/console/{dimension} - the rows after an offset, on every dimension,
+// and a request for both a page and an offset is refused
+// Kills: an offset ignored, an offset read as a page, and both taken at once.
+#[tokio::test]
+async fn console_dimensions_page_by_offset() {
+    let server = TestServer::new().await;
+    let f = seed_project(&server, "dmoffset").await;
+
+    for (dimension, query, expected) in [
+        (
+            "branches",
+            "sort=created&direction=asc&per_page=2&offset=0",
+            &["main", "devel"][..],
+        ),
+        (
+            "branches",
+            "sort=created&direction=asc&per_page=2&offset=1",
+            &["devel", "feature"],
+        ),
+        (
+            "branches",
+            "sort=created&direction=asc&per_page=2&offset=3",
+            &["old"],
+        ),
+        ("branches", "offset=4", &[]),
+        ("testbeds", "per_page=1&offset=1", &["linux"]),
+        ("benchmarks", "per_page=1&offset=1", &["beta"]),
+        ("measures", "per_page=1&offset=1", &["latency"]),
+    ] {
+        let (status, body) = get(&server, &f.user.token, &f.slug, dimension, query).await;
+        assert_eq!(status, StatusCode::OK, "{dimension} {query}");
+        assert_eq!(names(&body, dimension), expected, "{dimension} {query}");
+    }
+
+    for dimension in ["branches", "testbeds", "benchmarks", "measures"] {
+        let (status, _) = get(
+            &server,
+            &f.user.token,
+            &f.slug,
+            dimension,
+            "page=2&offset=2",
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{dimension}");
+    }
+}
+
 // PATCH /v0/projects/{project}/{branches,testbeds,measures}/{dimension} - archiving a dimension
 // archives every threshold on it, and unarchiving it brings back each threshold on it whose other
 // dimensions are active and leaves the rest archived

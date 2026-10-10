@@ -1,5 +1,8 @@
 import type { JsonProject, Visibility } from "../../types/bencher";
 import { ApiError } from "../api";
+import { failureOf } from "./failure";
+
+export { failureOf };
 
 /** The General form as the reader has it. */
 export interface Draft {
@@ -125,26 +128,4 @@ export const refusalOf = (error: unknown, patch: Patch): Refusal => {
 			"The Bencher API did not answer, so nothing was saved.",
 		),
 	};
-};
-
-/** What the API said when it refused, or `unanswered` when it never answered. */
-export const failureOf = (
-	error: unknown,
-	refused: string,
-	unanswered: string,
-) =>
-	error instanceof ApiError && error.status !== undefined
-		? `${refused}: ${apiMessage(error)}`
-		: unanswered;
-
-const apiMessage = (error: ApiError) => {
-	try {
-		const message = JSON.parse(error.message)?.message;
-		if (typeof message === "string" && message) {
-			return message;
-		}
-	} catch {
-		// Not the API's JSON; its status says enough.
-	}
-	return `the API answered ${error.status}.`;
 };
