@@ -332,7 +332,7 @@ async fn get_one_inner(
 }
 
 /// The project when the actor may read it, which takes a login even on a public project.
-fn readable_project(
+pub(super) fn readable_project(
     conn: &mut DbConnection,
     context: &ApiContext,
     project: &ProjectResourceId,

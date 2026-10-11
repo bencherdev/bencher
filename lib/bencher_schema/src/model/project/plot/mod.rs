@@ -4,8 +4,8 @@ use bencher_json::{
     project::{
         perf::MAX_DIMENSION_ENTRIES,
         plot::{
-            JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, LineKey, LineKeys, MetricFilter,
-            PlotLayout, XAxis, YAxis,
+            JsonPlotPatch, JsonPlotPatchNull, JsonUpdatePlot, LineKey, LineKeys, MAX_PLOTS,
+            MetricFilter, PlotLayout, XAxis, YAxis,
         },
     },
 };
@@ -277,6 +277,24 @@ impl QueryPlot {
         let testbeds = QueryPlotTestbed::into_json_for_plot(conn, &self)?;
         let benchmarks = QueryPlotBenchmark::into_json_for_plot(conn, &self)?;
         let measures = QueryPlotMeasure::into_json_for_plot(conn, &self)?;
+        Ok(self.into_json_with(project, branches, testbeds, benchmarks, measures))
+    }
+
+    /// The plot as saved, with its dimensions already read in their order.
+    pub fn into_json_with(
+        self,
+        project: &QueryProject,
+        branches: Vec<BranchUuid>,
+        testbeds: Vec<TestbedUuid>,
+        benchmarks: Vec<BenchmarkUuid>,
+        measures: Vec<MeasureUuid>,
+    ) -> JsonPlot {
+        assert_parentage(
+            BencherResource::Project,
+            project.id,
+            BencherResource::Plot,
+            self.project_id,
+        );
         let Self {
             uuid,
             title,
@@ -296,7 +314,7 @@ impl QueryPlot {
             modified,
             ..
         } = self;
-        Ok(JsonPlot {
+        JsonPlot {
             uuid,
             project: project.uuid,
             title,
@@ -318,7 +336,7 @@ impl QueryPlot {
             focus,
             created,
             modified,
-        })
+        }
     }
 
     pub async fn update(
@@ -546,6 +564,7 @@ impl InsertPlot {
 
         // Phase 2: Single write_conn + transaction for all writes
         let conn = write_conn!(context);
+        Self::has_room(conn, query_project)?;
         let rank = QueryPlot::new_rank(conn, query_project, index)?;
         let timestamp = DateTime::now();
         let insert_plot = Self {
@@ -589,6 +608,21 @@ impl InsertPlot {
             .filter(plot_table::id.eq(plot_id))
             .first::<QueryPlot>(auth_conn!(context))
             .map_err(resource_not_found_err!(Plot, plot_id))
+    }
+
+    /// Counted on the write connection, so two creates cannot both take the last place.
+    fn has_room(conn: &mut DbConnection, query_project: &QueryProject) -> Result<(), HttpError> {
+        let plots = plot_table::table
+            .filter(plot_table::project_id.eq(query_project.id))
+            .count()
+            .get_result::<i64>(conn)
+            .map_err(resource_not_found_err!(Plot, query_project))?;
+        if plots >= i64::from(MAX_PLOTS) {
+            return Err(bad_request_error(format!(
+                "A project may have at most {MAX_PLOTS} plots: delete one before creating another"
+            )));
+        }
+        Ok(())
     }
 }
 

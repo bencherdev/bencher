@@ -14,7 +14,9 @@ use bencher_schema::{
         project::QueryProject,
         user::auth::{AuthUser, BearerToken},
     },
+    schema,
 };
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -104,6 +106,20 @@ async fn get_inner(
                 e,
             )
         })?;
+        let plots = schema::plot::table
+            .filter(schema::plot::project_id.eq(query_project.id))
+            .count()
+            .get_result::<i64>(conn)
+            .map_err(|e| {
+                issue_error(
+                    "Failed to count plots",
+                    &format!(
+                        "Failed to count plots for project ({}).",
+                        query_project.uuid
+                    ),
+                    e,
+                )
+            })?;
         let query_organization = query_project.organization(conn)?;
         let organization = JsonConsoleOrganization {
             uuid: query_organization.uuid,
@@ -115,6 +131,7 @@ async fn get_inner(
             organization,
             permissions,
             active_alerts: u32::try_from(active_alerts).unwrap_or(u32::MAX),
+            plots: u32::try_from(plots).unwrap_or(u32::MAX),
         })
     })
 }
