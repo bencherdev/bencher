@@ -15,7 +15,8 @@ export interface DialogProps
  * makes the page behind it inert, and returns focus to where it was when it
  * closes. Give it `aria-labelledby`, and `role="alertdialog"` when it asks to
  * confirm what cannot be undone. Compose it from `ui-dialog-head`,
- * `ui-dialog-body`, and `ui-dialog-foot`; on a narrow screen it is a sheet.
+ * `ui-dialog-body`, and `ui-dialog-foot`; `data-size="wide"` makes room for
+ * two columns. On a narrow screen it is a sheet.
  */
 const Dialog = (props: DialogProps) => {
 	const [local, rest] = splitProps(props, ["class", "onDismiss"]);

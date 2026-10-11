@@ -28,6 +28,7 @@ import "../../../../../next/report/report.css";
 import "../../../../../next/thresholds/thresholds.css";
 import "../../../../../next/dimensions/dimensions.css";
 import "../../../../../next/alerts/alerts.css";
+import "../../../../../next/plots/plots.css";
 
 const slug = Astro.params.project ?? "";
 const place = parseNextPath(Astro.url.pathname);
@@ -36,8 +37,9 @@ const classic = classicPlace(Astro.url.pathname);
 const page = place ? pageName(place.rest) : "NotFound";
 // A link that draws a plot asks for the plot's code with the page's.
 const plot =
-	page === "Explore" &&
-	drawsPlot(decodeQuery(exploreSearchFromClassic(Astro.url.search)));
+	page === "Plots" ||
+	(page === "Explore" &&
+		drawsPlot(decodeQuery(exploreSearchFromClassic(Astro.url.search))));
 ---
 
 <!doctype html>

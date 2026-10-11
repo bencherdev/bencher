@@ -106,9 +106,9 @@ test("a tab switch holds the speed ceilings", async ({ page }) => {
 	await ready(page);
 
 	const since = await mark(page);
-	await tabRow(page).getByRole("link", { name: "Plots" }).click();
+	await tabRow(page).getByRole("link", { name: "Settings" }).click();
 	await expect(
-		page.getByRole("heading", { level: 1, name: "Plots" }),
+		page.getByRole("heading", { level: 1, name: "General" }),
 	).toBeVisible();
 	await settle(page);
 
@@ -382,6 +382,55 @@ for (const [width, viewport] of [
 			} as Cost);
 			const ceiling = ceilings.exploreColdLoad;
 			expect(moved).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+				ceiling.apiAnswersBeforePaint,
+			);
+			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+			if (!viewport) {
+				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			}
+			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+			expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
+				ceiling.inlineScriptBytes,
+			);
+			expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+			const stylesheets = await page.evaluate(
+				() =>
+					performance
+						.getEntriesByType("resource")
+						.filter((entry) => new URL(entry.name).pathname.endsWith(".css"))
+						.length,
+			);
+			expect(stylesheets).toBe(1);
+		});
+
+		// Kills tiles that ask for their lines one request each or after the
+		// shell's request, code found late or after the load, a page stylesheet
+		// of its own, and tiles that shift as their lines arrive.
+		test(`a cold Plots load holds its speed ceilings at ${width}`, async ({
+			page,
+		}) => {
+			await observePageShift(page);
+			const cost = await coldLoad(page, nextPath(hashbrown.slug, "plots"), () =>
+				expect(
+					page
+						.getByRole("region", {
+							name: "blake3 input_bytes=65536 threads=1, Latency on main",
+						})
+						.getByRole("figure"),
+				).toHaveAccessibleName("2 lines over 4w"),
+			);
+			const moved = await pageShift(page);
+			report(`plots cold load ${width}`, {
+				...cost,
+				pageShift: moved,
+			} as Cost);
+			const ceiling = ceilings.plotsColdLoad;
+			expect(moved).toBeLessThanOrEqual(ceiling.cls);
+			// The plot's code is named in the document, never left for after the load.
+			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
 				ceiling.apiAnswersBeforePaint,
 			);

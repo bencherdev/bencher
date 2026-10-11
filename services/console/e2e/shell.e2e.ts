@@ -86,17 +86,17 @@ test.describe("signed in", () => {
 				api.push(request.url());
 			}
 		});
-		await tabRow(page).getByRole("link", { name: "Plots" }).click();
+		await tabRow(page).getByRole("link", { name: "Settings" }).click();
 
-		await expect(page).toHaveURL(nextPath(hashbrown.slug, "plots"));
+		await expect(page).toHaveURL(nextPath(hashbrown.slug, "settings"));
 		await expect(
-			page.getByRole("heading", { level: 1, name: "Plots" }),
+			page.getByRole("heading", { level: 1, name: "General" }),
 		).toBeVisible();
 		await expect(tabRow(page).locator('[aria-current="page"]')).toHaveText(
-			"Plots",
+			"Settings",
 		);
 		await expect(page.getByRole("status")).toHaveText(
-			`Plots | ${hashbrown.name} | Bencher`,
+			`Settings | ${hashbrown.name} | Bencher`,
 		);
 		await settle(page);
 		expect(documents).toEqual([]);

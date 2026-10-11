@@ -66,6 +66,29 @@ export const rollingName = (seconds: number): string => {
 	if (preset) {
 		return preset.value;
 	}
+	const { count, unit } = rollingParts(seconds);
+	return count === 1 ? `1 ${unit.slice(0, -1)}` : `${count} ${unit}`;
+};
+
+export type RollingUnit = "days" | "weeks";
+
+/** The longest rolling window a pin keeps, as the console's report window. */
+const MAX_DAYS = 366;
+
+/** A rolling window of `count` whole days or weeks, in seconds. */
+export const rollingSeconds = (count: number, unit: RollingUnit): number => {
+	const days =
+		(Number.isFinite(count) ? Math.max(1, Math.round(count)) : 1) *
+		(unit === "weeks" ? 7 : 1);
+	return Math.min(MAX_DAYS, days) * DAY;
+};
+
+/** A rolling window in whole weeks when it is, else in days. */
+export const rollingParts = (
+	seconds: number,
+): { count: number; unit: RollingUnit } => {
 	const days = Math.max(1, Math.round(seconds / DAY));
-	return days === 1 ? "1 day" : `${days} days`;
+	return days % 7 === 0
+		? { count: days / 7, unit: "weeks" }
+		: { count: days, unit: "days" };
 };

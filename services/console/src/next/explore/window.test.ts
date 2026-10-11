@@ -4,6 +4,8 @@ import {
 	dateValue,
 	pickWindow,
 	rollingName,
+	rollingParts,
+	rollingSeconds,
 	windowChoice,
 } from "./window";
 
@@ -63,5 +65,34 @@ describe("rollingName", () => {
 		expect(rollingName(10 * DAY)).toBe("10 days");
 		expect(rollingName(DAY)).toBe("1 day");
 		expect(rollingName(3 * 60 * 60)).toBe("1 day");
+	});
+
+	// Kills naming whole weeks in days.
+	test("name whole weeks in weeks", () => {
+		expect(rollingName(42 * DAY)).toBe("6 weeks");
+		expect(rollingName(14 * DAY)).toBe("2 weeks");
+	});
+});
+
+describe("rollingSeconds", () => {
+	// Kills a week of the wrong length, a count that is not whole, and a window
+	// of nothing or past the longest the console reads.
+	test("make a rolling window of days or weeks", () => {
+		expect(rollingSeconds(6, "weeks")).toBe(42 * DAY);
+		expect(rollingSeconds(10, "days")).toBe(10 * DAY);
+		expect(rollingSeconds(2.6, "days")).toBe(3 * DAY);
+		expect(rollingSeconds(0, "days")).toBe(DAY);
+		expect(rollingSeconds(Number.NaN, "weeks")).toBe(7 * DAY);
+		expect(rollingSeconds(400, "days")).toBe(366 * DAY);
+		expect(rollingSeconds(60, "weeks")).toBe(366 * DAY);
+	});
+});
+
+describe("rollingParts", () => {
+	// Kills a pin opened in days when it saved whole weeks, or the reverse.
+	test("read a rolling window back as weeks when whole, else days", () => {
+		expect(rollingParts(42 * DAY)).toEqual({ count: 6, unit: "weeks" });
+		expect(rollingParts(10 * DAY)).toEqual({ count: 10, unit: "days" });
+		expect(rollingParts(3 * 60 * 60)).toEqual({ count: 1, unit: "days" });
 	});
 });

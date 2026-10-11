@@ -60,7 +60,10 @@ import {
 	tabOf,
 } from "../paths";
 import { formatDate } from "../plot/format";
+import { loadPlot, loadedPlot } from "../plot/lazy";
 import { useNarrow } from "../plot/narrow";
+import EditPin from "../plots/EditPin";
+import { PLOTS_LIMIT, countPins } from "../plots/pins";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
@@ -116,6 +119,12 @@ const Explore = (props: { readOnly?: boolean }) => {
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
 	const canPin = () =>
 		!props.readOnly && bootstrap().data?.permissions.create === true;
+	const full = () => (bootstrap().data?.plots ?? 0) >= PLOTS_LIMIT;
+	// Plots and the start lists show pins, so a change here is theirs to read again.
+	const pinsChanged = () => {
+		client.invalidateQueries({ queryKey: ["console", "start", slug()] });
+		client.invalidateQueries({ queryKey: ["console", "plots", slug()] });
+	};
 
 	const { requested, pending } = useRequested(
 		query,
@@ -166,7 +175,7 @@ const Explore = (props: { readOnly?: boolean }) => {
 			? "The API refused this query."
 			: "The API did not answer.";
 	};
-	const [PlotView, setPlotView] = createSignal(plotView);
+	const [PlotView, setPlotView] = createSignal(loadedPlot());
 	const wantPlot = () => {
 		if (!PlotView()) {
 			loadPlot()
@@ -285,7 +294,8 @@ const Explore = (props: { readOnly?: boolean }) => {
 				newPlot(before, title, drawn(), Date.now()),
 			);
 			client.setQueryData(plotKey(slug(), plot.uuid), plot);
-			client.invalidateQueries({ queryKey: ["console", "start", slug()] });
+			countPins(client, api, slug(), 1);
+			pinsChanged();
 			go(queryFromPlot(plot), true);
 			setConfirmation({
 				shown: {
@@ -296,7 +306,8 @@ const Explore = (props: { readOnly?: boolean }) => {
 				undo: async () => {
 					await unpinPlot(api, slug(), plot.uuid);
 					client.removeQueries({ queryKey: plotKey(slug(), plot.uuid) });
-					client.invalidateQueries({ queryKey: ["console", "start", slug()] });
+					countPins(client, api, slug(), -1);
+					pinsChanged();
 					go(before, true);
 				},
 			});
@@ -336,7 +347,7 @@ const Explore = (props: { readOnly?: boolean }) => {
 				plotPatch(query(), drawn(), Date.now()),
 			);
 			client.setQueryData(plotKey(slug(), saved.uuid), saved);
-			client.invalidateQueries({ queryKey: ["console", "start", slug()] });
+			pinsChanged();
 			setConfirmation(undefined);
 			go(queryFromPlot(saved), true);
 			return true;
@@ -346,6 +357,26 @@ const Explore = (props: { readOnly?: boolean }) => {
 		} finally {
 			setWorking(false);
 		}
+	};
+
+	const [editing, setEditing] = createSignal<JsonPlot>();
+	/** The pin dialog saved the pin just made: the link and the confirmation follow it. */
+	const edited = (plot: JsonPlot) => {
+		client.setQueryData(plotKey(slug(), plot.uuid), plot);
+		pinsChanged();
+		setEditing(undefined);
+		setConfirmation(
+			(pin) =>
+				pin && {
+					...pin,
+					shown: {
+						...pin.shown,
+						title: plot.title ?? pin.shown.title,
+						window: rollingName(plot.window),
+					},
+				},
+		);
+		go(queryFromPlot(plot), true);
 	};
 
 	const share = () =>
@@ -512,6 +543,7 @@ const Explore = (props: { readOnly?: boolean }) => {
 					source={source()}
 					ready={bootstrap().data !== undefined}
 					canPin={canPin()}
+					full={full()}
 					hasLines={(data()?.lines.length ?? 0) > 0}
 					working={working()}
 					shared={shared()}
@@ -519,6 +551,7 @@ const Explore = (props: { readOnly?: boolean }) => {
 					onShare={share}
 					onPin={() => create("Pinned to the top of Plots as")}
 					onUndo={undo}
+					onEdit={() => setEditing(pinned())}
 					onDiscard={() => {
 						const plot = pinned();
 						if (plot) {
@@ -625,6 +658,11 @@ const Explore = (props: { readOnly?: boolean }) => {
 			<Show when={blank() && !props.readOnly}>
 				<Start />
 			</Show>
+			<EditPin
+				plot={editing()}
+				onClose={() => setEditing(undefined)}
+				onSaved={edited}
+			/>
 			<Show when={leaving()}>
 				<Leave
 					title={pinned()?.title ?? "This pinned plot"}
@@ -644,21 +682,3 @@ const Explore = (props: { readOnly?: boolean }) => {
 };
 
 export default Explore;
-
-type PlotView = typeof import("../plot/Plot").default;
-let plotView: PlotView | undefined;
-let plotLoading: Promise<PlotView> | undefined;
-/** The plot's code, with its charting library, which blank Explore never loads. */
-const loadPlot = () => {
-	plotLoading ??= import("../plot/Plot").then(
-		({ default: view }) => {
-			plotView = view;
-			return view;
-		},
-		(error: unknown) => {
-			plotLoading = undefined;
-			throw error;
-		},
-	);
-	return plotLoading;
-};
