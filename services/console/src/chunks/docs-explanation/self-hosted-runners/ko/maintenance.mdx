@@ -24,11 +24,14 @@ systemd에서는 드롭인으로 유지 관리 유닛이 차례를 기다리게 
 [Service]
 ExecStartPre=+/usr/bin/install -d -m 0700 /run/bencher
 ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
+OpenFile=/dev/null
 ExecStart=
 ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
 ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
 TimeoutStartSec=infinity
 ```
+
+`OpenFile=/dev/null`이 파일 디스크립터 3을 차지하므로, `apt.systemd.daily`처럼 명령이 디스크립터 3을 다시 열어도 잠금은 계속 유지됩니다.
 
 ### Runner 비우기
 

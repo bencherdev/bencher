@@ -739,13 +739,15 @@ fn quiet_drop_in_path(unit: &str) -> String {
     format!("/etc/systemd/system/{unit}.d/{QUIET_DROP_IN}")
 }
 
-/// Waits for the runner's job lock, behind a marker of its own (`%n`, the unit) that the runner pauses for.
+/// Waits for the runner's job lock, behind a marker of its own (`%n`, the unit) that the runner pauses for, and holds
+/// it on fd 4 past the `OpenFile=` on fd 3, which a command may reopen as `apt.systemd.daily` does.
 fn quiet_drop_in(command: &str) -> String {
     let marker = format!("{RUN_DIR}/{MARKER}.%n");
     format!(
         "[Service]
 ExecStartPre=+/usr/bin/install -d -m 0700 {RUN_DIR}
 ExecStartPre=+/usr/bin/touch {marker}
+OpenFile=/dev/null
 ExecStart=
 ExecStart=/usr/bin/flock -F {RUN_DIR}/{JOB_LOCK} {command}
 ExecStopPost=+/usr/bin/rm -f {marker}
@@ -1698,6 +1700,38 @@ esac
                     "{content:?}"
                 );
             }
+        }
+
+        #[test]
+        fn the_drop_in_holds_the_job_lock_through_a_command_that_reopens_fd_3() {
+            // Kills a drop-in with no `OpenFile=`, whose lock on fd 3 a command
+            // like `apt.systemd.daily` drops at once, and one that locks a file
+            // other than the runner's job lock.
+            let dir = tempfile::tempdir().unwrap();
+            let dir = Utf8Path::from_path(dir.path()).unwrap();
+            // Exits 99 only while something else holds the lock.
+            let command =
+                format!("/bin/sh -c 'exec 3>/dev/null; flock -n -E 99 {RUN_DIR}/{JOB_LOCK} true'");
+            let drop_in = quiet_drop_in(&command).replace(RUN_DIR, dir.as_str());
+            let values = |key: &str| -> Vec<&str> {
+                drop_in
+                    .lines()
+                    .filter_map(|line| line.strip_prefix(key))
+                    .collect()
+            };
+            // systemd passes each `OpenFile=` in order from fd 3.
+            let open: Vec<String> = values("OpenFile=")
+                .iter()
+                .enumerate()
+                .map(|(index, path)| format!("{}<{path}", index + 3))
+                .collect();
+            let start = values("ExecStart=").last().copied().unwrap_or_default();
+            let status = Command::new("sh")
+                .arg("-c")
+                .arg(format!("exec {}; exec {start}", open.join(" ")))
+                .status()
+                .unwrap();
+            assert_eq!(status.code(), Some(99), "{drop_in}");
         }
     }
 }

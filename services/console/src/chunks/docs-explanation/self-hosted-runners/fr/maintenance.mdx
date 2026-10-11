@@ -24,11 +24,14 @@ Le `ExecStart=` vide efface cette commande, la ligne suivante doit donc la rép�
 [Service]
 ExecStartPre=+/usr/bin/install -d -m 0700 /run/bencher
 ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
+OpenFile=/dev/null
 ExecStart=
 ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
 ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
 TimeoutStartSec=infinity
 ```
+
+`OpenFile=/dev/null` occupe le descripteur de fichier 3, de sorte que le verrou reste pris même si la commande rouvre le descripteur 3, comme le fait `apt.systemd.daily`.
 
 ### Vider un Runner
 
