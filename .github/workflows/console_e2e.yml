@@ -1,0 +1,50 @@
+name: Console E2E
+
+on:
+  workflow_call:
+    inputs:
+      mold-version:
+        type: string
+        required: true
+      wasm-pack-version:
+        type: string
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  console_e2e:
+    name: Console E2E
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: BRAINSia/free-disk-space@7048ffbf50819342ac964ef3998a51c2564a8a75 # v2.1.3
+        with:
+          large-packages: false
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: console-e2e
+          mold-version: ${{ inputs.mold-version }}
+      - uses: ./.github/actions/setup-node
+        with:
+          working-directory: ./services/console
+      - name: Install `wasm-pack`
+        uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
+        with:
+          tool: wasm-pack@${{ inputs.wasm-pack-version }}
+      - name: Install Playwright Chromium
+        working-directory: ./services/console
+        run: npx playwright install --with-deps --only-shell chromium
+      - name: Run the console end-to-end suite
+        run: cargo test-console e2e
+      - name: Upload Playwright Traces
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: console-e2e-traces
+          path: ./services/console/test-results
+          if-no-files-found: ignore

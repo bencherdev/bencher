@@ -10,6 +10,7 @@ import { defineConfig, envField } from "astro/config";
 import wasmPack from "vite-plugin-wasm-pack";
 
 import { headingAutolink } from "./markdown.js";
+import nextPreloads from "./src/next/build/preloads.mjs";
 
 const CLIENT = "client";
 const SERVER = "server";
@@ -188,6 +189,7 @@ export default defineConfig({
 		expressiveCode(),
 		// https://docs.astro.build/en/guides/integrations-guide/mdx
 		mdx(),
+		nextPreloads(),
 		// https://docs.astro.build/en/guides/integrations-guide/solid-js/
 		solidJs({
 			// https://docs.astro.build/en/guides/integrations-guide/solid-js/#devtools

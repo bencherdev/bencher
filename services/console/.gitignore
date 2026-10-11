@@ -26,3 +26,7 @@ pnpm-debug.log*
 # Generated public assets
 public/download/
 public/diagrams/
+
+# Playwright output
+test-results/
+playwright-report/

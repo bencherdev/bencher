@@ -68,6 +68,23 @@ npx vitest run
 Run one project with `npx vitest run --project unit` or `--project browser`.
 The `*.browser.test.ts` files are happy-dom tests in the `unit` project, not browser tests.
 
+### End to end
+
+```bash
+cargo test-console e2e
+```
+
+Run from the repository root. It builds the API and the console (Node adapter),
+starts both on free ports against a fresh SQLite database in a temporary
+directory, seeds it (`tasks/test_console/src/task/e2e/seed.rs`), and runs
+Playwright in Chromium over `e2e/*.e2e.ts`. `--skip-console-build` serves the
+`dist` already built; arguments after `--` go to Playwright. It needs the
+console's dependencies (`npm ci`), `wasm-pack`, and Playwright's Chromium
+(`npx playwright install chromium`).
+
+The speed ceilings in `e2e/speed-ceilings.json` fail the suite above them.
+Set one at the measured value plus a small margin, and only ever lower it.
+
 ## New Console
 
 The console for BMF v1 projects lives under `src/next/`, built on the design
@@ -76,6 +93,25 @@ is a token in `packages/ui/src/styles/theme.css`; a test fails when a color
 literal appears anywhere in `packages/ui/src`, `src/next`, or `src/pages/next`.
 `src/next/Head.astro` belongs in the head of every new console page: it loads the
 stylesheet, preloads Inter, and sets the theme before the first paint.
+
+Every path under a project is served by
+`src/pages/next/console/projects/[project]/[...path].astro`. Its inline scripts
+(`src/next/astro/`) run before any module loads and read `localStorage` keys
+that the classic console also reads or writes: `BENCHER_USER`, `BENCHER_THEME`,
+`BENCHER_BMF_VERSIONS`, and `BENCHER_CONSOLE_SHELL` (`src/next/memory.ts`).
+Change a key or its shape on both sides at once.
+
+After the client build, `src/next/build/preloads.mjs` writes the client's module
+graph over a placeholder in the server bundle, and the page renders a
+`modulepreload` link for every module it will load (`src/next/preloads.ts`), so
+module loading is one round deep. A dev server has no graph and renders none.
+A page component must live at `src/next/pages/<Name>.tsx` to be found.
+
+## Sentry
+
+The browser SDK loads from `sentry.client.config.ts` as a dynamic import, so no
+page waits on it to paint; under `/next/` it waits for the load event and an
+idle moment. Errors raised before it arrives are queued and sent once it does.
 
 ## Formatting
 

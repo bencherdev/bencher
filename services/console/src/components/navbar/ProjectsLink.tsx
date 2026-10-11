@@ -1,6 +1,8 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
 import { createMemo, createResource } from "solid-js";
+import { rememberVersion } from "../../next/memory";
+import { nextHref } from "../../next/paths";
 import type { JsonAuthUser, JsonProject } from "../../types/bencher";
 import { httpGet } from "../../util/http";
 import { type InitValid, init_valid, validJwt } from "../../util/valid";
@@ -38,6 +40,7 @@ const ProjectsLink = (props: Props) => {
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
 				const json_project: JsonProject = resp?.data;
+				versionGate(fetcher.project_slug, json_project.bmf_version);
 				return json_project.organization;
 			})
 			.catch((error) => {
@@ -59,3 +62,16 @@ const ProjectsLink = (props: Props) => {
 };
 
 export default ProjectsLink;
+
+// The project's own version corrects the memory the new console's pages read,
+// and a version 1 project belongs to the new console.
+const versionGate = (slug: string, version: number) => {
+	if (version !== 0 && version !== 1) {
+		return;
+	}
+	rememberVersion(localStorage, slug, version);
+	const next = version === 1 && nextHref(window.location);
+	if (next) {
+		window.location.replace(next);
+	}
+};

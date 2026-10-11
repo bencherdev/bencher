@@ -31,9 +31,11 @@
 		color: var(--color-text-yellow);
 	}
 
+	/* The message stays in body text so it reads at full contrast; the
+	   border and the ground carry the error. */
 	.ui-banner[data-status="error"] {
 		background: var(--color-error-muted);
-		border-color: var(--color-border-red);
-		color: var(--color-text-red);
+		border-color: var(--color-error);
+		color: var(--color-text-primary);
 	}
 }

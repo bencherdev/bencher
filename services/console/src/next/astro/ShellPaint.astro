@@ -1,0 +1,62 @@
+---
+import { SHELL_KEY } from "../memory";
+import { USER_KEY } from "../reader";
+
+interface Props {
+	slug: string;
+}
+
+const { slug } = Astro.props;
+
+// Runs right after the shell's markup, before the first paint: fills in what
+// this reader last saw of the project, so the app's render over it moves
+// nothing, and brings the current tab into view on a narrow screen.
+---
+
+<script is:inline define:vars={{ slug, SHELL_KEY, USER_KEY }}>
+	try {
+		var user = JSON.parse(localStorage.getItem(USER_KEY) || "null");
+		var record = JSON.parse(localStorage.getItem(SHELL_KEY) || "null");
+		var seen =
+			user &&
+			user.user &&
+			record &&
+			record.reader === user.user.uuid &&
+			record.projects &&
+			record.projects[slug];
+		if (seen) {
+			var hole = document.querySelector('[data-shell="org"]');
+			var org = document.createElement("a");
+			org.className = "crumb-org";
+			org.setAttribute("data-shell", "org");
+			org.href = "/console/organizations/" + seen.organizationUuid + "/projects";
+			org.textContent = seen.organization;
+			hole.closest("nav").removeAttribute("aria-busy");
+			hole.replaceWith(org);
+			document.querySelector('[data-shell="project"]').textContent = seen.name;
+			if (seen.alerts > 0) {
+				var tab = document.querySelector('[data-shell="alerts"]');
+				var bell = document.querySelector('[data-shell="bell"]');
+				tab.setAttribute("aria-label", "Alerts " + seen.alerts + " active");
+				bell.setAttribute("aria-label", "Alerts, " + seen.alerts + " active");
+				[tab, bell].forEach(function (link) {
+					var badge = document.createElement("span");
+					badge.className = "badge";
+					badge.setAttribute("aria-hidden", "true");
+					badge.textContent = seen.alerts;
+					link.appendChild(badge);
+				});
+			}
+		}
+		var tabs = document.querySelector(".tabs");
+		var current = tabs.querySelector('[aria-current="page"]');
+		if (current && tabs.scrollWidth > tabs.clientWidth) {
+			var row = tabs.getBoundingClientRect();
+			var tab = current.getBoundingClientRect();
+			tabs.scrollLeft = Math.max(
+				0,
+				tab.left - row.left + tabs.scrollLeft - (tabs.clientWidth - tab.width) / 2,
+			);
+		}
+	} catch (_) {}
+</script>

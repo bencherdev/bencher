@@ -46,16 +46,24 @@
 		--font-size-sm: 0.875rem;
 		--font-size-base: 1rem;
 		--font-size-lg: 1.125rem;
-		--font-size-xl: 1.375rem;
+		--font-size-xl: 1.5rem;
 		--font-size-2xl: 1.75rem;
 		--font-weight-normal: 400;
 		--font-weight-medium: 500;
 		--font-weight-semibold: 600;
 		--font-weight-bold: 700;
+		--font-weight-extrabold: 800;
 
 		/* Motion. */
 		--duration-fast: 175ms;
 		--duration-medium: 400ms;
 		--ease-standard: cubic-bezier(0.24, 1, 0.4, 1);
+	}
+
+	/* A page title steps down on a narrow screen. */
+	@media (max-width: 767px) {
+		:root {
+			--font-size-xl: 1.25rem;
+		}
 	}
 }
