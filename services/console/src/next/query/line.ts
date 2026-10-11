@@ -1,8 +1,5 @@
-import {
-	type ExploreQuery,
-	type Parameters,
-	canonicalParameters,
-} from "./query";
+import { canonicalParameters } from "./parameters";
+import type { ExploreQuery, Parameters } from "./query";
 
 /** What makes a line one line: UUIDs, the variant's parameters, and the metric name. */
 export interface LineIdentity {

@@ -19,9 +19,33 @@ const nextPreloads = () => {
 	let preloads;
 	/** @type {URL | undefined} */
 	let serverDir;
+	/** @type {Map<string, Set<string>> | undefined} */
+	let loadedBefore;
 
 	const collect = {
 		name: "bencher-next-preloads",
+		// A lazy import's preload list leaves out what its importer already
+		// loaded, which every page's entry would otherwise carry for each route.
+		configEnvironment(/** @type {string} */ name) {
+			if (name !== "client") {
+				return;
+			}
+			return {
+				build: {
+					modulePreload: {
+						/** @type {(file: string, deps: string[], context: { hostId: string }) => string[]} */
+						resolveDependencies: (file, deps, { hostId }) => {
+							const loaded = loadedBefore?.get(hostId);
+							if (!loaded) {
+								return deps;
+							}
+							const needed = deps.filter((dep) => !loaded.has(dep));
+							return needed.length === 1 && needed[0] === file ? [] : needed;
+						},
+					},
+				},
+			};
+		},
 		/**
 		 * @this {{ environment: { name: string } }}
 		 * @param {unknown} _options
@@ -46,6 +70,9 @@ const nextPreloads = () => {
 				}
 				return seen;
 			};
+			loadedBefore = new Map(
+				[...chunks.keys()].map((fileName) => [fileName, closure(fileName)]),
+			);
 			/** @type {Set<string>} */
 			const entry = new Set();
 			// The public plot is a page of its own, with its own script.

@@ -1,4 +1,5 @@
 import { PerfQueryKey, PlotKey } from "../../types/bencher";
+import { canonicalParameters } from "./parameters";
 
 export type ParameterValue = string | number | boolean;
 export type Parameters = Readonly<Record<string, ParameterValue>>;
@@ -116,14 +117,6 @@ export const blankQuery = (): ExploreQuery => ({
 	layout: "dual",
 	hide: [],
 });
-
-/** The set's JSON with its keys in RFC 8785 order, as the API canonicalizes it. */
-export const canonicalParameters = (parameters: Parameters): string =>
-	`{${Object.keys(parameters)
-		// The default sort compares UTF-16 code units, which is RFC 8785's order.
-		.sort()
-		.map((key) => `${JSON.stringify(key)}:${JSON.stringify(parameters[key])}`)
-		.join(",")}}`;
 
 /** The first of each identity, at most `max` of them. */
 export const distinct = <T>(

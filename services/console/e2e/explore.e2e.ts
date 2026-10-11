@@ -377,13 +377,15 @@ test("Retry reads the page again when one of the plot's own imports did not load
 	request,
 }) => {
 	const { query } = await twoLines(request);
+	const link = explore(hashbrown.slug, query);
+	const plotImport = await plotOnlyImport(request, link);
 	const thrown: Error[] = [];
 	page.on("pageerror", (error) => thrown.push(error));
 	const failed = page.getByRole("region", { name: "Plot" }).getByRole("alert");
-	await page.route(PLOT_IMPORT, (route) => route.abort());
-	await page.goto(explore(hashbrown.slug, query));
+	await page.route(plotImport, (route) => route.abort());
+	await page.goto(link);
 	await expect(failed).toContainText("The plot did not load.");
-	await page.unroute(PLOT_IMPORT);
+	await page.unroute(plotImport);
 	await page.evaluate(() => {
 		Object.assign(window, { stayed: true });
 	});
@@ -399,8 +401,22 @@ test("Retry reads the page again when one of the plot's own imports did not load
 
 /** The plot's own chunk, under any later try's URL too. */
 const PLOT_CHUNK = /\/assets\/Plot\.[^/]*\.js(\?.*)?$/;
-/** A chunk only the plot's own code imports. */
-const PLOT_IMPORT = /\/assets\/units\.[^/]*\.js(\?.*)?$/;
+
+/** A chunk only the plot's own code imports: one `link`'s document names and blank Explore's does not. */
+const plotOnlyImport = async (request: APIRequestContext, link: string) => {
+	const named = async (path: string) =>
+		[
+			...(await (await request.get(path)).text()).matchAll(
+				/<link\b[^>]*\bhref="([^"]+\.js)"/g,
+			),
+		].map(([, href]) => href ?? "");
+	const blank = new Set(await named(nextPath(hashbrown.slug)));
+	const [own] = (await named(link)).filter(
+		(href) => !(blank.has(href) || PLOT_CHUNK.test(href)),
+	);
+	expect(own).toBeDefined();
+	return (url: URL) => url.pathname === own;
+};
 
 // Kills a refused-query banner that wraps or grows past the plot's head row
 // onto the lines it keeps, and a Retry under 44 px, at any width.

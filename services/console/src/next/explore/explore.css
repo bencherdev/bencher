@@ -75,11 +75,14 @@
 .ex-ctl .eyebrow:not(:first-child) {
 	margin-left: 8px;
 }
+/* A fieldset is never narrower than its content unless told, so on a phone To wraps under From. */
 .ex-range {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
-	gap: 8px;
-	margin: 0;
+	gap: 8px 16px;
+	min-width: 0;
+	margin: 0 0 0 8px;
 	padding: 0;
 	border: 0;
 }

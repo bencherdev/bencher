@@ -21,32 +21,36 @@ const CustomRange = (props: {
 	return (
 		<fieldset class="ex-range">
 			<legend class="sr-only">Custom window</legend>
-			<label class="eyebrow" for={from}>
-				From
-			</label>
-			<TextInput
-				id={from}
-				type="date"
-				size="sm"
-				value={dateValue(props.window.start)}
-				max={dateValue(end())}
-				onChange={(event) =>
-					change(event.currentTarget.value, dateValue(end()))
-				}
-			/>
-			<label class="eyebrow" for={to}>
-				To
-			</label>
-			<TextInput
-				id={to}
-				type="date"
-				size="sm"
-				value={dateValue(end())}
-				min={dateValue(props.window.start)}
-				onChange={(event) =>
-					change(dateValue(props.window.start), event.currentTarget.value)
-				}
-			/>
+			<span class="ex-ctl">
+				<label class="eyebrow" for={from}>
+					From
+				</label>
+				<TextInput
+					id={from}
+					type="date"
+					size="sm"
+					value={dateValue(props.window.start)}
+					max={dateValue(end())}
+					onChange={(event) =>
+						change(event.currentTarget.value, dateValue(end()))
+					}
+				/>
+			</span>
+			<span class="ex-ctl">
+				<label class="eyebrow" for={to}>
+					To
+				</label>
+				<TextInput
+					id={to}
+					type="date"
+					size="sm"
+					value={dateValue(end())}
+					min={dateValue(props.window.start)}
+					onChange={(event) =>
+						change(dateValue(props.window.start), event.currentTarget.value)
+					}
+				/>
+			</span>
 		</fieldset>
 	);
 };

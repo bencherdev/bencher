@@ -1,0 +1,6 @@
+/* The public plot's one stylesheet: what it draws, without the console's other pages. */
+@import "@bencherdev/ui/styles.css";
+@import "../styles/console.css";
+@import "../explore/explore.css";
+@import "../plot/plot.css";
+@import "./public.css";

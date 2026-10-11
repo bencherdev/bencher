@@ -561,4 +561,30 @@ test.describe("narrow", () => {
 			),
 		).toBe(true);
 	});
+
+	// Kills a custom window's From and To held on one line past the edge of a
+	// phone, which scrolls the page sideways.
+	test("a custom window scrolls nothing sideways", async ({
+		page,
+		request,
+	}) => {
+		const { project, search } = await twoRecentLines(request);
+		const end = Date.now();
+		await page.goto(
+			publicPath(
+				project.slug,
+				`${search}&start_time=${end - 30 * DAY}&end_time=${end}`,
+			),
+		);
+		await twoLinesDrawn(page);
+		const range = page.getByRole("group", { name: "Custom window" });
+		await expect(range.getByLabel("To")).toBeVisible();
+		expect(
+			await page.evaluate(
+				() => document.documentElement.scrollWidth <= window.innerWidth,
+			),
+		).toBe(true);
+		const box = await range.boundingBox();
+		expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(390);
+	});
 });

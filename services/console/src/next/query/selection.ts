@@ -1,4 +1,5 @@
 import { lineKey } from "./line";
+import { canonicalParameters } from "./parameters";
 import {
 	type BranchEntry,
 	type ExploreQuery,
@@ -7,7 +8,6 @@ import {
 	type QueryWindow,
 	type TestbedEntry,
 	blankQuery,
-	canonicalParameters,
 	distinct,
 	encodeQuery,
 	itself,
