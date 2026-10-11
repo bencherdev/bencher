@@ -6,16 +6,21 @@ use std::{
     time::Duration,
 };
 
+use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
 use bencher_json::{
-    BENCHER_API_PORT, DEV_BENCHER_API_URL, DEV_BENCHER_REGISTRY_URL, JsonApiVersion, Jwt,
-    LOCALHOST_BENCHER_API_URL, LOCALHOST_BENCHER_REGISTRY_URL, PROD_BENCHER_API_URL,
-    PROD_BENCHER_REGISTRY_URL, TEST_BENCHER_API_URL, TEST_BENCHER_REGISTRY_URL, Url,
+    BENCHER_API_PORT, BmfVersion, DEV_BENCHER_API_URL, DEV_BENCHER_REGISTRY_URL, JsonApiVersion,
+    JsonProject, Jwt, LOCALHOST_BENCHER_API_URL, LOCALHOST_BENCHER_REGISTRY_URL,
+    PROD_BENCHER_API_URL, PROD_BENCHER_REGISTRY_URL, TEST_BENCHER_API_URL,
+    TEST_BENCHER_REGISTRY_URL, Url,
 };
 
 use crate::{
     API_VERSION,
     parser::{TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
-    task::test::{examples::Examples, seed_test::SeedTest},
+    task::test::{
+        examples::Examples,
+        seed_test::{BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, SeedTest, TOKEN_ARG},
+    },
 };
 #[cfg(feature = "plus")]
 use crate::{
@@ -231,7 +236,8 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
                 is_bencher_cloud: true,
                 ..Default::default()
             };
-            SeedTest::try_from(task)?.exec()?;
+            let seed_test = SeedTest::try_from(task)?;
+            seed_test.exec()?;
 
             #[cfg(feature = "plus")]
             {
@@ -251,14 +257,15 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
                 runner_test.exec()?;
             }
 
-            Ok(())
+            move_project_to_bmf_v1(&seed_test)
         },
         MockSetup::SelfHosted { examples, runner } => {
             let task = TaskSeedTest {
                 url: Some(api_url.clone()),
                 ..Default::default()
             };
-            SeedTest::try_from(task)?.exec()?;
+            let seed_test = SeedTest::try_from(task)?;
+            seed_test.exec()?;
 
             #[cfg(feature = "plus")]
             {
@@ -290,9 +297,34 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
                 examples.exec()?;
             }
 
-            Ok(())
+            move_project_to_bmf_v1(&seed_test)
         },
     }
+}
+
+// The dev deploy leaves a BMF v1 project to look at in the new console.
+fn move_project_to_bmf_v1(seed_test: &SeedTest) -> anyhow::Result<()> {
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "project",
+        "update",
+        HOST_ARG,
+        seed_test.url.as_ref(),
+        TOKEN_ARG,
+        seed_test.admin_token.as_ref(),
+        "--bmf-version",
+        "1",
+        PROJECT_SLUG,
+    ])
+    .current_dir(CLI_DIR);
+    let assert = cmd.assert().success();
+    let project: JsonProject = serde_json::from_slice(&assert.get_output().stdout)?;
+    anyhow::ensure!(
+        project.bmf_version == BmfVersion::V1,
+        "Project {PROJECT_SLUG} is on BMF version {} after moving it to 1",
+        project.bmf_version
+    );
+    Ok(())
 }
 
 fn kill_child(child: Option<Child>) -> anyhow::Result<()> {
