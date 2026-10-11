@@ -24,11 +24,14 @@ El `ExecStart=` vacío borra ese comando, así que la línea siguiente debe repe
 [Service]
 ExecStartPre=+/usr/bin/install -d -m 0700 /run/bencher
 ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
+OpenFile=/dev/null
 ExecStart=
 ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
 ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
 TimeoutStartSec=infinity
 ```
+
+`OpenFile=/dev/null` ocupa el descriptor de archivo 3, así que el bloqueo sigue tomado aunque el comando reabra el descriptor 3, como hace `apt.systemd.daily`.
 
 ### Vaciar un Runner
 

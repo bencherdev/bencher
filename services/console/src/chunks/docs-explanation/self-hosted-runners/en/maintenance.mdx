@@ -24,11 +24,14 @@ The empty `ExecStart=` clears that command, so the next line must repeat it exac
 [Service]
 ExecStartPre=+/usr/bin/install -d -m 0700 /run/bencher
 ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
+OpenFile=/dev/null
 ExecStart=
 ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
 ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
 TimeoutStartSec=infinity
 ```
+
+`OpenFile=/dev/null` fills file descriptor 3, so the lock stays held even if the command reopens descriptor 3, as `apt.systemd.daily` does.
 
 ### Drain a Runner
 
