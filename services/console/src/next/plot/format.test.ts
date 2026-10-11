@@ -48,6 +48,14 @@ describe("formatDelta", () => {
 		});
 	});
 
+	// Kills dividing by a negative baseline's sign, which flips the move, so a row and the readout disagree.
+	test("keeps the sign of the move over a negative baseline", () => {
+		expect(formatDelta(-110, -100, "upper")).toEqual({
+			text: "-10.0%",
+			tone: "better",
+		});
+	});
+
 	test("has no delta without a baseline to divide by", () => {
 		expect(formatDelta(5, 0, "upper")).toBeNull();
 	});
