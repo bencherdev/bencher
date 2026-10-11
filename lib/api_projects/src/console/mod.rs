@@ -1,7 +1,8 @@
 //! Endpoints shaped for the console, which change with it and so stay out of the published API.
 
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeSet, HashMap, HashSet},
+    hash::Hash,
     time::Duration,
 };
 
@@ -10,7 +11,7 @@ use bencher_json::{
     ResourceName, SampleSize, VariantUuid, Window,
 };
 use bencher_json::{
-    BenchmarkUuid, DateTime, DateTimeMillis, GitHash, ModelTest, ModelUuid, ReportUuid,
+    BenchmarkUuid, Clock, DateTime, DateTimeMillis, GitHash, ModelTest, ModelUuid, ReportUuid,
     ThresholdUuid,
     project::{
         alert::AlertStatus,
@@ -24,13 +25,33 @@ use bencher_json::{
         report::Iteration,
     },
 };
-use bencher_schema::model::project::{
-    benchmark::BenchmarkId, measure::MeasureId, report::ReportId, threshold::ThresholdId,
-    variant::VariantId,
+use bencher_schema::model::{
+    project::{
+        benchmark::BenchmarkId, measure::MeasureId, report::ReportId, threshold::ThresholdId,
+        variant::VariantId,
+    },
+    user::actor::ApiActor,
 };
 
 pub mod alerts;
+pub mod perf;
 pub mod report;
+
+/// The longest that three calendar months run, and so the furthest back an
+/// unauthenticated plot reaches from now.
+const PUBLIC_REACH: Duration = Duration::from_hours(92 * 24);
+
+/// Move a start that reaches further back than an unauthenticated request may up
+/// to the limit, and say whether it moved.
+fn clamp_start(clock: &Clock, api_actor: &ApiActor, start_time: DateTime) -> (DateTime, bool) {
+    if api_actor.is_auth() {
+        return (start_time, false);
+    }
+    match before(clock.now(), PUBLIC_REACH) {
+        Some(floor) if start_time.timestamp() < floor.timestamp() => (floor, true),
+        Some(_) | None => (start_time, false),
+    }
+}
 
 fn before(time: DateTime, duration: Duration) -> Option<DateTime> {
     let seconds = i64::try_from(duration.as_secs()).ok()?;
@@ -244,18 +265,7 @@ impl Check {
     }
 
     fn model_json(&self) -> JsonConsoleModel {
-        let (uuid, test, min_sample_size, max_sample_size, window, lower_boundary, upper_boundary) =
-            self.model;
-        JsonConsoleModel {
-            uuid,
-            threshold: self.threshold_uuid,
-            test,
-            min_sample_size,
-            max_sample_size,
-            window,
-            lower_boundary,
-            upper_boundary,
-        }
+        model_json(self.threshold_uuid, self.model)
     }
 
     /// How far the value has moved toward the side the threshold guards: positive
@@ -272,6 +282,21 @@ impl Check {
             (false, false) => None,
         }
         .filter(|score| score.is_finite())
+    }
+}
+
+fn model_json(threshold: ThresholdUuid, model: ModelRow) -> JsonConsoleModel {
+    let (uuid, test, min_sample_size, max_sample_size, window, lower_boundary, upper_boundary) =
+        model;
+    JsonConsoleModel {
+        uuid,
+        threshold,
+        test,
+        min_sample_size,
+        max_sample_size,
+        window,
+        lower_boundary,
+        upper_boundary,
     }
 }
 
@@ -357,10 +382,18 @@ impl Tables {
     }
 
     fn model(&mut self, check: &Check) -> u32 {
-        let json = check.model_json();
+        self.model_json(check.model_json())
+    }
+
+    fn model_json(&mut self, json: JsonConsoleModel) -> u32 {
         *self.model_index.entry(json.uuid).or_insert_with(|| {
             self.models.push(json);
             to_index(self.models.len() - 1)
         })
     }
+}
+
+fn unique<T: Copy + Eq + Hash, I: Iterator<Item = T>>(items: I) -> Vec<T> {
+    let mut seen = HashSet::new();
+    items.filter(|item| seen.insert(*item)).collect()
 }
