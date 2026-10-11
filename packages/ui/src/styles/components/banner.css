@@ -1,0 +1,39 @@
+@layer ui-components {
+	.ui-banner {
+		padding: var(--spacing-3) var(--spacing-4);
+		border: var(--border-width) solid var(--color-border);
+		border-radius: var(--radius-element);
+		background: var(--color-background-muted);
+		color: var(--color-text-primary);
+		font-size: var(--font-size-sm);
+	}
+
+	.ui-banner a {
+		color: inherit;
+		text-decoration: underline;
+	}
+
+	.ui-banner[data-status="info"] {
+		background: var(--color-background-blue);
+		border-color: var(--color-border-blue);
+		color: var(--color-text-blue);
+	}
+
+	.ui-banner[data-status="success"] {
+		background: var(--color-success-muted);
+		border-color: var(--color-border-green);
+		color: var(--color-text-green);
+	}
+
+	.ui-banner[data-status="warning"] {
+		background: var(--color-warning-muted);
+		border-color: var(--color-border-yellow);
+		color: var(--color-text-yellow);
+	}
+
+	.ui-banner[data-status="error"] {
+		background: var(--color-error-muted);
+		border-color: var(--color-border-red);
+		color: var(--color-text-red);
+	}
+}

@@ -165,6 +165,11 @@ jobs:
         run: |
           npm install --include=dev
           npx biome ci --linter-enabled false .
+      - name: Biome format Design System
+        working-directory: ./packages/ui
+        run: |
+          npm install --include=dev
+          npx biome ci --linter-enabled false .
 
   biome_lint:
     name: Biome Lint
@@ -187,3 +192,11 @@ jobs:
         run: |
           npm install --include=dev
           npx biome ci --formatter-enabled false .
+      - name: Biome check Design System
+        working-directory: ./packages/ui
+        run: |
+          npm install --include=dev
+          npx biome ci --formatter-enabled false .
+      - name: Type check Design System
+        working-directory: ./packages/ui
+        run: npx tsc --noEmit

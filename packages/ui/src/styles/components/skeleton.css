@@ -1,0 +1,28 @@
+@layer ui-components {
+	.ui-skeleton {
+		background: var(--color-skeleton);
+		border-radius: var(--radius-container);
+		animation: ui-skeleton-pulse 1.6s var(--ease-standard) infinite;
+	}
+
+	.ui-skeleton[data-size="row"] {
+		min-height: var(--size-element-lg);
+		border-radius: var(--radius-element);
+	}
+
+	.ui-skeleton[data-size="card"] {
+		min-height: 9rem;
+	}
+
+	@keyframes ui-skeleton-pulse {
+		50% {
+			opacity: 0.55;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.ui-skeleton {
+			animation: none;
+		}
+	}
+}

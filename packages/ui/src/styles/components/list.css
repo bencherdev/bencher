@@ -1,0 +1,33 @@
+@layer ui-components {
+	.ui-list {
+		background: var(--color-background-surface);
+		border: var(--border-width) solid var(--color-border);
+		border-radius: var(--radius-container);
+		overflow: hidden;
+	}
+
+	.ui-list-item {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-3);
+		min-height: var(--size-element-lg);
+		padding: var(--spacing-3) var(--spacing-4);
+		color: inherit;
+	}
+
+	.ui-list-item + .ui-list-item {
+		border-block-start: var(--border-width) solid var(--color-border);
+	}
+
+	a.ui-list-item {
+		transition: background-color var(--duration-fast) var(--ease-standard);
+	}
+
+	a.ui-list-item:hover {
+		background: var(--color-overlay-hover);
+	}
+
+	a.ui-list-item:active {
+		background: var(--color-overlay-pressed);
+	}
+}

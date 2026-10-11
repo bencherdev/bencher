@@ -1,0 +1,17 @@
+@layer ui-components {
+	.ui-empty-state {
+		padding: var(--spacing-8) var(--spacing-4);
+		text-align: center;
+	}
+
+	.ui-empty-state-title {
+		font-weight: var(--font-weight-medium);
+		color: var(--color-text-primary);
+	}
+
+	.ui-empty-state-description {
+		margin-block-start: var(--spacing-1);
+		font-size: var(--font-size-sm);
+		color: var(--color-text-secondary);
+	}
+}

@@ -1,0 +1,28 @@
+/*
+ * The design system stylesheet. Layer order is the contract: app CSS stays
+ * unlayered, so it beats every layer here whenever it picks a fight.
+ */
+@layer ui-reset, ui-tokens, ui-base, ui-components;
+
+@import "./styles/reset.css";
+@import "./styles/tokens.css";
+@import "./styles/theme.css";
+@import "./styles/fonts.css";
+@import "./styles/base.css";
+@import "./styles/components/avatar.css";
+@import "./styles/components/banner.css";
+@import "./styles/components/button.css";
+@import "./styles/components/card.css";
+@import "./styles/components/empty-state.css";
+@import "./styles/components/field.css";
+@import "./styles/components/heading.css";
+@import "./styles/components/icon.css";
+@import "./styles/components/list.css";
+@import "./styles/components/popover.css";
+@import "./styles/components/skeleton.css";
+@import "./styles/components/stack.css";
+@import "./styles/components/table.css";
+@import "./styles/components/text.css";
+@import "./styles/components/timestamp.css";
+@import "./styles/components/kbd.css";
+@import "./styles/components/token.css";

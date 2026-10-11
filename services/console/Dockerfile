@@ -83,6 +83,7 @@ COPY services/api/openapi.json /usr/src/bencher/services/api/openapi.json
 COPY services/cli/templates/output /usr/src/bencher/services/cli/templates/output
 COPY services/runner/templates/output /usr/src/bencher/services/runner/templates/output
 COPY --from=wasm-builder /usr/src/bencher/lib/bencher_valid/pkg /usr/src/bencher/lib/bencher_valid/pkg
+COPY packages/ui /usr/src/bencher/packages/ui
 
 WORKDIR /usr/src/bencher/services/console
 COPY services/console/package-lock.json package-lock.json

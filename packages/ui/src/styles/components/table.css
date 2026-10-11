@@ -1,0 +1,35 @@
+@layer ui-components {
+	.ui-table-scroll {
+		overflow-x: auto;
+		border: var(--border-width) solid var(--color-border);
+		border-radius: var(--radius-container);
+	}
+
+	.ui-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: var(--font-size-sm);
+	}
+
+	.ui-table th,
+	.ui-table td {
+		padding: var(--spacing-2) var(--spacing-3);
+		text-align: start;
+		white-space: nowrap;
+	}
+
+	.ui-table thead th {
+		color: var(--color-text-secondary);
+		font-weight: var(--font-weight-medium);
+		border-block-end: var(--border-width) solid var(--color-border);
+	}
+
+	.ui-table td {
+		color: var(--color-text-primary);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.ui-table tbody tr + tr td {
+		border-block-start: var(--border-width) solid var(--color-border);
+	}
+}

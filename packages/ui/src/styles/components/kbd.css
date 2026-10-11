@@ -1,0 +1,16 @@
+@layer ui-components {
+	.ui-kbd {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.5rem;
+		padding: 0 var(--spacing-1);
+		border: var(--border-width) solid var(--color-border);
+		border-radius: var(--radius-inner);
+		background: var(--color-background-muted);
+		color: var(--color-text-secondary);
+		font-family: var(--font-family-code);
+		font-size: var(--font-size-xs);
+		line-height: 1.5rem;
+	}
+}

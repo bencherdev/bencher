@@ -1,0 +1,28 @@
+@layer ui-components {
+	.ui-heading {
+		font-weight: var(--font-weight-semibold);
+		color: var(--color-text-primary);
+		line-height: 1.3;
+		font-size: var(--font-size-base);
+	}
+
+	.ui-heading[data-size="sm"] {
+		font-size: var(--font-size-sm);
+	}
+
+	.ui-heading[data-size="lg"] {
+		font-size: var(--font-size-lg);
+	}
+
+	.ui-heading[data-size="xl"] {
+		font-size: var(--font-size-xl);
+	}
+
+	.ui-heading a {
+		color: inherit;
+	}
+
+	.ui-heading a:hover {
+		color: var(--color-text-accent);
+	}
+}

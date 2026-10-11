@@ -1,0 +1,73 @@
+@layer ui-components {
+	.ui-token {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--spacing-1);
+		padding: 2px var(--spacing-2);
+		border-radius: var(--radius-full);
+		background: var(--color-background-muted);
+		color: var(--color-text-secondary);
+		font-size: var(--font-size-xs);
+		font-weight: var(--font-weight-medium);
+		line-height: 1.4;
+		white-space: nowrap;
+	}
+
+	.ui-token[data-tone="blue"] {
+		background: var(--color-background-blue);
+		color: var(--color-text-blue);
+	}
+
+	.ui-token[data-tone="teal"] {
+		background: var(--color-background-teal);
+		color: var(--color-text-teal);
+	}
+
+	.ui-token[data-tone="green"] {
+		background: var(--color-background-green);
+		color: var(--color-text-green);
+	}
+
+	.ui-token[data-tone="yellow"] {
+		background: var(--color-background-yellow);
+		color: var(--color-text-yellow);
+	}
+
+	.ui-token[data-tone="orange"] {
+		background: var(--color-background-orange);
+		color: var(--color-text-orange);
+	}
+
+	.ui-token[data-tone="red"] {
+		background: var(--color-background-red);
+		color: var(--color-text-red);
+	}
+
+	.ui-token[data-tone="pink"] {
+		background: var(--color-background-pink);
+		color: var(--color-text-pink);
+	}
+
+	.ui-token[data-tone="purple"] {
+		background: var(--color-background-purple);
+		color: var(--color-text-purple);
+	}
+
+	.ui-token[data-tone="gray"] {
+		background: var(--color-background-gray);
+		color: var(--color-text-gray);
+	}
+
+	.ui-token[data-variant="strong"] {
+		background: var(--color-background-inverted);
+		color: var(--color-text-inverted);
+	}
+
+	.ui-token-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: var(--radius-full);
+		background: currentColor;
+		flex: none;
+	}
+}

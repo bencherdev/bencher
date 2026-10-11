@@ -4,6 +4,9 @@ dist/
 # generated types
 .astro/
 
+# Vitest browser mode failure screenshots
+__screenshots__/
+
 # local Cloudflare Workers state and secrets
 .wrangler/
 .dev.vars

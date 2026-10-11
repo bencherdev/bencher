@@ -1,0 +1,61 @@
+/*
+ * Every design token but color, named by purpose. Colors live in theme.css.
+ */
+@layer ui-tokens {
+	:root {
+		/* Spacing, on a 4px base scale. */
+		--spacing-0: 0px;
+		--spacing-1: 4px;
+		--spacing-2: 8px;
+		--spacing-3: 12px;
+		--spacing-4: 16px;
+		--spacing-5: 20px;
+		--spacing-6: 24px;
+		--spacing-7: 28px;
+		--spacing-8: 32px;
+		--spacing-9: 36px;
+		--spacing-10: 40px;
+		--spacing-11: 44px;
+		--spacing-12: 48px;
+
+		/* Control heights. Phone first: the default is 40px, primary 48px. */
+		--size-element-sm: 32px;
+		--size-element-md: 40px;
+		--size-element-lg: 48px;
+
+		/* Shape. Concentric by construction: inner < element < container. */
+		--radius-inner: 6px;
+		--radius-element: 8px;
+		--radius-container: 14px;
+		--radius-full: 999px;
+		--border-width: 1px;
+
+		/* Elevation. */
+		--shadow-low: 0 1px 2px var(--color-shadow);
+		--shadow-med: 0 2px 8px var(--color-shadow);
+		--shadow-high: 0 8px 24px var(--color-shadow);
+		--shadow-focus: 0 0 0 3px var(--color-accent-muted);
+
+		/* Type. */
+		--font-family-body:
+			"Inter", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+		--font-family-code:
+			ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+			"Liberation Mono", monospace;
+		--font-size-xs: 0.75rem;
+		--font-size-sm: 0.875rem;
+		--font-size-base: 1rem;
+		--font-size-lg: 1.125rem;
+		--font-size-xl: 1.375rem;
+		--font-size-2xl: 1.75rem;
+		--font-weight-normal: 400;
+		--font-weight-medium: 500;
+		--font-weight-semibold: 600;
+		--font-weight-bold: 700;
+
+		/* Motion. */
+		--duration-fast: 175ms;
+		--duration-medium: 400ms;
+		--ease-standard: cubic-bezier(0.24, 1, 0.4, 1);
+	}
+}

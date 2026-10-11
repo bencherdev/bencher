@@ -1,0 +1,32 @@
+@layer ui-components {
+	.ui-popover {
+		position: relative;
+		display: inline-block;
+	}
+
+	.ui-popover > summary {
+		list-style: none;
+		cursor: pointer;
+	}
+
+	.ui-popover > summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.ui-popover-menu {
+		position: absolute;
+		z-index: 20;
+		inset-block-start: calc(100% + var(--spacing-1));
+		display: flex;
+		gap: var(--spacing-1);
+		padding: var(--spacing-1);
+		background: var(--color-background-popover);
+		border: var(--border-width) solid var(--color-border);
+		border-radius: var(--radius-element);
+		box-shadow: var(--shadow-med);
+	}
+
+	.ui-popover-menu[data-shape="pill"] {
+		border-radius: var(--radius-full);
+	}
+}

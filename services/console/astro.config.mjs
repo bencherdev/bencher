@@ -214,6 +214,16 @@ export default defineConfig({
 	vite: {
 		assetsInclude: ["**/*.sh", "**/*.ps1"],
 		plugins: [wasmPack("../../lib/bencher_valid")],
+		// `@bencherdev/ui` is linked by path, so its files live outside this package:
+		// one copy of Solid keeps reactivity intact, and the dev server serves its fonts.
+		resolve: {
+			dedupe: ["solid-js", "solid-js/web", "solid-js/store"],
+		},
+		server: {
+			fs: {
+				allow: [".", "../../packages/ui"],
+			},
+		},
 	},
 	// https://docs.astro.build/en/guides/markdown-content/
 	markdown: {

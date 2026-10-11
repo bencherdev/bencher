@@ -5,6 +5,8 @@
 !Cargo.toml
 !Cargo.lock
 !lib/bencher_valid/
+!packages/ui/
+packages/ui/node_modules
 !services/api/openapi.json
 !services/cli/templates/output
 !services/runner/templates/output

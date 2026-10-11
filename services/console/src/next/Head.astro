@@ -1,0 +1,20 @@
+---
+import "@bencherdev/ui/styles.css";
+import inter from "@bencherdev/ui/fonts/inter-latin-wght-normal.woff2?url";
+import { THEME_ATTRIBUTE } from "@bencherdev/ui/ThemeToggle";
+import { THEME_KEY } from "./theme";
+---
+
+<link rel="preload" href={inter} as="font" type="font/woff2" crossorigin />
+<script is:inline define:vars={{ attribute: THEME_ATTRIBUTE, key: THEME_KEY }}>
+	let theme;
+	try {
+		theme = localStorage.getItem(key);
+	} catch {}
+	if (theme !== "light" && theme !== "dark") {
+		theme = matchMedia("(prefers-color-scheme: light)").matches
+			? "light"
+			: "dark";
+	}
+	document.documentElement.setAttribute(attribute, theme);
+</script>

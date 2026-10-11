@@ -1,0 +1,83 @@
+@layer ui-components {
+	.ui-field {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-1);
+	}
+
+	.ui-label {
+		font-size: var(--font-size-sm);
+		font-weight: var(--font-weight-medium);
+		color: var(--color-text-secondary);
+	}
+
+	.ui-input,
+	.ui-textarea,
+	.ui-select {
+		width: 100%;
+		min-height: var(--size-element-md);
+		padding: var(--spacing-2) var(--spacing-3);
+		border: var(--border-width) solid var(--color-border-emphasized);
+		border-radius: var(--radius-element);
+		background: var(--color-background-surface);
+		color: var(--color-text-primary);
+		/* 16px minimum: a smaller input font makes phones zoom on focus. */
+		font-size: var(--font-size-base);
+		transition:
+			border-color var(--duration-fast) var(--ease-standard),
+			box-shadow var(--duration-fast) var(--ease-standard);
+	}
+
+	.ui-input::placeholder,
+	.ui-textarea::placeholder {
+		color: var(--color-text-disabled);
+	}
+
+	.ui-input:focus-visible,
+	.ui-textarea:focus-visible,
+	.ui-select:focus-visible {
+		outline: none;
+		border-color: var(--color-focus);
+		box-shadow: var(--shadow-focus);
+	}
+
+	.ui-input[data-size="lg"],
+	.ui-select[data-size="lg"] {
+		min-height: var(--size-element-lg);
+		padding-inline: var(--spacing-4);
+	}
+
+	.ui-input[data-size="sm"],
+	.ui-select[data-size="sm"] {
+		min-height: var(--size-element-sm);
+		padding-block: var(--spacing-1);
+	}
+
+	.ui-textarea {
+		min-height: 6rem;
+		resize: vertical;
+	}
+
+	.ui-select-wrap {
+		position: relative;
+		display: inline-flex;
+	}
+
+	.ui-select {
+		appearance: none;
+		padding-inline-end: var(--spacing-8);
+	}
+
+	.ui-select-wrap::after {
+		content: "";
+		position: absolute;
+		inset-inline-end: var(--spacing-3);
+		top: 50%;
+		width: 8px;
+		height: 8px;
+		border-inline-end: 2px solid var(--color-text-secondary);
+		border-block-end: 2px solid var(--color-text-secondary);
+		transform: translateY(-70%) rotate(45deg);
+		pointer-events: none;
+	}
+}

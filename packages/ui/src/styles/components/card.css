@@ -1,0 +1,10 @@
+@layer ui-components {
+	.ui-card {
+		display: block;
+		background: var(--color-background-surface);
+		border: var(--border-width) solid var(--color-border);
+		border-radius: var(--radius-container);
+		padding: var(--spacing-4);
+		color: inherit;
+	}
+}
