@@ -7,7 +7,7 @@ use anyhow::Context as _;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use bencher_json::{
     DateTime, Entitlements, JsonAuthUser, JsonOrganization, JsonProject, JsonProjectKeyCreated,
-    JsonUser, Jwt, PlanLevel, Secret,
+    JsonUser, JsonUserKeyCreated, Jwt, PlanLevel, Secret,
 };
 use bencher_license::Licensor;
 use serde::Serialize;
@@ -19,6 +19,8 @@ const ADMIN: (&str, &str, &str) = (
     "eustace.bagge@nowhere.com",
 );
 const MEMBER: (&str, &str, &str) = ("Muriel Bagge", "muriel-bagge", "muriel.bagge@nowhere.com");
+/// Signed in, but a member of nothing: a reader of the public projects only.
+const OUTSIDER: (&str, &str, &str) = ("Courage", "courage", "courage@nowhere.com");
 
 const ORGANIZATION: &str = "Pompeii LLC";
 const HASHBROWN: &str = "Hashbrown";
@@ -100,9 +102,20 @@ pub struct Seed {
     now: DateTime,
     admin: JsonAuthUser,
     member: JsonAuthUser,
+    outsider: SeedReader,
     organization: SeedOrganization,
     projects: SeedProjects,
     last_main_hash: &'static str,
+}
+
+/// A signed in reader as the console stores one, holding a user key where
+/// [`JsonAuthUser`] holds a token: only two emails have test tokens.
+#[derive(Debug, Serialize)]
+struct SeedReader {
+    user: JsonUser,
+    token: String,
+    creation: DateTime,
+    expiration: DateTime,
 }
 
 #[derive(Debug, Serialize)]
@@ -139,6 +152,7 @@ impl Seed {
         let admin = api.sign_up(ADMIN, Jwt::test_admin_token()).await?;
         let member = api.sign_up(MEMBER, Jwt::test_token()).await?;
         let admin_token = admin.token.as_ref();
+        let outsider = api.sign_up_with_key(OUTSIDER, admin_token).await?;
         let token = member.token.as_ref();
 
         let organization: JsonOrganization = api
@@ -183,6 +197,7 @@ impl Seed {
             now: DateTime::try_from(NOW)?,
             admin,
             member,
+            outsider,
             organization: SeedOrganization {
                 uuid: organization.uuid.to_string(),
                 name: organization.name.to_string(),
@@ -536,6 +551,34 @@ impl Api {
             token,
             creation: DateTime::try_from(iat)?,
             expiration: DateTime::try_from(exp)?,
+        })
+    }
+
+    /// Sign a user up and sign them in with a user key the admin makes for them.
+    async fn sign_up_with_key(
+        &self,
+        (name, slug, email): (&str, &str, &str),
+        admin_token: &str,
+    ) -> anyhow::Result<SeedReader> {
+        let body =
+            serde_json::json!({ "name": name, "slug": slug, "email": email, "i_agree": true });
+        let _ack: serde_json::Value = self
+            .send(Method::Post, "/v0/auth/signup", "", &body)
+            .await?;
+        let user: JsonUser = self.get(&format!("/v0/users/{slug}"), admin_token).await?;
+        let key: JsonUserKeyCreated = self
+            .send(
+                Method::Post,
+                &format!("/v0/users/{slug}/keys"),
+                admin_token,
+                &serde_json::json!({ "name": "console" }),
+            )
+            .await?;
+        Ok(SeedReader {
+            user,
+            token: key.key.into(),
+            creation: key.creation,
+            expiration: key.expiration,
         })
     }
 

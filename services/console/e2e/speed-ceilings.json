@@ -4,7 +4,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 36000,
+		"jsBytes": 36300,
 		"deferredJsBytes": 108000,
 		"htmlBytes": 2700,
 		"inlineScriptBytes": 2840,
@@ -14,7 +14,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0,
-		"jsBytes": 36000,
+		"jsBytes": 36300,
 		"htmlBytes": 2700,
 		"inlineScriptBytes": 2840,
 		"lateModules": 0
@@ -28,7 +28,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 44450,
+		"jsBytes": 45150,
 		"htmlBytes": 2700,
 		"inlineScriptBytes": 2840,
 		"lateModules": 0
@@ -36,6 +36,27 @@
 	"reportsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 9150
+		"jsBytes": 9550
+	},
+	"settingsColdLoad": {
+		"apiAnswersBeforePaint": 0,
+		"apiRequests": 1,
+		"apiRounds": 1,
+		"cls": 0.00025,
+		"jsBytes": 47850,
+		"lateModules": 0
+	},
+	"keysColdLoad": {
+		"apiAnswersBeforePaint": 0,
+		"apiRequests": 3,
+		"apiRounds": 1,
+		"cls": 0.00025,
+		"jsBytes": 47850,
+		"lateModules": 0
+	},
+	"settingsSectionSwitch": {
+		"apiRequests": 2,
+		"apiRounds": 1,
+		"jsBytes": 0
 	}
 }

@@ -29,6 +29,7 @@
 	}
 
 	.ui-table td {
+		vertical-align: middle;
 		color: var(--color-text-primary);
 		font-variant-numeric: tabular-nums;
 	}
@@ -41,9 +42,14 @@
 		text-align: end;
 	}
 
+	/* Words a folded row needs because its header is gone. */
+	.ui-fold-label {
+		display: none;
+	}
+
 	/* A table with `data-fold` folds each row into two lines on a narrow screen:
 	   cells marked `l1` and `l2` on the left, the numbers in `n1` and `n2` on the
-	   right, and `hide` dropped. */
+	   right, `act` a column of its own, and `hide` dropped. */
 	@media (max-width: 767px) {
 		.ui-table[data-fold] thead {
 			display: none;
@@ -61,6 +67,10 @@
 			column-gap: var(--spacing-3);
 			min-height: 56px;
 			padding: 10px 14px;
+		}
+
+		.ui-table[data-fold] tbody tr:has(> td[data-fold="act"]) {
+			grid-template-columns: minmax(0, 1fr) auto auto;
 		}
 
 		.ui-table[data-fold] tbody tr + tr {
@@ -108,6 +118,15 @@
 			text-align: end;
 			color: var(--color-text-muted);
 			font-size: 12px;
+		}
+
+		.ui-table[data-fold] td[data-fold="act"] {
+			grid-column: 3;
+			grid-row: 1 / span 2;
+		}
+
+		.ui-table[data-fold] .ui-fold-label {
+			display: inline;
 		}
 	}
 }

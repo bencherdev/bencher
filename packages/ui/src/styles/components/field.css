@@ -15,30 +15,29 @@
 	.ui-textarea,
 	.ui-select {
 		width: 100%;
-		min-height: var(--size-element-md);
-		padding: var(--spacing-2) var(--spacing-3);
-		border: var(--border-width) solid var(--color-border-emphasized);
+		min-height: var(--spacing-9);
+		padding: 0 10px;
+		border: var(--border-width) solid var(--color-border-control);
 		border-radius: var(--radius-element);
-		background: var(--color-background-surface);
+		background: var(--color-background-body);
 		color: var(--color-text-primary);
-		/* 16px minimum: a smaller input font makes phones zoom on focus. */
-		font-size: var(--font-size-base);
-		transition:
-			border-color var(--duration-fast) var(--ease-standard),
-			box-shadow var(--duration-fast) var(--ease-standard);
+		font-size: var(--font-size-sm);
+	}
+
+	.ui-textarea {
+		padding-block: var(--spacing-2);
 	}
 
 	.ui-input::placeholder,
 	.ui-textarea::placeholder {
-		color: var(--color-text-disabled);
+		color: var(--color-text-faint);
 	}
 
-	.ui-input:focus-visible,
-	.ui-textarea:focus-visible,
-	.ui-select:focus-visible {
-		outline: none;
-		border-color: var(--color-focus);
-		box-shadow: var(--shadow-focus);
+	.ui-input:disabled,
+	.ui-input:read-only {
+		background: var(--color-background-muted);
+		border-color: var(--color-border);
+		color: var(--color-text-secondary);
 	}
 
 	.ui-input[data-size="lg"],
@@ -53,13 +52,16 @@
 		padding-block: var(--spacing-1);
 	}
 
-	/* Every input is a full touch target on a narrow screen. */
+	/* On a narrow screen every input is a full touch target, and its font is
+	   16px, under which a phone zooms into it. */
 	@media (max-width: 767px) {
 		.ui-input,
 		.ui-input[data-size],
+		.ui-textarea,
 		.ui-select,
 		.ui-select[data-size] {
 			min-height: var(--spacing-11);
+			font-size: var(--font-size-base);
 		}
 	}
 

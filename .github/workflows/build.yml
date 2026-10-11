@@ -153,7 +153,7 @@ jobs:
       - name: npx vitest
         working-directory: ./services/console
         env:
-          BENCHER_SPEED_FACTOR: "4"
+          BENCHER_SPEED_FACTOR: "8"
         run: |
           npm install --include=dev
           npx playwright install --with-deps --only-shell chromium
