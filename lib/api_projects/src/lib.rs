@@ -216,6 +216,7 @@ impl bencher_endpoint::Registrar for Api {
             api_description.register(console::thresholds::proj_console_thresholds_options)?;
             api_description.register(console::thresholds::proj_console_threshold_options)?;
         }
+        api_description.register(console::alerts::proj_console_alerts_get)?;
         api_description.register(console::alerts::proj_console_alerts_patch)?;
         api_description.register(console::thresholds::proj_console_thresholds_get)?;
         api_description.register(console::thresholds::proj_console_threshold_get)?;

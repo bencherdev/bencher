@@ -612,6 +612,8 @@ export interface JsonAlertsFilter {
 	measures?: Uuid[];
 	/** The thresholds that raised the alerts. */
 	thresholds?: Uuid[];
+	/** The reports that raised the alerts. */
+	reports?: Uuid[];
 	/** The earliest time an alert was created, in milliseconds, inclusive. */
 	start_time?: DateTimeMillis;
 	/** The latest time an alert was created, in milliseconds, inclusive. */
@@ -703,6 +705,67 @@ export interface JsonConsoleAlert {
 	status: AlertStatus;
 }
 
+export enum Adapter {
+	Magic = "magic",
+	Json = "json",
+	JsonV0 = "json_v0",
+	JsonV1 = "json_v1",
+	Rust = "rust",
+	RustBench = "rust_bench",
+	RustCriterion = "rust_criterion",
+	RustIai = "rust_iai",
+	RustGungraun = "rust_gungraun",
+	RustGungraunStdout = "rust_gungraun_stdout",
+	RustGungraunJson = "rust_gungraun_json",
+	Cpp = "cpp",
+	CppGoogle = "cpp_google",
+	CppCatch2 = "cpp_catch2",
+	Go = "go",
+	GoBench = "go_bench",
+	Java = "java",
+	JavaJmh = "java_jmh",
+	CSharp = "c_sharp",
+	CSharpDotNet = "c_sharp_dot_net",
+	Js = "js",
+	JsBenchmark = "js_benchmark",
+	JsTime = "js_time",
+	JsVitest = "js_vitest",
+	Python = "python",
+	PythonAsv = "python_asv",
+	PythonPytest = "python_pytest",
+	Ruby = "ruby",
+	RubyBenchmark = "ruby_benchmark",
+	Shell = "shell",
+	ShellHyperfine = "shell_hyperfine",
+	Dart = "dart",
+	DartBenchmarkHarness = "dart_benchmark_harness",
+}
+
+/** The window a response read, after any clamp. */
+export interface JsonConsoleWindow {
+	start_time: DateTimeMillis;
+	end_time: DateTimeMillis;
+	/**
+	 * Whether the requested start was moved later: a report's history holds a
+	 * bounded number of reports, and an unauthenticated plot reaches back at
+	 * most three months.
+	 */
+	clamped: boolean;
+}
+
+/**
+ * The shared x of every series in a response: one point per report and
+ * iteration, in report order.
+ */
+export interface JsonConsolePoints {
+	/** The report start time of each point, in milliseconds. */
+	x: DateTimeMillis[];
+	/** The report of each point, an index into `reports`. */
+	report: number[];
+	/** The iteration of each point, absent when every point is the first. */
+	iteration?: Iteration[];
+}
+
 export interface JsonConsoleAlertPoint {
 	/** A position in the series' columns. */
 	index: number;
@@ -711,10 +774,173 @@ export interface JsonConsoleAlertPoint {
 	status: AlertStatus;
 }
 
+/**
+ * One line's values, aligned to `points` with null where the line has no
+ * point, or, for a thinned line, one per position in `index`.
+ */
+export interface JsonConsoleSeries {
+	/**
+	 * The position in `points` of each value, present only when the line was
+	 * thinned.
+	 */
+	index?: number[];
+	y: (number | null)[];
+	/**
+	 * The baseline the threshold compared each point with.
+	 * Absent when there is none.
+	 */
+	baseline?: (number | null)[];
+	/** Absent when there is no lower limit. */
+	lower?: (number | null)[];
+	/** Absent when there is no upper limit. */
+	upper?: (number | null)[];
+	/** The points that alerted, in point order. */
+	alerts: JsonConsoleAlertPoint[];
+}
+
+/** One line of a report: one metric name of one measure of one variant. */
+export interface JsonConsoleReportLine {
+	/** An index into `benchmarks`. */
+	benchmark: number;
+	/** An index into `variants`. */
+	variant: number;
+	/** An index into `measures`. */
+	measure: number;
+	metric: string;
+	/** The value in this report. */
+	value: number;
+	/**
+	 * The model of the threshold that checked the value, an index into `models`.
+	 * Absent when no threshold checked it.
+	 */
+	model?: number;
+	baseline?: number;
+	lower_limit?: number;
+	upper_limit?: number;
+	alert?: JsonConsoleAlert;
+	/** The line over the window, aligned to `points`. */
+	history: JsonConsoleSeries;
+}
+
+/** An alert as the line it raised on, the way the report draws that line. */
+export interface JsonConsoleAlertLine {
+	/** The line, following the threshold that raised the alert. */
+	line: JsonConsoleReportLine;
+	/** When the alert last changed status, or was raised. */
+	modified: DateTimeMillis;
+}
+
+/**
+ * The alerts on a page that one report raised, each with its history over a
+ * window that ends at the report.
+ */
+export interface JsonConsoleAlertGroup {
+	/** The report that raised the alerts. */
+	uuid: Uuid;
+	/** An index into `branches`. */
+	branch: number;
+	/** An index into `testbeds`. */
+	testbed: number;
+	version: JsonVersion;
+	start_time: DateTimeMillis;
+	end_time: DateTimeMillis;
+	/** When the API took the report. */
+	created: DateTimeMillis;
+	adapter: Adapter;
+	/**
+	 * The number of the report's alerts that match the filters and the status,
+	 * over every page.
+	 */
+	total: number;
+	/** The history window, which ends at the report. */
+	window: JsonConsoleWindow;
+	/** The shared x of the group's histories, whose reports index into `reports`. */
+	points: JsonConsolePoints;
+	/** The group's alerts on this page, in the order the report's lines are drawn. */
+	alerts: JsonConsoleAlertLine[];
+}
+
+export interface JsonConsoleAlertsCounts {
+	active: number;
+	dismissed: number;
+	silenced: number;
+}
+
+export interface JsonConsolePointReport {
+	uuid: Uuid;
+	version: VersionNumber;
+	hash?: GitHash;
+}
+
+export interface JsonConsoleBranch {
+	uuid: Uuid;
+	name: BranchName;
+	slug: Slug;
+	/** The head the lines come from: a report's own, or the one a plot read. */
+	head: Uuid;
+}
+
+export interface JsonConsoleTestbed {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	/** The spec a plot read this testbed's runs on, when the query named one. */
+	spec?: Uuid;
+}
+
 export interface JsonConsoleBenchmark {
 	uuid: Uuid;
 	name: BenchmarkName;
 	slug: Slug;
+}
+
+export interface JsonConsoleVariant {
+	uuid: Uuid;
+	/** An index into `benchmarks`. */
+	benchmark: number;
+	parameters: Record<string, string | number | boolean>;
+}
+
+export interface JsonConsoleMeasure {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	units: ResourceName;
+}
+
+/** A threshold model, which the line or series it checked refers to by index. */
+export interface JsonConsoleModel {
+	uuid: Uuid;
+	threshold: Uuid;
+	test: ModelTest;
+	min_sample_size?: SampleSize;
+	max_sample_size?: SampleSize;
+	window?: Window;
+	lower_boundary?: Boundary;
+	upper_boundary?: Boundary;
+}
+
+/**
+ * A page of a project's alerts, grouped by the report that raised them, newest
+ * report first.
+ */
+export interface JsonConsoleAlerts {
+	/** The number of alerts that match the filters and the status, over every page. */
+	total: number;
+	/**
+	 * The number of alerts that match the filters, by their status now, whatever
+	 * status the request asked for.
+	 */
+	counts: JsonConsoleAlertsCounts;
+	groups: JsonConsoleAlertGroup[];
+	/** The reports of every group's points. */
+	reports: JsonConsolePointReport[];
+	branches: JsonConsoleBranch[];
+	testbeds: JsonConsoleTestbed[];
+	benchmarks: JsonConsoleBenchmark[];
+	variants: JsonConsoleVariant[];
+	measures: JsonConsoleMeasure[];
+	models: JsonConsoleModel[];
 }
 
 export interface JsonConsoleBenchmarkRow {
@@ -738,14 +964,6 @@ export interface JsonConsoleBenchmarks {
 	/** Every archived benchmark, whatever the search. */
 	archived: number;
 	benchmarks: JsonConsoleBenchmarkRow[];
-}
-
-export interface JsonConsoleBranch {
-	uuid: Uuid;
-	name: BranchName;
-	slug: Slug;
-	/** The head the lines come from: a report's own, or the one a plot read. */
-	head: Uuid;
 }
 
 export interface JsonConsoleBranchRow {
@@ -790,13 +1008,6 @@ export interface JsonConsoleLineGroup {
 	alerts: number;
 }
 
-export interface JsonConsoleMeasure {
-	uuid: Uuid;
-	name: ResourceName;
-	slug: Slug;
-	units: ResourceName;
-}
-
 export interface JsonConsoleMeasureRow {
 	uuid: Uuid;
 	name: ResourceName;
@@ -826,58 +1037,10 @@ export interface JsonConsoleMeasures {
 	measures: JsonConsoleMeasureRow[];
 }
 
-/** A threshold model, which the line or series it checked refers to by index. */
-export interface JsonConsoleModel {
-	uuid: Uuid;
-	threshold: Uuid;
-	test: ModelTest;
-	min_sample_size?: SampleSize;
-	max_sample_size?: SampleSize;
-	window?: Window;
-	lower_boundary?: Boundary;
-	upper_boundary?: Boundary;
-}
-
 export interface JsonConsoleOrganization {
 	uuid: Uuid;
 	name: ResourceName;
 	slug: Slug;
-}
-
-/** The window a response read, after any clamp. */
-export interface JsonConsoleWindow {
-	start_time: DateTimeMillis;
-	end_time: DateTimeMillis;
-	/**
-	 * Whether the requested start was moved later: a report's history holds a
-	 * bounded number of reports, and an unauthenticated plot reaches back at
-	 * most three months.
-	 */
-	clamped: boolean;
-}
-
-/**
- * One line's values, aligned to `points` with null where the line has no
- * point, or, for a thinned line, one per position in `index`.
- */
-export interface JsonConsoleSeries {
-	/**
-	 * The position in `points` of each value, present only when the line was
-	 * thinned.
-	 */
-	index?: number[];
-	y: (number | null)[];
-	/**
-	 * The baseline the threshold compared each point with.
-	 * Absent when there is none.
-	 */
-	baseline?: (number | null)[];
-	/** Absent when there is no lower limit. */
-	lower?: (number | null)[];
-	/** Absent when there is no upper limit. */
-	upper?: (number | null)[];
-	/** The points that alerted, in point order. */
-	alerts: JsonConsoleAlertPoint[];
 }
 
 /**
@@ -902,40 +1065,6 @@ export interface JsonConsolePerfLine {
 	 */
 	model?: number;
 	series: JsonConsoleSeries;
-}
-
-/**
- * The shared x of every series in a response: one point per report and
- * iteration, in report order.
- */
-export interface JsonConsolePoints {
-	/** The report start time of each point, in milliseconds. */
-	x: DateTimeMillis[];
-	/** The report of each point, an index into `reports`. */
-	report: number[];
-	/** The iteration of each point, absent when every point is the first. */
-	iteration?: Iteration[];
-}
-
-export interface JsonConsolePointReport {
-	uuid: Uuid;
-	version: VersionNumber;
-	hash?: GitHash;
-}
-
-export interface JsonConsoleTestbed {
-	uuid: Uuid;
-	name: ResourceName;
-	slug: Slug;
-	/** The spec a plot read this testbed's runs on, when the query named one. */
-	spec?: Uuid;
-}
-
-export interface JsonConsoleVariant {
-	uuid: Uuid;
-	/** An index into `benchmarks`. */
-	benchmark: number;
-	parameters: Record<string, string | number | boolean>;
 }
 
 /** The lines of a plot query, drawn as columns aligned to one shared x. */
@@ -998,42 +1127,6 @@ export interface JsonConsoleProject {
 	active_alerts: number;
 }
 
-export enum Adapter {
-	Magic = "magic",
-	Json = "json",
-	JsonV0 = "json_v0",
-	JsonV1 = "json_v1",
-	Rust = "rust",
-	RustBench = "rust_bench",
-	RustCriterion = "rust_criterion",
-	RustIai = "rust_iai",
-	RustGungraun = "rust_gungraun",
-	RustGungraunStdout = "rust_gungraun_stdout",
-	RustGungraunJson = "rust_gungraun_json",
-	Cpp = "cpp",
-	CppGoogle = "cpp_google",
-	CppCatch2 = "cpp_catch2",
-	Go = "go",
-	GoBench = "go_bench",
-	Java = "java",
-	JavaJmh = "java_jmh",
-	CSharp = "c_sharp",
-	CSharpDotNet = "c_sharp_dot_net",
-	Js = "js",
-	JsBenchmark = "js_benchmark",
-	JsTime = "js_time",
-	JsVitest = "js_vitest",
-	Python = "python",
-	PythonAsv = "python_asv",
-	PythonPytest = "python_pytest",
-	Ruby = "ruby",
-	RubyBenchmark = "ruby_benchmark",
-	Shell = "shell",
-	ShellHyperfine = "shell_hyperfine",
-	Dart = "dart",
-	DartBenchmarkHarness = "dart_benchmark_harness",
-}
-
 /** Counts for the alerts of a report. */
 export interface JsonReportAlertsCounts {
 	/** The total number of alerts. */
@@ -1057,30 +1150,6 @@ export interface JsonConsoleReportLink {
 	start_time: DateTimeMillis;
 	hash?: GitHash;
 	adapter: Adapter;
-}
-
-/** One line of a report: one metric name of one measure of one variant. */
-export interface JsonConsoleReportLine {
-	/** An index into `benchmarks`. */
-	benchmark: number;
-	/** An index into `variants`. */
-	variant: number;
-	/** An index into `measures`. */
-	measure: number;
-	metric: string;
-	/** The value in this report. */
-	value: number;
-	/**
-	 * The model of the threshold that checked the value, an index into `models`.
-	 * Absent when no threshold checked it.
-	 */
-	model?: number;
-	baseline?: number;
-	lower_limit?: number;
-	upper_limit?: number;
-	alert?: JsonConsoleAlert;
-	/** The line over the window, aligned to `points`. */
-	history: JsonConsoleSeries;
 }
 
 /**
@@ -2208,6 +2277,13 @@ export interface JsonUserKeyCreated {
 	key: UserKey;
 	creation: string;
 	expiration: string;
+}
+
+export enum ConsoleAlertStatus {
+	Active = "active",
+	/** Dismissed or silenced. */
+	Dismissed = "dismissed",
+	All = "all",
 }
 
 export enum ConsoleLineGroup {
