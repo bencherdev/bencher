@@ -5,7 +5,7 @@
 	font-size: 14px;
 	line-height: 1.45;
 }
-.console a:hover {
+.console a:not(.ui-button):hover {
 	color: var(--color-text-accent-hover);
 }
 .spacer {

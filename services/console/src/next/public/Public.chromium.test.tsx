@@ -1,0 +1,328 @@
+import "@bencherdev/ui/styles.css";
+import "../styles/console.css";
+import "../explore/explore.css";
+import "../plot/plot.css";
+import "./public.css";
+import { render } from "solid-js/web";
+import { afterEach, expect, test } from "vitest";
+import { page, userEvent } from "vitest/browser";
+import type { JsonConsolePerf } from "../../types/bencher";
+import { type ExploreQuery, blankQuery, decodeQuery } from "../query/query";
+import Public, { type PublicProps } from "./Public";
+
+const uuid = (n: number) =>
+	`00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
+
+const PERF: JsonConsolePerf = {
+	window: { start_time: 0, end_time: 1, clamped: false },
+	total: 2,
+	points: { x: [1], report: [0] },
+	reports: [{ uuid: uuid(20), version: 1 }],
+	branches: [{ uuid: uuid(1), name: "main", slug: "main", head: uuid(11) }],
+	testbeds: [{ uuid: uuid(3), name: "linux", slug: "linux" }],
+	benchmarks: [{ uuid: uuid(5), name: "blake3", slug: "blake3" }],
+	variants: [
+		{ uuid: uuid(30), benchmark: 0, parameters: { simd: "avx2", threads: 1 } },
+		{ uuid: uuid(31), benchmark: 0, parameters: { simd: "avx2", threads: 4 } },
+		{ uuid: uuid(32), benchmark: 0, parameters: { simd: "sse", threads: 1 } },
+	],
+	measures: [{ uuid: uuid(7), name: "Latency", slug: "latency", units: "ns" }],
+	models: [],
+	lines: [0, 1, 2].map((variant) => ({
+		branch: 0,
+		testbed: 0,
+		benchmark: 0,
+		variant,
+		measure: 0,
+		metric: "value",
+		series: { y: [1], alerts: [] },
+	})),
+};
+
+const QUERY: ExploreQuery = {
+	...blankQuery(),
+	branches: [{ uuid: uuid(1) }],
+	testbeds: [{ uuid: uuid(3) }],
+	benchmarks: [uuid(5)],
+	sets: [{ simd: "avx2" }],
+	measures: [uuid(7)],
+	xAxis: "version",
+};
+
+let dispose: (() => void) | undefined;
+afterEach(() => {
+	dispose?.();
+	dispose = undefined;
+	document.body.replaceChildren();
+	document.documentElement.removeAttribute("data-reader");
+});
+
+const show = (props: Partial<PublicProps> = {}) => {
+	const root = document.createElement("div");
+	root.className = "console";
+	document.body.append(root);
+	dispose = render(
+		() => (
+			<Public
+				slug="hashbrown"
+				name="Hashbrown"
+				query={QUERY}
+				signIn="/auth/login?back=x"
+				view="plot"
+				answer={PERF}
+				{...props}
+			/>
+		),
+		root,
+	);
+};
+
+// Kills boxes that offer an edit, values left unnamed though the plot named
+// them, and a set counted over every variant rather than those it matches.
+test("the query shows read only, named from the plot", async () => {
+	await page.viewport(1280, 900);
+	show();
+	await userEvent.click(page.getByRole("button", { name: "Show query" }));
+	const box = (name: string) => page.getByRole("group", { name });
+	await expect.element(box("Branches").getByText("main")).toBeVisible();
+	await expect.element(box("Testbeds").getByText("linux")).toBeVisible();
+	await expect.element(box("Benchmarks").getByText("blake3")).toBeVisible();
+	await expect
+		.element(box("Parameters").getByText("2 variants"))
+		.toBeVisible();
+	await expect.element(box("Measures").getByText("Latency")).toBeVisible();
+	await expect.element(box("Metrics").getByText("every metric")).toBeVisible();
+	expect(
+		page.getByRole("button", { name: /^(Add|Remove)/ }).elements(),
+	).toHaveLength(0);
+	await expect
+		.element(page.getByRole("button", { name: "Hide query" }))
+		.toHaveAttribute("aria-expanded", "true");
+});
+
+// Kills a custom window the API would cut short, and a view change lost
+// rather than handed back as the query.
+test("the window offers three presets, and a pick changes the query", async () => {
+	await page.viewport(1280, 900);
+	const changes: ExploreQuery[] = [];
+	show({ onQuery: (next) => changes.push(next) });
+	const windows = page.getByRole("radiogroup", { name: "Window" });
+	expect(
+		windows
+			.getByRole("radio")
+			.elements()
+			.map((radio) => radio.parentElement?.textContent),
+	).toEqual(["1w", "4w", "3m"]);
+	await userEvent.click(windows.getByText("3m"));
+	expect(changes.map(({ window }) => window)).toEqual([
+		{ seconds: 92 * 24 * 60 * 60 },
+	]);
+});
+
+// Kills a member's action shown to a reader who is not signed in, Log in
+// shown to one who is, and Open in console on another query than the one drawn.
+test("only a stored reader sees Open in console, on this query", async () => {
+	await page.viewport(1280, 900);
+	show();
+	await expect
+		.element(page.getByRole("link", { name: "Log in" }))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("link", { name: "Open in console" }))
+		.not.toBeInTheDocument();
+
+	document.documentElement.setAttribute("data-reader", "");
+	const open = page.getByRole("link", { name: "Open in console" });
+	await expect.element(open).toBeVisible();
+	await expect
+		.element(page.getByRole("link", { name: "Log in" }))
+		.not.toBeInTheDocument();
+	const href = new URL(
+		open.element().getAttribute("href") ?? "",
+		"https://bencher.dev",
+	);
+	expect(href.pathname).toBe("/next/console/projects/hashbrown/explore");
+	expect(decodeQuery(href.search)).toEqual(QUERY);
+});
+
+// Kills a refused query that drops the lines drawn or offers no way to ask again.
+test("a refused query keeps what was drawn and Retry asks again", async () => {
+	await page.viewport(1280, 900);
+	let retried = 0;
+	show({
+		refused: "The API did not answer.",
+		onRetry: () => {
+			retried++;
+		},
+		plot: (await import("../plot/Plot")).default,
+	});
+	await expect
+		.element(page.getByRole("alert"))
+		.toHaveTextContent("The API did not answer.");
+	await expect
+		.element(page.getByRole("figure"))
+		.toHaveAccessibleName("3 lines");
+	await userEvent.click(page.getByRole("button", { name: "Retry" }));
+	expect(retried).toBe(1);
+});
+
+const DAY = 24 * 60 * 60;
+const region = () => page.getByRole("region", { name: "Query, read only" });
+
+// Kills a window the API cut drawn without saying so, or said with no way to
+// sign in, and the note shown for a window drawn whole.
+test("a window the API cut says so in the window's line, with Log in", async () => {
+	await page.viewport(1280, 900);
+	show();
+	await expect.element(region().getByText("up to 3 months back")).toBeVisible();
+	expect(region().getByRole("link", { name: "Log in" }).elements()).toHaveLength(
+		0,
+	);
+	dispose?.();
+	document.body.replaceChildren();
+	show({ answer: { ...PERF, window: { ...PERF.window, clamped: true } } });
+	await expect
+		.element(region().getByText(/cut to its last 3 months/))
+		.toBeVisible();
+	await expect
+		.element(region().getByRole("link", { name: "Log in" }))
+		.toHaveAttribute("href", "/auth/login?back=x");
+	expect(region().getByText("up to 3 months back").elements()).toHaveLength(0);
+});
+
+// Kills a preset shown as the window of a link that ends earlier, and a pick
+// there that keeps the link's end, which never reaches the present.
+test("a window ending earlier checks no preset, and a pick ends now", async () => {
+	await page.viewport(1280, 900);
+	const changes: ExploreQuery[] = [];
+	show({
+		query: { ...QUERY, window: { seconds: 92 * DAY, end: Date.UTC(2026, 6, 1) } },
+		onQuery: (next) => changes.push(next),
+	});
+	const windows = page.getByRole("radiogroup", { name: "Window" });
+	expect(
+		windows
+			.getByRole("radio")
+			.elements()
+			.filter((radio) => (radio as HTMLInputElement).checked),
+	).toHaveLength(0);
+	await userEvent.click(windows.getByText("3m"));
+	await userEvent.click(windows.getByText("1w"));
+	expect(changes.map(({ window }) => window)).toEqual([
+		{ seconds: 92 * DAY },
+		{ seconds: 7 * DAY },
+	]);
+});
+
+// Kills a Metrics box that says every metric when the query names one.
+test("the Metrics box names the query's metrics", async () => {
+	await page.viewport(1280, 900);
+	show({ query: { ...QUERY, metrics: ["value"] } });
+	await userEvent.click(page.getByRole("button", { name: "Show query" }));
+	const metrics = page.getByRole("group", { name: "Metrics" });
+	await expect.element(metrics.getByText("value", { exact: true })).toBeVisible();
+	expect(metrics.getByText("every metric").elements()).toHaveLength(0);
+});
+
+// Kills a first read the API refused that leaves the summary waiting on names
+// that never come.
+test("a refused first read shows the summary", async () => {
+	await page.viewport(1280, 900);
+	const root = document.createElement("div");
+	root.className = "console";
+	document.body.append(root);
+	// No answer at all: a spread `answer: undefined` would leave the default one.
+	dispose = render(
+		() => (
+			<Public
+				slug="hashbrown"
+				name="Hashbrown"
+				query={QUERY}
+				signIn="/auth/login?back=x"
+				view="plot"
+				refused="The API refused this query."
+			/>
+		),
+		root,
+	);
+	for (const key of [
+		"branches",
+		"testbeds",
+		"benchmarks",
+		"parameters",
+		"measures",
+		"metrics",
+	]) {
+		await expect
+			.element(region().getByText(key, { exact: true }))
+			.toBeVisible();
+	}
+});
+
+// Kills an open query that keeps its summary, never says it is read only, or
+// whose chevron never turns.
+test("Show query puts the read only line in the summary's place and turns its chevron", async () => {
+	await page.viewport(1280, 900);
+	show();
+	const chevron = () =>
+		getComputedStyle(
+			region().getByRole("button", { name: /query$/ }).element().querySelector(
+				".ui-icon",
+			) as Element,
+		).transform;
+	const closed = chevron();
+	await userEvent.click(page.getByRole("button", { name: "Show query" }));
+	await expect
+		.element(region().getByText("read only: the six boxes behind this plot"))
+		.toBeVisible();
+	expect(region().getByText("branches", { exact: true }).elements()).toHaveLength(
+		0,
+	);
+	expect(chevron()).not.toBe(closed);
+	await userEvent.click(page.getByRole("button", { name: "Hide query" }));
+	await expect
+		.element(region().getByText("branches", { exact: true }))
+		.toBeVisible();
+	expect(chevron()).toBe(closed);
+});
+
+// Kills a signed in reader the project refuses who is told to log in or sign
+// up, and a reader who is not signed in who is not.
+test("a locked page asks only a reader who is not signed in to log in", async () => {
+	await page.viewport(1280, 900);
+	show({ view: "locked" });
+	await expect
+		.element(
+			page.getByRole("heading", { level: 1, name: "Log in to see this page" }),
+		)
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("main").getByRole("link", { name: "Log in" }))
+		.toHaveAttribute("href", "/auth/login?back=x");
+
+	document.documentElement.setAttribute("data-reader", "");
+	await expect
+		.element(
+			page.getByRole("heading", {
+				level: 1,
+				name: "This project is private, or it does not exist",
+			}),
+		)
+		.toBeVisible();
+	for (const name of ["Log in", "Sign up"]) {
+		expect(page.getByRole("link", { name }).elements()).toHaveLength(0);
+	}
+});
+
+// Kills a bar that names the link's slug as a project before anyone read it.
+test("only a drawn plot names its project in the bar", async () => {
+	await page.viewport(1280, 900);
+	const crumb = () =>
+		page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
+	show({ view: "locked", slug: "no-such", name: "no-such" });
+	expect(crumb().elements()).toHaveLength(0);
+	dispose?.();
+	document.body.replaceChildren();
+	show();
+	await expect.element(crumb()).toHaveTextContent("Hashbrown");
+});

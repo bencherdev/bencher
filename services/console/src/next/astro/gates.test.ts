@@ -150,3 +150,30 @@ describe("ClassicGate", () => {
 		).toBeUndefined();
 	});
 });
+
+describe("ClassicGate on the public perf page", () => {
+	const URL_ =
+		"https://bencher.dev/perf/hashbrown?branches=b&x_axis=version&tab=benchmarks";
+	const NEXT = "/next/perf/hashbrown?branches=b&x_axis=version";
+	const perf = async (storage: Record<string, string>) =>
+		run(
+			await container.renderToString(ClassicGate, {
+				props: { slug: "hashbrown", next: NEXT },
+				request: new Request(URL_),
+			}),
+			URL_,
+			storage,
+		).replaced;
+
+	// Kills a public perf page that waits for its own code to leave, or that
+	// leaves with the classic page's query instead of the public plot's.
+	test("a project remembered on version 1 goes to the public plot with its query", async () => {
+		expect(await perf(versions("hashbrown", 1))).toEqual([NEXT]);
+	});
+
+	// Kills a public perf page that leaves for a project it should keep.
+	test("a project remembered on version 0, or not at all, stays", async () => {
+		expect(await perf(versions("hashbrown", 0))).toEqual([]);
+		expect(await perf({})).toEqual([]);
+	});
+});

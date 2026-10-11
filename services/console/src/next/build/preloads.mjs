@@ -15,7 +15,7 @@ const PLACEHOLDER = "@@BENCHER_NEXT_PRELOADS@@";
  * @returns {import("astro").AstroIntegration}
  */
 const nextPreloads = () => {
-	/** @type {{ entry: string[], pages: Record<string, string[]>, parts: Record<string, string[]> } | undefined} */
+	/** @type {{ entry: string[], pages: Record<string, string[]>, parts: Record<string, string[]>, perf: { entry: string[], parts: Record<string, string[]> } } | undefined} */
 	let preloads;
 	/** @type {URL | undefined} */
 	let serverDir;
@@ -48,25 +48,34 @@ const nextPreloads = () => {
 			};
 			/** @type {Set<string>} */
 			const entry = new Set();
+			// The public plot is a page of its own, with its own script.
+			/** @type {Set<string>} */
+			const perf = new Set();
 			for (const chunk of chunks.values()) {
-				const isNextEntry =
-					chunk.isEntry && chunk.facadeModuleId?.includes("/src/pages/next/");
+				const page = chunk.isEntry
+					? chunk.facadeModuleId?.match(/\/src\/pages\/next\/(\w+)\//)?.[1]
+					: undefined;
 				// Astro's page script, which every page loads.
 				const isPageScript = chunk.isEntry && chunk.name === "page";
-				if (isNextEntry || isPageScript) {
+				if (page === "console" || isPageScript) {
 					closure(chunk.fileName, entry);
 				}
+				if (page === "perf" || isPageScript) {
+					closure(chunk.fileName, perf);
+				}
 			}
-			/** @type {(fileName: string) => string[]} */
-			const own = (fileName) =>
+			/** @type {(fileName: string, loaded?: Set<string>) => string[]} */
+			const own = (fileName, loaded = entry) =>
 				[...closure(fileName)]
-					.filter((file) => !entry.has(file))
+					.filter((file) => !loaded.has(file))
 					.map((file) => `/${file}`);
 			/** @type {Record<string, string[]>} */
 			const pages = {};
 			// What a page loads only for some of its links, such as Explore's plot.
 			/** @type {Record<string, string[]>} */
 			const parts = {};
+			/** @type {Record<string, string[]>} */
+			const perfParts = {};
 			for (const chunk of chunks.values()) {
 				const module = chunk.facadeModuleId?.match(
 					/\/src\/next\/(\w+)\/(\w+)\.tsx$/,
@@ -79,9 +88,18 @@ const nextPreloads = () => {
 					pages[name] = own(chunk.fileName);
 				} else {
 					parts[`${dir}/${name}`] = own(chunk.fileName);
+					perfParts[`${dir}/${name}`] = own(chunk.fileName, perf);
 				}
 			}
-			preloads = { entry: [...entry].map((file) => `/${file}`), pages, parts };
+			preloads = {
+				entry: [...entry].map((file) => `/${file}`),
+				pages,
+				parts,
+				perf: {
+					entry: [...perf].map((file) => `/${file}`),
+					parts: perfParts,
+				},
+			};
 		},
 	};
 

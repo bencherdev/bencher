@@ -12,6 +12,8 @@ import Notification from "../../../components/site/Notification";
 import ReconnectingBanner from "../../../components/site/ReconnectingBanner";
 import { fetchSSR, hasPerfImage } from "../../../components/perf/util";
 import FallbackPerfPanel from "../../../components/console/perf/FallbackPerfPanel.astro";
+import ClassicGate from "../../../next/astro/ClassicGate.astro";
+import { publicPlotHref } from "../../../next/public/query";
 import * as Sentry from "@sentry/astro";
 
 const params = Astro.params;
@@ -42,6 +44,15 @@ if (params.project && params.project !== "undefined") {
 	}
 }
 
+// A version 1 project's public plot lives under /next/, and a project this
+// page could not read may be one the reader has seen there.
+const nextPlot =
+	params.project &&
+	publicPlotHref(params.project, Astro.url.search, Date.now());
+if (nextPlot && jsonProject?.uuid && jsonProject.bmf_version === 1) {
+	return Astro.redirect(nextPlot);
+}
+
 let image: undefined | string;
 if (hasPerfImage(Astro.url)) {
 	image = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
@@ -61,6 +72,7 @@ if (hasPerfImage(Astro.url)) {
   modified={jsonProject?.modified}
   image={image}
 >
+  { !jsonProject?.uuid && <ClassicGate slot="head" slug={params.project} next={nextPlot} /> }
   { notFound ?
   <section class="section">
     <div class="container">

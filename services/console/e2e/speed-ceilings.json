@@ -4,7 +4,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 37100,
+		"jsBytes": 37500,
 		"stylesheets": 1,
 		"deferredJsBytes": 108000,
 		"htmlBytes": 2700,
@@ -15,7 +15,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0,
-		"jsBytes": 37100,
+		"jsBytes": 37500,
 		"stylesheets": 1,
 		"htmlBytes": 2700,
 		"inlineScriptBytes": 2840,
@@ -30,7 +30,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 48200,
+		"jsBytes": 48600,
 		"stylesheets": 1,
 		"htmlBytes": 2790,
 		"inlineScriptBytes": 2840,
@@ -46,7 +46,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 49550,
+		"jsBytes": 50000,
 		"stylesheets": 1,
 		"lateModules": 0
 	},
@@ -55,7 +55,7 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 49550,
+		"jsBytes": 50000,
 		"stylesheets": 1,
 		"lateModules": 0
 	},
@@ -69,7 +69,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 55800,
+		"jsBytes": 56240,
 		"stylesheets": 1,
 		"htmlBytes": 2780,
 		"lateModules": 0
@@ -79,7 +79,7 @@
 		"apiRequests": 5,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 55800,
+		"jsBytes": 56240,
 		"stylesheets": 1,
 		"htmlBytes": 2790,
 		"lateModules": 0
@@ -89,7 +89,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 62250,
+		"jsBytes": 62500,
 		"stylesheets": 1,
 		"htmlBytes": 2910,
 		"inlineScriptBytes": 2840,
@@ -105,9 +105,9 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 51600,
+		"jsBytes": 51950,
 		"stylesheets": 1,
-		"htmlBytes": 2770,
+		"htmlBytes": 2830,
 		"inlineScriptBytes": 2840,
 		"lateModules": 0
 	},
@@ -116,9 +116,9 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 67800,
+		"jsBytes": 68050,
 		"stylesheets": 1,
-		"htmlBytes": 2880,
+		"htmlBytes": 2940,
 		"inlineScriptBytes": 2840,
 		"lateModules": 0
 	},
@@ -127,7 +127,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 94000,
+		"jsBytes": 95700,
 		"htmlBytes": 2880,
 		"inlineScriptBytes": 2840,
 		"lateModules": 0
@@ -142,7 +142,7 @@
 		"apiRequests": 4,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 59700,
+		"jsBytes": 61400,
 		"lateModules": 0
 	},
 	"exploreKeyToggle": {
@@ -153,7 +153,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 68500,
+		"jsBytes": 68800,
 		"stylesheets": 1,
 		"htmlBytes": 2870,
 		"inlineScriptBytes": 2840,
@@ -169,10 +169,16 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 88600,
+		"jsBytes": 89400,
 		"deferredJsBytes": 108000,
 		"htmlBytes": 2850,
 		"inlineScriptBytes": 2885,
 		"lateModules": 0
+	},
+	"publicColdLoad": {
+		"cls": 0,
+		"jsBytes": 64350,
+		"htmlBytes": 3160,
+		"inlineScriptBytes": 700
 	}
 }
