@@ -3,11 +3,17 @@ use ordered_float::OrderedFloat;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{DateTime, JsonBenchmark, JsonBoundary, JsonMetricTriple, JsonThreshold, JsonVariant};
+use crate::{
+    BranchUuid, DateTime, DateTimeMillis, JsonBenchmark, JsonBoundary, JsonMetricTriple,
+    JsonThreshold, JsonVariant, MeasureUuid, TestbedUuid, ThresholdUuid,
+};
 
 use super::{boundary::BoundaryLimit, report::Iteration, report::ReportUuid};
 
 crate::typed_uuid::typed_uuid!(AlertUuid);
+
+/// The most entries any list in a [`JsonUpdateAlerts`] may hold.
+pub const MAX_UPDATE_ALERTS: usize = 255;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -144,6 +150,61 @@ pub enum UpdateAlertStatus {
     Active,
     /// The alert has been dismissed by a user.
     Dismissed,
+}
+
+/// A status change for many alerts at once, selected by either `alerts` or `filter`.
+///
+/// Silenced alerts never change, and an alert already in the new status is left as it is.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdateAlerts {
+    /// The new status of the alerts.
+    pub status: UpdateAlertStatus,
+    /// The alerts to change, at most 255.
+    #[serde(default)]
+    pub alerts: Option<Vec<AlertUuid>>,
+    /// Change every alert that matches.
+    #[serde(default)]
+    pub filter: Option<JsonAlertsFilter>,
+}
+
+/// The alerts that match every given field.
+///
+/// An empty or absent list matches every value, and each list holds at most 255 entries.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonAlertsFilter {
+    /// The current status of the alerts.
+    #[serde(default)]
+    pub status: Option<AlertStatus>,
+    /// The branches the alerts were raised on.
+    #[serde(default)]
+    pub branches: Vec<BranchUuid>,
+    /// The testbeds the alerts were raised on.
+    #[serde(default)]
+    pub testbeds: Vec<TestbedUuid>,
+    /// The measures the alerts were raised on.
+    #[serde(default)]
+    pub measures: Vec<MeasureUuid>,
+    /// The thresholds that raised the alerts.
+    #[serde(default)]
+    pub thresholds: Vec<ThresholdUuid>,
+    /// The earliest time an alert was created, in milliseconds, inclusive.
+    #[serde(default)]
+    pub start_time: Option<DateTimeMillis>,
+    /// The latest time an alert was created, in milliseconds, inclusive.
+    #[serde(default)]
+    pub end_time: Option<DateTimeMillis>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonUpdatedAlerts {
+    /// The number of alerts whose status changed.
+    pub changed: u32,
 }
 
 #[typeshare::typeshare]
