@@ -16,7 +16,7 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     actor_conn,
     context::{ApiContext, DbConnection},
-    error::{resource_not_found_err, with_auth_hint},
+    error::{bad_request_error, resource_not_found_err, with_auth_hint},
     model::{
         project::{
             QueryProject, benchmark::BenchmarkId, branch::BranchId, measure::MeasureId,
@@ -53,7 +53,7 @@ macro_rules! page {
             .select((count_star(), count(schema::$table::archived)))
             .get_result::<(i64, i64)>($conn)
             .map_err($not_found)?;
-        let request = Request::new($query_params);
+        let request = Request::new($query_params)?;
         let filtered = || {
             let mut query = $from
                 .filter(schema::$table::project_id.eq($project_id))
@@ -683,7 +683,7 @@ struct Request {
 }
 
 impl Request {
-    fn new(query_params: &JsonConsoleDimensionsQueryParams) -> Self {
+    fn new(query_params: &JsonConsoleDimensionsQueryParams) -> Result<Self, HttpError> {
         let sort = query_params.sort.unwrap_or_default();
         let direction = query_params.direction.unwrap_or(match sort {
             ConsoleDimensionsSort::Name => JsonDirection::Asc,
@@ -692,14 +692,22 @@ impl Request {
         let per_page = query_params
             .per_page
             .unwrap_or(DEFAULT_CONSOLE_DIMENSIONS_PER_PAGE);
-        Self {
+        let offset = match (query_params.page, query_params.offset) {
+            (Some(_), Some(_)) => {
+                return Err(bad_request_error(
+                    "Ask for either a page or an offset, not both",
+                ));
+            },
+            (None, Some(offset)) => i64::from(offset),
+            (page, None) => i64::from(page.unwrap_or(1).saturating_sub(1)) * i64::from(per_page),
+        };
+        Ok(Self {
             archived: query_params.archived.unwrap_or_default(),
             sort,
             direction,
-            offset: i64::from(query_params.page.unwrap_or(1).saturating_sub(1))
-                * i64::from(per_page),
+            offset,
             limit: i64::from(per_page),
-        }
+        })
     }
 }
 

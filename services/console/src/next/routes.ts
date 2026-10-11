@@ -27,6 +27,7 @@ export const PAGES: Record<PageName, Page> = {
 	Thresholds: lazy(() => import("./pages/Thresholds")),
 	Threshold: lazy(() => import("./pages/Threshold")),
 	Settings: lazy(() => import("./pages/Settings")),
+	Dimensions: lazy(() => import("./pages/Dimensions")),
 	NotFound: lazy(() => import("./pages/NotFound")),
 };
 

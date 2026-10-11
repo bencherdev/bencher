@@ -19,6 +19,8 @@ const STARTUP_TIMEOUT: Duration = Duration::from_secs(60);
 const POLL_INTERVAL: Duration = Duration::from_millis(100);
 /// Lines of each server's log shown when the suite fails.
 const LOG_TAIL: usize = 200;
+/// Set empty for every build and server, so no end-to-end run reports to Sentry.
+const SENTRY_DSN: &str = "PUBLIC_SENTRY_DSN";
 
 /// The console end-to-end suite, run against an API on a fresh database.
 #[derive(Debug)]
@@ -212,13 +214,17 @@ fn build_console(console_dir: &Utf8Path) -> anyhow::Result<()> {
 }
 
 fn npm(dir: &Utf8Path, args: &[&str]) -> anyhow::Result<()> {
-    let status = Command::new("npm")
-        .args(args)
-        .current_dir(dir)
+    let status = npm_command(dir, args)
         .status()
         .with_context(|| format!("Failed to run npm {}", args.join(" ")))?;
     anyhow::ensure!(status.success(), "npm {} failed: {status}", args.join(" "));
     Ok(())
+}
+
+fn npm_command(dir: &Utf8Path, args: &[&str]) -> Command {
+    let mut command = Command::new("npm");
+    command.args(args).current_dir(dir).env(SENTRY_DSN, "");
+    command
 }
 
 fn free_port() -> anyhow::Result<u16> {
@@ -269,16 +275,23 @@ fn spawn_console(
 ) -> anyhow::Result<Child> {
     let port = console_url.rsplit(':').next().context("No console port")?;
     let log = File::create(log)?;
-    Command::new("node")
+    console_command(console_dir, api_url, port)
+        .stdout(log.try_clone()?)
+        .stderr(log)
+        .spawn()
+        .context("Failed to start the console")
+}
+
+fn console_command(console_dir: &Utf8Path, api_url: &str, port: &str) -> Command {
+    let mut command = Command::new("node");
+    command
         .arg("dist/server/entry.mjs")
         .current_dir(console_dir)
         .env("HOST", "127.0.0.1")
         .env("PORT", port)
         .env("BENCHER_API_URL", api_url)
-        .stdout(log.try_clone()?)
-        .stderr(log)
-        .spawn()
-        .context("Failed to start the console")
+        .env(SENTRY_DSN, "");
+    command
 }
 
 async fn wait_until_up(url: &str) -> anyhow::Result<()> {
@@ -335,4 +348,33 @@ fn stop_signal() -> anyhow::Result<impl Future<Output = anyhow::Result<()>>> {
         ctrl_c.recv().await;
         Err(anyhow::anyhow!("Stopped by Ctrl-C"))
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{ffi::OsStr, process::Command};
+
+    use camino::Utf8Path;
+
+    use super::{SENTRY_DSN, console_command, npm_command};
+
+    fn sentry_dsn(command: &Command) -> Option<&OsStr> {
+        command
+            .get_envs()
+            .find_map(|(key, value)| (key == SENTRY_DSN).then_some(value))
+            .flatten()
+    }
+
+    // Kills a test build or test server that inherits a Sentry DSN, which the
+    // console's committed `.env.production` sets for production.
+    #[test]
+    fn console_builds_and_serves_with_an_empty_sentry_dsn() {
+        let dir = Utf8Path::new("services/console");
+        let empty = Some(OsStr::new(""));
+        assert_eq!(sentry_dsn(&npm_command(dir, &["run", "build"])), empty);
+        assert_eq!(
+            sentry_dsn(&console_command(dir, "http://127.0.0.1:61016", "3000")),
+            empty
+        );
+    }
 }

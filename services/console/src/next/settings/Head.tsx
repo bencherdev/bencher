@@ -1,6 +1,6 @@
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
-import { type JSX, Show } from "solid-js";
+import { For, type JSX, Show } from "solid-js";
 import { NEXT_PROJECTS } from "../paths";
 
 /** A section's crumb, title, and the read-only line for a reader who cannot change it. */
@@ -8,6 +8,8 @@ const Head = (props: {
 	slug: string;
 	title: string;
 	readOnly: boolean;
+	/** Crumbs after Settings, each a path under the project. */
+	crumbs?: { label: string; path: string }[];
 	children?: JSX.Element;
 	actions?: JSX.Element;
 }) => (
@@ -16,6 +18,16 @@ const Head = (props: {
 			<div class="crumb-line">
 				<a href={`${NEXT_PROJECTS}/${props.slug}/settings`}>Settings</a>
 				<span aria-hidden="true">/</span>
+				<For each={props.crumbs}>
+					{(crumb) => (
+						<>
+							<a href={`${NEXT_PROJECTS}/${props.slug}/${crumb.path}`}>
+								{crumb.label}
+							</a>
+							<span aria-hidden="true">/</span>
+						</>
+					)}
+				</For>
 			</div>
 			<Heading level={1} size="xl">
 				{props.title}

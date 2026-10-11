@@ -75,11 +75,14 @@ export const mount = (
 		api,
 		bootstrap = bootstrapOf(),
 		cached = [],
+		path = "/hashbrown/settings",
 	}: {
 		api: Api;
 		bootstrap?: JsonConsoleProject;
 		/** More answers the cache already holds, by query key. */
 		cached?: [unknown[], unknown][];
+		/** Where the router starts, under the project. */
+		path?: string;
 	},
 ) => {
 	const client = new QueryClient({
@@ -92,7 +95,7 @@ export const mount = (
 		client.setQueryData(key, data);
 	}
 	const history = createMemoryHistory();
-	history.set({ value: "/hashbrown/settings", replace: true });
+	history.set({ value: path, replace: true });
 	const root = document.createElement("div");
 	root.className = "console";
 	document.body.append(root);
