@@ -730,6 +730,7 @@ fn assert_report_results(status: StatusCode, body: &str) {
         vec![JsonReportIterationCounts {
             benchmarks: 1,
             measures: 1,
+            lines: 1,
         }],
         "the report kept its results"
     );

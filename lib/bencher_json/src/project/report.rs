@@ -362,6 +362,29 @@ impl Adapter {
             | Self::DartBenchmarkHarness => self,
         }
     }
+
+    /// Every adapter a report can be stored with that is listed as this one.
+    #[must_use]
+    pub fn listed_from(self) -> Vec<Self> {
+        let listed = self.normalize();
+        if matches!(listed, Self::Magic) {
+            vec![
+                Self::Magic,
+                Self::Rust,
+                Self::Cpp,
+                Self::Go,
+                Self::Java,
+                Self::CSharp,
+                Self::Js,
+                Self::Python,
+                Self::Ruby,
+                Self::Shell,
+                Self::Dart,
+            ]
+        } else {
+            vec![listed]
+        }
+    }
 }
 
 impl fmt::Display for Adapter {
@@ -674,6 +697,9 @@ pub struct JsonReportIterationCounts {
     pub benchmarks: u32,
     /// The number of distinct measures in this iteration.
     pub measures: u32,
+    /// The number of lines in this iteration: one per variant, measure, and metric name.
+    #[serde(default)]
+    pub lines: u32,
 }
 
 /// Counts for the alerts of a report.
@@ -821,10 +847,14 @@ pub struct JsonReportQueryParams {
     pub branch: Option<String>,
     /// Filter by testbed UUID, slug, or name exact match.
     pub testbed: Option<String>,
+    /// Filter by adapter, as reports list it: a language adapter such as `rust` is listed as `magic`.
+    pub adapter: Option<Adapter>,
     /// Filter for reports after the given date time in milliseconds.
     pub start_time: Option<DateTimeMillis>,
     /// Filter for reports before the given date time in milliseconds.
     pub end_time: Option<DateTimeMillis>,
+    /// If set to `active`, only return reports with at least one active alert.
+    pub alerts: Option<ReportAlerts>,
     /// If set to `true`, only return reports with an archived branch or testbed.
     /// If not set or set to `false`, only returns reports with non-archived branches and testbeds.
     pub archived: Option<bool>,
@@ -837,8 +867,10 @@ pub struct JsonReportQueryParams {
 pub struct JsonReportQuery {
     pub branch: Option<BranchNameId>,
     pub testbed: Option<TestbedNameId>,
+    pub adapter: Option<Adapter>,
     pub start_time: Option<DateTime>,
     pub end_time: Option<DateTime>,
+    pub alerts: Option<ReportAlerts>,
     pub archived: Option<bool>,
     pub expand: Option<bool>,
 }
@@ -850,8 +882,10 @@ impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
         let JsonReportQueryParams {
             branch,
             testbed,
+            adapter,
             start_time,
             end_time,
+            alerts,
             archived,
             expand,
         } = query_params;
@@ -870,8 +904,10 @@ impl TryFrom<JsonReportQueryParams> for JsonReportQuery {
         Ok(Self {
             branch,
             testbed,
+            adapter,
             start_time: start_time.map(Into::into),
             end_time: end_time.map(Into::into),
+            alerts,
             archived,
             expand,
         })
@@ -894,6 +930,15 @@ impl JsonReportQuery {
     pub fn end_time(&self) -> Option<DateTimeMillis> {
         self.end_time.map(Into::into)
     }
+}
+
+/// Which reports to list by their alerts.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ReportAlerts {
+    /// Reports with at least one active alert.
+    Active,
 }
 
 #[typeshare::typeshare]
@@ -992,5 +1037,100 @@ mod tests {
     #[test]
     fn display() {
         assert_eq!(Iteration(7).to_string(), "7");
+    }
+
+    const ADAPTERS: [Adapter; 33] = [
+        Adapter::Magic,
+        Adapter::Json,
+        Adapter::JsonV0,
+        Adapter::JsonV1,
+        Adapter::Rust,
+        Adapter::RustBench,
+        Adapter::RustCriterion,
+        Adapter::RustIai,
+        Adapter::RustGungraun,
+        Adapter::RustGungraunStdout,
+        Adapter::RustGungraunJson,
+        Adapter::Cpp,
+        Adapter::CppGoogle,
+        Adapter::CppCatch2,
+        Adapter::Go,
+        Adapter::GoBench,
+        Adapter::Java,
+        Adapter::JavaJmh,
+        Adapter::CSharp,
+        Adapter::CSharpDotNet,
+        Adapter::Js,
+        Adapter::JsBenchmark,
+        Adapter::JsTime,
+        Adapter::JsVitest,
+        Adapter::Python,
+        Adapter::PythonAsv,
+        Adapter::PythonPytest,
+        Adapter::Ruby,
+        Adapter::RubyBenchmark,
+        Adapter::Shell,
+        Adapter::ShellHyperfine,
+        Adapter::Dart,
+        Adapter::DartBenchmarkHarness,
+    ];
+
+    // A new variant fails to compile here until it joins `ADAPTERS` above.
+    const fn listed_in_adapters(adapter: Adapter) -> bool {
+        match adapter {
+            Adapter::Magic
+            | Adapter::Json
+            | Adapter::JsonV0
+            | Adapter::JsonV1
+            | Adapter::Rust
+            | Adapter::RustBench
+            | Adapter::RustCriterion
+            | Adapter::RustIai
+            | Adapter::RustGungraun
+            | Adapter::RustGungraunStdout
+            | Adapter::RustGungraunJson
+            | Adapter::Cpp
+            | Adapter::CppGoogle
+            | Adapter::CppCatch2
+            | Adapter::Go
+            | Adapter::GoBench
+            | Adapter::Java
+            | Adapter::JavaJmh
+            | Adapter::CSharp
+            | Adapter::CSharpDotNet
+            | Adapter::Js
+            | Adapter::JsBenchmark
+            | Adapter::JsTime
+            | Adapter::JsVitest
+            | Adapter::Python
+            | Adapter::PythonAsv
+            | Adapter::PythonPytest
+            | Adapter::Ruby
+            | Adapter::RubyBenchmark
+            | Adapter::Shell
+            | Adapter::ShellHyperfine
+            | Adapter::Dart
+            | Adapter::DartBenchmarkHarness => true,
+        }
+    }
+
+    #[test]
+    fn listed_from_is_every_adapter_that_normalizes_alike() {
+        assert!(ADAPTERS.into_iter().all(listed_in_adapters));
+        for adapter in ADAPTERS {
+            let mut listed: Vec<i32> = adapter
+                .listed_from()
+                .into_iter()
+                .map(|from| from as i32)
+                .collect();
+            listed.sort_unstable();
+            let mut alike: Vec<i32> = ADAPTERS
+                .into_iter()
+                .filter(|from| from.normalize() as i32 == adapter.normalize() as i32)
+                .map(|from| from as i32)
+                .collect();
+            alike.sort_unstable();
+            assert_eq!(listed, alike, "{adapter}");
+        }
     }
 }
