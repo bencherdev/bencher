@@ -297,6 +297,21 @@ pub struct JsonConsoleAlertPoint {
     pub status: AlertStatus,
 }
 
+/// A benchmark's newest report, where Explore starts a query that names only
+/// the benchmark.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleLatestReport {
+    pub uuid: ReportUuid,
+    pub branch: JsonConsoleBranch,
+    pub testbed: JsonConsoleTestbed,
+    pub version: JsonVersion,
+    pub start_time: DateTimeMillis,
+    /// The measures the benchmark reported in it, in name order.
+    pub measures: Vec<JsonConsoleMeasure>,
+}
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
