@@ -32,8 +32,9 @@ const boot = async (mount: HTMLElement) => {
 
 	const client = createQueryClient(() => signOut(store, client));
 	const versions = fetchedVersions(client);
+	const host = mount.dataset.apiUrl ?? "";
 	const api = createApi({
-		url: mount.dataset.apiUrl ?? "",
+		url: host,
 		token: reader.token,
 		expiration: Date.parse(reader.expiration),
 	});
@@ -68,6 +69,7 @@ const boot = async (mount: HTMLElement) => {
 					reader={reader}
 					versions={versions}
 					flush={persister.flush}
+					host={host}
 				/>
 			),
 			mount,

@@ -14,6 +14,8 @@ const App = (props: {
 	reader: JsonAuthUser;
 	versions: () => Record<string, BmfVersion>;
 	flush: () => Promise<void>;
+	/** The API's URL. */
+	host: string;
 }) => (
 	<QueryClientProvider client={props.client}>
 		<FlushContext.Provider value={props.flush}>
@@ -25,6 +27,7 @@ const App = (props: {
 						api={props.api}
 						reader={props.reader}
 						versions={props.versions}
+						host={props.host}
 					/>
 				)}
 			>

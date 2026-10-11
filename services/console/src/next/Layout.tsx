@@ -33,6 +33,7 @@ const Layout = (
 		api: Api;
 		reader: JsonAuthUser;
 		versions: () => Record<string, BmfVersion>;
+		host?: string | undefined;
 	},
 ) => {
 	const location = useLocation();
@@ -115,7 +116,7 @@ const Layout = (
 	};
 
 	return (
-		<ProjectContext.Provider value={{ api: props.api, slug }}>
+		<ProjectContext.Provider value={{ api: props.api, slug, host: props.host }}>
 			<Shell
 				slug={slug()}
 				tab={tab()}

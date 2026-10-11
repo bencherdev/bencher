@@ -130,6 +130,46 @@ describe("the persisted cache", () => {
 		stop();
 	});
 
+	// Kills a save after every answer, which rewrites the whole cache each time
+	// a poll asks again and hears what it heard before.
+	test("an answer that changes nothing is not saved again", async () => {
+		const { store } = memoryStore();
+		let writes = 0;
+		const counting: CacheStore = {
+			...store,
+			set: async (key, value) => {
+				writes += 1;
+				await store.set(key, value);
+			},
+		};
+		const client = createQueryClient(() => {});
+		const { stop } = persistCache(client, counting, "reader-a", "v1", {
+			delay: 0,
+			now: () => NOW,
+		});
+		let reports: { uuid: string }[] = [];
+		const poll = () =>
+			client.fetchQuery({
+				queryKey: KEY,
+				queryFn: async () => structuredClone(reports),
+				staleTime: 0,
+			});
+		// What answered before saving began.
+		await vi.waitFor(() => expect(writes).toBe(1));
+		await poll();
+		await vi.waitFor(() => expect(writes).toBe(2));
+
+		await poll();
+		await poll();
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(writes).toBe(2);
+
+		reports = [{ uuid: "first" }];
+		await poll();
+		await vi.waitFor(() => expect(writes).toBe(3));
+		stop();
+	});
+
 	// Kills a flush that leaves the change to a timer a navigation cancels.
 	test("a flush writes every change at once", async () => {
 		const { store, entries } = slowStore();

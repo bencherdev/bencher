@@ -4,6 +4,8 @@ import type { Api } from "./api";
 interface Project {
 	api: Api;
 	slug: Accessor<string>;
+	/** The API's URL, which `bencher run` needs unless it is Bencher Cloud's. */
+	host?: string | undefined;
 }
 
 /** The API and the project slug of the page being shown. */
