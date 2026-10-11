@@ -4,6 +4,7 @@ use bencher_json::{RunnerResourceId, Secret, UpdateChannel};
 use camino::Utf8PathBuf;
 use serde::Deserialize;
 
+use super::refresh_minute::RefreshMinute;
 use super::scrub_day::ScrubDay;
 
 pub type Servers = BTreeMap<RunnerResourceId, Server>;
@@ -21,6 +22,7 @@ pub struct Server {
     pub host: Option<url::Url>,
     pub update_channel: Option<UpdateChannel>,
     pub scrub_day: Option<ScrubDay>,
+    pub refresh_minute: Option<RefreshMinute>,
 }
 
 pub fn load_server(runner: &RunnerResourceId) -> anyhow::Result<Option<Server>> {

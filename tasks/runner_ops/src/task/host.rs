@@ -28,12 +28,13 @@ impl TryFrom<TaskHost> for Host {
             .and_then(|f| f.update_channel)
             .unwrap_or_default();
         let scrub_day = file.as_ref().and_then(|f| f.scrub_day);
+        let refresh_minute = file.as_ref().and_then(|f| f.refresh_minute);
         let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
         let label = runner.map_or_else(|| server.clone(), |runner| runner.to_string());
         Ok(Self {
             label,
             ssh: Ssh::new(server, ssh, user),
-            desired: Desired::new(update_channel, scrub_day),
+            desired: Desired::new(update_channel, scrub_day, refresh_minute),
         })
     }
 }
@@ -92,9 +93,13 @@ mod tests {
         let dir = Utf8Path::from_path(dir.path()).unwrap();
         // A runner on which no write takes, since every read prints nothing.
         let ssh = Ssh::stand_in(dir, "#!/bin/sh\n").unwrap();
-        let error = host(&ssh, "runner", &Desired::new(UpdateChannel::Stable, None))
-            .unwrap_err()
-            .to_string();
+        let error = host(
+            &ssh,
+            "runner",
+            &Desired::new(UpdateChannel::Stable, None, None),
+        )
+        .unwrap_err()
+        .to_string();
         assert!(
             error.starts_with("Host settings still differ after writing them: "),
             "{error}"

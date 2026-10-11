@@ -3,6 +3,8 @@ use std::fmt;
 use bencher_json::RunnerResourceId;
 use serde::Deserialize;
 
+use super::spacing::spacing_problems;
+
 // A scrub disturbs its runner's Jobs, so no 2 runners scrub on the same or adjacent days.
 const MIN_DAYS_APART: u8 = 2;
 
@@ -48,26 +50,13 @@ impl fmt::Display for ScrubDay {
 
 /// Every runner with no scrub day, and every pair of runners whose scrub days are too close.
 pub fn scrub_day_problems(days: &[(RunnerResourceId, Option<ScrubDay>)]) -> Vec<String> {
-    let mut problems: Vec<String> = days
-        .iter()
-        .filter(|(_, day)| day.is_none())
-        .map(|(runner, _)| format!("{runner} has no scrub_day"))
-        .collect();
-    let set: Vec<(&RunnerResourceId, ScrubDay)> = days
-        .iter()
-        .filter_map(|(runner, day)| day.map(|day| (runner, day)))
-        .collect();
-    for (index, (runner, day)) in set.iter().enumerate() {
-        for (other, other_day) in set.iter().skip(index + 1) {
-            let apart = day.days_apart(*other_day);
-            if apart < MIN_DAYS_APART {
-                problems.push(format!(
-                    "{runner} (day {day}) and {other} (day {other_day}) are {apart} day(s) apart"
-                ));
-            }
-        }
-    }
-    problems
+    spacing_problems(
+        days,
+        "scrub_day",
+        "day",
+        MIN_DAYS_APART,
+        ScrubDay::days_apart,
+    )
 }
 
 #[cfg(test)]

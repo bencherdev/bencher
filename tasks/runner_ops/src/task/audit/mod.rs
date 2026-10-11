@@ -11,6 +11,7 @@ use super::framed::{self, Output};
 use super::merge_ssh;
 use super::ssh::Ssh;
 use crate::parser::TaskAudit;
+use crate::parser::refresh_minute::{RefreshMinute, refresh_minute_problems};
 use crate::parser::scrub_day::{ScrubDay, scrub_day_problems};
 use crate::parser::server::{load_server, load_servers};
 use snapshot::{Sections, Snapshot};
@@ -45,13 +46,14 @@ impl TryFrom<TaskAudit> for Audit {
             .and_then(|f| f.update_channel)
             .unwrap_or_default();
         let scrub_day = file.as_ref().and_then(|f| f.scrub_day);
+        let refresh_minute = file.as_ref().and_then(|f| f.refresh_minute);
         let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
         let label = runner.map_or_else(|| server.clone(), |runner| runner.to_string());
         Ok(Self {
             runner: Target {
                 label,
                 ssh: Ssh::new(server, ssh, user),
-                desired: Desired::new(update_channel, scrub_day),
+                desired: Desired::new(update_channel, scrub_day, refresh_minute),
             },
             against: against.as_ref().map(Target::from_file).transpose()?,
         })
@@ -60,15 +62,16 @@ impl TryFrom<TaskAudit> for Audit {
 
 impl Audit {
     pub fn exec(self) -> anyhow::Result<()> {
-        let fleet: Vec<_> = load_servers()?
-            .into_iter()
-            .map(|(runner, server)| (runner, server.scrub_day))
-            .collect();
+        let mut fleet = Fleet::default();
+        for (runner, server) in load_servers()? {
+            fleet.scrub_days.push((runner.clone(), server.scrub_day));
+            fleet.refresh_minutes.push((runner, server.refresh_minute));
+        }
         self.exec_with_fleet(&fleet)
     }
 
-    /// The audit, with `fleet` the scrub day of every runner in runners.json.
-    fn exec_with_fleet(self, fleet: &[(RunnerResourceId, Option<ScrubDay>)]) -> anyhow::Result<()> {
+    /// The audit, with `fleet` the schedule of every runner in runners.json.
+    fn exec_with_fleet(self, fleet: &Fleet) -> anyhow::Result<()> {
         let Self { runner, against } = self;
         let (sections, frames) = runner.collect()?;
         let snapshot = Snapshot::new(&sections);
@@ -100,7 +103,16 @@ impl Audit {
             failed += report_health(&reference.label, reference_sections);
             unmet += reference.report_desired(reference_frames);
         }
-        failed += report_scrub_days(fleet);
+        failed += report_spacing(
+            "Scrub days in runners.json:",
+            "every runner scrubs on its own day, at least 2 days from any other",
+            &scrub_day_problems(&fleet.scrub_days),
+        );
+        failed += report_spacing(
+            "Refresh minutes in runners.json:",
+            "every runner refreshes at its own minute, at least 5 minutes from any other",
+            &refresh_minute_problems(&fleet.refresh_minutes),
+        );
 
         if failed > 0 || unmet > 0 || differing > 0 {
             anyhow::bail!(
@@ -112,6 +124,13 @@ impl Audit {
     }
 }
 
+/// Each runner's scrub day and refresh minute in runners.json, which no two runners may share.
+#[derive(Debug, Default)]
+struct Fleet {
+    scrub_days: Vec<(RunnerResourceId, Option<ScrubDay>)>,
+    refresh_minutes: Vec<(RunnerResourceId, Option<RefreshMinute>)>,
+}
+
 impl Target {
     /// A reference runner resolves from runners.json alone.
     fn from_file(runner: &RunnerResourceId) -> anyhow::Result<Self> {
@@ -121,7 +140,11 @@ impl Target {
         Ok(Self {
             label: runner.to_string(),
             ssh: Ssh::new(server, ssh, user),
-            desired: Desired::new(file.update_channel.unwrap_or_default(), file.scrub_day),
+            desired: Desired::new(
+                file.update_channel.unwrap_or_default(),
+                file.scrub_day,
+                file.refresh_minute,
+            ),
         })
     }
 
@@ -152,14 +175,13 @@ fn report_health(label: &str, sections: &Sections) -> usize {
     findings.iter().filter(|finding| finding.failed()).count()
 }
 
-/// Print whether every runner in runners.json scrubs on its own day, and count the failure.
-fn report_scrub_days(fleet: &[(RunnerResourceId, Option<ScrubDay>)]) -> usize {
-    let problems = scrub_day_problems(fleet);
-    println!("Scrub days in runners.json:");
+/// Print one runners.json schedule check under `title`, `ok` when it has no problems, and count the failure.
+fn report_spacing(title: &str, ok: &str, problems: &[String]) -> usize {
+    println!("{title}");
     if problems.is_empty() {
-        println!("  ok    every runner scrubs on its own day, at least 2 days from any other");
+        println!("  ok    {ok}");
     }
-    for problem in &problems {
+    for problem in problems {
         println!("  FAIL  {problem}");
     }
     usize::from(!problems.is_empty())
@@ -195,7 +217,7 @@ mod tests {
         let target = Target {
             label: "runner".to_owned(),
             ssh,
-            desired: Desired::new(UpdateChannel::Stable, None),
+            desired: Desired::new(UpdateChannel::Stable, None, None),
         };
         let (_, frames) = target.collect().unwrap();
         assert_eq!(
@@ -214,7 +236,10 @@ mod tests {
         let dir = Utf8Path::from_path(dir.path()).unwrap();
         let (audit, rows) = absent_rows(dir);
         assert_eq!(
-            audit.exec_with_fleet(&[]).unwrap_err().to_string(),
+            audit
+                .exec_with_fleet(&Fleet::default())
+                .unwrap_err()
+                .to_string(),
             format!(
                 "Audit found 0 failed health check(s), {rows} desired state difference(s), and 0 differing section(s)"
             )
@@ -227,10 +252,35 @@ mod tests {
         let dir = Utf8Path::from_path(dir.path()).unwrap();
         let (audit, rows) = absent_rows(dir);
         let day = |day| Some(ScrubDay::try_from(day).unwrap());
-        let fleet = [
-            ("runner".parse().unwrap(), day(5)),
-            ("other".parse().unwrap(), day(6)),
-        ];
+        let fleet = Fleet {
+            scrub_days: vec![
+                ("runner".parse().unwrap(), day(5)),
+                ("other".parse().unwrap(), day(6)),
+            ],
+            refresh_minutes: Vec::new(),
+        };
+        assert_eq!(
+            audit.exec_with_fleet(&fleet).unwrap_err().to_string(),
+            format!(
+                "Audit found 1 failed health check(s), {rows} desired state difference(s), and 0 differing section(s)"
+            )
+        );
+    }
+
+    #[test]
+    fn the_audit_counts_refresh_minutes_too_close_as_a_failed_check() {
+        // Kills a refresh minute check the audit prints but does not count.
+        let dir = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(dir.path()).unwrap();
+        let (audit, rows) = absent_rows(dir);
+        let minute = |minute| Some(RefreshMinute::try_from(minute).unwrap());
+        let fleet = Fleet {
+            scrub_days: Vec::new(),
+            refresh_minutes: vec![
+                ("runner".parse().unwrap(), minute(10)),
+                ("other".parse().unwrap(), minute(12)),
+            ],
+        };
         assert_eq!(
             audit.exec_with_fleet(&fleet).unwrap_err().to_string(),
             format!(
@@ -241,7 +291,7 @@ mod tests {
 
     /// The audit of a healthy runner on which every desired state row is absent, and its number of rows.
     fn absent_rows(dir: &Utf8Path) -> (Audit, usize) {
-        let desired = Desired::new(UpdateChannel::Stable, None);
+        let desired = Desired::new(UpdateChannel::Stable, None, None);
         let rows = desired.frames().count();
         let mut reply = fake_output(&health::healthy());
         for (name, _) in desired.frames() {
