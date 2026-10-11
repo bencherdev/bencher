@@ -98,6 +98,7 @@ const mountYear = (data: PlotData) => {
 				focused={null}
 				onHiddenChange={setHidden}
 				onFocusChange={() => {}}
+				reportHref={(uuid) => `/reports/${uuid}`}
 			/>
 		),
 		root,
@@ -136,9 +137,12 @@ test("moves the readout and the hover focus for one pointer move", async () => {
 	const over = page.getByRole("group", { name: /64 lines/ }).element();
 	const box = over.getBoundingClientRect();
 	const runs: number[] = [];
-	for (let run = 0; run < RUNS * 3; run++) {
+	const shown = new Set<string>();
+	const count = RUNS * 3;
+	for (let run = 0; run < count; run++) {
+		// Leftward, away from the readout on the cursor's right, so no move is held and each one moves it.
 		const event = new PointerEvent("pointermove", {
-			clientX: box.left + ((run % 7) + 1) * (box.width / 9),
+			clientX: box.left + box.width * (0.7 - (0.65 * run) / count),
 			clientY: box.top + ((run % 5) + 1) * (box.height / 7),
 			pointerType: "mouse",
 			bubbles: true,
@@ -147,8 +151,9 @@ test("moves the readout and the hover focus for one pointer move", async () => {
 		over.dispatchEvent(event);
 		await land(root);
 		runs.push(performance.now() - start);
+		shown.add(page.getByRole("status").element().textContent ?? "");
 	}
-	expect(page.getByRole("status").element().textContent).toContain("µs");
+	expect(shown.size).toBe(count);
 	expectUnder("hover", runs, CEILINGS.hover_ms);
 });
 

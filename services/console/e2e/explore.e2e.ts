@@ -11,8 +11,10 @@ import {
 	tabRow,
 	test,
 } from "./fixtures";
+import { DAY } from "./public";
 
 const { hashbrown } = seed.projects;
+const HOUR = DAY / 24;
 
 const plot = (page: Page) => page.getByRole("figure");
 const box = (page: Page, name: string) => page.getByRole("group", { name });
@@ -908,6 +910,83 @@ test("a query past 64 lines says so", async ({ page, request }) => {
 	).toContainText("72 lines, over the cap of 64.");
 	await expect(plot(page)).toHaveAccessibleName("64 lines");
 });
+
+// Kills a readout that follows the mouse past the next point on its way to
+// the readout's link, so the link reached is another report's or none.
+test("a mouse reaches a readout's report link past a point close beside it", async ({
+	page,
+	request,
+}) => {
+	const project = await createProject(request);
+	const now = Date.parse(seed.now);
+	const results = (value: number) => ({
+		hash: [{ parameters: { size: 1 }, measures: { latency: { value } } }],
+	});
+	// Two reports an hour apart among three weeks: their points sit a few pixels apart.
+	const first = await postReport(request, project.slug, {
+		start: new Date(now - 21 * DAY).toISOString(),
+		results: results(1),
+	});
+	await postReport(request, project.slug, {
+		start: new Date(now - 21 * DAY + HOUR).toISOString(),
+		results: results(2),
+	});
+	await postReport(request, project.slug, {
+		start: new Date(now - DAY).toISOString(),
+		results: results(3),
+	});
+	const id = await dimensions(request, project.slug);
+	await page.goto(
+		explore(project.slug, {
+			branches: [{ uuid: id.branch("main") }],
+			testbeds: [{ uuid: id.testbed("ubuntu-latest") }],
+			benchmarks: [id.benchmark("hash")],
+			measures: [id.measure("Latency")],
+		}),
+	);
+	await expect(plot(page)).toHaveAccessibleName("1 line");
+	const area = await page
+		.getByRole("group", { name: /^1 line,/ })
+		.boundingBox();
+	if (!area) {
+		throw new Error("No plot area");
+	}
+	await page.mouse.move(area.x + 0.5, area.y + area.height - 10);
+	const link = plot(page).getByRole("status").getByRole("link");
+	await expect(link).toHaveAttribute("href", new RegExp(first.uuid));
+	const goal = await link.boundingBox();
+	if (!goal) {
+		throw new Error("No report link");
+	}
+	await page.mouse.move(goal.x + goal.width / 2, goal.y + goal.height / 2, {
+		steps: 8,
+	});
+	await page.mouse.down();
+	await page.mouse.up();
+	await expect(page).toHaveURL(new RegExp(`/reports/${first.uuid}`));
+});
+
+// Kills a short plot that cannot scroll to the top of the screen, since
+// nothing below it gives the page the room.
+for (const viewport of [undefined, { width: 390, height: 844 }]) {
+	test(`a short plot scrolls to the top of the screen${viewport ? ` at ${viewport.width}` : ""}`, async ({
+		page,
+		request,
+	}) => {
+		if (viewport) {
+			await page.setViewportSize(viewport);
+		}
+		await page.goto(explore(hashbrown.slug, (await twoLines(request)).query));
+		await expect(plot(page)).toHaveAccessibleName("2 lines");
+		await page.evaluate(() =>
+			window.scrollTo({
+				top: document.documentElement.scrollHeight,
+				behavior: "instant",
+			}),
+		);
+		expect((await plot(page).boundingBox())?.y).toBeLessThanOrEqual(0);
+	});
+}
 
 // Kills a classic perf link that lands in Explore without its query, through
 // the version the browser remembers or the one the classic navbar reads.

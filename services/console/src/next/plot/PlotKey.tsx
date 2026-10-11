@@ -1,3 +1,4 @@
+import Tooltip from "@bencherdev/ui/Tooltip";
 import { createSignal, For, Index, Show } from "solid-js";
 import type { LineName } from "./key";
 import type { LineStyle } from "./series";
@@ -17,7 +18,6 @@ export interface PlotKeyProps {
 	/** Entries shown before the rest fold behind Show all. */
 	max: number;
 	compact: boolean;
-	hint: boolean;
 	onToggle: (line: number) => void;
 	onFocus: (line: number) => void;
 	/** A line focused while its entry is hovered or holds keyboard focus. */
@@ -48,16 +48,12 @@ export const PlotKey = (props: PlotKeyProps) => {
 					<span class="pl-dot" aria-hidden="true">
 						·
 					</span>
-					<span class="pl-ellipsis">
-						<span class="pl-mono">{props.constants.join(" ")}</span> on every
-						line, so entries leave it out
-					</span>
-				</Show>
-				<Show when={props.hint}>
-					<span class="pl-dot" aria-hidden="true">
-						·
-					</span>
-					<span>a name hides its line, the target focuses it</span>
+					<Tooltip tip="On every line">
+						{/* biome-ignore lint/a11y/noNoninteractiveTabindex: focusable, so the keyboard reaches its tooltip */}
+						<span class="pl-ellipsis pl-mono" tabIndex={0}>
+							{props.constants.join(" ")}
+						</span>
+					</Tooltip>
 				</Show>
 			</div>
 			<div class="pl-kgrid">
@@ -83,49 +79,53 @@ export const PlotKey = (props: PlotKeyProps) => {
 								}}
 								onFocusOut={() => props.onPreview(null)}
 							>
-								<button
-									type="button"
-									class="pl-ktog"
-									aria-label={`${name().text}: ${hidden() ? "show" : "hide"} its line`}
-									onClick={() => props.onToggle(line)}
-								>
-									<Show when={!hidden()} fallback={<EyeOff />}>
-										<Swatch
-											slot={style().slot}
-											shape={style().shape}
-											stroke={style().axis === 1 ? "dotted" : "solid"}
-										/>
-									</Show>
-									<b>{name().benchmark}</b>
-									<Index each={name().tags}>
-										{(tag) => (
-											<>
-												{" "}
-												<span class="pl-tag">{tag()}</span>
-											</>
-										)}
-									</Index>
-									<Index each={name().detail}>
-										{(detail) => (
-											<>
-												{" "}
-												<span class="pl-km">{detail()}</span>
-											</>
-										)}
-									</Index>
-									<Show when={props.lines[line]?.alerting}>
-										<span class="pl-alertdot" aria-hidden="true" />
-									</Show>
-								</button>
-								<button
-									type="button"
-									class="pl-kfoc"
-									aria-pressed={props.focused === line}
-									aria-label={`Focus ${name().text} and draw its boundary`}
-									onClick={() => props.onFocus(line)}
-								>
-									<Target />
-								</button>
+								<Tooltip tip={hidden() ? "Show line" : "Hide line"}>
+									<button
+										type="button"
+										class="pl-ktog"
+										aria-label={`${name().text}: ${hidden() ? "show" : "hide"} its line`}
+										onClick={() => props.onToggle(line)}
+									>
+										<Show when={!hidden()} fallback={<EyeOff />}>
+											<Swatch
+												slot={style().slot}
+												shape={style().shape}
+												stroke={style().axis === 1 ? "dotted" : "solid"}
+											/>
+										</Show>
+										<b>{name().benchmark}</b>
+										<Index each={name().tags}>
+											{(tag) => (
+												<>
+													{" "}
+													<span class="pl-tag">{tag()}</span>
+												</>
+											)}
+										</Index>
+										<Index each={name().detail}>
+											{(detail) => (
+												<>
+													{" "}
+													<span class="pl-km">{detail()}</span>
+												</>
+											)}
+										</Index>
+										<Show when={props.lines[line]?.alerting}>
+											<span class="pl-alertdot" aria-hidden="true" />
+										</Show>
+									</button>
+								</Tooltip>
+								<Tooltip tip="Focus line">
+									<button
+										type="button"
+										class="pl-kfoc"
+										aria-pressed={props.focused === line}
+										aria-label={`Focus ${name().text} and draw its boundary`}
+										onClick={() => props.onFocus(line)}
+									>
+										<Target />
+									</button>
+								</Tooltip>
 							</div>
 						);
 					}}

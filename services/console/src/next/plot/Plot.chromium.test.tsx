@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import Plot, { type PlotProps } from "./Plot";
 import { middle, near, pixelAt, rowsOf, settle, tokenRgb } from "./pixels";
+import { GRACE_MS } from "./readout";
 import { returnSyncKey, takeSyncKey } from "./sync";
 import { expectNameStartsWithText, shownText } from "../ui/testing";
 import { DAY, START, testData, testLine } from "./testing";
@@ -665,6 +666,42 @@ describe("Plot", () => {
 		expectNameStartsWithText(shown.element());
 	});
 
+	// Kills a key control or the shared parameters losing the tooltip that says what they are, or the keyboard's way to it.
+	test("describes each key control and the shared parameters in a tooltip", async () => {
+		const data = testData([
+			testLine({
+				id: "one",
+				parameters: { simd: "avx2", threads: 1 },
+				y: [1, 2],
+			}),
+			testLine({
+				id: "two",
+				parameters: { simd: "avx2", threads: 2 },
+				y: [2, 3],
+			}),
+		]);
+		mount({ data, focused: null });
+		await settle();
+		const controls = [
+			page.getByRole("button", { name: "blake3 threads=1: hide its line" }),
+			page.getByRole("button", {
+				name: "Focus blake3 threads=1 and draw its boundary",
+			}),
+		];
+		for (const control of controls) {
+			await expect.element(control).toHaveAccessibleDescription(/\S/);
+			await control.hover();
+			const tip = document.getElementById(
+				control.element().getAttribute("aria-describedby") ?? "",
+			);
+			expect(tip?.matches(":popover-open")).toBe(true);
+		}
+		const shared = page.getByText("simd=avx2", { exact: true });
+		await expect.element(shared).toHaveAccessibleDescription(/\S/);
+		(shared.element() as HTMLElement).focus();
+		expect(document.activeElement).toBe(shared.element());
+	});
+
 	test("lists alerting lines first in the key", async () => {
 		const data = testData([
 			testLine({ id: "quiet", benchmark: "crc32c", y: [1, 1] }),
@@ -753,6 +790,216 @@ const bodyBox = (over: HTMLElement) => {
 	}
 	return body.getBoundingClientRect();
 };
+
+/** A mouse event at a point on the page, as a real pointer sends it. */
+const pointer = (
+	target: Element,
+	type: string,
+	clientX: number,
+	clientY: number,
+) =>
+	target.dispatchEvent(
+		new PointerEvent(type, {
+			clientX,
+			clientY,
+			pointerType: "mouse",
+			bubbles: type === "pointermove",
+		}),
+	);
+
+// Three reports, the first two an hour apart, so their points sit closer than the readout's gap from its point.
+const CLOSE: PlotData = {
+	x: [START, START + DAY / 24, START + 20 * DAY],
+	report: [0, 1, 2],
+	reports: [0, 1, 2].map((index) => ({
+		uuid: `report-${index}`,
+		version: index,
+		hash: `aaaaaa${index}`,
+	})),
+	measures: [{ name: "Latency", units: "nanoseconds (ns)" }],
+	lines: [testLine({ id: "rising", y: [10_000, 20_000, 30_000] })],
+};
+
+describe("Plot readout hold", () => {
+	/** The hash of the report the readout reads out. */
+	const shown = () =>
+		/aaaaaa\d/.exec(page.getByRole("status").element().textContent ?? "")?.[0];
+	const linkRow = () => {
+		const when = page
+			.getByRole("status")
+			.element()
+			.querySelector(".pl-when")
+			?.getBoundingClientRect();
+		if (!when) {
+			throw new Error("No readout");
+		}
+		return when;
+	};
+	const wait = (ms: number) =>
+		new Promise((resolve) => setTimeout(resolve, ms));
+
+	/** Hovers the first point at `y` in the plot, low unless given, and returns the way to its readout's link. */
+	const atFirstPoint = async (linked = true) => {
+		const { setData } = mount({
+			data: CLOSE,
+			...(linked && { reportHref: (uuid: string) => `/reports/${uuid}` }),
+		});
+		await settle();
+		const { over, box } = await plotArea();
+		const start = { x: box.left, y: box.bottom - 10 };
+		pointer(over, "pointermove", start.x, start.y);
+		expect(shown()).toBe("aaaaaa0");
+		// The readout measures itself after it lays out, as it has by a mouse's next move.
+		await settle();
+		const row = linkRow();
+		const goal = { x: row.left + row.width / 2, y: row.top + row.height / 2 };
+		const toward = (step: number) =>
+			pointer(
+				over,
+				"pointermove",
+				start.x + (goal.x - start.x) * step,
+				start.y + (goal.y - start.y) * step,
+			);
+		return { over, box, goal, toward, setData };
+	};
+
+	// Kills a readout that follows a mouse past the next point on its way to the link, a hold that lets go at once, one that ends under the pointer on the link, or one that stays once it leaves.
+	test("keeps its point while a mouse heads into its link and while the mouse is on it", async () => {
+		const { over, goal, toward } = await atFirstPoint();
+		for (const step of [0.2, 0.4, 0.6]) {
+			toward(step);
+			await settle();
+		}
+		expect(shown()).toBe("aaaaaa0");
+
+		pointer(over, "pointerleave", goal.x, goal.y);
+		// Entering the link, a browser sends the readout's live region an enter of its own.
+		const live = page.getByRole("status").element();
+		pointer(live, "pointerenter", goal.x, goal.y);
+		await wait(GRACE_MS + 100);
+		expect(shown()).toBe("aaaaaa0");
+		await expect
+			.element(page.getByRole("status").getByRole("link"))
+			.toHaveAttribute("href", "/reports/report-0");
+
+		pointer(live, "pointerleave", goal.x, 0);
+		await expect.element(page.getByRole("status")).not.toHaveTextContent("µs");
+	});
+
+	// Kills a hold that never lets go of a mouse that stops short of the link.
+	test("follows again once a mouse settles short of the link", async () => {
+		const { toward } = await atFirstPoint();
+		toward(0.2);
+		expect(shown()).toBe("aaaaaa0");
+		await expect.poll(shown).toBe("aaaaaa1");
+	});
+
+	// Kills a hold on a readout with no link to reach, which only stops it following.
+	test("follows a mouse heading into a readout with no report link", async () => {
+		const { toward } = await atFirstPoint(false);
+		toward(0.2);
+		expect(shown()).toBe("aaaaaa1");
+	});
+
+	// Kills a hold aimed at the whole readout, or at a link row with no height: only a move level with the link holds.
+	test("holds for a move level with the link and not for one just below it", async () => {
+		const { over, box } = await atFirstPoint();
+		const row = linkRow();
+		for (const [y, held] of [
+			[row.top + row.height / 2, true],
+			[row.bottom + 4, false],
+		] as const) {
+			pointer(over, "pointerleave", box.left, box.bottom + 20);
+			pointer(over, "pointermove", box.left, y);
+			expect(shown(), `${y}`).toBe("aaaaaa0");
+			await settle();
+			pointer(over, "pointermove", box.left + 6, y);
+			expect(shown(), `${y}`).toBe(held ? "aaaaaa0" : "aaaaaa1");
+			await wait(GRACE_MS + 100);
+		}
+	});
+
+	// Kills a pin, a keyboard pin, a close, or new data that a pending hold undoes once it lets go.
+	for (const action of ["click", "End", "Escape", "new data"] as const) {
+		test(`a ${action} during a hold stands once the hold would have let go`, async () => {
+			const { over, box, toward, setData } = await atFirstPoint();
+			toward(0.2);
+			expect(shown()).toBe("aaaaaa0");
+			if (action === "new data") {
+				setData({ ...CLOSE });
+			} else if (action === "click") {
+				over.dispatchEvent(
+					new MouseEvent("click", {
+						clientX: box.left,
+						clientY: box.bottom - 10,
+						bubbles: true,
+					}),
+				);
+			} else {
+				over.dispatchEvent(
+					new KeyboardEvent("keydown", { key: action, bubbles: true }),
+				);
+			}
+			const settled = {
+				click: "aaaaaa0",
+				End: "aaaaaa2",
+				Escape: undefined,
+				"new data": undefined,
+			}[action];
+			expect(shown()).toBe(settled);
+			await wait(GRACE_MS + 100);
+			expect(shown()).toBe(settled);
+			if (action === "click" || action === "End") {
+				await expect
+					.element(page.getByRole("status"))
+					.toHaveAttribute("aria-live", "polite");
+			}
+		});
+	}
+
+	// Kills a hold aimed at the whole readout, or a readout body that takes the pointer from the points beneath it.
+	test("follows every point of a rightward sweep across the top of a six-line plot", async () => {
+		const points = 16;
+		mount({
+			data: testData(
+				Array.from({ length: 6 }, (_, index) =>
+					testLine({
+						id: `line-${index}`,
+						benchmark: "a_benchmark_with_a_long_name",
+						parameters: { threads: index },
+						y: Array.from(
+							{ length: points },
+							(_, at) => 1000 + at + index * 10,
+						),
+					}),
+				),
+			),
+			reportHref: (uuid) => `/reports/${uuid}`,
+		});
+		await settle();
+		const { box } = await plotArea();
+		const y = box.top + box.height * 0.3;
+		const seen = new Set<string>();
+		for (let x = box.left; x <= box.right; x += box.width / (points * 3)) {
+			// Where a real pointer would land, readout or plot.
+			document.elementFromPoint(x, y)?.dispatchEvent(
+				new PointerEvent("pointermove", {
+					clientX: x,
+					clientY: y,
+					pointerType: "mouse",
+					bubbles: true,
+				}),
+			);
+			await settle();
+			seen.add(
+				page.getByRole("status").element().querySelector(".pl-when")
+					?.textContent ?? "",
+			);
+		}
+		seen.delete("");
+		expect(seen.size).toBe(points);
+	});
+});
 
 describe("Plot readout room", () => {
 	// Kills a readout placed by the cursor's half of the plot, which runs off a phone's screen and hides its close button.

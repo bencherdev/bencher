@@ -89,6 +89,8 @@ export interface PanelEvents {
 	hover: (event: CursorEvent | null) => void;
 	pin: (event: CursorEvent) => void;
 	close: () => void;
+	/** Whether the readout keeps its point as a mouse moves to `left` and `top` from the plot area's corner; `follow` moves it once the hold lets go. */
+	hold: (left: number, top: number, follow: () => void) => boolean;
 }
 
 export interface Panel {
@@ -508,20 +510,23 @@ export const createPanel = (
 
 	const hide = () => moveCursor({ left: -10, top: -10 }, false, true);
 
-	const onMove = (event: PointerEvent) => {
-		if (event.pointerType === "touch" || state.pinned()) {
-			return;
-		}
-		const { left, top } = local(event);
-		events.hover(cursorAt(left, top));
-	};
-	const onLeave = (event: PointerEvent) => {
-		if (event.pointerType === "touch" || state.pinned()) {
-			return;
-		}
+	// A mouse heading into the readout may hold it, and the move or the leave waits until the hold lets go.
+	const pointer =
+		(then: (left: number, top: number) => void) => (event: PointerEvent) => {
+			if (event.pointerType === "touch" || state.pinned()) {
+				return;
+			}
+			const { left, top } = local(event);
+			const go = () => then(left, top);
+			if (event.pointerType !== "mouse" || !events.hold(left, top, go)) {
+				go();
+			}
+		};
+	const onMove = pointer((left, top) => events.hover(cursorAt(left, top)));
+	const onLeave = pointer(() => {
 		hide();
 		events.hover(null);
-	};
+	});
 	const onClick = (event: MouseEvent) => {
 		const { left, top } = local(event);
 		const cursor = cursorAt(left, top);

@@ -35,7 +35,7 @@ describe("slotsOf", () => {
 });
 
 describe("slotRange", () => {
-	// Rows of 44 px, a group header of 38 px, and an expanded row of 44 + 330 px.
+	// Rows of 44 px, a group header of 38 px, and an expanded row of 374 px.
 	const offsets = offsetsOf([38, 44, 374, 44, 44, 44]);
 
 	// Kills offsets that skip a row's own height.
