@@ -1,10 +1,8 @@
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
-import ThemeToggle from "@bencherdev/ui/ThemeToggle";
 import { For, Show } from "solid-js";
 import { TABS, type Tab, projectPath } from "../paths";
-import { THEME_KEY } from "../theme";
-import Mark from "./Mark";
+import Tools from "./Tools";
 
 interface ShellProps {
 	slug: string;
@@ -39,8 +37,8 @@ const Shell = (props: ShellProps) => {
 		<header class="shell">
 			<div class="bar">
 				<a class="brand" href="/console" aria-label="Bencher, home">
-					<Mark />
-					<span class="brand-name">Bencher</span>
+					<img src="/wordmark-dark.svg" alt="" />
+					<img src="/wordmark-light.svg" alt="" />
 				</a>
 				<nav
 					class="crumbs"
@@ -63,7 +61,7 @@ const Shell = (props: ShellProps) => {
 							</a>
 						)}
 					</Show>
-					<span class="sep crumb-org" aria-hidden="true">
+					<span class="sep" aria-hidden="true">
 						/
 					</span>
 					<a
@@ -89,10 +87,7 @@ const Shell = (props: ShellProps) => {
 						</span>
 					</Show>
 				</a>
-				<a class="docs" href="/docs/">
-					Docs
-				</a>
-				<ThemeToggle storageKey={THEME_KEY} class="theme-toggle" />
+				<Tools />
 				<a class="avatar" href={props.account ?? "/console"}>
 					<span class="sr-only">Account</span>
 				</a>

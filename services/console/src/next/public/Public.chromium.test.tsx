@@ -55,6 +55,7 @@ afterEach(() => {
 	dispose = undefined;
 	document.body.replaceChildren();
 	document.documentElement.removeAttribute("data-reader");
+	document.documentElement.removeAttribute("data-theme");
 });
 
 const show = (props: Partial<PublicProps> = {}) => {
@@ -314,15 +315,80 @@ test("a locked page asks only a reader who is not signed in to log in", async ()
 	}
 });
 
-// Kills a bar that names the link's slug as a project before anyone read it.
-test("only a drawn plot names its project in the bar", async () => {
+/** What the bar shows a reader, each control by its name, in order. */
+const held = () =>
+	[...document.querySelectorAll<HTMLElement>(".bar a, .bar button")]
+		.filter((control) => control.checkVisibility())
+		.map(
+			(control) =>
+				control.getAttribute("aria-label") ?? control.textContent?.trim(),
+		);
+
+// Kills a bar that names the project (the link's slug may name nothing), a
+// phone bar that drops Sign up or leaves Docs and the theme toggle out of its
+// menu, and a reader who is asked to log in, or not, by the wrong bar.
+test("the bar holds the wordmark, Docs and the theme or the menu, and Log in and Sign up or the avatar", async () => {
+	for (const view of ["plot", "locked"] as const) {
+		show({ view });
+		for (const [width, tools] of [
+			[1280, ["Docs", "Switch between light and dark"]],
+			[390, ["Menu"]],
+			[320, ["Menu"]],
+		] as const) {
+			await page.viewport(width, 800);
+			document.documentElement.removeAttribute("data-reader");
+			expect(held(), `${view} at ${width}`).toEqual([
+				"Bencher, home",
+				...tools,
+				"Log in",
+				"Sign up",
+			]);
+			document.documentElement.setAttribute("data-reader", "");
+			expect(held(), `${view} at ${width}, signed in`).toEqual([
+				"Bencher, home",
+				...tools,
+				"Account",
+			]);
+		}
+		dispose?.();
+		document.body.replaceChildren();
+		document.documentElement.removeAttribute("data-reader");
+	}
+});
+
+// Kills a public wordmark that follows the reader's system rather than the
+// page's theme, both drawn at once, or a theme with none.
+test("the wordmark follows the page's theme", async () => {
 	await page.viewport(1280, 900);
-	const crumb = () =>
-		page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link");
-	show({ view: "locked", slug: "no-such", name: "no-such" });
-	expect(crumb().elements()).toHaveLength(0);
-	dispose?.();
-	document.body.replaceChildren();
 	show();
-	await expect.element(crumb()).toHaveTextContent("Hashbrown");
+	const html = document.documentElement;
+	const wordmark = () =>
+		[...document.querySelectorAll<HTMLImageElement>(".brand img")]
+			.filter((image) => image.checkVisibility())
+			.map((image) => new URL(image.src).pathname);
+
+	expect(wordmark()).toEqual(["/wordmark-dark.svg"]);
+	html.setAttribute("data-theme", "light");
+	expect(wordmark()).toEqual(["/wordmark-light.svg"]);
+	html.setAttribute("data-theme", "dark");
+	expect(wordmark()).toEqual(["/wordmark-dark.svg"]);
+});
+
+// Kills a phone bar that wraps to a second row, scrolls sideways, or pushes
+// Log in or Sign up off the screen.
+test("on a phone the bar keeps Log in and Sign up on one row down to 320 px", async () => {
+	show();
+	const bar = document.querySelector(".bar");
+	for (const width of [390, 320]) {
+		await page.viewport(width, 800);
+		expect(bar?.getBoundingClientRect().height).toBe(52);
+		expect(bar && bar.scrollWidth <= bar.clientWidth).toBe(true);
+		for (const name of ["Log in", "Sign up"]) {
+			const link = page.getByRole("link", { name }).element();
+			const { left, right, height } = link.getBoundingClientRect();
+			expect(left, `${name} at ${width}`).toBeGreaterThanOrEqual(0);
+			expect(right, `${name} at ${width}`).toBeLessThanOrEqual(width);
+			expect(height, `${name} at ${width}`).toBeGreaterThanOrEqual(44);
+		}
+	}
 });

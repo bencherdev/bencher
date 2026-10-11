@@ -4,7 +4,6 @@ import ButtonLink from "@bencherdev/ui/ButtonLink";
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
-import ThemeToggle from "@bencherdev/ui/ThemeToggle";
 import {
 	For,
 	Index,
@@ -27,9 +26,7 @@ import { chipSummary } from "../explore/summary";
 import { projectPath } from "../paths";
 import { lineVisible, settleVisibility } from "../query/line";
 import { type ExploreQuery, encodeQuery } from "../query/query";
-import Mark from "../shell/Mark";
-import { THEME_KEY } from "../theme";
-import { publicPlotPath } from "./query";
+import Tools from "../shell/Tools";
 
 export type PlotView = typeof import("../plot/Plot").default;
 
@@ -72,22 +69,11 @@ const Public = (props: PublicProps) => (
 		<header class="shell">
 			<div class="bar">
 				<a class="brand" href="/" aria-label="Bencher, home">
-					<Mark />
-					<span class="brand-name">Bencher</span>
+					<img src="/wordmark-dark.svg" alt="" />
+					<img src="/wordmark-light.svg" alt="" />
 				</a>
-				<nav class="crumbs" aria-label="Breadcrumb">
-					{/* Only a project read names itself; the link's slug may name nothing. */}
-					<Show when={props.view === "plot"}>
-						<a class="projlink" href={publicPlotPath(props.slug)}>
-							{props.name}
-						</a>
-					</Show>
-				</nav>
 				<span class="spacer" />
-				<a class="docs" href="/docs/">
-					Docs
-				</a>
-				<ThemeToggle storageKey={THEME_KEY} class="theme-toggle" />
+				<Tools />
 				<a class="avatar pu-in" href="/console">
 					<span class="sr-only">Account</span>
 				</a>
@@ -95,12 +81,7 @@ const Public = (props: PublicProps) => (
 					<ButtonLink size="sm" href={props.signIn}>
 						Log in
 					</ButtonLink>
-					<ButtonLink
-						class="pu-signup"
-						size="sm"
-						variant="primary"
-						href="/auth/signup"
-					>
+					<ButtonLink size="sm" variant="primary" href="/auth/signup">
 						Sign up
 					</ButtonLink>
 				</span>

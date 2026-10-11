@@ -30,9 +30,14 @@ export const handOff = (mount: HTMLElement, paint: () => void) => {
 	}
 };
 
-// The bell and the Alerts tab share a link, so the class tells them apart.
+// The bell and the Alerts tab share a link, so the class tells them apart;
+// the server writes a spread class with a trailing space.
 const identity = (element: Element) =>
-	[element.tagName, element.className, element.getAttribute("href")].join(" ");
+	[
+		element.tagName,
+		element.className.trim(),
+		element.getAttribute("href"),
+	].join(" ");
 
 /** The earliest start of each CSS animation running in `mount`. */
 const startTimes = (mount: HTMLElement) => {
