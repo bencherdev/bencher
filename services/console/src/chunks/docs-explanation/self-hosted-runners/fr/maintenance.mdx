@@ -27,11 +27,12 @@ ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
 OpenFile=/dev/null
 ExecStart=
 ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
-ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
+ExecStopPost=+/bin/sh -c '/usr/bin/busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager PreparingForShutdown | /usr/bin/grep -q true || /usr/bin/rm -f /run/bencher/maintenance.%n'
 TimeoutStartSec=infinity
 ```
 
 `OpenFile=/dev/null` occupe le descripteur de fichier 3, de sorte que le verrou reste pris même si la commande rouvre le descripteur 3, comme le fait `apt.systemd.daily`.
+Pendant que l'hôte se prépare à s'arrêter, `ExecStopPost=` laisse le marqueur, de sorte que le Runner n'accepte aucun Job avant que le redémarrage ne vide `/run`.
 
 ### Vider un Runner
 
