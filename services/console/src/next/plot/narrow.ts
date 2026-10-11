@@ -1,7 +1,7 @@
 import { type Accessor, createSignal, onCleanup } from "solid-js";
 import { isServer } from "solid-js/web";
 
-const NARROW = "(max-width: 767px)";
+export const NARROW = "(max-width: 767px)";
 
 const [narrow, setNarrow] = createSignal(false);
 let query: MediaQueryList | undefined;

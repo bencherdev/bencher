@@ -4,7 +4,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 35700,
+		"jsBytes": 36000,
 		"deferredJsBytes": 108000,
 		"htmlBytes": 2700,
 		"inlineScriptBytes": 2840,
@@ -14,7 +14,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0,
-		"jsBytes": 35700,
+		"jsBytes": 36000,
 		"htmlBytes": 2700,
 		"inlineScriptBytes": 2840,
 		"lateModules": 0
@@ -22,5 +22,20 @@
 	"tabSwitch": {
 		"apiRequests": 0,
 		"jsBytes": 160
+	},
+	"reportsColdLoad": {
+		"apiAnswersBeforePaint": 0,
+		"apiRequests": 2,
+		"apiRounds": 1,
+		"cls": 0.00025,
+		"jsBytes": 44450,
+		"htmlBytes": 2700,
+		"inlineScriptBytes": 2840,
+		"lateModules": 0
+	},
+	"reportsTabSwitch": {
+		"apiRequests": 1,
+		"apiRounds": 1,
+		"jsBytes": 9150
 	}
 }

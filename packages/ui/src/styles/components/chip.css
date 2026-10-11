@@ -1,0 +1,42 @@
+@layer ui-components {
+	.ui-chip {
+		appearance: none;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		max-width: 100%;
+		height: 36px;
+		padding: 0 12px;
+		border: var(--border-width) solid var(--color-border-control);
+		border-radius: var(--radius-full);
+		background: transparent;
+		color: var(--color-text-primary);
+		font: var(--font-weight-medium) 13px var(--font-family-body);
+		white-space: nowrap;
+		cursor: pointer;
+	}
+
+	.ui-chip:hover {
+		background: var(--color-overlay-hover);
+	}
+
+	.ui-chip[data-on] {
+		border-color: var(--color-border-accent);
+		background: var(--color-accent-muted);
+	}
+
+	.ui-chip-key {
+		color: var(--color-text-muted);
+		font: 11px var(--font-family-code);
+	}
+
+	.ui-chip-caret {
+		color: var(--color-text-muted);
+	}
+
+	@media (max-width: 767px) {
+		.ui-chip {
+			height: var(--spacing-11);
+		}
+	}
+}

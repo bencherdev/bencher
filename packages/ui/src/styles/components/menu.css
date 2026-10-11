@@ -1,0 +1,81 @@
+@layer ui-components {
+	.ui-menu {
+		position: absolute;
+		z-index: 30;
+		inset-block-start: calc(100% + 6px);
+		inset-inline-start: 0;
+		display: flex;
+		flex-direction: column;
+		min-width: 200px;
+		max-width: min(320px, calc(100vw - 32px));
+		padding: 4px;
+		border: var(--border-width) solid var(--color-border-emphasized);
+		border-radius: 10px;
+		background: var(--color-background-popover);
+		box-shadow: var(--shadow-high);
+	}
+
+	.ui-menu[data-align="end"] {
+		inset-inline: auto 0;
+	}
+
+	/* A sheet's scrolling body would clip a floating menu, so in a sheet the menu opens in the flow and the sheet grows to hold it. */
+	.ui-sheet .ui-menu {
+		position: static;
+		margin-block-start: 6px;
+	}
+
+	.ui-menu-list {
+		display: flex;
+		flex-direction: column;
+		max-height: 320px;
+		overflow-y: auto;
+	}
+
+	.ui-menu-item {
+		appearance: none;
+		display: flex;
+		flex: none;
+		align-items: center;
+		gap: 10px;
+		width: 100%;
+		height: 40px;
+		padding: 0 12px;
+		border: 0;
+		border-radius: var(--radius-inner);
+		background: transparent;
+		color: var(--color-text-primary);
+		font: 13.5px var(--font-family-body);
+		text-align: start;
+		white-space: nowrap;
+		cursor: pointer;
+	}
+
+	.ui-menu-item:hover {
+		background: var(--color-overlay-hover);
+	}
+
+	.ui-menu-item[aria-checked="true"] {
+		background: var(--color-accent-muted);
+	}
+
+	.ui-menu-item:focus-visible {
+		outline-offset: -2px;
+	}
+
+	.ui-menu-check {
+		flex: none;
+		color: var(--color-text-accent);
+		visibility: hidden;
+	}
+
+	.ui-menu-item[aria-checked="true"] .ui-menu-check {
+		visibility: visible;
+	}
+
+	@media (max-width: 767px) {
+		.ui-menu-item {
+			height: var(--spacing-11);
+		}
+	}
+}
