@@ -201,3 +201,57 @@ test("an aside takes the measure's place in both layouts", async () => {
 		document.body.replaceChildren();
 	}
 });
+
+// Kills a dimmed row faded by opacity, one still drawn as alerting, and a dim that changes nothing.
+test("a dimmed row is drawn in the muted color, not faded, and does not alert", async () => {
+	mount({ dimmed: true });
+	const row = page.getByRole("row");
+	await expect
+		.element(row.getByRole("img", { name: "alerting" }))
+		.not.toBeInTheDocument();
+	const probe = document.createElement("span");
+	probe.style.color = "var(--color-text-muted)";
+	probe.style.backgroundColor = "var(--color-error-muted)";
+	document.body.append(probe);
+	const muted = getComputedStyle(probe).color;
+	const alerting = getComputedStyle(probe).backgroundColor;
+	const element = row.element();
+	expect(
+		getComputedStyle(element.querySelector("td") as HTMLElement)
+			.backgroundColor,
+	).not.toBe(alerting);
+	const name = element.querySelector("b") as HTMLElement;
+	expect(getComputedStyle(name).color).toBe(muted);
+	expect(
+		getComputedStyle(element.querySelector("td") as HTMLElement).color,
+	).toBe(muted);
+	for (const each of [element, ...element.querySelectorAll("td")]) {
+		expect(getComputedStyle(each).opacity).toBe("1");
+	}
+});
+
+// Kills controls left out of a row, a wide row that does not give them a
+// cell of their own or an expanded plot that does not span it, and a narrow
+// row that does not grow by the line the list lays out for them.
+test.each([
+	["wide", false],
+	["narrow", true],
+] as const)("a %s row's own controls", async (width, narrow) => {
+	mount({ narrow, actions: () => <button type="button">Reactivate</button> });
+	const row = page.getByRole("row").nth(0);
+	await expect
+		.element(row.getByRole("button", { name: "Reactivate" }))
+		.toBeVisible();
+	const heights = HEIGHTS[width];
+	expect(row.element().getBoundingClientRect().height).toBe(
+		heights.line + heights.actions,
+	);
+	if (!narrow) {
+		await expect
+			.element(row.getByRole("cell").nth(8).getByRole("button"))
+			.toHaveTextContent("Reactivate");
+	}
+	await page.getByRole("button", { name: `Expand ${NAME}` }).click();
+	const cell = page.getByRole("row").nth(1).getByRole("cell").element();
+	expect((cell as HTMLTableCellElement).colSpan).toBe(narrow ? 4 : 9);
+});

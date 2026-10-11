@@ -161,6 +161,25 @@ describe("the persisted cache", () => {
 		stop();
 	});
 
+	// Kills an invalidation left to the delayed save a reload cancels, which
+	// restores the data the reader's write replaced as fresh.
+	test("an invalidation is saved at once", async () => {
+		const { store, entries } = memoryStore();
+		const client = createQueryClient(() => {});
+		client.setQueryData(KEY, { name: "Hashbrown" });
+		const { stop } = persistCache(client, store, "reader-a", "v1", {
+			delay: 60_000,
+			now: () => NOW,
+		});
+
+		await client.invalidateQueries({ queryKey: KEY, refetchType: "none" });
+		await vi.waitFor(() => expect(entries.has("reader-a")).toBe(true));
+		stop();
+		const reloaded = createQueryClient(() => {});
+		await restoreCache(reloaded, store, "reader-a", "v1", NOW);
+		expect(reloaded.getQueryState(KEY)?.isInvalidated).toBe(true);
+	});
+
 	// Kills another reader's data left at rest in the browser.
 	test("a reader's boot removes every other reader's entry", async () => {
 		const { store, entries } = await saved("reader-b");

@@ -175,6 +175,9 @@
 .lr-c-limit {
 	width: 122px;
 }
+.lr-c-act {
+	width: 156px;
+}
 .lr-c-hit {
 	width: 44px;
 }
@@ -360,6 +363,18 @@
 .lrn > td {
 	height: 64px;
 }
+.lrn.lrn-act > td {
+	height: 84px;
+}
+/* A control on a row's third line keeps a 44 px target without a taller line. */
+.lrn .lr-act .lnk {
+	position: relative;
+}
+.lrn .lr-act .lnk::after {
+	content: "";
+	position: absolute;
+	inset: -12px -8px;
+}
 .lrn .lr-hit,
 .lrn .lr-twist {
 	width: 44px;
@@ -391,6 +406,33 @@
 }
 .lrn-num b {
 	font-size: 13.5px;
+}
+
+/* A row no longer alerting, as a dismissed alert: muted by color, never faded. */
+.lr-dim > td,
+.lr-dim b,
+.lr-dim .lrn-l2,
+.lr-dim .lr-worse,
+.lr-dim .lr-better {
+	color: var(--color-text-muted);
+}
+.lr-dim .lr-tag,
+.lr-dim .lr-ptag {
+	background: var(--color-background-tag);
+	color: var(--color-text-muted);
+}
+.lr-act {
+	font-size: 12px;
+	white-space: nowrap;
+}
+/* Accent text lacks contrast on an alerting row's ground in the light theme. */
+.lr-alerting .lr-act .lnk {
+	color: var(--color-text-primary);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+.lr-state {
+	color: var(--color-text-muted);
 }
 
 @media (max-width: 767px) {

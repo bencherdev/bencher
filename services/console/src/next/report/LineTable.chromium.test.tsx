@@ -3,7 +3,7 @@ import "../styles/console.css";
 import "../plot/plot.css";
 import "./report.css";
 import { THEME_ATTRIBUTE } from "@bencherdev/ui/ThemeToggle";
-import { type ComponentProps, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
@@ -33,7 +33,7 @@ afterEach(() => {
 const mount = (
 	count: number,
 	onNearEnd = () => {},
-	aside?: ComponentProps<typeof LineTable>["aside"],
+	extra: Partial<Parameters<typeof LineTable>[0]> = {},
 ) => {
 	const report = longReport(count);
 	const lines = linesOf(report);
@@ -67,7 +67,7 @@ const mount = (
 					reportHref: (uuid) => `/reports/${uuid}`,
 				})}
 				onNearEnd={onNearEnd}
-				{...(aside ? { aside } : {})}
+				{...extra}
 			/>
 		),
 		root,
@@ -249,9 +249,11 @@ test("numbers every row for a screen reader, an open line taking two", async () 
 // Kills an aside column left under the measure's header.
 test("an aside column takes the measure's place under its own header", async () => {
 	mount(3, () => {}, {
-		label: "Report",
-		column: "lr-c-measure",
-		cell: (line) => <span>{line.benchmark.name}</span>,
+		aside: {
+			label: "Report",
+			column: "lr-c-measure",
+			cell: (line) => <span>{line.benchmark.name}</span>,
+		},
 	});
 	await expect
 		.element(page.getByRole("columnheader", { name: "Report" }))
@@ -259,4 +261,78 @@ test("an aside column takes the measure's place under its own header", async () 
 	expect(
 		page.getByRole("columnheader", { name: "Measure" }).query(),
 	).toBeNull();
+});
+
+// Kills a page's group header left unused, or laid out at the report's
+// header height so the rows below it drift from where the list puts them.
+test("a page's own group header replaces the report's, at its own height", async () => {
+	mount(200, undefined, {
+		group: {
+			height: { wide: 50, narrow: 70 },
+			row: (props) => (
+				<tr aria-rowindex={props.index}>
+					<td colSpan={props.columns} style={{ height: "50px", padding: "0" }}>
+						Report {props.group.name}
+					</td>
+				</tr>
+			),
+		},
+	});
+	await expect.element(page.getByText("Report bench-0")).toBeVisible();
+	await expect
+		.element(page.getByText(/10 variants/).first())
+		.not.toBeInTheDocument();
+	await frame();
+	const body = document.querySelector("tbody") as HTMLElement;
+	expect(body.getBoundingClientRect().height).toBe(20 * 50 + 200 * 44);
+});
+
+// Kills row controls without a column, a header, or their own row's cell, a
+// group header that stops short of their column, and a dim the list does not
+// pass to its row.
+test("a list with row controls gives them a column, and dims the rows it names", async () => {
+	const { lines } = mount(3, undefined, {
+		actions: {
+			cell: (line) => <button type="button">Act on {line.variant}</button>,
+			narrow: () => false,
+		},
+		dimmed: (line) => line.variant === "v1",
+	});
+	await expect
+		.element(page.getByRole("columnheader", { name: "Actions" }))
+		.toBeInTheDocument();
+	// A group's header spans the controls' column too.
+	const header = page.getByRole("row").nth(1).getByRole("cell").element();
+	expect((header as HTMLTableCellElement).colSpan).toBe(9);
+	const row = (variant: string) =>
+		page
+			.getByRole("row")
+			.filter({ has: page.getByRole("button", { name: `Act on ${variant}` }) });
+	await expect
+		.element(row("v0").getByRole("cell").nth(8))
+		.toHaveTextContent("Act on v0");
+	const color = (variant: string) =>
+		getComputedStyle(row(variant).element().querySelector("b") as HTMLElement)
+			.color;
+	expect(color("v1")).not.toBe(color("v0"));
+	expect(lines).toHaveLength(3);
+});
+
+// Kills a narrow list that gives every row a line for its controls, or none.
+test("a narrow list draws a line of controls only for the rows it names", async () => {
+	await page.viewport(390, 800);
+	mount(3, undefined, {
+		narrow: true,
+		actions: {
+			cell: (line) => <button type="button">Act on {line.variant}</button>,
+			narrow: (line) => line.variant === "v1",
+		},
+	});
+	await expect
+		.element(page.getByRole("button", { name: "Act on v1" }))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("button", { name: "Act on v0" }))
+		.not.toBeInTheDocument();
+	expect(document.querySelectorAll("tr.lrn-act")).toHaveLength(1);
 });
