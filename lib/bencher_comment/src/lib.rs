@@ -1216,6 +1216,7 @@ mod tests {
         JsonReport {
             uuid: "00000000-0000-0000-0000-000000000000".parse().unwrap(),
             user: None,
+            project_key: None,
             project: JsonProject {
                 uuid: project_uuid,
                 organization: "22222222-2222-2222-2222-222222222222".parse().unwrap(),

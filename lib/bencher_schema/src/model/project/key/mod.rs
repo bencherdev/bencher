@@ -1,6 +1,7 @@
 use bencher_json::{
-    DateTime, JsonNewProjectKey, JsonProjectKey, JsonProjectKeyCreated, ProjectKey, ProjectKeyHash,
-    ProjectKeyUuid, ProjectUuid, ResourceName, project::key::JsonUpdateProjectKey,
+    DateTime, JsonNewProjectKey, JsonProjectKey, JsonProjectKeyCreated, JsonPubProjectKey,
+    ProjectKey, ProjectKeyHash, ProjectKeyUuid, ProjectUuid, ResourceName,
+    project::key::JsonUpdateProjectKey,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -98,6 +99,11 @@ impl QueryProjectKey {
             self.project_id,
         );
         self.into_json_inner(query_project.uuid, creator_uuid)
+    }
+
+    pub fn into_pub_json(self) -> JsonPubProjectKey {
+        let Self { uuid, name, .. } = self;
+        JsonPubProjectKey { uuid, name }
     }
 
     fn into_json_inner(

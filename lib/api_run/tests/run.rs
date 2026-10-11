@@ -11,7 +11,7 @@ use bencher_api_tests::TestServer;
 #[cfg(feature = "plus")]
 use bencher_api_tests::oci::compute_digest;
 use bencher_json::{
-    BmfVersion, JsonReport, JsonReports,
+    BmfVersion, JsonProjectKeyCreated, JsonReport, JsonReports,
     project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
 };
 #[cfg(feature = "plus")]
@@ -19,8 +19,11 @@ use bencher_json::{
     JsonJob, JsonRunners, JsonSpec, PlanLevel, project::threshold::MAX_ACTIVE_THRESHOLDS,
     runner::JsonJobs,
 };
+use bencher_schema::MIGRATIONS;
 #[cfg(feature = "plus")]
 use bencher_schema::model::runner::QueryJobCallback;
+use diesel::{Connection as _, RunQueryDsl as _, connection::SimpleConnection as _};
+use diesel_migrations::MigrationHarness as _;
 use http::StatusCode;
 
 // POST /v0/run - create a run with authentication
@@ -135,6 +138,256 @@ async fn run_post_unauthenticated() {
         "Expected auth error, got: {}",
         resp.status()
     );
+}
+
+// POST /v0/run - a run made with a project key names that key on its report
+#[tokio::test]
+async fn run_post_with_a_project_key_names_the_key() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runkey@example.com").await;
+    let org = server.create_org(&user, "Run Key Org").await;
+    let project = server.create_project(&user, &org, "Run Key Project").await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/keys")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "name": "run-key" }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let key: JsonProjectKeyCreated = resp.json().await.expect("Failed to parse response");
+
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.key.as_ref()),
+        )
+        .json(&serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": [bmf_results().to_string()]
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let report: JsonReport = resp.json().await.expect("Failed to parse response");
+
+    assert!(report.user.is_none());
+    let named = report
+        .project_key
+        .map(|named| (named.uuid, named.name.as_ref().to_owned()));
+    assert_eq!(named, Some((key.uuid, "run-key".to_owned())));
+}
+
+// The migration that records a report's project key carries every report row through it, down and
+// back up, and each way leaves the report table's schema as the migrations before it built it.
+#[tokio::test]
+async fn report_project_key_migration_round_trips_every_report() {
+    const REPORT_PROJECT_KEY_MIGRATION: &str = "20261007120000";
+
+    let server = TestServer::new().await;
+    // The first signup is the server admin, who alone may create a spec.
+    let user = server
+        .signup("Test User", "runkeymigration@example.com")
+        .await;
+    let org = server.create_org(&user, "Run Key Migration Org").await;
+    let project = server
+        .create_project(&user, &org, "Run Key Migration Project")
+        .await;
+    post_migration_reports(&server, &user, &project).await;
+
+    let mut conn = server.db_conn();
+    let before = report_rows(&mut conn);
+    let carried = |column: &str| {
+        before
+            .iter()
+            .any(|row| row.get(column).is_some_and(|value| !value.is_null()))
+    };
+    assert!(carried("idempotency_key"));
+    #[cfg(feature = "plus")]
+    assert!(carried("spec_id"));
+
+    let reference = report_schema_before(REPORT_PROJECT_KEY_MIGRATION);
+
+    conn.batch_execute("PRAGMA foreign_keys = OFF")
+        .expect("Failed to disable foreign keys");
+    loop {
+        let version = conn
+            .revert_last_migration(MIGRATIONS)
+            .expect("Failed to revert a migration");
+        if version.to_string() == REPORT_PROJECT_KEY_MIGRATION {
+            break;
+        }
+    }
+    assert_eq!(report_schema(&mut conn), reference, "down");
+    let without_key = before
+        .iter()
+        .cloned()
+        .map(|mut row| {
+            row.remove("project_key_id");
+            row
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(report_rows(&mut conn), without_key, "down");
+
+    conn.run_pending_migrations(MIGRATIONS)
+        .expect("Failed to apply the migrations");
+    conn.batch_execute("PRAGMA foreign_keys = ON")
+        .expect("Failed to enable foreign keys");
+    assert_eq!(report_rows(&mut conn), before, "up");
+    let kept = |schema: Vec<(String, String, Option<String>)>| {
+        schema
+            .into_iter()
+            .filter(|(_, name, _)| name != "report" && name != "index_report_project_key")
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(kept(report_schema(&mut conn)), kept(reference), "up");
+}
+
+/// A run with an idempotency key, and with the plus feature a job run, which records its spec.
+async fn post_migration_reports(
+    server: &TestServer,
+    user: &bencher_api_tests::TestUser,
+    project: &bencher_api_tests::TestProject,
+) {
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({
+            "project": project_slug,
+            "idempotency_key": uuid::Uuid::new_v4().to_string(),
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": [bmf_results().to_string()]
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "Failed to post the run");
+    // A job run's report records the spec it runs on.
+    #[cfg(feature = "plus")]
+    {
+        create_fallback_spec(server, user).await;
+        push_test_image(server, project, user, "v1").await;
+        let resp = server
+            .client
+            .post(server.api_url("/v0/run"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&serde_json::json!({
+                "project": project_slug,
+                "branch": "main",
+                "testbed": "localhost",
+                "start_time": "2024-01-01T00:02:00Z",
+                "end_time": "2024-01-01T00:03:00Z",
+                "results": [],
+                "job": { "image": format!("localhost/{project_slug}:v1") }
+            }))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(
+            resp.status(),
+            StatusCode::CREATED,
+            "Failed to post the job run"
+        );
+    }
+}
+
+/// The report table's schema as the migrations before `version` built it.
+fn report_schema_before(version: &str) -> Vec<(String, String, Option<String>)> {
+    let mut reference = diesel::SqliteConnection::establish(":memory:")
+        .expect("Failed to open the reference database");
+    reference
+        .batch_execute("PRAGMA foreign_keys = OFF")
+        .expect("Failed to disable foreign keys");
+    let pending = reference
+        .pending_migrations(MIGRATIONS)
+        .expect("Failed to list the migrations");
+    for migration in pending
+        .iter()
+        .take_while(|migration| migration.name().version().to_string() != version)
+    {
+        reference
+            .run_migration(migration.as_ref())
+            .expect("Failed to apply a migration");
+    }
+    report_schema(&mut reference)
+}
+
+/// Every row of the report table, with every column the table has, in row order.
+fn report_rows(
+    conn: &mut diesel::SqliteConnection,
+) -> Vec<serde_json::Map<String, serde_json::Value>> {
+    #[derive(diesel::QueryableByName)]
+    struct Name {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        name: String,
+    }
+    #[derive(diesel::QueryableByName)]
+    struct Row {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        row: String,
+    }
+    let columns = diesel::sql_query("SELECT name FROM pragma_table_info('report') ORDER BY cid")
+        .load::<Name>(conn)
+        .expect("Failed to read the report columns")
+        .into_iter()
+        .map(|Name { name }| format!("'{name}', {name}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    diesel::sql_query(format!(
+        "SELECT json_object({columns}) AS row FROM report ORDER BY id"
+    ))
+    .load::<Row>(conn)
+    .expect("Failed to read the reports")
+    .into_iter()
+    .map(|Row { row }| serde_json::from_str(&row).expect("Failed to parse a report row"))
+    .collect()
+}
+
+/// The report table's entries in the schema, by name, with each statement's whitespace collapsed.
+fn report_schema(conn: &mut diesel::SqliteConnection) -> Vec<(String, String, Option<String>)> {
+    #[derive(diesel::QueryableByName)]
+    struct Entry {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        kind: String,
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        name: String,
+        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+        sql: Option<String>,
+    }
+    diesel::sql_query(
+        "SELECT type AS kind, name, sql FROM sqlite_master WHERE tbl_name = 'report' ORDER BY name",
+    )
+    .load::<Entry>(conn)
+    .expect("Failed to read the report schema")
+    .into_iter()
+    .map(|Entry { kind, name, sql }| {
+        let sql = sql.map(|sql| sql.split_whitespace().collect::<Vec<_>>().join(" "));
+        (kind, name, sql)
+    })
+    .collect()
 }
 
 // --- Job creation integration tests (Plus only) ---

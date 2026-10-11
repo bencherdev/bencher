@@ -16558,6 +16558,22 @@
           "$ref": "#/components/schemas/JsonProject"
         }
       },
+      "JsonPubProjectKey": {
+        "description": "A project key by name only, as a report names the key that created it.",
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/ProjectKeyUuid"
+          }
+        },
+        "required": [
+          "name",
+          "uuid"
+        ]
+      },
       "JsonPubUser": {
         "type": "object",
         "properties": {
@@ -16891,6 +16907,15 @@
           },
           "project": {
             "$ref": "#/components/schemas/JsonProject"
+          },
+          "project_key": {
+            "nullable": true,
+            "description": "The project key that created the report, if one did.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonPubProjectKey"
+              }
+            ]
           },
           "results": {
             "nullable": true,

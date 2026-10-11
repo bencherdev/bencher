@@ -17,9 +17,9 @@ use bencher_api_tests::{
     },
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkUuid, BoundaryUuid, HeadUuid, JsonReport, JsonReports,
-    MAX_PARAMETER_KEYS, MeasureUuid, MetricName, MetricUuid, ModelUuid, ParameterSet,
-    ReportBenchmarkUuid, Slug, ThresholdUuid, VersionUuid,
+    BenchmarkName, BenchmarkUuid, BoundaryUuid, HeadUuid, JsonProjectKeyCreated, JsonReport,
+    JsonReports, MAX_PARAMETER_KEYS, MeasureUuid, MetricName, MetricUuid, ModelUuid, ParameterSet,
+    ProjectKeyUuid, ReportBenchmarkUuid, Slug, ThresholdUuid, UserUuid, VersionUuid,
     project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
 };
 #[cfg(feature = "plus")]
@@ -1590,4 +1590,110 @@ async fn reports_post_skips_a_threshold_on_a_measure_past_the_creation_ceiling()
             .expect("Failed to count the thresholds");
         assert_eq!(thresholds, 1, "{label}");
     }
+}
+
+// A report names the project key that created it in the response, the list, and the report
+// itself, and still names it once the key is revoked. A report a user created names no key.
+#[tokio::test]
+async fn reports_name_the_project_key_that_created_them() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "reportkey@example.com").await;
+    let org = server.create_org(&user, "Report Key Org").await;
+    let project = server
+        .create_project(&user, &org, "Report Key Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let key = create_project_key(&server, &user.token, project_slug, "ci-key").await;
+    let named_key = Some((key.uuid, "ci-key".to_owned()));
+
+    let by_key = post_report(&server, key.key.as_ref(), project_slug).await;
+    let by_user = post_report(&server, &user.token, project_slug).await;
+    assert_eq!(creator(&by_key), (None, named_key.clone()));
+    assert_eq!(creator(&by_user), (Some(user.uuid), None));
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/reports")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let reports: JsonReports = resp.json().await.expect("Failed to parse response");
+    let mut listed: Vec<_> = reports
+        .0
+        .iter()
+        .map(|report| (report.uuid, creator(report)))
+        .collect();
+    listed.sort_by_key(|(uuid, _)| *uuid);
+    let mut expected = vec![
+        (by_key.uuid, (None, named_key.clone())),
+        (by_user.uuid, (Some(user.uuid), None)),
+    ];
+    expected.sort_by_key(|(uuid, _)| *uuid);
+    assert_eq!(listed, expected);
+
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/projects/{project_slug}/keys/{}", key.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{project_slug}/reports/{}",
+            by_key.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let revoked: JsonReport = resp.json().await.expect("Failed to parse response");
+    assert_eq!(creator(&revoked), (None, named_key));
+}
+
+async fn create_project_key(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    name: &str,
+) -> JsonProjectKeyCreated {
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/keys")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .json(&serde_json::json!({ "name": name }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    resp.json().await.expect("Failed to parse response")
+}
+
+/// Who created a report: the user's UUID, and the project key's UUID and name.
+fn creator(report: &JsonReport) -> (Option<UserUuid>, Option<(ProjectKeyUuid, String)>) {
+    (
+        report.user.as_ref().map(|user| user.uuid),
+        report
+            .project_key
+            .as_ref()
+            .map(|key| (key.uuid, key.name.as_ref().to_owned())),
+    )
 }

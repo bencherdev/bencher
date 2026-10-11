@@ -10,8 +10,8 @@ use serde::{Deserialize, Deserializer, Serialize, de, de::Visitor};
 use crate::runner::job::JobUuid;
 use crate::{
     BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure,
-    JsonMetricTriple, JsonProject, JsonPubUser, JsonTestbed, MeasureNameId, MetricUuid,
-    ParameterFilter, ParameterSet, TestbedNameId, VariantUuid,
+    JsonMetricTriple, JsonProject, JsonPubProjectKey, JsonPubUser, JsonTestbed, MeasureNameId,
+    MetricUuid, ParameterFilter, ParameterSet, TestbedNameId, VariantUuid,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -545,6 +545,9 @@ crate::from_vec!(JsonReports[JsonReport]);
 pub struct JsonReport {
     pub uuid: ReportUuid,
     pub user: Option<JsonPubUser>,
+    /// The project key that created the report, if one did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_key: Option<JsonPubProjectKey>,
     pub project: JsonProject,
     pub branch: JsonBranch,
     pub testbed: JsonTestbed,

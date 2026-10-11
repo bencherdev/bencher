@@ -3,6 +3,8 @@ use bencher_api_tests as _;
 #[cfg(test)]
 use diesel as _;
 #[cfg(test)]
+use diesel_migrations as _;
+#[cfg(test)]
 use http as _;
 #[cfg(test)]
 use serde_json as _;

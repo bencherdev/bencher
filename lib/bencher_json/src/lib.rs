@@ -77,7 +77,7 @@ pub use project::{
     head::{HeadUuid, JsonHead, JsonStartPoint, VersionUuid},
     key::{
         JsonNewProjectKey, JsonProjectKey, JsonProjectKeyCreated, JsonProjectKeys,
-        JsonUpdateProjectKey, ProjectKeyUuid,
+        JsonPubProjectKey, JsonUpdateProjectKey, ProjectKeyUuid,
     },
     measure::{
         JsonMeasure, JsonMeasures, JsonNewMeasure, MeasureNameId, MeasureResourceId, MeasureSlug,
