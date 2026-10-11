@@ -33,6 +33,9 @@ export default getViteConfig({
 				test: {
 					name: "browser",
 					include: [CHROMIUM_TESTS],
+					provide: {
+						speedFactor: Number(process.env.BENCHER_SPEED_FACTOR ?? 1),
+					},
 					browser: {
 						enabled: true,
 						provider: playwright(),
