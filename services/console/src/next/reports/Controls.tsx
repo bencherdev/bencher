@@ -179,7 +179,7 @@ const Controls = (props: ControlsProps) => {
 
 export default Controls;
 
-const CustomRange = (props: {
+export const CustomRange = (props: {
 	window: CustomWindow;
 	onWindow: (window: ReportsWindow) => void;
 }) => {
@@ -309,7 +309,7 @@ const Filters = (props: {
 	);
 };
 
-interface Option {
+export interface Option {
 	value: string;
 	label: string;
 }
@@ -344,8 +344,8 @@ const useNamed = <T extends { slug: string; name: string }>(
 		}));
 };
 
-const FilterMenu = (props: {
-	name: "branch" | "testbed" | "adapter" | "alerts";
+export const FilterMenu = (props: {
+	name: "branch" | "testbed" | "measure" | "adapter" | "alerts";
 	value: string | undefined;
 	/** What the chip shows for `value`, when that is not `value` itself. */
 	label?: string | undefined;
@@ -408,7 +408,7 @@ const FilterOptions = (props: {
 			type="search"
 			size="sm"
 			class="reports-search"
-			aria-label={`Search ${props.name === "branch" ? "branches" : "testbeds"}`}
+			aria-label={`Search ${props.name}${props.name === "branch" ? "es" : "s"}`}
 			placeholder="Search"
 			value={typed()}
 			onInput={(event) => {

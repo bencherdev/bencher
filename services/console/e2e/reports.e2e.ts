@@ -192,9 +192,9 @@ test("a row opens its report page, its code loaded on hover", async ({
 // Kills a Reports link that waits for the click to ask for its first batch,
 // and a page that asks again for what the hover already fetched.
 test("hovering the Reports tab fetches its first batch", async ({ page }) => {
-	await page.goto(nextPath(hashbrown.slug, "thresholds"));
+	await page.goto(nextPath(hashbrown.slug, "plots"));
 	await expect(
-		page.getByRole("heading", { level: 1, name: "Thresholds" }),
+		page.getByRole("heading", { level: 1, name: "Plots" }),
 	).toBeVisible();
 	await settle(page);
 

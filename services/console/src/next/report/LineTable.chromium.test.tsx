@@ -3,7 +3,7 @@ import "../styles/console.css";
 import "../plot/plot.css";
 import "./report.css";
 import { THEME_ATTRIBUTE } from "@bencherdev/ui/ThemeToggle";
-import { createSignal } from "solid-js";
+import { type ComponentProps, createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
@@ -30,7 +30,11 @@ afterEach(() => {
 	document.body.replaceChildren();
 });
 
-const mount = (count: number, onNearEnd = () => {}) => {
+const mount = (
+	count: number,
+	onNearEnd = () => {},
+	aside?: ComponentProps<typeof LineTable>["aside"],
+) => {
 	const report = longReport(count);
 	const lines = linesOf(report);
 	const slots = slotsOf(groupsOf(report, "benchmark"), lines);
@@ -63,6 +67,7 @@ const mount = (count: number, onNearEnd = () => {}) => {
 					reportHref: (uuid) => `/reports/${uuid}`,
 				})}
 				onNearEnd={onNearEnd}
+				{...(aside ? { aside } : {})}
 			/>
 		),
 		root,
@@ -239,4 +244,19 @@ test("numbers every row for a screen reader, an open line taking two", async () 
 	await expect
 		.element(page.getByRole("table"))
 		.toHaveAttribute("aria-rowcount", "6");
+});
+
+// Kills an aside column left under the measure's header.
+test("an aside column takes the measure's place under its own header", async () => {
+	mount(3, () => {}, {
+		label: "Report",
+		column: "lr-c-measure",
+		cell: (line) => <span>{line.benchmark.name}</span>,
+	});
+	await expect
+		.element(page.getByRole("columnheader", { name: "Report" }))
+		.toBeVisible();
+	expect(
+		page.getByRole("columnheader", { name: "Measure" }).query(),
+	).toBeNull();
 });

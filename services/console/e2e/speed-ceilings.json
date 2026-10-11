@@ -4,7 +4,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 36700,
+		"jsBytes": 36850,
 		"stylesheets": 1,
 		"deferredJsBytes": 108000,
 		"htmlBytes": 2700,
@@ -15,7 +15,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0,
-		"jsBytes": 36700,
+		"jsBytes": 36850,
 		"stylesheets": 1,
 		"htmlBytes": 2700,
 		"inlineScriptBytes": 2840,
@@ -30,23 +30,23 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 46450,
+		"jsBytes": 47450,
 		"stylesheets": 1,
-		"htmlBytes": 2700,
+		"htmlBytes": 2790,
 		"inlineScriptBytes": 2840,
 		"lateModules": 0
 	},
 	"reportsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 10500
+		"jsBytes": 11350
 	},
 	"settingsColdLoad": {
 		"apiAnswersBeforePaint": 0,
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 48650,
+		"jsBytes": 48800,
 		"stylesheets": 1,
 		"lateModules": 0
 	},
@@ -55,7 +55,7 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 48650,
+		"jsBytes": 48800,
 		"stylesheets": 1,
 		"lateModules": 0
 	},
@@ -69,9 +69,36 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 58850,
+		"jsBytes": 60500,
+		"stylesheets": 1,
+		"htmlBytes": 2850,
+		"inlineScriptBytes": 2840,
+		"lateModules": 0
+	},
+	"thresholdsTabSwitch": {
+		"apiRequests": 1,
+		"apiRounds": 1,
+		"jsBytes": 14700
+	},
+	"thresholdsColdLoad": {
+		"apiAnswersBeforePaint": 0,
+		"apiRequests": 2,
+		"apiRounds": 1,
+		"cls": 0.00025,
+		"jsBytes": 50750,
 		"stylesheets": 1,
 		"htmlBytes": 2770,
+		"inlineScriptBytes": 2840,
+		"lateModules": 0
+	},
+	"thresholdColdLoad": {
+		"apiAnswersBeforePaint": 0,
+		"apiRequests": 3,
+		"apiRounds": 1,
+		"cls": 0.00025,
+		"jsBytes": 66000,
+		"stylesheets": 1,
+		"htmlBytes": 2820,
 		"inlineScriptBytes": 2840,
 		"lateModules": 0
 	},
@@ -80,7 +107,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 91300,
+		"jsBytes": 91400,
 		"htmlBytes": 2820,
 		"inlineScriptBytes": 2840,
 		"lateModules": 0
@@ -95,7 +122,7 @@
 		"apiRequests": 4,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 57000,
+		"jsBytes": 57150,
 		"lateModules": 0
 	},
 	"exploreKeyToggle": {

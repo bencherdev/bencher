@@ -166,6 +166,8 @@ describe("pageName", () => {
 		expect(pageName(["reports"])).toBe("Reports");
 		expect(pageName(["reports", "abc"])).toBe("Report");
 		expect(pageName(["reports", "abc", "def"])).toBe("Reports");
+		expect(pageName(["thresholds", "abc"])).toBe("Threshold");
+		expect(pageName(["thresholds", "abc", "def"])).toBe("Thresholds");
 		expect(pageName(["branches", "main"])).toBe("Settings");
 		expect(pageName(["nope"])).toBe("NotFound");
 	});
