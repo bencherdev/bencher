@@ -6,8 +6,9 @@
 )]
 //! Integration tests for project CRUD endpoints.
 
-use bencher_api_tests::TestServer;
+use bencher_api_tests::{TestServer, helpers::grant_project_role};
 use bencher_json::{JsonNewProject, JsonProject, JsonProjects, ParameterFilter, ProjectUuid};
+use bencher_rbac::project::Role;
 use http::StatusCode;
 
 // GET /v0/projects - list all public projects
@@ -242,6 +243,73 @@ async fn projects_delete() {
         .expect("Request failed");
 
     assert_eq!(get_resp.status(), StatusCode::NOT_FOUND);
+}
+
+// DELETE /v0/projects/{project} - deleting a project takes the Maintainer role: a Developer is
+// refused, though a Developer still deletes the project's branches, and a Maintainer who does not
+// lead the organization deletes it
+#[tokio::test]
+async fn projects_delete_takes_the_maintainer_role() {
+    let server = TestServer::new().await;
+    // The first signup is the server admin, who holds every role.
+    let _admin = server.signup("Admin", "projdelroleadmin@example.com").await;
+    let owner = server.signup("Owner", "projdelroleowner@example.com").await;
+    let developer = server
+        .signup("Developer", "projdelroledev@example.com")
+        .await;
+    let maintainer = server
+        .signup("Maintainer", "projdelrolemaint@example.com")
+        .await;
+    let org = server.create_org(&owner, "Delete Role Org").await;
+    let project = server
+        .create_project(&owner, &org, "Delete Role Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    grant_project_role(&server, &developer, project_slug, Role::Developer);
+    grant_project_role(&server, &maintainer, project_slug, Role::Maintainer);
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/branches")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&owner.token),
+        )
+        .json(&serde_json::json!({ "name": "feature", "slug": "feature" }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let delete = async |path: String, token: &str| {
+        server
+            .client
+            .delete(server.api_url(&path))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(token),
+            )
+            .send()
+            .await
+            .expect("Request failed")
+            .status()
+    };
+    assert_eq!(
+        delete(
+            format!("/v0/projects/{project_slug}/branches/feature"),
+            &developer.token
+        )
+        .await,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        delete(format!("/v0/projects/{project_slug}"), &developer.token).await,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        delete(format!("/v0/projects/{project_slug}"), &maintainer.token).await,
+        StatusCode::NO_CONTENT
+    );
 }
 
 // Soft-delete removes project from list

@@ -373,7 +373,7 @@ async fn patch_inner(
 /// Delete a project
 ///
 /// Delete a project.
-/// The user must have `delete` permissions for the project.
+/// The user must have `manage` permissions for the project.
 /// By default, projects are soft-deleted.
 /// Set the `hard` query parameter to `true` to permanently delete the project (requires server admin).
 #[endpoint {
@@ -439,7 +439,7 @@ async fn delete_inner(
             &context.rate_limiting,
             &path_params.project,
             auth_user,
-            Permission::Delete,
+            Permission::Manage,
         )?;
 
         // Soft delete: replace slug/name with valid deleted sentinels to free UNIQUE constraints

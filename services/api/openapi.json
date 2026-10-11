@@ -3147,7 +3147,7 @@
           "projects"
         ],
         "summary": "Delete a project",
-        "description": "Delete a project. The user must have `delete` permissions for the project. By default, projects are soft-deleted. Set the `hard` query parameter to `true` to permanently delete the project (requires server admin).",
+        "description": "Delete a project. The user must have `manage` permissions for the project. By default, projects are soft-deleted. Set the `hard` query parameter to `true` to permanently delete the project (requires server admin).",
         "operationId": "project_delete",
         "parameters": [
           {
