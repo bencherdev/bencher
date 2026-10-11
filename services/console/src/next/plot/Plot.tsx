@@ -39,7 +39,6 @@ import type {
 	PlotXAxis,
 } from "./types";
 import { type UnitScale, unitScale } from "./units";
-import "./plot.css";
 
 export interface PlotProps {
 	/** Undefined while the data loads: the plot holds its frame. */

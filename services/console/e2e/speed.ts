@@ -22,6 +22,8 @@ export interface Cost {
 	jsBytes: number;
 	/** Same origin JavaScript started after the load event: what waits for idle. */
 	deferredJsBytes: number;
+	/** Same origin stylesheets started since the mark, each a request the first paint waits on. */
+	stylesheets: number;
 	/** The HTML document as the server sent it, gzipped at level 9. */
 	htmlBytes: number;
 	/**
@@ -106,6 +108,13 @@ export const measure = async (
 						);
 					})
 					.map((entry) => ({ url: entry.name, start: entry.startTime })),
+				styles: resources
+					.map((entry) => new URL(entry.name))
+					.filter(
+						(url) =>
+							url.origin === location.origin && url.pathname.endsWith(".css"),
+					)
+					.map((url) => url.href),
 				cls: window.__layoutShift ?? 0,
 			};
 		},
@@ -148,6 +157,7 @@ export const measure = async (
 		cls: timing.cls,
 		jsBytes: await gzipped(critical.map((script) => script.url)),
 		deferredJsBytes: await gzipped(deferred.map((script) => script.url)),
+		stylesheets: new Set(timing.styles).size,
 		htmlBytes: gzipSync(served, { level: 9 }).length,
 		inlineScriptBytes: inlineScripts.reduce(
 			(bytes, body) => bytes + Buffer.byteLength(body),

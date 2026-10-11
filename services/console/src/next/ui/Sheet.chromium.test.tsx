@@ -7,7 +7,7 @@ import { page, userEvent } from "vitest/browser";
 
 let dispose: (() => void) | undefined;
 
-const mount = () => {
+const mount = (side = false) => {
 	const root = document.createElement("div");
 	document.body.append(root);
 	dispose = render(() => {
@@ -17,7 +17,12 @@ const mount = () => {
 				<button type="button" onClick={() => setOpen(true)}>
 					Filters
 				</button>
-				<Sheet open={open()} onClose={() => setOpen(false)} title="Filters">
+				<Sheet
+					open={open()}
+					onClose={() => setOpen(false)}
+					title="Filters"
+					side={side}
+				>
 					<button type="button">Filter by branch</button>
 				</Sheet>
 			</>
@@ -70,3 +75,26 @@ test("Escape and a press on the dimmed page close it", async () => {
 	dialog.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 	await expect.poll(isOpen).toBe(false);
 });
+
+// Kills a side sheet drawn across the foot of a wide screen, or docked on a phone.
+test.each([
+	[1280, { right: 1280, top: 0, height: 720 }],
+	[390, { right: 390, top: undefined, height: undefined }],
+] as const)(
+	"a side sheet at %i px docks to the right only on a wide screen",
+	async (width, expected) => {
+		await page.viewport(width, 720);
+		mount(true);
+		await opener().click();
+		const box = sheet().element().getBoundingClientRect();
+		expect(box.right).toBe(expected.right);
+		if (expected.top === undefined) {
+			expect(box.left).toBe(0);
+			expect(box.bottom).toBe(720);
+		} else {
+			expect(box.top).toBe(expected.top);
+			expect(box.height).toBe(expected.height);
+			expect(box.width).toBe(560);
+		}
+	},
+);
