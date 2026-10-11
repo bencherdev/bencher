@@ -108,3 +108,45 @@ test("a custom window shows its range, and editing it sends the new range", asyn
 		},
 	});
 });
+
+// Kills a Clear drawn with no filter set or missing with one, one that leaves
+// a filter or resets the status or the window, and one that drops the focus
+// with itself rather than moving it to the first filter, wide, or on a phone
+// in the bar and in its Filters sheet.
+test("Clear sends the search without its filters and moves the focus to the first filter", async () => {
+	mount();
+	expect(
+		page.getByRole("button", { name: "Clear filters" }).query(),
+	).toBeNull();
+	dispose?.();
+	document.body.replaceChildren();
+
+	const kept: AlertsSearch = {
+		status: "dismissed",
+		window: { kind: "rolling", days: 7 },
+	};
+	const filtered: AlertsSearch = {
+		...kept,
+		measure: "6f3c1a2e-0000-4000-8000-000000000003",
+	};
+	for (const [width, opens, first] of [
+		[1280, undefined, /^branch /],
+		[390, undefined, "Filters (1)"],
+		[390, "Filters (1)", /^branch /],
+	] as const) {
+		await page.viewport(width, 844);
+		const onSearch = mount(filtered);
+		if (opens) {
+			await page.getByRole("button", { name: opens }).click();
+		}
+		const bar = opens ? page.getByRole("dialog", { name: "Filters" }) : page;
+		await bar.getByRole("button", { name: "Clear filters" }).click();
+		expect(onSearch.mock.calls).toEqual([[kept]]);
+		await expect
+			.element(bar.getByRole("button", { name: first }))
+			.toHaveFocus();
+		dispose?.();
+		dispose = undefined;
+		document.body.replaceChildren();
+	}
+});

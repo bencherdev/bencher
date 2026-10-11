@@ -128,6 +128,10 @@ export const withFilter = (
 	return next;
 };
 
+/** The search with every filter cleared. */
+export const withoutFilters = (search: ThresholdsSearch): ThresholdsSearch =>
+	FILTERS.reduce((next, filter) => withFilter(next, filter, undefined), search);
+
 /** How many filters narrow the list; the status and the window are not filters. */
 export const filterCount = (search: ThresholdsSearch) =>
 	FILTERS.filter((filter) => search[filter] !== undefined).length;

@@ -258,6 +258,36 @@ test("filters that match nothing say which, and clearing them brings rows back",
 	await expect(page).toHaveURL(/\/reports\?window=1w$/);
 });
 
+// Kills a Clear that leaves a filter or drops the window, asks for the list
+// more than once, adds more than one history entry, or drops the focus, and a
+// Back that does not bring the filter back.
+test("Clear asks once for every report in the window, and Back brings the filter back", async ({
+	page,
+}) => {
+	await page.goto(reports("?branch=main&window=1w"));
+	await expect(heading(page)).toHaveText("4 reports");
+	await settle(page);
+	const requests = listRequests(page);
+	const entries = await page.evaluate(() => history.length);
+	const clear = page.getByRole("button", { name: "Clear filters" });
+
+	await clear.click();
+	await expect(heading(page)).toHaveText("7 reports");
+	await expect(page).toHaveURL(/\/reports\?window=1w$/);
+	await expect(page.getByRole("button", { name: "branch any" })).toBeFocused();
+	await expect(clear).toHaveCount(0);
+	await settle(page);
+	expect(requests.map((url) => url.searchParams.has("branch"))).toEqual([
+		false,
+	]);
+	expect(await page.evaluate(() => history.length)).toBe(entries + 1);
+
+	await page.goBack();
+	await expect(heading(page)).toHaveText("4 reports");
+	await expect(page.getByRole("button", { name: "branch main" })).toBeVisible();
+	await expect(clear).toBeVisible();
+});
+
 // Kills names, roles, and contrast that fail in either theme.
 test("Reports passes axe in both themes", async ({ page }) => {
 	await axeInBothThemes(page, reports(), async () => {

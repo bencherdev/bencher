@@ -3,7 +3,7 @@ import { For } from "solid-js";
 import type { Api } from "../api";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
-import { FilterMenu } from "./Controls";
+import { Clear, FilterMenu } from "./Controls";
 
 export type Dimension = "branches" | "testbeds" | "measures";
 type Filter = "branch" | "testbed" | "measure";
@@ -41,7 +41,7 @@ export const nameQuery = (
 	enabled: uuid !== undefined,
 });
 
-/** A menu each to filter by branch, testbed, and measure by UUID, its options and chip by name. */
+/** A menu each to filter by branch, testbed, and measure by UUID, its options and chip by name, and Clear. */
 const DimensionFilters = (props: {
 	/** The UUIDs picked. */
 	values: FilterNames;
@@ -49,37 +49,42 @@ const DimensionFilters = (props: {
 	/** Offer archived ones too, since archiving one archives its thresholds. */
 	archived?: boolean;
 	onPick: (filter: Filter, uuid: string | undefined) => void;
+	clearable: boolean;
+	onClear: () => void;
 }) => {
 	const { slug } = useProject();
 	const client = useQueryClient();
 	return (
-		<For each={["branch", "testbed", "measure"] as const}>
-			{(filter) => (
-				<FilterMenu
-					name={filter}
-					value={props.values[filter]}
-					// A cold link knows the UUID before the name.
-					label={
-						props.names[filter] ??
-						(props.values[filter] === undefined ? undefined : "…")
-					}
-					search
-					options={(text) =>
-						useOptions(RESOURCES[filter], text, () => props.archived === true)
-					}
-					onPick={(uuid, label) => {
-						// The chip names the pick without asking the API again.
-						if (uuid !== undefined && label !== undefined) {
-							client.setQueryData(
-								nameKey(RESOURCES[filter], slug(), uuid),
-								label,
-							);
+		<>
+			<For each={["branch", "testbed", "measure"] as const}>
+				{(filter) => (
+					<FilterMenu
+						name={filter}
+						value={props.values[filter]}
+						// A cold link knows the UUID before the name.
+						label={
+							props.names[filter] ??
+							(props.values[filter] === undefined ? undefined : "…")
 						}
-						props.onPick(filter, uuid);
-					}}
-				/>
-			)}
-		</For>
+						search
+						options={(text) =>
+							useOptions(RESOURCES[filter], text, () => props.archived === true)
+						}
+						onPick={(uuid, label) => {
+							// The chip names the pick without asking the API again.
+							if (uuid !== undefined && label !== undefined) {
+								client.setQueryData(
+									nameKey(RESOURCES[filter], slug(), uuid),
+									label,
+								);
+							}
+							props.onPick(filter, uuid);
+						}}
+					/>
+				)}
+			</For>
+			<Clear when={props.clearable} onClear={props.onClear} />
+		</>
 	);
 };
 

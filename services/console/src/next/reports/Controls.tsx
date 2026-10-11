@@ -27,6 +27,7 @@ import {
 	filterCount,
 	windowPhrase,
 	withFilter,
+	withoutFilters,
 } from "./search";
 
 const DAY = 24 * 60 * 60 * 1_000;
@@ -165,6 +166,11 @@ const Controls = (props: ControlsProps) => {
 						/>
 					</div>
 				</Sheet>
+				<Clear
+					when={count() > 0}
+					to="[aria-haspopup=dialog]"
+					onClear={() => props.onSearch(withoutFilters(props.search))}
+				/>
 			</div>
 			<Show when={customOf(props.search.window)}>
 				{(custom) => (
@@ -284,8 +290,11 @@ const Filters = (props: {
 			<FilterMenu
 				name="adapter"
 				value={props.search.adapter}
-				options={() => () =>
-					ADAPTERS.map((adapter) => ({ value: adapter, label: adapter }))
+				search
+				options={(text) => () =>
+					ADAPTERS.filter((adapter) =>
+						adapter.includes(text().toLowerCase()),
+					).map((adapter) => ({ value: adapter, label: adapter }))
 				}
 				onPick={(adapter) =>
 					props.onSearch(
@@ -306,9 +315,36 @@ const Filters = (props: {
 					props.onSearch({ ...props.search, alerts: alerts === "active" })
 				}
 			/>
+			<Clear
+				when={filterCount(props.search) > 0}
+				onClear={() => props.onSearch(withoutFilters(props.search))}
+			/>
 		</>
 	);
 };
+
+/** Clears every filter at once, first moving the focus to the control `to` finds so it never falls with the button. */
+export const Clear = (props: {
+	when: boolean;
+	onClear: () => void;
+	to?: string;
+}) => (
+	<Show when={props.when}>
+		<button
+			type="button"
+			class="lnk rp-clear"
+			aria-label="Clear filters"
+			onClick={(event) => {
+				event.currentTarget.parentElement
+					?.querySelector<HTMLElement>(props.to ?? ".ui-chip")
+					?.focus();
+				props.onClear();
+			}}
+		>
+			Clear
+		</button>
+	</Show>
+);
 
 export interface Option {
 	value: string;

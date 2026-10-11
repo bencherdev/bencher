@@ -3,7 +3,7 @@ import Menu, { MenuItemRadio } from "@bencherdev/ui/Menu";
 import Segmented from "@bencherdev/ui/Segmented";
 import Sheet from "@bencherdev/ui/Sheet";
 import { For, Show, createSignal } from "solid-js";
-import { CustomRange } from "../reports/Controls";
+import { Clear, CustomRange } from "../reports/Controls";
 import DimensionFilters, {
 	type FilterNames,
 } from "../reports/DimensionFilters";
@@ -19,6 +19,7 @@ import {
 	type AlertsStatus,
 	filterCount,
 	withFilter,
+	withoutFilters,
 } from "./search";
 
 const DAY = 24 * 60 * 60 * 1_000;
@@ -69,6 +70,7 @@ const Controls = (props: {
 		CHOICES.find(({ value }) => value === choiceOf(props.search.window))
 			?.label ?? "Custom";
 	const count = () => filterCount(props.search);
+	const clear = () => props.onSearch(withoutFilters(props.search));
 	return (
 		<>
 			<div class="toolbar al-controls">
@@ -98,6 +100,8 @@ const Controls = (props: {
 						onPick={(filter, uuid) =>
 							props.onSearch(withFilter(props.search, filter, uuid))
 						}
+						clearable={count() > 0}
+						onClear={clear}
 					/>
 				</span>
 				<div class="chips al-narrow">
@@ -154,9 +158,16 @@ const Controls = (props: {
 								onPick={(filter, uuid) =>
 									props.onSearch(withFilter(props.search, filter, uuid))
 								}
+								clearable={count() > 0}
+								onClear={clear}
 							/>
 						</div>
 					</Sheet>
+					<Clear
+						when={count() > 0}
+						to="[aria-haspopup=dialog]"
+						onClear={clear}
+					/>
 				</div>
 			</div>
 			<Show when={props.search.window.kind === "custom" && props.search.window}>

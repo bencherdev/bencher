@@ -10,6 +10,7 @@ import {
 	historyDays,
 	windowBounds,
 	withFilter,
+	withoutFilters,
 } from "./search";
 
 const DAY = 24 * 60 * 60 * 1_000;
@@ -120,6 +121,19 @@ describe("filters", () => {
 		expect(cleared).toEqual(DEFAULT_SEARCH);
 		expect("branch" in cleared).toBe(false);
 	});
+});
+
+// Kills a Clear that keeps a filter, or resets the status or the window.
+test.each([
+	"status=dismissed&window=1w",
+	"status=all&start_time=1786924800000&end_time=1787011199999",
+	"window=all",
+	"",
+])("withoutFilters leaves the link only its status and window: %s", (kept) => {
+	const filtered = decode(
+		`branch=${BRANCH}&testbed=${TESTBED}&measure=${MEASURE}&${kept}`,
+	);
+	expect(encodeSearch(withoutFilters(filtered))).toBe(kept);
 });
 
 describe("the list and Dismiss all", () => {

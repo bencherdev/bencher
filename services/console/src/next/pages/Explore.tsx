@@ -25,7 +25,7 @@ import ContentSkeleton from "../ContentSkeleton";
 import type { Option } from "../explore/Box";
 import Controls from "../explore/Controls";
 import { plotData } from "../explore/data";
-import { withValue } from "../explore/edit";
+import { BOXES, hasValues, withValue, withoutValues } from "../explore/edit";
 import Editor from "../explore/Editor";
 import Header, { type Confirmation } from "../explore/Header";
 import { measuresLayout } from "../explore/layout";
@@ -81,14 +81,9 @@ import {
 	encodeQuery,
 } from "../query/query";
 
-const DIMENSIONS = [
-	["branches", "branches"],
-	["testbeds", "testbeds"],
-	["benchmarks", "benchmarks"],
-	["sets", "parameters"],
-	["measures", "measures"],
-	["metrics", "metrics"],
-] as const;
+const DIMENSIONS = BOXES.map(
+	(box) => [box, box === "sets" ? "parameters" : box] as const,
+);
 
 /** Explore, or for a project nothing has reported to yet, how to send the first report. */
 const Explore = (props: { readOnly?: boolean }) => {
@@ -329,6 +324,19 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			go(rest, true);
 		}
 	});
+	// A link to a pin not yet drawn here shows the page's skeleton until the
+	// pin fills the query, so nothing moves as it arrives.
+	const [drawnPin, setDrawnPin] = createSignal<string>();
+	createEffect(() => {
+		if (drawable(query())) {
+			setDrawnPin(query().plot);
+		}
+	});
+	const holding = () =>
+		query().plot !== undefined &&
+		query().plot !== drawnPin() &&
+		!drawable(query()) &&
+		!plotResult().isError;
 	const dirty = () => {
 		const plot = pinned();
 		return plot !== undefined && unsaved(query(), plot, drawn());
@@ -595,6 +603,24 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 
 	const [sheet, setSheet] = createSignal(false);
 
+	const clear = () => (
+		<Show when={!props.readOnly && hasValues(query())}>
+			<button
+				type="button"
+				class="lnk rp-clear"
+				onClick={(event) => {
+					// The focus moves first to the first box beside it, so it never falls with Clear.
+					event.currentTarget.parentElement
+						?.querySelector<HTMLElement>(".ui-chip, .ex-add")
+						?.focus();
+					edit(withoutValues(query()));
+				}}
+			>
+				Clear
+			</button>
+		</Show>
+	);
+
 	// A query that cannot draw asks for its names at once; one that can waits for its answer.
 	const editor = () => (
 		<Editor
@@ -609,10 +635,12 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			onQuery={(next) => edit(next)}
 			onFirstBenchmark={first}
 			onBenchmarks={() => wantPlot()}
-		/>
+		>
+			{clear()}
+		</Editor>
 	);
 
-	return (
+	const page = () => (
 		<main class="page ex">
 			<section class="ex-qp" aria-label="Query">
 				<Header
@@ -665,6 +693,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 								</Chip>
 							)}
 						</For>
+						{clear()}
 					</div>
 					<Sheet open={sheet()} onClose={() => setSheet(false)} title="Query">
 						{editor()}
@@ -767,5 +796,10 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 				/>
 			</Show>
 		</main>
+	);
+	return (
+		<Show when={!holding()} fallback={<ContentSkeleton />}>
+			{page()}
+		</Show>
 	);
 };

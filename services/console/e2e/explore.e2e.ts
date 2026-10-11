@@ -1,4 +1,4 @@
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { createProject, listPlots, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
 import { dimensions, explore, twoLines } from "./explore";
@@ -891,6 +891,90 @@ test("a link to a pin opens its query, and one to a deleted pin is an unsaved pl
 	await context.close();
 });
 
+// Kills a Clear that leaves a box, drops the window or the y scale, adds
+// more than one history entry, or drops the focus, and a Back that does not
+// draw the plot again.
+test("Clear empties every box for blank Explore, keeps the view, and Back draws the plot again", async ({
+	page,
+	request,
+}) => {
+	const { query } = await twoLines(request);
+	await page.goto(
+		explore(hashbrown.slug, {
+			...query,
+			window: { seconds: 7 * 24 * 60 * 60 },
+			yScale: "log",
+		}),
+	);
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	const entries = await page.evaluate(() => history.length);
+	const clear = page.getByRole("button", { name: "Clear", exact: true });
+
+	await clear.click();
+	await expect(
+		box(page, "Branches").getByRole("button", { name: "Add branch" }),
+	).toBeFocused();
+	await expect(
+		page.getByRole("region", { name: "Pinned plots" }),
+	).toBeVisible();
+	expect([...params(page)]).toEqual([
+		["window", "1w"],
+		["y_axis", "log"],
+	]);
+	expect(await page.evaluate(() => history.length)).toBe(entries + 1);
+	await expect(clear).toHaveCount(0);
+
+	await page.goBack();
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+});
+
+// Kills a Clear drawn only for some boxes, such as one that needs a benchmark.
+test("a link whose only value is a measure draws Clear, which empties the box", async ({
+	page,
+	request,
+}) => {
+	const { id } = await twoLines(request);
+	await page.goto(
+		explore(hashbrown.slug, { measures: [id.measure("Latency")] }),
+	);
+	const remove = box(page, "Measures").getByRole("button", {
+		name: /^Remove measure /,
+	});
+	await expect(remove).toBeVisible();
+
+	await page.getByRole("button", { name: "Clear", exact: true }).click();
+	await expect(remove).toHaveCount(0);
+	expect(params(page).has("measures")).toBe(false);
+});
+
+// Kills a Clear on a pin that keeps the pin, which then fills the query back
+// from it, and a Back that loses the pin's unsaved edit.
+test("Clear on a pin with unsaved changes leaves the pin, and Back brings the edit back", async ({
+	page,
+	request,
+}) => {
+	const { project, query } = await pinnable(request);
+	await page.goto(explore(project.slug, query));
+	await page.getByRole("button", { name: "Pin to Plots" }).click();
+	await expect(page.getByRole("button", { name: "Save as new" })).toBeVisible();
+	const scale = page.getByRole("radiogroup", { name: "Y scale" });
+	await scale.getByText("Log").click();
+	const mark = page.getByText("Unsaved changes");
+	await expect(mark).toBeVisible();
+
+	await page.getByRole("button", { name: "Clear", exact: true }).click();
+	await expect(
+		page.getByRole("heading", { level: 1, name: "Unsaved plot" }),
+	).toBeVisible();
+	await expect(page.getByRole("button", { name: "Add branch" })).toBeFocused();
+	expect(params(page).has("plot")).toBe(false);
+
+	await page.goBack();
+	await expect(mark).toBeVisible();
+	await expect(scale.getByRole("radio", { name: "Log" })).toBeChecked();
+	expect(params(page).has("plot")).toBe(true);
+});
+
 // Kills a query past the line cap drawn without saying how many lines it left out.
 test("a query past 64 lines says so", async ({ page, request }) => {
 	const id = await dimensions(request, hashbrown.slug);
@@ -1068,6 +1152,42 @@ test.describe("narrow", () => {
 		expect((await remove.boundingBox())?.height).toBeGreaterThanOrEqual(44);
 		await sheet.getByRole("button", { name: "Done" }).click();
 		await expect(sheet).toBeHidden();
+	});
+
+	// Kills a Clear missing from a phone's query panel or its sheet, a target
+	// under 44 px there, and a focus that falls with it.
+	test("Clear is a 44 px target beside the chips and in the sheet", async ({
+		page,
+		request,
+	}) => {
+		const { query } = await twoLines(request);
+		await page.goto(explore(hashbrown.slug, query));
+		await expect(plot(page)).toHaveAccessibleName("2 lines");
+		const target = async (button: Locator) => {
+			const size = await button.boundingBox();
+			expect(
+				Math.min(size?.width ?? 0, size?.height ?? 0),
+			).toBeGreaterThanOrEqual(44);
+		};
+
+		await page.getByRole("button", { name: "branches main" }).click();
+		const sheet = page.getByRole("dialog", { name: "Query" });
+		const inSheet = sheet.getByRole("button", { name: "Clear", exact: true });
+		await target(inSheet);
+		await inSheet.click();
+		await expect(
+			sheet.getByRole("button", { name: "Add branch" }),
+		).toBeFocused();
+		await sheet.getByRole("button", { name: "Done" }).click();
+
+		await page.goBack();
+		await expect(plot(page)).toHaveAccessibleName("2 lines");
+		const inPanel = page.getByRole("button", { name: "Clear", exact: true });
+		await target(inPanel);
+		await inPanel.click();
+		await expect(
+			page.getByRole("button", { name: /^branches / }),
+		).toBeFocused();
 	});
 });
 

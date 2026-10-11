@@ -10,6 +10,7 @@ import {
 	tabRow,
 	test,
 } from "./fixtures";
+import { listPlots } from "./api";
 import { explore, twoLines } from "./explore";
 import { publicPath, twoLinesDrawn, twoRecentLines } from "./public";
 import ceilings from "./speed-ceilings.json" with { type: "json" };
@@ -375,11 +376,12 @@ const twoLinesShown = async (page: Page) => {
 	await alertDrawn(page);
 };
 
+/** The seed's pin. */
+const PINNED = "blake3 input_bytes=65536 threads=1, Latency on main";
+
 /** The seed's pinned tile, its alert drawn: its window reaches the newest `main` report. */
 const alertingTileShown = async (page: Page) => {
-	const tile = page.getByRole("region", {
-		name: "blake3 input_bytes=65536 threads=1, Latency on main",
-	});
+	const tile = page.getByRole("region", { name: PINNED });
 	await expect(tile.getByRole("figure")).toHaveAccessibleName(
 		"2 lines over 4w",
 	);
@@ -661,6 +663,49 @@ for (const [width, viewport] of [
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 			expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+		});
+	});
+}
+
+// A link that names only a pin, at each width the query panel changes at.
+for (const viewport of [
+	{ width: 390, height: 844 },
+	{ width: 767, height: 1024 },
+	{ width: 768, height: 1024 },
+	{ width: 1024, height: 768 },
+	{ width: 1280, height: 720 },
+]) {
+	test.describe(`a bare pin at ${viewport.width}`, () => {
+		test.use({ viewport });
+
+		// Kills a pin link that paints its header, boxes, or Clear before the
+		// pin's query arrives, which then moves the page.
+		test(`a cold link to a pin alone moves nothing at ${viewport.width}`, async ({
+			page,
+			request,
+		}) => {
+			const pin = (await listPlots(request, hashbrown.slug)).find(
+				({ title }) => title === PINNED,
+			);
+			expect(pin).toBeDefined();
+			await observePageShift(page);
+			const cost = await coldLoad(
+				page,
+				`${nextPath(hashbrown.slug)}?plot=${pin?.uuid}`,
+				async () => {
+					await expect(
+						page.getByRole("heading", { level: 1, name: PINNED }),
+					).toBeVisible();
+					await twoLinesShown(page);
+				},
+			);
+			const moved = await pageShift(page);
+			report(`bare pin cold load ${viewport.width}`, {
+				...cost,
+				pageShift: moved,
+			} as Cost);
+			expect(moved).toBeLessThanOrEqual(ceilings.exploreColdLoad.cls);
+			expect(cost.cls).toBeLessThanOrEqual(ceilings.exploreColdLoad.cls);
 		});
 	});
 }
@@ -1126,6 +1171,30 @@ test("a status switch on Alerts asks once", async ({ page }) => {
 	const cost = await measure(page, seed.api_url, since);
 	report("alerts status switch", cost);
 	const ceiling = ceilings.alertsViewSwitch;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
+});
+
+// Kills a Clear that asks for more than the list's first batch, chains a
+// second round, or loads more code.
+test("a Clear on Reports asks once", async ({ page }) => {
+	await page.goto(`${REPORTS}?branch=main`);
+	await reportsReady(page);
+	await ready(page);
+
+	await holdScripts(page);
+	const since = await mark(page);
+	await page.getByRole("button", { name: "Clear filters" }).click();
+	await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+		"16 reports",
+	);
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("reports clear", cost);
+	const ceiling = ceilings.reportsClear;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);

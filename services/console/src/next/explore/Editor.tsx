@@ -3,6 +3,7 @@ import {
 	type Accessor,
 	For,
 	Index,
+	type JSX,
 	Show,
 	createMemo,
 	mapArray,
@@ -58,6 +59,8 @@ const Editor = (props: {
 	onFirstBenchmark: (option: Option) => void;
 	/** The reader reached for a benchmark: the plot is likely next. */
 	onBenchmarks?: (() => void) | undefined;
+	/** Beside the last box. */
+	children?: JSX.Element;
 }) => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
@@ -190,6 +193,7 @@ const Editor = (props: {
 					<p class="ex-all">every metric</p>
 				</Show>
 			</Box>
+			{props.children}
 		</div>
 	);
 };

@@ -12,6 +12,7 @@ import {
 	filterCount,
 	nothingFound,
 	windowPhrase,
+	withoutFilters,
 } from "./search";
 
 const DAY = 24 * 60 * 60 * 1_000;
@@ -173,6 +174,20 @@ test("filterCount counts the filters, not the window", () => {
 		}),
 	).toBe(4);
 	expect(filterCount({ ...DEFAULT_SEARCH, alerts: true })).toBe(1);
+});
+
+// Kills a Clear that keeps a filter, the active alerts one included, or
+// drops or resets the window.
+test.each([
+	"window=1w",
+	"window=all",
+	"start_time=1786924800000&end_time=1787011199999",
+	"",
+])("withoutFilters leaves the link only its window: %s", (window) => {
+	const filtered = decode(
+		`branch=main&testbed=macos-latest&adapter=magic&alerts=active&${window}`,
+	);
+	expect(encodeSearch(withoutFilters(filtered))).toBe(window);
 });
 
 describe("windowPhrase", () => {

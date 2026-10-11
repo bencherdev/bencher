@@ -151,7 +151,8 @@ export const encodeSearch = (search: ReportsSearch) => {
 	return params.toString();
 };
 
-type Filter = "branch" | "testbed" | "adapter";
+const FILTERS = ["branch", "testbed", "adapter"] as const;
+type Filter = (typeof FILTERS)[number];
 
 /** The search with one filter set, or cleared when `value` is undefined. */
 export const withFilter = <K extends Filter>(
@@ -167,6 +168,15 @@ export const withFilter = <K extends Filter>(
 	}
 	return next;
 };
+
+/** The search with every filter cleared, active alerts included. */
+export const withoutFilters = (search: ReportsSearch): ReportsSearch => ({
+	...FILTERS.reduce(
+		(next, filter) => withFilter(next, filter, undefined),
+		search,
+	),
+	alerts: false,
+});
 
 export interface Batch {
 	page: number;
@@ -202,8 +212,7 @@ export const apiParams = (search: ReportsSearch, now: number, batch: Batch) => {
 
 /** How many filters narrow the list; the window is not one. */
 export const filterCount = (search: ReportsSearch) =>
-	[search.branch, search.testbed, search.adapter, search.alerts].filter(Boolean)
-		.length;
+	FILTERS.filter((filter) => search[filter]).length + Number(search.alerts);
 
 const span = (days: number) => {
 	const preset = WINDOWS.find((window) => window.days === days);
