@@ -852,7 +852,7 @@ test("Discard returns a pin to what it saved, and Save as new pins the edit besi
 // Kills a bare link to a pin that never opens the pin's query, and a link to a
 // pin deleted since that still opens as that pin.
 test("a link to a pin opens its query, and one to a deleted pin is an unsaved plot", async ({
-	browser,
+	newContext,
 	page,
 	request,
 }) => {
@@ -879,7 +879,7 @@ test("a link to a pin opens its query, and one to a deleted pin is an unsaved pl
 	);
 	expect(await listPlots(request, project.slug)).toEqual([]);
 	// A fresh browser, since this one still holds the pin it read.
-	const context = await browser.newContext({
+	const context = await newContext({
 		storageState: signedIn(seed.member),
 	});
 	const fresh = await context.newPage();
@@ -912,7 +912,7 @@ test("a query past 64 lines says so", async ({ page, request }) => {
 // Kills a classic perf link that lands in Explore without its query, through
 // the version the browser remembers or the one the classic navbar reads.
 test("a classic perf link opens the same query in Explore", async ({
-	browser,
+	newContext,
 	request,
 }) => {
 	const { query } = await twoLines(request);
@@ -929,7 +929,7 @@ test("a classic perf link opens the same query in Explore", async ({
 		{ [VERSION_KEY]: JSON.stringify({ [hashbrown.slug]: 1 }) },
 		{},
 	]) {
-		const context = await browser.newContext({
+		const context = await newContext({
 			storageState: signedIn(seed.member, memory),
 		});
 		const page = await context.newPage();
@@ -944,9 +944,9 @@ test("a classic perf link opens the same query in Explore", async ({
 
 // Kills pin and save controls drawn for a reader who cannot use them, and a
 // Share that copies anything but the link.
-test("a viewer can share but not pin", async ({ browser, request }) => {
+test("a viewer can share but not pin", async ({ newContext, request }) => {
 	const { query } = await twoLines(request);
-	const context = await browser.newContext({
+	const context = await newContext({
 		storageState: signedIn(seed.outsider),
 		permissions: ["clipboard-read", "clipboard-write"],
 	});

@@ -27,7 +27,7 @@ const { hashbrown } = seed.projects;
 const SHELL = nextPath(hashbrown.slug, "nowhere");
 const REPORTS = nextPath(hashbrown.slug, "reports");
 
-test.use({ storageState: signedIn(seed.member), freezeClock: false });
+test.use({ storageState: signedIn(seed.member) });
 
 const report = (name: string, cost: Cost) => {
 	test
@@ -364,8 +364,27 @@ test("moving from General to Keys holds the speed ceilings", async ({
 	);
 });
 
-const twoLinesShown = (page: Page) =>
-	expect(page.getByRole("figure")).toHaveAccessibleName("2 lines");
+/** The plot holds the seed's newest `main` report, whose alert only a window reaching it draws. */
+const alertDrawn = (page: Page) =>
+	expect(
+		page.getByRole("figure").getByText("1 alert", { exact: true }),
+	).toBeVisible();
+
+const twoLinesShown = async (page: Page) => {
+	await expect(page.getByRole("figure")).toHaveAccessibleName("2 lines");
+	await alertDrawn(page);
+};
+
+/** The seed's pinned tile, its alert drawn: its window reaches the newest `main` report. */
+const alertingTileShown = async (page: Page) => {
+	const tile = page.getByRole("region", {
+		name: "blake3 input_bytes=65536 threads=1, Latency on main",
+	});
+	await expect(tile.getByRole("figure")).toHaveAccessibleName(
+		"2 lines over 4w",
+	);
+	await expect(tile.getByRole("img", { name: "has an alert" })).toBeVisible();
+};
 
 /** Layout shift with a source outside the shell: what the page itself moves. */
 const observePageShift = (page: Page) =>
@@ -580,13 +599,7 @@ for (const [width, viewport] of [
 		}) => {
 			await observePageShift(page);
 			const cost = await coldLoad(page, nextPath(hashbrown.slug, "plots"), () =>
-				expect(
-					page
-						.getByRole("region", {
-							name: "blake3 input_bytes=65536 threads=1, Latency on main",
-						})
-						.getByRole("figure"),
-				).toHaveAccessibleName("2 lines over 4w"),
+				alertingTileShown(page),
 			);
 			const moved = await pageShift(page);
 			report(`plots cold load ${width}`, {
@@ -656,7 +669,7 @@ for (const [width, viewport] of [
 // round later, blank Explore loading the plot it does not draw, and a reader
 // reaching for a benchmark who waits on the plot's code after the pick.
 test("an Explore link names its plot's code in its document; blank Explore loads it only once a benchmark is near", async ({
-	browser,
+	newContext,
 	page,
 	request,
 }) => {
@@ -680,7 +693,7 @@ test("an Explore link names its plot's code in its document; blank Explore loads
 	await ready(page);
 	const blank = new Set(await scripts(page));
 
-	const context = await browser.newContext({
+	const context = await newContext({
 		storageState: signedIn(seed.member),
 	});
 	const linked = await context.newPage();
@@ -756,6 +769,7 @@ test("a move from blank Explore to an Explore link holds its speed ceilings", as
 	const since = await mark(page);
 	await alerting.click();
 	await expect(page.getByRole("figure")).toHaveAccessibleName(/^\d+ lines?$/);
+	await alertDrawn(page);
 	await settle(page);
 
 	const cost = await measure(page, seed.api_url, since);
@@ -858,13 +872,7 @@ test("a tab switch into Plots holds its speed ceilings", async ({ page }) => {
 	await holdScripts(page);
 	const since = await mark(page);
 	await tabRow(page).getByRole("link", { name: "Plots" }).click();
-	await expect(
-		page
-			.getByRole("region", {
-				name: "blake3 input_bytes=65536 threads=1, Latency on main",
-			})
-			.getByRole("figure"),
-	).toHaveAccessibleName("2 lines over 4w");
+	await alertingTileShown(page);
 	await settle(page);
 
 	const cost = await measure(page, seed.api_url, since);
@@ -953,7 +961,9 @@ for (const [width, viewport] of [
 				// The alerts sit below the cards, out of view on a phone, so their count says they arrived.
 				() =>
 					expect(
-						page.getByText(/^\d+ active · \d+ dismissed in the last 4 weeks$/),
+						page.getByText(
+							/^[1-9]\d* active · \d+ dismissed in the last 4 weeks$/,
+						),
 					).toBeVisible(),
 			);
 			const moved = await pageShift(page);
@@ -1130,7 +1140,12 @@ for (const [width, viewport] of [
 	["390", { width: 390, height: 844 }],
 ] as const) {
 	test.describe(`the public plot at ${width}`, () => {
-		test.use({ storageState: signedOut, ...(viewport ? { viewport } : {}) });
+		// Its lines reported near the real time (see `twoRecentLines`).
+		test.use({
+			storageState: signedOut,
+			freezeClock: false,
+			...(viewport ? { viewport } : {}),
+		});
 
 		// Kills a public page that waits on the API or on code to paint, asks
 		// the API twice or in two rounds, finds code late, links a second

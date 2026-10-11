@@ -1,5 +1,11 @@
 import { readFileSync } from "node:fs";
-import { test as base, expect, type Page } from "@playwright/test";
+import {
+	type BrowserContext,
+	type BrowserContextOptions,
+	test as base,
+	expect,
+	type Page,
+} from "@playwright/test";
 import type { JsonAuthUser } from "../src/types/bencher";
 
 interface SeedProject {
@@ -70,21 +76,36 @@ export const nextPath = (slug: string, tab = "") =>
 export const test = base.extend<{
 	freezeClock: boolean;
 	frozenClock: undefined;
+	/** A browser of its own, at the same date as the test's. */
+	newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>;
 }>({
 	freezeClock: [true, { option: true }],
 	// Only the date is frozen, never the timers. Playwright's clock fakes the
 	// timers of every frame, each counting its own ids, so a timer set through
 	// a sandbox frame (as Sentry does) and cleared through the page clears the
 	// page's own timer of that id, such as the cache's next save.
+	// Frozen for the whole context, so a second page of the test's sees the seed's date too.
 	frozenClock: [
-		async ({ page, freezeClock }, use) => {
+		async ({ context, freezeClock }, use) => {
 			if (freezeClock) {
-				await page.addInitScript(freezeDate, Date.parse(seed.now));
+				await context.addInitScript(freezeDate, Date.parse(seed.now));
 			}
 			await use(undefined);
 		},
 		{ auto: true },
 	],
+	newContext: async ({ browser, freezeClock }, use) => {
+		const contexts: BrowserContext[] = [];
+		await use(async (options) => {
+			const context = await browser.newContext(options);
+			contexts.push(context);
+			if (freezeClock) {
+				await context.addInitScript(freezeDate, Date.parse(seed.now));
+			}
+			return context;
+		});
+		await Promise.all(contexts.map((context) => context.close()));
+	},
 });
 
 /** Runs in the page: the current time is `now`, and every other date is itself. */

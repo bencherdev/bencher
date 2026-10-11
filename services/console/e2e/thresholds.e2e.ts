@@ -25,6 +25,8 @@ const rows = (page: Page) =>
 	table(page).getByRole("rowgroup").last().getByRole("row");
 const alertsTable = (page: Page) =>
 	page.getByRole("table", { name: "Alerts this threshold raised" });
+/** A day the API stamped by its own clock, which names its year once that is past the frozen clock's. */
+const stampedDay = String.raw`[A-Z][a-z]{2} \d{1,2}(?:, \d{4})?`;
 
 const LATENCY =
 	"Threshold on main, ubuntu-latest, Latency, value, every variant";
@@ -203,7 +205,7 @@ test("Archived lists a threshold whose branch was archived, and a measure filter
 	await expect(heading(page)).toHaveText("1 archived threshold");
 	await expect(rows(page)).toHaveCount(1);
 	await expect(rows(page).first().getByRole("cell").first()).toHaveText(
-		/^retired · archived [A-Z][a-z]{2} \d{1,2}$/,
+		new RegExp(`^retired · archived ${stampedDay}$`),
 	);
 	await page.getByRole("button", { name: "branch any" }).click();
 	await expect(
@@ -326,7 +328,9 @@ test("a threshold whose model changed lists both, and its snippet declares the c
 	const history = page.getByRole("region", { name: "Model history" });
 	await expect(history.getByRole("listitem")).toHaveText([
 		/^current z_score · upper_boundary 0\.95 · lower_boundary 0\.9 · window 90 days since /,
-		/^replaced t_test · upper_boundary 0\.99 · max_sample_size 30 [A-Z][a-z]{2} \d{1,2} to /,
+		new RegExp(
+			String.raw`^replaced t_test · upper_boundary 0\.99 · max_sample_size 30 ${stampedDay} to `,
+		),
 	]);
 	await expect(
 		page.getByRole("region", { name: "Model", exact: true }),
