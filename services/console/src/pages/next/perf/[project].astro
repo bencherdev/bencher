@@ -11,7 +11,7 @@ import Head from "../../../next/Head.astro";
 import { drawable } from "../../../next/explore/request";
 import { perfPreloads } from "../../../next/preloads";
 import Public from "../../../next/public/Public";
-import { publicQuery } from "../../../next/public/query";
+import { decodeQuery } from "../../../next/query/query";
 import { USER_KEY, signInHref } from "../../../next/reader";
 import type { JsonProject } from "../../../types/bencher";
 import "../../../next/styles/console.css";
@@ -45,7 +45,7 @@ if (project && project.bmf_version !== 1) {
 	return Astro.redirect(`/perf/${slug}${Astro.url.search}`);
 }
 const name = project?.name ?? slug;
-const query = publicQuery(Astro.url.search, Date.now());
+const query = decodeQuery(Astro.url.search);
 const plot = found === "public" && drawable(query);
 ---
 

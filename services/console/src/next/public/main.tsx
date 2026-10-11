@@ -4,10 +4,10 @@ import type { JsonConsolePerf, JsonProject } from "../../types/bencher";
 import { drawable, perfSearch, requestKey } from "../explore/request";
 import { handOff } from "../handoff";
 import { rememberVersion } from "../memory";
-import { type ExploreQuery, encodeQuery } from "../query/query";
+import { type ExploreQuery, decodeQuery, encodeQuery } from "../query/query";
 import { isCurrent, readReader, signInHref } from "../reader";
 import Public, { type PlotView } from "./Public";
-import { publicPlotPath, publicQuery } from "./query";
+import { publicPlotPath } from "./query";
 
 /** A failed read: the status the API answered with, if it answered. */
 class Refusal extends Error {
@@ -42,7 +42,7 @@ const boot = (mount: HTMLElement) => {
 	};
 	const project = `/v0/projects/${encodeURIComponent(slug)}`;
 
-	const initial = publicQuery(location.search, Date.now());
+	const initial = decodeQuery(location.search);
 	const here = () => `${publicPlotPath(slug)}${encodeQuery(query())}`;
 	const [query, setQuery] = createSignal(initial);
 	if (here() !== `${location.pathname}${location.search}`) {

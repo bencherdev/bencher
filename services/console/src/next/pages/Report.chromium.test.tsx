@@ -415,6 +415,34 @@ test("Previous and Open N are named first by what they show, at either width", a
 	}
 });
 
+// Kills a read-only note that arrives with the bootstrap on its own line and
+// pushes the controls and the rows down, at any width.
+test("a viewer's read-only note arrives without moving what is below the title", async () => {
+	for (const width of [1280, 768, 390]) {
+		await page.viewport(width, 800);
+		let answer: (bootstrap: unknown) => void = () => {};
+		const held = new Promise((resolve) => {
+			answer = resolve;
+		});
+		const { api } = fakeApi(async (url) =>
+			isReport(url) ? { data: threeLines() } : { data: await held },
+		);
+		mount(api, impatient());
+		await expect.element(table()).toBeVisible();
+		const top = () => table().element().getBoundingClientRect().top;
+		const before = top();
+		answer(bootstrapOf({ edit: false }));
+		await expect
+			.element(
+				page.getByText("Read only. Ask a project Maintainer for access."),
+			)
+			.toBeInTheDocument();
+		expect(top()).toBe(before);
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
 // Kills a Clear that keeps the lines chosen.
 test("Clear lets go of every selected line", async () => {
 	const { api } = fakeApi((url) =>
@@ -573,6 +601,101 @@ test("the no-threshold sheet names the project's self-hosted API", async () => {
 			page.getByRole("dialog", { name: "No threshold checks this line" }),
 		)
 		.toHaveTextContent("--host http://localhost:61016");
+});
+
+// Kills a Read only pill that the title and its alerts push along when the
+// report answers after the bootstrap, as it does on every move to a report
+// within the console, at any width.
+test("a viewer's Read only pill keeps its place when the report arrives after the bootstrap", async () => {
+	for (const width of [1280, 768, 390]) {
+		await page.viewport(width, 800);
+		let answer: (report: unknown) => void = () => {};
+		const held = new Promise((resolve) => {
+			answer = resolve;
+		});
+		const { api } = fakeApi(async (url) =>
+			isReport(url)
+				? { data: await held }
+				: { data: bootstrapOf({ edit: false }) },
+		);
+		mount(api, impatient());
+		const readOnly = page.getByTitle(
+			"Read only. Ask a project Maintainer for access.",
+		);
+		await expect.element(readOnly).toBeVisible();
+		const pill = () => {
+			const { x, y, width, height } = readOnly
+				.element()
+				.getBoundingClientRect();
+			return { x, y, width, height };
+		};
+		const before = pill();
+		answer(threeLines());
+		await expect.element(table()).toBeVisible();
+		expect(pill()).toEqual(before);
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a Read only pill that takes its width from a viewer's title, cutting
+// a title a member sees whole, and one that moves the title's alerts when the
+// bootstrap answers after the report.
+test("a viewer's title stays whole beside the Read only pill, and its alerts keep their place when the bootstrap answers last", async () => {
+	for (const width of [1280, 768, 390]) {
+		await page.viewport(width, 800);
+		let answer: (bootstrap: unknown) => void = () => {};
+		const held = new Promise((resolve) => {
+			answer = resolve;
+		});
+		const { api } = fakeApi(async (url) =>
+			isReport(url) ? { data: threeLines() } : { data: await held },
+		);
+		mount(api, impatient());
+		const title = page.getByRole("heading", { level: 1 });
+		await expect.element(title).toHaveTextContent("main · ubuntu-latest");
+		const alerts = page.getByText("1 alert", { exact: true }).first();
+		const box = () => {
+			const { x, y, width, height } = alerts.element().getBoundingClientRect();
+			return { x, y, width, height };
+		};
+		const before = box();
+		answer(bootstrapOf({ edit: false }));
+		await expect
+			.element(
+				page.getByTitle("Read only. Ask a project Maintainer for access."),
+			)
+			.toBeVisible();
+		expect(box()).toEqual(before);
+		const heading = title.element() as HTMLElement;
+		expect(heading.scrollWidth).toBeLessThanOrEqual(heading.clientWidth);
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a reread whose answer has not changed that redraws an open row's plot
+// or the rows, which drops the focus.
+test("a reread with the same answer redraws nothing and keeps the focus", async () => {
+	const { api, requests } = fakeApi((url) =>
+		isReport(url) ? { data: threeLines() } : { data: bootstrapOf() },
+	);
+	const client = impatient();
+	mount(api, client);
+	await page.getByRole("button", { name: `Expand ${LATENCY}` }).click();
+	const plot = page.getByRole("region", { name: `${LATENCY}, full plot` });
+	await expect.element(plot).toBeVisible();
+	const drawn = plot.element();
+	const select = page.getByRole("checkbox", { name: `Select ${SMALL}` });
+	(select.element() as HTMLElement).focus();
+	const reads = requests.filter(isReport).length;
+	await client.refetchQueries();
+	await expect
+		.poll(() => requests.filter(isReport).length)
+		.toBeGreaterThan(reads);
+	await new Promise((resolve) => setTimeout(resolve, 100));
+	expect(plot.element()).toBe(drawn);
+	expect(document.activeElement).toBe(select.element());
 });
 
 // Kills an open row's plot built again whenever another row opens.

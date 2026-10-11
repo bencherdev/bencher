@@ -1,5 +1,6 @@
 import "@bencherdev/ui/styles.css";
 import "../styles/console.css";
+import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
@@ -159,4 +160,58 @@ describe("wide", () => {
 		expect(tab && shownText(tab)).toBe("Alerts 1");
 		expectNameStartsWithText(tab);
 	});
+});
+
+// Kills an Alerts tab that grows when its count arrives, or shrinks for a
+// project with none, which moves every tab after it, whatever the count.
+test("the Alerts tab holds its width before, with, and without a count", async () => {
+	for (const width of [1280, 390]) {
+		await page.viewport(width, 800);
+		const [alerts, setAlerts] = createSignal<number | undefined>();
+		const root = document.createElement("div");
+		root.className = "console";
+		document.body.append(root);
+		dispose = render(
+			() => <Shell slug="hashbrown" tab="reports" alerts={alerts()} />,
+			root,
+		);
+		const tab = () =>
+			root.querySelector('.tab[data-shell="alerts"]')?.getBoundingClientRect()
+				.width;
+		const before = tab();
+		for (const count of [3, 12, 99, 100, 0]) {
+			setAlerts(count);
+			expect(tab(), `${count} at ${width}`).toBe(before);
+		}
+		dispose();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills an empty badge drawn beside "Alerts" for a project with no alerts,
+// and a count past 99 shown or named as anything but 99+, whose name then
+// would not start with what the tab and the bell show.
+test("the Alerts tab draws no badge without a count, and says 99+ past 99", async () => {
+	await page.viewport(390, 800);
+	const [alerts, setAlerts] = createSignal<number | undefined>();
+	const root = document.createElement("div");
+	root.className = "console";
+	document.body.append(root);
+	dispose = render(
+		() => <Shell slug="hashbrown" tab="reports" alerts={alerts()} />,
+		root,
+	);
+	const tab = () => root.querySelector('.tab[data-shell="alerts"]');
+	const shownBadge = () =>
+		tab()?.querySelector(".badge")?.checkVisibility({
+			visibilityProperty: true,
+		});
+	expect(shownBadge()).toBe(false);
+	setAlerts(0);
+	expect(shownBadge()).toBe(false);
+	setAlerts(120);
+	expect(shownBadge()).toBe(true);
+	expect(shownText(tab() as Element)).toBe("Alerts 99+");
+	expectNameStartsWithText(tab());
+	expectNameStartsWithText(root.querySelector(".bell"));
 });

@@ -13,8 +13,7 @@
 	gap: 6px;
 	min-width: 0;
 }
-.rp-head > .ph-sub,
-.rp-head > .ro-note {
+.rp-head > .ph-sub {
 	grid-column: 1 / -1;
 }
 .ph-sub.rp-sub {
@@ -36,6 +35,27 @@
 	overflow-x: clip;
 	white-space: nowrap;
 	text-overflow: ellipsis;
+}
+/* At the end of the crumb line, which its negative margins keep from growing, so it arrives taking no width from the title. */
+.rp-ro {
+	flex: none;
+	margin: -6px 0 -6px auto;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 24px;
+	padding: 0 9px;
+	border: var(--border-width) solid var(--color-border);
+	border-radius: var(--radius-full);
+	color: var(--color-text-secondary);
+	font-size: 12px;
+	font-weight: var(--font-weight-normal);
+	letter-spacing: normal;
+	text-transform: none;
+	white-space: nowrap;
+}
+.rp-ro .ui-icon {
+	color: var(--color-text-muted);
 }
 .rp-alerts {
 	flex: none;

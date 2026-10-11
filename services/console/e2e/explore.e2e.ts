@@ -755,6 +755,10 @@ test("leaving a pin with unsaved changes asks first", async ({
 	const { project, query } = await pinnable(request);
 	await page.goto(explore(project.slug, query));
 	await page.getByRole("button", { name: "Pin to Plots" }).click();
+	// An edit before the pin lands edits the unsaved plot, not the pin.
+	await expect(
+		page.getByRole("status").filter({ hasText: "Pinned" }),
+	).toBeVisible();
 	await page
 		.getByRole("radiogroup", { name: "X axis" })
 		.getByText("Version")
@@ -805,6 +809,9 @@ test("Discard returns a pin to what it saved, and Save as new pins the edit besi
 	const { project, query } = await pinnable(request);
 	await page.goto(explore(project.slug, query));
 	await page.getByRole("button", { name: "Pin to Plots" }).click();
+	await expect(
+		page.getByRole("status").filter({ hasText: "Pinned" }),
+	).toBeVisible();
 	const mark = page.getByText("Unsaved changes");
 	const xAxis = page.getByRole("radiogroup", { name: "X axis" });
 	await xAxis.getByText("Version").click();

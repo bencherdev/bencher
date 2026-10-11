@@ -27,6 +27,73 @@ const keys = (lines: readonly AlertLine[]) =>
 	lines.map(({ key }) => Number(key.slice(-11)));
 
 describe("alertLinesOf", () => {
+	// Kills a reread with the same answer for an alert that resolves it anew,
+	// which draws its row anew, and one that keeps a line whose alert changed.
+	test("an alert read again unchanged keeps its line, and a changed one does not", () => {
+		const batch = alertsFixture([
+			{ report: 0, alerts: [{ alert: 1 }, { alert: 2 }] },
+		]);
+		const [first, second] = alertLinesOf(batch);
+		const group = batch.groups[0];
+		const changed = group && {
+			...batch,
+			groups: [
+				{
+					...group,
+					alerts: [
+						group.alerts[0],
+						{ ...group.alerts[1], modified: START + 1_000 },
+					],
+				},
+			],
+		};
+		const [again, other] = alertLinesOf(changed as typeof batch);
+		expect(again).toBe(first);
+		expect(other).not.toBe(second);
+		expect(other?.modified).toBe(START + 1_000);
+	});
+
+	// Kills a row whose identity holds its group's total: a reread under Active
+	// that leaves out a dismissed alert counts its group one less, which drew
+	// every other row of the group, and its open plot, anew. The group's header
+	// still reads the new total.
+	test("an alert read again with only its group's total changed keeps its line", () => {
+		const batch = alertsFixture([
+			{ report: 0, alerts: [{ alert: 1 }, { alert: 2 }] },
+		]);
+		const [first] = alertLinesOf(batch);
+		const group = batch.groups[0];
+		const reread = group && {
+			...batch,
+			groups: [{ ...group, total: 1, alerts: group.alerts.slice(0, 1) }],
+		};
+		const [again] = alertLinesOf(reread as typeof batch);
+		expect(again).toBe(first);
+		expect(again?.report.total).toBe(1);
+	});
+
+	// Kills a line kept whenever its alert is unchanged, whatever tables it was
+	// read against, which keeps a renamed benchmark or a replaced model.
+	test("an unchanged alert read against changed tables gets a new line", () => {
+		const batch = alertsFixture([{ report: 0, alerts: [{ alert: 1 }] }]);
+		const [first] = alertLinesOf(batch);
+		const renamed = {
+			...batch,
+			benchmarks: batch.benchmarks.map((benchmark) => ({
+				...benchmark,
+				name: `${benchmark.name}-renamed`,
+			})),
+		};
+		const [again] = alertLinesOf(renamed);
+		expect(again).not.toBe(first);
+		expect(again?.benchmark.name).toMatch(/-renamed$/);
+		const remodeled = {
+			...renamed,
+			models: renamed.models.map((model) => ({ ...model })),
+		};
+		expect(alertLinesOf(remodeled)[0]).not.toBe(again);
+	});
+
 	// Kills a row resolved against the wrong table, an alert dot on an alert no
 	// longer active, and a row that forgets its report or when it changed.
 	test("each alert is its line, keyed by the alert, with its report", () => {
@@ -105,6 +172,15 @@ describe("withKept", () => {
 		expect(keys(withKept(without(1), [kept(1, undefined)]))).toEqual([
 			1, 2, 3, 4,
 		]);
+	});
+
+	// Kills a kept row the list read again drawn as the reread's new object,
+	// which draws its row anew and drops its focus and open plot.
+	test("a kept row the list still holds keeps the object drawn when it changed", () => {
+		const reread = linesOf([1, 2, 3, 4]);
+		const out = withKept(reread, [kept(2, 1)]);
+		expect(out[1]).toBe(at(2));
+		expect(out[0]).toBe(reread[0]);
 	});
 
 	// Kills chains broken when every row was kept, as after Dismiss all.

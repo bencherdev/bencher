@@ -234,7 +234,10 @@ const Report = () => {
 			<main class="page">
 				<div class="pagehead rp-head">
 					<div class="ph-title">
-						<Crumb slug={slug()} />
+						<Crumb
+							slug={slug()}
+							readOnly={bootstrap().data?.permissions.edit === false}
+						/>
 						<Title report={report()} />
 					</div>
 					<div class="ph-actions rp-actions">
@@ -268,12 +271,6 @@ const Report = () => {
 							)}
 						</Show>
 					</p>
-					<Show when={bootstrap().data?.permissions.edit === false}>
-						<p class="ro-note">
-							<Icon name="read-only" />
-							Read only. Ask a project Maintainer for access.
-						</p>
-					</Show>
 				</div>
 				<Controls view={view()} narrow={narrow()} onView={setView} />
 				<Selection
@@ -390,14 +387,28 @@ const groupsOfBatch = ({ report, group }: ReportBatch) => {
 	return groups;
 };
 
-const Crumb = (props: { slug: string }) => (
+/** The way back to Reports, and whether the reader can only read, where its arrival takes no width from the title. */
+const Crumb = (props: { slug: string; readOnly?: boolean }) => (
 	<div class="crumb-line">
 		<a href={projectPath(props.slug, "reports")}>Reports</a>
 		<span aria-hidden="true">/</span>
+		<Show when={props.readOnly}>
+			<span
+				class="rp-ro"
+				title="Read only. Ask a project Maintainer for access."
+			>
+				<Icon name="read-only" />
+				Read only
+				<span class="sr-only">. Ask a project Maintainer for access.</span>
+			</span>
+		</Show>
 	</div>
 );
 
-/** The branch and testbed, and the report's alerts; before they arrive, a placeholder of the same line box. */
+/**
+ * The branch and testbed, and the report's alerts; before they arrive, a
+ * placeholder of the same line box, so what arrives later moves nothing.
+ */
 const Title = (props: { report: JsonConsoleReport | undefined }) => (
 	<div class="rp-titlerow">
 		<Heading level={1} size="xl">

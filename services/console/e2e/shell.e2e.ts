@@ -161,8 +161,9 @@ test.describe("signed in", () => {
 		await expect(plots).toBeFocused();
 	});
 
-	// Kills a first paint that waits for the app to name the project.
-	test("a returning reader's first paint names the project before any module loads", async ({
+	// Kills a first paint that waits for the app to name the project or show
+	// the Alerts tab's count, which a badge held empty would hide until then.
+	test("a returning reader's first paint names the project and counts its alerts before any module loads", async ({
 		page,
 	}) => {
 		await page.goto(nextPath(hashbrown.slug, "reports"));
@@ -179,9 +180,9 @@ test.describe("signed in", () => {
 		await expect(
 			crumbs(page).getByRole("link", { name: hashbrown.name }),
 		).toBeVisible();
-		await expect(
-			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
-		).toBeVisible();
+		const alerts = tabRow(page).getByRole("link", { name: "Alerts 1 active" });
+		await expect(alerts).toBeVisible();
+		await expect(alerts.getByText("1", { exact: true })).toBeVisible();
 	});
 });
 
