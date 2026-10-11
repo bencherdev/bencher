@@ -15,6 +15,7 @@ mod allowed;
 pub mod benchmarks;
 pub mod branches;
 pub mod console;
+mod console_project;
 pub mod jobs;
 mod keys;
 pub mod measures;
@@ -56,6 +57,12 @@ impl bencher_endpoint::Registrar for Api {
             api_description.register(allowed::proj_allowed_options)?;
         }
         api_description.register(allowed::proj_allowed_get)?;
+
+        // Console project
+        if http_options {
+            api_description.register(console_project::proj_console_options)?;
+        }
+        api_description.register(console_project::proj_console_get)?;
 
         // Project Keys
         if http_options {
