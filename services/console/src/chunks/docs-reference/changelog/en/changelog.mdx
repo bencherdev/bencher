@@ -26,6 +26,7 @@
 - Add optional `metrics`, `hidden`, `focus`, and `layout` fields to plots, so a pinned plot keeps the metrics it draws, the lines it hides, the line it focuses, and how it lays out its measures; set them with `POST /v0/projects/{project}/plots`, and change them, or clear them with `null`, with `PATCH /v0/projects/{project}/plots/{plot}`
 - Filter the Reports list by `adapter` and `alerts=active`, and count each Report iteration's `lines`
 - Cap a project at 64 plots: `POST /v0/projects/{project}/plots` refuses another with a 400 until one is deleted
+- Add `--bmf-version` to `bencher project update`, so a server admin can move a Project to BMF version 1
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects

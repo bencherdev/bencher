@@ -1,4 +1,6 @@
-use bencher_json::{OrganizationResourceId, ProjectResourceId, ProjectSlug, ResourceName, Url};
+use bencher_json::{
+    BmfVersion, OrganizationResourceId, ProjectResourceId, ProjectSlug, ResourceName, Url,
+};
 use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::parser::CliBackend;
@@ -133,6 +135,10 @@ pub struct CliProjectUpdate {
     /// Project visibility
     #[clap(long)]
     pub visibility: Option<CliProjectVisibility>,
+
+    /// BMF version of the project. Server admins only.
+    #[clap(long)]
+    pub bmf_version: Option<BmfVersion>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

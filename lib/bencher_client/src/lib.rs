@@ -32,6 +32,7 @@ macro_rules! from_client {
 from_client!(
     RunContext,
     BenchmarkName,
+    BmfVersion,
     Boundary,
     BranchName,
     Email,

@@ -1,7 +1,7 @@
 use bencher_client::types::{
     JsonProjectPatch, JsonProjectPatchNull, JsonUpdateProject, Visibility,
 };
-use bencher_json::{ProjectResourceId, ProjectSlug, ResourceName, Url};
+use bencher_json::{BmfVersion, ProjectResourceId, ProjectSlug, ResourceName, Url};
 
 use crate::{
     CliError,
@@ -20,6 +20,7 @@ pub struct Update {
     pub slug: Option<ProjectSlug>,
     pub url: Option<Option<Url>>,
     pub visibility: Option<Visibility>,
+    pub bmf_version: Option<BmfVersion>,
     pub backend: AuthBackend,
 }
 
@@ -33,6 +34,7 @@ impl TryFrom<CliProjectUpdate> for Update {
             slug,
             url,
             visibility,
+            bmf_version,
             backend,
         } = create;
         Ok(Self {
@@ -41,6 +43,7 @@ impl TryFrom<CliProjectUpdate> for Update {
             slug,
             url: url.map(Into::into),
             visibility: visibility.map(Into::into),
+            bmf_version,
             backend: backend.try_into()?,
         })
     }
@@ -53,6 +56,7 @@ impl From<Update> for JsonUpdateProject {
             slug,
             url,
             visibility,
+            bmf_version,
             ..
         } = update;
         match url {
@@ -62,8 +66,7 @@ impl From<Update> for JsonUpdateProject {
                     slug: slug.map(Into::into),
                     url: Some(url.into()),
                     visibility,
-                    // The field is server admin only, so the CLI never states it.
-                    bmf_version: None,
+                    bmf_version: bmf_version.map(Into::into),
                 }),
                 subtype_1: None,
             },
@@ -74,7 +77,7 @@ impl From<Update> for JsonUpdateProject {
                     slug: slug.map(Into::into),
                     url: (),
                     visibility,
-                    bmf_version: None,
+                    bmf_version: bmf_version.map(Into::into),
                 }),
             },
             None => Self {
@@ -83,7 +86,7 @@ impl From<Update> for JsonUpdateProject {
                     slug: slug.map(Into::into),
                     url: None,
                     visibility,
-                    bmf_version: None,
+                    bmf_version: bmf_version.map(Into::into),
                 }),
                 subtype_1: None,
             },

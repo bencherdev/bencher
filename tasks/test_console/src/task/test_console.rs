@@ -1,6 +1,9 @@
 use std::{thread, time::Duration};
 
-use bencher_json::{DEVEL_BENCHER_URL_STR, PROD_BENCHER_URL_STR};
+use bencher_json::{
+    BmfVersion, DEV_BENCHER_API_URL_STR, DEVEL_BENCHER_URL_STR, JsonProject,
+    PROD_BENCHER_API_URL_STR, PROD_BENCHER_URL_STR,
+};
 use serde::Serialize;
 
 use crate::{API_VERSION, parser::TaskTestConsole};
@@ -44,26 +47,26 @@ impl TestConsole {
     }
 
     pub async fn exec(&self) -> anyhow::Result<()> {
-        let console_url = if self.dev {
-            DEVEL_BENCHER_URL_STR
+        let (console_url, api_url) = if self.dev {
+            (DEVEL_BENCHER_URL_STR, DEV_BENCHER_API_URL_STR)
         } else {
-            PROD_BENCHER_URL_STR
+            (PROD_BENCHER_URL_STR, PROD_BENCHER_API_URL_STR)
         };
 
         // TODO replace this with some actual e2e tests
-        let project_slug = if self.dev { "the-computer" } else { "bencher" };
-        let find_str = if self.dev {
-            "<title>The Computer | Bencher - Continuous Benchmarking</title>"
+        let (project_slug, project_name) = if self.dev {
+            ("the-computer", "The Computer")
         } else {
-            "<title>Bencher | Bencher - Continuous Benchmarking</title>"
+            ("bencher", "Bencher")
         };
         let mut result = Ok(());
         for i in 0..5 {
             match test_ui_project(
                 console_url,
+                api_url,
                 project_slug,
+                project_name,
                 self.agent_key.as_deref(),
-                find_str,
             )
             .await
             {
@@ -90,14 +93,37 @@ impl TestConsole {
 
 async fn test_ui_project(
     console_url: &str,
+    api_url: &str,
     project_slug: &str,
+    project_name: &str,
     agent_key: Option<&str>,
-    find_str: &str,
 ) -> anyhow::Result<()> {
-    let url = format!("{console_url}/perf/{project_slug}");
-    println!("Testing UI project {project_slug} at {url}");
+    let project: JsonProject = reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .build()?
+        .get(format!("{api_url}/v0/projects/{project_slug}"))
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let (url, find_str) = if project.bmf_version == BmfVersion::V1 {
+        (
+            format!("{console_url}/next/perf/{project_slug}"),
+            format!("<title>{project_name} | Bencher</title>"),
+        )
+    } else {
+        (
+            format!("{console_url}/perf/{project_slug}"),
+            format!("<title>{project_name} | Bencher - Continuous Benchmarking</title>"),
+        )
+    };
+    println!(
+        "Testing UI project {project_slug} (BMF version {}) at {url}",
+        project.bmf_version
+    );
 
-    fetch_and_check(&url, agent_key, find_str).await
+    fetch_and_check(&url, agent_key, &find_str).await
 }
 
 async fn test_ui_version(console_url: &str, agent_key: Option<&str>) -> anyhow::Result<()> {
@@ -117,10 +143,12 @@ async fn fetch_and_check(url: &str, agent_key: Option<&str>, find_str: &str) -> 
     } else {
         request
     };
-    let html = request.send().await?.text().await?;
+    let response = request.send().await?;
+    let final_url = response.url().clone();
+    let html = response.text().await?;
     if !html.contains(find_str) {
         return Err(anyhow::anyhow!(
-            "Failed to find `{find_str}` in HTML from {url}"
+            "Failed to find `{find_str}` in HTML from {final_url}"
         ));
     }
 
