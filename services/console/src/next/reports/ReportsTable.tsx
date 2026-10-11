@@ -213,7 +213,7 @@ const ReportRow = (props: {
 	const absolute = () => absoluteTime(start());
 	const label = () =>
 		[
-			`Report on ${props.report.branch.name}`,
+			`${props.report.branch.name}, report on ${props.report.branch.name}`,
 			props.report.testbed.name,
 			props.report.adapter,
 			absolute(),

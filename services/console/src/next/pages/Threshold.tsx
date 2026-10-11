@@ -467,16 +467,19 @@ const Alerts = (props: {
 /** The report an alert came from, and its status once it is no longer active. */
 const ReportCell = (props: { slug: string; line: AlertLine }) => {
 	const narrow = useNarrow();
-	const when = () => formatWhen(props.line.report.start);
+	const shown = () =>
+		narrow()
+			? formatDate(props.line.report.start)
+			: [formatWhen(props.line.report.start), props.line.report.hash]
+					.filter(Boolean)
+					.join(" · ");
 	return (
 		<span class="th-report">
 			<a
 				href={reportPath(props.slug, props.line.report.uuid)}
-				aria-label={`Open the report from ${when()}${props.line.report.hash ? `, ${props.line.report.hash}` : ""}`}
+				aria-label={`${shown()}, open the report`}
 			>
-				{narrow()
-					? formatDate(props.line.report.start)
-					: [when(), props.line.report.hash].filter(Boolean).join(" · ")}
+				{shown()}
 			</a>
 			<Show when={props.line.status !== "active"}>
 				<span class="th-quiet"> · {props.line.status}</span>

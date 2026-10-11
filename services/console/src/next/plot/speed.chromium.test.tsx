@@ -160,7 +160,9 @@ test("hides and shows a line from the key", async () => {
 	const name = "blake3 threads=63";
 	for (let run = 0; run < RUNS * 2; run++) {
 		const button = page
-			.getByRole("button", { name: new RegExp(`^(Hide|Show) ${name}$`) })
+			.getByRole("button", {
+				name: new RegExp(`^${name}: (hide|show) its line$`),
+			})
 			.element() as HTMLButtonElement;
 		const start = performance.now();
 		button.click();

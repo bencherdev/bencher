@@ -149,7 +149,7 @@ test("an expanded row reserves its space at once and draws its plot after that f
 		.element(
 			page
 				.getByRole("region", { name: "bench-0 n=0 Latency, full plot" })
-				.getByRole("button", { name: /^Hide / }),
+				.getByRole("button", { name: /: hide its line$/ }),
 		)
 		.toBeVisible();
 });
@@ -199,7 +199,7 @@ test("expanding a row and toggling its line in the key each fit in a frame", asy
 
 		const hide = page
 			.getByRole("region", { name: "bench-0 n=0 Latency, full plot" })
-			.getByRole("button", { name: /^Hide / });
+			.getByRole("button", { name: /: hide its line$/ });
 		await expect.element(hide).toBeVisible();
 		await frame();
 		const toggle = performance.now();

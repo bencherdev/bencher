@@ -208,7 +208,9 @@ test("two rows expand into two plots with their keys", async ({
 
 	for (const name of [ALERTING, UNCHECKED]) {
 		const plot = page.getByRole("region", { name: `${name}, full plot` });
-		await expect(plot.getByRole("button", { name: /^Hide / })).toBeVisible();
+		await expect(
+			plot.getByRole("button", { name: /: hide its line$/ }),
+		).toBeVisible();
 	}
 	await expect(page).toHaveURL(/expanded=.*&expanded=/);
 	await page.reload();
@@ -232,7 +234,7 @@ test("Previous and Next walk the branch's reports", async ({
 
 	await page
 		.getByRole("link", {
-			name: "Previous report on main, ubuntu-latest: Sep 11, 13:16, 0000000",
+			name: "Previous Sep 11, 13:16: the report on main, ubuntu-latest, 0000000",
 		})
 		.click();
 	await expect(page.getByText(/^Sep 11, 2026, 13:16 · json/)).toBeVisible();
@@ -240,7 +242,7 @@ test("Previous and Next walk the branch's reports", async ({
 
 	await page
 		.getByRole("link", {
-			name: /^Next report on main, ubuntu-latest: Sep 13, 21:16, 9c1f2e4$/,
+			name: /^Next Sep 13, 21:16: the report on main, ubuntu-latest, 9c1f2e4$/,
 		})
 		.click();
 	await expect(page).toHaveURL(
@@ -263,7 +265,7 @@ test("Open 2 in Explore opens exactly the selected lines", async ({
 	await page.getByRole("checkbox", { name: `Select ${ALERTING}` }).check();
 	await page.getByRole("checkbox", { name: `Select ${UNCHECKED}` }).check();
 
-	const open = page.getByRole("link", { name: "Open 2 lines in Explore" });
+	const open = page.getByRole("link", { name: "Open 2 in Explore" });
 	const href = new URL(
 		(await open.getAttribute("href")) ?? "",
 		seed.console_url,
@@ -369,7 +371,7 @@ test("the report passes axe in both themes", async ({ page, request }) => {
 		await expect(
 			page
 				.getByRole("region", { name: `${ALERTING}, full plot` })
-				.getByRole("button", { name: /^Hide / }),
+				.getByRole("button", { name: /: hide its line$/ }),
 		).toBeVisible();
 	});
 });
@@ -392,12 +394,10 @@ test.describe("on a phone", () => {
 		await expect(row).toContainText("+6.2% worse");
 		await expect(
 			page.getByRole("button", {
-				name: "Window, ending at this report, 4 weeks",
+				name: "window 4w, 4 weeks",
 			}),
 		).toBeVisible();
-		await expect(
-			page.getByRole("link", { name: /^Previous report/ }),
-		).toBeVisible();
+		await expect(page.getByRole("link", { name: /^Previous / })).toBeVisible();
 
 		const select = row.getByRole("checkbox", { name: `Select ${ALERTING}` });
 		const expand = row.getByRole("button", { name: `Expand ${ALERTING}` });
@@ -417,7 +417,7 @@ test.describe("on a phone", () => {
 		await expect(
 			page
 				.getByRole("region", { name: `${ALERTING}, full plot` })
-				.getByRole("button", { name: /^Hide / }),
+				.getByRole("button", { name: /: hide its line$/ }),
 		).toBeVisible();
 		const width = await page.evaluate(
 			() => document.documentElement.scrollWidth,

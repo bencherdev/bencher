@@ -16,6 +16,8 @@ export interface ButtonProps
 	full?: boolean;
 	/** Toggle state, for chips. Renders `aria-pressed`. */
 	selected?: boolean;
+	/** Drawn square, for a button whose only content is an `Icon`. */
+	iconOnly?: boolean;
 }
 
 /** An action. Buttons act; navigation is a link. */
@@ -25,6 +27,7 @@ const Button = (props: ButtonProps) => {
 		"size",
 		"full",
 		"selected",
+		"iconOnly",
 		"class",
 		"type",
 	]);
@@ -38,6 +41,7 @@ const Button = (props: ButtonProps) => {
 			data-size={local.size ?? "md"}
 			data-full={local.full === true ? "" : undefined}
 			data-selected={local.selected === true ? "" : undefined}
+			data-icon-only={local.iconOnly === true ? "" : undefined}
 			aria-pressed={local.selected}
 			{...rest}
 		/>

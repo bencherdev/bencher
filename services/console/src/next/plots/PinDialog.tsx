@@ -141,6 +141,7 @@ const PinDialog = (props: {
 				<h2 id={heading}>Edit pin</h2>
 				<Button
 					variant="ghost"
+					iconOnly
 					aria-label="Close without saving"
 					onClick={props.onClose}
 				>

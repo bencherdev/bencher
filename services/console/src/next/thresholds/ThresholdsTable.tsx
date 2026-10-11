@@ -180,9 +180,9 @@ const Spacer = (props: { height: number }) => (
 	</tr>
 );
 
-/** The threshold's link names it by what it applies to. */
-const thresholdName = (row: ThresholdRow) =>
-	`Threshold on ${row.branch.name}, ${row.testbed.name}, ${row.measure.name}, ${row.metric}, ${
+/** The threshold's link: the text it shows, then what the threshold applies to. */
+const thresholdName = (shown: string, row: ThresholdRow) =>
+	`${shown}, threshold on ${row.branch.name}, ${row.testbed.name}, ${row.measure.name}, ${row.metric}, ${
 		row.parameters?.length
 			? `filtered to ${filterSummary(row.parameters)}`
 			: "every variant"
@@ -203,6 +203,15 @@ const Row = (props: {
 	index: number;
 }) => {
 	const model = () => modelText(props.row.model);
+	const shown = () =>
+		props.narrow
+			? [
+					props.row.branch.name,
+					props.row.testbed.name,
+					filterSummary(props.row.parameters),
+					props.row.model?.test ?? "no model",
+				].join(" · ")
+			: props.row.branch.name;
 	return (
 		<tr class="th-row" aria-rowindex={props.index + 2}>
 			<td data-fold="l2" class="th-branch">
@@ -217,16 +226,9 @@ const Row = (props: {
 				<a
 					class="th-link"
 					href={`${projectPath(props.slug, "thresholds")}/${props.row.uuid}`}
-					aria-label={thresholdName(props.row)}
+					aria-label={thresholdName(shown(), props.row)}
 				>
-					{props.narrow
-						? [
-								props.row.branch.name,
-								props.row.testbed.name,
-								filterSummary(props.row.parameters),
-								props.row.model?.test ?? "no model",
-							].join(" · ")
-						: props.row.branch.name}
+					{shown()}
 				</a>
 				<Show when={!props.narrow && props.row.branch.start_point}>
 					{(from) => <span class="th-from"> from {from()}</span>}

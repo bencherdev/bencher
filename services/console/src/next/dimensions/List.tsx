@@ -383,7 +383,7 @@ const List = (props: {
 					<Button
 						size="sm"
 						class="dm-direction"
-						aria-label={`Sort direction: ${directionText(search().sort, search().direction)}`}
+						aria-label={`${directionText(search().sort, search().direction)}, sort direction`}
 						onClick={() => setSearch(flipDirection(search()))}
 					>
 						<svg

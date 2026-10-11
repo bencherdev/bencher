@@ -86,6 +86,9 @@ const Controls = (props: ControlsProps) => {
 				value === choiceOf(props.search.window) && value !== "custom",
 		)?.long ??
 		windowPhrase(props.search.window, props.now).replace(/^In the last /, "");
+	const windowShort = () =>
+		CHOICES.find(({ value }) => value === choiceOf(props.search.window))
+			?.label ?? windowName();
 
 	return (
 		<>
@@ -113,12 +116,10 @@ const Controls = (props: ControlsProps) => {
 						caret
 						aria-haspopup="menu"
 						aria-expanded={windowMenu()}
-						aria-label={`Window, ${windowName()}`}
+						aria-label={`Window ${windowShort()}, ${windowName()}`}
 						onClick={() => setWindowMenu(!windowMenu())}
 					>
-						{CHOICES.find(
-							({ value }) => value === choiceOf(props.search.window),
-						)?.label ?? windowName()}
+						{windowShort()}
 					</Chip>
 					<Show when={windowMenu()}>
 						<Menu
@@ -368,7 +369,6 @@ export const FilterMenu = (props: {
 				on={props.value !== undefined}
 				aria-haspopup="menu"
 				aria-expanded={open()}
-				aria-label={`Filter by ${props.name}, ${shown()}`}
 				onClick={() => setOpen(!open())}
 			>
 				{shown()}

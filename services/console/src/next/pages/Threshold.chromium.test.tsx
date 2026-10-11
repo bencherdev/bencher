@@ -15,6 +15,7 @@ import { createQueryClient } from "../cache";
 import { ProjectContext } from "../project";
 import { decodeQuery } from "../query/query";
 import { fakeApi } from "../reports/testing";
+import { expectNameStartsWithText } from "../ui/testing";
 import { alertsBatch } from "../thresholds/query";
 import {
 	THRESHOLD,
@@ -143,6 +144,21 @@ test("a cold threshold asks for itself and its alerts in one round", async () =>
 	await expect.element(alertRows().first()).toBeVisible();
 });
 
+// Kills a card drawn on the raised surface, as the default card is.
+test("every card on the page is soft", async () => {
+	const { api: answered } = api();
+	mount(answered, client());
+
+	await expect
+		.element(page.getByRole("region", { name: "Model history" }))
+		.toBeVisible();
+	const cards = [...document.querySelectorAll(".th-card")];
+	expect(cards.length).toBeGreaterThan(1);
+	expect(cards.map((card) => card.getAttribute("data-variant"))).toEqual(
+		cards.map(() => "soft"),
+	);
+});
+
 // Kills a model history that drops the replaced model or orders it first, and
 // a history row that does not say when each model held.
 test("the model history lists every model, newest first, with when each held", async () => {
@@ -172,12 +188,14 @@ test("each alert is its own row, naming its report and its status", async () => 
 	const rows = page
 		.getByRole("table", { name: "Alerts this threshold raised" })
 		.getByRole("row");
+	const report = rows.nth(1).getByRole("link", { name: /, open the report$/ });
 	await expect
-		.element(rows.nth(1).getByRole("link", { name: /^Open the report from / }))
+		.element(report)
 		.toHaveAttribute(
 			"href",
 			"/next/console/projects/hashbrown/reports/report-new",
 		);
+	expectNameStartsWithText(report.element());
 	await expect
 		.element(rows.nth(1).getByRole("img", { name: "alerting" }))
 		.toBeVisible();

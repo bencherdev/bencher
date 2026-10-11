@@ -298,7 +298,7 @@ test("filters that match nothing are named, not slugged", async () => {
 		.element(page.getByText("Nothing on 412/merge. Clear the filters."))
 		.toBeVisible();
 	await expect
-		.element(page.getByRole("button", { name: "Filter by branch, 412/merge" }))
+		.element(page.getByRole("button", { name: "branch 412/merge" }))
 		.toBeInTheDocument();
 });
 
@@ -390,14 +390,10 @@ test("a picked branch or testbed is named from its option, not asked for again",
 		["branch", "feature/simd"],
 		["testbed", "Bare metal"],
 	] as const) {
-		await page
-			.getByRole("button", { name: `Filter by ${filter}, any` })
-			.click();
+		await page.getByRole("button", { name: `${filter} any` }).click();
 		await page.getByRole("menuitemradio", { name }).click();
 		await expect
-			.element(
-				page.getByRole("button", { name: `Filter by ${filter}, ${name}` }),
-			)
+			.element(page.getByRole("button", { name: `${filter} ${name}` }))
 			.toBeInTheDocument();
 	}
 	await expect

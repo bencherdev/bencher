@@ -24,6 +24,7 @@ import {
 import { decodeQuery } from "../query/query";
 import { fakeApi, watchFallback } from "../reports/testing";
 import { bootstrapOf } from "../settings/testing";
+import { expectNameStartsWithText } from "../ui/testing";
 import Report from "./Report";
 
 const PATH = `${NEXT_PROJECTS}/hashbrown/reports/${REPORT}`;
@@ -197,7 +198,9 @@ test("moving to the previous report redraws its identity and starts with nothing
 	await expect.element(subtitle).toHaveTextContent("9c1f2e4");
 	await page.getByRole("checkbox", { name: `Select ${LATENCY}` }).click();
 	await expect.element(page.getByText("1 line selected")).toBeVisible();
-	await page.getByRole("link", { name: /^Previous report on main/ }).click();
+	await page
+		.getByRole("link", { name: /^Previous .*: the report on main/ })
+		.click();
 	await expect.element(subtitle).toHaveTextContent("4e02c1d");
 	await expect
 		.element(page.getByText("Select lines to open them together in Explore"))
@@ -356,7 +359,7 @@ test("Open N opens exactly the selected lines, over the view's window ending at 
 	mount(api, impatient(), `${PATH}?window=1w`);
 	await page.getByRole("checkbox", { name: `Select ${SMALL}` }).click();
 	await page.getByRole("checkbox", { name: `Select ${THROUGHPUT}` }).click();
-	const open = page.getByRole("link", { name: "Open 2 lines in Explore" });
+	const open = page.getByRole("link", { name: "Open 2 in Explore" });
 	await expect.element(open).toBeVisible();
 
 	const query = decodeQuery(
@@ -371,6 +374,38 @@ test("Open N opens exactly the selected lines, over the view's window ending at 
 		end: report.window.end_time,
 	});
 	expect(query.report).toBe(REPORT);
+});
+
+// Kills a Previous or Open N whose name does not start with what it shows,
+// wide or narrow, so voice control cannot reach it by its words.
+test("Previous and Open N are named first by what they show, at either width", async () => {
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? {
+					data: reportFixture(undefined, {
+						previous: {
+							uuid: "00000000-0000-4000-8000-000000000002",
+							start_time: Date.parse("2026-09-11T09:40:00Z"),
+							hash: "4e02c1d",
+							adapter: "json",
+						},
+					} as never),
+				}
+			: { data: bootstrapOf() },
+	);
+	for (const width of [1280, 390]) {
+		await page.viewport(width, 720);
+		mount(api, impatient());
+		await page.getByRole("checkbox", { name: `Select ${LATENCY}` }).click();
+		const open = page.getByRole("link", { name: "Open 1 in Explore" });
+		await expect.element(open).toBeVisible();
+		expectNameStartsWithText(open.element());
+		expectNameStartsWithText(
+			page.getByRole("link", { name: /: the report on main/ }).element(),
+		);
+		dispose?.();
+		document.body.replaceChildren();
+	}
 });
 
 // Kills a Clear that keeps the lines chosen.
@@ -422,7 +457,9 @@ test("hovering Previous starts its first batch in this view at the page's batch 
 	const [first] = requests.filter(isReport);
 	await page.viewport(1280, 400);
 
-	await page.getByRole("link", { name: /^Previous report on main/ }).hover();
+	await page
+		.getByRole("link", { name: /^Previous .*: the report on main/ })
+		.hover();
 	const previous = () =>
 		requests.filter((url) => url.pathname.endsWith(PREVIOUS));
 	await expect.poll(() => previous().length).toBe(1);
@@ -433,7 +470,9 @@ test("hovering Previous starts its first batch in this view at the page's batch 
 	);
 	expect(prefetched?.searchParams.get("sort")).toBe("delta");
 
-	await page.getByRole("link", { name: /^Previous report on main/ }).click();
+	await page
+		.getByRole("link", { name: /^Previous .*: the report on main/ })
+		.click();
 	await expect
 		.element(page.getByText(/ · json · /))
 		.toHaveTextContent("4e02c1d");
@@ -521,14 +560,14 @@ test("opening a second row keeps the first row's plot", async () => {
 		page.getByRole("region", { name: `${name}, full plot` });
 	await page.getByRole("button", { name: `Expand ${LATENCY}` }).click();
 	await expect
-		.element(plotOf(LATENCY).getByRole("button", { name: /^Hide / }))
+		.element(plotOf(LATENCY).getByRole("button", { name: /: hide its line$/ }))
 		.toBeVisible();
 	const canvas = plotOf(LATENCY).element().querySelector("canvas");
 	expect(canvas).not.toBeNull();
 
 	await page.getByRole("button", { name: `Expand ${SMALL}` }).click();
 	await expect
-		.element(plotOf(SMALL).getByRole("button", { name: /^Hide / }))
+		.element(plotOf(SMALL).getByRole("button", { name: /: hide its line$/ }))
 		.toBeVisible();
 	await frame();
 	expect(plotOf(LATENCY).element().querySelector("canvas")).toBe(canvas);

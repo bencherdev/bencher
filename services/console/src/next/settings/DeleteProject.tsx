@@ -58,7 +58,12 @@ const DeleteProject = (props: {
 		>
 			<div class="ui-dialog-head">
 				<h2 id="del-title">Delete {props.project.slug}?</h2>
-				<Button variant="ghost" aria-label="Close" onClick={props.onDismiss}>
+				<Button
+					variant="ghost"
+					iconOnly
+					aria-label="Close"
+					onClick={props.onDismiss}
+				>
 					<Icon name="close" />
 				</Button>
 			</div>

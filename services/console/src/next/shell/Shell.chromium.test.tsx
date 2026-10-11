@@ -4,6 +4,7 @@ import { render } from "solid-js/web";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
 import type { Tab } from "../paths";
+import { expectNameStartsWithText, shownText } from "../ui/testing";
 import Shell from "./Shell";
 import { centerCurrentTab } from "./scroll";
 
@@ -59,9 +60,9 @@ describe("narrow", () => {
 		]) {
 			expect(shown(root, folded), folded).toBe(false);
 		}
-		await expect
-			.element(page.getByRole("link", { name: "Alerts, 1 active" }))
-			.toBeVisible();
+		const bell = page.getByRole("link", { name: "1 active alert" });
+		await expect.element(bell).toBeVisible();
+		expectNameStartsWithText(bell.element());
 	});
 
 	// Kills touch targets under 44 px.
@@ -146,5 +147,16 @@ describe("wide", () => {
 		await expect
 			.element(page.getByRole("link", { name: "Alerts 1 active" }))
 			.toBeVisible();
+	});
+
+	// Kills a badge run into the tab's label ("Alerts1"): voice control and the
+	// label-in-name check read the text as written, so the name must start with it.
+	test("the Alerts tab's name starts with the text it shows", async () => {
+		await page.viewport(1280, 800);
+		const root = mount();
+
+		const tab = root.querySelector('.tab[data-shell="alerts"]');
+		expect(tab && shownText(tab)).toBe("Alerts 1");
+		expectNameStartsWithText(tab);
 	});
 });

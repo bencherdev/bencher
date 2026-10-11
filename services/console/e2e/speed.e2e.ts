@@ -582,7 +582,7 @@ test("an Explore key toggle fits in a frame", async ({ page, request }) => {
 
 	const since = await mark(page);
 	const times = await page.evaluate(async () => {
-		const toggle = /^(Hide|Show) blake3 simd=sse4\.2/;
+		const toggle = /^blake3 simd=sse4\.2.*: (hide|show) its line$/;
 		const button = () =>
 			[...document.querySelectorAll("button")].find((each) =>
 				toggle.test(each.getAttribute("aria-label") ?? ""),
@@ -772,7 +772,7 @@ for (const [width, viewport] of [
 				"branches/main",
 				(page: Page) =>
 					page.getByRole("link", {
-						name: "Threshold for Latency on main, ubuntu-latest",
+						name: /^ubuntu-latest, threshold for Latency on main, ubuntu-latest/,
 					}),
 				ceilings.branchColdLoad,
 			],

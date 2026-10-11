@@ -1042,7 +1042,12 @@ const DismissAll = (props: {
 	>
 		<div class="ui-dialog-head">
 			<h2 id="al-da-title">Dismiss {plural(props.count, "active alert")}?</h2>
-			<Button variant="ghost" aria-label="Close" onClick={props.onCancel}>
+			<Button
+				variant="ghost"
+				iconOnly
+				aria-label="Close"
+				onClick={props.onCancel}
+			>
 				<Icon name="close" />
 			</Button>
 		</div>

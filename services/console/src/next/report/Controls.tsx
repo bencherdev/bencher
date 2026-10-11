@@ -179,7 +179,11 @@ const Choice = <T extends string>(props: {
 					caret
 					aria-haspopup="menu"
 					aria-expanded={open()}
-					aria-label={`${props.title}, ${current()?.long ?? ""}`}
+					aria-label={
+						current()?.long.toLowerCase() === current()?.label.toLowerCase()
+							? undefined
+							: `${props.label} ${current()?.label}, ${current()?.long}`
+					}
 					onClick={() => setOpen(!open())}
 				>
 					{current()?.label}

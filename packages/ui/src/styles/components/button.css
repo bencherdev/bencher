@@ -81,8 +81,7 @@
 		font-size: var(--font-size-base);
 	}
 
-	/* A button that is only an icon is square. */
-	.ui-button:has(> .ui-icon:only-child) {
+	.ui-button[data-icon-only] {
 		min-width: var(--ui-button-size);
 		padding-inline: 0;
 	}

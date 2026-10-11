@@ -144,7 +144,7 @@ test("the active blake3 alert sits under report 9c1f2e4 with its value, delta, a
 	await expect(
 		page
 			.getByRole("region", { name: `${BLAKE3}, full plot` })
-			.getByRole("button", { name: /^Hide / }),
+			.getByRole("button", { name: /: hide its line$/ }),
 	).toBeVisible();
 });
 
@@ -395,7 +395,7 @@ test.describe("on a project of its own", () => {
 	}) => {
 		const { project } = await createAlerts(request);
 		await page.goto(alerts(project.slug, "?status=all"));
-		await page.getByRole("button", { name: "Filter by branch, any" }).click();
+		await page.getByRole("button", { name: "branch any" }).click();
 		await page.getByRole("menuitemradio", { name: "feature" }).click();
 		await expect(page).toHaveURL(/[?&]branch=[0-9a-f-]{36}/);
 		await expect(heading(page)).toHaveText("0 active");
@@ -405,7 +405,7 @@ test.describe("on a project of its own", () => {
 		]);
 		await page.reload();
 		await expect(
-			page.getByRole("button", { name: "Filter by branch, feature" }),
+			page.getByRole("button", { name: "branch feature" }),
 		).toBeVisible();
 		await expect(row(page, line("bench-00"))).toContainText(
 			"Silenced: the branch head was replaced",
@@ -715,13 +715,11 @@ test.describe("on a phone", () => {
 		await expect(
 			page.getByRole("button", { name: "Window 4w, 4 weeks" }),
 		).toBeVisible();
-		await expect(
-			page.getByRole("button", { name: "Filter by branch, any" }),
-		).toBeHidden();
+		await expect(page.getByRole("button", { name: "branch any" })).toBeHidden();
 
 		await page.getByRole("button", { name: "Filters", exact: true }).click();
 		const sheet = page.getByRole("dialog", { name: "Filters" });
-		await sheet.getByRole("button", { name: "Filter by branch, any" }).click();
+		await sheet.getByRole("button", { name: "branch any" }).click();
 		await sheet.getByRole("menuitemradio", { name: "main" }).click();
 		await expect(page).toHaveURL(/[?&]branch=/);
 		await sheet.getByRole("button", { name: "Done" }).click();

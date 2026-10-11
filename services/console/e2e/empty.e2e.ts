@@ -1,4 +1,3 @@
-import AxeBuilder from "@axe-core/playwright";
 import { createProject, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
 import { dimensions } from "./explore";
@@ -208,16 +207,6 @@ test.describe("a project's Maintainer", () => {
 				card(page).getByRole("button", { name: "Create key" }),
 			).toBeEnabled(),
 		);
-		const { violations } = await new AxeBuilder({
-			page: page as unknown as ConstructorParameters<
-				typeof AxeBuilder
-			>[0]["page"],
-		})
-			.withRules(["label-content-name-mismatch"])
-			.analyze();
-		expect(
-			violations.map(({ nodes }) => nodes.map(({ target }) => target)),
-		).toEqual([]);
 	});
 });
 

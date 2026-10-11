@@ -134,10 +134,10 @@ test("a tile hides and focuses the lines its pin saved", async () => {
 	mount([tile]);
 	const key = page.getByRole("region", { name: "Pin 1" });
 	await expect
-		.element(key.getByRole("button", { name: /^Show .*size=1/ }))
+		.element(key.getByRole("button", { name: /size=1.*: show its line$/ }))
 		.toBeInTheDocument();
 	await expect
-		.element(key.getByRole("button", { name: /^Hide .*size=2/ }))
+		.element(key.getByRole("button", { name: /size=2.*: hide its line$/ }))
 		.toBeInTheDocument();
 	await expect
 		.element(key.getByRole("button", { name: /^Focus .*size=2/ }))

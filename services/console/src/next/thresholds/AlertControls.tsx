@@ -34,8 +34,7 @@ const AlertControls = (props: {
 			props.onView({ ...props.view, window });
 		}
 	};
-	const long = () =>
-		WINDOW_CHOICES.find(({ value }) => value === choice())?.long ?? "";
+	const shown = () => WINDOW_CHOICES.find(({ value }) => value === choice());
 	return (
 		<>
 			<div class="toolbar th-controls">
@@ -63,10 +62,10 @@ const AlertControls = (props: {
 						caret
 						aria-haspopup="menu"
 						aria-expanded={menu()}
-						aria-label={`Window, ${long()}`}
+						aria-label={`Window ${shown()?.label}, ${shown()?.long}`}
 						onClick={() => setMenu(!menu())}
 					>
-						{WINDOW_CHOICES.find(({ value }) => value === choice())?.label}
+						{shown()?.label}
 					</Chip>
 					<Show when={menu()}>
 						<Menu label="Window" anchor={chip} onClose={() => setMenu(false)}>

@@ -18,6 +18,7 @@ import {
 	dateValue,
 } from "./search";
 import { fakeApi, watchFallback } from "./testing";
+import { expectNameStartsWithText } from "../ui/testing";
 
 const DAY = 24 * 60 * 60 * 1_000;
 const NOW = Date.parse("2026-09-14T12:00:00Z");
@@ -66,6 +67,29 @@ afterEach(() => {
 	document.body.replaceChildren();
 });
 
+// Kills a chip named apart from what it shows ("Filter by branch, any" over
+// "branch any"), wide or narrow, which voice control cannot reach by its words.
+test("every chip's name starts with the text it shows, at either width", async () => {
+	const { api } = fakeApi(() => ({ data: [] }));
+	for (const [width, window] of [
+		[1280, DEFAULT_SEARCH.window],
+		[390, DEFAULT_SEARCH.window],
+		[390, customWindow("2026-08-18", "2026-09-14") as ReportsSearch["window"]],
+	] as const) {
+		await page.viewport(width, 720);
+		mount(api, { ...DEFAULT_SEARCH, window });
+		const chips = [...document.querySelectorAll(".ui-chip")].filter((chip) =>
+			chip.checkVisibility(),
+		);
+		expect(chips.length).toBeGreaterThan(1);
+		for (const chip of chips) {
+			expectNameStartsWithText(chip);
+		}
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
 // Kills options read while they load, which suspends the page: it leaves the
 // screen, and the search box loses the focus and what was typed.
 test("a filter menu whose options are loading leaves the page and the focus alone", async () => {
@@ -74,7 +98,7 @@ test("a filter menu whose options are loading leaves the page and the focus alon
 	mount(api);
 	const suspended = () => document.body.textContent?.includes("Suspended");
 
-	await page.getByRole("button", { name: "Filter by branch, any" }).click();
+	await page.getByRole("button", { name: "branch any" }).click();
 	const search = page.getByRole("searchbox", { name: "Search branches" });
 	await expect.element(search).toHaveFocus();
 	await userEvent.keyboard("fea");
@@ -106,7 +130,7 @@ test("options that arrive and change never take the page out", async () => {
 	const stop = watchFallback();
 	mount(api);
 
-	await page.getByRole("button", { name: "Filter by branch, any" }).click();
+	await page.getByRole("button", { name: "branch any" }).click();
 	await expect
 		.element(page.getByRole("menuitemradio", { name: "main" }))
 		.toBeVisible();
@@ -132,12 +156,12 @@ test("the branch and testbed menus ask the API for what is typed", async () => {
 				url.searchParams.get("search") === text,
 		);
 
-	await page.getByRole("button", { name: "Filter by branch, any" }).click();
+	await page.getByRole("button", { name: "branch any" }).click();
 	await userEvent.keyboard("fea");
 	await expect.poll(() => asked("branches", "fea")).toBe(true);
 	await userEvent.keyboard("{Escape}");
 
-	await page.getByRole("button", { name: "Filter by testbed, any" }).click();
+	await page.getByRole("button", { name: "testbed any" }).click();
 	await userEvent.keyboard("mac");
 	await expect.poll(() => asked("testbeds", "mac")).toBe(true);
 });
@@ -153,7 +177,7 @@ test("options stay while the next search loads, and a pick filters by slug", asy
 	);
 	mount(api);
 
-	await page.getByRole("button", { name: "Filter by branch, any" }).click();
+	await page.getByRole("button", { name: "branch any" }).click();
 	const merge = page.getByRole("menuitemradio", { name: "412/merge" });
 	await expect.element(merge).toBeVisible();
 	await userEvent.keyboard("412");
@@ -175,12 +199,10 @@ test("the chips name the branch and the testbed", async () => {
 	);
 
 	await expect
-		.element(page.getByRole("button", { name: "Filter by branch, 412/merge" }))
-		.toHaveTextContent("branch412/merge");
+		.element(page.getByRole("button", { name: "branch 412/merge" }))
+		.toHaveTextContent("branch 412/merge");
 	await expect
-		.element(
-			page.getByRole("button", { name: "Filter by testbed, Linux x86 64" }),
-		)
+		.element(page.getByRole("button", { name: "testbed Linux x86 64" }))
 		.toBeVisible();
 });
 
@@ -233,7 +255,7 @@ test("on a phone, every option of a filter menu in the Filters sheet is on scree
 			["alerts", 2],
 		] as const) {
 			const chip = sheet.getByRole("button", {
-				name: new RegExp(`^Filter by ${name},`),
+				name: new RegExp(`^${name} `),
 			});
 			await chip.click();
 			const list = page
