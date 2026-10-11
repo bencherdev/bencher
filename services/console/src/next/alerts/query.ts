@@ -1,8 +1,4 @@
-import type {
-	JsonConsoleAlerts,
-	JsonUpdateAlerts,
-	JsonUpdatedAlerts,
-} from "../../types/bencher";
+import type { JsonConsoleAlerts } from "../../types/bencher";
 import type { Api } from "../api";
 import { batchSize } from "../reports/rows";
 import { FOLD } from "./fold";
@@ -40,7 +36,7 @@ const alertsPath = (slug: string) =>
 	`/v0/console/projects/${encodeURIComponent(slug)}/alerts`;
 
 /** Every batch of one search. */
-export const searchKey = (slug: string, search: AlertsSearch) =>
+const searchKey = (slug: string, search: AlertsSearch) =>
 	["console", "alerts", slug, encodeSearch(search)] as const;
 
 /**
@@ -81,36 +77,4 @@ export const alertsQuery = (
 		batch.offset === 0 && batch.round === 0 && query?.queryKey[2] === slug
 			? previous
 			: undefined,
-});
-
-/** Change the alerts `body` selects; resolves to how many changed. */
-export const updateAlerts = async (
-	api: Api,
-	slug: string,
-	body: JsonUpdateAlerts,
-) =>
-	(await api.send<JsonUpdatedAlerts>("PATCH", alertsPath(slug), body)).data
-		.changed;
-
-export type Dimension = "branches" | "testbeds" | "measures";
-
-/** The name of a branch, a testbed, or a measure, by UUID, as the Thresholds pages key it. */
-export const nameKey = (resource: Dimension, slug: string, uuid: string) =>
-	["console", resource, slug, "name", uuid] as const;
-
-export const nameQuery = (
-	api: Api,
-	slug: string,
-	resource: Dimension,
-	uuid: string | undefined,
-) => ({
-	queryKey: nameKey(resource, slug, uuid ?? ""),
-	queryFn: async ({ signal }: { signal: AbortSignal }) =>
-		(
-			await api.get<{ name: string }>(
-				`/v0/projects/${encodeURIComponent(slug)}/${resource}/${encodeURIComponent(uuid ?? "")}`,
-				signal,
-			)
-		).data.name,
-	enabled: uuid !== undefined,
 });

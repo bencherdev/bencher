@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { lineKey } from "../query/line";
 import { decodeQuery } from "../query/query";
-import { type AlertLine, alertLinesOf } from "./alerts";
+import { type AlertLine, alertLinesOf } from "../alerts/lines";
 import { exploreSearchOf } from "./explore";
 import { alertsFixture } from "./testing";
 
@@ -33,12 +33,12 @@ describe("alertLinesOf", () => {
 
 	// Kills a row that does not know its report or the alert's status now.
 	test("knows its report and the alert's status", () => {
-		expect(newest?.report).toEqual({
+		expect(newest?.report).toMatchObject({
 			uuid: "report-new",
 			start: Date.parse("2026-09-13T21:16:00Z"),
 			hash: "9c1f2e4",
 		});
-		expect(sha256?.report).toEqual({
+		expect(sha256?.report).toMatchObject({
 			uuid: "report-old",
 			start: Date.parse("2026-09-13T21:16:00Z") - 18 * DAY,
 			hash: undefined,

@@ -3,6 +3,7 @@ import "./plots.css";
 import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type { JsonPlot } from "../../types/bencher";
+import { ApiError } from "../api";
 import { fakeApi, mount } from "../settings/testing";
 import PinDialog from "./PinDialog";
 import { testTile } from "./testing";
@@ -26,7 +27,10 @@ const order = [
  * The dialog over pin `plot-1`; every plot query answers with its lines, and is recorded.
  * The order's read waits for `release` when `held`.
  */
-const open = (props: { order?: typeof order; held?: boolean } = { order }) => {
+const open = (
+	props: { order?: typeof order; held?: boolean; refused?: number } = { order },
+) => {
+	let refusals = props.refused ?? 0;
 	const { plot, perf } = testTile();
 	const reads: URL[] = [];
 	let release = () => {};
@@ -43,6 +47,13 @@ const open = (props: { order?: typeof order; held?: boolean } = { order }) => {
 				url.pathname.endsWith("/v0/console/projects/hashbrown/plots")
 			) {
 				await held;
+			}
+			if (
+				refusals > 0 &&
+				url.pathname.endsWith("/v0/console/projects/hashbrown/plots")
+			) {
+				refusals -= 1;
+				throw new ApiError(403, "forbidden", "refused");
 			}
 			return {
 				data: url.pathname.endsWith("/v0/console/projects/hashbrown/plots")
@@ -209,4 +220,25 @@ test("an empty title cannot save, and Cancel sends nothing", async () => {
 	await dialog.getByRole("button", { name: "Cancel" }).click();
 	expect(sent).toEqual([]);
 	expect(closed).toEqual([true]);
+});
+
+// Kills a refused order read that leaves the position reading as on its way
+// for good, with no way to ask again but closing the dialog.
+test("a refused order read says the order did not load, and Retry reads it", async () => {
+	const { dialog, reads } = open({ refused: 1 });
+	const failed = dialog.getByRole("alert");
+	await expect
+		.element(failed)
+		.toHaveTextContent("The order of the pinned plots did not load.");
+	await expect
+		.element(dialog.getByRole("radio", { name: "Top" }))
+		.toBeDisabled();
+	await failed.getByRole("button", { name: "Retry" }).click();
+	await expect
+		.element(dialog.getByText("Plots holds 4 pinned plots"))
+		.toBeVisible();
+	await expect
+		.element(dialog.getByRole("radio", { name: "Top" }))
+		.toBeEnabled();
+	expect(orderReads(reads)).toHaveLength(2);
 });

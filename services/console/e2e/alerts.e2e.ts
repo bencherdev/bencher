@@ -2,6 +2,12 @@ import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { createAlerts, createManyAlerts, raiseAlerts } from "./api";
 import { axeInBothThemes } from "./axe";
 import {
+	alertsTopToBottom,
+	dismissWhileNextBatchIsOut,
+	manyAlertNames,
+	refocusThenReread,
+} from "./overtake";
+import {
 	expect,
 	nextPath,
 	seed,
@@ -586,14 +592,14 @@ for (const width of [768, 1024]) {
 		await settle(page);
 		const measured = await page.evaluate(() => {
 			const list = document
-				.querySelector(".al-scroll")
+				.querySelector(".lr-alerts")
 				?.getBoundingClientRect();
 			const right = Math.min(window.innerWidth, list?.right ?? 0);
 			return {
 				page: document.documentElement.scrollWidth,
-				controls: document.querySelectorAll(".al-scroll button, .al-scroll a")
+				controls: document.querySelectorAll(".lr-alerts button, .lr-alerts a")
 					.length,
-				out: [...document.querySelectorAll(".al-scroll button, .al-scroll a")]
+				out: [...document.querySelectorAll(".lr-alerts button, .lr-alerts a")]
 					.filter((control) => {
 						const box = control.getBoundingClientRect();
 						return (
@@ -658,6 +664,110 @@ test.describe("a list longer than a batch", () => {
 		expect(batches.every((batch) => !batch.has("page"))).toBe(true);
 		// A batch after the dismissals starts where the rows still active end, off a page's edge.
 		expect(offsets.some((offset) => offset % size !== 0)).toBe(true);
+	});
+
+	// Kills a next batch the API read after a dismissal it took while that
+	// batch was on its way, which starts an alert late and is never asked for
+	// again from the recounted offset, so that alert is never drawn.
+	test("a dismissal the API takes while the next batch is on its way skips and repeats no alert", async ({
+		page,
+		request,
+	}) => {
+		const project = await createManyAlerts(request, 60);
+		const label = "Alerts, grouped by the report that raised them";
+		const offsets = await dismissWhileNextBatchIsOut(
+			page,
+			alerts(project.slug),
+			label,
+		);
+		expect(
+			await alertsTopToBottom(page, label, "bench-59 n=0 Latency"),
+		).toEqual(manyAlertNames(60));
+		const [, size = 0] = offsets;
+		expect(offsets.slice(0, 3)).toEqual([0, size, size - 1]);
+	});
+
+	// Kills later batches read again from the offsets they were first asked
+	// from, on returning to the window or by a reread after a short change,
+	// rather than only the first batch, then each later one from its recounted
+	// offset.
+	test("after dismissals, returning to the window reads only the first batch again, and a reread recounts each later batch", async ({
+		page,
+		request,
+	}) => {
+		const project = await createManyAlerts(request, 60);
+		const label = "Alerts, grouped by the report that raised them";
+		const { size, focus, reread } = await refocusThenReread(
+			page,
+			request,
+			project.slug,
+			alerts(project.slug),
+			label,
+		);
+		expect(focus).toEqual([0]);
+		expect(
+			await alertsTopToBottom(page, label, "bench-59 n=0 Latency"),
+		).toEqual(
+			manyAlertNames(60).filter((name) => name !== "bench-03 n=0 Latency"),
+		);
+		expect(reread()).toEqual([0, size, 2 * size, 3 * size]);
+	});
+
+	// Kills a first batch read again on returning to the window whose fresh
+	// answer pushes its last rows past its end while the later batches keep
+	// their old answers, which leaves those rows out of the list until a
+	// reload.
+	test("alerts raised ahead while the reader was away push no alert out of the list on returning to the window", async ({
+		page,
+		request,
+	}) => {
+		const project = await createManyAlerts(request, 60);
+		const label = "Alerts, grouped by the report that raised them";
+		const batches: URLSearchParams[] = [];
+		page.on("request", (sent) => {
+			const url = new URL(sent.url());
+			if (
+				/\/v0\/console\/projects\/[^/]+\/alerts$/.test(url.pathname) &&
+				sent.method() === "GET"
+			) {
+				batches.push(url.searchParams);
+			}
+		});
+		await page.goto(alerts(project.slug));
+		await expect(heading(page)).toHaveText("60 active");
+		await expect(async () => {
+			if (batches.length < 3) {
+				await page.mouse.wheel(0, 2_000);
+			}
+			expect(batches.length).toBeGreaterThan(2);
+		}).toPass();
+		await settle(page);
+		const size = Number(batches[0]?.get("per_page"));
+		// A dismissal leaves the list stale, as time away does.
+		await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+		const taken = page.waitForResponse(
+			(response) =>
+				response.request().method() === "PATCH" &&
+				/\/v0\/console\/projects\/[^/]+\/alerts$/.test(response.url()),
+		);
+		await dismiss(table(page), line("bench-03")).click();
+		expect((await taken).ok()).toBe(true);
+		await raiseAlerts(request, project.slug, 30, ["bench-00", "bench-01"]);
+
+		const returned = batches.length;
+		await page.evaluate(() =>
+			window.dispatchEvent(new Event("visibilitychange")),
+		);
+		await expect.poll(() => batches.length).toBeGreaterThan(returned + 1);
+		await settle(page);
+		expect(
+			batches
+				.slice(returned, returned + 2)
+				.map((batch) => Number(batch.get("offset"))),
+		).toEqual([0, size]);
+		expect(
+			await alertsTopToBottom(page, label, "bench-59 n=0 Latency"),
+		).toEqual([line("bench-00"), line("bench-01"), ...manyAlertNames(60)]);
 	});
 });
 

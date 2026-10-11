@@ -5,7 +5,12 @@ import "../report/report.css";
 import "../reports/reports.css";
 import "../alerts/alerts.css";
 import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
-import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import {
+	type QueryClient,
+	QueryClientProvider,
+	focusManager,
+	onlineManager,
+} from "@tanstack/solid-query";
 import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test } from "vitest";
@@ -582,6 +587,74 @@ test("a change the API made for fewer alerts than were loaded puts the rows back
 	await expect.poll(() => lists().length).toBe(2);
 });
 
+// Kills a short change that leaves the tab badge and the project's count as
+// the page guessed them, rather than as the API holds them.
+test("the project's count is read again after a short change", async () => {
+	const { api, reads, answered } = fakeApi(three, async () => ({ changed: 1 }));
+	mount(api);
+	const project = () =>
+		reads.filter(
+			({ pathname }) => pathname === "/v0/console/projects/hashbrown",
+		).length;
+	await expect.element(heading()).toHaveTextContent("3 active");
+	expect(project()).toBe(0);
+	await page.getByRole("button", { name: `Dismiss group on ${WHERE}` }).click();
+	await expect.poll(answered).toBe(1);
+	await expect.poll(project).toBe(1);
+});
+
+// Kills a recount read while another change is still out, before the API
+// has taken it, so the badge jumps to a count the page then moves again.
+test("the project's count is read again only once no change is in flight", async () => {
+	const answers: ((changed: number) => void)[] = [];
+	const { api, reads, answered } = fakeApi(
+		three,
+		() =>
+			new Promise((resolve) => {
+				answers.push((changed) => resolve({ changed }));
+			}),
+	);
+	mount(api);
+	const project = () =>
+		reads.filter(
+			({ pathname }) => pathname === "/v0/console/projects/hashbrown",
+		).length;
+	await expect.element(heading()).toHaveTextContent("3 active");
+	await press(dismissButtons().nth(0));
+	await press(dismissButtons().nth(0));
+	await expect.poll(() => answers.length).toBe(2);
+	answers[0]?.(0);
+	await expect.poll(answered).toBe(1);
+	await new Promise((resolve) => setTimeout(resolve, 100));
+	expect(project()).toBe(0);
+	answers[1]?.(1);
+	await expect.poll(answered).toBe(2);
+	await expect.poll(project).toBe(1);
+});
+
+// Kills a reread that drops the focus with a row it leaves out.
+test("a reread that leaves out the focused row moves the focus to the row now in its place", async () => {
+	let read = 0;
+	const { api, answered } = fakeApi(
+		() =>
+			read++ === 0
+				? three()
+				: alertsFixture([{ report: 0, alerts: [{ alert: 1 }, { alert: 3 }] }]),
+		async () => ({ changed: 0 }),
+	);
+	mount(api);
+	await expect.element(heading()).toHaveTextContent("3 active");
+	const rows = () =>
+		[...document.querySelectorAll("tbody tr[aria-rowindex]")].filter((row) =>
+			row.querySelector("td.lr-act"),
+		);
+	await press(dismissButtons().nth(1));
+	await expect.poll(answered).toBe(1);
+	await expect.poll(() => rows().length).toBe(2);
+	await expect.poll(focusedName).toBe(`Select ${NAME}`);
+	expect(document.activeElement?.closest("tr")).toBe(rows()[1]);
+});
+
 // Kills rows drawn anew when the API's answer is written, which drops the
 // focus a row's Dismiss handed to its Reactivate.
 test("a row's Reactivate keeps the focus once the API answers its Dismiss", async () => {
@@ -816,6 +889,493 @@ test("the next batch waits for a change in flight", async () => {
 	answer?.();
 	await expect.poll(() => lists().length).toBe(2);
 	expect(lists()[1]?.searchParams.get("offset")).toBe(String(size - 1));
+});
+
+/** How many alerts a newer report can raise ahead of the rest. */
+const ARRIVALS = 4;
+
+/**
+ * The page's API over the alerts numbered 1 to `total`, each on a benchmark of
+ * its own and active until it is dismissed, the list served from its `offset`;
+ * `holdList` keeps a list from `offset` out, read once it resolves, and
+ * `holdAnswer` keeps one out once it was read. A change counts only the alerts
+ * it dismissed, `elsewhere` dismisses an alert as another reader would, and
+ * `arrive` has a newer report raise alerts numbered past `total`, listed ahead
+ * of the rest.
+ */
+const dismissibleAlerts = (
+	total: number,
+	holdList: (offset: number) => Promise<void> | undefined,
+	holdAnswer: (offset: number) => Promise<void> | undefined = () => undefined,
+) => {
+	const dismissed = new Set<number>();
+	const arrived: number[] = [];
+	const benchmarks = Array.from({ length: total + ARRIVALS }, (_, index) => ({
+		uuid: `bench-${index + 1}-uuid`,
+		name: `bench-${index + 1}`,
+		slug: `bench-${index + 1}`,
+	}));
+	const variants = benchmarks.map(({ uuid }, index) => ({
+		uuid: `variant-${uuid}`,
+		benchmark: index,
+		parameters: { n: 0 },
+	}));
+	const api = fakeApi(
+		async (url) => {
+			const offset = Number(url.searchParams.get("offset"));
+			const size = Number(url.searchParams.get("per_page"));
+			await holdList(offset);
+			const ids = [
+				...arrived,
+				...Array.from({ length: total }, (_, index) => index + 1),
+			].filter(
+				(id) =>
+					url.searchParams.get("status") !== "active" || !dismissed.has(id),
+			);
+			const batch = ids.slice(offset, offset + size);
+			const reports = [
+				{ report: 1, raised: (id: number) => id > total },
+				{ report: 0, raised: (id: number) => id <= total },
+			];
+			const answer = {
+				...alertsFixture(
+					reports
+						.filter(({ raised }) => batch.some(raised))
+						.map(({ report, raised }) => ({
+							report,
+							total: ids.filter(raised).length,
+							alerts: batch
+								.filter(raised)
+								.map((alert) => ({ alert, benchmark: alert - 1 })),
+						})),
+					{ benchmarks, variants } as Partial<JsonConsoleAlerts>,
+				),
+				total: ids.length,
+				counts: {
+					active: total + arrived.length - dismissed.size,
+					dismissed: dismissed.size,
+					silenced: 0,
+				},
+				read_time: Date.now(),
+			} as JsonConsoleAlerts;
+			await holdAnswer(offset);
+			return answer;
+		},
+		async (sent) => {
+			const { alerts = [] } = sent.body as { alerts?: string[] };
+			const before = dismissed.size;
+			for (const uuid of alerts) {
+				dismissed.add(Number(uuid.slice(-11)));
+			}
+			return { changed: dismissed.size - before };
+		},
+	);
+	return {
+		...api,
+		elsewhere: (alert: number) => dismissed.add(alert),
+		arrive: (...alerts: number[]) => arrived.unshift(...alerts),
+	};
+};
+const STATUS_BUTTON =
+	"button[aria-label^='Dismiss the alert on '], button[aria-label^='Reactivate the alert on ']";
+/** Each alert row's name, top to bottom, read a screen at a time. */
+const alertNamesTopToBottom = async () => {
+	const names = new Map<number, string>();
+	for (
+		let top = 0;
+		top <= document.documentElement.scrollHeight;
+		top += window.innerHeight / 2
+	) {
+		window.scrollTo({ top, behavior: "instant" });
+		await new Promise((resolve) =>
+			requestAnimationFrame(() => requestAnimationFrame(resolve)),
+		);
+		for (const row of document.querySelectorAll("tbody tr[aria-rowindex]")) {
+			const name = row
+				.querySelector(STATUS_BUTTON)
+				?.getAttribute("aria-label")
+				?.replace(/^(Dismiss|Reactivate) the alert on /, "");
+			if (name) {
+				names.set(Number(row.getAttribute("aria-rowindex")), name);
+			}
+		}
+	}
+	return [...names].sort(([a], [b]) => a - b).map(([, name]) => name);
+};
+
+// Kills a next batch the API read after a dismissal it took while that batch
+// was out, which starts an alert late and is never asked for again from the
+// recounted offset, so that alert is never drawn.
+test("a dismissal the API takes while the next batch is out skips and repeats no alert", async () => {
+	await page.viewport(1280, 400);
+	const total = 40;
+	let release = () => {};
+	const held = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const { api, lists, answered } = dismissibleAlerts(total, (offset) =>
+		offset > 0 ? held : undefined,
+	);
+	mount(api, { ...bootstrapOf(), active_alerts: total });
+	await expect.element(heading()).toHaveTextContent(`${total} active`);
+	const size = Number(lists()[0]?.searchParams.get("per_page"));
+	const toBottom = () =>
+		window.scrollTo({
+			top: document.documentElement.scrollHeight,
+			behavior: "instant",
+		});
+	toBottom();
+	await expect.poll(() => lists().length).toBe(2);
+	window.scrollTo({ top: 0, behavior: "instant" });
+	await page
+		.getByRole("button", { name: "Dismiss the alert on bench-1 n=0 Latency" })
+		.click();
+	await expect.poll(answered).toBe(1);
+	release();
+	// Asked for again with the reader still at the top, where nothing nears the end.
+	await expect.poll(() => lists().length).toBe(3);
+
+	await expect
+		.poll(
+			() => {
+				toBottom();
+				return [...document.querySelectorAll(STATUS_BUTTON)]
+					.at(-1)
+					?.getAttribute("aria-label");
+			},
+			{ timeout: 5_000 },
+		)
+		.toBe(`Dismiss the alert on bench-${total} n=0 Latency`);
+	await new Promise((resolve) => setTimeout(resolve, 200));
+	expect(await alertNamesTopToBottom()).toEqual(
+		Array.from(
+			{ length: total },
+			(_, index) => `bench-${index + 1} n=0 Latency`,
+		),
+	);
+	expect(
+		lists()
+			.slice(0, 3)
+			.map((url) => url.searchParams.get("offset")),
+	).toEqual(["0", String(size), String(size - 1)]);
+});
+
+const toEnd = () =>
+	window.scrollTo({
+		top: document.documentElement.scrollHeight,
+		behavior: "instant",
+	});
+const offsetsOf = (urls: URL[]) =>
+	urls.map((url) => url.searchParams.get("offset"));
+/** The names of the alerts numbered `alerts`, top to bottom, once the last one is drawn. */
+const drawnOnce = async (alerts: number[]) => {
+	await expect
+		.poll(
+			() => {
+				toEnd();
+				return [...document.querySelectorAll(STATUS_BUTTON)]
+					.at(-1)
+					?.getAttribute("aria-label")
+					?.replace(/^(Dismiss|Reactivate) the alert on /, "");
+			},
+			{ timeout: 5_000 },
+		)
+		.toBe(`bench-${alerts.at(-1)} n=0 Latency`);
+	await new Promise((resolve) => setTimeout(resolve, 200));
+	expect(await alertNamesTopToBottom()).toEqual(
+		alerts.map((alert) => `bench-${alert} n=0 Latency`),
+	);
+};
+const numbered = (from: number, to: number) =>
+	Array.from({ length: to - from + 1 }, (_, index) => from + index);
+
+// Kills a later batch read again on returning to the window or the network,
+// from the offset it was first asked from, which the dismissals ahead of it
+// have moved: only the first batch is read again, and the next batch counts
+// from it.
+test("returning to the window or the network after dismissals reads only the first batch again and draws every alert once", async () => {
+	await page.viewport(1280, 400);
+	const total = 60;
+	const { api, lists, answered } = dismissibleAlerts(total, () => undefined);
+	mount(api, { ...bootstrapOf(), active_alerts: total });
+	await expect.element(heading()).toHaveTextContent(`${total} active`);
+	const size = Number(lists()[0]?.searchParams.get("per_page"));
+	await expect
+		.poll(
+			() => {
+				toEnd();
+				return lists().length;
+			},
+			{ timeout: 5_000 },
+		)
+		.toBe(3);
+	window.scrollTo({ top: 0, behavior: "instant" });
+	for (const alert of [1, 2, 3]) {
+		await page
+			.getByRole("button", {
+				name: `Dismiss the alert on bench-${alert} n=0 Latency`,
+			})
+			.click();
+	}
+	await expect.poll(answered).toBe(3);
+	const before = lists().length;
+	focusManager.setFocused(false);
+	focusManager.setFocused(true);
+	try {
+		await expect.poll(() => lists().length).toBeGreaterThan(before);
+		await new Promise((resolve) => setTimeout(resolve, 200));
+		expect(offsetsOf(lists().slice(before))).toEqual(["0"]);
+	} finally {
+		focusManager.setFocused(undefined);
+	}
+	await page
+		.getByRole("button", { name: "Dismiss the alert on bench-4 n=0 Latency" })
+		.click();
+	await expect.poll(answered).toBe(4);
+	const back = lists().length;
+	onlineManager.setOnline(false);
+	onlineManager.setOnline(true);
+	await expect.poll(() => lists().length).toBeGreaterThan(back);
+	await new Promise((resolve) => setTimeout(resolve, 200));
+	expect(offsetsOf(lists().slice(back))).toEqual(["0"]);
+
+	await drawnOnce(numbered(1, total));
+	expect(offsetsOf(lists().slice(back + 1))).toEqual([String(3 * size - 4)]);
+});
+
+// Kills a reread after a short change that reads the later batches again from
+// the offsets they were first asked from, or before the first batch answers:
+// each is asked for again from the offset the batches before it now count.
+test("a reread after a short change asks each later batch again from the offset the first batch's answer counts", async () => {
+	await page.viewport(1280, 400);
+	const total = 60;
+	let holding = false;
+	let release = () => {};
+	const held = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const { api, lists, answered, elsewhere } = dismissibleAlerts(
+		total,
+		(offset) => (holding && offset === 0 ? held : undefined),
+	);
+	mount(api, { ...bootstrapOf(), active_alerts: total });
+	await expect.element(heading()).toHaveTextContent(`${total} active`);
+	const size = Number(lists()[0]?.searchParams.get("per_page"));
+	for (const alert of [1, 2, 3]) {
+		await page
+			.getByRole("button", {
+				name: `Dismiss the alert on bench-${alert} n=0 Latency`,
+			})
+			.click();
+	}
+	await expect.poll(answered).toBe(3);
+	await expect
+		.poll(
+			() => {
+				toEnd();
+				return lists().length;
+			},
+			{ timeout: 5_000 },
+		)
+		.toBe(3);
+	expect(offsetsOf(lists())).toEqual([
+		"0",
+		String(size - 3),
+		String(2 * size - 3),
+	]);
+	window.scrollTo({ top: 0, behavior: "instant" });
+
+	// Another reader dismissed bench-5 first, so this dismissal changes nothing.
+	elsewhere(5);
+	holding = true;
+	const before = lists().length;
+	await page
+		.getByRole("button", { name: "Dismiss the alert on bench-5 n=0 Latency" })
+		.click();
+	await expect
+		.element(page.getByRole("alert"))
+		.toHaveTextContent(
+			"Some alerts did not change, so the list is read again.",
+		);
+	await expect.poll(() => lists().length).toBeGreaterThan(before);
+	await new Promise((resolve) => setTimeout(resolve, 200));
+	expect(offsetsOf(lists().slice(before))).toEqual(["0"]);
+	holding = false;
+	release();
+	await expect.poll(() => lists().length).toBe(before + 2);
+	expect(offsetsOf(lists().slice(before + 1))).toEqual([String(size)]);
+
+	await drawnOnce([1, 2, 3, 4, ...numbered(6, total)]);
+});
+
+// Kills a reread whose first batch failed that still sets the later batches
+// aside, which asks them again from offsets counted over rows the API no
+// longer holds as the page shows them.
+test("a reread whose first batch fails keeps the later batches as they were", async () => {
+	await page.viewport(1280, 400);
+	const total = 60;
+	let failing = false;
+	const { api, lists, elsewhere } = dismissibleAlerts(total, (offset) =>
+		failing && offset === 0
+			? Promise.reject(new ApiError(500, "server", "{}"))
+			: undefined,
+	);
+	mount(api, { ...bootstrapOf(), active_alerts: total });
+	await expect.element(heading()).toHaveTextContent(`${total} active`);
+	const size = Number(lists()[0]?.searchParams.get("per_page"));
+	await expect
+		.poll(
+			() => {
+				toEnd();
+				return lists().length;
+			},
+			{ timeout: 5_000 },
+		)
+		.toBe(3);
+	window.scrollTo({ top: 0, behavior: "instant" });
+	const table = page.getByRole("table", {
+		name: "Alerts, grouped by the report that raised them",
+	});
+	const rows = String(2 + 3 * size);
+	await expect.element(table).toHaveAttribute("aria-rowcount", rows);
+
+	elsewhere(5);
+	failing = true;
+	const before = lists().length;
+	await page
+		.getByRole("button", { name: "Dismiss the alert on bench-5 n=0 Latency" })
+		.click();
+	await expect.poll(() => lists().length).toBeGreaterThan(before);
+	await new Promise((resolve) => setTimeout(resolve, 200));
+	expect(offsetsOf(lists().slice(before))).toEqual(["0"]);
+	await expect.element(table).toHaveAttribute("aria-rowcount", rows);
+});
+
+/** The reader was away long enough for every batch of the list to go stale. */
+const away = (client: QueryClient) =>
+	client.invalidateQueries({
+		queryKey: ["console", "alerts", "hashbrown"],
+		refetchType: "none",
+	});
+/** Load the first three batches of a list longer than them, then scroll back to the top. */
+const threeBatches = async (lists: () => URL[]) => {
+	await expect
+		.poll(
+			() => {
+				toEnd();
+				return lists().length;
+			},
+			{ timeout: 5_000 },
+		)
+		.toBe(3);
+	window.scrollTo({ top: 0, behavior: "instant" });
+};
+/** Return to the window, and the offsets asked for once `count` batches were. */
+const refocusAsking = async (lists: () => URL[], count: number) => {
+	const before = lists().length;
+	focusManager.setFocused(false);
+	focusManager.setFocused(true);
+	try {
+		await expect
+			.poll(() => lists().length)
+			.toBeGreaterThanOrEqual(before + count);
+		await new Promise((resolve) => setTimeout(resolve, 200));
+		return offsetsOf(lists().slice(before));
+	} finally {
+		focusManager.setFocused(undefined);
+	}
+};
+
+// Kills a first batch read again on returning to the window whose fresh
+// answer pushes its last rows past its end while the later batches keep their
+// old answers, so no batch draws the rows pushed out: the list reads itself
+// again from the top, the next batch from the offset the fresh first batch
+// counts.
+test("alerts raised ahead while the reader was away push no alert out of the list on returning to the window", async () => {
+	await page.viewport(1280, 400);
+	const total = 60;
+	const { api, lists, arrive } = dismissibleAlerts(total, () => undefined);
+	const client = mount(api, { ...bootstrapOf(), active_alerts: total });
+	await expect.element(heading()).toHaveTextContent(`${total} active`);
+	const size = Number(lists()[0]?.searchParams.get("per_page"));
+	await threeBatches(lists);
+
+	arrive(61, 62);
+	await away(client);
+	expect(await refocusAsking(lists, 2)).toEqual(["0", String(size)]);
+	await drawnOnce([61, 62, ...numbered(1, total)]);
+});
+
+// Kills a list read again from the top whenever its first batch's fresh
+// answer falls short of the next batch, as it does when nothing changed
+// ahead; whenever that answer leaves out a row dismissed here, which left the
+// view; or whenever it leaves out rows it held though it still reaches the
+// next batch: alerts another reader dismissed ahead only leave the list.
+test("returning to the window reads only the first batch again when nothing ahead pushes its rows past the next batch", async () => {
+	await page.viewport(1280, 400);
+	const total = 60;
+	const { api, lists, answered, arrive, elsewhere } = dismissibleAlerts(
+		total,
+		() => undefined,
+	);
+	const client = mount(api, { ...bootstrapOf(), active_alerts: total });
+	await expect.element(heading()).toHaveTextContent(`${total} active`);
+	await threeBatches(lists);
+
+	await away(client);
+	expect(await refocusAsking(lists, 1)).toEqual(["0"]);
+	await page
+		.getByRole("button", { name: "Dismiss the alert on bench-5 n=0 Latency" })
+		.click();
+	await expect.poll(answered).toBe(1);
+	arrive(61);
+	await away(client);
+	expect(await refocusAsking(lists, 1)).toEqual(["0"]);
+	elsewhere(7);
+	elsewhere(8);
+	await away(client);
+	expect(await refocusAsking(lists, 1)).toEqual(["0"]);
+	await drawnOnce([61, ...numbered(1, 6), ...numbered(9, total)]);
+});
+
+// Kills a next batch still on its way when the first batch's fresh answer
+// pushed rows past its end, which then draws what it read before the alerts
+// were raised and leaves the rows pushed out undrawn: it is asked again from
+// the offset the fresh first batch counts.
+test("a next batch read before alerts were raised ahead is asked again once the first batch's fresh answer pushes rows past its end", async () => {
+	await page.viewport(1280, 400);
+	const total = 60;
+	let holding = false;
+	let release = () => {};
+	const held = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const { api, lists, arrive } = dismissibleAlerts(
+		total,
+		() => undefined,
+		(offset) => (holding && offset > 0 ? held : undefined),
+	);
+	const client = mount(api, { ...bootstrapOf(), active_alerts: total });
+	await expect.element(heading()).toHaveTextContent(`${total} active`);
+	const size = Number(lists()[0]?.searchParams.get("per_page"));
+	holding = true;
+	await expect
+		.poll(
+			() => {
+				toEnd();
+				return lists().length;
+			},
+			{ timeout: 5_000 },
+		)
+		.toBe(2);
+	holding = false;
+	window.scrollTo({ top: 0, behavior: "instant" });
+
+	arrive(61, 62);
+	await away(client);
+	expect(await refocusAsking(lists, 2)).toEqual(["0", String(size)]);
+	release();
+	await drawnOnce([61, 62, ...numbered(1, total)]);
 });
 
 // Kills Reactivate N offered under Active, where a dismissed row has its own.

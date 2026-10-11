@@ -31,7 +31,12 @@ const PATH = `${NEXT_PROJECTS}/hashbrown/reports/${REPORT}`;
 
 let dispose: (() => void) | undefined;
 
-const mount = (api: Api, client: QueryClient, path = PATH) => {
+const mount = (
+	api: Api,
+	client: QueryClient,
+	path = PATH,
+	host = "https://api.bencher.dev",
+) => {
 	const history = createMemoryHistory();
 	history.set({ value: path });
 	const root = document.createElement("div");
@@ -44,7 +49,9 @@ const mount = (api: Api, client: QueryClient, path = PATH) => {
 					history={history}
 					base={NEXT_PROJECTS}
 					root={(props) => (
-						<ProjectContext.Provider value={{ api, slug: () => "hashbrown" }}>
+						<ProjectContext.Provider
+							value={{ api, slug: () => "hashbrown", host }}
+						>
 							<Suspense fallback={<p>Suspended</p>}>{props.children}</Suspense>
 						</ProjectContext.Provider>
 					)}
@@ -548,6 +555,24 @@ test("the no-threshold sheet guards the side the report's other lines guard", as
 		.element(exact)
 		.toHaveTextContent("--threshold-lower-boundary 0.99");
 	await expect.element(exact).not.toHaveTextContent("--threshold-upper");
+});
+
+// Kills a host read from anywhere but the project the page is in.
+test("the no-threshold sheet names the project's self-hosted API", async () => {
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: threeLines() } : { data: bootstrapOf() },
+	);
+	mount(api, impatient(), PATH, "http://localhost:61016");
+	await page
+		.getByRole("button", {
+			name: `No threshold checks ${THROUGHPUT}. Show the run snippet that declares one.`,
+		})
+		.click();
+	await expect
+		.element(
+			page.getByRole("dialog", { name: "No threshold checks this line" }),
+		)
+		.toHaveTextContent("--host http://localhost:61016");
 });
 
 // Kills an open row's plot built again whenever another row opens.

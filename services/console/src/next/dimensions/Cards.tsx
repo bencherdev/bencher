@@ -25,6 +25,7 @@ import {
 } from "./data";
 import { VARIANT_IMPACT } from "./impact";
 import { Actions, Impact, focusRow } from "./RowTable";
+import { modelText } from "../thresholds/text";
 import { thresholdLinkName } from "./threshold";
 import { shortDate, shortDay } from "./time";
 import { parametersInUse, shownTotal, shownVariants, tagsOf } from "./variants";
@@ -773,7 +774,7 @@ const ThresholdsCard = (props: {
 												<Sets threshold={threshold} />
 											</td>
 											<td data-fold="n1" class="mono">
-												{threshold.model?.test ?? "no model"}
+												{modelText(threshold.model)}
 											</td>
 										</tr>
 									)}

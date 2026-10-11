@@ -146,7 +146,8 @@
 .plots-dprev {
 	gap: 6px;
 }
-.plots-drow {
+.plots-drow,
+.plots-dorder {
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;

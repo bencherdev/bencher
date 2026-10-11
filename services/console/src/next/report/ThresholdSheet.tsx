@@ -2,15 +2,12 @@ import Sheet from "@bencherdev/ui/Sheet";
 import type { QueryObserverResult } from "@tanstack/solid-query";
 import { For, Match, Show, Switch } from "solid-js";
 import Code from "./Code";
-import { useProject } from "../project";
+import { runHost, useProject } from "../project";
 import { useQueryResult } from "../query";
 import type { ReportLine } from "./lines";
 import { countQuery } from "./query";
 import { lineLabel } from "./row";
 import { thresholdSnippets } from "./snippet";
-
-// Bencher Cloud's API, which `bencher run` reports to unless told otherwise.
-const CLOUD = "https://api.bencher.dev";
 
 interface ThresholdSheetProps {
 	/** The line no threshold checks, while the sheet is open. */
@@ -21,7 +18,7 @@ interface ThresholdSheetProps {
 	branch: string;
 	testbed: string;
 	/** Where the run reports, for a server other than Bencher Cloud. */
-	host: string;
+	host: string | undefined;
 	onClose: () => void;
 }
 
@@ -50,7 +47,7 @@ const Snippets = (props: ThresholdSheetProps & { line: ReportLine }) => {
 				project: slug(),
 				branch: props.branch,
 				testbed: props.testbed,
-				host: props.host === CLOUD ? undefined : props.host,
+				host: runHost(props.host),
 			},
 			snippetLine(props.line),
 			props.lines.map(snippetLine),

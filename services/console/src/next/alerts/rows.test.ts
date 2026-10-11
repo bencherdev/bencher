@@ -1,14 +1,12 @@
 import { describe, expect, test } from "vitest";
+import { type AlertLine, alertLinesOf, withStatuses } from "./lines";
 import {
-	type AlertLine,
-	alertLinesOf,
 	alertSlots,
 	distinctLines,
 	groupState,
 	toggleGroup,
 	visibleLines,
 	withKept,
-	withStatuses,
 } from "./rows";
 import { alertId, alertsFixture, reportId } from "./testing";
 

@@ -1,5 +1,11 @@
-import type { JsonConsoleAlertsCounts } from "../../types/bencher";
-import type { AlertLine, Kept } from "./rows";
+import type {
+	JsonConsoleAlertsCounts,
+	JsonUpdateAlerts,
+	JsonUpdatedAlerts,
+} from "../../types/bencher";
+import type { Api } from "../api";
+import type { AlertLine } from "./lines";
+import type { Kept } from "./rows";
 
 /** A status the page can set: the API never silences or unsilences. */
 export type Settable = "active" | "dismissed";
@@ -118,7 +124,14 @@ export const inView = (
 	lines: readonly AlertLine[],
 	view: "active" | "dismissed" | "all",
 	changes: Changes,
-) => lines.filter((line) => IN_VIEW[view](confirmedOf(line, changes))).length;
+) => linesInView(lines, view, changes).length;
+
+/** The lines still in a view on the server. */
+export const linesInView = (
+	lines: readonly AlertLine[],
+	view: "active" | "dismissed" | "all",
+	changes: Changes,
+) => lines.filter((line) => IN_VIEW[view](confirmedOf(line, changes)));
 
 /** The lines a change to `status` would move: active ones to dismiss, dismissed ones to reactivate. */
 export const changeable = (
@@ -159,3 +172,17 @@ export const withPending = (
 		dismissed: Math.max(0, counts.dismissed - moved),
 	};
 };
+
+/** Change the alerts `body` selects; resolves to how many changed. */
+export const updateAlerts = async (
+	api: Api,
+	slug: string,
+	body: JsonUpdateAlerts,
+) =>
+	(
+		await api.send<JsonUpdatedAlerts>(
+			"PATCH",
+			`/v0/console/projects/${encodeURIComponent(slug)}/alerts`,
+			body,
+		)
+	).data.changed;

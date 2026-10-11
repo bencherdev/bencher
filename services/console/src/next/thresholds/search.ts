@@ -1,3 +1,4 @@
+import type { Batch as AlertsBatch } from "../alerts/search";
 import { customWindow, dateValue } from "../reports/search";
 import { dayText } from "./model";
 
@@ -203,7 +204,7 @@ export const alertsParams = (
 	threshold: string,
 	view: ThresholdView,
 	now: number,
-	batch: Batch,
+	batch: AlertsBatch,
 ) => {
 	const params = new URLSearchParams({
 		thresholds: threshold,
@@ -211,7 +212,7 @@ export const alertsParams = (
 	});
 	setWindow(params, view.window, now);
 	params.set("window", String(historyDays(view.window)));
-	params.set("page", String(batch.page));
+	params.set("offset", String(batch.offset));
 	params.set("per_page", String(batch.perPage));
 	return params;
 };

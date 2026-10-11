@@ -5,11 +5,7 @@ import Dialog from "@bencherdev/ui/Dialog";
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
-import {
-	type QueryKey,
-	type QueryObserverResult,
-	useQueryClient,
-} from "@tanstack/solid-query";
+import { type QueryKey, useQueryClient } from "@tanstack/solid-query";
 import {
 	type Accessor,
 	For,
@@ -17,11 +13,9 @@ import {
 	Show,
 	Switch,
 	batch,
-	createComputed,
 	createEffect,
 	createMemo,
 	createSignal,
-	mapArray,
 	on,
 } from "solid-js";
 import type {
@@ -30,27 +24,19 @@ import type {
 	JsonUpdateAlerts,
 } from "../../types/bencher";
 import AlertActions from "../alerts/AlertActions";
-import Controls, { type FilterNames } from "../alerts/Controls";
+import Controls from "../alerts/Controls";
+import { FIRST, useAlertBatches } from "../alerts/batches";
 import { useFold } from "../alerts/fold";
-import {
-	type AlertsBatch,
-	alertsBatch,
-	alertsQuery,
-	nameQuery,
-	searchKey,
-	updateAlerts,
-} from "../alerts/query";
+import { type AlertsBatch, alertsBatch, alertsQuery } from "../alerts/query";
+import { type AlertLine, alertLinesOf, withStatuses } from "../alerts/lines";
 import {
 	type AlertGroup,
-	type AlertLine,
-	alertLinesOf,
 	alertSlots,
 	distinctLines,
 	groupState,
 	toggleGroup,
 	visibleLines,
 	withKept,
-	withStatuses,
 } from "../alerts/rows";
 import {
 	type AlertsSearch,
@@ -68,10 +54,12 @@ import {
 	changeable,
 	inChunks,
 	inView,
+	linesInView,
 	rollback,
 	settle,
 	shownDelta,
 	statusOf,
+	updateAlerts,
 	withPending,
 } from "../alerts/status";
 import { projectPath, reportPath } from "../paths";
@@ -84,15 +72,12 @@ import LineTable from "../report/LineTable";
 import { type GroupRow, type ReportLine, plotOf } from "../report/lines";
 import { lineLabel } from "../report/row";
 import { WINDOWS, windowPhrase } from "../reports/search";
+import { type FilterNames, nameQuery } from "../reports/DimensionFilters";
 
 const SKELETON_ROWS = 8;
 /** A report's header: its identity on one line when wide, with its controls on a second when narrow. */
 const GROUP_HEIGHT = { wide: 44, narrow: 88 } as const;
 const FILTERS: readonly Filter[] = ["branch", "testbed", "measure"];
-/** The first batch of every search, one object so its query is kept, and re-keyed, rather than started again. */
-const FIRST = { offset: 0, round: 0 } as const;
-
-type Batch = QueryObserverResult<AlertsBatch>;
 
 /** A project's alerts under the reports that raised them, triaged in place. */
 const Alerts = () => {
@@ -120,34 +105,20 @@ const Alerts = () => {
 	const searched = createMemo(() => encodeSearch(search()));
 	// A rolling window is measured from when the reader picked it, so every batch binds the same bounds.
 	const now = createMemo(on(searched, () => Date.now()));
-	const [starts, setStarts] = createSignal<{ offset: number; round: number }[]>(
-		[FIRST],
-	);
-	createComputed(on(searched, () => setStarts([FIRST]), { defer: true }));
-	const queries = createMemo(
-		mapArray(starts, (start) =>
-			useQueryResult(() =>
+	const { batches, loaded, next, first, busy, loading, nearEnd, reread } =
+		useAlertBatches({
+			view: searched,
+			query: (start) =>
 				alertsQuery(api, slug(), search(), { ...start, perPage }, now()),
-			),
-		),
-	);
-	const batches = () => queries().map((batch) => batch());
-	/** The batches loaded so far, up to the first one still loading or failed. */
-	const loaded = createMemo(() => {
-		const ready: Batch[] = [];
-		for (const batch of batches()) {
-			if (batch.data === undefined) {
-				break;
-			}
-			ready.push(batch);
-		}
-		return ready;
-	});
-	/** The batch after the loaded ones, while it loads or once it failed. */
-	const next = () => batches()[loaded().length];
-	const first = () => loaded()[0]?.data;
-	/** The rows on screen are the last search's, until the new one answers. */
-	const busy = () => batches()[0]?.isPlaceholderData === true;
+			alerts: ({ alerts }) => alerts,
+			perPage,
+			inView: (): number => inView(listed(), search().status, changes()),
+			keysInView: ({ alerts }) =>
+				linesInView(linesOfBatch(alerts), search().status, changes()).map(
+					({ key }) => key,
+				),
+			inFlight: () => pending(),
+		});
 
 	// Each batch resolves its rows once, so the rows on screen keep their objects as data arrives.
 	const resolved = new WeakMap<JsonConsoleAlerts, AlertLine[]>();
@@ -210,35 +181,6 @@ const Alerts = () => {
 		return batch && withPending(batch.alerts.counts, [adjustment()]);
 	});
 	const activeCount = () => counts()?.active ?? 0;
-
-	// The next batch starts after the loaded rows still in the view, since a row changed in place leaves it.
-	const [wantMore, setWantMore] = createSignal(false);
-	const nearEnd = () => {
-		const last = loaded().at(-1)?.data?.alerts;
-		if (!last || next() !== undefined) {
-			return;
-		}
-		if (pending() > 0) {
-			setWantMore(true);
-			return;
-		}
-		const offset = inView(listed(), search().status, changes());
-		const full =
-			last.groups.reduce((sum, group) => sum + group.alerts.length, 0) ===
-			perPage;
-		if (full && offset < last.total) {
-			const round = starts().filter((start) => start.offset === offset).length;
-			setStarts([...starts(), { offset, round }]);
-		}
-	};
-	createEffect(
-		on(pending, (count) => {
-			if (count === 0 && wantMore()) {
-				setWantMore(false);
-				nearEnd();
-			}
-		}),
-	);
 
 	const moveBadge = (delta: number) => {
 		if (delta !== 0) {
@@ -343,7 +285,29 @@ const Alerts = () => {
 		});
 	};
 
+	/** Read the list again; if the answer takes away the focused row, the focus moves to the row now in its place. */
+	const rereadHoldingFocus = async () => {
+		// After the focus a change just handed on.
+		await new Promise<void>((resolve) => queueMicrotask(resolve));
+		const focused = document.activeElement;
+		const held = focused instanceof HTMLElement && main?.contains(focused);
+		const fallback = nearestRow(focused);
+		await reread();
+		// The cache tells its readers on a later task.
+		await new Promise((resolve) => setTimeout(resolve));
+		const now = document.activeElement;
+		if (
+			held &&
+			!focused.isConnected &&
+			(now === null || now === document.body)
+		) {
+			fallback()?.focus();
+		}
+	};
+
 	let requests = 0;
+	// A change the API made smaller than asked reads the project's count again once nothing is in flight.
+	let recount = false;
 	/**
 	 * Show `status` on `lines` at once and ask the API; a refusal, or a change of
 	 * fewer than were loaded (the API does not say which), returns them to what it
@@ -360,7 +324,6 @@ const Alerts = () => {
 	) => {
 		const request = ++requests;
 		// The view the change is made in, whatever the reader turns to before the API answers.
-		const view = searchKey(slug(), search());
 		const counted = alertsQuery(
 			api,
 			slug(),
@@ -415,7 +378,8 @@ const Alerts = () => {
 				}
 			});
 			if (partial) {
-				client.invalidateQueries({ queryKey: view });
+				recount = true;
+				void rereadHoldingFocus();
 			}
 		} catch {
 			holdFocus(() => {
@@ -427,6 +391,12 @@ const Alerts = () => {
 			});
 		} finally {
 			setPending(pending() - 1);
+			if (pending() === 0 && recount) {
+				recount = false;
+				client.invalidateQueries({
+					queryKey: consoleProjectQuery(api, slug()).queryKey,
+				});
+			}
 		}
 	};
 	const changeListed = (
@@ -685,7 +655,7 @@ const Alerts = () => {
 					/>
 				</Match>
 				<Match when={shown().length > 0}>
-					<div class="al-scroll">
+					<div class="lr-alerts">
 						<LineTable
 							label="Alerts, grouped by the report that raised them"
 							slots={layout().slots}
@@ -735,7 +705,7 @@ const Alerts = () => {
 							})}
 							onNearEnd={nearEnd}
 							busy={busy()}
-							loading={next()?.isFetching ?? false}
+							loading={loading()}
 							onRetry={
 								next()?.isLoadingError ? () => next()?.refetch() : undefined
 							}

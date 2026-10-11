@@ -16,7 +16,7 @@ afterEach(() => {
 	document.body.replaceChildren();
 });
 
-const mount = (tiles: (JsonConsolePlot | undefined)[]) => {
+const mount = (tiles: (JsonConsolePlot | undefined)[], failed = false) => {
 	// One column, so a grid row stretching its tiles cannot hide a difference.
 	const root = document.createElement("div");
 	root.style.width = "min(560px, 100%)";
@@ -28,6 +28,7 @@ const mount = (tiles: (JsonConsolePlot | undefined)[]) => {
 					title={`Pin ${index + 1}`}
 					tile={tile}
 					windowText="saved window 4w"
+					failed={failed}
 					openHref="#"
 					menu={{
 						first: index === 0,
@@ -145,4 +146,19 @@ test("a tile hides and focuses the lines its pin saved", async () => {
 	await expect
 		.element(key.getByRole("button", { name: /^Focus .*size=3/ }))
 		.toHaveAttribute("aria-pressed", "false");
+});
+
+// Kills a failed tile whose frame still reads as loading inside its figure,
+// so a screen reader hears both that it did not load and that it is loading.
+test("a tile whose batch failed says so inside its figure, never that it is loading", async () => {
+	await page.viewport(1280, 900);
+	mount([undefined], true);
+	const figure = page.getByRole("figure", { name: "The plot did not load" });
+	await expect.element(figure).toBeVisible();
+	await expect
+		.element(figure.getByRole("img", { name: "The plot did not load" }))
+		.toBeVisible();
+	expect(
+		figure.getByRole("img", { name: "Loading the plot" }).query(),
+	).toBeNull();
 });

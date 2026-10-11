@@ -319,6 +319,89 @@ test("a refused plot query says so, keeps what was drawn, and Retry asks again",
 	await expect(failed).toHaveCount(0);
 });
 
+// Kills a plot whose own code did not load leaving the frame loading for good
+// with no banner, a Retry that does not load it again or reads the whole page
+// again to do it, and one that throws.
+test("a plot whose code did not load says so, and Retry loads it in place", async ({
+	page,
+	request,
+}) => {
+	const { query } = await twoLines(request);
+	const thrown: Error[] = [];
+	page.on("pageerror", (error) => thrown.push(error));
+	const failed = page.getByRole("region", { name: "Plot" }).getByRole("alert");
+	await page.route(PLOT_CHUNK, (route) => route.abort());
+	await page.goto(explore(hashbrown.slug, query));
+	await expect(failed).toContainText("The plot did not load.");
+	await page.unroute(PLOT_CHUNK);
+	await page.evaluate(() => {
+		Object.assign(window, { stayed: true });
+	});
+	await failed.getByRole("button", { name: "Retry" }).click();
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	await expect(failed).toHaveCount(0);
+	expect(await page.evaluate(() => "stayed" in window)).toBe(true);
+	expect(thrown).toEqual([]);
+});
+
+// Kills a Retry that keeps asking for a chunk a newer deploy took away, which
+// only reading the page again replaces.
+test("Retry reads the page again when the server no longer has the plot's code", async ({
+	page,
+	request,
+}) => {
+	const { query } = await twoLines(request);
+	const thrown: Error[] = [];
+	page.on("pageerror", (error) => thrown.push(error));
+	const failed = page.getByRole("region", { name: "Plot" }).getByRole("alert");
+	await page.route(PLOT_CHUNK, (route) => route.fulfill({ status: 404 }));
+	await page.goto(explore(hashbrown.slug, query));
+	await expect(failed).toContainText("The plot did not load.");
+	await page.evaluate(() => {
+		Object.assign(window, { stayed: true });
+	});
+	await Promise.all([
+		page.waitForEvent("load"),
+		failed.getByRole("button", { name: "Retry" }).click(),
+	]);
+	expect(await page.evaluate(() => "stayed" in window)).toBe(false);
+	await expect(failed).toContainText("The plot did not load.");
+	expect(thrown).toEqual([]);
+});
+
+// Kills a Retry that imports the plot again in place after one of the plot's
+// own imports failed: that module stays failed for the page's life, so only
+// reading the page again draws the plot.
+test("Retry reads the page again when one of the plot's own imports did not load", async ({
+	page,
+	request,
+}) => {
+	const { query } = await twoLines(request);
+	const thrown: Error[] = [];
+	page.on("pageerror", (error) => thrown.push(error));
+	const failed = page.getByRole("region", { name: "Plot" }).getByRole("alert");
+	await page.route(PLOT_IMPORT, (route) => route.abort());
+	await page.goto(explore(hashbrown.slug, query));
+	await expect(failed).toContainText("The plot did not load.");
+	await page.unroute(PLOT_IMPORT);
+	await page.evaluate(() => {
+		Object.assign(window, { stayed: true });
+	});
+	await Promise.all([
+		page.waitForEvent("load"),
+		failed.getByRole("button", { name: "Retry" }).click(),
+	]);
+	expect(await page.evaluate(() => "stayed" in window)).toBe(false);
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	await expect(failed).toHaveCount(0);
+	expect(thrown).toEqual([]);
+});
+
+/** The plot's own chunk, under any later try's URL too. */
+const PLOT_CHUNK = /\/assets\/Plot\.[^/]*\.js(\?.*)?$/;
+/** A chunk only the plot's own code imports. */
+const PLOT_IMPORT = /\/assets\/units\.[^/]*\.js(\?.*)?$/;
+
 // Kills a refused-query banner that wraps or grows past the plot's head row
 // onto the lines it keeps, and a Retry under 44 px, at any width.
 test("a refused edit's banner keeps to the plot's head row at every width", async ({

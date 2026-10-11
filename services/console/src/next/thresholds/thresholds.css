@@ -277,8 +277,20 @@
 	height: 1lh;
 	vertical-align: top;
 }
+/* The measure column's width, as on the Alerts page, until the report's hash has room too. */
 .th-c-report {
-	width: 220px;
+	width: 104px;
+}
+.th-report-hash {
+	display: none;
+}
+@media (min-width: 1280px) {
+	.th-c-report {
+		width: 220px;
+	}
+	.th-report-hash {
+		display: inline;
+	}
 }
 .th-report {
 	display: block;

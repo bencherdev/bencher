@@ -1,6 +1,6 @@
 import { exploreSearch } from "../query/selection";
 import type { ReportsWindow } from "../reports/search";
-import type { AlertLine } from "./rows";
+import type { AlertLine } from "./lines";
 import { historyDays } from "./search";
 
 const DAY_SECONDS = 86_400;

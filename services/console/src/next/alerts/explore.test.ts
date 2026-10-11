@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { decodeQuery } from "../query/query";
 import { exploreSearchOf } from "./explore";
-import { alertLinesOf } from "./rows";
+import { alertLinesOf } from "./lines";
 import { alertsFixture } from "./testing";
 
 const DAY = 86_400_000;
