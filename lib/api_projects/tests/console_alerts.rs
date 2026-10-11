@@ -214,12 +214,26 @@ async fn post(server: &TestServer, fixture: &Fixture, post: Post) -> JsonReport 
     let text = resp.text().await.expect("Failed to read the response");
     assert_eq!(status, StatusCode::CREATED, "POST report at {time}: {text}");
     let report: JsonReport = serde_json::from_str(&text).expect("Failed to parse the report");
+    set_created(server, report.uuid, start_time);
+    report
+}
+
+/// An alert keeps when its report was created, so the two move together.
+fn set_created(server: &TestServer, report: ReportUuid, created: DateTime) {
     let mut conn = server.db_conn();
-    diesel::update(schema::report::table.filter(schema::report::uuid.eq(report.uuid)))
-        .set(schema::report::created.eq(start_time))
+    let report_id: i32 = schema::report::table
+        .filter(schema::report::uuid.eq(report))
+        .select(schema::report::id)
+        .first(&mut conn)
+        .expect("Failed to get the report");
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::created.eq(created))
         .execute(&mut conn)
         .expect("Failed to set when the report was created");
-    report
+    diesel::update(schema::alert::table.filter(schema::alert::report_id.eq(report_id)))
+        .set(schema::alert::created.eq(created))
+        .execute(&mut conn)
+        .expect("Failed to set when the report's alerts were created");
 }
 
 /// The reports that raised alerts, by when they were created.
@@ -534,12 +548,7 @@ async fn console_alerts_group_by_report_newest_first() {
         late,
     } = seeded(&server, "groups").await;
     // The early report was created last, after the other two.
-    let mut conn = server.db_conn();
-    diesel::update(schema::report::table.filter(schema::report::uuid.eq(early.uuid)))
-        .set(schema::report::created.eq(at("2024-02-28T00:00:00Z")))
-        .execute(&mut conn)
-        .expect("Failed to set when the report was created");
-    drop(conn);
+    set_created(&server, early.uuid, at("2024-02-28T00:00:00Z"));
 
     let alerts = console_alerts(&server, &fixture, "").await;
 

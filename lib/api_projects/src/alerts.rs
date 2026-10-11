@@ -197,6 +197,9 @@ fn get_ls_count(
 
     if let Some(status) = query_params.status {
         query = query.filter(schema::alert::status.eq(status));
+    } else {
+        // Holds SQLite to the status index, as the created order of `get_ls_query` does.
+        query = query.filter(schema::alert::status.ge(AlertStatus::Active));
     }
 
     query
@@ -238,21 +241,27 @@ fn get_ls_query<'q>(
     // Two variants of one benchmark tie on every other key, so the alert identifier
     // is what makes each order total.
     match pagination_params.order() {
-        ProjAlertsSort::Created => match pagination_params.direction {
-            Some(JsonDirection::Asc) | None => query.order((
-                schema::alert::status.asc(),
-                schema::report::start_time.asc(),
-                schema::benchmark::name.asc(),
-                schema::report_benchmark::iteration.asc(),
-                schema::alert::id.asc(),
-            )),
-            Some(JsonDirection::Desc) => query.order((
-                schema::alert::status.asc(),
-                schema::report::start_time.desc(),
-                schema::benchmark::name.asc(),
-                schema::report_benchmark::iteration.asc(),
-                schema::alert::id.asc(),
-            )),
+        ProjAlertsSort::Created => {
+            // Every status is at least active, so this range keeps every alert and holds SQLite to
+            // the status index, which supplies the order's first key: it would otherwise read the
+            // alerts by creation and sort them all.
+            query = query.filter(schema::alert::status.ge(AlertStatus::Active));
+            match pagination_params.direction {
+                Some(JsonDirection::Asc) | None => query.order((
+                    schema::alert::status.asc(),
+                    schema::report::start_time.asc(),
+                    schema::benchmark::name.asc(),
+                    schema::report_benchmark::iteration.asc(),
+                    schema::alert::id.asc(),
+                )),
+                Some(JsonDirection::Desc) => query.order((
+                    schema::alert::status.asc(),
+                    schema::report::start_time.desc(),
+                    schema::benchmark::name.asc(),
+                    schema::report_benchmark::iteration.asc(),
+                    schema::alert::id.asc(),
+                )),
+            }
         },
         ProjAlertsSort::Modified => match pagination_params.direction {
             Some(JsonDirection::Asc) => query.order((
