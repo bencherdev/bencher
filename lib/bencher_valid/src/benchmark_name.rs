@@ -1,7 +1,7 @@
 use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use std::str::FromStr;
+use std::{borrow::Borrow, str::FromStr};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -29,6 +29,11 @@ crate::typed_string!(BenchmarkName);
 
 impl BenchmarkName {
     pub const MAX_LEN: usize = MAX_BENCHMARK_NAME_LEN;
+
+    /// The name of a command: its arguments joined by single spaces.
+    pub fn from_args<S: Borrow<str>>(args: &[S]) -> Result<Self, ValidError> {
+        Self::try_from(args.join(" "))
+    }
 
     pub fn try_push(&mut self, separator: char, other: &Self) -> Result<(), ValidError> {
         let remaining_capacity = Self::MAX_LEN.saturating_sub(self.0.len());
@@ -123,6 +128,12 @@ mod tests {
     #[test]
     fn is_valid_benchmark_name_false() {
         assert_eq!(false, is_valid_benchmark_name(""), "");
+    }
+
+    #[test]
+    fn benchmark_name_from_args_keeps_an_empty_argument() {
+        let benchmark_name = BenchmarkName::from_args(&["make", ""]).unwrap();
+        assert_eq!(benchmark_name.as_ref(), "make ");
     }
 
     #[test]

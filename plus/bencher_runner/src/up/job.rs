@@ -244,17 +244,17 @@ impl Iterations {
 fn build_benchmark_name(
     job: &JsonClaimedJob,
 ) -> Result<bencher_json::BenchmarkName, bencher_json::ValidError> {
-    let name: String = job
+    let args = job
         .config
         .entrypoint
         .iter()
         .flatten()
         .chain(job.config.cmd.iter().flatten())
-        .cloned()
-        .collect::<Vec<_>>()
-        .join(" ");
-    if !name.is_empty() {
-        return name.parse();
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    // No arguments, or one empty one, join to an empty name.
+    if !matches!(args.as_slice(), [] | [""]) {
+        return bencher_json::BenchmarkName::from_args(&args);
     }
     if let Some(image) = &job.config.image {
         return image.to_string().parse();
@@ -1351,6 +1351,58 @@ pub(crate) mod tests {
         let job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 300, false);
         let result = build_config_from_job(&up_config, &job).unwrap();
         assert!(!result.file_size);
+    }
+
+    // --- build_benchmark_name ---
+
+    #[test]
+    fn build_benchmark_name_joins_the_entrypoint_and_cmd() {
+        let job = command_job(Some(&["/usr/bin/env"]), Some(&["make"]));
+        assert_eq!(
+            build_benchmark_name(&job).unwrap().as_ref(),
+            "/usr/bin/env make"
+        );
+    }
+
+    #[test]
+    fn build_benchmark_name_is_the_cmd_without_an_entrypoint() {
+        let job = command_job(None, Some(&["make"]));
+        assert_eq!(build_benchmark_name(&job).unwrap().as_ref(), "make");
+    }
+
+    #[test]
+    fn build_benchmark_name_falls_back_to_the_image() {
+        const IMAGE: &str = "alpine:3.18";
+        // A lone empty argument joins to an empty name, as no command does.
+        for cmd in [None, Some(&[""][..])] {
+            let mut job = command_job(None, cmd);
+            job.config.image = Some(IMAGE.parse().unwrap());
+            assert_eq!(
+                build_benchmark_name(&job).unwrap().as_ref(),
+                IMAGE,
+                "{cmd:?}"
+            );
+        }
+        // A command too long to name is an error, not a fallback.
+        let long = "a".repeat(bencher_json::BenchmarkName::MAX_LEN - "make".len());
+        let mut job = command_job(None, Some(&["make", long.as_str()]));
+        job.config.image = Some(IMAGE.parse().unwrap());
+        build_benchmark_name(&job).unwrap_err();
+    }
+
+    fn command_job(entrypoint: Option<&[&str]>, cmd: Option<&[&str]>) -> JsonClaimedJob {
+        let to_owned = |args: &[&str]| args.iter().map(|&arg| arg.to_owned()).collect();
+        test_job_with_options(
+            1,
+            mib_to_bytes(512),
+            mib_to_bytes(1024),
+            300,
+            false,
+            entrypoint.map(to_owned),
+            cmd.map(to_owned),
+            None,
+            None,
+        )
     }
 
     // --- output_to_iteration ---
