@@ -27,11 +27,12 @@ ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
 OpenFile=/dev/null
 ExecStart=
 ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
-ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
+ExecStopPost=+/bin/sh -c '/usr/bin/busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager PreparingForShutdown | /usr/bin/grep -q true || /usr/bin/rm -f /run/bencher/maintenance.%n'
 TimeoutStartSec=infinity
 ```
 
 `OpenFile=/dev/null` 占用文件描述符 3，因此即使命令像 `apt.systemd.daily` 那样重新打开描述符 3，锁也仍然保持。
+在主机准备关机期间，`ExecStopPost=` 会保留标记，因此在重启清空 `/run` 之前 Runner 不接受任何 Job。
 
 ### 排空 Runner
 

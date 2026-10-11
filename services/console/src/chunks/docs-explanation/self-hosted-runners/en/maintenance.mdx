@@ -27,11 +27,12 @@ ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
 OpenFile=/dev/null
 ExecStart=
 ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
-ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
+ExecStopPost=+/bin/sh -c '/usr/bin/busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager PreparingForShutdown | /usr/bin/grep -q true || /usr/bin/rm -f /run/bencher/maintenance.%n'
 TimeoutStartSec=infinity
 ```
 
 `OpenFile=/dev/null` fills file descriptor 3, so the lock stays held even if the command reopens descriptor 3, as `apt.systemd.daily` does.
+While the host prepares to shut down, `ExecStopPost=` leaves the marker, so the Runner takes no Job before the reboot empties `/run`.
 
 ### Drain a Runner
 

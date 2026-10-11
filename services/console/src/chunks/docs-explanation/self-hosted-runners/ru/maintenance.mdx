@@ -27,11 +27,12 @@ ExecStartPre=+/usr/bin/touch /run/bencher/maintenance.%n
 OpenFile=/dev/null
 ExecStart=
 ExecStart=/usr/bin/flock -F /run/bencher/job.lock /sbin/fstrim --listed-in /etc/fstab:/proc/self/mountinfo --verbose --quiet-unsupported
-ExecStopPost=+/usr/bin/rm -f /run/bencher/maintenance.%n
+ExecStopPost=+/bin/sh -c '/usr/bin/busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager PreparingForShutdown | /usr/bin/grep -q true || /usr/bin/rm -f /run/bencher/maintenance.%n'
 TimeoutStartSec=infinity
 ```
 
 `OpenFile=/dev/null` занимает файловый дескриптор 3, поэтому блокировка остается занятой, даже если команда заново открывает дескриптор 3, как это делает `apt.systemd.daily`.
+Пока хост готовится к выключению, `ExecStopPost=` оставляет маркер, поэтому Runner не принимает Job, пока перезагрузка не очистит `/run`.
 
 ### Освободить Runner
 

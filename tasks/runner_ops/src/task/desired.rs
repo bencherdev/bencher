@@ -739,8 +739,9 @@ fn quiet_drop_in_path(unit: &str) -> String {
     format!("/etc/systemd/system/{unit}.d/{QUIET_DROP_IN}")
 }
 
-/// Waits for the runner's job lock, behind a marker of its own (`%n`, the unit) that the runner pauses for, and holds
-/// it on fd 4 past the `OpenFile=` on fd 3, which a command may reopen as `apt.systemd.daily` does.
+/// Waits for the runner's job lock, behind a marker of its own (`%n`, the unit) that the runner pauses for, holds it
+/// on fd 4 past the `OpenFile=` on fd 3, which a command may reopen as `apt.systemd.daily` does, and keeps the marker
+/// through a shutdown, whose reboot empties `/run`.
 fn quiet_drop_in(command: &str) -> String {
     let marker = format!("{RUN_DIR}/{MARKER}.%n");
     format!(
@@ -750,7 +751,7 @@ ExecStartPre=+/usr/bin/touch {marker}
 OpenFile=/dev/null
 ExecStart=
 ExecStart=/usr/bin/flock -F {RUN_DIR}/{JOB_LOCK} {command}
-ExecStopPost=+/usr/bin/rm -f {marker}
+ExecStopPost=+/bin/sh -c '/usr/bin/busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager PreparingForShutdown | /usr/bin/grep -q true || /usr/bin/rm -f {marker}'
 TimeoutStartSec=infinity"
     )
 }
@@ -1186,6 +1187,7 @@ mod tests {
                     .find(|line| line.contains(program))
                     .and_then(|line| line.split_whitespace().last())
                     .unwrap_or_else(|| panic!("no {program} in {drop_in}"))
+                    .trim_end_matches('\'')
                     .replace("%n", unit)
             };
             let touched = path_after("/usr/bin/touch ");
@@ -1732,6 +1734,47 @@ esac
                 .status()
                 .unwrap();
             assert_eq!(status.code(), Some(99), "{drop_in}");
+        }
+
+        #[test]
+        fn the_drop_in_keeps_its_marker_only_while_the_host_prepares_a_shutdown() {
+            // Kills a stop that removes the marker during a shutdown, which lets
+            // the runner take a Job the reboot cancels, one that keeps it
+            // otherwise, which pauses the runner until a reboot, and one that
+            // keeps it when logind cannot be asked.
+            let dir = tempfile::tempdir().unwrap();
+            let dir = Utf8Path::from_path(dir.path()).unwrap();
+            let busctl = dir.join("busctl");
+            let drop_in = quiet_drop_in("/bin/true")
+                .replace(RUN_DIR, dir.as_str())
+                .replace("/usr/bin/busctl", busctl.as_str())
+                .replace("%n", "fstrim.service");
+            let stop = drop_in
+                .lines()
+                .find_map(|line| line.strip_prefix("ExecStopPost=+"))
+                .unwrap();
+            let marker = dir.join(format!("{MARKER}.fstrim.service"));
+            for (answer, kept) in [
+                ("echo b true", true),
+                ("echo b false", false),
+                ("exit 1", false),
+            ] {
+                write_executable(
+                    &busctl,
+                    &format!(
+                        r#"#!/bin/sh
+case "$*" in
+  "get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager PreparingForShutdown") {answer} ;;
+  *) exit 1 ;;
+esac
+"#
+                    ),
+                )
+                .unwrap();
+                write(&marker, "", 0o644);
+                sh(dir, stop).unwrap();
+                assert_eq!(marker.exists(), kept, "{answer}: {stop}");
+            }
         }
     }
 }
