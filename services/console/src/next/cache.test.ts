@@ -42,6 +42,19 @@ const slowStore = () => {
 	return { store: slow, entries };
 };
 
+const countingStore = () => {
+	const { store, entries } = memoryStore();
+	let writes = 0;
+	const counting: CacheStore = {
+		...store,
+		set: async (key, value) => {
+			writes += 1;
+			await store.set(key, value);
+		},
+	};
+	return { store: counting, entries, writes: () => writes };
+};
+
 const NOW = Date.parse("2026-09-14T00:00:00Z");
 const KEY = ["project", "hashbrown"];
 
@@ -112,16 +125,16 @@ describe("the persisted cache", () => {
 		).toBeUndefined();
 	});
 
-	// Kills a save that hears only answers, which leaves a deleted project at rest.
-	test("a removed query leaves storage too", async () => {
+	// Kills a save that hears only answers, or leaves a removal to the delayed
+	// save a reload cancels, which leaves a deleted project at rest.
+	test("a removed query leaves storage at once", async () => {
 		const { store } = await saved();
 		const client = createQueryClient(() => {});
 		await restoreCache(client, store, "reader-a", "v1", NOW);
 		const { stop } = persistCache(client, store, "reader-a", "v1", {
-			delay: 0,
+			delay: 60_000,
 			now: () => NOW,
 		});
-		await new Promise((resolve) => setTimeout(resolve, 0));
 
 		client.removeQueries({ queryKey: KEY });
 		await vi.waitFor(async () =>
@@ -133,17 +146,9 @@ describe("the persisted cache", () => {
 	// Kills a save after every answer, which rewrites the whole cache each time
 	// a poll asks again and hears what it heard before.
 	test("an answer that changes nothing is not saved again", async () => {
-		const { store } = memoryStore();
-		let writes = 0;
-		const counting: CacheStore = {
-			...store,
-			set: async (key, value) => {
-				writes += 1;
-				await store.set(key, value);
-			},
-		};
+		const { store, writes } = countingStore();
 		const client = createQueryClient(() => {});
-		const { stop } = persistCache(client, counting, "reader-a", "v1", {
+		const { stop } = persistCache(client, store, "reader-a", "v1", {
 			delay: 0,
 			now: () => NOW,
 		});
@@ -155,18 +160,18 @@ describe("the persisted cache", () => {
 				staleTime: 0,
 			});
 		// What answered before saving began.
-		await vi.waitFor(() => expect(writes).toBe(1));
+		await vi.waitFor(() => expect(writes()).toBe(1));
 		await poll();
-		await vi.waitFor(() => expect(writes).toBe(2));
+		await vi.waitFor(() => expect(writes()).toBe(2));
 
 		await poll();
 		await poll();
 		await new Promise((resolve) => setTimeout(resolve, 20));
-		expect(writes).toBe(2);
+		expect(writes()).toBe(2);
 
 		reports = [{ uuid: "first" }];
 		await poll();
-		await vi.waitFor(() => expect(writes).toBe(3));
+		await vi.waitFor(() => expect(writes()).toBe(3));
 		stop();
 	});
 
@@ -218,6 +223,71 @@ describe("the persisted cache", () => {
 		const reloaded = createQueryClient(() => {});
 		await restoreCache(reloaded, store, "reader-a", "v1", NOW);
 		expect(reloaded.getQueryState(KEY)?.isInvalidated).toBe(true);
+	});
+
+	// Kills a write left to the delayed save a reload cancels, or to the one an
+	// answer has pending, which restores the lists from before a revoke as
+	// fresh, and a save for each list it moves.
+	test("a write is saved at once, in one save", async () => {
+		const { store, writes } = countingStore();
+		const active = ["keys", "active"];
+		const revoked = ["keys", "revoked"];
+		const client = createQueryClient(() => {});
+		client.setQueryData(active, ["ci"]);
+		client.setQueryData(revoked, []);
+		const { flush, stop } = persistCache(client, store, "reader-a", "v1", {
+			delay: 60_000,
+			now: () => NOW,
+		});
+		await flush();
+		await client.query({ queryKey: KEY, queryFn: async () => ["answer"] });
+
+		client.setQueryData(active, []);
+		client.setQueryData(revoked, ["ci"]);
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		stop();
+		const reloaded = createQueryClient(() => {});
+		await restoreCache(reloaded, store, "reader-a", "v1", NOW);
+		expect(reloaded.getQueryData(revoked)).toEqual(["ci"]);
+		expect(reloaded.getQueryData(active)).toEqual([]);
+		expect(writes()).toBe(2);
+	});
+
+	// Kills a save for a write that changes nothing, which writes the whole
+	// cache again each time an undo or a seed repeats what is saved.
+	test("a write that changes nothing is not saved again", async () => {
+		const { store, writes } = countingStore();
+		const client = createQueryClient(() => {});
+		client.setQueryData(KEY, { name: "Hashbrown" });
+		const { flush, stop } = persistCache(client, store, "reader-a", "v1", {
+			delay: 60_000,
+			now: () => NOW,
+		});
+		await flush();
+
+		client.setQueryData(KEY, { name: "Hashbrown" });
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		stop();
+		expect(writes()).toBe(1);
+	});
+
+	// Kills a save at once after every answer, which writes the whole cache
+	// again each time a page reads.
+	test("an answer waits for the delay", async () => {
+		const { store, entries } = memoryStore();
+		const client = createQueryClient(() => {});
+		const { stop } = persistCache(client, store, "reader-a", "v1", {
+			delay: 60_000,
+			now: () => NOW,
+		});
+
+		await client.query({
+			queryKey: KEY,
+			queryFn: async () => ({ name: "Hashbrown" }),
+		});
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		stop();
+		expect(entries.size).toBe(0);
 	});
 
 	// Kills another reader's data left at rest in the browser.

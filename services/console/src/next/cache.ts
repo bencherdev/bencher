@@ -98,18 +98,24 @@ export const persistCache = (
 	const schedule = () => {
 		timer ??= setTimeout(save, delay);
 	};
+	// A reload before the delay would restore what the reader's write replaced as fresh.
+	const saveSoon = () => {
+		clearTimeout(timer);
+		timer = setTimeout(save);
+	};
 	const unsubscribe = client.getQueryCache().subscribe((event) => {
-		// A reload before the delay would restore what the reader's write replaced as fresh.
-		if (event.type === "updated" && event.action.type === "invalidate") {
-			clearTimeout(timer);
-			timer = setTimeout(save);
-		} else if (
+		if (
 			event.type === "removed" ||
-			(event.type === "updated" &&
-				event.action.type === "success" &&
-				saved.get(event.query.queryHash) !== event.query.state.data)
+			(event.type === "updated" && event.action.type === "invalidate")
 		) {
-			schedule();
+			saveSoon();
+		} else if (
+			event.type === "updated" &&
+			event.action.type === "success" &&
+			saved.get(event.query.queryHash) !== event.query.state.data
+		) {
+			// setQueryData marks the app's own writes manual; only answers wait.
+			(event.action.manual ? saveSoon : schedule)();
 		}
 	});
 	// Queries that answered before this subscribed are saved too.
