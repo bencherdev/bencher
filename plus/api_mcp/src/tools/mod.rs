@@ -1,7 +1,7 @@
 use std::sync::{Arc, LazyLock};
 
 use bencher_endpoint::TotalCount;
-use bencher_json::OAuthScope;
+use bencher_json::{OAuthScope, OAuthScopes};
 use bencher_schema::{
     context::ApiContext,
     error::{bad_request_error, with_auth_hint},
@@ -9,7 +9,7 @@ use bencher_schema::{
 };
 use dropshot::HttpError;
 use rmcp::model::{
-    CallToolResult, ContentBlock, JsonObject, ListToolsResult, Tool, ToolAnnotations,
+    CallToolResult, ContentBlock, JsonObject, ListToolsResult, MetaObject, Tool, ToolAnnotations,
 };
 use schemars::{
     JsonSchema,
@@ -17,9 +17,11 @@ use schemars::{
     visit::{Visitor, visit_schema_object},
 };
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{Value, json};
 use slog::Logger;
 use strum::IntoEnumIterator as _;
+
+const SECURITY_SCHEMES: &str = "securitySchemes";
 
 mod alerts;
 mod benchmarks;
@@ -223,6 +225,31 @@ impl McpTool {
         LIST.clone()
     }
 
+    /// The tool list for a server that offers OAuth sign-in,
+    /// where each tool also says whether it needs a signed-in caller and with which scope.
+    pub fn list_with_security_schemes() -> ListToolsResult {
+        static LIST: LazyLock<ListToolsResult> = LazyLock::new(|| {
+            ListToolsResult::with_all_items(
+                McpTool::iter()
+                    .map(|tool| tool.spec().with_meta(tool.security_schemes()))
+                    .collect(),
+            )
+        });
+        LIST.clone()
+    }
+
+    fn security_schemes(self) -> MetaObject {
+        let oauth2 = json!({"type": "oauth2", "scopes": [self.access().scope()]});
+        let schemes = match self.kind().anonymous() {
+            Anonymous::Allowed => json!([{"type": "noauth"}, oauth2]),
+            Anonymous::Refused => json!([oauth2]),
+        };
+        MetaObject(JsonObject::from_iter([(
+            SECURITY_SCHEMES.to_owned(),
+            schemes,
+        )]))
+    }
+
     fn spec(self) -> Tool {
         let tool = match self {
             Self::SubmitRun => run::submit_tool(self.name()),
@@ -266,25 +293,8 @@ impl McpTool {
             .with_annotations(self.kind().annotations(self.title()))
     }
 
+    /// Run the tool, keeping a failure's status for the caller to decide how to answer it.
     pub async fn call(
-        self,
-        log: &Logger,
-        context: &ApiContext,
-        api_actor: ApiActor,
-        headers: &http::HeaderMap,
-        arguments: Value,
-    ) -> CallToolResult {
-        match self
-            .try_call(log, context, api_actor, headers, arguments)
-            .await
-            .map_err(with_auth_hint)
-        {
-            Ok(result) => result,
-            Err(err) => error_result(&err),
-        }
-    }
-
-    async fn try_call(
         self,
         log: &Logger,
         context: &ApiContext,
@@ -362,6 +372,14 @@ impl ToolKind {
         }
     }
 
+    /// Anyone may read a public project, and run benchmarks on an unclaimed one.
+    const fn anonymous(self) -> Anonymous {
+        match self {
+            Self::Read | Self::Run => Anonymous::Allowed,
+            Self::Create | Self::Update | Self::Report | Self::Reset => Anonymous::Refused,
+        }
+    }
+
     fn annotations(self, title: &str) -> ToolAnnotations {
         let annotations =
             ToolAnnotations::with_title(title).read_only(matches!(self.access(), ToolAccess::Read));
@@ -401,6 +419,23 @@ impl ToolAccess {
             Self::Write => OAuthScope::ProjectsWrite,
         }
     }
+
+    /// The scopes a client signs in with to use a tool: a tool that writes also reads.
+    pub fn sign_in_scopes(self) -> OAuthScopes {
+        match self {
+            Self::Read => [Self::Read.scope()].into_iter().collect(),
+            Self::Write => [Self::Read.scope(), Self::Write.scope()]
+                .into_iter()
+                .collect(),
+        }
+    }
+}
+
+/// Whether an anonymous caller can use a tool.
+#[derive(Debug, Clone, Copy)]
+enum Anonymous {
+    Allowed,
+    Refused,
 }
 
 /// A boxed tool call future, keeping the dispatch future small.
@@ -504,7 +539,8 @@ struct ListOutput<T> {
 
 /// Map an `HttpError` to a tool error, exposing only the status code and the
 /// user-facing external message (never `internal_message`).
-fn error_result(err: &HttpError) -> CallToolResult {
+pub fn error_result(err: HttpError) -> CallToolResult {
+    let err = with_auth_hint(err);
     CallToolResult::error(vec![ContentBlock::text(format!(
         "{status}: {message}",
         status = err.status_code.as_u16(),
