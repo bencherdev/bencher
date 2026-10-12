@@ -42,6 +42,8 @@ pub enum BencherResource {
     UserKey,
     Token,
     #[cfg(feature = "plus")]
+    OAuthGrant,
+    #[cfg(feature = "plus")]
     Plan,
     #[cfg(feature = "plus")]
     Sso,
@@ -87,6 +89,8 @@ impl fmt::Display for BencherResource {
                 Self::User => "User",
                 Self::UserKey => "User Key",
                 Self::Token => "Token",
+                #[cfg(feature = "plus")]
+                Self::OAuthGrant => "OAuth Grant",
                 #[cfg(feature = "plus")]
                 Self::Plan => "Plan",
                 #[cfg(feature = "plus")]

@@ -1,5 +1,7 @@
 pub mod console_user;
 pub mod key;
+#[cfg(feature = "plus")]
+pub mod oauth;
 pub mod token;
 use bencher_valid::{DateTime, Email, ResourceId, UserName};
 

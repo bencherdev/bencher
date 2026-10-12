@@ -1,21 +1,29 @@
-use std::{borrow::Cow, panic::AssertUnwindSafe, sync::Arc};
+use std::{
+    borrow::Cow,
+    panic::AssertUnwindSafe,
+    sync::{Arc, OnceLock},
+};
 
-use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
+use bencher_schema::context::ApiContext;
 use futures::FutureExt as _;
+use http::StatusCode;
 use rmcp::{
     ErrorData, RoleServer, ServerHandler,
     model::{
         CallToolRequestParams, CallToolResponse, CallToolResult, CompleteRequestMethod,
-        CompleteRequestParams, CompleteResult, Implementation, ListPromptsRequestMethod,
-        ListPromptsResult, ListResourceTemplatesRequestMethod, ListResourceTemplatesResult,
-        ListResourcesRequestMethod, ListResourcesResult, ListToolsResult, PaginatedRequestParams,
-        ProtocolVersion, ServerCapabilities, ServerConfig,
+        CompleteRequestParams, CompleteResult, ContentBlock, Implementation,
+        ListPromptsRequestMethod, ListPromptsResult, ListResourceTemplatesRequestMethod,
+        ListResourceTemplatesResult, ListResourcesRequestMethod, ListResourcesResult,
+        ListToolsResult, PaginatedRequestParams, ProtocolVersion, ServerCapabilities, ServerConfig,
     },
     service::{MaybeSendFuture, RequestContext},
 };
 use slog::Logger;
 
-use crate::tools::McpTool;
+use crate::{
+    principal::{Challenge, McpPrincipal},
+    tools::McpTool,
+};
 
 const SERVER_NAME: &str = "bencher";
 const SERVER_INSTRUCTIONS: &str = "Bencher tracks benchmark results over time and catches performance regressions. \
@@ -37,15 +45,25 @@ const SUPPORTED_PROTOCOL_VERSIONS: &[ProtocolVersion] = &[
 pub struct BencherMcp {
     rqctx: Arc<dropshot::RequestContext<ApiContext>>,
     /// Only resolved for a call to a known tool.
-    api_actor: Option<ApiActor>,
+    principal: Option<McpPrincipal>,
+    /// Set when the endpoint must answer with a challenge in place of the SDK's response.
+    challenge: OnceLock<Challenge>,
 }
 
 impl BencherMcp {
-    pub fn new(rqctx: dropshot::RequestContext<ApiContext>, api_actor: Option<ApiActor>) -> Self {
+    pub fn new(
+        rqctx: dropshot::RequestContext<ApiContext>,
+        principal: Option<McpPrincipal>,
+    ) -> Self {
         Self {
             rqctx: Arc::new(rqctx),
-            api_actor,
+            principal,
+            challenge: OnceLock::new(),
         }
+    }
+
+    pub fn challenge(&self) -> Option<Challenge> {
+        self.challenge.get().copied()
     }
 }
 
@@ -82,15 +100,24 @@ impl ServerHandler for BencherMcp {
                 None,
             ));
         };
-        let Some(api_actor) = self.api_actor.clone() else {
+        let Some(principal) = &self.principal else {
             return Err(ErrorData::invalid_request("Malformed tool call", None));
         };
+        if !principal.permits(tool.access()) {
+            let challenge = self.challenge.get_or_init(|| Challenge::InsufficientScope);
+            return Ok(CallToolResult::error(vec![ContentBlock::text(format!(
+                "{status}: {description}",
+                status = StatusCode::FORBIDDEN.as_u16(),
+                description = challenge.description(),
+            ))])
+            .into());
+        }
 
         let arguments = serde_json::Value::Object(arguments.unwrap_or_default());
         let call = tool.call(
             &self.rqctx.log,
             self.rqctx.context(),
-            api_actor,
+            principal.actor().clone(),
             self.rqctx.request.headers(),
             arguments,
         );

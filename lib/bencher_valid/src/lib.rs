@@ -61,8 +61,10 @@ pub use parameter::{ParameterKey, ParameterValue};
 pub use plus::{
     Architecture, CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth,
     ExpirationYear, GracePeriod, HeartbeatTimeout, ImageReference, LastFour, LicensedPlanId,
-    Memory, MeteredPlanId, OperatingSystem, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction,
-    RecaptchaScore, RunnerKey, RunnerKeyHash, Sandbox, Sha256, Timeout, UpdateChannel,
+    Memory, MeteredPlanId, OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeHash, OAuthIssuer,
+    OAuthRefreshToken, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash, OperatingSystem,
+    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash,
+    Sandbox, Sha256, Timeout, UpdateChannel,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;

@@ -183,6 +183,7 @@ impl TestServer {
             log,
             cloud_routes,
             openai_apps_challenge: None,
+            oauth: None,
         })
         .await
     }
@@ -205,6 +206,7 @@ impl TestServer {
             log,
             cloud_routes,
             openai_apps_challenge,
+            oauth,
         } = options;
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
@@ -290,6 +292,7 @@ impl TestServer {
             callbacks,
             runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
             openai_apps_challenge,
+            oauth,
             shutdown,
         };
 
@@ -488,6 +491,7 @@ pub struct TestServerOptions {
     pub log: Option<slog::Logger>,
     pub cloud_routes: bool,
     pub openai_apps_challenge: Option<bencher_json::NonEmpty>,
+    pub oauth: Option<bencher_schema::context::OAuthServer>,
 }
 
 /// Waits out a lock instead of failing at once, as the server's own pools do.

@@ -1,9 +1,9 @@
 use std::ops::Deref;
 
 use async_trait::async_trait;
-#[cfg(feature = "plus")]
-use bencher_json::system::payment::JsonCustomer;
 use bencher_json::{Jwt, Sanitize, UserKey, UserKeyHash};
+#[cfg(feature = "plus")]
+use bencher_json::{OAuthScopes, system::payment::JsonCustomer};
 use bencher_rbac::{
     Organization, Project, Server, User as RbacUser,
     server::Permission,
@@ -17,6 +17,8 @@ use dropshot::{
 };
 use oso::{PolarValue, ToPolar};
 
+#[cfg(feature = "plus")]
+use crate::context::OAuthServer;
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
     error::{BEARER_TOKEN_FORMAT, bad_request_error, issue_error, unauthorized_error},
@@ -32,6 +34,8 @@ use crate::{
 };
 
 use super::QueryUser;
+#[cfg(feature = "plus")]
+use super::oauth::{authenticate, is_oauth_credential};
 
 const INVALID_USER_KEY: &str = "Invalid user key";
 
@@ -171,6 +175,25 @@ impl AuthUser {
         }
 
         Ok((query_user, query_key))
+    }
+
+    /// Authenticate an OAuth access token presented to the MCP server, returning its scopes.
+    /// The user acts without server admin authority, whatever their account holds.
+    #[cfg(feature = "plus")]
+    pub async fn from_oauth_token(
+        context: &ApiContext,
+        oauth: &OAuthServer,
+        token: &str,
+    ) -> Result<(Self, OAuthScopes), HttpError> {
+        let conn = public_conn!(context);
+        let (mut query_user, query_grant) = authenticate(context, conn, oauth, token)?;
+        context.rate_limiting.user_request(query_user.uuid)?;
+        query_user.admin = false;
+        let credential = AuthCredential::OAuthGrant {
+            user_key_id: query_grant.user_key_id,
+        };
+        let auth_user = Self::load_inner(conn, query_user, credential)?;
+        Ok((auth_user, query_grant.scope))
     }
 
     pub fn reload(&self, conn: &mut DbConnection) -> Result<Self, HttpError> {
@@ -314,10 +337,11 @@ impl AuthUser {
     }
 
     pub fn user_key_id(&self) -> Option<UserKeyId> {
-        if let AuthCredential::UserKey(user_key_id) = self.credential {
-            Some(user_key_id)
-        } else {
-            None
+        match self.credential {
+            AuthCredential::UserKey(user_key_id) => Some(user_key_id),
+            #[cfg(feature = "plus")]
+            AuthCredential::OAuthGrant { user_key_id } => user_key_id,
+            AuthCredential::Session | AuthCredential::ApiToken => None,
         }
     }
 
@@ -385,6 +409,11 @@ pub enum AuthCredential {
     /// A deprecated user API token, or a user loaded internally.
     ApiToken,
     UserKey(UserKeyId),
+    /// An OAuth access token, whose grant dies with the user key it was approved with, if any.
+    #[cfg(feature = "plus")]
+    OAuthGrant {
+        user_key_id: Option<UserKeyId>,
+    },
 }
 
 // https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/bearer.rs
@@ -414,6 +443,17 @@ impl BearerToken {
     /// Centralized so the `SharedExtractor` impl and `ApiActor`'s dispatch agree on
     /// the prefix detection rules.
     pub fn from_raw(raw: &str) -> Result<Self, HttpError> {
+        // Refused before any parse, whose error would quote the token.
+        #[cfg(feature = "plus")]
+        if is_oauth_credential(raw) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthTokenAuthFailed(
+                bencher_otel::OAuthTokenAuthFailureReason::RestApi,
+            ));
+            return Err(unauthorized_error(
+                "OAuth tokens are not accepted by the REST API",
+            ));
+        }
         if raw.starts_with(UserKey::PREFIX) {
             raw.parse::<UserKey>().map(Self::UserKey).map_err(|e| {
                 // Mirror `ProjectKeyAuthFailureReason::Invalid` (emitted in

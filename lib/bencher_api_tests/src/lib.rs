@@ -52,6 +52,8 @@ pub use bencher_callback::CallbackRequest;
 #[cfg(feature = "plus")]
 pub use callbacks::RecordingSender;
 pub use context::TestServer;
+#[cfg(feature = "plus")]
+pub use context::TestServerOptions;
 pub use log::LogCapture;
 #[cfg(feature = "plus")]
 pub use seed::TestProjectKey;

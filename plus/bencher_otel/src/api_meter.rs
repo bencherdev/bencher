@@ -146,6 +146,10 @@ pub enum ApiCounter {
 
     ProjectKeyAuthFailed(ProjectKeyAuthFailureReason),
 
+    OAuthGrantRevoke,
+    OAuthGrantBlocked,
+    OAuthTokenAuthFailed(OAuthTokenAuthFailureReason),
+
     RequestMax(IntervalKind, AuthorizationKind),
 
     RunClaimedMax(IntervalKind),
@@ -245,11 +249,15 @@ impl ApiCounter {
             | Self::UserKeyViewBlocked
             | Self::UserKeyUpdateBlocked
             | Self::UserKeyRevokeBlocked
+            | Self::OAuthGrantBlocked
             | Self::OrganizationPlanUpdateBlocked
             | Self::CallbackAttempt(_) => "{attempt}",
             Self::UserCredentialMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
             Self::UserKeyCreate | Self::UserKeyRevoke | Self::RunnerKeyRotate => "{key}",
-            Self::ProjectKeyAuthFailed(_) | Self::UserKeyAuthFailed(_) => "{auth_failure}",
+            Self::ProjectKeyAuthFailed(_)
+            | Self::UserKeyAuthFailed(_)
+            | Self::OAuthTokenAuthFailed(_) => "{auth_failure}",
+            Self::OAuthGrantRevoke => "{grant}",
 
             Self::Create(_) | Self::CreateMax(_) => "{resource}",
 
@@ -323,6 +331,9 @@ impl ApiCounter {
             Self::UserKeyRevoke => "user.key.revoke",
             Self::UserKeyRevokeBlocked => "user.key.revoke.blocked",
             Self::UserKeyAuthFailed(_) => "user.key.auth.failed",
+            Self::OAuthGrantRevoke => "oauth.grant.revoke",
+            Self::OAuthGrantBlocked => "oauth.grant.blocked",
+            Self::OAuthTokenAuthFailed(_) => "oauth.token.auth.failed",
 
             Self::RequestMax(_, _) => "request.max",
 
@@ -454,6 +465,13 @@ impl ApiCounter {
                 "Counts the number of user API key revocation attempts blocked because the caller authenticated with a different user API key"
             },
             Self::UserKeyAuthFailed(_) => "Counts the number of user key authentication failures",
+            Self::OAuthGrantRevoke => "Counts the number of OAuth grant revocations by their user",
+            Self::OAuthGrantBlocked => {
+                "Counts the number of OAuth grant management attempts blocked because the caller did not authenticate with a user session"
+            },
+            Self::OAuthTokenAuthFailed(_) => {
+                "Counts the number of OAuth token authentication failures"
+            },
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
 
@@ -556,6 +574,8 @@ impl ApiCounter {
             | Self::UserKeyUpdateBlocked
             | Self::UserKeyRevoke
             | Self::UserKeyRevokeBlocked
+            | Self::OAuthGrantRevoke
+            | Self::OAuthGrantBlocked
             | Self::MetricNamesDropped
             | Self::MetricsBilled
             | Self::MetricsBilledFailed
@@ -612,6 +632,7 @@ impl ApiCounter {
             },
             Self::ProjectKeyAuthFailed(reason) => vec![reason.into()],
             Self::UserKeyAuthFailed(reason) => vec![reason.into()],
+            Self::OAuthTokenAuthFailed(reason) => vec![reason.into()],
             Self::RunnerJobUpdate(status_kind) => vec![status_kind.into()],
             Self::RunnerPause(reason_kind) => vec![reason_kind.into()],
             // Self-hosted specific metrics
@@ -912,6 +933,49 @@ impl From<UserKeyAuthFailureReason> for opentelemetry::KeyValue {
 }
 
 impl UserKeyAuthFailureReason {
+    const KEY: &str = "reason";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum OAuthTokenAuthFailureReason {
+    Invalid,
+    NotFound,
+    Kind,
+    Expired,
+    GrantRevoked,
+    GrantExpired,
+    Resource,
+    Locked,
+    KeyRevoked,
+    KeyExpired,
+    RestApi,
+}
+
+impl fmt::Display for OAuthTokenAuthFailureReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Invalid => write!(f, "invalid"),
+            Self::NotFound => write!(f, "not_found"),
+            Self::Kind => write!(f, "kind"),
+            Self::Expired => write!(f, "expired"),
+            Self::GrantRevoked => write!(f, "grant_revoked"),
+            Self::GrantExpired => write!(f, "grant_expired"),
+            Self::Resource => write!(f, "resource"),
+            Self::Locked => write!(f, "locked"),
+            Self::KeyRevoked => write!(f, "key_revoked"),
+            Self::KeyExpired => write!(f, "key_expired"),
+            Self::RestApi => write!(f, "rest_api"),
+        }
+    }
+}
+
+impl From<OAuthTokenAuthFailureReason> for opentelemetry::KeyValue {
+    fn from(reason: OAuthTokenAuthFailureReason) -> Self {
+        Self::new(OAuthTokenAuthFailureReason::KEY, reason.to_string())
+    }
+}
+
+impl OAuthTokenAuthFailureReason {
     const KEY: &str = "reason";
 }
 

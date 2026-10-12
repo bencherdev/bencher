@@ -12,8 +12,9 @@ pub use bencher_valid::{
 pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
     GracePeriod, ImageDigest, ImageReference, LastFour, LicensedPlanId, Memory, MeteredPlanId,
-    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash,
-    Timeout,
+    OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeHash, OAuthIssuer, OAuthRefreshToken,
+    OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash, PlanLevel, PlanStatus, PollTimeout,
+    RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash, Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -124,6 +125,10 @@ pub use system::{
     server::{
         BooleanParam, JsonServer, JsonServerStats, SelfHostedStartup, SelfHostedStats, ServerUuid,
     },
+};
+#[cfg(feature = "plus")]
+pub use user::oauth::{
+    JsonOAuthClient, JsonOAuthGrant, JsonOAuthGrantKey, JsonOAuthGrants, OAuthGrantUuid,
 };
 pub use user::{
     JsonPubUser, JsonUpdateUser, JsonUser, JsonUsers, UserResourceId, UserSlug, UserUuid,
