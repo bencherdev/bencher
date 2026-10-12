@@ -132,10 +132,6 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
-.ex-hint.ex-on {
-	color: var(--color-text-accent);
-	font-weight: 600;
-}
 .ex-val,
 .ex-set {
 	display: flex;

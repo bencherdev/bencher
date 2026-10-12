@@ -125,11 +125,6 @@ const Editor = (props: {
 							noun={noun}
 							values={labels()}
 							start={props.blank && dimension === "benchmarks"}
-							hint={
-								props.blank && dimension === "benchmarks"
-									? "start here"
-									: undefined
-							}
 							readOnly={props.readOnly}
 							full={uuids(dimension).length >= MAX_ENTRIES}
 							onRemove={(index) =>

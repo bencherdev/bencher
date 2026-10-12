@@ -387,17 +387,6 @@ const Plots = () => {
 	const total = () => shown().length;
 	const canEdit = () => permissions()?.edit === true;
 	const canCreate = () => permissions()?.create === true;
-	const NewPlot = () => (
-		<a
-			class="ui-button"
-			data-variant="primary"
-			data-size="md"
-			href={projectPath(slug(), "explore")}
-		>
-			<Plus />
-			New plot
-		</a>
-	);
 
 	return (
 		<main class="page plots">
@@ -449,7 +438,15 @@ const Plots = () => {
 									</Button>
 								</Show>
 								<Show when={canCreate()}>
-									<NewPlot />
+									<a
+										class="ui-button"
+										data-variant="primary"
+										data-size="md"
+										href={projectPath(slug(), "explore")}
+									>
+										<Plus />
+										New plot
+									</a>
 								</Show>
 							</Show>
 						</Show>
@@ -503,9 +500,6 @@ const Plots = () => {
 							<a href={projectPath(slug(), "reports")}>report</a>, or an{" "}
 							<a href={projectPath(slug(), "alerts")}>alert</a>.
 						</p>
-						<Show when={canCreate()}>
-							<NewPlot />
-						</Show>
 					</div>
 				</Match>
 				<Match when={ready() && reordering()}>

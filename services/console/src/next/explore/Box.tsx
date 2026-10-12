@@ -112,9 +112,7 @@ const Box = (props: {
 			<div class="ex-eh">
 				<span>{props.title}</span>
 				<Show when={props.hint}>
-					<span class="ex-hint" classList={{ "ex-on": props.start === true }}>
-						{props.hint}
-					</span>
+					<span class="ex-hint">{props.hint}</span>
 				</Show>
 			</div>
 			<Index each={props.values}>

@@ -592,7 +592,6 @@ test("blank Explore starts from alerts, reports, and pins, and a first benchmark
 	await expect(
 		page.getByRole("region", { name: "Pinned plots" }),
 	).toBeVisible();
-	await expect(box(page, "Benchmarks").getByText("start here")).toBeVisible();
 
 	await box(page, "Benchmarks")
 		.getByRole("button", { name: "Add benchmark" })

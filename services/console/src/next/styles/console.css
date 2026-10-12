@@ -512,12 +512,7 @@
 }
 .danger-row {
 	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 12px 24px;
-}
-.danger-row .grow {
-	flex: 1 1 320px;
+	justify-content: flex-end;
 }
 .muted {
 	color: var(--color-text-muted);

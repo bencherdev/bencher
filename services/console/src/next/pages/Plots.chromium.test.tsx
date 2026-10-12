@@ -309,6 +309,33 @@ test("an empty Plots links to Explore, Reports, and Alerts to pin from", async (
 	}
 });
 
+// Kills an empty Plots that draws New plot twice, a New plot that moves when
+// the first pin arrives, and one that does not open Explore.
+test("New plot is drawn once on an empty Plots, where the first pin leaves it, and opens Explore", async () => {
+	const newPlot = page.getByRole("link", { name: "New plot" });
+	const placed = () => {
+		const { x, y, width, height } = newPlot.element().getBoundingClientRect();
+		return { x, y, width, height };
+	};
+	const empty = plotsApi(0);
+	mount(empty.api, newClient(empty.api, 0));
+	await expect
+		.element(page.getByRole("link", { name: "report", exact: true }))
+		.toBeVisible();
+	expect(newPlot.elements()).toHaveLength(1);
+	await expect
+		.element(newPlot)
+		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/explore`);
+	const before = placed();
+	dispose?.();
+	document.body.replaceChildren();
+
+	const one = plotsApi(1);
+	mount(one.api, newClient(one.api, 1));
+	await expect.element(figure("Pin 1")).toHaveAccessibleName("2 lines over 4w");
+	expect(placed()).toEqual(before);
+});
+
 // Kills a confirmed move kept only in the page, so coming back draws the old
 // order from the cache until the API answers again.
 test("a move is in the cache when the page is opened again", async () => {

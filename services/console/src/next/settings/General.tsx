@@ -421,7 +421,6 @@ const Danger = (props: { data: JsonConsoleProject }) => {
 			</div>
 			<div class="setcard-body">
 				<div class="danger-row">
-					<b class="grow">Delete this project</b>
 					<Button
 						variant="danger"
 						aria-haspopup="dialog"
