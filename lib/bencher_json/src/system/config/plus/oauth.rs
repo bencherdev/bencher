@@ -1,7 +1,9 @@
-use bencher_valid::{OAuthIssuer, OAuthResource, Sanitize};
+use bencher_valid::{OAuthClientId, OAuthIssuer, OAuthResource, Sanitize};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+use crate::JsonOAuthClientMetadata;
 
 /// OAuth authorization server configuration, for MCP clients to sign in with
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,6 +17,43 @@ pub struct JsonOAuthServer {
     /// Defaults to the issuer followed by `/mcp`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resources: Option<Vec<OAuthResource>>,
+    /// The only clients that may sign in.
+    /// Defaults to any client that publishes a valid metadata document.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clients: Option<Vec<JsonOAuthServerClient>>,
+}
+
+/// A client that may sign in.
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonOAuthServerClient {
+    /// The client ID: the URL of the client's metadata document.
+    pub id: OAuthClientId,
+    /// The client's metadata document, used instead of fetching it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<JsonOAuthClientMetadata>,
+}
+
+impl<'de> Deserialize<'de> for JsonOAuthServerClient {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Unchecked {
+            id: OAuthClientId,
+            metadata: Option<JsonOAuthClientMetadata>,
+        }
+
+        let Unchecked { id, metadata } = Unchecked::deserialize(deserializer)?;
+        if let Some(metadata) = &metadata {
+            metadata
+                .clone()
+                .validate(id.url())
+                .map_err(serde::de::Error::custom)?;
+        }
+        Ok(Self { id, metadata })
+    }
 }
 
 impl Sanitize for JsonOAuthServer {
@@ -23,6 +62,7 @@ impl Sanitize for JsonOAuthServer {
         let Self {
             issuer: _,
             resources: _,
+            clients: _,
         } = self;
     }
 }
@@ -45,6 +85,34 @@ mod tests {
         serde_json::from_value::<JsonOAuthServer>(json!({
             "issuer": "https://api.example.com",
             "resources": ["http://mcp.example.com/mcp"]
+        }))
+        .unwrap_err();
+    }
+
+    #[test]
+    fn configured_client_metadata_must_be_valid_for_its_id() {
+        let config = |client_id: &str| {
+            json!({
+                "issuer": "https://api.example.com",
+                "clients": [
+                    {"id": "https://fetched.example/client.json"},
+                    {
+                        "id": "https://client.example/client.json",
+                        "metadata": {
+                            "client_id": client_id,
+                            "redirect_uris": ["http://127.0.0.1/callback"],
+                        },
+                    },
+                ],
+            })
+        };
+        serde_json::from_value::<JsonOAuthServer>(config("https://client.example/client.json"))
+            .unwrap();
+        serde_json::from_value::<JsonOAuthServer>(config("https://other.example/client.json"))
+            .unwrap_err();
+        serde_json::from_value::<JsonOAuthServer>(json!({
+            "issuer": "https://api.example.com",
+            "clients": [{"id": "http://client.example/client.json"}],
         }))
         .unwrap_err();
     }
