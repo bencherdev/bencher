@@ -23,11 +23,13 @@ use super::public::{PubBearerToken, PublicUser};
 
 const INVALID_PROJECT_KEY: &str = "Invalid project key";
 
+#[derive(Clone)]
 pub enum ApiActor {
     Public(PublicUser),
     ProjectKey(ProjectKeyActor),
 }
 
+#[derive(Clone)]
 pub struct ProjectKeyActor {
     pub key_id: ProjectKeyId,
     pub project_id: ProjectId,
