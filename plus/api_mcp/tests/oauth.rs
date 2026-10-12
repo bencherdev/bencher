@@ -15,7 +15,8 @@ use bencher_api_tests::{
 };
 use bencher_json::{
     Clock, DateTime, JsonUserKeyCreated, OAuthAccessToken, OAuthResource, UserKeyUuid,
-    project::Visibility, system::config::JsonRateLimiting,
+    project::Visibility,
+    system::config::{JsonOAuthServer, JsonRateLimiting},
 };
 use bencher_schema::{
     context::{OAuthServer, RateLimiting},
@@ -24,9 +25,12 @@ use bencher_schema::{
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
-use reqwest::header::{
-    ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, HeaderMap, HeaderName,
-    WWW_AUTHENTICATE,
+use reqwest::{
+    Url,
+    header::{
+        ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, HOST, HeaderMap, HeaderName,
+        WWW_AUTHENTICATE,
+    },
 };
 use serde_json::{Value, json};
 
@@ -217,6 +221,83 @@ async fn oauth_expired_access_token() {
     .expect("Failed to expire the access token");
 
     assert_refused(&server, grant.access_token.as_ref()).await;
+}
+
+// A refused token is challenged with the metadata of the MCP server the client reached, by its
+// `Host`, where the client finds how to get a new access token.
+#[tokio::test]
+async fn oauth_challenge_points_at_resource_metadata() {
+    let json: JsonOAuthServer = serde_json::from_value(json!({
+        "issuer": "https://api.example.com",
+        "resources": ["https://api.example.com/mcp", "https://mcp.example.com/mcp"],
+    }))
+    .expect("Invalid OAuth config");
+    let server = server_with(Some(OAuthServer::from(json))).await;
+    let user = server
+        .signup("OAuth Challenged", "oauth-challenged@example.com")
+        .await;
+    let grant = grant(&server, &user, "projects:read");
+    let mut conn = server.db_conn();
+    diesel::update(
+        schema::oauth_token::table
+            .filter(schema::oauth_token::grant_id.eq(grant_id(&mut conn, &grant))),
+    )
+    .set(schema::oauth_token::expiration.eq(now()))
+    .execute(&mut conn)
+    .expect("Failed to expire the tokens");
+
+    for (host, resource) in [
+        ("mcp.example.com", "https://mcp.example.com/mcp"),
+        ("api.example.com", "https://api.example.com/mcp"),
+        ("unknown.example", "https://api.example.com/mcp"),
+    ] {
+        let resp = server
+            .client
+            .post(server.api_url("/mcp"))
+            .header(HOST, host)
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(grant.access_token.as_ref()),
+            )
+            .json(&json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "list_projects", "arguments": {}}
+            }))
+            .send()
+            .await
+            .expect("MCP request failed");
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+        assert_challenge_exposed(resp.headers());
+        let challenge = header(resp.headers(), &WWW_AUTHENTICATE);
+        let origin = resource.trim_end_matches("/mcp");
+        let resource_metadata = format!("{origin}/.well-known/oauth-protected-resource/mcp");
+        assert_eq!(
+            challenge,
+            format!(
+                r#"Bearer error="invalid_token", error_description="The access token is invalid", resource_metadata="{resource_metadata}""#
+            ),
+            "{host}"
+        );
+
+        let url = Url::parse(&resource_metadata).expect("Invalid resource metadata URL");
+        let metadata: Value = server
+            .client
+            .get(server.api_url(url.path()))
+            .header(HOST, url.host_str().expect("Missing host"))
+            .send()
+            .await
+            .expect("Failed to read the resource metadata")
+            .json()
+            .await
+            .expect("Invalid resource metadata");
+        assert_eq!(metadata["resource"], resource, "{host}");
+        assert_eq!(
+            metadata["authorization_servers"],
+            json!(["https://api.example.com"])
+        );
+    }
 }
 
 // A revoked grant takes its access tokens with it

@@ -1,17 +1,24 @@
 use bencher_json::{
     DateTime, JsonOAuthAuthorization, JsonOAuthAuthorizationClient, JsonOAuthAuthorizationRedirect,
-    NonEmpty, OAuthAuthorizationUuid, OAuthClientId, OAuthCodeChallenge, OAuthCodeHash, OAuthNonce,
-    OAuthRedirectUri, OAuthRequestState, OAuthResource, OAuthScopes,
+    NonEmpty, OAuthAuthorizationUuid, OAuthClientId, OAuthCodeChallenge, OAuthCodeHash,
+    OAuthGrantUuid, OAuthNonce, OAuthRedirectUri, OAuthRequestState, OAuthResource, OAuthScopes,
 };
 use chrono::TimeDelta;
-use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, OptionalExtension as _,
+    QueryDsl as _, RunQueryDsl as _,
+};
 
 use crate::{
     context::{DbConnection, OAuthServer},
     schema,
 };
 
-use super::{UserId, key::UserKeyId, oauth::OAuthGrantId};
+use super::{
+    QueryUser, UserId,
+    key::{QueryUserKey, UserKeyId},
+    oauth::{OAuthGrantId, QueryOAuthGrant, earliest},
+};
 
 crate::macros::typed_id::typed_id!(OAuthAuthorizationId);
 
@@ -19,6 +26,8 @@ crate::macros::typed_id::typed_id!(OAuthAuthorizationId);
 const PENDING: TimeDelta = TimeDelta::minutes(30);
 /// How long an app has to exchange its authorization code.
 const CODE: TimeDelta = TimeDelta::minutes(5);
+/// How long a grant lasts at most.
+const GRANT: TimeDelta = TimeDelta::days(365);
 
 /// An app's request to connect to a user's account: pending until the user answers it,
 /// then holding the hash of the authorization code until that expires.
@@ -131,6 +140,70 @@ impl QueryOAuthAuthorization {
         } else {
             OAuthAnswer::Recorded(Box::new(authorization))
         })
+    }
+
+    /// An approved request by the hash of its authorization code, with the user who approved it
+    /// and the user key they approved it with.
+    pub fn approved(
+        conn: &mut DbConnection,
+        code_hash: &OAuthCodeHash,
+    ) -> diesel::QueryResult<Option<(Self, QueryUser, Option<QueryUserKey>)>> {
+        schema::oauth_authorization::table
+            .inner_join(
+                schema::user::table
+                    .on(schema::oauth_authorization::user_id.eq(schema::user::id.nullable())),
+            )
+            .left_join(
+                schema::user_key::table
+                    .on(schema::oauth_authorization::user_key_id
+                        .eq(schema::user_key::id.nullable())),
+            )
+            .filter(schema::oauth_authorization::code_hash.eq(code_hash))
+            .select((
+                schema::oauth_authorization::all_columns,
+                schema::user::all_columns,
+                schema::user_key::all_columns.nullable(),
+            ))
+            .first(conn)
+            .optional()
+    }
+
+    /// Grant what the approved request asked for, recording that its code was exchanged.
+    /// The grant lasts a year at most, and no longer than the user key it was approved with.
+    pub fn grant(
+        &self,
+        conn: &mut DbConnection,
+        query_user: &QueryUser,
+        query_key: Option<&QueryUserKey>,
+        now: DateTime,
+    ) -> diesel::QueryResult<QueryOAuthGrant> {
+        let expiration = query_key.map_or(now + GRANT, |query_key| {
+            earliest(now + GRANT, query_key.expiration)
+        });
+        let uuid = OAuthGrantUuid::new();
+        diesel::insert_into(schema::oauth_grant::table)
+            .values((
+                schema::oauth_grant::uuid.eq(uuid),
+                schema::oauth_grant::user_id.eq(query_user.id),
+                schema::oauth_grant::user_key_id.eq(self.user_key_id),
+                schema::oauth_grant::client_id.eq(&self.client_id),
+                schema::oauth_grant::client_name.eq(&self.client_name),
+                schema::oauth_grant::scope.eq(&self.scope),
+                schema::oauth_grant::resource.eq(&self.resource),
+                schema::oauth_grant::created.eq(now),
+                schema::oauth_grant::modified.eq(now),
+                schema::oauth_grant::expiration.eq(expiration),
+            ))
+            .execute(conn)?;
+        let query_grant = schema::oauth_grant::table
+            .filter(schema::oauth_grant::uuid.eq(uuid))
+            .first::<QueryOAuthGrant>(conn)?;
+        diesel::update(
+            schema::oauth_authorization::table.filter(schema::oauth_authorization::id.eq(self.id)),
+        )
+        .set(schema::oauth_authorization::grant_id.eq(query_grant.id))
+        .execute(conn)?;
+        Ok(query_grant)
     }
 
     pub fn into_json(self, oauth: &OAuthServer) -> JsonOAuthAuthorization {

@@ -8,7 +8,7 @@
 //! (GET /.well-known/openai-apps-challenge).
 
 use bencher_api_tests::TestServer;
-use http::StatusCode;
+use http::{Method, StatusCode};
 
 const CHALLENGE_PATH: &str = "/.well-known/openai-apps-challenge";
 
@@ -37,21 +37,45 @@ async fn openai_apps_challenge() {
         ))
     );
     assert_eq!(
+        resp.headers()
+            .get(reqwest::header::ACCESS_CONTROL_ALLOW_ORIGIN),
+        Some(&reqwest::header::HeaderValue::from_static("*"))
+    );
+    assert_eq!(
         resp.bytes().await.expect("Failed to read body"),
         CHALLENGE.as_bytes()
     );
+
+    let resp = server
+        .client
+        .request(Method::OPTIONS, server.api_url(CHALLENGE_PATH))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    for (name, value) in [
+        (reqwest::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*"),
+        (reqwest::header::ACCESS_CONTROL_ALLOW_METHODS, "GET"),
+    ] {
+        assert_eq!(
+            resp.headers().get(&name),
+            Some(&reqwest::header::HeaderValue::from_static(value)),
+            "{name}"
+        );
+    }
 }
 
 #[tokio::test]
 async fn openai_apps_challenge_not_configured() {
     let server = TestServer::new().await;
 
-    let resp = server
-        .client
-        .get(server.api_url(CHALLENGE_PATH))
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    for method in [Method::GET, Method::OPTIONS] {
+        let resp = server
+            .client
+            .request(method.clone(), server.api_url(CHALLENGE_PATH))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND, "{method}");
+    }
 }

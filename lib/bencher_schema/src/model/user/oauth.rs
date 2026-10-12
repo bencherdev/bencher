@@ -2,6 +2,7 @@ use bencher_json::{
     DateTime, JsonOAuthClient, JsonOAuthGrant, JsonOAuthGrantKey, NonEmpty, OAuthAccessToken,
     OAuthClientId, OAuthGrantUuid, OAuthRefreshToken, OAuthResource, OAuthScopes, OAuthTokenHash,
 };
+use chrono::TimeDelta;
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
     NullableExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
@@ -20,6 +21,11 @@ use super::{
 };
 
 const INVALID_OAUTH_TOKEN: &str = "Invalid OAuth access token";
+
+/// How long an access token lasts.
+const ACCESS_LIFETIME: TimeDelta = TimeDelta::hours(1);
+/// How long a refresh token lasts. Each refresh issues a new one.
+const REFRESH_LIFETIME: TimeDelta = TimeDelta::days(30);
 
 crate::macros::typed_id::typed_id!(OAuthGrantId);
 crate::macros::typed_id::typed_id!(OAuthTokenId);
@@ -89,6 +95,17 @@ impl QueryOAuthGrant {
             .map_err(resource_not_found_err!(OAuthGrant, (user_id, uuid)))
     }
 
+    pub fn from_id(conn: &mut DbConnection, grant_id: OAuthGrantId) -> diesel::QueryResult<Self> {
+        schema::oauth_grant::table
+            .filter(schema::oauth_grant::id.eq(grant_id))
+            .first(conn)
+    }
+
+    /// Whether the grant itself is neither revoked nor expired, whatever its user and key.
+    pub fn is_live(&self, now: DateTime) -> bool {
+        self.revoked.is_none() && self.expiration.timestamp() > now.timestamp()
+    }
+
     pub fn revoke(
         conn: &mut DbConnection,
         grant_id: OAuthGrantId,
@@ -101,6 +118,57 @@ impl QueryOAuthGrant {
         )
         .set(schema::oauth_grant::revoked.eq(now))
         .execute(conn)
+    }
+
+    /// Issue an access token, and a refresh token if asked, neither outliving the grant.
+    pub fn issue(
+        &self,
+        conn: &mut DbConnection,
+        refresh: RefreshTokens,
+        now: DateTime,
+    ) -> diesel::QueryResult<OAuthTokens> {
+        let access_token = OAuthAccessToken::generate();
+        let access_expiration = self.expiring(now + ACCESS_LIFETIME);
+        self.insert_token(
+            conn,
+            OAuthTokenKind::Access,
+            &OAuthTokenHash::from(&access_token),
+            access_expiration,
+            now,
+        )?;
+        let refresh_token = if refresh == RefreshTokens::Issue {
+            let refresh_token = OAuthRefreshToken::generate();
+            self.insert_token(
+                conn,
+                OAuthTokenKind::Refresh,
+                &OAuthTokenHash::from(&refresh_token),
+                self.expiring(now + REFRESH_LIFETIME),
+                now,
+            )?;
+            Some(refresh_token)
+        } else {
+            None
+        };
+        Ok(OAuthTokens {
+            access_token,
+            access_expiration,
+            refresh_token,
+            scope: self.scope.clone(),
+        })
+    }
+
+    /// Record that the grant was refreshed at `now`, dropping its expired tokens.
+    pub fn refreshed(&self, conn: &mut DbConnection, now: DateTime) -> diesel::QueryResult<()> {
+        diesel::update(schema::oauth_grant::table.filter(schema::oauth_grant::id.eq(self.id)))
+            .set(schema::oauth_grant::modified.eq(now))
+            .execute(conn)?;
+        diesel::delete(
+            schema::oauth_token::table
+                .filter(schema::oauth_token::grant_id.eq(self.id))
+                .filter(schema::oauth_token::expiration.le(now)),
+        )
+        .execute(conn)?;
+        Ok(())
     }
 
     pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonOAuthGrant, HttpError> {
@@ -139,7 +207,96 @@ impl QueryOAuthGrant {
             expiration,
         })
     }
+
+    /// `expiration`, or the grant's own expiration if that comes first.
+    fn expiring(&self, expiration: DateTime) -> DateTime {
+        earliest(expiration, self.expiration)
+    }
+
+    fn insert_token(
+        &self,
+        conn: &mut DbConnection,
+        kind: OAuthTokenKind,
+        token_hash: &OAuthTokenHash,
+        expiration: DateTime,
+        now: DateTime,
+    ) -> diesel::QueryResult<usize> {
+        diesel::insert_into(schema::oauth_token::table)
+            .values((
+                schema::oauth_token::grant_id.eq(self.id),
+                schema::oauth_token::kind.eq(kind),
+                schema::oauth_token::token_hash.eq(token_hash),
+                schema::oauth_token::created.eq(now),
+                schema::oauth_token::expiration.eq(expiration),
+            ))
+            .execute(conn)
+    }
 }
+
+/// Whether a grant's client gets refresh tokens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RefreshTokens {
+    Issue,
+    Withhold,
+}
+
+/// The tokens issued for a grant, which are never stored, only their hashes.
+pub struct OAuthTokens {
+    pub access_token: OAuthAccessToken,
+    pub access_expiration: DateTime,
+    pub refresh_token: Option<OAuthRefreshToken>,
+    pub scope: OAuthScopes,
+}
+
+impl QueryOAuthToken {
+    /// A token by its hash, with what it acts for.
+    pub fn with_grant(
+        conn: &mut DbConnection,
+        token_hash: &OAuthTokenHash,
+    ) -> diesel::QueryResult<Option<OAuthTokenGrant>> {
+        schema::oauth_token::table
+            .inner_join(schema::oauth_grant::table.inner_join(schema::user::table))
+            .left_join(
+                schema::user_key::table.on(schema::oauth_grant::user_key_id
+                    .eq(schema::user_key::id.nullable())
+                    .and(schema::user_key::user_id.eq(schema::oauth_grant::user_id))),
+            )
+            .filter(schema::oauth_token::token_hash.eq(token_hash))
+            .select((
+                schema::oauth_token::all_columns,
+                schema::oauth_grant::all_columns,
+                schema::user::all_columns,
+                schema::user_key::all_columns.nullable(),
+            ))
+            .first(conn)
+            .optional()
+    }
+
+    /// Record that a refresh token was exchanged at `now`: presenting it again is reuse.
+    pub fn use_up(&self, conn: &mut DbConnection, now: DateTime) -> diesel::QueryResult<usize> {
+        diesel::update(schema::oauth_token::table.filter(schema::oauth_token::id.eq(self.id)))
+            .set(schema::oauth_token::used.eq(now))
+            .execute(conn)
+    }
+
+    pub fn delete(&self, conn: &mut DbConnection) -> diesel::QueryResult<usize> {
+        diesel::delete(schema::oauth_token::table.filter(schema::oauth_token::id.eq(self.id)))
+            .execute(conn)
+    }
+
+    pub fn is_expired(&self, now: DateTime) -> bool {
+        self.expiration.timestamp() <= now.timestamp()
+    }
+}
+
+/// A token with its grant, the grant's user, and the user key the grant is bound to
+/// when that key is the user's.
+pub type OAuthTokenGrant = (
+    QueryOAuthToken,
+    QueryOAuthGrant,
+    QueryUser,
+    Option<QueryUserKey>,
+);
 
 /// Look up an OAuth access token presented to the MCP server with its grant and user.
 /// A single query returns the token with its grant, user, and bound user key,
@@ -153,27 +310,7 @@ pub(super) fn authenticate(
     let Some(token_hash) = oauth_token_hash(token) else {
         return Err(oauth_token_failure(OAuthTokenFailure::Invalid));
     };
-    let lookup = schema::oauth_token::table
-        .inner_join(schema::oauth_grant::table.inner_join(schema::user::table))
-        .left_join(
-            schema::user_key::table.on(schema::oauth_grant::user_key_id
-                .eq(schema::user_key::id.nullable())
-                .and(schema::user_key::user_id.eq(schema::oauth_grant::user_id))),
-        )
-        .filter(schema::oauth_token::token_hash.eq(&token_hash))
-        .select((
-            schema::oauth_token::all_columns,
-            schema::oauth_grant::all_columns,
-            schema::user::all_columns,
-            schema::user_key::all_columns.nullable(),
-        ))
-        .first::<(
-            QueryOAuthToken,
-            QueryOAuthGrant,
-            QueryUser,
-            Option<QueryUserKey>,
-        )>(conn)
-        .optional()
+    let lookup = QueryOAuthToken::with_grant(conn, &token_hash)
         .inspect_err(|err| {
             issue_error(
                 "Failed to lookup OAuth token",
@@ -199,9 +336,9 @@ pub(super) fn authenticate(
     Ok((query_user, query_grant))
 }
 
-/// Access and refresh tokens share a table, so either hashes to a lookup;
-/// only an access token is then accepted.
-fn oauth_token_hash(token: &str) -> Option<OAuthTokenHash> {
+/// Access and refresh tokens share a table, so either hashes to a lookup,
+/// and the token's kind is then checked against what it was presented as.
+pub fn oauth_token_hash(token: &str) -> Option<OAuthTokenHash> {
     if let Ok(access_token) = token.parse::<OAuthAccessToken>() {
         Some(OAuthTokenHash::from(&access_token))
     } else if let Ok(refresh_token) = token.parse::<OAuthRefreshToken>() {
@@ -224,35 +361,58 @@ fn token_failure(
     query_key: Option<&QueryUserKey>,
     now: DateTime,
 ) -> Option<OAuthTokenFailure> {
-    let now = now.timestamp();
     if query_token.kind != OAuthTokenKind::Access {
         return Some(OAuthTokenFailure::Kind);
     }
-    if query_token.expiration.timestamp() <= now {
+    if query_token.is_expired(now) {
         return Some(OAuthTokenFailure::Expired);
     }
-    if query_grant.revoked.is_some() {
-        return Some(OAuthTokenFailure::GrantRevoked);
-    }
-    if query_grant.expiration.timestamp() <= now {
-        return Some(OAuthTokenFailure::GrantExpired);
+    if let Some(failure) = grant_failure(query_grant, query_user, query_key, now) {
+        return Some(failure.into());
     }
     if !oauth.serves(&query_grant.resource) {
         return Some(OAuthTokenFailure::Resource);
     }
-    if query_user.locked {
-        return Some(OAuthTokenFailure::Locked);
+    None
+}
+
+/// Why a grant can no longer act for its user, if it cannot.
+pub fn grant_failure(
+    query_grant: &QueryOAuthGrant,
+    query_user: &QueryUser,
+    query_key: Option<&QueryUserKey>,
+    now: DateTime,
+) -> Option<OAuthGrantFailure> {
+    if query_grant.revoked.is_some() {
+        return Some(OAuthGrantFailure::Revoked);
     }
-    if query_grant.user_key_id.is_some() {
-        // Only the grant's own user's key joins, and a deleted key cascades to its grants.
+    if query_grant.expiration.timestamp() <= now.timestamp() {
+        return Some(OAuthGrantFailure::Expired);
+    }
+    approver_failure(query_user, query_grant.user_key_id, query_key, now)
+}
+
+/// Why a user, with the user key `user_key_id` they approved with if any, can no longer stand
+/// behind an approval, if they cannot.
+pub fn approver_failure(
+    query_user: &QueryUser,
+    user_key_id: Option<UserKeyId>,
+    query_key: Option<&QueryUserKey>,
+    now: DateTime,
+) -> Option<OAuthGrantFailure> {
+    if query_user.locked {
+        return Some(OAuthGrantFailure::Locked);
+    }
+    if user_key_id.is_some() {
+        // A bound key that did not join was deleted, which cascades, or is another user's.
         let Some(query_key) = query_key else {
-            return Some(OAuthTokenFailure::KeyRevoked);
+            return Some(OAuthGrantFailure::KeyRevoked);
         };
         if query_key.revoked.is_some() {
-            return Some(OAuthTokenFailure::KeyRevoked);
+            return Some(OAuthGrantFailure::KeyRevoked);
         }
-        if query_key.expiration.timestamp() <= now {
-            return Some(OAuthTokenFailure::KeyExpired);
+        if query_key.expiration.timestamp() <= now.timestamp() {
+            return Some(OAuthGrantFailure::KeyExpired);
         }
     }
     None
@@ -329,6 +489,37 @@ enum OAuthTokenFailure {
     Locked,
     KeyRevoked,
     KeyExpired,
+}
+
+/// Why a grant can no longer act for its user.
+#[derive(Debug, Clone, Copy)]
+pub enum OAuthGrantFailure {
+    Revoked,
+    Expired,
+    Locked,
+    KeyRevoked,
+    KeyExpired,
+}
+
+impl From<OAuthGrantFailure> for OAuthTokenFailure {
+    fn from(failure: OAuthGrantFailure) -> Self {
+        match failure {
+            OAuthGrantFailure::Revoked => Self::GrantRevoked,
+            OAuthGrantFailure::Expired => Self::GrantExpired,
+            OAuthGrantFailure::Locked => Self::Locked,
+            OAuthGrantFailure::KeyRevoked => Self::KeyRevoked,
+            OAuthGrantFailure::KeyExpired => Self::KeyExpired,
+        }
+    }
+}
+
+/// Whichever of two times comes first.
+pub fn earliest(left: DateTime, right: DateTime) -> DateTime {
+    if right.timestamp() < left.timestamp() {
+        right
+    } else {
+        left
+    }
 }
 
 #[cfg(feature = "otel")]

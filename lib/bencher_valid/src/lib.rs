@@ -1,5 +1,7 @@
 #[cfg(feature = "server")]
 use regex as _;
+#[cfg(all(feature = "server", not(feature = "plus")))]
+use subtle as _;
 #[cfg(test)]
 use wasm_bindgen_test as _;
 
@@ -62,10 +64,10 @@ pub use plus::{
     Architecture, CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth,
     ExpirationYear, GracePeriod, HeartbeatTimeout, ImageReference, LastFour, LicensedPlanId,
     Memory, MeteredPlanId, OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge,
-    OAuthCodeHash, OAuthIssuer, OAuthNonce, OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState,
-    OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash, OperatingSystem, PlanLevel, PlanStatus,
-    PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash, Sandbox, Sha256,
-    Timeout, UpdateChannel,
+    OAuthCodeHash, OAuthCodeVerifier, OAuthIssuer, OAuthNonce, OAuthRedirectUri, OAuthRefreshToken,
+    OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash, OperatingSystem,
+    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash,
+    Sandbox, Sha256, Timeout, UpdateChannel,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;
