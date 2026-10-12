@@ -365,6 +365,31 @@ test.describe("signed out", () => {
 			twoLinesDrawn(page),
 		);
 	});
+
+	// Kills a short plot that cannot scroll to the top of the screen, since
+	// nothing below it gives the page the room.
+	for (const viewport of [undefined, { width: 390, height: 844 }]) {
+		test(`a short plot scrolls to the top of the screen${viewport ? ` at ${viewport.width}` : ""}`, async ({
+			page,
+			request,
+		}) => {
+			if (viewport) {
+				await page.setViewportSize(viewport);
+			}
+			const { project, search } = await twoRecentLines(request);
+			await page.goto(publicPath(project.slug, search));
+			await twoLinesDrawn(page);
+			await page.evaluate(() =>
+				window.scrollTo({
+					top: document.documentElement.scrollHeight,
+					behavior: "instant",
+				}),
+			);
+			expect(
+				(await page.getByRole("figure").boundingBox())?.y,
+			).toBeLessThanOrEqual(0);
+		});
+	}
 });
 
 test.describe("with the version memory", () => {

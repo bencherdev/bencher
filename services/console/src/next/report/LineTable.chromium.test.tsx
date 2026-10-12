@@ -143,7 +143,7 @@ test("an expanded row reserves its space at once and draws its plot after that f
 	const row = button.closest("tr") as HTMLElement;
 	button.click();
 	const space = row.nextElementSibling as HTMLElement;
-	expect(space.getBoundingClientRect().height).toBe(330);
+	const reserved = space.getBoundingClientRect().height;
 	expect(space.querySelector(".pl")).toBeNull();
 	await expect
 		.element(
@@ -152,7 +152,37 @@ test("an expanded row reserves its space at once and draws its plot after that f
 				.getByRole("button", { name: /: hide its line$/ }),
 		)
 		.toBeVisible();
+	expect(space.getBoundingClientRect().height).toBe(reserved);
 });
+
+// Kills a reserved height short of the plot and its key, which cuts off the
+// bottom of the key's entries, or one that leaves a gap under them.
+for (const [width, narrow] of [
+	[1280, false],
+	[390, true],
+] as const) {
+	test(`an expanded row's plot fills its space, key and all, at ${width}`, async () => {
+		await page.viewport(width, 800);
+		mount(3, () => {}, { narrow });
+		await page
+			.getByRole("button", { name: "Expand bench-0 n=0 Latency" })
+			.click();
+		const region = page.getByRole("region", {
+			name: "bench-0 n=0 Latency, full plot",
+		});
+		const toggle = region.getByRole("button", { name: /: hide its line$/ });
+		const target = region.getByRole("button", { name: /^Focus .* boundary$/ });
+		await expect.element(toggle).toBeVisible();
+		const space = region.element().getBoundingClientRect();
+		for (const control of [toggle, target]) {
+			expect(control.element().getBoundingClientRect().bottom).toBeLessThan(
+				space.bottom,
+			);
+		}
+		const plot = region.getByRole("figure").element().getBoundingClientRect();
+		expect(plot.height).toBe(space.height);
+	});
+}
 
 // Kills offsets that leave out an open row's plot, so the list shrinks once the row scrolls away.
 test("an open row keeps its height once it scrolls out of view", async () => {

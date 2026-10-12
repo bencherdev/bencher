@@ -263,7 +263,7 @@
 	display: none;
 }
 
-/* The readout follows the cursor; pinned, it takes the pointer for its link and close button. */
+/* The readout follows the cursor; only its link takes the pointer, and all of it once pinned. */
 .pl-live {
 	position: absolute;
 	inset: 0;
@@ -291,6 +291,10 @@
 
 .pl-readout.pinned {
 	padding-right: var(--spacing-8);
+}
+
+.pl-readout.pinned,
+.pl-readout a {
 	pointer-events: auto;
 }
 

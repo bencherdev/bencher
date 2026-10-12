@@ -1,0 +1,15 @@
+@layer ui-components {
+	/* A popover in the top layer, placed by its script. */
+	.ui-tooltip {
+		inset: auto;
+		max-width: 240px;
+		margin: 0;
+		padding: var(--spacing-1) var(--spacing-2);
+		border: var(--border-width) solid var(--color-border-emphasized);
+		border-radius: var(--radius-inner);
+		background: var(--color-background-popover);
+		box-shadow: var(--shadow-med);
+		color: var(--color-text-primary);
+		font: var(--font-size-xs) / 1.4 var(--font-family-body);
+	}
+}

@@ -148,3 +148,45 @@ export const readoutLeft = (x: number, width: number, room: number): number => {
 	}
 	return Math.max(EDGE, Math.min(room - EDGE - width, x - width / 2));
 };
+
+/** A pointer's place in the plot's body, in CSS pixels. */
+export interface Point {
+	x: number;
+	y: number;
+}
+
+/** How long a readout keeps its point after the last move toward it. */
+export const GRACE_MS = 300;
+
+/** A box, in CSS pixels. */
+export interface Box {
+	left: number;
+	top: number;
+	right: number;
+	bottom: number;
+}
+
+/** Whether a pointer moving from `from` to `to` heads into the box: it lands in it, or the ray from `from` through `to` enters it ahead of `from`. */
+export const headsInto = (box: Box, from: Point, to: Point): boolean => {
+	if (
+		to.x >= box.left &&
+		to.x <= box.right &&
+		to.y >= box.top &&
+		to.y <= box.bottom
+	) {
+		return true;
+	}
+	let near = 0;
+	let far = Number.POSITIVE_INFINITY;
+	for (const [start, step, low, high] of [
+		[from.x, to.x - from.x, box.left, box.right],
+		[from.y, to.y - from.y, box.top, box.bottom],
+	] as const) {
+		// A still axis divides to infinities that keep the ray inside its span or rule it out.
+		const a = (low - start) / step;
+		const b = (high - start) / step;
+		near = Math.max(near, Math.min(a, b));
+		far = Math.min(far, Math.max(a, b));
+	}
+	return near > 0 && near <= far && far < Number.POSITIVE_INFINITY;
+};

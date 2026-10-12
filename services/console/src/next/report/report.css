@@ -304,11 +304,11 @@
 	background: var(--color-background-surface);
 }
 .lr-exrow section {
-	height: 329px;
+	height: 341px;
 	overflow: hidden;
 }
 .lr-table.lr-narrow .lr-exrow section {
-	height: 359px;
+	height: 367px;
 }
 .lr-table .lr-spacer > td {
 	padding: 0;

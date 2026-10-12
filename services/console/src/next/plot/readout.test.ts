@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { readout, readoutLeft } from "./readout";
+import { headsInto, readout, readoutLeft } from "./readout";
 import { START, testData, testLine } from "./testing";
 import type { PlotData } from "./types";
 
@@ -134,5 +134,36 @@ describe("readoutLeft", () => {
 		expect(readoutLeft(150, 250, 320)).toBe(25);
 		expect(readoutLeft(20, 300, 320)).toBe(4);
 		expect(readoutLeft(300, 300, 320)).toBe(16);
+	});
+});
+
+describe("headsInto", () => {
+	// A readout right of a cursor at x 100, near the top of the plot.
+	const BOX = { left: 112, top: 4, right: 312, bottom: 84 };
+	const at = (x: number, y: number) => ({ x, y });
+
+	// Kills a readout that follows the pointer across a neighbor's point on its way to the readout's link.
+	test("is true for a move toward the box, or one that lands in it", () => {
+		expect(headsInto(BOX, at(100, 150), at(104, 146))).toBe(true);
+		expect(headsInto(BOX, at(100, 150), at(150, 60))).toBe(true);
+		expect(headsInto(BOX, at(100, 60), at(104, 60))).toBe(true);
+	});
+
+	// Kills a hold on a pointer that moved on.
+	test("is false for a move away from the box, or past it", () => {
+		expect(headsInto(BOX, at(100, 150), at(96, 150))).toBe(false);
+		expect(headsInto(BOX, at(100, 150), at(104, 160))).toBe(false);
+		expect(headsInto(BOX, at(100, 150), at(98, 140))).toBe(false);
+		expect(headsInto(BOX, at(100, 150), at(104, 150))).toBe(false);
+		expect(headsInto(BOX, at(100, 60), at(96, 60))).toBe(false);
+	});
+
+	// Kills a hold that ends while the pointer is still in the box, one that keeps a pointer leaving it, or one on a pointer standing still outside it.
+	test("is true while the pointer stays in the box, and false once it leaves or stands outside", () => {
+		expect(headsInto(BOX, at(120, 60), at(130, 62))).toBe(true);
+		expect(headsInto(BOX, at(120, 60), at(120, 60))).toBe(true);
+		expect(headsInto(BOX, at(120, 80), at(120, 90))).toBe(false);
+		expect(headsInto(BOX, at(100, 150), at(100, 150))).toBe(false);
+		expect(headsInto(BOX, at(100, 60), at(100, 60))).toBe(false);
 	});
 });
