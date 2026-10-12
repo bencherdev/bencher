@@ -154,13 +154,17 @@ impl TestServer {
         Self::build(None, None, None, None, Some(rate_limiting), None, false).await
     }
 
+    /// Create a new test server that serves `challenge` at `/.well-known/openai-apps-challenge`.
     #[cfg(feature = "plus")]
-    #[expect(
-        clippy::expect_used,
-        clippy::unused_async,
-        clippy::unused_async_trait_impl,
-        reason = "test server setup with fallible init; async for API parity"
-    )]
+    pub async fn new_with_openai_apps_challenge(challenge: bencher_json::NonEmpty) -> Self {
+        Self::new_with_options(TestServerOptions {
+            openai_apps_challenge: Some(challenge),
+            ..TestServerOptions::default()
+        })
+        .await
+    }
+
+    #[cfg(feature = "plus")]
     async fn build(
         upload_timeout: Option<u64>,
         max_body_size: Option<u64>,
@@ -170,6 +174,38 @@ impl TestServer {
         log: Option<slog::Logger>,
         cloud_routes: bool,
     ) -> Self {
+        Self::new_with_options(TestServerOptions {
+            upload_timeout,
+            max_body_size,
+            clock,
+            runner_update_base_url,
+            rate_limiting,
+            log,
+            cloud_routes,
+            openai_apps_challenge: None,
+        })
+        .await
+    }
+
+    /// Create a new test server with any of its settings changed from the defaults.
+    #[cfg(feature = "plus")]
+    #[expect(
+        clippy::expect_used,
+        clippy::unused_async,
+        clippy::unused_async_trait_impl,
+        reason = "test server setup with fallible init; async for API parity"
+    )]
+    pub async fn new_with_options(options: TestServerOptions) -> Self {
+        let TestServerOptions {
+            upload_timeout,
+            max_body_size,
+            clock,
+            runner_update_base_url,
+            rate_limiting,
+            log,
+            cloud_routes,
+            openai_apps_challenge,
+        } = options;
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
 
@@ -253,6 +289,7 @@ impl TestServer {
             callback_key,
             callbacks,
             runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
+            openai_apps_challenge,
             shutdown,
         };
 
@@ -437,6 +474,20 @@ impl TestServer {
             .drain(&slog::Logger::root(slog::Discard, slog::o!()))
             .await;
     }
+}
+
+/// The settings of a test server, each left at the plain test server's default when unset.
+#[cfg(feature = "plus")]
+#[derive(Default)]
+pub struct TestServerOptions {
+    pub upload_timeout: Option<u64>,
+    pub max_body_size: Option<u64>,
+    pub clock: Option<bencher_json::Clock>,
+    pub runner_update_base_url: Option<url::Url>,
+    pub rate_limiting: Option<bencher_schema::context::RateLimiting>,
+    pub log: Option<slog::Logger>,
+    pub cloud_routes: bool,
+    pub openai_apps_challenge: Option<bencher_json::NonEmpty>,
 }
 
 /// Waits out a lock instead of failing at once, as the server's own pools do.
