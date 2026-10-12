@@ -145,13 +145,14 @@ impl TestServer {
         Self::build(None, None, None, None, Some(rate_limiting), None).await
     }
 
+    /// Create a new test server that serves `challenge` at `/.well-known/openai-apps-challenge`.
     #[cfg(feature = "plus")]
-    #[expect(
-        clippy::expect_used,
-        clippy::unused_async,
-        clippy::unused_async_trait_impl,
-        reason = "test server setup with fallible init; async for API parity"
-    )]
+    pub async fn new_with_openai_apps_challenge(challenge: bencher_json::NonEmpty) -> Self {
+        Self::build_with_openai_apps_challenge(None, None, None, None, None, None, Some(challenge))
+            .await
+    }
+
+    #[cfg(feature = "plus")]
     async fn build(
         upload_timeout: Option<u64>,
         max_body_size: Option<u64>,
@@ -159,6 +160,34 @@ impl TestServer {
         runner_update_base_url: Option<url::Url>,
         rate_limiting: Option<bencher_schema::context::RateLimiting>,
         log: Option<slog::Logger>,
+    ) -> Self {
+        Self::build_with_openai_apps_challenge(
+            upload_timeout,
+            max_body_size,
+            clock,
+            runner_update_base_url,
+            rate_limiting,
+            log,
+            None,
+        )
+        .await
+    }
+
+    #[cfg(feature = "plus")]
+    #[expect(
+        clippy::expect_used,
+        clippy::unused_async,
+        clippy::unused_async_trait_impl,
+        reason = "test server setup with fallible init; async for API parity"
+    )]
+    async fn build_with_openai_apps_challenge(
+        upload_timeout: Option<u64>,
+        max_body_size: Option<u64>,
+        clock: Option<bencher_json::Clock>,
+        runner_update_base_url: Option<url::Url>,
+        rate_limiting: Option<bencher_schema::context::RateLimiting>,
+        log: Option<slog::Logger>,
+        openai_apps_challenge: Option<bencher_json::NonEmpty>,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
@@ -243,6 +272,7 @@ impl TestServer {
             callback_key,
             callbacks,
             runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
+            openai_apps_challenge,
             shutdown,
         };
 

@@ -1,0 +1,8 @@
+### `plus.mcp`
+
+This section configures the [Bencher MCP server](/docs/how-to/mcp/).
+The entire section is optional.
+
+|         Name          |             Example              | Default | Required |                                                                                                Description                                                                                                 |
+| :-------------------: | :------------------------------: | :-----: | :------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| openai_apps_challenge | a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 |   ---   |    No    | The domain verification token OpenAI issues when you submit an app that uses this MCP server. The API server serves it as plain text at `/.well-known/openai-apps-challenge`. If not specified, that route returns `404 Not Found`. |
