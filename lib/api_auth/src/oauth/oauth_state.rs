@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use bencher_json::{Email, Jwt, OrganizationUuid, PlanLevel};
+use bencher_json::{Email, Jwt, OAuthAuthorizationUuid, OrganizationUuid, PlanLevel};
 use bencher_schema::error::unauthorized_error;
 use bencher_token::TokenKey;
 use dropshot::HttpError;
@@ -22,6 +22,8 @@ pub struct OAuthState {
     pub claim: Option<OrganizationUuid>,
     /// Plan level.
     pub plan: Option<PlanLevel>,
+    /// An app's pending request to connect, to return to after signing in.
+    pub authorization: Option<OAuthAuthorizationUuid>,
 }
 
 impl OAuthState {
@@ -34,6 +36,7 @@ impl OAuthState {
             invite,
             claim,
             plan,
+            authorization: None,
         }
     }
 
@@ -69,6 +72,10 @@ impl OAuthState {
     pub fn plan(&self) -> Option<PlanLevel> {
         self.plan
     }
+
+    pub fn authorization(&self) -> Option<OAuthAuthorizationUuid> {
+        self.authorization
+    }
 }
 
 impl From<OAuthState> for bencher_token::StateClaims {
@@ -77,11 +84,13 @@ impl From<OAuthState> for bencher_token::StateClaims {
             invite,
             claim,
             plan,
+            authorization,
         } = state;
         Self {
             invite,
             claim,
             plan,
+            authorization,
         }
     }
 }
@@ -92,11 +101,13 @@ impl From<bencher_token::OAuthClaims> for OAuthState {
             invite,
             claim,
             plan,
+            authorization,
         } = claims.state;
         Self {
             invite,
             claim,
             plan,
+            authorization,
         }
     }
 }

@@ -74,6 +74,15 @@ impl QueryOAuthAuthorization {
         self.code_hash.is_some()
     }
 
+    /// Whether the request is still waiting for the user's answer.
+    pub fn is_pending(
+        conn: &mut DbConnection,
+        uuid: OAuthAuthorizationUuid,
+        now: DateTime,
+    ) -> diesel::QueryResult<bool> {
+        Ok(Self::live(conn, uuid, now)?.is_some_and(|authorization| !authorization.is_answered()))
+    }
+
     /// Approve a pending request for `user_id`, bound to `user_key_id` when the user approved with
     /// a key, recording the hash of the authorization code the app may exchange until it expires.
     pub fn approve(

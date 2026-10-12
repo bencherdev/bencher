@@ -21,6 +21,8 @@ const POLL_INTERVAL: Duration = Duration::from_millis(100);
 const LOG_TAIL: usize = 200;
 /// Set empty for every build and server, so no end-to-end run reports to Sentry.
 const SENTRY_DSN: &str = "PUBLIC_SENTRY_DSN";
+/// The app the suite connects to Bencher, whose redirects the browser never really reaches.
+const OAUTH_CLIENT: &str = "https://client.example/oauth/client.json";
 
 /// The console end-to-end suite, run against an API on a fresh database.
 #[derive(Debug)]
@@ -89,7 +91,7 @@ impl E2e {
         )?);
         wait_until_up(&format!("{api_url}/v0/server/version")).await?;
 
-        let seed = seed::Seed::new(&api_url, &console_url).await?;
+        let seed = seed::Seed::new(&api_url, &console_url, &servers.api_log).await?;
         let seed_path = dir.join("seed.json");
         fs::write(&seed_path, serde_json::to_string_pretty(&seed)?)?;
 
@@ -255,6 +257,22 @@ fn spawn_api(
             "log": { "stderr_terminal": { "level": "info" } },
         },
         "database": { "file": dir.join("bencher.db") },
+        "plus": {
+            "oauth": {
+                "issuer": api_url,
+                "clients": [{
+                    "id": OAUTH_CLIENT,
+                    "metadata": {
+                        "client_id": OAUTH_CLIENT,
+                        "client_name": "ChatGPT",
+                        "redirect_uris": [
+                            "https://client.example/callback",
+                            "http://127.0.0.1/callback",
+                        ],
+                    },
+                }],
+            },
+        },
     });
     let log = File::create(log)?;
     Command::new(api_bin)
@@ -290,6 +308,8 @@ fn console_command(console_dir: &Utf8Path, api_url: &str, port: &str) -> Command
         .env("HOST", "127.0.0.1")
         .env("PORT", port)
         .env("BENCHER_API_URL", api_url)
+        // The sign in pages offer GitHub, so the suite can follow a sign in through it.
+        .env("OAUTH_GITHUB", "true")
         .env(SENTRY_DSN, "");
     command
 }

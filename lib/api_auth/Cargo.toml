@@ -48,6 +48,7 @@ bencher_json = { workspace = true, features = ["server", "schema"] }
 http.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+url.workspace = true
 
 [lints]
 workspace = true

@@ -59,6 +59,10 @@ async fn get_inner(
         context.rate_limiting.public_auth_attempt(remote_ip)?;
     }
 
+    let oauth_state = OAuthState {
+        authorization: crate::pending_authorization(context, oauth_state.authorization).await?,
+        ..oauth_state
+    };
     let state = oauth_state.encode(log, &context.token_key)?;
     let url = google_client.auth_url(state);
     Ok(JsonOAuthUrl { url })

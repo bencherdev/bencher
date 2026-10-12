@@ -20,6 +20,27 @@ impl LogCapture {
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
     }
+
+    /// The last email the server logged in place of sending it that has `button`.
+    #[expect(clippy::expect_used, reason = "test helper reading a logged email")]
+    pub fn email(&self, button: &str) -> String {
+        let prefix = format!("\n{button}: ");
+        self.lines()
+            .into_iter()
+            .rev()
+            .find(|line| line.contains(&prefix))
+            .expect("No email was logged")
+    }
+
+    /// The link behind `button` in the last email the server logged in place of sending it.
+    #[expect(clippy::expect_used, reason = "test helper reading a logged email")]
+    pub fn email_link(&self, button: &str) -> url::Url {
+        let email = self.email(button);
+        let prefix = format!("\n{button}: ");
+        let (_, rest) = email.split_once(&prefix).expect("No link in the email");
+        let href = rest.split_once('\n').map_or(rest, |(href, _)| href);
+        href.parse().expect("Invalid link in the email")
+    }
 }
 
 impl Drain for LogCapture {

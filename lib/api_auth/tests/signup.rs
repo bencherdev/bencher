@@ -25,6 +25,8 @@ async fn signup_success() {
         i_agree: true,
         #[cfg(feature = "plus")]
         recaptcha_token: None,
+        #[cfg(feature = "plus")]
+        authorization: None,
     };
 
     let resp = server
@@ -56,6 +58,8 @@ async fn signup_with_custom_slug() {
         i_agree: true,
         #[cfg(feature = "plus")]
         recaptcha_token: None,
+        #[cfg(feature = "plus")]
+        authorization: None,
     };
 
     let resp = server
@@ -85,6 +89,8 @@ async fn signup_duplicate_email() {
         i_agree: true,
         #[cfg(feature = "plus")]
         recaptcha_token: None,
+        #[cfg(feature = "plus")]
+        authorization: None,
     };
 
     // First signup
@@ -124,6 +130,8 @@ async fn signup_must_agree_to_terms() {
         i_agree: false,
         #[cfg(feature = "plus")]
         recaptcha_token: None,
+        #[cfg(feature = "plus")]
+        authorization: None,
     };
 
     let resp = server
@@ -157,4 +165,81 @@ async fn signup_invalid_email() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+// Kills a signup whose emailed link drops the app's request to connect, or carries one that does
+// not wait for an answer. Only the email that returns to one warns of it.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn signup_link_returns_to_a_pending_authorization() {
+    use bencher_api_tests::{
+        LogCapture, TestServerOptions,
+        helpers::{oauth_server, seed_oauth_authorization},
+    };
+    use bencher_json::{DateTime, OAuthAuthorizationUuid};
+
+    let capture = LogCapture::default();
+    let server = TestServer::new_with_options(TestServerOptions {
+        oauth: Some(oauth_server()),
+        log: Some(capture.logger()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let pending = seed_oauth_authorization(&server, DateTime::now());
+
+    for (email, authorization, names) in [
+        (
+            "pending@example.com",
+            pending,
+            ["token", "authorization"].as_slice(),
+        ),
+        (
+            "unknown@example.com",
+            OAuthAuthorizationUuid::new(),
+            ["token"].as_slice(),
+        ),
+    ] {
+        let body = JsonSignup {
+            name: "Connect User".parse().unwrap(),
+            slug: None,
+            email: email.parse().unwrap(),
+            plan: None,
+            invite: None,
+            claim: None,
+            i_agree: true,
+            recaptcha_token: None,
+            authorization: Some(authorization),
+        };
+        let resp = server
+            .client
+            .post(server.api_url("/v0/auth/signup"))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::ACCEPTED);
+
+        let link = capture.email_link("Confirm Email");
+        assert_eq!(link.origin(), server.context().console_url.origin());
+        let found = link
+            .query_pairs()
+            .map(|(name, _)| name.into_owned())
+            .collect::<Vec<_>>();
+        assert_eq!(found, names, "Link: {link}");
+        let returns = names.contains(&"authorization");
+        if returns {
+            assert!(
+                link.query_pairs()
+                    .any(|(name, value)| name == "authorization" && value == pending.to_string()),
+                "Link: {link}"
+            );
+        }
+        assert_eq!(
+            capture.email("Confirm Email").contains(
+                "An app asked to connect to your Bencher account. If you did not start this, ignore this email."
+            ),
+            returns,
+            "Only the email that returns to the request warns of it"
+        );
+    }
 }

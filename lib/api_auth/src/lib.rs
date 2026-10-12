@@ -7,6 +7,8 @@ use http as _;
 use serde_json as _;
 #[cfg(test)]
 use tokio as _;
+#[cfg(test)]
+use url as _;
 
 #[cfg(feature = "plus")]
 use bencher_json::NonEmpty;
@@ -32,6 +34,11 @@ const CLIENT_TOKEN_TTL: u32 = 30 * 24 * 60 * 60;
 #[cfg(feature = "plus")]
 const PLAN_ARG: &str = "plan";
 const TOKEN_ARG: &str = "token";
+#[cfg(feature = "plus")]
+const AUTHORIZATION_ARG: &str = "authorization";
+/// Told in a sign-in email that returns to an app's request to connect, never naming the app.
+#[cfg(feature = "plus")]
+const CONNECT_NOTICE: &str = "An app asked to connect to your Bencher account. If you did not start this, ignore this email.";
 
 pub struct Api;
 
@@ -108,4 +115,34 @@ async fn verify_recaptcha(
         .verify(log, recaptcha_token, recaptcha_action, remote_ip)
         .await
         .map_err(|_error| bencher_schema::error::forbidden_error("reCAPTCHA verification failed"))
+}
+
+/// The app's request to connect a sign-in returns to, dropped unless apps can connect and it
+/// still waits for an answer.
+#[cfg(feature = "plus")]
+async fn pending_authorization(
+    context: &bencher_schema::ApiContext,
+    authorization: Option<bencher_json::OAuthAuthorizationUuid>,
+) -> Result<Option<bencher_json::OAuthAuthorizationUuid>, dropshot::HttpError> {
+    use bencher_schema::model::user::oauth_authorization::QueryOAuthAuthorization;
+
+    let Some(uuid) = authorization else {
+        return Ok(None);
+    };
+    if context.oauth.is_none() {
+        return Ok(None);
+    }
+    let pending = QueryOAuthAuthorization::is_pending(
+        bencher_schema::public_conn!(context),
+        uuid,
+        context.clock.now(),
+    )
+    .map_err(|error| {
+        bencher_schema::error::issue_error(
+            "Failed to find an OAuth authorization request",
+            "Failed to find an OAuth authorization request to sign in to:",
+            error,
+        )
+    })?;
+    Ok(pending.then_some(uuid))
 }

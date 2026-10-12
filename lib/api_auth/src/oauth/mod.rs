@@ -103,6 +103,7 @@ async fn handle_oauth_user(
             claim: oauth_state.claim(),
             i_agree: true,
             recaptcha_token: None,
+            authorization: None,
         };
 
         let invited = json_signup.invite.is_some();
@@ -176,6 +177,7 @@ async fn handle_oauth_user(
     Ok(JsonOAuthUser {
         user,
         plan: oauth_state.plan(),
+        authorization: oauth_state.authorization(),
     })
 }
 
@@ -200,5 +202,43 @@ impl From<OAuthProvider> for bencher_otel::OAuthProvider {
             OAuthProvider::GitHub => Self::GitHub,
             OAuthProvider::Google => Self::Google,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_api_tests::TestServer;
+    use bencher_json::OAuthAuthorizationUuid;
+
+    use super::{OAuthProvider, OAuthState, handle_oauth_user};
+
+    // Kills a provider sign-in that loses the app's request to connect between the state it sent
+    // the provider and the signed-in user the console reads.
+    #[tokio::test]
+    async fn provider_sign_in_returns_to_the_authorization_in_its_state() {
+        let server = TestServer::new().await;
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+        let authorization = OAuthAuthorizationUuid::new();
+        let state = OAuthState {
+            invite: None,
+            claim: None,
+            plan: None,
+            authorization: Some(authorization),
+        }
+        .encode(&log, server.token_key())
+        .unwrap();
+
+        let oauth_state = OAuthState::decode(&log, server.token_key(), &state).unwrap();
+        let user = handle_oauth_user(
+            &log,
+            server.context(),
+            oauth_state,
+            "Provider User".parse().unwrap(),
+            "provider@example.com".parse().unwrap(),
+            OAuthProvider::GitHub,
+        )
+        .await
+        .unwrap();
+        assert_eq!(user.authorization, Some(authorization));
     }
 }

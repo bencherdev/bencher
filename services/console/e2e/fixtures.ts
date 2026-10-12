@@ -18,6 +18,8 @@ interface SeedProject {
 export interface Seed {
 	api_url: string;
 	console_url: string;
+	/** Where the API logs the emails it would send. */
+	api_log: string;
 	now: string;
 	admin: JsonAuthUser;
 	member: JsonAuthUser;
