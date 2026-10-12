@@ -21,7 +21,7 @@ pub use disaster_recovery::JsonDisasterRecovery;
 pub use github::JsonGitHub;
 pub use google::JsonGoogle;
 pub use mcp::JsonMcp;
-pub use oauth::JsonOAuthServer;
+pub use oauth::{JsonOAuthServer, JsonOAuthServerClient};
 pub use rate_limiting::JsonRateLimiting;
 pub use registry::JsonRegistry;
 pub use runners::JsonRunners;
