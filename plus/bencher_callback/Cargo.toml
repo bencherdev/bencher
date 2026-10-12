@@ -18,26 +18,27 @@ plus = [
     "dep:http",
     "dep:reqwest",
     "dep:thiserror",
-    "dep:tokio",
     "dep:url",
     "dep:uuid",
+    "bencher_egress/plus",
 ]
 db = ["dep:diesel", "diesel/sqlite"]
 
 [dependencies]
 async-trait = { workspace = true, optional = true }
 aws-lc-rs = { workspace = true, optional = true }
+bencher_egress = { workspace = true, optional = true }
 bencher_json = { workspace = true, optional = true, features = ["plus", "server"] }
 derive_more = { workspace = true, optional = true }
 diesel = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true, features = ["rustls-no-provider"] }
 thiserror = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true, features = ["net"] }
 url = { workspace = true, optional = true }
 uuid = { workspace = true, optional = true }
 
 [dev-dependencies]
+bencher_egress = { workspace = true, features = ["test-loopback"] }
 pretty_assertions.workspace = true
 tokio = { workspace = true, features = ["io-util", "macros", "net", "test-util"] }
 tokio-rustls.workspace = true

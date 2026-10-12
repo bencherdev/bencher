@@ -902,6 +902,7 @@ version = "0.6.13"
 dependencies = [
  "async-trait",
  "aws-lc-rs",
+ "bencher_egress",
  "bencher_json",
  "derive_more",
  "diesel",
@@ -1016,6 +1017,20 @@ dependencies = [
  "typeshare",
  "uuid",
  "windows",
+]
+
+[[package]]
+name = "bencher_egress"
+version = "0.6.13"
+dependencies = [
+ "async-trait",
+ "derive_more",
+ "http",
+ "reqwest",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-rustls",
+ "url",
 ]
 
 [[package]]
