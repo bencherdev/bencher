@@ -1,10 +1,9 @@
 ---
-import { GOOGLE_ANALYTICS_ID } from "astro:env/client";
-
 import { SEO } from "astro-seo";
 import "../styles/styles.scss";
 import Navbar from "../components/navbar/Navbar.astro";
 import Footer from "../components/site/Footer.astro";
+import GoogleAnalytics from "../components/site/GoogleAnalytics.astro";
 import { BENCHER_TITLE, BENCHER_DESCRIPTION } from "../util/resource";
 import { BENCHER_SITE_URL } from "../util/ext";
 import { defaultLang } from "../i18n/ui.ts";
@@ -26,6 +25,9 @@ interface Props {
 	author?: undefined | Author;
 	canonical?: undefined | string;
 	theme?: undefined | string;
+	analytics?: undefined | boolean;
+	/** The page's address in link previews, instead of the address it was requested at. */
+	url?: undefined | string;
 }
 
 const {
@@ -39,6 +41,8 @@ const {
 	author,
 	canonical,
 	theme,
+	analytics = true,
+	url,
 } = Astro.props;
 
 const BENCHER_OG_IMAGE =
@@ -140,6 +144,7 @@ const article = () => {
           title: titleFmt ? titleFmt(title) : title,
           type: "website",
           image: imageUrl(),
+          url,
         },
         optional: {
           siteName: "🐰 Bencher",
@@ -174,19 +179,7 @@ const article = () => {
     <!-- font awesome -->
     <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"
     ></script>
-    <!-- Google tag (gtag.js) -->
-    <script
-      async
-      src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`}
-    ></script>
-    <script define:vars={{ GOOGLE_ANALYTICS_ID }}>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-      gtag("config", GOOGLE_ANALYTICS_ID);
-    </script>
+    {analytics && <GoogleAnalytics />}
     <!-- https://docs.astro.build/en/guides/view-transitions/ -->
     <!-- <ClientRouter /> -->
   </head>

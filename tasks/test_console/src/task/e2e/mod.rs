@@ -25,6 +25,8 @@ const SENTRY_DSN: &str = "PUBLIC_SENTRY_DSN";
 /// Sentry, while the console still draws what a Sentry build draws; the suite
 /// intercepts what it needs to see.
 const TEST_SENTRY_DSN: &str = "http://feedback@127.0.0.1:9/0";
+/// The app the suite connects to Bencher, whose redirects the browser never really reaches.
+const OAUTH_CLIENT: &str = "https://client.example/oauth/client.json";
 
 /// The console end-to-end suite, run against an API on a fresh database.
 #[derive(Debug)]
@@ -268,6 +270,22 @@ fn spawn_api(
             "log": { "stderr_terminal": { "level": "info" } },
         },
         "database": { "file": dir.join("bencher.db") },
+        "plus": {
+            "oauth": {
+                "issuer": api_url,
+                "clients": [{
+                    "id": OAUTH_CLIENT,
+                    "metadata": {
+                        "client_id": OAUTH_CLIENT,
+                        "client_name": "ChatGPT",
+                        "redirect_uris": [
+                            "https://client.example/callback",
+                            "http://127.0.0.1/callback",
+                        ],
+                    },
+                }],
+            },
+        },
     });
     let log = File::create(log)?;
     Command::new(api_bin)
@@ -303,6 +321,8 @@ fn console_command(console_dir: &Utf8Path, api_url: &str, port: &str) -> Command
         .env("HOST", "127.0.0.1")
         .env("PORT", port)
         .env("BENCHER_API_URL", api_url)
+        // The sign in pages offer GitHub, so the suite can follow a sign in through it.
+        .env("OAUTH_GITHUB", "true")
         .env(SENTRY_DSN, TEST_SENTRY_DSN);
     command
 }

@@ -121,3 +121,86 @@ async fn oauth_endpoints_exist() {
     assert!(github_resp.status().as_u16() > 0);
     assert!(google_resp.status().as_u16() > 0);
 }
+
+// Kills a sign-in with GitHub or Google whose state drops the app's request to connect, or
+// carries one that does not wait for an answer.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn provider_state_returns_to_a_pending_authorization() {
+    use bencher_api_tests::helpers::seed_oauth_authorization;
+    use bencher_json::{DateTime, JsonOAuthUrl, Jwt, OAuthAuthorizationUuid};
+
+    let server = provider_server().await;
+    let pending = seed_oauth_authorization(&server, DateTime::now());
+
+    for provider in ["github", "google"] {
+        for (authorization, expected) in [
+            (pending, Some(pending)),
+            (OAuthAuthorizationUuid::new(), None),
+        ] {
+            let resp = server
+                .client
+                .get(server.api_url(&format!("/v0/auth/{provider}")))
+                .query(&[("authorization", authorization.to_string())])
+                .send()
+                .await
+                .expect("Request failed");
+            assert_eq!(resp.status(), http::StatusCode::OK, "{provider}");
+            let JsonOAuthUrl { url } = resp.json().await.expect("Failed to parse response");
+            let state: Jwt = url
+                .query_pairs()
+                .find_map(|(name, value)| (name == "state").then(|| value.into_owned()))
+                .expect("No state")
+                .parse()
+                .expect("Invalid state");
+            let claims = server
+                .token_key()
+                .validate_oauth(&state)
+                .expect("Invalid state");
+            assert_eq!(claims.state.authorization, expected, "{provider}");
+        }
+    }
+}
+
+// Kills a sign-in start with GitHub or Google that a cache may keep.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn provider_starts_are_never_cached() {
+    let server = provider_server().await;
+    for provider in ["github", "google"] {
+        let resp = server
+            .client
+            .get(server.api_url(&format!("/v0/auth/{provider}")))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), http::StatusCode::OK, "{provider}");
+        assert_eq!(
+            resp.headers()[http::header::CACHE_CONTROL],
+            "no-store",
+            "{provider}"
+        );
+    }
+}
+
+#[cfg(feature = "plus")]
+async fn provider_server() -> TestServer {
+    use bencher_api_tests::{
+        TestServerOptions,
+        helpers::{github_client, google_client, oauth_server},
+    };
+    use bencher_json::PlanLevel;
+
+    let server = TestServer::new_with_options(TestServerOptions {
+        oauth: Some(oauth_server()),
+        github_client: Some(github_client()),
+        google_client: Some(google_client()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    // Signing in with a provider takes an Enterprise license on a self-hosted server.
+    let user = server.signup("License User", "license@example.com").await;
+    let org = server.create_org(&user, "Licensed").await;
+    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    server
+}

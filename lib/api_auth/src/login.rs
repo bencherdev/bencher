@@ -75,6 +75,9 @@ async fn post_inner(
         )));
     }
 
+    #[cfg(feature = "plus")]
+    let authorization = crate::pending_authorization(context, json_login.authorization).await?;
+
     let token = context
         .token_key
         .new_auth(json_login.email.clone(), AUTH_TOKEN_TTL)
@@ -107,11 +110,21 @@ async fn post_inner(
                         .append_pair(super::PLAN_ARG, plan.as_ref());
                 }
                 url.query_pairs_mut().append_pair(TOKEN_ARG, &token);
+                #[cfg(feature = "plus")]
+                if let Some(authorization) = authorization {
+                    url.query_pairs_mut()
+                        .append_pair(super::AUTHORIZATION_ARG, &authorization.to_string());
+                }
                 url.into()
             })
             .unwrap_or_default(),
         clipboard_text: "Confirmation Token".into(),
         clipboard_target: token,
+        #[cfg(feature = "plus")]
+        post_body: authorization
+            .map(|_| super::CONNECT_NOTICE.to_owned())
+            .unwrap_or_default(),
+        #[cfg(not(feature = "plus"))]
         post_body: String::new(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),

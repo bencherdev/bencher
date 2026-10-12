@@ -54,6 +54,7 @@ impl TestServer {
             claim: None,
             i_agree: true,
             recaptcha_token: None,
+            authorization: None,
         };
         #[cfg(not(feature = "plus"))]
         let body = JsonSignup {

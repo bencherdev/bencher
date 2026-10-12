@@ -208,7 +208,7 @@
 		"apiRequests": 4,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 66750,
+		"jsBytes": 66806,
 		"deferredJsBytes": 105990,
 		"lateModules": 0
 	},

@@ -10,6 +10,7 @@ use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode,
     errors::ErrorKind as JsonWebTokenErrorKind,
 };
+use uuid::Uuid;
 
 #[cfg(feature = "plus")]
 use bencher_json::ProjectUuid;
@@ -54,10 +55,9 @@ impl TokenKey {
         email: Email,
         ttl: u32,
         org: Option<OrgClaims>,
-        state: Option<StateClaims>,
         oci: Option<OciScopeClaims>,
     ) -> Result<Jwt, TokenError> {
-        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, state, oci);
+        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, None, oci);
         Jwt::from_str(
             &encode(&HEADER, &claims, &self.encoding)
                 .map_err(|e| TokenError::Encode { error: e })?,
@@ -66,15 +66,15 @@ impl TokenKey {
     }
 
     pub fn new_auth(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::Auth, email, ttl, None, None, None)
+        self.new_jwt(Audience::Auth, email, ttl, None, None)
     }
 
     pub fn new_client(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::Client, email, ttl, None, None, None)
+        self.new_jwt(Audience::Client, email, ttl, None, None)
     }
 
     pub fn new_api_key(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::ApiKey, email, ttl, None, None, None)
+        self.new_jwt(Audience::ApiKey, email, ttl, None, None)
     }
 
     pub fn new_invite(
@@ -88,11 +88,27 @@ impl TokenKey {
             uuid: org_uuid,
             role,
         };
-        self.new_jwt(Audience::Invite, email, ttl, Some(org_claims), None, None)
+        self.new_jwt(Audience::Invite, email, ttl, Some(org_claims), None)
     }
 
     pub fn new_oauth(&self, email: Email, ttl: u32, state: StateClaims) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::OAuth, email, ttl, None, Some(state), None)
+        let claims = Claims {
+            jti: Some(Uuid::new_v4()),
+            ..Claims::new(
+                Audience::OAuth,
+                self.issuer.clone(),
+                email,
+                ttl,
+                None,
+                Some(state),
+                None,
+            )
+        };
+        Jwt::from_str(
+            &encode(&HEADER, &claims, &self.encoding)
+                .map_err(|e| TokenError::Encode { error: e })?,
+        )
+        .map_err(TokenError::Parse)
     }
 
     pub fn new_email_change(
@@ -157,7 +173,7 @@ impl TokenKey {
             repository,
             actions,
         };
-        self.new_jwt(Audience::OciAuth, email, ttl, None, None, Some(oci_claims))
+        self.new_jwt(Audience::OciAuth, email, ttl, None, Some(oci_claims))
     }
 
     #[cfg(feature = "plus")]
@@ -375,7 +391,7 @@ mod tests {
 
     use crate::{
         Audience, Claims, DEFAULT_SECRET_KEY, EmailChangeClaims, OciAction, OciScopeClaims,
-        OrgClaims,
+        OrgClaims, StateClaims,
     };
 
     use super::TokenKey;
@@ -407,6 +423,7 @@ mod tests {
             org,
             state: None,
             oci,
+            jti: None,
         };
         Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap())
             .unwrap()
@@ -506,6 +523,31 @@ mod tests {
         };
         let token = make_expired_token(&secret_key, Audience::Invite, Some(org), None);
         secret_key.validate_invite(&token).unwrap_err();
+    }
+
+    // Kills a state without its random claim, or with a constant one: two states for the same
+    // sign in each carry a JWT ID, and the two differ.
+    #[test]
+    fn jwt_oauth_states_differ() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let jti = || {
+            let state = StateClaims {
+                invite: None,
+                claim: None,
+                #[cfg(feature = "plus")]
+                plan: None,
+                #[cfg(feature = "plus")]
+                authorization: None,
+            };
+            let token = secret_key.new_oauth(EMAIL.clone(), TTL, state).unwrap();
+            secret_key
+                .validate(&token, &[Audience::OAuth])
+                .unwrap()
+                .claims
+                .jti
+                .expect("No JWT ID")
+        };
+        assert_ne!(jti(), jti());
     }
 
     // --- Email change tokens ---

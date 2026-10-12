@@ -1,8 +1,5 @@
 use std::sync::LazyLock;
 
-#[cfg(debug_assertions)]
-use uuid as _;
-
 use bencher_json::Secret;
 
 mod audience;

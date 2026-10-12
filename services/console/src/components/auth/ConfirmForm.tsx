@@ -1,4 +1,5 @@
 import {
+	Show,
 	createEffect,
 	createMemo,
 	createResource,
@@ -9,6 +10,7 @@ import * as Sentry from "@sentry/astro";
 import { createStore } from "solid-js/store";
 import {
 	type Email,
+	type JsonAuthUser,
 	type JsonConfirm,
 	type JsonLogin,
 	type Jwt,
@@ -19,7 +21,7 @@ import { setUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 import { getRecaptchaToken, loadRecaptcha } from "../../util/recaptcha";
-import { useSearchParams } from "../../util/url";
+import { hiddenRedirect, useSearchParams } from "../../util/url";
 import {
 	init_valid,
 	validEmail,
@@ -29,7 +31,15 @@ import {
 import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
+import SignInAs from "./SignInAs";
 import { AUTH_FIELDS, EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./auth";
+import {
+	AUTHORIZATION_PARAM,
+	consentPath,
+	requestUuid,
+	signInPath,
+} from "./authorize/path";
+import { takeSignIn } from "./signIn";
 
 export interface Props {
 	apiUrl: string;
@@ -50,8 +60,13 @@ const ConfirmForm = (props: Props) => {
 	const token = createMemo(() => searchParams[TOKEN_PARAM] as Jwt);
 	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
 	const email = createMemo(() => searchParams[EMAIL_PARAM] as Email);
+	const authorization = createMemo(() =>
+		requestUuid(searchParams[AUTHORIZATION_PARAM]),
+	);
 
 	const [submitted, setSubmitted] = createSignal();
+	// Confirmed, but not as the account this tab started signing in as, so not signed in until asked.
+	const [pending, setPending] = createSignal<JsonAuthUser>();
 	const [form, setForm] = createStore<{
 		token: {
 			value: string;
@@ -85,17 +100,11 @@ const ConfirmForm = (props: Props) => {
 		httpPost(props.apiUrl, "/v0/auth/confirm", null, authToken)
 			.then((resp) => {
 				setSubmitting(false);
-				const user = resp.data;
-				if (setUser(user)) {
-					navigateNotify(
-						NotifyKind.OK,
-						`Hoppy to see you, ${user.user.name}!`,
-						"/console",
-						[PLAN_PARAM],
-						null,
-					);
+				const user: JsonAuthUser = resp.data;
+				if (takeSignIn(user.user.email)) {
+					signIn(user);
 				} else {
-					pageNotify(NotifyKind.ERROR, "Invalid user. Please, try again.");
+					setPending(user);
 				}
 			})
 			.catch((error) => {
@@ -109,6 +118,25 @@ const ConfirmForm = (props: Props) => {
 			});
 	};
 
+	const signIn = (user: JsonAuthUser) => {
+		if (!setUser(user)) {
+			pageNotify(NotifyKind.ERROR, "Invalid user. Please, try again.");
+			return;
+		}
+		const consent = consentPath(authorization());
+		if (consent) {
+			hiddenRedirect(consent);
+		} else {
+			navigateNotify(
+				NotifyKind.OK,
+				`Hoppy to see you, ${user.user.name}!`,
+				"/console",
+				[PLAN_PARAM],
+				null,
+			);
+		}
+	};
+
 	const handleResendEmail = async () => {
 		setSubmitting(true);
 		setResendCount(resendCount() + 1);
@@ -117,6 +145,10 @@ const ConfirmForm = (props: Props) => {
 			email: email(),
 			plan: plan() as PlanLevel,
 		};
+		const authorization_uuid = authorization();
+		if (authorization_uuid) {
+			login.authorization = authorization_uuid;
+		}
 		const recaptcha_token = await getRecaptchaToken(RecaptchaAction.Login);
 		if (recaptcha_token) {
 			login.recaptcha_token = recaptcha_token;
@@ -129,7 +161,7 @@ const ConfirmForm = (props: Props) => {
 					NotifyKind.OK,
 					`Successful resent email to ${email()}. Please confirm token.`,
 					null,
-					[PLAN_PARAM, EMAIL_PARAM],
+					[PLAN_PARAM, EMAIL_PARAM, AUTHORIZATION_PARAM],
 					null,
 				);
 			})
@@ -183,62 +215,77 @@ const ConfirmForm = (props: Props) => {
 	});
 
 	return (
-		<>
-			<form
-				class="box"
-				onSubmit={(e) => {
-					e.preventDefault();
-					handleSubmit();
-				}}
-			>
-				<Field
-					kind={FieldKind.INPUT}
-					fieldKey="token"
-					value={form?.token?.value}
-					valid={form?.token?.valid}
-					config={AUTH_FIELDS.token}
-					handleField={handleField}
-				/>
-
-				<div class="field">
-					<p class="control">
-						<button
-							class="button is-primary is-fullwidth"
-							type="submit"
-							disabled={!isSendable()}
-							onMouseDown={(e) => {
-								e.preventDefault();
-								handleSubmit();
-							}}
-						>
-							Submit
-						</button>
-					</p>
-				</div>
-			</form>
-
-			{email() && (
+		<Show
+			when={pending()}
+			fallback={
 				<>
-					<hr />
+					<form
+						class="box"
+						onSubmit={(e) => {
+							e.preventDefault();
+							handleSubmit();
+						}}
+					>
+						<Field
+							kind={FieldKind.INPUT}
+							fieldKey="token"
+							value={form?.token?.value}
+							valid={form?.token?.valid}
+							config={AUTH_FIELDS.token}
+							handleField={handleField}
+						/>
 
-					<div class="content has-text-centered">
-						<button
-							class="button is-small"
-							type="submit"
-							disabled={
-								submitting() || coolDown() || resendCount() >= MAX_RESEND_COUNT
-							}
-							onMouseDown={(e) => {
-								e.preventDefault();
-								void handleResendEmail();
-							}}
-						>
-							<div>Click to resend email to: {email()}</div>
-						</button>
-					</div>
+						<div class="field">
+							<p class="control">
+								<button
+									class="button is-primary is-fullwidth"
+									type="submit"
+									disabled={!isSendable()}
+									onMouseDown={(e) => {
+										e.preventDefault();
+										handleSubmit();
+									}}
+								>
+									Submit
+								</button>
+							</p>
+						</div>
+					</form>
+
+					{email() && (
+						<>
+							<hr />
+
+							<div class="content has-text-centered">
+								<button
+									class="button is-small"
+									type="submit"
+									disabled={
+										submitting() ||
+										coolDown() ||
+										resendCount() >= MAX_RESEND_COUNT
+									}
+									onMouseDown={(e) => {
+										e.preventDefault();
+										void handleResendEmail();
+									}}
+								>
+									<div>Click to resend email to: {email()}</div>
+								</button>
+							</div>
+						</>
+					)}
 				</>
+			}
+		>
+			{(user) => (
+				<SignInAs
+					user={user()}
+					cancel={signInPath("/auth/login", authorization())}
+					onSignIn={() => signIn(user())}
+				/>
 			)}
-		</>
+		</Show>
 	);
 };
 

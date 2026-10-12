@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "plus")]
 use url::Url;
 
+#[cfg(feature = "plus")]
+use crate::OAuthAuthorizationUuid;
 use crate::{JsonUser, OrganizationUuid, UserSlug};
 
 #[typeshare::typeshare]
@@ -25,6 +27,9 @@ pub struct JsonSignup {
     pub i_agree: bool,
     #[cfg(feature = "plus")]
     pub recaptcha_token: Option<NonEmpty>,
+    /// An app's pending request to connect, which the emailed link returns to.
+    #[cfg(feature = "plus")]
+    pub authorization: Option<OAuthAuthorizationUuid>,
 }
 
 #[typeshare::typeshare]
@@ -37,6 +42,9 @@ pub struct JsonLogin {
     pub invite: Option<Jwt>,
     #[cfg(feature = "plus")]
     pub recaptcha_token: Option<NonEmpty>,
+    /// An app's pending request to connect, which the emailed link returns to.
+    #[cfg(feature = "plus")]
+    pub authorization: Option<OAuthAuthorizationUuid>,
 }
 
 #[cfg(feature = "plus")]
@@ -63,6 +71,9 @@ pub struct JsonOAuthUser {
     pub user: JsonAuthUser,
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
+    /// An app's pending request to connect, to return to now that the user is signed in.
+    #[cfg(feature = "plus")]
+    pub authorization: Option<OAuthAuthorizationUuid>,
 }
 
 #[typeshare::typeshare]

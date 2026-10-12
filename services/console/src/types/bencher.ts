@@ -1732,6 +1732,8 @@ export interface JsonLogin {
 	plan?: PlanLevel;
 	invite?: Jwt;
 	recaptcha_token?: NonEmpty;
+	/** An app's pending request to connect, which the emailed link returns to. */
+	authorization?: Uuid;
 }
 
 export enum OrganizationRole {
@@ -2174,6 +2176,8 @@ export interface JsonOAuthUrl {
 export interface JsonOAuthUser {
 	user: JsonAuthUser;
 	plan?: PlanLevel;
+	/** An app's pending request to connect, to return to now that the user is signed in. */
+	authorization?: Uuid;
 }
 
 /**
@@ -2501,6 +2505,8 @@ export interface JsonSignup {
 	/** I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license) */
 	i_agree: boolean;
 	recaptcha_token?: NonEmpty;
+	/** An app's pending request to connect, which the emailed link returns to. */
+	authorization?: Uuid;
 }
 
 export interface JsonToken {
