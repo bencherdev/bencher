@@ -173,6 +173,9 @@ pub enum ValidError {
     #[error("Failed to validate OAuth code challenge: expected 43 base64url characters")]
     OAuthCodeChallenge,
     #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth code verifier: expected 43 to 128 unreserved characters")]
+    OAuthCodeVerifier,
+    #[cfg(feature = "plus")]
     #[error("Failed to validate OAuth state: expected at most 1 KiB")]
     OAuthRequestState,
     #[cfg(feature = "plus")]

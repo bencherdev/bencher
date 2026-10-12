@@ -1483,6 +1483,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.0",
  "slug",
+ "subtle",
  "thiserror 2.0.18",
  "typeshare",
  "url",
