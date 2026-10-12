@@ -3,7 +3,7 @@ use api_projects::reports::{
     post_inner,
 };
 use bencher_json::{
-    JsonNewReport,
+    JsonNewReport, JsonReport, JsonReports,
     project::report::{JsonReportQuery, JsonReportQueryParams},
 };
 use bencher_schema::{context::ApiContext, error::bad_request_error, model::user::actor::ApiActor};
@@ -14,7 +14,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use slog::Logger;
 
-use super::{input_schema, json_result, list_result, parse_input};
+use super::{ListOutput, json_result, json_schema, list_result, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct ListReportsInput {
@@ -45,8 +45,9 @@ pub fn list_tool(name: &'static str) -> Tool {
         name,
         "List reports for a project, sorted by date time in reverse chronological order by default. \
          Results and alerts are collapsed to counts unless `expand` is set to true.",
-        input_schema::<ListReportsInput>(),
+        json_schema::<ListReportsInput>(),
     )
+    .with_raw_output_schema(json_schema::<ListOutput<JsonReports>>())
 }
 
 pub async fn list(
@@ -63,7 +64,7 @@ pub async fn list(
     let query: JsonReportQuery = query.try_into().map_err(bad_request_error)?;
     let (json, total_count) =
         get_ls_inner(log, context, path, pagination, query, api_actor).await?;
-    list_result(&json, total_count)
+    list_result(json, total_count)
 }
 
 pub fn create_tool(name: &'static str) -> Tool {
@@ -71,8 +72,9 @@ pub fn create_tool(name: &'static str) -> Tool {
         name,
         "Create a report from raw benchmark results for an existing branch and testbed. \
          Prefer `submit_run` unless the branch and testbed are already known to exist.",
-        input_schema::<CreateReportInput>(),
+        json_schema::<CreateReportInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonReport>())
 }
 
 pub async fn create(
@@ -90,8 +92,9 @@ pub fn view_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "View a report, including its full results and any alerts.",
-        input_schema::<ViewReportInput>(),
+        json_schema::<ViewReportInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonReport>())
 }
 
 pub async fn view(

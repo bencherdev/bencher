@@ -1,12 +1,12 @@
 use api_run::run::post_run;
-use bencher_json::JsonNewRun;
+use bencher_json::{JsonNewRun, JsonReport};
 use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
 use dropshot::HttpError;
 use rmcp::model::{CallToolResult, Tool};
 use serde_json::Value;
 use slog::Logger;
 
-use super::{input_schema, json_result, parse_input};
+use super::{json_result, json_schema, parse_input};
 
 pub fn submit_tool(name: &'static str) -> Tool {
     Tool::new(
@@ -17,8 +17,9 @@ pub fn submit_tool(name: &'static str) -> Tool {
          Branch, testbed, and thresholds are created on the fly if they do not exist. \
          Prefer the `bencher run` CLI when benchmarks are executed from a local checkout; \
          use this tool when the results are already in hand.",
-        input_schema::<JsonNewRun>(),
+        json_schema::<JsonNewRun>(),
     )
+    .with_raw_output_schema(json_schema::<JsonReport>())
 }
 
 pub async fn submit(
