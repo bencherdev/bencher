@@ -134,6 +134,38 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Failed to validate runner key hash: {0}")]
     RunnerKeyHash(String),
+    // The token itself is left out of every OAuth token message: it is a credential.
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth access token")]
+    OAuthAccessToken(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth refresh token")]
+    OAuthRefreshToken(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth authorization code")]
+    OAuthCode(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth token hash: {0}")]
+    OAuthTokenHash(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth authorization code hash: {0}")]
+    OAuthCodeHash(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth scope: {0}")]
+    OAuthScope(String),
+    #[cfg(feature = "plus")]
+    #[error(
+        "Failed to validate OAuth issuer ({0}): expected an `https` origin, or an `http` one for a loopback host"
+    )]
+    OAuthIssuer(String),
+    #[cfg(feature = "plus")]
+    #[error(
+        "Failed to validate OAuth resource ({0}): expected an `https` URL, or an `http` one for a loopback host, with no query or fragment"
+    )]
+    OAuthResource(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth client ID: {0}")]
+    OAuthClientId(String),
     #[cfg(feature = "plus")]
     #[error("Failed to validate SHA-256 hash: {0}")]
     Sha256(String),

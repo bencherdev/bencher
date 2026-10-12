@@ -16,7 +16,7 @@ use rmcp::{
     },
 };
 
-use crate::{server::BencherMcp, tools::McpTool};
+use crate::{principal::McpPrincipal, server::BencherMcp, tools::McpTool};
 
 const MCP_ACCEPT: &str = "application/json, text/event-stream";
 const MCP_ALLOW_METHODS: &str = "POST, OPTIONS";
@@ -49,20 +49,20 @@ pub async fn mcp_post(
     rqctx: RequestContext<ApiContext>,
     body: UntypedBody,
 ) -> Result<Response<Body>, HttpError> {
-    let api_actor = if is_tool_call(body.as_bytes()) {
+    let principal = if is_tool_call(body.as_bytes()) {
         // Invalid or expired credentials fail the whole request with a `401`,
         // just like the REST API; anonymous requests may still read public projects.
         // Rate limiting is applied per-actor inside the shared endpoint handlers,
         // with the same exceptions as REST (`list_projects` mirrors `GET /v0/projects`).
-        let api_actor = ApiActor::new(&rqctx).await?;
+        let principal = McpPrincipal::new(&rqctx).await?;
         // Anonymous tool calls are also throttled before dispatch: malformed
         // arguments are rejected before reaching the shared handlers where
         // per-actor rate limiting lives (REST body and query parse failures
         // are likewise rejected before rate limiting)
-        if matches!(&api_actor, ApiActor::Public(PublicUser::Public(_))) {
+        if matches!(principal.actor(), ApiActor::Public(PublicUser::Public(_))) {
             apply_public_rate_limit(&rqctx)?;
         }
-        Some(api_actor)
+        Some(principal)
     } else {
         apply_public_rate_limit(&rqctx)?;
         None
@@ -70,10 +70,14 @@ pub async fn mcp_post(
 
     let request = mcp_request(&rqctx, &body);
     let config = server_config(rqctx.request_body_max_bytes());
-    let server = Arc::new(BencherMcp::new(rqctx, api_actor));
+    let server = Arc::new(BencherMcp::new(rqctx, principal));
+    let handler = Arc::clone(&server);
     let service: StreamableHttpService<_, NeverSessionManager> =
-        StreamableHttpService::new(move || Ok(Arc::clone(&server)), Arc::default(), config);
+        StreamableHttpService::new(move || Ok(Arc::clone(&handler)), Arc::default(), config);
     let (mut parts, response_body) = service.handle(request).await.into_parts();
+    if let Some(challenge) = server.challenge() {
+        return challenge.into_response();
+    }
     insert_cors_headers(&mut parts.headers);
     Ok(Response::from_parts(parts, Body::wrap(response_body)))
 }
@@ -129,7 +133,7 @@ fn server_config(max_request_body_bytes: usize) -> StreamableHttpServerConfig {
         .disable_allowed_origins()
 }
 
-fn insert_cors_headers(headers: &mut HeaderMap) {
+pub fn insert_cors_headers(headers: &mut HeaderMap) {
     headers.insert(
         header::ACCESS_CONTROL_ALLOW_ORIGIN,
         HeaderValue::from_static("*"),

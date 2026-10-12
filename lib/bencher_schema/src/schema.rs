@@ -166,6 +166,57 @@ diesel::table! {
 }
 
 diesel::table! {
+    oauth_authorization (id) {
+        id -> Integer,
+        uuid -> Text,
+        client_id -> Text,
+        client_name -> Text,
+        redirect_uri -> Text,
+        scope -> Text,
+        resource -> Text,
+        code_challenge -> Text,
+        state -> Nullable<Text>,
+        nonce -> Nullable<Text>,
+        refresh -> Bool,
+        user_id -> Nullable<Integer>,
+        user_key_id -> Nullable<Integer>,
+        code_hash -> Nullable<Text>,
+        grant_id -> Nullable<Integer>,
+        created -> BigInt,
+        expiration -> BigInt,
+    }
+}
+
+diesel::table! {
+    oauth_grant (id) {
+        id -> Integer,
+        uuid -> Text,
+        user_id -> Integer,
+        user_key_id -> Nullable<Integer>,
+        client_id -> Text,
+        client_name -> Text,
+        scope -> Text,
+        resource -> Text,
+        created -> BigInt,
+        modified -> BigInt,
+        expiration -> BigInt,
+        revoked -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
+    oauth_token (id) {
+        id -> Integer,
+        grant_id -> Integer,
+        kind -> Integer,
+        token_hash -> Text,
+        created -> BigInt,
+        expiration -> BigInt,
+        used -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
     organization (id) {
         id -> Integer,
         uuid -> Text,
@@ -534,6 +585,12 @@ diesel::joinable!(measure -> project (project_id));
 diesel::joinable!(metric -> measure (measure_id));
 diesel::joinable!(metric -> report_benchmark (report_benchmark_id));
 diesel::joinable!(metric_count_by_report -> report (report_id));
+diesel::joinable!(oauth_authorization -> oauth_grant (grant_id));
+diesel::joinable!(oauth_authorization -> user (user_id));
+diesel::joinable!(oauth_authorization -> user_key (user_key_id));
+diesel::joinable!(oauth_grant -> user (user_id));
+diesel::joinable!(oauth_grant -> user_key (user_key_id));
+diesel::joinable!(oauth_token -> oauth_grant (grant_id));
 diesel::joinable!(organization_role -> organization (organization_id));
 diesel::joinable!(organization_role -> user (user_id));
 diesel::joinable!(plot -> project (project_id));
@@ -596,6 +653,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     metric,
     metric_count_by_report,
     model,
+    oauth_authorization,
+    oauth_grant,
+    oauth_token,
     organization,
     organization_role,
     plan,

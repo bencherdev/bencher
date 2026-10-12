@@ -9,6 +9,6 @@ pub use api_gauge::{ApiGauge, RunnerStateKind};
 pub use api_histogram::{ApiHistogram, Priority};
 pub use api_meter::{
     ApiCounter, ApiMeter, AuthMethod, AuthorizationKind, IntervalKind, JobStatusKind,
-    OAuthProvider, PauseReasonKind, PlanKind, ProjectKeyAuthFailureReason, UpdateChannelKind,
-    UserKeyAuthFailureReason,
+    OAuthProvider, OAuthTokenAuthFailureReason, PauseReasonKind, PlanKind,
+    ProjectKeyAuthFailureReason, UpdateChannelKind, UserKeyAuthFailureReason,
 };
