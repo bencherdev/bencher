@@ -7,10 +7,13 @@
 //! Integration tests for the MCP Streamable HTTP endpoint (POST /mcp).
 
 use bencher_api_tests::{
-    TestProject, TestServer, TestUser, helpers::set_job_status, oci::create_oci_manifest,
+    TestProject, TestServer, TestServerOptions, TestUser,
+    helpers::{oauth_server, set_job_status},
+    oci::create_oci_manifest,
 };
-use bencher_json::JobStatus;
-use http::StatusCode;
+use bencher_json::{JobStatus, system::config::JsonRateLimiting};
+use bencher_schema::context::RateLimiting;
+use http::{StatusCode, header::WWW_AUTHENTICATE};
 use serde_json::{Value, json};
 
 const MCP_TOOL_COUNT: usize = 36;
@@ -290,6 +293,8 @@ async fn mcp_tools_list() {
         assert!(names.contains(&name), "Missing tool: {name}");
     }
     for tool in tools {
+        // Sign-in requirements are only declared once OAuth is configured
+        assert!(tool.get("_meta").is_none(), "{tool}");
         assert_eq!(tool["inputSchema"]["type"], "object", "{tool}");
         assert!(tool["description"].is_string(), "{tool}");
         assert!(tool["title"].is_string(), "{tool}");
@@ -328,35 +333,28 @@ async fn mcp_unknown_tool() {
     assert_eq!(message["error"]["code"], -32602);
 }
 
-// An unknown tool is rejected before credentials are resolved
-#[tokio::test]
-async fn mcp_unknown_tool_invalid_credential() {
-    let server = TestServer::new().await;
-
-    let resp = mcp_post(
-        &server,
-        Some("bencher_run_invalid"),
-        &call_tool_request("no_such_tool", &json!({})),
-    )
-    .await;
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let message: Value = resp.json().await.expect("Invalid JSON-RPC response");
-    assert_eq!(message["error"]["code"], -32602);
-}
-
-// An invalid bearer credential fails the whole request with 401, like REST
+// An invalid bearer credential fails the whole request with 401 whatever its method, like REST,
+// rather than being served as anonymous; with OAuth unset there is no challenge to sign in
 #[tokio::test]
 async fn mcp_invalid_credential() {
     let server = TestServer::new().await;
 
-    let resp = mcp_post(
-        &server,
-        Some("bencher_run_invalid"),
-        &call_tool_request("list_projects", &json!({})),
-    )
-    .await;
-
+    for body in [
+        call_tool_request("list_projects", &json!({})),
+        call_tool_request("no_such_tool", &json!({})),
+        json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}),
+        initialize_request("2025-06-18"),
+        json!({"jsonrpc": "2.0", "method": "notifications/initialized"}),
+    ] {
+        let resp = mcp_post(&server, Some("bencher_run_invalid"), &body).await;
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED, "{body}");
+        assert!(
+            resp.headers().get(WWW_AUTHENTICATE).is_none(),
+            "Unexpected challenge: {body}"
+        );
+    }
+    let discover = request_2026("server/discover", json!({}));
+    let resp = mcp_post_2026(&server, Some("bencher_run_invalid"), &discover).await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
@@ -524,7 +522,6 @@ async fn mcp_submit_run_project_key() {
 // Every tool with structured output returns results that match its output schema,
 // including the types whose JSON is written by hand
 #[tokio::test]
-#[expect(clippy::too_many_lines, reason = "one call per tool")]
 async fn mcp_tool_results_match_output_schemas() {
     let server = TestServer::new().await;
     let user = server
@@ -534,23 +531,125 @@ async fn mcp_tool_results_match_output_schemas() {
     let project = server
         .create_project(&user, &org, "MCP Schemas Project")
         .await;
+
+    for (tool, arguments) in seed_every_tool(&server, &user, &project).await {
+        let result = mcp_result(
+            &server,
+            Some(&user.token),
+            &call_tool_request(tool, &arguments),
+        )
+        .await;
+        let content = tool_content(&result);
+        // A list result only exercises its item schema when it has items
+        if tool.starts_with("list_") {
+            assert_ne!(content["data"], json!([]), "{tool}: {content}");
+        }
+    }
+}
+
+// With OAuth on, every tool declares the scope it needs and whether an anonymous caller may use it,
+// and means it: a tool that declares `noauth` works anonymously on a public project (or, for
+// `submit_run`, an unclaimed one) without a challenge, and every other tool asks to sign in
+#[tokio::test]
+async fn mcp_tools_declare_how_to_sign_in() {
+    let server = TestServer::new_with_options(TestServerOptions {
+        oauth: Some(oauth_server()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let user = server
+        .signup("MCP Signs In", "mcp-signs-in@bencher.dev")
+        .await;
+    let org = server.create_org(&user, "MCP Signs In Org").await;
+    let project = server
+        .create_project(&user, &org, "MCP Signs In Project")
+        .await;
+    let every_tool = seed_every_tool(&server, &user, &project).await;
+
+    let tools_list = json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"});
+    let tools = json_rpc_result(mcp_post(&server, None, &tools_list).await, &tools_list).await;
+    let tools = tools["tools"].as_array().expect("Missing tools array");
+    assert_eq!(tools.len(), every_tool.len());
+    for tool in tools {
+        let name = tool["name"].as_str().expect("Missing tool name");
+        let schemes = tool["_meta"]["securitySchemes"]
+            .as_array()
+            .expect("Missing security schemes");
+        let scope = if tool["annotations"]["readOnlyHint"] == true {
+            "projects:read"
+        } else {
+            "projects:write"
+        };
+        assert!(
+            schemes.contains(&json!({"type": "oauth2", "scopes": [scope]})),
+            "{name}: {schemes:?}"
+        );
+
+        let arguments = if name == "submit_run" {
+            json!({
+                "project": "mcp-unclaimed",
+                "context": {"bencher.dev/v0/repo/name": "mcp-unclaimed"},
+                "start_time": "2025-01-01T00:00:00Z",
+                "end_time": "2025-01-01T00:01:00Z",
+                "results": ["{\"mcp_bench\": {\"latency\": {\"value\": 88.0}}}"]
+            })
+        } else {
+            every_tool
+                .iter()
+                .find_map(|(tool, arguments)| (*tool == name).then(|| arguments.clone()))
+                .expect("Missing arguments")
+        };
+        let body = call_tool_request(name, &arguments);
+        let resp = mcp_post(&server, None, &body).await;
+        if schemes.contains(&json!({"type": "noauth"})) {
+            let result = json_rpc_result(resp, &body).await;
+            assert_ne!(result["isError"], true, "{name}: {result}");
+            assert!(result.get("_meta").is_none(), "{name}: {result}");
+        } else {
+            assert_eq!(resp.status(), StatusCode::UNAUTHORIZED, "{name}");
+            let challenge = resp
+                .headers()
+                .get(WWW_AUTHENTICATE)
+                .and_then(|value| value.to_str().ok())
+                .expect("Missing challenge");
+            assert!(
+                challenge.starts_with(r#"Bearer resource_metadata=""#),
+                "{name}: {challenge}"
+            );
+        }
+    }
+}
+
+/// Seed a project with one of everything the tools read, through the tools themselves,
+/// and return arguments that call every tool on it.
+#[expect(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    clippy::too_many_lines,
+    reason = "test helper with one call per tool; indexing a serde_json value never panics"
+)]
+async fn seed_every_tool(
+    server: &TestServer,
+    user: &TestUser,
+    project: &TestProject,
+) -> Vec<(&'static str, Value)> {
     let project_slug: &str = project.slug.as_ref();
     let call = async |name: &str, mut arguments: Value| {
         arguments["project"] = json!(project_slug);
         let request = call_tool_request(name, &arguments);
-        tool_content(&mcp_result(&server, Some(&user.token), &request).await)
+        tool_content(&mcp_result(server, Some(&user.token), &request).await)
     };
 
     // The first user to sign up is the server admin, who registers hardware specs
     let spec = post_spec(
-        &server,
-        &user,
+        server,
+        user,
         json!({"name": "Bare Metal", "fallback": true}),
     )
     .await;
     let sandboxed = post_spec(
-        &server,
-        &user,
+        server,
+        user,
         json!({"name": "Sandboxed", "sandbox": "firecracker"}),
     )
     .await;
@@ -630,12 +729,12 @@ async fn mcp_tool_results_match_output_schemas() {
         .send()
         .await
         .expect("Plot request failed");
-    assert_eq!(plot.status(), StatusCode::CREATED);
+    assert_eq!(plot.status(), StatusCode::CREATED, "Failed to create plot");
     let plot: Value = plot.json().await.expect("Invalid plot");
 
     let mut job_run = run(3, 10.0);
     job_run["job"] = json!({
-        "image": push_image(&server, &user, &project).await,
+        "image": push_image(server, user, project).await,
         "entrypoint": ["/bin/sh"],
         "cmd": ["-c", "bench"],
         "env": {"THREADS": "4"},
@@ -646,7 +745,7 @@ async fn mcp_tool_results_match_output_schemas() {
     let pending = call("view_job", json!({"job": job})).await;
     assert!(pending["callback"].is_object(), "{pending}");
     let job_uuid = serde_json::from_value(job.clone()).expect("Invalid job UUID");
-    set_job_status(&server, job_uuid, JobStatus::Failed);
+    set_job_status(server, job_uuid, JobStatus::Failed);
     let output = serde_json::from_value(json!({
         "results": [{"exit_code": 1, "stdout": "out", "stderr": "err", "output": {"/out/results.json": "{}"}}],
         "error": "Benchmark failed"
@@ -662,74 +761,94 @@ async fn mcp_tool_results_match_output_schemas() {
     let failed = call("view_job", json!({"job": job})).await;
     assert!(failed["output"].is_object(), "{failed}");
 
-    for (tool, arguments) in [
+    let perf = json!({
+        "project": project_slug,
+        "branches": branch["uuid"],
+        "testbeds": testbed["uuid"],
+        "benchmarks": benchmark["uuid"],
+        "measures": measure["uuid"]
+    });
+    let mut every_tool = vec![
+        ("list_projects", json!({})),
+        ("view_project", json!({})),
+        ("list_reports", json!({})),
         ("view_report", json!({"report": report["uuid"]})),
+        ("list_branches", json!({})),
+        ("view_branch", json!({"branch": branch["uuid"]})),
+        ("list_testbeds", json!({})),
+        ("view_testbed", json!({"testbed": testbed["uuid"]})),
+        ("list_benchmarks", json!({})),
+        ("view_benchmark", json!({"benchmark": benchmark["uuid"]})),
+        ("list_measures", json!({})),
+        ("view_measure", json!({"measure": measure["uuid"]})),
+        ("list_thresholds", json!({})),
+        ("view_threshold", json!({"threshold": threshold["uuid"]})),
+        ("list_alerts", json!({})),
         ("view_alert", json!({"alert": alert["uuid"]})),
-        (
-            "update_alert",
-            json!({"alert": alert["uuid"], "status": "dismissed"}),
-        ),
         (
             "view_metric",
             json!({"metric": result["measures"][0]["metrics"][0]["uuid"]}),
         ),
-        (
-            "query_perf",
-            json!({
-                "branches": branch["uuid"],
-                "testbeds": testbed["uuid"],
-                "benchmarks": benchmark["uuid"],
-                "measures": measure["uuid"]
-            }),
-        ),
-        ("view_threshold", json!({"threshold": threshold["uuid"]})),
-        (
-            "update_threshold",
-            json!({"threshold": threshold["uuid"], "test": "static", "upper_boundary": 200.0}),
-        ),
+        ("query_perf", perf.clone()),
+        ("perf_image", perf),
+        ("list_plots", json!({})),
         ("view_plot", json!({"plot": plot["uuid"]})),
-        ("create_benchmark", json!({"name": "mcp_other"})),
+        ("list_jobs", json!({})),
+        ("view_job", json!({"job": job})),
         (
             "create_branch",
             json!({"name": "feature", "start_point": {"branch": branch["uuid"]}}),
         ),
-        ("view_branch", json!({"branch": branch["uuid"]})),
         (
             "update_branch",
             json!({"branch": branch["uuid"], "name": "renamed"}),
         ),
-        ("view_testbed", json!({"testbed": testbed["uuid"]})),
+        ("create_testbed", json!({"name": "other"})),
         (
             "update_testbed",
             json!({"testbed": testbed["uuid"], "name": "renamed"}),
         ),
-        ("view_benchmark", json!({"benchmark": benchmark["uuid"]})),
+        ("create_benchmark", json!({"name": "mcp_other"})),
         (
             "update_benchmark",
             json!({"benchmark": benchmark["uuid"], "name": "renamed"}),
         ),
-        ("view_measure", json!({"measure": measure["uuid"]})),
+        (
+            "create_measure",
+            json!({"name": "throughput", "units": "ops"}),
+        ),
         (
             "update_measure",
             json!({"measure": measure["uuid"], "name": "renamed"}),
         ),
-    ] {
-        call(tool, arguments).await;
+        (
+            "create_threshold",
+            json!({
+                "branch": branch["uuid"],
+                "testbed": testbed["uuid"],
+                "measure": measure["uuid"],
+                "parameters": [{"threads": 8}],
+                "test": "static",
+                "upper_boundary": 100.0
+            }),
+        ),
+        (
+            "update_threshold",
+            json!({"threshold": threshold["uuid"], "test": "static", "upper_boundary": 200.0}),
+        ),
+        (
+            "update_alert",
+            json!({"alert": alert["uuid"], "status": "dismissed"}),
+        ),
+        ("create_report", run(4, 10.0)),
+        ("submit_run", run(5, 10.0)),
+    ];
+    for (tool, arguments) in &mut every_tool {
+        if *tool != "list_projects" {
+            arguments["project"] = json!(project_slug);
+        }
     }
-    // A list result only exercises its item schema when it has items
-    for tool in [
-        "list_reports",
-        "list_branches",
-        "list_testbeds",
-        "list_benchmarks",
-        "list_measures",
-        "list_thresholds",
-        "list_plots",
-        "list_jobs",
-    ] {
-        let list = call(tool, json!({})).await;
-        assert_ne!(list["data"], json!([]), "{tool}: {list}");
-    }
+    every_tool
 }
 
 /// Register a hardware spec, which only the server admin can do.
@@ -1020,19 +1139,18 @@ async fn mcp_public_host_and_cross_origin() {
 }
 
 // Anonymous requests are throttled per IP address before the SDK handles them,
-// while authenticated tool calls are left to per-actor rate limiting
+// while signed-in requests are charged to their credential whatever they are
 #[tokio::test]
 async fn mcp_public_rate_limit() {
-    use bencher_json::system::config::JsonRateLimiting;
-    use bencher_schema::context::RateLimiting;
-
-    let rate_limiting: JsonRateLimiting =
-        serde_json::from_value(json!({"public": {"requests": {"minute": 1}}}))
-            .expect("Invalid rate limiting");
-    let server = TestServer::new_with_rate_limiting(RateLimiting::from(rate_limiting)).await;
+    let server = rate_limited_server(json!({"public": {"requests": {"minute": 1}}})).await;
     let user = server
         .signup("MCP Throttled", "mcp-throttled@bencher.dev")
         .await;
+    let org = server.create_org(&user, "MCP Throttled Org").await;
+    let project = server
+        .create_project(&user, &org, "MCP Throttled Project")
+        .await;
+    let key = server.create_project_key(&user, &project, "mcp-key").await;
 
     let post_from_ip = async |bearer: Option<&str>, body: Value| {
         mcp_request(&server, bearer, &body)
@@ -1046,7 +1164,7 @@ async fn mcp_public_rate_limit() {
 
     assert_eq!(post_from_ip(None, tools_list.clone()).await, StatusCode::OK);
     assert_eq!(
-        post_from_ip(None, tools_list).await,
+        post_from_ip(None, tools_list.clone()).await,
         StatusCode::TOO_MANY_REQUESTS
     );
     assert_eq!(
@@ -1057,20 +1175,23 @@ async fn mcp_public_rate_limit() {
         .await,
         StatusCode::TOO_MANY_REQUESTS
     );
-    assert_eq!(
-        post_from_ip(
-            Some(&user.token),
-            call_tool_request("list_projects", &json!({}))
-        )
-        .await,
-        StatusCode::OK
-    );
+    // With OAuth unset, an anonymous tool call over the limit is refused, not asked to sign in
     assert_eq!(
         post_from_ip(None, call_tool_request("list_projects", &json!({}))).await,
         StatusCode::TOO_MANY_REQUESTS
     );
-    // Messages the SDK does not dispatch as a tool call are not one,
-    // whatever credential they carry
+    let bearers: [&str; 2] = [&user.token, key.key.as_ref()];
+    for bearer in bearers {
+        assert_eq!(
+            post_from_ip(Some(bearer), call_tool_request("list_projects", &json!({}))).await,
+            StatusCode::OK
+        );
+        assert_eq!(
+            post_from_ip(Some(bearer), tools_list.clone()).await,
+            StatusCode::OK
+        );
+    }
+    // Messages the SDK does not dispatch as a tool call are charged to their credential too
     assert_eq!(
         post_from_ip(
             Some(&user.token),
@@ -1082,7 +1203,7 @@ async fn mcp_public_rate_limit() {
             })
         )
         .await,
-        StatusCode::TOO_MANY_REQUESTS
+        StatusCode::OK
     );
     assert_eq!(
         post_from_ip(
@@ -1094,8 +1215,97 @@ async fn mcp_public_rate_limit() {
             })
         )
         .await,
+        StatusCode::ACCEPTED
+    );
+}
+
+// An anonymous tool call is charged to its address once, like every other anonymous message
+#[tokio::test]
+async fn mcp_anonymous_charged_once() {
+    let server = rate_limited_server(json!({"public": {"requests": {"minute": 2}}})).await;
+
+    let mut statuses = Vec::new();
+    for _ in 0..3 {
+        let status = mcp_request(
+            &server,
+            None,
+            &call_tool_request("list_projects", &json!({})),
+        )
+        .header("X-Forwarded-For", "203.0.113.8")
+        .send()
+        .await
+        .expect("MCP request failed")
+        .status();
+        statuses.push(status);
+    }
+    assert_eq!(
+        statuses,
+        [
+            StatusCode::OK,
+            StatusCode::OK,
+            StatusCode::TOO_MANY_REQUESTS
+        ]
+    );
+}
+
+// Signed-in messages are charged to their credential whatever their method: a user's to the user,
+// and a project key's to its project, where a tool call is charged once, by the tool
+#[tokio::test]
+async fn mcp_signed_in_charged_to_credential() {
+    let server = rate_limited_server(json!({
+        "user": {"requests": {"minute": 4}},
+        "project": {"requests": {"minute": 4}}
+    }))
+    .await;
+    let reader = server.signup("MCP Reader", "mcp-reader@bencher.dev").await;
+    let owner = server.signup("MCP Owner", "mcp-owner@bencher.dev").await;
+    let org = server.create_org(&owner, "MCP Charged Org").await;
+    let project = server
+        .create_project(&owner, &org, "MCP Charged Project")
+        .await;
+    // Creating the key is the project's first charged request
+    let key = server.create_project_key(&owner, &project, "mcp-key").await;
+    let tools_list = json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"});
+
+    let mut statuses = Vec::new();
+    for _ in 0..5 {
+        statuses.push(
+            mcp_post(&server, Some(&reader.token), &tools_list)
+                .await
+                .status(),
+        );
+    }
+    assert_eq!(
+        statuses,
+        [
+            StatusCode::OK,
+            StatusCode::OK,
+            StatusCode::OK,
+            StatusCode::OK,
+            StatusCode::TOO_MANY_REQUESTS
+        ]
+    );
+
+    let key: &str = key.key.as_ref();
+    for _ in 0..2 {
+        assert_eq!(
+            mcp_post(&server, Some(key), &tools_list).await.status(),
+            StatusCode::OK
+        );
+    }
+    let view_project = call_tool_request("view_project", &json!({"project": project.slug}));
+    tool_content(&mcp_result(&server, Some(key), &view_project).await);
+    assert_eq!(
+        mcp_post(&server, Some(key), &tools_list).await.status(),
         StatusCode::TOO_MANY_REQUESTS
     );
+}
+
+#[expect(clippy::expect_used, reason = "test helper parsing fixed rate limits")]
+async fn rate_limited_server(rate_limiting: Value) -> TestServer {
+    let rate_limiting: JsonRateLimiting =
+        serde_json::from_value(rate_limiting).expect("Invalid rate limiting");
+    TestServer::new_with_rate_limiting(RateLimiting::from(rate_limiting)).await
 }
 
 /// Assert the CORS headers a browser based MCP client needs.

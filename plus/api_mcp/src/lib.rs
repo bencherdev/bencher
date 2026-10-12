@@ -31,7 +31,9 @@
 //! endpoint handlers; anonymous requests may read public projects.
 //! Once `plus.oauth` is configured, an OAuth access token is accepted too,
 //! acting as its user within the token's scopes, and every refused credential
-//! is challenged with where to find how to get a new one.
+//! is challenged with where to find how to get a new one. Each tool then also
+//! declares whether it needs a signed-in caller, and an anonymous caller is
+//! asked to sign in when a tool needs one.
 //!
 //! These endpoints are `unpublished`: they speak JSON-RPC, not REST,
 //! so they are intentionally excluded from the `OpenAPI` spec.

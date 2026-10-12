@@ -53,6 +53,7 @@ otel = [
     "dep:bencher_otel_provider",
     "api_auth/otel",
     "api_checkout?/otel",
+    "api_mcp?/otel",
     "api_oauth?/otel",
     "api_oci?/otel",
     "api_organizations/otel",
