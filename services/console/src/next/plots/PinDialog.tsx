@@ -125,7 +125,7 @@ const PinDialog = (props: {
 			);
 			props.onSaved(data, moved ? placed(current, uuid(), index) : current);
 		} catch {
-			setFailure("Bencher did not save the pin. Try again.");
+			setFailure("Bencher did not save the pin");
 		} finally {
 			setSaving(false);
 		}
@@ -156,7 +156,7 @@ const PinDialog = (props: {
 					<Tile
 						title={titled() || "Untitled"}
 						tile={tile()}
-						windowText={`${rollingName(seconds())} rolling`}
+						window={rollingName(seconds())}
 						class="plots-preview"
 					/>
 				</div>
@@ -175,8 +175,8 @@ const PinDialog = (props: {
 						/>
 						<span id={titleHelp} class="fhelp">
 							{bytes() > TITLE_BYTES
-								? `Too long: a title holds at most ${TITLE_BYTES} bytes, and this one is ${bytes()}.`
-								: "Defaults to the benchmark, the parameters that vary, the measure, and the branch."}
+								? `${bytes()} of ${TITLE_BYTES} bytes`
+								: ""}
 						</span>
 					</div>
 					<div class="field">
@@ -219,10 +219,6 @@ const PinDialog = (props: {
 								</span>
 							</Show>
 						</div>
-						<span class="fhelp">
-							Rolling: the pin always shows the last {rollingName(seconds())},
-							up to the newest report.
-						</span>
 					</div>
 					<fieldset class="fset">
 						<legend class="flab">Position on Plots</legend>
@@ -292,13 +288,13 @@ const PinDialog = (props: {
 							fallback={
 								<span class="fhelp">
 									{known() === undefined
-										? "Reading the order of the pinned plots."
-										: `Plots holds ${order().length} ${order().length === 1 ? "pinned plot" : "pinned plots"}; a project keeps up to ${PLOTS_LIMIT}.`}
+										? ""
+										: `${order().length} of ${PLOTS_LIMIT} pinned`}
 								</span>
 							}
 						>
 							<span class="fhelp plots-dorder" role="alert">
-								The order of the pinned plots did not load.
+								The order of the pinned plots did not load
 								<Button
 									size="sm"
 									disabled={asked().isFetching}
@@ -321,7 +317,6 @@ const PinDialog = (props: {
 				</p>
 			</Show>
 			<div class="ui-dialog-foot">
-				<span class="muted sm">Saving updates the pin in place.</span>
 				<span class="spacer" />
 				<Button onClick={props.onClose}>Cancel</Button>
 				<Button

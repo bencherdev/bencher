@@ -258,54 +258,11 @@ export const windowPhrase = (
 	}
 };
 
-const and = (parts: string[]) =>
-	parts.length > 1
-		? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`
-		: (parts[0] ?? "");
-
 /** The names of the branch and the testbed the search filters by, where known. */
 export interface FilterNames {
 	branch?: string | undefined;
 	testbed?: string | undefined;
 }
-
-/** What the zero state says: which filters and window found nothing, and what to try. */
-export const nothingFound = (
-	search: ReportsSearch,
-	now: number,
-	timeZone?: string,
-	names: FilterNames = {},
-) => {
-	const where = [
-		search.branch && (names.branch ?? search.branch),
-		search.testbed && (names.testbed ?? search.testbed),
-	].filter((part): part is string => Boolean(part));
-	const what = [
-		...(search.adapter ? [`the ${search.adapter} adapter`] : []),
-		...(search.alerts ? ["active alerts"] : []),
-	];
-	const phrase = [
-		"Nothing",
-		...(where.length ? [`on ${and(where)}`] : []),
-		...(what.length ? [`with ${and(what)}`] : []),
-		...(search.window.kind === "all"
-			? []
-			: [
-					windowPhrase(search.window, now, timeZone).replace(
-						/^(In|From)/,
-						(word) => word.toLowerCase(),
-					),
-				]),
-	].join(" ");
-	const filtered = filterCount(search) > 0;
-	const advice =
-		search.window.kind === "all"
-			? "Clear the filters."
-			: filtered
-				? "Widen the window or clear the filters."
-				: "Widen the window.";
-	return `${phrase}. ${advice}`;
-};
 
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 

@@ -48,8 +48,8 @@ const Tile = (props: {
 	tile: JsonConsolePlot | undefined;
 	/** Its batch failed, so no lines are on the way. */
 	failed?: boolean;
-	/** Such as "saved window 4w". */
-	windowText: string;
+	/** Its own window, such as "4w", while it draws at it. */
+	window?: string | undefined;
 	openHref?: string;
 	menu?:
 		| {
@@ -249,13 +249,9 @@ const Tile = (props: {
 				}}
 			</Show>
 			<div class="plots-tfoot">
-				<Show when={lines() !== undefined}>
-					<span>{lines() === 1 ? "1 line" : `${lines()} lines`}</span>
-					<span class="dotsep" aria-hidden="true">
-						·
-					</span>
+				<Show when={props.window}>
+					<span class="lr-tag">{props.window}</span>
 				</Show>
-				<span>{props.windowText}</span>
 				<span class="spacer" />
 				<Show when={props.openHref}>
 					{(href) => (

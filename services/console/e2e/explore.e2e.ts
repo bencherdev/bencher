@@ -299,7 +299,7 @@ test("a refused plot query says so, keeps what was drawn, and Retry asks again",
 	await page.route(perf, (route) => route.fulfill({ status: 500, body: "{}" }));
 	await page.goto(explore(hashbrown.slug, query));
 	// An API that did not answer is asked twice more before the page says so.
-	await expect(failed).toContainText("did not answer", { timeout: 15_000 });
+	await expect(failed).toContainText("did not load", { timeout: 15_000 });
 	await page.unroute(perf);
 	await retry.click();
 	await expect(plot(page)).toHaveAccessibleName("2 lines");
@@ -334,7 +334,7 @@ test("a plot whose code did not load says so, and Retry loads it in place", asyn
 	const failed = page.getByRole("region", { name: "Plot" }).getByRole("alert");
 	await page.route(PLOT_CHUNK, (route) => route.abort());
 	await page.goto(explore(hashbrown.slug, query));
-	await expect(failed).toContainText("The plot did not load.");
+	await expect(failed).toContainText("The plot did not load");
 	await page.unroute(PLOT_CHUNK);
 	await page.evaluate(() => {
 		Object.assign(window, { stayed: true });
@@ -358,7 +358,7 @@ test("Retry reads the page again when the server no longer has the plot's code",
 	const failed = page.getByRole("region", { name: "Plot" }).getByRole("alert");
 	await page.route(PLOT_CHUNK, (route) => route.fulfill({ status: 404 }));
 	await page.goto(explore(hashbrown.slug, query));
-	await expect(failed).toContainText("The plot did not load.");
+	await expect(failed).toContainText("The plot did not load");
 	await page.evaluate(() => {
 		Object.assign(window, { stayed: true });
 	});
@@ -367,7 +367,7 @@ test("Retry reads the page again when the server no longer has the plot's code",
 		failed.getByRole("button", { name: "Retry" }).click(),
 	]);
 	expect(await page.evaluate(() => "stayed" in window)).toBe(false);
-	await expect(failed).toContainText("The plot did not load.");
+	await expect(failed).toContainText("The plot did not load");
 	expect(thrown).toEqual([]);
 });
 
@@ -386,7 +386,7 @@ test("Retry reads the page again when one of the plot's own imports did not load
 	const failed = page.getByRole("region", { name: "Plot" }).getByRole("alert");
 	await page.route(plotImport, (route) => route.abort());
 	await page.goto(link);
-	await expect(failed).toContainText("The plot did not load.");
+	await expect(failed).toContainText("The plot did not load");
 	await page.unroute(plotImport);
 	await page.evaluate(() => {
 		Object.assign(window, { stayed: true });
@@ -535,9 +535,6 @@ test("two measures share a dual axis by default, three always stack", async ({
 	);
 	await expect(plot(page)).toHaveAccessibleName("3 lines");
 	await expect(
-		page.getByText("three or more measures always stack"),
-	).toBeVisible();
-	await expect(
 		page.getByRole("radiogroup", { name: "Measures layout" }),
 	).toHaveCount(0);
 	await expect(page.locator("figure")).toHaveAttribute(
@@ -574,17 +571,18 @@ test("hidden and focused lines travel in the link", async ({
 });
 
 // Kills a blank Explore without its starting points, an alert that opens more
-// than its line, and a benchmark picked first that leaves the branch, the
-// testbed, and the measures for the reader.
+// than its line or names a source that does not link to the alerts, and a
+// benchmark picked first that leaves the branch, the testbed, and the measures
+// for the reader.
 test("blank Explore starts from alerts, reports, and pins, and a first benchmark fills the rest", async ({
 	page,
 }) => {
 	await page.goto(nextPath(hashbrown.slug));
 	const alerting = page.getByRole("region", { name: "Alerting now" });
-	const alert = alerting.getByRole("link", { name: /open in Explore$/ });
+	const alert = alerting.getByRole("link", { name: /^blake3 / });
 	await expect(alert).toHaveCount(1);
 	await expect(alert).toHaveAccessibleName(
-		/^blake3 input_bytes=65536 simd=avx2 threads=1 Latency on main, ubuntu-latest, \+\d+\.\d%: open in Explore$/,
+		/^blake3 input_bytes=65536 simd=avx2 threads=1 Latency main · ubuntu-latest · \+\d+\.\d%$/,
 	);
 	await expect(
 		page.getByRole("region", { name: "Latest reports" }).getByRole("link", {
@@ -628,21 +626,17 @@ test("blank Explore starts from alerts, reports, and pins, and a first benchmark
 	).toHaveCount(2);
 	release();
 	await page.unroute(perf);
-	await expect(
-		page.getByText(/came from sha256's latest report/),
-	).toBeVisible();
 	await expect(plot(page)).toHaveAccessibleName("8 lines");
 
 	await page.goto(nextPath(hashbrown.slug));
 	await alert.click();
 	await expect(plot(page)).toHaveAccessibleName("1 line");
 	await expect(page).toHaveURL(/focus=/);
-	await expect(
-		page.getByText("from an alert on main · ubuntu-latest"),
-	).toBeVisible();
-	await expect(
-		page.getByRole("link", { name: "Alerts", exact: true }),
-	).toBeVisible();
+	await expect(page.getByText(/on main · ubuntu-latest$/)).toBeVisible();
+	await page.getByRole("link", { name: "alert", exact: true }).click();
+	await expect(page).toHaveURL(
+		new RegExp(`${nextPath(hashbrown.slug, "alerts")}$`),
+	);
 });
 
 /** A project of its own, with one benchmark's two variants run on `main`. */
@@ -687,7 +681,7 @@ test("Pin to Plots pins the shown line by its full name, and Undo removes it", a
 	await page.getByRole("button", { name: "Pin to Plots" }).click();
 	const confirmation = page.getByRole("status").filter({ hasText: "Pinned" });
 	await expect(confirmation).toContainText(
-		'Pinned to the top of Plots as "hash size=1, Latency on main", 4w rolling',
+		'Pinned "hash size=1, Latency on main" · 4w',
 	);
 	await expect(
 		page.getByRole("heading", {
@@ -722,7 +716,7 @@ test("an edited pin shows the unsaved mark until Save, which writes it", async (
 
 	await page.goto(nextPath(project.slug));
 	const pins = page.getByRole("region", { name: "Pinned plots" });
-	const pin = pins.getByRole("link").filter({ hasText: "rolling" });
+	const pin = pins.getByRole("link").filter({ hasText: "Latency on main" });
 	await expect(pin).toHaveText([/hash size=1, Latency on main/]);
 	await pin.click();
 	await expect(
@@ -787,7 +781,7 @@ test("leaving a pin with unsaved changes asks first", async ({
 	const dialog = page.getByRole("alertdialog", {
 		name: "Leave without saving?",
 	});
-	await expect(dialog).toContainText("Leaving for Reports drops them");
+	await expect(dialog).toBeVisible();
 	await dialog.getByRole("button", { name: "Keep editing" }).first().click();
 	await expect(dialog).toHaveCount(0);
 	await expect(page.getByText("Unsaved changes")).toBeVisible();
@@ -841,7 +835,7 @@ test("Discard returns a pin to what it saved, and Save as new pins the edit besi
 	await xAxis.getByText("Version").click();
 	await page.getByRole("button", { name: "Save as new" }).click();
 	await expect(
-		page.getByRole("status").filter({ hasText: "Saved as a new pin" }),
+		page.getByRole("status").filter({ hasText: "Saved as new" }),
 	).toBeVisible();
 	await expect(mark).toHaveCount(0);
 	await expect
@@ -990,8 +984,8 @@ test("a query past 64 lines says so", async ({ page, request }) => {
 		}),
 	);
 	await expect(
-		page.getByRole("status").filter({ hasText: "cap" }),
-	).toContainText("72 lines, over the cap of 64.");
+		page.getByRole("status").filter({ hasText: "of 64 lines" }),
+	).toContainText("72 of 64 lines");
 	await expect(plot(page)).toHaveAccessibleName("64 lines");
 });
 
@@ -1189,6 +1183,63 @@ test.describe("narrow", () => {
 			page.getByRole("button", { name: /^branches / }),
 		).toBeFocused();
 	});
+});
+
+// Kills a contrast, name, or role failure on blank Explore's starting points
+// in either theme.
+test("blank Explore passes axe in both themes", async ({ page }) => {
+	await axeInBothThemes(page, nextPath(hashbrown.slug), async () => {
+		await expect(
+			page
+				.getByRole("region", { name: "Alerting now" })
+				.getByRole("link", { name: /^blake3 / }),
+		).toHaveCount(1);
+		await expect(
+			page.getByRole("region", { name: "Latest reports" }).getByRole("link"),
+		).not.toHaveCount(0);
+	});
+});
+
+// Kills a source line, from an alert or from a report, whose link reads only
+// by its color or fails a contrast or a name in either theme.
+test("Explore opened from an alert or a report passes axe in both themes", async ({
+	page,
+	request,
+}) => {
+	await axeInBothThemes(
+		page,
+		nextPath(hashbrown.slug),
+		async () => {
+			await expect(
+				page.getByRole("link", { name: "alert", exact: true }),
+			).toBeVisible();
+			await expect(plot(page)).toHaveAccessibleName("1 line");
+		},
+		() =>
+			page
+				.getByRole("region", { name: "Alerting now" })
+				.getByRole("link", { name: /^blake3 / })
+				.click(),
+	);
+
+	const response = await request.get(
+		`${seed.api_url}/v0/projects/${hashbrown.slug}/reports?branch=main&testbed=ubuntu-latest&per_page=1`,
+		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+	);
+	const [newest] = (await response.json()) as { uuid: string }[];
+	const { query } = await twoLines(request);
+	await axeInBothThemes(
+		page,
+		explore(hashbrown.slug, { ...query, report: newest?.uuid ?? "" }),
+		async () => {
+			await expect(
+				page
+					.getByRole("region", { name: "Query" })
+					.getByRole("link", { name: /^[0-9a-f]{7}$/ }),
+			).toBeVisible();
+			await expect(plot(page)).toHaveAccessibleName("2 lines");
+		},
+	);
 });
 
 // Kills a contrast, name, or role failure on Explore in either theme.

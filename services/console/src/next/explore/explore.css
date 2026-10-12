@@ -269,11 +269,6 @@
 	color: var(--color-text-muted);
 	font-size: 12.5px;
 }
-.ex-note {
-	margin: 0;
-	color: var(--color-text-secondary);
-	font-size: 12.5px;
-}
 /* Room below the plot, so it scrolls to the top of the screen. */
 .ex-plot {
 	position: relative;

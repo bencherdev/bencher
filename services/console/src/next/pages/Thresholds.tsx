@@ -33,7 +33,6 @@ import {
 	type ThresholdsSearch,
 	decodeSearch,
 	encodeSearch,
-	filterCount,
 	windowLabel,
 	windowPhrase,
 } from "../thresholds/search";
@@ -137,10 +136,6 @@ const Thresholds = () => {
 						{total() === 1 ? `1 ${noun()}` : `${total()} ${noun()}s`}
 					</Show>
 				</Heading>
-				<p class="ph-sub">
-					Runs declare thresholds, and every threshold that matches a line
-					checks it.
-				</p>
 			</div>
 			<Controls
 				search={search()}
@@ -150,7 +145,11 @@ const Thresholds = () => {
 			/>
 			<Switch>
 				<Match when={first() && rows().length === 0 && !busy()}>
-					<NothingFound search={search()} />
+					<div class="ui-table-scroll th-empty">
+						<Heading level={2} size="lg">
+							No thresholds
+						</Heading>
+					</div>
 				</Match>
 				<Match when={rows().length > 0}>
 					<ThresholdsTable
@@ -174,9 +173,7 @@ const Thresholds = () => {
 				</Match>
 				<Match when={batches()[0]?.isLoadingError}>
 					<Banner status="error" role="alert" class="load-error">
-						<span class="grow">
-							Thresholds did not load: the Bencher API did not answer.
-						</span>
+						<span class="grow">Thresholds did not load</span>
 						<Button size="sm" onClick={() => batches()[0]?.refetch()}>
 							Retry
 						</Button>
@@ -222,26 +219,4 @@ const useName = (resource: Dimension, uuid: Accessor<string | undefined>) => {
 	const { api, slug } = useProject();
 	const result = useQueryResult(() => nameQuery(api, slug(), resource, uuid()));
 	return () => result().data;
-};
-
-const NothingFound = (props: { search: ThresholdsSearch }) => {
-	const filtered = () => filterCount(props.search) > 0;
-	return (
-		<div class="ui-table-scroll th-empty">
-			<Heading level={2} size="lg">
-				{filtered()
-					? "No thresholds match these filters"
-					: props.search.archived
-						? "No archived thresholds"
-						: "No thresholds yet"}
-			</Heading>
-			<p>
-				{filtered()
-					? "Clear the filters to see every threshold."
-					: props.search.archived
-						? "A threshold is archived with its branch, testbed, or measure."
-						: "The first run that declares a threshold adds it here."}
-			</p>
-		</div>
-	);
 };

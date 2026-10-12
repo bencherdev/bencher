@@ -135,14 +135,12 @@ const Layout = (
 				}
 			>
 				<Match when={failure() === "not_found" || failure() === "forbidden"}>
-					<ProjectNotFound slug={slug()} />
+					<ProjectNotFound />
 				</Match>
 				<Match when={failure()}>
 					<main class="page">
 						<Banner status="error" role="alert" class="load-error">
-							<span class="grow">
-								{slug()} did not load: the Bencher API did not answer.
-							</span>
+							<span class="grow">{slug()} did not load</span>
 							<Button size="sm" onClick={() => bootstrap().refetch()}>
 								Retry
 							</Button>
@@ -156,16 +154,12 @@ const Layout = (
 
 export default Layout;
 
-const ProjectNotFound = (props: { slug: string }) => (
+const ProjectNotFound = () => (
 	<main class="page">
 		<div class="pagehead">
 			<Heading level={1} size="xl">
 				Project not found
 			</Heading>
-			<p class="lede">
-				There is no project {props.slug} that you can see. It may be private,
-				deleted, or mistyped.
-			</p>
 		</div>
 	</main>
 );

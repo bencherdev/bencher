@@ -130,9 +130,7 @@ test("a list the API did not answer shows a banner whose Retry loads it", async 
 	mount(api, impatient());
 
 	const banner = page.getByRole("alert");
-	await expect
-		.element(banner)
-		.toHaveTextContent("Reports did not load: the Bencher API did not answer.");
+	await expect.element(banner).toHaveTextContent("Reports did not load");
 	fail = false;
 	await banner.getByRole("button", { name: "Retry" }).click();
 
@@ -222,11 +220,7 @@ test("a later batch the API refused shows a row whose Retry loads it, asked for 
 
 	toBottom();
 	const alert = page.getByRole("alert");
-	await expect
-		.element(alert)
-		.toHaveTextContent(
-			"These reports did not load: the Bencher API did not answer.",
-		);
+	await expect.element(alert).toHaveTextContent("These reports did not load");
 	await wait(500);
 	expect(asked(requests, 2)).toBe(1);
 	expect(requests).toHaveLength(2);
@@ -284,7 +278,7 @@ test("a short batch ends the list", async () => {
 	expect(requests).toHaveLength(1);
 });
 
-// Kills a zero state that names a branch by its slug.
+// Kills a filter that matches nothing named by its slug.
 test("filters that match nothing are named, not slugged", async () => {
 	const { api } = fakeApi((url) => {
 		if (url.pathname.endsWith("/branches/412-merge")) {
@@ -295,7 +289,7 @@ test("filters that match nothing are named, not slugged", async () => {
 	mount(api, client(), `${PATH}?branch=412-merge&window=all`);
 
 	await expect
-		.element(page.getByText("Nothing on 412/merge. Clear the filters."))
+		.element(page.getByRole("heading", { name: "No reports" }))
 		.toBeVisible();
 	await expect
 		.element(page.getByRole("button", { name: "branch 412/merge" }))
@@ -421,13 +415,12 @@ test("a search after nothing was found shows no zero state while it loads", asyn
 				}),
 	);
 	mount(api, client());
-	await expect
-		.element(page.getByRole("heading", { name: "No reports in this window" }))
-		.toBeVisible();
+	const none = page.getByRole("heading", { name: "No reports", exact: true });
+	await expect.element(none).toBeVisible();
 
 	await page.getByRole("button", { name: "Show all time" }).click();
 	await wait(100);
-	expect(document.body.textContent).not.toContain("No reports yet");
+	expect(none.elements()).toEqual([]);
 
 	answer({ data: [reportFixture(0)], total: 1 });
 	await expect.element(table()).toBeVisible();

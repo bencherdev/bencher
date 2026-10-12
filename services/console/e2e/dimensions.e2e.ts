@@ -7,7 +7,7 @@ import { expect, nextPath, seed, settle, signedIn, test } from "./fixtures";
 
 const { hashbrown } = seed.projects;
 
-const READ_ONLY = "Read only. Ask a project Maintainer for access.";
+const READ_ONLY = "Read only";
 
 const HOUR = 60 * 60 * 1_000;
 
@@ -230,7 +230,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		await row.getByRole("button", { name: "Archive feature-simd" }).click();
 		const impact = page.getByRole("group", { name: "Archive feature-simd" });
 		await expect(impact).toContainText(
-			"Archiving feature-simd archives 1 threshold and hides its lines. A run that reports it brings it back.",
+			"Hides its lines and archives 1 threshold",
 		);
 		await impact.getByRole("button", { name: "Archive feature-simd" }).click();
 
@@ -292,7 +292,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 			.getByRole("button", { name: "Unarchive feature-simd" })
 			.click();
 		await expect(page.getByRole("main").getByRole("status")).toContainText(
-			"Unarchived feature-simd and 1 threshold.",
+			"Unarchived feature-simd and 1 threshold",
 		);
 		await expect
 			.poll(
@@ -508,7 +508,7 @@ test.describe("as a reader who is a member of nothing", () => {
 	// Kills Archive drawn for a reader the API would refuse.
 	test("the lists and the pages draw no Archive", async ({ page }) => {
 		await page.goto(nextPath(hashbrown.slug, "branches"));
-		await expect(page.getByText(READ_ONLY)).toBeVisible();
+		await expect(page.getByText(READ_ONLY, { exact: true })).toBeVisible();
 		await expect(
 			list(page, "Active branches").getByRole("link", { name: "main" }),
 		).toBeVisible();
@@ -518,7 +518,7 @@ test.describe("as a reader who is a member of nothing", () => {
 		await expect(
 			page.getByRole("heading", { level: 1, name: "main" }),
 		).toBeVisible();
-		await expect(page.getByText(READ_ONLY)).toBeVisible();
+		await expect(page.getByText(READ_ONLY, { exact: true })).toBeVisible();
 		await expect(page.getByRole("button", { name: /Archive/ })).toHaveCount(0);
 	});
 });

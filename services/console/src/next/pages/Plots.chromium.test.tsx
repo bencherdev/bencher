@@ -44,15 +44,16 @@ interface Sent {
 }
 
 /**
- * An API holding `count` pins, "Pin 1" on top, each drawn over the window it is asked for.
+ * An API holding `count` pins, "Pin 1" on top, saved at `windows` (4w unless given), each drawn over the window it is asked for.
  * A read `held` matches waits until `release`; a change `refused` matches fails.
  */
-const plotsApi = (count: number) => {
+const plotsApi = (count: number, windows: readonly number[] = []) => {
 	const pins = new Map(
 		Array.from({ length: count }, (_, index) => {
 			const tile = testTile({
 				uuid: `plot-${index + 1}`,
 				title: `Pin ${index + 1}`,
+				...(windows[index] === undefined ? {} : { window: windows[index] }),
 			});
 			return [tile.plot.uuid, tile] as const;
 		}),
@@ -237,6 +238,77 @@ test("a page window keeps the tiles drawn and busy until its answer", async () =
 	expect(grid?.getAttribute("aria-busy")).toBe("false");
 });
 
+// Kills a page that opens at a page window rather than Per plot, a page window
+// left off some tiles or kept for the next view, tiles still tagged with their
+// own windows while they draw the page's, and a Per plot that asks again.
+test("Per plot draws each tile at its own window, and a page window draws them all for this view only", async () => {
+	const DAY = 86_400;
+	const { api, plotsReads } = plotsApi(3, [7 * DAY, 28 * DAY, 92 * DAY]);
+	const client = newClient(api, 3);
+	mount(api, client);
+	const windowGroup = page.getByRole("radiogroup", { name: "Window" });
+	const own = [
+		["Pin 1", "1w"],
+		["Pin 2", "4w"],
+		["Pin 3", "3m"],
+	] as const;
+	const drawnAtOwn = async () => {
+		for (const [title, window] of own) {
+			await expect
+				.element(figure(title))
+				.toHaveAccessibleName(`2 lines over ${window}`);
+			await expect
+				.element(
+					page
+						.getByRole("region", { name: title, exact: true })
+						.getByText(window, { exact: true }),
+				)
+				.toBeVisible();
+		}
+		await expect
+			.element(windowGroup.getByRole("radio", { name: "Per plot" }))
+			.toBeChecked();
+	};
+	await drawnAtOwn();
+
+	await windowGroup.getByRole("radio", { name: "1w" }).click();
+	for (const [title, window] of own) {
+		await expect.element(figure(title)).toHaveAccessibleName("2 lines over 1w");
+		expect(
+			page
+				.getByRole("region", { name: title, exact: true })
+				.getByText(window, { exact: true })
+				.elements(),
+		).toEqual([]);
+	}
+	const asked = plotsReads().length;
+	await windowGroup.getByRole("radio", { name: "Per plot" }).click();
+	await drawnAtOwn();
+	expect(plotsReads()).toHaveLength(asked);
+
+	await windowGroup.getByRole("radio", { name: "3m" }).click();
+	await expect.element(figure("Pin 1")).toHaveAccessibleName("2 lines over 3m");
+	dispose?.();
+	document.body.replaceChildren();
+	mount(api, client);
+	await drawnAtOwn();
+});
+
+// Kills an empty Plots whose places to pin from do not lead to their tabs.
+test("an empty Plots links to Explore, Reports, and Alerts to pin from", async () => {
+	const { api } = plotsApi(0);
+	mount(api, newClient(api, 0));
+	for (const [name, tab] of [
+		["Explore", "explore"],
+		["report", "reports"],
+		["alert", "alerts"],
+	] as const) {
+		await expect
+			.element(page.getByRole("link", { name, exact: true }))
+			.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/${tab}`);
+	}
+});
+
 // Kills a confirmed move kept only in the page, so coming back draws the old
 // order from the cache until the API answers again.
 test("a move is in the cache when the page is opened again", async () => {
@@ -319,7 +391,7 @@ test("a move from a tile's menu returns the focus to its More button", async () 
 	// Rename, Move up, Move to top.
 	await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
 	await expect
-		.element(page.getByText("Bencher did not move the plot. Try again."))
+		.element(page.getByText("Bencher did not move the plot"))
 		.toBeVisible();
 	expect(titles()).toEqual(["Pin 2", "Pin 1", "Pin 3"]);
 	expect(focusedName()).toBe("More for Pin 3");

@@ -27,16 +27,55 @@ const Start = () => {
 	return (
 		<section class="ex-startcard" aria-labelledby="ex-start">
 			<h2 class="seclabel" id="ex-start">
-				Or start from
+				Start from
 			</h2>
 			<div class="ex-cols">
+				<List
+					id="ex-plots"
+					title="Pinned plots"
+					all={{ href: projectPath(slug(), "plots"), text: "All plots" }}
+					result={plots()}
+					rows={START.plots}
+					empty="No pinned plots"
+				>
+					{(plot: JsonPlot) => (
+						<a class="ex-srow" href={`${explore()}${plotSearch(plot)}`}>
+							<span class="grow">
+								<b class="ex-ellip">{plot.title ?? "Untitled plot"}</b>
+								<span class="ex-sub">{rollingName(plot.window)}</span>
+							</span>
+						</a>
+					)}
+				</List>
+				<List
+					id="ex-reports"
+					title="Latest reports"
+					all={{ href: projectPath(slug(), "reports"), text: "All reports" }}
+					result={reports()}
+					rows={START.reports}
+					empty="No reports"
+				>
+					{(report: JsonReport) => (
+						<a class="ex-srow" href={reportPath(slug(), report.uuid)}>
+							<span class="grow">
+								<span class="ex-sline">
+									<b>{report.branch.name}</b>
+									<span class="muted">· {report.testbed.name}</span>
+								</span>
+								<span class="ex-sub">
+									{formatWhen(Date.parse(report.start_time))}
+								</span>
+							</span>
+						</a>
+					)}
+				</List>
 				<List
 					id="ex-alerts"
 					title="Alerting now"
 					all={{ href: projectPath(slug(), "alerts"), text: "All alerts" }}
 					result={alerts()}
 					rows={START.alerts}
-					empty="No alerts are active."
+					empty="No alerts"
 				>
 					{(alert: JsonAlert) => {
 						const delta =
@@ -64,7 +103,6 @@ const Start = () => {
 										}),
 									)
 								}
-								aria-label={`${[alert.benchmark.name, ...tags, measure.name].join(" ")} on ${branch.name}, ${testbed.name}${delta ? `, ${delta.text}` : ""}: open in Explore`}
 							>
 								<span class="ex-alertdot" aria-hidden="true" />
 								<span class="grow">
@@ -83,45 +121,6 @@ const Start = () => {
 							</a>
 						);
 					}}
-				</List>
-				<List
-					id="ex-reports"
-					title="Latest reports"
-					all={{ href: projectPath(slug(), "reports"), text: "All reports" }}
-					result={reports()}
-					rows={START.reports}
-					empty="No reports yet."
-				>
-					{(report: JsonReport) => (
-						<a class="ex-srow" href={reportPath(slug(), report.uuid)}>
-							<span class="grow">
-								<span class="ex-sline">
-									<b>{report.branch.name}</b>
-									<span class="muted">· {report.testbed.name}</span>
-								</span>
-								<span class="ex-sub">
-									{formatWhen(Date.parse(report.start_time))}
-								</span>
-							</span>
-						</a>
-					)}
-				</List>
-				<List
-					id="ex-plots"
-					title="Pinned plots"
-					all={{ href: projectPath(slug(), "plots"), text: "All plots" }}
-					result={plots()}
-					rows={START.plots}
-					empty="No plots are pinned yet."
-				>
-					{(plot: JsonPlot) => (
-						<a class="ex-srow" href={`${explore()}${plotSearch(plot)}`}>
-							<span class="grow">
-								<b class="ex-ellip">{plot.title ?? "Untitled plot"}</b>
-								<span class="ex-sub">{rollingName(plot.window)} rolling</span>
-							</span>
-						</a>
-					)}
 				</List>
 			</div>
 		</section>
@@ -162,7 +161,7 @@ const List = <T,>(props: {
 				{(data) => <For each={data()}>{props.children}</For>}
 			</Match>
 			<Match when={props.result.isError}>
-				<p class="ex-none">This list did not load.</p>
+				<p class="ex-none">This list did not load</p>
 			</Match>
 		</Switch>
 	</section>

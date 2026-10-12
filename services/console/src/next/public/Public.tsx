@@ -131,18 +131,9 @@ const Plotted = (props: PublicProps) => {
 		<main class="page pu">
 			<div class="sethead">
 				<div class="ph-title">
-					<div class="crumb-line">Public plot</div>
 					<Heading level={1} size="xl">
 						{props.name}
 					</Heading>
-					<p class="ph-sub pu-out">
-						Anyone can read this plot, up to 3 months back. Reports, alerts, and
-						thresholds are for project members.
-					</p>
-					<p class="ph-sub pu-in">
-						The public plot, as anyone sees it. The console has this project's
-						reports, alerts, and thresholds.
-					</p>
 				</div>
 				<div class="ph-actions pu-in">
 					<ButtonLink
@@ -158,14 +149,7 @@ const Plotted = (props: PublicProps) => {
 					<span class="eyebrow">Query</span>
 					{/* The names arrive with the plot, and a pill that grew would push the rest along. */}
 					<span class="pu-sum">
-						<Show
-							when={!open()}
-							fallback={
-								<span class="muted sm pu-ro">
-									read only: the six boxes behind this plot
-								</span>
-							}
-						>
+						<Show when={!open()}>
 							<Show
 								when={
 									!drawable(props.query) ||
@@ -209,18 +193,7 @@ const Plotted = (props: PublicProps) => {
 					total={undefined}
 					now={Date.now}
 					onQuery={edit}
-					reach={
-						props.answer?.window.clamped ? (
-							<>
-								cut to its last 3 months
-								<span class="pu-out">
-									. <a href={props.signIn}>Log in</a> to see it all
-								</span>
-							</>
-						) : (
-							"up to 3 months back"
-						)
-					}
+					presetsOnly
 				>
 					<span class="spacer" />
 					<Button size="sm" onClick={() => props.onShare?.()}>
@@ -231,12 +204,7 @@ const Plotted = (props: PublicProps) => {
 			</section>
 			<Show
 				when={drawable(props.query)}
-				fallback={
-					<p class="lede">
-						This link names no lines to draw. A project member picks them in
-						the console and shares the link.
-					</p>
-				}
+				fallback={<p class="lede">No lines</p>}
 			>
 				<section class="ex-plot" aria-label="Plot" aria-busy={props.busy}>
 					<Show when={props.refused}>
@@ -281,6 +249,9 @@ const Plotted = (props: PublicProps) => {
 									scale={props.query.yScale}
 									layout={layout()}
 									reserve={reserve()}
+									note={
+										props.answer?.window.clamped ? "Cut to 3 months" : undefined
+									}
 								/>
 							);
 						}}
@@ -405,34 +376,19 @@ const plural = (count: number, one: string, many: string) =>
 /** The page a reader sees for a project they cannot read, which may not exist; a signed in reader is not asked to log in. */
 const Locked = (props: { signIn: string }) => (
 	<main class="page pu-locked">
-		<section class="pu-lockcard pu-out" aria-labelledby="pu-locked">
+		<section class="pu-lockcard" aria-labelledby="pu-locked">
 			<span class="pu-lock" aria-hidden="true">
 				<Icon name="read-only" />
 			</span>
 			<Heading level={1} size="xl" id="pu-locked">
-				Log in to see this page
+				Private or not found
 			</Heading>
-			<p class="lede">
-				This page is private, or it does not exist. Log in with an account that
-				belongs to its project.
-			</p>
-			<div class="btnrow">
+			<div class="btnrow pu-out">
 				<ButtonLink variant="primary" href={props.signIn}>
 					Log in
 				</ButtonLink>
 				<ButtonLink href="/auth/signup">Sign up</ButtonLink>
 			</div>
-		</section>
-		<section class="pu-lockcard pu-in" aria-labelledby="pu-private">
-			<span class="pu-lock" aria-hidden="true">
-				<Icon name="read-only" />
-			</span>
-			<Heading level={1} size="xl" id="pu-private">
-				This project is private, or it does not exist
-			</Heading>
-			<p class="lede">
-				Your account cannot see it. Ask a member of its project for access.
-			</p>
 		</section>
 	</main>
 );

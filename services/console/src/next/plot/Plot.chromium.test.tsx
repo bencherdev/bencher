@@ -838,7 +838,7 @@ describe("Plot readout hold", () => {
 	const wait = (ms: number) =>
 		new Promise((resolve) => setTimeout(resolve, ms));
 
-	/** Hovers the first point at `y` in the plot, low unless given, and returns the way to its readout's link. */
+	/** Hovers the first point, low in the plot, with a report link unless `linked` is false, and returns the way to its readout's link. */
 	const atFirstPoint = async (linked = true) => {
 		const { setData } = mount({
 			data: CLOSE,
@@ -915,6 +915,27 @@ describe("Plot readout hold", () => {
 			await settle();
 			pointer(over, "pointermove", box.left + 6, y);
 			expect(shown(), `${y}`).toBe(held ? "aaaaaa0" : "aaaaaa1");
+			await wait(GRACE_MS + 100);
+		}
+	});
+
+	// Kills a link box read from the readout's padding edge, which sits a border's width up and left of the link.
+	test("holds for a move into the link's first pixel row or column and not the one beside it", async () => {
+		const { over, box } = await atFirstPoint();
+		const row = linkRow();
+		for (const [from, to, held] of [
+			[[box.left, row.top + 0.5], [box.left + 6, row.top + 0.5], true],
+			[[box.left, row.top - 0.5], [box.left + 6, row.top - 0.5], false],
+			[[row.left + 0.5, row.bottom - 2], [row.left + 0.5, row.top + 2], true],
+			[[row.left - 0.5, row.bottom - 2], [row.left - 0.5, row.top + 2], false],
+		] as const) {
+			pointer(over, "pointerleave", box.left, box.bottom + 20);
+			pointer(over, "pointermove", box.left, box.bottom - 10);
+			await settle();
+			pointer(over, "pointermove", ...from);
+			expect(shown(), `${from}`).toBe("aaaaaa0");
+			pointer(over, "pointermove", ...to);
+			expect(shown(), `${to}`).toBe(held ? "aaaaaa0" : "aaaaaa1");
 			await wait(GRACE_MS + 100);
 		}
 	});

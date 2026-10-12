@@ -82,9 +82,9 @@ test("a reader without manage sees no key and no control", () => {
 		0,
 	);
 	expect(page.getByRole("table").elements()).toHaveLength(0);
-	expect(
-		page.getByText("Read only. Ask a project Maintainer").elements(),
-	).toHaveLength(1);
+	expect(page.getByText("Read only", { exact: true }).elements()).toHaveLength(
+		1,
+	);
 });
 
 // Kills key lists that wait forever on a failed read, with no way to retry.
@@ -183,7 +183,7 @@ test("a key made from the Revoked list shows among the active ones", async () =>
 	await page.getByRole("button", { name: "Create key" }).click();
 	const reveal = page.getByRole("dialog", { name: "Copy your new key" });
 	await expect
-		.element(reveal.getByRole("group", { name: "In a shell or a CI step" }))
+		.element(reveal.getByRole("group", { name: "Export line" }))
 		.toHaveTextContent("export BENCHER_API_KEY=bencher_run_secret");
 	// The one showing of the secret survives a stray Escape.
 	await userEvent.keyboard("{Escape}");
@@ -239,9 +239,7 @@ test("a key name is held to the API's 64 bytes", async () => {
 	dispose = mount(() => <Keys />, { api, cached }).dispose;
 	await page.getByRole("button", { name: "New key" }).click();
 	await page.getByRole("textbox", { name: "Name" }).fill("é".repeat(33));
-	await expect
-		.element(page.getByText("Too long: 64 bytes at most."))
-		.toBeVisible();
+	await expect.element(page.getByText("66 of 64 bytes")).toBeVisible();
 	await expect
 		.element(page.getByRole("button", { name: "Create key" }))
 		.toBeDisabled();

@@ -111,8 +111,8 @@ const boot = (mount: HTMLElement) => {
 				if (turn === asked) {
 					setRefused(
 						error.status && error.status < 500
-							? "The API refused this query."
-							: "The API did not answer.",
+							? "The API refused this query"
+							: "The plot did not load",
 					);
 					setBusy(false);
 				}

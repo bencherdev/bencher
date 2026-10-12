@@ -283,9 +283,9 @@ test.describe("signed out", () => {
 			(92 * DAY) / 1000,
 		);
 		await twoLinesDrawn(page);
-		// The note takes the place of the window's reach, so nothing moves.
-		const reach = page.locator(".muted.sm").filter({ hasText: /3 months/ });
-		await expect(reach).toHaveText(/^cut to its last 3 months/);
+		await expect(
+			page.getByRole("region", { name: "Plot" }).getByText(/3 months/),
+		).toBeVisible();
 		await expect(
 			page
 				.getByRole("radiogroup", { name: "Window" })
@@ -347,7 +347,7 @@ test.describe("signed out", () => {
 		const path = publicPath(seed.projects.private.slug, "?x_axis=version");
 		await page.goto(path);
 		await expect(
-			page.getByRole("heading", { level: 1, name: "Log in to see this page" }),
+			page.getByRole("heading", { level: 1, name: "Private or not found" }),
 		).toBeVisible();
 		await expect(
 			page.getByRole("main").getByRole("link", { name: "Log in" }),
@@ -514,10 +514,7 @@ test.describe("a signed in reader who is not a member", () => {
 	}) => {
 		await page.goto(publicPath(seed.projects.private.slug));
 		await expect(
-			page.getByRole("heading", {
-				level: 1,
-				name: "This project is private, or it does not exist",
-			}),
+			page.getByRole("heading", { level: 1, name: "Private or not found" }),
 		).toBeVisible();
 		for (const name of ["Log in", "Sign up"]) {
 			await expect(page.getByRole("link", { name })).toHaveCount(0);

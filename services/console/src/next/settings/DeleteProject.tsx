@@ -69,9 +69,8 @@ const DeleteProject = (props: {
 			</div>
 			<div class="ui-dialog-body">
 				<p id="del-desc" class="text2">
-					Every report, threshold, alert, and pinned plot in{" "}
-					{props.project.name} goes with it. Members lose access at once. It
-					cannot be undone.
+					Every report, threshold, alert, and pinned plot goes with it, for
+					good.
 				</p>
 				<div class="field">
 					<label for="del-slug" class="text2 sm">
@@ -85,22 +84,12 @@ const DeleteProject = (props: {
 						autocomplete="off"
 						spellcheck={false}
 						autofocus
-						aria-describedby="del-hint"
 					/>
-					<span class="fhelp" id="del-hint">
-						{matches()
-							? "The slug matches."
-							: "Delete project stays off until the slug matches."}
-					</span>
 				</div>
 				<Show when={failed()}>
 					{(failure) => (
 						<p class="ferror" role="alert">
-							{failureOf(
-								failure().error,
-								"Bencher did not delete the project",
-								"The Bencher API did not answer, so the project is still there.",
-							)}
+							{failureOf(failure().error, "Bencher did not delete the project")}
 						</p>
 					)}
 				</Show>

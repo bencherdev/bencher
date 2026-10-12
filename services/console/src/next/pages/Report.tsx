@@ -222,15 +222,7 @@ const Report = () => {
 		prefetchReport(client, api, slug(), uuid, view(), perPage);
 
 	return (
-		<Show
-			when={!missing()}
-			fallback={
-				<NotFound
-					slug={slug()}
-					project={bootstrap().data?.project.name ?? slug()}
-				/>
-			}
-		>
+		<Show when={!missing()} fallback={<NotFound slug={slug()} />}>
 			<main class="page">
 				<div class="pagehead rp-head">
 					<div class="ph-title">
@@ -283,9 +275,7 @@ const Report = () => {
 					<Match when={report()?.total === 0 && !busy()}>
 						<div class="card soft rp-empty">
 							<Heading level={2} size="lg">
-								{view().search
-									? `No lines match "${view().search}"`
-									: "This report has no lines"}
+								No lines
 							</Heading>
 							<Show when={view().search}>
 								<Button onClick={() => setView({ ...view(), search: "" })}>
@@ -328,9 +318,7 @@ const Report = () => {
 					</Match>
 					<Match when={failure()}>
 						<Banner status="error" role="alert" class="load-error">
-							<span class="grow">
-								This report did not load: the Bencher API did not answer.
-							</span>
+							<span class="grow">This report did not load</span>
 							<Button size="sm" onClick={() => batches()[0]?.refetch()}>
 								Retry
 							</Button>
@@ -393,13 +381,9 @@ const Crumb = (props: { slug: string; readOnly?: boolean }) => (
 		<a href={projectPath(props.slug, "reports")}>Reports</a>
 		<span aria-hidden="true">/</span>
 		<Show when={props.readOnly}>
-			<span
-				class="rp-ro"
-				title="Read only. Ask a project Maintainer for access."
-			>
+			<span class="rp-ro">
 				<Icon name="read-only" />
 				Read only
-				<span class="sr-only">. Ask a project Maintainer for access.</span>
 			</span>
 		</Show>
 	</div>
@@ -527,11 +511,7 @@ const Selection = (props: {
 }) => (
 	<section class="rp-selbar" aria-label="Selected lines">
 		<span class="rp-selcount" aria-live="polite">
-			{props.count === 0
-				? "Select lines to open them together in Explore"
-				: props.count === 1
-					? "1 line selected"
-					: `${props.count} lines selected`}
+			{props.count === 1 ? "1 line selected" : `${props.count} lines selected`}
 		</span>
 		<Show when={props.count > 0}>
 			<button
@@ -568,7 +548,7 @@ const Selection = (props: {
 	</section>
 );
 
-const NotFound = (props: { slug: string; project: string }) => (
+const NotFound = (props: { slug: string }) => (
 	<main class="page">
 		<div class="pagehead">
 			<div class="ph-title">
@@ -578,19 +558,5 @@ const NotFound = (props: { slug: string; project: string }) => (
 				</Heading>
 			</div>
 		</div>
-		<section class="card soft rp-missing">
-			<Heading level={2} size="lg">
-				{props.project} has no report here
-			</Heading>
-			<p>It may have been deleted, or the link may be mistyped.</p>
-			<a
-				class="ui-button"
-				data-variant="primary"
-				data-size="md"
-				href={projectPath(props.slug, "reports")}
-			>
-				Open Reports
-			</a>
-		</section>
 	</main>
 );

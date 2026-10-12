@@ -16,7 +16,7 @@ import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { addKey, keysQuery, revokeKey } from "./data";
-import { TOO_LONG, failureOf, tooLong } from "./general";
+import { failureOf, overBytes, tooLong } from "./general";
 import Head from "./Head";
 import {
 	DEFAULT_EXPIRY,
@@ -63,7 +63,7 @@ const Keys = () => {
 
 	const revoke = async (key: JsonProjectKey) => {
 		setFailure("");
-		setNote(`Revoked ${key.name}. It cannot be used again.`);
+		setNote(`Revoked ${key.name}`);
 		// A read of the active list in flight would land over the change.
 		await client.cancelQueries({
 			queryKey: ["console", "keys", slug(), "active"],
@@ -88,13 +88,7 @@ const Keys = () => {
 		} catch (error) {
 			undo();
 			setNote("");
-			setFailure(
-				failureOf(
-					error,
-					`Bencher did not revoke ${key.name}`,
-					`The Bencher API did not answer, so ${key.name} still works.`,
-				),
-			);
+			setFailure(failureOf(error, `Bencher did not revoke ${key.name}`));
 		}
 	};
 
@@ -115,14 +109,7 @@ const Keys = () => {
 						</Button>
 					) : undefined
 				}
-			>
-				<p class="set-lede">
-					A project key lets <span class="mono">bencher run</span> report to{" "}
-					{bootstrap().data?.project.name ?? slug()}. Runs read it from{" "}
-					<span class="mono">BENCHER_API_KEY</span>. Bencher shows a key once,
-					when it is created.
-				</p>
-			</Head>
+			/>
 			<Show when={manage() !== false}>
 				<div class="setbody tight">
 					<div class="toolbar">
@@ -173,9 +160,7 @@ const Keys = () => {
 								fallback={<Skeleton size="card" />}
 							>
 								<Banner status="error" role="alert" class="load-error">
-									<span class="grow">
-										The keys did not load: the Bencher API did not answer.
-									</span>
+									<span class="grow">The keys did not load</span>
 									<Button size="sm" onClick={() => listed().refetch()}>
 										Retry
 									</Button>
@@ -223,7 +208,6 @@ const Keys = () => {
 					{(target) => (
 						<Revoke
 							target={target}
-							project={bootstrap().data?.project.name ?? slug()}
 							onDismiss={close}
 							onRevoke={() => {
 								close();
@@ -269,11 +253,7 @@ const KeyTable = (props: {
 					fallback={
 						<tr>
 							<td colSpan={4} data-fold="l1">
-								<p class="keys-empty">
-									{isActive()
-										? "No active keys. New key makes one."
-										: "No revoked keys."}
-								</p>
+								<p class="keys-empty">No keys</p>
 							</td>
 						</tr>
 					}
@@ -401,15 +381,12 @@ const NewKey = (props: {
 							placeholder="release-benchmarks"
 							autocomplete="off"
 							autofocus
-							aria-describedby="nk-name-h nk-name-e"
+							aria-describedby="nk-name-e"
 							aria-invalid={long() ? true : undefined}
 						/>
-						<span class="fhelp" id="nk-name-h">
-							Up to 64 characters, so you can tell your keys apart.
-						</span>
 						<Show when={long()}>
 							<p class="ferror" id="nk-name-e">
-								{TOO_LONG}
+								{overBytes(name().trim())}
 							</p>
 						</Show>
 					</div>
@@ -442,11 +419,7 @@ const NewKey = (props: {
 					<Show when={failed()}>
 						{(failure) => (
 							<p class="ferror" role="alert">
-								{failureOf(
-									failure().error,
-									"Bencher did not make the key",
-									"The Bencher API did not answer, so no key was made.",
-								)}
+								{failureOf(failure().error, "Bencher did not make the key")}
 							</p>
 						)}
 					</Show>
@@ -489,9 +462,7 @@ const Reveal = (props: {
 			</div>
 			<div class="ui-dialog-body">
 				<p id="rv-desc" class="text2">
-					This is the only time Bencher shows{" "}
-					<b class="mono">{props.created.name}</b>. Copy it now and store it as
-					a secret; Bencher keeps only a hash of it.
+					<b class="mono">{props.created.name}</b> · shown once
 				</p>
 				<div class="secret">
 					<span>{props.created.key}</span>
@@ -504,7 +475,7 @@ const Reveal = (props: {
 					</Button>
 				</div>
 				<fieldset class="fset field">
-					<legend class="flab">In a shell or a CI step</legend>
+					<legend class="flab">Export line</legend>
 					<div class="code">
 						<span>{line()}</span>
 						<Button
@@ -519,10 +490,7 @@ const Reveal = (props: {
 					</div>
 				</fieldset>
 				<p class="fhelp">
-					{end().text === "Never"
-						? "It never expires."
-						: `Expires ${end().text}.`}{" "}
-					You can revoke it from this page at any time.
+					{end().text === "Never" ? "Never expires" : `Expires ${end().text}`}
 				</p>
 			</div>
 			<div class="ui-dialog-foot">
@@ -536,7 +504,6 @@ const Reveal = (props: {
 
 const Revoke = (props: {
 	target: JsonProjectKey;
-	project: string;
 	onDismiss: () => void;
 	onRevoke: () => void;
 }) => {
@@ -561,9 +528,7 @@ const Revoke = (props: {
 			</div>
 			<div class="ui-dialog-body">
 				<p id="rk-desc" class="text2">
-					Every run that uses this key stops reporting to {props.project} at
-					once. <b>Revoking cannot be undone:</b> a revoked key never works
-					again, and those runs need a new key.
+					Every run that uses it stops reporting, for good.
 				</p>
 				<dl>
 					<div class="kv">

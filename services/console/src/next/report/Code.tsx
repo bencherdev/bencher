@@ -38,7 +38,7 @@ const Code = (props: {
 			</div>
 			<Show when={copy() === "refused"}>
 				<p class="sm rp-refused" role="alert">
-					The browser refused to copy; select the command to copy it.
+					The browser refused to copy
 				</p>
 			</Show>
 		</>

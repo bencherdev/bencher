@@ -184,7 +184,7 @@ const Editor = (props: {
 						.filter((name) => !chosen.has(name) && name.includes(text()))
 						.map((name) => ({ value: name, label: name }));
 				}}
-				empty="The plot has drawn no other metric names."
+				empty="No other metrics"
 				onAdd={(option) =>
 					props.onQuery(withValue(props.query, "metrics", option.value))
 				}
@@ -307,7 +307,7 @@ const Sets = (props: {
 						}));
 				};
 			}}
-			empty="Add a benchmark to see its parameters."
+			empty="No parameters"
 			onAdd={(option) =>
 				props.onQuery(withValue(props.query, "sets", JSON.parse(option.value)))
 			}
@@ -334,11 +334,6 @@ const Sets = (props: {
 							<div
 								class="ex-set"
 								classList={{ "ex-covered": covering() !== undefined }}
-								title={
-									covering()
-										? `Covered by ${tagsOf(covering() ?? {}).join(" ") || "every variant"}, a wider set; kept as chosen.`
-										: undefined
-								}
 							>
 								<span class="ex-tags">
 									<For each={tags().length > 0 ? tags() : ["every variant"]}>

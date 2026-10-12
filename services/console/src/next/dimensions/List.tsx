@@ -285,7 +285,6 @@ const List = (props: {
 						failureOf(
 							error,
 							`Bencher did not ${archive ? "archive" : "unarchive"} ${name}`,
-							`The Bencher API did not answer, so ${name} is ${archive ? "still active" : "still archived"}.`,
 						),
 					);
 					throw error;
@@ -339,9 +338,7 @@ const List = (props: {
 					<Switch>
 						<Match when={batches()[0]?.isLoadingError}>
 							<Banner status="error" role="alert" class="load-error">
-								<span class="grow">
-									{kind().label} did not load: the Bencher API did not answer.
-								</span>
+								<span class="grow">{kind().label} did not load</span>
 								<Button size="sm" onClick={() => batches()[0]?.refetch()}>
 									Retry
 								</Button>
@@ -448,13 +445,7 @@ const List = (props: {
 				<Switch>
 					<Match when={first() && rows().length === 0 && !busy()}>
 						<div class="ui-table-scroll dm-empty">
-							<p>
-								{search().search
-									? `No ${kind().label.toLowerCase()} match "${search().search}".`
-									: search().archived
-										? `No archived ${kind().label.toLowerCase()}.`
-										: `No ${kind().label.toLowerCase()} yet. A run creates them.`}
-							</p>
+							<p>No {kind().label.toLowerCase()}</p>
 							<Show when={search().search}>
 								<Button
 									size="sm"
@@ -490,9 +481,7 @@ const List = (props: {
 					</Match>
 					<Match when={batches()[0]?.isLoadingError}>
 						<Banner status="error" role="alert" class="load-error">
-							<span class="grow">
-								{kind().label} did not load: the Bencher API did not answer.
-							</span>
+							<span class="grow">{kind().label} did not load</span>
 							<Button size="sm" onClick={() => batches()[0]?.refetch()}>
 								Retry
 							</Button>

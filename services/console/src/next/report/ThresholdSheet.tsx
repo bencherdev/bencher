@@ -84,22 +84,12 @@ const Snippets = (props: ThresholdSheetProps & { line: ReportLine }) => {
 					{props.line.measure.name}, metric {props.line.metric}, on {where()}
 				</span>
 			</div>
-			<p class="lede sm">
-				Runs declare thresholds; the console never creates one. A threshold
-				belongs to a branch, a testbed, and a measure, and checks every variant
-				there unless a parameters filter narrows it. The next run on {where()}{" "}
-				that declares one checks from then on. Once one threshold in a run names
-				a metric, every threshold in that run must name one.
-			</p>
 			<Show when={snippets().exact}>
 				{(snippet) => (
 					<section class="rp-sec" aria-label="Exactly this line">
 						<div class="seclabel">Exactly this line</div>
 						<p class="sm">
-							Filtered to this line's parameters and metric, it checks{" "}
-							{props.line.measure.name} for every variant carrying{" "}
-							<span class="mono">{label().tags.join(" ")}</span>:{" "}
-							<Count count={exact()} />.
+							<Count count={exact()} />
 						</p>
 						<Code
 							name="the command for exactly this line"
@@ -112,10 +102,7 @@ const Snippets = (props: ThresholdSheetProps & { line: ReportLine }) => {
 			<section class="rp-sec" aria-label="Every line of the measure">
 				<div class="seclabel">Every line of the measure</div>
 				<p class="sm">
-					Simpler and wider: without a parameters filter, it checks every{" "}
-					{props.line.measure.name} line with the metric{" "}
-					<span class="mono">{props.line.metric}</span>:{" "}
-					<Count count={simple()} />.
+					<Count count={simple()} />
 				</p>
 				<Code
 					name="the command for every line of the measure"
@@ -142,8 +129,8 @@ const Count = (props: { count: QueryObserverResult<number> }) => (
 		<Match when={props.count.data !== undefined}>
 			<b>
 				{props.count.data === 1
-					? "1 line in this report, this one"
-					: `${props.count.data} lines in this report, this one included`}
+					? "1 line in this report"
+					: `${props.count.data} lines in this report`}
 			</b>
 		</Match>
 		<Match when={props.count.isError}>

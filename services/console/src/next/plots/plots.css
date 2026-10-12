@@ -107,10 +107,6 @@
 	color: var(--color-text-muted);
 	font-size: 12px;
 }
-.plots-tfoot .dotsep {
-	margin: 0 -3px;
-}
-
 @media (max-width: 767px) {
 	.plots-grid {
 		grid-template-columns: minmax(0, 1fr);
@@ -198,12 +194,7 @@
 	padding: 48px 24px;
 	text-align: center;
 }
-.plots-empty h2 {
-	margin: 0;
-	font-size: 18px;
-}
 .plots-empty p {
-	max-width: 56ch;
 	margin: 0;
 	color: var(--color-text-muted);
 }

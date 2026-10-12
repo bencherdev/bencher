@@ -63,9 +63,7 @@ const Dimensions = () => {
 										title={KINDS[at.dimension].label}
 										readOnly={!shown().permissions.edit}
 										crumbs={[{ label: "Dimensions", path: "branches" }]}
-									>
-										<p class="set-lede">{KINDS[at.dimension].lede}</p>
-									</Head>
+									/>
 									<List
 										dimension={at.dimension}
 										perPage={perPage}

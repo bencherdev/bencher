@@ -20,7 +20,7 @@ import {
 
 const { hashbrown } = seed.projects;
 
-const READ_ONLY = "Read only. Ask a project Maintainer for access.";
+const READ_ONLY = "Read only";
 
 const general = (page: Page) =>
 	page.getByRole("heading", { level: 1, name: "General" });
@@ -229,7 +229,7 @@ test.describe("as a reader who is a member of nothing", () => {
 	test("General is read only, with no Danger section", async ({ page }) => {
 		await page.goto(nextPath(hashbrown.slug, "settings"));
 		await expect(general(page)).toBeVisible();
-		await expect(page.getByText(READ_ONLY)).toBeVisible();
+		await expect(page.getByText(READ_ONLY, { exact: true })).toBeVisible();
 		await expect(page.getByText(hashbrown.slug, { exact: true })).toBeVisible();
 
 		await expect(page.getByRole("textbox")).toHaveCount(0);
@@ -245,7 +245,7 @@ test.describe("as a reader who is a member of nothing", () => {
 	test("Keys shows no key and no control", async ({ page }) => {
 		await page.goto(nextPath(hashbrown.slug, "keys"));
 		await expect(keys(page)).toBeVisible();
-		await expect(page.getByText(READ_ONLY)).toBeVisible();
+		await expect(page.getByText(READ_ONLY, { exact: true })).toBeVisible();
 		await expect(page.getByRole("button", { name: "New key" })).toHaveCount(0);
 		await expect(page.getByRole("table")).toHaveCount(0);
 	});
@@ -320,7 +320,7 @@ test.describe("Keys, as the project's Maintainer", () => {
 
 	// Kills a revoke without its confirmation, one that only hides the row, and
 	// a Revoked list that does not hold it.
-	test("Revoke confirms that it cannot be undone and moves the key to Revoked", async ({
+	test("Revoke asks first and moves the key to Revoked", async ({
 		page,
 		request,
 	}) => {
@@ -334,12 +334,10 @@ test.describe("Keys, as the project's Maintainer", () => {
 
 		await page.getByRole("button", { name: `Revoke ${name}` }).click();
 		const confirm = page.getByRole("alertdialog", { name: `Revoke ${name}?` });
-		await expect(confirm).toContainText("Revoking cannot be undone");
+		await expect(confirm).toBeVisible();
 		await confirm.getByRole("button", { name: "Revoke key" }).click();
 		await expect(confirm).toBeHidden();
-		await expect(status(page)).toHaveText(
-			`Revoked ${name}. It cannot be used again.`,
-		);
+		await expect(status(page)).toHaveText(`Revoked ${name}`);
 		await expect(
 			active.getByRole("row", { name: new RegExp(name) }),
 		).toHaveCount(0);

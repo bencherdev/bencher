@@ -20,6 +20,32 @@ const api: Api = {
 	},
 };
 
+// Kills starting points out of the tabs' order, or drawn in an order that
+// their reading and keyboard order does not follow.
+for (const [width, edge] of [
+	[1280, "left"],
+	[390, "top"],
+] as const) {
+	test(`the starting points run Pinned plots, Latest reports, Alerting now at ${width} px`, async () => {
+		await page.viewport(width, 844);
+		dispose = mount(() => <Start />, { api }).dispose;
+		const lists = ["Pinned plots", "Latest reports", "Alerting now"].map(
+			(name) => page.getByRole("region", { name }).element(),
+		);
+		for (const [at, list] of lists.entries()) {
+			const next = lists[at + 1];
+			if (next) {
+				expect(
+					list.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING,
+				).toBeTruthy();
+				expect(next.getBoundingClientRect()[edge]).toBeGreaterThan(
+					list.getBoundingClientRect()[edge],
+				);
+			}
+		}
+	});
+}
+
 // Kills a link to a whole list too small to tap on a phone.
 test("on a phone each list's link to all of it is a 44 px target", async () => {
 	await page.viewport(390, 844);

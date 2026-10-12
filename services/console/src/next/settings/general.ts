@@ -54,7 +54,9 @@ const MAX_BYTES = 64;
 const bytes = (text: string) => new TextEncoder().encode(text).length;
 /** Over the API's 64 bytes for a name or a slug. */
 export const tooLong = (text: string) => bytes(text) > MAX_BYTES;
-export const TOO_LONG = "Too long: 64 bytes at most.";
+/** How far over the limit `text` is, as the pin title's says it. */
+export const overBytes = (text: string) =>
+	`${bytes(text)} of ${MAX_BYTES} bytes`;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** What the API would refuse in each field, in words for the reader. */
@@ -62,13 +64,14 @@ export const problemsOf = (draft: Draft): Partial<Record<Field, string>> => {
 	const problems: Partial<Record<Field, string>> = {};
 	const name = draft.name.trim();
 	if (!name) {
-		problems.name = "A project needs a name.";
+		problems.name = "Required";
 	} else if (tooLong(name)) {
-		problems.name = TOO_LONG;
+		problems.name = overBytes(name);
 	}
-	if (!SLUG.test(draft.slug) || tooLong(draft.slug)) {
-		problems.slug =
-			"Up to 64 lowercase letters and numbers, with single dashes between them.";
+	if (tooLong(draft.slug)) {
+		problems.slug = overBytes(draft.slug);
+	} else if (!SLUG.test(draft.slug)) {
+		problems.slug = "Lowercase letters, numbers, and single dashes";
 	}
 	const url = draft.url.trim();
 	if (url && !webUrl(url)) {
@@ -110,22 +113,18 @@ export const refusalOf = (error: unknown, patch: Patch): Refusal => {
 		if (error.status === PAYMENT_REQUIRED && patch.visibility !== undefined) {
 			return {
 				field: "visibility",
-				message: "Bencher kept the project public: private needs a paid plan.",
+				message: "Bencher kept the project public: private needs a paid plan",
 			};
 		}
 		if (error.status === CONFLICT && patch.slug !== undefined) {
 			return {
 				field: "slug",
-				message: "Another project already has this slug.",
+				message: "Another project has this slug",
 			};
 		}
 	}
 	return {
 		field: "form",
-		message: failureOf(
-			error,
-			"Bencher did not save the changes",
-			"The Bencher API did not answer, so nothing was saved.",
-		),
+		message: failureOf(error, "Bencher did not save the changes"),
 	};
 };

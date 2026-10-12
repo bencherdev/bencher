@@ -596,8 +596,8 @@ const Alerts = () => {
 						{(shownCounts) => (
 							<>
 								{filterCount(search()) > 0
-									? `Filtered to ${filterNames(search(), names()).join(", ")} · ${bootstrap().data?.active_alerts ?? 0} active in the project`
-									: `${shownCounts().dismissed} dismissed and ${shownCounts().silenced} silenced ${phrase().sentence}`}
+									? `${bootstrap().data?.active_alerts ?? 0} active in the project`
+									: `${shownCounts().dismissed} dismissed · ${shownCounts().silenced} silenced`}
 							</>
 						)}
 					</Show>
@@ -605,7 +605,7 @@ const Alerts = () => {
 				<Show when={bootstrap().data?.permissions.edit === false}>
 					<p class="ro-note">
 						<Icon name="read-only" />
-						Read only. Ask a project Maintainer for access.
+						Read only
 					</p>
 				</Show>
 			</div>
@@ -618,16 +618,12 @@ const Alerts = () => {
 			<Switch>
 				<Match when={notice() === "refused"}>
 					<Banner status="error" role="alert" class="load-error">
-						<span class="grow">
-							The alerts did not change: the Bencher API did not answer.
-						</span>
+						<span class="grow">The alerts did not change</span>
 					</Banner>
 				</Match>
 				<Match when={notice() === "partial"}>
 					<Banner status="warning" role="alert" class="load-error">
-						<span class="grow">
-							Some alerts did not change, so the list is read again.
-						</span>
+						<span class="grow">Some alerts did not change</span>
 					</Banner>
 				</Match>
 			</Switch>
@@ -648,11 +644,11 @@ const Alerts = () => {
 			/>
 			<Switch>
 				<Match when={first() && shown().length === 0 && !busy()}>
-					<Empty
-						search={search()}
-						quiet={(counts()?.dismissed ?? 0) + (counts()?.silenced ?? 0) === 0}
-						window={phrase().sentence}
-					/>
+					<div class="card soft al-empty">
+						<Heading level={2} size="lg">
+							No alerts
+						</Heading>
+					</div>
 				</Match>
 				<Match when={shown().length > 0}>
 					<div class="lr-alerts">
@@ -714,9 +710,7 @@ const Alerts = () => {
 				</Match>
 				<Match when={batches()[0]?.isLoadingError}>
 					<Banner status="error" role="alert" class="load-error">
-						<span class="grow">
-							Alerts did not load: the Bencher API did not answer.
-						</span>
+						<span class="grow">Alerts did not load</span>
 						<Button size="sm" onClick={() => batches()[0]?.refetch()}>
 							Retry
 						</Button>
@@ -736,7 +730,7 @@ const Alerts = () => {
 					count={activeCount()}
 					search={search()}
 					names={names()}
-					window={phrase().object}
+					window={phrase()}
 					onCancel={() => setConfirming(false)}
 					onConfirm={dismissAll}
 				/>
@@ -750,23 +744,11 @@ export default Alerts;
 const plural = (count: number, noun: string) =>
 	`${count} ${count === 1 ? noun : `${noun}s`}`;
 
-/** The window inside a sentence ("in the last 4 weeks") and on its own ("the last 4 weeks"). */
-const windowText = (search: AlertsSearch, now: number) => {
-	if (search.window.kind === "all") {
-		return { sentence: "over all time", object: "all time" };
-	}
-	const phrase = windowPhrase(search.window, now);
-	return {
-		sentence: phrase.replace(/^(In|From)/, (word) => word.toLowerCase()),
-		object: phrase.replace(/^(In|From) /, ""),
-	};
-};
-
-/** The names the chips show for the filters set. */
-const filterNames = (search: AlertsSearch, names: FilterNames) =>
-	FILTERS.flatMap((filter) =>
-		search[filter] === undefined ? [] : [names[filter] ?? "…"],
-	);
+/** The window on its own, such as "the last 4 weeks". */
+const windowText = (search: AlertsSearch, now: number) =>
+	search.window.kind === "all"
+		? "all time"
+		: windowPhrase(search.window, now).replace(/^(In|From) /, "");
 
 /** The names of the branch, testbed, and measure the search filters by, by UUID. */
 const useNames = (search: Accessor<AlertsSearch>) => {
@@ -882,30 +864,6 @@ const ReportHeader = (props: {
 	);
 };
 
-const Empty = (props: {
-	search: AlertsSearch;
-	/** Nothing in the window was dismissed or silenced either. */
-	quiet: boolean;
-	window: string;
-}) => {
-	const unfiltered = () =>
-		props.search.status === "active" && filterCount(props.search) === 0;
-	return (
-		<div class="card soft al-empty">
-			<Heading level={2} size="lg">
-				{unfiltered() ? "No active alerts" : "No alerts match"}
-			</Heading>
-			<p>
-				{unfiltered()
-					? props.quiet
-						? `Nothing alerted ${props.window}.`
-						: `Every alert ${props.window} is dismissed. Dismissed and All still list them.`
-					: `Nothing matches these filters ${props.window}. Clear a filter or widen the window.`}
-			</p>
-		</div>
-	);
-};
-
 const Selection = (props: {
 	chosen: readonly AlertLine[];
 	status: AlertsSearch["status"];
@@ -930,11 +888,7 @@ const Selection = (props: {
 				tabindex={-1}
 				ref={props.count}
 			>
-				{count() > 0
-					? `${count()} selected`
-					: props.narrow
-						? "Select alerts"
-						: "Select alerts to act on them together"}
+				{count()} selected
 			</span>
 			<Show when={count() > 0}>
 				<button
@@ -1022,11 +976,7 @@ const DismissAll = (props: {
 			</Button>
 		</div>
 		<div class="ui-dialog-body">
-			<p id="al-da-desc" class="text2">
-				This dismisses every active alert that matches the filters on this page,
-				including alerts not loaded yet.
-			</p>
-			<dl>
+			<dl id="al-da-desc">
 				<For each={FILTERS}>
 					{(filter) => (
 						<div class="kv">
@@ -1044,9 +994,6 @@ const DismissAll = (props: {
 					<dd>{props.window}</dd>
 				</div>
 			</dl>
-			<p class="muted">
-				Each moves to Dismissed, where Reactivate brings it back.
-			</p>
 		</div>
 		<div class="ui-dialog-foot">
 			<Button onClick={props.onCancel}>Cancel</Button>

@@ -80,15 +80,10 @@ const Setup = () => {
 							<Heading level={1} size="xl" id="pu-setup">
 								Send the first report
 							</Heading>
-							<p class="lede">
-								Runs create everything here: branches, testbeds, benchmarks,
-								variants, measures, and thresholds all come from{" "}
-								<code>bencher run</code>. Nothing is made by hand.
-							</p>
 							<Show when={!manage()}>
 								<p class="ro-note">
 									<Icon name="read-only" />
-									Read only. Ask a project Maintainer for access.
+									Read only
 								</p>
 							</Show>
 						</div>
@@ -108,8 +103,7 @@ const Setup = () => {
 											</div>
 											<p class="fwarn">
 												<Icon name="warning" />
-												Shown once. Bencher keeps only a hash of it, so copy it
-												now.
+												Shown once
 											</p>
 											<pre class="code">
 												{exportLine(key().key)}
@@ -130,24 +124,17 @@ const Setup = () => {
 										>
 											Create key
 										</Button>
-										<span class="fhelp">
-											A project key for <code>bencher run</code>, shown once.
-											Settings, Keys lists it and revokes it.
-										</span>
 									</div>
 									<Show when={failed()}>
 										<p class="ferror" role="alert">
-											Bencher did not make the key. Try again.
+											Bencher did not make the key
 										</p>
 									</Show>
 								</Match>
 								<Match when={!manage()}>
-									<p class="fhelp">
-										A Maintainer creates the key. Export it before you run:
-									</p>
 									<pre class="code">
 										{exportLine("")}
-										<span class="muted">the key a Maintainer gives you</span>
+										<span class="muted">key from a Maintainer</span>
 									</pre>
 								</Match>
 							</Switch>
@@ -165,20 +152,11 @@ const Setup = () => {
 									value="json"
 									onChange={() => {}}
 								/>
-								<span class="fhelp">
-									Version 1 projects read BMF v1 JSON; harness adapters join it
-									once version 1 accepts them.
-								</span>
 							</div>
 							<pre class="code">
 								{SAMPLE}
 								<Copy what="the sample" text={SAMPLE} />
 							</pre>
-							<p class="fhelp">
-								Save it as <code>results.json</code>, or have your harness write
-								the same shape: each benchmark lists its variants, each with its
-								parameters and a value per measure.
-							</p>
 						</div>
 						<div class="pu-step">
 							<h2 class="seclabel">3 · Run it</h2>
@@ -186,11 +164,6 @@ const Setup = () => {
 								{command()}
 								<Copy what="the command" text={command()} />
 							</pre>
-							<p class="fhelp">
-								The five threshold flags declare a first threshold: a t-test
-								that alerts when the latency value rises past its 99% boundary.
-								Later runs declare more the same way.
-							</p>
 							<p class="pu-docs">
 								<span class="muted">Docs:</span>
 								<a href="/docs/reference/bencher-metric-format/">BMF format</a>
@@ -203,8 +176,7 @@ const Setup = () => {
 						</div>
 						<p class="pu-wait" role="status">
 							<span class="pu-dot" aria-hidden="true" />
-							Waiting for the first report. When it lands, this card gives way
-							to Explore, with that report first among its starting points.
+							Waiting for the first report
 						</p>
 					</section>
 				</main>

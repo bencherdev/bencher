@@ -29,6 +29,18 @@ describe("modelText", () => {
 		);
 	});
 
+	// Kills a field an endpoint sends as null printed as "null", or a null window as "0 weeks".
+	test("leaves out a field sent as null", () => {
+		expect(
+			modelText({
+				test: "t_test",
+				upper_boundary: 0.99,
+				lower_boundary: null,
+				window: null,
+			}),
+		).toBe("t_test · upper_boundary 0.99");
+	});
+
 	// Kills a boundary of zero taken for an absent one.
 	test("prints a zero boundary", () => {
 		expect(modelText({ test: "static", upper_boundary: 0 })).toBe(

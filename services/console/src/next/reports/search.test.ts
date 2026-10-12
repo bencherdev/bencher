@@ -10,7 +10,6 @@ import {
 	decodeSearch,
 	encodeSearch,
 	filterCount,
-	nothingFound,
 	windowPhrase,
 	withoutFilters,
 } from "./search";
@@ -218,59 +217,6 @@ describe("windowPhrase", () => {
 		],
 	])("%o reads %s", (window, phrase) => {
 		expect(windowPhrase(window, NOW, "UTC")).toBe(phrase);
-	});
-});
-
-describe("nothingFound", () => {
-	// Kills a zero state that hides a filter, names a filter that is not set, or
-	// offers a wider window when there is none.
-	test.each([
-		[
-			{
-				window: { kind: "rolling", days: 7 },
-				branch: "feature-simd",
-				adapter: "magic",
-				alerts: false,
-			} as ReportsSearch,
-			"Nothing on feature-simd with the magic adapter in the last week. Widen the window or clear the filters.",
-		],
-		[
-			{
-				window: { kind: "all" },
-				branch: "main",
-				testbed: "macos-latest",
-				alerts: true,
-			} as ReportsSearch,
-			"Nothing on main and macos-latest with active alerts. Clear the filters.",
-		],
-		[
-			{
-				window: { kind: "rolling", days: 28 },
-				adapter: "json",
-				alerts: true,
-			} as ReportsSearch,
-			"Nothing with the json adapter and active alerts in the last 4 weeks. Widen the window or clear the filters.",
-		],
-		[DEFAULT_SEARCH, "Nothing in the last 4 weeks. Widen the window."],
-	])("%o", (search, text) => {
-		expect(nothingFound(search, NOW, "UTC")).toBe(text);
-	});
-
-	// Kills a zero state that names a branch or a testbed by its slug when its name is known.
-	test("names the branch and the testbed by name", () => {
-		expect(
-			nothingFound(
-				{
-					window: { kind: "all" },
-					branch: "412-merge",
-					testbed: "linux-x86-64",
-					alerts: false,
-				},
-				NOW,
-				"UTC",
-				{ branch: "412/merge", testbed: "Linux x86 64" },
-			),
-		).toBe("Nothing on 412/merge and Linux x86 64. Clear the filters.");
 	});
 });
 

@@ -107,9 +107,6 @@ const Controls = (props: {
 				/>
 				<span class="muted sm">days</span>
 			</Show>
-			<Show when={!props.narrow}>
-				<span class="muted sm">ending at this report</span>
-			</Show>
 			<Choice
 				name="report-group"
 				label="group"
