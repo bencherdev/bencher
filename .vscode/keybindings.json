@@ -2,10 +2,6 @@
 [
     {
         "key": "capslock capslock",
-        "command": "remote-containers.reopenInContainer"
-    },
-    {
-        "key": "capslock capslock",
         "command": "workbench.action.positionPanelRight"
     }
 ]
