@@ -39,18 +39,21 @@
 .console .brand {
 	display: inline-flex;
 	align-items: center;
-	gap: 10px;
-	font-weight: var(--font-weight-bold);
-	font-size: 20px;
-	letter-spacing: -0.01em;
-	color: var(--color-text-primary);
 	flex: none;
 }
-.brand svg {
-	display: block;
+/* Both themes' wordmarks are in the page, so a theme switch draws the other at
+   once; each is sized here, so neither moves the bar as it loads. */
+.brand img {
+	width: 150px;
+	height: 28.25px;
 }
-.mark-eye {
-	fill: var(--color-stroke-accent);
+.brand img + img,
+[data-theme="light"] .brand img,
+.tools-menu {
+	display: none;
+}
+[data-theme="light"] .brand img + img {
+	display: block;
 }
 .crumbs {
 	display: flex;
@@ -87,6 +90,16 @@
 }
 .console .docs {
 	color: var(--color-text-muted);
+}
+.tools {
+	display: contents;
+}
+.tools:popover-open {
+	display: flex;
+	inset: 52px 8px auto auto;
+	margin: 0;
+	flex-direction: row;
+	justify-content: space-between;
 }
 .console .avatar {
 	display: inline-block;
@@ -714,7 +727,7 @@
 	}
 }
 
-/* narrow: mark, project, bell, avatar; the tab row scrolls */
+/* narrow: wordmark, bell, menu, avatar; the tab row scrolls */
 @media (max-width: 767px) {
 	.console {
 		font-size: 13.5px;
@@ -722,29 +735,27 @@
 	.bar {
 		height: 52px;
 		gap: 6px;
-		padding: 0 8px 0 12px;
+		padding: 0 8px;
 	}
-	.brand-name,
-	.crumb-org,
-	.crumb-skel,
-	.console .docs,
-	.theme-toggle {
+	.crumbs,
+	.tools {
 		display: none;
 	}
 	.console .brand {
-		width: 44px;
 		height: 44px;
-		justify-content: center;
-		/* The hit area grows into the gaps, so the mark and the project stay put. */
-		margin: 0 -6px 0 -8px;
 	}
-	.console .bell {
+	.brand img {
+		width: 106px;
+		height: 20px;
+	}
+	.console .bell,
+	.tools-menu {
 		display: inline-grid;
 	}
-	.console .projlink {
-		height: 44px;
-		font-size: 15px;
-		font-weight: var(--font-weight-bold);
+	.console .docs {
+		display: inline-flex;
+		align-items: center;
+		padding: 0 8px;
 	}
 	.console .avatar {
 		width: 44px;

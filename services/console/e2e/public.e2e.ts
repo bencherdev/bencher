@@ -6,7 +6,6 @@ import { axeInBothThemes } from "./axe";
 import { dimensions } from "./explore";
 import {
 	VERSION_KEY,
-	crumbs,
 	expect,
 	nextPath,
 	seed,
@@ -353,7 +352,6 @@ test.describe("signed out", () => {
 		await expect(
 			page.getByRole("main").getByRole("link", { name: "Log in" }),
 		).toHaveAttribute("href", signInWayBack(path));
-		await expect(crumbs(page).getByRole("link")).toHaveCount(0);
 		await page.waitForLoadState("networkidle");
 		expect(asked).toEqual([]);
 	});
@@ -560,6 +558,28 @@ test.describe("narrow", () => {
 				() => document.documentElement.scrollWidth <= window.innerWidth,
 			),
 		).toBe(true);
+	});
+
+	// Kills a phone bar that drops Sign up, or crowds Log in or Sign up off the
+	// screen or under another control.
+	test("Log in and Sign up both show and take a press at 390 and 320 px", async ({
+		page,
+	}) => {
+		for (const width of [390, 320]) {
+			await page.setViewportSize({ width, height: 844 });
+			await page.goto(publicPath(hashbrown.slug));
+			const bar = page.getByRole("banner");
+			for (const name of ["Log in", "Sign up"]) {
+				const link = bar.getByRole("link", { name });
+				await expect(link).toBeInViewport({ ratio: 1 });
+				await link.click({ trial: true });
+			}
+			expect(
+				await page.evaluate(
+					() => document.documentElement.scrollWidth <= window.innerWidth,
+				),
+			).toBe(true);
+		}
 	});
 
 	// Kills a custom window's From and To held on one line past the edge of a

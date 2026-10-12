@@ -60,6 +60,25 @@ test("focus moves to the same control in the app", async () => {
 	await expect.element(tab).toHaveFocus();
 });
 
+// Kills a hand-off that tells a design system button from its static copy by
+// the trailing space the server writes after a spread class, which drops the
+// focus from the phone's menu button to the page.
+test("focus on a button moves to the same button in the app", async () => {
+	await page.viewport(390, 844);
+	const mount = staticPage();
+	for (const button of mount.querySelectorAll("button")) {
+		button.className += " ";
+	}
+	const menu = page.getByRole("button", { name: "Menu" });
+	const before = menu.element();
+	(before as HTMLElement).focus();
+
+	handOff(mount, () => paint(mount));
+
+	expect(menu.element()).not.toBe(before);
+	await expect.element(menu).toHaveFocus();
+});
+
 // Kills a skeleton whose wait starts over when the app draws it again.
 test("a skeleton already shown stays shown", () => {
 	const mount = staticPage();

@@ -50,3 +50,30 @@ test("the shell passes axe in both themes", async ({ page }) => {
 		).toBeVisible();
 	});
 });
+
+test.describe("with the system set to light", () => {
+	test.use({ colorScheme: "light" });
+
+	// Kills a wordmark that keeps to the system once the reader picks a theme,
+	// or to the theme the page started with once it is switched.
+	test("the wordmark follows the system until the reader picks a theme", async ({
+		page,
+	}) => {
+		const html = page.locator("html");
+		const wordmark = page.getByRole("banner").locator(".brand img:visible");
+		await page.goto(nextPath(hashbrown.slug, "reports"));
+		await expect(html).toHaveAttribute("data-theme", "light");
+		await expect(wordmark).toHaveAttribute("src", "/wordmark-light.svg");
+		await expect(
+			crumbs(page).getByRole("link", { name: seed.organization.name }),
+		).toBeVisible();
+
+		await page
+			.getByRole("button", { name: "Switch between light and dark" })
+			.click();
+		await expect(wordmark).toHaveAttribute("src", "/wordmark-dark.svg");
+		await page.reload();
+		await expect(html).toHaveAttribute("data-theme", "dark");
+		await expect(wordmark).toHaveAttribute("src", "/wordmark-dark.svg");
+	});
+});

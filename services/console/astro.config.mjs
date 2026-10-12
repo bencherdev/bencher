@@ -41,6 +41,10 @@ const SHARED_FILES = [
 		test: /[\\/]src[\\/]next[\\/](query[\\/]line|plot[\\/]format)\.ts$/,
 	},
 	{
+		name: "bar",
+		test: /[\\/](packages[\\/]ui[\\/]src[\\/](Banner|Button|Heading|Icon|Skeleton|ThemeToggle)\.tsx|src[\\/]next[\\/](shell[\\/]Tools\.tsx|(handoff|reader|theme)\.ts))$/,
+	},
+	{
 		name: "memory",
 		test: /[\\/]src[\\/]next[\\/](memory|paths)\.ts$/,
 	},
