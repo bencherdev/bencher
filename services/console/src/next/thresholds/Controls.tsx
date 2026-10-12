@@ -4,7 +4,7 @@ import Segmented from "@bencherdev/ui/Segmented";
 import Sheet from "@bencherdev/ui/Sheet";
 import { For, Show, createSignal, createUniqueId } from "solid-js";
 import { useNarrow } from "../plot/narrow";
-import { CustomRange } from "../reports/Controls";
+import { Clear, CustomRange } from "../reports/Controls";
 import DimensionFilters, {
 	type FilterNames,
 } from "../reports/DimensionFilters";
@@ -16,6 +16,7 @@ import {
 	pickWindow,
 	windowLabel,
 	withFilter,
+	withoutFilters,
 } from "./search";
 
 /** The status, the filters, and the window: a row of controls when wide, a full-width status, two chips, and a sheet when narrow. */
@@ -39,6 +40,7 @@ const Controls = (props: {
 		}
 	};
 	const count = () => filterCount(props.search);
+	const clear = () => props.onSearch(withoutFilters(props.search));
 	return (
 		<>
 			<div class="toolbar th-controls">
@@ -64,6 +66,8 @@ const Controls = (props: {
 						onPick={(filter, uuid) =>
 							props.onSearch(withFilter(props.search, filter, uuid))
 						}
+						clearable={count() > 0}
+						onClear={clear}
 					/>
 				</span>
 				<span class="spacer th-wide" />
@@ -135,9 +139,16 @@ const Controls = (props: {
 								onPick={(filter, uuid) =>
 									props.onSearch(withFilter(props.search, filter, uuid))
 								}
+								clearable={count() > 0}
+								onClear={clear}
 							/>
 						</div>
 					</Sheet>
+					<Clear
+						when={count() > 0}
+						to="[aria-haspopup=dialog]"
+						onClear={clear}
+					/>
 				</div>
 			</div>
 			<Show when={props.search.window.kind === "custom" && props.search.window}>

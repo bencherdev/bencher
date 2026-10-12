@@ -312,23 +312,38 @@ test("a new search starts again from one batch", async () => {
 	).toEqual(["1"]);
 });
 
-// Kills Clear filters that also resets the status or the window.
-test("Clear filters keeps the status and the window", async () => {
-	const { api } = fakeApi((url) =>
+// Kills a Clear that also resets the status or the window, asks for the
+// list more than once or with a filter, or adds more than one history entry
+// that Back does not undo.
+test("Clear keeps the status and the window, asks once, and Back brings the filter back", async () => {
+	const { api, requests } = fakeApi((url) =>
 		url.pathname.endsWith(`/branches/${MAIN}`)
 			? { data: { uuid: MAIN, name: "main", slug: "main" } }
 			: { data: thresholdsFixture([]) },
 	);
-	const history = mount(
-		api,
-		client(),
-		`${PATH}?status=archived&branch=${MAIN}&window=1w`,
-	);
+	const filtered = `${PATH}?status=archived&branch=${MAIN}&window=1w`;
+	const history = mount(api, client(), filtered);
+	const lists = () =>
+		requests.filter((url) => url.pathname.endsWith("/thresholds"));
+	await expect.poll(() => lists().length).toBe(1);
 
 	await page.getByRole("button", { name: "Clear filters" }).click();
 	await expect
 		.poll(() => history.get())
 		.toBe(`${PATH}?status=archived&window=1w`);
+	await expect.poll(() => lists().length).toBe(2);
+	await wait(300);
+	expect(
+		lists()
+			.slice(1)
+			.map((url) => url.searchParams.get("branch")),
+	).toEqual([null]);
+
+	history.back();
+	expect(history.get()).toBe(filtered);
+	await expect
+		.element(page.getByRole("button", { name: "branch main" }))
+		.toBeVisible();
 });
 
 // Kills a pick that asks the API again for the name its option already showed,

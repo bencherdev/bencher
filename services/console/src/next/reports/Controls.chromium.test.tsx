@@ -1,5 +1,6 @@
 import "@bencherdev/ui/styles.css";
 import "../styles/console.css";
+import "../report/report.css";
 import "./reports.css";
 import { QueryClientProvider } from "@tanstack/solid-query";
 import { Suspense, createSignal } from "solid-js";
@@ -204,6 +205,115 @@ test("the chips name the branch and the testbed", async () => {
 	await expect
 		.element(page.getByRole("button", { name: "testbed Linux x86 64" }))
 		.toBeVisible();
+});
+
+// Kills a Clear drawn with no filter set, or missing once one is.
+test("Clear is drawn only while a filter is set", async () => {
+	await page.viewport(1280, 720);
+	const { api } = fakeApi(() => ({ data: [] }));
+	mount(api);
+	const clear = page.getByRole("button", { name: "Clear filters" });
+	expect(clear.query()).toBeNull();
+
+	await page.getByRole("button", { name: "alerts any" }).click();
+	await page.getByRole("menuitemradio", { name: "With active alerts" }).click();
+	await expect.element(clear).toBeVisible();
+	await clear.click();
+	expect(clear.query()).toBeNull();
+});
+
+// Kills a Clear that leaves a filter (the active alerts one included) or
+// resets the window, one that searches more than once, and one that drops
+// the focus with itself.
+test("Clear clears every filter in one search, keeps the window, and leaves the focus on the first filter", async () => {
+	await page.viewport(1280, 720);
+	const { api } = fakeApi(() => ({ data: [] }));
+	const window = { kind: "rolling", days: 7 } as const;
+	mount(
+		api,
+		{
+			window,
+			branch: "main",
+			testbed: "macos",
+			adapter: "magic",
+			alerts: true,
+		},
+		{ branch: "main", testbed: "macOS" },
+	);
+
+	await page.getByRole("button", { name: "Clear filters" }).click();
+	expect(searches).toEqual([{ window, alerts: false }]);
+	await expect
+		.element(page.getByRole("button", { name: /^branch / }))
+		.toHaveFocus();
+});
+
+// Kills a Clear missing from a phone's bar or its Filters sheet while one
+// filter is set, a target under 44 px there, and a focus that falls with Clear
+// rather than moving to Filters, or to the first filter in the sheet, which
+// stays open.
+test("on a phone, Clear in the bar and in the Filters sheet is a 44 px target that clears every filter", async () => {
+	await page.viewport(390, 844);
+	const { api } = fakeApi(() => ({ data: [] }));
+	const filtered: ReportsSearch = { ...DEFAULT_SEARCH, adapter: "magic" };
+	const cleared = [{ window: DEFAULT_SEARCH.window, alerts: false }];
+	const target = (button: HTMLElement) => {
+		const { width, height } = button.getBoundingClientRect();
+		expect(Math.min(width, height)).toBeGreaterThanOrEqual(44);
+	};
+
+	mount(api, filtered);
+	const inBar = page.getByRole("button", { name: "Clear filters" });
+	target(inBar.element() as HTMLElement);
+	await inBar.click();
+	expect(searches).toEqual(cleared);
+	await expect
+		.element(page.getByRole("button", { name: "Filters, none applied" }))
+		.toHaveFocus();
+	dispose?.();
+	document.body.replaceChildren();
+
+	mount(api, filtered);
+	await page.getByRole("button", { name: "Filters, 1 applied" }).click();
+	const sheet = page.getByRole("dialog", { name: "Filters" });
+	const inSheet = sheet.getByRole("button", { name: "Clear filters" });
+	target(inSheet.element() as HTMLElement);
+	await inSheet.click();
+	expect(searches).toEqual(cleared);
+	await expect
+		.element(sheet.getByRole("button", { name: /^branch / }))
+		.toHaveFocus();
+	await expect.element(sheet).toBeVisible();
+});
+
+// Kills an adapter filter without a search box, a search that leaves the
+// fixed list whole, minds case, or asks the API, and options the keyboard
+// cannot pick.
+test("the adapter filter narrows as you type, asks nothing, and picks from the keyboard", async () => {
+	await page.viewport(1280, 720);
+	const { api, requests } = fakeApi(() => ({ data: [] }));
+	mount(api);
+
+	await page.getByRole("button", { name: "adapter any" }).click();
+	await expect
+		.element(page.getByRole("searchbox", { name: "Search adapters" }))
+		.toHaveFocus();
+	await userEvent.keyboard("GUNG");
+	await expect
+		.poll(() =>
+			[...document.querySelectorAll('[role="menuitemradio"]')].map(
+				(item) => item.textContent,
+			),
+		)
+		.toEqual([
+			"Any adapter",
+			"rust_gungraun",
+			"rust_gungraun_json",
+			"rust_gungraun_stdout",
+		]);
+	await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+	expect(searches).toEqual([{ ...DEFAULT_SEARCH, adapter: "rust_gungraun" }]);
+	expect(requests).toEqual([]);
 });
 
 // Kills a custom window that does not start as the four weeks ending today.

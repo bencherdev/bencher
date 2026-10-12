@@ -1,6 +1,7 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { createAlerts, createManyAlerts, raiseAlerts } from "./api";
 import { axeInBothThemes } from "./axe";
+import { dimensions } from "./explore";
 import {
 	alertsTopToBottom,
 	dismissWhileNextBatchIsOut,
@@ -440,6 +441,53 @@ test.describe("on a project of its own", () => {
 		await settle(page);
 		await tabRow(page).getByRole("link", { name: "Reports" }).click();
 		await expect(newerCount).toHaveText(/^1 total$/);
+	});
+});
+
+test.describe("Clear", () => {
+	// Kills a Clear that leaves the filter or resets the status, asks for the
+	// list more than once, adds more than one history entry, or drops the
+	// focus, and a Back that does not bring the filter back.
+	test("Clear lists every alert under the status in one request, and Back brings the filter back", async ({
+		page,
+		request,
+	}) => {
+		const { project } = await createAlerts(request);
+		const { branch } = await dimensions(request, project.slug);
+		await page.goto(
+			alerts(project.slug, `?status=all&branch=${branch("feature")}`),
+		);
+		await expect(heading(page)).toHaveText("0 active");
+		await settle(page);
+		const lists: URL[] = [];
+		page.on("request", (sent) => {
+			const url = new URL(sent.url());
+			if (url.pathname === `/v0/console/projects/${project.slug}/alerts`) {
+				lists.push(url);
+			}
+		});
+		const entries = await page.evaluate(() => history.length);
+
+		await page.getByRole("button", { name: "Clear filters" }).click();
+		await expect(heading(page)).toHaveText("3 active");
+		await expect(page).toHaveURL(/\/alerts\?status=all$/);
+		await expect(
+			page.getByRole("button", { name: "branch any" }),
+		).toBeFocused();
+		await settle(page);
+		expect(
+			lists.map((url) => [
+				url.searchParams.get("status"),
+				url.searchParams.has("branches"),
+			]),
+		).toEqual([["all", false]]);
+		expect(await page.evaluate(() => history.length)).toBe(entries + 1);
+
+		await page.goBack();
+		await expect(heading(page)).toHaveText("0 active");
+		await expect(
+			page.getByRole("button", { name: "branch feature" }),
+		).toBeVisible();
 	});
 });
 

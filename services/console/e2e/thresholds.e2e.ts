@@ -570,8 +570,9 @@ test.describe("on a phone", () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 
 	// Kills a table that keeps its columns on a phone, a window or filters left
-	// in a row of controls, a Filters sheet that does not open, targets under
-	// 44 px, and a page wider than the phone.
+	// in a row of controls, a Filters sheet that does not open, a phone bar
+	// without Clear or one that drops the focus, targets under 44 px, and a page
+	// wider than the phone.
 	test("rows fold, the window is one chip, the filters open in a sheet, and the threshold fits", async ({
 		page,
 		request,
@@ -600,7 +601,18 @@ test.describe("on a phone", () => {
 		await expect(
 			sheet.getByRole("button", { name: "testbed any" }),
 		).toBeVisible();
+		await sheet.getByRole("button", { name: "branch any" }).click();
+		await sheet.getByRole("menuitemradio", { name: "main" }).click();
 		await sheet.getByRole("button", { name: "Done" }).click();
+		await expect(page).toHaveURL(/[?&]branch=/);
+		const clear = page.getByRole("button", { name: "Clear filters" });
+		const size = await clear.boundingBox();
+		expect(
+			Math.min(size?.width ?? 0, size?.height ?? 0),
+		).toBeGreaterThanOrEqual(44);
+		await clear.click();
+		await expect(filters).toBeFocused();
+		await expect(page).not.toHaveURL(/[?&]branch=/);
 		for (const target of [
 			page.getByRole("button", { name: "Alerts in 1w, 1 week" }),
 			filters,

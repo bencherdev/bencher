@@ -11,6 +11,7 @@ import {
 	pickWindow,
 	thresholdsParams,
 	windowPhrase,
+	withoutFilters,
 } from "./search";
 
 const DAY = 86_400_000;
@@ -58,6 +59,18 @@ describe("the list's link", () => {
 			),
 		).toEqual(DEFAULT_SEARCH);
 	});
+});
+
+// Kills a Clear that keeps a filter, or resets the status or the window.
+test.each([
+	"status=archived&window=1w",
+	"start_time=1786924800000&end_time=1787011199999",
+	"",
+])("withoutFilters leaves the link only its status and window: %s", (kept) => {
+	const filtered = decodeSearch(
+		params(`branch=${BRANCH}&testbed=${BRANCH}&measure=${MEASURE}&${kept}`),
+	);
+	expect(encodeSearch(withoutFilters(filtered))).toBe(kept);
 });
 
 describe("the list's request", () => {

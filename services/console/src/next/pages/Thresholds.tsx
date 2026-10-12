@@ -30,7 +30,6 @@ import Controls from "../thresholds/Controls";
 import { screenBatch, thresholdsQuery } from "../thresholds/query";
 import { type ThresholdRow, rowsOf } from "../thresholds/rows";
 import {
-	DEFAULT_SEARCH,
 	type ThresholdsSearch,
 	decodeSearch,
 	encodeSearch,
@@ -151,7 +150,7 @@ const Thresholds = () => {
 			/>
 			<Switch>
 				<Match when={first() && rows().length === 0 && !busy()}>
-					<NothingFound search={search()} onSearch={setSearch} />
+					<NothingFound search={search()} />
 				</Match>
 				<Match when={rows().length > 0}>
 					<ThresholdsTable
@@ -225,10 +224,7 @@ const useName = (resource: Dimension, uuid: Accessor<string | undefined>) => {
 	return () => result().data;
 };
 
-const NothingFound = (props: {
-	search: ThresholdsSearch;
-	onSearch: (search: ThresholdsSearch) => void;
-}) => {
+const NothingFound = (props: { search: ThresholdsSearch }) => {
 	const filtered = () => filterCount(props.search) > 0;
 	return (
 		<div class="ui-table-scroll th-empty">
@@ -246,19 +242,6 @@ const NothingFound = (props: {
 						? "A threshold is archived with its branch, testbed, or measure."
 						: "The first run that declares a threshold adds it here."}
 			</p>
-			<Show when={filtered()}>
-				<Button
-					onClick={() =>
-						props.onSearch({
-							...DEFAULT_SEARCH,
-							archived: props.search.archived,
-							window: props.search.window,
-						})
-					}
-				>
-					Clear filters
-				</Button>
-			</Show>
 		</div>
 	);
 };

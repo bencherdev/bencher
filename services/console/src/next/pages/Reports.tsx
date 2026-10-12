@@ -32,7 +32,6 @@ export { prefetchReports as prefetch } from "../reports/query";
 import ReportsTable from "../reports/ReportsTable";
 import { type Range, hasMore, loadMore } from "../reports/rows";
 import {
-	DEFAULT_SEARCH,
 	type FilterNames,
 	type ReportsSearch,
 	decodeSearch,
@@ -254,20 +253,8 @@ const NothingFound = (props: {
 						: "No reports in this window"}
 			</Heading>
 			<p>{nothingFound(props.search, props.now, undefined, props.names)}</p>
-			<div class="btnrow">
-				<Show when={filtered()}>
-					<Button
-						onClick={() =>
-							props.onSearch({
-								window: props.search.window,
-								alerts: DEFAULT_SEARCH.alerts,
-							})
-						}
-					>
-						Clear filters
-					</Button>
-				</Show>
-				<Show when={!all()}>
+			<Show when={!all()}>
+				<div class="btnrow">
 					<Button
 						onClick={() =>
 							props.onSearch({ ...props.search, window: { kind: "all" } })
@@ -275,8 +262,8 @@ const NothingFound = (props: {
 					>
 						Show all time
 					</Button>
-				</Show>
-			</div>
+				</div>
+			</Show>
 		</div>
 	);
 };

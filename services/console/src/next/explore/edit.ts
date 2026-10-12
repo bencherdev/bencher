@@ -56,3 +56,29 @@ export const withoutValue = (
 	...query,
 	[box]: (query[box] as readonly Entry[]).filter((_, at) => at !== index),
 });
+
+/** The six boxes, in the ruled order. */
+export const BOXES = [
+	"branches",
+	"testbeds",
+	"benchmarks",
+	"sets",
+	"measures",
+	"metrics",
+] as const satisfies readonly Box[];
+
+export const hasValues = (query: ExploreQuery): boolean =>
+	BOXES.some((box) => query[box].length > 0);
+
+/** The query with every box emptied, and the lines, report, and pin they named let go. */
+export const withoutValues = ({
+	only: _only,
+	focus: _focus,
+	report: _report,
+	plot: _plot,
+	...query
+}: ExploreQuery): ExploreQuery => ({
+	...query,
+	...Object.fromEntries(BOXES.map((box) => [box, []])),
+	hide: [],
+});
