@@ -3,10 +3,12 @@ import "../styles/console.css";
 import "../explore/explore.css";
 import "../plot/plot.css";
 import "./public.css";
+import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type { JsonConsolePerf } from "../../types/bencher";
+import Plot from "../plot/Plot";
 import { type ExploreQuery, blankQuery, decodeQuery } from "../query/query";
 import Public, { type PublicProps } from "./Public";
 
@@ -151,7 +153,7 @@ test("a refused query keeps what was drawn and Retry asks again", async () => {
 	await page.viewport(1280, 900);
 	let retried = 0;
 	show({
-		refused: "The API did not answer.",
+		refused: "The plot did not load",
 		onRetry: () => {
 			retried++;
 		},
@@ -159,7 +161,7 @@ test("a refused query keeps what was drawn and Retry asks again", async () => {
 	});
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("The API did not answer.");
+		.toHaveTextContent("The plot did not load");
 	await expect
 		.element(page.getByRole("figure"))
 		.toHaveAccessibleName("3 lines");
@@ -170,25 +172,47 @@ test("a refused query keeps what was drawn and Retry asks again", async () => {
 const DAY = 24 * 60 * 60;
 const region = () => page.getByRole("region", { name: "Query, read only" });
 
-// Kills a window the API cut drawn without saying so, or said with no way to
-// sign in, and the note shown for a window drawn whole.
-test("a window the API cut says so in the window's line, with Log in", async () => {
-	await page.viewport(1280, 900);
-	show();
-	await expect.element(region().getByText("up to 3 months back")).toBeVisible();
-	expect(region().getByRole("link", { name: "Log in" }).elements()).toHaveLength(
-		0,
-	);
-	dispose?.();
-	document.body.replaceChildren();
-	show({ answer: { ...PERF, window: { ...PERF.window, clamped: true } } });
-	await expect
-		.element(region().getByText(/cut to its last 3 months/))
-		.toBeVisible();
-	await expect
-		.element(region().getByRole("link", { name: "Log in" }))
-		.toHaveAttribute("href", "/auth/login?back=x");
-	expect(region().getByText("up to 3 months back").elements()).toHaveLength(0);
+// Kills a window the API cut drawn without saying so, a cut said of a window
+// drawn whole, and a cut whose arrival moves the page.
+test("a window the API cut says so in the plot's head, and its arrival moves nothing", async () => {
+	for (const width of [1280, 390]) {
+		await page.viewport(width, 900);
+		const [answer, setAnswer] = createSignal<JsonConsolePerf>(PERF);
+		const root = document.createElement("div");
+		root.className = "console";
+		document.body.append(root);
+		dispose = render(
+			() => (
+				<Public
+					slug="hashbrown"
+					name="Hashbrown"
+					query={QUERY}
+					signIn="/auth/login?back=x"
+					view="plot"
+					answer={answer()}
+					plot={Plot}
+				/>
+			),
+			root,
+		);
+		const figure = page.getByRole("figure");
+		const cut = page.getByText(/3 months/);
+		await expect.element(figure).toHaveAccessibleName("3 lines");
+		expect(cut.query()).toBeNull();
+		const place = () => {
+			const { x, y, height } = figure.element().getBoundingClientRect();
+			return { x, y, height };
+		};
+		const before = place();
+		setAnswer({ ...PERF, window: { ...PERF.window, clamped: true } });
+		await expect.element(cut).toBeVisible();
+		expect(place()).toEqual(before);
+		setAnswer(PERF);
+		await expect.poll(() => cut.query()).toBeNull();
+		dispose();
+		dispose = undefined;
+		document.body.replaceChildren();
+	}
 });
 
 // Kills a preset shown as the window of a link that ends earlier, and a pick
@@ -260,9 +284,8 @@ test("a refused first read shows the summary", async () => {
 	}
 });
 
-// Kills an open query that keeps its summary, never says it is read only, or
-// whose chevron never turns.
-test("Show query puts the read only line in the summary's place and turns its chevron", async () => {
+// Kills an open query that keeps its summary, or whose chevron never turns.
+test("Show query takes the summary away for the boxes and turns its chevron", async () => {
 	await page.viewport(1280, 900);
 	show();
 	const chevron = () =>
@@ -274,7 +297,7 @@ test("Show query puts the read only line in the summary's place and turns its ch
 	const closed = chevron();
 	await userEvent.click(page.getByRole("button", { name: "Show query" }));
 	await expect
-		.element(region().getByText("read only: the six boxes behind this plot"))
+		.element(page.getByRole("group", { name: "Branches" }))
 		.toBeVisible();
 	expect(region().getByText("branches", { exact: true }).elements()).toHaveLength(
 		0,
@@ -292,24 +315,17 @@ test("Show query puts the read only line in the summary's place and turns its ch
 test("a locked page asks only a reader who is not signed in to log in", async () => {
 	await page.viewport(1280, 900);
 	show({ view: "locked" });
-	await expect
-		.element(
-			page.getByRole("heading", { level: 1, name: "Log in to see this page" }),
-		)
-		.toBeVisible();
+	const locked = page.getByRole("heading", {
+		level: 1,
+		name: "Private or not found",
+	});
+	await expect.element(locked).toBeVisible();
 	await expect
 		.element(page.getByRole("main").getByRole("link", { name: "Log in" }))
 		.toHaveAttribute("href", "/auth/login?back=x");
 
 	document.documentElement.setAttribute("data-reader", "");
-	await expect
-		.element(
-			page.getByRole("heading", {
-				level: 1,
-				name: "This project is private, or it does not exist",
-			}),
-		)
-		.toBeVisible();
+	await expect.element(locked).toBeVisible();
 	for (const name of ["Log in", "Sign up"]) {
 		expect(page.getByRole("link", { name }).elements()).toHaveLength(0);
 	}

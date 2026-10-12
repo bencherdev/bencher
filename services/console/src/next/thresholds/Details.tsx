@@ -73,11 +73,7 @@ export const Cards = (props: {
 						<dd>
 							<Show
 								when={props.threshold.parameters?.length}
-								fallback={
-									<>
-										every variant <span class="th-quiet">(no filter)</span>
-									</>
-								}
+								fallback="every variant"
 							>
 								<Sets sets={filterSets(props.threshold.parameters)} />
 							</Show>
@@ -104,11 +100,7 @@ export const Cards = (props: {
 				</h2>
 				<Show
 					when={props.threshold.model}
-					fallback={
-						<p class="th-note">
-							No model: it checks nothing until a run declares one.
-						</p>
-					}
+					fallback={<p class="th-note">No model</p>}
 				>
 					{(model) => (
 						<>
@@ -128,10 +120,7 @@ export const Cards = (props: {
 									)}
 								</For>
 							</dl>
-							<p class="th-note">
-								Set {dayText(model().created, props.now)}.{" "}
-								<a href={`#${CHANGE}`}>Change it from the run</a>.
-							</p>
+							<p class="th-note">Set {dayText(model().created, props.now)}</p>
 						</>
 					)}
 				</Show>
@@ -177,8 +166,6 @@ export const Change = (props: {
 	threshold: JsonConsoleThreshold;
 	host: string | undefined;
 }) => {
-	const where = () =>
-		`${props.threshold.branch.name} · ${props.threshold.testbed.name}`;
 	const snippet = () => {
 		const model = props.threshold.model;
 		return (
@@ -209,60 +196,27 @@ export const Change = (props: {
 			<h2 class="seclabel" id={CHANGE}>
 				Change this threshold
 			</h2>
-			<div class="th-change-body">
-				<div class="th-change-text">
-					<p>
-						The console never edits a threshold; the run that declares it does.
-						The next run on {where()} that declares a different model replaces
-						this one and adds a row to its history.
-					</p>
-					<p>
-						To stop it checking, leave it out of the run and pass{" "}
-						<span class="th-mono">--thresholds-reset</span>: the threshold keeps
-						its history and loses its model.
-					</p>
-					<a
-						class="lnk"
-						href="https://bencher.dev/docs/explanation/thresholds/"
-					>
-						How thresholds work
-					</a>
-				</div>
-				<Show
-					when={snippet()}
-					fallback={
-						<p class="th-note">
-							It has no model to declare again; a run that declares one for{" "}
-							{props.threshold.measure.name} on {where()} gives it one.
-						</p>
-					}
-				>
-					{(declared) => (
-						<fieldset class="th-declared">
-							<legend class="sr-only">
-								The run that declares this threshold
-							</legend>
-							<Show when={declared().kind === "payload"}>
-								<p class="th-note">
-									Each run flag carries one parameters set, so a filter of{" "}
-									{props.threshold.parameters?.length} sets is declared in a
-									report's <span class="th-mono">thresholds.models</span>, sent
-									to the API:
-								</p>
-							</Show>
-							<Code
-								name={
-									declared().kind === "flags"
-										? "the bencher run command"
-										: "the report's thresholds"
-								}
-								text={declared().text}
-								code={declared().code}
-							/>
-						</fieldset>
-					)}
-				</Show>
-			</div>
+			<Show when={snippet()}>
+				{(declared) => (
+					<fieldset class="th-declared">
+						<legend class="sr-only">
+							The run that declares this threshold
+						</legend>
+						<Code
+							name={
+								declared().kind === "flags"
+									? "the bencher run command"
+									: "the report's thresholds"
+							}
+							text={declared().text}
+							code={declared().code}
+						/>
+					</fieldset>
+				)}
+			</Show>
+			<a class="lnk" href="https://bencher.dev/docs/explanation/thresholds/">
+				How thresholds work
+			</a>
 		</Card>
 	);
 };

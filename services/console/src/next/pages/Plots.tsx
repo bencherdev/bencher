@@ -42,6 +42,7 @@ import { useQueryResult } from "../query";
 const WINDOWS = [
 	...PRESETS.map(({ value }) => ({ value, label: value })),
 	{ value: "custom", label: "Custom" },
+	{ value: "own", label: "Per plot" },
 ] as const;
 type WindowChoice = (typeof WINDOWS)[number]["value"];
 
@@ -219,7 +220,7 @@ const Plots = () => {
 			setPending((all) => [...all, change]);
 			setFailure(undefined);
 			setStatus(
-				`Moved ${titleOf(uuid)} ${MOVED[how]}: now ${index + 1} of ${order.length}.`,
+				`Moved ${titleOf(uuid)} ${MOVED[how]}: ${index + 1} of ${order.length}`,
 			);
 		});
 		target()?.focus();
@@ -233,7 +234,7 @@ const Plots = () => {
 			batch(() => {
 				settle(change);
 				setStatus("");
-				setFailure("Bencher did not move the plot. Try again.");
+				setFailure("Bencher did not move the plot");
 			});
 			if (document.activeElement === document.body) {
 				target()?.focus();
@@ -271,7 +272,7 @@ const Plots = () => {
 		} catch {
 			batch(() => {
 				settle(change);
-				setFailure("Bencher did not unpin the plot. Try again.");
+				setFailure("Bencher did not unpin the plot");
 			});
 		}
 	};
@@ -302,7 +303,7 @@ const Plots = () => {
 		} catch {
 			batch(() => {
 				setUnpinned(gone);
-				setFailure("Bencher did not pin the plot again. Try again.");
+				setFailure("Bencher did not pin the plot again");
 			});
 		}
 	};
@@ -314,7 +315,7 @@ const Plots = () => {
 		try {
 			setEditing(await savedPlot(uuid));
 		} catch {
-			setFailure("Bencher did not load the pin. Try again.");
+			setFailure("Bencher did not load the pin");
 		}
 	};
 	const onSaved = (plot: JsonPlot, order: string[]) => {
@@ -348,10 +349,12 @@ const Plots = () => {
 		const current = pageWindow();
 		return typeof current === "object" ? current : undefined;
 	};
-	const choice = (): WindowChoice | undefined =>
-		range() ? "custom" : (pageWindow() as WindowChoice | undefined);
+	const choice = (): WindowChoice =>
+		range() ? "custom" : ((pageWindow() as WindowChoice | undefined) ?? "own");
 	const pickWindow = (next: WindowChoice) => {
-		if (next !== "custom") {
+		if (next === "own") {
+			setPageWindow(undefined);
+		} else if (next !== "custom") {
 			setPageWindow(next);
 		} else if (!range()) {
 			const now = Date.now();
@@ -411,7 +414,7 @@ const Plots = () => {
 						<Show when={!(canEdit() || canCreate())}>
 							<p class="ro-note">
 								<Icon name="read-only" />
-								Read only. Ask a project Maintainer for access.
+								Read only
 							</p>
 						</Show>
 					</Show>
@@ -458,7 +461,7 @@ const Plots = () => {
 					<p class="plots-confirm" role="status">
 						<Icon name="check" />
 						<span class="grow">
-							Unpinned <b>"{gone().plot.title ?? "Untitled"}"</b>.
+							Unpinned <b>"{gone().plot.title ?? "Untitled"}"</b>
 						</span>
 						<Show when={canCreate()}>
 							<button type="button" class="lnk" onClick={() => void undo()}>
@@ -473,8 +476,8 @@ const Plots = () => {
 					<p class="plots-confirm" role="status">
 						<Icon name="check" />
 						<span class="grow">
-							Saved <b>"{plot().title ?? "Untitled"}"</b>,{" "}
-							{rollingName(plot().window)} rolling.
+							Saved <b>"{plot().title ?? "Untitled"}"</b> ·{" "}
+							{rollingName(plot().window)}
 						</span>
 					</p>
 				)}
@@ -486,27 +489,24 @@ const Plots = () => {
 			</Show>
 			<Show when={total() >= PLOTS_LIMIT}>
 				<Banner status="warning" class="load-error">
-					<span class="grow">
-						<b>
-							{total()} of {PLOTS_LIMIT} pinned.
-						</b>{" "}
-						A project keeps at most {PLOTS_LIMIT} pinned plots: unpin one before
-						pinning another. Every Pin button says so until then.
-					</span>
+					<b class="grow">
+						{total()} of {PLOTS_LIMIT} pinned
+					</b>
 				</Banner>
 			</Show>
 			<Switch>
 				<Match when={ready() && total() === 0}>
-					<section class="ui-card plots-empty" aria-labelledby="plots-empty">
-						<h2 id="plots-empty">No pinned plots yet</h2>
+					<div class="ui-card plots-empty">
 						<p>
-							Pin a plot from Explore, a report, or an alert. One click puts it
-							at the top of this page, at the window it was viewed at.
+							Pin a plot from{" "}
+							<a href={projectPath(slug(), "explore")}>Explore</a>, a{" "}
+							<a href={projectPath(slug(), "reports")}>report</a>, or an{" "}
+							<a href={projectPath(slug(), "alerts")}>alert</a>.
 						</p>
 						<Show when={canCreate()}>
 							<NewPlot />
 						</Show>
-					</section>
+					</div>
 				</Match>
 				<Match when={ready() && reordering()}>
 					<section class="ui-card plots-reorder" aria-labelledby="plots-reo">
@@ -514,7 +514,6 @@ const Plots = () => {
 							<h2 id="plots-reo" class="seclabel">
 								Reorder
 							</h2>
-							<span class="muted sm">Each move saves at once.</span>
 						</div>
 						<ol class="plots-reo">
 							<For each={shown()}>
@@ -581,7 +580,7 @@ const Plots = () => {
 						</span>
 						<Segmented
 							name="plots-window"
-							aria-label="Window for every plot on this page"
+							aria-label="Window"
 							options={WINDOWS}
 							value={choice()}
 							onChange={pickWindow}
@@ -602,20 +601,6 @@ const Plots = () => {
 								/>
 							)}
 						</Show>
-						<span class="muted sm">
-							{pageWindow() === undefined
-								? "Each plot shows its own saved window."
-								: `Showing ${range() ? "the chosen dates" : pageWindow()} on every plot, for this view only.`}
-						</span>
-						<Show when={pageWindow() !== undefined}>
-							<button
-								type="button"
-								class="lnk"
-								onClick={() => setPageWindow(undefined)}
-							>
-								Each plot keeps its own
-							</button>
-						</Show>
 					</div>
 					<div
 						class="plots-grid"
@@ -633,10 +618,10 @@ const Plots = () => {
 										title={title()}
 										tile={tile()}
 										failed={failed()}
-										windowText={
-											window() === undefined
-												? ""
-												: `saved window ${rollingName(window() ?? 0)}`
+										window={
+											pageWindow() === undefined && window() !== undefined
+												? rollingName(window() ?? 0)
+												: undefined
 										}
 										openHref={openHref(tile(), uuid)}
 										onOpen={() => seed(tile())}
@@ -662,7 +647,7 @@ const Plots = () => {
 						<Banner status="error" role="alert" class="load-error">
 							<span class="grow">
 								{listed(unloaded().map(({ title }) => title ?? "Untitled"))} did
-								not load: the Bencher API did not answer.
+								not load
 							</span>
 							<Button
 								size="sm"
@@ -684,9 +669,7 @@ const Plots = () => {
 				</Match>
 				<Match when={first()?.isLoadingError}>
 					<Banner status="error" role="alert" class="load-error">
-						<span class="grow">
-							Plots did not load: the Bencher API did not answer.
-						</span>
+						<span class="grow">Plots did not load</span>
 						<Button size="sm" onClick={() => void first()?.refetch()}>
 							Retry
 						</Button>

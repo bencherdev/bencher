@@ -218,7 +218,7 @@ test.describe("a reader who is not a Maintainer", () => {
 		await page.goto(nextPath(empty.slug));
 		await expect(card(page)).toBeVisible();
 		await expect(
-			card(page).getByText("A Maintainer creates the key."),
+			card(page).getByText("Read only", { exact: true }),
 		).toBeVisible();
 		await expect(
 			card(page).getByRole("button", { name: "Create key" }),

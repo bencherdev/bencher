@@ -136,10 +136,6 @@
 	padding: 48px 24px;
 	text-align: center;
 }
-.al-empty p {
-	margin: 0;
-	color: var(--color-text-muted);
-}
 .al-skeleton {
 	display: flex;
 	flex-direction: column;

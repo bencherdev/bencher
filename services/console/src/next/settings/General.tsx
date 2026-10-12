@@ -185,16 +185,13 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 				<div class="formrow">
 					<div class="fl">
 						<label for="f-name">Name</label>
-						<span class="fhelp" id="h-name">
-							Shown on every page of the project.
-						</span>
 					</div>
 					<div class="field">
 						<TextInput
 							id="f-name"
 							value={draft().name}
 							onInput={(event) => edit({ name: event.currentTarget.value })}
-							aria-describedby="h-name e-name"
+							aria-describedby="e-name"
 							aria-invalid={problem("name") ? true : undefined}
 							autocomplete="off"
 						/>
@@ -205,10 +202,6 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 				<div class="formrow">
 					<div class="fl">
 						<label for="f-slug">Slug</label>
-						<span class="fhelp">
-							The project's name in links and in{" "}
-							<span class="mono">bencher run --project</span>.
-						</span>
 					</div>
 					<div class="field">
 						<TextInput
@@ -223,13 +216,12 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 							autocomplete="off"
 							spellcheck={false}
 						/>
-						<p class="fwarn" id="w-slug">
-							<Icon name="warning" />
-							<span>
-								Changing the slug breaks every existing link to this project,
-								and every run that names it.
-							</span>
-						</p>
+						<Show when={draft().slug !== saved().slug}>
+							<p class="fwarn" id="w-slug">
+								<Icon name="warning" />
+								<span>Breaks every link and run that names the old slug</span>
+							</p>
+						</Show>
 						<FieldError id="e-slug" message={problem("slug")} />
 						<Show when={refused("slug")}>
 							{(message) => (
@@ -244,9 +236,6 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 				<div class="formrow">
 					<div class="fl">
 						<label for="f-url">URL</label>
-						<span class="fhelp" id="h-url">
-							Where the project lives, such as its repository.
-						</span>
 					</div>
 					<div class="field">
 						<TextInput
@@ -254,7 +243,7 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 							type="url"
 							value={draft().url}
 							onInput={(event) => edit({ url: event.currentTarget.value })}
-							aria-describedby="h-url e-url"
+							aria-describedby="e-url"
 							aria-invalid={problem("url") ? true : undefined}
 							autocomplete="off"
 						/>
@@ -265,7 +254,6 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 				<div class="formrow">
 					<div class="fl">
 						<span id="lab-vis">Visibility</span>
-						<span class="fhelp">Who can open the public plot.</span>
 					</div>
 					<div class="field">
 						<Segmented
@@ -276,11 +264,6 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 							onChange={(visibility) => edit({ visibility })}
 							style={{ "align-self": "flex-start" }}
 						/>
-						<p class="fhelp">
-							{draft().visibility === Visibility.Public
-								? "Anyone can open the public plot. Every other page needs a login and a seat on the project."
-								: "Only the project's members can see it, and the public plot is gone."}
-						</p>
 						<Show
 							when={refused("visibility")}
 							fallback={
@@ -307,11 +290,8 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 				<div class="formrow">
 					<div class="fl">
 						<span>BMF version</span>
-						<span class="fhelp" id="h-bmf">
-							The version a report gets when it names none.
-						</span>
 					</div>
-					<BmfVersion version={props.data.project.bmf_version} />
+					<div class="fvalue mono">{props.data.project.bmf_version}</div>
 				</div>
 			</div>
 			<div
@@ -417,16 +397,6 @@ const ProjectFacts = (props: { project: JsonProject }) => (
 	</section>
 );
 
-const BmfVersion = (props: { version: number }) => (
-	<div class="fvalue">
-		<span class="mono">{props.version}</span>
-		<span class="set-status">
-			<Icon name="read-only" />
-			Read only
-		</span>
-	</div>
-);
-
 const FieldError = (props: { id: string; message: string | undefined }) => (
 	<Show when={props.message}>
 		{(message) => (
@@ -451,13 +421,7 @@ const Danger = (props: { data: JsonConsoleProject }) => {
 			</div>
 			<div class="setcard-body">
 				<div class="danger-row">
-					<div class="grow">
-						<b>Delete this project</b>
-						<span class="muted sm">
-							Every report, threshold, alert, and pinned plot goes with it, and
-							members lose access at once. It cannot be undone.
-						</span>
-					</div>
+					<b class="grow">Delete this project</b>
 					<Button
 						variant="danger"
 						aria-haspopup="dialog"

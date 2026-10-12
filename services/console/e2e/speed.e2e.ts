@@ -505,9 +505,7 @@ for (const [width, viewport] of [
 						`${REPORTS}/${newest?.uuid}`,
 						async () => {
 							await expect(
-								page.getByTitle(
-									"Read only. Ask a project Maintainer for access.",
-								),
+								page.getByText("Read only", { exact: true }),
 							).toBeVisible();
 							await expect(
 								page.getByRole("table", { name: /^Lines in report / }),
@@ -644,7 +642,7 @@ for (const [width, viewport] of [
 				expect(
 					page
 						.getByRole("region", { name: "Alerting now" })
-						.getByRole("link", { name: /open in Explore$/ }),
+						.getByRole("link", { name: /^blake3 / }),
 				).toBeVisible(),
 			);
 			const moved = await pageShift(page);
@@ -733,7 +731,7 @@ test("an Explore link names its plot's code in its document; blank Explore loads
 	await expect(
 		page
 			.getByRole("region", { name: "Alerting now" })
-			.getByRole("link", { name: /open in Explore$/ }),
+			.getByRole("link", { name: /^blake3 / }),
 	).toBeVisible();
 	await ready(page);
 	const blank = new Set(await scripts(page));
@@ -804,7 +802,7 @@ test("a move from blank Explore to an Explore link holds its speed ceilings", as
 }) => {
 	const alerting = page
 		.getByRole("region", { name: "Alerting now" })
-		.getByRole("link", { name: /open in Explore$/ })
+		.getByRole("link", { name: /^blake3 / })
 		.first();
 	await page.goto(nextPath(hashbrown.slug));
 	await expect(alerting).toBeVisible();
@@ -1006,9 +1004,7 @@ for (const [width, viewport] of [
 				// The alerts sit below the cards, out of view on a phone, so their count says they arrived.
 				() =>
 					expect(
-						page.getByText(
-							/^[1-9]\d* active · \d+ dismissed in the last 4 weeks$/,
-						),
+						page.getByText(/^[1-9]\d* active · \d+ dismissed$/),
 					).toBeVisible(),
 			);
 			const moved = await pageShift(page);

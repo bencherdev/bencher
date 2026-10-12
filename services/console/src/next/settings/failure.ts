@@ -1,14 +1,10 @@
 import { ApiError } from "../api";
 
-/** What the API said when it refused, or `unanswered` when it never answered. */
-export const failureOf = (
-	error: unknown,
-	refused: string,
-	unanswered: string,
-) =>
+/** What did not happen, with what the API said when it refused. */
+export const failureOf = (error: unknown, failed: string) =>
 	error instanceof ApiError && error.status !== undefined
-		? `${refused}: ${apiMessage(error)}`
-		: unanswered;
+		? `${failed}: ${apiMessage(error)}`
+		: failed;
 
 const apiMessage = (error: ApiError) => {
 	try {
@@ -19,5 +15,5 @@ const apiMessage = (error: ApiError) => {
 	} catch {
 		// Not the API's JSON; its status says enough.
 	}
-	return `the API answered ${error.status}.`;
+	return `the API answered ${error.status}`;
 };

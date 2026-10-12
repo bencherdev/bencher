@@ -48,12 +48,6 @@
 	width: 320px;
 	max-width: 100%;
 }
-.pu-ro {
-	grid-column: 1 / -1;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
 .pu-qhead [aria-expanded="true"] > .ui-icon {
 	transform: rotate(180deg);
 }

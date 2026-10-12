@@ -66,7 +66,7 @@ test("a refused key says so and Create key stays", async () => {
 	await userEvent.click(page.getByRole("button", { name: "Create key" }));
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not make the key. Try again.");
+		.toHaveTextContent("Bencher did not make the key");
 	await expect
 		.element(page.getByRole("button", { name: "Create key" }))
 		.toBeEnabled();
@@ -80,7 +80,7 @@ test("a reader who is not a Maintainer gets the card without Create key", async 
 		bootstrap: bootstrapOf({ manage: false }),
 	}).dispose;
 	await expect
-		.element(page.getByText("A Maintainer creates the key."))
+		.element(page.getByText("Read only", { exact: true }))
 		.toBeVisible();
 	await expect
 		.element(page.getByRole("button", { name: "Create key" }))

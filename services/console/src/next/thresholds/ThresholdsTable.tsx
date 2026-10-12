@@ -145,10 +145,7 @@ const ThresholdsTable = (props: {
 						<tr class="th-more">
 							<td colSpan={COLUMNS}>
 								<div class="reports-failed" role="alert">
-									<span>
-										These thresholds did not load: the Bencher API did not
-										answer.
-									</span>
+									<span>These thresholds did not load</span>
 									<Button size="sm" onClick={() => retry()()}>
 										Retry
 									</Button>

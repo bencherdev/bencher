@@ -23,7 +23,7 @@ import {
 	markVariantArchived,
 	variantsQuery,
 } from "./data";
-import { VARIANT_IMPACT } from "./impact";
+import { archiveImpact } from "./impact";
 import { Actions, Impact, focusRow } from "./RowTable";
 import { modelText } from "../thresholds/text";
 import { thresholdLinkName } from "./threshold";
@@ -110,10 +110,6 @@ export const BranchCards = (props: {
 								</Show>
 							</Kv>
 						</dl>
-						<p class="fhelp dm-help">
-							A run with a new start point replaces the head. The old head keeps
-							its reports, and its active alerts are silenced.
-						</p>
 					</Card>
 					<Card id="dm-record" title="Record">
 						<dl class="dm-kvs">
@@ -184,7 +180,7 @@ const RecentReportsTable = (props: {
 			{(recent) => (
 				<Show
 					when={recent().reports.length > 0}
-					fallback={<p class="dm-none">No reports on this branch yet.</p>}
+					fallback={<p class="dm-none">No reports</p>}
 				>
 					<Table fold class="dm-inner" aria-labelledby="dm-reports">
 						<thead>
@@ -269,9 +265,7 @@ export const TestbedCards = (props: {
 				>
 					<Show
 						when={spec()}
-						fallback={
-							<p class="dm-none">{props.testbed ? "No spec reported." : ""}</p>
-						}
+						fallback={<p class="dm-none">{props.testbed ? "No spec" : ""}</p>}
 					>
 						{(shown) => (
 							<dl class="dm-kvs">
@@ -287,10 +281,6 @@ export const TestbedCards = (props: {
 							</dl>
 						)}
 					</Show>
-					<p class="fhelp dm-help">
-						The runner reports its spec with each report. A testbed that runs
-						outside a Bencher runner has none.
-					</p>
 				</Card>
 				<ThresholdsCard
 					slug={props.slug}
@@ -428,7 +418,6 @@ export const BenchmarkCards = (props: {
 						failureOf(
 							error,
 							`Bencher did not ${archive ? "archive" : "unarchive"} the variant`,
-							"The Bencher API did not answer, so the variant is as it was.",
 						),
 					);
 				}
@@ -465,7 +454,7 @@ export const BenchmarkCards = (props: {
 				>
 					<Show
 						when={inUse().length > 0}
-						fallback={<p class="dm-none">Its variants take no parameters.</p>}
+						fallback={<p class="dm-none">No parameters</p>}
 					>
 						<div class="dm-params">
 							<For each={inUse()}>
@@ -535,11 +524,7 @@ export const BenchmarkCards = (props: {
 				>
 					<Show
 						when={shown().length > 0}
-						fallback={
-							<p class="dm-none">
-								{archived() ? "No archived variants." : "No variants yet."}
-							</p>
-						}
+						fallback={<p class="dm-none">No variants</p>}
 					>
 						<Table
 							fold
@@ -601,7 +586,7 @@ export const BenchmarkCards = (props: {
 													<td colSpan={2} data-fold="full">
 														<Impact
 															name={label(variant)}
-															text={VARIANT_IMPACT}
+															text={archiveImpact(undefined)}
 															confirm="Archive variant"
 															onConfirm={() => {
 																change(variant, true);
@@ -646,13 +631,12 @@ const Card = (props: {
 	</section>
 );
 
-/** A titled table, its title row above it and its note below. */
+/** A titled table under its title row. */
 const Section = (props: {
 	id: string;
 	title: string;
 	aside?: JSX.Element;
 	children: JSX.Element;
-	foot?: JSX.Element;
 }) => (
 	<section class="dm-section" aria-labelledby={props.id}>
 		<div class="dm-section-head">
@@ -663,9 +647,6 @@ const Section = (props: {
 			{props.aside}
 		</div>
 		{props.children}
-		<Show when={props.foot}>
-			<p class="fhelp">{props.foot}</p>
-		</Show>
 	</section>
 );
 
@@ -720,7 +701,6 @@ const ThresholdsCard = (props: {
 					</span>
 				</Show>
 			}
-			foot="Runs declare thresholds. To change one, change the run that declares it."
 		>
 			<Show
 				when={props.state.data}
@@ -736,9 +716,7 @@ const ThresholdsCard = (props: {
 				{(on) => (
 					<Show
 						when={on().thresholds.length > 0}
-						fallback={
-							<p class="dm-none">No threshold checks this {props.one}.</p>
-						}
+						fallback={<p class="dm-none">No thresholds</p>}
 					>
 						<Table fold class="dm-inner" aria-labelledby="dm-thresholds">
 							<thead>
@@ -822,7 +800,7 @@ const Sets = (props: { threshold: JsonThreshold }) => (
 
 const Failed = (props: { what: string; retry: () => void }) => (
 	<div class="dm-failed" role="alert">
-		<span>{props.what} did not load: the Bencher API did not answer.</span>
+		<span>{props.what} did not load</span>
 		<Button size="sm" onClick={() => props.retry()}>
 			Retry
 		</Button>

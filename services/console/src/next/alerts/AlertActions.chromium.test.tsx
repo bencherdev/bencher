@@ -91,7 +91,7 @@ test("a silenced alert says why and offers nothing", async () => {
 		onDismiss: vi.fn(),
 		onReactivate: vi.fn(),
 	});
-	expect(root.textContent).toBe("Silenced: the branch head was replaced");
+	expect(root.textContent).toBe("Silenced: branch head replaced");
 	await expect.element(page.getByRole("button")).not.toBeInTheDocument();
 });
 

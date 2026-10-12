@@ -235,22 +235,17 @@ test("a filter menu loading its options leaves the page and the typing alone", a
 
 // Kills a zero state that hides which filters emptied the list, and a Clear
 // filters that keeps them or drops the window.
-test("filters that match nothing say which, and clearing them brings rows back", async ({
+test("filters that match nothing show which, and clearing them brings rows back", async ({
 	page,
 }) => {
 	await page.goto(reports("?branch=feature-simd&adapter=magic&window=1w"));
 
 	await expect(
-		page.getByRole("heading", {
-			level: 2,
-			name: "No reports match these filters",
-		}),
+		page.getByRole("heading", { level: 2, name: "No reports" }),
 	).toBeVisible();
-	await expect(
-		page.getByText(
-			"Nothing on feature-simd with the magic adapter in the last week.",
-		),
-	).toBeVisible();
+	for (const name of ["branch feature-simd", "adapter magic"]) {
+		await expect(page.getByRole("button", { name })).toBeVisible();
+	}
 	await expect(heading(page)).toHaveText("0 reports");
 
 	await page.getByRole("button", { name: "Clear filters" }).click();

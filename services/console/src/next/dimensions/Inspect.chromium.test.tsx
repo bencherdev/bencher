@@ -287,9 +287,7 @@ test("archiving from the page shows it at once, and a refusal puts it back", asy
 	const impact = page.getByRole("group", { name: "Archive 412/merge" });
 	await expect
 		.element(impact)
-		.toHaveTextContent(
-			"Archiving 412/merge archives 2 thresholds and hides its lines. A run that reports it brings it back.",
-		);
+		.toHaveTextContent("Hides its lines and archives 2 thresholds");
 	await impact.getByRole("button", { name: "Archive 412/merge" }).click();
 
 	await expect
@@ -297,9 +295,7 @@ test("archiving from the page shows it at once, and a refusal puts it back", asy
 		.toBeVisible();
 	await expect
 		.element(page.getByRole("status"))
-		.toHaveTextContent(
-			"Archived 412/merge with its 2 thresholds. Its lines are hidden.",
-		);
+		.toHaveTextContent("Archived 412/merge and 2 thresholds");
 	await expect
 		.element(page.getByRole("button", { name: "Unarchive" }))
 		.toBeVisible();
@@ -356,7 +352,7 @@ test("an archived branch reads its archived thresholds and says which come back"
 	await expect
 		.element(page.getByRole("status"))
 		.toHaveTextContent(
-			"Unarchived 412/merge and 2 thresholds. One threshold stays archived: another of its dimensions is archived.",
+			"Unarchived 412/merge and 2 thresholds · 1 threshold still archived",
 		);
 });
 
@@ -365,7 +361,7 @@ test("a reader who cannot edit sees the read only line instead of Archive", asyn
 	const { api } = branchApi(false);
 	dispose = (await show(api, "branches", "412-merge", false)).dispose;
 	await expect
-		.element(page.getByText("Read only. Ask a project Maintainer for access."))
+		.element(page.getByText("Read only", { exact: true }))
 		.toBeVisible();
 	expect(page.getByRole("button", { name: /Archive/ }).elements()).toEqual([]);
 });
@@ -375,7 +371,7 @@ test("a branch the project does not have says so", async () => {
 	const { api } = branchApi(false);
 	dispose = (await show(api, "branches", "nope")).dispose;
 	await expect
-		.element(page.getByRole("heading", { level: 1, name: "No branch nope" }))
+		.element(page.getByRole("heading", { level: 1, name: "Branch not found" }))
 		.toBeVisible();
 });
 
@@ -506,9 +502,7 @@ test("a branch that does not load says so, and Retry loads it", async () => {
 	dispose = (await show(api, "branches", "412-merge")).dispose;
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent(
-			"This branch did not load: the Bencher API did not answer.",
-		);
+		.toHaveTextContent("This branch did not load");
 	expect(page.getByRole("heading", { name: /^No branch/ }).elements()).toEqual(
 		[],
 	);

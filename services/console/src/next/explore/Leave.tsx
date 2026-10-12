@@ -5,8 +5,6 @@ import Icon from "@bencherdev/ui/Icon";
 /** Asked before leaving a pin with unsaved changes for another page. */
 const Leave = (props: {
 	title: string;
-	/** The page the reader is leaving for, as its tab names it. */
-	destination: string;
 	saving: boolean;
 	onStay: () => void;
 	onLeave: () => void;
@@ -30,18 +28,13 @@ const Leave = (props: {
 			</Button>
 		</div>
 		<div class="ui-dialog-body">
-			<p class="ex-leave">
+			<p id="ex-leave-desc" class="ex-leave">
 				<span class="ex-warn">
 					<Icon name="warning" />
 				</span>
 				<span>
-					<b>{props.title}</b> has changes since its last save.
+					<b>{props.title}</b> has unsaved changes
 				</span>
-			</p>
-			<p id="ex-leave-desc" class="text2">
-				Save writes them to the pinned plot. Leaving for{" "}
-				<b>{props.destination}</b> drops them; the pinned plot stays as it was
-				saved.
 			</p>
 		</div>
 		<div class="ui-dialog-foot">

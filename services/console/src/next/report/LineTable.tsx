@@ -283,9 +283,7 @@ const LineTable = (props: LineTableProps) => {
 						<tr class="lr-more">
 							<td colSpan={columns()}>
 								<div class="lr-failed" role="alert">
-									<span>
-										These lines did not load: the Bencher API did not answer.
-									</span>
+									<span>These lines did not load</span>
 									<Button size="sm" onClick={() => retry()()}>
 										Retry
 									</Button>

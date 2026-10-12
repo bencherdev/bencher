@@ -470,9 +470,7 @@ test("a change the API made to no alert says so, reads the list again, and count
 	await dismiss().click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent(
-			"Some alerts did not change, so the list is read again.",
-		);
+		.toHaveTextContent("Some alerts did not change");
 	await expect.poll(reads).toBe(before.reads + 1);
 	await expect.poll(counts).toBe(before.counts + 1);
 	await expect.element(dismiss()).toBeVisible();
@@ -1262,9 +1260,7 @@ test("under Active, a reread after a change the API made to no alert asks each l
 	await dismissBench(4).click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent(
-			"Some alerts did not change, so the list is read again.",
-		);
+		.toHaveTextContent("Some alerts did not change");
 	await expect.poll(() => lists().length).toBeGreaterThan(before);
 	await wait(200);
 	expect(offsetsOf(lists().slice(before))).toEqual(["0"]);
@@ -1412,9 +1408,9 @@ test("each alert is its own row, naming its report and its status", async () => 
 	expect(rows.nth(2).getByRole("img", { name: "alerting" }).query()).toBeNull();
 	await expect
 		.element(rows.nth(3))
-		.toHaveTextContent(/Silenced: the branch head was replaced/);
+		.toHaveTextContent(/Silenced: branch head replaced/);
 	await expect
-		.element(page.getByText("1 active · 2 dismissed in the last 4 weeks"))
+		.element(page.getByText("1 active · 2 dismissed", { exact: true }))
 		.toBeVisible();
 });
 
@@ -1485,7 +1481,7 @@ test("Open in Explore turns off again for a view with no alerts", async () => {
 
 	await page.getByRole("radio", { name: "Dismissed" }).click();
 	await expect
-		.element(page.getByRole("heading", { name: "No alerts in this window" }))
+		.element(page.getByRole("heading", { name: "No alerts" }))
 		.toBeVisible();
 	await expect
 		.element(page.getByRole("button", { name: "Open in Explore" }))
@@ -1494,7 +1490,7 @@ test("Open in Explore turns off again for a view with no alerts", async () => {
 
 // Kills a summary that keeps its first answer, and a Window control whose
 // pick never reaches the API or the link.
-test("the summary follows the window, its counts and its phrase", async () => {
+test("the summary follows the window's counts", async () => {
 	const { api: answered, requests } = fakeApi((url) => {
 		if (
 			url.pathname.endsWith(
@@ -1521,14 +1517,10 @@ test("the summary follows the window, its counts and its phrase", async () => {
 		return new Promise<never>(() => {});
 	});
 	const history = mount(answered, client());
-	await expect
-		.element(summary())
-		.toHaveTextContent("1 active · 2 dismissed in the last 4 weeks");
+	await expect.element(summary()).toHaveTextContent(/^1 active · 2 dismissed$/);
 
 	await page.getByRole("radio", { name: "1w" }).click();
-	await expect
-		.element(summary())
-		.toHaveTextContent("1 active · 0 dismissed in the last week");
+	await expect.element(summary()).toHaveTextContent(/^1 active · 0 dismissed$/);
 	expect(history.get()).toBe(`${PATH}?window=1w`);
 	const week = requests.filter(isAlerts).at(-1);
 	expect(week?.searchParams.get("window")).toBe("7");
@@ -1539,11 +1531,7 @@ test("the summary follows the window, its counts and its phrase", async () => {
 	).toBe(7);
 
 	await page.getByRole("radio", { name: "Custom" }).click();
-	await expect
-		.element(summary())
-		.toHaveTextContent(
-			/^0 active · 0 dismissed from [A-Z][a-z]{2} \d{1,2} to [A-Z][a-z]{2} \d{1,2}$/,
-		);
+	await expect.element(summary()).toHaveTextContent(/^0 active · 0 dismissed$/);
 	expect(requests.filter(isAlerts).at(-1)?.searchParams.has("end_time")).toBe(
 		true,
 	);
@@ -1791,7 +1779,7 @@ test("moving to another threshold never shows the last one's alerts as its own",
 
 	release?.();
 	await expect
-		.element(page.getByRole("heading", { name: "No alerts in this window" }))
+		.element(page.getByRole("heading", { name: "No alerts" }))
 		.toBeVisible();
 });
 

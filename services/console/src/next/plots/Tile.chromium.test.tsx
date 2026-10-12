@@ -27,7 +27,7 @@ const mount = (tiles: (JsonConsolePlot | undefined)[], failed = false) => {
 				<Tile
 					title={`Pin ${index + 1}`}
 					tile={tile}
-					windowText="saved window 4w"
+					window="4w"
 					failed={failed}
 					openHref="#"
 					menu={{
@@ -107,12 +107,7 @@ test("a tile draws its plot only as it nears the screen", async () => {
 		() => (
 			<>
 				<div style={{ height: "3000px" }} />
-				<Tile
-					title="Far"
-					tile={testTile()}
-					windowText="saved window 4w"
-					openHref="#"
-				/>
+				<Tile title="Far" tile={testTile()} window="4w" openHref="#" />
 			</>
 		),
 		root,

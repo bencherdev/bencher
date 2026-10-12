@@ -125,11 +125,6 @@
 	padding: 40px 24px;
 	text-align: center;
 }
-.th-empty p {
-	margin: 0;
-	max-width: 56ch;
-	color: var(--color-text-muted);
-}
 
 /* A threshold: every box in the head holds its size before the threshold arrives. */
 .pagehead.th-head {
@@ -232,22 +227,6 @@
 .th-history li.th-replaced .th-mono {
 	color: var(--color-text-secondary);
 }
-.th-change-body {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
-	gap: 18px;
-	align-items: start;
-}
-.th-change-text {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	font-size: 13px;
-	color: var(--color-text-secondary);
-}
-.th-change-text p {
-	margin: 0;
-}
 .th-declared {
 	display: flex;
 	flex-direction: column;
@@ -337,8 +316,5 @@
 		min-height: 0;
 		padding: 0;
 		border: 0;
-	}
-	.th-change-body {
-		grid-template-columns: minmax(0, 1fr);
 	}
 }

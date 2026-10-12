@@ -29,8 +29,8 @@ export const declarationSnippet = (
 	}
 	const row = (text: string, flag = false) => ({ text, flag });
 	const { model } = declaration;
-	const option = (name: string, value: number | undefined) =>
-		value === undefined ? [] : [row(`  --threshold-${name} ${value}`, true)];
+	const option = (name: string, value: number | null | undefined) =>
+		value == null ? [] : [row(`  --threshold-${name} ${value}`, true)];
 	const rows = [
 		row("export BENCHER_API_KEY=bencher_run_..."),
 		row("bencher run"),

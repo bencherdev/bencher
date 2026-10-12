@@ -62,7 +62,7 @@ export interface PlotProps {
 	layout?: PlotLayout;
 	size?: PlotSize;
 	/** Muted text in the head, such as the window. */
-	note?: string;
+	note?: string | undefined;
 	label?: string;
 	/** Links the readout to the report a point came from. */
 	reportHref?: (uuid: string) => string;
@@ -712,17 +712,17 @@ const Readout = (props: ReadoutProps) => {
 	let box: HTMLDivElement | undefined;
 	let whenRow: HTMLSpanElement | undefined;
 	onMount(() => {
-		if (!box) {
+		const readout = box;
+		if (!readout) {
 			return;
 		}
-		// After layout, so reading the link row's offsets forces none.
+		// After layout, so reading the link row's offsets forces none; they start inside the readout's border.
 		const observer = new ResizeObserver(([entry]) => {
-			const {
-				offsetLeft: left,
-				offsetTop: top,
-				offsetWidth: width,
-				offsetHeight: height,
-			} = whenRow as HTMLSpanElement;
+			const row = whenRow as HTMLSpanElement;
+			const left = row.offsetLeft + readout.clientLeft;
+			const top = row.offsetTop + readout.clientTop;
+			const width = row.offsetWidth;
+			const height = row.offsetHeight;
 			props.onSize(entry?.borderBoxSize[0]?.inlineSize ?? 0, {
 				left,
 				top,
@@ -730,7 +730,7 @@ const Readout = (props: ReadoutProps) => {
 				bottom: top + height,
 			});
 		});
-		observer.observe(box);
+		observer.observe(readout);
 		onCleanup(() => observer.disconnect());
 	});
 	return (

@@ -257,7 +257,7 @@ test("a row opens the threshold, its model, and the alerts it raised", async ({
 	);
 
 	await expect(
-		page.getByText("1 active · 1 dismissed in the last 4 weeks"),
+		page.getByText("1 active · 1 dismissed", { exact: true }),
 	).toBeVisible();
 	const expand = (name: string) =>
 		alertsTable(page).getByRole("button", { name: `Expand ${name}` });
@@ -428,7 +428,9 @@ test("a malformed or unknown threshold is not found", async ({ page }) => {
 	);
 	await expect(heading(page)).toHaveText("Threshold not found");
 	await expect(
-		page.getByRole("link", { name: "Open Thresholds" }),
+		page
+			.getByRole("main")
+			.getByRole("link", { name: "Thresholds", exact: true }),
 	).toHaveAttribute("href", thresholds(hashbrown.slug));
 });
 

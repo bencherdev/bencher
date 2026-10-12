@@ -96,12 +96,8 @@ const simple = () =>
 // Kills counts swapped between the two thresholds.
 test("each threshold says how many of the report's lines it checks", async () => {
 	mount();
-	await expect
-		.element(exact())
-		.toHaveTextContent("2 lines in this report, this one included");
-	await expect
-		.element(simple())
-		.toHaveTextContent("18 lines in this report, this one included");
+	await expect.element(exact()).toHaveTextContent("2 lines in this report");
+	await expect.element(simple()).toHaveTextContent("18 lines in this report");
 });
 
 // Kills a self-hosted server left out of the commands, and Bencher Cloud named in them.
@@ -171,9 +167,7 @@ test("a copy the browser refuses says so", async () => {
 		.click();
 	await expect
 		.element(simple().getByRole("alert"))
-		.toHaveTextContent(
-			"The browser refused to copy; select the command to copy it.",
-		);
+		.toHaveTextContent("The browser refused to copy");
 });
 
 // Kills a count that failed and holds its placeholder for good.
@@ -184,9 +178,7 @@ test("a count that did not load offers Retry, which loads it", async () => {
 	await expect.element(simple()).toHaveTextContent("the count did not load");
 	down = false;
 	await simple().getByRole("button", { name: "Retry" }).click();
-	await expect
-		.element(simple())
-		.toHaveTextContent("18 lines in this report, this one included");
+	await expect.element(simple()).toHaveTextContent("18 lines in this report");
 });
 
 // Kills a threshold that guards against the default side when the report's other lines show the project's.

@@ -11,12 +11,14 @@ const PHONE = { width: 390, height: 844 };
  * Scan the page at `path` with axe in the dark and the light theme, at the
  * test's own width and on a phone, once `ready` resolves in each and no
  * animation runs: a control easing between two states shows a contrast it
- * never has at rest.
+ * never has at rest. With `arrive`, each scan opens `path` and goes on from
+ * there, for a state no link holds.
  */
 export const axeInBothThemes = async (
 	page: Page,
 	path: string,
 	ready: () => Promise<void>,
+	arrive?: () => Promise<void>,
 ) => {
 	const own = page.viewportSize();
 	const sizes = own && own.width > PHONE.width ? [own, PHONE] : [own ?? PHONE];
@@ -28,7 +30,12 @@ export const axeInBothThemes = async (
 				THEME_KEY,
 				theme,
 			] as const);
-			await page.reload();
+			if (arrive) {
+				await page.goto(path);
+				await arrive();
+			} else {
+				await page.reload();
+			}
 			await ready();
 			await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
 			await page.waitForFunction(() =>

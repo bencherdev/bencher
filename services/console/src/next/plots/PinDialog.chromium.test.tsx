@@ -111,7 +111,9 @@ test("a custom window in days or weeks draws the preview and saves", async () =>
 		.getByRole("combobox", { name: "Days or weeks" })
 		.selectOptions("days");
 	await expect.poll(() => reads.map(windowDays)).toContain(10);
-	await expect.element(dialog.getByText("10 days rolling")).toBeVisible();
+	await expect
+		.element(dialog.getByText("10 days", { exact: true }))
+		.toBeVisible();
 
 	await dialog.getByRole("radio", { name: "Custom" }).click();
 	await count.fill("6");
@@ -203,11 +205,7 @@ test("a title over 64 bytes cannot save and says so", async () => {
 	await expect.element(save).toBeEnabled();
 	await title.fill("€".repeat(22));
 	await expect.element(save).toBeDisabled();
-	await expect
-		.element(title)
-		.toHaveAccessibleDescription(
-			"Too long: a title holds at most 64 bytes, and this one is 66.",
-		);
+	await expect.element(title).toHaveAccessibleDescription("66 of 64 bytes");
 });
 
 // Kills a Save that sends a title the API refuses, and a Cancel that saves.
@@ -229,14 +227,12 @@ test("a refused order read says the order did not load, and Retry reads it", asy
 	const failed = dialog.getByRole("alert");
 	await expect
 		.element(failed)
-		.toHaveTextContent("The order of the pinned plots did not load.");
+		.toHaveTextContent("The order of the pinned plots did not load");
 	await expect
 		.element(dialog.getByRole("radio", { name: "Top" }))
 		.toBeDisabled();
 	await failed.getByRole("button", { name: "Retry" }).click();
-	await expect
-		.element(dialog.getByText("Plots holds 4 pinned plots"))
-		.toBeVisible();
+	await expect.element(dialog.getByText("4 of 64 pinned")).toBeVisible();
 	await expect
 		.element(dialog.getByRole("radio", { name: "Top" }))
 		.toBeEnabled();

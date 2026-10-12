@@ -229,9 +229,7 @@ const AddMenu = (props: {
 			<For
 				each={options()}
 				fallback={
-					<p class="ex-none">
-						{text() ? `Nothing matches "${text()}".` : (props.empty ?? "")}
-					</p>
+					<p class="ex-none">{text() ? "No matches" : (props.empty ?? "")}</p>
 				}
 			>
 				{(option) => (

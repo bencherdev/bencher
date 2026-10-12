@@ -110,11 +110,7 @@ test("a report the API did not answer offers Retry, which loads it", async () =>
 	});
 	mount(api, impatient());
 	const banner = page.getByRole("alert");
-	await expect
-		.element(banner)
-		.toHaveTextContent(
-			"This report did not load: the Bencher API did not answer.",
-		);
+	await expect.element(banner).toHaveTextContent("This report did not load");
 	fail = false;
 	await banner.getByRole("button", { name: "Retry" }).click();
 	await expect.element(table()).toBeVisible();
@@ -128,21 +124,19 @@ test("a report with no lines, or none matching the filter, says so", async () =>
 			? { data: reportFixture([], { total: 0, groups: [] }) }
 			: { data: bootstrapOf() },
 	);
+	const none = page.getByRole("heading", { name: "No lines", exact: true });
+	const clear = page.getByRole("button", { name: "Clear the filter" });
 	mount(api, impatient());
-	await expect
-		.element(page.getByRole("heading", { name: "This report has no lines" }))
-		.toBeVisible();
+	await expect.element(none).toBeVisible();
+	expect(clear.elements()).toHaveLength(0);
 
 	dispose?.();
 	document.body.replaceChildren();
 	mount(api, impatient(), `${PATH}?search=avx512`);
-	await expect
-		.element(page.getByRole("heading", { name: 'No lines match "avx512"' }))
-		.toBeVisible();
-	await page.getByRole("button", { name: "Clear the filter" }).click();
-	await expect
-		.element(page.getByRole("heading", { name: "This report has no lines" }))
-		.toBeVisible();
+	await expect.element(none).toBeVisible();
+	await clear.click();
+	await expect.element(clear).not.toBeInTheDocument();
+	await expect.element(none).toBeVisible();
 });
 
 // Kills rows that fall back to the skeleton, or take the page out, while a new view loads.
@@ -209,9 +203,7 @@ test("moving to the previous report redraws its identity and starts with nothing
 		.getByRole("link", { name: /^Previous .*: the report on main/ })
 		.click();
 	await expect.element(subtitle).toHaveTextContent("4e02c1d");
-	await expect
-		.element(page.getByText("Select lines to open them together in Explore"))
-		.toBeVisible();
+	await expect.element(page.getByText("0 lines selected")).toBeVisible();
 });
 
 const LATENCY = "blake3 input_bytes=65536 simd=avx2 threads=1 Latency";
@@ -338,11 +330,7 @@ test("a later batch that did not load offers Retry, which loads it", async () =>
 			return failed.query() !== null;
 		})
 		.toBe(true);
-	await expect
-		.element(failed)
-		.toHaveTextContent(
-			"These lines did not load: the Bencher API did not answer.",
-		);
+	await expect.element(failed).toHaveTextContent("These lines did not load");
 	down = false;
 	await failed.getByRole("button", { name: "Retry" }).click();
 	await expect.element(failed).not.toBeInTheDocument();
@@ -433,9 +421,7 @@ test("a viewer's read-only note arrives without moving what is below the title",
 		const before = top();
 		answer(bootstrapOf({ edit: false }));
 		await expect
-			.element(
-				page.getByText("Read only. Ask a project Maintainer for access."),
-			)
+			.element(page.getByText("Read only", { exact: true }))
 			.toBeInTheDocument();
 		expect(top()).toBe(before);
 		dispose?.();
@@ -453,9 +439,7 @@ test("Clear lets go of every selected line", async () => {
 	await page.getByRole("checkbox", { name: `Select ${SMALL}` }).click();
 	await expect.element(page.getByText("2 lines selected")).toBeVisible();
 	await page.getByRole("button", { name: "Clear", exact: true }).click();
-	await expect
-		.element(page.getByText("Select lines to open them together in Explore"))
-		.toBeVisible();
+	await expect.element(page.getByText("0 lines selected")).toBeVisible();
 	await expect
 		.element(page.getByRole("checkbox", { name: `Select ${LATENCY}` }))
 		.not.toBeChecked();
@@ -619,9 +603,7 @@ test("a viewer's Read only pill keeps its place when the report arrives after th
 				: { data: bootstrapOf({ edit: false }) },
 		);
 		mount(api, impatient());
-		const readOnly = page.getByTitle(
-			"Read only. Ask a project Maintainer for access.",
-		);
+		const readOnly = page.getByText("Read only", { exact: true });
 		await expect.element(readOnly).toBeVisible();
 		const pill = () => {
 			const { x, y, width, height } = readOnly
@@ -662,9 +644,7 @@ test("a viewer's title stays whole beside the Read only pill, and its alerts kee
 		const before = box();
 		answer(bootstrapOf({ edit: false }));
 		await expect
-			.element(
-				page.getByTitle("Read only. Ask a project Maintainer for access."),
-			)
+			.element(page.getByText("Read only", { exact: true }))
 			.toBeVisible();
 		expect(box()).toEqual(before);
 		const heading = title.element() as HTMLElement;

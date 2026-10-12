@@ -252,7 +252,8 @@ test("Previous and Next walk the branch's reports", async ({
 });
 
 // Kills a selection that opens more or fewer lines than chosen, loses the
-// report it came from, or does not reach Explore.
+// report it came from, does not reach Explore, or names a source that does
+// not link back to the report.
 test("Open 2 in Explore opens exactly the selected lines", async ({
 	page,
 	request,
@@ -275,6 +276,13 @@ test("Open 2 in Explore opens exactly the selected lines", async ({
 	expect(href.searchParams.get("report")).toBe(report);
 	await open.click();
 	await expect(page).toHaveURL(/\/explore\?/);
+	await page
+		.getByRole("region", { name: "Query" })
+		.getByRole("link", { name: /^[0-9a-f]{7}$/ })
+		.click();
+	await expect(page).toHaveURL(
+		new RegExp(`${reportPath(hashbrown.slug, report)}$`),
+	);
 });
 
 // Kills a sheet without the exact threshold's parameters and metric, counts
@@ -302,9 +310,7 @@ test("the no-threshold sheet offers the exact and the simpler threshold with the
 	await expect(exact).toContainText(
 		`--threshold-parameters '{"input_bytes": 65536, "simd": "avx2", "threads": 1}'`,
 	);
-	await expect(exact).toContainText(
-		"2 lines in this report, this one included",
-	);
+	await expect(exact).toContainText("2 lines in this report");
 
 	const simple = sheet.getByRole("region", {
 		name: "Every line of the measure",
@@ -312,9 +318,7 @@ test("the no-threshold sheet offers the exact and the simpler threshold with the
 	await expect(simple).toContainText("--threshold-measure throughput");
 	await expect(simple).toContainText("--threshold-metric value");
 	await expect(simple).not.toContainText("--threshold-parameters");
-	await expect(simple).toContainText(
-		"18 lines in this report, this one included",
-	);
+	await expect(simple).toContainText("18 lines in this report");
 });
 
 // Kills a missing report drawn as a failure to retry, or as an empty report.
@@ -326,10 +330,7 @@ test("an unknown report says so", async ({ page }) => {
 		"Report not found",
 	);
 	await expect(
-		page.getByRole("heading", { name: `${hashbrown.name} has no report here` }),
-	).toBeVisible();
-	await expect(
-		page.getByRole("link", { name: "Open Reports" }),
+		page.getByRole("main").getByRole("link", { name: "Reports", exact: true }),
 	).toHaveAttribute("href", nextPath(hashbrown.slug, "reports"));
 });
 
@@ -354,9 +355,7 @@ test.describe("a reader who cannot edit", () => {
 		request,
 	}) => {
 		await page.goto(reportPath(hashbrown.slug, await newestMain(request)));
-		await expect(
-			page.getByText("Read only. Ask a project Maintainer for access."),
-		).toBeVisible();
+		await expect(page.getByText("Read only", { exact: true })).toBeVisible();
 		await page.getByRole("checkbox", { name: `Select ${ALERTING}` }).check();
 		await expect(page.getByText("1 line selected")).toBeVisible();
 	});

@@ -231,7 +231,6 @@ const Inspect = (props: {
 						failureOf(
 							error,
 							`Bencher did not ${archive ? "archive" : "unarchive"} ${shown.name}`,
-							`The Bencher API did not answer, so ${shown.name} is ${archive ? "still active" : "still archived"}.`,
 						),
 					);
 				}
@@ -269,19 +268,13 @@ const Inspect = (props: {
 						<span aria-hidden="true">/</span>
 					</div>
 					<Heading level={1} size="xl">
-						No {kind().one} {props.entry}
+						{kind().title} not found
 					</Heading>
-					<p class="lede">
-						This project has no {kind().one} at this address.{" "}
-						<a href={list()}>See every {kind().one}</a>.
-					</p>
 				</div>
 			</Match>
 			<Match when={detail().isLoadingError}>
 				<Banner status="error" role="alert" class="load-error">
-					<span class="grow">
-						This {kind().one} did not load: the Bencher API did not answer.
-					</span>
+					<span class="grow">This {kind().one} did not load</span>
 					<Button size="sm" onClick={() => detail().refetch()}>
 						Retry
 					</Button>
@@ -339,7 +332,7 @@ const Inspect = (props: {
 							fallback={
 								<p class="ro-note">
 									<Icon name="read-only" />
-									Read only. Ask a project Maintainer for access.
+									Read only
 								</p>
 							}
 						>
@@ -374,7 +367,7 @@ const Inspect = (props: {
 					{(shown) => (
 						<Impact
 							name={shown().name}
-							text={archiveImpact(shown().name, counts().back)}
+							text={archiveImpact(counts().back)}
 							confirm={`Archive ${shown().name}`}
 							onConfirm={() => {
 								change(true);

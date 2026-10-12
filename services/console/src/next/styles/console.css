@@ -390,12 +390,6 @@
 .console .crumb-line a:hover {
 	color: var(--color-text-primary);
 }
-.set-lede {
-	margin: 0;
-	font-size: 13px;
-	color: var(--color-text-secondary);
-	max-width: 72ch;
-}
 
 /* cards */
 .setcard {
@@ -450,7 +444,7 @@
 	gap: 16px;
 	padding: 14px 0;
 	border-bottom: var(--border-width) solid var(--color-border);
-	align-items: start;
+	align-items: baseline;
 }
 .formrow:last-child {
 	border-bottom: 0;
@@ -475,12 +469,6 @@
 	margin: 0;
 	font-size: 12.5px;
 	color: var(--color-text-muted);
-}
-/* A link inside a sentence is told apart by more than its color. */
-.console .fhelp a,
-.console .ferror a {
-	text-decoration: underline;
-	text-underline-offset: 2px;
 }
 .fwarn,
 .ferror {
@@ -529,9 +517,6 @@
 	gap: 12px 24px;
 }
 .danger-row .grow {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
 	flex: 1 1 320px;
 }
 .muted {

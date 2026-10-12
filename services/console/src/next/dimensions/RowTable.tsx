@@ -166,7 +166,7 @@ const RowTable = (props: {
 									<td colSpan={columns()} data-fold="full">
 										<Impact
 											name={row.name}
-											text={archiveImpact(row.name, thresholdsOf(row))}
+											text={archiveImpact(thresholdsOf(row))}
 											confirm={`Archive ${row.name}`}
 											onConfirm={() => {
 												props.onChange(row, true);
@@ -199,9 +199,7 @@ const RowTable = (props: {
 						<tr class="dm-more">
 							<td colSpan={columns()}>
 								<div class="dm-failed" role="alert">
-									<span>
-										These rows did not load: the Bencher API did not answer.
-									</span>
+									<span>These rows did not load</span>
 									<Button size="sm" onClick={() => retry()()}>
 										Retry
 									</Button>

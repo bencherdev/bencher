@@ -173,9 +173,7 @@ const ReportsTable = (props: {
 						<tr class="reports-more">
 							<td colSpan={COLUMNS}>
 								<div class="reports-failed" role="alert">
-									<span>
-										These reports did not load: the Bencher API did not answer.
-									</span>
+									<span>These reports did not load</span>
 									<Button size="sm" onClick={() => retry()()}>
 										Retry
 									</Button>

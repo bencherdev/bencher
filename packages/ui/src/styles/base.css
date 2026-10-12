@@ -26,6 +26,12 @@
 		text-decoration: none;
 	}
 
+	/* A link inside running text is told apart by more than its color. */
+	p a:not([class]) {
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+
 	code,
 	pre,
 	kbd,

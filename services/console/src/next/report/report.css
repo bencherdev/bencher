@@ -135,8 +135,7 @@
 	color: var(--color-text-secondary);
 	white-space: nowrap;
 }
-.rp-empty,
-.rp-missing {
+.rp-empty {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -145,10 +144,6 @@
 	border: var(--border-width) solid var(--color-border);
 	border-radius: var(--radius-container);
 	text-align: center;
-}
-.rp-missing p {
-	margin: 0;
-	color: var(--color-text-muted);
 }
 .rp-skeleton {
 	display: flex;

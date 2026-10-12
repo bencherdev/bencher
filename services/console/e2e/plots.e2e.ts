@@ -70,20 +70,18 @@ test("the pinned plots draw in one request, each at its own window", async ({
 });
 
 // Kills a page window that redraws only some tiles, one that is saved, and a
-// way back to the plots' own windows that asks the API again.
+// Per plot that asks the API again for the plots' own windows.
 test("a page window redraws every tile for this view only", async ({
 	page,
 }) => {
 	const requests = plotsRequests(page);
 	await page.goto(PLOTS);
 	await expect(figure(page, SEEDED[2][0])).toHaveAccessibleName(SEEDED[2][1]);
-	const window = page.getByRole("radiogroup", {
-		name: "Window for every plot on this page",
-	});
+	const window = page.getByRole("radiogroup", { name: "Window" });
+	const checked = window.getByRole("radio", { checked: true });
+	await expect(checked).toHaveAccessibleName("Per plot");
 	await window.getByText("1w", { exact: true }).click();
-	await expect(
-		page.getByText("Showing 1w on every plot, for this view only."),
-	).toBeVisible();
+	await expect(checked).toHaveAccessibleName("1w");
 	await expect(figure(page, SEEDED[0][0])).toHaveAccessibleName(
 		"2 lines over 1w",
 	);
@@ -96,7 +94,7 @@ test("a page window redraws every tile for this view only", async ({
 	);
 
 	const asked = requests.length;
-	await page.getByRole("button", { name: "Each plot keeps its own" }).click();
+	await window.getByText("Per plot", { exact: true }).click();
 	for (const [title, drawn] of SEEDED) {
 		await expect(figure(page, title)).toHaveAccessibleName(drawn);
 	}
@@ -110,7 +108,7 @@ test("a page window redraws every tile for this view only", async ({
 	for (const [title, drawn] of SEEDED) {
 		await expect(figure(page, title)).toHaveAccessibleName(drawn);
 	}
-	await expect(window.getByRole("radio", { checked: true })).toHaveCount(0);
+	await expect(checked).toHaveAccessibleName("Per plot");
 });
 
 // Kills a move the API never hears of or places elsewhere, a rename that is
@@ -141,7 +139,7 @@ test("rename, move, and unpin with Undo save as they show", async ({
 	await more(page, "Renamed", "Unpin");
 	await expect(titles(page)).toHaveText(["Pin 1", "Pin 2"]);
 	const unpinned = page.getByRole("status").filter({ hasText: "Unpinned" });
-	await expect(unpinned).toContainText('Unpinned "Renamed".');
+	await expect(unpinned).toContainText('Unpinned "Renamed"');
 	await expect
 		.poll(() => pinTitles(request, project.slug))
 		.toEqual(["Pin 1", "Pin 2"]);
@@ -166,7 +164,7 @@ test("Reorder mode moves a tile up and the order survives a reload", async ({
 	await page.getByRole("button", { name: "Reorder" }).click();
 	const reorder = page.getByRole("region", { name: "Reorder" });
 	await reorder.getByRole("button", { name: "Move Pin 3 up" }).click();
-	await expect(page.getByText("Moved Pin 3 up: now 2 of 3.")).toBeVisible();
+	await expect(page.getByText("Moved Pin 3 up: 2 of 3")).toBeVisible();
 	await expect(
 		reorder.getByRole("button", { name: "Move Pin 1 up" }),
 	).toBeDisabled();
@@ -212,11 +210,13 @@ test("the pin dialog changes the title, the window, and the position", async ({
 	await dialog
 		.getByRole("combobox", { name: "After which plot" })
 		.selectOption("Pin 3");
-	await expect(dialog.getByText("2 weeks rolling")).toBeVisible();
+	await expect(dialog.getByText("2 weeks", { exact: true })).toBeVisible();
 	await dialog.getByRole("button", { name: "Save pin" }).click();
 
 	await expect(titles(page)).toHaveText(["Pin 2", "Pin 3", "Fortnight"]);
-	await expect(tile(page, "Fortnight")).toContainText("saved window 2 weeks");
+	await expect(
+		tile(page, "Fortnight").getByText("2 weeks", { exact: true }),
+	).toBeVisible();
 	await expect(figure(page, "Fortnight")).toHaveAccessibleName(
 		"2 lines over 2 weeks",
 	);
@@ -258,7 +258,7 @@ test("Edit on Explore's pin confirmation opens the pin dialog", async ({
 	await expect(
 		page.getByRole("heading", { level: 1, name: "Edited" }),
 	).toBeVisible();
-	await expect(confirmation).toContainText('"Edited", 1w rolling');
+	await expect(confirmation).toContainText('"Edited" · 1w');
 	const [pin] = await listPlots(request, project.slug);
 	expect(pin?.title).toBe("Edited");
 	expect(pin?.window).toBe(7 * 24 * 60 * 60);
@@ -272,7 +272,7 @@ test("at 64 pins Plots says so, Pin says so, and the API refuses another", async
 }) => {
 	const project = await pinnedProject(request, 64);
 	await page.goto(nextPath(project.slug, "plots"));
-	await expect(page.getByText("64 of 64 pinned.")).toBeVisible();
+	await expect(page.getByText("64 of 64 pinned")).toBeVisible();
 	await expect(
 		createPin(request, project.slug, { title: "One more" }),
 	).rejects.toThrow(/: 400 /);
@@ -373,10 +373,9 @@ test("a batch that did not load says so and loads on Retry", async ({
 	await expect(figure(page, "Pin 1")).toHaveAccessibleName("2 lines over 4w");
 	await tile(page, "Pin 8").scrollIntoViewIfNeeded();
 	const failed = page.getByRole("alert").filter({ hasText: "did not load" });
-	await expect(failed).toContainText(
-		"Pin 7 and Pin 8 did not load: the Bencher API did not answer.",
-		{ timeout: 15_000 },
-	);
+	await expect(failed).toContainText("Pin 7 and Pin 8 did not load", {
+		timeout: 15_000,
+	});
 	await expect(figure(page, "Pin 8")).toHaveAccessibleName(
 		"The plot did not load",
 	);
@@ -401,9 +400,7 @@ test.describe("a viewer", () => {
 	test("opens the pinned plots and changes none of them", async ({ page }) => {
 		await page.goto(PLOTS);
 		await expect(titles(page)).toHaveText(SEEDED.map(([title]) => title));
-		await expect(
-			page.getByText("Read only. Ask a project Maintainer for access."),
-		).toBeVisible();
+		await expect(page.getByText("Read only", { exact: true })).toBeVisible();
 		await expect(
 			page.getByRole("link", { name: /^Open .* in Explore$/ }),
 		).toHaveCount(3);
@@ -421,6 +418,17 @@ test("Plots passes axe in both themes", async ({ page }) => {
 		for (const [title, drawn] of SEEDED) {
 			await expect(figure(page, title)).toHaveAccessibleName(drawn);
 		}
+	});
+});
+
+// Kills empty-state links that read only by their color, or a contrast or a
+// name missing in either theme.
+test("an empty Plots passes axe in both themes", async ({ page, request }) => {
+	const project = await pinnedProject(request, 0);
+	await axeInBothThemes(page, nextPath(project.slug, "plots"), async () => {
+		await expect(
+			page.getByRole("main").getByRole("link", { name: "report", exact: true }),
+		).toBeVisible();
 	});
 });
 

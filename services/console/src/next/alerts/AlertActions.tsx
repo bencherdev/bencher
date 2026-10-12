@@ -2,7 +2,7 @@ import { Match, Show, Switch } from "solid-js";
 import { formatDate } from "../plot/format";
 
 /** Bencher records no reason, and a replaced branch head is the only one. */
-const SILENCED = "Silenced: the branch head was replaced";
+const SILENCED = "Silenced: branch head replaced";
 
 interface AlertActionsProps {
 	/** The line, as its row names it. */

@@ -105,7 +105,7 @@ describe("a save", () => {
 		const slug = page.getByRole("textbox", { name: "Slug" });
 		await slug.fill("Hash Browns");
 		await expect
-			.element(page.getByText("Up to 64 lowercase letters"))
+			.element(page.getByText("Lowercase letters, numbers, and single dashes"))
 			.toBeVisible();
 		await expect.element(save()).toBeDisabled();
 		expect(sent).toEqual([]);
@@ -114,6 +114,18 @@ describe("a save", () => {
 		await expect.element(slug).toHaveValue("hashbrown");
 		await expect.element(save()).toBeDisabled();
 	});
+});
+
+// Kills a slug warning shown for the saved slug, one never shown for an
+// edit, and one left once the edit is undone.
+test("the slug describes what a change breaks only while it differs from the saved one", async () => {
+	dispose = mount(() => <General />, { api: fakeApi().api }).dispose;
+	const slug = page.getByRole("textbox", { name: "Slug" });
+	await expect.element(slug).toHaveAccessibleDescription("");
+	await slug.fill("hash-browns");
+	await expect.element(slug).toHaveAccessibleDescription();
+	await slug.fill("hashbrown");
+	await expect.element(slug).toHaveAccessibleDescription("");
 });
 
 // Kills a slug change that leaves the old slug's cache answering for a
@@ -170,7 +182,7 @@ test("a slug another project has is announced under Slug", async () => {
 	await save().click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Another project already has this slug.");
+		.toHaveTextContent("Another project has this slug");
 });
 
 describe("focus", () => {
@@ -229,8 +241,7 @@ describe("what a reader sees", () => {
 			form: page.getByRole("textbox", { name: "Name" }).elements().length,
 			danger: page.getByRole("button", { name: "Delete project" }).elements()
 				.length,
-			readOnly: page.getByText("Read only. Ask a project Maintainer").elements()
-				.length,
+			readOnly: page.getByText("Read only", { exact: true }).elements().length,
 		};
 	};
 

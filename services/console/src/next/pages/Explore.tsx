@@ -57,13 +57,11 @@ import { chipSummary } from "../explore/summary";
 import { rollingName } from "../explore/window";
 import {
 	NEXT_PROJECTS,
-	TABS,
 	parseNextPath,
 	projectPath,
 	reportPath,
 	tabOf,
 } from "../paths";
-import { formatDate } from "../plot/format";
 import { loadPlot, loadedPlot } from "../plot/lazy";
 import { useNarrow } from "../plot/narrow";
 import EditPin from "../plots/EditPin";
@@ -239,8 +237,8 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 		return error instanceof ApiError &&
 			error.kind !== "network" &&
 			error.kind !== "server"
-			? "The API refused this query."
-			: "The API did not answer.";
+			? "The API refused this query"
+			: "The plot did not load";
 	};
 	const [PlotView, setPlotView] = createSignal(loadedPlot());
 	const [plotMissing, setPlotMissing] = createSignal(false);
@@ -260,7 +258,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 		}
 	};
 	const plotFailure = () =>
-		refused() ?? (plotMissing() ? "The plot did not load." : undefined);
+		refused() ?? (plotMissing() ? "The plot did not load" : undefined);
 	createEffect(() => {
 		if (drawsPlot(query())) {
 			wantPlot();
@@ -289,14 +287,12 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 		shown: Confirmation;
 		undo: () => Promise<void>;
 	}>();
-	const [filled, setFilled] = createSignal<string>();
 	const [shared, setShared] = createSignal(false);
 	const [working, setWorking] = createSignal(false);
 	const [failure, setFailure] = createSignal<string>();
 	/** The reader changed the query. */
 	const edit = (next: ExploreQuery, replace = false) => {
 		setConfirmation(undefined);
-		setFilled(undefined);
 		setShared(false);
 		setFailure(undefined);
 		go(settleVisibility(next, drawn()), replace);
@@ -403,7 +399,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 				},
 			});
 		} catch {
-			setFailure("Bencher did not pin the plot. Try again.");
+			setFailure("Bencher did not pin the plot");
 		} finally {
 			setWorking(false);
 		}
@@ -418,7 +414,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			await pin.undo();
 			setConfirmation(undefined);
 		} catch {
-			setFailure("Bencher did not remove the pin. Try again.");
+			setFailure("Bencher did not remove the pin");
 		} finally {
 			setWorking(false);
 		}
@@ -443,7 +439,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			go(queryFromPlot(saved), true);
 			return true;
 		} catch {
-			setFailure("Bencher did not save the plot. Try again.");
+			setFailure("Bencher did not save the plot");
 			return false;
 		} finally {
 			setWorking(false);
@@ -486,7 +482,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			edit(withValue(before, "benchmarks", option.value));
 			return;
 		}
-		const { branch, testbed, measures, version, start_time } = latest;
+		const { branch, testbed, measures } = latest;
 		const seed = (
 			dimension: "branches" | "testbeds" | "measures",
 			uuid: string,
@@ -507,10 +503,6 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			testbeds: [{ uuid: testbed.uuid }],
 			measures: measures.slice(0, MAX_ENTRIES).map(({ uuid }) => uuid),
 		});
-		const hash = version.hash ? `${version.hash.slice(0, 7)} on ` : "";
-		setFilled(
-			`The branch, the testbed, and the measures came from ${option.label}'s latest report, ${hash}${formatDate(start_time)}. Change any of them.`,
-		);
 	};
 
 	// Leaving a pin with unsaved changes for another page asks first; a link
@@ -569,22 +561,16 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			window.location.assign(to);
 		}
 	};
-	const leavingFor = () => {
-		const to = leaving();
-		const tab = to === undefined ? undefined : destination(to).tab;
-		return TABS.find((entry) => entry.tab === tab)?.label ?? "another page";
-	};
 
 	const source = () => {
 		if (blank()) {
-			return "nothing chosen yet";
+			return "No lines";
 		}
 		const alert = (location.state as { alert?: string } | undefined)?.alert;
 		if (alert !== undefined) {
 			return (
 				<>
-					from an alert on {alert}{" "}
-					<a href={projectPath(slug(), "alerts")}>Alerts</a>
+					from an <a href={projectPath(slug(), "alerts")}>alert</a> on {alert}
 				</>
 			);
 		}
@@ -593,12 +579,12 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			return undefined;
 		}
 		const hash = answer()?.reports.find(({ uuid }) => uuid === report)?.hash;
-		return (
-			<>
-				{hash ? `from report ${hash.slice(0, 7)} ` : "from a report "}
-				<a href={reportPath(slug(), report)}>Open report</a>
-			</>
+		const link = (
+			<a href={reportPath(slug(), report)}>
+				{hash ? hash.slice(0, 7) : "report"}
+			</a>
 		);
+		return hash ? <>from report {link}</> : <>from a {link}</>;
 	};
 
 	const [sheet, setSheet] = createSignal(false);
@@ -660,7 +646,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 					shared={shared()}
 					confirmation={confirmation()?.shown}
 					onShare={share}
-					onPin={() => create("Pinned to the top of Plots as")}
+					onPin={() => create("Pinned")}
 					onUndo={undo}
 					onEdit={() => setEditing(pinned())}
 					onDiscard={() => {
@@ -670,7 +656,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 						}
 					}}
 					onSave={save}
-					onSaveNew={() => create("Saved as a new pin at the top of Plots as")}
+					onSaveNew={() => create("Saved as new")}
 				/>
 				<Show when={failure()}>
 					<p class="ferror" role="alert">
@@ -706,15 +692,6 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 					onQuery={(next) => edit(next)}
 				/>
 				<Show when={!narrow()}>{editor()}</Show>
-				<Show when={blank()}>
-					<p class="ex-note">
-						Add a benchmark to start. Its latest report fills the branch, the
-						testbed, and the measures; change any of them after.
-					</p>
-				</Show>
-				<Show when={filled()}>
-					<p class="ex-note">{filled()}</p>
-				</Show>
 			</section>
 			<Show when={drawable(query())}>
 				<section class="ex-plot" aria-label="Plot" aria-busy={busy()}>
@@ -784,7 +761,6 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			<Show when={leaving()}>
 				<Leave
 					title={pinned()?.title ?? "This pinned plot"}
-					destination={leavingFor()}
 					saving={working()}
 					onStay={() => setLeaving(undefined)}
 					onLeave={leave}

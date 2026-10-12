@@ -176,9 +176,7 @@ export const refocusThenReread = async (
 	const taken = patched();
 	await dismiss("bench-03 n=0 Latency").click();
 	expect((await taken).ok()).toBe(true);
-	await expect(
-		page.getByText("Some alerts did not change, so the list is read again."),
-	).toBeVisible();
+	await expect(page.getByText("Some alerts did not change")).toBeVisible();
 	await expect.poll(() => offsets.length).toBeGreaterThan(asked);
 	// Nothing else is asked for while the first batch is out.
 	await page.waitForTimeout(500);

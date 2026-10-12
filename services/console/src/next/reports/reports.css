@@ -138,11 +138,6 @@
 	padding: 48px 24px;
 	text-align: center;
 }
-.reports-empty p {
-	margin: 0;
-	max-width: 56ch;
-	color: var(--color-text-muted);
-}
 .reports-empty .btnrow {
 	justify-content: center;
 }

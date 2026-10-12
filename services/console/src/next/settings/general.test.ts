@@ -155,7 +155,7 @@ describe("refusalOf", () => {
 			refusalOf(refused(402, "No plan"), { visibility: Visibility.Private }),
 		).toEqual({
 			field: "visibility",
-			message: "Bencher kept the project public: private needs a paid plan.",
+			message: "Bencher kept the project public: private needs a paid plan",
 		});
 	});
 
@@ -177,7 +177,7 @@ describe("refusalOf", () => {
 			refusalOf(new ApiError(undefined, "network", "Failed"), { name: "x" }),
 		).toEqual({
 			field: "form",
-			message: "The Bencher API did not answer, so nothing was saved.",
+			message: "Bencher did not save the changes",
 		});
 	});
 });

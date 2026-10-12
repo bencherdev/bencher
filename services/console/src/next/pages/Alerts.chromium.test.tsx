@@ -174,9 +174,7 @@ test("a refused dismiss puts back the row, the count, and the badge, and says so
 	refuse?.();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent(
-			"The alerts did not change: the Bencher API did not answer.",
-		);
+		.toHaveTextContent("The alerts did not change");
 	await expect.element(heading()).toHaveTextContent("3 active");
 	expect(badge(client)).toBe(3);
 	expect(rowStates()).toEqual(["Dismiss", "Dismiss", "Dismiss"]);
@@ -338,7 +336,7 @@ test("a viewer gets no status controls, and can still select", async () => {
 		`${PATH}?status=all`,
 	);
 	await expect
-		.element(page.getByText("Read only. Ask a project Maintainer for access."))
+		.element(page.getByText("Read only", { exact: true }))
 		.toBeVisible();
 	await expect.element(page.getByText(/^Dismissed /)).toBeVisible();
 	for (const name of [/^Dismiss/, /^Reactivate/]) {
@@ -578,9 +576,7 @@ test("a change the API made for fewer alerts than were loaded puts the rows back
 	await page.getByRole("button", { name: `Dismiss group on ${WHERE}` }).click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent(
-			"Some alerts did not change, so the list is read again.",
-		);
+		.toHaveTextContent("Some alerts did not change");
 	await expect
 		.poll(() => rowStates())
 		.toEqual(["Dismiss", "Dismiss", "Dismiss"]);
@@ -1231,9 +1227,7 @@ test("a reread after a short change asks each later batch again from the offset 
 		.click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent(
-			"Some alerts did not change, so the list is read again.",
-		);
+		.toHaveTextContent("Some alerts did not change");
 	await expect.poll(() => lists().length).toBeGreaterThan(before);
 	await new Promise((resolve) => setTimeout(resolve, 200));
 	expect(offsetsOf(lists().slice(before))).toEqual(["0"]);
@@ -1497,7 +1491,7 @@ test("a filtered page names the project's active count from the tab badge", asyn
 	);
 	await expect.element(heading()).toHaveTextContent("3 active");
 	await expect
-		.element(page.getByText(/ · 9 active in the project$/))
+		.element(page.getByText("9 active in the project", { exact: true }))
 		.toBeVisible();
 });
 

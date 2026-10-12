@@ -1,5 +1,5 @@
 import Segmented from "@bencherdev/ui/Segmented";
-import { type JSX, Match, Show, Switch, children } from "solid-js";
+import { type JSX, Show } from "solid-js";
 import type { ExploreQuery } from "../query/query";
 import CustomRange from "./CustomRange";
 import { LINE_CAP, lineCapWarning, measuresLayout } from "./layout";
@@ -30,8 +30,8 @@ const Controls = (props: {
 	total: number | undefined;
 	now: () => number;
 	onQuery: (query: ExploreQuery) => void;
-	/** For a reader who has no custom window, whose presets end now: how far back they reach. */
-	reach?: JSX.Element;
+	/** For a reader who has no custom window: the presets end now. */
+	presetsOnly?: boolean;
 	/** What ends the row. */
 	children?: JSX.Element;
 }) => {
@@ -41,13 +41,11 @@ const Controls = (props: {
 		props.total === undefined ? undefined : lineCapWarning(props.total);
 	const set = (change: Partial<ExploreQuery>) =>
 		props.onQuery({ ...props.query, ...change });
-	const reach = children(() => props.reach);
-	const presetsOnly = () => reach() !== undefined;
 	const pick = (choice: WindowChoice) => {
 		const { end: _end, ...unended } = props.query.window;
 		set({
 			window: pickWindow(
-				presetsOnly() ? unended : props.query.window,
+				props.presetsOnly ? unended : props.query.window,
 				choice,
 				props.now(),
 			),
@@ -82,17 +80,14 @@ const Controls = (props: {
 				<Segmented
 					name="explore-window"
 					aria-label="Window"
-					options={presetsOnly() ? WINDOWS.slice(0, -1) : WINDOWS}
+					options={props.presetsOnly ? WINDOWS.slice(0, -1) : WINDOWS}
 					value={
-						presetsOnly() && props.query.window.end !== undefined
+						props.presetsOnly && props.query.window.end !== undefined
 							? undefined
 							: windowChoice(props.query.window)
 					}
 					onChange={pick}
 				/>
-				<Show when={presetsOnly()}>
-					<span class="muted sm">{reach()}</span>
-				</Show>
 				<Show when={"start" in props.query.window && props.query.window}>
 					{(window) => (
 						<CustomRange
@@ -102,54 +97,40 @@ const Controls = (props: {
 						/>
 					)}
 				</Show>
-				<Switch>
-					<Match when={layout().control === "choice"}>
-						<span class="eyebrow" aria-hidden="true">
-							Measures
-						</span>
-						<Segmented
-							name="explore-layout"
-							aria-label="Measures layout"
-							options={LAYOUTS}
-							value={layout().layout}
-							onChange={(next) => set({ layout: next })}
-						/>
-					</Match>
-					<Match when={layout().control === "forced"}>
-						<span class="muted sm">three or more measures always stack</span>
-					</Match>
-				</Switch>
+				<Show when={layout().control === "choice"}>
+					<span class="eyebrow" aria-hidden="true">
+						Measures
+					</span>
+					<Segmented
+						name="explore-layout"
+						aria-label="Measures layout"
+						options={LAYOUTS}
+						value={layout().layout}
+						onChange={(next) => set({ layout: next })}
+					/>
+				</Show>
 				{props.children}
 			</div>
 			<Show when={cap()}>
-				{(warning) => (
-					<p class="ex-cap" role="status">
-						<svg
-							viewBox="0 0 24 24"
-							width="16"
-							height="16"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							aria-hidden="true"
-						>
-							<path d="M12 4l9 16H3z" />
-							<path d="M12 10v4M12 17v.5" />
-						</svg>
-						<span>
-							<b>
-								{warning() === "over"
-									? `${props.total} lines, over the cap of ${LINE_CAP}.`
-									: `${props.total} of ${LINE_CAP} lines.`}
-							</b>{" "}
-							{warning() === "over"
-								? `The plot draws the first ${LINE_CAP}. Remove a value or a set to narrow the query.`
-								: "The query is near the line cap; narrow it before adding more."}
-						</span>
-					</p>
-				)}
+				<p class="ex-cap" role="status">
+					<svg
+						viewBox="0 0 24 24"
+						width="16"
+						height="16"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<path d="M12 4l9 16H3z" />
+						<path d="M12 10v4M12 17v.5" />
+					</svg>
+					<b>
+						{props.total} of {LINE_CAP} lines
+					</b>
+				</p>
 			</Show>
 		</>
 	);

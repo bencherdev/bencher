@@ -122,9 +122,7 @@ test("the active blake3 alert sits under report 9c1f2e4 with its value, delta, a
 	await page.goto(alerts(hashbrown.slug));
 
 	await expect(heading(page)).toHaveText("1 active");
-	await expect(
-		page.getByText("1 dismissed and 0 silenced in the last 4 weeks"),
-	).toBeVisible();
+	await expect(page.getByText("1 dismissed · 0 silenced")).toBeVisible();
 	expect(await rowNames(page)).toEqual([
 		`the alerts in the report on ${MAIN_REPORT}`,
 		BLAKE3,
@@ -253,9 +251,7 @@ test.describe("on a project of its own", () => {
 		await expect(heading(page)).toHaveText("3 active");
 
 		await dismiss(row(page, line("bench-02")), line("bench-02")).click();
-		await expect(page.getByRole("alert")).toContainText(
-			"did not change: the Bencher API did not answer",
-		);
+		await expect(page.getByRole("alert")).toContainText("did not change");
 		await expect(
 			dismiss(row(page, line("bench-02")), line("bench-02")),
 		).toBeVisible();
@@ -289,7 +285,7 @@ test.describe("on a project of its own", () => {
 
 		await page.reload();
 		await expect(
-			page.getByRole("heading", { name: "No active alerts" }),
+			page.getByRole("heading", { name: "No alerts" }),
 		).toBeVisible();
 	});
 
@@ -314,7 +310,7 @@ test.describe("on a project of its own", () => {
 		]);
 		const silenced = table(page)
 			.getByRole("row")
-			.filter({ hasText: "Silenced: the branch head was replaced" });
+			.filter({ hasText: "Silenced: branch head replaced" });
 		await expect(silenced).toHaveCount(1);
 		await expect(
 			silenced.getByRole("button", { name: `Expand ${line("bench-00")}` }),
@@ -369,9 +365,7 @@ test.describe("on a project of its own", () => {
 		).not.toBeChecked();
 
 		await older.uncheck();
-		await expect(
-			page.getByText("Select alerts to act on them together"),
-		).toBeVisible();
+		await expect(page.getByText("0 selected")).toBeVisible();
 
 		await groupRow(page, OLDER)
 			.getByRole("button", { name: `Dismiss group on ${OLDER}` })
@@ -415,7 +409,7 @@ test.describe("on a project of its own", () => {
 			page.getByRole("button", { name: "branch feature" }),
 		).toBeVisible();
 		await expect(row(page, line("bench-00"))).toContainText(
-			"Silenced: the branch head was replaced",
+			"Silenced: branch head replaced",
 		);
 
 		// The Reports list is read and cached, then the page dismisses an alert it counts.
@@ -871,9 +865,7 @@ test.describe("a reader who cannot edit", () => {
 		page,
 	}) => {
 		await page.goto(alerts(hashbrown.slug, "?status=all"));
-		await expect(
-			page.getByText("Read only. Ask a project Maintainer for access."),
-		).toBeVisible();
+		await expect(page.getByText("Read only", { exact: true })).toBeVisible();
 		await expect(row(page, SHA256)).toContainText(/Dismissed /);
 		await expect(page.getByRole("button", { name: /^Dismiss/ })).toHaveCount(0);
 		await expect(page.getByRole("button", { name: /^Reactivate/ })).toHaveCount(

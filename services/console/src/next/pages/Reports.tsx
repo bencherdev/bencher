@@ -36,9 +36,6 @@ import {
 	type ReportsSearch,
 	decodeSearch,
 	encodeSearch,
-	filterCount,
-	nothingFound,
-	windowPhrase,
 } from "../reports/search";
 
 /** Skeleton rows for a list never fetched, which show only once the wait is noticeable. */
@@ -147,13 +144,6 @@ const Reports = () => {
 						{total() === 1 ? "1 report" : `${total()} reports`}
 					</Show>
 				</Heading>
-				<p class="ph-sub">
-					{windowPhrase(search().window, now())}
-					<span class="dotsep" aria-hidden="true">
-						·
-					</span>
-					newest first
-				</p>
 			</div>
 			<Controls
 				search={search()}
@@ -163,12 +153,7 @@ const Reports = () => {
 			/>
 			<Switch>
 				<Match when={first() && reports().length === 0 && !busy()}>
-					<NothingFound
-						search={search()}
-						names={names()}
-						now={now()}
-						onSearch={setSearch}
-					/>
+					<NothingFound search={search()} onSearch={setSearch} />
 				</Match>
 				<Match when={reports().length > 0}>
 					<ReportsTable
@@ -186,9 +171,7 @@ const Reports = () => {
 				</Match>
 				<Match when={batches()[0]?.isLoadingError}>
 					<Banner status="error" role="alert" class="load-error">
-						<span class="grow">
-							Reports did not load: the Bencher API did not answer.
-						</span>
+						<span class="grow">Reports did not load</span>
 						<Button size="sm" onClick={() => batches()[0]?.refetch()}>
 							Retry
 						</Button>
@@ -237,22 +220,14 @@ export default Reports;
 
 const NothingFound = (props: {
 	search: ReportsSearch;
-	names: FilterNames;
-	now: number;
 	onSearch: (search: ReportsSearch) => void;
 }) => {
-	const filtered = () => filterCount(props.search) > 0;
 	const all = () => props.search.window.kind === "all";
 	return (
 		<div class="ui-table-scroll reports-empty">
 			<Heading level={2} size="lg">
-				{filtered()
-					? "No reports match these filters"
-					: all()
-						? "No reports yet"
-						: "No reports in this window"}
+				No reports
 			</Heading>
-			<p>{nothingFound(props.search, props.now, undefined, props.names)}</p>
 			<Show when={!all()}>
 				<div class="btnrow">
 					<Button

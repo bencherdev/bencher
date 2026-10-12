@@ -4,7 +4,7 @@ import { type JSX, Show } from "solid-js";
 import ShareIcon from "./ShareIcon";
 
 export interface Confirmation {
-	/** What happened, such as "Pinned to the top of Plots as". */
+	/** What happened, such as "Pinned". */
 	text: string;
 	title: string;
 	window: string;
@@ -71,7 +71,7 @@ const Header = (props: {
 					fallback={
 						<div class="ex-title">
 							<h1 class="eyebrow ex-eyebrow">Unsaved plot</h1>
-							<span class="muted sm">{props.source}</span>
+							<p class="muted sm">{props.source}</p>
 						</div>
 					}
 				>
@@ -158,9 +158,8 @@ const Header = (props: {
 							<path d="M5 12.5l4.5 4.5L19 7.5" />
 						</svg>
 						<span class="grow">
-							{confirmation().text} <b>"{confirmation().title}"</b>,{" "}
-							{confirmation().window} rolling, with its hidden and focused
-							lines.
+							{confirmation().text} <b>"{confirmation().title}"</b> ·{" "}
+							{confirmation().window}
 						</span>
 						<button type="button" class="lnk" onClick={() => props.onUndo()}>
 							Undo

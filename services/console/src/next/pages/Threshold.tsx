@@ -46,7 +46,6 @@ import {
 	encodeView,
 	isUuid,
 	windowLabel,
-	windowPhrase,
 } from "../thresholds/search";
 
 const SKELETON_ROWS = 4;
@@ -185,20 +184,11 @@ const Threshold = () => {
 				: "network";
 	};
 	const missing = () => !valid() || failure() === "not_found";
-	const windowText = () => windowPhrase(view().window, now());
 	const history = () =>
 		view().window.kind === "custom" ? "range" : windowLabel(view().window);
 
 	return (
-		<Show
-			when={!missing()}
-			fallback={
-				<NotFound
-					slug={slug()}
-					project={bootstrap().data?.project.name ?? slug()}
-				/>
-			}
-		>
+		<Show when={!missing()} fallback={<NotFound slug={slug()} />}>
 			<main class="page">
 				<div class="pagehead th-head">
 					<div class="ph-title">
@@ -265,8 +255,7 @@ const Threshold = () => {
 													return (
 														<>
 															{shown().active} active ·{" "}
-															{shown().dismissed + shown().silenced} dismissed{" "}
-															{windowText()}
+															{shown().dismissed + shown().silenced} dismissed
 														</>
 													);
 												}}
@@ -286,8 +275,8 @@ const Threshold = () => {
 											<Banner status="error" role="alert" class="load-error">
 												<span class="grow">
 													{notice() === "partial"
-														? "Some alerts did not change, so the list is read again."
-														: "The alert did not change: the Bencher API did not answer."}
+														? "Some alerts did not change"
+														: "The alert did not change"}
 												</span>
 											</Banner>
 										)}
@@ -330,9 +319,7 @@ const Threshold = () => {
 					</Match>
 					<Match when={failure()}>
 						<Banner status="error" role="alert" class="load-error">
-							<span class="grow">
-								This threshold did not load: the Bencher API did not answer.
-							</span>
+							<span class="grow">This threshold did not load</span>
 							<Button size="sm" onClick={() => threshold().refetch()}>
 								Retry
 							</Button>
@@ -443,15 +430,8 @@ const Alerts = (props: {
 		>
 			<div class="th-empty">
 				<Heading level={3} size="base">
-					{props.view.status === "active"
-						? "No active alerts"
-						: "No alerts in this window"}
+					No alerts
 				</Heading>
-				<p>
-					{props.view.status === "active"
-						? "Nothing this threshold raised is active. All lists the dismissed ones."
-						: "Widen the window to see older alerts."}
-				</p>
 			</div>
 		</Match>
 		<Match when={props.lines.length > 0}>
@@ -521,9 +501,7 @@ const Alerts = (props: {
 		</Match>
 		<Match when={props.failed}>
 			<Banner status="error" role="alert" class="load-error">
-				<span class="grow">
-					These alerts did not load: the Bencher API did not answer.
-				</span>
+				<span class="grow">These alerts did not load</span>
 				<Button size="sm" onClick={() => props.onRetry("first")}>
 					Retry
 				</Button>
@@ -568,7 +546,7 @@ const ReportCell = (props: { slug: string; line: AlertLine }) => {
 	);
 };
 
-const NotFound = (props: { slug: string; project: string }) => (
+const NotFound = (props: { slug: string }) => (
 	<main class="page">
 		<div class="pagehead">
 			<div class="ph-title">
@@ -581,19 +559,5 @@ const NotFound = (props: { slug: string; project: string }) => (
 				</Heading>
 			</div>
 		</div>
-		<section class="rp-missing">
-			<Heading level={2} size="lg">
-				{props.project} has no threshold here
-			</Heading>
-			<p>It may have been deleted, or the link may be mistyped.</p>
-			<a
-				class="ui-button"
-				data-variant="primary"
-				data-size="md"
-				href={projectPath(props.slug, "thresholds")}
-			>
-				Open Thresholds
-			</a>
-		</section>
 	</main>
 );

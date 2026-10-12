@@ -36,7 +36,7 @@ const Head = (props: {
 			<Show when={props.readOnly}>
 				<p class="ro-note">
 					<Icon name="read-only" />
-					Read only. Ask a project Maintainer for access.
+					Read only
 				</p>
 			</Show>
 		</div>

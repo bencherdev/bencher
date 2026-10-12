@@ -115,9 +115,7 @@ test("archiving dims the row at once, and a refusal puts it back and says why", 
 	const impact = page.getByRole("group", { name: "Archive feature-simd" });
 	await expect
 		.element(impact)
-		.toHaveTextContent(
-			"Archiving feature-simd archives 1 threshold and hides its lines.",
-		);
+		.toHaveTextContent("Hides its lines and archives 1 threshold");
 	await impact.getByRole("button", { name: "Archive feature-simd" }).click();
 
 	await expect
@@ -128,7 +126,7 @@ test("archiving dims the row at once, and a refusal puts it back and says why", 
 		.toBeInTheDocument();
 	await expect
 		.element(page.getByRole("status"))
-		.toHaveTextContent("Archived feature-simd with its 1 threshold.");
+		.toHaveTextContent("Archived feature-simd and 1 threshold");
 	await expect
 		.poll(() => fake.sent)
 		.toEqual([
@@ -203,7 +201,7 @@ test("unarchiving says which thresholds come back and which stay", async () => {
 	await expect
 		.element(page.getByRole("status"))
 		.toHaveTextContent(
-			"Unarchived gone and 1 threshold. One threshold stays archived: another of its dimensions is archived.",
+			"Unarchived gone and 1 threshold · 1 threshold still archived",
 		);
 	await expect
 		.element(page.getByRole("button", { name: "Undo, gone" }))
@@ -294,7 +292,7 @@ test("the filter asks once the typing stops, and an empty answer offers to clear
 		"simd",
 	);
 	await expect
-		.element(page.getByText('No branches match "simd".'))
+		.element(page.getByText("No branches", { exact: true }))
 		.toBeVisible();
 	const searched = fake.reads
 		.slice(before)
@@ -891,9 +889,7 @@ test("a list that does not load says so, and Retry loads it", async () => {
 	dispose = show(fake.api).dispose;
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent(
-			"Branches did not load: the Bencher API did not answer.",
-		);
+		.toHaveTextContent("Branches did not load");
 	failing = false;
 	await page.getByRole("button", { name: "Retry" }).click();
 	await expect.element(rowOf("main")).toBeVisible();
@@ -911,9 +907,7 @@ test("a next batch that does not load says so, and Retry loads it", async () => 
 	scrollToRow(25);
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent(
-			"These rows did not load: the Bencher API did not answer.",
-		);
+		.toHaveTextContent("These rows did not load");
 	failing = false;
 	await page.getByRole("button", { name: "Retry" }).click();
 	await expect
