@@ -318,8 +318,9 @@ test.describe("Keys, as the project's Maintainer", () => {
 		expect(stored).not.toContain(secret);
 	});
 
-	// Kills a revoke without its confirmation, one that only hides the row, and
-	// a Revoked list that does not hold it.
+	// Kills a revoke without its confirmation, one that only hides the row, a
+	// Revoked list that does not hold it, and a revoke that a reload at once
+	// undoes.
 	test("Revoke asks first and moves the key to Revoked", async ({
 		page,
 		request,
@@ -331,6 +332,13 @@ test.describe("Keys, as the project's Maintainer", () => {
 		await expect(
 			active.getByRole("row", { name: new RegExp(name) }),
 		).toBeVisible();
+		// With both lists saved, the revoke is the one change a reload can lose.
+		await expect
+			.poll(() => savedKeys(page, hashbrown.slug))
+			.toEqual({
+				active: expect.arrayContaining([name]),
+				revoked: expect.any(Array),
+			});
 
 		await page.getByRole("button", { name: `Revoke ${name}` }).click();
 		const confirm = page.getByRole("alertdialog", { name: `Revoke ${name}?` });
@@ -359,6 +367,38 @@ test.describe("Keys, as the project's Maintainer", () => {
 		).toBeVisible();
 	});
 });
+
+/** The key names the signed in reader has saved for `slug`, by list. */
+const savedKeys = (page: Page, slug: string) =>
+	page.evaluate(
+		({ reader, slug }) =>
+			new Promise<Record<string, string[]>>((resolve) => {
+				const open = indexedDB.open("bencher-console", 1);
+				open.onupgradeneeded = () => open.result.createObjectStore("cache");
+				open.onerror = () => resolve({});
+				open.onsuccess = () => {
+					const db = open.result;
+					const get = db.transaction("cache").objectStore("cache").get(reader);
+					get.onsuccess = () => {
+						db.close();
+						const lists: Record<string, string[]> = {};
+						for (const { queryKey, state } of get.result?.state.queries ?? []) {
+							if (queryKey[1] === "keys" && queryKey[2] === slug) {
+								lists[queryKey[3]] = state.data.keys.map(
+									(key: { name: string }) => key.name,
+								);
+							}
+						}
+						resolve(lists);
+					};
+					get.onerror = () => {
+						db.close();
+						resolve({});
+					};
+				};
+			}),
+		{ reader: seed.member.user.uuid, slug },
+	);
 
 test.describe("accessibility", () => {
 	test.use({ storageState: signedIn(seed.member) });
