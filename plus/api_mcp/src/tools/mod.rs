@@ -1,6 +1,7 @@
 use std::sync::{Arc, LazyLock};
 
 use bencher_endpoint::TotalCount;
+use bencher_json::OAuthScope;
 use bencher_schema::{
     context::ApiContext,
     error::{bad_request_error, with_auth_hint},
@@ -209,6 +210,11 @@ impl McpTool {
         }
     }
 
+    /// What the tool may do to a project, which decides the OAuth scope it needs.
+    pub const fn access(self) -> ToolAccess {
+        self.kind().access()
+    }
+
     pub fn list() -> ListToolsResult {
         // The tool list is static, so the schemas are generated once
         static LIST: LazyLock<ListToolsResult> = LazyLock::new(|| {
@@ -347,33 +353,52 @@ enum ToolKind {
 }
 
 impl ToolKind {
-    fn annotations(self, title: &str) -> ToolAnnotations {
-        let annotations = ToolAnnotations::with_title(title);
+    const fn access(self) -> ToolAccess {
         match self {
-            Self::Read => annotations
-                .read_only(true)
-                .destructive(false)
-                .open_world(false),
+            Self::Read => ToolAccess::Read,
+            Self::Create | Self::Update | Self::Report | Self::Reset | Self::Run => {
+                ToolAccess::Write
+            },
+        }
+    }
+
+    fn annotations(self, title: &str) -> ToolAnnotations {
+        let annotations =
+            ToolAnnotations::with_title(title).read_only(matches!(self.access(), ToolAccess::Read));
+        match self {
+            Self::Read => annotations.destructive(false).open_world(false),
             Self::Create => annotations
-                .read_only(false)
                 .destructive(false)
                 .idempotent(false)
                 .open_world(false),
             Self::Update => annotations
-                .read_only(false)
                 .destructive(true)
                 .idempotent(true)
                 .open_world(false),
             Self::Report | Self::Reset => annotations
-                .read_only(false)
                 .destructive(true)
                 .idempotent(false)
                 .open_world(false),
             Self::Run => annotations
-                .read_only(false)
                 .destructive(true)
                 .idempotent(false)
                 .open_world(true),
+        }
+    }
+}
+
+/// What a tool may do to a project: its read-only hint and the OAuth scope it needs both follow.
+#[derive(Debug, Clone, Copy, strum::EnumIter)]
+pub enum ToolAccess {
+    Read,
+    Write,
+}
+
+impl ToolAccess {
+    pub const fn scope(self) -> OAuthScope {
+        match self {
+            Self::Read => OAuthScope::ProjectsRead,
+            Self::Write => OAuthScope::ProjectsWrite,
         }
     }
 }

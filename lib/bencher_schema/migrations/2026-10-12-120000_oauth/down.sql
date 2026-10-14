@@ -1,0 +1,12 @@
+DROP INDEX IF EXISTS index_oauth_authorization_expiration;
+DROP INDEX IF EXISTS index_oauth_authorization_grant_id;
+DROP INDEX IF EXISTS index_oauth_authorization_user_key_id;
+DROP INDEX IF EXISTS index_oauth_authorization_user_id;
+DROP INDEX IF EXISTS index_oauth_authorization_code_hash;
+DROP TABLE IF EXISTS oauth_authorization;
+DROP INDEX IF EXISTS index_oauth_token_grant_id;
+DROP INDEX IF EXISTS index_oauth_token_hash;
+DROP TABLE IF EXISTS oauth_token;
+DROP INDEX IF EXISTS index_oauth_grant_user_key_id;
+DROP INDEX IF EXISTS index_oauth_grant_user_id;
+DROP TABLE IF EXISTS oauth_grant;

@@ -27,6 +27,8 @@ pub mod actor;
 pub mod admin;
 pub mod auth;
 pub mod key;
+#[cfg(feature = "plus")]
+pub mod oauth;
 pub mod public;
 pub mod token;
 

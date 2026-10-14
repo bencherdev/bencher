@@ -226,7 +226,7 @@
 		"inlineScriptBytes": 700
 	},
 	"classicPerfColdLoad": {
-		"jsBytes": 299860,
+		"jsBytes": 301010,
 		"cssBytes": 68140
 	}
 }

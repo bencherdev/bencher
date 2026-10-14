@@ -29,6 +29,8 @@ mod heartbeat_tasks;
 mod indexer;
 mod messenger;
 #[cfg(feature = "plus")]
+mod oauth;
+#[cfg(feature = "plus")]
 mod rate_limiting;
 mod rbac;
 #[cfg(feature = "plus")]
@@ -48,6 +50,8 @@ pub use indexer::{IndexError, Indexer};
 pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
 #[cfg(feature = "plus")]
 pub use messenger::{RunnerStatusBody, ServerStatsBody};
+#[cfg(feature = "plus")]
+pub use oauth::OAuthServer;
 #[cfg(feature = "plus")]
 pub use rate_limiting::{HeaderMap, RateLimiting, RateLimitingError, RateLimitingPruneTask};
 pub use rbac::{Rbac, RbacError};
@@ -108,6 +112,9 @@ pub struct ApiContext {
     /// Domain verification token served at `/.well-known/openai-apps-challenge`.
     #[cfg(feature = "plus")]
     pub openai_apps_challenge: Option<bencher_json::NonEmpty>,
+    /// The OAuth authorization server, only when `plus.oauth` is configured.
+    #[cfg(feature = "plus")]
+    pub oauth: Option<OAuthServer>,
     /// Cancellation signal tripped on graceful shutdown so long-lived handlers (the runner WebSocket
     /// channel) can wind down and let `server.close()` complete. It also stops the periodic rate
     /// limiting prune.

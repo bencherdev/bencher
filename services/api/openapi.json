@@ -11084,6 +11084,284 @@
         }
       }
     },
+    "/v0/users/{user}/oauth/grants": {
+      "get": {
+        "tags": [
+          "users",
+          "oauth"
+        ],
+        "summary": "List connected apps",
+        "description": "List the apps connected to a user's account through OAuth that can still act for the user. Only the user themselves and server admins have access, with a JWT (user session token). The HTTP response header `X-Total-Count` contains the total number of apps.",
+        "operationId": "user_oauth_grants_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/UserOAuthGrantsSort"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonOAuthGrants"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/users/{user}/oauth/grants/{grant}": {
+      "get": {
+        "tags": [
+          "users",
+          "oauth"
+        ],
+        "summary": "View a connected app",
+        "description": "View an app connected to a user's account through OAuth. Only the user themselves and server admins have access, with a JWT (user session token).",
+        "operationId": "user_oauth_grant_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "grant",
+            "description": "The UUID for an OAuth grant.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/OAuthGrantUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonOAuthGrant"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users",
+          "oauth"
+        ],
+        "summary": "Disconnect an app",
+        "description": "Revoke the OAuth grant of an app connected to a user's account: its tokens stop working at once, and it must ask for consent again. Only the user themselves and server admins have access, with a JWT (user session token).",
+        "operationId": "user_oauth_grant_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "grant",
+            "description": "The UUID for an OAuth grant.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/OAuthGrantUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/users/{user}/tokens": {
       "get": {
         "tags": [
@@ -15314,6 +15592,133 @@
           "state"
         ]
       },
+      "JsonOAuthClient": {
+        "description": "The app an OAuth grant was given to.",
+        "type": "object",
+        "properties": {
+          "host": {
+            "description": "The host serving the app's metadata document, which is who the app is.",
+            "type": "string"
+          },
+          "id": {
+            "description": "The URL of the app's metadata document.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthClientId"
+              }
+            ]
+          },
+          "name": {
+            "description": "The name the app gives itself. It is not verified.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          }
+        },
+        "required": [
+          "host",
+          "id",
+          "name"
+        ]
+      },
+      "JsonOAuthGrant": {
+        "description": "An app connected to a user's account through OAuth.",
+        "type": "object",
+        "properties": {
+          "client": {
+            "$ref": "#/components/schemas/JsonOAuthClient"
+          },
+          "created": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "expiration": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "modified": {
+            "description": "The last time the app renewed its access.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OAuthScope"
+            }
+          },
+          "user_key": {
+            "nullable": true,
+            "description": "The user API key the connection was approved with, if any. Revoking or expiring that key disconnects the app.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonOAuthGrantKey"
+              }
+            ]
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/OAuthGrantUuid"
+          }
+        },
+        "required": [
+          "client",
+          "created",
+          "expiration",
+          "modified",
+          "scopes",
+          "uuid"
+        ]
+      },
+      "JsonOAuthGrantKey": {
+        "description": "The user API key an OAuth grant was approved with.",
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/components/schemas/ResourceName"
+          },
+          "uuid": {
+            "$ref": "#/components/schemas/UserKeyUuid"
+          }
+        },
+        "required": [
+          "name",
+          "uuid"
+        ]
+      },
+      "JsonOAuthGrants": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonOAuthGrant"
+        }
+      },
+      "JsonOAuthServer": {
+        "description": "OAuth authorization server configuration, for MCP clients to sign in with",
+        "type": "object",
+        "properties": {
+          "issuer": {
+            "description": "The issuer identifier: the public origin of this API server, `https`, or `http` only for a loopback host. Changing it disconnects every client.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthIssuer"
+              }
+            ]
+          },
+          "resources": {
+            "nullable": true,
+            "description": "The MCP server URLs access tokens are issued for, canonical first. Defaults to the issuer followed by `/mcp`.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OAuthResource"
+            }
+          }
+        },
+        "required": [
+          "issuer"
+        ]
+      },
       "JsonOAuthUrl": {
         "type": "object",
         "properties": {
@@ -16353,6 +16758,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonMcp"
+              }
+            ]
+          },
+          "oauth": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonOAuthServer"
               }
             ]
           },
@@ -19864,6 +20277,41 @@
       "NonEmpty": {
         "type": "string"
       },
+      "OAuthClientId": {
+        "description": "An OAuth client identifier: the URL of the client's metadata document.",
+        "type": "string"
+      },
+      "OAuthGrantUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "OAuthIssuer": {
+        "description": "The OAuth issuer identifier: an `https` origin, or an `http` one for a loopback host. It is written without a trailing slash, as clients compare it byte for byte.",
+        "type": "string"
+      },
+      "OAuthResource": {
+        "description": "An OAuth protected resource: an `https` URL, or an `http` one for a loopback host, with no query or fragment. It is written with a lowercase scheme and host, no default port, and no trailing slash.",
+        "type": "string"
+      },
+      "OAuthScope": {
+        "description": "An OAuth scope: what a client may do on the user's behalf.",
+        "oneOf": [
+          {
+            "description": "Read the projects the user can read.",
+            "type": "string",
+            "enum": [
+              "projects:read"
+            ]
+          },
+          {
+            "description": "Read and write the projects the user can write.",
+            "type": "string",
+            "enum": [
+              "projects:write"
+            ]
+          }
+        ]
+      },
       "OperatingSystem": {
         "type": "string",
         "enum": [
@@ -20818,6 +21266,17 @@
           }
         ]
       },
+      "UserOAuthGrantsSort": {
+        "oneOf": [
+          {
+            "description": "Sort by when the app was connected.",
+            "type": "string",
+            "enum": [
+              "created"
+            ]
+          }
+        ]
+      },
       "UserTokensSort": {
         "oneOf": [
           {
@@ -20888,6 +21347,9 @@
     {
       "name": "models",
       "description": "Models"
+    },
+    {
+      "name": "oauth"
     },
     {
       "name": "oci"
