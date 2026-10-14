@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import Plot, { type PlotProps } from "./Plot";
 import { middle, near, pixelAt, rowsOf, settle, tokenRgb } from "./pixels";
-import { GRACE_MS } from "./readout";
 import { returnSyncKey, takeSyncKey } from "./sync";
 import { expectNameStartsWithText, shownText } from "../ui/testing";
 import { DAY, START, testData, testLine } from "./testing";
@@ -211,7 +210,7 @@ describe("Plot", () => {
 		await expect.element(page.getByText("1 hidden")).toBeInTheDocument();
 	});
 
-	// Kills a band on the wrong side, a band for the wrong line, or no dimming.
+	// Kills a band on the wrong side, a band for the wrong line, or no dimming, a boundary button that keeps its name once its boundary shows or that cannot hide it, and one on a line with no threshold, which has no boundary to show.
 	test("focusing a line draws its band on the guarded side and dims the rest", async () => {
 		const data = testData([
 			testLine({
@@ -237,11 +236,7 @@ describe("Plot", () => {
 			[0, 1, 2, 3, 4, 5].filter((offset) => isBand(from + offset)).length;
 		expect(bandRows(box.bottom - 7)).toBe(0);
 
-		await page
-			.getByRole("button", {
-				name: "Focus blake3 and draw its boundary",
-			})
-			.click();
+		await page.getByRole("button", { name: "Show boundary of blake3" }).click();
 		await settle();
 
 		expect(focused()).toBe("guarded");
@@ -251,13 +246,18 @@ describe("Plot", () => {
 		expect(rowsOf(canvas, column, box.top, box.bottom, dim, 100)).not.toEqual(
 			[],
 		);
+		const hide = page.getByRole("button", { name: "Hide boundary of blake3" });
 		await expect
-			.element(
-				page.getByRole("button", {
-					name: "Focus blake3 and draw its boundary",
-				}),
-			)
-			.toHaveAttribute("aria-pressed", "true");
+			.element(page.getByRole("button", { name: /boundary of sha256/ }))
+			.not.toBeInTheDocument();
+		await expect
+			.element(page.getByRole("button", { name: "sha256: hide its line" }))
+			.toBeInTheDocument();
+		await hide.click();
+		expect(focused()).toBeNull();
+		await expect
+			.element(page.getByRole("button", { name: "Show boundary of blake3" }))
+			.toBeInTheDocument();
 	});
 
 	test("a lower limit's band runs to the top", async () => {
@@ -282,6 +282,9 @@ describe("Plot", () => {
 		);
 		expect(top.length).toBeGreaterThanOrEqual(3);
 		expect(bottom).toEqual([]);
+		await expect
+			.element(page.getByRole("button", { name: /boundary of blake3/ }))
+			.toBeInTheDocument();
 	});
 
 	// Kills a hover focus that never reaches the band: the key entry's line draws its boundary while hovered.
@@ -333,10 +336,8 @@ describe("Plot", () => {
 		});
 
 		await expect.element(status).toHaveTextContent("30.00 µs");
+		await expect.element(status).toHaveTextContent("aaaaaa2");
 		await expect.element(status).toHaveAttribute("aria-live", "off");
-		await expect
-			.element(page.getByRole("link", { name: /aaaaaa2/ }))
-			.toHaveAttribute("href", "/reports/report-2");
 
 		await page.elementLocator(over).hover({
 			position: { x: box.width - 2, y: box.height / 2 },
@@ -359,7 +360,9 @@ describe("Plot", () => {
 			position: { x: box.width / 4, y: box.height / 2 },
 		});
 
-		await page.getByRole("link", { name: /aaaaaa1/ }).hover();
+		const link = page.getByRole("link", { name: /aaaaaa1/ });
+		await expect.element(link).toHaveAttribute("href", "/reports/report-1");
+		await link.hover();
 		await expect
 			.element(page.getByRole("status"))
 			.toHaveTextContent("20.00 µs");
@@ -369,6 +372,55 @@ describe("Plot", () => {
 		await expect
 			.element(page.getByRole("button", { name: "Close the readout" }))
 			.toBeInTheDocument();
+	});
+
+	// Kills an unpinned readout that takes the pointer or offers a link or a button, which keeps a mouse from the points beneath it, and a pinned readout the pointer passes through, whose link no mouse can reach.
+	test("an unpinned readout lets the pointer through to the plot, and a pinned one takes it", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		mount({ data, reportHref: (uuid) => `/reports/${uuid}` });
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+		const hit = (x: number, y: number) =>
+			status
+				.element()
+				.querySelector(".pl-readout")
+				?.contains(document.elementFromPoint(x, y));
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 4, y: box.height / 2 },
+		});
+		await expect.element(status).toHaveTextContent("20.00 µs");
+		expect(status.element().querySelector("a, button")).toBeNull();
+		// The readout's far edge is nearer the next point than its own.
+		const card = readoutBox();
+		const edge = { x: card.right - 4, y: card.top + card.height / 2 };
+		expect(hit(edge.x, edge.y)).toBe(false);
+		await page.elementLocator(over).hover({
+			position: { x: edge.x - box.left, y: edge.y - box.top },
+		});
+		await expect.element(status).toHaveTextContent("30.00 µs");
+
+		await page.elementLocator(over).click({
+			position: { x: box.width / 4, y: box.height / 2 },
+		});
+		await expect.element(status).toHaveTextContent("20.00 µs");
+		const pinned = readoutBox();
+		expect(hit(pinned.right - 4, pinned.top + pinned.height / 2)).toBe(true);
+		const link = page
+			.getByRole("link", { name: /aaaaaa1/ })
+			.element()
+			.getBoundingClientRect();
+		expect(
+			document
+				.elementFromPoint(
+					link.left + link.width / 2,
+					link.top + link.height / 2,
+				)
+				?.closest("a")
+				?.getAttribute("href"),
+		).toBe("/reports/report-1");
 	});
 
 	// Kills a tap treated as a hover, which a phone loses the moment the finger lifts.
@@ -401,6 +453,217 @@ describe("Plot", () => {
 
 		await page.getByRole("button", { name: "Close the readout" }).click();
 		await expect.element(status).not.toHaveTextContent("µs");
+	});
+
+	// Kills a click on the pinned point that keeps it pinned or closes a mouse's readout, a click on another point that unpins instead of moving the pin, and a readout that keeps "Click to pin" once pinned or leaves it out while it follows the mouse.
+	test("a click on the pinned point unpins it, and a click on another point moves the pin there", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		mount({ data });
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+		const close = page.getByRole("button", { name: "Close the readout" });
+		const hint = page.getByText("Click to pin");
+		const at = (fraction: number) => ({
+			position: { x: box.width * fraction, y: box.height / 2 },
+		});
+
+		await page.elementLocator(over).hover(at(0.25));
+		await expect.element(status).toHaveTextContent("20.00 µs");
+		await expect.element(hint).toBeInTheDocument();
+		await expect.element(close).not.toBeInTheDocument();
+
+		await page.elementLocator(over).click(at(0.25));
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await expect.element(close).toBeInTheDocument();
+		await expect.element(hint).not.toBeInTheDocument();
+
+		await page.elementLocator(over).click(at(0.25));
+		await expect.element(status).toHaveAttribute("aria-live", "off");
+		await expect.element(status).toHaveTextContent("20.00 µs");
+		await expect.element(close).not.toBeInTheDocument();
+		await expect.element(hint).toBeInTheDocument();
+
+		await page.elementLocator(over).click(at(0.25));
+		await page.elementLocator(over).click(at(0.75));
+		await expect.element(status).toHaveTextContent("40.00 µs");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+	});
+
+	// Kills a tap on the pinned point that keeps it pinned, leaves a readout no finger can move, or is told from its click rather than its press, and a tap elsewhere that does not move the pin.
+	test("a tap on the pinned point closes the readout, and a tap elsewhere moves it", async () => {
+		await page.viewport(375, 812);
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		mount({ data }, 343);
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+		// A finger's press, then a click that some browsers send as a plain mouse event.
+		const tap = (fraction: number) => {
+			const at = {
+				clientX: box.left + box.width * fraction,
+				clientY: box.top + box.height / 2,
+				bubbles: true,
+			};
+			over.dispatchEvent(
+				new PointerEvent("pointerdown", { ...at, pointerType: "touch" }),
+			);
+			over.dispatchEvent(new MouseEvent("click", at));
+		};
+		tap(0.25);
+		await expect.element(status).toHaveTextContent("20.00 µs");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		tap(0.75);
+		await expect.element(status).toHaveTextContent("40.00 µs");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		tap(0.75);
+		await expect.element(status).not.toHaveTextContent("µs");
+	});
+
+	// Kills Enter or Space that does nothing, only pins, scrolls the page, or holds the page's Space with nothing to pin, an unpin that loses the point, and a readout the keys unpinned that offers a click.
+	test("Enter or Space pins the cursor's point and unpins it", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		mount({ data });
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+		const space = () =>
+			over.dispatchEvent(
+				new KeyboardEvent("keydown", {
+					key: " ",
+					bubbles: true,
+					cancelable: true,
+				}),
+			);
+		over.focus();
+		expect(space()).toBe(true);
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 4, y: box.height / 2 },
+		});
+		await expect.element(status).toHaveAttribute("aria-live", "off");
+
+		await userEvent.keyboard("{Enter}");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await expect.element(status).toHaveTextContent("20.00 µs");
+		expect(space()).toBe(false);
+		await expect.element(status).toHaveAttribute("aria-live", "off");
+		await expect.element(status).toHaveTextContent("20.00 µs");
+		await expect
+			.element(page.getByText("Click to pin"))
+			.not.toBeInTheDocument();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await expect.element(status).toHaveTextContent("20.00 µs");
+	});
+
+	// Kills a pin from the keys that a click on a line's point at its x moves to that line, so unpinning takes two clicks.
+	test("one click on its point unpins a readout the keys pinned", async () => {
+		mount({ data: FLAT, focused: null });
+		await settle();
+		const { over, canvas, box } = await plotArea();
+		over.focus();
+		await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+		const status = page.getByRole("status");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		const column = box.left + box.width / 2;
+		const low = middle(rowsOf(canvas, column, box.top, box.bottom, series(1)));
+		await page.elementLocator(over).click({
+			position: { x: box.width / 2, y: low - box.top },
+		});
+		await expect.element(status).toHaveAttribute("aria-live", "off");
+	});
+
+	// Kills a hint the keys turned off that stays off for a mouse, after a hover or after a click that unpins a pin the keys made.
+	test("a mouse gets Click to pin back after the keys moved or pinned the readout", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		mount({ data });
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+		const hint = page.getByText("Click to pin");
+		over.focus();
+		await userEvent.keyboard("{ArrowRight}{ArrowRight}{Enter}");
+		await expect.element(status).toHaveAttribute("aria-live", "off");
+		await expect.element(hint).not.toBeInTheDocument();
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 4, y: box.height / 2 },
+		});
+		await expect.element(hint).toBeInTheDocument();
+
+		await userEvent.keyboard("{ArrowRight}");
+		await expect.element(status).toHaveTextContent("30.00 µs");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await page.elementLocator(over).click({
+			position: { x: box.width / 2, y: box.height / 2 },
+		});
+		await expect.element(status).toHaveAttribute("aria-live", "off");
+		await expect.element(hint).toBeInTheDocument();
+	});
+
+	// Kills a mouse unpin off every line that keeps the line it pinned on focused in the readout.
+	test("a click off every line that unpins a point lets its line go", async () => {
+		mount({ data: FLAT, focused: null });
+		await settle();
+		const { over, canvas, box } = await plotArea();
+		const column = box.left + box.width / 2;
+		const low = middle(rowsOf(canvas, column, box.top, box.bottom, series(1)));
+		const mid = middle(rowsOf(canvas, column, box.top, box.bottom, series(2)));
+		const focusedName = () =>
+			page
+				.getByRole("status")
+				.element()
+				.querySelector(".pl-rrow.focused .pl-rname")?.textContent;
+		await page.elementLocator(over).click({
+			position: { x: box.width / 2, y: low - box.top },
+		});
+		await expect.poll(focusedName).toBe("crc32c");
+		await page.elementLocator(over).click({
+			position: { x: box.width / 2, y: (low + mid) / 2 - box.top },
+		});
+		await expect
+			.element(page.getByRole("status"))
+			.toHaveAttribute("aria-live", "off");
+		expect(focusedName()).toBeUndefined();
+	});
+
+	// Kills a pinned point told by its index, where several reports share its x on a version axis, so a click on its other side pins it again.
+	test("a click on either side of a pinned point shared by several reports unpins it", async () => {
+		const data: PlotData = {
+			x: [
+				START,
+				START + DAY,
+				START + 2 * DAY,
+				START + 3 * DAY,
+				START + 4 * DAY,
+			],
+			report: [0, 1, 2, 3, 4],
+			reports: [1, 2, 2, 2, 3].map((version, index) => ({
+				uuid: `report-${index}`,
+				version,
+				hash: `aaaaaa${index}`,
+			})),
+			measures: [{ name: "Latency", units: "nanoseconds (ns)" }],
+			lines: [testLine({ id: "a", y: [10, 11, 12, 13, 14] })],
+		};
+		mount({ data, xAxis: "version" });
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+		const at = (dx: number) => ({
+			position: { x: box.width / 2 + dx, y: box.height / 2 },
+		});
+		await page.elementLocator(over).click(at(-3));
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await page.elementLocator(over).click(at(3));
+		await expect.element(status).toHaveAttribute("aria-live", "off");
 	});
 
 	// Kills a keyboard path that moves the readout without announcing it, or a plot area that hides its keys.
@@ -673,6 +936,7 @@ describe("Plot", () => {
 				id: "one",
 				parameters: { simd: "avx2", threads: 1 },
 				y: [1, 2],
+				upper: [3, 3],
 			}),
 			testLine({
 				id: "two",
@@ -684,9 +948,7 @@ describe("Plot", () => {
 		await settle();
 		const controls = [
 			page.getByRole("button", { name: "blake3 threads=1: hide its line" }),
-			page.getByRole("button", {
-				name: "Focus blake3 threads=1 and draw its boundary",
-			}),
+			page.getByRole("button", { name: "Show boundary of blake3 threads=1" }),
 		];
 		for (const control of controls) {
 			await expect.element(control).toHaveAccessibleDescription(/\S/);
@@ -791,237 +1053,6 @@ const bodyBox = (over: HTMLElement) => {
 	return body.getBoundingClientRect();
 };
 
-/** A mouse event at a point on the page, as a real pointer sends it. */
-const pointer = (
-	target: Element,
-	type: string,
-	clientX: number,
-	clientY: number,
-) =>
-	target.dispatchEvent(
-		new PointerEvent(type, {
-			clientX,
-			clientY,
-			pointerType: "mouse",
-			bubbles: type === "pointermove",
-		}),
-	);
-
-// Three reports, the first two an hour apart, so their points sit closer than the readout's gap from its point.
-const CLOSE: PlotData = {
-	x: [START, START + DAY / 24, START + 20 * DAY],
-	report: [0, 1, 2],
-	reports: [0, 1, 2].map((index) => ({
-		uuid: `report-${index}`,
-		version: index,
-		hash: `aaaaaa${index}`,
-	})),
-	measures: [{ name: "Latency", units: "nanoseconds (ns)" }],
-	lines: [testLine({ id: "rising", y: [10_000, 20_000, 30_000] })],
-};
-
-describe("Plot readout hold", () => {
-	/** The hash of the report the readout reads out. */
-	const shown = () =>
-		/aaaaaa\d/.exec(page.getByRole("status").element().textContent ?? "")?.[0];
-	const linkRow = () => {
-		const when = page
-			.getByRole("status")
-			.element()
-			.querySelector(".pl-when")
-			?.getBoundingClientRect();
-		if (!when) {
-			throw new Error("No readout");
-		}
-		return when;
-	};
-	const wait = (ms: number) =>
-		new Promise((resolve) => setTimeout(resolve, ms));
-
-	/** Hovers the first point, low in the plot, with a report link unless `linked` is false, and returns the way to its readout's link. */
-	const atFirstPoint = async (linked = true) => {
-		const { setData } = mount({
-			data: CLOSE,
-			...(linked && { reportHref: (uuid: string) => `/reports/${uuid}` }),
-		});
-		await settle();
-		const { over, box } = await plotArea();
-		const start = { x: box.left, y: box.bottom - 10 };
-		pointer(over, "pointermove", start.x, start.y);
-		expect(shown()).toBe("aaaaaa0");
-		// The readout measures itself after it lays out, as it has by a mouse's next move.
-		await settle();
-		const row = linkRow();
-		const goal = { x: row.left + row.width / 2, y: row.top + row.height / 2 };
-		const toward = (step: number) =>
-			pointer(
-				over,
-				"pointermove",
-				start.x + (goal.x - start.x) * step,
-				start.y + (goal.y - start.y) * step,
-			);
-		return { over, box, goal, toward, setData };
-	};
-
-	// Kills a readout that follows a mouse past the next point on its way to the link, a hold that lets go at once, one that ends under the pointer on the link, or one that stays once it leaves.
-	test("keeps its point while a mouse heads into its link and while the mouse is on it", async () => {
-		const { over, goal, toward } = await atFirstPoint();
-		for (const step of [0.2, 0.4, 0.6]) {
-			toward(step);
-			await settle();
-		}
-		expect(shown()).toBe("aaaaaa0");
-
-		pointer(over, "pointerleave", goal.x, goal.y);
-		// Entering the link, a browser sends the readout's live region an enter of its own.
-		const live = page.getByRole("status").element();
-		pointer(live, "pointerenter", goal.x, goal.y);
-		await wait(GRACE_MS + 100);
-		expect(shown()).toBe("aaaaaa0");
-		await expect
-			.element(page.getByRole("status").getByRole("link"))
-			.toHaveAttribute("href", "/reports/report-0");
-
-		pointer(live, "pointerleave", goal.x, 0);
-		await expect.element(page.getByRole("status")).not.toHaveTextContent("µs");
-	});
-
-	// Kills a hold that never lets go of a mouse that stops short of the link.
-	test("follows again once a mouse settles short of the link", async () => {
-		const { toward } = await atFirstPoint();
-		toward(0.2);
-		expect(shown()).toBe("aaaaaa0");
-		await expect.poll(shown).toBe("aaaaaa1");
-	});
-
-	// Kills a hold on a readout with no link to reach, which only stops it following.
-	test("follows a mouse heading into a readout with no report link", async () => {
-		const { toward } = await atFirstPoint(false);
-		toward(0.2);
-		expect(shown()).toBe("aaaaaa1");
-	});
-
-	// Kills a hold aimed at the whole readout, or at a link row with no height: only a move level with the link holds.
-	test("holds for a move level with the link and not for one just below it", async () => {
-		const { over, box } = await atFirstPoint();
-		const row = linkRow();
-		for (const [y, held] of [
-			[row.top + row.height / 2, true],
-			[row.bottom + 4, false],
-		] as const) {
-			pointer(over, "pointerleave", box.left, box.bottom + 20);
-			pointer(over, "pointermove", box.left, y);
-			expect(shown(), `${y}`).toBe("aaaaaa0");
-			await settle();
-			pointer(over, "pointermove", box.left + 6, y);
-			expect(shown(), `${y}`).toBe(held ? "aaaaaa0" : "aaaaaa1");
-			await wait(GRACE_MS + 100);
-		}
-	});
-
-	// Kills a link box read from the readout's padding edge, which sits a border's width up and left of the link.
-	test("holds for a move into the link's first pixel row or column and not the one beside it", async () => {
-		const { over, box } = await atFirstPoint();
-		const row = linkRow();
-		for (const [from, to, held] of [
-			[[box.left, row.top + 0.5], [box.left + 6, row.top + 0.5], true],
-			[[box.left, row.top - 0.5], [box.left + 6, row.top - 0.5], false],
-			[[row.left + 0.5, row.bottom - 2], [row.left + 0.5, row.top + 2], true],
-			[[row.left - 0.5, row.bottom - 2], [row.left - 0.5, row.top + 2], false],
-		] as const) {
-			pointer(over, "pointerleave", box.left, box.bottom + 20);
-			pointer(over, "pointermove", box.left, box.bottom - 10);
-			await settle();
-			pointer(over, "pointermove", ...from);
-			expect(shown(), `${from}`).toBe("aaaaaa0");
-			pointer(over, "pointermove", ...to);
-			expect(shown(), `${to}`).toBe(held ? "aaaaaa0" : "aaaaaa1");
-			await wait(GRACE_MS + 100);
-		}
-	});
-
-	// Kills a pin, a keyboard pin, a close, or new data that a pending hold undoes once it lets go.
-	for (const action of ["click", "End", "Escape", "new data"] as const) {
-		test(`a ${action} during a hold stands once the hold would have let go`, async () => {
-			const { over, box, toward, setData } = await atFirstPoint();
-			toward(0.2);
-			expect(shown()).toBe("aaaaaa0");
-			if (action === "new data") {
-				setData({ ...CLOSE });
-			} else if (action === "click") {
-				over.dispatchEvent(
-					new MouseEvent("click", {
-						clientX: box.left,
-						clientY: box.bottom - 10,
-						bubbles: true,
-					}),
-				);
-			} else {
-				over.dispatchEvent(
-					new KeyboardEvent("keydown", { key: action, bubbles: true }),
-				);
-			}
-			const settled = {
-				click: "aaaaaa0",
-				End: "aaaaaa2",
-				Escape: undefined,
-				"new data": undefined,
-			}[action];
-			expect(shown()).toBe(settled);
-			await wait(GRACE_MS + 100);
-			expect(shown()).toBe(settled);
-			if (action === "click" || action === "End") {
-				await expect
-					.element(page.getByRole("status"))
-					.toHaveAttribute("aria-live", "polite");
-			}
-		});
-	}
-
-	// Kills a hold aimed at the whole readout, or a readout body that takes the pointer from the points beneath it.
-	test("follows every point of a rightward sweep across the top of a six-line plot", async () => {
-		const points = 16;
-		mount({
-			data: testData(
-				Array.from({ length: 6 }, (_, index) =>
-					testLine({
-						id: `line-${index}`,
-						benchmark: "a_benchmark_with_a_long_name",
-						parameters: { threads: index },
-						y: Array.from(
-							{ length: points },
-							(_, at) => 1000 + at + index * 10,
-						),
-					}),
-				),
-			),
-			reportHref: (uuid) => `/reports/${uuid}`,
-		});
-		await settle();
-		const { box } = await plotArea();
-		const y = box.top + box.height * 0.3;
-		const seen = new Set<string>();
-		for (let x = box.left; x <= box.right; x += box.width / (points * 3)) {
-			// Where a real pointer would land, readout or plot.
-			document.elementFromPoint(x, y)?.dispatchEvent(
-				new PointerEvent("pointermove", {
-					clientX: x,
-					clientY: y,
-					pointerType: "mouse",
-					bubbles: true,
-				}),
-			);
-			await settle();
-			seen.add(
-				page.getByRole("status").element().querySelector(".pl-when")
-					?.textContent ?? "",
-			);
-		}
-		seen.delete("");
-		expect(seen.size).toBe(points);
-	});
-});
-
 describe("Plot readout room", () => {
 	// Kills a readout placed by the cursor's half of the plot, which runs off a phone's screen and hides its close button.
 	test("keeps a tapped readout inside a phone's plot", async () => {
@@ -1029,7 +1060,8 @@ describe("Plot readout room", () => {
 		mount({ data: WIDE }, 382);
 		await settle();
 		const { over, box } = await plotArea();
-		for (const fraction of [0.1, 0.45, 0.55, 0.95]) {
+		// One tap on each of the five points, since a tap on the pinned one closes it.
+		for (const fraction of [0.05, 0.3, 0.5, 0.7, 0.95]) {
 			const at = {
 				clientX: box.left + box.width * fraction,
 				clientY: box.top + box.height / 2,
@@ -1050,6 +1082,24 @@ describe("Plot readout room", () => {
 			expect(close.right, `${fraction}`).toBeLessThanOrEqual(innerWidth);
 			expect(document.documentElement.scrollWidth).toBe(innerWidth);
 		}
+	});
+
+	// Kills a pinned readout grown by a line for its close button, which runs a six-line readout past a phone's plot onto its axis labels (decision 77).
+	test("keeps a pinned six-line readout inside a phone's plot", async () => {
+		await page.viewport(375, 667);
+		mount({ data: WIDE }, 343);
+		await settle();
+		const { over, box } = await plotArea();
+		over.dispatchEvent(
+			new PointerEvent("click", {
+				clientX: box.left + box.width / 2,
+				clientY: box.top + box.height / 2,
+				bubbles: true,
+				pointerType: "touch",
+			}),
+		);
+		await settle();
+		expect(readoutBox().bottom).toBeLessThanOrEqual(box.bottom);
 	});
 
 	test("keeps a hovered readout inside a 400 px tile", async () => {

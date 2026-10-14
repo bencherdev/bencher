@@ -140,7 +140,6 @@ test("moves the readout and the hover focus for one pointer move", async () => {
 	const shown = new Set<string>();
 	const count = RUNS * 3;
 	for (let run = 0; run < count; run++) {
-		// Leftward, away from the readout on the cursor's right, so no move is held and each one moves it.
 		const event = new PointerEvent("pointermove", {
 			clientX: box.left + box.width * (0.7 - (0.65 * run) / count),
 			clientY: box.top + ((run % 5) + 1) * (box.height / 7),

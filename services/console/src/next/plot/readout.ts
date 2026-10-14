@@ -149,44 +149,29 @@ export const readoutLeft = (x: number, width: number, room: number): number => {
 	return Math.max(EDGE, Math.min(room - EDGE - width, x - width / 2));
 };
 
-/** A pointer's place in the plot's body, in CSS pixels. */
-export interface Point {
+/** Where the readout reads: a data index of one panel, the x it sits at, the line it is on if any, and whether a click, tap, or key pinned it there. */
+export interface Cursor {
+	index: number;
+	panel: number;
 	x: number;
-	y: number;
+	line: number | null;
+	pinned: boolean;
 }
 
-/** How long a readout keeps its point after the last move toward it. */
-export const GRACE_MS = 300;
-
-/** A box, in CSS pixels. */
-export interface Box {
-	left: number;
-	top: number;
-	right: number;
-	bottom: number;
-}
-
-/** Whether a pointer moving from `from` to `to` heads into the box: it lands in it, or the ray from `from` through `to` enters it ahead of `from`. */
-export const headsInto = (box: Box, from: Point, to: Point): boolean => {
-	if (
-		to.x >= box.left &&
-		to.x <= box.right &&
-		to.y >= box.top &&
-		to.y <= box.bottom
-	) {
-		return true;
+/** The cursor after a click or a tap at `at`: one on the pinned point, at the same x of the same panel and on its line or none, unpins it, to follow a mouse or close for a tap. */
+export const clicked = (
+	current: Cursor | null,
+	at: Omit<Cursor, "pinned">,
+	xs: readonly number[],
+	touch: boolean,
+): Cursor | null => {
+	const onPin =
+		current?.pinned &&
+		current.panel === at.panel &&
+		xs[current.index] === xs[at.index] &&
+		(at.line === null || current.line === null || at.line === current.line);
+	if (!onPin) {
+		return { ...at, pinned: true };
 	}
-	let near = 0;
-	let far = Number.POSITIVE_INFINITY;
-	for (const [start, step, low, high] of [
-		[from.x, to.x - from.x, box.left, box.right],
-		[from.y, to.y - from.y, box.top, box.bottom],
-	] as const) {
-		// A still axis divides to infinities that keep the ray inside its span or rule it out.
-		const a = (low - start) / step;
-		const b = (high - start) / step;
-		near = Math.max(near, Math.min(a, b));
-		far = Math.min(far, Math.max(a, b));
-	}
-	return near > 0 && near <= far && far < Number.POSITIVE_INFINITY;
+	return touch ? null : { ...at, pinned: false };
 };

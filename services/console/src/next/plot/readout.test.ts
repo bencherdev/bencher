@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { headsInto, readout, readoutLeft } from "./readout";
+import { clicked, readout, readoutLeft } from "./readout";
 import { START, testData, testLine } from "./testing";
 import type { PlotData } from "./types";
 
@@ -137,33 +137,68 @@ describe("readoutLeft", () => {
 	});
 });
 
-describe("headsInto", () => {
-	// A readout right of a cursor at x 100, near the top of the plot.
-	const BOX = { left: 112, top: 4, right: 312, bottom: 84 };
-	const at = (x: number, y: number) => ({ x, y });
+describe("clicked", () => {
+	// Five reports, the middle three at one x, as on a version axis.
+	const XS = [10, 20, 20, 20, 30];
+	const point = (index: number, line: number | null = 0, panel = 0) => ({
+		index,
+		panel,
+		x: (XS[index] ?? 0) * 10,
+		line,
+	});
+	const pinned = { ...point(1), pinned: true };
 
-	// Kills a readout that follows the pointer across a neighbor's point on its way to the readout's link.
-	test("is true for a move toward the box, or one that lands in it", () => {
-		expect(headsInto(BOX, at(100, 150), at(104, 146))).toBe(true);
-		expect(headsInto(BOX, at(100, 150), at(150, 60))).toBe(true);
-		expect(headsInto(BOX, at(100, 60), at(104, 60))).toBe(true);
+	// Kills a click that only pins where nothing is pinned, or pins the wrong point.
+	test("pins the point clicked when nothing is pinned or another point is", () => {
+		expect(clicked(null, point(1), XS, false)).toEqual(pinned);
+		expect(
+			clicked({ ...point(1), pinned: false }, point(1), XS, false),
+		).toEqual(pinned);
+		expect(clicked(pinned, point(4), XS, false)).toEqual({
+			...point(4),
+			pinned: true,
+		});
+		expect(clicked(pinned, point(1, 0, 1), XS, false)).toEqual({
+			...point(1, 0, 1),
+			pinned: true,
+		});
 	});
 
-	// Kills a hold on a pointer that moved on.
-	test("is false for a move away from the box, or past it", () => {
-		expect(headsInto(BOX, at(100, 150), at(96, 150))).toBe(false);
-		expect(headsInto(BOX, at(100, 150), at(104, 160))).toBe(false);
-		expect(headsInto(BOX, at(100, 150), at(98, 140))).toBe(false);
-		expect(headsInto(BOX, at(100, 150), at(104, 150))).toBe(false);
-		expect(headsInto(BOX, at(100, 60), at(96, 60))).toBe(false);
+	// Kills a click on the pinned point that pins it again, one that closes a mouse's readout instead of letting it follow, and one judged by the index where several reports share the x.
+	test("unpins the pinned point for a mouse, at any index of its x, on its line or none", () => {
+		expect(clicked(pinned, point(1), XS, false)).toEqual({
+			...point(1),
+			pinned: false,
+		});
+		expect(clicked(pinned, point(3), XS, false)).toEqual({
+			...point(3),
+			pinned: false,
+		});
+		expect(clicked(pinned, point(2, null), XS, false)).toEqual({
+			...point(2, null),
+			pinned: false,
+		});
 	});
 
-	// Kills a hold that ends while the pointer is still in the box, one that keeps a pointer leaving it, or one on a pointer standing still outside it.
-	test("is true while the pointer stays in the box, and false once it leaves or stands outside", () => {
-		expect(headsInto(BOX, at(120, 60), at(130, 62))).toBe(true);
-		expect(headsInto(BOX, at(120, 60), at(120, 60))).toBe(true);
-		expect(headsInto(BOX, at(120, 80), at(120, 90))).toBe(false);
-		expect(headsInto(BOX, at(100, 150), at(100, 150))).toBe(false);
-		expect(headsInto(BOX, at(100, 60), at(100, 60))).toBe(false);
+	// Kills a tap on the pinned point that leaves a readout no finger can move.
+	test("closes the pinned point for a tap", () => {
+		expect(clicked(pinned, point(2), XS, true)).toBeNull();
+	});
+
+	// Kills a click on another line's point at the same x that unpins instead of moving the pin to it.
+	test("moves the pin to another line's point at the same x", () => {
+		expect(clicked(pinned, point(1, 1), XS, false)).toEqual({
+			...point(1, 1),
+			pinned: true,
+		});
+	});
+
+	// Kills a pin from the keys, on no line, that the first click on any line's point at its x moves instead of unpinning.
+	test("unpins a pin on no line from a click on any line at its x", () => {
+		const keyed = { ...point(1, null), pinned: true };
+		expect(clicked(keyed, point(1, 1), XS, false)).toEqual({
+			...point(1, 1),
+			pinned: false,
+		});
 	});
 });

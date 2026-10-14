@@ -24,14 +24,7 @@ import { constantParameters, keyOrder, lineNames } from "./key";
 import { axisFont, axisWidth } from "./labels";
 import { useNarrow } from "./narrow";
 import { PlotKey, PlotKeyReserve } from "./PlotKey";
-import {
-	type Box,
-	GRACE_MS,
-	headsInto,
-	type Point,
-	readout,
-	readoutLeft,
-} from "./readout";
+import { type Cursor, clicked, readout, readoutLeft } from "./readout";
 import { yRange, yScale, yTicks } from "./scale";
 import { type Layout, layoutOf, lineStyles, measuresOf } from "./series";
 import { Swatch } from "./Swatch";
@@ -70,13 +63,6 @@ export interface PlotProps {
 	reserve?: { lines: number; measures: number };
 	/** No data is on its way: the frame says so instead of that it is loading. */
 	failed?: boolean;
-}
-
-interface Cursor {
-	index: number;
-	panel: number;
-	x: number;
-	pinned: boolean;
 }
 
 const KEY_MAX = { full: 12, row: 12, tile: 4 } as const;
@@ -170,16 +156,13 @@ const Plot = (props: PlotProps) => {
 	});
 
 	const [cursor, setCursor] = createSignal<Cursor | null>(null);
-	// A mouse heading into the readout's link holds the readout's point, and a pin, a close, or new data ends the hold.
-	let last: Point | undefined;
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	onCleanup(() => clearTimeout(timer));
+	// Whether the keys put the cursor where it is, so the readout does not offer a click.
+	const [byKeys, setByKeys] = createSignal(false);
 	const panels = new Map<number, Panel>();
 	// Each plot area's offset in the body, read when it lays out so a hover reads no layout.
 	const offsets = new Map<number, { left: number; top: number }>();
 	createEffect(
 		on(data, () => {
-			clearTimeout(timer);
 			batch(() => {
 				setCursor(null);
 				setHover(null);
@@ -236,27 +219,48 @@ const Plot = (props: PlotProps) => {
 	const panelEvents = (panel: number) => ({
 		hover: (event: CursorEvent | null) =>
 			batch(() => {
-				setCursor(
-					event && { index: event.index, panel, x: event.x, pinned: false },
-				);
+				setCursor(event && { ...event, panel, pinned: false });
 				setHover(event?.line ?? null);
+				setByKeys(false);
 			}),
 		pin: (event: CursorEvent) =>
 			batch(() => {
-				clearTimeout(timer);
-				setCursor({ index: event.index, panel, x: event.x, pinned: true });
+				setCursor({ ...event, panel, pinned: true });
 				if (event.line !== null) {
 					setHover(event.line);
 				}
+				setByKeys(true);
+			}),
+		click: (event: CursorEvent, touch: boolean) =>
+			batch(() => {
+				const next = clicked(
+					cursor(),
+					{ ...event, panel },
+					data()?.x ?? [],
+					touch,
+				);
+				setCursor(next);
+				if (!next) {
+					panels.get(panel)?.clearCursor();
+					setHover(null);
+				} else if (event.line !== null || !next.pinned) {
+					setHover(event.line);
+				}
+				setByKeys(false);
+			}),
+		toggle: () =>
+			batch(() => {
+				const current = cursor();
+				if (current) {
+					setCursor({ ...current, pinned: !current.pinned });
+				}
+				setByKeys(true);
 			}),
 		close: () =>
 			batch(() => {
-				clearTimeout(timer);
 				setCursor(null);
 				setHover(null);
 			}),
-		hold: (left: number, top: number, follow: () => void) =>
-			hold(panel, left, top, follow),
 	});
 
 	// Each axis grows to fit the labels any plot draws, and stacked plots relay out to share the widest.
@@ -282,7 +286,6 @@ const Plot = (props: PlotProps) => {
 		};
 
 	const closeReadout = () => {
-		clearTimeout(timer);
 		const current = cursor();
 		if (current) {
 			panels.get(current.panel)?.clearCursor();
@@ -347,42 +350,8 @@ const Plot = (props: PlotProps) => {
 	// Measured by resize observers, which report after layout, so a hover never forces one.
 	const [room, setRoom] = createSignal(0);
 	const [readoutWidth, setReadoutWidth] = createSignal(0);
-	// The link's row inside the readout, read with the readout's size.
-	let linkRow: Box = { left: 0, top: 0, right: 0, bottom: 0 };
 	let body: HTMLDivElement | undefined;
 
-	const hold = (
-		panel: number,
-		left: number,
-		top: number,
-		follow: () => void,
-	) => {
-		clearTimeout(timer);
-		const offset = offsets.get(panel);
-		const frame = panels.get(panel)?.frame();
-		const from = last;
-		last = offset &&
-			frame && {
-				x: offset.left + frame.left + left,
-				y: offset.top + frame.top + top,
-			};
-		const at = placement();
-		if (!(props.reportHref && at && from && last)) {
-			return false;
-		}
-		const x = readoutLeft(at.x, readoutWidth(), room());
-		const box = {
-			left: x + linkRow.left,
-			top: at.top + linkRow.top,
-			right: x + linkRow.right,
-			bottom: at.top + linkRow.bottom,
-		};
-		if (!headsInto(box, from, last)) {
-			return false;
-		}
-		timer = setTimeout(follow, GRACE_MS);
-		return true;
-	};
 	onMount(() => {
 		if (!body) {
 			return;
@@ -431,7 +400,7 @@ const Plot = (props: PlotProps) => {
 		>
 			<span id={description} class="pl-hint">
 				Arrow keys step through the reports, Home and End go to the first and
-				the last, and Escape closes the readout.
+				the last, Enter pins or unpins, and Escape closes the readout.
 			</span>
 			<Show when={head()}>
 				<div class="pl-head">
@@ -586,13 +555,6 @@ const Plot = (props: PlotProps) => {
 					class="pl-live"
 					role="status"
 					aria-live={cursor()?.pinned ? "polite" : "off"}
-					// Only the readout takes the pointer in here.
-					onPointerEnter={() => clearTimeout(timer)}
-					onPointerLeave={() => {
-						if (!cursor()?.pinned) {
-							closeReadout();
-						}
-					}}
 				>
 					<Show when={model()}>
 						{(current) => (
@@ -600,11 +562,9 @@ const Plot = (props: PlotProps) => {
 								readout={current()}
 								placement={placement()}
 								left={readoutLeft(placement()?.x ?? 0, readoutWidth(), room())}
-								onSize={(width, row) => {
-									linkRow = row;
-									setReadoutWidth(width);
-								}}
+								onWidth={setReadoutWidth}
 								pinned={cursor()?.pinned ?? false}
+								hint={!(cursor()?.pinned || byKeys())}
 								single={lines().length === 1}
 								names={names().map(({ text }) => text)}
 								styles={styles()}
@@ -695,9 +655,11 @@ interface ReadoutProps {
 		ring: { top: number } | null;
 	} | null;
 	left: number;
-	/** The readout's width, and its link row's box inside it. */
-	onSize: (width: number, row: Box) => void;
+	onWidth: (width: number) => void;
+	/** Only a pinned readout takes the pointer, so only its link and close button work. */
 	pinned: boolean;
+	/** A click would pin the readout, so it says so. */
+	hint: boolean;
 	single: boolean;
 	names: readonly string[];
 	styles: ReturnType<typeof lineStyles>;
@@ -710,27 +672,14 @@ const Readout = (props: ReadoutProps) => {
 	const when = () =>
 		props.hash ? `${props.readout.when} · ${props.hash}` : props.readout.when;
 	let box: HTMLDivElement | undefined;
-	let whenRow: HTMLSpanElement | undefined;
 	onMount(() => {
-		const readout = box;
-		if (!readout) {
+		if (!box) {
 			return;
 		}
-		// After layout, so reading the link row's offsets forces none; they start inside the readout's border.
-		const observer = new ResizeObserver(([entry]) => {
-			const row = whenRow as HTMLSpanElement;
-			const left = row.offsetLeft + readout.clientLeft;
-			const top = row.offsetTop + readout.clientTop;
-			const width = row.offsetWidth;
-			const height = row.offsetHeight;
-			props.onSize(entry?.borderBoxSize[0]?.inlineSize ?? 0, {
-				left,
-				top,
-				right: left + width,
-				bottom: top + height,
-			});
-		});
-		observer.observe(readout);
+		const observer = new ResizeObserver(([entry]) =>
+			props.onWidth(entry?.borderBoxSize[0]?.inlineSize ?? 0),
+		);
+		observer.observe(box);
 		onCleanup(() => observer.disconnect());
 	});
 	return (
@@ -755,8 +704,8 @@ const Readout = (props: ReadoutProps) => {
 					top: `${props.placement?.top ?? 0}px`,
 				}}
 			>
-				<span ref={whenRow} class="pl-when">
-					<Show when={props.href} fallback={when()}>
+				<span class="pl-when">
+					<Show when={props.pinned && props.href} fallback={when()}>
 						{(href) => <a href={href()}>{when()}</a>}
 					</Show>
 				</span>
@@ -802,6 +751,9 @@ const Readout = (props: ReadoutProps) => {
 						{props.readout.more} more{" "}
 						{props.readout.more === 1 ? "line" : "lines"}
 					</span>
+				</Show>
+				<Show when={props.hint}>
+					<span class="pl-pin">Click to pin</span>
 				</Show>
 				<Show when={props.pinned}>
 					<button

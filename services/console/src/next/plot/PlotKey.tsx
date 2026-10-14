@@ -62,6 +62,8 @@ export const PlotKey = (props: PlotKeyProps) => {
 						const name = () => props.names[line] as LineName;
 						const style = () => props.styles[line] as LineStyle;
 						const hidden = () => props.hidden.has(line);
+						const boundary = () =>
+							props.focused === line ? "Hide boundary" : "Show boundary";
 						return (
 							<div
 								class="pl-ke"
@@ -115,17 +117,20 @@ export const PlotKey = (props: PlotKeyProps) => {
 										</Show>
 									</button>
 								</Tooltip>
-								<Tooltip tip="Focus line">
-									<button
-										type="button"
-										class="pl-kfoc"
-										aria-pressed={props.focused === line}
-										aria-label={`Focus ${name().text} and draw its boundary`}
-										onClick={() => props.onFocus(line)}
-									>
-										<Target />
-									</button>
-								</Tooltip>
+								<Show
+									when={props.lines[line]?.lower || props.lines[line]?.upper}
+								>
+									<Tooltip tip={boundary()}>
+										<button
+											type="button"
+											class="pl-kfoc"
+											aria-label={`${boundary()} of ${name().text}`}
+											onClick={() => props.onFocus(line)}
+										>
+											<Target />
+										</button>
+									</Tooltip>
+								</Show>
 							</div>
 						);
 					}}
