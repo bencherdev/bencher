@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use bencher_schema::{
-    context::{ApiContext, RateLimiting},
-    model::user::{actor::ApiActor, public::PublicUser},
-};
+use bencher_schema::context::ApiContext;
 use bytes::Bytes;
 use dropshot::{Body, HttpError, RequestContext, UntypedBody, endpoint};
 use http::{HeaderMap, HeaderValue, Request, Response, StatusCode, header};
@@ -16,7 +13,7 @@ use rmcp::{
     },
 };
 
-use crate::{principal::McpPrincipal, server::BencherMcp, tools::McpTool};
+use crate::{principal::Caller, server::BencherMcp, tools::McpTool};
 
 const MCP_ACCEPT: &str = "application/json, text/event-stream";
 const MCP_ALLOW_METHODS: &str = "POST, OPTIONS";
@@ -49,58 +46,34 @@ pub async fn mcp_post(
     rqctx: RequestContext<ApiContext>,
     body: UntypedBody,
 ) -> Result<Response<Body>, HttpError> {
-    let principal = if is_tool_call(body.as_bytes()) {
-        // Invalid or expired credentials fail the whole request with a `401`,
-        // just like the REST API; anonymous requests may still read public projects.
-        // Rate limiting is applied per-actor inside the shared endpoint handlers,
-        // with the same exceptions as REST (`list_projects` mirrors `GET /v0/projects`).
-        let principal = McpPrincipal::new(&rqctx).await?;
-        // Anonymous tool calls are also throttled before dispatch: malformed
-        // arguments are rejected before reaching the shared handlers where
-        // per-actor rate limiting lives (REST body and query parse failures
-        // are likewise rejected before rate limiting)
-        if matches!(principal.actor(), ApiActor::Public(PublicUser::Public(_))) {
-            apply_public_rate_limit(&rqctx)?;
-        }
-        Some(principal)
-    } else {
-        apply_public_rate_limit(&rqctx)?;
-        None
-    };
+    // Invalid or expired credentials fail the whole request with a `401` whatever its method,
+    // just like the REST API; anonymous requests may still read public projects.
+    let caller = Caller::new(&rqctx, called_tool(body.as_bytes())).await?;
 
     let request = mcp_request(&rqctx, &body);
     let config = server_config(rqctx.request_body_max_bytes());
-    let server = Arc::new(BencherMcp::new(rqctx, principal));
+    let server = Arc::new(BencherMcp::new(rqctx, caller));
     let handler = Arc::clone(&server);
     let service: StreamableHttpService<_, NeverSessionManager> =
         StreamableHttpService::new(move || Ok(Arc::clone(&handler)), Arc::default(), config);
     let (mut parts, response_body) = service.handle(request).await.into_parts();
-    if let Some(challenge) = server.challenge() {
-        return challenge.into_response();
+    if let Some(challenge) = server.challenge_response() {
+        return challenge;
     }
     insert_cors_headers(&mut parts.headers);
     Ok(Response::from_parts(parts, Body::wrap(response_body)))
 }
 
-/// Only a request to call a known tool needs credentials;
-/// every other message takes the public rate limit.
-/// The body is read with the SDK's own types so this agrees with what it dispatches.
-fn is_tool_call(body: &[u8]) -> bool {
+/// The known tool a message calls, read with the SDK's own types so this agrees with what it
+/// dispatches.
+fn called_tool(body: &[u8]) -> Option<McpTool> {
     if let Ok(ClientJsonRpcMessage::Request(request)) = serde_json::from_slice(body)
         && let ClientRequest::CallToolRequest(call) = request.request
     {
-        McpTool::from_name(&call.params.name).is_some()
+        McpTool::from_name(&call.params.name)
     } else {
-        false
+        None
     }
-}
-
-fn apply_public_rate_limit(rqctx: &RequestContext<ApiContext>) -> Result<(), HttpError> {
-    let context = rqctx.context();
-    if let Some(remote_ip) = RateLimiting::remote_ip(&rqctx.log, rqctx.request.headers()) {
-        context.rate_limiting.public_request(remote_ip)?;
-    }
-    Ok(())
 }
 
 fn mcp_request(rqctx: &RequestContext<ApiContext>, body: &UntypedBody) -> Request<Full<Bytes>> {

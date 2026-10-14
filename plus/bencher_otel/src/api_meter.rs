@@ -156,6 +156,7 @@ pub enum ApiCounter {
     OAuthTokenIssue(OAuthGrantKind),
     OAuthTokenFailed(OAuthTokenFailureReason),
     OAuthRevoke(OAuthRevokeKind),
+    McpChallenge(McpChallengeKind, McpClientStyle),
 
     RequestMax(IntervalKind, AuthorizationKind),
 
@@ -274,6 +275,7 @@ impl ApiCounter {
             | Self::OAuthTokenAuthFailed(_) => "{auth_failure}",
             Self::OAuthGrantRevoke => "{grant}",
             Self::OAuthConsent(_) => "{consent}",
+            Self::McpChallenge(_, _) => "{challenge}",
 
             Self::Create(_) | Self::CreateMax(_) => "{resource}",
 
@@ -357,6 +359,7 @@ impl ApiCounter {
             Self::OAuthTokenIssue(_) => "oauth.token.issue",
             Self::OAuthTokenFailed(_) => "oauth.token.failed",
             Self::OAuthRevoke(_) => "oauth.revoke",
+            Self::McpChallenge(_, _) => "mcp.challenge",
 
             Self::RequestMax(_, _) => "request.max",
 
@@ -512,6 +515,9 @@ impl ApiCounter {
                 "Counts the number of OAuth token endpoint requests refused"
             },
             Self::OAuthRevoke(_) => "Counts the number of OAuth tokens presented for revocation",
+            Self::McpChallenge(_, _) => {
+                "Counts the number of MCP tool calls answered with a challenge to sign in"
+            },
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
 
@@ -680,6 +686,7 @@ impl ApiCounter {
             Self::OAuthTokenIssue(kind) => vec![kind.into()],
             Self::OAuthTokenFailed(reason) => vec![reason.into()],
             Self::OAuthRevoke(kind) => vec![kind.into()],
+            Self::McpChallenge(kind, style) => vec![kind.into(), style.into()],
             Self::RunnerJobUpdate(status_kind) => vec![status_kind.into()],
             Self::RunnerPause(reason_kind) => vec![reason_kind.into()],
             // Self-hosted specific metrics
@@ -1223,6 +1230,63 @@ impl From<OAuthRevokeKind> for opentelemetry::KeyValue {
 
 impl OAuthRevokeKind {
     const KEY: &str = "kind";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum McpChallengeKind {
+    /// An anonymous caller that a tool refused, or that found nothing it may see.
+    SignIn,
+    /// An anonymous caller over its address's request limit.
+    OverLimit,
+    /// An access token whose scopes do not permit the tool.
+    InsufficientScope,
+}
+
+impl fmt::Display for McpChallengeKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SignIn => write!(f, "sign_in"),
+            Self::OverLimit => write!(f, "over_limit"),
+            Self::InsufficientScope => write!(f, "insufficient_scope"),
+        }
+    }
+}
+
+impl From<McpChallengeKind> for opentelemetry::KeyValue {
+    fn from(kind: McpChallengeKind) -> Self {
+        Self::new(McpChallengeKind::KEY, kind.to_string())
+    }
+}
+
+impl McpChallengeKind {
+    const KEY: &str = "kind";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum McpClientStyle {
+    /// Answered in the tool result.
+    ChatGpt,
+    /// Answered with the HTTP status.
+    Standard,
+}
+
+impl fmt::Display for McpClientStyle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ChatGpt => write!(f, "chatgpt"),
+            Self::Standard => write!(f, "standard"),
+        }
+    }
+}
+
+impl From<McpClientStyle> for opentelemetry::KeyValue {
+    fn from(style: McpClientStyle) -> Self {
+        Self::new(McpClientStyle::KEY, style.to_string())
+    }
+}
+
+impl McpClientStyle {
+    const KEY: &str = "client.style";
 }
 
 fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
