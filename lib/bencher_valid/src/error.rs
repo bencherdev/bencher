@@ -167,6 +167,18 @@ pub enum ValidError {
     #[error("Failed to validate OAuth client ID: {0}")]
     OAuthClientId(String),
     #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth redirect URI: {0}")]
+    OAuthRedirectUri(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth code challenge: expected 43 base64url characters")]
+    OAuthCodeChallenge,
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth state: expected at most 1 KiB")]
+    OAuthRequestState,
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth nonce: expected at most 256 bytes")]
+    OAuthNonce,
+    #[cfg(feature = "plus")]
     #[error("Failed to validate SHA-256 hash: {0}")]
     Sha256(String),
     #[cfg(feature = "plus")]

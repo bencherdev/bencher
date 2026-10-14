@@ -43,8 +43,9 @@ pub use memory::Memory;
 pub use month::ExpirationMonth;
 pub use number::CardNumber;
 pub use oauth::{
-    OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeHash, OAuthIssuer, OAuthRefreshToken,
-    OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash,
+    OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge, OAuthCodeHash, OAuthIssuer,
+    OAuthNonce, OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope,
+    OAuthScopes, OAuthTokenHash,
 };
 pub use operating_system::OperatingSystem;
 pub use plan_id::{LicensedPlanId, MeteredPlanId};

@@ -12,9 +12,10 @@ pub use bencher_valid::{
 pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
     GracePeriod, ImageDigest, ImageReference, LastFour, LicensedPlanId, Memory, MeteredPlanId,
-    OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeHash, OAuthIssuer, OAuthRefreshToken,
-    OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash, PlanLevel, PlanStatus, PollTimeout,
-    RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash, Timeout,
+    OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge, OAuthCodeHash, OAuthIssuer,
+    OAuthNonce, OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope,
+    OAuthScopes, OAuthTokenHash, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction,
+    RecaptchaScore, RunnerKey, RunnerKeyHash, Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -25,6 +26,8 @@ use serde_yaml as _;
 mod auth;
 pub mod big_int;
 pub mod clock;
+#[cfg(feature = "plus")]
+pub mod oauth;
 #[cfg(feature = "plus")]
 pub mod oci;
 pub mod organization;
@@ -48,6 +51,14 @@ pub mod user;
 pub use bencher_valid::{Architecture, OperatingSystem, Sandbox, Sha256, UpdateChannel};
 pub use big_int::BigInt;
 pub use clock::Clock;
+#[cfg(feature = "plus")]
+pub use oauth::{
+    authorization::{
+        JsonOAuthAuthorization, JsonOAuthAuthorizationClient, JsonOAuthAuthorizationRedirect,
+        JsonOAuthDecision, JsonOAuthRedirect, OAuthAuthorizationUuid,
+    },
+    client::{JsonOAuthClientMetadata, OAuthClientMetadata, OAuthClientMetadataError},
+};
 pub use organization::{
     JsonNewOrganization, JsonOrganization, JsonOrganizations, OrganizationResourceId,
     OrganizationSlug, OrganizationUuid,

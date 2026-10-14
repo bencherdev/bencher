@@ -149,6 +149,10 @@ pub enum ApiCounter {
     OAuthGrantRevoke,
     OAuthGrantBlocked,
     OAuthTokenAuthFailed(OAuthTokenAuthFailureReason),
+    OAuthAuthorize,
+    OAuthAuthorizeFailed(OAuthAuthorizeFailureReason),
+    OAuthConsent(OAuthConsentKind),
+    OAuthConsentBlocked,
 
     RequestMax(IntervalKind, AuthorizationKind),
 
@@ -230,7 +234,9 @@ impl ApiCounter {
             | Self::UserIpNotFound
             | Self::RequestMax(_, _)
             | Self::RunnerRequestMax(_)
-            | Self::OciTagsList => "{request}",
+            | Self::OciTagsList
+            | Self::OAuthAuthorize
+            | Self::OAuthAuthorizeFailed(_) => "{request}",
 
             Self::UserSignup(_) => "{signup}",
             Self::UserLogin(_) => "{login}",
@@ -250,6 +256,7 @@ impl ApiCounter {
             | Self::UserKeyUpdateBlocked
             | Self::UserKeyRevokeBlocked
             | Self::OAuthGrantBlocked
+            | Self::OAuthConsentBlocked
             | Self::OrganizationPlanUpdateBlocked
             | Self::CallbackAttempt(_) => "{attempt}",
             Self::UserCredentialMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
@@ -258,6 +265,7 @@ impl ApiCounter {
             | Self::UserKeyAuthFailed(_)
             | Self::OAuthTokenAuthFailed(_) => "{auth_failure}",
             Self::OAuthGrantRevoke => "{grant}",
+            Self::OAuthConsent(_) => "{consent}",
 
             Self::Create(_) | Self::CreateMax(_) => "{resource}",
 
@@ -334,6 +342,10 @@ impl ApiCounter {
             Self::OAuthGrantRevoke => "oauth.grant.revoke",
             Self::OAuthGrantBlocked => "oauth.grant.blocked",
             Self::OAuthTokenAuthFailed(_) => "oauth.token.auth.failed",
+            Self::OAuthAuthorize => "oauth.authorize",
+            Self::OAuthAuthorizeFailed(_) => "oauth.authorize.failed",
+            Self::OAuthConsent(_) => "oauth.consent",
+            Self::OAuthConsentBlocked => "oauth.consent.blocked",
 
             Self::RequestMax(_, _) => "request.max",
 
@@ -472,6 +484,16 @@ impl ApiCounter {
             Self::OAuthTokenAuthFailed(_) => {
                 "Counts the number of OAuth token authentication failures"
             },
+            Self::OAuthAuthorize => {
+                "Counts the number of OAuth authorization requests sent on for consent"
+            },
+            Self::OAuthAuthorizeFailed(_) => {
+                "Counts the number of OAuth authorization requests refused"
+            },
+            Self::OAuthConsent(_) => "Counts the number of answers to OAuth authorization requests",
+            Self::OAuthConsentBlocked => {
+                "Counts the number of OAuth authorization approvals blocked because the caller authenticated with a project API key"
+            },
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
 
@@ -576,6 +598,8 @@ impl ApiCounter {
             | Self::UserKeyRevokeBlocked
             | Self::OAuthGrantRevoke
             | Self::OAuthGrantBlocked
+            | Self::OAuthAuthorize
+            | Self::OAuthConsentBlocked
             | Self::MetricNamesDropped
             | Self::MetricsBilled
             | Self::MetricsBilledFailed
@@ -633,6 +657,8 @@ impl ApiCounter {
             Self::ProjectKeyAuthFailed(reason) => vec![reason.into()],
             Self::UserKeyAuthFailed(reason) => vec![reason.into()],
             Self::OAuthTokenAuthFailed(reason) => vec![reason.into()],
+            Self::OAuthAuthorizeFailed(reason) => vec![reason.into()],
+            Self::OAuthConsent(kind) => vec![kind.into()],
             Self::RunnerJobUpdate(status_kind) => vec![status_kind.into()],
             Self::RunnerPause(reason_kind) => vec![reason_kind.into()],
             // Self-hosted specific metrics
@@ -977,6 +1003,76 @@ impl From<OAuthTokenAuthFailureReason> for opentelemetry::KeyValue {
 
 impl OAuthTokenAuthFailureReason {
     const KEY: &str = "reason";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum OAuthAuthorizeFailureReason {
+    InvalidRequest,
+    InvalidClient,
+    ClientFetch,
+    ClientDocument,
+    ClientBusy,
+    Throttled,
+    RedirectUri,
+    ResponseType,
+    Resource,
+    ConsentRequired,
+    ServerError,
+}
+
+impl fmt::Display for OAuthAuthorizeFailureReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidRequest => write!(f, "invalid_request"),
+            Self::InvalidClient => write!(f, "invalid_client"),
+            Self::ClientFetch => write!(f, "client_fetch"),
+            Self::ClientDocument => write!(f, "client_document"),
+            Self::ClientBusy => write!(f, "client_busy"),
+            Self::Throttled => write!(f, "throttled"),
+            Self::RedirectUri => write!(f, "redirect_uri"),
+            Self::ResponseType => write!(f, "response_type"),
+            Self::Resource => write!(f, "resource"),
+            Self::ConsentRequired => write!(f, "consent_required"),
+            Self::ServerError => write!(f, "server_error"),
+        }
+    }
+}
+
+impl From<OAuthAuthorizeFailureReason> for opentelemetry::KeyValue {
+    fn from(reason: OAuthAuthorizeFailureReason) -> Self {
+        Self::new(OAuthAuthorizeFailureReason::KEY, reason.to_string())
+    }
+}
+
+impl OAuthAuthorizeFailureReason {
+    const KEY: &str = "reason";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum OAuthConsentKind {
+    ApproveSession,
+    ApproveKey,
+    Deny,
+}
+
+impl fmt::Display for OAuthConsentKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ApproveSession => write!(f, "approve_session"),
+            Self::ApproveKey => write!(f, "approve_key"),
+            Self::Deny => write!(f, "deny"),
+        }
+    }
+}
+
+impl From<OAuthConsentKind> for opentelemetry::KeyValue {
+    fn from(kind: OAuthConsentKind) -> Self {
+        Self::new(OAuthConsentKind::KEY, kind.to_string())
+    }
+}
+
+impl OAuthConsentKind {
+    const KEY: &str = "kind";
 }
 
 fn self_hosted_attributes(server_uuid: Uuid) -> Vec<opentelemetry::KeyValue> {
