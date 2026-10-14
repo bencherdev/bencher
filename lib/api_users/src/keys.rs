@@ -13,7 +13,7 @@ use bencher_schema::{
     model::user::{
         QueryUser, UserId,
         auth::{AuthUser, BearerToken},
-        key::{InsertUserKey, QueryUserKey, UpdateUserKey, UserKeyId},
+        key::{InsertUserKey, QueryUserKey, UpdateUserKey},
         same_user,
     },
     schema, write_conn, write_transaction,
@@ -71,8 +71,8 @@ pub async fn user_keys_options(
 ///
 /// List all `bencher_user_*` API keys for a user.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
-/// When authenticated with a user API key, only that key itself is listed:
-/// a key cannot enumerate the user's other keys.
+/// This endpoint requires a user session:
+/// neither a user API key nor a deprecated user API token can list keys.
 /// By default, the keys are sorted in alphabetical order by name.
 /// The HTTP response header `X-Total-Count` contains the total number of keys.
 #[endpoint {
@@ -88,6 +88,11 @@ pub async fn user_keys_get(
     query_params: Query<UserKeysQuery>,
 ) -> Result<ResponseOk<JsonUserKeys>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        return Err(forbidden_error(
+            "Only a user session can list user API keys.",
+        ));
+    }
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -109,38 +114,28 @@ async fn get_ls_inner(
     let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
     same_user!(auth_user, context.rbac, query_user.uuid);
 
-    let keys = get_ls_query(
-        &pagination_params,
-        &query_params,
-        query_user.id,
-        auth_user.user_key_id,
-    )
-    .offset(pagination_params.offset())
-    .limit(pagination_params.limit())
-    .load::<QueryUserKey>(auth_conn!(context))
-    .map_err(resource_not_found_err!(
-        UserKey,
-        (&pagination_params, &query_params, auth_user)
-    ))?;
+    let keys = get_ls_query(&pagination_params, &query_params, query_user.id)
+        .offset(pagination_params.offset())
+        .limit(pagination_params.limit())
+        .load::<QueryUserKey>(auth_conn!(context))
+        .map_err(resource_not_found_err!(
+            UserKey,
+            (&pagination_params, &query_params, auth_user)
+        ))?;
 
     let json_keys: JsonUserKeys = keys
         .into_iter()
         .map(|query_key| query_key.into_json_for_user(&query_user))
         .collect();
 
-    let total_count = get_ls_query(
-        &pagination_params,
-        &query_params,
-        query_user.id,
-        auth_user.user_key_id,
-    )
-    .count()
-    .get_result::<i64>(auth_conn!(context))
-    .map_err(resource_not_found_err!(
-        UserKey,
-        (&pagination_params, &query_params, auth_user)
-    ))?
-    .try_into()?;
+    let total_count = get_ls_query(&pagination_params, &query_params, query_user.id)
+        .count()
+        .get_result::<i64>(auth_conn!(context))
+        .map_err(resource_not_found_err!(
+            UserKey,
+            (&pagination_params, &query_params, auth_user)
+        ))?
+        .try_into()?;
 
     Ok((json_keys, total_count))
 }
@@ -149,16 +144,10 @@ fn get_ls_query<'q>(
     pagination_params: &UserKeysPagination,
     query_params: &'q UserKeysQuery,
     user_id: UserId,
-    auth_key_id: Option<UserKeyId>,
 ) -> schema::user_key::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = schema::user_key::table
         .filter(schema::user_key::user_id.eq(user_id))
         .into_boxed();
-
-    // A user key can only see itself.
-    if let Some(auth_key_id) = auth_key_id {
-        query = query.filter(schema::user_key::id.eq(auth_key_id));
-    }
 
     if let Some(true) = query_params.revoked {
         query = query.filter(schema::user_key::revoked.is_not_null());
@@ -196,10 +185,9 @@ fn get_ls_query<'q>(
 /// Create a new `bencher_user_*` API key for a user.
 /// The plaintext key is only returned once in the response.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
-/// This endpoint cannot be called with a user API key:
-/// a key cannot be used to create another key, so revoking a key
-/// also cuts off any credentials that could have been derived from it.
-/// Authenticate with a JWT (user session token) instead.
+/// This endpoint requires a user session:
+/// neither a user API key nor a deprecated user API token can create a key,
+/// so neither can mint a user API key that outlives its own revocation.
 #[endpoint {
     method = POST,
     path =  "/v0/users/{user}/keys",
@@ -215,11 +203,11 @@ pub async fn user_key_post(
     // Check only after successful authentication: an invalid or revoked key
     // still gets the opaque `Invalid user key` 401, while a valid key gets a
     // 403 that explains the policy.
-    if auth_user.user_key_id.is_some() {
+    if !auth_user.is_session() {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyCreateBlocked);
         return Err(forbidden_error(
-            "A user API key cannot be used to create another user API key. Authenticate with a JWT (user session token) instead.",
+            "Only a user session can create a user API key.",
         ));
     }
     let json = post_inner(
@@ -284,9 +272,8 @@ pub async fn user_key_options(
 ///
 /// View an API key for a user.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
-/// When authenticated with a user API key, only that key itself may be viewed:
-/// a key cannot inspect the user's other keys.
-/// Authenticate with a JWT (user session token) to view other keys.
+/// This endpoint requires a user session:
+/// neither a user API key nor a deprecated user API token can view a key.
 #[endpoint {
     method = GET,
     path =  "/v0/users/{user}/keys/{key}",
@@ -298,6 +285,13 @@ pub async fn user_key_get(
     path_params: Path<UserKeyParams>,
 ) -> Result<ResponseOk<JsonUserKey>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyViewBlocked);
+        return Err(forbidden_error(
+            "Only a user session can view a user API key.",
+        ));
+    }
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Get::auth_response_ok(json))
 }
@@ -313,17 +307,6 @@ async fn get_one_inner(
     let query_key =
         QueryUserKey::get_user_key(auth_conn!(context), query_user.id, path_params.key)?;
 
-    // A user key can only see itself.
-    if let Some(auth_key_id) = auth_user.user_key_id
-        && auth_key_id != query_key.id
-    {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyViewBlocked);
-        return Err(forbidden_error(
-            "A user API key can only view itself. Authenticate with a JWT (user session token) to view other keys.",
-        ));
-    }
-
     Ok(query_key.into_json_for_user(&query_user))
 }
 
@@ -331,9 +314,8 @@ async fn get_one_inner(
 ///
 /// Update an API key for a user (rename only).
 /// Only the authenticated user themselves and server admins have access to this endpoint.
-/// When authenticated with a user API key, only that key itself may be updated:
-/// a key cannot modify the user's other keys.
-/// Authenticate with a JWT (user session token) to update other keys.
+/// This endpoint requires a user session:
+/// neither a user API key nor a deprecated user API token can update a key.
 #[endpoint {
     method = PATCH,
     path =  "/v0/users/{user}/keys/{key}",
@@ -346,6 +328,13 @@ pub async fn user_key_patch(
     body: TypedBody<JsonUpdateUserKey>,
 ) -> Result<ResponseOk<JsonUserKey>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyUpdateBlocked);
+        return Err(forbidden_error(
+            "Only a user session can update a user API key.",
+        ));
+    }
     let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -368,17 +357,6 @@ async fn patch_inner(
     let query_key =
         QueryUserKey::get_user_key(auth_conn!(context), query_user.id, path_params.key)?;
 
-    // A user key may only mutate itself.
-    if let Some(auth_key_id) = auth_user.user_key_id
-        && auth_key_id != query_key.id
-    {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyUpdateBlocked);
-        return Err(forbidden_error(
-            "A user API key can only update itself. Authenticate with a JWT (user session token) to update other keys.",
-        ));
-    }
-
     let update_key = UpdateUserKey::from(json_key);
     write_transaction!(context, |conn| {
         diesel::update(schema::user_key::table.filter(schema::user_key::id.eq(query_key.id)))
@@ -399,9 +377,8 @@ async fn patch_inner(
 /// Revocation is terminal: a revoked key can no longer authenticate any request,
 /// and the revocation cannot be undone.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
-/// When authenticated with a user API key, only that key itself may be revoked:
-/// a key can always destroy itself, but it cannot revoke the user's other keys.
-/// Authenticate with a JWT (user session token) to revoke other keys.
+/// This endpoint requires a user session:
+/// neither a user API key nor a deprecated user API token can revoke a key.
 #[endpoint {
     method = DELETE,
     path =  "/v0/users/{user}/keys/{key}",
@@ -413,6 +390,13 @@ pub async fn user_key_delete(
     path_params: Path<UserKeyParams>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyRevokeBlocked);
+        return Err(forbidden_error(
+            "Only a user session can revoke a user API key.",
+        ));
+    }
     delete_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
     Ok(Delete::auth_response_deleted())
 }
@@ -427,19 +411,6 @@ async fn delete_inner(
 
     let query_key =
         QueryUserKey::get_user_key(auth_conn!(context), query_user.id, path_params.key)?;
-
-    // A user key may always revoke itself (burn-after-use, in-CI incident
-    // response) but never the user's other keys: a stolen key revoking its
-    // siblings is a denial-of-service vector with no legitimate workflow.
-    if let Some(auth_key_id) = auth_user.user_key_id
-        && auth_key_id != query_key.id
-    {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyRevokeBlocked);
-        return Err(forbidden_error(
-            "A user API key can only revoke itself. Authenticate with a JWT (user session token) to revoke other keys.",
-        ));
-    }
 
     let now = context.clock.now();
     let rows = write_transaction!(context, |conn| QueryUserKey::revoke(

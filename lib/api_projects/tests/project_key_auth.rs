@@ -8,10 +8,11 @@
 )]
 //! Integration tests for project key authentication.
 
-use bencher_api_tests::TestServer;
+use bencher_api_tests::{TestServer, helpers::seed_token};
 use bencher_json::{
-    JsonBenchmark, JsonBranch, JsonBranches, JsonMeasure, JsonProject, JsonProjectKeyCreated,
-    JsonProjects, JsonReport, JsonTestbed, JsonThreshold, ProjectKey,
+    JsonBenchmark, JsonBranch, JsonBranches, JsonMeasure, JsonProject, JsonProjectKey,
+    JsonProjectKeyCreated, JsonProjectKeys, JsonProjects, JsonReport, JsonTestbed, JsonThreshold,
+    ProjectKey, ProjectKeyUuid,
 };
 use http::StatusCode;
 
@@ -1139,4 +1140,252 @@ async fn project_key_can_dismiss_alert() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
+}
+
+// Fails if project key POST accepts a deprecated user API token or a user API key.
+#[tokio::test]
+async fn project_key_create_requires_session() {
+    let server = TestServer::new().await;
+    let user = server.signup("Key User", "keysession@example.com").await;
+    let org = server.create_org(&user, "Session Key Org").await;
+    let project = server
+        .create_project(&user, &org, "Session Key Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let api_token = seed_token(&server, &user, "legacy-token");
+    let user_key = server.create_user_key(&user, "user-key").await;
+
+    let status = create_key(&server, project_slug, api_token.token.as_ref()).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let status = create_key(&server, project_slug, user_key.as_ref()).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let status = create_key(&server, project_slug, &user.token).await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    // Only the session created a key.
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{}/keys", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let keys: JsonProjectKeys = resp.json().await.expect("Failed to parse keys");
+    assert_eq!(keys.0.len(), 1);
+}
+
+async fn create_key(server: &TestServer, project_slug: &str, bearer: &str) -> StatusCode {
+    server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/keys", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(bearer),
+        )
+        .json(&serde_json::json!({"name": "session-key"}))
+        .send()
+        .await
+        .expect("Request failed")
+        .status()
+}
+
+// Fails if project key list accepts a user API key or a deprecated user API token.
+#[tokio::test]
+async fn project_key_list_requires_session() {
+    let fixture = setup_non_session().await;
+
+    for bearer in &fixture.bearers {
+        let resp = fixture
+            .server
+            .client
+            .get(
+                fixture
+                    .server
+                    .api_url(&format!("/v0/projects/{}/keys", fixture.project_slug)),
+            )
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(bearer),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+}
+
+// Fails if project key view accepts a user API key or a deprecated user API token.
+#[tokio::test]
+async fn project_key_view_requires_session() {
+    let fixture = setup_non_session().await;
+
+    for bearer in &fixture.bearers {
+        let resp = fixture
+            .server
+            .client
+            .get(fixture.key_url())
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(bearer),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+}
+
+// Fails if project key PATCH accepts a user API key or a deprecated user API token, or refuses a user session.
+#[tokio::test]
+async fn project_key_rename_requires_session() {
+    let fixture = setup_non_session().await;
+
+    for bearer in &fixture.bearers {
+        let resp = fixture
+            .server
+            .client
+            .patch(fixture.key_url())
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(bearer),
+            )
+            .json(&serde_json::json!({"name": "tampered"}))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // The key's name is unchanged.
+    let resp = fixture
+        .server
+        .client
+        .get(fixture.key_url())
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let viewed: JsonProjectKey = resp.json().await.expect("Failed to parse key");
+    let name: &str = viewed.name.as_ref();
+    assert_eq!(name, "ci-key");
+
+    let resp = fixture
+        .server
+        .client
+        .patch(fixture.key_url())
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .json(&serde_json::json!({"name": "renamed"}))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let renamed: JsonProjectKey = resp.json().await.expect("Failed to parse key");
+    let name: &str = renamed.name.as_ref();
+    assert_eq!(name, "renamed");
+}
+
+// Fails if project key DELETE accepts a user API key or a deprecated user API token.
+#[tokio::test]
+async fn project_key_revoke_requires_session() {
+    let fixture = setup_non_session().await;
+
+    for bearer in &fixture.bearers {
+        let resp = fixture
+            .server
+            .client
+            .delete(fixture.key_url())
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(bearer),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // The key is not revoked and still authenticates.
+    let resp = fixture
+        .server
+        .client
+        .get(
+            fixture
+                .server
+                .api_url(&format!("/v0/projects/{}", fixture.project_slug)),
+        )
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(fixture.key.as_ref()),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+struct NonSession {
+    server: TestServer,
+    project_slug: String,
+    token: String,
+    key: ProjectKey,
+    key_uuid: ProjectKeyUuid,
+    /// A user API key and a deprecated user API token for the project's manager.
+    bearers: [String; 2],
+}
+
+impl NonSession {
+    fn key_url(&self) -> String {
+        self.server.api_url(&format!(
+            "/v0/projects/{}/keys/{}",
+            self.project_slug, self.key_uuid
+        ))
+    }
+}
+
+async fn setup_non_session() -> NonSession {
+    let server = TestServer::new().await;
+    let user = server.signup("Key User", "keyuser@example.com").await;
+    let org = server.create_org(&user, "Key Org").await;
+    let project = server.create_project(&user, &org, "Key Project").await;
+    let project_slug: &str = project.slug.as_ref();
+    let project_slug = project_slug.to_owned();
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/keys", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({"name": "ci-key"}))
+        .send()
+        .await
+        .expect("Failed to create project key");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let created: JsonProjectKeyCreated = resp.json().await.expect("Failed to parse key");
+
+    let user_key = server.create_user_key(&user, "user-key").await;
+    let api_token = seed_token(&server, &user, "legacy-token");
+    NonSession {
+        server,
+        project_slug,
+        token: user.token,
+        key: created.key,
+        key_uuid: created.uuid,
+        bearers: [
+            user_key.as_ref().to_owned(),
+            api_token.token.as_ref().to_owned(),
+        ],
+    }
 }

@@ -50,12 +50,12 @@ pub struct TestServer {
 impl TestServer {
     /// Create a new test server with default settings.
     pub async fn new() -> Self {
-        Self::build(None, None, None, None, None, None).await
+        Self::build(None, None, None, None, None, None, false).await
     }
 
     /// Create a new test server that logs to `log` instead of stderr.
     pub async fn new_with_log(log: slog::Logger) -> Self {
-        Self::build(None, None, None, None, None, Some(log)).await
+        Self::build(None, None, None, None, None, Some(log), false).await
     }
 
     /// Create a new test server with custom upload timeout and max body size.
@@ -68,6 +68,7 @@ impl TestServer {
             None,
             None,
             None,
+            false,
         )
         .await
     }
@@ -86,6 +87,7 @@ impl TestServer {
             None,
             None,
             None,
+            false,
         )
         .await
     }
@@ -93,20 +95,27 @@ impl TestServer {
     /// Create a new test server with an injectable clock that logs to `log` instead of stderr.
     #[cfg(feature = "plus")]
     pub async fn new_with_clock_and_log(clock: bencher_json::Clock, log: slog::Logger) -> Self {
-        Self::build(None, None, Some(clock), None, None, Some(log)).await
+        Self::build(None, None, Some(clock), None, None, Some(log), false).await
     }
 
     /// Create a new test server whose clock is frozen at the given time.
     #[cfg(feature = "plus")]
     pub async fn new_at(now: bencher_json::DateTime) -> Self {
         let clock = bencher_json::Clock::Custom(Arc::new(move || now));
-        Self::build(None, None, Some(clock), None, None, None).await
+        Self::build(None, None, Some(clock), None, None, None, false).await
     }
 
     /// Create a new test server with a custom runner self-update base URL.
     #[cfg(feature = "plus")]
     pub async fn new_with_runner_update_base_url(base_url: url::Url) -> Self {
-        Self::build(None, None, None, Some(base_url), None, None).await
+        Self::build(None, None, None, Some(base_url), None, None, false).await
+    }
+
+    /// Create a new test server that also registers the Bencher Cloud only endpoints,
+    /// with no biller and `is_bencher_cloud` still false.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_cloud_routes() -> Self {
+        Self::build(None, None, None, None, None, None, true).await
     }
 
     /// Create a new test server with custom creation rate limits.
@@ -133,7 +142,7 @@ impl TestServer {
                 claimed_limit,
                 plus_limit,
             );
-        Self::build(None, None, None, None, Some(rate_limiting), None).await
+        Self::build(None, None, None, None, Some(rate_limiting), None, false).await
     }
 
     #[cfg(feature = "plus")]
@@ -150,6 +159,7 @@ impl TestServer {
         runner_update_base_url: Option<url::Url>,
         rate_limiting: Option<bencher_schema::context::RateLimiting>,
         log: Option<slog::Logger>,
+        cloud_routes: bool,
     ) -> Self {
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
@@ -237,7 +247,15 @@ impl TestServer {
             shutdown,
         };
 
-        Self::start_server(context, &log, token_key, db_path, db_file, callback_sender)
+        Self::start_server(
+            context,
+            &log,
+            token_key,
+            db_path,
+            db_file,
+            callback_sender,
+            cloud_routes,
+        )
     }
 
     #[cfg(not(feature = "plus"))]
@@ -254,6 +272,7 @@ impl TestServer {
         _runner_update_base_url: Option<url::Url>,
         _rate_limiting: Option<()>,
         log: Option<slog::Logger>,
+        _cloud_routes: bool,
     ) -> Self {
         let log = log.unwrap_or_else(stderr_logger);
 
@@ -305,6 +324,7 @@ impl TestServer {
         db_path: String,
         db_file: NamedTempFile,
         #[cfg(feature = "plus")] callback_sender: Arc<crate::RecordingSender>,
+        #[cfg(feature = "plus")] cloud_routes: bool,
     ) -> Self {
         // Create API description and register endpoints
         let mut api_description = ApiDescription::new();
@@ -312,7 +332,7 @@ impl TestServer {
         bencher_api::api::Api::register(
             &mut api_description,
             false, // http_options
-            false, // is_bencher_cloud
+            cloud_routes,
         )
         .expect("Failed to register endpoints");
         #[cfg(not(feature = "plus"))]

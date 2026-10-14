@@ -8,10 +8,10 @@ use std::time::Duration;
 
 use bencher_json::{Jwt, Url};
 
+use super::unwrap_admin_legacy_token;
 use crate::parser::TaskOci;
 use crate::task::is_dev;
 use crate::task::test::seed_test::ADMIN_EMAIL;
-use crate::task::unwrap_admin_token;
 use crate::task::unwrap_url;
 
 #[derive(Debug)]
@@ -68,7 +68,7 @@ impl TryFrom<TaskOci> for Oci {
 
         // In order to run pull tests, we need to be an admin
         let username = username.unwrap_or_else(|| ADMIN_EMAIL.to_owned());
-        let password = unwrap_admin_token(password, is_dev);
+        let password = unwrap_admin_legacy_token(password, is_dev);
 
         Ok(Self {
             url,

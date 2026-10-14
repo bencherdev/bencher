@@ -2378,8 +2378,7 @@ impl SeedTest {
         let _json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // A user key may revoke itself (burn-after-use), even though it cannot
-        // create or mutate the user's other keys.
+        // A user key cannot revoke itself: only a user session manages keys.
         // cargo run -- user key revoke --host http://localhost:6610 --key $USER_KEY muriel-bagge <uuid>
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
@@ -2390,6 +2389,27 @@ impl SeedTest {
             host,
             KEY_ARG,
             user_key.as_str(),
+            ORG_SLUG,
+            user_key_uuid_str.as_str(),
+        ])
+        .current_dir(CLI_DIR);
+        let assert = cmd.assert().failure();
+        let output = assert.get_output();
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("Status: 403"),
+            "user key revoking itself should 403: {output:?}"
+        );
+
+        // cargo run -- user key revoke --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge <uuid>
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user",
+            "key",
+            "revoke",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token,
             ORG_SLUG,
             user_key_uuid_str.as_str(),
         ])

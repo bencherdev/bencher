@@ -142,8 +142,8 @@ pub async fn org_plan_post(
 
 /// Update an organization's metered subscription plan.
 /// Schedules or clears a cancel-at-period-end for the organization's metered
-/// subscription. Available to organization managers and must be called with a
-/// user session JWT, not a user API key.
+/// subscription. Available to organization managers and requires a user session:
+/// a user API key or a deprecated user API token is refused.
 #[endpoint {
     method = PATCH,
     path =  "/v0/organizations/{organization}/plan",
@@ -156,13 +156,11 @@ pub async fn org_plan_patch(
     body: TypedBody<JsonUpdatePlan>,
 ) -> Result<ResponseOk<JsonPlan>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    // A user API key cannot update a subscription plan; require a user session JWT
-    // (mirrors the user-key management endpoints).
-    if auth_user.user_key_id.is_some() {
+    if !auth_user.is_session() {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OrganizationPlanUpdateBlocked);
         return Err(forbidden_error(
-            "A user API key cannot update a subscription plan. Authenticate with a JWT (user session token) instead.",
+            "Only a user session can update a subscription plan.",
         ));
     }
     let json = patch_inner(

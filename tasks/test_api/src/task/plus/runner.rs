@@ -9,6 +9,7 @@ use pretty_assertions::assert_eq;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt as _;
 
+use super::unwrap_user_legacy_token;
 use crate::parser::TaskRunner;
 use crate::task::test::seed_test::{
     BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, TOKEN_ARG, USER_EMAIL, USER_SLUG,
@@ -42,6 +43,7 @@ pub struct RunnerTest {
     admin_token: Jwt,
     username: String,
     token: Jwt,
+    legacy_token: Jwt,
     with_daemon: bool,
 }
 
@@ -62,6 +64,7 @@ impl TryFrom<TaskRunner> for RunnerTest {
         let admin_token = unwrap_admin_token(admin_token, is_dev);
         // Run tests as a normal user
         let username = username.unwrap_or_else(|| USER_EMAIL.to_owned());
+        let legacy_token = unwrap_user_legacy_token(token.clone(), is_dev);
         let token = unwrap_user_token(token, is_dev);
 
         Ok(Self {
@@ -69,6 +72,7 @@ impl TryFrom<TaskRunner> for RunnerTest {
             admin_token,
             username,
             token,
+            legacy_token,
             with_daemon,
         })
     }
@@ -89,7 +93,13 @@ impl RunnerTest {
             } else {
                 "no-sandbox-spec"
             };
-            run_runner_test(&self.url, &self.username, &self.token, spec)?;
+            run_runner_test(
+                &self.url,
+                &self.username,
+                &self.token,
+                &self.legacy_token,
+                spec,
+            )?;
             run_image_project_runner_test(&self.url, &self.token, spec)?;
             run_user_key_runner_test(&self.url, &self.username, &self.token, spec)?;
             run_project_key_runner_test(&self.url, &self.admin_token, spec)
@@ -238,7 +248,13 @@ impl RunnerTest {
             "no-sandbox-spec"
         };
         let result = if unclaimed_result.is_ok() {
-            run_runner_test(&self.url, &self.username, &self.token, spec)
+            run_runner_test(
+                &self.url,
+                &self.username,
+                &self.token,
+                &self.legacy_token,
+                spec,
+            )
         } else {
             Ok(())
         };
@@ -287,7 +303,13 @@ impl RunnerTest {
 
         // Run the image-only runner test (no --exec, ENTRYPOINT baked into image)
         let image_only_result = if project_key_result.is_ok() {
-            run_image_only_runner_test(&self.url, &self.username, &self.token, spec)
+            run_image_only_runner_test(
+                &self.url,
+                &self.username,
+                &self.token,
+                &self.legacy_token,
+                spec,
+            )
         } else {
             Ok(())
         };
@@ -520,7 +542,13 @@ pub fn docker_available() -> bool {
 /// Run the runner smoke test: pull a prebuilt image, push it to the API's OCI
 /// registry via Docker, then submit a job with `bencher run --image`.
 #[expect(clippy::panic_in_result_fn, reason = "test harness")]
-pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> anyhow::Result<()> {
+pub fn run_runner_test(
+    url: &Url,
+    username: &str,
+    token: &Jwt,
+    legacy_token: &Jwt,
+    spec: &str,
+) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running runner smoke test against: {host}");
@@ -560,7 +588,7 @@ pub fn run_runner_test(url: &Url, username: &str, token: &Jwt, spec: &str) -> an
 
     // Step 3: Log in to the local OCI registry
     println!("Step 3: Logging in to {registry}...");
-    docker_login(&registry, username, token.as_ref())?;
+    docker_login(&registry, username, legacy_token.as_ref())?;
 
     // Step 4: Push the image to the local registry
     println!("Step 4: Pushing image to {registry}...");
@@ -1279,6 +1307,7 @@ fn run_image_only_runner_test(
     url: &Url,
     username: &str,
     token: &Jwt,
+    legacy_token: &Jwt,
     spec: &str,
 ) -> anyhow::Result<()> {
     let host = url.as_ref();
@@ -1305,7 +1334,7 @@ fn run_image_only_runner_test(
     docker_build_mock_image(&local_ref)?;
 
     println!("Logging in to {registry}...");
-    docker_login(&registry, username, token.as_ref())?;
+    docker_login(&registry, username, legacy_token.as_ref())?;
 
     println!("Pushing mock image to {registry}...");
     docker_push(&local_ref)?;

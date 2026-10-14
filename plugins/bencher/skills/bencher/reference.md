@@ -157,21 +157,11 @@
 
 ## Key & Token Management
 
+API keys, both user API keys (`bencher_user_*`) and project API keys (`bencher_run_*`,
+preferred for `bencher run` in CI), are created and managed in the Console.
+The plaintext key is shown only once, at creation time.
+
 ```bash
-# User API keys (bencher_user_*)
-bencher user key list <user>
-bencher user key create <user> --name <name> [--ttl <seconds>]
-bencher user key view <user> <uuid>
-bencher user key update <user> <uuid> --name <name>
-bencher user key revoke <user> <uuid>
-
-# Project API keys (bencher_run_*) - preferred for `bencher run` in CI
-bencher project key list <project>
-bencher project key create <project> --name <name> [--ttl <seconds>]
-bencher project key view <project> <uuid>
-bencher project key update <project> <uuid> --name <name>
-bencher project key revoke <project> <uuid>
-
 # User API tokens (deprecated: existing tokens only, none can be created)
 bencher token list <user>
 bencher token view <user> <uuid>
@@ -179,8 +169,7 @@ bencher token update <user> <uuid> --name <name>
 bencher token revoke <user> <uuid>
 ```
 
-The plaintext key is returned only once, at creation time. Aliases: `add` (create),
-`get` (view), `edit` (update), `rm` (revoke), `ls` (list).
+Aliases: `get` (view), `edit` (update), `rm` (revoke), `ls` (list).
 
 ## Utility Commands
 

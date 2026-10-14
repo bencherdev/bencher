@@ -11,7 +11,10 @@ use bencher_rbac::project::Permission;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{conflict_error, resource_conflict_err, resource_not_found_err, with_token_hint},
+    error::{
+        conflict_error, forbidden_error, resource_conflict_err, resource_not_found_err,
+        with_token_hint,
+    },
     model::{
         project::{
             ProjectId, QueryProject,
@@ -76,7 +79,8 @@ pub async fn proj_keys_options(
 /// List project keys
 ///
 /// List all API keys for a project.
-/// Requires `manage` permission on the project.
+/// Requires `manage` permission on the project and a user session:
+/// neither a user API key nor a deprecated user API token can list project keys.
 /// By default, the keys are sorted in alphabetical order by name.
 /// The HTTP response header `X-Total-Count` contains the total number of keys.
 #[endpoint {
@@ -92,6 +96,11 @@ pub async fn proj_keys_get(
     query_params: Query<ProjKeysQuery>,
 ) -> Result<ResponseOk<JsonProjectKeys>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        return Err(forbidden_error(
+            "Only a user session can list project API keys.",
+        ));
+    }
     let (json, total_count) = get_ls_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -198,7 +207,8 @@ fn get_ls_query<'q>(
 ///
 /// Create a new API key for a project.
 /// The plaintext key is only returned once in the response.
-/// Requires `manage` permission on the project.
+/// Requires `manage` permission on the project and a user session:
+/// neither a user API key nor a deprecated user API token can create a project key.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/keys",
@@ -211,6 +221,11 @@ pub async fn proj_key_post(
     body: TypedBody<JsonNewProjectKey>,
 ) -> Result<ResponseCreated<JsonProjectKeyCreated>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        return Err(forbidden_error(
+            "Only a user session can create a project API key.",
+        ));
+    }
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -278,7 +293,8 @@ pub async fn proj_key_options(
 /// View a project key
 ///
 /// View an API key for a project.
-/// Requires `manage` permission on the project.
+/// Requires `manage` permission on the project and a user session:
+/// neither a user API key nor a deprecated user API token can view a project key.
 #[endpoint {
     method = GET,
     path =  "/v0/projects/{project}/keys/{key}",
@@ -290,6 +306,11 @@ pub async fn proj_key_get(
     path_params: Path<ProjKeyParams>,
 ) -> Result<ResponseOk<JsonProjectKey>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        return Err(forbidden_error(
+            "Only a user session can view a project API key.",
+        ));
+    }
     let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
         .map_err(with_token_hint)?;
@@ -319,7 +340,8 @@ async fn get_one_inner(
 /// Update a project key
 ///
 /// Update an API key for a project (rename only).
-/// Requires `manage` permission on the project.
+/// Requires `manage` permission on the project and a user session:
+/// neither a user API key nor a deprecated user API token can update a project key.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/keys/{key}",
@@ -332,6 +354,11 @@ pub async fn proj_key_patch(
     body: TypedBody<JsonUpdateProjectKey>,
 ) -> Result<ResponseOk<JsonProjectKey>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        return Err(forbidden_error(
+            "Only a user session can update a project API key.",
+        ));
+    }
     let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),
@@ -383,7 +410,8 @@ async fn patch_inner(
 /// Revoke an API key for a project.
 /// Revocation is terminal: a revoked key can no longer authenticate any request,
 /// and the revocation cannot be undone.
-/// Requires `manage` permission on the project.
+/// Requires `manage` permission on the project and a user session:
+/// neither a user API key nor a deprecated user API token can revoke a project key.
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}/keys/{key}",
@@ -395,6 +423,11 @@ pub async fn proj_key_delete(
     path_params: Path<ProjKeyParams>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        return Err(forbidden_error(
+            "Only a user session can revoke a project API key.",
+        ));
+    }
     delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
         .map_err(with_token_hint)?;

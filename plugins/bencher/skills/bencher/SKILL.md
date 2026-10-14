@@ -55,7 +55,7 @@ The project must be identified by `--project` or derived from a `--image` whose
 repository names the project. A project key cannot create a project on the fly.
 
 **User key (`bencher_user_*`), good for local/interactive use:** authenticates as the
-owning user across everything a session can do (except minting other keys), and can
+owning user across everything a session can do (except managing API keys), and can
 create a project on the fly, so `--project` is optional.
 ```bash
 export BENCHER_API_KEY=bencher_user_...
