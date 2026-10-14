@@ -167,6 +167,7 @@ dependencies = [
  "serde_urlencoded",
  "slog",
  "tokio",
+ "url",
 ]
 
 [[package]]
@@ -855,6 +856,8 @@ dependencies = [
  "bencher_callback",
  "bencher_config",
  "bencher_endpoint",
+ "bencher_github_client",
+ "bencher_google_client",
  "bencher_json",
  "bencher_license",
  "bencher_oci_storage",

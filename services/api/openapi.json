@@ -304,6 +304,14 @@
         "parameters": [
           {
             "in": "query",
+            "name": "authorization",
+            "description": "An app's pending request to connect, to return to after signing in.",
+            "schema": {
+              "$ref": "#/components/schemas/OAuthAuthorizationUuid"
+            }
+          },
+          {
+            "in": "query",
             "name": "claim",
             "description": "Organization UUID to claim.",
             "schema": {
@@ -462,6 +470,14 @@
         ],
         "operationId": "auth_google_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "authorization",
+            "description": "An app's pending request to connect, to return to after signing in.",
+            "schema": {
+              "$ref": "#/components/schemas/OAuthAuthorizationUuid"
+            }
+          },
           {
             "in": "query",
             "name": "claim",
@@ -13970,6 +13986,15 @@
       "JsonLogin": {
         "type": "object",
         "properties": {
+          "authorization": {
+            "nullable": true,
+            "description": "An app's pending request to connect, which the emailed link returns to.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthAuthorizationUuid"
+              }
+            ]
+          },
           "email": {
             "$ref": "#/components/schemas/Email"
           },
@@ -15824,6 +15849,15 @@
       "JsonOAuthUser": {
         "type": "object",
         "properties": {
+          "authorization": {
+            "nullable": true,
+            "description": "An app's pending request to connect, to return to now that the user is signed in.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthAuthorizationUuid"
+              }
+            ]
+          },
           "plan": {
             "nullable": true,
             "allOf": [
@@ -18722,6 +18756,15 @@
       "JsonSignup": {
         "type": "object",
         "properties": {
+          "authorization": {
+            "nullable": true,
+            "description": "An app's pending request to connect, which the emailed link returns to.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthAuthorizationUuid"
+              }
+            ]
+          },
           "claim": {
             "nullable": true,
             "allOf": [
@@ -20366,6 +20409,10 @@
       },
       "NonEmpty": {
         "type": "string"
+      },
+      "OAuthAuthorizationUuid": {
+        "type": "string",
+        "format": "uuid"
       },
       "OAuthClientId": {
         "description": "An OAuth client identifier: the URL of the client's metadata document.",

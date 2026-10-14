@@ -4,9 +4,10 @@ import type { JsonAuthUser, JsonOAuth } from "../../types/bencher";
 import { authUser, setUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
-import { useNavigate, useSearchParams } from "../../util/url";
+import { hiddenRedirect, useNavigate, useSearchParams } from "../../util/url";
 import { type InitValid, init_valid } from "../../util/valid";
 import { PLAN_PARAM } from "./auth";
+import { consentPath } from "./authorize/path";
 
 const CODE_PARAM = "code";
 const STATE_PARAM = "state";
@@ -51,14 +52,19 @@ const AuthOAuth = (props: Props) => {
 			.then((resp) => {
 				const user = resp.data?.user;
 				if (setUser(user)) {
+					const consent = consentPath(resp.data?.authorization);
 					const plan = resp.data?.plan;
-					navigateNotify(
-						NotifyKind.OK,
-						"Hoppy to git to see you!",
-						"/console",
-						null,
-						plan ? [[PLAN_PARAM, plan]] : null,
-					);
+					if (consent) {
+						hiddenRedirect(consent);
+					} else {
+						navigateNotify(
+							NotifyKind.OK,
+							"Hoppy to git to see you!",
+							"/console",
+							null,
+							plan ? [[PLAN_PARAM, plan]] : null,
+						);
+					}
 				} else {
 					navigateNotify(
 						NotifyKind.ERROR,

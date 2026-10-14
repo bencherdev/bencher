@@ -1,4 +1,6 @@
 #[cfg(feature = "plus")]
+use bencher_json::OAuthAuthorizationUuid;
+#[cfg(feature = "plus")]
 use bencher_json::PlanLevel;
 #[cfg(feature = "plus")]
 use bencher_json::ProjectUuid;
@@ -55,6 +57,10 @@ pub struct StateClaims {
     pub claim: Option<OrganizationUuid>,
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
+    // Left out when absent, so a state without it is the token it always was.
+    #[cfg(feature = "plus")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization: Option<OAuthAuthorizationUuid>,
 }
 
 impl Claims {

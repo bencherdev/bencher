@@ -10,6 +10,7 @@ use bencher_json::{
     JsonUser, JsonUserKeyCreated, Jwt, PlanLevel, Secret,
 };
 use bencher_license::Licensor;
+use camino::{Utf8Path, Utf8PathBuf};
 use serde::Serialize;
 
 // The test tokens are signed for these two emails.
@@ -99,6 +100,8 @@ const JITTER: [f64; 8] = [0.0, 0.004, -0.003, 0.002, -0.004, 0.003, -0.002, 0.00
 pub struct Seed {
     api_url: String,
     console_url: String,
+    /// Where the API logs the emails it would send.
+    api_log: Utf8PathBuf,
     now: DateTime,
     admin: JsonAuthUser,
     member: JsonAuthUser,
@@ -145,7 +148,7 @@ struct SeedProject {
 }
 
 impl Seed {
-    pub async fn new(api_url: &str, console_url: &str) -> anyhow::Result<Self> {
+    pub async fn new(api_url: &str, console_url: &str, api_log: &Utf8Path) -> anyhow::Result<Self> {
         let api = Api::new(api_url);
 
         // The first user to sign up is the server admin.
@@ -195,6 +198,7 @@ impl Seed {
         Ok(Self {
             api_url: api_url.to_owned(),
             console_url: console_url.to_owned(),
+            api_log: api_log.to_owned(),
             now: DateTime::try_from(NOW)?,
             admin,
             member,

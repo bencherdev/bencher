@@ -19,7 +19,7 @@ import { setUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 import { getRecaptchaToken, loadRecaptcha } from "../../util/recaptcha";
-import { useSearchParams } from "../../util/url";
+import { hiddenRedirect, useSearchParams } from "../../util/url";
 import {
 	init_valid,
 	validEmail,
@@ -30,6 +30,11 @@ import type { FieldHandler } from "../field/Field";
 import Field from "../field/Field";
 import FieldKind from "../field/kind";
 import { AUTH_FIELDS, EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./auth";
+import {
+	AUTHORIZATION_PARAM,
+	consentPath,
+	requestUuid,
+} from "./authorize/path";
 
 export interface Props {
 	apiUrl: string;
@@ -50,6 +55,9 @@ const ConfirmForm = (props: Props) => {
 	const token = createMemo(() => searchParams[TOKEN_PARAM] as Jwt);
 	const plan = createMemo(() => searchParams[PLAN_PARAM] as PlanLevel);
 	const email = createMemo(() => searchParams[EMAIL_PARAM] as Email);
+	const authorization = createMemo(() =>
+		requestUuid(searchParams[AUTHORIZATION_PARAM]),
+	);
 
 	const [submitted, setSubmitted] = createSignal();
 	const [form, setForm] = createStore<{
@@ -87,13 +95,18 @@ const ConfirmForm = (props: Props) => {
 				setSubmitting(false);
 				const user = resp.data;
 				if (setUser(user)) {
-					navigateNotify(
-						NotifyKind.OK,
-						`Hoppy to see you, ${user.user.name}!`,
-						"/console",
-						[PLAN_PARAM],
-						null,
-					);
+					const consent = consentPath(authorization());
+					if (consent) {
+						hiddenRedirect(consent);
+					} else {
+						navigateNotify(
+							NotifyKind.OK,
+							`Hoppy to see you, ${user.user.name}!`,
+							"/console",
+							[PLAN_PARAM],
+							null,
+						);
+					}
 				} else {
 					pageNotify(NotifyKind.ERROR, "Invalid user. Please, try again.");
 				}
@@ -117,6 +130,10 @@ const ConfirmForm = (props: Props) => {
 			email: email(),
 			plan: plan() as PlanLevel,
 		};
+		const authorization_uuid = authorization();
+		if (authorization_uuid) {
+			login.authorization = authorization_uuid;
+		}
 		const recaptcha_token = await getRecaptchaToken(RecaptchaAction.Login);
 		if (recaptcha_token) {
 			login.recaptcha_token = recaptcha_token;
@@ -129,7 +146,7 @@ const ConfirmForm = (props: Props) => {
 					NotifyKind.OK,
 					`Successful resent email to ${email()}. Please confirm token.`,
 					null,
-					[PLAN_PARAM, EMAIL_PARAM],
+					[PLAN_PARAM, EMAIL_PARAM, AUTHORIZATION_PARAM],
 					null,
 				);
 			})
