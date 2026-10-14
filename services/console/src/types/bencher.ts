@@ -2116,6 +2116,12 @@ export enum OAuthScope {
 	ProjectsRead = "projects:read",
 	/** Read and write the projects the user can write. */
 	ProjectsWrite = "projects:write",
+	/** Who the user is. */
+	Openid = "openid",
+	/** The user's email address. */
+	Email = "email",
+	/** The user's name. */
+	Profile = "profile",
 }
 
 /** An app's pending request to connect to a user's account through OAuth. */
@@ -2144,13 +2150,13 @@ export interface JsonOAuthDecision {
 
 /** The user API key an OAuth grant was approved with. */
 export interface JsonOAuthGrantKey {
-	uuid: UserKeyUuid;
+	uuid: Uuid;
 	name: ResourceName;
 }
 
 /** An app connected to a user's account through OAuth. */
 export interface JsonOAuthGrant {
-	uuid: OAuthGrantUuid;
+	uuid: Uuid;
 	client: JsonOAuthClient;
 	scopes: OAuthScope[];
 	/**
@@ -2673,7 +2679,7 @@ export interface JsonUsage {
 }
 
 export interface JsonUserKey {
-	uuid: UserKeyUuid;
+	uuid: Uuid;
 	user: Uuid;
 	name: ResourceName;
 	creation: string;
@@ -2686,7 +2692,7 @@ export interface JsonUserKey {
 }
 
 export interface JsonUserKeyCreated {
-	uuid: UserKeyUuid;
+	uuid: Uuid;
 	user: Uuid;
 	name: ResourceName;
 	/** The plaintext user key. Only returned once, at creation. */

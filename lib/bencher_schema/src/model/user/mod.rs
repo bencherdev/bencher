@@ -59,6 +59,8 @@ pub struct QueryUser {
     pub name: UserName,
     pub slug: UserSlug,
     pub email: Email,
+    /// When the user last proved they hold `email`, cleared when it changes.
+    pub email_verified: Option<DateTime>,
     pub admin: bool,
     pub locked: bool,
     pub created: DateTime,
@@ -109,6 +111,22 @@ impl QueryUser {
             .filter(schema::user::email.eq(email))
             .first(conn)
             .map_err(resource_not_found_err!(User, email))
+    }
+
+    /// Record that the user proved they hold `email` at `now`, unless their email is no longer it.
+    pub fn verify_email(
+        conn: &mut DbConnection,
+        id: UserId,
+        email: &Email,
+        now: DateTime,
+    ) -> diesel::QueryResult<usize> {
+        diesel::update(
+            schema::user::table
+                .filter(schema::user::id.eq(id))
+                .filter(schema::user::email.eq(email)),
+        )
+        .set(schema::user::email_verified.eq(now))
+        .execute(conn)
     }
 
     pub fn get_admins(conn: &mut DbConnection) -> Result<Vec<Self>, HttpError> {
@@ -357,4 +375,182 @@ impl From<JsonUpdateUser> for UpdateUser {
 #[diesel::dsl::auto_type(no_type_alias)]
 pub fn bump_modified(now: DateTime) -> _ {
     user_table::modified.eq(max(now, user_table::modified + 1i64))
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::{DateTime, Email};
+    use diesel::{RunQueryDsl as _, connection::SimpleConnection as _};
+    use diesel_migrations::MigrationHarness as _;
+    use pretty_assertions::assert_eq;
+
+    use super::QueryUser;
+    use crate::{run_migrations, test_util::setup_test_db};
+
+    const EMAIL_VERIFIED_MIGRATION: &str = "20261014120000";
+    /// Every user column, in order, before the migration.
+    const USER_COLUMNS: &str = "id, uuid, name, slug, email, admin, locked, created, modified";
+    /// The tables whose rows hang off a user, which rebuilding the user table must leave alone.
+    const CHILD_TABLES: [&str; 5] = [
+        "organization_role",
+        "user_key",
+        "token",
+        "oauth_grant",
+        "oauth_token",
+    ];
+
+    #[derive(diesel::QueryableByName)]
+    struct Text {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        text: String,
+    }
+
+    #[derive(diesel::QueryableByName)]
+    struct Count {
+        #[diesel(sql_type = diesel::sql_types::BigInt)]
+        count: i64,
+    }
+
+    // Rebuilding the user table must keep every user and everything that hangs off one,
+    // with the new column right after the email.
+    #[test]
+    fn email_verified_migration_keeps_every_user() {
+        let mut conn = setup_test_db();
+        conn.batch_execute("PRAGMA foreign_keys = OFF").unwrap();
+        loop {
+            let version = conn.revert_last_migration(crate::MIGRATIONS).unwrap();
+            if version.to_string() == EMAIL_VERIFIED_MIGRATION {
+                break;
+            }
+        }
+        conn.batch_execute("PRAGMA foreign_keys = ON").unwrap();
+        seed_users(&mut conn, 1024);
+        let users = user_rows(&mut conn);
+        let children = child_counts(&mut conn);
+
+        // The path the server takes at startup.
+        run_migrations(&mut conn).unwrap();
+        assert_eq!(
+            text(
+                &mut conn,
+                "SELECT group_concat(name, ', ') AS text FROM pragma_table_info('user')"
+            ),
+            "id, uuid, name, slug, email, email_verified, admin, locked, created, modified"
+        );
+        assert_eq!(user_rows(&mut conn), users);
+        assert_eq!(child_counts(&mut conn), children);
+        assert_eq!(
+            count(
+                &mut conn,
+                "SELECT COUNT(*) AS count FROM user WHERE email_verified IS NOT NULL"
+            ),
+            0,
+            "no address is asserted verified before its user proves it"
+        );
+        assert_eq!(
+            count(
+                &mut conn,
+                "SELECT COUNT(*) AS count FROM pragma_foreign_key_check"
+            ),
+            0
+        );
+
+        conn.batch_execute(
+            "UPDATE user SET email_verified = 1 WHERE id % 2 = 0; PRAGMA foreign_keys = OFF",
+        )
+        .unwrap();
+        let version = conn.revert_last_migration(crate::MIGRATIONS).unwrap();
+        assert_eq!(version.to_string(), EMAIL_VERIFIED_MIGRATION);
+        conn.batch_execute("PRAGMA foreign_keys = ON").unwrap();
+        assert_eq!(user_rows(&mut conn), users);
+        assert_eq!(child_counts(&mut conn), children);
+    }
+
+    // The update is guarded by the address, so a proof of an old address never verifies a new one.
+    #[test]
+    fn verify_email_needs_the_current_address() {
+        let mut conn = setup_test_db();
+        seed_users(&mut conn, 1);
+        let email: Email = "user1@example.com".parse().unwrap();
+        let id = QueryUser::get_id_from_email(&mut conn, &email).unwrap();
+
+        let old_email: Email = "old@example.com".parse().unwrap();
+        assert_eq!(
+            QueryUser::verify_email(&mut conn, id, &old_email, DateTime::TEST).unwrap(),
+            0
+        );
+        assert_eq!(QueryUser::get(&mut conn, id).unwrap().email_verified, None);
+
+        assert_eq!(
+            QueryUser::verify_email(&mut conn, id, &email, DateTime::TEST).unwrap(),
+            1
+        );
+        assert_eq!(
+            QueryUser::get(&mut conn, id).unwrap().email_verified,
+            Some(DateTime::TEST)
+        );
+    }
+
+    /// `n` users, each with an organization role, a user key, an API token, and an OAuth grant
+    /// with a token, written with only the columns the user table had before the migration.
+    fn seed_users(conn: &mut diesel::SqliteConnection, n: u32) {
+        conn.batch_execute(&format!(
+            "INSERT INTO organization (id, uuid, name, slug, created, modified)
+                VALUES (1, '00000000-0000-0000-0000-000000000001', 'Organization', 'organization', 0, 0);
+            WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < {n})
+            INSERT INTO user ({USER_COLUMNS})
+                SELECT i, printf('00000000-0000-4000-8000-%012d', i), 'User ' || i, 'user-' || i,
+                    'user' || i || '@example.com', i % 7 = 0, i % 5 = 0, 1700000000 + i, 1700000000 + 2 * i
+                FROM n;
+            INSERT INTO organization_role (user_id, organization_id, role, created, modified)
+                SELECT id, 1, 'leader', created, modified FROM user;
+            INSERT INTO user_key (uuid, user_id, name, key_hash, creation, expiration)
+                SELECT printf('00000000-0000-4000-9000-%012d', id), id, 'Key', 'hash-' || id, created, created + 1
+                FROM user;
+            INSERT INTO token (uuid, user_id, name, jwt, creation, expiration)
+                SELECT printf('00000000-0000-4000-a000-%012d', id), id, 'Token', 'jwt-' || id, created, created + 1
+                FROM user;
+            INSERT INTO oauth_grant (uuid, user_id, user_key_id, client_id, client_name, scope, resource, created, modified, expiration)
+                SELECT printf('00000000-0000-4000-b000-%012d', user_id), user_id, id,
+                    'https://client.example/client.json', 'Client', 'projects:read', 'https://api.example.com/mcp',
+                    creation, creation, expiration
+                FROM user_key;
+            INSERT INTO oauth_token (grant_id, kind, token_hash, created, expiration)
+                SELECT id, 0, 'token-' || id, created, expiration FROM oauth_grant;"
+        ))
+        .unwrap();
+    }
+
+    /// Every user, every old column, in order.
+    fn user_rows(conn: &mut diesel::SqliteConnection) -> String {
+        text(
+            conn,
+            &format!(
+                "SELECT group_concat(row, ';') AS text FROM (
+                    SELECT concat_ws('|', {USER_COLUMNS}) AS row FROM user ORDER BY id
+                )"
+            ),
+        )
+    }
+
+    fn child_counts(conn: &mut diesel::SqliteConnection) -> Vec<i64> {
+        CHILD_TABLES
+            .iter()
+            .map(|table| count(conn, &format!("SELECT COUNT(*) AS count FROM {table}")))
+            .collect()
+    }
+
+    fn text(conn: &mut diesel::SqliteConnection, query: &str) -> String {
+        diesel::sql_query(query)
+            .get_result::<Text>(conn)
+            .unwrap()
+            .text
+    }
+
+    fn count(conn: &mut diesel::SqliteConnection, query: &str) -> i64 {
+        diesel::sql_query(query)
+            .get_result::<Count>(conn)
+            .unwrap()
+            .count
+    }
 }

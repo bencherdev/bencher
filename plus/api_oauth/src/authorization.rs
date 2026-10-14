@@ -1,12 +1,13 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseOk};
 use bencher_json::{
-    JsonOAuthAuthorization, JsonOAuthDecision, JsonOAuthRedirect, Jwt, OAuthAuthorizationUuid,
-    OAuthCode, OAuthCodeHash, ProjectKey, UserKey,
+    DateTime, JsonOAuthAuthorization, JsonOAuthDecision, JsonOAuthRedirect, Jwt,
+    OAuthAuthorizationUuid, OAuthCode, OAuthCodeHash, ProjectKey, UserKey,
 };
 use bencher_schema::{
-    context::{ApiContext, RateLimiting},
+    context::{ApiContext, OAuthServer, RateLimiting},
     error::{conflict_error, forbidden_error, issue_error, not_found_error, unauthorized_error},
     model::user::{
+        QueryUser,
         auth::{AuthCredential, AuthUser, BearerToken},
         oauth_authorization::{OAuthAnswer, QueryOAuthAuthorization},
     },
@@ -100,17 +101,25 @@ pub async fn oauth_authorization_post(
     let now = context.clock.now();
 
     let (answer, code) = if approve {
-        let auth_user = approver(&rqctx).await?;
+        let (auth_user, auth_time) = approver(&rqctx).await?;
         let code = OAuthCode::generate();
         let code_hash = OAuthCodeHash::from(&code);
-        let answer = write_transaction!(context, |conn| QueryOAuthAuthorization::approve(
-            conn,
-            authorization,
-            auth_user.id,
-            auth_user.user_key_id(),
-            &code_hash,
-            now,
-        ));
+        let answer = write_transaction!(context, |conn| {
+            let answer = QueryOAuthAuthorization::approve_with_auth_time(
+                conn,
+                authorization,
+                auth_user.id,
+                auth_user.user_key_id(),
+                auth_time,
+                &code_hash,
+                now,
+            )?;
+            // A session is only minted for an address its user proved they hold.
+            if auth_user.is_session() && matches!(answer, OAuthAnswer::Recorded(_)) {
+                QueryUser::verify_email(conn, auth_user.id, &auth_user.email, now)?;
+            }
+            Ok::<_, diesel::result::Error>(answer)
+        });
         (answer, Some(code))
     } else {
         charge_public_request(&rqctx)?;
@@ -136,9 +145,26 @@ pub async fn oauth_authorization_post(
                 "The user API key is not the approving user's",
             ));
         },
+        OAuthAnswer::LoginRequired(authorization) => {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsent(
+                bencher_otel::OAuthConsentKind::LoginRequired,
+            ));
+            return redirect(
+                oauth,
+                &authorization,
+                &[
+                    ("error", "login_required"),
+                    (
+                        "error_description",
+                        "The user has not signed in recently enough",
+                    ),
+                ],
+            );
+        },
     };
 
-    let url = if let Some(code) = code {
+    if let Some(code) = code {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsent(
             if authorization.user_key_id.is_some() {
@@ -147,33 +173,44 @@ pub async fn oauth_authorization_post(
                 bencher_otel::OAuthConsentKind::ApproveSession
             },
         ));
-        client_redirect(
-            &authorization.redirect_uri,
-            &[("code", code.as_ref())],
-            authorization.state.as_ref(),
-            oauth.issuer(),
-        )
+        redirect(oauth, &authorization, &[("code", code.as_ref())])
     } else {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsent(
             bencher_otel::OAuthConsentKind::Deny,
         ));
-        client_redirect(
-            &authorization.redirect_uri,
+        redirect(
+            oauth,
+            &authorization,
             &[
                 ("error", "access_denied"),
                 ("error_description", "The user denied the request"),
             ],
-            authorization.state.as_ref(),
-            oauth.issuer(),
         )
-    };
+    }
+}
+
+/// Where to send the browser with the answer to a request: its client's redirect URI, with `params`.
+fn redirect(
+    oauth: &OAuthServer,
+    authorization: &QueryOAuthAuthorization,
+    params: &[(&str, &str)],
+) -> Result<Response<Body>, HttpError> {
+    let url = client_redirect(
+        &authorization.redirect_uri,
+        params,
+        authorization.state.as_ref(),
+        oauth.issuer(),
+    );
     json(&JsonOAuthRedirect { url })
 }
 
-/// The user approving a request: a session JWT, or a pasted user API key, which is charged as an
-/// attempt to sign in from the caller's address. No credential is ever quoted back.
-async fn approver(rqctx: &RequestContext<ApiContext>) -> Result<AuthUser, HttpError> {
+/// The user approving a request, and when they signed in: a session JWT, or a pasted user API key,
+/// which proves no sign in and is charged as an attempt to sign in from the caller's address.
+/// No credential is ever quoted back.
+async fn approver(
+    rqctx: &RequestContext<ApiContext>,
+) -> Result<(AuthUser, Option<DateTime>), HttpError> {
     let context = rqctx.context();
     let headers = rqctx.request.headers();
     let Some(token) = headers
@@ -204,6 +241,15 @@ async fn approver(rqctx: &RequestContext<ApiContext>) -> Result<AuthUser, HttpEr
         token.parse::<Jwt>().map(BearerToken::Jwt)
     }
     .map_err(|_err| unauthorized_error(INVALID_CREDENTIAL))?;
+    let auth_time = if let BearerToken::Jwt(jwt) = &bearer_token {
+        context
+            .token_key
+            .validate_client(jwt)
+            .ok()
+            .map(|claims| claims.issued_at())
+    } else {
+        None
+    };
     let auth_user = AuthUser::from_token(context, bearer_token).await?;
     if !matches!(
         auth_user.credential,
@@ -215,7 +261,7 @@ async fn approver(rqctx: &RequestContext<ApiContext>) -> Result<AuthUser, HttpEr
             "An API token cannot approve a request to connect. Sign in, or use a user API key (bencher_user_) instead.",
         ));
     }
-    Ok(auth_user)
+    Ok((auth_user, auth_time))
 }
 
 fn charge_public_request(rqctx: &RequestContext<ApiContext>) -> Result<(), HttpError> {

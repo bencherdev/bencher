@@ -299,10 +299,11 @@ pub type OAuthTokenGrant = (
     Option<QueryUserKey>,
 );
 
-/// Look up an OAuth access token presented to the MCP server with its grant and user.
+/// Look up an OAuth access token presented to the MCP server or the user info endpoint.
+///
 /// A single query returns the token with its grant, user, and bound user key,
 /// and every adverse case returns the same opaque error.
-pub(super) fn authenticate(
+pub fn authenticate(
     context: &ApiContext,
     conn: &mut DbConnection,
     oauth: &OAuthServer,

@@ -44,7 +44,7 @@ pub use month::ExpirationMonth;
 pub use number::CardNumber;
 pub use oauth::{
     OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge, OAuthCodeHash,
-    OAuthCodeVerifier, OAuthIssuer, OAuthNonce, OAuthRedirectUri, OAuthRefreshToken,
+    OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce, OAuthRedirectUri, OAuthRefreshToken,
     OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash,
 };
 pub use operating_system::OperatingSystem;
