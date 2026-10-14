@@ -298,6 +298,11 @@ async fn into_context(
         .and_then(|r| r.update_base_url.clone())
         .map(|url| url.try_into().map_err(ConfigTxError::RunnerUpdateBaseUrl))
         .transpose()?;
+    #[cfg(feature = "plus")]
+    let openai_apps_challenge = plus
+        .as_ref()
+        .and_then(|p| p.mcp.as_ref())
+        .and_then(|m| m.openai_apps_challenge.clone());
 
     info!(log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]
@@ -394,6 +399,8 @@ async fn into_context(
         callbacks,
         #[cfg(feature = "plus")]
         runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
+        #[cfg(feature = "plus")]
+        openai_apps_challenge,
         #[cfg(feature = "plus")]
         shutdown,
     })

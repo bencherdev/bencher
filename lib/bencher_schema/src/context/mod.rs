@@ -105,6 +105,9 @@ pub struct ApiContext {
     /// Runner self-update URL construction and cloud channel checksum cache.
     #[cfg(feature = "plus")]
     pub runner_update: RunnerUpdate,
+    /// Domain verification token served at `/.well-known/openai-apps-challenge`.
+    #[cfg(feature = "plus")]
+    pub openai_apps_challenge: Option<bencher_json::NonEmpty>,
     /// Cancellation signal tripped on graceful shutdown so long-lived handlers (the runner WebSocket
     /// channel) can wind down and let `server.close()` complete. It also stops the periodic rate
     /// limiting prune.

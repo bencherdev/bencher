@@ -9,6 +9,7 @@ pub mod cloud;
 pub mod disaster_recovery;
 pub mod github;
 pub mod google;
+pub mod mcp;
 pub mod rate_limiting;
 pub mod registry;
 pub mod runners;
@@ -18,6 +19,7 @@ pub use cloud::JsonCloud;
 pub use disaster_recovery::JsonDisasterRecovery;
 pub use github::JsonGitHub;
 pub use google::JsonGoogle;
+pub use mcp::JsonMcp;
 pub use rate_limiting::JsonRateLimiting;
 pub use registry::JsonRegistry;
 pub use runners::JsonRunners;
@@ -42,6 +44,8 @@ pub struct JsonPlus {
     pub registry: Option<JsonRegistry>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub runners: Option<JsonRunners>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mcp: Option<JsonMcp>,
 }
 
 impl Sanitize for JsonPlus {

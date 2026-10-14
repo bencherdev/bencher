@@ -13724,6 +13724,21 @@
           "email"
         ]
       },
+      "JsonMcp": {
+        "description": "MCP server configuration",
+        "type": "object",
+        "properties": {
+          "openai_apps_challenge": {
+            "nullable": true,
+            "description": "Domain verification token for an app built on this MCP server, served at `/.well-known/openai-apps-challenge`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          }
+        }
+      },
       "JsonMdArray": {
         "description": "An md array.",
         "type": "object",
@@ -16330,6 +16345,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonGoogle"
+              }
+            ]
+          },
+          "mcp": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonMcp"
               }
             ]
           },

@@ -32,7 +32,10 @@
 //!
 //! These endpoints are `unpublished`: they speak JSON-RPC, not REST,
 //! so they are intentionally excluded from the `OpenAPI` spec.
+//!
+//! Also serves `GET /.well-known/openai-apps-challenge` (`unpublished`).
 
+mod challenge;
 mod endpoint;
 mod server;
 mod tools;
@@ -54,6 +57,7 @@ impl Registrar for Api {
         // `unpublished` so the OpenAPI spec is unaffected either way
         api_description.register(endpoint::mcp_options)?;
         api_description.register(endpoint::mcp_post)?;
+        api_description.register(challenge::openai_apps_challenge_get)?;
         Ok(())
     }
 }
