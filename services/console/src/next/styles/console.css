@@ -137,10 +137,7 @@
 	border-radius: var(--radius-element);
 	font-size: 20px;
 }
-.badge[data-empty] {
-	visibility: hidden;
-}
-/* As wide as 99+, the most it shows, so the tab never moves when a count arrives. */
+/* As wide as 99+, the most it shows, so a count that changes never moves the tabs. */
 .tab .badge {
 	box-sizing: content-box;
 	width: 3ch;
@@ -196,10 +193,12 @@
 
 /* page */
 .page {
+	/* What sits below the page's last block, which Explore's plot room subtracts. */
+	--page-end: 32px;
 	width: 100%;
 	max-width: 1440px;
 	margin: 0 auto;
-	padding: 16px 24px 32px;
+	padding: 16px 24px var(--page-end);
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
@@ -510,9 +509,27 @@
 .set-status:empty {
 	display: none;
 }
+/* A title and its line, then the button, which wraps under them on a phone. */
 .danger-row {
 	display: flex;
-	justify-content: flex-end;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px 24px;
+}
+.danger-row + .danger-row {
+	padding-top: 10px;
+	border-top: var(--border-width) solid var(--color-border);
+}
+.danger-row .grow {
+	flex: 1 1 240px;
+}
+.danger-row h3 {
+	margin: 0;
+	font-size: 14px;
+	font-weight: var(--font-weight-semibold);
+}
+.danger-row p {
+	margin: 2px 0 0;
 }
 .muted {
 	color: var(--color-text-muted);
@@ -775,7 +792,8 @@
 		display: none;
 	}
 	.page {
-		padding: 12px 14px 24px;
+		--page-end: 24px;
+		padding: 12px 14px var(--page-end);
 		gap: 10px;
 	}
 }

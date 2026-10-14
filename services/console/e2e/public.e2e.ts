@@ -3,7 +3,7 @@ import { decodeQuery } from "../src/next/query/query";
 import type { JsonConsolePerf } from "../src/types/bencher";
 import { createProject, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
-import { dimensions } from "./explore";
+import { dimensions, plotAtEnd } from "./explore";
 import {
 	VERSION_KEY,
 	expect,
@@ -14,7 +14,13 @@ import {
 	signedOut,
 	test,
 } from "./fixtures";
-import { DAY, publicPath, twoLinesDrawn, twoRecentLines } from "./public";
+import {
+	DAY,
+	publicPath,
+	recentLines,
+	twoLinesDrawn,
+	twoRecentLines,
+} from "./public";
 
 const { hashbrown, version_zero } = seed.projects;
 
@@ -366,28 +372,26 @@ test.describe("signed out", () => {
 		);
 	});
 
-	// Kills a short plot that cannot scroll to the top of the screen, since
-	// nothing below it gives the page the room.
-	for (const viewport of [undefined, { width: 390, height: 844 }]) {
-		test(`a short plot scrolls to the top of the screen${viewport ? ` at ${viewport.width}` : ""}`, async ({
+	// Kills scroll room that leaves the plot's top short of the top of the
+	// screen or lets it scroll past, whatever the key's height.
+	for (const viewport of [
+		{ width: 1280, height: 800 },
+		{ width: 390, height: 844 },
+	]) {
+		test(`the plot scrolls exactly to the top of the screen at ${viewport.width}`, async ({
 			page,
 			request,
 		}) => {
-			if (viewport) {
-				await page.setViewportSize(viewport);
+			await page.setViewportSize(viewport);
+			for (const count of [2, 8]) {
+				const { project, search } = await recentLines(request, count);
+				await page.goto(publicPath(project.slug, search));
+				await expect(page.getByRole("figure")).toHaveAccessibleName(
+					`${count} lines`,
+				);
+				const { top } = await plotAtEnd(page);
+				expect(Math.abs(top), `${count} lines`).toBeLessThanOrEqual(1);
 			}
-			const { project, search } = await twoRecentLines(request);
-			await page.goto(publicPath(project.slug, search));
-			await twoLinesDrawn(page);
-			await page.evaluate(() =>
-				window.scrollTo({
-					top: document.documentElement.scrollHeight,
-					behavior: "instant",
-				}),
-			);
-			expect(
-				(await page.getByRole("figure").boundingBox())?.y,
-			).toBeLessThanOrEqual(0);
 		});
 	}
 });

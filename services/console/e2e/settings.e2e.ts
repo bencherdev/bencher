@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import {
 	createKey,
 	createOrganization,
@@ -110,9 +110,38 @@ test.describe("General, as the project's Maintainer", () => {
 		expect(await projectStatus(request, project.slug)).toBe(404);
 	});
 
-	// Kills a refusal that is swallowed, shown far from the field, or left
+	// Kills a visibility change that never reaches the API, one the row does
+	// not say, and one a reload undoes.
+	test("Change visibility makes the project private and public again", async ({
+		page,
+		request,
+	}) => {
+		const project = await createProject(request);
+		await page.goto(nextPath(project.slug, "settings"));
+		await expect(general(page)).toBeVisible();
+
+		for (const to of ["private", "public"]) {
+			await visibility(page).click();
+			await page
+				.getByRole("alertdialog", { name: `Make ${project.slug} ${to}?` })
+				.getByRole("button", { name: `Make ${to}` })
+				.click();
+			await expect(page.getByRole("alertdialog")).toBeHidden();
+			await expect(visibility(page)).toHaveAccessibleDescription(
+				new RegExp(to),
+			);
+			await settle(page);
+			await page.reload();
+			await expect(visibility(page)).toHaveAccessibleDescription(
+				new RegExp(to),
+			);
+			expect(await projectVisibility(request, project.slug)).toBe(to);
+		}
+	});
+
+	// Kills a refusal that is swallowed, shown outside the dialog, or left
 	// applied in the cache as if the project were private.
-	test("private on an organization with no plan is refused in place, with the plans link", async ({
+	test("private on an organization with no plan is refused in the dialog, with the plans link", async ({
 		page,
 		request,
 	}) => {
@@ -123,9 +152,12 @@ test.describe("General, as the project's Maintainer", () => {
 		await page.goto(nextPath(project.slug, "settings"));
 		await expect(general(page)).toBeVisible();
 
-		await page.getByRole("radio", { name: "Private" }).check();
-		await save(page).click();
-		const refusal = page.getByRole("alert");
+		await page.getByRole("button", { name: "Change visibility" }).click();
+		const dialog = page.getByRole("alertdialog", {
+			name: `Make ${project.slug} private?`,
+		});
+		await dialog.getByRole("button", { name: "Make private" }).click();
+		const refusal = dialog.getByRole("alert");
 		await expect(refusal).toContainText("private needs a paid plan");
 		await expect(
 			refusal.getByRole("link", { name: "See plans" }),
@@ -133,9 +165,11 @@ test.describe("General, as the project's Maintainer", () => {
 			"href",
 			`/console/organizations/${organization.slug}/billing`,
 		);
+		await dialog.getByRole("button", { name: "Cancel" }).click();
+		await expect(visibility(page)).toHaveAccessibleDescription(/public/);
 
 		await page.reload();
-		await expect(page.getByRole("radio", { name: "Public" })).toBeChecked();
+		await expect(visibility(page)).toHaveAccessibleDescription(/public/);
 	});
 
 	// Kills a Danger section drawn from the wrong permission, and a delete that
@@ -233,9 +267,11 @@ test.describe("as a reader who is a member of nothing", () => {
 		await expect(page.getByText(hashbrown.slug, { exact: true })).toBeVisible();
 
 		await expect(page.getByRole("textbox")).toHaveCount(0);
-		await expect(page.getByRole("radio")).toHaveCount(0);
 		await expect(save(page)).toHaveCount(0);
 		await expect(page.getByRole("heading", { name: "Danger" })).toHaveCount(0);
+		await expect(
+			page.getByRole("button", { name: "Change visibility" }),
+		).toHaveCount(0);
 		await expect(
 			page.getByRole("button", { name: "Delete project" }),
 		).toHaveCount(0);
@@ -404,19 +440,21 @@ test.describe("accessibility", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
 	// Kills contrast, names, and roles that fail axe in either theme.
-	test("General and its delete dialog pass axe in both themes", async ({
-		page,
-	}) => {
-		await axeInBothThemes(
+	for (const opener of ["Change visibility", "Delete project"]) {
+		test(`General and its ${opener} dialog pass axe in both themes`, async ({
 			page,
-			nextPath(hashbrown.slug, "settings"),
-			async () => {
-				await expect(general(page)).toBeVisible();
-				await page.getByRole("button", { name: "Delete project" }).click();
-				await expect(page.getByRole("alertdialog")).toBeVisible();
-			},
-		);
-	});
+		}) => {
+			await axeInBothThemes(
+				page,
+				nextPath(hashbrown.slug, "settings"),
+				async () => {
+					await expect(general(page)).toBeVisible();
+					await page.getByRole("button", { name: opener }).click();
+					await expect(page.getByRole("alertdialog")).toBeVisible();
+				},
+			);
+		});
+	}
 
 	test("Keys and its new key dialog pass axe in both themes", async ({
 		page,
@@ -438,7 +476,8 @@ test.describe("narrow", () => {
 	});
 
 	// Kills a rail that stays beside the form on a phone, fields that do not
-	// stack, and touch targets under 44 px.
+	// stack, Danger buttons squeezed beside their text, and touch targets
+	// under 44 px.
 	test("the sections become a segmented control and every target is 44 px", async ({
 		page,
 		request,
@@ -464,6 +503,18 @@ test.describe("narrow", () => {
 		const label = await page.getByText("Name", { exact: true }).boundingBox();
 		expect(name?.y).toBeGreaterThan((label?.y ?? 0) + (label?.height ?? 0) - 1);
 		expect(name?.width).toBeGreaterThan(300);
+		for (const [button, line] of [
+			["Change visibility", "dz-vis"],
+			["Delete project", "dz-del"],
+		] as const) {
+			const text = await page.locator(`#${line}`).boundingBox();
+			const target = await page
+				.getByRole("button", { name: button })
+				.boundingBox();
+			expect(target?.y, button).toBeGreaterThanOrEqual(
+				(text?.y ?? 0) + (text?.height ?? 0),
+			);
+		}
 
 		const targets = [
 			...(await sections.getByRole("link").all()),
@@ -471,9 +522,8 @@ test.describe("narrow", () => {
 				.getByRole("main")
 				.getByRole("link", { name: "Settings", exact: true }),
 			page.getByRole("textbox", { name: "Name" }),
-			page.getByRole("radio", { name: "Public" }).locator(".."),
-			page.getByRole("radio", { name: "Private" }).locator(".."),
 			save(page),
+			page.getByRole("button", { name: "Change visibility" }),
 			page.getByRole("button", { name: "Delete project" }),
 		];
 		for (const target of targets) {
@@ -524,3 +574,17 @@ const storedQueries = (page: Page, slug: string) =>
 			}),
 		slug,
 	);
+
+/** Change visibility, described by the line that says the project's visibility. */
+const visibility = (page: Page) =>
+	page.getByRole("button", { name: "Change visibility" });
+
+/** The project's visibility as the API has it. */
+const projectVisibility = async (request: APIRequestContext, slug: string) =>
+	(
+		(await (
+			await request.get(`${seed.api_url}/v0/projects/${slug}`, {
+				headers: { Authorization: `Bearer ${seed.member.token}` },
+			})
+		).json()) as { visibility: string }
+	).visibility;

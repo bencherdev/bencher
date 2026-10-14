@@ -306,9 +306,11 @@ describe("wide", () => {
 	});
 });
 
-// Kills an Alerts tab that grows when its count arrives, or shrinks for a
-// project with none, which moves every tab after it, whatever the count.
-test("the Alerts tab holds its width before, with, and without a count", async () => {
+// Kills room held for a count a project does not have, as an empty badge, a
+// gap, or a padding, which leaves a gap before Thresholds; a count drawn
+// anywhere but inline in the tab; and a badge sized by its digits, which moves
+// the tabs after it whenever the count changes.
+test("the Alerts tab holds no room without a count, and one width with any", async () => {
 	for (const width of [1280, 390]) {
 		await page.viewport(width, 800);
 		const [alerts, setAlerts] = createSignal<number | undefined>();
@@ -320,12 +322,39 @@ test("the Alerts tab holds its width before, with, and without a count", async (
 			root,
 		);
 		const tab = () =>
-			root.querySelector('.tab[data-shell="alerts"]')?.getBoundingClientRect()
-				.width;
-		const before = tab();
-		for (const count of [3, 12, 99, 100, 0]) {
+			root.querySelector<HTMLElement>('.tab[data-shell="alerts"]');
+		/** Where a tab's label is drawn. */
+		const label = (name: string) => {
+			const text = [...root.querySelectorAll(".tab")]
+				.flatMap((each) => [...each.childNodes])
+				.find(
+					(node) =>
+						node.nodeType === Node.TEXT_NODE && node.textContent === name,
+				);
+			if (!text) {
+				throw new Error(`no ${name} tab`);
+			}
+			const range = document.createRange();
+			range.selectNodeContents(text);
+			return range.getBoundingClientRect();
+		};
+		/** The space from Alerts to Thresholds past the space from Reports to Alerts. */
+		const room = () =>
+			label("Thresholds").left -
+			label("Alerts").right -
+			(label("Alerts").left - label("Reports").right);
+
+		expect(room(), `none at ${width}`).toBeCloseTo(0, 0);
+		setAlerts(0);
+		expect(room(), `0 at ${width}`).toBeCloseTo(0, 0);
+		setAlerts(3);
+		const counted = tab()?.getBoundingClientRect().width;
+		expect(room(), `3 at ${width}`).toBeGreaterThan(16);
+		for (const count of [12, 99, 100]) {
 			setAlerts(count);
-			expect(tab(), `${count} at ${width}`).toBe(before);
+			expect(tab()?.getBoundingClientRect().width, `${count} at ${width}`).toBe(
+				counted,
+			);
 		}
 		dispose();
 		document.body.replaceChildren();
@@ -347,9 +376,9 @@ test("the Alerts tab draws no badge without a count, and says 99+ past 99", asyn
 	);
 	const tab = () => root.querySelector('.tab[data-shell="alerts"]');
 	const shownBadge = () =>
-		tab()?.querySelector(".badge")?.checkVisibility({
-			visibilityProperty: true,
-		});
+		tab()
+			?.querySelector(".badge")
+			?.checkVisibility({ visibilityProperty: true }) ?? false;
 	expect(shownBadge()).toBe(false);
 	setAlerts(0);
 	expect(shownBadge()).toBe(false);

@@ -9,16 +9,23 @@ export const publicPath = (slug: string, search = "") =>
 	`/next/perf/${slug}${search}`;
 
 /** A project of two lines that reported in the last two days: the API reaches back three months from its own clock for a reader who is not signed in. */
-export const twoRecentLines = async (request: APIRequestContext) => {
+export const twoRecentLines = (request: APIRequestContext) =>
+	recentLines(request, 2);
+
+/** A project of `count` lines, one per size, that reported in the last two days. */
+export const recentLines = async (
+	request: APIRequestContext,
+	count: number,
+) => {
 	const project = await createProject(request);
 	for (const daysAgo of [2, 1]) {
 		await postReport(request, project.slug, {
 			start: new Date(Date.now() - daysAgo * DAY).toISOString(),
 			results: {
-				hash: [
-					{ parameters: { size: 1 }, measures: { latency: { value: 1 } } },
-					{ parameters: { size: 2 }, measures: { latency: { value: 2 } } },
-				],
+				hash: Array.from({ length: count }, (_, index) => ({
+					parameters: { size: index + 1 },
+					measures: { latency: { value: index + 1 } },
+				})),
 			},
 		});
 	}
