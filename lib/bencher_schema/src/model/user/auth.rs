@@ -418,7 +418,7 @@ impl BearerToken {
                 bencher_otel::OAuthTokenAuthFailureReason::RestApi,
             ));
             return Err(unauthorized_error(
-                "OAuth access tokens are only accepted by the MCP server",
+                "OAuth access tokens are not accepted by the REST API",
             ));
         }
         if raw.starts_with(UserKey::PREFIX) {

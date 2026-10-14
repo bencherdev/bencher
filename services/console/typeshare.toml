@@ -22,6 +22,8 @@
 "JobUuid" = "Uuid"
 "VariantUuid" = "Uuid"
 "ProjectKeyUuid" = "Uuid"
+"UserKeyUuid" = "Uuid"
+"OAuthGrantUuid" = "Uuid"
 "OAuthAuthorizationUuid" = "Uuid"
 # Typed Slugs
 "Slug" = "string"

@@ -7,11 +7,13 @@ use bencher_schema::{
     context::{ApiContext, RateLimiting},
     error::{conflict_error, forbidden_error, issue_error, not_found_error, unauthorized_error},
     model::user::{
+        QueryUser,
         auth::{AuthUser, BearerToken},
         oauth_authorization::{OAuthAnswer, QueryOAuthAuthorization},
     },
     public_conn, write_transaction,
 };
+use bencher_token::Audience;
 use diesel::OptionalExtension as _;
 use dropshot::{Body, HttpError, Path, RequestContext, TypedBody, endpoint};
 use http::Response;
@@ -100,17 +102,23 @@ pub async fn oauth_authorization_post(
     let now = context.clock.now();
 
     let (answer, code) = if approve {
-        let auth_user = approver(&rqctx).await?;
+        let (auth_user, credential) = approver(&rqctx).await?;
         let code = OAuthCode::generate();
         let code_hash = OAuthCodeHash::from(&code);
-        let answer = write_transaction!(context, |conn| QueryOAuthAuthorization::approve(
-            conn,
-            authorization,
-            auth_user.id,
-            auth_user.user_key_id,
-            &code_hash,
-            now,
-        ));
+        let answer = write_transaction!(context, |conn| {
+            let answer = QueryOAuthAuthorization::approve(
+                conn,
+                authorization,
+                auth_user.id,
+                auth_user.user_key_id,
+                &code_hash,
+                now,
+            )?;
+            if credential == Credential::Session && matches!(answer, OAuthAnswer::Recorded(_)) {
+                QueryUser::verify_email(conn, auth_user.id, &auth_user.email, now)?;
+            }
+            Ok::<_, diesel::result::Error>(answer)
+        });
         (answer, Some(code))
     } else {
         charge_public_request(&rqctx)?;
@@ -173,7 +181,7 @@ pub async fn oauth_authorization_post(
 
 /// The user approving a request: a session JWT, or a pasted user API key, which is charged as an
 /// attempt to sign in from the caller's address. No credential is ever quoted back.
-async fn approver(rqctx: &RequestContext<ApiContext>) -> Result<AuthUser, HttpError> {
+async fn approver(rqctx: &RequestContext<ApiContext>) -> Result<(AuthUser, Credential), HttpError> {
     let context = rqctx.context();
     let headers = rqctx.request.headers();
     let Some(token) = headers
@@ -204,7 +212,34 @@ async fn approver(rqctx: &RequestContext<ApiContext>) -> Result<AuthUser, HttpEr
         token.parse::<Jwt>().map(BearerToken::Jwt)
     }
     .map_err(|_err| unauthorized_error(INVALID_CREDENTIAL))?;
-    AuthUser::from_token(context, bearer_token).await
+    let credential = match &bearer_token {
+        BearerToken::UserKey(_) => Credential::UserKey,
+        BearerToken::Jwt(jwt) => {
+            // A JWT that does not validate is refused below, as anywhere else.
+            if context
+                .token_key
+                .validate_client(jwt)
+                .is_ok_and(|claims| claims.audience() != Audience::Client.as_str())
+            {
+                #[cfg(feature = "otel")]
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsentBlocked);
+                return Err(forbidden_error(
+                    "An API token cannot approve a request to connect. Sign in, or use a user API key (bencher_user_) instead.",
+                ));
+            }
+            Credential::Session
+        },
+    };
+    let auth_user = AuthUser::from_token(context, bearer_token).await?;
+    Ok((auth_user, credential))
+}
+
+/// What a request was approved with.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Credential {
+    /// A sign in session, which is only minted for an address its user proved they hold.
+    Session,
+    UserKey,
 }
 
 fn charge_public_request(rqctx: &RequestContext<ApiContext>) -> Result<(), HttpError> {

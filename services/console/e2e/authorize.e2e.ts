@@ -13,24 +13,30 @@ const CHALLENGE = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
 const CONSENT = "/auth/authorize";
 const CORS = { "Access-Control-Allow-Origin": "*" };
 
-const authorizeUrl = (redirectUri: string, state: string) =>
+const PROJECT_SCOPES = "projects:read projects:write";
+
+const authorizeUrl = (redirectUri: string, state: string, scope: string) =>
 	`${seed.api_url}/oauth/authorize?${new URLSearchParams({
 		response_type: "code",
 		client_id: CLIENT_ID,
 		redirect_uri: redirectUri,
 		code_challenge: CHALLENGE,
 		code_challenge_method: "S256",
-		scope: "projects:read projects:write",
+		scope,
 		state,
 	})}`;
 
 /** Start an app's request to connect, as its browser would, landing on the consent page. */
-const connect = async (page: Page, redirectUri = CALLBACK) => {
+const connect = async (
+	page: Page,
+	redirectUri = CALLBACK,
+	scope = PROJECT_SCOPES,
+) => {
 	const state = randomUUID();
 	await page.route(`${new URL(redirectUri).origin}/**`, (route) =>
 		route.fulfill({ contentType: "text/plain", body: "Connected" }),
 	);
-	await page.goto(authorizeUrl(redirectUri, state));
+	await page.goto(authorizeUrl(redirectUri, state, scope));
 	await expect(page).toHaveURL(
 		new RegExp(`${CONSENT}\\?request=[0-9a-f-]{36}$`),
 	);
@@ -105,6 +111,17 @@ test.describe("signed in", () => {
 			"client.example",
 		);
 		await expect(page.getByText("a program on this computer")).toHaveCount(0);
+	});
+
+	// Kills a page that shows an identity scope by its raw name, or not at all.
+	test("identity scopes are said in plain words", async ({ page }) => {
+		await connect(page, CALLBACK, "openid email profile projects:read");
+		await expect(page.getByRole("listitem")).toHaveText([
+			"View your email address and whether it is verified",
+			"Know which Bencher account you are signed in as",
+			"View your name and username",
+			"View your projects and their results, including private projects",
+		]);
 	});
 
 	// Kills a page that lets an answer go to a local program without warning.

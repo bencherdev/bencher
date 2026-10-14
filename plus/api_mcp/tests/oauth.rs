@@ -231,7 +231,10 @@ async fn oauth_challenge_points_at_resource_metadata() {
         "resources": ["https://api.example.com/mcp", "https://mcp.example.com/mcp"],
     }))
     .expect("Invalid OAuth config");
-    let server = server_with(Some(OAuthServer::from(json))).await;
+    let server = server_with(Some(
+        OAuthServer::try_from(json).expect("Invalid OAuth server"),
+    ))
+    .await;
     let user = server
         .signup("OAuth Challenged", "oauth-challenged@example.com")
         .await;

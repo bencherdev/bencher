@@ -83,6 +83,11 @@ impl QueryOAuthAuthorization {
         Ok(Self::live(conn, uuid, now)?.is_some_and(|authorization| !authorization.is_answered()))
     }
 
+    /// When the user approved an answered request: its code expires a fixed time after.
+    pub fn approval_time(&self) -> DateTime {
+        self.expiration - CODE
+    }
+
     /// Approve a pending request for `user_id`, bound to `user_key_id` when the user approved with
     /// a key, recording the hash of the authorization code the app may exchange until it expires.
     pub fn approve(

@@ -8,6 +8,9 @@ use crate::ValidError;
 
 const PROJECTS_READ: &str = "projects:read";
 const PROJECTS_WRITE: &str = "projects:write";
+const OPENID: &str = "openid";
+const EMAIL: &str = "email";
+const PROFILE: &str = "profile";
 
 /// An OAuth scope: what a client may do on the user's behalf.
 #[typeshare::typeshare]
@@ -20,6 +23,15 @@ pub enum OAuthScope {
     /// Read and write the projects the user can write.
     #[serde(rename = "projects:write")]
     ProjectsWrite,
+    /// Who the user is.
+    #[serde(rename = "openid")]
+    Openid,
+    /// The user's email address.
+    #[serde(rename = "email")]
+    Email,
+    /// The user's name.
+    #[serde(rename = "profile")]
+    Profile,
 }
 
 /// A set of OAuth scopes, written sorted and space-delimited.
@@ -43,11 +55,19 @@ impl OAuthScopes {
 }
 
 impl OAuthScope {
+    /// Whether this scope reaches projects, rather than asking who the user is.
+    pub fn is_project(self) -> bool {
+        match self {
+            Self::ProjectsRead | Self::ProjectsWrite => true,
+            Self::Openid | Self::Email | Self::Profile => false,
+        }
+    }
+
     /// Whether holding this scope permits what `scope` permits.
     fn covers(self, scope: Self) -> bool {
         match self {
-            Self::ProjectsRead => scope == Self::ProjectsRead,
             Self::ProjectsWrite => matches!(scope, Self::ProjectsRead | Self::ProjectsWrite),
+            Self::ProjectsRead | Self::Openid | Self::Email | Self::Profile => scope == self,
         }
     }
 }
@@ -65,6 +85,9 @@ impl FromStr for OAuthScope {
         match scope {
             PROJECTS_READ => Ok(Self::ProjectsRead),
             PROJECTS_WRITE => Ok(Self::ProjectsWrite),
+            OPENID => Ok(Self::Openid),
+            EMAIL => Ok(Self::Email),
+            PROFILE => Ok(Self::Profile),
             _ => Err(ValidError::OAuthScope(scope.to_owned())),
         }
     }
@@ -75,6 +98,9 @@ impl AsRef<str> for OAuthScope {
         match self {
             Self::ProjectsRead => PROJECTS_READ,
             Self::ProjectsWrite => PROJECTS_WRITE,
+            Self::Openid => OPENID,
+            Self::Email => EMAIL,
+            Self::Profile => PROFILE,
         }
     }
 }
@@ -142,6 +168,21 @@ mod tests {
         assert!(write.permits(OAuthScope::ProjectsWrite));
 
         assert!(!OAuthScopes::default().permits(OAuthScope::ProjectsRead));
+    }
+
+    // An identity scope neither reaches projects nor comes with them.
+    #[test]
+    fn identity_scopes_permit_only_themselves() {
+        let projects: OAuthScopes = "projects:read projects:write".parse().unwrap();
+        let identity = [OAuthScope::Openid, OAuthScope::Email, OAuthScope::Profile];
+        for scope in identity {
+            let held: OAuthScopes = [scope].into_iter().collect();
+            assert!(!held.permits(OAuthScope::ProjectsRead), "{scope}");
+            assert!(!projects.permits(scope), "{scope}");
+            for other in identity {
+                assert_eq!(held.permits(other), scope == other, "{scope} {other}");
+            }
+        }
     }
 
     #[test]

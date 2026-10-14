@@ -522,6 +522,7 @@ diesel::table! {
         name -> Text,
         slug -> Text,
         email -> Text,
+        email_verified -> Nullable<BigInt>,
         admin -> Bool,
         locked -> Bool,
         created -> BigInt,

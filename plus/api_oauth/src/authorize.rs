@@ -21,6 +21,7 @@ use crate::{
     AUTHORIZATION_CODE_RESPONSE, S256, oauth_server,
     params::Params,
     response::{client_redirect, consent_page, found},
+    supported_scopes,
 };
 
 const RESPONSE_TYPE: &str = "response_type";
@@ -191,7 +192,7 @@ async fn authorize(
         client_id,
         client_name: metadata.name.clone(),
         redirect_uri: redirect_uri.clone(),
-        scope: scopes(params.get(SCOPE)),
+        scope: scopes(oauth, params.get(SCOPE)),
         resource,
         code_challenge,
         state: state.clone(),
@@ -209,17 +210,14 @@ async fn authorize(
     })
 }
 
-/// The scopes asked for that this server knows, or reading projects when there are none.
-fn scopes(scope: Option<&str>) -> OAuthScopes {
-    let scopes = scope
-        .unwrap_or_default()
-        .split(' ')
-        .filter_map(|scope| scope.parse::<OAuthScope>().ok())
-        .collect::<OAuthScopes>();
-    if scopes.iter().next().is_some() {
+/// The scopes asked for that this server grants, with reading projects when none of them reach
+/// projects, so that every grant can use the MCP server.
+fn scopes(oauth: &OAuthServer, scope: Option<&str>) -> OAuthScopes {
+    let scopes = supported_scopes(oauth, scope);
+    if scopes.iter().any(OAuthScope::is_project) {
         scopes
     } else {
-        [OAuthScope::ProjectsRead].into_iter().collect()
+        scopes.iter().chain([OAuthScope::ProjectsRead]).collect()
     }
 }
 

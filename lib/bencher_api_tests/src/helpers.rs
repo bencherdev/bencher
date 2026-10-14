@@ -283,12 +283,17 @@ pub fn seed_token(server: &TestServer, user: &TestUser, name: &str) -> TestToken
 /// The issuer of the OAuth server that tests configure.
 pub const OAUTH_ISSUER: &str = "https://api.example.com";
 
+/// A test key for signing ID tokens, never used anywhere else.
+pub const OAUTH_SIGNING_KEY: &str =
+    include_str!("../../bencher_token/src/test/oauth_signing_key.pem");
+
 /// An OAuth server for [`OAUTH_ISSUER`], serving only its default resource.
 #[expect(clippy::expect_used, reason = "test helper parsing a fixed config")]
 pub fn oauth_server() -> OAuthServer {
     serde_json::from_value::<JsonOAuthServer>(serde_json::json!({ "issuer": OAUTH_ISSUER }))
         .expect("Invalid OAuth config")
-        .into()
+        .try_into()
+        .expect("Invalid OAuth server")
 }
 
 /// The resource [`oauth_server`] serves: the issuer's MCP endpoint.
