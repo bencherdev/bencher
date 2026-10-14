@@ -20,6 +20,7 @@ targets = [
 # rustsec advisory exemptions
 ignore = [
     # https://rustsec.org/advisories/RUSTSEC-2023-0071.html
+    # `rsa` only signs (Google service account, OIDC ID tokens), with blinding through `jsonwebtoken`, and never decrypts
     "RUSTSEC-2023-0071",
     # https://rustsec.org/advisories/RUSTSEC-2024-0436.html
     "RUSTSEC-2024-0436",

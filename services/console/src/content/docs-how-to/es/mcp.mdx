@@ -3,11 +3,12 @@ title: "Bencher MCP"
 description: "Conecte agentes y asistentes de IA a Bencher con el servidor MCP alojado para consultar datos de benchmarks y enviar resultados"
 heading: "Cómo usar Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-07-18T07:00:00Z"
+modified: "2026-10-14T20:00:00Z"
 sortOrder: 11
 ---
 
 import McpClaudeCode from "../../../chunks/docs-how-to/mcp/mcp-claude-code.mdx";
+import McpClaudeCodeKey from "../../../chunks/docs-how-to/mcp/mcp-claude-code-key.mdx";
 import McpJson from "../../../chunks/docs-how-to/mcp/mcp-json.mdx";
 
 Bencher MCP es un servidor [Model Context Protocol](https://modelcontextprotocol.io) (MCP) alojado.
@@ -24,9 +25,17 @@ Use Bencher MCP cuando la CLI no esté instalada o cuando su cliente MCP no pued
 | Bencher Cloud | `https://mcp.bencher.dev/mcp` |
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
+Agregue la URL a su cliente MCP e inicie sesión con su cuenta de Bencher cuando el cliente se lo pida.
+ChatGPT, los conectores personalizados de claude.ai y Claude Code inician sesión con OAuth.
 Por ejemplo, conéctese desde [Claude Code](https://docs.anthropic.com/en/docs/claude-code):
 
 <McpClaudeCode />
+
+Cuando una herramienta necesite que inicie sesión, ejecute `/mcp` en Claude Code y siga los pasos en su navegador.
+
+Para conectarse en su lugar con una clave de API, envíela en el encabezado `Authorization`:
+
+<McpClaudeCodeKey />
 
 O use una configuración genérica de cliente MCP:
 
@@ -34,19 +43,71 @@ O use una configuración genérica de cliente MCP:
 
 ## Autenticación
 
-Bencher MCP acepta las mismas credenciales `Authorization: Bearer` que la API de Bencher:
-una clave de API de proyecto (`bencher_run_*`) o una clave de API de usuario (`bencher_user_*`).
-Los proyectos públicos se pueden leer sin ninguna credencial.
-OAuth todavía no es compatible, por lo que los clientes MCP que solo admiten OAuth para servidores remotos aún no pueden conectarse.
+### Iniciar sesión con OAuth
 
+Los clientes MCP que admiten OAuth inician sesión con su cuenta de Bencher, por lo que nunca tiene que pegar una clave en ellos.
+El cliente abre Bencher en su navegador, ya sea al conectarse o la primera vez que una herramienta necesite que inicie sesión.
+Bencher identifica la aplicación por su dirección web y muestra lo que la aplicación solicita hacer.
+Inicie sesión, o pegue una clave de API de usuario (`bencher_user_*`), y luego apruebe o rechace la solicitud.
+Bencher pregunta cada vez que una aplicación se conecta, y una clave de API de proyecto (`bencher_run_*`) no puede aprobar.
+
+Una aplicación permanece conectada hasta un año.
+Una aplicación aprobada con una clave de API de usuario se desconecta en cuanto esa clave se revoca o caduca.
+Los tokens de acceso OAuth son para Bencher MCP:
+la API de Bencher los rechaza con `401 Unauthorized`.
+
+En Bencher Self-Hosted, el inicio de sesión funciona una vez configurada la sección [`plus.oauth`](/es/docs/reference/server-config/#plusoauth) del servidor de API.
+ChatGPT y claude.ai necesitan poder acceder al servidor desde internet.
+Claude Code también puede iniciar sesión en un servidor de su propia red servido por `https`, siempre que el servidor pueda obtener el documento de metadatos de cliente de Claude Code o lo tenga configurado en `plus.oauth.clients`.
+
+### Scopes
+
+Usted aprueba todos los scopes que solicita una aplicación, o ninguno:
+
+| Scope | La aplicación puede |
+| :--- | :--- |
+| `projects:read` | Ver sus proyectos y sus resultados, incluidos los proyectos privados |
+| `projects:write` | Ver, crear y cambiar datos en sus proyectos, incluidos los proyectos privados, como informes, thresholds y alertas |
+| `openid` | Saber con qué cuenta de Bencher ha iniciado sesión |
+| `email` | Ver su dirección de correo electrónico y si está verificada |
+| `profile` | Ver su nombre y su nombre de usuario |
+
+Las herramientas de lectura (`list_*`, `view_*`, `query_perf` y `perf_image`) necesitan `projects:read`.
+Todas las demás herramientas necesitan `projects:write`, que incluye `projects:read`.
+Una aplicación que no solicita ninguno de los dos recibe `projects:read`.
+A una aplicación que inició sesión sin `projects:write` se le pide que vuelva a iniciar sesión cuando llama a una herramienta que escribe.
+Los scopes `openid`, `email` y `profile` son para OpenID Connect y solo están disponibles cuando el servidor tiene un `plus.oauth.signing_key`.
+Una aplicación actúa en su nombre: su rol en cada proyecto sigue decidiendo qué puede ver y cambiar, y nunca tiene acceso de administrador del servidor.
+
+### Aplicaciones conectadas
+
+Para ver las aplicaciones conectadas a su cuenta, abra **Connected Apps** desde el menú de su cuenta en la Bencher Console, o vaya a [`/console/users/apps`](/console/users/apps).
+Cada aplicación aparece con su dirección web, junto con lo que puede hacer, cuándo se conectó, cuándo renovó su acceso por última vez y cómo la aprobó.
+**Revoke** desconecta una aplicación al instante.
+
+### Claves de API
+
+Bencher MCP también acepta las mismas credenciales `Authorization: Bearer` que la API de Bencher:
+una clave de API de proyecto (`bencher_run_*`) o una clave de API de usuario (`bencher_user_*`).
 Una clave de API de proyecto está limitada a un solo proyecto, por lo que es la mejor opción para la mayoría de los agentes.
 Una clave de API de usuario puede acceder a todos los proyectos del usuario.
+Una credencial que no es válida se rechaza en cada solicitud y nunca se trata como anónima.
+
+### Sin iniciar sesión
+
+Los proyectos públicos se pueden leer sin ninguna credencial.
+Las solicitudes anónimas comparten un límite de tasa por dirección IP, mientras que las solicitudes con sesión iniciada cuentan para sus propios límites.
+Cuando el servidor tiene OAuth configurado, Bencher MCP le pide a su cliente que inicie sesión cuando una llamada anónima a una herramienta lo necesita:
+
+- Al leer un proyecto privado. Un proyecto que no existe recibe la misma respuesta, por lo que un proyecto o un ID mal escrito, incluso dentro de un proyecto público, también le pide que inicie sesión.
+- Al llamar a una herramienta que escribe, salvo `submit_run` a un [proyecto `unclaimed`](/es/docs/how-to/claim/#proyectos-unclaimed).
+- Al superar el límite de tasa anónimo.
 
 ## Herramientas
 
 El conjunto de herramientas refleja lo que puede hacer una clave de API de proyecto (`bencher_run_*`):
-lecturas limitadas al proyecto y escrituras no destructivas.
-No hay herramientas para eliminar ni renombrar, y con una clave de API de proyecto las actualizaciones de alertas se limitan al estado.
+lecturas y escrituras limitadas al proyecto, sin herramientas para eliminar.
+No hay herramientas para renombrar, y con una clave de API de proyecto las actualizaciones de alertas se limitan al estado.
 La mayoría de las herramientas aceptan un argumento `project` que puede ser el slug o el UUID del proyecto.
 
 | Herramienta | Propósito |
