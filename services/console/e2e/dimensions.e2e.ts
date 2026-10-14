@@ -181,6 +181,64 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		).toHaveText("2", { useInnerText: true });
 	});
 
+	// Kills a row only its name opens, a middle or a Ctrl or Cmd click on it
+	// that lands anywhere but the row's link or that the page takes for itself,
+	// so the browser opens no new tab, and an Archive under the row's link.
+	test("a row opens its branch from anywhere on it, a new tab too, and Archive keeps its click", async ({
+		page,
+		request,
+	}) => {
+		const project = await dimensionsProject(request);
+		const listPath = nextPath(project.slug, "branches");
+		const branchPath = nextPath(project.slug, "branches/devel");
+		await page.goto(listPath);
+		const devel = list(page, "Active branches")
+			.getByRole("row")
+			.filter({ has: page.getByRole("link", { name: "devel", exact: true }) });
+		await expect(devel).toBeVisible();
+		await settle(page);
+		const created = devel.getByRole("cell").nth(2);
+		// The browser opens a new tab itself, for a click that reaches a link
+		// with nothing preventing it; waiting for that tab is flaky in headless
+		// Chromium even when the link itself is clicked.
+		const clicks: Parameters<Locator["click"]>[0][] = [
+			{ button: "middle", force: true },
+			{ modifiers: ["ControlOrMeta"], force: true },
+		];
+		for (const click of clicks) {
+			await page.evaluate(() => {
+				const seen = window as Window & { seen?: unknown };
+				seen.seen = undefined;
+				const record = (event: Event) => {
+					seen.seen ??= {
+						href: (event.target as Element).closest("a")?.getAttribute("href"),
+						prevented: event.defaultPrevented,
+					};
+				};
+				window.addEventListener("click", record, { once: true });
+				window.addEventListener("auxclick", record, { once: true });
+			});
+			// Forced past the check that the cell itself takes the click: the row's link covering it does.
+			await created.click(click);
+			expect(
+				await page.evaluate(() => (window as Window & { seen?: unknown }).seen),
+			).toEqual({ href: branchPath, prevented: false });
+			await expect(page).toHaveURL(new RegExp(`${listPath}$`));
+		}
+
+		await devel.getByRole("button", { name: "Archive devel" }).click();
+		await expect(
+			page.getByRole("group", { name: "Archive devel" }),
+		).toBeVisible();
+		await expect(page).toHaveURL(new RegExp(`${listPath}$`));
+
+		await created.click({ force: true });
+		await expect(page).toHaveURL(new RegExp(`${branchPath}$`));
+		await expect(
+			page.getByRole("heading", { level: 1, name: "devel" }),
+		).toBeVisible();
+	});
+
 	// Kills a sort that the API never hears, a direction that does not flip,
 	// and a picked sort that keeps the last one's direction.
 	test("sorting by last used reads newest first, then oldest first", async ({

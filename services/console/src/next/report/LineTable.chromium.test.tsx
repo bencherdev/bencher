@@ -6,7 +6,7 @@ import { THEME_ATTRIBUTE } from "@bencherdev/ui/ThemeToggle";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import LineTable from "./LineTable";
 import { type ReportLine, groupsOf, linesOf, plotOf } from "./lines";
 import { slotsOf } from "./slots";
@@ -28,6 +28,8 @@ afterEach(() => {
 	dispose?.();
 	dispose = undefined;
 	document.body.replaceChildren();
+	vi.unstubAllGlobals();
+	vi.restoreAllMocks();
 });
 
 const mount = (
@@ -333,13 +335,13 @@ test("a list with row controls gives them a column, and dims the rows it names",
 		.toBeInTheDocument();
 	// A group's header spans the controls' column too.
 	const header = page.getByRole("row").nth(1).getByRole("cell").element();
-	expect((header as HTMLTableCellElement).colSpan).toBe(9);
+	expect((header as HTMLTableCellElement).colSpan).toBe(10);
 	const row = (variant: string) =>
 		page
 			.getByRole("row")
 			.filter({ has: page.getByRole("button", { name: `Act on ${variant}` }) });
 	await expect
-		.element(row("v0").getByRole("cell").nth(8))
+		.element(row("v0").getByRole("cell").nth(9))
 		.toHaveTextContent("Act on v0");
 	const color = (variant: string) =>
 		getComputedStyle(row(variant).element().querySelector("b") as HTMLElement)
@@ -365,4 +367,163 @@ test("a narrow list draws a line of controls only for the rows it names", async 
 		.element(page.getByRole("button", { name: "Act on v0" }))
 		.not.toBeInTheDocument();
 	expect(document.querySelectorAll("tr.lrn-act")).toHaveLength(1);
+});
+
+// Kills row links drawn, or the page's codec asked for, before the page is
+// idle or the reader moves toward the lines; a pointer the page moved under
+// taken for the reader's; a list that hands a row's link every line, another
+// row's line, or none; and one that draws no column for the links.
+test.each([
+	[
+		"a pointer moving onto them",
+		async () => {
+			await userEvent.hover(page.getByRole("columnheader", { name: "Line" }));
+			await userEvent.hover(
+				page.getByRole("button", { name: "Expand bench-0 n=1 Latency" }),
+			);
+		},
+	],
+	["the keyboard entering them", () => userEvent.keyboard("{Tab}")],
+] as const)(
+	"each row's Explore link, once %s, is the page's link for that one line",
+	async (_, move) => {
+		// A page that never goes idle, so only the reader can bring the links.
+		vi.stubGlobal("requestIdleCallback", () => 0);
+		vi.stubGlobal("cancelIdleCallback", () => {});
+		const onExploreIntent = vi.fn();
+		const { lines } = mount(3, undefined, {
+			explore: (chosen) => `/explore?lines=${chosen.map(({ key }) => key)}`,
+			onExploreIntent,
+		});
+		await expect
+			.element(page.getByRole("columnheader", { name: "Explore" }))
+			.toBeInTheDocument();
+		page
+			.getByRole("table")
+			.element()
+			.dispatchEvent(new PointerEvent("pointermove", { bubbles: true }));
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(page.getByRole("link").elements()).toHaveLength(0);
+		expect(onExploreIntent).not.toHaveBeenCalled();
+		await move();
+		expect(onExploreIntent).toHaveBeenCalledOnce();
+		for (const [index, line] of lines.entries()) {
+			await expect
+				.element(
+					page.getByRole("link", {
+						name: `Open in Explore: bench-0 n=${index} Latency`,
+					}),
+				)
+				.toHaveAttribute("href", `/explore?lines=${line.key}`);
+		}
+	},
+);
+
+// Kills row links that never arrive for a reader who neither points nor
+// focuses, such as a screen reader reading the page.
+test("each row's Explore link arrives once the page goes idle, with no pointer or focus", async () => {
+	const onExploreIntent = vi.fn();
+	const { lines } = mount(3, undefined, {
+		explore: (chosen) => `/explore?lines=${chosen.map(({ key }) => key)}`,
+		onExploreIntent,
+	});
+	for (const [index, line] of lines.entries()) {
+		await expect
+			.element(
+				page.getByRole("link", {
+					name: `Open in Explore: bench-0 n=${index} Latency`,
+				}),
+			)
+			.toHaveAttribute("href", `/explore?lines=${line.key}`);
+	}
+	expect(onExploreIntent).toHaveBeenCalledOnce();
+});
+
+/** Holds the page's idle callback until the test runs it, and drops it when the page cancels it. */
+const holdIdle = () => {
+	let held: (() => void) | undefined;
+	vi.stubGlobal("requestIdleCallback", (then: () => void) => {
+		held = then;
+		return 1;
+	});
+	vi.stubGlobal("cancelIdleCallback", () => {
+		held = undefined;
+	});
+	return () => held?.();
+};
+
+/** The idle load marks the page has set. */
+const idleMarks = (mark: { mock: { calls: unknown[][] } }) =>
+	mark.mock.calls.filter(([name]) => name === "console:idle-load");
+
+const explore = (chosen: readonly ReportLine[]) =>
+	`/explore?lines=${chosen.map(({ key }) => key)}`;
+
+// Kills an idle load that outlives its table, which would load the links' code
+// and set its mark on whatever page the reader moved to.
+test("a table gone before the page goes idle loads nothing and marks nothing", async () => {
+	const idle = holdIdle();
+	const mark = vi.spyOn(performance, "mark");
+	const stays = vi.fn();
+	mount(3, undefined, { explore, onExploreIntent: stays });
+	await expect.element(page.getByRole("table")).toBeInTheDocument();
+	idle();
+	expect(idleMarks(mark)).toHaveLength(1);
+	expect(stays).toHaveBeenCalledOnce();
+	dispose?.();
+	document.body.replaceChildren();
+
+	const leaves = vi.fn();
+	mount(3, undefined, { explore, onExploreIntent: leaves });
+	await expect.element(page.getByRole("table")).toBeInTheDocument();
+	dispose?.();
+	dispose = undefined;
+	idle();
+	expect(idleMarks(mark)).toHaveLength(1);
+	expect(leaves).not.toHaveBeenCalled();
+});
+
+// Kills an idle load that marks and asks again after the reader already
+// brought the links, so the mark no longer says where the idle load began.
+test("once the reader brought the links, the page going idle marks and asks nothing", async () => {
+	const idle = holdIdle();
+	const mark = vi.spyOn(performance, "mark");
+	const onExploreIntent = vi.fn();
+	mount(3, undefined, { explore, onExploreIntent });
+	await expect.element(page.getByRole("table")).toBeInTheDocument();
+	await userEvent.keyboard("{Tab}");
+	expect(onExploreIntent).toHaveBeenCalledOnce();
+	idle();
+	expect(idleMarks(mark)).toHaveLength(0);
+	expect(onExploreIntent).toHaveBeenCalledOnce();
+});
+
+// Kills a page that never goes idle where the browser has no idle callback,
+// as in Safari, so a reader who only waits there never gets the links.
+test("where the browser has no idle callback, the links still arrive", async () => {
+	let owner: object | null = window;
+	while (owner && !Object.hasOwn(owner, "requestIdleCallback")) {
+		owner = Object.getPrototypeOf(owner);
+	}
+	const own =
+		owner && Object.getOwnPropertyDescriptor(owner, "requestIdleCallback");
+	if (owner) {
+		delete (owner as { requestIdleCallback?: unknown }).requestIdleCallback;
+	}
+	try {
+		expect("requestIdleCallback" in window).toBe(false);
+		mount(3, undefined, { explore });
+		await expect
+			.element(
+				page.getByRole("link", {
+					name: "Open in Explore: bench-0 n=0 Latency",
+				}),
+				{ timeout: 3_000 },
+			)
+			.toBeVisible();
+	} finally {
+		if (owner && own) {
+			Object.defineProperty(owner, "requestIdleCallback", own);
+		}
+	}
 });

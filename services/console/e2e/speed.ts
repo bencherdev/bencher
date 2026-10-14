@@ -25,7 +25,10 @@ export interface Cost {
 	 * load event, gzipped at level 9: what the page needs to run.
 	 */
 	jsBytes: number;
-	/** Same origin JavaScript started after the load event: what waits for idle. */
+	/**
+	 * Same origin JavaScript started after the load event, or on a navigation
+	 * after the console's idle load mark: what waits for idle.
+	 */
 	deferredJsBytes: number;
 	/** Same origin stylesheets started since the mark, each a request the first paint waits on. */
 	stylesheets: number;
@@ -138,6 +141,11 @@ export const measure = async (
 			return {
 				paint: paint?.startTime ?? Number.POSITIVE_INFINITY,
 				loaded: navigation?.loadEventStart || Number.POSITIVE_INFINITY,
+				idle:
+					performance
+						.getEntriesByName("console:idle-load")
+						.find((mark) => mark.startTime >= from)?.startTime ??
+					Number.POSITIVE_INFINITY,
 				api: resources
 					.filter((entry) => entry.name.startsWith(api))
 					.map((entry) => ({ start: entry.startTime, end: entry.responseEnd })),
@@ -188,9 +196,9 @@ export const measure = async (
 		}
 		return bytes;
 	};
-	// A navigation after the load counts everything it loads.
+	// A navigation has no load event, so the console's idle load marks where its deferred code starts.
 	const beforeLoad = (script: { start: number }) =>
-		since > 0 || script.start < timing.loaded;
+		script.start < (since > 0 ? timing.idle : timing.loaded);
 	const critical = timing.scripts.filter(beforeLoad);
 	const deferred = timing.scripts.filter((script) => !beforeLoad(script));
 

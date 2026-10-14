@@ -197,7 +197,8 @@ test("a tab switch into Reports holds its speed ceilings", async ({ page }) => {
 });
 
 // Kills a move to a report that refetches the shell or the list, pulls in
-// more than its page, or finds its code a round late.
+// more than its page, finds its code a round late, or defers more than its
+// rows' links.
 test("a move from Reports to a report holds its speed ceilings", async ({
 	page,
 }) => {
@@ -217,6 +218,10 @@ test("a move from Reports to a report holds its speed ceilings", async ({
 			.getByRole("checkbox")
 			.first(),
 	).toBeVisible();
+	// The rows' own links arrive once the page goes idle, as deferred code.
+	await expect(
+		page.getByRole("link", { name: /^Open in Explore: / }).first(),
+	).toBeVisible();
 	await settle(page);
 
 	const cost = await measure(page, seed.api_url, since);
@@ -225,6 +230,7 @@ test("a move from Reports to a report holds its speed ceilings", async ({
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
 });
 
@@ -1078,7 +1084,7 @@ for (const [width, viewport] of [
 }
 
 // Kills a status switch that asks for more than its first batch, chains a
-// second round, or loads more code.
+// second round, or loads more code, before or after its list's idle load.
 test("a status switch on Alerts asks once", async ({ page }) => {
 	await page.goto(nextPath(hashbrown.slug, "alerts"));
 	await expect(
@@ -1105,6 +1111,7 @@ test("a status switch on Alerts asks once", async ({ page }) => {
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
 });
 

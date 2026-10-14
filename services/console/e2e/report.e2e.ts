@@ -1,7 +1,15 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { createProject, createReport } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, nextPath, seed, settle, signedIn, test } from "./fixtures";
+import {
+	approach,
+	expect,
+	nextPath,
+	seed,
+	settle,
+	signedIn,
+	test,
+} from "./fixtures";
 
 const { hashbrown } = seed.projects;
 
@@ -222,6 +230,44 @@ test("two rows expand into two plots with their keys", async ({
 	).toHaveAttribute("aria-expanded", "true");
 });
 
+// Kills a row only its caret toggles, a checkbox click that toggles the plot
+// too, and a drag across a row's text that toggles it as the drag ends.
+test("a row toggles its plot from anywhere on it but its checkbox, and not from a drag across its text", async ({
+	page,
+	request,
+}) => {
+	await page.goto(reportPath(hashbrown.slug, await newestMain(request)));
+	const row = lineRow(page, ALERTING);
+	const plot = page.getByRole("region", { name: `${ALERTING}, full plot` });
+	const measure = row.getByRole("cell").nth(3);
+	await measure.click();
+	await expect(
+		plot.getByRole("button", { name: /: hide its line$/ }),
+	).toBeVisible();
+	await expect(
+		row.getByRole("button", { name: `Collapse ${ALERTING}` }),
+	).toHaveAttribute("aria-expanded", "true");
+	await row.getByRole("cell").nth(5).click();
+	await expect(plot).toHaveCount(0);
+
+	await row.getByRole("checkbox", { name: `Select ${ALERTING}` }).check();
+	await expect(page.getByText("1 line selected")).toBeVisible();
+	await expect(plot).toHaveCount(0);
+
+	const box = await measure.boundingBox();
+	if (!box) {
+		throw new Error("The measure is not drawn");
+	}
+	await page.mouse.move(box.x + 2, box.y + box.height / 2);
+	await page.mouse.down();
+	await page.mouse.move(box.x + box.width + 200, box.y + box.height / 2, {
+		steps: 8,
+	});
+	await page.mouse.up();
+	expect(await page.evaluate(() => String(getSelection()))).not.toBe("");
+	await expect(plot).toHaveCount(0);
+});
+
 // Kills neighbors that are not the branch's and testbed's, links that lose the
 // view, and a Next on the newest report.
 test("Previous and Next walk the branch's reports", async ({
@@ -283,6 +329,58 @@ test("Open 2 in Explore opens exactly the selected lines", async ({
 	await expect(page).toHaveURL(
 		new RegExp(`${reportPath(hashbrown.slug, report)}$`),
 	);
+});
+
+// Kills a row's Explore link that opens anything but what Open 1 opens for
+// that row alone, or that does not reach Explore.
+test("a row's Open in Explore opens its line as Open 1 does", async ({
+	page,
+	request,
+}) => {
+	await page.goto(reportPath(hashbrown.slug, await newestMain(request)));
+	await approach(page.getByRole("table", { name: /^Lines in report / }));
+	const row = page.getByRole("link", { name: `Open in Explore: ${UNCHECKED}` });
+	const href = (await row.getAttribute("href")) ?? "";
+	await page.getByRole("checkbox", { name: `Select ${UNCHECKED}` }).check();
+	await expect(
+		page.getByRole("link", { name: "Open 1 in Explore" }),
+	).toHaveAttribute("href", href);
+	await row.click();
+	await expect(page).toHaveURL(new URL(href, seed.console_url).href);
+	await expect(page.getByRole("region", { name: "Query" })).toBeVisible();
+});
+
+// Kills row links that only a pointer or the keyboard brings, so a reader who
+// only waits, such as a screen reader reading the page, never gets them.
+test("a reader who only waits gets each row's Open in Explore", async ({
+	page,
+	request,
+}) => {
+	await page.goto(reportPath(hashbrown.slug, await newestMain(request)));
+	await expect(
+		page.getByRole("link", { name: `Open in Explore: ${ALERTING}` }),
+	).toHaveAttribute("href", /^\/next\/console\/projects\/[^/]+\/explore\?/);
+	await expect(
+		page.getByRole("link", { name: `Open in Explore: ${UNCHECKED}` }),
+	).toBeVisible();
+});
+
+// Kills row links that only the page the reader opened loads when it goes
+// idle, so a reader who moves to a report inside the console and only waits
+// never gets them.
+test("a reader who moves from Reports to a report and only waits gets each row's Open in Explore", async ({
+	page,
+}) => {
+	await page.goto(nextPath(hashbrown.slug, "reports"));
+	const reports = page.getByRole("table", { name: "Reports, newest first" });
+	await reports.getByRole("link").first().click();
+	await expect(page).toHaveURL(/\/reports\/[0-9a-f-]+$/);
+	await expect(
+		page.getByRole("table", { name: /^Lines in report / }),
+	).toBeVisible();
+	await expect(
+		page.getByRole("link", { name: /^Open in Explore: / }).first(),
+	).toHaveAttribute("href", /^\/next\/console\/projects\/[^/]+\/explore\?/);
 });
 
 // Kills a sheet without the exact threshold's parameters and metric, counts
@@ -371,6 +469,10 @@ test("the report passes axe in both themes", async ({ page, request }) => {
 			page
 				.getByRole("region", { name: `${ALERTING}, full plot` })
 				.getByRole("button", { name: /: hide its line$/ }),
+		).toBeVisible();
+		await approach(page.getByRole("table", { name: /^Lines in report / }));
+		await expect(
+			page.getByRole("link", { name: `Open in Explore: ${ALERTING}` }),
 		).toBeVisible();
 	});
 });

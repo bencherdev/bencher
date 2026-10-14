@@ -15,7 +15,7 @@ import { ProjectContext } from "../project";
 import { fakeApi } from "../reports/testing";
 import { screenBatch } from "../thresholds/query";
 import { thresholdsFixture } from "../thresholds/testing";
-import { expectNameStartsWithText } from "../ui/testing";
+import { expectNameStartsWithText, expectRowOpens } from "../ui/testing";
 import Thresholds from "./Thresholds";
 
 // Relative to the router base, as the app routes it.
@@ -470,6 +470,30 @@ test("a row's link is named by the text it shows first, on a phone too", async (
 			.toBe(2);
 		for (const link of document.querySelectorAll("a.th-link")) {
 			expectNameStartsWithText(link);
+		}
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a row only its branch opens, and one whose link covers the rows
+// around it, wide or folded on a phone.
+test("a row opens its threshold from anywhere on it, on a phone too", async () => {
+	const { api } = fakeApi(() => batch(0, 3, 3));
+	for (const [width, height] of [
+		[1280, 720],
+		[390, 844],
+	] as const) {
+		await page.viewport(width, height);
+		mount(api, client());
+		await expect
+			.poll(() => document.querySelectorAll("a.th-link").length)
+			.toBe(3);
+		for (const link of document.querySelectorAll("a.th-link")) {
+			expectRowOpens(
+				link.closest("tr") as Element,
+				link.getAttribute("href") ?? "no link",
+			);
 		}
 		dispose?.();
 		document.body.replaceChildren();

@@ -1585,6 +1585,43 @@ test("Open in Explore opens the page's window", async () => {
 	expect(query.window).toEqual({ seconds: 7 * 86_400 });
 });
 
+// Kills an alert row whose Explore link opens another line or window than the
+// page's Open in Explore does when the row's line is the only one listed.
+test("an alert row's Open in Explore is the page's link for its line alone", async () => {
+	const lone = alertsFixture();
+	const { api: answered } = fakeApi((url) => {
+		if (
+			url.pathname.endsWith(
+				`/v0/console/projects/hashbrown/thresholds/${THRESHOLD}`,
+			)
+		) {
+			return { data: thresholdFixture() };
+		}
+		return isAlerts(url)
+			? {
+					data: {
+						...lone,
+						total: 1,
+						counts: { active: 1, dismissed: 0, silenced: 0 },
+						groups: lone.groups.slice(0, 1),
+					},
+				}
+			: new Promise<never>(() => {});
+	});
+	mount(answered, client(), `${PATH}?window=1w`);
+	const header = page.getByRole("link", { name: EXPLORE });
+	await expect.element(header).toBeVisible();
+	await userEvent.hover(
+		alertsTable().getByRole("columnheader", { name: "Line" }),
+	);
+	await userEvent.hover(
+		alertsTable().getByRole("columnheader", { name: "Limit" }),
+	);
+	await expect
+		.element(alertsTable().getByRole("link", { name: /^Open in Explore: / }))
+		.toHaveAttribute("href", header.element().getAttribute("href") as string);
+});
+
 // Kills an archived threshold called active, and an Applies to card that does
 // not say which dimension archived it.
 test("an archived threshold says so, and what archived it", async () => {

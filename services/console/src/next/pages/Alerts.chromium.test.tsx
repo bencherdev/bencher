@@ -1539,3 +1539,29 @@ test("a batch from an offset already read is read again", async () => {
 	await expect.poll(() => lists().length).toBe(4);
 	expect(lists()[3]?.searchParams.get("offset")).toBe(String(size));
 });
+
+// Kills an alert row whose Explore link opens another line or window than
+// Open 1 does for that row alone, and row links that wait for a selection.
+test("an alert row's Open in Explore is Open 1 for that row alone", async () => {
+	const { api } = fakeApi(three);
+	mount(api);
+	const table = page.getByRole("table", {
+		name: "Alerts, grouped by the report that raised them",
+	});
+	await expect.element(table).toBeVisible();
+	await userEvent.hover(table.getByRole("columnheader", { name: "Line" }));
+	await userEvent.hover(table.getByRole("columnheader", { name: "Limit" }));
+	const row = page
+		.getByRole("link", { name: `Open in Explore: ${NAME}` })
+		.first();
+	await expect.element(row).toBeVisible();
+	const href = row.element().getAttribute("href");
+	expect(href).toMatch(/^\/next\/console\/projects\/hashbrown\/explore\?/);
+	await page
+		.getByRole("checkbox", { name: `Select ${NAME}` })
+		.first()
+		.click();
+	await expect
+		.element(page.getByRole("link", { name: "Open 1 in Explore" }))
+		.toHaveAttribute("href", href as string);
+});

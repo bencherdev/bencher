@@ -1,3 +1,4 @@
+import "../reports/reports.css";
 import "./dimensions.css";
 import type { QueryClient } from "@tanstack/solid-query";
 import { afterEach, expect, test } from "vitest";
@@ -14,7 +15,7 @@ import { reportFixture } from "../reports/testing";
 import { type Sent, bootstrapOf, mount } from "../settings/testing";
 import type { Dimension } from "./dimension";
 import Inspect from "./Inspect";
-import { expectNameStartsWithText } from "../ui/testing";
+import { expectNameStartsWithText, expectRowOpens } from "../ui/testing";
 
 let dispose: (() => void) | undefined;
 
@@ -269,6 +270,40 @@ test("a branch's page shows its start point, head, recent reports, and threshold
 			"href",
 			"/next/console/projects/hashbrown/explore?branches=branch-uuid",
 		);
+});
+
+// Kills a recent report or threshold row only its first cell opens, and one
+// whose link covers the rows around it, wide or folded on a phone.
+test("a branch's recent reports and thresholds open from anywhere on their rows", async () => {
+	for (const [width, height] of [
+		[1280, 720],
+		[390, 844],
+	] as const) {
+		const { api } = branchApi(false);
+		dispose = (await show(api, "branches", "412-merge")).dispose;
+		await page.viewport(width, height);
+		const rows = () =>
+			[
+				...page
+					.getByRole("table", { name: "Recent reports" })
+					.getByRole("row")
+					.elements(),
+				...page
+					.getByRole("table", { name: "Thresholds" })
+					.getByRole("row")
+					.elements(),
+			].filter((row) => row.querySelector("a"));
+		await expect.poll(() => rows().length).toBe(3);
+		for (const row of rows()) {
+			row.scrollIntoView({ block: "center" });
+			expectRowOpens(
+				row,
+				row.querySelector("a")?.getAttribute("href") ?? "no link",
+			);
+		}
+		dispose?.();
+		dispose = undefined;
+	}
 });
 
 // Kills an archive that waits for the API before the page says so, an Undo

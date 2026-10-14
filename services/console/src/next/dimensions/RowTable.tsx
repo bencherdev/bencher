@@ -247,14 +247,14 @@ const DimensionRow = (props: {
 	const changed = () => Boolean(row().archived) !== props.listArchived;
 	return (
 		<tr
-			class="dm-row"
+			class="dm-row rowlink"
 			classList={{ "dm-dim": !props.listArchived && changed() }}
 			aria-rowindex={props.index + 2}
 			data-uuid={row().uuid}
 		>
 			<td data-fold="l1" class="dm-name">
 				<a
-					class="dm-link"
+					class="dm-link rowlink-name"
 					href={`${NEXT_PROJECTS}/${props.slug}/${props.dimension}/${row().slug}`}
 				>
 					{row().name}

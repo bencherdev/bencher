@@ -20,6 +20,7 @@ import {
 	on,
 } from "solid-js";
 import type { JsonConsoleReport } from "../../types/bencher";
+import { useFold } from "../alerts/fold";
 import { ApiError } from "../api";
 import { projectPath, reportPath } from "../paths";
 import { formatWhen } from "../plot/format";
@@ -63,6 +64,7 @@ const Report = () => {
 	const navigate = useNavigate();
 	const client = useQueryClient();
 	const narrow = useNarrow();
+	const fold = useFold();
 	const view = createMemo(() =>
 		parseReportView(new URLSearchParams(location.search)),
 	);
@@ -159,15 +161,18 @@ const Report = () => {
 	const [selection, setSelection] = createSignal<
 		ReadonlyMap<string, ReportLine>
 	>(new Map());
-	// Explore's query codec loads with the first selection, not with the page.
+	// Explore's query codec loads with the first selection or once the lines want their links, not with the page.
 	const [explorer, setExplorer] =
 		createSignal<typeof import("../report/explore")["exploreSearchOf"]>();
-	const select = (line: ReportLine, selected: boolean) => {
+	const loadExplorer = () => {
 		if (!explorer()) {
 			import("../report/explore")
 				.then(({ exploreSearchOf }) => setExplorer(() => exploreSearchOf))
 				.catch(() => {});
 		}
+	};
+	const select = (line: ReportLine, selected: boolean) => {
+		loadExplorer();
 		const chosen = new Map(selection());
 		if (selected) {
 			chosen.set(line.key, line);
@@ -205,18 +210,18 @@ const Report = () => {
 		return typeof window === "number" ? `${windowDays(window)}d` : window;
 	};
 	const hash = () => shortHash(report()?.version.hash);
+	/** Explore's link for some of the report's lines, once the codec has arrived. */
 	const explore = () => {
 		const current = report();
 		const search = explorer();
-		return (
-			current &&
-			search &&
-			`${projectPath(slug(), "explore")}${search(
-				[...selection().values()],
-				{ uuid: current.uuid, end: current.window.end_time },
-				windowDays(view().window),
-			)}`
-		);
+		return current && search
+			? (lines: readonly ReportLine[]) =>
+					`${projectPath(slug(), "explore")}${search(
+						lines,
+						{ uuid: current.uuid, end: current.window.end_time },
+						windowDays(view().window),
+					)}`
+			: undefined;
 	};
 	const intent = (uuid: string) =>
 		prefetchReport(client, api, slug(), uuid, view(), perPage);
@@ -268,7 +273,7 @@ const Report = () => {
 				<Selection
 					count={selection().size}
 					narrow={narrow()}
-					explore={explore()}
+					explore={explore()?.([...selection().values()])}
 					onClear={() => setSelection(new Map())}
 				/>
 				<Switch>
@@ -290,7 +295,7 @@ const Report = () => {
 								label={`Lines in report ${hash() ?? report().uuid}, grouped by ${first()?.group}`}
 								slots={slots()}
 								rows={groups().length + report().total}
-								narrow={narrow()}
+								narrow={fold()}
 								metrics={report().counts.metrics > 1}
 								history={`History, ${windowLabel()}`}
 								expanded={expanded()}
@@ -298,6 +303,8 @@ const Report = () => {
 								selected={selectedKeys()}
 								onSelect={select}
 								onNoThreshold={setSheet}
+								explore={explore()}
+								onExploreIntent={loadExplorer}
 								plot={(line) => ({
 									data: plotOf(
 										line,

@@ -1,5 +1,29 @@
 /* The Reports list. Rows have fixed heights, since only the rows on screen are drawn. */
 
+/* Every list's row with a page opens it from anywhere: its name link covers the row, and the row's own controls sit above. */
+.rowlink {
+	position: relative;
+}
+.rowlink:hover {
+	background: var(--color-overlay-hover);
+}
+.rowlink-name::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+}
+.rowlink-name:focus-visible {
+	outline: none;
+}
+.rowlink-name:focus-visible::after {
+	outline: 2px solid var(--color-focus);
+	outline-offset: -2px;
+}
+.rowlink :is(a, button, input, label):not(.rowlink-name) {
+	position: relative;
+	z-index: 1;
+}
+
 .reports-narrow {
 	display: none;
 }
@@ -25,16 +49,12 @@
 	border: 0;
 }
 .reports-table tbody tr.reports-row {
-	position: relative;
 	height: 40px;
 }
 .reports-table tbody tr.reports-row > td {
 	height: 40px;
 	padding-block: 0;
 	line-height: 20px;
-}
-.reports-table tbody tr.reports-row:hover td {
-	background: var(--color-overlay-hover);
 }
 /* Dimmed only once the wait is noticeable, like a skeleton. */
 .reports-table[aria-busy="true"] tbody {
@@ -53,19 +73,6 @@
 }
 .console a.reports-link:hover {
 	color: var(--color-text-accent);
-}
-/* The whole row opens the report. */
-.reports-link::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-}
-.reports-link:focus-visible {
-	outline: none;
-}
-.reports-link:focus-visible::after {
-	outline: 2px solid var(--color-focus);
-	outline-offset: -2px;
 }
 .reports-hash {
 	font: 12.5px var(--font-family-code);

@@ -28,7 +28,7 @@ import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import LineTable from "../report/LineTable";
-import { plotOf } from "../report/lines";
+import { type ReportLine, plotOf } from "../report/lines";
 import AlertControls from "../thresholds/AlertControls";
 import AlertActions from "../alerts/AlertActions";
 import { useRowStatus } from "../alerts/rowStatus";
@@ -168,10 +168,12 @@ const Threshold = () => {
 				.catch(() => {});
 		}
 	});
+	/** Explore's link for some of the alerts' lines, once the codec has arrived. */
 	const explore = () => {
 		const search = explorer();
-		return search && listed().length > 0
-			? `${projectPath(slug(), "explore")}${search(listed(), view().window)}`
+		return search
+			? (lines: readonly ReportLine[]) =>
+					`${projectPath(slug(), "explore")}${search(lines as readonly AlertLine[], view().window)}`
 			: undefined;
 	};
 
@@ -200,7 +202,7 @@ const Threshold = () => {
 					</div>
 					<div class="ph-actions">
 						<Show
-							when={explore()}
+							when={listed().length > 0 && explore()?.(listed())}
 							fallback={
 								<Button size="sm" disabled>
 									Open in Explore
@@ -298,6 +300,7 @@ const Threshold = () => {
 										history={history()}
 										expanded={expanded()}
 										onExpand={expand}
+										explore={explore()}
 										onNearEnd={nearEnd}
 										busy={busy()}
 										loading={loading()}
@@ -407,6 +410,7 @@ const Alerts = (props: {
 	history: string;
 	expanded: ReadonlySet<string>;
 	onExpand: (line: { key: string }, open: boolean) => void;
+	explore: ((lines: readonly ReportLine[]) => string) | undefined;
 	onNearEnd: () => void;
 	busy: boolean;
 	loading: boolean;
@@ -445,6 +449,7 @@ const Alerts = (props: {
 					history={`History, ${props.history}`}
 					expanded={props.expanded}
 					onExpand={props.onExpand}
+					explore={props.explore}
 					aside={{
 						label: "Report",
 						column: "th-c-report",

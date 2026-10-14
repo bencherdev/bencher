@@ -1,3 +1,4 @@
+import "../reports/reports.css";
 import "./dimensions.css";
 import { focusManager } from "@tanstack/solid-query";
 import { afterEach, expect, test } from "vitest";
@@ -5,7 +6,7 @@ import { page, userEvent } from "vitest/browser";
 import type { JsonConsoleBranchRow } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import { type Sent, bootstrapOf, mount } from "../settings/testing";
-import { expectNameStartsWithText } from "../ui/testing";
+import { expectNameStartsWithText, expectRowOpens } from "../ui/testing";
 import List from "./List";
 
 let dispose: (() => void) | undefined;
@@ -913,4 +914,25 @@ test("a next batch that does not load says so, and Retry loads it", async () => 
 	await expect
 		.element(branches().getByRole("link", { name: "branch-030" }))
 		.toBeInTheDocument();
+});
+
+// Kills a row only its name opens, a row whose link covers the rows around it,
+// and an Archive under the row's link, wide or folded on a phone.
+test("a row opens its branch from anywhere on it, and Archive keeps its own click", async () => {
+	for (const [width, height] of [
+		[1280, 720],
+		[390, 844],
+	] as const) {
+		await page.viewport(width, height);
+		dispose = show(api().api).dispose;
+		await expect.element(rowOf("main")).toBeVisible();
+		for (const { name } of ACTIVE) {
+			expectRowOpens(
+				rowOf(name).element(),
+				`/next/console/projects/hashbrown/branches/${name}`,
+			);
+		}
+		dispose?.();
+		dispose = undefined;
+	}
 });

@@ -193,6 +193,9 @@
 .lr-c-act {
 	width: 156px;
 }
+.lr-c-go {
+	width: 40px;
+}
 /* Positioned, so the table's hidden header labels stay inside the box that clips them. */
 .lr-alerts {
 	position: relative;
@@ -273,6 +276,18 @@
 .lr.lr-alerting > td,
 .lrn.lr-alerting > td {
 	background: var(--color-error-muted);
+}
+/* The whole row toggles its plot; the overlay keeps an alerting row's tint. */
+.lr,
+.lrn {
+	cursor: pointer;
+}
+.lr:hover > td,
+.lrn:hover > td {
+	background-image: linear-gradient(
+		var(--color-overlay-hover),
+		var(--color-overlay-hover)
+	);
 }
 .lr-group > td {
 	height: 38px;
@@ -367,7 +382,8 @@
 	accent-color: var(--color-accent);
 	cursor: pointer;
 }
-.lr-twist {
+.lr-twist,
+.lr-go {
 	appearance: none;
 	display: inline-grid;
 	place-items: center;
@@ -380,7 +396,8 @@
 	color: var(--color-text-muted);
 	cursor: pointer;
 }
-.lr-twist:hover {
+.lr-twist:hover,
+.lr-go:hover {
 	background: var(--color-overlay-hover);
 	color: var(--color-text-primary);
 }
@@ -411,9 +428,19 @@
 	min-height: 44px;
 }
 .lrn .lr-hit,
-.lrn .lr-twist {
+.lrn .lr-twist,
+.lrn .lr-go {
 	width: 44px;
 	height: 44px;
+}
+/* The Explore link's place beside the line's two lines, held before it arrives, so the controls below keep the cell's width. */
+.lrn-top {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 44px;
+	align-items: center;
+}
+.lrn-lines {
+	overflow: hidden;
 }
 .lrn-l1 .lr-tag,
 .lrn-l1 .lr-ptag {

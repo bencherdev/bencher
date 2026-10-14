@@ -6,13 +6,15 @@ import { THEME_ATTRIBUTE } from "@bencherdev/ui/ThemeToggle";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import { HEIGHTS } from "./LineTable";
-import LineRow from "./LineRow";
+import LineRow, { RowExplore } from "./LineRow";
 import { linesOf } from "./lines";
 import { lineFixture, reportFixture } from "./testing";
 
 const NAME = "blake3 input_bytes=65536 simd=avx2 threads=1 Latency";
+const UNCHECKED = "blake3 input_bytes=65536 simd=avx2 threads=1 Throughput";
+const EXPLORE = "/next/console/projects/hashbrown/explore?benchmarks=b";
 
 let dispose: (() => void) | undefined;
 
@@ -56,6 +58,15 @@ const mount = (
 				classList={{ "lr-narrow": props.narrow === true }}
 				aria-label="Lines"
 			>
+				{/* A narrow list's columns, as LineTable lays them out. */}
+				{props.narrow === true && (
+					<colgroup>
+						<col class="lr-c-hit" />
+						<col />
+						<col class="lr-c-numbers" />
+						<col class="lr-c-hit" />
+					</colgroup>
+				)}
 				<tbody>
 					<LineRow
 						line={checked as never}
@@ -177,10 +188,13 @@ test.each([
 
 // Kills touch targets under 44 px on a phone.
 test("a narrow row's controls are 44 px targets", async () => {
-	mount({ narrow: true, onSelect: () => {} });
+	mount({ narrow: true, onSelect: () => {}, explore: EXPLORE });
+	const explore = page.getByRole("link", { name: `Open in Explore: ${NAME}` });
+	await expect.element(explore).toBeVisible();
 	for (const target of [
 		page.getByRole("checkbox").element().parentElement as HTMLElement,
 		page.getByRole("button", { name: `Expand ${NAME}` }).element(),
+		explore.element(),
 	]) {
 		const { width, height } = target.getBoundingClientRect();
 		expect(width).toBeGreaterThanOrEqual(44);
@@ -248,10 +262,125 @@ test.each([
 	);
 	if (!narrow) {
 		await expect
-			.element(row.getByRole("cell").nth(8).getByRole("button"))
+			.element(row.getByRole("cell").nth(9).getByRole("button"))
 			.toHaveTextContent("Reactivate");
 	}
 	await page.getByRole("button", { name: `Expand ${NAME}` }).click();
 	const cell = page.getByRole("row").nth(1).getByRole("cell").element();
-	expect((cell as HTMLTableCellElement).colSpan).toBe(narrow ? 4 : 9);
+	expect((cell as HTMLTableCellElement).colSpan).toBe(narrow ? 4 : 10);
 });
+
+// Kills a row whose text or space does not toggle its plot, wide or narrow,
+// and one that only ever opens it.
+test.each([
+	["wide", false],
+	["narrow", true],
+] as const)(
+	"a click on a %s row's text toggles its plot",
+	async (_, narrow) => {
+		const { onExpand } = mount({ narrow });
+		const measure = () =>
+			page.getByRole("row").nth(0).getByText("Latency", { exact: true });
+		await measure().click();
+		expect(onExpand).toHaveBeenLastCalledWith(true);
+		await expect.element(page.getByText("The plot")).toBeVisible();
+		await measure().click();
+		expect(onExpand).toHaveBeenLastCalledWith(false);
+		await expect.element(page.getByText("The plot")).not.toBeInTheDocument();
+		expect(onExpand).toHaveBeenCalledTimes(2);
+	},
+);
+
+// Kills a row that toggles its plot on a click meant for its checkbox, its
+// snippet button, its Explore link, or a tooltip drawn inside it, and a caret
+// whose click the row toggles back.
+test("a row's controls and the tooltip inside it keep their clicks", async () => {
+	const onSelect = vi.fn();
+	const onNoThreshold = vi.fn();
+	const { onExpand } = mount({
+		line: unchecked as never,
+		onSelect,
+		onNoThreshold,
+		explore: EXPLORE,
+	});
+	const row = page.getByRole("row").nth(0);
+	await row.getByRole("checkbox").click();
+	expect(onSelect).toHaveBeenCalledWith(true);
+	await row.getByRole("button", { name: /^No threshold checks / }).click();
+	expect(onNoThreshold).toHaveBeenCalledOnce();
+	const explore = row.getByRole("link", {
+		name: `Open in Explore: ${UNCHECKED}`,
+	});
+	await expect.element(explore).toBeVisible();
+	const stay = (event: Event) => event.preventDefault();
+	document.addEventListener("click", stay, { capture: true });
+	await explore.click();
+	(row.element().querySelector("[role=tooltip]") as HTMLElement).click();
+	document.removeEventListener("click", stay, { capture: true });
+	expect(onExpand).not.toHaveBeenCalled();
+	await row.getByRole("button", { name: `Expand ${UNCHECKED}` }).click();
+	expect(onExpand).toHaveBeenCalledOnce();
+	expect(onExpand).toHaveBeenCalledWith(true);
+});
+
+// Kills a row that toggles its plot as a drag selecting its text ends.
+test("a click that ends selecting the row's text leaves the plot alone", async () => {
+	const { onExpand } = mount();
+	const measure = page
+		.getByRole("row")
+		.nth(0)
+		.getByText("Latency", { exact: true })
+		.element() as HTMLElement;
+	getSelection()?.selectAllChildren(measure);
+	measure.click();
+	expect(onExpand).not.toHaveBeenCalled();
+	getSelection()?.removeAllRanges();
+	measure.click();
+	expect(onExpand).toHaveBeenCalledWith(true);
+});
+
+// Kills a row without its own link into Explore, one drawn before the page can
+// write it, and one that opens anything but the line's link.
+test("a row opens its line in Explore once the page can write the link", async () => {
+	const [href, setHref] = createSignal<string>();
+	mount({
+		get explore() {
+			return href();
+		},
+	});
+	const row = page.getByRole("row").nth(0);
+	await RowExplore.preload();
+	await new Promise((resolve) => requestAnimationFrame(resolve));
+	expect(row.getByRole("link").elements()).toHaveLength(0);
+	setHref(EXPLORE);
+	await expect
+		.element(row.getByRole("link", { name: `Open in Explore: ${NAME}` }))
+		.toHaveAttribute("href", EXPLORE);
+});
+
+// Kills a row that takes a tab stop of its own, and controls out of the order
+// they are drawn in, wide or narrow.
+test.each([
+	["wide", false, ["Select", "Expand", "Open"]],
+	["narrow", true, ["Select", "Open", "Expand"]],
+] as const)(
+	"a %s row's tab stops are its controls in order",
+	async (_, narrow, order) => {
+		mount({ narrow, onSelect: () => {}, explore: EXPLORE });
+		await expect
+			.element(page.getByRole("link", { name: `Open in Explore: ${NAME}` }))
+			.toBeVisible();
+		const stops: string[] = [];
+		(document.activeElement as HTMLElement | null)?.blur();
+		for (const _ of order) {
+			await userEvent.keyboard("{Tab}");
+			const focused = document.activeElement as HTMLElement;
+			stops.push(
+				(focused.getAttribute("aria-label") ?? focused.textContent ?? "").split(
+					" ",
+				)[0] ?? "",
+			);
+		}
+		expect(stops).toEqual(order);
+	},
+);

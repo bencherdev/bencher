@@ -7,7 +7,7 @@ import { page } from "vitest/browser";
 import type { JsonReport } from "../../types/bencher";
 import ReportsTable from "./ReportsTable";
 import type { Range } from "./rows";
-import { expectNameStartsWithText } from "../ui/testing";
+import { expectNameStartsWithText, expectRowOpens } from "../ui/testing";
 import { reportFixture } from "./testing";
 
 const NOW = Date.parse("2026-09-14T00:00:00Z");
@@ -179,4 +179,22 @@ test("narrow rows fold into two lines that open the report anywhere", async () =
 	expect(hit?.closest("a")?.getAttribute("href")).toBe(
 		"/next/console/projects/hashbrown/reports/00000000-0000-4000-8000-000000000000",
 	);
+});
+
+// Kills a wide row only its branch opens, and one whose link covers the rows
+// around it.
+test("a wide row opens its report from any cell", async () => {
+	await page.viewport(1280, 720);
+	mount([reportFixture(0), reportFixture(1), reportFixture(2)]);
+	await expect.poll(drawn).toEqual([2, 3, 4]);
+	for (const row of document.querySelectorAll("tbody tr[aria-rowindex]")) {
+		expectRowOpens(
+			row,
+			row.querySelector("a")?.getAttribute("href") ?? "no link",
+		);
+	}
+	const hrefs = [...document.querySelectorAll("tbody a")].map((link) =>
+		link.getAttribute("href"),
+	);
+	expect(new Set(hrefs).size).toBe(3);
 });

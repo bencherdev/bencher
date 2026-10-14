@@ -465,15 +465,18 @@ const Alerts = () => {
 	const chosen = createMemo(() =>
 		shown().filter(({ key }) => selected().has(key)),
 	);
-	// Explore's query codec loads with the first selection, not with the page.
+	// Explore's query codec loads with the first selection or once the lines want their links, not with the page.
 	const [explorer, setExplorer] =
 		createSignal<typeof import("../alerts/explore")["exploreSearchOf"]>();
-	const choose = (next: ReadonlySet<string>) => {
+	const loadExplorer = () => {
 		if (!explorer()) {
 			import("../alerts/explore")
 				.then(({ exploreSearchOf }) => setExplorer(() => exploreSearchOf))
 				.catch(() => {});
 		}
+	};
+	const choose = (next: ReadonlySet<string>) => {
+		loadExplorer();
 		setSelected(next);
 	};
 	const select = (key: string, on: boolean) => {
@@ -485,10 +488,12 @@ const Alerts = () => {
 		}
 		choose(next);
 	};
+	/** Explore's link for some of the alerts' lines, once the codec has arrived. */
 	const explore = () => {
 		const searchOf = explorer();
-		return searchOf && chosen().length > 0
-			? `${projectPath(slug(), "explore")}${searchOf(chosen(), search().window)}`
+		return searchOf
+			? (lines: readonly ReportLine[]) =>
+					`${projectPath(slug(), "explore")}${searchOf(lines as readonly AlertLine[], search().window)}`
 			: undefined;
 	};
 	const [expanded, setExpanded] = createSignal<ReadonlySet<string>>(new Set());
@@ -633,7 +638,7 @@ const Alerts = () => {
 				changes={changes()}
 				canEdit={canEdit()}
 				narrow={narrow()}
-				explore={explore()}
+				explore={chosen().length > 0 ? explore()?.(chosen()) : undefined}
 				count={(element) => {
 					selection = element;
 				}}
@@ -673,6 +678,8 @@ const Alerts = () => {
 							onSelect={(line, on) => select(line.key, on)}
 							group={{ height: GROUP_HEIGHT, row: GroupHeader }}
 							dimmed={(line) => statusShown(line) !== "active"}
+							explore={explore()}
+							onExploreIntent={loadExplorer}
 							actions={{
 								cell: (line) => (
 									<AlertActions

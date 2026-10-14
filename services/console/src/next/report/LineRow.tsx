@@ -1,4 +1,4 @@
-import { For, type JSX, Show } from "solid-js";
+import { For, type JSX, Show, Suspense, lazy } from "solid-js";
 import InlineHistory from "../plot/InlineHistory";
 import type { Guard } from "../plot/format";
 import { formatValue } from "../plot/format";
@@ -6,6 +6,7 @@ import { unitScale } from "../plot/units";
 import { deltaOf } from "./delta";
 import type { AlignedSeries } from "./lines";
 import { type ParameterSet, lineLabel, rowNumbers } from "./row";
+import { rowClick } from "./rowClick";
 
 /** What a row draws of a line, as a report, an alert, or a threshold's page holds it. */
 interface RowLine {
@@ -27,7 +28,10 @@ interface RowLine {
 const UNITS = { unitScale, formatValue };
 
 /** The columns of a wide row; a narrow one folds them into four. */
-export const COLUMNS = { wide: 8, narrow: 4 } as const;
+export const COLUMNS = { wide: 9, narrow: 4 } as const;
+
+/** Loads once the page goes idle or the reader moves toward the lines, so no first paint waits on it. */
+export const RowExplore = lazy(() => import("./RowExplore"));
 
 interface LineRowProps {
 	line: RowLine;
@@ -48,8 +52,10 @@ interface LineRowProps {
 	aside?: JSX.Element;
 	/** No longer alerting, as a dismissed alert: drawn in the muted color, never faded. */
 	dimmed?: boolean;
-	/** Draws the row's own controls: a last cell when wide, a third line when narrow. */
+	/** Draws the row's own controls: a last cell when wide, after the Explore link, and a third line when narrow. */
 	actions?: (() => JSX.Element) | undefined;
+	/** The line's plot in Explore, once the page can write its link. */
+	explore?: string | undefined;
 	/** What the row expands into, drawn in a row of its own under it. */
 	children?: JSX.Element;
 }
@@ -160,6 +166,20 @@ const LineRow = (props: LineRowProps) => {
 			)}
 		</Show>
 	);
+	const go = () => (
+		<Show when={props.explore}>
+			{(href) => (
+				<Suspense>
+					<RowExplore href={href()} name={label().name} />
+				</Suspense>
+			)}
+		</Show>
+	);
+	const toggle = (event: MouseEvent) => {
+		if (rowClick(event)) {
+			props.onExpand(!props.expanded);
+		}
+	};
 	const noThreshold = () => (
 		<Show when={props.onNoThreshold}>
 			{(open) => (
@@ -184,6 +204,7 @@ const LineRow = (props: LineRowProps) => {
 						class="lr"
 						classList={{ "lr-alerting": alerting(), "lr-dim": props.dimmed }}
 						aria-rowindex={props.index}
+						onClick={toggle}
 					>
 						<td>{select()}</td>
 						<td>{twist()}</td>
@@ -201,6 +222,7 @@ const LineRow = (props: LineRowProps) => {
 								<span class="lr-num">{numbers().limit}</span>
 							</Show>
 						</td>
+						<td class="lr-gocell">{go()}</td>
 						<Show when={props.actions}>
 							{(actions) => <td class="lr-act">{actions()()}</td>}
 						</Show>
@@ -215,16 +237,22 @@ const LineRow = (props: LineRowProps) => {
 						"lrn-act": props.actions !== undefined,
 					}}
 					aria-rowindex={props.index}
+					onClick={toggle}
 				>
 					<td>{select()}</td>
-					<td title={label().name}>
-						<div class="lrn-l1">{name()}</div>
-						<div class="lrn-l2">
-							<span>{props.aside ?? props.line.measure.name}</span>
-							{history()}
-							<Show when={props.line.guard} fallback={noThreshold()}>
-								<span class="lr-num muted">limit {numbers().limit}</span>
-							</Show>
+					<td>
+						<div class="lrn-top">
+							<div class="lrn-lines" title={label().name}>
+								<div class="lrn-l1">{name()}</div>
+								<div class="lrn-l2">
+									<span>{props.aside ?? props.line.measure.name}</span>
+									{history()}
+									<Show when={props.line.guard} fallback={noThreshold()}>
+										<span class="lr-num muted">limit {numbers().limit}</span>
+									</Show>
+								</div>
+							</div>
+							{go()}
 						</div>
 						<Show when={props.actions}>
 							{(actions) => <div class="lrn-l2 lr-act">{actions()()}</div>}

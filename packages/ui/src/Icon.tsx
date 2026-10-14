@@ -10,6 +10,7 @@ export type IconName =
 	| "check"
 	| "chevron-down"
 	| "close"
+	| "explore"
 	| "key"
 	| "menu"
 	| "read-only"
@@ -31,6 +32,7 @@ const GLYPHS: Record<IconName, () => JSX.Element> = {
 	check: () => <path d="M5 12.5l4.5 4.5L19 7.5" />,
 	"chevron-down": () => <path d="M6 9l6 6 6-6" />,
 	close: () => <path d="M6 6l12 12M18 6L6 18" />,
+	explore: () => <path d="M4 4v16h16M8 15l3.5-3.5 3 3L20 9" />,
 	key: () => (
 		<>
 			<circle cx="8" cy="15" r="4" />

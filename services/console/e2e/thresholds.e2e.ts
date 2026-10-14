@@ -2,7 +2,15 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import type { JsonConsoleThresholds } from "../src/types/bencher";
 import { createManyAlerts, createProject } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, nextPath, seed, settle, signedIn, test } from "./fixtures";
+import {
+	approach,
+	expect,
+	nextPath,
+	seed,
+	settle,
+	signedIn,
+	test,
+} from "./fixtures";
 import {
 	alertsTopToBottom,
 	dismissWhileNextBatchIsOut,
@@ -448,6 +456,12 @@ test("Thresholds and a threshold pass axe in both themes", async ({
 		await alertsTable(page).scrollIntoViewIfNeeded();
 		await expect(
 			alertsTable(page).getByRole("button", { name: `Expand ${ALERTING}` }),
+		).toBeVisible();
+		await approach(alertsTable(page));
+		await expect(
+			alertsTable(page).getByRole("link", {
+				name: `Open in Explore: ${ALERTING}`,
+			}),
 		).toBeVisible();
 		await settle(page);
 	});
