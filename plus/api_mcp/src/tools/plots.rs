@@ -2,6 +2,7 @@ use api_projects::plots::{
     ProjPlotParams, ProjPlotsPagination, ProjPlotsParams, ProjPlotsQuery, get_ls_inner,
     get_one_inner,
 };
+use bencher_json::{JsonPlot, JsonPlots};
 use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
 use dropshot::HttpError;
 use rmcp::model::{CallToolResult, Tool};
@@ -9,7 +10,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{input_schema, json_result, list_result, parse_input};
+use super::{ListOutput, json_result, json_schema, list_result, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct ListPlotsInput {
@@ -31,8 +32,9 @@ pub fn list_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "List saved dashboard plots for a project.",
-        input_schema::<ListPlotsInput>(),
+        json_schema::<ListPlotsInput>(),
     )
+    .with_raw_output_schema(json_schema::<ListOutput<JsonPlots>>())
 }
 
 pub async fn list(
@@ -46,15 +48,16 @@ pub async fn list(
         query,
     } = parse_input(arguments)?;
     let (json, total_count) = get_ls_inner(context, api_actor, path, pagination, query).await?;
-    list_result(&json, total_count)
+    list_result(json, total_count)
 }
 
 pub fn view_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "View a saved dashboard plot. The `plot` argument is a plot UUID.",
-        input_schema::<ViewPlotInput>(),
+        json_schema::<ViewPlotInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonPlot>())
 }
 
 pub async fn view(

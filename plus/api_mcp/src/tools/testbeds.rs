@@ -2,7 +2,9 @@ use api_projects::testbeds::{
     ProjTestbedParams, ProjTestbedQuery, ProjTestbedsPagination, ProjTestbedsParams,
     ProjTestbedsQuery, get_ls_inner, get_one_inner, patch_inner, post_inner,
 };
-use bencher_json::{JsonNewTestbed, project::testbed::JsonUpdateTestbed};
+use bencher_json::{
+    JsonNewTestbed, JsonTestbed, JsonTestbeds, project::testbed::JsonUpdateTestbed,
+};
 use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
 use dropshot::HttpError;
 use rmcp::model::{CallToolResult, Tool};
@@ -10,7 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{input_schema, json_result, list_result, parse_input};
+use super::{ListOutput, json_result, json_schema, list_result, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct ListTestbedsInput {
@@ -50,8 +52,9 @@ pub fn list_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "List testbeds for a project.",
-        input_schema::<ListTestbedsInput>(),
+        json_schema::<ListTestbedsInput>(),
     )
+    .with_raw_output_schema(json_schema::<ListOutput<JsonTestbeds>>())
 }
 
 pub async fn list(
@@ -65,15 +68,16 @@ pub async fn list(
         query,
     } = parse_input(arguments)?;
     let (json, total_count) = get_ls_inner(context, api_actor, path, pagination, query).await?;
-    list_result(&json, total_count)
+    list_result(json, total_count)
 }
 
 pub fn create_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Create a testbed for a project.",
-        input_schema::<CreateTestbedInput>(),
+        json_schema::<CreateTestbedInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonTestbed>())
 }
 
 pub async fn create(
@@ -90,8 +94,9 @@ pub fn view_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "View a testbed. The `testbed` argument accepts a testbed slug or UUID.",
-        input_schema::<ViewTestbedInput>(),
+        json_schema::<ViewTestbedInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonTestbed>())
 }
 
 pub async fn view(
@@ -108,8 +113,9 @@ pub fn update_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Update a testbed. Project API keys (`bencher_run_`) cannot rename testbeds.",
-        input_schema::<UpdateTestbedInput>(),
+        json_schema::<UpdateTestbedInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonTestbed>())
 }
 
 pub async fn update(

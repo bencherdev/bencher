@@ -6,7 +6,10 @@
 )]
 //! Integration tests for the MCP Streamable HTTP endpoint (POST /mcp).
 
-use bencher_api_tests::TestServer;
+use bencher_api_tests::{
+    TestProject, TestServer, TestUser, helpers::set_job_status, oci::create_oci_manifest,
+};
+use bencher_json::JobStatus;
 use http::StatusCode;
 use serde_json::{Value, json};
 
@@ -57,12 +60,16 @@ async fn mcp_post_2026(
 
 /// POST a JSON-RPC request and return the `result` member of the response.
 async fn mcp_result(server: &TestServer, bearer: Option<&str>, body: &Value) -> Value {
-    json_rpc_result(mcp_post(server, bearer, body).await, body).await
+    let result = json_rpc_result(mcp_post(server, bearer, body).await, body).await;
+    assert_output_schema(server, body, &result).await;
+    result
 }
 
 /// POST a `2026-07-28` JSON-RPC request and return the `result` member of the response.
 async fn mcp_result_2026(server: &TestServer, bearer: Option<&str>, body: &Value) -> Value {
-    json_rpc_result(mcp_post_2026(server, bearer, body).await, body).await
+    let result = json_rpc_result(mcp_post_2026(server, bearer, body).await, body).await;
+    assert_output_schema(server, body, &result).await;
+    result
 }
 
 /// Assert a successful JSON-RPC response to `body` and return its `result` member.
@@ -81,6 +88,48 @@ async fn json_rpc_result(resp: reqwest::Response, body: &Value) -> Value {
         "Unexpected JSON-RPC error: {message}"
     );
     message["result"].clone()
+}
+
+/// Validate the `structuredContent` of a successful tool call
+/// against the `outputSchema` that `tools/list` declares for the tool.
+#[expect(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "test helper; indexing a serde_json value never panics"
+)]
+async fn assert_output_schema(server: &TestServer, body: &Value, result: &Value) {
+    if body["method"] != "tools/call" || result["isError"] == true {
+        return;
+    }
+    let tools_list = json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"});
+    let tools = json_rpc_result(mcp_post(server, None, &tools_list).await, &tools_list).await;
+    let name = &body["params"]["name"];
+    let tool = tools["tools"]
+        .as_array()
+        .expect("Missing tools array")
+        .iter()
+        .find(|tool| tool["name"] == *name)
+        .expect("Missing tool");
+    let content = &result["structuredContent"];
+    let Some(schema) = tool.get("outputSchema") else {
+        assert!(
+            content.is_null(),
+            "Structured content without an output schema: {name}"
+        );
+        return;
+    };
+    let validator = jsonschema::draft202012::options()
+        .should_validate_formats(true)
+        .build(schema)
+        .expect("Invalid output schema");
+    let errors: Vec<String> = validator
+        .iter_errors(content)
+        .map(|error| error.to_string())
+        .collect();
+    assert!(
+        errors.is_empty(),
+        "Structured content of {name} does not match its output schema: {errors:#?}"
+    );
 }
 
 fn initialize_request(protocol_version: &str) -> Value {
@@ -219,7 +268,7 @@ async fn mcp_method_not_found() {
     }
 }
 
-// tools/list returns the full tool surface with schemas
+// tools/list returns the full tool surface with schemas, titles, and annotations
 #[tokio::test]
 async fn mcp_tools_list() {
     let server = TestServer::new().await;
@@ -243,6 +292,22 @@ async fn mcp_tools_list() {
     for tool in tools {
         assert_eq!(tool["inputSchema"]["type"], "object", "{tool}");
         assert!(tool["description"].is_string(), "{tool}");
+        assert!(tool["title"].is_string(), "{tool}");
+        let annotations = &tool["annotations"];
+        assert_eq!(annotations["title"], tool["title"], "{tool}");
+        for hint in ["readOnlyHint", "destructiveHint", "openWorldHint"] {
+            assert!(annotations[hint].is_boolean(), "Missing {hint}: {tool}");
+        }
+        assert_eq!(
+            annotations["idempotentHint"].is_boolean(),
+            annotations["readOnlyHint"] == false,
+            "{tool}"
+        );
+        assert_eq!(
+            tool["outputSchema"]["type"] == "object",
+            tool["name"] != "perf_image",
+            "{tool}"
+        );
     }
 }
 
@@ -454,6 +519,275 @@ async fn mcp_submit_run_project_key() {
     .await;
     let content = tool_content(&result);
     assert_eq!(content["total_count"], 1);
+}
+
+// Every tool with structured output returns results that match its output schema,
+// including the types whose JSON is written by hand
+#[tokio::test]
+#[expect(clippy::too_many_lines, reason = "one call per tool")]
+async fn mcp_tool_results_match_output_schemas() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("MCP Schemas", "mcp-schemas@bencher.dev")
+        .await;
+    let org = server.create_org(&user, "MCP Schemas Org").await;
+    let project = server
+        .create_project(&user, &org, "MCP Schemas Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let call = async |name: &str, mut arguments: Value| {
+        arguments["project"] = json!(project_slug);
+        let request = call_tool_request(name, &arguments);
+        tool_content(&mcp_result(&server, Some(&user.token), &request).await)
+    };
+
+    // The first user to sign up is the server admin, who registers hardware specs
+    let spec = post_spec(
+        &server,
+        &user,
+        json!({"name": "Bare Metal", "fallback": true}),
+    )
+    .await;
+    let sandboxed = post_spec(
+        &server,
+        &user,
+        json!({"name": "Sandboxed", "sandbox": "firecracker"}),
+    )
+    .await;
+    let branch = call("create_branch", json!({"name": "main"})).await;
+    let testbed = call(
+        "create_testbed",
+        json!({"name": "localhost", "spec": spec["uuid"]}),
+    )
+    .await;
+    // A spec without a sandbox rides along as `"sandbox": null` in every testbed
+    assert!(testbed["spec"]["sandbox"].is_null(), "{testbed}");
+    call(
+        "create_testbed",
+        json!({"name": "sandboxed", "spec": sandboxed["uuid"]}),
+    )
+    .await;
+    let measure = call("create_measure", json!({"name": "latency", "units": "ns"})).await;
+    let threshold = call(
+        "create_threshold",
+        json!({
+            "branch": branch["uuid"],
+            "testbed": testbed["uuid"],
+            "measure": measure["uuid"],
+            "parameters": [{"threads": 4}],
+            "test": "static",
+            "upper_boundary": 100.0
+        }),
+    )
+    .await;
+    let run = |day: u8, value: f64| {
+        let results = json!({
+            "mcp_bench": [{"parameters": {"threads": 4}, "measures": {"latency": {"value": value}}}]
+        });
+        json!({
+            "branch": branch["uuid"],
+            "testbed": testbed["uuid"],
+            "start_time": format!("2025-01-0{day}T00:00:00Z"),
+            "end_time": format!("2025-01-0{day}T00:01:00Z"),
+            "bmf_version": 1,
+            "results": [results.to_string()]
+        })
+    };
+    // A threshold only checks a metric once it has an earlier one to compare
+    call("create_report", run(1, 10.0)).await;
+    let report = call("submit_run", run(2, 1000.0)).await;
+    let result = &report["results"][0][0];
+    let benchmark = &result["benchmark"];
+    let alerts = call("list_alerts", json!({})).await;
+    let alert = &alerts["data"][0];
+    assert!(alert.is_object(), "Expected an alert: {alerts}");
+
+    let plot = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/plots")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&json!({
+            "title": "MCP Plot",
+            "lower_value": false,
+            "upper_value": false,
+            "lower_boundary": false,
+            "upper_boundary": true,
+            "x_axis": "date_time",
+            "layout": "stacked",
+            "window": 2_592_000,
+            "branches": [branch["uuid"]],
+            "testbeds": [testbed["uuid"]],
+            "benchmarks": [benchmark["uuid"]],
+            "parameters": [{"threads": 4}],
+            "measures": [measure["uuid"]],
+            "metrics": ["p99", "value"],
+            "hidden": ["1a2b3c4d5e6"],
+            "focus": "0123456789abcdef"
+        }))
+        .send()
+        .await
+        .expect("Plot request failed");
+    assert_eq!(plot.status(), StatusCode::CREATED);
+    let plot: Value = plot.json().await.expect("Invalid plot");
+
+    let mut job_run = run(3, 10.0);
+    job_run["job"] = json!({
+        "image": push_image(&server, &user, &project).await,
+        "entrypoint": ["/bin/sh"],
+        "cmd": ["-c", "bench"],
+        "env": {"THREADS": "4"},
+        "file_paths": ["/out/results.json"],
+        "callback": {"url": "https://example.com/hook", "headers": {"X-Bench": "1"}}
+    });
+    let job = call("submit_run", job_run).await["job"].clone();
+    let pending = call("view_job", json!({"job": job})).await;
+    assert!(pending["callback"].is_object(), "{pending}");
+    let job_uuid = serde_json::from_value(job.clone()).expect("Invalid job UUID");
+    set_job_status(&server, job_uuid, JobStatus::Failed);
+    let output = serde_json::from_value(json!({
+        "results": [{"exit_code": 1, "stdout": "out", "stderr": "err", "output": {"/out/results.json": "{}"}}],
+        "error": "Benchmark failed"
+    }))
+    .expect("Invalid job output");
+    server
+        .context()
+        .oci_storage()
+        .job_output()
+        .put(project.uuid, job_uuid, &output)
+        .await
+        .expect("Failed to store job output");
+    let failed = call("view_job", json!({"job": job})).await;
+    assert!(failed["output"].is_object(), "{failed}");
+
+    for (tool, arguments) in [
+        ("view_report", json!({"report": report["uuid"]})),
+        ("view_alert", json!({"alert": alert["uuid"]})),
+        (
+            "update_alert",
+            json!({"alert": alert["uuid"], "status": "dismissed"}),
+        ),
+        (
+            "view_metric",
+            json!({"metric": result["measures"][0]["metrics"][0]["uuid"]}),
+        ),
+        (
+            "query_perf",
+            json!({
+                "branches": branch["uuid"],
+                "testbeds": testbed["uuid"],
+                "benchmarks": benchmark["uuid"],
+                "measures": measure["uuid"]
+            }),
+        ),
+        ("view_threshold", json!({"threshold": threshold["uuid"]})),
+        (
+            "update_threshold",
+            json!({"threshold": threshold["uuid"], "test": "static", "upper_boundary": 200.0}),
+        ),
+        ("view_plot", json!({"plot": plot["uuid"]})),
+        ("create_benchmark", json!({"name": "mcp_other"})),
+        (
+            "create_branch",
+            json!({"name": "feature", "start_point": {"branch": branch["uuid"]}}),
+        ),
+        ("view_branch", json!({"branch": branch["uuid"]})),
+        (
+            "update_branch",
+            json!({"branch": branch["uuid"], "name": "renamed"}),
+        ),
+        ("view_testbed", json!({"testbed": testbed["uuid"]})),
+        (
+            "update_testbed",
+            json!({"testbed": testbed["uuid"], "name": "renamed"}),
+        ),
+        ("view_benchmark", json!({"benchmark": benchmark["uuid"]})),
+        (
+            "update_benchmark",
+            json!({"benchmark": benchmark["uuid"], "name": "renamed"}),
+        ),
+        ("view_measure", json!({"measure": measure["uuid"]})),
+        (
+            "update_measure",
+            json!({"measure": measure["uuid"], "name": "renamed"}),
+        ),
+    ] {
+        call(tool, arguments).await;
+    }
+    // A list result only exercises its item schema when it has items
+    for tool in [
+        "list_reports",
+        "list_branches",
+        "list_testbeds",
+        "list_benchmarks",
+        "list_measures",
+        "list_thresholds",
+        "list_plots",
+        "list_jobs",
+    ] {
+        let list = call(tool, json!({})).await;
+        assert_ne!(list["data"], json!([]), "{tool}: {list}");
+    }
+}
+
+/// Register a hardware spec, which only the server admin can do.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn post_spec(server: &TestServer, admin: &TestUser, spec: Value) -> Value {
+    let mut body = json!({
+        "os": "linux",
+        "architecture": "x86_64",
+        "cpu": 2,
+        "memory": 0x0001_0000_0000i64,
+        "disk": 0x0002_8000_0000i64
+    });
+    if let (Some(body), Some(spec)) = (body.as_object_mut(), spec.as_object()) {
+        body.extend(spec.clone());
+    }
+    let resp = server
+        .client
+        .post(server.api_url("/v0/specs"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Spec request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "Failed to create spec");
+    resp.json().await.expect("Invalid spec")
+}
+
+/// Push an image to the project's registry and return its reference.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn push_image(server: &TestServer, user: &TestUser, project: &TestProject) -> String {
+    let project_slug: &str = project.slug.as_ref();
+    let token = server.oci_push_token(user, project);
+    let config = server.upload_blob(project_slug, &token, b"config").await;
+    let layer = server.upload_blob(project_slug, &token, b"layer").await;
+    let resp = server
+        .client
+        .put(server.api_url(&format!("/v2/{project_slug}/manifests/v1")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .header(
+            reqwest::header::CONTENT_TYPE,
+            "application/vnd.oci.image.manifest.v1+json",
+        )
+        .body(create_oci_manifest(&config, &layer))
+        .send()
+        .await
+        .expect("Manifest push failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "Failed to push manifest"
+    );
+    format!("localhost/{project_slug}:v1")
 }
 
 // Anonymous requests cannot read a private project

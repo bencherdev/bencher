@@ -2,7 +2,7 @@ use api_projects::branches::{
     ProjBranchParams, ProjBranchQuery, ProjBranchesPagination, ProjBranchesParams,
     ProjBranchesQuery, get_ls_inner, get_one_inner, patch_inner, post_inner,
 };
-use bencher_json::{JsonNewBranch, project::branch::JsonUpdateBranch};
+use bencher_json::{JsonBranch, JsonBranches, JsonNewBranch, project::branch::JsonUpdateBranch};
 use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
 use dropshot::HttpError;
 use rmcp::model::{CallToolResult, Tool};
@@ -11,7 +11,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use slog::Logger;
 
-use super::{input_schema, json_result, list_result, parse_input};
+use super::{ListOutput, json_result, json_schema, list_result, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct ListBranchesInput {
@@ -51,8 +51,9 @@ pub fn list_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "List branches for a project.",
-        input_schema::<ListBranchesInput>(),
+        json_schema::<ListBranchesInput>(),
     )
+    .with_raw_output_schema(json_schema::<ListOutput<JsonBranches>>())
 }
 
 pub async fn list(
@@ -66,15 +67,16 @@ pub async fn list(
         query,
     } = parse_input(arguments)?;
     let (json, total_count) = get_ls_inner(context, api_actor, path, pagination, query).await?;
-    list_result(&json, total_count)
+    list_result(json, total_count)
 }
 
 pub fn create_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Create a branch for a project.",
-        input_schema::<CreateBranchInput>(),
+        json_schema::<CreateBranchInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonBranch>())
 }
 
 pub async fn create(
@@ -92,8 +94,9 @@ pub fn view_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "View a branch. The `branch` argument accepts a branch slug or UUID.",
-        input_schema::<ViewBranchInput>(),
+        json_schema::<ViewBranchInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonBranch>())
 }
 
 pub async fn view(
@@ -110,8 +113,9 @@ pub fn update_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Update a branch. Project API keys (`bencher_run_`) cannot rename branches.",
-        input_schema::<UpdateBranchInput>(),
+        json_schema::<UpdateBranchInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonBranch>())
 }
 
 pub async fn update(

@@ -2,7 +2,9 @@ use api_projects::benchmarks::{
     ProjBenchmarkParams, ProjBenchmarksPagination, ProjBenchmarksParams, ProjBenchmarksQuery,
     get_ls_inner, get_one_inner, patch_inner, post_inner,
 };
-use bencher_json::project::benchmark::{JsonNewBenchmark, JsonUpdateBenchmark};
+use bencher_json::project::benchmark::{
+    JsonBenchmark, JsonBenchmarks, JsonNewBenchmark, JsonUpdateBenchmark,
+};
 use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
 use dropshot::HttpError;
 use rmcp::model::{CallToolResult, Tool};
@@ -10,7 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{input_schema, json_result, list_result, parse_input};
+use super::{ListOutput, json_result, json_schema, list_result, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct ListBenchmarksInput {
@@ -48,8 +50,9 @@ pub fn list_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "List benchmarks for a project.",
-        input_schema::<ListBenchmarksInput>(),
+        json_schema::<ListBenchmarksInput>(),
     )
+    .with_raw_output_schema(json_schema::<ListOutput<JsonBenchmarks>>())
 }
 
 pub async fn list(
@@ -63,15 +66,16 @@ pub async fn list(
         query,
     } = parse_input(arguments)?;
     let (json, total_count) = get_ls_inner(context, api_actor, path, pagination, query).await?;
-    list_result(&json, total_count)
+    list_result(json, total_count)
 }
 
 pub fn create_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Create a benchmark for a project.",
-        input_schema::<CreateBenchmarkInput>(),
+        json_schema::<CreateBenchmarkInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonBenchmark>())
 }
 
 pub async fn create(
@@ -88,8 +92,9 @@ pub fn view_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "View a benchmark. The `benchmark` argument accepts a benchmark slug or UUID.",
-        input_schema::<ViewBenchmarkInput>(),
+        json_schema::<ViewBenchmarkInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonBenchmark>())
 }
 
 pub async fn view(
@@ -106,8 +111,9 @@ pub fn update_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Update a benchmark. Project API keys (`bencher_run_`) cannot rename benchmarks.",
-        input_schema::<UpdateBenchmarkInput>(),
+        json_schema::<UpdateBenchmarkInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonBenchmark>())
 }
 
 pub async fn update(
