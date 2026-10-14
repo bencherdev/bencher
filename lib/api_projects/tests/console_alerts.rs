@@ -6,7 +6,8 @@
     clippy::too_many_lines,
     reason = "integration test file"
 )]
-//! The console's alerts: `GET /v0/console/projects/{project}/alerts`.
+//! The console's alerts: `GET /v0/console/projects/{project}/alerts` and
+//! `GET /v0/console/projects/{project}/alerts/{alert}`.
 //!
 //! Every report here is posted through the API with a fixed time, so the
 //! thresholds compute real boundaries and alerts from a known history, and each
@@ -17,11 +18,13 @@ use bencher_json::{
     AlertUuid, DateTime, JsonReport, ProjectSlug, ProjectUuid, ReportUuid, VersionUuid,
     project::{
         Visibility,
-        alert::JsonUpdatedAlerts,
+        alert::{AlertStatus, JsonAlert, JsonUpdatedAlerts},
+        boundary::BoundaryLimit,
         console::{
-            JsonConsoleAlertGroup, JsonConsoleAlerts, JsonConsoleBenchmark, JsonConsoleMeasure,
-            JsonConsoleModel, JsonConsolePointReport, JsonConsolePoints, JsonConsoleReport,
-            JsonConsoleReportLine, JsonConsoleVariant, MAX_CONSOLE_HISTORY_REPORTS,
+            JsonConsoleAlertDetail, JsonConsoleAlertGroup, JsonConsoleAlerts, JsonConsoleBenchmark,
+            JsonConsoleMeasure, JsonConsoleModel, JsonConsolePointReport, JsonConsolePoints,
+            JsonConsoleReport, JsonConsoleReportLine, JsonConsoleVariant,
+            MAX_CONSOLE_HISTORY_REPORTS,
         },
         report::Adapter,
     },
@@ -1182,5 +1185,600 @@ async fn console_alerts_need_a_signed_in_reader() {
     let (status, text) = try_console_alerts(&server, &mine.slug, "", Some(&mine_key)).await;
     assert_eq!(status, StatusCode::OK, "{text}");
     let (status, _) = try_console_alerts(&server, &mine.slug, "", Some(&theirs_key)).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+async fn try_console_alert(
+    server: &TestServer,
+    project: &ProjectSlug,
+    alert: AlertUuid,
+    token: Option<&str>,
+) -> (StatusCode, String) {
+    let mut request = server
+        .client
+        .get(server.api_url(&format!("/v0/console/projects/{project}/alerts/{alert}")));
+    if let Some(token) = token {
+        request = request.header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        );
+    }
+    let resp = request.send().await.expect("Request failed");
+    let status = resp.status();
+    (
+        status,
+        resp.text().await.expect("Failed to read the response"),
+    )
+}
+
+async fn console_alert(
+    server: &TestServer,
+    fixture: &Fixture,
+    alert: AlertUuid,
+) -> JsonConsoleAlertDetail {
+    let (status, text) =
+        try_console_alert(server, &fixture.slug, alert, Some(&fixture.token)).await;
+    assert_eq!(status, StatusCode::OK, "GET console alert {alert}: {text}");
+    serde_json::from_str(&text).expect("Failed to parse the console alert")
+}
+
+/// The alert a report raised on a line of `benchmark` with exactly `parameters`, on a
+/// measure, by the threshold `filtered` or not by its parameters.
+fn raised<'a>(
+    report: &'a JsonReport,
+    benchmark: &str,
+    parameters: &str,
+    measure: &str,
+    filtered: bool,
+) -> &'a JsonAlert {
+    report
+        .alerts
+        .as_ref()
+        .expect("the report's alerts")
+        .iter()
+        .find(|alert| {
+            alert.benchmark.name.to_string() == benchmark
+                && alert.variant.parameters.to_string() == parameters
+                && alert.threshold.measure.slug.to_string() == measure
+                && alert.threshold.parameters.is_some() == filtered
+        })
+        .expect("the report raised the alert")
+}
+
+fn millis_of(times: &[&str]) -> Vec<i64> {
+    times
+        .iter()
+        .map(|time| at(time).timestamp_millis())
+        .collect()
+}
+
+// Kills: an alert whose side, value, baseline, or limits come from another row, a
+// report, line, or threshold other than the ones that raised it, and a creation or
+// change time other than the alert's own.
+#[tokio::test]
+async fn console_alert_is_the_alert_its_report_raised() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let Seeded { fixture, late, .. } = seeded(&server, "detail").await;
+    let raised = late.alerts.as_ref().expect("the report's alerts");
+    assert_eq!(raised.len(), 5);
+    assert!(
+        [BoundaryLimit::Lower, BoundaryLimit::Upper]
+            .iter()
+            .all(|side| raised.iter().any(|alert| alert.limit == *side)),
+        "alerts on both sides"
+    );
+
+    for alert in raised {
+        let detail = console_alert(&server, &fixture, alert.uuid).await;
+        let perf = &detail.perf;
+        assert_eq!(perf.lines.len(), 1, "the one line the alert raised on");
+        let line = &perf.lines[0];
+        let model = &perf.models[line.model.expect("the threshold's model") as usize];
+        assert_eq!(
+            serde_json::json!({
+                "uuid": detail.uuid,
+                "status": detail.status,
+                "limit": detail.limit,
+                "created": i64::from(detail.created),
+                "modified": i64::from(detail.modified),
+                "value": detail.value,
+                "baseline": detail.baseline,
+                "lower_limit": detail.lower_limit,
+                "upper_limit": detail.upper_limit,
+                "report": detail.report.uuid,
+                "report_start": i64::from(detail.report.start_time),
+                "hash": detail.report.hash,
+                "branch": perf.branches[line.branch as usize].uuid,
+                "testbed": perf.testbeds[line.testbed as usize].uuid,
+                "benchmark": perf.benchmarks[line.benchmark as usize].uuid,
+                "variant": perf.variants[line.variant as usize].uuid,
+                "measure": perf.measures[line.measure as usize].uuid,
+                "metric": line.metric,
+                "threshold": model.threshold,
+                "model": model.uuid,
+            }),
+            serde_json::json!({
+                "uuid": alert.uuid,
+                "status": AlertStatus::Active,
+                "limit": alert.limit,
+                "created": at("2024-02-25T00:00:00Z").timestamp_millis(),
+                "modified": alert.modified.timestamp_millis(),
+                "value": alert.value.0,
+                "baseline": alert.boundary.baseline.map(|baseline| baseline.0),
+                "lower_limit": alert.boundary.lower_limit.map(|limit| limit.0),
+                "upper_limit": alert.boundary.upper_limit.map(|limit| limit.0),
+                "report": late.uuid,
+                "report_start": late.start_time.timestamp_millis(),
+                "hash": "1000000000000000000000000000000000000005",
+                "branch": late.branch.uuid,
+                "testbed": late.testbed.uuid,
+                "benchmark": alert.benchmark.uuid,
+                "variant": alert.variant.uuid,
+                "measure": alert.threshold.measure.uuid,
+                "metric": "value",
+                "threshold": alert.threshold.uuid,
+                "model": alert.threshold.model.as_ref().expect("a model").uuid,
+            }),
+        );
+    }
+}
+
+// Kills: a history that does not end at the alert's report, that starts other than
+// four weeks before the report, that reads another testbed, and that misses or
+// misplaces the alerting point or its limits.
+#[tokio::test]
+async fn console_alert_draws_four_weeks_ending_at_its_report() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let Seeded {
+        fixture,
+        early,
+        late,
+        ..
+    } = seeded(&server, "history").await;
+    let early_alert = raised(&early, "alpha", r#"{"size":10}"#, "latency", false);
+    let late_alert = raised(&late, "alpha", r#"{"size":10}"#, "latency", false);
+    let window = |detail: &JsonConsoleAlertDetail| {
+        let window = detail.perf.window;
+        (
+            i64::from(window.start_time),
+            i64::from(window.end_time),
+            window.clamped,
+        )
+    };
+    let x = |detail: &JsonConsoleAlertDetail| {
+        detail
+            .perf
+            .points
+            .x
+            .iter()
+            .copied()
+            .map(i64::from)
+            .collect::<Vec<_>>()
+    };
+
+    let detail = console_alert(&server, &fixture, early_alert.uuid).await;
+    assert_eq!(
+        window(&detail),
+        (
+            at("2024-01-18T00:00:00Z").timestamp_millis(),
+            early.end_time.timestamp_millis(),
+            false
+        )
+    );
+    assert_eq!(
+        x(&detail),
+        millis_of(&[
+            "2024-01-20T00:00:00Z",
+            "2024-02-01T00:00:00Z",
+            "2024-02-10T00:00:00Z",
+            "2024-02-15T00:00:00Z",
+        ]),
+        "the head's runs on the testbed up to the alert's report"
+    );
+
+    let detail = console_alert(&server, &fixture, late_alert.uuid).await;
+    assert_eq!(
+        window(&detail),
+        (
+            at("2024-01-28T00:00:00Z").timestamp_millis(),
+            late.end_time.timestamp_millis(),
+            false
+        )
+    );
+    assert_eq!(
+        x(&detail),
+        millis_of(&[
+            "2024-02-01T00:00:00Z",
+            "2024-02-10T00:00:00Z",
+            "2024-02-15T00:00:00Z",
+            "2024-02-25T00:00:00Z",
+        ])
+    );
+    let perf = &detail.perf;
+    let branch = &perf.branches[perf.lines[0].branch as usize];
+    assert_eq!(branch.head, late.branch.head.uuid);
+    let series = &perf.lines[0].series;
+    assert_eq!(
+        series
+            .alerts
+            .iter()
+            .map(|point| (point.index, point.uuid, point.status))
+            .collect::<Vec<_>>(),
+        vec![
+            (2, early_alert.uuid, AlertStatus::Active),
+            (3, late_alert.uuid, AlertStatus::Active),
+        ]
+    );
+    let at_alert = |column: Option<&Vec<Option<f64>>>| column.and_then(|column| column[3]);
+    assert_eq!(
+        (
+            series.y[3],
+            at_alert(series.baseline.as_ref()),
+            at_alert(series.upper.as_ref())
+        ),
+        (Some(detail.value), detail.baseline, detail.upper_limit)
+    );
+}
+
+// Kills: a history read on the branch's current head rather than the head the alert's
+// report ran on, once the branch has a new head with runs inside the window.
+#[tokio::test]
+async fn console_alert_reads_its_reports_head() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let Seeded { fixture, late, .. } = seeded(&server, "head").await;
+    let alert = raised(&late, "alpha", r#"{"size":10}"#, "latency", false);
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{}/branches/main", fixture.slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .json(&serde_json::json!({ "start_point": { "reset": true } }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert!(resp.status().is_success(), "reset main: {}", resp.status());
+    let on_new_head = post(
+        &server,
+        &fixture,
+        Post::main(
+            "2024-02-20T00:00:00Z",
+            "1000000000000000000000000000000000000006",
+            STEADY,
+        ),
+    )
+    .await;
+    assert_ne!(on_new_head.branch.head.uuid, late.branch.head.uuid);
+
+    let detail = console_alert(&server, &fixture, alert.uuid).await;
+
+    let perf = &detail.perf;
+    assert_eq!(
+        perf.branches[perf.lines[0].branch as usize].head,
+        late.branch.head.uuid
+    );
+    assert_eq!(
+        perf.points
+            .x
+            .iter()
+            .copied()
+            .map(i64::from)
+            .collect::<Vec<_>>(),
+        millis_of(&[
+            "2024-02-01T00:00:00Z",
+            "2024-02-10T00:00:00Z",
+            "2024-02-15T00:00:00Z",
+            "2024-02-25T00:00:00Z",
+        ]),
+        "the new head's run is not the report's history"
+    );
+    assert_eq!(
+        perf.lines[0]
+            .series
+            .alerts
+            .iter()
+            .map(|point| (point.index, point.uuid))
+            .collect::<Vec<_>>()
+            .last(),
+        Some(&(3, alert.uuid))
+    );
+    // The reset silences the old head's alerts.
+    assert_eq!(detail.status, AlertStatus::Silenced);
+}
+
+// Kills: a history that draws a run ending with the alert's report but taken after
+// it, which the report's own history leaves out, or that leaves out one taken before
+// it or the report itself.
+#[tokio::test]
+async fn console_alert_ends_with_its_report() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "ends").await;
+    let mut steady = Vec::new();
+    for (time, hash) in [
+        (
+            "2024-02-01T00:00:00Z",
+            "9000000000000000000000000000000000000001",
+        ),
+        (
+            "2024-02-05T00:00:00Z",
+            "9000000000000000000000000000000000000002",
+        ),
+        (
+            "2024-02-10T00:00:00Z",
+            "9000000000000000000000000000000000000003",
+        ),
+    ] {
+        steady.push(post(&server, &fixture, Post::main(time, hash, STEADY)).await);
+    }
+    let alerting = post(
+        &server,
+        &fixture,
+        Post::main(
+            "2024-02-10T00:00:00Z",
+            "9000000000000000000000000000000000000004",
+            SUBJECT,
+        ),
+    )
+    .await;
+    let taken_after = post(
+        &server,
+        &fixture,
+        Post::main(
+            "2024-02-10T00:00:00Z",
+            "9000000000000000000000000000000000000005",
+            STEADY,
+        ),
+    )
+    .await;
+    assert_eq!(taken_after.end_time, alerting.end_time);
+    let alert = raised(&alerting, "alpha", r#"{"size":10}"#, "latency", false);
+
+    let detail = console_alert(&server, &fixture, alert.uuid).await;
+
+    let perf = &detail.perf;
+    assert_eq!(
+        perf.points
+            .report
+            .iter()
+            .map(|report| perf.reports[*report as usize].uuid)
+            .collect::<Vec<_>>(),
+        steady
+            .iter()
+            .chain([&alerting])
+            .map(|report| report.uuid)
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(
+        perf.lines[0]
+            .series
+            .alerts
+            .iter()
+            .map(|point| (point.index, point.uuid))
+            .collect::<Vec<_>>(),
+        vec![(3, alert.uuid)]
+    );
+}
+
+// Kills: a line that follows the threshold a plot would (the oldest that alerted)
+// rather than the one that raised this alert, and a line drawn with the benchmark's
+// other variants or the measure's other metric names.
+#[tokio::test]
+async fn console_alert_follows_the_threshold_that_raised_it() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "follows").await;
+    // The bare threshold is the older and the looser; both alert on the last run.
+    let both = serde_json::json!({ "models": [
+        {
+            "measure": "latency",
+            "metric": "value",
+            "model": { "test": "percentage", "upper_boundary": 0.5 },
+        },
+        {
+            "parameters": [{ "size": 10 }],
+            "measure": "latency",
+            "metric": "value",
+            "model": { "test": "percentage", "upper_boundary": 0.25 },
+        },
+    ]});
+    let run = |latency: f64| {
+        serde_json::json!({
+            "alpha": [
+                {
+                    "parameters": { "size": 10 },
+                    "measures": { "latency": { "value": latency, "p99": latency } },
+                },
+                {
+                    "parameters": { "size": 10, "mode": "fast" },
+                    "measures": { "latency": { "value": 200.0 } },
+                },
+            ],
+        })
+        .to_string()
+    };
+    let mut last = None;
+    for (time, hash, latency) in [
+        (
+            "2024-02-01T00:00:00Z",
+            "7000000000000000000000000000000000000001",
+            200.0,
+        ),
+        (
+            "2024-02-10T00:00:00Z",
+            "7000000000000000000000000000000000000002",
+            200.0,
+        ),
+        (
+            "2024-02-20T00:00:00Z",
+            "7000000000000000000000000000000000000003",
+            400.0,
+        ),
+    ] {
+        last = Some(
+            post(
+                &server,
+                &fixture,
+                Post {
+                    iterations: vec![run(latency)],
+                    thresholds: both.clone(),
+                    ..Post::main(time, hash, STEADY)
+                },
+            )
+            .await,
+        );
+    }
+    let last = last.expect("a report");
+    let filtered = raised(&last, "alpha", r#"{"size":10}"#, "latency", true);
+    let bare = raised(&last, "alpha", r#"{"size":10}"#, "latency", false);
+
+    for (alert, upper_limit, upper_boundary) in [(filtered, 250.0, 0.25), (bare, 300.0, 0.5)] {
+        let detail = console_alert(&server, &fixture, alert.uuid).await;
+        let perf = &detail.perf;
+        assert_eq!(
+            perf.lines.len(),
+            1,
+            "only the alert's variant and metric name"
+        );
+        let line = &perf.lines[0];
+        let model = &perf.models[line.model.expect("the threshold's model") as usize];
+        assert_eq!(
+            (model.threshold, model.upper_boundary.map(f64::from)),
+            (alert.threshold.uuid, Some(upper_boundary))
+        );
+        assert_eq!(
+            (
+                detail.upper_limit,
+                line.series
+                    .upper
+                    .as_ref()
+                    .and_then(|upper| upper.last().copied().flatten())
+            ),
+            (Some(upper_limit), Some(upper_limit))
+        );
+        assert_eq!(
+            line.series
+                .alerts
+                .iter()
+                .map(|point| point.uuid)
+                .collect::<Vec<_>>(),
+            vec![alert.uuid],
+            "the other threshold's alert on the point is not this line's"
+        );
+    }
+}
+
+// Kills: a dismissed alert answered as active, a change time read from when it was
+// raised, and a history whose alerting point keeps its old status.
+#[tokio::test]
+async fn console_alert_dismissed_answers_with_its_status() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let Seeded { fixture, late, .. } = seeded(&server, "dismissed").await;
+    let alert = raised(&late, "alpha", r#"{"size":10}"#, "latency", false);
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/console/projects/{}/alerts", fixture.slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .json(&serde_json::json!({ "status": "dismissed", "alerts": [alert.uuid] }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let updated: JsonUpdatedAlerts = resp.json().await.expect("Failed to parse the response");
+    assert_eq!(updated.changed, 1);
+
+    let detail = console_alert(&server, &fixture, alert.uuid).await;
+
+    assert_eq!(
+        (
+            detail.status,
+            i64::from(detail.created),
+            i64::from(detail.modified)
+        ),
+        (
+            AlertStatus::Dismissed,
+            at("2024-02-25T00:00:00Z").timestamp_millis(),
+            at(NOW).timestamp_millis()
+        )
+    );
+    let point = detail.perf.lines[0]
+        .series
+        .alerts
+        .iter()
+        .find(|point| point.uuid == alert.uuid)
+        .expect("the alerting point");
+    assert_eq!(point.status, AlertStatus::Dismissed);
+}
+
+// Kills: an alert found through another project or served without a login, a private
+// project's alert served to a reader without `view`, and a project key read on another
+// project.
+#[tokio::test]
+async fn console_alert_needs_a_reader_of_its_project() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let mine = fixture(&server, "alertmine").await;
+    let theirs = fixture(&server, "alerttheirs").await;
+    let outsider = server
+        .signup("Outsider", "consolealertoutsider@example.com")
+        .await;
+    let mut alerts = Vec::new();
+    for fixture in [&mine, &theirs] {
+        post(
+            &server,
+            fixture,
+            Post::main(
+                "2024-02-01T00:00:00Z",
+                "8000000000000000000000000000000000000001",
+                STEADY,
+            ),
+        )
+        .await;
+        let report = post(
+            &server,
+            fixture,
+            Post::main(
+                "2024-02-10T00:00:00Z",
+                "8000000000000000000000000000000000000002",
+                SUBJECT,
+            ),
+        )
+        .await;
+        alerts.push(raised(&report, "alpha", r#"{"size":10}"#, "latency", false).uuid);
+    }
+    let (mine_alert, theirs_alert) = (alerts[0], alerts[1]);
+
+    for alert in [theirs_alert, AlertUuid::new()] {
+        let (status, _) = try_console_alert(&server, &mine.slug, alert, Some(&mine.token)).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{alert}");
+    }
+    let (status, text) =
+        try_console_alert(&server, &theirs.slug, theirs_alert, Some(&theirs.token)).await;
+    assert_eq!(status, StatusCode::OK, "{text}");
+
+    let (status, _) = try_console_alert(&server, &mine.slug, mine_alert, None).await;
+    assert_eq!(
+        status,
+        StatusCode::UNAUTHORIZED,
+        "a public project still needs a login"
+    );
+    let (status, text) =
+        try_console_alert(&server, &mine.slug, mine_alert, Some(&outsider.token)).await;
+    assert_eq!(status, StatusCode::OK, "{text}");
+
+    set_visibility(&server, &mine, Visibility::Private);
+    for token in [None, Some(outsider.token.as_str())] {
+        let (status, _) = try_console_alert(&server, &mine.slug, mine_alert, token).await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+    }
+    let (status, text) =
+        try_console_alert(&server, &mine.slug, mine_alert, Some(&mine.token)).await;
+    assert_eq!(status, StatusCode::OK, "{text}");
+    let mine_key = project_key(&server, &mine).await;
+    let theirs_key = project_key(&server, &theirs).await;
+    let (status, text) = try_console_alert(&server, &mine.slug, mine_alert, Some(&mine_key)).await;
+    assert_eq!(status, StatusCode::OK, "{text}");
+    let (status, _) = try_console_alert(&server, &mine.slug, mine_alert, Some(&theirs_key)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
