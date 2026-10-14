@@ -86,7 +86,7 @@ describe("wide", () => {
 	// Kills an entry dropped or led to the wrong place, Profile, Keys, or
 	// Organizations left outside the new console,
 	// and Switch project offered where the crumb already is.
-	test("the avatar's menu leads to Profile, Keys, Organizations, and Help", async () => {
+	test("the avatar's menu leads to Profile, Keys, Connected Apps, Organizations, and Help", async () => {
 		await open(1280);
 		await avatar().click();
 
@@ -94,6 +94,7 @@ describe("wide", () => {
 		expect(items()).toEqual([
 			"Profile",
 			"Keys",
+			"Connected Apps",
 			"Organizations",
 			"Help",
 			"Sign out",
@@ -102,6 +103,7 @@ describe("wide", () => {
 			(item(name).element() as HTMLAnchorElement).getAttribute("href");
 		expect(href("Profile")).toBe("/next/console/users/muriel-bagge/settings");
 		expect(href("Keys")).toBe("/next/console/users/muriel-bagge/keys");
+		expect(href("Connected Apps")).toBe("/console/users/muriel-bagge/apps");
 		expect(href("Organizations")).toBe("/next/console/organizations");
 		expect(href("Help")).toBe("/help/");
 	});
@@ -211,7 +213,7 @@ describe("phone", () => {
 		await expect.element(menu()).toBeVisible();
 
 		const entries = document.querySelectorAll('[role="menuitem"]');
-		expect(entries).toHaveLength(6);
+		expect(entries).toHaveLength(7);
 		for (const entry of entries) {
 			const box = entry.getBoundingClientRect();
 			expect(box.height, entry.textContent ?? "").toBeGreaterThanOrEqual(44);

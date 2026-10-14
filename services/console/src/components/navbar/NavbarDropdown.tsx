@@ -17,6 +17,9 @@ const NavbarDropdown = () => {
 				<a class="navbar-item" href={`/console/users/${user?.user?.slug}/keys`}>
 					Keys
 				</a>
+				<a class="navbar-item" href={`/console/users/${user?.user?.slug}/apps`}>
+					Connected Apps
+				</a>
 				<a
 					class="navbar-item"
 					href={`/console/users/${

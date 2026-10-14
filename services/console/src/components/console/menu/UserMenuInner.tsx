@@ -3,6 +3,7 @@ import type { JsonAuthUser } from "../../../types/bencher";
 
 enum Section {
 	KEYS = "keys",
+	APPS = "apps",
 	TOKENS = "tokens",
 	SETTINGS = "settings",
 	HELP = "help",
@@ -32,6 +33,9 @@ const UserMenu = (props: { user?: JsonAuthUser }) => {
 				</li>
 				<li>
 					<a href={path(Section.KEYS)}>API Keys</a>
+				</li>
+				<li>
+					<a href={path(Section.APPS)}>Connected Apps</a>
 				</li>
 				<Show when={showTokens()}>
 					<li>
