@@ -136,6 +136,15 @@ impl TestServer {
         Self::build(None, None, None, None, Some(rate_limiting), None).await
     }
 
+    /// Create a new test server with the given rate limits, in-memory request
+    /// limiters included, for tests of the request throttle itself.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_rate_limiting(
+        rate_limiting: bencher_schema::context::RateLimiting,
+    ) -> Self {
+        Self::build(None, None, None, None, Some(rate_limiting), None).await
+    }
+
     #[cfg(feature = "plus")]
     #[expect(
         clippy::expect_used,

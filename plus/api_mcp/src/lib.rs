@@ -10,10 +10,13 @@
 
 //! Bencher MCP (Model Context Protocol) Server - A Bencher Plus Feature
 //!
-//! Implements a stateless MCP server over the Streamable HTTP transport:
+//! Serves a stateless MCP server over the Streamable HTTP transport,
+//! with the protocol handled by the official MCP Rust SDK (`rmcp`):
 //! - POST `/mcp` - A single JSON-RPC 2.0 message per request
-//!   (`initialize`, `ping`, `tools/list`, `tools/call`)
 //!
+//! Protocol `2026-07-28` clients send self-contained requests
+//! (`server/discover`, per-request `_meta`); clients of `2025-03-26` through
+//! `2025-11-25` still open with `initialize`, which is answered statelessly.
 //! Every request is independent: responses are plain `application/json`,
 //! with no SSE stream and no `Mcp-Session-Id`.
 //! Server-initiated messages (sampling, elicitation) are not supported.
