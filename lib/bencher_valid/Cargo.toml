@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = []
 client = ["dep:regex-lite"]
-server = ["dep:hex", "dep:rand", "dep:regex", "dep:sha2"]
+server = ["dep:hex", "dep:rand", "dep:regex", "dep:sha2", "dep:subtle"]
 schema = ["dep:schemars", "ordered-float/schemars"]
 db = ["dep:diesel"]
 plus = ["chrono/clock"]
@@ -44,6 +44,7 @@ serde.workspace = true
 serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 slug.workspace = true
+subtle = { workspace = true, optional = true }
 thiserror.workspace = true
 typeshare.workspace = true
 url = { workspace = true, features = ["serde"] }

@@ -1,6 +1,6 @@
 use bencher_json::OAuthScopes;
 use bencher_schema::{
-    context::ApiContext,
+    context::{ApiContext, OAuthServer},
     model::user::{actor::ApiActor, auth::AuthUser, oauth::is_oauth_token},
 };
 use dropshot::{Body, ClientErrorStatusCode, HttpError, RequestContext};
@@ -53,7 +53,7 @@ impl McpPrincipal {
         } else {
             ApiActor::new(rqctx).await.map(Self::Actor)
         };
-        principal.map_err(with_invalid_token_challenge)
+        principal.map_err(|error| with_invalid_token_challenge(error, oauth, rqctx))
     }
 
     pub fn actor(&self) -> &ApiActor {
@@ -102,13 +102,24 @@ impl Challenge {
     }
 }
 
-fn with_invalid_token_challenge(mut error: HttpError) -> HttpError {
+/// Point a refused client at the metadata of the MCP server it reached, where it finds how to get
+/// a new access token.
+fn with_invalid_token_challenge(
+    mut error: HttpError,
+    oauth: &OAuthServer,
+    rqctx: &RequestContext<ApiContext>,
+) -> HttpError {
     if error.status_code == ClientErrorStatusCode::UNAUTHORIZED {
+        let resource_metadata = oauth
+            .resource_at(rqctx.request.headers(), rqctx.request.uri())
+            .metadata_url();
+        let challenge =
+            format!(r#"{INVALID_TOKEN_CHALLENGE}, resource_metadata="{resource_metadata}""#);
+        // A resource is a normalized URL, which is always a valid header value.
+        let challenge = HeaderValue::from_str(&challenge)
+            .unwrap_or_else(|_err| HeaderValue::from_static(INVALID_TOKEN_CHALLENGE));
         let headers = error.headers_mut();
-        headers.insert(
-            header::WWW_AUTHENTICATE,
-            HeaderValue::from_static(INVALID_TOKEN_CHALLENGE),
-        );
+        headers.insert(header::WWW_AUTHENTICATE, challenge);
         insert_challenge_cors_headers(headers);
     }
     error

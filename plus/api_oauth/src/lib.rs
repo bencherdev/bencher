@@ -13,6 +13,10 @@
 //! - GET `/oauth/authorize` - An app's request to connect, sent on to the console for consent
 //! - GET and POST `/v0/oauth/authorizations/{authorization}` - The consent page's view of a
 //!   request, and the user's answer to it
+//! - POST `/oauth/token` - An authorization code or refresh token exchanged for tokens
+//! - POST `/oauth/revoke` - A refresh token's grant, or an access token, revoked
+//! - GET `/.well-known/oauth-protected-resource` (also at `/mcp`) - The MCP server's metadata
+//! - GET `/.well-known/oauth-authorization-server` - The authorization server's metadata
 //!
 //! Every route answers `404` until `plus.oauth` is configured.
 //! These endpoints are `unpublished`: they belong to the OAuth protocol and the console's
@@ -20,7 +24,13 @@
 
 mod authorization;
 mod authorize;
+mod client;
+mod discovery;
+mod error;
+mod params;
 mod response;
+mod revoke;
+mod token;
 
 use bencher_endpoint::Registrar;
 use bencher_schema::{
@@ -28,6 +38,13 @@ use bencher_schema::{
     error::not_found_error,
 };
 use dropshot::{ApiDescription, ApiDescriptionRegisterError, HttpError};
+
+/// The authorization code flow's response type, the only one supported.
+const AUTHORIZATION_CODE_RESPONSE: &str = "code";
+/// The only PKCE code challenge method supported.
+const S256: &str = "S256";
+const AUTHORIZATION_CODE: &str = "authorization_code";
+const REFRESH_TOKEN: &str = "refresh_token";
 
 pub struct Api;
 
@@ -44,6 +61,16 @@ impl Registrar for Api {
         api_description.register(authorization::oauth_authorization_options)?;
         api_description.register(authorization::oauth_authorization_get)?;
         api_description.register(authorization::oauth_authorization_post)?;
+        api_description.register(token::oauth_token_options)?;
+        api_description.register(token::oauth_token_post)?;
+        api_description.register(revoke::oauth_revoke_options)?;
+        api_description.register(revoke::oauth_revoke_post)?;
+        api_description.register(discovery::protected_resource_options)?;
+        api_description.register(discovery::protected_resource_get)?;
+        api_description.register(discovery::mcp_protected_resource_options)?;
+        api_description.register(discovery::mcp_protected_resource_get)?;
+        api_description.register(discovery::authorization_server_options)?;
+        api_description.register(discovery::authorization_server_get)?;
         Ok(())
     }
 }

@@ -57,7 +57,37 @@ impl OAuthResource {
     pub fn mcp(issuer: &OAuthIssuer) -> Self {
         Self(format!("{issuer}/mcp"))
     }
+
+    /// Where this resource's metadata is published (RFC 9728):
+    /// the well-known path inserted between its origin and its path.
+    pub fn metadata_url(&self) -> String {
+        let (origin, path) = self.origin_and_path();
+        format!("{origin}{METADATA_PATH}{path}")
+    }
+
+    /// Whether a request whose `Host` header is `host` reached this resource's origin.
+    pub fn is_served_at(&self, host: &str) -> bool {
+        let (origin, _path) = self.origin_and_path();
+        origin
+            .split_once("://")
+            .is_some_and(|(scheme, _authority)| {
+                Url::parse(&format!("{scheme}://{host}"))
+                    .is_ok_and(|url| url.origin().ascii_serialization() == origin)
+            })
+    }
+
+    /// The origin holds the scheme's two slashes, so the path starts at the third, if any.
+    fn origin_and_path(&self) -> (&str, &str) {
+        let path = self
+            .0
+            .match_indices('/')
+            .nth(2)
+            .map_or(self.0.len(), |(index, _slash)| index);
+        self.0.split_at_checked(path).unwrap_or((&self.0, ""))
+    }
 }
+
+const METADATA_PATH: &str = "/.well-known/oauth-protected-resource";
 
 /// A URL split into its ASCII origin and its path without a trailing slash.
 struct Normalized {
@@ -186,6 +216,48 @@ mod tests {
         "https://api.example.com/bencher"
             .parse::<OAuthIssuer>()
             .unwrap_err();
+    }
+
+    #[test]
+    fn metadata_url_inserts_the_well_known_path_after_the_origin() {
+        for (resource, metadata_url) in [
+            (
+                "https://mcp.example.com/mcp",
+                "https://mcp.example.com/.well-known/oauth-protected-resource/mcp",
+            ),
+            (
+                "http://localhost:61016/api/mcp",
+                "http://localhost:61016/.well-known/oauth-protected-resource/api/mcp",
+            ),
+            (
+                "https://mcp.example.com",
+                "https://mcp.example.com/.well-known/oauth-protected-resource",
+            ),
+        ] {
+            let resource: OAuthResource = resource.parse().unwrap();
+            assert_eq!(resource.metadata_url(), metadata_url);
+        }
+    }
+
+    #[test]
+    fn served_at_the_host_of_its_origin() {
+        let resource: OAuthResource = "https://mcp.example.com/mcp".parse().unwrap();
+        for host in ["mcp.example.com", "MCP.Example.COM", "mcp.example.com:443"] {
+            assert!(resource.is_served_at(host), "{host}");
+        }
+        for host in [
+            "api.example.com",
+            "mcp.example.com:8443",
+            "mcp.example.com.evil.example",
+            "example.com",
+            "",
+        ] {
+            assert!(!resource.is_served_at(host), "{host}");
+        }
+
+        let resource: OAuthResource = "http://localhost:61016/mcp".parse().unwrap();
+        assert!(resource.is_served_at("localhost:61016"));
+        assert!(!resource.is_served_at("localhost"));
     }
 
     #[test]

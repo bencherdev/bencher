@@ -30,7 +30,8 @@
 //! the REST API (project key, user key, or token) by reusing the REST
 //! endpoint handlers; anonymous requests may read public projects.
 //! Once `plus.oauth` is configured, an OAuth access token is accepted too,
-//! acting as its user within the token's scopes.
+//! acting as its user within the token's scopes, and every refused credential
+//! is challenged with where to find how to get a new one.
 //!
 //! These endpoints are `unpublished`: they speak JSON-RPC, not REST,
 //! so they are intentionally excluded from the `OpenAPI` spec.
@@ -60,6 +61,7 @@ impl Registrar for Api {
         // `unpublished` so the OpenAPI spec is unaffected either way
         api_description.register(endpoint::mcp_options)?;
         api_description.register(endpoint::mcp_post)?;
+        api_description.register(challenge::openai_apps_challenge_options)?;
         api_description.register(challenge::openai_apps_challenge_get)?;
         Ok(())
     }

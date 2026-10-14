@@ -180,6 +180,7 @@ slug = "0.1"
 statrs = "0.18"
 strip-ansi-escapes = "0.2"
 strum = { version = "0.27", features = ["derive"] }
+subtle = "2.6"
 syn = "2.0"
 sync_wrapper = "1.0"
 tabled = "0.20"

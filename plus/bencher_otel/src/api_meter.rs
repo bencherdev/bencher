@@ -153,6 +153,9 @@ pub enum ApiCounter {
     OAuthAuthorizeFailed(OAuthAuthorizeFailureReason),
     OAuthConsent(OAuthConsentKind),
     OAuthConsentBlocked,
+    OAuthTokenIssue(OAuthGrantKind),
+    OAuthTokenFailed(OAuthTokenFailureReason),
+    OAuthRevoke(OAuthRevokeKind),
 
     RequestMax(IntervalKind, AuthorizationKind),
 
@@ -236,7 +239,8 @@ impl ApiCounter {
             | Self::RunnerRequestMax(_)
             | Self::OciTagsList
             | Self::OAuthAuthorize
-            | Self::OAuthAuthorizeFailed(_) => "{request}",
+            | Self::OAuthAuthorizeFailed(_)
+            | Self::OAuthTokenFailed(_) => "{request}",
 
             Self::UserSignup(_) => "{signup}",
             Self::UserLogin(_) => "{login}",
@@ -259,7 +263,11 @@ impl ApiCounter {
             | Self::OAuthConsentBlocked
             | Self::OrganizationPlanUpdateBlocked
             | Self::CallbackAttempt(_) => "{attempt}",
-            Self::UserCredentialMax(_) | Self::UserTokenCreate | Self::UserTokenRevoke => "{token}",
+            Self::UserCredentialMax(_)
+            | Self::UserTokenCreate
+            | Self::UserTokenRevoke
+            | Self::OAuthTokenIssue(_)
+            | Self::OAuthRevoke(_) => "{token}",
             Self::UserKeyCreate | Self::UserKeyRevoke | Self::RunnerKeyRotate => "{key}",
             Self::ProjectKeyAuthFailed(_)
             | Self::UserKeyAuthFailed(_)
@@ -346,6 +354,9 @@ impl ApiCounter {
             Self::OAuthAuthorizeFailed(_) => "oauth.authorize.failed",
             Self::OAuthConsent(_) => "oauth.consent",
             Self::OAuthConsentBlocked => "oauth.consent.blocked",
+            Self::OAuthTokenIssue(_) => "oauth.token.issue",
+            Self::OAuthTokenFailed(_) => "oauth.token.failed",
+            Self::OAuthRevoke(_) => "oauth.revoke",
 
             Self::RequestMax(_, _) => "request.max",
 
@@ -494,6 +505,13 @@ impl ApiCounter {
             Self::OAuthConsentBlocked => {
                 "Counts the number of OAuth authorization approvals blocked because the caller authenticated with a project API key"
             },
+            Self::OAuthTokenIssue(_) => {
+                "Counts the number of OAuth access tokens issued at the token endpoint"
+            },
+            Self::OAuthTokenFailed(_) => {
+                "Counts the number of OAuth token endpoint requests refused"
+            },
+            Self::OAuthRevoke(_) => "Counts the number of OAuth tokens presented for revocation",
 
             Self::RequestMax(_, _) => "Counts the number of request maximums reached",
 
@@ -659,6 +677,9 @@ impl ApiCounter {
             Self::OAuthTokenAuthFailed(reason) => vec![reason.into()],
             Self::OAuthAuthorizeFailed(reason) => vec![reason.into()],
             Self::OAuthConsent(kind) => vec![kind.into()],
+            Self::OAuthTokenIssue(kind) => vec![kind.into()],
+            Self::OAuthTokenFailed(reason) => vec![reason.into()],
+            Self::OAuthRevoke(kind) => vec![kind.into()],
             Self::RunnerJobUpdate(status_kind) => vec![status_kind.into()],
             Self::RunnerPause(reason_kind) => vec![reason_kind.into()],
             // Self-hosted specific metrics
@@ -1072,6 +1093,135 @@ impl From<OAuthConsentKind> for opentelemetry::KeyValue {
 }
 
 impl OAuthConsentKind {
+    const KEY: &str = "kind";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum OAuthGrantKind {
+    AuthorizationCode,
+    RefreshToken,
+}
+
+impl fmt::Display for OAuthGrantKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::AuthorizationCode => write!(f, "authorization_code"),
+            Self::RefreshToken => write!(f, "refresh_token"),
+        }
+    }
+}
+
+impl From<OAuthGrantKind> for opentelemetry::KeyValue {
+    fn from(kind: OAuthGrantKind) -> Self {
+        Self::new(OAuthGrantKind::KEY, kind.to_string())
+    }
+}
+
+impl OAuthGrantKind {
+    const KEY: &str = "grant_type";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum OAuthTokenFailureReason {
+    InvalidRequest,
+    InvalidClient,
+    UnsupportedGrantType,
+    InvalidScope,
+    InvalidTarget,
+    Throttled,
+    ServerError,
+    UnknownCode,
+    CodeReused,
+    CodeExpired,
+    OtherClient,
+    RedirectUri,
+    Resource,
+    CodeVerifier,
+    ResourceUnserved,
+    UnknownToken,
+    Vanished,
+    TokenKind,
+    TokenReused,
+    TokenExpired,
+    GrantRevoked,
+    GrantExpired,
+    Locked,
+    KeyRevoked,
+    KeyExpired,
+}
+
+impl fmt::Display for OAuthTokenFailureReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidRequest => write!(f, "invalid_request"),
+            Self::InvalidClient => write!(f, "invalid_client"),
+            Self::UnsupportedGrantType => write!(f, "unsupported_grant_type"),
+            Self::InvalidScope => write!(f, "invalid_scope"),
+            Self::InvalidTarget => write!(f, "invalid_target"),
+            Self::Throttled => write!(f, "throttled"),
+            Self::ServerError => write!(f, "server_error"),
+            Self::UnknownCode => write!(f, "unknown_code"),
+            Self::CodeReused => write!(f, "code_reused"),
+            Self::CodeExpired => write!(f, "code_expired"),
+            Self::OtherClient => write!(f, "other_client"),
+            Self::RedirectUri => write!(f, "redirect_uri"),
+            Self::Resource => write!(f, "resource"),
+            Self::CodeVerifier => write!(f, "code_verifier"),
+            Self::ResourceUnserved => write!(f, "resource_unserved"),
+            Self::UnknownToken => write!(f, "unknown_token"),
+            Self::Vanished => write!(f, "vanished"),
+            Self::TokenKind => write!(f, "token_kind"),
+            Self::TokenReused => write!(f, "token_reused"),
+            Self::TokenExpired => write!(f, "token_expired"),
+            Self::GrantRevoked => write!(f, "grant_revoked"),
+            Self::GrantExpired => write!(f, "grant_expired"),
+            Self::Locked => write!(f, "locked"),
+            Self::KeyRevoked => write!(f, "key_revoked"),
+            Self::KeyExpired => write!(f, "key_expired"),
+        }
+    }
+}
+
+impl From<OAuthTokenFailureReason> for opentelemetry::KeyValue {
+    fn from(reason: OAuthTokenFailureReason) -> Self {
+        Self::new(OAuthTokenFailureReason::KEY, reason.to_string())
+    }
+}
+
+impl OAuthTokenFailureReason {
+    const KEY: &str = "reason";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum OAuthRevokeKind {
+    /// A refresh token, which revoked its grant.
+    Grant,
+    /// An access token, which was deleted.
+    AccessToken,
+    /// A token of another client, or of a dead grant, which changed nothing.
+    Ignored,
+    /// A token this server does not know.
+    Unknown,
+}
+
+impl fmt::Display for OAuthRevokeKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Grant => write!(f, "grant"),
+            Self::AccessToken => write!(f, "access_token"),
+            Self::Ignored => write!(f, "ignored"),
+            Self::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
+impl From<OAuthRevokeKind> for opentelemetry::KeyValue {
+    fn from(kind: OAuthRevokeKind) -> Self {
+        Self::new(OAuthRevokeKind::KEY, kind.to_string())
+    }
+}
+
+impl OAuthRevokeKind {
     const KEY: &str = "kind";
 }
 

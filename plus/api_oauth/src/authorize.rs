@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap, net::IpAddr, str::FromStr};
+use std::net::IpAddr;
 
 use bencher_cimd::{OAuthClientError, Throttled};
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
@@ -15,10 +15,11 @@ use bencher_schema::{
 use dropshot::{Body, HttpError, RequestContext, endpoint};
 use http::Response;
 use slog::Logger;
-use url::{Url, form_urlencoded};
+use url::Url;
 
 use crate::{
-    oauth_server,
+    AUTHORIZATION_CODE_RESPONSE, S256, oauth_server,
+    params::Params,
     response::{client_redirect, consent_page, found},
 };
 
@@ -114,7 +115,8 @@ async fn authorize(
             .public_request(remote_ip)
             .map_err(|_err| Refusal::Page(AuthorizeError::Throttled))?;
     }
-    let params = Params::parse(query).ok_or(Refusal::Page(AuthorizeError::Repeated))?;
+    let params = Params::parse(query.as_bytes(), &PARAMETERS)
+        .ok_or(Refusal::Page(AuthorizeError::Repeated))?;
     let (Some(client_id), Some(redirect_uri)) = (params.get(CLIENT_ID), params.get(REDIRECT_URI))
     else {
         return Err(Refusal::Page(AuthorizeError::Missing));
@@ -155,11 +157,11 @@ async fn authorize(
         .map_err(|()| Refusal::client(oauth, &redirect_uri, None, AuthorizeError::State))?;
     let refuse = |error| Refusal::client(oauth, &redirect_uri, state.as_ref(), error);
     match params.get(RESPONSE_TYPE) {
-        Some("code") => {},
+        Some(AUTHORIZATION_CODE_RESPONSE) => {},
         Some(_) => return Err(refuse(AuthorizeError::ResponseType)),
         None => return Err(refuse(AuthorizeError::ResponseTypeMissing)),
     }
-    if params.get(CODE_CHALLENGE_METHOD) != Some("S256") {
+    if params.get(CODE_CHALLENGE_METHOD) != Some(S256) {
         return Err(refuse(AuthorizeError::CodeChallengeMethod));
     }
     let Ok(Some(code_challenge)) = params.value::<OAuthCodeChallenge>(CODE_CHALLENGE) else {
@@ -218,36 +220,6 @@ fn scopes(scope: Option<&str>) -> OAuthScopes {
         scopes
     } else {
         [OAuthScope::ProjectsRead].into_iter().collect()
-    }
-}
-
-/// The query of an authorization request, each parameter given at most once.
-struct Params<'q>(HashMap<Cow<'q, str>, Cow<'q, str>>);
-
-impl<'q> Params<'q> {
-    fn parse(query: &'q str) -> Option<Self> {
-        let mut params = HashMap::new();
-        for (name, value) in form_urlencoded::parse(query.as_bytes()) {
-            let known = PARAMETERS.contains(&name.as_ref());
-            if params.insert(name, value).is_some() && known {
-                return None;
-            }
-        }
-        Some(Self(params))
-    }
-
-    fn get(&self, name: &str) -> Option<&str> {
-        self.0.get(name).map(AsRef::as_ref)
-    }
-
-    /// The parameter, if it is given, unless it is invalid.
-    fn value<T>(&self, name: &str) -> Result<Option<T>, ()>
-    where
-        T: FromStr,
-    {
-        self.get(name)
-            .map(|value| value.parse::<T>().map_err(|_err| ()))
-            .transpose()
     }
 }
 
