@@ -1,0 +1,31 @@
+### `plus.oauth`
+
+Esta seção permite que clientes MCP, como o ChatGPT, o claude.ai e o Claude Code, [entrem no Bencher MCP](/pt/docs/how-to/mcp/) com OAuth.
+O servidor de API passa a ser o servidor de autorização OAuth deles, e os usuários aprovam cada aplicativo no Bencher Console em `console.url`.
+A seção inteira é opcional.
+Se não especificada, o OAuth fica desativado: seus endpoints retornam `404 Not Found`, e o Bencher MCP só aceita chaves de API e requisições anônimas.
+
+| Nome | Exemplo | Padrão | Obrigatório | Descrição |
+| :---: | :---: | :---: | :---: | :---: |
+| issuer | "https://api.bencher.example.com" | --- | Sim | A origem pública deste servidor de API, onde os aplicativos encontram seus endpoints OAuth: `https`, ou `http` apenas para um host de loopback como `localhost`. Deve ser uma origem sem caminho, ou o servidor não vai iniciar. **ATENÇÃO** Sem uma URL listada em `resources`, o recurso padrão segue este valor, então alterá-lo desconecta os aplicativos que entraram no recurso padrão anterior até que o valor anterior seja restaurado; com uma URL listada em `resources`, alterá-lo não desconecta nada enquanto a origem anterior ainda chegar a este servidor. |
+| resources | `["https://mcp.bencher.example.com/mcp", "https://api.bencher.example.com/mcp"]` | [`<issuer>/mcp`] | Não | As URLs do endpoint MCP deste servidor nas quais os aplicativos entram, a canônica primeiro: `https`, ou `http` apenas para um host de loopback. Um aplicativo que não indica nenhuma recebe a primeira. Remover uma URL desconecta os aplicativos que entraram nela até que ela volte a ser listada; sem nenhuma URL listada, o recurso padrão é servido. |
+| clients | [\{ ... \}] | --- | Não | Os únicos aplicativos que podem entrar. Remover um aplicativo o desconecta até que ele volte a ser listado. Os aplicativos listados são marcados como verificados na página de consentimento. Se não especificado, qualquer aplicativo pode pedir para entrar, desde que o servidor de API consiga buscar um documento de metadados de cliente válido a partir do seu ID de cliente. |
+| clients.id | "https://app.example.com/oauth/client.json" | --- | Sim | O ID de cliente do aplicativo: a URL `https` do seu documento de metadados de cliente. |
+| clients.metadata | \{ ... \} | --- | Não | O documento de metadados de cliente do aplicativo, usado em vez de buscá-lo em `id`, por exemplo em um servidor sem acesso à internet. Ele deve ser um documento de metadados de cliente válido cujo `client_id` seja igual a `id`, ou o servidor não vai iniciar. |
+| signing_key | `"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"` | --- | Não | Uma chave privada RSA de pelo menos 2048 bits, em formato PEM (PKCS #1 ou PKCS #8), que assina os ID tokens. Ela ativa o OpenID Connect: os escopos `openid`, `email` e `profile`, os ID tokens e os endpoints de UserInfo, JWKS e descoberta. Se não especificada, o OpenID Connect fica desativado. Se não for uma chave válida, o servidor não vai iniciar. **DEVE SER MUITO SEGURA!** Sempre que exibida, aparecerá ofuscada como `************`. |
+
+Uma string JSON não pode conter quebras de linha, então escreva cada quebra de linha de `signing_key` como `\n`.
+Por exemplo, gere uma chave e imprima-a como uma string JSON, sem gravá-la em um arquivo:
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | jq -Rs .
+```
+
+Para fazer a rotação da chave de assinatura, substitua-a. Isso não desconecta nenhum aplicativo.
+
+O servidor de API serve seus endpoints e metadados OAuth na raiz de `issuer`.
+Se um proxy reverso servir o servidor de API sob um prefixo de caminho, como `https://bencher.example.com/api`,
+defina `issuer` como a origem (`https://bencher.example.com`) e liste a URL completa do endpoint MCP em `resources` (`https://bencher.example.com/api/mcp`).
+O proxy deve então rotear `/oauth/`, `/.well-known/oauth-authorization-server` e `/.well-known/openid-configuration` na origem para os mesmos caminhos no servidor de API,
+e rotear o caminho de metadados de cada recurso, aqui `/.well-known/oauth-protected-resource/api/mcp`, para `/.well-known/oauth-protected-resource/mcp` no servidor de API.
+Com mais de um recurso, o proxy também deve repassar o cabeçalho `Host` sem alterações, pois o servidor de API escolhe por ele qual recurso anunciar.

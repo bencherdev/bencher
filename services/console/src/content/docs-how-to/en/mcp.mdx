@@ -3,11 +3,12 @@ title: "Bencher MCP"
 description: "Connect AI agents and assistants to Bencher with the hosted MCP server to query benchmark data and submit results"
 heading: "How to Use Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-07-18T07:00:00Z"
+modified: "2026-10-18T01:00:00Z"
 sortOrder: 11
 ---
 
 import McpClaudeCode from "../../../chunks/docs-how-to/mcp/mcp-claude-code.mdx";
+import McpClaudeCodeKey from "../../../chunks/docs-how-to/mcp/mcp-claude-code-key.mdx";
 import McpJson from "../../../chunks/docs-how-to/mcp/mcp-json.mdx";
 
 Bencher MCP is a hosted [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server.
@@ -24,9 +25,17 @@ Use Bencher MCP when the CLI is not installed or when your MCP client cannot run
 | Bencher Cloud | `https://mcp.bencher.dev/mcp` |
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
+Add the URL to your MCP client, and sign in with your Bencher account when the client asks.
+ChatGPT, claude.ai custom connectors, and Claude Code all sign in with OAuth.
 For example, connect from [Claude Code](https://docs.anthropic.com/en/docs/claude-code):
 
 <McpClaudeCode />
+
+When a tool needs you to sign in, run `/mcp` in Claude Code and follow the steps in your browser.
+
+To connect with an API key instead, send it in the `Authorization` header:
+
+<McpClaudeCodeKey />
 
 Or use a generic MCP client configuration:
 
@@ -34,19 +43,71 @@ Or use a generic MCP client configuration:
 
 ## Authentication
 
-Bencher MCP accepts the same `Authorization: Bearer` credentials as the Bencher API:
-a project API key (`bencher_run_*`) or a user API key (`bencher_user_*`).
-Public projects can be read without any credential.
-OAuth is not yet supported, so MCP clients that only support OAuth for remote servers cannot connect yet.
+### Sign In with OAuth
 
+MCP clients that support OAuth sign in with your Bencher account, so you never paste a key into them.
+The client opens Bencher in your browser, either when you connect or the first time a tool needs you to sign in.
+Bencher names the app by its web address and lists what the app is asking to do.
+Log in, or paste a user API key (`bencher_user_*`), then approve or deny.
+Bencher asks every time an app connects, and a project API key (`bencher_run_*`) cannot approve.
+
+An app stays connected for up to a year.
+An app approved with a user API key is disconnected as soon as that key is revoked or expires.
+OAuth access tokens are for Bencher MCP:
+the Bencher API refuses them with `401 Unauthorized`.
+
+On Bencher Self-Hosted, signing in works once the API server's [`plus.oauth`](/docs/reference/server-config/#plusoauth) section is configured.
+ChatGPT and claude.ai need to reach the server from the internet.
+Claude Code can also sign in to a server on your own network served over `https`, as long as the server can fetch Claude Code's client metadata document or has it configured in `plus.oauth.clients`.
+
+### Scopes
+
+You approve all of the scopes an app asks for, or none of them:
+
+| Scope | The app can |
+| :--- | :--- |
+| `projects:read` | View your projects and their results, including private projects |
+| `projects:write` | View, create, and change data in your projects, including private projects, such as reports, thresholds, and alerts, and submit runs that create projects or claim unclaimed organizations |
+| `openid` | Know which Bencher account you are signed in as |
+| `email` | View your email address and whether it is verified |
+| `profile` | View your name and username |
+
+The read tools (`list_*`, `view_*`, `query_perf`, and `perf_image`) need `projects:read`.
+Every other tool needs `projects:write`, which includes `projects:read`.
+An app that asks for neither gets `projects:read`.
+An app signed in without `projects:write` is asked to sign in again when it calls a tool that writes.
+The `openid`, `email`, and `profile` scopes are for OpenID Connect, and they are only available when the server has a `plus.oauth.signing_key`.
+An app acts as you: your role in each project still decides what it can see and change, and it never has server admin access.
+
+### Connected Apps
+
+To see the apps connected to your account, open **Connected Apps** from your account menu in the Bencher Console, or go to [`/console/users/apps`](/console/users/apps).
+Each app is listed by its web address, with what it can do, when it connected, when it last refreshed its access, and how you approved it.
+**Revoke** disconnects an app at once.
+
+### API Keys
+
+Bencher MCP also accepts the same `Authorization: Bearer` credentials as the Bencher API:
+a project API key (`bencher_run_*`) or a user API key (`bencher_user_*`).
 A project API key is scoped to a single project, so it is the best choice for most agents.
 A user API key can access all of the user's projects.
+A credential that is not valid is refused on every request, never treated as anonymous.
+
+### Without Signing In
+
+Public projects can be read without any credential.
+Anonymous requests share a rate limit per IP address, while signed-in requests count against your own limits.
+When the server has OAuth configured, Bencher MCP asks your client to sign in when an anonymous tool call needs it:
+
+- Reading a private project. A project that does not exist gets the same answer, so a mistyped project or ID, even within a public project, also asks you to sign in.
+- Calling a tool that writes, other than `submit_run` to an [`unclaimed` project](/docs/how-to/claim/#unclaimed-projects).
+- Going over the anonymous rate limit.
 
 ## Tools
 
 The tool surface mirrors what a project API key (`bencher_run_*`) can do:
-project-scoped reads and non-destructive writes.
-There are no delete or rename tools, and with a project API key alert updates are status only.
+project-scoped reads and writes, with no delete tools.
+There are no rename tools, and with a project API key alert updates are status only.
 Most tools take a `project` argument that accepts either a project slug or UUID.
 
 | Tool | Purpose |

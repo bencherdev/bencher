@@ -1,0 +1,31 @@
+### `plus.oauth`
+
+このセクションを設定すると、ChatGPT、claude.ai、Claude Code などの MCP クライアントが OAuth で [Bencher MCP にサインイン](/ja/docs/how-to/mcp/)できるようになります。
+API サーバーがそれらの OAuth 認可サーバーとなり、ユーザーは `console.url` の Bencher Console で各アプリを承認します。
+このセクション全体は任意です。
+指定しない場合、OAuth は無効です: そのエンドポイントは `404 Not Found` を返し、Bencher MCP は API キーと匿名のリクエストのみを受け付けます。
+
+| 名前 | 例 | デフォルト | 必須 | 説明 |
+| :---: | :---: | :---: | :---: | :---: |
+| issuer | "https://api.bencher.example.com" | --- | はい | この API サーバーの公開オリジンで、アプリはここで OAuth エンドポイントを見つけます: `https`、または `localhost` などのループバックホストに限り `http`。パスを含まないオリジンである必要があり、そうでない場合サーバーは起動しません。 **警告** `resources` に URL を記載しない場合はデフォルトのリソースがこの値に従うため、この値を変更すると元に戻すまで以前のデフォルトのリソースにサインインしたアプリが切断されますが、`resources` に URL を記載している場合は、以前のオリジンがまだこのサーバーに届く限り何も切断されません。 |
+| resources | `["https://mcp.bencher.example.com/mcp", "https://api.bencher.example.com/mcp"]` | [`<issuer>/mcp`] | いいえ | アプリがサインインする、このサーバーの MCP エンドポイントの URL で、正規の URL を先頭にします: `https`、またはループバックホストに限り `http`。どれも指定しないアプリには先頭の URL が使われます。URL を削除すると、再び一覧に加えるまで、その URL にサインインしたアプリは切断されますが、URL が 1 つも残っていない場合はデフォルトのリソースが提供されます。 |
+| clients | [\{ ... \}] | --- | いいえ | サインインを許可するアプリの一覧です。アプリを削除すると、再び一覧に加えるまでそのアプリは切断されます。一覧のアプリは同意ページで確認済みとして表示されます。指定しない場合、API サーバーがクライアント ID から有効なクライアントメタデータドキュメントを取得できる限り、どのアプリもサインインを求めることができます。 |
+| clients.id | "https://app.example.com/oauth/client.json" | --- | はい | アプリのクライアント ID: そのクライアントメタデータドキュメントの `https` URL です。 |
+| clients.metadata | \{ ... \} | --- | いいえ | アプリのクライアントメタデータドキュメントで、`id` から取得する代わりに使用されます。たとえばインターネットにアクセスできないサーバーで使います。これは `client_id` が `id` と一致する有効なクライアントメタデータドキュメントである必要があり、そうでない場合サーバーは起動しません。 |
+| signing_key | `"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"` | --- | いいえ | ID トークンに署名する、2048 ビット以上の RSA 秘密鍵です（PEM 形式、PKCS #1 または PKCS #8）。これにより OpenID Connect が有効になります: `openid`、`email`、`profile` のスコープ、ID トークン、そして UserInfo、JWKS、ディスカバリーのエンドポイントです。指定しない場合、OpenID Connect は無効です。有効な鍵でない場合、サーバーは起動しません。 **非常に安全であるべきです！** ログに記録されるとき、それは `************` と表示されます。 |
+
+JSON 文字列には改行を含められないため、`signing_key` の各改行は `\n` と記述します。
+たとえば、ファイルに書き出さずに鍵を生成し、JSON 文字列として出力します:
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | jq -Rs .
+```
+
+署名鍵をローテーションするには、置き換えます。これによって切断されるアプリはありません。
+
+API サーバーは OAuth のエンドポイントとメタデータを `issuer` のルートで提供します。
+リバースプロキシが `https://bencher.example.com/api` のようなパスプレフィックスの下で API サーバーを提供する場合は、
+`issuer` をオリジン（`https://bencher.example.com`）に設定し、MCP エンドポイントの完全な URL を `resources` に記載します（`https://bencher.example.com/api/mcp`）。
+その場合、プロキシはオリジンの `/oauth/`、`/.well-known/oauth-authorization-server`、`/.well-known/openid-configuration` を API サーバーの同じパスにルーティングし、
+各リソースのメタデータパス（ここでは `/.well-known/oauth-protected-resource/api/mcp`）を API サーバーの `/.well-known/oauth-protected-resource/mcp` にルーティングする必要があります。
+リソースが複数ある場合、API サーバーは `Host` ヘッダーをもとに提示するリソースを選ぶため、プロキシはこのヘッダーも変更せずに渡す必要があります。
