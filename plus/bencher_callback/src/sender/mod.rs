@@ -1,31 +1,22 @@
-use std::{
-    error::Error,
-    io, iter,
-    net::{IpAddr, SocketAddr},
-    sync::Arc,
-    time::Duration,
-};
+use std::{net::IpAddr, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
+use bencher_egress::{EgressBlock, EgressClient, EgressError, EgressTimeouts};
 use http::{HeaderMap, StatusCode};
-use reqwest::{
-    dns::{Addrs, Name, Resolve, Resolving},
-    redirect,
-};
-use url::{Host, Url};
+use url::Url;
 
 mod credential;
-mod policy;
 mod rate_limit;
 
+pub use bencher_egress::{AddressClass, error_chain};
 pub use credential::{CallbackCredential, CallbackHost};
-pub use policy::AddressClass;
 pub use rate_limit::RateLimit;
 
-/// The whole attempt, from the host lookup to the response head.
-const TIMEOUT: Duration = Duration::from_secs(10);
-/// The lookup, the TCP connect, and the TLS handshake, with the connect split across the host's addresses.
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+/// The whole attempt ends at the response head, since the body is never read.
+const TIMEOUTS: EgressTimeouts = EgressTimeouts {
+    connect: Duration::from_secs(5),
+    total: Duration::from_secs(10),
+};
 
 /// Sends one attempt of a callback. A connection error never carries the URL.
 #[async_trait]
@@ -132,9 +123,7 @@ pub enum CallbackFailure {
 
 /// The production sender: `https` to public addresses only, one request per attempt.
 pub struct CallbackClient {
-    /// The HTTP client, or why it failed to build.
-    http: Result<reqwest::Client, Arc<reqwest::Error>>,
-    policy: Policy,
+    egress: EgressClient,
 }
 
 impl CallbackAttempt {
@@ -161,17 +150,11 @@ impl CallbackAttempt {
         }
     }
 
-    fn failed(error: reqwest::Error) -> Self {
-        // reqwest keeps the resolver's error in the source chain, where it also finds its own timeouts.
-        let block = iter::successors(error.source(), |&cause| cause.source())
-            .find_map(|cause| cause.downcast_ref::<CallbackBlock>())
-            .copied();
-        if let Some(block) = block {
-            Self::Blocked(block)
-        } else if error.is_timeout() {
-            Self::TimedOut
-        } else {
-            Self::Connection(Arc::new(error.without_url()))
+    fn failed(error: EgressError) -> Self {
+        match error {
+            EgressError::Blocked(block) => Self::Blocked(block.into()),
+            EgressError::TimedOut => Self::TimedOut,
+            EgressError::Connection(error) => Self::Connection(error),
         }
     }
 }
@@ -185,43 +168,27 @@ impl CallbackBlock {
     }
 }
 
-/// An error and every cause under it, which tell a missing name from a refused connection.
-pub fn error_chain(error: &dyn Error) -> String {
-    iter::successors(error.source(), |&cause| cause.source()).fold(
-        error.to_string(),
-        |mut chain, cause| {
-            chain.push_str(": ");
-            chain.push_str(&cause.to_string());
-            chain
-        },
-    )
+impl From<EgressBlock> for CallbackBlock {
+    fn from(block: EgressBlock) -> Self {
+        match block {
+            EgressBlock::NotHttps => Self::NotHttps,
+            EgressBlock::Address { address, class } => Self::Address { address, class },
+        }
+    }
 }
 
 impl CallbackClient {
     /// Builds the HTTP client now, at boot, which panics if the process has no rustls crypto provider installed.
     /// A client that fails to build, as on a host without CA certificates, makes every send a connection error.
     pub fn new() -> Self {
-        Self::with_policy(Policy::Public, Arc::new(SystemLookup))
-    }
-
-    fn with_policy(policy: Policy, lookup: Arc<dyn Lookup>) -> Self {
-        let http = reqwest::Client::builder()
-            .dns_resolver(VettingResolver { lookup, policy })
-            .no_proxy()
-            .redirect(redirect::Policy::none())
-            .retry(reqwest::retry::never())
-            .http1_only()
-            .pool_max_idle_per_host(0)
-            .connect_timeout(CONNECT_TIMEOUT)
-            .timeout(TIMEOUT)
-            .build()
-            .map_err(|error| Arc::new(error.without_url()));
-        Self { http, policy }
+        Self {
+            egress: EgressClient::new(TIMEOUTS),
+        }
     }
 
     /// Why the HTTP client failed to build, if it did.
     pub fn build_error(&self) -> Option<&reqwest::Error> {
-        self.http.as_ref().err().map(AsRef::as_ref)
+        self.egress.build_error()
     }
 }
 
@@ -235,110 +202,11 @@ impl Default for CallbackClient {
 impl CallbackSender for CallbackClient {
     async fn send(&self, request: &CallbackRequest) -> CallbackAttempt {
         let CallbackRequest { url, headers, body } = request;
-        if let Err(block) = self.policy.vet_url(url) {
-            return CallbackAttempt::Blocked(block);
-        }
-        let http = match &self.http {
-            Ok(http) => http,
-            Err(error) => return CallbackAttempt::Connection(Arc::clone(error)),
-        };
-        let response = http
-            .post(url.clone())
-            .headers(headers.clone())
-            .body(body.clone())
-            .send()
-            .await;
-        match response {
+        match self.egress.post(url, headers.clone(), body.clone()).await {
             // The body is never read: dropping the response closes the connection.
             Ok(response) => CallbackAttempt::answered(response.status(), response.headers()),
             Err(error) => CallbackAttempt::failed(error),
         }
-    }
-}
-
-/// Where a callback may go.
-#[derive(Clone, Copy)]
-enum Policy {
-    /// `https` to public addresses.
-    Public,
-    /// Also plain `http` and loopback addresses, so a test can deliver to a local listener.
-    #[cfg(test)]
-    Loopback,
-}
-
-impl Policy {
-    fn vet_url(self, url: &Url) -> Result<(), CallbackBlock> {
-        let scheme_allowed = match self {
-            Self::Public => url.scheme() == "https",
-            #[cfg(test)]
-            Self::Loopback => matches!(url.scheme(), "https" | "http"),
-        };
-        if !scheme_allowed {
-            return Err(CallbackBlock::NotHttps);
-        }
-        match url.host() {
-            // The connector dials an IP literal without a lookup, so it is vetted here.
-            Some(Host::Ipv4(address)) => self.vet(IpAddr::V4(address)),
-            Some(Host::Ipv6(address)) => self.vet(IpAddr::V6(address)),
-            // A name is vetted as it resolves, and a URL without a host never connects.
-            Some(Host::Domain(_)) | None => Ok(()),
-        }
-    }
-
-    fn vet(self, address: IpAddr) -> Result<(), CallbackBlock> {
-        let refused = match self {
-            Self::Public => AddressClass::of(address),
-            #[cfg(test)]
-            Self::Loopback => {
-                AddressClass::of(address).filter(|class| *class != AddressClass::Loopback)
-            },
-        };
-        refused.map_or(Ok(()), |class| {
-            Err(CallbackBlock::Address { address, class })
-        })
-    }
-}
-
-/// Looks up the addresses of a host name.
-#[async_trait]
-trait Lookup: Send + Sync {
-    async fn lookup(&self, host: &str) -> io::Result<Vec<IpAddr>>;
-}
-
-struct SystemLookup;
-
-#[async_trait]
-impl Lookup for SystemLookup {
-    async fn lookup(&self, host: &str) -> io::Result<Vec<IpAddr>> {
-        let addresses = tokio::net::lookup_host((host, 0)).await?;
-        Ok(addresses.map(|address| address.ip()).collect())
-    }
-}
-
-/// The client's only resolver. It looks a name up once, vets every address in the answer,
-/// and hands the connector exactly those addresses, so the address vetted is the address dialed.
-struct VettingResolver {
-    lookup: Arc<dyn Lookup>,
-    policy: Policy,
-}
-
-impl Resolve for VettingResolver {
-    fn resolve(&self, name: Name) -> Resolving {
-        let lookup = Arc::clone(&self.lookup);
-        let policy = self.policy;
-        Box::pin(async move {
-            let addresses = lookup.lookup(name.as_str()).await?;
-            addresses
-                .iter()
-                .try_for_each(|address| policy.vet(*address))?;
-            // Port 0 takes the URL's port, or the scheme's default.
-            let addrs: Addrs = Box::new(
-                addresses
-                    .into_iter()
-                    .map(|address| SocketAddr::new(address, 0)),
-            );
-            Ok(addrs)
-        })
     }
 }
 
@@ -353,8 +221,8 @@ mod tests {
     };
 
     use async_trait::async_trait;
+    use bencher_egress::{EgressClient, EgressPolicy as Policy, Lookup};
     use http::{HeaderMap, HeaderValue, StatusCode, header};
-    use reqwest::dns::Resolve as _;
     use tokio::{
         io::{AsyncReadExt as _, AsyncWriteExt as _},
         net::{TcpListener, TcpStream},
@@ -365,7 +233,7 @@ mod tests {
 
     use super::{
         AddressClass, CallbackAttempt, CallbackBlock, CallbackClient, CallbackRequest,
-        CallbackSender, Lookup, Policy, RateLimit, SystemLookup, VettingResolver, error_chain,
+        CallbackSender, RateLimit, TIMEOUTS, error_chain,
     };
 
     /// Answers each lookup with the next scripted answer, and records every name it is asked.
@@ -401,7 +269,9 @@ mod tests {
 
     fn client(policy: Policy, lookup: Arc<ScriptedLookup>) -> CallbackClient {
         install_crypto_provider();
-        CallbackClient::with_policy(policy, lookup)
+        CallbackClient {
+            egress: EgressClient::with_lookup(policy, TIMEOUTS, lookup),
+        }
     }
 
     fn install_crypto_provider() {
@@ -782,8 +652,7 @@ mod tests {
     #[tokio::test]
     async fn an_unavailable_client_sends_nothing() {
         let unavailable = |policy| CallbackClient {
-            http: Err(Arc::new(build_error())),
-            policy,
+            egress: EgressClient::unavailable(policy, build_error()),
         };
         let build_chain = error_chain(&build_error());
         let (listener, address) = listener().await;
@@ -1044,49 +913,6 @@ mod tests {
             );
             assert_eq!(lookup.names(), ["callback.example"]);
         }
-    }
-
-    // Port 0 tells the connector to use the URL's port, or the scheme's default.
-    #[tokio::test]
-    async fn the_resolver_hands_over_exactly_the_vetted_addresses() {
-        let answer = vec![ip("93.184.216.34"), ip("2606:4700:4700::1111")];
-        let resolver = VettingResolver {
-            lookup: ScriptedLookup::new(vec![answer.clone()]),
-            policy: Policy::Public,
-        };
-
-        let addresses: Vec<SocketAddr> = resolver
-            .resolve("callback.example".parse().unwrap())
-            .await
-            .unwrap()
-            .collect();
-
-        let expected: Vec<SocketAddr> = answer
-            .into_iter()
-            .map(|address| SocketAddr::new(address, 0))
-            .collect();
-        assert_eq!(addresses, expected);
-    }
-
-    #[tokio::test]
-    async fn the_system_lookup_resolves_a_name() {
-        let addresses = SystemLookup.lookup("localhost").await.unwrap();
-
-        assert!(!addresses.is_empty(), "localhost has an address");
-        assert!(addresses.iter().all(IpAddr::is_loopback), "{addresses:?}");
-    }
-
-    #[test]
-    fn uses_no_proxy() {
-        install_crypto_provider();
-        // A client with reqwest's defaults shows its proxies, so this test cannot pass vacuously.
-        let defaults = reqwest::Client::builder().build().unwrap();
-        assert!(format!("{defaults:?}").contains("proxies"), "{defaults:?}");
-
-        let client = client(Policy::Public, ScriptedLookup::new(Vec::new()));
-        let http = client.http.as_ref().unwrap();
-
-        assert!(!format!("{http:?}").contains("proxies"), "{http:?}");
     }
 
     #[tokio::test]

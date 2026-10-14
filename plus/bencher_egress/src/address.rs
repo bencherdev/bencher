@@ -1,6 +1,6 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-/// Why an address is not on the public internet, so a callback never goes to it.
+/// Why an address is not on the public internet, so no request goes to it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, derive_more::Display)]
 pub enum AddressClass {
     /// `0.0.0.0/8` and `::`
