@@ -1,4 +1,4 @@
-import swagger from "../../../api/openapi.json";
+import { info } from "../../../api/openapi.json";
 
 export const BENCHER_SITE_URL = "https://bencher.dev";
 export const BENCHER_CLOUD_API_URL: string = "https://api.bencher.dev";
@@ -21,8 +21,7 @@ export const BENCHER_WORDMARK: string = "/wordmark.svg";
 export const BENCHER_WORDMARK_LIGHT: string = "/wordmark-light.svg";
 export const BENCHER_WORDMARK_DARK: string = "/wordmark-dark.svg";
 
-export const BENCHER_VERSION = `${swagger?.info?.version}`;
+export const BENCHER_VERSION: string = info.version;
 
-export const SWAGGER = swagger;
 export const BENCHER_CLOUD = "Bencher Cloud";
 export const BENCHER_SELF_HOSTED = "Bencher Self-Hosted";
