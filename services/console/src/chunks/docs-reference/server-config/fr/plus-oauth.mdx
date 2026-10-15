@@ -1,0 +1,31 @@
+### `plus.oauth`
+
+Cette section permet aux clients MCP, comme ChatGPT, claude.ai et Claude Code, de [se connecter à Bencher MCP](/fr/docs/how-to/mcp/) avec OAuth.
+Le serveur d'API devient leur serveur d'autorisation OAuth, et les utilisateurs approuvent chaque application sur la Bencher Console à l'adresse `console.url`.
+La totalité de la section est optionnelle.
+Si elle n'est pas spécifiée, alors OAuth est désactivé : ses endpoints renvoient `404 Not Found`, et Bencher MCP n'accepte que les clés d'API et les requêtes anonymes.
+
+| Nom | Exemple | Par défaut | Requis | Description |
+| :---: | :---: | :---: | :---: | :---: |
+| issuer | "https://api.bencher.example.com" | --- | Oui | L'origine publique de ce serveur d'API, où les applications trouvent ses endpoints OAuth : `https`, ou `http` uniquement pour un hôte de loopback comme `localhost`. Ce doit être une origine sans chemin, sinon le serveur ne démarre pas. **AVERTISSEMENT** Modifier cette valeur déconnecte toutes les applications. |
+| resources | `["https://mcp.bencher.example.com/mcp", "https://api.bencher.example.com/mcp"]` | [`<issuer>/mcp`] | Non | Les URL de l'endpoint MCP de ce serveur auxquelles les applications se connectent, la canonique en premier : `https`, ou `http` uniquement pour un hôte de loopback. Une application qui n'en indique aucune reçoit la première. Retirer une URL déconnecte les applications qui s'y sont connectées. |
+| clients | [\{ ... \}] | --- | Non | Les seules applications autorisées à se connecter. Les applications listées sont marquées comme vérifiées sur la page de consentement. Si cette valeur n'est pas spécifiée, toute application peut demander à se connecter, à condition que le serveur d'API puisse récupérer un document de métadonnées client valide depuis son ID client. |
+| clients.id | "https://app.example.com/oauth/client.json" | --- | Oui | L'ID client de l'application : l'URL `https` de son document de métadonnées client. |
+| clients.metadata | \{ ... \} | --- | Non | Le document de métadonnées client de l'application, utilisé au lieu de le récupérer depuis `id`, par exemple sur un serveur sans accès à internet. Ce doit être un document de métadonnées client valide dont le `client_id` est égal à `id`, sinon le serveur ne démarre pas. |
+| signing_key | `"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"` | --- | Non | Une clé privée RSA d'au moins 2048 bits, au format PEM (PKCS #1 ou PKCS #8), qui signe les ID tokens. Elle active OpenID Connect : les scopes `openid`, `email` et `profile`, les ID tokens et les endpoints UserInfo, JWKS et de découverte. Si elle n'est pas spécifiée, OpenID Connect est désactivé. Si ce n'est pas une clé valide, le serveur ne démarre pas. **CELA DOIT ÊTRE TRÈS SÉCURISÉ !** Chaque fois qu'elle est journalisée, elle apparaîtra masquée sous la forme `************`. |
+
+Une chaîne JSON ne peut pas contenir de saut de ligne, écrivez donc chaque saut de ligne de `signing_key` sous la forme `\n`.
+Par exemple, générez une clé et affichez-la sous forme de chaîne JSON, sans l'écrire dans un fichier :
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | jq -Rs .
+```
+
+Pour faire tourner la clé de signature, remplacez-la. Cela ne déconnecte aucune application.
+
+Le serveur d'API sert ses endpoints et métadonnées OAuth à la racine de `issuer`.
+Si un proxy inverse sert le serveur d'API sous un préfixe de chemin, comme `https://bencher.example.com/api`,
+définissez `issuer` sur l'origine (`https://bencher.example.com`) et listez l'URL complète de l'endpoint MCP dans `resources` (`https://bencher.example.com/api/mcp`).
+Le proxy doit alors router `/oauth/`, `/.well-known/oauth-authorization-server` et `/.well-known/openid-configuration` à l'origine vers les mêmes chemins du serveur d'API,
+et router le chemin de métadonnées de chaque ressource, ici `/.well-known/oauth-protected-resource/api/mcp`, vers `/.well-known/oauth-protected-resource/mcp` sur le serveur d'API.
+Avec plus d'une ressource, le proxy doit aussi transmettre l'en-tête `Host` sans le modifier, car le serveur d'API choisit d'après lui la ressource à annoncer.

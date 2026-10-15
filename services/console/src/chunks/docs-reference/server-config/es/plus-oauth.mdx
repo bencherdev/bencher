@@ -1,0 +1,31 @@
+### `plus.oauth`
+
+Esta sección permite que los clientes MCP, como ChatGPT, claude.ai y Claude Code, [inicien sesión en Bencher MCP](/es/docs/how-to/mcp/) con OAuth.
+El servidor de API se convierte en su servidor de autorización OAuth, y los usuarios aprueban cada aplicación en la Bencher Console en `console.url`.
+Toda la sección es opcional.
+Si no se especifica, OAuth está desactivado: sus endpoints devuelven `404 Not Found`, y Bencher MCP solo acepta claves de API y solicitudes anónimas.
+
+| Nombre | Ejemplo | Predeterminado | Requerido | Descripción |
+| :---: | :---: | :---: | :---: | :---: |
+| issuer | "https://api.bencher.example.com" | --- | Sí | El origen público de este servidor de API, donde las aplicaciones encuentran sus endpoints de OAuth: `https`, o `http` solo para un host de loopback como `localhost`. Debe ser un origen sin ruta, o el servidor no se iniciará. **ADVERTENCIA** Cambiar este valor desconecta todas las aplicaciones. |
+| resources | `["https://mcp.bencher.example.com/mcp", "https://api.bencher.example.com/mcp"]` | [`<issuer>/mcp`] | No | Las URL del endpoint MCP de este servidor en las que las aplicaciones inician sesión, la canónica primero: `https`, o `http` solo para un host de loopback. Una aplicación que no indica ninguna recibe la primera. Quitar una URL desconecta las aplicaciones que iniciaron sesión en ella. |
+| clients | [\{ ... \}] | --- | No | Las únicas aplicaciones que pueden iniciar sesión. Las aplicaciones de la lista se marcan como verificadas en la página de consentimiento. Si no se especifica, cualquier aplicación puede pedir iniciar sesión, siempre que el servidor de API pueda obtener un documento de metadatos de cliente válido desde su ID de cliente. |
+| clients.id | "https://app.example.com/oauth/client.json" | --- | Sí | El ID de cliente de la aplicación: la URL `https` de su documento de metadatos de cliente. |
+| clients.metadata | \{ ... \} | --- | No | El documento de metadatos de cliente de la aplicación, que se usa en lugar de obtenerlo desde `id`, por ejemplo en un servidor sin acceso a internet. Debe ser un documento de metadatos de cliente válido cuyo `client_id` sea igual a `id`, o el servidor no se iniciará. |
+| signing_key | `"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"` | --- | No | Una clave privada RSA de al menos 2048 bits, en formato PEM (PKCS #1 o PKCS #8), que firma los ID tokens. Activa OpenID Connect: los scopes `openid`, `email` y `profile`, los ID tokens y los endpoints de UserInfo, JWKS y descubrimiento. Si no se especifica, OpenID Connect está desactivado. Si no es una clave válida, el servidor no se iniciará. **¡DEBE SER MUY SEGURA!** Cuando se registra, aparecerá de manera ofuscada como `************`. |
+
+Una cadena JSON no puede contener saltos de línea, así que escriba cada salto de línea de `signing_key` como `\n`.
+Por ejemplo, genere una clave e imprímala como una cadena JSON, sin escribirla en un archivo:
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | jq -Rs .
+```
+
+Para rotar la clave de firma, reemplácela. Esto no desconecta ninguna aplicación.
+
+El servidor de API sirve sus endpoints y metadatos de OAuth en la raíz de `issuer`.
+Si un proxy inverso sirve el servidor de API bajo un prefijo de ruta, como `https://bencher.example.com/api`,
+configure `issuer` con el origen (`https://bencher.example.com`) e incluya la URL completa del endpoint MCP en `resources` (`https://bencher.example.com/api/mcp`).
+El proxy debe entonces enrutar `/oauth/`, `/.well-known/oauth-authorization-server` y `/.well-known/openid-configuration` en el origen a las mismas rutas del servidor de API,
+y enrutar la ruta de metadatos de cada recurso, aquí `/.well-known/oauth-protected-resource/api/mcp`, a `/.well-known/oauth-protected-resource/mcp` en el servidor de API.
+Con más de un recurso, el proxy también debe pasar el encabezado `Host` sin cambios, ya que el servidor de API elige por él qué recurso anunciar.

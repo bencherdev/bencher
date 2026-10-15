@@ -1,0 +1,31 @@
+### `plus.oauth`
+
+이 섹션을 구성하면 ChatGPT, claude.ai, Claude Code 같은 MCP 클라이언트가 OAuth로 [Bencher MCP에 로그인](/ko/docs/how-to/mcp/)할 수 있습니다.
+API 서버가 이들의 OAuth 인가 서버가 되며, 사용자는 `console.url`의 Bencher Console에서 각 앱을 승인합니다.
+전체 섹션은 선택 사항입니다.
+지정하지 않으면 OAuth는 꺼집니다: OAuth 엔드포인트는 `404 Not Found`를 반환하고, Bencher MCP는 API 키와 익명 요청만 허용합니다.
+
+| 이름 | 예시 | 기본값 | 필수 | 설명 |
+| :---: | :---: | :---: | :---: | :---: |
+| issuer | "https://api.bencher.example.com" | --- | 예 | 앱이 OAuth 엔드포인트를 찾는 이 API 서버의 공개 오리진입니다: `https`, 또는 `localhost` 같은 루프백 호스트에 한해 `http`. 경로가 없는 오리진이어야 하며, 그렇지 않으면 서버가 시작되지 않습니다. **경고** 이 값을 변경하면 모든 앱의 연결이 끊어집니다. |
+| resources | `["https://mcp.bencher.example.com/mcp", "https://api.bencher.example.com/mcp"]` | [`<issuer>/mcp`] | 아니오 | 앱이 로그인하는 이 서버 MCP 엔드포인트의 URL이며, 정식 URL이 맨 앞에 옵니다: `https`, 또는 루프백 호스트에 한해 `http`. 아무것도 지정하지 않는 앱은 첫 번째 URL을 받습니다. URL을 제거하면 그 URL에 로그인한 앱의 연결이 끊어집니다. |
+| clients | [\{ ... \}] | --- | 아니오 | 로그인할 수 있는 유일한 앱 목록입니다. 목록의 앱은 동의 페이지에서 인증됨으로 표시됩니다. 지정하지 않으면 API 서버가 클라이언트 ID에서 유효한 클라이언트 메타데이터 문서를 가져올 수 있는 한, 어떤 앱이든 로그인을 요청할 수 있습니다. |
+| clients.id | "https://app.example.com/oauth/client.json" | --- | 예 | 앱의 클라이언트 ID: 해당 클라이언트 메타데이터 문서의 `https` URL입니다. |
+| clients.metadata | \{ ... \} | --- | 아니오 | `id`에서 가져오는 대신 사용하는 앱의 클라이언트 메타데이터 문서로, 예를 들어 인터넷에 접근할 수 없는 서버에서 사용합니다. `client_id`가 `id`와 같은 유효한 클라이언트 메타데이터 문서여야 하며, 그렇지 않으면 서버가 시작되지 않습니다. |
+| signing_key | `"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"` | --- | 아니오 | ID 토큰에 서명하는 2048비트 이상의 RSA 개인 키입니다(PEM 형식, PKCS #1 또는 PKCS #8). 이 키는 OpenID Connect를 켭니다: `openid`, `email`, `profile` 스코프, ID 토큰, 그리고 UserInfo, JWKS, 디스커버리 엔드포인트입니다. 지정하지 않으면 OpenID Connect는 꺼집니다. 유효한 키가 아니면 서버가 시작되지 않습니다. **매우 안전해야 합니다!** 로그에 기록될 때 `************`로 가려집니다. |
+
+JSON 문자열에는 줄바꿈을 넣을 수 없으므로, `signing_key`의 각 줄바꿈은 `\n`으로 작성하세요.
+예를 들어 파일에 쓰지 않고 키를 생성하여 JSON 문자열로 출력합니다:
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | jq -Rs .
+```
+
+서명 키를 교체하려면 새 키로 바꾸세요. 이렇게 해도 연결이 끊어지는 앱은 없습니다.
+
+API 서버는 OAuth 엔드포인트와 메타데이터를 `issuer`의 루트에서 제공합니다.
+리버스 프록시가 `https://bencher.example.com/api` 같은 경로 접두사 아래에서 API 서버를 제공한다면,
+`issuer`를 오리진(`https://bencher.example.com`)으로 설정하고 MCP 엔드포인트의 전체 URL을 `resources`에 나열하세요(`https://bencher.example.com/api/mcp`).
+그러면 프록시는 오리진의 `/oauth/`, `/.well-known/oauth-authorization-server`, `/.well-known/openid-configuration`을 API 서버의 같은 경로로 라우팅하고,
+각 리소스의 메타데이터 경로(여기서는 `/.well-known/oauth-protected-resource/api/mcp`)를 API 서버의 `/.well-known/oauth-protected-resource/mcp`로 라우팅해야 합니다.
+리소스가 둘 이상이면 API 서버가 `Host` 헤더로 알릴 리소스를 고르므로, 프록시는 이 헤더도 변경 없이 전달해야 합니다.

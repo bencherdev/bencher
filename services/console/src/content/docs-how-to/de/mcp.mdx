@@ -3,11 +3,12 @@ title: "Bencher MCP"
 description: "Verbinden Sie KI-Agenten und Assistenten über den gehosteten MCP-Server mit Bencher, um Benchmark-Daten abzufragen und Ergebnisse zu übermitteln"
 heading: "So verwenden Sie Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-07-18T07:00:00Z"
+modified: "2026-10-14T20:00:00Z"
 sortOrder: 11
 ---
 
 import McpClaudeCode from "../../../chunks/docs-how-to/mcp/mcp-claude-code.mdx";
+import McpClaudeCodeKey from "../../../chunks/docs-how-to/mcp/mcp-claude-code-key.mdx";
 import McpJson from "../../../chunks/docs-how-to/mcp/mcp-json.mdx";
 
 Bencher MCP ist ein gehosteter [Model Context Protocol](https://modelcontextprotocol.io) (MCP) Server.
@@ -24,9 +25,17 @@ Verwenden Sie Bencher MCP, wenn die CLI nicht installiert ist oder Ihr MCP-Clien
 | Bencher Cloud | `https://mcp.bencher.dev/mcp` |
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
+Fügen Sie die URL zu Ihrem MCP-Client hinzu und melden Sie sich mit Ihrem Bencher-Konto an, wenn der Client Sie dazu auffordert.
+ChatGPT, benutzerdefinierte Konnektoren in claude.ai und Claude Code melden sich alle über OAuth an.
 Verbinden Sie sich zum Beispiel über [Claude Code](https://docs.anthropic.com/en/docs/claude-code):
 
 <McpClaudeCode />
+
+Wenn ein Tool eine Anmeldung erfordert, führen Sie in Claude Code `/mcp` aus und folgen Sie den Schritten in Ihrem Browser.
+
+Um sich stattdessen mit einem API-Schlüssel zu verbinden, senden Sie ihn im `Authorization` Header:
+
+<McpClaudeCodeKey />
 
 Oder verwenden Sie eine generische MCP-Client-Konfiguration:
 
@@ -34,19 +43,71 @@ Oder verwenden Sie eine generische MCP-Client-Konfiguration:
 
 ## Authentifizierung
 
-Bencher MCP akzeptiert dieselben `Authorization: Bearer` Anmeldedaten wie die Bencher API:
-einen Projekt-API-Schlüssel (`bencher_run_*`) oder einen Benutzer-API-Schlüssel (`bencher_user_*`).
-Öffentliche Projekte können ohne Anmeldedaten gelesen werden.
-OAuth wird noch nicht unterstützt, daher können MCP-Clients, die für Remote-Server ausschließlich OAuth unterstützen, sich noch nicht verbinden.
+### Mit OAuth anmelden
 
+MCP-Clients, die OAuth unterstützen, melden sich mit Ihrem Bencher-Konto an, sodass Sie nie einen Schlüssel in sie einfügen.
+Der Client öffnet Bencher in Ihrem Browser, entweder wenn Sie sich verbinden oder wenn ein Tool zum ersten Mal eine Anmeldung erfordert.
+Bencher nennt die App bei ihrer Webadresse und listet auf, was die App tun möchte.
+Melden Sie sich an oder fügen Sie einen Benutzer-API-Schlüssel (`bencher_user_*`) ein, und genehmigen oder verweigern Sie dann die Anfrage.
+Bencher fragt jedes Mal nach, wenn sich eine App verbindet, und ein Projekt-API-Schlüssel (`bencher_run_*`) kann nicht genehmigen.
+
+Eine App bleibt bis zu einem Jahr verbunden.
+Eine mit einem Benutzer-API-Schlüssel genehmigte App wird getrennt, sobald dieser Schlüssel widerrufen wird oder abläuft.
+OAuth-Zugriffstokens sind für Bencher MCP gedacht:
+Die Bencher API lehnt sie mit `401 Unauthorized` ab.
+
+Bei Bencher Self-Hosted funktioniert die Anmeldung, sobald der Abschnitt [`plus.oauth`](/de/docs/reference/server-config/#plusoauth) des API-Servers konfiguriert ist.
+ChatGPT und claude.ai müssen den Server aus dem Internet erreichen können.
+Claude Code kann sich auch bei einem über `https` erreichbaren Server in Ihrem eigenen Netzwerk anmelden, solange der Server das Client-Metadatendokument von Claude Code abrufen kann oder es in `plus.oauth.clients` konfiguriert ist.
+
+### Scopes
+
+Sie genehmigen entweder alle Scopes, die eine App anfordert, oder keinen davon:
+
+| Scope | Die App kann |
+| :--- | :--- |
+| `projects:read` | Ihre Projekte und deren Ergebnisse ansehen, einschließlich privater Projekte |
+| `projects:write` | Daten in Ihren Projekten ansehen, erstellen und ändern, einschließlich privater Projekte, etwa Reports, Thresholds und Alerts |
+| `openid` | Wissen, mit welchem Bencher-Konto Sie angemeldet sind |
+| `email` | Ihre E-Mail-Adresse ansehen und ob sie verifiziert ist |
+| `profile` | Ihren Namen und Benutzernamen ansehen |
+
+Die Lese-Tools (`list_*`, `view_*`, `query_perf` und `perf_image`) benötigen `projects:read`.
+Alle anderen Tools benötigen `projects:write`, das `projects:read` einschließt.
+Eine App, die keinen der beiden anfordert, erhält `projects:read`.
+Eine App, die ohne `projects:write` angemeldet ist, wird erneut zur Anmeldung aufgefordert, wenn sie ein Tool aufruft, das schreibt.
+Die Scopes `openid`, `email` und `profile` sind für OpenID Connect gedacht und nur verfügbar, wenn der Server einen `plus.oauth.signing_key` hat.
+Eine App handelt in Ihrem Namen: Ihre Rolle in jedem Projekt entscheidet weiterhin, was sie sehen und ändern kann, und sie hat nie Server-Administratorrechte.
+
+### Verbundene Apps
+
+Um die mit Ihrem Konto verbundenen Apps zu sehen, öffnen Sie **Connected Apps** in Ihrem Kontomenü in der Bencher Console oder rufen Sie [`/console/users/apps`](/console/users/apps) auf.
+Jede App wird mit ihrer Webadresse aufgeführt, zusammen mit dem, was sie tun kann, wann sie sich verbunden hat, wann sie ihren Zugriff zuletzt erneuert hat und wie Sie sie genehmigt haben.
+**Revoke** trennt eine App sofort.
+
+### API-Schlüssel
+
+Bencher MCP akzeptiert auch dieselben `Authorization: Bearer` Anmeldedaten wie die Bencher API:
+einen Projekt-API-Schlüssel (`bencher_run_*`) oder einen Benutzer-API-Schlüssel (`bencher_user_*`).
 Ein Projekt-API-Schlüssel ist auf ein einzelnes Projekt beschränkt und damit die beste Wahl für die meisten Agenten.
 Ein Benutzer-API-Schlüssel kann auf alle Projekte des Benutzers zugreifen.
+Ungültige Anmeldedaten werden bei jeder Anfrage abgelehnt und nie als anonym behandelt.
+
+### Ohne Anmeldung
+
+Öffentliche Projekte können ohne Anmeldedaten gelesen werden.
+Anonyme Anfragen teilen sich ein Rate Limit pro IP-Adresse, während angemeldete Anfragen auf Ihre eigenen Limits angerechnet werden.
+Wenn auf dem Server OAuth konfiguriert ist, fordert Bencher MCP Ihren Client zur Anmeldung auf, wenn ein anonymer Tool-Aufruf dies erfordert:
+
+- Beim Lesen eines privaten Projekts. Ein Projekt, das nicht existiert, erhält dieselbe Antwort, daher führt auch ein falsch geschriebenes Projekt oder eine falsch geschriebene ID, selbst innerhalb eines öffentlichen Projekts, zu einer Aufforderung zur Anmeldung.
+- Beim Aufruf eines Tools, das schreibt, außer `submit_run` für ein [`unclaimed` Projekt](/de/docs/how-to/claim/#unclaimed-projekte).
+- Beim Überschreiten des anonymen Rate Limits.
 
 ## Tools
 
 Die verfügbaren Tools spiegeln wider, was ein Projekt-API-Schlüssel (`bencher_run_*`) darf:
-projektbezogene Lesezugriffe und nicht-destruktive Schreibzugriffe.
-Es gibt keine Tools zum Löschen oder Umbenennen, und mit einem Projekt-API-Schlüssel sind Alert-Aktualisierungen auf den Status beschränkt.
+projektbezogene Lese- und Schreibzugriffe, ohne Tools zum Löschen.
+Es gibt keine Tools zum Umbenennen, und mit einem Projekt-API-Schlüssel sind Alert-Aktualisierungen auf den Status beschränkt.
 Die meisten Tools nehmen ein `project` Argument entgegen, das entweder einen Projekt-Slug oder eine UUID akzeptiert.
 
 | Tool | Zweck |

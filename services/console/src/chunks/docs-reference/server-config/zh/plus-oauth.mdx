@@ -1,0 +1,31 @@
+### `plus.oauth`
+
+此部分让 ChatGPT、claude.ai 和 Claude Code 等 MCP 客户端可以通过 OAuth [登录 Bencher MCP](/zh/docs/how-to/mcp/)。
+API 服务器会成为它们的 OAuth 授权服务器，用户在位于 `console.url` 的 Bencher Console 上批准每个应用。
+整个部分是可选的。
+如果未指定，则 OAuth 处于关闭状态：其端点返回 `404 Not Found`，并且 Bencher MCP 只接受 API 密钥和匿名请求。
+
+| 名称 | 示例 | 默认值 | 必需 | 描述 |
+| :---: | :---: | :---: | :---: | :---: |
+| issuer | "https://api.bencher.example.com" | --- | 是 | 此 API 服务器的公开源（origin），应用在这里找到它的 OAuth 端点：`https`，或仅对 `localhost` 等回环主机使用 `http`。它必须是不带路径的源，否则服务器将无法启动。**警告** 更改此值会断开所有应用的连接。 |
+| resources | `["https://mcp.bencher.example.com/mcp", "https://api.bencher.example.com/mcp"]` | [`<issuer>/mcp`] | 否 | 应用登录的、此服务器 MCP 端点的 URL，规范 URL 排在第一位：`https`，或仅对回环主机使用 `http`。未指明任何 URL 的应用会得到第一个。移除某个 URL 会断开通过它登录的应用。 |
+| clients | [\{ ... \}] | --- | 否 | 唯一允许登录的应用。列出的应用会在授权同意页面上标记为已验证。如果未指定，只要 API 服务器能从应用的客户端 ID 获取有效的客户端元数据文档，任何应用都可以请求登录。 |
+| clients.id | "https://app.example.com/oauth/client.json" | --- | 是 | 应用的客户端 ID：其客户端元数据文档的 `https` URL。 |
+| clients.metadata | \{ ... \} | --- | 否 | 应用的客户端元数据文档，用于代替从 `id` 获取，例如在无法访问互联网的服务器上。它必须是 `client_id` 等于 `id` 的有效客户端元数据文档，否则服务器将无法启动。 |
+| signing_key | `"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"` | --- | 否 | 用于签署 ID 令牌的 RSA 私钥，至少 2048 位，PEM 格式（PKCS #1 或 PKCS #8）。它会开启 OpenID Connect：`openid`、`email` 和 `profile` 作用域、ID 令牌，以及 UserInfo、JWKS 和发现端点。如果未指定，则 OpenID Connect 处于关闭状态。如果它不是有效的密钥，服务器将无法启动。**它应非常安全！** 当记录时，它将以`************`的形式出现。 |
+
+JSON 字符串不能包含换行符，因此请将 `signing_key` 中的每个换行写作 `\n`。
+例如，生成一个密钥并将其输出为 JSON 字符串，而不写入文件：
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | jq -Rs .
+```
+
+要轮换签名密钥，替换它即可。这不会断开任何应用的连接。
+
+API 服务器在 `issuer` 的根路径下提供其 OAuth 端点和元数据。
+如果反向代理在路径前缀下提供 API 服务器，例如 `https://bencher.example.com/api`，
+请将 `issuer` 设置为源（`https://bencher.example.com`），并在 `resources` 中列出 MCP 端点的完整 URL（`https://bencher.example.com/api/mcp`）。
+此时，代理必须将源上的 `/oauth/`、`/.well-known/oauth-authorization-server` 和 `/.well-known/openid-configuration` 路由到 API 服务器上的相同路径，
+并将每个资源的元数据路径（此处为 `/.well-known/oauth-protected-resource/api/mcp`）路由到 API 服务器上的 `/.well-known/oauth-protected-resource/mcp`。
+当有多个资源时，代理还必须原样传递 `Host` 请求头，因为 API 服务器根据它选择要公布的资源。
