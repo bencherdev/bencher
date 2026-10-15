@@ -25,17 +25,7 @@ pub enum Command {
 
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Shell {
-                shell,
-                flag,
-                command,
-            } => write!(f, "{shell} {flag} {command}"),
-            Self::Exec { program, arguments } => {
-                let args = arguments.join(" ");
-                write!(f, "{program} {args}")
-            },
-        }
+        f.write_str(&self.to_args().join(" "))
     }
 }
 
@@ -82,7 +72,7 @@ impl Command {
         build_time: Option<BuildTime>,
     ) -> Result<CommandOutput, RunError> {
         let (output, duration) = self.run_inner(log).await?;
-        let build_command = build_time.map(|bt| bt.command(self.to_string(), duration));
+        let build_command = build_time.map(|bt| bt.command(self, duration));
         Ok(CommandOutput::new(build_command, output))
     }
 
