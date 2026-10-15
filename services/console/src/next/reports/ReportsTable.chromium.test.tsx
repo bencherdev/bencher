@@ -39,7 +39,6 @@ const drawn = () =>
 	[...document.querySelectorAll<HTMLElement>("tbody tr[aria-rowindex]")].map(
 		(row) => Number(row.getAttribute("aria-rowindex")),
 	);
-const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
 afterEach(() => {
 	dispose?.();
@@ -69,8 +68,6 @@ test("draws only the rows on screen and follows the scroll", async () => {
 		top: body.getBoundingClientRect().top + 300 * 40,
 		behavior: "instant",
 	});
-	await frame();
-	await frame();
 	await expect.poll(() => drawn().includes(302)).toBe(true);
 	expect(drawn()).not.toContain(2);
 	expect(drawn().length).toBeLessThan(40);
