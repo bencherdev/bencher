@@ -15802,6 +15802,15 @@
             "items": {
               "$ref": "#/components/schemas/OAuthResource"
             }
+          },
+          "signing_key": {
+            "nullable": true,
+            "description": "The RSA private key, in PEM format, that signs ID tokens. It enables the `openid`, `email`, and `profile` scopes.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Secret"
+              }
+            ]
           }
         },
         "required": [
@@ -20445,6 +20454,27 @@
             "type": "string",
             "enum": [
               "projects:write"
+            ]
+          },
+          {
+            "description": "Who the user is.",
+            "type": "string",
+            "enum": [
+              "openid"
+            ]
+          },
+          {
+            "description": "The user's email address.",
+            "type": "string",
+            "enum": [
+              "email"
+            ]
+          },
+          {
+            "description": "The user's name.",
+            "type": "string",
+            "enum": [
+              "profile"
             ]
           }
         ]

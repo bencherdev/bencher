@@ -15,7 +15,7 @@ use bencher_schema::{
 use dropshot::HttpError;
 use slog::Logger;
 
-use crate::CLIENT_TOKEN_TTL;
+use crate::{CLIENT_TOKEN_TTL, verify_email};
 
 pub mod github;
 pub mod google;
@@ -125,6 +125,9 @@ async fn handle_oauth_user(
         (query_user, AuthAction::Signup)
     };
 
+    // Both providers vouch only for an address they verified.
+    verify_email(context, &query_user, &email).await?;
+
     #[cfg(feature = "otel")]
     let auth_method = bencher_otel::AuthMethod::OAuth(provider.into());
 
@@ -208,7 +211,9 @@ impl From<OAuthProvider> for bencher_otel::OAuthProvider {
 #[cfg(test)]
 mod tests {
     use bencher_api_tests::TestServer;
-    use bencher_json::OAuthAuthorizationUuid;
+    use bencher_json::{Email, OAuthAuthorizationUuid};
+    use bencher_schema::{model::user::QueryUser, schema};
+    use diesel::{ExpressionMethods as _, RunQueryDsl as _};
 
     use super::{OAuthProvider, OAuthState, handle_oauth_user};
 
@@ -240,5 +245,32 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(user.authorization, Some(authorization));
+    }
+
+    // Kills a provider sign in that is not recorded as proof of the address, whether it signs a
+    // new user up or an existing one in.
+    #[tokio::test]
+    async fn provider_sign_in_verifies_the_email() {
+        let server = TestServer::new().await;
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+        let email: Email = "provider@example.com".parse().unwrap();
+        for provider in [OAuthProvider::GitHub, OAuthProvider::Google] {
+            diesel::update(schema::user::table)
+                .set(schema::user::email_verified.eq(None::<bencher_json::DateTime>))
+                .execute(&mut server.db_conn())
+                .unwrap();
+            handle_oauth_user(
+                &log,
+                server.context(),
+                OAuthState::new(None, None, None),
+                "Provider User".parse().unwrap(),
+                email.clone(),
+                provider,
+            )
+            .await
+            .unwrap();
+            let query_user = QueryUser::get_with_email(&mut server.db_conn(), &email).unwrap();
+            assert!(query_user.email_verified.is_some(), "{provider}");
+        }
     }
 }

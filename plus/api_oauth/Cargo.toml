@@ -20,6 +20,8 @@ plus = [
     "bencher_otel?/plus",
     "dep:bencher_schema",
     "bencher_schema/plus",
+    "dep:bencher_token",
+    "bencher_token/plus",
     "dep:diesel",
     "dep:dropshot",
     "dep:http",
@@ -38,6 +40,7 @@ bencher_endpoint = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"], optional = true }
 bencher_otel = { workspace = true, optional = true }
 bencher_schema = { workspace = true, optional = true }
+bencher_token = { workspace = true, optional = true }
 
 diesel = { workspace = true, optional = true }
 dropshot = { workspace = true, optional = true }
@@ -55,6 +58,7 @@ bencher_egress = { workspace = true, features = ["test-loopback"] }
 bencher_json = { workspace = true, features = ["server", "test-clock"] }
 diesel.workspace = true
 http.workspace = true
+jsonwebtoken.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-no-provider"] }
 rustls.workspace = true
 serde_json.workspace = true

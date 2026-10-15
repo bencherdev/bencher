@@ -681,7 +681,8 @@ async fn fetch_failures_answer_alike() {
         OAuthServer::with_egress(
             serde_json::from_value(json!({"issuer": OAUTH_ISSUER})).expect("Invalid config"),
             egress(Arc::clone(&lookup)),
-        ),
+        )
+        .expect("Invalid OAuth server"),
         None,
     )
     .await;
@@ -747,7 +748,11 @@ async fn anonymous_requests_are_limited_per_address() {
 async fn verified_only_when_answered_on_the_same_host() {
     let json: JsonOAuthServer =
         serde_json::from_value(json!({ "issuer": OAUTH_ISSUER })).expect("Invalid OAuth config");
-    let harness = Harness::with_oauth(OAuthServer::from(json), None).await;
+    let harness = Harness::with_oauth(
+        OAuthServer::try_from(json).expect("Invalid OAuth server"),
+        None,
+    )
+    .await;
     for (redirect_uri, verified) in [
         ("https://evil.example/cb", false),
         (
@@ -1957,7 +1962,11 @@ impl Harness {
     #[expect(clippy::expect_used, reason = "test helper")]
     async fn new() -> Self {
         let json: JsonOAuthServer = serde_json::from_value(config()).expect("Invalid OAuth config");
-        Self::with_oauth(OAuthServer::from(json), None).await
+        Self::with_oauth(
+            OAuthServer::try_from(json).expect("Invalid OAuth server"),
+            None,
+        )
+        .await
     }
 
     /// The public `limits` for each address, every request from the same one.
@@ -1971,8 +1980,9 @@ impl Harness {
         let oauth = if let Some(lookup) = lookup {
             OAuthServer::with_egress(json, egress(lookup))
         } else {
-            OAuthServer::from(json)
-        };
+            OAuthServer::try_from(json)
+        }
+        .expect("Invalid OAuth server");
         let rate_limiting: JsonRateLimiting =
             serde_json::from_value(json!({ "public": limits })).expect("Invalid rate limiting");
         let mut harness = Self::with_oauth(oauth, Some(RateLimiting::from(rate_limiting))).await;
@@ -1987,7 +1997,7 @@ impl Harness {
         let rate_limiting: JsonRateLimiting =
             serde_json::from_value(rate_limiting).expect("Invalid rate limiting");
         let mut harness = Self::with_oauth(
-            OAuthServer::from(json),
+            OAuthServer::try_from(json).expect("Invalid OAuth server"),
             Some(RateLimiting::from(rate_limiting)),
         )
         .await;

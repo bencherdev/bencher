@@ -10,7 +10,7 @@ use bencher_schema::{
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 
-use super::CLIENT_TOKEN_TTL;
+use super::{CLIENT_TOKEN_TTL, verify_email};
 
 #[endpoint {
     method = OPTIONS,
@@ -55,6 +55,8 @@ async fn post_inner(
         bencher_otel::AuthMethod::Email,
     )
     .await?;
+
+    verify_email(context, &query_user, email).await?;
 
     let token = context
         .token_key

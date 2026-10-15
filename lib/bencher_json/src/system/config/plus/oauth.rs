@@ -1,4 +1,4 @@
-use bencher_valid::{OAuthClientId, OAuthIssuer, OAuthResource, Sanitize};
+use bencher_valid::{OAuthClientId, OAuthIssuer, OAuthResource, Sanitize, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -21,6 +21,10 @@ pub struct JsonOAuthServer {
     /// Defaults to any client that publishes a valid metadata document.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub clients: Option<Vec<JsonOAuthServerClient>>,
+    /// The RSA private key, in PEM format, that signs ID tokens.
+    /// It enables the `openid`, `email`, and `profile` scopes.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signing_key: Option<Secret>,
 }
 
 /// A client that may sign in.
@@ -58,17 +62,20 @@ impl<'de> Deserialize<'de> for JsonOAuthServerClient {
 
 impl Sanitize for JsonOAuthServer {
     fn sanitize(&mut self) {
-        // Nothing here is secret yet; destructured so that a new field has to be considered.
+        // Destructured so that a new field has to be considered.
         let Self {
             issuer: _,
             resources: _,
             clients: _,
+            signing_key,
         } = self;
+        signing_key.sanitize();
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use bencher_valid::Sanitize as _;
     use serde_json::json;
 
     use super::JsonOAuthServer;
@@ -87,6 +94,22 @@ mod tests {
             "resources": ["http://mcp.example.com/mcp"]
         }))
         .unwrap_err();
+    }
+
+    // The server's configuration is served sanitized, so the key must not survive it.
+    #[test]
+    fn signing_key_is_sanitized() {
+        let mut config = serde_json::from_value::<JsonOAuthServer>(json!({
+            "issuer": "https://api.example.com",
+            "signing_key": "-----BEGIN PRIVATE KEY-----",
+        }))
+        .unwrap();
+        config.sanitize();
+        assert!(
+            !serde_json::to_string(&config)
+                .unwrap()
+                .contains("BEGIN PRIVATE KEY")
+        );
     }
 
     #[test]

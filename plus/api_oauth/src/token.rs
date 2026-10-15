@@ -1,6 +1,6 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post};
 use bencher_json::{
-    DateTime, OAuthCode, OAuthCodeHash, OAuthCodeVerifier, OAuthResource, OAuthScope, OAuthScopes,
+    DateTime, OAuthCode, OAuthCodeHash, OAuthCodeVerifier, OAuthResource, OAuthScopes,
     OAuthTokenHash,
 };
 use bencher_schema::{
@@ -24,9 +24,11 @@ use crate::{
     AUTHORIZATION_CODE, REFRESH_TOKEN,
     client::{CLIENT_CREDENTIALS, CLIENT_ID, authenticates_client},
     error::{GrantRefusal, InvalidRequest, TokenError, charge_user},
+    id_token::SignIn,
     oauth_server,
     params::Params,
     response::json,
+    supported_scopes,
 };
 
 const GRANT_TYPE: &str = "grant_type";
@@ -87,7 +89,7 @@ pub async fn oauth_token_post(
     )
     .await
     {
-        Ok(tokens) => json(&TokenResponse::new(&tokens, now)),
+        Ok(issued) => json(&TokenResponse::new(&issued, now)),
         Err(error) => error.charged(&rqctx).into_response(&rqctx.log, oauth),
     }
 }
@@ -98,7 +100,7 @@ async fn token(
     headers: &HeaderMap,
     body: &[u8],
     now: DateTime,
-) -> Result<OAuthTokens, TokenError> {
+) -> Result<Issued, TokenError> {
     let params =
         Params::parse(body, &PARAMETERS).ok_or(TokenError::Request(InvalidRequest::Repeated))?;
     if authenticates_client(&params, headers) {
@@ -106,12 +108,12 @@ async fn token(
     }
     match params.get(GRANT_TYPE) {
         Some(AUTHORIZATION_CODE) => {
-            let tokens = exchange(context, oauth, &params, now).await?;
+            let issued = exchange(context, oauth, &params, now).await?;
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthTokenIssue(
                 bencher_otel::OAuthGrantKind::AuthorizationCode,
             ));
-            Ok(tokens)
+            Ok(issued)
         },
         Some(REFRESH_TOKEN) => {
             let tokens = refresh(context, oauth, &params, now).await?;
@@ -119,7 +121,10 @@ async fn token(
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthTokenIssue(
                 bencher_otel::OAuthGrantKind::RefreshToken,
             ));
-            Ok(tokens)
+            Ok(Issued {
+                tokens,
+                id_token: None,
+            })
         },
         Some(_) => Err(TokenError::GrantType),
         None => Err(TokenError::Request(InvalidRequest::GrantType)),
@@ -131,7 +136,7 @@ async fn exchange(
     oauth: &OAuthServer,
     params: &Params<'_>,
     now: DateTime,
-) -> Result<OAuthTokens, TokenError> {
+) -> Result<Issued, TokenError> {
     let (Some(code), Some(client_id), Some(code_verifier)) = (
         params.get(CODE),
         params.get(CLIENT_ID),
@@ -182,8 +187,10 @@ async fn exchange(
             return Err(TokenError::Throttled);
         }
     }
-    write_transaction!(context, |conn| exchange.grant(conn, oauth, now))
-        .map_err(TokenError::server)?
+    let (tokens, sign_in) = write_transaction!(context, |conn| exchange.grant(conn, oauth, now))
+        .map_err(TokenError::server)??;
+    let id_token = sign_in.map(|sign_in| sign_in.id_token(now)).transpose()?;
+    Ok(Issued { tokens, id_token })
 }
 
 async fn refresh(
@@ -197,13 +204,7 @@ async fn refresh(
         return Err(TokenError::Request(InvalidRequest::RefreshParameters));
     };
     let resource = requested_resource(oauth, params)?;
-    // Like an authorization request, unknown scopes (`offline_access` among them) are ignored.
-    let scope = params
-        .get(SCOPE)
-        .unwrap_or_default()
-        .split(' ')
-        .filter_map(|scope| scope.parse::<OAuthScope>().ok())
-        .collect::<OAuthScopes>();
+    let scope = supported_scopes(oauth, params.get(SCOPE));
     // An access token hashes too, so that one presented here is refused as the wrong kind.
     let token_hash =
         oauth_token_hash(refresh_token).ok_or(TokenError::Grant(GrantRefusal::UnknownToken))?;
@@ -289,13 +290,14 @@ struct CodeExchange<'p> {
 impl CodeExchange<'_> {
     /// In one write transaction, judged again as it now stands: an exchanged code is reuse, which
     /// revokes the grant made from it; any other code issues a new grant's tokens if it is live and
-    /// bound to this request. The read path already charged the request.
-    fn grant(
+    /// bound to this request, with who signed in when the grant includes `openid`. The read path
+    /// already charged the request.
+    fn grant<'o>(
         &self,
         conn: &mut DbConnection,
-        oauth: &OAuthServer,
+        oauth: &'o OAuthServer,
         now: DateTime,
-    ) -> diesel::QueryResult<Result<OAuthTokens, TokenError>> {
+    ) -> diesel::QueryResult<Result<(OAuthTokens, Option<SignIn<'o>>), TokenError>> {
         let Some((authorization, query_user, query_key)) =
             QueryOAuthAuthorization::approved(conn, &self.code_hash)?
         else {
@@ -315,7 +317,11 @@ impl CodeExchange<'_> {
         } else {
             RefreshTokens::Withhold
         };
-        query_grant.issue(conn, refresh, now).map(Ok)
+        let tokens = query_grant.issue(conn, refresh, now)?;
+        Ok(Ok((
+            tokens,
+            SignIn::new(oauth, &authorization, &query_user),
+        )))
     }
 
     /// Why the code cannot be exchanged, if it cannot. An exchanged code is reuse, whatever else
@@ -445,7 +451,13 @@ impl Refresh<'_> {
     }
 }
 
-/// A successful token response (RFC 6749, section 5.1).
+/// The tokens a request was issued, with an ID token for a user who signed in with `openid`.
+struct Issued {
+    tokens: OAuthTokens,
+    id_token: Option<String>,
+}
+
+/// A successful token response (RFC 6749, section 5.1, and OIDC Core, section 3.1.3.3).
 #[derive(Serialize)]
 struct TokenResponse<'t> {
     access_token: &'t str,
@@ -454,10 +466,13 @@ struct TokenResponse<'t> {
     #[serde(skip_serializing_if = "Option::is_none")]
     refresh_token: Option<&'t str>,
     scope: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    id_token: Option<&'t str>,
 }
 
 impl<'t> TokenResponse<'t> {
-    fn new(tokens: &'t OAuthTokens, now: DateTime) -> Self {
+    fn new(issued: &'t Issued, now: DateTime) -> Self {
+        let Issued { tokens, id_token } = issued;
         let OAuthTokens {
             access_token,
             access_expiration,
@@ -472,6 +487,7 @@ impl<'t> TokenResponse<'t> {
             expires_in: (access_expiration.timestamp() - now.timestamp()).max(1),
             refresh_token: refresh_token.as_ref().map(AsRef::as_ref),
             scope: scope.to_string(),
+            id_token: id_token.as_deref(),
         }
     }
 }

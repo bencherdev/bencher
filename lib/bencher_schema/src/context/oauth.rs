@@ -2,7 +2,8 @@ use std::iter;
 
 use bencher_cimd::OAuthClients;
 use bencher_egress::EgressClient;
-use bencher_json::{OAuthIssuer, OAuthResource, system::config::JsonOAuthServer};
+use bencher_json::{OAuthIssuer, OAuthResource, Secret, system::config::JsonOAuthServer};
+use bencher_token::{OAuthSigningKey, OAuthSigningKeyError};
 use http::{HeaderMap, Uri, header::HOST, uri::Authority};
 
 /// Bencher as an OAuth authorization server for its MCP server,
@@ -14,31 +15,46 @@ pub struct OAuthServer {
     canonical_resource: OAuthResource,
     other_resources: Vec<OAuthResource>,
     clients: OAuthClients,
+    /// Present only when OIDC is configured.
+    signing_key: Option<OAuthSigningKey>,
 }
 
-impl From<JsonOAuthServer> for OAuthServer {
-    fn from(json: JsonOAuthServer) -> Self {
+impl TryFrom<JsonOAuthServer> for OAuthServer {
+    type Error = OAuthSigningKeyError;
+
+    fn try_from(json: JsonOAuthServer) -> Result<Self, Self::Error> {
         let JsonOAuthServer {
             issuer,
             resources,
             clients,
+            signing_key,
         } = json;
-        Self::new(issuer, resources, OAuthClients::new(clients))
+        Self::new(
+            issuer,
+            resources,
+            OAuthClients::new(clients),
+            signing_key.as_ref(),
+        )
     }
 }
 
 impl OAuthServer {
     /// Fetch client metadata documents with `egress`.
-    pub fn with_egress(json: JsonOAuthServer, egress: EgressClient) -> Self {
+    pub fn with_egress(
+        json: JsonOAuthServer,
+        egress: EgressClient,
+    ) -> Result<Self, OAuthSigningKeyError> {
         let JsonOAuthServer {
             issuer,
             resources,
             clients,
+            signing_key,
         } = json;
         Self::new(
             issuer,
             resources,
             OAuthClients::with_egress(clients, egress),
+            signing_key.as_ref(),
         )
     }
 
@@ -46,17 +62,20 @@ impl OAuthServer {
         issuer: OAuthIssuer,
         resources: Option<Vec<OAuthResource>>,
         clients: OAuthClients,
-    ) -> Self {
+        signing_key: Option<&Secret>,
+    ) -> Result<Self, OAuthSigningKeyError> {
+        let signing_key = signing_key.map(OAuthSigningKey::new).transpose()?;
         let mut resources = resources.unwrap_or_default().into_iter();
         let canonical_resource = resources
             .next()
             .unwrap_or_else(|| OAuthResource::mcp(&issuer));
-        Self {
+        Ok(Self {
             issuer,
             canonical_resource,
             other_resources: resources.collect(),
             clients,
-        }
+            signing_key,
+        })
     }
 
     pub fn issuer(&self) -> &OAuthIssuer {
@@ -90,6 +109,11 @@ impl OAuthServer {
     pub fn clients(&self) -> &OAuthClients {
         &self.clients
     }
+
+    /// The key that signs ID tokens, when OIDC is configured.
+    pub fn signing_key(&self) -> Option<&OAuthSigningKey> {
+        self.signing_key.as_ref()
+    }
 }
 
 #[cfg(test)]
@@ -98,12 +122,13 @@ mod tests {
     use http::{HeaderMap, HeaderValue, Uri, header::HOST};
     use pretty_assertions::assert_eq;
 
-    use super::OAuthServer;
+    use super::{OAuthServer, OAuthSigningKeyError};
 
     fn server(json: serde_json::Value) -> OAuthServer {
         serde_json::from_value::<JsonOAuthServer>(json)
             .unwrap()
-            .into()
+            .try_into()
+            .unwrap()
     }
 
     #[test]
@@ -131,6 +156,43 @@ mod tests {
             oauth.canonical_resource().as_ref(),
             "https://mcp.example.com/mcp"
         );
+    }
+
+    // Kills a key that cannot sign quietly starting the server without OIDC: startup must fail.
+    #[test]
+    fn a_bad_signing_key_refuses_the_server() {
+        let short = include_str!("../../../bencher_token/src/test/oauth_signing_key_1024.pem");
+        for (signing_key, short_key) in [(short, true), ("not a key", false)] {
+            let json = serde_json::from_value::<JsonOAuthServer>(serde_json::json!({
+                "issuer": "https://api.example.com",
+                "signing_key": signing_key,
+            }))
+            .unwrap();
+            let error = OAuthServer::try_from(json).unwrap_err();
+            assert_eq!(
+                matches!(error, OAuthSigningKeyError::Short),
+                short_key,
+                "{error}"
+            );
+            assert_eq!(
+                matches!(error, OAuthSigningKeyError::Pem(_)),
+                !short_key,
+                "{error}"
+            );
+        }
+    }
+
+    // Kills holding the key as its PEM, which a debug build prints in full.
+    #[test]
+    fn debug_output_leaves_out_the_signing_key() {
+        let pem = include_str!("../../../bencher_token/src/test/oauth_signing_key.pem");
+        let oauth = server(serde_json::json!({
+            "issuer": "https://api.example.com",
+            "signing_key": pem,
+        }));
+        assert!(oauth.signing_key().is_some());
+        let secret_line = pem.lines().nth(1).unwrap();
+        assert!(!format!("{oauth:?}").contains(secret_line));
     }
 
     #[test]

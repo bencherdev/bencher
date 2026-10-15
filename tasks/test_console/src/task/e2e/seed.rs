@@ -10,8 +10,11 @@ use bencher_json::{
     JsonUser, JsonUserKeyCreated, Jwt, PlanLevel, Secret,
 };
 use bencher_license::Licensor;
+use bencher_token::TokenKey;
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Serialize;
+
+use super::{ISSUER, SECRET_KEY};
 
 // The test tokens are signed for these two emails.
 const ADMIN: (&str, &str, &str) = (
@@ -153,7 +156,9 @@ impl Seed {
 
         // The first user to sign up is the server admin.
         let admin = api.sign_up(ADMIN, Jwt::test_admin_token()).await?;
-        let member = api.sign_up(MEMBER, Jwt::test_token()).await?;
+        api.sign_up(MEMBER, Jwt::test_token()).await?;
+        // Signed in with a session, not an API token, so the member can approve an app.
+        let member = api.session(MEMBER.2).await?;
         let admin_token = admin.token.as_ref();
         let outsider = api.sign_up_with_key(OUTSIDER, admin_token).await?;
         let token = member.token.as_ref();
@@ -620,6 +625,19 @@ impl Api {
             creation: DateTime::try_from(iat)?,
             expiration: DateTime::try_from(exp)?,
         })
+    }
+
+    /// A sign in session for `email`, as its emailed link mints one.
+    async fn session(&self, email: &str) -> anyhow::Result<JsonAuthUser> {
+        let token = TokenKey::new(ISSUER.to_owned(), &SECRET_KEY.parse::<Secret>()?)
+            .new_auth(email.parse()?, 60)?;
+        self.send(
+            Method::Post,
+            "/v0/auth/confirm",
+            "",
+            &serde_json::json!({ "token": token }),
+        )
+        .await
     }
 
     /// Sign a user up and sign them in with a user key the admin makes for them.

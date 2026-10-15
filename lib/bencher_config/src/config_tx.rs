@@ -91,6 +91,9 @@ pub enum ConfigTxError {
     #[cfg(feature = "plus")]
     #[error("{0}")]
     CallbackKey(bencher_callback::CallbackKeyError),
+    #[cfg(feature = "plus")]
+    #[error("{0}")]
+    OAuthSigningKey(bencher_token::OAuthSigningKeyError),
 }
 
 impl ConfigTx {
@@ -307,7 +310,9 @@ async fn into_context(
     let oauth = plus
         .as_ref()
         .and_then(|p| p.oauth.clone())
-        .map(bencher_schema::context::OAuthServer::from);
+        .map(bencher_schema::context::OAuthServer::try_from)
+        .transpose()
+        .map_err(ConfigTxError::OAuthSigningKey)?;
 
     info!(log, "Configuring Bencher Plus");
     #[cfg(feature = "plus")]

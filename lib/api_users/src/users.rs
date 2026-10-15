@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk, TotalCount};
 use bencher_json::{
-    JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, Sanitize as _, Search, UserName,
-    UserResourceId, user::JsonUsers,
+    DateTime, JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, Sanitize as _, Search,
+    UserName, UserResourceId, user::JsonUsers,
 };
 use bencher_schema::{
     auth_conn,
@@ -234,18 +234,25 @@ async fn patch_inner(
         return Err(admin_only_error("locked"));
     }
 
-    let update_user = UpdateUser::from(json_user.clone());
+    let mut update_user = UpdateUser::from(json_user.clone());
 
     let email_changed = json_user
         .email
         .as_ref()
         .is_some_and(|new_email| *new_email != query_user.email);
+    // Unchanged as read, so never written: a stale address must not land on a newer, proven one.
+    if !email_changed {
+        update_user.email = None;
+    }
 
     if email_changed {
         let now = context.clock.now();
         write_transaction!(context, |conn| {
             diesel::update(schema::user::table.filter(schema::user::id.eq(query_user.id)))
-                .set(&update_user)
+                .set((
+                    &update_user,
+                    schema::user::email_verified.eq(None::<DateTime>),
+                ))
                 .execute(conn)?;
             QueryToken::revoke_all(conn, query_user.id, now)
         })

@@ -2,6 +2,8 @@
 #[cfg(test)]
 use bencher_api_tests as _;
 #[cfg(test)]
+use diesel as _;
+#[cfg(test)]
 use http as _;
 #[cfg(test)]
 use serde_json as _;
@@ -12,6 +14,7 @@ use url as _;
 
 #[cfg(feature = "plus")]
 use bencher_json::NonEmpty;
+use bencher_schema::model::user::QueryUser;
 #[cfg(not(feature = "plus"))]
 use schemars as _;
 #[cfg(not(feature = "plus"))]
@@ -145,4 +148,29 @@ async fn pending_authorization(
         )
     })?;
     Ok(pending.then_some(uuid))
+}
+
+/// Record that the user proved they hold `email`.
+async fn verify_email(
+    context: &bencher_schema::ApiContext,
+    query_user: &QueryUser,
+    email: &bencher_json::Email,
+) -> Result<(), dropshot::HttpError> {
+    QueryUser::verify_email(
+        bencher_schema::write_conn!(context),
+        query_user.id,
+        email,
+        context.clock.now(),
+    )
+    .map(|_updated| ())
+    .map_err(|e| {
+        bencher_schema::error::issue_error(
+            "Failed to record a verified email",
+            &format!(
+                "Failed to record a verified email for user ({})",
+                query_user.uuid
+            ),
+            e,
+        )
+    })
 }
