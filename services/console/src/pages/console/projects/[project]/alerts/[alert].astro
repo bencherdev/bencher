@@ -14,7 +14,13 @@ const title = "View Alert";
 const redirect = `/perf/${params.project}/alerts/${params.alert}${Astro.url.search}`;
 ---
 
-<ProjectLayout apiUrl={BENCHER_API_URL} params={params} title={title} redirect={redirect}>
+<ProjectLayout
+  apiUrl={BENCHER_API_URL}
+  params={params}
+  title={title}
+  redirect={redirect}
+  signedOut={redirect}
+>
   <DeckPanel
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}

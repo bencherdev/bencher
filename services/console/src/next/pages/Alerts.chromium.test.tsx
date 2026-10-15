@@ -19,8 +19,9 @@ import type {
 	JsonConsoleAlerts,
 	JsonConsoleProject,
 } from "../../types/bencher";
+import { perfHolding, perfStatusOf } from "../alert/testing";
 import { type Api, ApiError, type Method } from "../api";
-import { READ, alertsFixture } from "../alerts/testing";
+import { READ, alertId, alertsFixture } from "../alerts/testing";
 import { budget } from "../budget";
 import { createQueryClient } from "../cache";
 import { NEXT_PROJECTS } from "../paths";
@@ -1564,4 +1565,99 @@ test("an alert row's Open in Explore is Open 1 for that row alone", async () => 
 	await expect
 		.element(page.getByRole("link", { name: "Open 1 in Explore" }))
 		.toHaveAttribute("href", href as string);
+});
+
+/** Pins the last point of the plot in `region`, as the keys do. */
+const pinLast = async (region: ReturnType<typeof page.getByRole>) => {
+	const plot = region.getByRole("group", { name: /^1 line/ });
+	await expect.element(plot).toBeVisible();
+	(plot.element() as HTMLElement).focus();
+	await userEvent.keyboard("{End}");
+};
+
+// Kills a readout on a row's alert that changes it outside its row, which
+// leaves the row, the count, and the badge as they were, and one that does not
+// link to the alert's page.
+test("a pinned readout on a row's alert opens it and dismisses it as its row does", async () => {
+	const { api, sent } = fakeApi(three);
+	const client = mount(api);
+	await expect.element(heading()).toHaveTextContent("3 active");
+	const row = dismissButtons().nth(1).element().closest("tr");
+	await page
+		.getByRole("button", { name: `Expand ${NAME}` })
+		.nth(1)
+		.click();
+	const region = page.getByRole("region", { name: `${NAME}, full plot` });
+	await pinLast(region);
+	const readout = region.getByRole("status");
+	await expect
+		.element(readout.getByRole("link", { name: `Alert: ${NAME}` }))
+		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/alerts/${alertId(2)}`);
+	await readout
+		.getByRole("button", { name: `Dismiss the alert on ${NAME}` })
+		.click();
+	await expect.element(heading()).toHaveTextContent("2 active");
+	expect(badge(client)).toBe(2);
+	expect(row?.textContent).toContain("Dismissed just now");
+	await expect
+		.element(
+			readout.getByRole("button", { name: `Reactivate the alert on ${NAME}` }),
+		)
+		.toBeVisible();
+	expect(sent).toEqual([
+		{
+			method: "PATCH",
+			path: "/v0/console/projects/hashbrown/alerts",
+			body: { status: "dismissed", alerts: [alertId(2)] },
+		},
+	]);
+});
+
+// Kills a change on the list that leaves the other answers holding the alert,
+// such as Explore's, with its old status for a return to them.
+test("a change on the list is written into the other answers that hold the alert", async () => {
+	const { api } = fakeApi(three);
+	const bootstrap = { ...bootstrapOf(), active_alerts: 3 };
+	const client = newClient(api, bootstrap);
+	const perf = ["console", "perf", "hashbrown", "q"];
+	client.setQueryData(perf, perfHolding(alertId(2)));
+	mount(api, bootstrap, PATH, client);
+	await expect.element(heading()).toHaveTextContent("3 active");
+	await dismissButtons().nth(1).click();
+	await expect.element(heading()).toHaveTextContent("2 active");
+	await expect
+		.poll(() => perfStatusOf(client.getQueryData(perf)))
+		.toBe("dismissed");
+});
+
+// Kills a viewer offered a Dismiss in a pinned readout, which the API refuses.
+test("a viewer's pinned readout links the alert and offers no change", async () => {
+	const { api } = fakeApi(three);
+	mount(api, { ...bootstrapOf({ edit: false }), active_alerts: 3 });
+	await expect.element(heading()).toHaveTextContent("3 active");
+	await page
+		.getByRole("button", { name: `Expand ${NAME}` })
+		.nth(1)
+		.click();
+	const region = page.getByRole("region", { name: `${NAME}, full plot` });
+	await pinLast(region);
+	const readout = region.getByRole("status");
+	await expect
+		.element(readout.getByRole("link", { name: `Alert: ${NAME}` }))
+		.toBeVisible();
+	expect(
+		readout.getByRole("button", { name: /the alert on/ }).elements(),
+	).toHaveLength(0);
+});
+
+// Kills a row naming an alert whose name opens nothing, or another alert.
+test("each row's name links to its alert's page", async () => {
+	const { api } = fakeApi(three);
+	mount(api);
+	await expect.element(heading()).toHaveTextContent("3 active");
+	const links = page.getByRole("link", { name: `${NAME}, open the alert` });
+	await expect.element(links.first()).toBeVisible();
+	expect(links.elements().map((link) => link.getAttribute("href"))).toEqual(
+		[1, 2, 3].map((n) => `${NEXT_PROJECTS}/hashbrown/alerts/${alertId(n)}`),
+	);
 });

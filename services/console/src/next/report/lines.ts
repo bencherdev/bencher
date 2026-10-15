@@ -8,7 +8,7 @@ import type {
 	JsonConsoleSeries,
 	JsonConsoleTestbed,
 } from "../../types/bencher";
-import type { PlotData } from "../plot/types";
+import type { PlotAlert, PlotData } from "../plot/types";
 import type { Guard } from "../plot/format";
 import { guardOf } from "./delta";
 import type { ParameterSet } from "./row";
@@ -22,6 +22,8 @@ export interface AlignedSeries {
 	upper?: readonly (number | null)[];
 	/** Indices into the points of the values that alerted. */
 	alerts: readonly number[];
+	/** The alert behind each of `alerts`. */
+	raised?: readonly PlotAlert[];
 }
 
 /** The points one batch of lines is drawn over. */
@@ -114,6 +116,10 @@ export const alignSeries = (
 	length: number,
 ): AlignedSeries => {
 	const { index } = series;
+	const raised = series.alerts.flatMap(({ index: at, uuid, status }) => {
+		const point = index ? index[at] : at;
+		return point === undefined ? [] : [{ index: point, uuid, status }];
+	});
 	const spread = (column: readonly (number | null)[]) => {
 		if (!index) {
 			return column;
@@ -132,10 +138,8 @@ export const alignSeries = (
 		...(series.baseline && { baseline: spread(series.baseline) }),
 		...(series.lower && { lower: spread(series.lower) }),
 		...(series.upper && { upper: spread(series.upper) }),
-		alerts: series.alerts.flatMap((alert) => {
-			const point = index ? index[alert.index] : alert.index;
-			return point === undefined ? [] : [point];
-		}),
+		alerts: raised.map((alert) => alert.index),
+		raised,
 	};
 };
 

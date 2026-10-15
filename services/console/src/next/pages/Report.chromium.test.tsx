@@ -756,3 +756,100 @@ test("a malformed report id is not found at once, without asking the API", async
 		.toHaveTextContent("Report not found");
 	expect(requests.filter(isReport)).toHaveLength(0);
 });
+
+const ALERTED = {
+	uuid: "alert-uuid",
+	limit: "upper",
+	status: "active",
+} as const;
+
+/** A report of one line that raised `ALERTED`, read as `bootstrap` permits, its changes answered by `change`. */
+const alertedReport = (
+	bootstrap = bootstrapOf(),
+	change: () => Promise<unknown> = async () => ({ changed: 1 }),
+) => {
+	const sent: { method: string; path: string; body: unknown }[] = [];
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? {
+					data: reportFixture([
+						lineFixture({
+							alert: ALERTED as never,
+							history: { alerts: [{ index: 2, ...ALERTED }] as never },
+						}),
+					]),
+				}
+			: { data: bootstrap },
+	);
+	api.send = async <T,>(method: string, path: string, body?: unknown) => {
+		sent.push({ method, path, body });
+		return { data: (await change()) as T, headers: new Headers() };
+	};
+	mount(api, impatient());
+	return sent;
+};
+
+/** Opens the row's plot and pins its readout on the alert, the last point. */
+const pinAlert = async () => {
+	await page.getByRole("button", { name: `Expand ${LATENCY}` }).click();
+	const region = page.getByRole("region", { name: `${LATENCY}, full plot` });
+	const plot = region.getByRole("group", { name: /^1 line/ });
+	await expect.element(plot).toBeVisible();
+	(plot.element() as HTMLElement).focus();
+	await userEvent.keyboard("{End}");
+	const readout = region.getByRole("status");
+	await expect
+		.element(readout.getByRole("link", { name: `Alert: ${LATENCY}` }))
+		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/alerts/alert-uuid`);
+	return readout;
+};
+
+type Scope = ReturnType<typeof page.getByRole>;
+const dismissIn = (readout: Scope) =>
+	readout.getByRole("button", { name: `Dismiss the alert on ${LATENCY}` });
+const reactivateIn = (readout: Scope) =>
+	readout.getByRole("button", { name: `Reactivate the alert on ${LATENCY}` });
+
+// Kills a report row that alerted whose name links nowhere or to another
+// alert, a readout on its alert with no link to it or no Dismiss, a Dismiss
+// that sends another alert or status, a readout left offering Dismiss, and a
+// row plot folded and opened again that forgets the dismissal.
+test("a row that alerted links its alert, and its pinned readout dismisses it", async () => {
+	const sent = alertedReport();
+	await expect
+		.element(page.getByRole("link", { name: `${LATENCY}, open the alert` }))
+		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/alerts/alert-uuid`);
+	const readout = await pinAlert();
+	await dismissIn(readout).click();
+	await expect.element(reactivateIn(readout)).toBeVisible();
+	await expect.poll(() => sent).toHaveLength(1);
+	expect(sent[0]).toEqual({
+		method: "PATCH",
+		path: "/v0/console/projects/hashbrown/alerts",
+		body: { status: "dismissed", alerts: ["alert-uuid"] },
+	});
+
+	await page.getByRole("button", { name: `Collapse ${LATENCY}` }).click();
+	await expect.element(readout).not.toBeInTheDocument();
+	await expect.element(reactivateIn(await pinAlert())).toBeVisible();
+});
+
+// Kills a viewer offered a Dismiss the API refuses.
+test("a viewer's pinned readout links the alert and offers no change", async () => {
+	alertedReport(bootstrapOf({ edit: false }));
+	const readout = await pinAlert();
+	expect(
+		readout.getByRole("button", { name: /the alert on/ }).elements(),
+	).toHaveLength(0);
+});
+
+// Kills a refused change from a row's readout that leaves it as if it had changed, or says nothing.
+test("a refused Dismiss from a row's readout puts it back, and says so there", async () => {
+	alertedReport(bootstrapOf(), () =>
+		Promise.reject(new ApiError(500, "server", "{}")),
+	);
+	const readout = await pinAlert();
+	await dismissIn(readout).click();
+	await expect.element(readout.getByRole("alert")).toBeVisible();
+	await expect.element(dismissIn(readout)).toBeVisible();
+});

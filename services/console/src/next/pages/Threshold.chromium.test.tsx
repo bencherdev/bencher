@@ -18,6 +18,7 @@ import type {
 	JsonConsoleAlerts,
 	JsonConsoleProject,
 } from "../../types/bencher";
+import { perfHolding, perfStatusOf } from "../alert/testing";
 import { type Api, ApiError } from "../api";
 import { createQueryClient } from "../cache";
 import { ProjectContext } from "../project";
@@ -1828,4 +1829,87 @@ test("on a phone, Status spans the page", async () => {
 	const status = page.getByRole("radiogroup", { name: "Status" });
 	await expect.element(status).toBeVisible();
 	expect(status.element().getBoundingClientRect().width).toBeGreaterThan(300);
+});
+
+// Kills a readout on a row's alert that changes it outside its row, which
+// leaves the row, the counts, and the badge as they were, a readout that does
+// not link to the alert's page, and an alert row whose name links nowhere.
+test("a pinned readout on a row's alert opens it and dismisses it as its row does", async () => {
+	const { api: answered, cache, sent } = changing(async () => ({ changed: 1 }));
+	mount(answered, cache);
+	await expect.element(dismiss()).toBeVisible();
+	const row = activeRow();
+	const name = row?.querySelector("a.al-link");
+	expect(name?.getAttribute("href")).toBe(
+		"/next/console/projects/hashbrown/alerts/alert-1",
+	);
+	const expand = row?.querySelector<HTMLElement>(".lr-twist");
+	if (!expand) {
+		throw new Error("The alert's row has no expand control");
+	}
+	expand.click();
+	const region = page.getByRole("region", { name: /, full plot$/ });
+	const plot = region.getByRole("group", { name: /^1 line/ });
+	await expect.element(plot).toBeVisible();
+	(plot.element() as HTMLElement).focus();
+	await userEvent.keyboard("{End}");
+	const readout = region.getByRole("status");
+	await expect
+		.element(readout.getByRole("link", { name: /^Alert: blake3/ }))
+		.toHaveAttribute("href", "/next/console/projects/hashbrown/alerts/alert-1");
+	await readout
+		.getByRole("button", { name: /^Dismiss the alert on blake3/ })
+		.click();
+	await expect.element(summary()).toHaveTextContent(/^0 active · 3 dismissed/);
+	expect(row?.textContent).toContain("Dismissed just now");
+	expect(badge(cache)).toBe(0);
+	expect(sent).toEqual([
+		{
+			method: "PATCH",
+			path: "/v0/console/projects/hashbrown/alerts",
+			body: { status: "dismissed", alerts: ["alert-1"] },
+		},
+	]);
+});
+
+// Kills a change on the threshold page that leaves the other answers holding
+// the alert, such as Explore's, with its old status for a return to them.
+test("a change on the threshold page is written into the other answers that hold the alert", async () => {
+	const { api: answered, cache } = changing(async () => ({ changed: 1 }));
+	const perf = ["console", "perf", "hashbrown", "q"];
+	cache.setQueryData(perf, perfHolding("alert-1"));
+	mount(answered, cache);
+	await dismiss().click();
+	await expect
+		.poll(() => perfStatusOf(cache.getQueryData(perf)))
+		.toBe("dismissed");
+});
+
+// Kills a viewer offered a Dismiss in a pinned readout, which the API refuses.
+test("a viewer's pinned readout links the alert and offers no change", async () => {
+	const { api: answered, cache } = changing(async () => ({ changed: 1 }), {
+		edit: false,
+	});
+	mount(answered, cache);
+	await expect.poll(() => alertRows().all().length).toBe(3);
+	const expand = document
+		.querySelector('a.al-link[href$="/alerts/alert-1"]')
+		?.closest("tr")
+		?.querySelector<HTMLElement>(".lr-twist");
+	if (!expand) {
+		throw new Error("The alert's row has no expand control");
+	}
+	expand.click();
+	const region = page.getByRole("region", { name: /, full plot$/ });
+	const plot = region.getByRole("group", { name: /^1 line/ });
+	await expect.element(plot).toBeVisible();
+	(plot.element() as HTMLElement).focus();
+	await userEvent.keyboard("{End}");
+	const readout = region.getByRole("status");
+	await expect
+		.element(readout.getByRole("link", { name: /^Alert: blake3/ }))
+		.toBeVisible();
+	expect(
+		readout.getByRole("button", { name: /the alert on/ }).elements(),
+	).toHaveLength(0);
 });

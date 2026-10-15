@@ -40,6 +40,7 @@ const page = place ? pageName(place.rest) : "NotFound";
 // A link that draws a plot asks for the plot's code with the page's.
 const plot =
 	page === "Plots" ||
+	page === "Alert" ||
 	(page === "Explore" &&
 		drawsPlot(decodeQuery(exploreSearchFromClassic(Astro.url.search))));
 ---

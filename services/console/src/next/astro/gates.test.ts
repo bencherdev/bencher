@@ -143,6 +143,29 @@ describe("ClassicGate", () => {
 		).toEqual([]);
 	});
 
+	// Kills a classic alert page that sends a reader who is not signed in to
+	// sign in under /next/, rather than where the classic page would send them,
+	// and one that keeps a signed in reader.
+	test("the classic alert page sends only a signed in reader to the new console", async () => {
+		const ALERT = "https://bencher.dev/console/projects/hashbrown/alerts/a";
+		const gate = async (storage: Record<string, string>) =>
+			run(
+				await container.renderToString(ClassicGate, {
+					props: { slug: "hashbrown", signedOut: "/perf/hashbrown/alerts/a" },
+					request: new Request(ALERT),
+				}),
+				ALERT,
+				storage,
+			).replaced;
+		expect(await gate({ ...SIGNED_IN, ...versions("hashbrown", 1) })).toEqual([
+			"/next/console/projects/hashbrown/alerts/a",
+		]);
+		expect(await gate(versions("hashbrown", 1))).toEqual([
+			"/perf/hashbrown/alerts/a",
+		]);
+		expect(await gate(versions("hashbrown", 0))).toEqual([]);
+	});
+
 	// Kills a gate on pages that are not a project's.
 	test("renders nothing outside a project", async () => {
 		expect(

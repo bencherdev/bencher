@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { type AlertLine, alertLinesOf, withStatuses } from "./lines";
+import { type AlertLine, alertLinesOf } from "./lines";
+import { withStatuses } from "./status";
 import {
 	alertSlots,
 	distinctLines,

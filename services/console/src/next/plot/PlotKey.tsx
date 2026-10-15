@@ -15,6 +15,8 @@ export interface PlotKeyProps {
 	/** The line whose focus target is pressed. */
 	focused: number | null;
 	constants: readonly string[];
+	/** Whether a line has an alert still active. */
+	alerting: (line: number) => boolean;
 	/** Entries shown before the rest fold behind Show all. */
 	max: number;
 	compact: boolean;
@@ -112,7 +114,7 @@ export const PlotKey = (props: PlotKeyProps) => {
 												</>
 											)}
 										</Index>
-										<Show when={props.lines[line]?.alerting}>
+										<Show when={props.alerting(line)}>
 											<span class="pl-alertdot" aria-hidden="true" />
 										</Show>
 									</button>

@@ -11,15 +11,17 @@ interface Props {
 	params: Params;
 	title: string;
 	redirect?: string;
+	/** Where the version gate sends a reader who is not signed in, rather than to sign in. */
+	signedOut?: string;
 }
 
-const { apiUrl, params, title, redirect } = Astro.props;
+const { apiUrl, params, title, redirect, signedOut } = Astro.props;
 const project_redirect = redirect ?? `/perf/${params.project}`;
 const project_slug = params.project;
 ---
 
 <ConsoleLayout apiUrl={apiUrl} params={params} title={title} redirect={project_redirect}>
-  <ClassicGate slot="head" slug={project_slug} />
+  <ClassicGate slot="head" slug={project_slug} signedOut={signedOut} />
   <ProjectMenu client:only="solid-js" slot="menu" apiUrl={apiUrl} params={params}>
 	<ProjectFallbackMenu slot="fallback" />
   </ProjectMenu>

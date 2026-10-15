@@ -14,6 +14,7 @@ import { queryFromPlot } from "../explore/pinned";
 import { measuresLayout } from "../explore/layout";
 import { rollingName } from "../explore/window";
 import { loadPlot, loadedPlot } from "../plot/lazy";
+import type { PlotAlerts } from "../plot/Plot";
 import type { PlotData } from "../plot/types";
 import type { Move } from "./order";
 
@@ -64,6 +65,8 @@ const Tile = (props: {
 	onNear?: () => void;
 	onOpen?: () => void;
 	class?: string;
+	/** What a pinned readout on an alert offers. */
+	alerts?: PlotAlerts | undefined;
 }) => {
 	const heading = createUniqueId();
 	let section: HTMLElement | undefined;
@@ -111,7 +114,16 @@ const Tile = (props: {
 			.join(" · ");
 	};
 	const lines = () => data()?.lines.length;
-	const alerting = () => data()?.lines.some(({ alerting }) => alerting);
+	// An alert still active, as the page holds its alerts' statuses.
+	const alerting = () =>
+		data()?.lines.some((line) =>
+			line.raised
+				? line.raised.some(
+						({ uuid, status }) =>
+							(props.alerts?.status?.(uuid) ?? status) === "active",
+					)
+				: line.alerting,
+		);
 	// What the tile draws, as the answer says: its own window or the page's.
 	const label = () => {
 		const count = lines();
@@ -243,6 +255,7 @@ const Tile = (props: {
 							}
 							reserve={RESERVE}
 							label={label()}
+							alerts={props.alerts}
 							failed={props.failed ?? false}
 						/>
 					);

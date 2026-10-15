@@ -14,6 +14,8 @@ import {
 	onMount,
 	untrack,
 } from "solid-js";
+import type { Settable } from "../alerts/status";
+import type { PlotAlerts } from "../plot/Plot";
 import type { PlotData } from "../plot/types";
 import type { GroupRow, ReportLine } from "./lines";
 import LineRow, { COLUMNS, RowExplore } from "./LineRow";
@@ -66,10 +68,17 @@ interface LineTableProps {
 	explore?: ((lines: readonly ReportLine[]) => string) | undefined;
 	/** The lines want their links (the page went idle or the reader moved toward them), so the page can start writing them. */
 	onExploreIntent?: () => void;
+	/** The page of the alert a line names, which its name links to. */
+	href?: (line: ReportLine) => string | undefined;
 	plot: (line: ReportLine) => {
 		data: PlotData;
 		note: string;
 		reportHref: (uuid: string) => string;
+		/** What a pinned readout on an alert offers, when the page decides it. */
+		alerts?: PlotAlerts;
+		/** Otherwise the statuses the row plots set, and whether the reader may change them. */
+		kept?: Map<string, Settable>;
+		canChange?: () => boolean;
 	};
 	/** The rows drawn below the screen reach the last one loaded. */
 	onNearEnd?: () => void;
@@ -292,6 +301,7 @@ const LineTable = (props: LineTableProps) => {
 									acts(slot) ? () => props.actions?.cell(slot) : undefined
 								}
 								explore={intent() ? props.explore?.([slot]) : undefined}
+								href={props.href?.(slot)}
 								onIntent={() => {
 									RowPlot.preload();
 								}}

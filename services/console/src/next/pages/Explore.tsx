@@ -30,6 +30,7 @@ import Editor from "../explore/Editor";
 import Header, { type Confirmation } from "../explore/Header";
 import { measuresLayout } from "../explore/layout";
 import Leave from "../explore/Leave";
+import { useAlertChange } from "../alerts/change";
 import PlotFrame from "../explore/PlotFrame";
 import {
 	newPlot,
@@ -58,6 +59,7 @@ import { rollingName } from "../explore/window";
 import {
 	NEXT_PROJECTS,
 	parseNextPath,
+	alertPath,
 	projectPath,
 	reportPath,
 	tabOf,
@@ -184,6 +186,9 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
 	const canPin = () =>
 		!props.readOnly && bootstrap().data?.permissions.create === true;
+	const alerts = useAlertChange().readout(
+		() => !props.readOnly && bootstrap().data?.permissions.edit === true,
+	);
 	const full = () => (bootstrap().data?.plots ?? 0) >= PLOTS_LIMIT;
 	// Plots and the start lists show pins, so a change here is theirs to read again.
 	const pinsChanged = () => {
@@ -566,11 +571,22 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 		if (blank()) {
 			return "No lines";
 		}
-		const alert = (location.state as { alert?: string } | undefined)?.alert;
+		const { alert, uuid } =
+			(location.state as { alert?: string; uuid?: string } | undefined) ?? {};
 		if (alert !== undefined) {
 			return (
 				<>
-					from an <a href={projectPath(slug(), "alerts")}>alert</a> on {alert}
+					from an{" "}
+					<a
+						href={
+							uuid === undefined
+								? projectPath(slug(), "alerts")
+								: alertPath(slug(), uuid)
+						}
+					>
+						alert
+					</a>{" "}
+					on {alert}
 				</>
 			);
 		}
@@ -744,6 +760,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 									layout={layout()}
 									reportHref={(uuid) => reportPath(slug(), uuid)}
 									reserve={reserve()}
+									alerts={alerts}
 								/>
 							);
 						}}

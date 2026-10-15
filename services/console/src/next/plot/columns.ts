@@ -32,6 +32,12 @@ export const alignToAxis = (data: PlotData, axis: PlotXAxis): PlotData => {
 				alerts: line.alerts
 					.map((index) => position[index] ?? index)
 					.sort((a, b) => a - b),
+				...(line.raised && {
+					raised: line.raised.map((alert) => ({
+						...alert,
+						index: position[alert.index] ?? alert.index,
+					})),
+				}),
 			}),
 		),
 	};

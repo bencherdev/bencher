@@ -8,6 +8,7 @@ import { transform, type YScale, yRange, yScale, yTicks } from "./scale";
 import { type LineStyle, lineDash } from "./series";
 import type { Palette } from "./theme";
 import type {
+	PlotAlert,
 	PlotData,
 	PlotLine,
 	PlotScale,
@@ -76,6 +77,8 @@ export interface PanelState {
 	palette: () => Palette;
 	pinned: () => boolean;
 	index: () => number | null;
+	/** An alert's status now, which mutes its marker once it is no longer active. */
+	status: (alert: PlotAlert) => PlotAlert["status"];
 }
 
 /** Where the pointer or the keys put the cursor: a data index, the nearest line, and the x in CSS pixels inside the plot area. */
@@ -101,6 +104,8 @@ export interface Panel {
 	frame: () => { left: number; top: number; width: number };
 	/** Draws again with the state's hidden lines, focus, and palette, synchronously. */
 	update: () => void;
+	/** Pins the cursor at a data index, as the keys do. */
+	pinAt: (index: number) => void;
 	clearCursor: () => void;
 	setSize: (width: number, height: number) => void;
 	/** The y of a line's value at an index, in CSS pixels inside the plot area. */
@@ -428,10 +433,18 @@ export const createPanel = (
 		const alertRadius =
 			(narrow ? NARROW_ALERT_RADIUS : ALERT_RADIUS[size]) * ratio;
 		for (const line of visible) {
+			const raised = data.lines[line]?.raised;
 			for (const index of data.lines[line]?.alerts ?? []) {
 				const point = pointOf(u, line, index);
+				const alert = raised?.find((each) => each.index === index);
 				if (point) {
-					drawAlert(ctx, point, alertRadius, palette, false);
+					drawAlert(
+						ctx,
+						point,
+						alertRadius,
+						palette,
+						alert !== undefined && state.status(alert) !== "active",
+					);
 				}
 			}
 		}
@@ -570,7 +583,9 @@ export const createPanel = (
 				return;
 		}
 		event.preventDefault();
-		index = Math.max(0, Math.min(x.length - 1, index));
+		pinAt(Math.max(0, Math.min(x.length - 1, index)));
+	};
+	const pinAt = (index: number) => {
 		const left = u.valToPos(x[index] ?? 0, "x");
 		moveCursor({ left, top: u.bbox.height / pixelRatio() / 2 }, false, true);
 		events.pin({ index, line: null, x: left });
@@ -608,6 +623,7 @@ export const createPanel = (
 				});
 			});
 		},
+		pinAt,
 		clearCursor: hide,
 		setSize: (width, height) => {
 			if (width !== u.width || height !== u.height) {
