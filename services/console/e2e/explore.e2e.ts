@@ -554,7 +554,9 @@ test("hidden and focused lines travel in the link", async ({
 	await page
 		.getByRole("button", { name: /^blake3 simd=sse4\.2.*: hide its line$/ })
 		.click();
-	await page.getByRole("button", { name: /^Focus blake3 simd=avx2/ }).click();
+	await page
+		.getByRole("button", { name: /^Show boundary of blake3 simd=avx2/ })
+		.click();
 	await expect(page).toHaveURL(/hide=/);
 	await expect(page).toHaveURL(/focus=/);
 
@@ -566,8 +568,8 @@ test("hidden and focused lines travel in the link", async ({
 		}),
 	).toBeVisible();
 	await expect(
-		other.getByRole("button", { name: /^Focus blake3 simd=avx2/ }),
-	).toHaveAttribute("aria-pressed", "true");
+		other.getByRole("button", { name: /^Hide boundary of blake3 simd=avx2/ }),
+	).toBeVisible();
 });
 
 // Kills a blank Explore without its starting points, an alert that opens more
@@ -988,9 +990,10 @@ test("a query past 64 lines says so", async ({ page, request }) => {
 	await expect(plot(page)).toHaveAccessibleName("64 lines");
 });
 
-// Kills a readout that follows the mouse past the next point on its way to
-// the readout's link, so the link reached is another report's or none.
-test("a mouse reaches a readout's report link past a point close beside it", async ({
+// Kills a readout that takes the pointer before it is pinned, so a click on
+// the plot beneath it pins nothing, or a pinned readout whose report link a
+// mouse cannot reach.
+test("a click pins the readout, and only a pinned readout's report link opens the report", async ({
 	page,
 	request,
 }) => {
@@ -1000,11 +1003,11 @@ test("a mouse reaches a readout's report link past a point close beside it", asy
 		hash: [{ parameters: { size: 1 }, measures: { latency: { value } } }],
 	});
 	// Two reports an hour apart among three weeks: their points sit a few pixels apart.
-	const first = await postReport(request, project.slug, {
+	await postReport(request, project.slug, {
 		start: new Date(now - 21 * DAY).toISOString(),
 		results: results(1),
 	});
-	await postReport(request, project.slug, {
+	const second = await postReport(request, project.slug, {
 		start: new Date(now - 21 * DAY + HOUR).toISOString(),
 		results: results(2),
 	});
@@ -1029,8 +1032,24 @@ test("a mouse reaches a readout's report link past a point close beside it", asy
 		throw new Error("No plot area");
 	}
 	await page.mouse.move(area.x + 0.5, area.y + area.height - 10);
-	const link = plot(page).getByRole("status").getByRole("link");
-	await expect(link).toHaveAttribute("href", new RegExp(first.uuid));
+	const status = plot(page).getByRole("status");
+	const hint = status.getByText("Click to pin");
+	const link = status.getByRole("link");
+	await expect(hint).toBeVisible();
+	await expect(link).toHaveCount(0);
+	// The hint sits nearer the second report's point than the first's, and a
+	// click on it reaches the plot beneath.
+	const over = await hint.boundingBox();
+	if (!over) {
+		throw new Error("No hint");
+	}
+	await page.mouse.move(over.x + over.width / 2, over.y + over.height / 2, {
+		steps: 4,
+	});
+	await page.mouse.down();
+	await page.mouse.up();
+	await expect(link).toHaveAttribute("href", new RegExp(second.uuid));
+	await expect(hint).toHaveCount(0);
 	const goal = await link.boundingBox();
 	if (!goal) {
 		throw new Error("No report link");
@@ -1040,7 +1059,7 @@ test("a mouse reaches a readout's report link past a point close beside it", asy
 	});
 	await page.mouse.down();
 	await page.mouse.up();
-	await expect(page).toHaveURL(new RegExp(`/reports/${first.uuid}`));
+	await expect(page).toHaveURL(new RegExp(`/reports/${second.uuid}`));
 });
 
 // Kills scroll room that leaves the plot's top short of the top of the screen

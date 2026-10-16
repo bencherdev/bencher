@@ -263,7 +263,7 @@
 	display: none;
 }
 
-/* The readout follows the cursor; only its link takes the pointer, and all of it once pinned. */
+/* The readout follows the cursor and lets the pointer through to the plot until it is pinned. */
 .pl-live {
 	position: absolute;
 	inset: 0;
@@ -291,10 +291,6 @@
 
 .pl-readout.pinned {
 	padding-right: var(--spacing-8);
-}
-
-.pl-readout.pinned,
-.pl-readout a {
 	pointer-events: auto;
 }
 
@@ -334,14 +330,15 @@
 }
 
 .pl-more,
-.pl-limit {
+.pl-limit,
+.pl-pin {
 	color: var(--color-text-muted);
 }
 
 .pl-close {
 	position: absolute;
-	top: 2px;
 	right: 2px;
+	bottom: 2px;
 	display: inline-grid;
 	place-items: center;
 	width: var(--pl-target);
@@ -498,7 +495,7 @@
 	color: var(--color-text-primary);
 }
 
-.pl-kfoc[aria-pressed="true"] {
+.pl-ke.foc .pl-kfoc {
 	color: var(--color-stroke-accent);
 }
 

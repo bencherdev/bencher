@@ -87,10 +87,13 @@ export interface CursorEvent {
 
 export interface PanelEvents {
 	hover: (event: CursorEvent | null) => void;
+	/** The keys put the cursor at `event` and pin it there. */
 	pin: (event: CursorEvent) => void;
+	/** A click, or a tap when `touch`, at `event`. */
+	click: (event: CursorEvent, touch: boolean) => void;
+	/** Enter or Space at the cursor's point. */
+	toggle: () => void;
 	close: () => void;
-	/** Whether the readout keeps its point as a mouse moves to `left` and `top` from the plot area's corner; `follow` moves it once the hold lets go. */
-	hold: (left: number, top: number, follow: () => void) => boolean;
 }
 
 export interface Panel {
@@ -510,34 +513,42 @@ export const createPanel = (
 
 	const hide = () => moveCursor({ left: -10, top: -10 }, false, true);
 
-	// A mouse heading into the readout may hold it, and the move or the leave waits until the hold lets go.
 	const pointer =
 		(then: (left: number, top: number) => void) => (event: PointerEvent) => {
 			if (event.pointerType === "touch" || state.pinned()) {
 				return;
 			}
 			const { left, top } = local(event);
-			const go = () => then(left, top);
-			if (event.pointerType !== "mouse" || !events.hold(left, top, go)) {
-				go();
-			}
+			then(left, top);
 		};
 	const onMove = pointer((left, top) => events.hover(cursorAt(left, top)));
 	const onLeave = pointer(() => {
 		hide();
 		events.hover(null);
 	});
+	// A browser may send a tap's click as a plain mouse event, so the press tells a tap.
+	let touch = false;
+	const onDown = (event: PointerEvent) => {
+		touch = event.pointerType === "touch";
+	};
 	const onClick = (event: MouseEvent) => {
 		const { left, top } = local(event);
 		const cursor = cursorAt(left, top);
 		if (cursor) {
-			events.pin(cursor);
+			events.click(cursor, touch);
 		}
 	};
 	const onKey = (event: KeyboardEvent) => {
 		if (event.key === "Escape") {
 			hide();
 			events.close();
+			return;
+		}
+		if (event.key === "Enter" || event.key === " ") {
+			if (state.index() !== null) {
+				event.preventDefault();
+				events.toggle();
+			}
 			return;
 		}
 		const current = state.index();
@@ -568,6 +579,7 @@ export const createPanel = (
 	over.addEventListener("pointerenter", onEnter);
 	over.addEventListener("pointermove", onMove);
 	over.addEventListener("pointerleave", onLeave);
+	over.addEventListener("pointerdown", onDown);
 	over.addEventListener("click", onClick);
 	over.addEventListener("keydown", onKey);
 
@@ -613,6 +625,7 @@ export const createPanel = (
 			over.removeEventListener("pointerenter", onEnter);
 			over.removeEventListener("pointermove", onMove);
 			over.removeEventListener("pointerleave", onLeave);
+			over.removeEventListener("pointerdown", onDown);
 			over.removeEventListener("click", onClick);
 			over.removeEventListener("keydown", onKey);
 			u.destroy();

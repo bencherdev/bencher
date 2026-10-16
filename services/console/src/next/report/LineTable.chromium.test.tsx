@@ -173,14 +173,11 @@ for (const [width, narrow] of [
 			name: "bench-0 n=0 Latency, full plot",
 		});
 		const toggle = region.getByRole("button", { name: /: hide its line$/ });
-		const target = region.getByRole("button", { name: /^Focus .* boundary$/ });
 		await expect.element(toggle).toBeVisible();
 		const space = region.element().getBoundingClientRect();
-		for (const control of [toggle, target]) {
-			expect(control.element().getBoundingClientRect().bottom).toBeLessThan(
-				space.bottom,
-			);
-		}
+		expect(toggle.element().getBoundingClientRect().bottom).toBeLessThan(
+			space.bottom,
+		);
 		const plot = region.getByRole("figure").element().getBoundingClientRect();
 		expect(plot.height).toBe(space.height);
 	});

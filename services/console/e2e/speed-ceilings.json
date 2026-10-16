@@ -121,7 +121,7 @@
 	"plotsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 53200,
+		"jsBytes": 53020,
 		"scriptRounds": 1
 	},
 	"thresholdsColdLoad": {
@@ -153,7 +153,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 95580,
+		"jsBytes": 95390,
 		"deferredJsBytes": 105960,
 		"htmlBytes": 2590,
 		"inlineScriptBytes": 2900,
@@ -168,7 +168,7 @@
 	"exploreLinkMove": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 35640,
+		"jsBytes": 35460,
 		"scriptRounds": 1
 	},
 	"blankExploreColdLoad": {
@@ -213,7 +213,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 89310,
+		"jsBytes": 89120,
 		"deferredJsBytes": 105960,
 		"htmlBytes": 2560,
 		"inlineScriptBytes": 2885,
@@ -221,7 +221,7 @@
 	},
 	"publicColdLoad": {
 		"cls": 0,
-		"jsBytes": 63940,
+		"jsBytes": 63790,
 		"deferredJsBytes": 105960,
 		"cssBytes": 10740,
 		"htmlBytes": 2630,
