@@ -19,7 +19,6 @@
 }
 
 .th-table tbody tr.th-row {
-	position: relative;
 	height: 40px;
 }
 .th-table tbody tr.th-row > td {
@@ -32,9 +31,6 @@
 }
 .th-table tbody tr.th-row > td.th-model {
 	max-width: 360px;
-}
-.th-table tbody tr.th-row:hover td {
-	background: var(--color-overlay-hover);
 }
 .th-table tbody tr.th-spacer td {
 	padding: 0;
@@ -50,19 +46,6 @@
 }
 .console a.th-link:hover {
 	color: var(--color-text-accent);
-}
-/* The whole row opens the threshold. */
-.th-link::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-}
-.th-link:focus-visible {
-	outline: none;
-}
-.th-link:focus-visible::after {
-	outline: 2px solid var(--color-focus);
-	outline-offset: -2px;
 }
 .th-from,
 .th-quiet,

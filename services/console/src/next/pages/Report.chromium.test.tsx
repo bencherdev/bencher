@@ -371,6 +371,50 @@ test("Open N opens exactly the selected lines, over the view's window ending at 
 	expect(query.report).toBe(REPORT);
 });
 
+// Kills a row whose Explore link opens another line, window, or report than
+// Open 1 does for that row alone, and row links that wait for a selection.
+test("a row's Open in Explore is Open 1 for that row alone", async () => {
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: threeLines() } : { data: bootstrapOf() },
+	);
+	mount(api, impatient(), `${PATH}?window=1w`);
+	await expect.element(table()).toBeVisible();
+	await userEvent.hover(table().getByRole("columnheader", { name: "Line" }));
+	await userEvent.hover(table().getByRole("columnheader", { name: "Limit" }));
+	const row = page.getByRole("link", { name: `Open in Explore: ${SMALL}` });
+	await expect.element(row).toBeVisible();
+	const href = row.element().getAttribute("href");
+	expect(href).toMatch(/^\/next\/console\/projects\/hashbrown\/explore\?/);
+	await page.getByRole("checkbox", { name: `Select ${SMALL}` }).click();
+	await expect
+		.element(page.getByRole("link", { name: "Open 1 in Explore" }))
+		.toHaveAttribute("href", href as string);
+});
+
+// Kills a report that keeps its wide rows below 980 px, where the Explore
+// column leaves a line's name little room, and none at 768.
+test("between 768 and 980 px a report's rows fold so each line's name has room", async () => {
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: threeLines() } : { data: bootstrapOf() },
+	);
+	for (const width of [768, 900]) {
+		await page.viewport(width, 800);
+		mount(api, impatient());
+		await expect.element(table()).toBeVisible();
+		for (const name of [LATENCY, SMALL, THROUGHPUT]) {
+			const cell = page
+				.getByRole("checkbox", { name: `Select ${name}` })
+				.element()
+				.closest("tr")
+				?.querySelector("b")
+				?.closest("td");
+			expect(cell?.getBoundingClientRect().width).toBeGreaterThanOrEqual(200);
+		}
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
 // Kills a Previous or Open N whose name does not start with what it shows,
 // wide or narrow, so voice control cannot reach it by its words.
 test("Previous and Open N are named first by what they show, at either width", async () => {

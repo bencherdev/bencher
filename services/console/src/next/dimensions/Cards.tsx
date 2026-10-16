@@ -197,10 +197,10 @@ const RecentReportsTable = (props: {
 						<tbody>
 							<For each={recent().reports.slice(0, RECENT_REPORTS)}>
 								{(report) => (
-									<tr>
+									<tr class="rowlink">
 										<td data-fold="l1">
 											<a
-												class="dm-link"
+												class="dm-link rowlink-name"
 												href={reportPath(props.slug, report.uuid)}
 												aria-label={`${shortDate(report.start_time)}, report on ${report.branch.name}, ${report.testbed.name}`}
 											>
@@ -731,10 +731,10 @@ const ThresholdsCard = (props: {
 							<tbody>
 								<For each={on().thresholds}>
 									{(threshold) => (
-										<tr>
+										<tr class="rowlink">
 											<td data-fold="l1">
 												<a
-													class="dm-link"
+													class="dm-link rowlink-name"
 													href={thresholdPath(props.slug, threshold.uuid)}
 													aria-label={thresholdLinkName(
 														props.first.of(threshold),

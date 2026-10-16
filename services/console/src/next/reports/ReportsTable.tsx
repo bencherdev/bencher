@@ -220,7 +220,7 @@ const ReportRow = (props: {
 			.filter(Boolean)
 			.join(", ");
 	return (
-		<tr class="reports-row" aria-rowindex={props.index + 2}>
+		<tr class="reports-row rowlink" aria-rowindex={props.index + 2}>
 			<td data-fold="n2" class="reports-when">
 				<time datetime={props.report.start_time} title={absolute()}>
 					{relativeTime(start(), props.now)}
@@ -228,7 +228,7 @@ const ReportRow = (props: {
 			</td>
 			<td data-fold="l1" class="reports-branch">
 				<a
-					class="reports-link"
+					class="reports-link rowlink-name"
 					href={reportPath(props.slug, props.report.uuid)}
 					aria-label={label()}
 				>

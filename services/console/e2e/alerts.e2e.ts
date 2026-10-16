@@ -9,6 +9,7 @@ import {
 	refocusThenReread,
 } from "./overtake";
 import {
+	approach,
 	expect,
 	nextPath,
 	seed,
@@ -889,6 +890,12 @@ test("Alerts passes axe in both themes", async ({ page }) => {
 		alerts(hashbrown.slug, "?status=all"),
 		async () => {
 			await expect(row(page, SHA256)).toContainText(/Dismissed /);
+			await approach(table(page));
+			await expect(
+				row(page, SHA256).getByRole("link", {
+					name: `Open in Explore: ${SHA256}`,
+				}),
+			).toBeVisible();
 			await settle(page);
 		},
 	);

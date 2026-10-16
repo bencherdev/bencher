@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import {
 	type BrowserContext,
 	type BrowserContextOptions,
+	type Locator,
 	test as base,
 	expect,
 	type Page,
@@ -153,4 +154,17 @@ export const settle = async (page: Page, quietMs = 300) => {
 		page.off("requestfinished", end);
 		page.off("requestfailed", end);
 	}
+};
+
+/** Moves the pointer across `lines` as a reader heading for a row does, which brings the rows' Explore links without waiting for the page to go idle. */
+export const approach = async (lines: Locator) => {
+	await lines.scrollIntoViewIfNeeded();
+	const box = await lines.boundingBox();
+	if (!box) {
+		throw new Error("The lines are not drawn");
+	}
+	const top = Math.max(box.y, 0);
+	const mouse = lines.page().mouse;
+	await mouse.move(box.x + 8, top + 8);
+	await mouse.move(box.x + box.width / 2, top + 16, { steps: 4 });
 };

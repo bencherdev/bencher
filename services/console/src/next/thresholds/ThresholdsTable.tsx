@@ -205,7 +205,7 @@ const Row = (props: {
 				].join(" · ")
 			: props.row.branch.name;
 	return (
-		<tr class="th-row" aria-rowindex={props.index + 2}>
+		<tr class="th-row rowlink" aria-rowindex={props.index + 2}>
 			<td data-fold="l2" class="th-branch">
 				{/* On a phone this line's end is cut off, so what archived the row comes first. */}
 				<Show when={props.narrow && archivedBy(props.row)}>
@@ -216,7 +216,7 @@ const Row = (props: {
 					)}
 				</Show>
 				<a
-					class="th-link"
+					class="th-link rowlink-name"
 					href={`${projectPath(props.slug, "thresholds")}/${props.row.uuid}`}
 					aria-label={thresholdName(shown(), props.row)}
 				>

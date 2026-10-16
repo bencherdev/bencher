@@ -16,7 +16,7 @@ import {
 } from "solid-js";
 import type { PlotData } from "../plot/types";
 import type { GroupRow, ReportLine } from "./lines";
-import LineRow, { COLUMNS } from "./LineRow";
+import LineRow, { COLUMNS, RowExplore } from "./LineRow";
 import { type Slot, isGroup, offsetsOf, slotRange } from "./slots";
 
 const RowPlot = lazy(() => import("./RowPlot"));
@@ -55,13 +55,17 @@ interface LineTableProps {
 		height: { wide: number; narrow: number };
 		row: Component<{ group: GroupRow; index: number; columns: number }>;
 	};
-	/** Each line's own controls: a last column when wide, and when narrow a third line for the lines `narrow` names. */
+	/** Each line's own controls: a last column when wide, after the Explore links, and when narrow a third line for the lines `narrow` names. */
 	actions?: {
 		cell: (line: ReportLine) => JSX.Element;
 		narrow: (line: ReportLine) => boolean;
 	};
 	/** The lines drawn dimmed. */
 	dimmed?: (line: ReportLine) => boolean;
+	/** Explore's link for some of the lines, once the page can write it: each row opens its own. */
+	explore?: ((lines: readonly ReportLine[]) => string) | undefined;
+	/** The lines want their links (the page went idle or the reader moved toward them), so the page can start writing them. */
+	onExploreIntent?: () => void;
 	plot: (line: ReportLine) => {
 		data: PlotData;
 		note: string;
@@ -157,6 +161,25 @@ const LineTable = (props: LineTableProps) => {
 	const shown = createMemo(() => props.slots.slice(range().start, range().end));
 	const above = () => offsets()[range().start] ?? 0;
 	const below = () => (offsets().at(-1) ?? 0) - (offsets()[range().end] ?? 0);
+	// Each row's link into Explore arrives at the first idle moment after the rows are drawn, or sooner when the reader moves toward the lines.
+	const [intent, setIntent] = createSignal(false);
+	const intend = () => {
+		if (!intent()) {
+			setIntent(true);
+			RowExplore.preload();
+			props.onExploreIntent?.();
+		}
+	};
+	onMount(() =>
+		onCleanup(
+			whenIdle(() => {
+				if (!intent()) {
+					performance.mark("console:idle-load");
+					intend();
+				}
+			}),
+		),
+	);
 
 	return (
 		<table
@@ -165,6 +188,14 @@ const LineTable = (props: LineTableProps) => {
 			aria-label={props.label}
 			aria-rowcount={(props.narrow ? 0 : 1) + props.rows + opened()}
 			aria-busy={props.busy === true ? "true" : undefined}
+			onPointerMove={(event) => {
+				// A pointer still while the page changes under it is not the reader moving.
+				if (event.movementX || event.movementY) {
+					intend();
+				}
+			}}
+			onPointerDown={intend}
+			onFocusIn={intend}
 		>
 			<Show
 				when={props.narrow}
@@ -179,6 +210,7 @@ const LineTable = (props: LineTableProps) => {
 							<col class="lr-c-value" />
 							<col class="lr-c-delta" />
 							<col class="lr-c-limit" />
+							<col class="lr-c-go" />
 							<Show when={props.actions}>
 								<col class="lr-c-act" />
 							</Show>
@@ -203,6 +235,9 @@ const LineTable = (props: LineTableProps) => {
 								</th>
 								<th scope="col" class="lr-end">
 									Limit
+								</th>
+								<th scope="col">
+									<span class="sr-only">Explore</span>
 								</th>
 								<Show when={props.actions}>
 									<th scope="col">
@@ -256,6 +291,7 @@ const LineTable = (props: LineTableProps) => {
 								actions={
 									acts(slot) ? () => props.actions?.cell(slot) : undefined
 								}
+								explore={intent() ? props.explore?.([slot]) : undefined}
 								onIntent={() => {
 									RowPlot.preload();
 								}}
@@ -334,6 +370,19 @@ const Group = (props: { group: GroupRow; index: number; columns: number }) => (
 );
 
 const Dot = () => <span aria-hidden="true">·</span>;
+
+/** The longest the row links wait for an idle moment, and their wait where the browser cannot say. */
+const IDLE_MS = 1_000;
+
+/** Runs `then` at the browser's next idle moment, at most `IDLE_MS` away; the returned call cancels it. */
+const whenIdle = (then: () => void) => {
+	if ("requestIdleCallback" in window) {
+		const id = requestIdleCallback(then, { timeout: IDLE_MS });
+		return () => cancelIdleCallback(id);
+	}
+	const id = setTimeout(then, IDLE_MS);
+	return () => clearTimeout(id);
+};
 
 /** Its children, once the frame that showed the space they fill has painted. */
 const AfterPaint = (props: { children: JSX.Element }) => {
