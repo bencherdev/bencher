@@ -161,8 +161,8 @@ test.describe("signed in", () => {
 		await expect(plots).toBeFocused();
 	});
 
-	// Kills a first paint that waits for the app to name the project or show
-	// the Alerts tab's count, which a badge held empty would hide until then.
+	// Kills a first paint that waits for the app to name the project or to
+	// show the Alerts tab's count.
 	test("a returning reader's first paint names the project and counts its alerts before any module loads", async ({
 		page,
 	}) => {

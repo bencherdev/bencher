@@ -13,8 +13,13 @@ export interface Cost {
 	apiRequests: number;
 	/** The longest chain of API requests: a request starting after another finished is the next round. */
 	apiRounds: number;
-	/** Cumulative layout shift since the page loaded. */
+	/** Cumulative layout shift since the page loaded, in frames that moved anything outside the shell. */
 	cls: number;
+	/**
+	 * Cumulative layout shift in frames that moved only the shell, such as the
+	 * Alerts tab's count arriving on a cold load.
+	 */
+	shellShift: number;
 	/**
 	 * Same origin JavaScript started since the mark and, on a load, before the
 	 * load event, gzipped at level 9: what the page needs to run.
@@ -49,20 +54,36 @@ export interface Cost {
 declare global {
 	interface Window {
 		__layoutShift?: number;
+		__shellShift?: number;
 	}
 }
 
-/** Sum the layout shifts the reader did not cause, from the first paint on. */
+/** Sum the layout shifts the reader did not cause, from the first paint on, the shell's own apart. */
 export const observeLayoutShift = (page: Page) =>
 	page.addInitScript(() => {
 		window.__layoutShift = 0;
+		window.__shellShift = 0;
 		new PerformanceObserver((list) => {
 			for (const entry of list.getEntries()) {
 				const shift = entry as PerformanceEntry & {
 					value: number;
 					hadRecentInput: boolean;
+					sources?: { node?: Node | null }[];
 				};
-				if (!shift.hadRecentInput) {
+				if (shift.hadRecentInput) {
+					continue;
+				}
+				const sources = shift.sources ?? [];
+				const shell =
+					sources.length > 0 &&
+					sources.every(({ node }) =>
+						(node instanceof Element ? node : node?.parentElement)?.closest(
+							".shell",
+						),
+					);
+				if (shell) {
+					window.__shellShift = (window.__shellShift ?? 0) + shift.value;
+				} else {
 					window.__layoutShift = (window.__layoutShift ?? 0) + shift.value;
 				}
 			}
@@ -140,6 +161,7 @@ export const measure = async (
 					)
 					.map((url) => url.href),
 				cls: window.__layoutShift ?? 0,
+				shellShift: window.__shellShift ?? 0,
 			};
 		},
 		[apiUrl, since] as const,
@@ -179,6 +201,7 @@ export const measure = async (
 		apiRequests: timing.api.length,
 		apiRounds: rounds(timing.api),
 		cls: timing.cls,
+		shellShift: timing.shellShift,
 		jsBytes: await gzipped(critical.map((script) => script.url)),
 		deferredJsBytes: await gzipped(deferred.map((script) => script.url)),
 		stylesheets: new Set(timing.styles).size,

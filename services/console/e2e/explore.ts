@@ -1,4 +1,4 @@
-import type { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import {
 	type ExploreQuery,
 	blankQuery,
@@ -54,4 +54,26 @@ export const twoLines = async (request: APIRequestContext) => {
 			metrics: ["value"],
 		},
 	};
+};
+
+/**
+ * Scroll to the page's end: where the plot's top sits then, and the room left
+ * between the plot's bottom and the page's end, beyond the page's own padding.
+ */
+export const plotAtEnd = async (page: Page) => {
+	await page.evaluate(() =>
+		window.scrollTo({
+			top: document.documentElement.scrollHeight,
+			behavior: "instant",
+		}),
+	);
+	return page.getByRole("figure").evaluate((figure) => {
+		const box = figure.getBoundingClientRect();
+		const main = figure.closest("main");
+		const end = document.documentElement.scrollHeight - window.scrollY;
+		const padding = main
+			? Number.parseFloat(getComputedStyle(main).paddingBottom)
+			: 0;
+		return { top: box.top, below: end - box.bottom - padding };
+	});
 };

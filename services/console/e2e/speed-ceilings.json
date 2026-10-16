@@ -24,7 +24,7 @@
 	},
 	"tabSwitch": {
 		"apiRequests": 0,
-		"jsBytes": 11800,
+		"jsBytes": 12070,
 		"scriptRounds": 1
 	},
 	"reportsColdLoad": {
@@ -56,7 +56,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 48190,
+		"jsBytes": 48430,
 		"deferredJsBytes": 105960,
 		"stylesheets": 1,
 		"lateModules": 0
@@ -66,7 +66,7 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 48190,
+		"jsBytes": 48430,
 		"deferredJsBytes": 105960,
 		"stylesheets": 1,
 		"lateModules": 0
@@ -228,5 +228,12 @@
 	"classicPerfColdLoad": {
 		"jsBytes": 263390,
 		"cssBytes": 68140
+	},
+	"shellShift": {
+		"390": 0.00115,
+		"767": 0.00045,
+		"768": 0.00055,
+		"1024": 0.00055,
+		"1280": 0.0004
 	}
 }

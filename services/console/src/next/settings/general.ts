@@ -9,7 +9,6 @@ export interface Draft {
 	name: string;
 	slug: string;
 	url: string;
-	visibility: Visibility;
 }
 
 /** A change to the project as the API takes it; a `null` URL removes it. */
@@ -26,7 +25,6 @@ export const draftOf = (project: JsonProject): Draft => ({
 	name: project.name,
 	slug: project.slug,
 	url: project.url ?? "",
-	visibility: project.visibility,
 });
 
 /** What the reader changed, or nothing when the form matches the project. */
@@ -42,9 +40,6 @@ export const patchOf = (saved: Draft, draft: Draft): Patch | undefined => {
 	}
 	if (url !== saved.url) {
 		patch.url = url || null;
-	}
-	if (draft.visibility !== saved.visibility) {
-		patch.visibility = draft.visibility;
 	}
 	return Object.keys(patch).length > 0 ? patch : undefined;
 };
@@ -99,7 +94,7 @@ export const patched = (project: JsonProject, patch: Patch): JsonProject => {
 };
 
 export interface Refusal {
-	/** Where the reader reads it: under the field, or at the form's foot. */
+	/** Where the reader reads it: under the field, at the form's foot, or in the visibility dialog. */
 	field: "visibility" | "slug" | "form";
 	message: string;
 }

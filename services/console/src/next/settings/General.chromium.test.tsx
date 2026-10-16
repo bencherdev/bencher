@@ -1,4 +1,4 @@
-import type { JsonConsoleProject } from "../../types/bencher";
+import { type JsonConsoleProject, Visibility } from "../../types/bencher";
 import { afterEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { ApiError } from "../api";
@@ -21,9 +21,9 @@ const save = () => page.getByRole("button", { name: "Save changes" });
 
 describe("a save", () => {
 	// Kills a save that waits for the API before the project changes, an undo
-	// that keeps the refused change, a refusal shown away from Visibility, and
-	// a form that drops the reader's edits when it is refused.
-	test("shows at once, and a refusal puts the project back and says why in place", async () => {
+	// that keeps the refused change, a refusal said nowhere, and a form that
+	// drops the reader's edits when it is refused.
+	test("shows at once, and a refusal puts the project back and says why", async () => {
 		let refuse: (error: unknown) => void = () => {};
 		const { api, sent } = fakeApi(
 			() =>
@@ -35,33 +35,23 @@ describe("a save", () => {
 		dispose = mounted.dispose;
 
 		await page.getByRole("textbox", { name: "Name" }).fill("Hash Browns");
-		await page.getByRole("radio", { name: "Private" }).click();
 		await save().click();
 
 		expect(sent).toEqual([
 			{
 				method: "PATCH",
 				path: "/v0/projects/hashbrown",
-				body: { name: "Hash Browns", visibility: "private" },
+				body: { name: "Hash Browns" },
 			},
 		]);
 		expect(project(mounted.client)?.name).toBe("Hash Browns");
 
-		refuse(new ApiError(402, "client", '{"message":"No plan"}'));
-		const refusal = page.getByRole("alert");
-		await expect
-			.element(refusal)
-			.toHaveTextContent("private needs a paid plan");
-		await expect
-			.element(refusal.getByRole("link", { name: "See plans" }))
-			.toHaveAttribute("href", "/console/organizations/pompeii-llc/billing");
+		refuse(new ApiError(400, "client", '{"message":"Bad name"}'));
+		await expect.element(page.getByRole("alert")).toHaveTextContent("Bad name");
 		expect(project(mounted.client)).toEqual(PROJECT);
 		await expect
 			.element(page.getByRole("textbox", { name: "Name" }))
 			.toHaveValue("Hash Browns");
-		await expect
-			.element(page.getByRole("radio", { name: "Private" }))
-			.toBeChecked();
 		await expect.element(save()).toBeEnabled();
 	});
 
@@ -185,6 +175,129 @@ test("a slug another project has is announced under Slug", async () => {
 		.toHaveTextContent("Another project has this slug");
 });
 
+describe("visibility", () => {
+	const opener = () => page.getByRole("button", { name: "Change visibility" });
+	/** The row's line, read from the page while the dialog holds the focus. */
+	const line = () => document.getElementById("dz-vis")?.textContent;
+
+	// Kills a change sent before the reader confirms, a Cancel that sends it,
+	// and a dialog that offers the visibility the project already has.
+	test("asks first, for the other visibility, and Cancel sends nothing", async () => {
+		for (const [visibility, other] of [
+			[Visibility.Public, Visibility.Private],
+			[Visibility.Private, Visibility.Public],
+		] as const) {
+			const { api, sent } = fakeApi();
+			dispose = mount(() => <General />, {
+				api,
+				bootstrap: { ...bootstrapOf(), project: { ...PROJECT, visibility } },
+			}).dispose;
+
+			await opener().click();
+			const dialog = page.getByRole("alertdialog", {
+				name: `Make hashbrown ${other}?`,
+			});
+			await expect.element(dialog).toBeVisible();
+			expect(sent).toEqual([]);
+			await dialog.getByRole("button", { name: "Cancel" }).click();
+			await expect.element(dialog).not.toBeInTheDocument();
+			expect(sent).toEqual([]);
+			dispose();
+		}
+		dispose = undefined;
+	});
+
+	// Kills a change that waits for the API before the row says it, one that
+	// sends the form's fields along, a dialog that renames itself once the
+	// change shows, a dialog left open once it is made, and a focus dropped to
+	// the page when the dialog goes.
+	test("sends the visibility alone, shows it at once, and gives the focus back", async () => {
+		let answer: (project: unknown) => void = () => {};
+		const { api, sent } = fakeApi(
+			() =>
+				new Promise((resolve) => {
+					answer = resolve;
+				}),
+		);
+		const mounted = mount(() => <General />, { api });
+		dispose = mounted.dispose;
+		await page.getByRole("textbox", { name: "Name" }).fill("Hash Browns");
+
+		await opener().click();
+		await page.getByRole("button", { name: "Make private" }).click();
+		expect(sent).toEqual([
+			{
+				method: "PATCH",
+				path: "/v0/projects/hashbrown",
+				body: { visibility: Visibility.Private },
+			},
+		]);
+		expect(project(mounted.client)?.visibility).toBe(Visibility.Private);
+		expect(line()).toContain("private");
+		await expect
+			.element(
+				page.getByRole("alertdialog", { name: "Make hashbrown private?" }),
+			)
+			.toBeVisible();
+
+		answer({ ...PROJECT, visibility: Visibility.Private });
+		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+		await expect.element(opener()).toHaveFocus();
+		await expect.element(opener()).toHaveAccessibleDescription(/private/);
+		await expect
+			.element(page.getByRole("textbox", { name: "Name" }))
+			.toHaveValue("Hash Browns");
+	});
+
+	// Kills a plan refusal said outside the dialog or without its plans link,
+	// a refused change left showing, a dialog closed on a refusal, and a
+	// confirm that disables itself while it waits, which drops the focus.
+	test("a missing plan is said in the dialog, with the plans link, and the project stays public", async () => {
+		let refuse: (error: unknown) => void = () => {};
+		const { api } = fakeApi(
+			() =>
+				new Promise((_, reject) => {
+					refuse = reject;
+				}),
+		);
+		const mounted = mount(() => <General />, { api });
+		dispose = mounted.dispose;
+
+		await opener().click();
+		const dialog = page.getByRole("alertdialog", {
+			name: "Make hashbrown private?",
+		});
+		const confirm = dialog.getByRole("button", { name: "Make private" });
+		await confirm.click();
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+		refuse(new ApiError(402, "client", '{"message":"No plan"}'));
+		const refusal = dialog.getByRole("alert");
+		await expect
+			.element(refusal)
+			.toHaveTextContent("private needs a paid plan");
+		await expect
+			.element(refusal.getByRole("link", { name: "See plans" }))
+			.toHaveAttribute("href", "/console/organizations/pompeii-llc/billing");
+		expect(project(mounted.client)).toEqual(PROJECT);
+		expect(line()).toContain("public");
+		await expect.element(confirm).toHaveFocus();
+	});
+
+	// Kills any other refusal shown with the plans link, as if a plan would help.
+	test("another refusal says what the API said, without the plans link", async () => {
+		const { api } = fakeApi(async () => {
+			throw new ApiError(400, "client", '{"message":"Bad visibility"}');
+		});
+		dispose = mount(() => <General />, { api }).dispose;
+
+		await opener().click();
+		await page.getByRole("button", { name: "Make private" }).click();
+		const refusal = page.getByRole("alertdialog").getByRole("alert");
+		await expect.element(refusal).toHaveTextContent("Bad visibility");
+		expect(refusal.getByRole("link").elements()).toHaveLength(0);
+	});
+});
+
 describe("focus", () => {
 	const answered = () =>
 		fakeApi(async () => ({ ...PROJECT, name: "Hash Browns" }));
@@ -237,29 +350,53 @@ describe("what a reader sees", () => {
 			api: fakeApi().api,
 			bootstrap,
 		}).dispose;
+		const danger = page.getByRole("region", { name: "Danger" });
 		return {
 			form: page.getByRole("textbox", { name: "Name" }).elements().length,
-			danger: page.getByRole("button", { name: "Delete project" }).elements()
-				.length,
+			// The section's buttons in order, or null without the section.
+			danger:
+				danger.elements().length === 0
+					? null
+					: danger
+							.getByRole("button")
+							.elements()
+							.map((button) => button.textContent),
 			readOnly: page.getByText("Read only", { exact: true }).elements().length,
 		};
 	};
 
-	// Kills the Danger section drawn from `edit` or `delete` instead of `manage`.
-	test("a Developer edits the project and has no Danger section", () => {
+	// Kills a Danger section that drops a row, puts delete first, or draws the
+	// visibility control anywhere else, such as back in the form.
+	test("a Maintainer edits the project, and changes its visibility or deletes it under Danger", () => {
+		expect(shown(bootstrapOf())).toEqual({
+			form: 1,
+			danger: ["Change visibility", "Delete project"],
+			readOnly: 0,
+		});
+		expect(
+			page.getByRole("button", { name: "Change visibility" }).elements(),
+		).toHaveLength(1);
+		expect(page.getByRole("radio").elements()).toHaveLength(0);
+	});
+
+	// Kills the delete row drawn from `edit` or `delete` instead of `manage`,
+	// and the visibility row, or the whole section, kept from a reader the API
+	// lets change visibility.
+	test("a Developer edits the project and changes its visibility under Danger, with no delete", () => {
 		expect(shown(bootstrapOf({ manage: false }))).toEqual({
 			form: 1,
-			danger: 0,
+			danger: ["Change visibility"],
 			readOnly: 0,
 		});
 	});
 
-	// Kills a form drawn for a reader the API would refuse.
+	// Kills a form drawn for a reader the API would refuse, and a Danger
+	// section drawn, empty, for one who has neither of its rows.
 	test("a reader without edit sees the project as text", () => {
 		const view = shown(
 			bootstrapOf({ create: false, edit: false, delete: false, manage: false }),
 		);
-		expect(view).toEqual({ form: 0, danger: 0, readOnly: 1 });
+		expect(view).toEqual({ form: 0, danger: null, readOnly: 1 });
 		expect(
 			page.getByText("hashbrown", { exact: true }).elements(),
 		).toHaveLength(1);

@@ -1,16 +1,17 @@
 import Button from "@bencherdev/ui/Button";
+import Dialog from "@bencherdev/ui/Dialog";
 import Icon from "@bencherdev/ui/Icon";
-import Segmented from "@bencherdev/ui/Segmented";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import TextInput from "@bencherdev/ui/TextInput";
 import { useNavigate } from "@solidjs/router";
-import { useQueryClient } from "@tanstack/solid-query";
+import { type QueryClient, useQueryClient } from "@tanstack/solid-query";
 import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
 import {
 	type JsonConsoleProject,
 	type JsonProject,
 	Visibility,
 } from "../../types/bencher";
+import type { Api } from "../api";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
@@ -31,12 +32,7 @@ import Head from "./Head";
 
 const FIELDS: readonly Field[] = ["name", "slug", "url"];
 
-const VISIBILITIES = [
-	{ value: Visibility.Public, label: "Public" },
-	{ value: Visibility.Private, label: "Private" },
-] as const;
-
-/** The project's name, slug, URL, and visibility, and the Danger section. */
+/** The project's name, slug, and URL, and the Danger section with its visibility. */
 const General = () => {
 	const { api, slug } = useProject();
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
@@ -56,7 +52,7 @@ const General = () => {
 						>
 							<ProjectForm data={data()} />
 						</Show>
-						<Show when={data().permissions.manage}>
+						<Show when={data().permissions.edit || data().permissions.manage}>
 							<Danger data={data()} />
 						</Show>
 					</>
@@ -86,16 +82,8 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 		const from = slug();
 		setSaving(true);
 		setRefusal(undefined);
-		// A read in flight would land over the change.
-		await client.cancelQueries({ queryKey: ["console", "project", from] });
-		const undo = applyPatch(client, from, patch);
 		try {
-			const { data: project } = await api.send<JsonProject>(
-				"PATCH",
-				`/v0/projects/${encodeURIComponent(from)}`,
-				patch,
-			);
-			settleProject(client, localStorage, from, project);
+			const project = await sendPatch(api, client, from, patch);
 			setDraft(draftOf(project));
 			setJustSaved(true);
 			if (project.slug !== from) {
@@ -105,7 +93,6 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 			}
 		} catch (error) {
 			setRefusal(refusalOf(error, patch));
-			undo();
 		} finally {
 			setSaving(false);
 		}
@@ -253,42 +240,6 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 
 				<div class="formrow">
 					<div class="fl">
-						<span id="lab-vis">Visibility</span>
-					</div>
-					<div class="field">
-						<Segmented
-							name="visibility"
-							aria-labelledby="lab-vis"
-							options={VISIBILITIES}
-							value={draft().visibility}
-							onChange={(visibility) => edit({ visibility })}
-							style={{ "align-self": "flex-start" }}
-						/>
-						<Show
-							when={refused("visibility")}
-							fallback={
-								<Show when={saved().visibility === Visibility.Public}>
-									<p class="fhelp">
-										Private needs a paid plan.{" "}
-										<a href={billing(props.data)}>See plans</a>
-									</p>
-								</Show>
-							}
-						>
-							{(message) => (
-								<p class="ferror" role="alert">
-									<Icon name="warning" />
-									<span>
-										{message()} <a href={billing(props.data)}>See plans</a>
-									</span>
-								</p>
-							)}
-						</Show>
-					</div>
-				</div>
-
-				<div class="formrow">
-					<div class="fl">
 						<span>BMF version</span>
 					</div>
 					<div class="fvalue mono">{props.data.project.bmf_version}</div>
@@ -411,6 +362,7 @@ const billing = (data: JsonConsoleProject) =>
 	`/console/organizations/${data.organization.slug}/billing`;
 
 const Danger = (props: { data: JsonConsoleProject }) => {
+	const [changing, setChanging] = createSignal(false);
 	const [deleting, setDeleting] = createSignal(false);
 	return (
 		<section class="setcard danger" aria-labelledby="sec-danger">
@@ -420,16 +372,49 @@ const Danger = (props: { data: JsonConsoleProject }) => {
 				</h2>
 			</div>
 			<div class="setcard-body">
-				<div class="danger-row">
-					<Button
-						variant="danger"
-						aria-haspopup="dialog"
-						onClick={() => setDeleting(true)}
-					>
-						Delete project
-					</Button>
-				</div>
+				<Show when={props.data.permissions.edit}>
+					<div class="danger-row">
+						<div class="grow">
+							<h3>Change project visibility</h3>
+							<p id="dz-vis" class="muted">
+								This project is currently {props.data.project.visibility}.
+							</p>
+						</div>
+						<Button
+							aria-haspopup="dialog"
+							aria-describedby="dz-vis"
+							onClick={() => setChanging(true)}
+						>
+							Change visibility
+						</Button>
+					</div>
+				</Show>
+				<Show when={props.data.permissions.manage}>
+					<div class="danger-row">
+						<div class="grow">
+							<h3>Delete this project</h3>
+							<p id="dz-del" class="muted">
+								Once you delete a project, there is no going back. Please be
+								certain.
+							</p>
+						</div>
+						<Button
+							variant="danger"
+							aria-haspopup="dialog"
+							aria-describedby="dz-del"
+							onClick={() => setDeleting(true)}
+						>
+							Delete project
+						</Button>
+					</div>
+				</Show>
 			</div>
+			<Show when={changing()}>
+				<ChangeVisibility
+					data={props.data}
+					onDismiss={() => setChanging(false)}
+				/>
+			</Show>
 			<Show when={deleting()}>
 				<DeleteProject
 					project={props.data.project}
@@ -439,4 +424,107 @@ const Danger = (props: { data: JsonConsoleProject }) => {
 			</Show>
 		</section>
 	);
+};
+
+/** Asks, then changes the project to the other visibility with the form's patch. */
+const ChangeVisibility = (props: {
+	data: JsonConsoleProject;
+	onDismiss: () => void;
+}) => {
+	const { api, slug } = useProject();
+	const client = useQueryClient();
+	// Held from the opening: the change shows at once, under the dialog.
+	const to =
+		props.data.project.visibility === Visibility.Private
+			? Visibility.Public
+			: Visibility.Private;
+	const [sending, setSending] = createSignal(false);
+	const [refusal, setRefusal] = createSignal<Refusal>();
+	// The button stays enabled while sending, so the focus on it is never dropped.
+	const change = async () => {
+		if (sending()) {
+			return;
+		}
+		const patch = { visibility: to };
+		setSending(true);
+		setRefusal(undefined);
+		try {
+			await sendPatch(api, client, slug(), patch);
+			props.onDismiss();
+		} catch (error) {
+			setRefusal(refusalOf(error, patch));
+		} finally {
+			setSending(false);
+		}
+	};
+	return (
+		<Dialog
+			role="alertdialog"
+			aria-labelledby="vis-title"
+			onDismiss={props.onDismiss}
+		>
+			<div class="ui-dialog-head">
+				<h2 id="vis-title">
+					Make {props.data.project.slug} {to}?
+				</h2>
+				<Button
+					variant="ghost"
+					iconOnly
+					aria-label="Close"
+					onClick={props.onDismiss}
+				>
+					<Icon name="close" />
+				</Button>
+			</div>
+			<Show when={refusal()}>
+				{(refused) => (
+					<div class="ui-dialog-body">
+						<p class="ferror" role="alert">
+							<Icon name="warning" />
+							<span>
+								{refused().message}
+								<Show when={refused().field === "visibility"}>
+									{" "}
+									<a href={billing(props.data)}>See plans</a>
+								</Show>
+							</span>
+						</p>
+					</div>
+				)}
+			</Show>
+			<div class="ui-dialog-foot">
+				<Button onClick={props.onDismiss}>Cancel</Button>
+				<Button variant="primary" onClick={change}>
+					Make {to}
+				</Button>
+			</div>
+		</Dialog>
+	);
+};
+
+/**
+ * Show `patch` at once and send it, taking it back if the API refuses; the
+ * project as the API kept it.
+ */
+const sendPatch = async (
+	api: Api,
+	client: QueryClient,
+	slug: string,
+	patch: Patch,
+) => {
+	// A read in flight would land over the change.
+	await client.cancelQueries({ queryKey: ["console", "project", slug] });
+	const undo = applyPatch(client, slug, patch);
+	try {
+		const { data: project } = await api.send<JsonProject>(
+			"PATCH",
+			`/v0/projects/${encodeURIComponent(slug)}`,
+			patch,
+		);
+		settleProject(client, localStorage, slug, project);
+		return project;
+	} catch (error) {
+		undo();
+		throw error;
+	}
 };

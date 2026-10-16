@@ -14,7 +14,6 @@ const saved: Draft = {
 	name: "Hashbrown",
 	slug: "hashbrown",
 	url: "https://github.com/pompeii-llc/hashbrown",
-	visibility: Visibility.Public,
 };
 
 const project = {
@@ -30,8 +29,7 @@ const project = {
 } as JsonProject;
 
 describe("patchOf", () => {
-	// Kills a save that resends untouched fields: a resent visibility asks the
-	// plan check again, and a resent slug can collide.
+	// Kills a save that resends untouched fields: a resent slug can collide.
 	test("sends only what changed, and nothing when nothing did", () => {
 		expect(patchOf(saved, saved)).toBeUndefined();
 		expect(patchOf(saved, { ...saved, name: "Hash Browns" })).toEqual({
@@ -41,9 +39,9 @@ describe("patchOf", () => {
 			patchOf(saved, {
 				...saved,
 				slug: "hash-browns",
-				visibility: Visibility.Private,
+				url: "https://example.com",
 			}),
-		).toEqual({ slug: "hash-browns", visibility: Visibility.Private });
+		).toEqual({ slug: "hash-browns", url: "https://example.com" });
 	});
 
 	// Kills a name the API refuses for its spaces, and an emptied URL the
@@ -149,7 +147,7 @@ describe("refusalOf", () => {
 	const refused = (status: number, message: string) =>
 		new ApiError(status, "client", JSON.stringify({ message }));
 
-	// Kills a plan refusal shown away from Visibility, or as the API's raw words.
+	// Kills a plan refusal shown without its plans link, or as the API's raw words.
 	test("a missing plan belongs to Visibility", () => {
 		expect(
 			refusalOf(refused(402, "No plan"), { visibility: Visibility.Private }),

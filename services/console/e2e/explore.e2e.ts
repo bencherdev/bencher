@@ -1,7 +1,7 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { createProject, listPlots, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
-import { dimensions, explore, twoLines } from "./explore";
+import { dimensions, explore, plotAtEnd, twoLines } from "./explore";
 import {
 	VERSION_KEY,
 	expect,
@@ -1043,27 +1043,62 @@ test("a mouse reaches a readout's report link past a point close beside it", asy
 	await expect(page).toHaveURL(new RegExp(`/reports/${first.uuid}`));
 });
 
-// Kills a short plot that cannot scroll to the top of the screen, since
-// nothing below it gives the page the room.
-for (const viewport of [undefined, { width: 390, height: 844 }]) {
-	test(`a short plot scrolls to the top of the screen${viewport ? ` at ${viewport.width}` : ""}`, async ({
+// Kills scroll room that leaves the plot's top short of the top of the screen
+// or lets it scroll past (a full screen of room under the page's padding),
+// whatever the key's height, on a link and on a pin.
+for (const viewport of [
+	{ width: 1280, height: 800 },
+	{ width: 390, height: 844 },
+]) {
+	test(`the plot scrolls exactly to the top of the screen at ${viewport.width}`, async ({
 		page,
 		request,
 	}) => {
-		if (viewport) {
-			await page.setViewportSize(viewport);
-		}
-		await page.goto(explore(hashbrown.slug, (await twoLines(request)).query));
-		await expect(plot(page)).toHaveAccessibleName("2 lines");
-		await page.evaluate(() =>
-			window.scrollTo({
-				top: document.documentElement.scrollHeight,
-				behavior: "instant",
-			}),
+		await page.setViewportSize(viewport);
+		const { id, query } = await twoLines(request);
+		const pin = (await listPlots(request, hashbrown.slug)).find(
+			({ title }) =>
+				title === "blake3 input_bytes=65536 threads=1, Latency on main",
 		);
-		expect((await plot(page).boundingBox())?.y).toBeLessThanOrEqual(0);
+		for (const [link, lines] of [
+			[explore(hashbrown.slug, query), "2 lines"],
+			[
+				explore(hashbrown.slug, {
+					...query,
+					benchmarks: [id.benchmark("blake3")],
+					sets: [],
+				}),
+				"8 lines",
+			],
+			[explore(hashbrown.slug, { plot: pin?.uuid ?? "" }), "2 lines"],
+		] as const) {
+			await page.goto(link);
+			await expect(plot(page)).toHaveAccessibleName(lines);
+			const { top } = await plotAtEnd(page);
+			expect(Math.abs(top), link).toBeLessThanOrEqual(1);
+		}
 	});
 }
+
+// Kills room added below a plot already taller than the screen.
+test("a plot taller than the screen ends the page at its key", async ({
+	page,
+	request,
+}) => {
+	await page.setViewportSize({ width: 1280, height: 480 });
+	const { id, query } = await twoLines(request);
+	await page.goto(
+		explore(hashbrown.slug, {
+			...query,
+			benchmarks: [id.benchmark("blake3")],
+			sets: [],
+		}),
+	);
+	await expect(plot(page)).toHaveAccessibleName("8 lines");
+	const { top, below } = await plotAtEnd(page);
+	expect(top).toBeLessThan(-1);
+	expect(below).toBeLessThanOrEqual(1);
+});
 
 // Kills a classic perf link that lands in Explore without its query, through
 // the version the browser remembers or the one the classic navbar reads.

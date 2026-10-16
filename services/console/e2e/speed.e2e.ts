@@ -37,6 +37,12 @@ const report = (name: string, cost: Cost) => {
 	console.log(`${name}: ${JSON.stringify(cost)}`);
 };
 
+/** The most the shell may move on a cold load at this page's width: the Alerts count arriving once. */
+const shellCeiling = (page: Page) =>
+	ceilings.shellShift[
+		String(page.viewportSize()?.width) as keyof typeof ceilings.shellShift
+	];
+
 /** The page is up, its deferred work has started, and the network is quiet. */
 const ready = async (page: Page) => {
 	await expect(
@@ -72,6 +78,7 @@ test("a cold load holds the speed ceilings", async ({ page }) => {
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
@@ -98,6 +105,7 @@ test("a warm reload holds the speed ceilings", async ({ page }) => {
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.shellShift).toBeLessThanOrEqual(ceiling.cls);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 	expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
@@ -158,6 +166,7 @@ test("a cold load of Reports holds its speed ceilings", async ({ page }) => {
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
@@ -255,6 +264,7 @@ test("a cold load of General holds the speed ceilings", async ({ page }) => {
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
@@ -275,14 +285,15 @@ test("a cold load of Keys holds the speed ceilings", async ({ page }) => {
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
-// Kills the shell's late badge and names, or a page's own data, moving the
-// layout on a narrow screen, where the pages above are not measured.
+// Measures each page's cold load on a narrow screen: what the page moves as its
+// data arrives, and what the shell moves when the Alerts count arrives.
 for (const [width, viewport] of [
 	["768", { width: 768, height: 1024 }],
 	["390", { width: 390, height: 844 }],
@@ -325,6 +336,7 @@ for (const [width, viewport] of [
 				const cost = await coldLoad(page, path, () => shown(page));
 				report(`${name} cold load ${width}`, cost);
 				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+				expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 			});
 		}
 	});
@@ -388,33 +400,6 @@ const alertingTileShown = async (page: Page) => {
 	await expect(tile.getByRole("img", { name: "has an alert" })).toBeVisible();
 };
 
-/** Layout shift with a source outside the shell: what the page itself moves. */
-const observePageShift = (page: Page) =>
-	page.addInitScript(() => {
-		const holder = window as Window & { __pageShift?: number };
-		holder.__pageShift = 0;
-		new PerformanceObserver((list) => {
-			for (const entry of list.getEntries()) {
-				const shift = entry as PerformanceEntry & {
-					value: number;
-					hadRecentInput: boolean;
-					sources?: { node?: Node | null }[];
-				};
-				const outside = (shift.sources ?? []).some(
-					({ node }) => !(node instanceof Element && node.closest(".shell")),
-				);
-				if (!shift.hadRecentInput && outside) {
-					holder.__pageShift = (holder.__pageShift ?? 0) + shift.value;
-				}
-			}
-		}).observe({ type: "layout-shift", buffered: true });
-	});
-
-const pageShift = (page: Page) =>
-	page.evaluate(
-		() => (window as Window & { __pageShift?: number }).__pageShift ?? 0,
-	);
-
 // The cold loads of a report, at each width the layout changes at.
 for (const [width, viewport] of [
 	["desktop", undefined],
@@ -439,7 +424,6 @@ for (const [width, viewport] of [
 				{ headers: { Authorization: `Bearer ${seed.member.token}` } },
 			);
 			const [newest] = (await response.json()) as { uuid: string }[];
-			await observePageShift(page);
 			const cost = await coldLoad(page, `${REPORTS}/${newest?.uuid}`, () =>
 				expect(
 					page
@@ -448,19 +432,15 @@ for (const [width, viewport] of [
 						.first(),
 				).toBeVisible(),
 			);
-			const moved = await pageShift(page);
-			report(`report cold load ${width}`, {
-				...cost,
-				pageShift: moved,
-			} as Cost);
+			report(`report cold load ${width}`, cost);
 			const ceiling = ceilings.reportColdLoad;
-			expect(moved).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
 				ceiling.apiAnswersBeforePaint,
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 			expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
@@ -499,7 +479,6 @@ for (const [width, viewport] of [
 						{ headers: { Authorization: `Bearer ${seed.member.token}` } },
 					);
 					const [newest] = (await response.json()) as { uuid: string }[];
-					await observePageShift(page);
 					const cost = await coldLoad(
 						page,
 						`${REPORTS}/${newest?.uuid}`,
@@ -513,16 +492,12 @@ for (const [width, viewport] of [
 						},
 						delay,
 					);
-					const moved = await pageShift(page);
-					report(`viewer report cold load ${order} ${width}`, {
-						...cost,
-						pageShift: moved,
-					} as Cost);
+					report(`viewer report cold load ${order} ${width}`, cost);
 					const ceiling = ceilings.reportColdLoad;
-					expect(moved).toBeLessThanOrEqual(ceiling.cls);
 					expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 					expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 					expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+					expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 					expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 					expect(cost.deferredJsBytes).toBeLessThanOrEqual(
 						ceiling.deferredJsBytes,
@@ -559,21 +534,16 @@ for (const [width, viewport] of [
 			request,
 		}) => {
 			const link = explore(hashbrown.slug, (await twoLines(request)).query);
-			await observePageShift(page);
 			const cost = await coldLoad(page, link, () => twoLinesShown(page));
-			const moved = await pageShift(page);
-			report(`explore cold load ${width}`, {
-				...cost,
-				pageShift: moved,
-			} as Cost);
+			report(`explore cold load ${width}`, cost);
 			const ceiling = ceilings.exploreColdLoad;
-			expect(moved).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
 				ceiling.apiAnswersBeforePaint,
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
@@ -597,17 +567,11 @@ for (const [width, viewport] of [
 		test(`a cold Plots load holds its speed ceilings at ${width}`, async ({
 			page,
 		}) => {
-			await observePageShift(page);
 			const cost = await coldLoad(page, nextPath(hashbrown.slug, "plots"), () =>
 				alertingTileShown(page),
 			);
-			const moved = await pageShift(page);
-			report(`plots cold load ${width}`, {
-				...cost,
-				pageShift: moved,
-			} as Cost);
+			report(`plots cold load ${width}`, cost);
 			const ceiling = ceilings.plotsColdLoad;
-			expect(moved).toBeLessThanOrEqual(ceiling.cls);
 			// The plot's code is named in the document, never left for after the load.
 			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
@@ -616,6 +580,7 @@ for (const [width, viewport] of [
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
 			expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
@@ -637,7 +602,6 @@ for (const [width, viewport] of [
 		test(`a cold blank Explore holds its speed ceilings at ${width}`, async ({
 			page,
 		}) => {
-			await observePageShift(page);
 			const cost = await coldLoad(page, nextPath(hashbrown.slug), () =>
 				expect(
 					page
@@ -645,19 +609,15 @@ for (const [width, viewport] of [
 						.getByRole("link", { name: /^blake3 / }),
 				).toBeVisible(),
 			);
-			const moved = await pageShift(page);
-			report(`blank explore cold load ${width}`, {
-				...cost,
-				pageShift: moved,
-			} as Cost);
+			report(`blank explore cold load ${width}`, cost);
 			const ceiling = ceilings.blankExploreColdLoad;
-			expect(moved).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
 				ceiling.apiAnswersBeforePaint,
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 			expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
@@ -686,7 +646,6 @@ for (const viewport of [
 				({ title }) => title === PINNED,
 			);
 			expect(pin).toBeDefined();
-			await observePageShift(page);
 			const cost = await coldLoad(
 				page,
 				`${nextPath(hashbrown.slug)}?plot=${pin?.uuid}`,
@@ -697,13 +656,9 @@ for (const viewport of [
 					await twoLinesShown(page);
 				},
 			);
-			const moved = await pageShift(page);
-			report(`bare pin cold load ${viewport.width}`, {
-				...cost,
-				pageShift: moved,
-			} as Cost);
-			expect(moved).toBeLessThanOrEqual(ceilings.exploreColdLoad.cls);
+			report(`bare pin cold load ${viewport.width}`, cost);
 			expect(cost.cls).toBeLessThanOrEqual(ceilings.exploreColdLoad.cls);
+			expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 		});
 	});
 }
@@ -939,17 +894,17 @@ for (const [width, viewport] of [
 		}
 
 		const holds = (
+			page: Page,
 			cost: Cost,
-			moved: number,
 			ceiling: typeof ceilings.thresholdsColdLoad,
 		) => {
-			expect(moved).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
 				ceiling.apiAnswersBeforePaint,
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 			expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
@@ -966,7 +921,6 @@ for (const [width, viewport] of [
 		test(`a cold load of Thresholds holds its speed ceilings at ${width}`, async ({
 			page,
 		}) => {
-			await observePageShift(page);
 			const cost = await coldLoad(page, THRESHOLDS, () =>
 				expect(
 					page
@@ -975,12 +929,8 @@ for (const [width, viewport] of [
 						.first(),
 				).toBeVisible(),
 			);
-			const moved = await pageShift(page);
-			report(`thresholds cold load ${width}`, {
-				...cost,
-				pageShift: moved,
-			} as Cost);
-			holds(cost, moved, ceilings.thresholdsColdLoad);
+			report(`thresholds cold load ${width}`, cost);
+			holds(page, cost, ceilings.thresholdsColdLoad);
 		});
 
 		// Kills a threshold whose alerts wait on the threshold's own request, a
@@ -997,7 +947,6 @@ for (const [width, viewport] of [
 			const {
 				thresholds: [threshold],
 			} = (await response.json()) as { thresholds: { uuid: string }[] };
-			await observePageShift(page);
 			const cost = await coldLoad(
 				page,
 				`${THRESHOLDS}/${threshold?.uuid}`,
@@ -1007,12 +956,8 @@ for (const [width, viewport] of [
 						page.getByText(/^[1-9]\d* active · \d+ dismissed$/),
 					).toBeVisible(),
 			);
-			const moved = await pageShift(page);
-			report(`threshold cold load ${width}`, {
-				...cost,
-				pageShift: moved,
-			} as Cost);
-			holds(cost, moved, ceilings.thresholdColdLoad);
+			report(`threshold cold load ${width}`, cost);
+			holds(page, cost, ceilings.thresholdColdLoad);
 		});
 	});
 }
@@ -1055,7 +1000,6 @@ for (const [width, viewport] of [
 			test(`a cold load of ${name} holds its speed ceilings at ${width}`, async ({
 				page,
 			}) => {
-				await observePageShift(page);
 				const cost = await coldLoad(
 					page,
 					nextPath(hashbrown.slug, path),
@@ -1063,18 +1007,14 @@ for (const [width, viewport] of [
 						await expect(shown(page)).toBeVisible();
 					},
 				);
-				const moved = await pageShift(page);
-				report(`${name} cold load ${width}`, {
-					...cost,
-					pageShift: moved,
-				} as Cost);
-				expect(moved).toBeLessThanOrEqual(ceiling.cls);
+				report(`${name} cold load ${width}`, cost);
 				expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
 					ceiling.apiAnswersBeforePaint,
 				);
 				expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 				expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 				expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+				expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 				expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 				expect(cost.deferredJsBytes).toBeLessThanOrEqual(
 					ceiling.deferredJsBytes,
@@ -1105,7 +1045,6 @@ for (const [width, viewport] of [
 		test(`a cold load of Alerts holds its speed ceilings at ${width}`, async ({
 			page,
 		}) => {
-			await observePageShift(page);
 			const cost = await coldLoad(
 				page,
 				nextPath(hashbrown.slug, "alerts"),
@@ -1117,19 +1056,15 @@ for (const [width, viewport] of [
 							.last(),
 					).toBeVisible(),
 			);
-			const moved = await pageShift(page);
-			report(`alerts cold load ${width}`, {
-				...cost,
-				pageShift: moved,
-			} as Cost);
+			report(`alerts cold load ${width}`, cost);
 			const ceiling = ceilings.alertsColdLoad;
-			expect(moved).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
 				ceiling.apiAnswersBeforePaint,
 			);
 			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 			expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
@@ -1254,6 +1189,7 @@ for (const [width, viewport] of [
 			expect(cost.apiRequests).toBe(1);
 			expect(cost.apiRounds).toBe(1);
 			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.shellShift).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 			expect(cost.cssBytes).toBeLessThanOrEqual(ceiling.cssBytes);
