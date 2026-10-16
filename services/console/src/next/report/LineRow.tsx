@@ -1,11 +1,12 @@
-import { For, type JSX, Show, Suspense, lazy } from "solid-js";
+import { For, type JSX, Show, Suspense, createMemo, lazy } from "solid-js";
 import InlineHistory from "../plot/InlineHistory";
 import type { Guard } from "../plot/format";
 import { formatValue } from "../plot/format";
+import { inlineOf } from "../plot/inline";
 import { unitScale } from "../plot/units";
 import { deltaOf } from "./delta";
 import type { AlignedSeries } from "./lines";
-import { type ParameterSet, lineLabel, rowNumbers } from "./row";
+import { type ParameterSet, iterationTag, lineLabel, rowNumbers } from "./row";
 import { rowClick } from "./rowClick";
 
 /** What a row draws of a line, as a report, an alert, or a threshold's page holds it. */
@@ -22,7 +23,14 @@ interface RowLine {
 	alert: { limit: "lower" | "upper" } | undefined;
 	guard: Guard | undefined;
 	history: AlignedSeries;
-	points: { x: readonly number[] };
+	points: {
+		x: readonly number[];
+		report: readonly number[];
+		iteration?: readonly number[];
+	};
+	iteration?: number;
+	iterations?: number;
+	chosen?: number;
 }
 
 const UNITS = { unitScale, formatValue };
@@ -169,12 +177,23 @@ const LineRow = (props: LineRowProps) => {
 					</a>
 				)}
 			</Show>
+			<Show when={iterationTag(props.line)}>
+				{(tag) => (
+					<>
+						{" "}
+						<span class="lr-tag">{tag()}</span>
+					</>
+				)}
+			</Show>
 		</>
+	);
+	const inline = createMemo(() =>
+		inlineOf(props.line.points, props.line.history, props.line.chosen),
 	);
 	const history = () => (
 		<InlineHistory
-			x={props.line.points.x}
-			line={props.line.history}
+			x={inline().x}
+			line={inline().line}
 			muted={props.dimmed === true}
 			label={`${label().name}, history`}
 		/>

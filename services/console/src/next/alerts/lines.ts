@@ -44,6 +44,7 @@ export const alertLinesOf = (batch: JsonConsoleAlerts): AlertLine[] =>
 		const points = {
 			x: group.points.x,
 			report: group.points.report,
+			...(group.points.iteration && { iteration: group.points.iteration }),
 			reports: batch.reports,
 		};
 		const report: AlertReport = {

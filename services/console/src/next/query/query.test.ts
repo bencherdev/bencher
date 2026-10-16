@@ -26,6 +26,7 @@ const FULL: ExploreQuery = {
 	yScale: "log",
 	window: { seconds: 7 * DAY, end: 1_757_800_000_000 },
 	layout: "stacked",
+	iteration: 3,
 	hide: ["k1", "k2"],
 	only: ["k3", "k4"],
 	focus: "k3",

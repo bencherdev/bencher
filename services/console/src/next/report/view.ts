@@ -11,6 +11,8 @@ export interface ReportView {
 	window: ReportWindow;
 	search: string;
 	expanded: string[];
+	/** The iteration the rows show, counting from 1; each row's own when absent. */
+	iteration?: number | undefined;
 }
 
 // The API reads a report's history back at most this far.
@@ -26,13 +28,23 @@ const DEFAULT_WINDOW = "4w";
 
 const CUSTOM_WINDOW = /^([1-9][0-9]*)d$/;
 
-export const parseReportView = (params: URLSearchParams): ReportView => ({
-	group: params.get("group") === "measure" ? "measure" : "benchmark",
-	sort: params.get("sort") === "delta" ? "delta" : "name",
-	window: parseWindow(params.get("window")),
-	search: params.get("search")?.trim() ?? "",
-	expanded: [...new Set(params.getAll("expanded"))],
-});
+const ITERATION = /^[1-9][0-9]{0,3}$/;
+
+/** An iteration a link names, counting from 1, or none for a missing or hand-broken one. */
+const parseIteration = (text: string | null): number | undefined =>
+	text !== null && ITERATION.test(text) ? Number(text) : undefined;
+
+export const parseReportView = (params: URLSearchParams): ReportView => {
+	const iteration = parseIteration(params.get("iteration"));
+	return {
+		group: params.get("group") === "measure" ? "measure" : "benchmark",
+		sort: params.get("sort") === "delta" ? "delta" : "name",
+		window: parseWindow(params.get("window")),
+		search: params.get("search")?.trim() ?? "",
+		expanded: [...new Set(params.getAll("expanded"))],
+		...(iteration !== undefined && { iteration }),
+	};
+};
 
 /** The search string for a view, empty for the default view and without a leading `?`. */
 export const reportViewSearch = (view: ReportView): string => {
@@ -55,6 +67,9 @@ export const reportViewSearch = (view: ReportView): string => {
 	}
 	for (const key of view.expanded) {
 		params.append("expanded", key);
+	}
+	if (view.iteration !== undefined) {
+		params.set("iteration", String(view.iteration));
 	}
 	return params.toString();
 };

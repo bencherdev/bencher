@@ -153,6 +153,8 @@ pub struct JsonConsoleReportCounts {
     pub measures: u32,
     /// The distinct metric names of the report's lines.
     pub metrics: u32,
+    /// The most iterations any of the report's lines ran.
+    pub iterations: u32,
     pub alerts: JsonReportAlertsCounts,
 }
 
@@ -212,6 +214,13 @@ pub struct JsonConsoleReportLine {
     pub metric: MetricName,
     /// The value in this report.
     pub value: f64,
+    /// The iteration the value is from: the one that alerted, and otherwise the last.
+    /// Absent when it is the first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub iteration: Option<Iteration>,
+    /// How many iterations of the report the line ran, absent when one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub iterations: Option<u32>,
     /// The model of the threshold that checked the value, an index into `models`.
     /// Absent when no threshold checked it.
     #[serde(default, skip_serializing_if = "Option::is_none")]

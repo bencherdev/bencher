@@ -1,8 +1,15 @@
 import uPlot from "uplot";
 import { bandGeometry, EDGE } from "./band";
 import { extent, sameX } from "./columns";
-import { drawAlert, drawMark, fillAreas, strokeLimits } from "./draw";
+import {
+	drawAlert,
+	drawMark,
+	fillAreas,
+	strokeLimits,
+	strokeRanges,
+} from "./draw";
 import { formatDate, formatTick, formatWhen } from "./format";
+import { rangeBars } from "./iterations";
 import { axisFont, axisWidth } from "./labels";
 import { transform, type YScale, yRange, yScale, yTicks } from "./scale";
 import { type LineStyle, lineDash } from "./series";
@@ -81,7 +88,7 @@ export interface PanelState {
 	status: (alert: PlotAlert) => PlotAlert["status"];
 }
 
-/** Where the pointer or the keys put the cursor: a data index, the nearest line, and the x in CSS pixels inside the plot area. */
+/** Where the pointer or the keys put the cursor: a data index, which on a line is its point nearest the pointer, the nearest line, and the x in CSS pixels inside the plot area. */
 export interface CursorEvent {
 	index: number;
 	line: number | null;
@@ -104,8 +111,8 @@ export interface Panel {
 	frame: () => { left: number; top: number; width: number };
 	/** Draws again with the state's hidden lines, focus, and palette, synchronously. */
 	update: () => void;
-	/** Pins the cursor at a data index, as the keys do. */
-	pinAt: (index: number) => void;
+	/** Pins the cursor at a data index, on `line`'s point there when given, and on no line as the keys do. */
+	pinAt: (index: number, line?: number | null) => void;
 	clearCursor: () => void;
 	setSize: (width: number, height: number) => void;
 	/** The y of a line's value at an index, in CSS pixels inside the plot area. */
@@ -281,7 +288,7 @@ export const createPanel = (
 			),
 		],
 		hooks: {
-			drawAxes: [(u) => drawBand(u)],
+			drawAxes: [(u) => drawBand(u), (u) => drawRanges(u)],
 			draw: [(u) => drawOverlay(u)],
 		},
 	};
@@ -329,7 +336,11 @@ export const createPanel = (
 			return;
 		}
 		const line = data.lines[focus] as PlotLine;
-		const geometry = bandGeometry(line.y, line.lower, line.upper);
+		const geometry = bandGeometry(
+			line.through ?? line.y,
+			line.lower,
+			line.upper,
+		);
 		if (!geometry.areas.length) {
 			return;
 		}
@@ -369,10 +380,42 @@ export const createPanel = (
 		ctx.restore();
 	};
 
-	const pointCounts = lines.map(
-		(line) =>
-			(data.lines[line]?.y ?? []).filter((value) => value != null).length,
-	);
+	// One per report, so a report's iterations, drawn at its one x, never thin out the marks.
+	const pointCounts = lines.map((line) => {
+		const drawn = data.lines[line];
+		return (drawn?.through ?? drawn?.y ?? []).filter((value) => value != null)
+			.length;
+	});
+
+	const ranges = lines.map((line) => {
+		const drawn = data.lines[line];
+		return drawn?.through ? rangeBars(drawn.y, data.report) : [];
+	});
+
+	// Under the lines, as the band is: one bar per report from its lowest iteration to its highest.
+	const drawRanges = (u: uPlot) => {
+		const ctx = u.ctx;
+		ctx.save();
+		clipToPlot(u, ctx);
+		lines.forEach((line, position) => {
+			const bars = ranges[position] ?? [];
+			if (!bars.length || state.hidden().has(line) || dimmed(line)) {
+				return;
+			}
+			const key = scaleKey(line);
+			strokeRanges(
+				ctx,
+				bars.map(({ index, low, high }) => ({
+					x: u.valToPos(x[index] ?? 0, "x", true),
+					top: u.valToPos(high, key, true),
+					bottom: u.valToPos(low, key, true),
+				})),
+				strokeColor(line),
+				pixelRatio(),
+			);
+		});
+		ctx.restore();
+	};
 
 	// Inside save and restore, so uPlot's cache of the context's style stays true.
 	const drawOverlay = (u: uPlot) => {
@@ -450,7 +493,12 @@ export const createPanel = (
 		}
 	};
 
-	const columns = [x, ...lines.map((line) => data.lines[line]?.y ?? [])];
+	const columns = [
+		x,
+		...lines.map(
+			(line) => data.lines[line]?.through ?? data.lines[line]?.y ?? [],
+		),
+	];
 	const u = new uPlot(opts, columns as uPlot.AlignedData, target);
 	const over = u.over;
 	over.setAttribute("role", "group");
@@ -473,10 +521,13 @@ export const createPanel = (
 		});
 	};
 
-	// The nearest visible line to the pointer at `index`, among the points that share its x.
-	const nearest = (index: number, top: number): number | null => {
+	// The nearest visible line to the pointer at `index`, and its point, among the points that share its x.
+	const nearest = (
+		index: number,
+		top: number,
+	): { line: number; point: number } | null => {
 		const [start, end] = sameX(x, index);
-		let best: number | null = null;
+		let best: { line: number; point: number } | null = null;
 		let distance = HOVER_REACH;
 		for (const line of lines) {
 			if (state.hidden().has(line)) {
@@ -491,7 +542,7 @@ export const createPanel = (
 				const gap = Math.abs(u.valToPos(value, scaleKey(line)) - top);
 				if (gap <= distance) {
 					distance = gap;
-					best = line;
+					best = { line, point };
 				}
 			}
 		}
@@ -517,9 +568,10 @@ export const createPanel = (
 		if (index == null) {
 			return null;
 		}
+		const near = nearest(index, top);
 		return {
-			index,
-			line: nearest(index, top),
+			index: near?.point ?? index,
+			line: near?.line ?? null,
 			x: u.valToPos(x[index] ?? 0, "x"),
 		};
 	};
@@ -585,10 +637,10 @@ export const createPanel = (
 		event.preventDefault();
 		pinAt(Math.max(0, Math.min(x.length - 1, index)));
 	};
-	const pinAt = (index: number) => {
+	const pinAt = (index: number, line: number | null = null) => {
 		const left = u.valToPos(x[index] ?? 0, "x");
 		moveCursor({ left, top: u.bbox.height / pixelRatio() / 2 }, false, true);
-		events.pin({ index, line: null, x: left });
+		events.pin({ index, line, x: left });
 	};
 	const onEnter = () => u.syncRect();
 	over.addEventListener("pointerenter", onEnter);

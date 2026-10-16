@@ -44,9 +44,21 @@ export const fullName = (
 
 const NO_SCALE: UnitScale = { factor: 1, symbol: "" };
 
+/** One iteration of the focused line's report. */
+interface ReadoutIteration {
+	/** Counting from 1. */
+	iteration: number;
+	value: string;
+	/** The one the row's value, delta, limit, and alert read. */
+	emphasized: boolean;
+	alerted: boolean;
+}
+
 interface ReadoutRow {
 	/** An index into the data's lines. */
 	line: number;
+	/** The data index the row reads. */
+	point: number;
 	value: string;
 	/** The report the point came from, an index into the data's reports. */
 	report: number;
@@ -55,6 +67,8 @@ interface ReadoutRow {
 	limit?: string;
 	/** The alert raised at the focused line's point. */
 	alert?: PlotAlert;
+	/** The focused or only line's iterations at its report, where it ran several or one is chosen. */
+	iterations?: ReadoutIteration[];
 }
 
 export interface Readout {
@@ -65,7 +79,11 @@ export interface Readout {
 	more: number;
 }
 
-/** What the plot reads out at `index` for the visible lines in `order`, the focused line first. */
+/**
+ * What the plot reads out at `index` for the visible lines in `order`, the
+ * focused line first. Each line reads the point it runs through, except the
+ * focused line under the cursor, which reads the point the cursor is on.
+ */
 export const readout = (
 	data: PlotData,
 	index: number,
@@ -74,6 +92,9 @@ export const readout = (
 	scales: readonly UnitScale[],
 	xAxis: PlotXAxis,
 	timeZone?: string,
+	cursor: { line: number | null; chosen?: number | undefined } = {
+		line: null,
+	},
 ): Readout => {
 	const [start, end] = sameX(data.x, index);
 	const lines =
@@ -84,7 +105,11 @@ export const readout = (
 	let count = 0;
 	for (const lineIndex of lines) {
 		const line = data.lines[lineIndex];
-		const point = line && lastPoint(line, start, end);
+		const point =
+			line &&
+			(lineIndex === focus && cursor.line === focus && line.y[index] != null
+				? index
+				: shownPoint(line, start, end));
 		if (!line || point === undefined) {
 			continue;
 		}
@@ -95,6 +120,7 @@ export const readout = (
 		const scale = scales[line.measure] ?? NO_SCALE;
 		const row: ReadoutRow = {
 			line: lineIndex,
+			point,
 			value: formatValue(line.y[point] ?? 0, scale),
 			report: data.report[point] ?? 0,
 			focused: lineIndex === focus,
@@ -110,6 +136,13 @@ export const readout = (
 				row.alert = alert;
 			}
 		}
+		// The focused line, or the only one, lists its report's iterations.
+		const iterations =
+			(row.focused || lines.length === 1) &&
+			iterationsAt(data, line, point, scale, cursor.chosen);
+		if (iterations) {
+			row.iterations = iterations;
+		}
 		rows.push(row);
 	}
 	const report = rows[0]?.report ?? data.report[index] ?? 0;
@@ -124,17 +157,43 @@ export const readout = (
 	};
 };
 
-const lastPoint = (
+/** The last point among those that share the x that the line runs through. */
+const shownPoint = (
 	line: PlotLine,
 	start: number,
 	end: number,
 ): number | undefined => {
+	const values = line.through ?? line.y;
 	for (let index = end - 1; index >= start; index--) {
-		if (line.y[index] != null) {
+		if (values[index] != null) {
 			return index;
 		}
 	}
 	return undefined;
+};
+
+/** Every iteration of the report at `point` the line has a value at, in order. */
+const iterationsAt = (
+	data: PlotData,
+	line: PlotLine,
+	point: number,
+	scale: UnitScale,
+	chosen: number | undefined,
+): ReadoutIteration[] | undefined => {
+	const { iteration, report } = data;
+	const [start, end] = sameX(data.x, point);
+	const points = Array.from(
+		{ length: end - start },
+		(_, at) => start + at,
+	).filter((index) => report[index] === report[point] && line.y[index] != null);
+	return iteration && (points.length > 1 || chosen !== undefined)
+		? points.map((index) => ({
+				iteration: (iteration[index] ?? 0) + 1,
+				value: formatValue(line.y[index] ?? 0, scale),
+				emphasized: index === point,
+				alerted: line.alerts.includes(index),
+			}))
+		: undefined;
 };
 
 const guardAt = (line: PlotLine, point: number): Guard | undefined => {
@@ -195,18 +254,22 @@ export interface Cursor {
 	pinned: boolean;
 }
 
-/** The cursor after a click or a tap at `at`: one on the pinned point, at the same x of the same panel and on its line or none, unpins it, to follow a mouse or close for a tap. */
+/** The cursor after a click or a tap at `at`: one on the pinned point, at the same x of the same panel and on its line at its iteration or on none, unpins it, to follow a mouse or close for a tap. */
 export const clicked = (
 	current: Cursor | null,
 	at: Omit<Cursor, "pinned">,
 	xs: readonly number[],
 	touch: boolean,
+	iteration?: readonly number[],
 ): Cursor | null => {
 	const onPin =
 		current?.pinned &&
 		current.panel === at.panel &&
 		xs[current.index] === xs[at.index] &&
-		(at.line === null || current.line === null || at.line === current.line);
+		(at.line === null ||
+			current.line === null ||
+			(at.line === current.line &&
+				(iteration?.[at.index] ?? 0) === (iteration?.[current.index] ?? 0)));
 	if (!onPin) {
 		return { ...at, pinned: true };
 	}

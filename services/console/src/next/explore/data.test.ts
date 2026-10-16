@@ -122,6 +122,15 @@ describe("plotData", () => {
 		expect(second).toMatchObject({ measure: 1, lower: [1, 1, 1], alerts: [0] });
 	});
 
+	// Kills an answer whose iterations never reach the plot, which then draws them as one report's zigzag.
+	test("keep each point's iteration", () => {
+		expect(plotData(PERF).iteration).toBeUndefined();
+		expect(
+			plotData({ ...PERF, points: { ...PERF.points, iteration: [0, 0, 1] } })
+				.iteration,
+		).toEqual([0, 0, 1]);
+	});
+
 	// Kills a line id from names or positions, which would not match the key in a link.
 	test("name each line by its key", () => {
 		const [first, second] = plotData(PERF).lines;

@@ -11,6 +11,7 @@ import { lineKey } from "../query/line";
 export const plotData = (perf: JsonConsolePerf): PlotData => ({
 	x: perf.points.x,
 	report: perf.points.report,
+	...(perf.points.iteration && { iteration: perf.points.iteration }),
 	reports: perf.reports,
 	measures: perf.measures.map(({ name, units }) => ({ name, units })),
 	lines: perf.lines.flatMap((line): PlotLine[] => {

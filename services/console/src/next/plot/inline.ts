@@ -1,5 +1,5 @@
 import { bandGeometry, EDGE } from "./band";
-import { extent } from "./columns";
+import { extent, pickLine, pointsOf, throughOf } from "./columns";
 import {
 	type Area,
 	drawAlert,
@@ -110,4 +110,30 @@ export const drawInline = (
 	for (const point of geometry.alerts) {
 		drawAlert(ctx, point, ALERT_RADIUS, palette, muted);
 	}
+};
+
+/** A row's history as its inline plot draws it: only iteration `chosen`, counting from 1, or else through the iteration each report shows. */
+export const inlineOf = (
+	points: {
+		x: readonly number[];
+		report: readonly number[];
+		iteration?: readonly number[];
+	},
+	history: InlineLine,
+	chosen: number | undefined,
+): { x: readonly number[]; line: InlineLine } => {
+	if (chosen !== undefined) {
+		const order = pointsOf(points.iteration, points.x.length, chosen);
+		return {
+			x: order.map((index) => points.x[index] ?? 0),
+			line: pickLine(history, order),
+		};
+	}
+	const through = throughOf(
+		history.y,
+		history.alerts,
+		points.report,
+		points.iteration,
+	);
+	return { x: points.x, line: through ? { ...history, y: through } : history };
 };

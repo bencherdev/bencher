@@ -79,9 +79,9 @@ test("hasValues is true for a value in any one box and false for the view alone"
 	}
 });
 
-// Kills a Clear hidden while only the x axis, the y scale, the window, or the
-// layout is off its default, or one drawn for a blank query, a rolling window
-// that ends now, or one that only names the default length.
+// Kills a Clear hidden while only the x axis, the y scale, the window, the
+// layout, or the iteration is off its default, or one drawn for a blank query,
+// a rolling window that ends now, or one that only names the default length.
 test("clearable is true for a value or a view control off its default", () => {
 	expect(clearable(blankQuery())).toBe(false);
 	expect(
@@ -94,6 +94,7 @@ test("clearable is true for a value or a view control off its default", () => {
 		{ window: { seconds: DEFAULT_WINDOW, end: 1_787_011_199_999 } },
 		{ window: { start: 1_786_924_800_000 } },
 		{ layout: "stacked" },
+		{ iteration: 2 },
 		{ measures: [uuid(3)] },
 	] as const) {
 		expect(clearable({ ...blankQuery(), ...view })).toBe(true);

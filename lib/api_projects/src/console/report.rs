@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, hash_map::Entry},
     hash::Hash,
     time::Duration,
 };
@@ -731,6 +731,8 @@ pub(super) struct Line {
     measure: MeasureRow,
     metric: MetricName,
     iteration: Iteration,
+    /// How many iterations of the report ran the line: one past the highest.
+    iterations: u32,
     value: f64,
     check: Option<Check>,
 }
@@ -751,6 +753,7 @@ impl Line {
             measure,
             metric,
             iteration,
+            iterations: 1,
             value,
             check,
         }
@@ -852,6 +855,7 @@ impl ReportLines {
                         measure,
                         metric,
                         iteration,
+                        iterations: iteration.0.saturating_add(1),
                         value,
                         check: None,
                     },
@@ -885,11 +889,18 @@ impl ReportLines {
         let mut lines: HashMap<LineKey, Line> = HashMap::new();
         for (mut line, checks) in metrics {
             line.check = Check::choose(checks);
-            let replace = lines.get(&line.key()).is_none_or(|kept| {
-                (line.alerting(), line.iteration.0) > (kept.alerting(), kept.iteration.0)
-            });
-            if replace {
-                lines.insert(line.key(), line);
+            match lines.entry(line.key()) {
+                Entry::Vacant(entry) => {
+                    entry.insert(line);
+                },
+                Entry::Occupied(mut entry) => {
+                    let kept = entry.get_mut();
+                    let iterations = kept.iterations.max(line.iterations);
+                    if (line.alerting(), line.iteration.0) > (kept.alerting(), kept.iteration.0) {
+                        *kept = line;
+                    }
+                    kept.iterations = iterations;
+                },
             }
         }
 
@@ -1020,7 +1031,8 @@ pub(super) fn line_json(
         variant,
         measure,
         metric,
-        iteration: _,
+        iteration,
+        iterations,
         value,
         check,
     } = line;
@@ -1050,6 +1062,8 @@ pub(super) fn line_json(
         measure,
         metric,
         value,
+        iteration: (iteration.0 != 0).then_some(iteration),
+        iterations: (iterations > 1).then_some(iterations),
         model,
         baseline,
         lower_limit,
@@ -1251,6 +1265,11 @@ fn report_counts(lines: &[Line], alerts: JsonReportAlertsCounts) -> JsonConsoleR
         variants: count(lines.iter().map(|line| line.variant.0)),
         measures: count(lines.iter().map(|line| line.measure.0)),
         metrics: count(lines.iter().map(|line| line.metric.clone())),
+        iterations: lines
+            .iter()
+            .map(|line| line.iterations)
+            .max()
+            .unwrap_or_default(),
         alerts,
     }
 }

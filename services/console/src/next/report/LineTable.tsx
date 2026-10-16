@@ -74,6 +74,8 @@ interface LineTableProps {
 		data: PlotData;
 		note: string;
 		reportHref: (uuid: string) => string;
+		/** Only this iteration of every report, counting from 1. */
+		iteration?: number | undefined;
 		/** What a pinned readout on an alert offers, when the page decides it. */
 		alerts?: PlotAlerts;
 		/** Otherwise the statuses the row plots set, and whether the reader may change them. */

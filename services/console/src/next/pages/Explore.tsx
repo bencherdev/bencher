@@ -57,6 +57,7 @@ import {
 	reportPath,
 	tabOf,
 } from "../paths";
+import IterationSelect from "../plot/IterationSelect";
 import { loadPlot, loadedPlot } from "../plot/lazy";
 import { useNarrow } from "../plot/narrow";
 import EditPin from "../plots/EditPin";
@@ -263,6 +264,13 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 		}
 	});
 	const drawn = createMemo(() => data()?.lines.map(({ id }) => id) ?? []);
+	// Iterations count from 0, so a report ran one more than its highest.
+	const iterations = createMemo(() =>
+		(data()?.iteration ?? []).reduce(
+			(most, each) => Math.max(most, each + 1),
+			1,
+		),
+	);
 	// The plot redraws only for what changed: a key toggle leaves the axes alone.
 	const xAxis = createMemo(() => query().xAxis);
 	const yScale = createMemo(() => query().yScale);
@@ -664,6 +672,16 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 					now={Date.now}
 					onQuery={(next) => edit(next)}
 				>
+					<Show when={drawable(query())}>
+						<IterationSelect
+							count={iterations()}
+							value={query().iteration}
+							onChange={(iteration) => {
+								const { iteration: _iteration, ...rest } = query();
+								edit(iteration === undefined ? rest : { ...rest, iteration });
+							}}
+						/>
+					</Show>
 					{clear()}
 				</Controls>
 				<Show when={!narrow()}>{editor()}</Show>
@@ -717,6 +735,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 									xAxis={xAxis()}
 									scale={yScale()}
 									layout={layout()}
+									iteration={query().iteration}
 									reportHref={(uuid) => reportPath(slug(), uuid)}
 									reserve={reserve()}
 									alerts={alerts}

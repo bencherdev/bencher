@@ -31,6 +31,7 @@ describe("the report page's URL", () => {
 		["custom window", { ...DEFAULT, window: 10 }],
 		["search", { ...DEFAULT, search: "simd=avx2 & p99" }],
 		["expanded rows", { ...DEFAULT, expanded: ["1x3k9qz0ab", "x"] }],
+		["iteration", { ...DEFAULT, iteration: 2 }],
 		[
 			"every field",
 			{
@@ -39,6 +40,7 @@ describe("the report page's URL", () => {
 				window: "1w",
 				search: "blake3",
 				expanded: ["k"],
+				iteration: 12,
 			},
 		],
 	])("round trips the %s", (_, view) => {

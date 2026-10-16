@@ -29,6 +29,8 @@ export interface PlotLine {
 	model?: string;
 	/** Aligned to `x`, with null where the line has no point. */
 	y: readonly (number | null)[];
+	/** Where a report ran the line more than once, `y` at the one iteration of each report its line runs through. */
+	through?: readonly (number | null)[];
 	baseline?: readonly (number | null)[];
 	lower?: readonly (number | null)[];
 	upper?: readonly (number | null)[];
@@ -51,6 +53,8 @@ export interface PlotData {
 	x: readonly number[];
 	/** The report of each point, an index into `reports`. */
 	report: readonly number[];
+	/** The iteration of each point, counting from 0; absent when every point is the first. */
+	iteration?: readonly number[];
 	reports: readonly PlotReport[];
 	measures: readonly PlotMeasure[];
 	lines: readonly PlotLine[];

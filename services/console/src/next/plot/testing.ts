@@ -39,3 +39,26 @@ export const testData = (
 		lines,
 	};
 };
+
+// One report run once, then two run three times; the last raised an alert on its second iteration.
+export const RUNS: PlotData = {
+	x: [START, START + DAY, START + DAY, START + DAY].concat(
+		Array(3).fill(START + 2 * DAY),
+	),
+	report: [0, 1, 1, 1, 2, 2, 2],
+	iteration: [0, 0, 1, 2, 0, 1, 2],
+	reports: [0, 1, 2].map((index) => ({
+		uuid: `report-${index}`,
+		version: 100 + index,
+	})),
+	measures: [{ name: "Latency", units: "nanoseconds (ns)" }],
+	lines: [
+		testLine({
+			id: "a",
+			y: [10, 11, 14, 12, 10, 13, 9],
+			upper: [15, 15, 15, 15, 12, 12, 12],
+			alerts: [5],
+			raised: [{ index: 5, uuid: "alert", status: "dismissed" }],
+		}),
+	],
+};

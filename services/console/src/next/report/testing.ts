@@ -48,6 +48,7 @@ export const reportFixture = (
 			variants: 2,
 			measures: 2,
 			metrics: 1,
+			iterations: 1,
 			alerts: { total: 1, active: 1 },
 		},
 		window: { start_time: START - 28 * DAY, end_time: START, clamped: false },

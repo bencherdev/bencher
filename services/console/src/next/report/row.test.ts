@@ -1,5 +1,17 @@
 import { describe, expect, test } from "vitest";
-import { lineLabel, rowNumbers, type UnitsPort } from "./row";
+import { iterationTag, lineLabel, rowNumbers, type UnitsPort } from "./row";
+
+describe("iterationTag", () => {
+	// Kills an iteration counted from 0, a tag on a line run once, and a count taken from the iteration shown.
+	test("names the iteration a row shows of how many its line ran, when more than one", () => {
+		expect(iterationTag({ iteration: 1, iterations: 3 })).toBe(
+			"iteration 2 of 3",
+		);
+		expect(iterationTag({ iterations: 2 })).toBe("iteration 1 of 2");
+		expect(iterationTag({})).toBeUndefined();
+		expect(iterationTag({ iteration: 0, iterations: 1 })).toBeUndefined();
+	});
+});
 
 describe("lineLabel", () => {
 	const LINE = {

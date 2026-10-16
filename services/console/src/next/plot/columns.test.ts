@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { alignToAxis, extent, sameX } from "./columns";
+import { alignToAxis, extent, sameX, throughOf } from "./columns";
 import { testLine } from "./testing";
 import type { PlotData } from "./types";
 
@@ -45,6 +45,15 @@ describe("alignToAxis", () => {
 		expect(aligned.lines[0]?.y).toEqual([null, null, 10, 11]);
 		expect(aligned.lines[0]?.upper).toEqual([null, null, 12, 13]);
 		expect(aligned.lines[1]?.baseline).toEqual([19, 20, null, null]);
+	});
+
+	// Kills iterations left in time order, which name another point's iteration.
+	test("moves each point's iteration with it", () => {
+		const aligned = alignToAxis(
+			{ ...TWO_BRANCHES, iteration: [0, 1, 2, 3] },
+			"version",
+		);
+		expect(aligned.iteration).toEqual([1, 3, 0, 2]);
 	});
 
 	// Kills alert indices, or the alerts behind them, left pointing at the time order.
@@ -97,5 +106,44 @@ describe("extent", () => {
 
 	test("has none without a value", () => {
 		expect(extent([{ y: [null] }])).toBeUndefined();
+	});
+});
+
+describe("throughOf", () => {
+	// Kills a line through the first iteration, or through the last one past an alert, at any status.
+	test("runs through each report's iteration that alerted, else its last", () => {
+		expect(
+			throughOf(
+				[10, 11, 14, 12, 10, 13, 9],
+				[5],
+				[0, 1, 1, 1, 2, 2, 2],
+				[0, 0, 1, 2, 0, 1, 2],
+			),
+		).toEqual([10, null, null, 12, null, 13, null]);
+	});
+
+	// Kills the lowest of two alerting iterations, which the report's row does not show.
+	test("takes the later of two iterations that alerted", () => {
+		expect(throughOf([1, 2, 3], [0, 1], [0, 0, 0], [0, 1, 2])).toEqual([
+			null,
+			2,
+			null,
+		]);
+	});
+
+	// Kills a last iteration the line has no value at.
+	test("takes the last iteration the line has a value at", () => {
+		expect(throughOf([1, 2, null], [], [0, 0, 0], [0, 1, 2])).toEqual([
+			null,
+			2,
+			null,
+		]);
+	});
+
+	// Kills a column made for data that draws exactly as before.
+	test("leaves a line alone when no report ran it twice", () => {
+		expect(throughOf([1, 2, 3], [], [0, 1, 2], undefined)).toBeUndefined();
+		expect(throughOf([1, 2, 3], [], [0, 1, 2], [0, 0, 0])).toBeUndefined();
+		expect(throughOf([1, null, 3], [], [0, 0, 1], [0, 1, 0])).toBeUndefined();
 	});
 });

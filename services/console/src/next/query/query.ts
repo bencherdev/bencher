@@ -42,6 +42,8 @@ export interface ExploreQuery {
 	readonly window: QueryWindow;
 	/** The reader's choice; `measuresLayout` decides what is drawn. */
 	readonly layout: Layout;
+	/** Only this iteration of each report, counting from 1; every iteration when absent. */
+	readonly iteration?: number;
 	/** Line keys hidden in the key. */
 	readonly hide: readonly string[];
 	/** Line keys that alone are drawn: a selection names its lines without knowing the extras. */
@@ -83,6 +85,7 @@ const METRICS = "metrics";
 // Explore's own.
 const WINDOW = "window";
 const LAYOUT = "layout";
+const ITERATION = "iteration";
 const HIDE = "hide";
 const ONLY = "only";
 const FOCUS = "focus";
@@ -97,6 +100,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const LINE_KEY = /^[0-9a-z]{1,11}$/;
 // Fifteen digits stay below 2^53, so every time reads exactly.
 const TIME = /^\d{1,15}$/;
+const ITERATION_NUMBER = /^[1-9]\d{0,3}$/;
 const ROLLING = /^(\d{1,10})([wds])$/;
 const UNIT_SECONDS = new Map([
 	["w", WEEK],
@@ -186,6 +190,9 @@ export const encodeQuery = (query: ExploreQuery): string => {
 	if (query.layout === "stacked") {
 		add(LAYOUT, "stacked");
 	}
+	if (query.iteration !== undefined) {
+		add(ITERATION, String(query.iteration));
+	}
 	addList(HIDE, query.hide);
 	addList(ONLY, query.only ?? []);
 	if (query.focus !== undefined) {
@@ -235,6 +242,7 @@ export const decodeQuery = (search: string): ExploreQuery => {
 			spec === undefined ? { uuid } : { uuid, spec },
 	);
 	const only = keys(ONLY);
+	const iteration = params.get(ITERATION);
 	const focus = params.get(FOCUS);
 	const report = params.get(REPORT);
 	const plot = params.get(PLOT);
@@ -257,6 +265,9 @@ export const decodeQuery = (search: string): ExploreQuery => {
 		yScale: Y_SCALES.find((scale) => scale === params.get(Y_AXIS)) ?? "auto",
 		window: readWindow(params),
 		layout: params.get(LAYOUT) === "stacked" ? "stacked" : "dual",
+		...(iteration !== null && ITERATION_NUMBER.test(iteration)
+			? { iteration: Number(iteration) }
+			: {}),
 		hide: keys(HIDE),
 		...(only.length > 0 ? { only } : {}),
 		...(focus !== null && isLineKey(focus) ? { focus } : {}),

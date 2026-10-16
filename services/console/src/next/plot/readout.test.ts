@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
+import { onlyIteration, withThrough } from "./iterations";
 import { clicked, readout, readoutLeft } from "./readout";
-import { START, testData, testLine } from "./testing";
+import { DAY, START, testData, testLine } from "./testing";
 import type { PlotData } from "./types";
 
 const SCALES = [
@@ -80,6 +81,7 @@ describe("readout", () => {
 		const result = readout(DATA, 1, [2, 0], 0, SCALES, "date", "UTC");
 		expect(result.rows[0]).toEqual({
 			line: 0,
+			point: 1,
 			value: "20.60 µs",
 			report: 1,
 			focused: true,
@@ -142,6 +144,134 @@ describe("readout", () => {
 	test("names the version on a version axis", () => {
 		const result = readout(DATA, 1, [0], null, SCALES, "version", "UTC");
 		expect(result.when).toBe("Version 101");
+	});
+});
+
+// A report run once, then one run three times whose second iteration alerted on both lines.
+const RAW_RUNS: PlotData = {
+	x: [START, START + DAY, START + DAY, START + DAY],
+	report: [0, 1, 1, 1],
+	iteration: [0, 0, 1, 2],
+	reports: [
+		{ uuid: "r0", version: 1 },
+		{ uuid: "r1", version: 2 },
+	],
+	measures: DATA.measures,
+	lines: [
+		testLine({
+			id: "a",
+			y: [18_000, 18_500, 20_600, 18_200],
+			baseline: [null, 18_000, 18_100, 18_100],
+			upper: [null, 19_000, 19_400, 19_300],
+			alerts: [2],
+			raised: [{ index: 2, uuid: "alert", status: "active" }],
+		}),
+		testLine({ id: "b", y: [17_000, 17_100, 17_300, 17_200], alerts: [2] }),
+	],
+};
+const RUNS = withThrough(RAW_RUNS);
+
+describe("readout of iterations", () => {
+	// Kills the pointed iteration read as the one the line runs through, an iteration left out, and the alerted one unmarked.
+	test("lists the focused line's iterations, the pointed one emphasized with its delta and limit", () => {
+		const [focused, other] = readout(
+			RUNS,
+			1,
+			[0, 1],
+			0,
+			SCALES,
+			"date",
+			"UTC",
+			{ line: 0 },
+		).rows;
+		expect(focused).toMatchObject({
+			point: 1,
+			value: "18.50 µs",
+			limit: "limit 19.00 µs",
+			delta: { text: "+2.8%" },
+			iterations: [
+				{ iteration: 1, value: "18.50 µs", emphasized: true, alerted: false },
+				{ iteration: 2, value: "20.60 µs", emphasized: false, alerted: true },
+				{ iteration: 3, value: "18.20 µs", emphasized: false, alerted: false },
+			],
+		});
+		expect(focused?.alert).toBeUndefined();
+		// Kills another line read at its last iteration rather than the one it runs through.
+		expect(other).toMatchObject({ point: 2, value: "17.30 µs" });
+		expect(other?.iterations).toBeUndefined();
+	});
+
+	// Kills a cursor on no line that emphasizes the iteration it happens to sit on.
+	test("emphasizes the iteration the line runs through when the cursor is on no line", () => {
+		const [focused] = readout(RUNS, 3, [0], 0, SCALES, "date", "UTC").rows;
+		expect(focused).toMatchObject({
+			point: 2,
+			value: "20.60 µs",
+			limit: "limit 19.40 µs",
+			alert: { uuid: "alert" },
+		});
+		expect(focused?.iterations?.map(({ emphasized }) => emphasized)).toEqual([
+			false,
+			true,
+			false,
+		]);
+	});
+
+	// Kills a plot of one line, which Explore draws with nothing focused, that reads out one iteration.
+	test("lists the only line's iterations though it is not focused", () => {
+		const [only] = readout(RUNS, 3, [0], null, SCALES, "date", "UTC").rows;
+		expect(only?.focused).toBe(false);
+		expect(only?.iterations?.map(({ emphasized }) => emphasized)).toEqual([
+			false,
+			true,
+			false,
+		]);
+		expect(
+			readout(RUNS, 3, [0, 1], null, SCALES, "date", "UTC").rows.map(
+				({ iterations }) => iterations,
+			),
+		).toEqual([undefined, undefined]);
+	});
+
+	// Kills a report run once listed as a single iteration, as if it ran several.
+	test("lists no iterations for a report run once", () => {
+		expect(
+			readout(RUNS, 0, [0], 0, SCALES, "date", "UTC", { line: 0 }).rows[0]
+				?.iterations,
+		).toBeUndefined();
+	});
+
+	// Kills another report that shares the x, as reports of one version do, listed among the iterations.
+	test("lists only the report's own iterations among the points that share its x", () => {
+		const shared = withThrough({
+			x: [START, START, START],
+			report: [0, 0, 1],
+			iteration: [0, 1, 0],
+			reports: [
+				{ uuid: "r0", version: 1 },
+				{ uuid: "r1", version: 1 },
+			],
+			measures: DATA.measures,
+			lines: [testLine({ id: "a", y: [18_000, 19_000, 21_000] })],
+		});
+		expect(
+			readout(shared, 0, [0], 0, SCALES, "version", "UTC", {
+				line: 0,
+			}).rows[0]?.iterations?.map(({ value }) => value),
+		).toEqual(["18.00 µs", "19.00 µs"]);
+	});
+
+	// Kills a chosen iteration the readout does not name, or names counting from 0.
+	test("names the chosen iteration", () => {
+		const second = withThrough(onlyIteration(RAW_RUNS, 2));
+		expect(
+			readout(second, 0, [0], 0, SCALES, "date", "UTC", {
+				line: null,
+				chosen: 2,
+			}).rows[0]?.iterations,
+		).toEqual([
+			{ iteration: 2, value: "20.60 µs", emphasized: true, alerted: true },
+		]);
 	});
 });
 
@@ -216,6 +346,19 @@ describe("clicked", () => {
 		expect(clicked(pinned, point(1, 1), XS, false)).toEqual({
 			...point(1, 1),
 			pinned: true,
+		});
+	});
+
+	// Kills a click on another iteration of the pinned report that unpins instead of moving the pin to it.
+	test("moves the pin to another iteration of the pinned point's report", () => {
+		const iteration = [0, 0, 1, 2, 0];
+		expect(clicked(pinned, point(2), XS, false, iteration)).toEqual({
+			...point(2),
+			pinned: true,
+		});
+		expect(clicked(pinned, point(1), XS, false, iteration)).toEqual({
+			...point(1),
+			pinned: false,
 		});
 	});
 

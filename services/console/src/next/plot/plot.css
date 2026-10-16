@@ -331,8 +331,14 @@
 
 .pl-more,
 .pl-limit,
-.pl-pin {
+.pl-pin,
+.pl-it {
 	color: var(--color-text-muted);
+}
+
+.pl-rrow.focused .pl-it {
+	color: var(--color-text-primary);
+	font-weight: var(--font-weight-semibold);
 }
 
 .pl-close {

@@ -1,7 +1,34 @@
 import { describe, expect, test } from "vitest";
 import { lineKey } from "../query/line";
-import { alignSeries, groupsOf, linesOf, plotOf } from "./lines";
-import { lineFixture, reportFixture } from "./testing";
+import { alignSeries, groupsOf, lineAt, linesOf, plotOf } from "./lines";
+import { REPORT, lineFixture, reportFixture } from "./testing";
+
+// The report ran three times, after two run once; its second iteration alerted, so its row shows that one.
+const RUNS = reportFixture(
+	[
+		lineFixture({
+			value: 20.6,
+			iteration: 1,
+			iterations: 3,
+			baseline: 19.4,
+			upper_limit: 19.9,
+			alert: { uuid: "alert", limit: "upper", status: "active" } as never,
+			history: {
+				y: [19.3, 19.5, 19.6, 20.6, 19.7],
+				baseline: [null, 19.3, 19.4, 19.4, 19.5],
+				upper: [null, 19.8, 19.9, 19.9, 20],
+				alerts: [{ index: 3, uuid: "alert", limit: "upper", status: "active" }],
+			} as never,
+		}),
+	],
+	{
+		points: {
+			x: [1, 2, 3, 3, 3],
+			report: [0, 1, 2, 2, 2],
+			iteration: [0, 0, 0, 1, 2],
+		},
+	},
+);
 
 describe("linesOf", () => {
 	// Kills resolving a line's indexes against the wrong table, or dropping the variant's parameters.
@@ -31,6 +58,16 @@ describe("linesOf", () => {
 		]);
 	});
 
+	// Kills the iteration a row shows, its count, or its points' iterations lost on the way to the row.
+	test("keeps the iteration each row shows and its points' iterations", () => {
+		const [line] = linesOf(RUNS);
+		expect(line).toMatchObject({ iteration: 1, iterations: 3 });
+		expect(line?.points.iteration).toEqual([0, 0, 0, 1, 2]);
+		expect(plotOf(line as never, "main", "ubuntu-latest").iteration).toEqual([
+			0, 0, 0, 1, 2,
+		]);
+	});
+
 	// Kills a key Explore would not give the same line, so an open row or a selection would name nothing there.
 	test("keys each line as Explore does", () => {
 		const [line] = linesOf(reportFixture());
@@ -44,6 +81,46 @@ describe("linesOf", () => {
 				metric: "value",
 			}),
 		);
+	});
+});
+
+describe("lineAt", () => {
+	// Kills a row that keeps the iteration it showed, reads another report's point of the same iteration, counts from 0, or keeps the alert of the iteration it showed.
+	test("reads the chosen iteration of the report from the line's history", () => {
+		const [line] = linesOf(RUNS);
+		if (!line) {
+			throw new Error("The batch has a line");
+		}
+		expect(lineAt(line, REPORT, 1)).toMatchObject({
+			value: 19.6,
+			baseline: 19.4,
+			upper_limit: 19.9,
+			alert: undefined,
+			iteration: 0,
+			chosen: 1,
+		});
+		expect(lineAt(line, REPORT, 3)).toMatchObject({
+			value: 19.7,
+			baseline: 19.5,
+			upper_limit: 20,
+			iteration: 2,
+			chosen: 3,
+		});
+		expect(lineAt(line, REPORT, 2)).toMatchObject({
+			value: 20.6,
+			alert: { uuid: "alert", limit: "upper", status: "active" },
+			chosen: 2,
+		});
+	});
+
+	// Kills a row emptied by an iteration its line never ran, or by no choice at all.
+	test("keeps the line when nothing is chosen or it has no such iteration", () => {
+		const [line] = linesOf(RUNS);
+		if (!line) {
+			throw new Error("The batch has a line");
+		}
+		expect(lineAt(line, REPORT, undefined)).toBe(line);
+		expect(lineAt(line, REPORT, 4)).toBe(line);
 	});
 });
 
@@ -64,7 +141,7 @@ describe("alignSeries", () => {
 			y: [1, null, null, 4, null],
 			upper: [2, null, null, 5, null],
 			alerts: [3],
-			raised: [{ index: 3, uuid: "a", status: "active" }],
+			raised: [{ index: 3, uuid: "a", status: "active", limit: "upper" }],
 		});
 	});
 
@@ -79,7 +156,7 @@ describe("alignSeries", () => {
 			y: [1, null, 3],
 			baseline: [1, 1, 1],
 			alerts: [2],
-			raised: [{ index: 2, uuid: "a", status: "active" }],
+			raised: [{ index: 2, uuid: "a", status: "active", limit: "upper" }],
 		});
 	});
 });
