@@ -1,4 +1,5 @@
 use api_projects::metrics::{ProjMetricParams, get_one_inner};
+use bencher_json::JsonOneMetric;
 use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
 use dropshot::HttpError;
 use rmcp::model::{CallToolResult, Tool};
@@ -6,7 +7,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{input_schema, json_result, parse_input};
+use super::{json_result, json_schema, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct ViewMetricInput {
@@ -19,8 +20,9 @@ pub fn view_tool(name: &'static str) -> Tool {
         name,
         "View a single metric with its full context: report, branch, testbed, benchmark, \
          measure, and any threshold boundary. The `metric` argument is a metric UUID.",
-        input_schema::<ViewMetricInput>(),
+        json_schema::<ViewMetricInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonOneMetric>())
 }
 
 pub async fn view(

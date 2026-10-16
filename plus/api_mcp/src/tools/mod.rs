@@ -7,7 +7,14 @@ use bencher_schema::{
     model::user::actor::ApiActor,
 };
 use dropshot::HttpError;
-use rmcp::model::{CallToolResult, ContentBlock, JsonObject, ListToolsResult, Tool};
+use rmcp::model::{
+    CallToolResult, ContentBlock, JsonObject, ListToolsResult, Tool, ToolAnnotations,
+};
+use schemars::{
+    JsonSchema,
+    schema::{InstanceType, SchemaObject},
+    visit::{Visitor, visit_schema_object},
+};
 use serde::Serialize;
 use serde_json::Value;
 use slog::Logger;
@@ -120,6 +127,88 @@ impl McpTool {
         }
     }
 
+    const fn title(self) -> &'static str {
+        match self {
+            Self::SubmitRun => "Submit run",
+            Self::ListProjects => "List projects",
+            Self::ViewProject => "View project",
+            Self::ListReports => "List reports",
+            Self::CreateReport => "Create report",
+            Self::ViewReport => "View report",
+            Self::ListBranches => "List branches",
+            Self::CreateBranch => "Create branch",
+            Self::ViewBranch => "View branch",
+            Self::UpdateBranch => "Update branch",
+            Self::ListTestbeds => "List testbeds",
+            Self::CreateTestbed => "Create testbed",
+            Self::ViewTestbed => "View testbed",
+            Self::UpdateTestbed => "Update testbed",
+            Self::ListBenchmarks => "List benchmarks",
+            Self::CreateBenchmark => "Create benchmark",
+            Self::ViewBenchmark => "View benchmark",
+            Self::UpdateBenchmark => "Update benchmark",
+            Self::ListMeasures => "List measures",
+            Self::CreateMeasure => "Create measure",
+            Self::ViewMeasure => "View measure",
+            Self::UpdateMeasure => "Update measure",
+            Self::ListThresholds => "List thresholds",
+            Self::CreateThreshold => "Create threshold",
+            Self::ViewThreshold => "View threshold",
+            Self::UpdateThreshold => "Update threshold",
+            Self::ListAlerts => "List alerts",
+            Self::ViewAlert => "View alert",
+            Self::UpdateAlert => "Update alert",
+            Self::ViewMetric => "View metric",
+            Self::QueryPerf => "Query perf",
+            Self::PerfImage => "Render perf image",
+            Self::ListPlots => "List plots",
+            Self::ViewPlot => "View plot",
+            Self::ListJobs => "List jobs",
+            Self::ViewJob => "View job",
+        }
+    }
+
+    const fn kind(self) -> ToolKind {
+        match self {
+            Self::ListProjects
+            | Self::ViewProject
+            | Self::ListReports
+            | Self::ViewReport
+            | Self::ListBranches
+            | Self::ViewBranch
+            | Self::ListTestbeds
+            | Self::ViewTestbed
+            | Self::ListBenchmarks
+            | Self::ViewBenchmark
+            | Self::ListMeasures
+            | Self::ViewMeasure
+            | Self::ListThresholds
+            | Self::ViewThreshold
+            | Self::ListAlerts
+            | Self::ViewAlert
+            | Self::ViewMetric
+            | Self::QueryPerf
+            | Self::PerfImage
+            | Self::ListPlots
+            | Self::ViewPlot
+            | Self::ListJobs
+            | Self::ViewJob => ToolKind::Read,
+            Self::CreateBranch
+            | Self::CreateTestbed
+            | Self::CreateBenchmark
+            | Self::CreateMeasure
+            | Self::CreateThreshold => ToolKind::Create,
+            Self::CreateReport => ToolKind::Report,
+            Self::SubmitRun => ToolKind::Run,
+            Self::UpdateBranch => ToolKind::Reset,
+            Self::UpdateTestbed
+            | Self::UpdateBenchmark
+            | Self::UpdateMeasure
+            | Self::UpdateThreshold
+            | Self::UpdateAlert => ToolKind::Update,
+        }
+    }
+
     pub fn list() -> ListToolsResult {
         // The tool list is static, so the schemas are generated once
         static LIST: LazyLock<ListToolsResult> = LazyLock::new(|| {
@@ -129,7 +218,7 @@ impl McpTool {
     }
 
     fn spec(self) -> Tool {
-        match self {
+        let tool = match self {
             Self::SubmitRun => run::submit_tool(self.name()),
             Self::ListProjects => projects::list_tool(self.name()),
             Self::ViewProject => projects::view_tool(self.name()),
@@ -166,7 +255,9 @@ impl McpTool {
             Self::ViewPlot => plots::view_tool(self.name()),
             Self::ListJobs => jobs::list_tool(self.name()),
             Self::ViewJob => jobs::view_tool(self.name()),
-        }
+        };
+        tool.with_title(self.title())
+            .with_annotations(self.kind().annotations(self.title()))
     }
 
     pub async fn call(
@@ -240,6 +331,53 @@ impl McpTool {
     }
 }
 
+/// What a tool does to the project, from which its MCP annotations follow.
+#[derive(Debug, Clone, Copy)]
+enum ToolKind {
+    Read,
+    Create,
+    Update,
+    /// Adds a report, and may replace threshold models and the branch head.
+    Report,
+    /// An update that may reset the branch head, which starts a new head on every call.
+    Reset,
+    /// A report that may also run a job, pulling its image from an outside registry
+    /// and sending its callback to an outside URL.
+    Run,
+}
+
+impl ToolKind {
+    fn annotations(self, title: &str) -> ToolAnnotations {
+        let annotations = ToolAnnotations::with_title(title);
+        match self {
+            Self::Read => annotations
+                .read_only(true)
+                .destructive(false)
+                .open_world(false),
+            Self::Create => annotations
+                .read_only(false)
+                .destructive(false)
+                .idempotent(false)
+                .open_world(false),
+            Self::Update => annotations
+                .read_only(false)
+                .destructive(true)
+                .idempotent(true)
+                .open_world(false),
+            Self::Report | Self::Reset => annotations
+                .read_only(false)
+                .destructive(true)
+                .idempotent(false)
+                .open_world(false),
+            Self::Run => annotations
+                .read_only(false)
+                .destructive(true)
+                .idempotent(false)
+                .open_world(true),
+        }
+    }
+}
+
 /// A boxed tool call future, keeping the dispatch future small.
 type ToolFuture<'a> =
     std::pin::Pin<Box<dyn Future<Output = Result<CallToolResult, HttpError>> + Send + 'a>>;
@@ -254,26 +392,46 @@ where
         .map_err(|err| bad_request_error(format!("Invalid tool arguments: {err}")))
 }
 
-/// Generate a self-contained JSON Schema for a tool's input type.
+/// Generate a self-contained JSON Schema for a tool's input or output type.
 /// Subschemas are inlined because MCP clients do not resolve `$ref`s
-/// against a `definitions` map. Inlining recurses without bound, so tool
-/// input types must not be recursive.
-/// Generation cannot fail for the concrete tool input types; the
-/// `tool_specs_have_object_schemas` test guards that every schema is an
-/// object, so the empty-object fallback is unreachable in practice.
-fn input_schema<T>() -> Arc<JsonObject>
+/// against a `definitions` map. A recursive type would still need one,
+/// so tool input and output types must not be recursive.
+/// Generation cannot fail for the concrete tool types; the
+/// `tool_specs_have_object_schemas` test guards that every schema is a
+/// valid object schema, so the empty-object fallback is unreachable in practice.
+fn json_schema<T>() -> Arc<JsonObject>
 where
-    T: schemars::JsonSchema,
+    T: JsonSchema,
 {
-    let settings = schemars::r#gen::SchemaSettings::draft07().with(|settings| {
-        settings.inline_subschemas = true;
-    });
+    let settings = schemars::r#gen::SchemaSettings::draft07()
+        .with(|settings| {
+            settings.inline_subschemas = true;
+        })
+        .with_visitor(NullableEnum);
     let schema = settings.into_generator().into_root_schema_for::<T>();
     if let Ok(Value::Object(object)) = serde_json::to_value(schema.schema) {
         Arc::new(object)
     } else {
         debug_assert!(false, "Failed to generate JSON Schema object");
         Arc::new(JsonObject::new())
+    }
+}
+
+/// An inlined optional enum gets `null` added to its `type` but not to its `enum`,
+/// so the schema would reject the `null` that `None` serializes to.
+#[derive(Debug, Clone)]
+struct NullableEnum;
+
+impl Visitor for NullableEnum {
+    fn visit_schema_object(&mut self, schema: &mut SchemaObject) {
+        visit_schema_object(self, schema);
+        if let Some(instance_type) = &schema.instance_type
+            && instance_type.contains(&InstanceType::Null)
+            && let Some(values) = &mut schema.enum_values
+            && !values.contains(&Value::Null)
+        {
+            values.push(Value::Null);
+        }
     }
 }
 
@@ -289,16 +447,11 @@ where
 
 /// A successful list result. The REST endpoints return the total count in the
 /// `X-Total-Count` header; tools have no headers, so it rides in the body.
-fn list_result<T>(json: &T, total_count: TotalCount) -> Result<CallToolResult, HttpError>
+fn list_result<T>(data: T, total_count: TotalCount) -> Result<CallToolResult, HttpError>
 where
     T: Serialize,
 {
-    let value = serde_json::to_value(json)
-        .map_err(|e| HttpError::for_internal_error(format!("Failed to serialize result: {e}")))?;
-    Ok(success_result(serde_json::json!({
-        "data": value,
-        "total_count": total_count,
-    })))
+    json_result(&ListOutput { data, total_count })
 }
 
 fn success_result(value: Value) -> CallToolResult {
@@ -318,6 +471,12 @@ fn success_result(value: Value) -> CallToolResult {
     result
 }
 
+#[derive(Serialize, JsonSchema)]
+struct ListOutput<T> {
+    data: T,
+    total_count: TotalCount,
+}
+
 /// Map an `HttpError` to a tool error, exposing only the status code and the
 /// user-facing external message (never `internal_message`).
 fn error_result(err: &HttpError) -> CallToolResult {
@@ -332,9 +491,10 @@ fn error_result(err: &HttpError) -> CallToolResult {
 mod tests {
     use std::collections::HashSet;
 
+    use serde_json::Value;
     use strum::IntoEnumIterator as _;
 
-    use super::McpTool;
+    use super::{McpTool, json_schema};
 
     #[test]
     fn tool_names_round_trip_and_are_unique() {
@@ -351,21 +511,53 @@ mod tests {
     }
 
     #[test]
+    fn optional_enum_schema_accepts_null() {
+        #[derive(serde::Serialize, schemars::JsonSchema)]
+        enum Sandbox {
+            Firecracker,
+        }
+        #[derive(serde::Serialize, schemars::JsonSchema)]
+        struct Spec {
+            sandbox: Option<Sandbox>,
+        }
+
+        let schema = Value::Object(json_schema::<Spec>().as_ref().clone());
+        for spec in [
+            Spec {
+                sandbox: Some(Sandbox::Firecracker),
+            },
+            Spec { sandbox: None },
+        ] {
+            let spec = serde_json::to_value(spec).expect("Failed to serialize spec");
+            assert!(
+                jsonschema::draft202012::is_valid(&schema, &spec),
+                "{spec} does not match {schema}"
+            );
+        }
+    }
+
+    #[test]
     fn tool_specs_have_object_schemas() {
         let list = McpTool::list();
         assert_eq!(list.tools.len(), McpTool::iter().count());
         for tool in &list.tools {
+            let name = &tool.name;
             assert!(
                 tool.description.is_some(),
-                "Tool is missing a description: {name}",
-                name = tool.name
+                "Tool is missing a description: {name}"
             );
-            assert_eq!(
-                tool.input_schema.get("type").and_then(|t| t.as_str()),
-                Some("object"),
-                "Tool input schema is not an object: {name}",
-                name = tool.name
-            );
+            for schema in std::iter::once(&tool.input_schema).chain(&tool.output_schema) {
+                assert_eq!(
+                    schema.get("type").and_then(|t| t.as_str()),
+                    Some("object"),
+                    "Tool schema is not an object: {name}"
+                );
+                // MCP reads a schema without `$schema` as JSON Schema 2020-12
+                let schema = Value::Object(schema.as_ref().clone());
+                if let Err(error) = jsonschema::draft202012::new(&schema) {
+                    panic!("Tool schema is not valid JSON Schema 2020-12: {name}: {error}");
+                }
+            }
         }
     }
 }
