@@ -9,8 +9,8 @@ git add ./services/console/src/chunks/docs-reference/changelog/en/changelog.mdx
 sed -i '' "s/version: [0-9]*\.[0-9]*\.[0-9]*/version: $VERSION/" ./README.md
 git add ./README.md
 
-sed -i '' "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$VERSION\"/" ./.claude-plugin/plugin.json
-git add ./.claude-plugin/plugin.json
+sed -i '' "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$VERSION\"/" ./plugins/bencher/.claude-plugin/plugin.json
+git add ./plugins/bencher/.claude-plugin/plugin.json
 
 # Generate the API docs from the server and the types for the UI
 cargo gen-types

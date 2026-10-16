@@ -104,7 +104,7 @@ When changing any `ApiActor`-accepting endpoint (its params, semantics, or the
 set of operations a `bencher_run_` key can perform), also update:
 
 - The corresponding tool in `plus/api_mcp/src/tools/`
-- The Bencher skill docs: `skills/bencher/mcp.md`
+- The Bencher skill docs: `plugins/bencher/skills/bencher/mcp.md`
 
 MCP tool input types must not be recursive: tool schemas are generated with
 `schemars` `inline_subschemas`, which recurses without bound, so a recursive

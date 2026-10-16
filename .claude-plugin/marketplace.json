@@ -5,7 +5,7 @@
   "plugins": [
     {
       "name": "bencher",
-      "source": "./",
+      "source": "./plugins/bencher",
       "description": "Bencher continuous benchmarking CLI",
       "author": { "name": "Bencher" },
       "homepage": "https://bencher.dev",
