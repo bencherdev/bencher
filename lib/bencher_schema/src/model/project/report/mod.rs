@@ -303,11 +303,16 @@ impl QueryReport {
         // If any insert fails, all are rolled back.
         let insert_report_uuid = write_transaction!(context, |conn| {
             // If the version was already found outside the transaction, use it.
-            // Otherwise, increment a new version inside the transaction.
+            // Otherwise, look again under the write lock before creating one.
             let version_id = if let Some(version_id) = existing_version_id {
                 version_id
             } else {
-                InsertVersion::increment(conn, project_id, head_id, json_report.hash.clone())?
+                InsertVersion::find_or_increment(
+                    conn,
+                    project_id,
+                    head_id,
+                    json_report.hash.clone(),
+                )?
             };
 
             // Create a new report and add it to the database
