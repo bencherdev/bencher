@@ -147,7 +147,7 @@ dependencies = [
  "chrono",
  "dropshot",
  "http",
- "schemars",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -179,12 +179,15 @@ dependencies = [
  "bencher_endpoint",
  "bencher_json",
  "bencher_schema",
+ "bytes",
  "diesel",
  "dropshot",
+ "futures",
  "http",
+ "http-body-util",
  "reqwest",
  "rmcp",
- "schemars",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "slog",
@@ -211,7 +214,7 @@ dependencies = [
  "futures",
  "http",
  "reqwest",
- "schemars",
+ "schemars 0.8.22",
  "sentry",
  "serde",
  "serde_json",
@@ -234,7 +237,7 @@ dependencies = [
  "diesel",
  "dropshot",
  "http",
- "schemars",
+ "schemars 0.8.22",
  "sentry",
  "serde",
  "serde_json",
@@ -258,7 +261,7 @@ dependencies = [
  "dropshot",
  "futures",
  "http",
- "schemars",
+ "schemars 0.8.22",
  "sentry",
  "serde",
  "serde_json",
@@ -306,7 +309,7 @@ dependencies = [
  "futures-concurrency",
  "http",
  "reqwest",
- "schemars",
+ "schemars 0.8.22",
  "sentry",
  "serde",
  "serde_json",
@@ -331,7 +334,7 @@ dependencies = [
  "diesel",
  "dropshot",
  "http",
- "schemars",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "slog",
@@ -349,7 +352,7 @@ dependencies = [
  "diesel",
  "dropshot",
  "http",
- "schemars",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "tokio",
@@ -367,7 +370,7 @@ dependencies = [
  "diesel",
  "dropshot",
  "http",
- "schemars",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "tokio",
@@ -654,7 +657,7 @@ dependencies = [
  "log",
  "num-rational",
  "num-traits",
- "pastey",
+ "pastey 0.1.1",
  "rayon",
  "thiserror 2.0.18",
  "v_frame",
@@ -992,7 +995,7 @@ version = "0.6.13"
 dependencies = [
  "bencher_valid",
  "gix",
- "schemars",
+ "schemars 0.8.22",
  "serde",
  "typeshare",
  "uuid",
@@ -1007,7 +1010,7 @@ dependencies = [
  "dropshot",
  "http",
  "paste",
- "schemars",
+ "schemars 0.8.22",
  "serde",
 ]
 
@@ -1078,7 +1081,7 @@ dependencies = [
  "percent-encoding",
  "pretty_assertions",
  "ryu-js",
- "schemars",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -1401,7 +1404,7 @@ dependencies = [
  "rand 0.10.1",
  "regex",
  "regex-lite",
- "schemars",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -2625,7 +2628,7 @@ dependencies = [
  "percent-encoding",
  "rustls",
  "rustls-pemfile",
- "schemars",
+ "schemars 0.8.22",
  "scopeguard",
  "semver",
  "serde",
@@ -5701,7 +5704,7 @@ checksum = "b7d950ca161dc355eaf28f82b11345ed76c6e1f6eb1f4f4479e0323b9e2fbd0e"
 dependencies = [
  "num-traits",
  "rand 0.8.6",
- "schemars",
+ "schemars 0.8.22",
  "serde",
 ]
 
@@ -5815,6 +5818,12 @@ name = "pastey"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35fb2e5f958ec131621fdd531e9fc186ed768cbe395337403ae56c17a74c68ec"
+
+[[package]]
+name = "pastey"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ee67f1008b1ba2321834326597b8e186293b049a023cdef258527550b9935b4"
 
 [[package]]
 name = "pathfinder_geometry"
@@ -6279,7 +6288,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "schemars",
+ "schemars 0.8.22",
  "serde",
  "serde_json",
  "syn 2.0.117",
@@ -6695,6 +6704,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ref-cast"
+version = "1.0.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e440fb4e4b4147295338efb76001ab9e4efc0e5839df2c47fc5ac2381d365c3"
+dependencies = [
+ "ref-cast-impl",
+]
+
+[[package]]
+name = "ref-cast-impl"
+version = "1.0.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92ecd8964f8453721699a1ed72037b0db49ce2f5a5138486ee89bed6f67cdf3a"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
+]
+
+[[package]]
 name = "regex"
 version = "1.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6861,20 +6890,33 @@ dependencies = [
 
 [[package]]
 name = "rmcp"
-version = "2.2.0"
+version = "3.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14db48ee17a9ba61810ab1a9c1beb7d06d8136ae39ac25a1137f10d357af01af"
+checksum = "ab5023804cbe0304cbe06197ac16e645a0a0d0ffa2953bf735c15c2fa0213350"
 dependencies = [
  "async-trait",
+ "base64 0.23.1",
+ "bytes",
  "chrono",
  "futures",
+ "http",
+ "http-body",
+ "http-body-util",
+ "indexmap",
+ "pastey 0.2.3",
  "pin-project-lite",
+ "rand 0.10.1",
+ "schemars 1.2.2",
  "serde",
  "serde_json",
+ "sse-stream",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-stream",
  "tokio-util",
+ "tower-service",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -7123,11 +7165,25 @@ checksum = "3fbf2ae1b8bc8e02df939598064d22402220cd5bbcca1c76f7d6a310974d5615"
 dependencies = [
  "chrono",
  "dyn-clone",
- "schemars_derive",
+ "schemars_derive 0.8.22",
  "serde",
  "serde_json",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "schemars"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "687274d293b6cdc6e73e0fee520bf2049650090d7164f87672d212a3c530cf4a"
+dependencies = [
+ "chrono",
+ "dyn-clone",
+ "ref-cast",
+ "schemars_derive 1.2.2",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -7138,8 +7194,20 @@ checksum = "32e265784ad618884abaea0600a9adf15393368d840e0222d101a072f3f7534d"
 dependencies = [
  "proc-macro2",
  "quote",
- "serde_derive_internals",
+ "serde_derive_internals 0.29.1",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "schemars_derive"
+version = "1.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d98c67716b46af2f0b8cf752abc930f6f9aecfbf671ecfb531db8a31dbe4e2ba"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_derive_internals 0.30.0",
+ "syn 3.0.6",
 ]
 
 [[package]]
@@ -7313,6 +7381,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "serde_derive_internals"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f852137cce035d6a4df67ccce505ff6b3e9fd3a10e3e52b24dc71e650bb1a9bd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
 ]
 
 [[package]]
@@ -7721,6 +7800,19 @@ dependencies = [
  "js-sys",
  "rsqlite-vfs",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "sse-stream"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c25ac7aff0abd1dbc474536e40416e1102c7dd9bfba0b9861c6d357f835dcfb4"
+dependencies = [
+ "bytes",
+ "futures-util",
+ "http-body",
+ "http-body-util",
+ "pin-project-lite",
 ]
 
 [[package]]
@@ -8563,7 +8655,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regress",
- "schemars",
+ "schemars 0.8.22",
  "semver",
  "serde",
  "serde_json",
@@ -8580,7 +8672,7 @@ checksum = "39ed96c57f06ae0839416b986921a98f18b220da63bbb243a8570a00c8492183"
 dependencies = [
  "proc-macro2",
  "quote",
- "schemars",
+ "schemars 0.8.22",
  "semver",
  "serde",
  "serde_json",

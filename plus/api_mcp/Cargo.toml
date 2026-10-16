@@ -20,8 +20,11 @@ plus = [
     "bencher_json/plus",
     "dep:bencher_schema",
     "bencher_schema/plus",
+    "dep:bytes",
     "dep:dropshot",
+    "dep:futures",
     "dep:http",
+    "dep:http-body-util",
     "dep:rmcp",
     "dep:schemars",
     "dep:serde",
@@ -38,9 +41,12 @@ bencher_json = { workspace = true, features = ["server", "schema"], optional = t
 bencher_schema = { workspace = true, optional = true }
 
 base64 = { workspace = true, optional = true }
+bytes = { workspace = true, optional = true }
 dropshot = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
-rmcp = { workspace = true, optional = true }
+http-body-util = { workspace = true, optional = true }
+rmcp = { workspace = true, optional = true, features = ["server", "transport-streamable-http-server"] }
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
