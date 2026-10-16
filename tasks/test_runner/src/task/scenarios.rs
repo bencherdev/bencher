@@ -2088,6 +2088,14 @@ CMD ["printf", "%s_%s\\n", "ITER", "OUTPUT"]"#,
                 if count != 3 {
                     bail!("Expected 3 iterations of output, found {count}")
                 }
+                let parsed = records_with(&output.stderr, "Parsing OCI image config").count();
+                let unpacked = records_with(&output.stderr, "Unpacking OCI image").count();
+                let disks = records_with(&output.stderr, "Creating the ext4 rootfs").count();
+                anyhow::ensure!(
+                    (parsed, unpacked, disks) == (1, 1, 3),
+                    "Expected the image parsed and unpacked once, and a disk built for each of the 3 iterations, got {parsed}, {unpacked}, and {disks}.\nstderr: {}",
+                    output.stderr
+                );
                 Ok(())
             },
             ..Scenario::default()
@@ -2105,6 +2113,15 @@ CMD ["printf", "%s_%s\\n", "ZERO", "ITERATIONS"]"#,
                 }
                 if guest_printed(output, "ZERO_ITERATIONS") > 0 {
                     bail!("Expected no benchmark execution with --iter 0, but output was produced")
+                }
+                if records_with(&output.stderr, "Parsing OCI image config")
+                    .next()
+                    .is_some()
+                {
+                    bail!(
+                        "Expected no image prepared with --iter 0.\nstderr: {}",
+                        output.stderr
+                    )
                 }
                 Ok(())
             },
@@ -2185,6 +2202,19 @@ CMD ["sh", "-c", "sleep 1 && printf '%s_%s\\n' TIMED a7f3b2c9"]"#,
             validate: |output| assert_timed_alone(output, "TIMED_a7f3b2c9"),
             ..Scenario::default()
         },
+        Scenario {
+            name: "guest_writes_stay_in_their_iteration",
+            description: "Each iteration boots a new disk, so a file the first iteration's guest writes is gone in the second",
+            // Synced, since init reboots without a sync and an unsynced file
+            // never reaches the disk at all.
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "if [ -e left ]; then printf '%s_%s\\n' SEEN a7f3b2c9; else printf '%s_%s\\n' FRESH a7f3b2c9; fi && touch left && sync"]"#,
+            extra_args: &["--timeout", "60", "--iter", "2"],
+            validate: |output| {
+                assert_fresh_each_iteration(output, "FRESH_a7f3b2c9", "SEEN_a7f3b2c9")
+            },
+            ..Scenario::default()
+        },
     ]
 }
 
@@ -2192,6 +2222,10 @@ CMD ["sh", "-c", "sleep 1 && printf '%s_%s\\n' TIMED a7f3b2c9"]"#,
 ///
 /// These test the `local_execute` code path (no Firecracker VM).
 /// The OCI image is unpacked and the command runs directly on the host.
+#[expect(
+    clippy::too_many_lines,
+    reason = "each scenario needs its configuration"
+)]
 fn nosandbox_scenarios() -> Vec<Scenario> {
     vec![
         Scenario {
@@ -2287,7 +2321,7 @@ CMD ["sh", "-c", "sleep 5 && printf '%s_%s\\n' HOST SPAN"]"#,
             description: "Non-sandboxed: the command is timed from its spawn, so a runner held before the image is unpacked adds nothing to the command's duration",
             // A stop after the spawn freezes the runner's wait, so the exit is
             // seen late and reads as a hold inside the measure; the ballast
-            // keeps the spawn far behind the run's first record.
+            // keeps the spawn far behind the iteration's first record.
             dockerfile: r#"FROM busybox:musl
 RUN head -c 67108864 /dev/urandom > /ballast
 CMD ["sh", "-c", "sleep 1 && printf '%s_%s\\n' HOST TIMED"]"#,
@@ -2295,6 +2329,17 @@ CMD ["sh", "-c", "sleep 1 && printf '%s_%s\\n' HOST TIMED"]"#,
             extra_args: &["--timeout", "60"],
             stopped_at: Some("Executing benchmark run, non-sandboxed"),
             validate: |output| assert_timed_alone(output, "HOST_TIMED"),
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "nosandbox_writes_stay_in_their_iteration",
+            description: "Non-sandboxed: each iteration unpacks a tree of its own, so a file the first iteration writes is gone in the second",
+            // Relative, so the file lands in the unpacked tree, never the host's root.
+            dockerfile: r#"FROM busybox:musl
+CMD ["sh", "-c", "if [ -e left ]; then printf '%s_%s\\n' SEEN HOST; else printf '%s_%s\\n' FRESH HOST; fi && touch left"]"#,
+            sandboxed: false,
+            extra_args: &["--timeout", "60", "--iter", "2"],
+            validate: |output| assert_fresh_each_iteration(output, "FRESH_HOST", "SEEN_HOST"),
             ..Scenario::default()
         },
     ]
@@ -2884,9 +2929,10 @@ fn jail_contention_scenarios() -> Vec<Scenario> {
             dockerfile: r#"FROM busybox
 CMD ["printf", "%s_%s\\n", "QUEUED", "a7f3b2c9"]"#,
             extra_args: &["--timeout", "3"],
-            // Once its image is unpacked, far ahead of the boot, so the run
-            // comes to the check before boot with no time left.
-            stopped_at: Some("Writing init config"),
+            // Once its iteration starts, past the run's own check of its
+            // timeout and far ahead of the boot, so the run comes to the check
+            // before boot with no time left.
+            stopped_at: Some("Executing benchmark run"),
             control_marker: Some("QUEUED_a7f3b2c9"),
             validate: |output| {
                 anyhow::ensure!(
@@ -3815,6 +3861,20 @@ fn assert_timed_alone(output: &ScenarioOutput, marker: &str) -> Result<()> {
     anyhow::ensure!(
         matches!(durations.as_slice(), [Some(ms)] if (1_000..held).contains(ms)),
         "Expected one command timed at 1 s or more and under the {STOPPED_FOR:?} its runner was held, got {durations:?} ms.\nstderr: {}",
+        output.stderr
+    );
+    Ok(())
+}
+
+/// Two iterations, neither of which found the file the first one wrote.
+fn assert_fresh_each_iteration(output: &ScenarioOutput, fresh: &str, seen: &str) -> Result<()> {
+    anyhow::ensure!(
+        output.exit_code == 0
+            && guest_printed(output, fresh) == 2
+            && guest_printed(output, seen) == 0,
+        "Expected two iterations, neither finding the file the first one wrote, got exit code {}.\nstdout: {}\nstderr: {}",
+        output.exit_code,
+        output.stdout,
         output.stderr
     );
     Ok(())

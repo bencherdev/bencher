@@ -87,8 +87,6 @@ pub use jail::{
 #[cfg(feature = "plus")]
 pub use log_level::SandboxLogLevel;
 #[cfg(feature = "plus")]
-pub use run::{
-    RunArgs, RunOutput, execute, execute_with_deadline, resolve_oci_image, run_with_args,
-};
+pub use run::{RunArgs, RunOutput, resolve_oci_image, run_with_args};
 #[cfg(feature = "plus")]
 pub use tuning::{ParseThpModeError, PerfEventParanoid, Swappiness, ThpMode, TuningConfig};

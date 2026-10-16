@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -174,9 +174,20 @@ pub fn run_with_args(log: &Logger, args: &RunArgs) -> Result<(), RunnerError> {
 
     let mut host = crate::jail::HostPreparation::new();
 
-    // Like a Job's, the timeout spans every iteration.
+    // Like a Job's, the timeout spans every iteration, and the image is pulled
+    // once for all of them.
     let deadline = JobDeadline::start(Duration::from_secs(args.timeout_secs));
     let iter_count = args.iter.as_usize();
+    if iter_count == 0 {
+        return Ok(());
+    }
+    let image = PreparedImage::prepare(
+        log,
+        &config,
+        &mut host,
+        Some(crate::signal::stop_flag()),
+        deadline,
+    )?;
     for iteration in 0..iter_count {
         if crate::signal::stop_requested() {
             return Err(
@@ -191,7 +202,7 @@ pub fn run_with_args(log: &Logger, args: &RunArgs) -> Result<(), RunnerError> {
             ))
             .into());
         }
-        match execute_with_deadline(
+        match image.execute(
             log,
             &config,
             &mut host,
@@ -260,71 +271,160 @@ fn print_product(output: &RunOutput) {
     }
 }
 
-/// Workspace created by [`prepare_oci_workspace`]: temp directory, work/unpack
-/// paths, and the resolved OCI configuration.
-pub(crate) struct OciWorkspace {
-    /// Held for RAII — dropping this removes the temporary directory.
-    #[expect(dead_code, reason = "kept alive for RAII cleanup of temp directory")]
-    pub temp_dir: tempfile::TempDir,
-    /// Base working directory inside the temp dir.
-    #[cfg_attr(
-        not(target_os = "linux"),
-        expect(dead_code, reason = "only read by vm_execute on Linux")
-    )]
-    pub work_dir: Utf8PathBuf,
-    pub unpack_dir: Utf8PathBuf,
-    pub oci_config: ResolvedOciConfig,
+/// What every iteration of a Job or a run executes, made ready once before
+/// the first.
+pub(crate) enum PreparedImage {
+    /// Unpacked once, with init in place, for a new guest disk per iteration.
+    #[cfg(target_os = "linux")]
+    Sandboxed(crate::vm::GuestTree),
+    /// Pulled once, and unpacked afresh for each iteration, since the command
+    /// writes to its tree.
+    Local(PulledImage),
 }
 
-/// Prepare a temporary OCI workspace: create temp dir, resolve the OCI image,
-/// parse its config, and unpack the layers.
-///
-/// Shared between `local_execute` and `vm_execute` to avoid duplicating this
-/// setup sequence.
-pub(crate) fn prepare_oci_workspace(
-    log: &Logger,
-    config: &crate::Config,
-    deadline: JobDeadline,
-) -> Result<OciWorkspace, RunnerError> {
-    // Create a temporary work directory
-    let temp_dir = tempfile::tempdir().map_err(crate::error::ConfigError::TempDir)?;
-    let work_dir =
-        Utf8Path::from_path(temp_dir.path()).ok_or(crate::error::ConfigError::NonUtf8TempDir)?;
-    let work_dir = work_dir.to_path_buf();
+impl PreparedImage {
+    /// Pulls and parses the image, and with a sandbox unpacks it.
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(
+            unused_variables,
+            clippy::needless_pass_by_ref_mut,
+            reason = "host preparation is Linux-only, as is the VM executor it prepares for"
+        )
+    )]
+    pub(crate) fn prepare(
+        log: &Logger,
+        config: &crate::Config,
+        host: &mut crate::jail::HostPreparation,
+        cancel_flag: Option<&AtomicBool>,
+        deadline: JobDeadline,
+    ) -> Result<Self, RunnerError> {
+        if cancel_flag.is_some_and(|flag| flag.load(Ordering::SeqCst)) {
+            return Err(
+                crate::error::ExecutionError::Canceled("job was canceled".to_owned()).into(),
+            );
+        }
+        match config.sandbox {
+            Some(bencher_json::Sandbox::Firecracker) => {
+                #[cfg(target_os = "linux")]
+                {
+                    crate::vm::GuestTree::prepare(log, config, host, cancel_flag, deadline)
+                        .map(Self::Sandboxed)
+                }
+                #[cfg(not(target_os = "linux"))]
+                {
+                    Err(crate::error::ConfigError::UnsupportedPlatform(
+                        "Firecracker sandbox requires Linux with KVM support".to_owned(),
+                    )
+                    .into())
+                }
+            },
+            None => PulledImage::pull(log, config, deadline).map(Self::Local),
+        }
+    }
 
-    let unpack_dir = work_dir.join("rootfs");
+    /// Runs one iteration, which has only what is left of `deadline`.
+    ///
+    /// A `cancel_flag` set to `true` aborts the run at its next stage or while
+    /// it waits for the VM.
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(
+            unused_variables,
+            clippy::needless_pass_by_ref_mut,
+            reason = "host preparation is Linux-only, as is the VM executor it prepares for"
+        )
+    )]
+    pub(crate) fn execute(
+        &self,
+        log: &Logger,
+        config: &crate::Config,
+        host: &mut crate::jail::HostPreparation,
+        cancel_flag: Option<&AtomicBool>,
+        deadline: JobDeadline,
+    ) -> Result<RunOutput, RunnerError> {
+        let output = match self {
+            #[cfg(target_os = "linux")]
+            Self::Sandboxed(tree) => {
+                crate::vm::vm_execute(log, config, tree, host, cancel_flag, deadline)
+            },
+            Self::Local(image) => {
+                crate::local::local_execute(log, config, image, cancel_flag, deadline)
+            },
+        }?;
+        info!(log, "Command finished";
+            "exit_code" => output.exit_code,
+            "duration_ms" => u64::try_from(output.duration.as_millis()).unwrap_or(u64::MAX),
+        );
+        Ok(output)
+    }
+}
 
-    // Resolve OCI image (local path or pull from registry)
-    let oci_image_path = resolve_oci_image(
-        log,
-        &config.oci_image,
-        config.token.as_ref().map(AsRef::as_ref),
-        config.registry_scheme,
-        deadline,
-        &work_dir,
-    )?;
+/// An image pulled and parsed into a temporary directory, which lives as long
+/// as the image and holds every tree unpacked from it.
+pub(crate) struct PulledImage {
+    /// Held for RAII: dropping this removes the temporary directory.
+    #[expect(dead_code, reason = "kept alive for RAII cleanup of temp directory")]
+    temp_dir: tempfile::TempDir,
+    work_dir: Utf8PathBuf,
+    image_dir: Utf8PathBuf,
+    oci_config: ResolvedOciConfig,
+}
 
-    // Parse OCI image config to get the command
-    info!(log, "Parsing OCI image config");
-    let oci_image = bencher_oci::OciImage::parse(&oci_image_path)?;
-    let oci_config = resolve_oci_config(&oci_image, config)?;
+impl PulledImage {
+    /// Resolves the image (a local path, or a pull from its registry) and
+    /// parses its config.
+    pub(crate) fn pull(
+        log: &Logger,
+        config: &crate::Config,
+        deadline: JobDeadline,
+    ) -> Result<Self, RunnerError> {
+        let temp_dir = tempfile::tempdir().map_err(crate::error::ConfigError::TempDir)?;
+        let work_dir = Utf8Path::from_path(temp_dir.path())
+            .ok_or(crate::error::ConfigError::NonUtf8TempDir)?
+            .to_path_buf();
 
-    info!(log, "OCI image config";
-        "command" => bencher_logger::capped(oci_config.command.join(" ")),
-        "work_dir" => bencher_logger::capped(&oci_config.working_dir),
-        "env_vars" => oci_config.env.len(),
-    );
+        let image_dir = resolve_oci_image(
+            log,
+            &config.oci_image,
+            config.token.as_ref().map(AsRef::as_ref),
+            config.registry_scheme,
+            deadline,
+            &work_dir,
+        )?;
 
-    // Unpack OCI image layers into the rootfs directory
-    info!(log, "Unpacking OCI image"; "unpack_dir" => unpack_dir.as_str());
-    bencher_oci::unpack(&oci_image_path, &unpack_dir)?;
+        info!(log, "Parsing OCI image config");
+        let oci_image = bencher_oci::OciImage::parse(&image_dir)?;
+        let oci_config = resolve_oci_config(&oci_image, config)?;
+        info!(log, "OCI image config";
+            "command" => bencher_logger::capped(oci_config.command.join(" ")),
+            "work_dir" => bencher_logger::capped(&oci_config.working_dir),
+            "env_vars" => oci_config.env.len(),
+        );
 
-    Ok(OciWorkspace {
-        temp_dir,
-        work_dir,
-        unpack_dir,
-        oci_config,
-    })
+        Ok(Self {
+            temp_dir,
+            work_dir,
+            image_dir,
+            oci_config,
+        })
+    }
+
+    /// Unpacks the image's layers into `tree`.
+    pub(crate) fn unpack(&self, log: &Logger, tree: &Utf8Path) -> Result<(), RunnerError> {
+        info!(log, "Unpacking OCI image"; "unpack_dir" => tree.as_str());
+        bencher_oci::unpack(&self.image_dir, tree)?;
+        Ok(())
+    }
+
+    /// The temporary directory, removed with the image.
+    pub(crate) fn work_dir(&self) -> &Utf8Path {
+        &self.work_dir
+    }
+
+    pub(crate) fn oci_config(&self) -> &ResolvedOciConfig {
+        &self.oci_config
+    }
 }
 
 /// Resolve an OCI image source to a local path.
@@ -453,70 +553,6 @@ pub fn resolve_oci_config(
     })
 }
 
-/// Execute a single benchmark run with the given configuration.
-///
-/// Dispatches based on `config.sandbox`:
-/// - `Some(Sandbox::Firecracker)` → Firecracker microVM (Linux-only)
-/// - `None` → local host execution (any platform)
-///
-/// # Arguments
-///
-/// * `config` - The benchmark run configuration
-/// * `cancel_flag` - Optional cancellation flag; if set to `true`, the run
-///   will be aborted at its next stage or while it waits for the VM.
-///
-/// # Returns
-///
-/// The benchmark output including exit code and stdout.
-pub fn execute(
-    log: &Logger,
-    config: &crate::Config,
-    host: &mut crate::jail::HostPreparation,
-    cancel_flag: Option<&AtomicBool>,
-) -> Result<RunOutput, RunnerError> {
-    let deadline = JobDeadline::start(Duration::from_secs(config.timeout_secs));
-    execute_with_deadline(log, config, host, cancel_flag, deadline)
-}
-
-/// Like [`execute`], but the run has only what is left of `deadline`, which
-/// can have started before it.
-#[cfg_attr(
-    not(target_os = "linux"),
-    expect(
-        unused_variables,
-        reason = "host preparation is Linux-only, as is the VM executor it prepares for"
-    )
-)]
-pub fn execute_with_deadline(
-    log: &Logger,
-    config: &crate::Config,
-    host: &mut crate::jail::HostPreparation,
-    cancel_flag: Option<&AtomicBool>,
-    deadline: JobDeadline,
-) -> Result<RunOutput, RunnerError> {
-    let output = match config.sandbox {
-        Some(bencher_json::Sandbox::Firecracker) => {
-            #[cfg(target_os = "linux")]
-            {
-                crate::vm::vm_execute(log, config, host, cancel_flag, deadline)
-            }
-            #[cfg(not(target_os = "linux"))]
-            {
-                Err(crate::error::ConfigError::UnsupportedPlatform(
-                    "Firecracker sandbox requires Linux with KVM support".to_owned(),
-                )
-                .into())
-            }
-        },
-        None => crate::local::local_execute(log, config, cancel_flag, deadline),
-    }?;
-    info!(log, "Command finished";
-        "exit_code" => output.exit_code,
-        "duration_ms" => u64::try_from(output.duration.as_millis()).unwrap_or(u64::MAX),
-    );
-    Ok(output)
-}
-
 #[cfg(test)]
 mod tests {
     use std::io::{self, Read as _, Write as _};
@@ -537,13 +573,14 @@ mod tests {
         let registry = std::thread::spawn(move || stall_first_response(&listener, &released));
         let started = Instant::now();
 
-        let result = execute_with_deadline(
+        let result = PreparedImage::prepare(
             &crate::log::discard(),
             &config,
             &mut crate::jail::HostPreparation::new(),
             None,
             JobDeadline::start(Duration::from_secs(2)),
-        );
+        )
+        .map(drop);
 
         let elapsed = started.elapsed();
         drop(release);
