@@ -1,6 +1,14 @@
 {
   "name": "bencher",
-  "description": "Bencher continuous benchmarking CLI",
+  "displayName": "Bencher",
+  "description": "Catch performance regressions before they merge",
   "version": "0.6.13",
-  "author": { "name": "Bencher" }
+  "author": { "name": "Bencher", "url": "https://bencher.dev" },
+  "homepage": "https://bencher.dev",
+  "repository": "https://github.com/bencherdev/bencher",
+  "documentationUrl": "https://bencher.dev/docs/",
+  "supportUrl": "https://bencher.dev/help/",
+  "privacyPolicyUrl": "https://bencher.dev/legal/privacy/",
+  "termsOfServiceUrl": "https://bencher.dev/legal/terms-of-use/",
+  "keywords": ["benchmarking", "continuous-benchmarking", "performance", "regression-detection", "ci", "bencher"]
 }

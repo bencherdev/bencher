@@ -6,7 +6,7 @@
     {
       "name": "bencher",
       "source": "./plugins/bencher",
-      "description": "Bencher continuous benchmarking CLI",
+      "description": "Catch performance regressions before they merge",
       "author": { "name": "Bencher" },
       "homepage": "https://bencher.dev",
       "repository": "https://github.com/bencherdev/bencher"
