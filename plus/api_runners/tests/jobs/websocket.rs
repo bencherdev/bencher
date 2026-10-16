@@ -1452,6 +1452,59 @@ async fn channel_completed_multiple_iterations_with_file_output() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
+/// A build time Job sends a failed iteration's metrics map empty, so that
+/// iteration's stdout never reaches the adapter and the Job keeps the build time
+/// of the iteration that succeeded.
+#[tokio::test]
+async fn channel_completed_build_time_with_a_failed_iteration() {
+    let server = TestServer::new().await;
+    let (mut ws, _runner_uuid, _runner_key, job_uuid) =
+        setup_claimed_job(&server, "build-time-failed").await;
+
+    send_msg(&mut ws, &RunnerMessage::Running).await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
+
+    let metrics = std::collections::BTreeMap::from([(
+        camino::Utf8PathBuf::from("\0bencher"),
+        r#"{"make":{"build-time":{"value":12.5}}}"#.to_owned(),
+    )]);
+    send_msg(
+        &mut ws,
+        &RunnerMessage::Completed {
+            job: job_uuid,
+            results: vec![
+                JsonIterationOutput {
+                    exit_code: 0,
+                    stdout: Some("built".into()),
+                    stderr: None,
+                    output: Some(metrics),
+                },
+                JsonIterationOutput {
+                    exit_code: 1,
+                    stdout: Some("the build failed".into()),
+                    stderr: None,
+                    output: Some(std::collections::BTreeMap::new()),
+                },
+            ],
+        },
+    )
+    .await;
+    let resp = recv_msg(&mut ws).await;
+    assert!(matches!(resp, ServerMessage::Ack { .. }));
+    assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+
+    let build_times: Vec<f64> = schema::metric::table
+        .inner_join(schema::measure::table)
+        .filter(schema::measure::slug.eq("build-time"))
+        .select(schema::metric::value)
+        .load(&mut server.db_conn())
+        .expect("Failed to load build times");
+    assert_eq!(build_times, [12.5]);
+
+    ws.close(None).await.expect("Failed to close WebSocket");
+}
+
 /// Failed with multiple iterations (partial results before failure).
 /// The job should transition to Failed.
 #[tokio::test]

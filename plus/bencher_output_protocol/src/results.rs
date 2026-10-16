@@ -9,6 +9,7 @@
 //!   [u64 stdout length, little-endian]
 //!   [u64 stderr length, little-endian]
 //!   [u64 output files length, little-endian]
+//!   [u64 command's duration in nanoseconds, little-endian]
 //!   [zero bytes to 4 KiB]
 //! [stdout][stderr][output files], from offset 4 KiB
 //! ```
@@ -17,6 +18,7 @@
 
 use std::fs::File;
 use std::io::{Read as _, Seek as _, SeekFrom, Write as _};
+use std::time::Duration;
 
 const MAGIC: [u8; 8] = *b"BNCHRES1";
 
@@ -34,6 +36,8 @@ pub struct Record {
     pub stderr: Vec<u8>,
     /// In the length-prefixed protocol, empty for none.
     pub output_files: Vec<u8>,
+    /// From the command's spawn to its reaping.
+    pub duration: Duration,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -57,17 +61,20 @@ pub fn drive_size(cap: u64) -> Option<u64> {
 /// The payload first, then the header, each flushed, so a header on the drive
 /// always has its whole payload behind it.
 pub fn write(drive: &mut File, record: &Record) -> std::io::Result<()> {
+    let Record {
+        exit_code,
+        stdout,
+        stderr,
+        output_files,
+        duration,
+    } = record;
+    let fields = [stdout, stderr, output_files];
     let header = Header {
-        exit_code: record.exit_code,
-        lengths: [&record.stdout, &record.stderr, &record.output_files]
-            .map(|field| field.len() as u64),
+        exit_code: *exit_code,
+        lengths: fields.map(|field| field.len() as u64),
+        duration: *duration,
     };
-    for ((offset, _len), field) in
-        header
-            .regions()
-            .into_iter()
-            .zip([&record.stdout, &record.stderr, &record.output_files])
-    {
+    for ((offset, _len), field) in header.regions().into_iter().zip(fields) {
         drive.seek(SeekFrom::Start(offset))?;
         drive.write_all(field)?;
     }
@@ -102,6 +109,7 @@ pub fn read(drive: &File, cap: u64) -> Result<Option<Record>, ReadError> {
         stdout: stdout?,
         stderr: stderr?,
         output_files: output_files?,
+        duration: header.duration,
     }))
 }
 
@@ -111,6 +119,7 @@ struct Header {
     exit_code: i32,
     /// Stdout, stderr, and the output files, in the order they sit on the drive.
     lengths: [u64; 3],
+    duration: Duration,
 }
 
 impl Header {
@@ -131,13 +140,15 @@ impl Header {
     )]
     fn encode(&self) -> [u8; HEADER_LEN] {
         let [stdout, stderr, output_files] = self.lengths.map(u64::to_le_bytes);
-        let fields: [&[u8]; 6] = [
+        let nanos = u64::try_from(self.duration.as_nanos()).unwrap_or(u64::MAX);
+        let fields: [&[u8]; 7] = [
             &MAGIC,
             &self.exit_code.to_le_bytes(),
             &[0; 4],
             &stdout,
             &stderr,
             &output_files,
+            &nanos.to_le_bytes(),
         ];
         let mut bytes = [0u8; HEADER_LEN];
         for (byte, value) in bytes.iter_mut().zip(fields.into_iter().flatten()) {
@@ -161,10 +172,12 @@ impl Header {
         let (_zero, rest) = rest.split_first_chunk::<4>()?;
         let (stdout, rest) = rest.split_first_chunk::<8>()?;
         let (stderr, rest) = rest.split_first_chunk::<8>()?;
-        let (output_files, _rest) = rest.split_first_chunk::<8>()?;
+        let (output_files, rest) = rest.split_first_chunk::<8>()?;
+        let (nanos, _rest) = rest.split_first_chunk::<8>()?;
         Some(Self {
             exit_code: i32::from_le_bytes(*exit_code),
             lengths: [stdout, stderr, output_files].map(|len| u64::from_le_bytes(*len)),
+            duration: Duration::from_nanos(u64::from_le_bytes(*nanos)),
         })
     }
 }
@@ -193,6 +206,7 @@ mod tests {
             stderr: b"err".repeat(10),
             output_files: crate::encode(&[(camino::Utf8Path::new("/a.json"), b"{}".as_slice())])
                 .unwrap(),
+            duration: Duration::new(3_600, 123_456_789),
         }
     }
 
@@ -212,7 +226,12 @@ mod tests {
 
     /// The header as a guest that skipped `write`'s checks would leave it.
     fn header(exit_code: i32, lengths: [u64; 3]) -> [u8; HEADER_LEN] {
-        Header { exit_code, lengths }.encode()
+        Header {
+            exit_code,
+            lengths,
+            duration: Duration::ZERO,
+        }
+        .encode()
     }
 
     fn put(file: &mut File, offset: u64, bytes: &[u8]) {
@@ -239,6 +258,7 @@ mod tests {
             stdout: vec![b'o'; 4096 + 1],
             stderr: vec![b'e'; 4096 + 1],
             output_files: vec![b'f'; 4096 + 1],
+            duration: Duration::ZERO,
         };
         let cap = 4096 + 1;
         let (_dir, path, mut file) = drive(cap);

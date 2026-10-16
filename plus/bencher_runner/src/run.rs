@@ -22,6 +22,9 @@ pub struct RunOutput {
     pub stderr: String,
     /// Optional output files as (path, contents), in the Job's declared order.
     pub output_files: Option<Vec<(Utf8PathBuf, Vec<u8>)>>,
+    /// How long the image's command ran, timed by init in a sandbox and by the
+    /// runner without one.
+    pub duration: Duration,
 }
 
 /// Arguments for the `run` subcommand.
@@ -491,7 +494,7 @@ pub fn execute_with_deadline(
     cancel_flag: Option<&AtomicBool>,
     deadline: JobDeadline,
 ) -> Result<RunOutput, RunnerError> {
-    match config.sandbox {
+    let output = match config.sandbox {
         Some(bencher_json::Sandbox::Firecracker) => {
             #[cfg(target_os = "linux")]
             {
@@ -506,7 +509,12 @@ pub fn execute_with_deadline(
             }
         },
         None => crate::local::local_execute(log, config, cancel_flag, deadline),
-    }
+    }?;
+    info!(log, "Command finished";
+        "exit_code" => output.exit_code,
+        "duration_ms" => u64::try_from(output.duration.as_millis()).unwrap_or(u64::MAX),
+    );
+    Ok(output)
 }
 
 #[cfg(test)]
