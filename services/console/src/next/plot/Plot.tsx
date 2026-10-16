@@ -24,15 +24,23 @@ import { constantParameters, keyOrder, lineNames } from "./key";
 import { axisFont, axisWidth } from "./labels";
 import { useNarrow } from "./narrow";
 import { PlotKey, PlotKeyReserve } from "./PlotKey";
-import { type Cursor, clicked, readout, readoutLeft } from "./readout";
+import {
+	type Cursor,
+	clicked,
+	fullName,
+	readout,
+	readoutLeft,
+} from "./readout";
 import { yRange, yScale, yTicks } from "./scale";
 import { type Layout, layoutOf, lineStyles, measuresOf } from "./series";
 import { Swatch } from "./Swatch";
 import { returnSyncKey, takeSyncKey } from "./sync";
 import { usePalette } from "./theme";
 import type {
+	PlotAlert,
 	PlotData,
 	PlotLayout,
+	PlotLine,
 	PlotMeasure,
 	PlotScale,
 	PlotSize,
@@ -63,6 +71,23 @@ export interface PlotProps {
 	reserve?: { lines: number; measures: number };
 	/** No data is on its way: the frame says so instead of that it is loading. */
 	failed?: boolean;
+	/** The alerts behind the markers, which a pinned readout on one opens and changes. */
+	alerts?: PlotAlerts | undefined;
+	/** A point the readout pins as the plot first draws, an index into `x` on a date axis. */
+	pin?: number | undefined;
+}
+
+export interface PlotAlerts {
+	/** The status the page holds for an alert, when newer than the data's. */
+	status?: (uuid: string) => PlotAlert["status"] | undefined;
+	/** The alert's own page; none on that page. */
+	href?: (uuid: string) => string;
+	/** Changes an alert's status; none for an alert the reader cannot change here. */
+	change?: (
+		uuid: string,
+	) => ((status: "active" | "dismissed") => void) | undefined;
+	/** The last change of the alert here did not go through. */
+	refused?: (uuid: string) => boolean;
 }
 
 const KEY_MAX = { full: 12, row: 12, tile: 4 } as const;
@@ -125,6 +150,13 @@ const Plot = (props: PlotProps) => {
 		});
 		return set;
 	});
+	const statusOf = (alert: PlotAlert) =>
+		props.alerts?.status?.(alert.uuid) ?? alert.status;
+	/** A line with an alert still active, as the page holds its alerts' statuses. */
+	const alerting = (line: PlotLine | undefined) =>
+		line?.raised
+			? line.raised.some((alert) => statusOf(alert) === "active")
+			: line?.alerting === true;
 	const visible = (line: number | null) =>
 		line !== null && line >= 0 && line < lines().length && !hidden().has(line);
 	const resolved = createMemo<number | null>(() => {
@@ -300,6 +332,9 @@ const Plot = (props: PlotProps) => {
 		hidden();
 		focus();
 		palette();
+		for (const line of lines()) {
+			line.raised?.forEach(statusOf);
+		}
 		untrack(() => {
 			for (const panel of panels.values()) {
 				panel.update();
@@ -366,7 +401,7 @@ const Plot = (props: PlotProps) => {
 	const keyMax = () =>
 		narrow() ? Math.min(NARROW_KEY_MAX, KEY_MAX[size()]) : KEY_MAX[size()];
 	const alerts = () =>
-		lines().filter((line, index) => line.alerting && !hidden().has(index))
+		lines().filter((line, index) => alerting(line) && !hidden().has(index))
 			.length;
 	const boundary = () => {
 		const line = focus();
@@ -385,6 +420,40 @@ const Plot = (props: PlotProps) => {
 		const uuid = data()?.reports[report]?.uuid;
 		return uuid === undefined ? undefined : props.reportHref?.(uuid);
 	};
+	/** The alert at the focused line's pinned point, as its readout offers it. */
+	const pinnedAlert = createMemo(() => {
+		const row = cursor()?.pinned ? model()?.rows[0] : undefined;
+		const alert = row?.focused ? row.alert : undefined;
+		const line = row && data()?.lines[row.line];
+		if (!(alert && line && props.alerts)) {
+			return undefined;
+		}
+		const status = statusOf(alert);
+		const change = props.alerts.change?.(alert.uuid);
+		const href = props.alerts.href?.(alert.uuid);
+		const action: "Dismiss" | "Reactivate" | undefined =
+			change && status !== "silenced"
+				? status === "active"
+					? "Dismiss"
+					: "Reactivate"
+				: undefined;
+		return href
+			? {
+					name: fullName(
+						line.benchmark,
+						line.parameters,
+						data()?.measures[line.measure]?.name,
+						line.metric,
+					),
+					href,
+					action,
+					refused: props.alerts.refused?.(alert.uuid) === true,
+					run: () => {
+						change?.(status === "active" ? "dismissed" : "active");
+					},
+				}
+			: undefined;
+	});
 	const reservedPanels = () =>
 		layout() === "stacked" ? (props.reserve?.measures ?? 1) : 1;
 
@@ -489,6 +558,7 @@ const Plot = (props: PlotProps) => {
 											palette,
 											pinned: () => cursor()?.pinned ?? false,
 											index: () => cursor()?.index ?? null,
+											status: statusOf,
 										},
 										panelEvents(index()),
 									);
@@ -500,9 +570,15 @@ const Plot = (props: PlotProps) => {
 											top: target.offsetTop,
 										});
 									place();
+									// Pinned once the panel has its size, so the readout sits at the point.
+									let pin = index() === 0 ? props.pin : undefined;
 									const observer = new ResizeObserver(() => {
 										panel.setSize(target.clientWidth, target.clientHeight);
 										place();
+										if (pin !== undefined) {
+											panel.pinAt(pin);
+											pin = undefined;
+										}
 									});
 									observer.observe(target);
 									onCleanup(() => {
@@ -562,6 +638,7 @@ const Plot = (props: PlotProps) => {
 								readout={current()}
 								placement={placement()}
 								left={readoutLeft(placement()?.x ?? 0, readoutWidth(), room())}
+								measured={readoutWidth() > 0}
 								onWidth={setReadoutWidth}
 								pinned={cursor()?.pinned ?? false}
 								hint={!(cursor()?.pinned || byKeys())}
@@ -570,6 +647,7 @@ const Plot = (props: PlotProps) => {
 								styles={styles()}
 								hash={data()?.reports[current().report]?.hash}
 								href={reportLink(current().report)}
+								alert={pinnedAlert()}
 								onClose={closeReadout}
 							/>
 						)}
@@ -594,6 +672,7 @@ const Plot = (props: PlotProps) => {
 					hidden={hidden()}
 					focused={resolved()}
 					constants={constantParameters(lines())}
+					alerting={(line) => alerting(lines()[line])}
 					max={keyMax()}
 					compact={size() === "tile"}
 					onToggle={(line) => {
@@ -655,6 +734,8 @@ interface ReadoutProps {
 		ring: { top: number } | null;
 	} | null;
 	left: number;
+	/** Its width is known, so `left` is where it sits. */
+	measured: boolean;
 	onWidth: (width: number) => void;
 	/** Only a pinned readout takes the pointer, so only its link and close button work. */
 	pinned: boolean;
@@ -665,6 +746,16 @@ interface ReadoutProps {
 	styles: ReturnType<typeof lineStyles>;
 	hash: string | undefined;
 	href: string | undefined;
+	/** The pinned point's alert: its page, and Dismiss or Reactivate. */
+	alert:
+		| {
+				name: string;
+				href: string;
+				action: "Dismiss" | "Reactivate" | undefined;
+				refused: boolean;
+				run: () => void;
+		  }
+		| undefined;
 	onClose: () => void;
 }
 
@@ -702,6 +793,8 @@ const Readout = (props: ReadoutProps) => {
 				style={{
 					left: `${props.left}px`,
 					top: `${props.placement?.top ?? 0}px`,
+					// Placed by its width, so it shows once measured rather than move.
+					visibility: props.measured ? undefined : "hidden",
 				}}
 			>
 				<span class="pl-when">
@@ -751,6 +844,42 @@ const Readout = (props: ReadoutProps) => {
 						{props.readout.more} more{" "}
 						{props.readout.more === 1 ? "line" : "lines"}
 					</span>
+				</Show>
+				<Show when={props.alert}>
+					{(alert) => (
+						<div class="pl-ralert">
+							<a
+								class="lnk"
+								href={alert().href}
+								aria-label={`Alert: ${alert().name}`}
+							>
+								<span class="pl-alertdot" aria-hidden="true" />
+								Alert
+							</a>
+							<Show when={alert().action}>
+								{(action) => (
+									<>
+										<span class="dotsep" aria-hidden="true">
+											·
+										</span>
+										<button
+											type="button"
+											class="lnk"
+											aria-label={`${action()} the alert on ${alert().name}`}
+											onClick={() => alert().run()}
+										>
+											{action()}
+										</button>
+									</>
+								)}
+							</Show>
+							<Show when={alert().refused}>
+								<span class="pl-rerr" role="alert">
+									The alert did not change
+								</span>
+							</Show>
+						</div>
+					)}
 				</Show>
 				<Show when={props.hint}>
 					<span class="pl-pin">Click to pin</span>

@@ -5,7 +5,7 @@ import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import Plot, { type PlotProps } from "./Plot";
+import Plot, { type PlotAlerts, type PlotProps } from "./Plot";
 import { middle, near, pixelAt, rowsOf, settle, tokenRgb } from "./pixels";
 import { returnSyncKey, takeSyncKey } from "./sync";
 import { expectNameStartsWithText, shownText } from "../ui/testing";
@@ -1021,6 +1021,265 @@ describe("Plot", () => {
 			(row, index) => index === 0 || row - (rows[index - 1] ?? 0) > 1,
 		);
 		expect(markers).toHaveLength(2);
+	});
+});
+
+// One line whose middle point alerted, as an alert's page and Explore draw it.
+const ALERTED = testData([
+	testLine({
+		id: "alerted",
+		benchmark: "blake3",
+		parameters: { threads: 1, simd: "avx2" },
+		alerting: true,
+		y: [10_000, 10_000, 30_000, 10_000, 10_000],
+		upper: [12_000, 12_000, 12_000, 12_000, 12_000],
+		alerts: [2],
+		raised: [{ index: 2, uuid: "alert-2", status: "active" }],
+	}),
+]);
+const ALERT_NAME = "blake3 simd=avx2 threads=1 Latency";
+
+/** Whether the head counts an alert and the key marks a line alerting. */
+const alertMarks = () => ({
+	count: document.querySelector(".pl-head .pl-pill.alert") !== null,
+	dot: document.querySelector(".pl-key .pl-alertdot") !== null,
+});
+
+/** The rows of `color` down the column just right of the alerted point's center. */
+const markerRows = async (token: string) => {
+	const { canvas, box } = await plotArea();
+	return rowsOf(
+		canvas,
+		box.left + box.width / 2 + 4,
+		box.top,
+		box.bottom,
+		tokenRgb(token),
+	);
+};
+
+describe("Plot alerts", () => {
+	// Kills alert controls on an unpinned readout or another point, a link to
+	// another alert, a change of the wrong alert or to the wrong status, a
+	// button that is replaced rather than relabeled (dropping the focus), and a
+	// marker, the head's alert count, or the key's alert dot that keeps its
+	// place when the alert's status changes.
+	test("a pinned readout on an alert links to it and changes it, and its marker follows", async () => {
+		const [status, setStatus] = createSignal<"active" | "dismissed">();
+		const changes: [string, string][] = [];
+		mount({
+			data: ALERTED,
+			alerts: {
+				href: (uuid) => `/alerts/${uuid}`,
+				status: () => status(),
+				change: (uuid) => (next) => {
+					changes.push([uuid, next]);
+					setStatus(next);
+				},
+			},
+		});
+		await settle();
+		const { over, box } = await plotArea();
+		const at = (fraction: number) => ({
+			position: { x: box.width * fraction, y: box.height / 2 },
+		});
+		const link = page.getByRole("link", { name: `Alert: ${ALERT_NAME}` });
+		const dismiss = page.getByRole("button", {
+			name: `Dismiss the alert on ${ALERT_NAME}`,
+		});
+		const reactivate = page.getByRole("button", {
+			name: `Reactivate the alert on ${ALERT_NAME}`,
+		});
+		expect(await markerRows("--color-marker")).not.toHaveLength(0);
+		expect(alertMarks()).toEqual({ count: true, dot: true });
+
+		await page.elementLocator(over).hover(at(0.5));
+		await expect
+			.element(page.getByRole("status"))
+			.toHaveTextContent("30.00 µs");
+		await expect.element(link).not.toBeInTheDocument();
+
+		await page.elementLocator(over).click(at(0.5));
+		await expect.element(link).toHaveAttribute("href", "/alerts/alert-2");
+		expectNameStartsWithText(link.element());
+		expectNameStartsWithText(dismiss.element());
+		await dismiss.click();
+		expect(changes).toEqual([["alert-2", "dismissed"]]);
+		await expect.element(reactivate).toHaveFocus();
+		await settle();
+		expect(await markerRows("--color-marker")).toHaveLength(0);
+		expect(await markerRows("--color-text-muted")).not.toHaveLength(0);
+		expect(alertMarks()).toEqual({ count: false, dot: false });
+
+		await reactivate.click();
+		expect(changes).toEqual([
+			["alert-2", "dismissed"],
+			["alert-2", "active"],
+		]);
+		await expect.element(dismiss).toHaveFocus();
+		await settle();
+		expect(await markerRows("--color-marker")).not.toHaveLength(0);
+		expect(alertMarks()).toEqual({ count: true, dot: true });
+
+		await page.elementLocator(over).click(at(0.25));
+		await expect
+			.element(page.getByRole("status"))
+			.toHaveTextContent("10.00 µs");
+		await expect.element(link).not.toBeInTheDocument();
+		await expect.element(dismiss).not.toBeInTheDocument();
+	});
+
+	// Kills a marker drawn by the alert's status alone, which a dismissed alert's page draws red.
+	test("draws a marker muted while the data says its alert is no longer active", async () => {
+		mount({
+			data: {
+				...ALERTED,
+				lines: ALERTED.lines.map((line) => ({
+					...line,
+					raised: [{ index: 2, uuid: "alert-2", status: "dismissed" }],
+				})),
+			},
+		});
+		await settle();
+		expect(await markerRows("--color-marker")).toHaveLength(0);
+		expect(await markerRows("--color-text-muted")).not.toHaveLength(0);
+	});
+
+	// Kills a readout that offers the page's own alert again, a change the page
+	// cannot make for this alert or this reader, and Dismiss on an alert the API
+	// silenced.
+	test("offers only what the page and the reader can do", async () => {
+		const [alerts, setAlerts] = createSignal<PlotAlerts>({
+			status: () => undefined,
+		});
+		const offer = (next: PlotAlerts) => setAlerts(() => next);
+		const root = document.createElement("div");
+		root.style.width = "900px";
+		document.body.append(root);
+		dispose = render(
+			() => (
+				<Plot
+					data={ALERTED}
+					hidden={[]}
+					onHiddenChange={() => {}}
+					onFocusChange={() => {}}
+					alerts={alerts()}
+				/>
+			),
+			root,
+		);
+		await settle();
+		const { over, box } = await plotArea();
+		await page.elementLocator(over).click({
+			position: { x: box.width / 2, y: box.height / 2 },
+		});
+		const status = page.getByRole("status");
+		await expect.element(status).toHaveTextContent("30.00 µs");
+		await expect
+			.element(status.getByRole("link", { name: /^Alert/ }))
+			.not.toBeInTheDocument();
+		await expect
+			.element(status.getByRole("button", { name: /the alert/ }))
+			.not.toBeInTheDocument();
+
+		offer({ href: (uuid) => `/alerts/${uuid}` });
+		await expect
+			.element(status.getByRole("link", { name: `Alert: ${ALERT_NAME}` }))
+			.toBeInTheDocument();
+		await expect
+			.element(status.getByRole("button", { name: /the alert/ }))
+			.not.toBeInTheDocument();
+
+		offer({
+			href: (uuid) => `/alerts/${uuid}`,
+			change: () => undefined,
+		});
+		await expect
+			.element(status.getByRole("link", { name: /^Alert/ }))
+			.toBeInTheDocument();
+		await expect
+			.element(status.getByRole("button", { name: /the alert/ }))
+			.not.toBeInTheDocument();
+
+		offer({
+			href: (uuid) => `/alerts/${uuid}`,
+			status: () => "silenced",
+			change: () => () => {},
+		});
+		await expect
+			.element(status.getByRole("link", { name: /^Alert/ }))
+			.toBeInTheDocument();
+		await expect
+			.element(status.getByRole("button", { name: /the alert/ }))
+			.not.toBeInTheDocument();
+	});
+
+	// Kills a refusal the readout keeps to itself, and one it shows for another alert.
+	test("a pinned readout says when its alert's last change did not go through", async () => {
+		const [refused, setRefused] = createSignal<string>();
+		mount({
+			data: ALERTED,
+			alerts: {
+				href: (uuid) => `/alerts/${uuid}`,
+				change: () => () => {},
+				refused: (uuid) => refused() === uuid,
+			},
+		});
+		await settle();
+		const { over, box } = await plotArea();
+		await page.elementLocator(over).click({
+			position: { x: box.width / 2, y: box.height / 2 },
+		});
+		const status = page.getByRole("status");
+		await expect
+			.element(status.getByRole("link", { name: `Alert: ${ALERT_NAME}` }))
+			.toBeInTheDocument();
+		await expect.element(status.getByRole("alert")).not.toBeInTheDocument();
+		setRefused("another");
+		await expect.element(status.getByRole("alert")).not.toBeInTheDocument();
+		setRefused("alert-2");
+		await expect.element(status.getByRole("alert")).toBeInTheDocument();
+	});
+
+	// Kills a focused line that follows the alerts' statuses, which moves the
+	// readout off a line the reader just dismissed and takes its Reactivate.
+	test("a Dismiss keeps the alert's line in focus", async () => {
+		const [status, setStatus] = createSignal<"active" | "dismissed">();
+		mount({
+			data: testData([
+				testLine({ id: "quiet", benchmark: "crc32c", y: [1, 1, 1, 1, 1] }),
+				...ALERTED.lines,
+			]),
+			alerts: {
+				href: (uuid) => `/alerts/${uuid}`,
+				status: () => status(),
+				change: () => setStatus,
+			},
+		});
+		await settle();
+		const { over } = await plotArea();
+		over.focus();
+		await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+		await page
+			.getByRole("button", { name: `Dismiss the alert on ${ALERT_NAME}` })
+			.click();
+		await expect
+			.element(
+				page.getByRole("button", {
+					name: `Reactivate the alert on ${ALERT_NAME}`,
+				}),
+			)
+			.toHaveFocus();
+	});
+
+	// Kills an alert's page whose plot opens with nothing pinned, or pinned at another point.
+	test("pins a point as it first draws", async () => {
+		mount({ data: ALERTED, pin: 2 });
+		const status = page.getByRole("status");
+		await expect.element(status).toHaveTextContent("30.00 µs");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await expect
+			.element(page.getByRole("button", { name: "Close the readout" }))
+			.toBeInTheDocument();
 	});
 });
 

@@ -19,9 +19,10 @@ import type {
 	JsonConsoleThreshold,
 } from "../../types/bencher";
 import { ApiError } from "../api";
-import { projectPath, reportPath } from "../paths";
+import { alertPath, projectPath, reportPath } from "../paths";
 import { formatDate, formatWhen } from "../plot/format";
 import { useNarrow } from "../plot/narrow";
+import type { PlotAlerts } from "../plot/Plot";
 import { FIRST, useAlertBatches } from "../alerts/batches";
 import { useFold } from "../alerts/fold";
 import { useProject } from "../project";
@@ -132,6 +133,21 @@ const Threshold = () => {
 		),
 	);
 	const canEdit = () => bootstrap().data?.permissions.edit === true;
+	/** A row's alert, by its UUID; a pinned readout changes it as its row does. */
+	const rowOf = (uuid: string) => lines().find(({ key }) => key === uuid);
+	const readout: PlotAlerts = {
+		href: (uuid) => alertPath(slug(), uuid),
+		status: (uuid) => {
+			const line = rowOf(uuid);
+			return line && rows.statusOf(line);
+		},
+		change: (uuid) => {
+			const line = rowOf(uuid);
+			return canEdit() && line
+				? (status) => rows.change(status, line)
+				: undefined;
+		},
+	};
 	const [now, setNow] = createSignal(Date.now());
 	createComputed(
 		on(
@@ -315,6 +331,7 @@ const Threshold = () => {
 										statusOf={rows.statusOf}
 										changed={rows.changed}
 										onChange={canEdit() ? rows.change : undefined}
+										readout={readout}
 									/>
 								</section>
 							</>
@@ -425,6 +442,8 @@ const Alerts = (props: {
 	onChange?:
 		| ((status: "active" | "dismissed", line: AlertLine) => void)
 		| undefined;
+	/** What a pinned readout on an alert offers. */
+	readout: PlotAlerts;
 }) => (
 	<Switch>
 		<Match
@@ -450,6 +469,7 @@ const Alerts = (props: {
 					expanded={props.expanded}
 					onExpand={props.onExpand}
 					explore={props.explore}
+					href={(line) => alertPath(props.slug, line.key)}
 					aside={{
 						label: "Report",
 						column: "th-c-report",
@@ -496,6 +516,7 @@ const Alerts = (props: {
 						),
 						note: `${props.history}, ending at its report`,
 						reportHref: (uuid) => reportPath(props.slug, uuid),
+						alerts: props.readout,
 					})}
 					onNearEnd={props.onNearEnd}
 					busy={props.busy}

@@ -6,10 +6,41 @@ import {
 	formatWhen,
 	type Guard,
 } from "./format";
-import type { PlotData, PlotLine, PlotXAxis } from "./types";
+import type {
+	PlotAlert,
+	PlotData,
+	PlotLine,
+	PlotParameterValue,
+	PlotXAxis,
+} from "./types";
 import type { UnitScale } from "./units";
 
 const READOUT_ROWS = 6;
+
+/** A variant's parameters as tags, in the API's key order. */
+export const tagsOf = (
+	parameters: Readonly<Record<string, PlotParameterValue>>,
+) =>
+	Object.keys(parameters)
+		.sort()
+		.map((key) => `${key}=${String(parameters[key])}`);
+
+// A threshold with no metric checks the conventional name.
+const VALUE = "value";
+
+/** A line in full, as a control that acts on it alone names it: its metric only when not the conventional one. */
+export const fullName = (
+	benchmark: string,
+	parameters: Readonly<Record<string, PlotParameterValue>>,
+	measure: string | undefined,
+	metric: string,
+) =>
+	[
+		benchmark,
+		...tagsOf(parameters),
+		measure,
+		...(metric === VALUE ? [] : [metric]),
+	].join(" ");
 
 const NO_SCALE: UnitScale = { factor: 1, symbol: "" };
 
@@ -22,6 +53,8 @@ interface ReadoutRow {
 	focused: boolean;
 	delta?: Delta | null;
 	limit?: string;
+	/** The alert raised at the focused line's point. */
+	alert?: PlotAlert;
 }
 
 export interface Readout {
@@ -71,6 +104,10 @@ export const readout = (
 			const limit = limitAt(line, point, scale);
 			if (limit) {
 				row.limit = limit;
+			}
+			const alert = line.raised?.find(({ index }) => index === point);
+			if (alert) {
+				row.alert = alert;
 			}
 		}
 		rows.push(row);

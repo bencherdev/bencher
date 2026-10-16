@@ -7,7 +7,7 @@ import type {
 } from "../../types/bencher";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
-import { type AlertLine, withStatuses } from "./lines";
+import type { AlertLine } from "./lines";
 import {
 	type Changes,
 	type Settable,
@@ -20,6 +20,7 @@ import {
 	statusOf,
 	updateAlerts,
 	withPending,
+	withStatuses,
 } from "./status";
 
 /** What the row controls need of the page that lists the alerts. */
@@ -96,6 +97,11 @@ export const useRowStatus = (page: RowPage) => {
 				}
 			}
 		}
+		const current = slug();
+		// Every other answer that holds them, once the writer's code arrives.
+		void import("./write").then(({ writeStatuses }) =>
+			writeStatuses(client, current, statuses, modified, "threshold"),
+		);
 		client.invalidateQueries({
 			predicate: ({ queryKey: [scope, kind, project] }) =>
 				scope === "console" &&

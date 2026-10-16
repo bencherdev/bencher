@@ -41,6 +41,9 @@ export const projectPath = (slug: string, tab?: Tab) =>
 export const reportPath = (slug: string, report: string) =>
 	`${projectPath(slug, "reports")}/${report}`;
 
+export const alertPath = (slug: string, alert: string) =>
+	`${projectPath(slug, "alerts")}/${alert}`;
+
 const TAB_PAGES = {
 	explore: "Explore",
 	plots: "Plots",
@@ -54,6 +57,7 @@ const TAB_PAGES = {
 export type PageName =
 	| (typeof TAB_PAGES)[Tab]
 	| "Report"
+	| "Alert"
 	| "Threshold"
 	| "Dimensions"
 	| "NotFound";
@@ -65,6 +69,9 @@ export const pageName = (rest: string[]): PageName => {
 	}
 	if (rest.length === 2 && rest[0] === "thresholds") {
 		return "Threshold";
+	}
+	if (rest.length === 2 && rest[0] === "alerts") {
+		return "Alert";
 	}
 	if (DIMENSIONS.some((dimension) => dimension === rest[0])) {
 		return "Dimensions";

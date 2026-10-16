@@ -573,7 +573,7 @@ test("hidden and focused lines travel in the link", async ({
 });
 
 // Kills a blank Explore without its starting points, an alert that opens more
-// than its line or names a source that does not link to the alerts, and a
+// than its line or names a source that does not link to that alert, and a
 // benchmark picked first that leaves the branch, the testbed, and the measures
 // for the reader.
 test("blank Explore starts from alerts, reports, and pins, and a first benchmark fills the rest", async ({
@@ -636,8 +636,9 @@ test("blank Explore starts from alerts, reports, and pins, and a first benchmark
 	await expect(page.getByText(/on main · ubuntu-latest$/)).toBeVisible();
 	await page.getByRole("link", { name: "alert", exact: true }).click();
 	await expect(page).toHaveURL(
-		new RegExp(`${nextPath(hashbrown.slug, "alerts")}$`),
+		new RegExp(`${nextPath(hashbrown.slug, "alerts")}/[0-9a-f-]{36}$`),
 	);
+	await expect(page.getByRole("heading", { level: 1 })).toContainText("blake3");
 });
 
 /** A project of its own, with one benchmark's two variants run on `main`. */

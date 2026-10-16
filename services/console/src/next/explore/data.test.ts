@@ -156,6 +156,15 @@ describe("plotData", () => {
 		]);
 	});
 
+	// Kills markers that lose the alert behind them, its status, or its point.
+	test("carry the alert behind each marker", () => {
+		expect(plotData(PERF).lines.map(({ raised }) => raised)).toEqual([
+			[{ index: 2, uuid: uuid(102), status: AlertStatus.Active }],
+			[{ index: 0, uuid: uuid(100), status: AlertStatus.Dismissed }],
+			[],
+		]);
+	});
+
 	// Kills naming the wrong test or side, or a model for a line no threshold checked.
 	test("name the threshold model behind each line", () => {
 		expect(plotData(PERF).lines.map(({ model }) => model)).toEqual([

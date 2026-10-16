@@ -1,8 +1,4 @@
-import type {
-	AlertStatus,
-	JsonConsoleAlertLine,
-	JsonConsoleAlerts,
-} from "../../types/bencher";
+import type { JsonConsoleAlerts } from "../../types/bencher";
 import { lineKey } from "../query/line";
 import { guardOf } from "../report/delta";
 import { type ReportLine, alignSeries } from "../report/lines";
@@ -125,53 +121,3 @@ export const alertLinesOf = (batch: JsonConsoleAlerts): AlertLine[] =>
 			return [resolvedLine];
 		});
 	});
-
-/** A batch with each alert in `statuses` changed to its status at `modified`; the rest keep their objects. */
-export const withStatuses = (
-	alerts: JsonConsoleAlerts,
-	statuses: ReadonlyMap<string, "active" | "dismissed">,
-	modified: number,
-): JsonConsoleAlerts => {
-	// An alert also marks its point in the history of later rows on its line.
-	const touched = ({ line }: JsonConsoleAlertLine) =>
-		(line.alert !== undefined && statuses.has(line.alert.uuid)) ||
-		line.history.alerts.some(({ uuid }) => statuses.has(uuid));
-	if (!alerts.groups.some((group) => group.alerts.some(touched))) {
-		return alerts;
-	}
-	const changed = <T extends { uuid: string; status: AlertStatus }>(
-		alert: T,
-	): T => {
-		const status = statuses.get(alert.uuid);
-		return status === undefined
-			? alert
-			: { ...alert, status: status as AlertStatus };
-	};
-	const rewrite = (entry: JsonConsoleAlertLine): JsonConsoleAlertLine => {
-		const { alert, history } = entry.line;
-		return {
-			modified:
-				alert !== undefined && statuses.has(alert.uuid)
-					? modified
-					: entry.modified,
-			line: {
-				...entry.line,
-				...(alert && { alert: changed(alert) }),
-				history: { ...history, alerts: history.alerts.map(changed) },
-			},
-		};
-	};
-	return {
-		...alerts,
-		groups: alerts.groups.map((group) =>
-			group.alerts.some(touched)
-				? {
-						...group,
-						alerts: group.alerts.map((entry) =>
-							touched(entry) ? rewrite(entry) : entry,
-						),
-					}
-				: group,
-		),
-	};
-};

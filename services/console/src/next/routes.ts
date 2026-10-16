@@ -7,6 +7,9 @@ import { ProjectContext } from "./project";
 type Page = Component & { preload: () => Promise<unknown> };
 
 const reportsPage = () => import("./pages/Reports");
+// Reading only the default export spares the bundler a namespace object.
+const alertPage = () =>
+	import("./pages/Alert").then(({ default: page }) => ({ default: page }));
 
 /** Each page is its own chunk, loaded on first need or when a link to it is hovered. */
 export const PAGES: Record<PageName, Page> = {
@@ -30,6 +33,11 @@ export const PAGES: Record<PageName, Page> = {
 	Alerts: lazy<Component>(() =>
 		import("./pages/Alerts").then(({ default: page }) => ({ default: page })),
 	),
+	// An alert draws its plot at once, so the plot's code starts with the page's.
+	Alert: lazy<Component>(() => {
+		import("./plot/Plot").catch(() => {});
+		return alertPage();
+	}),
 	Thresholds: lazy(() => import("./pages/Thresholds")),
 	Threshold: lazy(() => import("./pages/Threshold")),
 	Settings: lazy(() => import("./pages/Settings")),
@@ -57,6 +65,7 @@ export const ROUTES: RouteDefinition[] = [
 	{ path: "/:project", component: PAGES.Explore },
 	{ path: "/:project/reports/:report", component: PAGES.Report },
 	{ path: "/:project/thresholds/:threshold", component: PAGES.Threshold },
+	{ path: "/:project/alerts/:alert", component: PAGES.Alert },
 	...TABS.flatMap(({ segments }) =>
 		segments.map((segment) => {
 			const page = pageName([segment]);

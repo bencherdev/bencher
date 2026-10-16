@@ -273,6 +273,17 @@
 .lrn-l1 b {
 	font-weight: var(--font-weight-bold);
 }
+/* A row naming an alert links its name to the alert's page; the rest of the row still toggles its plot. */
+.console a.al-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	color: var(--color-text-primary);
+}
+.console .lr-dim a.al-link {
+	color: var(--color-text-muted);
+}
 .lr.lr-alerting > td,
 .lrn.lr-alerting > td {
 	background: var(--color-error-muted);

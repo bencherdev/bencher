@@ -17,6 +17,8 @@ interface Props {
 	created: (json?: undefined | object) => string;
 	modified: (json?: undefined | object) => string;
 	config: PubDeckPanelConfig;
+	/** The resource, when the page read it already. */
+	json?: object | undefined;
 }
 
 const params = Astro.params;
@@ -28,12 +30,14 @@ const path = config?.deck?.url(params, search);
 let title = Astro.props.title();
 let description = Astro.props.description();
 let notFound = false;
-let json: object;
+let json = Astro.props.json;
 if (params.project && params.project !== "undefined") {
 	try {
-		const url = `${INTERNAL_API_URL ?? BENCHER_API_URL}${path}`;
-		const resp = await fetchSSR(url);
-		json = await resp.json();
+		if (!json) {
+			const url = `${INTERNAL_API_URL ?? BENCHER_API_URL}${path}`;
+			const resp = await fetchSSR(url);
+			json = await resp.json();
+		}
 		if (json?.uuid) {
 			title = Astro.props.title(json);
 			description = Astro.props.description(json);
@@ -56,6 +60,7 @@ if (params.project && params.project !== "undefined") {
   published={Astro.props.created(json)}
   modified={Astro.props.modified(json)}
 >
+  <slot name="head" slot="head" />
   { notFound ?
   <section class="section">
     <div class="container">

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
 	NEXT_PROJECTS,
+	alertPath,
 	classicHref,
 	nextHref,
 	pageName,
@@ -159,8 +160,8 @@ describe("nextHref", () => {
 });
 
 describe("pageName", () => {
-	// Kills a report opened on the Reports list, a deeper path taken for a
-	// report, and a tab's path drawn by another tab's page.
+	// Kills a report or an alert opened on its list, a deeper path taken for
+	// one, and a tab's path drawn by another tab's page.
 	test("names the page that draws a project path", () => {
 		expect(pageName([])).toBe("Explore");
 		expect(pageName(["reports"])).toBe("Reports");
@@ -168,6 +169,8 @@ describe("pageName", () => {
 		expect(pageName(["reports", "abc", "def"])).toBe("Reports");
 		expect(pageName(["thresholds", "abc"])).toBe("Threshold");
 		expect(pageName(["thresholds", "abc", "def"])).toBe("Thresholds");
+		expect(pageName(["alerts", "abc"])).toBe("Alert");
+		expect(pageName(["alerts", "abc", "def"])).toBe("Alerts");
 		expect(pageName(["branches", "main"])).toBe("Dimensions");
 		expect(pageName(["nope"])).toBe("NotFound");
 	});
@@ -193,5 +196,12 @@ describe("pageName", () => {
 test("reportPath is the report under its project's Reports", () => {
 	expect(reportPath("hashbrown", "abc")).toBe(
 		`${NEXT_PROJECTS}/hashbrown/reports/abc`,
+	);
+});
+
+// Kills an alert link outside the project's Alerts.
+test("alertPath is the alert under its project's Alerts", () => {
+	expect(alertPath("hashbrown", "abc")).toBe(
+		`${NEXT_PROJECTS}/hashbrown/alerts/abc`,
 	);
 });

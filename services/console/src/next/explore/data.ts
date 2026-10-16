@@ -50,6 +50,11 @@ export const plotData = (perf: JsonConsolePerf): PlotData => ({
 				...(series.lower && { lower: series.lower }),
 				...(series.upper && { upper: series.upper }),
 				alerts: series.alerts.map(({ index }) => index),
+				raised: series.alerts.map(({ index, uuid, status }) => ({
+					index,
+					uuid,
+					status,
+				})),
 			},
 		];
 	}),

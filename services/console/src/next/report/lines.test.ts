@@ -48,7 +48,7 @@ describe("linesOf", () => {
 });
 
 describe("alignSeries", () => {
-	// Kills drawing a thinned history's values at their own positions instead of the page's points.
+	// Kills drawing a thinned history's values, or the alerts behind its markers, at their own positions instead of the page's points.
 	test("spreads a thinned history over the page's points", () => {
 		expect(
 			alignSeries(
@@ -64,6 +64,7 @@ describe("alignSeries", () => {
 			y: [1, null, null, 4, null],
 			upper: [2, null, null, 5, null],
 			alerts: [3],
+			raised: [{ index: 3, uuid: "a", status: "active" }],
 		});
 	});
 
@@ -78,6 +79,7 @@ describe("alignSeries", () => {
 			y: [1, null, 3],
 			baseline: [1, 1, 1],
 			alerts: [2],
+			raised: [{ index: 2, uuid: "a", status: "active" }],
 		});
 	});
 });

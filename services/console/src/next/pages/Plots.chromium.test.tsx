@@ -17,6 +17,7 @@ import { type Api, ApiError, type Method } from "../api";
 import { budget } from "../budget";
 import { createQueryClient } from "../cache";
 import { NEXT_PROJECTS } from "../paths";
+import { middle, rowsOf, tokenRgb } from "../plot/pixels";
 import { placed } from "../plots/order";
 import { testTile } from "../plots/testing";
 import { ProjectContext } from "../project";
@@ -47,12 +48,17 @@ interface Sent {
  * An API holding `count` pins, "Pin 1" on top, saved at `windows` (4w unless given), each drawn over the window it is asked for.
  * A read `held` matches waits until `release`; a change `refused` matches fails.
  */
-const plotsApi = (count: number, windows: readonly number[] = []) => {
+const plotsApi = (
+	count: number,
+	windows: readonly number[] = [],
+	alerting = false,
+) => {
 	const pins = new Map(
 		Array.from({ length: count }, (_, index) => {
 			const tile = testTile({
 				uuid: `plot-${index + 1}`,
 				title: `Pin ${index + 1}`,
+				alerting,
 				...(windows[index] === undefined ? {} : { window: windows[index] }),
 			});
 			return [tile.plot.uuid, tile] as const;
@@ -120,6 +126,9 @@ const plotsApi = (count: number, windows: readonly number[] = []) => {
 			sent.push(change);
 			if (state.refused(change)) {
 				throw new ApiError(500, "server", "refused");
+			}
+			if (path.endsWith("/alerts")) {
+				return { data: { changed: 1 } as T, headers: new Headers() };
 			}
 			const uuid = path.split("/").at(-1) ?? "";
 			const plot = pins.get(uuid)?.plot as JsonPlot;
@@ -189,6 +198,25 @@ const titles = () =>
 	);
 const figure = (title: string) =>
 	page.getByRole("region", { name: title, exact: true }).getByRole("figure");
+/** Pins the readout of `title`'s tile on its alert, the marker at its last point. */
+const pinAlert = async (title: string) => {
+	const plot = figure(title).getByRole("group", { name: /lines?,/ });
+	await expect.element(plot).toBeVisible();
+	const over = plot.element() as HTMLElement;
+	const canvas = over.parentElement?.querySelector("canvas");
+	if (!canvas) {
+		throw new Error("The plot area has no canvas");
+	}
+	const box = over.getBoundingClientRect();
+	const x = box.right - 4;
+	const marker = () =>
+		rowsOf(canvas, x, box.top, box.bottom, tokenRgb("--color-marker"));
+	await expect.poll(() => marker().length).toBeGreaterThan(0);
+	await page.elementLocator(over).click({
+		position: { x: x - box.left, y: middle(marker()) - box.top },
+	});
+	return figure(title).getByRole("status");
+};
 const focusedName = () =>
 	document.activeElement?.getAttribute("aria-label") ??
 	document.activeElement?.textContent;
@@ -638,4 +666,37 @@ test("a move from a tile's menu redraws no plot", async () => {
 	expect(redrawn.map((tile) => tile.querySelector("h2")?.textContent)).toEqual(
 		[],
 	);
+});
+
+// Kills a viewer offered a Dismiss in a tile's pinned readout, which the API
+// refuses, and an editor's refused Dismiss that says nothing where it was made.
+test("a tile's pinned readout offers Dismiss only to an editor, and says when it did not go through", async () => {
+	const viewer = plotsApi(1, [], true);
+	const client = newClient(viewer.api, 1);
+	client.setQueryData(consoleProjectQuery(viewer.api, "hashbrown").queryKey, {
+		...bootstrapOf({ edit: false }),
+		plots: 1,
+	});
+	mount(viewer.api, client);
+	const read = await pinAlert("Pin 1");
+	await expect
+		.element(read.getByRole("link", { name: /^Alert: / }))
+		.toBeVisible();
+	expect(
+		read.getByRole("button", { name: /the alert on/ }).elements(),
+	).toHaveLength(0);
+	dispose?.();
+	dispose = undefined;
+	document.body.replaceChildren();
+
+	const editor = plotsApi(1, [], true);
+	editor.state.refused = ({ path }) => path.endsWith("/alerts");
+	mount(editor.api, newClient(editor.api, 1));
+	const readout = await pinAlert("Pin 1");
+	const dismiss = readout.getByRole("button", {
+		name: /^Dismiss the alert on/,
+	});
+	await dismiss.click();
+	await expect.element(readout.getByRole("alert")).toBeVisible();
+	await expect.element(dismiss).toBeVisible();
 });

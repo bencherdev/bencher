@@ -2,9 +2,11 @@ import "@bencherdev/ui/styles.css";
 import "../plot/plot.css";
 import "../styles/console.css";
 import "./plots.css";
+import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
 import { page } from "vitest/browser";
+import { middle, rowsOf, tokenRgb } from "../plot/pixels";
 import type { JsonConsolePlot } from "../../types/bencher";
 import { testTile } from "./testing";
 import Tile, { drawingOf } from "./Tile";
@@ -162,4 +164,70 @@ test("a tile whose batch failed says so inside its figure, never that it is load
 	expect(
 		figure.getByRole("img", { name: "Loading the plot" }).query(),
 	).toBeNull();
+});
+
+// Kills a tile whose pinned readout on an alert offers neither the alert's page nor Dismiss.
+// Kills a tile whose head keeps saying it has an alert once the alert is dismissed.
+test("a tile's pinned readout on an alert links to it and dismisses it", async () => {
+	await page.viewport(1280, 900);
+	const changes: [string, string][] = [];
+	const [status, setStatus] = createSignal<"active" | "dismissed">();
+	const root = document.createElement("div");
+	root.style.width = "560px";
+	document.body.append(root);
+	dispose = render(
+		() => (
+			<Tile
+				title="Pin 1"
+				tile={testTile({ lines: 1, alerting: true })}
+				openHref="#"
+				alerts={{
+					href: (uuid) => `/alerts/${uuid}`,
+					status: () => status(),
+					change: (uuid) => (next) => {
+						changes.push([uuid, next]);
+						setStatus(next);
+					},
+				}}
+			/>
+		),
+		root,
+	);
+	const plot = page.getByRole("group", { name: /^1 line/ });
+	await expect.element(plot).toBeVisible();
+	// A click on the alert's marker pins its point and focuses its line.
+	const over = plot.element() as HTMLElement;
+	const canvas = over.parentElement?.querySelector("canvas");
+	const box = over.getBoundingClientRect();
+	const x = box.right - 4;
+	await expect
+		.poll(() =>
+			canvas
+				? rowsOf(canvas, x, box.top, box.bottom, tokenRgb("--color-marker"))
+						.length
+				: 0,
+		)
+		.toBeGreaterThan(0);
+	const y = middle(
+		rowsOf(
+			canvas as HTMLCanvasElement,
+			x,
+			box.top,
+			box.bottom,
+			tokenRgb("--color-marker"),
+		),
+	);
+	await page.elementLocator(over).click({
+		position: { x: x - box.left, y: y - box.top },
+	});
+	await expect
+		.element(page.getByRole("link", { name: /^Alert: blake3/ }))
+		.toHaveAttribute("href", "/alerts/alert-1");
+	const flagged = page.getByRole("img", { name: "has an alert" });
+	await expect.element(flagged).toBeInTheDocument();
+	await page
+		.getByRole("button", { name: /^Dismiss the alert on blake3/ })
+		.click();
+	expect(changes).toEqual([["alert-1", "dismissed"]]);
+	await expect.element(flagged).not.toBeInTheDocument();
 });

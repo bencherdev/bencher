@@ -20,9 +20,10 @@ import {
 	on,
 } from "solid-js";
 import type { JsonConsoleReport } from "../../types/bencher";
+import type { Settable } from "../alerts/status";
 import { useFold } from "../alerts/fold";
 import { ApiError } from "../api";
-import { projectPath, reportPath } from "../paths";
+import { alertPath, projectPath, reportPath } from "../paths";
 import { formatWhen } from "../plot/format";
 import { useNarrow } from "../plot/narrow";
 import { useProject } from "../project";
@@ -79,6 +80,9 @@ const Report = () => {
 			replace,
 		});
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
+	// The statuses its row plots set, which outlive a row folded and opened again.
+	const kept = new Map<string, Settable>();
+	const canChange = () => bootstrap().data?.permissions.edit === true;
 
 	const perPage = screenBatch();
 	const linesKey = createMemo(
@@ -305,6 +309,9 @@ const Report = () => {
 								onNoThreshold={setSheet}
 								explore={explore()}
 								onExploreIntent={loadExplorer}
+								href={(line) =>
+									line.alert && alertPath(slug(), line.alert.uuid)
+								}
 								plot={(line) => ({
 									data: plotOf(
 										line,
@@ -313,6 +320,8 @@ const Report = () => {
 									),
 									note: `${windowLabel()}, ending at this report`,
 									reportHref: (uuid) => reportPath(slug(), uuid),
+									kept,
+									canChange,
 								})}
 								onNearEnd={nearEnd}
 								busy={busy()}

@@ -49,6 +49,32 @@ describe("readout", () => {
 		expect(result.rows.map(({ line }) => line)).toEqual([2]);
 	});
 
+	// Kills an alert read off another line or point, or named on a row the reader is not focused on.
+	test("names the alert raised at the focused line's point", () => {
+		const raised = { index: 1, uuid: "alert", status: "active" } as const;
+		const data = {
+			...DATA,
+			lines: DATA.lines.map((line, index) =>
+				index === 0
+					? { ...line, alerts: [1], raised: [raised] }
+					: { ...line, alerts: [1], raised: [{ ...raised, uuid: "other" }] },
+			),
+		};
+		expect(
+			readout(data, 1, [0, 2], 0, SCALES, "date", "UTC").rows.map(
+				({ alert }) => alert,
+			),
+		).toEqual([raised, undefined]);
+		expect(
+			readout(data, 0, [0, 2], 0, SCALES, "date", "UTC").rows[0]?.alert,
+		).toBeUndefined();
+		expect(
+			readout(data, 1, [0, 2], 2, SCALES, "date", "UTC").rows.map(
+				({ alert }) => alert,
+			),
+		).toEqual([{ ...raised, uuid: "other" }, undefined]);
+	});
+
 	// Kills a focused line that loses its place, its delta, or its limit.
 	test("leads with the focused line, its delta, and its limit", () => {
 		const result = readout(DATA, 1, [2, 0], 0, SCALES, "date", "UTC");

@@ -34,6 +34,16 @@ export interface PlotLine {
 	upper?: readonly (number | null)[];
 	/** Indices into `x` of the points that alerted. */
 	alerts: readonly number[];
+	/** The alert behind each marker, where the page can open it. */
+	raised?: readonly PlotAlert[];
+}
+
+/** An alert at a point of a line: a marker no longer active draws muted. */
+export interface PlotAlert {
+	/** An index into `x`. */
+	index: number;
+	uuid: string;
+	status: "active" | "dismissed" | "silenced";
 }
 
 export interface PlotData {

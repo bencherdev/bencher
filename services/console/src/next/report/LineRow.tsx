@@ -56,6 +56,8 @@ interface LineRowProps {
 	actions?: (() => JSX.Element) | undefined;
 	/** The line's plot in Explore, once the page can write its link. */
 	explore?: string | undefined;
+	/** The page of the alert the row names, which its name links to. */
+	href?: string | undefined;
 	/** What the row expands into, drawn in a row of its own under it. */
 	children?: JSX.Element;
 }
@@ -122,6 +124,28 @@ const LineRow = (props: LineRowProps) => {
 			</svg>
 		</button>
 	);
+	// The spaces read the name as words; between flex items they take no room.
+	const words = () => (
+		<>
+			<b>{props.line.benchmark.name}</b>
+			<For each={label().tags}>
+				{(tag) => (
+					<>
+						{" "}
+						<span class="lr-ptag">{tag}</span>
+					</>
+				)}
+			</For>
+			<Show when={label().metric}>
+				{(metric) => (
+					<>
+						{" "}
+						<span class="lr-tag">{metric()}</span>
+					</>
+				)}
+			</Show>
+		</>
+	);
 	const name = () => (
 		<>
 			<Show when={alerting()}>
@@ -134,12 +158,16 @@ const LineRow = (props: LineRowProps) => {
 					<circle cx="4" cy="4" r="4" />
 				</svg>
 			</Show>
-			<b>{props.line.benchmark.name}</b>
-			<For each={label().tags}>
-				{(tag) => <span class="lr-ptag">{tag}</span>}
-			</For>
-			<Show when={label().metric}>
-				{(metric) => <span class="lr-tag">{metric()}</span>}
+			<Show when={props.href} fallback={words()}>
+				{(href) => (
+					<a
+						class="al-link"
+						href={href()}
+						aria-label={`${label().name}, open the alert`}
+					>
+						{words()}
+					</a>
+				)}
 			</Show>
 		</>
 	);

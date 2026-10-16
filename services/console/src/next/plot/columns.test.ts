@@ -20,6 +20,7 @@ const TWO_BRANCHES: PlotData = {
 			y: [10, null, 11, null],
 			upper: [12, null, 13, null],
 			alerts: [2],
+			raised: [{ index: 2, uuid: "a", status: "active" }],
 		}),
 		testLine({
 			id: "feature",
@@ -46,10 +47,13 @@ describe("alignToAxis", () => {
 		expect(aligned.lines[1]?.baseline).toEqual([19, 20, null, null]);
 	});
 
-	// Kills alert indices left pointing at the time order.
+	// Kills alert indices, or the alerts behind them, left pointing at the time order.
 	test("moves alert indices with their points", () => {
 		const aligned = alignToAxis(TWO_BRANCHES, "version");
 		expect(aligned.lines[0]?.alerts).toEqual([3]);
+		expect(aligned.lines[0]?.raised).toEqual([
+			{ index: 3, uuid: "a", status: "active" },
+		]);
 		expect(aligned.lines[1]?.alerts).toEqual([0]);
 	});
 

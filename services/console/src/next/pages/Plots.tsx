@@ -24,6 +24,7 @@ import type {
 	JsonNewPlot,
 	JsonPlot,
 } from "../../types/bencher";
+import { useAlertChange } from "../alerts/change";
 import CustomRange from "../explore/CustomRange";
 import { plotSearch, queryFromPlot } from "../explore/pinned";
 import { perfQuery, plotKey } from "../explore/queries";
@@ -386,6 +387,7 @@ const Plots = () => {
 		bootstrap().data !== undefined && confirmed() !== undefined;
 	const total = () => shown().length;
 	const canEdit = () => permissions()?.edit === true;
+	const alerts = useAlertChange().readout(canEdit);
 	const canCreate = () => permissions()?.create === true;
 
 	return (
@@ -618,6 +620,7 @@ const Plots = () => {
 												: undefined
 										}
 										openHref={openHref(tile(), uuid)}
+										alerts={alerts}
 										onOpen={() => seed(tile())}
 										onNear={() => want(uuid)}
 										menu={

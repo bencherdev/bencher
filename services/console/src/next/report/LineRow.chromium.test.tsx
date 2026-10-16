@@ -358,15 +358,45 @@ test("a row opens its line in Explore once the page can write the link", async (
 		.toHaveAttribute("href", EXPLORE);
 });
 
+// Kills a row that names an alert without linking it, a link to another
+// place, a click on the link the row takes for its toggle, and a row whose
+// other cells no longer toggle its plot.
+test.each([
+	["wide", false],
+	["narrow", true],
+] as const)(
+	"a %s row naming an alert links its name to the alert, and the rest of the row toggles its plot",
+	async (_, narrow) => {
+		const { onExpand } = mount({ narrow, href: "/alerts/a" });
+		const row = page.getByRole("row").nth(0);
+		const link = row.getByRole("link", { name: `${NAME}, open the alert` });
+		await expect.element(link).toHaveAttribute("href", "/alerts/a");
+		const stay = (event: Event) => event.preventDefault();
+		document.addEventListener("click", stay, { capture: true });
+		await link.click();
+		document.removeEventListener("click", stay, { capture: true });
+		expect(onExpand).not.toHaveBeenCalled();
+		await row.getByText("Latency", { exact: true }).click();
+		expect(onExpand).toHaveBeenCalledWith(true);
+	},
+);
+
 // Kills a row that takes a tab stop of its own, and controls out of the order
 // they are drawn in, wide or narrow.
 test.each([
-	["wide", false, ["Select", "Expand", "Open"]],
-	["narrow", true, ["Select", "Open", "Expand"]],
+	["wide", false, false, ["Select", "Expand", "Open"]],
+	["narrow", true, false, ["Select", "Open", "Expand"]],
+	["wide alert's", false, true, ["Select", "Expand", "blake3", "Open"]],
+	["narrow alert's", true, true, ["Select", "blake3", "Open", "Expand"]],
 ] as const)(
 	"a %s row's tab stops are its controls in order",
-	async (_, narrow, order) => {
-		mount({ narrow, onSelect: () => {}, explore: EXPLORE });
+	async (_, narrow, alert, order) => {
+		mount({
+			narrow,
+			onSelect: () => {},
+			explore: EXPLORE,
+			...(alert ? { href: "/alerts/a" } : {}),
+		});
 		await expect
 			.element(page.getByRole("link", { name: `Open in Explore: ${NAME}` }))
 			.toBeVisible();

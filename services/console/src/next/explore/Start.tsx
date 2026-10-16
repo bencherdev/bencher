@@ -100,6 +100,7 @@ const Start = () => {
 										"state",
 										JSON.stringify({
 											alert: `${branch.name} · ${testbed.name}`,
+											uuid: alert.uuid,
 										}),
 									)
 								}

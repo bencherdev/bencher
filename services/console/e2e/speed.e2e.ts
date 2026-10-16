@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import {
 	crumbs,
 	expect,
@@ -1082,6 +1082,153 @@ for (const [width, viewport] of [
 		});
 	});
 }
+
+/** The seed's one active alert, as the API lists it. */
+const activeAlert = async (request: APIRequestContext) => {
+	const response = await request.get(
+		`${seed.api_url}/v0/projects/${hashbrown.slug}/alerts?status=active`,
+		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+	);
+	const [alert] = (await response.json()) as { uuid: string }[];
+	if (!alert) {
+		throw new Error("The seed has no active alert");
+	}
+	return alert.uuid;
+};
+const ALERT_NAME = "blake3 input_bytes=65536 simd=avx2 threads=1 Latency";
+
+/** The alert's page is drawn, its plot pinned on the alert. */
+const alertShown = (page: Page) =>
+	expect(page.getByRole("figure").getByRole("status")).toHaveAttribute(
+		"aria-live",
+		"polite",
+	);
+
+const expectAlertColdLoad = (page: Page, cost: Cost) => {
+	const ceiling = ceilings.alertColdLoad;
+	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+		ceiling.apiAnswersBeforePaint,
+	);
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
+	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
+	expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+	expect(cost.inlineScriptBytes).toBeLessThanOrEqual(ceiling.inlineScriptBytes);
+	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+};
+
+// The cold loads of an alert's page, at each width the layout changes at.
+for (const [width, viewport] of [
+	["desktop", undefined],
+	["768", { width: 768, height: 1024 }],
+	["390", { width: 390, height: 844 }],
+] as const) {
+	test.describe(`an alert at ${width}`, () => {
+		if (viewport) {
+			test.use({ viewport });
+		}
+
+		// Kills an alert that waits on the shell's request or on its own code
+		// or its plot's arriving late, an alert asked for twice, a page
+		// stylesheet of its own, and a page that shifts as the alert arrives.
+		test(`a cold load of an alert holds its speed ceilings at ${width}`, async ({
+			page,
+			request,
+		}) => {
+			const alert = await activeAlert(request);
+			const cost = await coldLoad(
+				page,
+				nextPath(hashbrown.slug, `alerts/${alert}`),
+				async () => {
+					await alertShown(page);
+					await expect(
+						page.getByRole("button", {
+							name: `Dismiss the alert on ${ALERT_NAME}`,
+						}),
+					).toBeVisible();
+				},
+			);
+			report(`alert cold load ${width}`, cost);
+			expectAlertColdLoad(page, cost);
+		});
+
+		test.describe("as a viewer", () => {
+			test.use({ storageState: signedIn(seed.outsider) });
+
+			for (const [order, delay] of [
+				[
+					"its bootstrap answering first",
+					(url: string) =>
+						/\/v0\/console\/projects\/[^/]+\/alerts\//.test(url) ? 1_000 : 500,
+				],
+				[
+					"its alert answering first",
+					(url: string) =>
+						/\/v0\/console\/projects\/[^/]+\/alerts\//.test(url) ? 500 : 1_000,
+				],
+			] as const) {
+				// Kills a viewer's page that draws before it knows the reader cannot
+				// change the alert, and so moves when that arrives.
+				test(`a viewer's cold load of an alert, ${order}, holds its speed ceilings at ${width}`, async ({
+					page,
+					request,
+				}) => {
+					const alert = await activeAlert(request);
+					const cost = await coldLoad(
+						page,
+						nextPath(hashbrown.slug, `alerts/${alert}`),
+						async () => {
+							await expect(
+								page.getByText("Read only", { exact: true }),
+							).toBeVisible();
+							await alertShown(page);
+						},
+						delay,
+					);
+					report(`viewer alert cold load ${order} ${width}`, cost);
+					expectAlertColdLoad(page, cost);
+				});
+			}
+		});
+	});
+}
+
+// Kills a move to an alert that refetches the shell or the list, asks for
+// its alert more than once, finds its plot's code a round late, or pulls in
+// more than its page.
+test("a move from Alerts to an alert holds its speed ceilings", async ({
+	page,
+}) => {
+	await page.goto(nextPath(hashbrown.slug, "alerts"));
+	await expect(
+		page.getByRole("link", { name: /^Open in Explore: / }).first(),
+	).toBeVisible();
+	await ready(page);
+
+	await holdScripts(page);
+	const since = await mark(page);
+	await page
+		.getByRole("link", { name: `${ALERT_NAME}, open the alert` })
+		.click();
+	await alertShown(page);
+	await expect(
+		page.getByRole("link", { name: `Open in Explore: ${ALERT_NAME}` }),
+	).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("alert move", cost);
+	const ceiling = ceilings.alertMove;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
+	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
+});
 
 // Kills a status switch that asks for more than its first batch, chains a
 // second round, or loads more code, before or after its list's idle load.

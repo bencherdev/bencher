@@ -28,7 +28,7 @@ import Controls from "../alerts/Controls";
 import { FIRST, useAlertBatches } from "../alerts/batches";
 import { useFold } from "../alerts/fold";
 import { type AlertsBatch, alertsBatch, alertsQuery } from "../alerts/query";
-import { type AlertLine, alertLinesOf, withStatuses } from "../alerts/lines";
+import { type AlertLine, alertLinesOf } from "../alerts/lines";
 import {
 	type AlertGroup,
 	alertSlots,
@@ -61,9 +61,11 @@ import {
 	statusOf,
 	updateAlerts,
 	withPending,
+	withStatuses,
 } from "../alerts/status";
-import { projectPath, reportPath } from "../paths";
+import { alertPath, projectPath, reportPath } from "../paths";
 import { formatWhen } from "../plot/format";
+import type { PlotAlerts } from "../plot/Plot";
 import { useNarrow } from "../plot/narrow";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
@@ -229,6 +231,11 @@ const Alerts = () => {
 				}
 			}
 		}
+		const current = slug();
+		// Every other answer that holds them, once the writer's code arrives.
+		void import("../alerts/write").then(({ writeStatuses }) =>
+			writeStatuses(client, current, statuses, modified, "alerts"),
+		);
 		client.invalidateQueries({ queryKey: alertsKey(), refetchType: "none" });
 		client.invalidateQueries({
 			predicate: ({ queryKey: [scope, kind, project] }) =>
@@ -520,6 +527,21 @@ const Alerts = () => {
 	// Every row of this list is an alert's.
 	const alertOf = (line: ReportLine) => line as AlertLine;
 	const statusShown = (line: ReportLine) => statusOf(alertOf(line), changes());
+	/** A row's alert, by its UUID; a pinned readout changes it as its row does. */
+	const rowOf = (uuid: string) => shown().find(({ key }) => key === uuid);
+	const readout: PlotAlerts = {
+		href: (uuid) => alertPath(slug(), uuid),
+		status: (uuid) => {
+			const line = rowOf(uuid);
+			return line && statusShown(line);
+		},
+		change: (uuid) => {
+			const line = rowOf(uuid);
+			return canEdit() && line
+				? (status) => changeListed(status, [line])
+				: undefined;
+		},
+	};
 
 	const GroupHeader = (props: {
 		group: GroupRow;
@@ -701,10 +723,12 @@ const Alerts = () => {
 								),
 								narrow: (line) => statusShown(line) !== "active",
 							}}
+							href={(line) => alertPath(slug(), line.key)}
 							plot={(line) => ({
 								data: plotOf(line, line.branch.name, line.testbed.name),
 								note: `${history()}, ending at its report`,
 								reportHref: (uuid) => reportPath(slug(), uuid),
+								alerts: readout,
 							})}
 							onNearEnd={nearEnd}
 							busy={busy()}
