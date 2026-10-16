@@ -741,6 +741,17 @@ export enum Adapter {
 	DartBenchmarkHarness = "dart_benchmark_harness",
 }
 
+/**
+ * A report, with what a link to it shows: a neighbor's Previous or Next
+ * control, or the report that raised an alert.
+ */
+export interface JsonConsoleReportLink {
+	uuid: Uuid;
+	start_time: DateTimeMillis;
+	hash?: GitHash;
+	adapter: Adapter;
+}
+
 /** The window a response read, after any clamp. */
 export interface JsonConsoleWindow {
 	start_time: DateTimeMillis;
@@ -751,19 +762,6 @@ export interface JsonConsoleWindow {
 	 * three months.
 	 */
 	clamped: boolean;
-}
-
-/**
- * The shared x of every series in a response: one point per report and
- * iteration, in report order.
- */
-export interface JsonConsolePoints {
-	/** The report start time of each point, in milliseconds. */
-	x: DateTimeMillis[];
-	/** The report of each point, an index into `reports`. */
-	report: number[];
-	/** The iteration of each point, absent when every point is the first. */
-	iteration?: Iteration[];
 }
 
 export interface JsonConsoleAlertPoint {
@@ -796,6 +794,149 @@ export interface JsonConsoleSeries {
 	upper?: (number | null)[];
 	/** The points that alerted, in point order. */
 	alerts: JsonConsoleAlertPoint[];
+}
+
+/**
+ * One line of a plot: one metric name of one measure of one variant, on one
+ * branch and one testbed.
+ */
+export interface JsonConsolePerfLine {
+	/** An index into `branches`. */
+	branch: number;
+	/** An index into `testbeds`. */
+	testbed: number;
+	/** An index into `benchmarks`. */
+	benchmark: number;
+	/** An index into `variants`. */
+	variant: number;
+	/** An index into `measures`. */
+	measure: number;
+	metric: string;
+	/**
+	 * The model of the threshold that checked the line's latest checked point,
+	 * an index into `models`. Absent when no threshold checked it.
+	 */
+	model?: number;
+	series: JsonConsoleSeries;
+}
+
+/**
+ * The shared x of every series in a response: one point per report and
+ * iteration, in report order.
+ */
+export interface JsonConsolePoints {
+	/** The report start time of each point, in milliseconds. */
+	x: DateTimeMillis[];
+	/** The report of each point, an index into `reports`. */
+	report: number[];
+	/** The iteration of each point, absent when every point is the first. */
+	iteration?: Iteration[];
+}
+
+export interface JsonConsolePointReport {
+	uuid: Uuid;
+	version: VersionNumber;
+	hash?: GitHash;
+}
+
+export interface JsonConsoleBranch {
+	uuid: Uuid;
+	name: BranchName;
+	slug: Slug;
+	/** The head the lines come from: a report's own, or the one a plot read. */
+	head: Uuid;
+}
+
+export interface JsonConsoleTestbed {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	/** The spec a plot read this testbed's runs on, when the query named one. */
+	spec?: Uuid;
+}
+
+export interface JsonConsoleBenchmark {
+	uuid: Uuid;
+	name: BenchmarkName;
+	slug: Slug;
+}
+
+export interface JsonConsoleVariant {
+	uuid: Uuid;
+	/** An index into `benchmarks`. */
+	benchmark: number;
+	parameters: Record<string, string | number | boolean>;
+}
+
+export interface JsonConsoleMeasure {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	units: ResourceName;
+}
+
+/** A threshold model, which the line or series it checked refers to by index. */
+export interface JsonConsoleModel {
+	uuid: Uuid;
+	threshold: Uuid;
+	test: ModelTest;
+	min_sample_size?: SampleSize;
+	max_sample_size?: SampleSize;
+	window?: Window;
+	lower_boundary?: Boundary;
+	upper_boundary?: Boundary;
+}
+
+/** The lines of a plot query, drawn as columns aligned to one shared x. */
+export interface JsonConsolePerf {
+	/** The window the query read, after any clamp. */
+	window: JsonConsoleWindow;
+	/**
+	 * The number of lines the query names: the product of its boxes.
+	 * More than `lines` holds when the line cap cut some off.
+	 */
+	total: number;
+	/**
+	 * The lines in the order the boxes name them: branch, testbed, benchmark,
+	 * variant, measure, and metric. A line with no point in the window has only
+	 * nulls.
+	 */
+	lines: JsonConsolePerfLine[];
+	points: JsonConsolePoints;
+	reports: JsonConsolePointReport[];
+	branches: JsonConsoleBranch[];
+	testbeds: JsonConsoleTestbed[];
+	benchmarks: JsonConsoleBenchmark[];
+	variants: JsonConsoleVariant[];
+	measures: JsonConsoleMeasure[];
+	models: JsonConsoleModel[];
+}
+
+/**
+ * One alert as the console's alert page draws it: the alert, the report that
+ * raised it, and its line over the window that ends at the report.
+ */
+export interface JsonConsoleAlertDetail {
+	uuid: Uuid;
+	limit: BoundaryLimit;
+	status: AlertStatus;
+	/** When the alert was raised: when its report was created. */
+	created: DateTimeMillis;
+	/** When the alert last changed status, or was raised. */
+	modified: DateTimeMillis;
+	/** The report that raised the alert. */
+	report: JsonConsoleReportLink;
+	/** The value that alerted. */
+	value: number;
+	baseline?: number;
+	lower_limit?: number;
+	upper_limit?: number;
+	/**
+	 * The line the alert raised on over the window that ends at the report,
+	 * following the threshold that raised the alert: its one line names the
+	 * branch, testbed, benchmark, variant, measure, and the threshold's model.
+	 */
+	perf: JsonConsolePerf;
 }
 
 /** One line of a report: one metric name of one measure of one variant. */
@@ -864,60 +1005,6 @@ export interface JsonConsoleAlertsCounts {
 	active: number;
 	dismissed: number;
 	silenced: number;
-}
-
-export interface JsonConsolePointReport {
-	uuid: Uuid;
-	version: VersionNumber;
-	hash?: GitHash;
-}
-
-export interface JsonConsoleBranch {
-	uuid: Uuid;
-	name: BranchName;
-	slug: Slug;
-	/** The head the lines come from: a report's own, or the one a plot read. */
-	head: Uuid;
-}
-
-export interface JsonConsoleTestbed {
-	uuid: Uuid;
-	name: ResourceName;
-	slug: Slug;
-	/** The spec a plot read this testbed's runs on, when the query named one. */
-	spec?: Uuid;
-}
-
-export interface JsonConsoleBenchmark {
-	uuid: Uuid;
-	name: BenchmarkName;
-	slug: Slug;
-}
-
-export interface JsonConsoleVariant {
-	uuid: Uuid;
-	/** An index into `benchmarks`. */
-	benchmark: number;
-	parameters: Record<string, string | number | boolean>;
-}
-
-export interface JsonConsoleMeasure {
-	uuid: Uuid;
-	name: ResourceName;
-	slug: Slug;
-	units: ResourceName;
-}
-
-/** A threshold model, which the line or series it checked refers to by index. */
-export interface JsonConsoleModel {
-	uuid: Uuid;
-	threshold: Uuid;
-	test: ModelTest;
-	min_sample_size?: SampleSize;
-	max_sample_size?: SampleSize;
-	window?: Window;
-	lower_boundary?: Boundary;
-	upper_boundary?: Boundary;
 }
 
 /**
@@ -1062,55 +1149,6 @@ export interface JsonConsoleOrganization {
 	slug: Slug;
 }
 
-/**
- * One line of a plot: one metric name of one measure of one variant, on one
- * branch and one testbed.
- */
-export interface JsonConsolePerfLine {
-	/** An index into `branches`. */
-	branch: number;
-	/** An index into `testbeds`. */
-	testbed: number;
-	/** An index into `benchmarks`. */
-	benchmark: number;
-	/** An index into `variants`. */
-	variant: number;
-	/** An index into `measures`. */
-	measure: number;
-	metric: string;
-	/**
-	 * The model of the threshold that checked the line's latest checked point,
-	 * an index into `models`. Absent when no threshold checked it.
-	 */
-	model?: number;
-	series: JsonConsoleSeries;
-}
-
-/** The lines of a plot query, drawn as columns aligned to one shared x. */
-export interface JsonConsolePerf {
-	/** The window the query read, after any clamp. */
-	window: JsonConsoleWindow;
-	/**
-	 * The number of lines the query names: the product of its boxes.
-	 * More than `lines` holds when the line cap cut some off.
-	 */
-	total: number;
-	/**
-	 * The lines in the order the boxes name them: branch, testbed, benchmark,
-	 * variant, measure, and metric. A line with no point in the window has only
-	 * nulls.
-	 */
-	lines: JsonConsolePerfLine[];
-	points: JsonConsolePoints;
-	reports: JsonConsolePointReport[];
-	branches: JsonConsoleBranch[];
-	testbeds: JsonConsoleTestbed[];
-	benchmarks: JsonConsoleBenchmark[];
-	variants: JsonConsoleVariant[];
-	measures: JsonConsoleMeasure[];
-	models: JsonConsoleModel[];
-}
-
 export interface JsonConsolePermissions {
 	view: boolean;
 	create: boolean;
@@ -1251,14 +1289,6 @@ export interface JsonConsoleReportCounts {
 	/** The distinct metric names of the report's lines. */
 	metrics: number;
 	alerts: JsonReportAlertsCounts;
-}
-
-/** A neighboring report, with what its Previous or Next control shows. */
-export interface JsonConsoleReportLink {
-	uuid: Uuid;
-	start_time: DateTimeMillis;
-	hash?: GitHash;
-	adapter: Adapter;
 }
 
 /**

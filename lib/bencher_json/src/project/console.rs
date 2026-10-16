@@ -156,7 +156,8 @@ pub struct JsonConsoleReportCounts {
     pub alerts: JsonReportAlertsCounts,
 }
 
-/// A neighboring report, with what its Previous or Next control shows.
+/// A report, with what a link to it shows: a neighbor's Previous or Next
+/// control, or the report that raised an alert.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -511,6 +512,35 @@ pub struct JsonConsoleAlertLine {
     pub line: JsonConsoleReportLine,
     /// When the alert last changed status, or was raised.
     pub modified: DateTimeMillis,
+}
+
+/// One alert as the console's alert page draws it: the alert, the report that
+/// raised it, and its line over the window that ends at the report.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleAlertDetail {
+    pub uuid: AlertUuid,
+    pub limit: BoundaryLimit,
+    pub status: AlertStatus,
+    /// When the alert was raised: when its report was created.
+    pub created: DateTimeMillis,
+    /// When the alert last changed status, or was raised.
+    pub modified: DateTimeMillis,
+    /// The report that raised the alert.
+    pub report: JsonConsoleReportLink,
+    /// The value that alerted.
+    pub value: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub baseline: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lower_limit: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub upper_limit: Option<f64>,
+    /// The line the alert raised on over the window that ends at the report,
+    /// following the threshold that raised the alert: its one line names the
+    /// branch, testbed, benchmark, variant, measure, and the threshold's model.
+    pub perf: JsonConsolePerf,
 }
 
 /// The most lines a plot draws.

@@ -230,6 +230,70 @@ pub(super) fn draw(
     Ok(plot.into_json(&boxes, &models, window, total))
 }
 
+/// One line over a window already resolved that ends at `report`, as `window` echoes it,
+/// following the threshold of `followed` at every point rather than the one that checked
+/// its latest. A run that ends with `report` but was taken after it is left out, as a
+/// report's own window leaves it out.
+pub(super) fn draw_line(
+    conn: &mut DbConnection,
+    project: &QueryProject,
+    line: LineDimensions,
+    followed: PointCheck,
+    read_window: Window,
+    report: ReportId,
+    window: JsonConsoleWindow,
+) -> Result<JsonConsolePerf, HttpError> {
+    let LineDimensions {
+        branch,
+        head_id,
+        head,
+        testbed,
+        benchmark,
+        variant,
+        measure,
+        metric,
+    } = line;
+    let boxes = Boxes {
+        branches: vec![BranchHead {
+            branch,
+            head_id,
+            head,
+        }],
+        testbeds: vec![TestbedSpec {
+            testbed,
+            spec_id: None,
+            #[cfg(feature = "plus")]
+            spec: None,
+        }],
+        benchmarks: vec![(benchmark, vec![variant])],
+        measures: vec![measure],
+    };
+    let series = boxes.series();
+    let names = Names::Every(vec![metric]);
+    let mut rows = plot_rows(conn, &boxes, &series, names.named(), read_window)
+        .map_err(resource_not_found_err!(Metric, project))?;
+    let end = read_window.end_time.timestamp();
+    rows.retain(|row| row.report.end_time.timestamp() < end || row.report.id <= report);
+    let plot = Plot::following(&boxes, &series, &names, rows, |_, lines| {
+        vec![Some(followed); lines]
+    });
+    let models =
+        plot_models(conn, &plot.model_ids()).map_err(resource_not_found_err!(Model, project))?;
+    Ok(plot.into_json(&boxes, &models, window, 1))
+}
+
+/// The dimensions of one line, already read.
+pub(super) struct LineDimensions {
+    pub branch: BranchRow,
+    pub head_id: HeadId,
+    pub head: HeadUuid,
+    pub testbed: TestbedRow,
+    pub benchmark: BenchmarkRow,
+    pub variant: VariantRow,
+    pub measure: MeasureRow,
+    pub metric: MetricName,
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct Window {
     start_time: DateTime,
@@ -367,8 +431,8 @@ struct Boxes {
     measures: Vec<MeasureRow>,
 }
 
-type BranchRow = (BranchId, BranchUuid, BranchName, BranchSlug);
-type TestbedRow = (TestbedId, TestbedUuid, ResourceName, TestbedSlug);
+pub(super) type BranchRow = (BranchId, BranchUuid, BranchName, BranchSlug);
+pub(super) type TestbedRow = (TestbedId, TestbedUuid, ResourceName, TestbedSlug);
 
 struct BranchHead {
     branch: BranchRow,
@@ -709,11 +773,11 @@ struct PlotRow {
 /// What one threshold computed for one point. The model is read once per plot
 /// rather than on every row.
 #[derive(Clone, Copy)]
-struct PointCheck {
-    threshold_id: ThresholdId,
-    model_id: ModelId,
-    limits: Limits,
-    alert: Option<JsonConsoleAlert>,
+pub(super) struct PointCheck {
+    pub threshold_id: ThresholdId,
+    pub model_id: ModelId,
+    pub limits: Limits,
+    pub alert: Option<JsonConsoleAlert>,
 }
 
 impl PointCheck {
@@ -999,6 +1063,21 @@ struct Plot {
 
 impl Plot {
     fn new(boxes: &Boxes, series: &[Series], names: &Names, rows: Vec<PlotRow>) -> Self {
+        Self::following(boxes, series, names, rows, followed_checks)
+    }
+
+    /// The drawn lines, each following the threshold of the check that `follow`
+    /// picks for it from the rows it draws.
+    fn following<F>(
+        boxes: &Boxes,
+        series: &[Series],
+        names: &Names,
+        rows: Vec<PlotRow>,
+        follow: F,
+    ) -> Self
+    where
+        F: FnOnce(&[(usize, PlotRow)], usize) -> Vec<Option<PointCheck>>,
+    {
         let lines = series
             .iter()
             .flat_map(|series| {
@@ -1016,7 +1095,7 @@ impl Plot {
             points.add(&row.report, row.iteration);
         }
         let points = points.build();
-        let checks = followed_checks(&rows, lines.len());
+        let checks = follow(&rows, lines.len());
 
         let mut series = lines
             .iter()

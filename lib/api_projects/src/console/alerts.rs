@@ -8,17 +8,19 @@ use std::{
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk};
 use bencher_json::{
-    BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, GitHash, HeadUuid, MeasureUuid,
-    MetricName, ProjectResourceId, ReportUuid, ResourceName, TestbedSlug, TestbedUuid,
+    AlertUuid, BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, GitHash, HeadUuid,
+    MeasureUuid, MetricName, ProjectResourceId, ReportUuid, ResourceName, TestbedSlug, TestbedUuid,
     ThresholdUuid,
     project::{
         alert::{
             AlertStatus, JsonAlertsFilter, JsonUpdateAlerts, JsonUpdatedAlerts, MAX_UPDATE_ALERTS,
         },
+        boundary::BoundaryLimit,
         console::{
-            ConsoleAlertStatus, DEFAULT_CONSOLE_ALERTS_PER_PAGE, JsonConsoleAlertGroup,
-            JsonConsoleAlertLine, JsonConsoleAlerts, JsonConsoleAlertsCounts,
-            JsonConsoleAlertsQueryParams, JsonConsoleBranch, JsonConsoleTestbed, JsonConsoleWindow,
+            ConsoleAlertStatus, DEFAULT_CONSOLE_ALERTS_PER_PAGE, JsonConsoleAlert,
+            JsonConsoleAlertDetail, JsonConsoleAlertGroup, JsonConsoleAlertLine, JsonConsoleAlerts,
+            JsonConsoleAlertsCounts, JsonConsoleAlertsQueryParams, JsonConsoleBranch,
+            JsonConsoleReportLink, JsonConsoleTestbed, JsonConsoleWindow,
             MAX_CONSOLE_ALERTS_PER_PAGE, MAX_CONSOLE_HISTORY_REPORTS,
         },
         head::{JsonVersion, VersionNumber},
@@ -38,7 +40,11 @@ use bencher_schema::{
             metric::MetricId,
             report::{QueryReport, ReportId},
             testbed::TestbedId,
-            threshold::alert::{AlertId, UpdateAlert},
+            threshold::{
+                ThresholdId,
+                alert::{AlertId, UpdateAlert},
+                model::ModelId,
+            },
         },
         user::actor::{ApiActor, PubProjectBearerToken},
     },
@@ -58,10 +64,12 @@ use serde::Deserialize;
 use super::{
     AlertRow, BenchmarkRow, Check, Limits, MeasureRow, ModelRow, PointReport, Tables, VariantRow,
     alert_json, before,
+    perf::{BranchRow, LineDimensions, PointCheck, TestbedRow, Window, draw_line},
     report::{
         BoundaryRow, History, HistoryRow, Line, LineKey, WindowSource, history_points, line_json,
         window_holds, window_length, windows_history_rows,
     },
+    thresholds::readable_project,
 };
 use crate::{alerts::archived_filter, perf::DEFAULT_REPORT_HISTORY};
 
@@ -1016,6 +1024,246 @@ fn unique_ids<I: Iterator<Item = ReportId>>(ids: I) -> Vec<ReportId> {
 
 fn to_u32(count: usize) -> u32 {
     u32::try_from(count).unwrap_or(u32::MAX)
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct ProjConsoleAlertParams {
+    /// The slug or UUID for a project.
+    pub project: ProjectResourceId,
+    /// The UUID for an alert.
+    pub alert: AlertUuid,
+}
+
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/console/projects/{project}/alerts/{alert}",
+    tags = ["projects", "alerts"],
+    unpublished = true,
+}]
+pub async fn proj_console_alert_options(
+    _rqctx: RequestContext<ApiContext>,
+    _path_params: Path<ProjConsoleAlertParams>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Get.into()]))
+}
+
+/// View an alert for the console
+///
+/// An alert of a project with the report that raised it and the line it raised on, drawn over
+/// the four weeks that end at the report with the boundary of the threshold that raised it.
+/// The user must be signed in and allowed to view the project,
+/// or provide a valid project key for the project.
+#[endpoint {
+    method = GET,
+    path =  "/v0/console/projects/{project}/alerts/{alert}",
+    tags = ["projects", "alerts"],
+    unpublished = true,
+}]
+pub async fn proj_console_alert_get(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: PubProjectBearerToken,
+    path_params: Path<ProjConsoleAlertParams>,
+) -> Result<ResponseOk<JsonConsoleAlertDetail>, HttpError> {
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
+    let json = get_one_inner(rqctx.context(), &api_actor, path_params.into_inner())
+        .await
+        .map_err(with_auth_hint)?;
+    Ok(Get::auth_response_ok(json))
+}
+
+async fn get_one_inner(
+    context: &ApiContext,
+    api_actor: &ApiActor,
+    path_params: ProjConsoleAlertParams,
+) -> Result<JsonConsoleAlertDetail, HttpError> {
+    actor_conn!(context, api_actor, |conn| {
+        let project = readable_project(conn, context, &path_params.project, api_actor)?;
+        let (
+            (uuid, limit, status, created, modified),
+            report,
+            hash,
+            (branch, head),
+            testbed,
+            benchmark,
+            variant,
+            measure,
+            (metric, value),
+            (threshold_id, model_id, baseline, lower_limit, upper_limit),
+        ) = detail_row(conn, &project, path_params.alert)?;
+
+        let limits = Limits {
+            baseline,
+            lower_limit,
+            upper_limit,
+        };
+        let followed = PointCheck {
+            threshold_id,
+            model_id,
+            limits,
+            alert: Some(JsonConsoleAlert {
+                uuid,
+                limit,
+                status,
+            }),
+        };
+        let start_time = window_start(&report, DEFAULT_REPORT_HISTORY);
+        let window = JsonConsoleWindow {
+            start_time: start_time.into(),
+            end_time: report.end_time.into(),
+            clamped: false,
+        };
+        let line = LineDimensions {
+            branch,
+            head_id: report.head_id,
+            head,
+            testbed,
+            benchmark,
+            variant,
+            measure,
+            metric,
+        };
+        let perf = draw_line(
+            conn,
+            &project,
+            line,
+            followed,
+            Window::new(start_time, report.end_time),
+            report.id,
+            window,
+        )?;
+
+        let QueryReport {
+            uuid: report_uuid,
+            adapter,
+            start_time: report_start,
+            ..
+        } = report;
+        Ok(JsonConsoleAlertDetail {
+            uuid,
+            limit,
+            status,
+            created: created.into(),
+            modified: modified.into(),
+            report: JsonConsoleReportLink {
+                uuid: report_uuid,
+                start_time: report_start.into(),
+                hash,
+                adapter: adapter.normalize(),
+            },
+            value,
+            baseline,
+            lower_limit,
+            upper_limit,
+            perf,
+        })
+    })
+}
+
+/// An alert with the report that raised it, the line it raised on, and the boundary it
+/// crossed.
+type DetailRow = (
+    (AlertUuid, BoundaryLimit, AlertStatus, DateTime, DateTime),
+    QueryReport,
+    Option<GitHash>,
+    (BranchRow, HeadUuid),
+    TestbedRow,
+    BenchmarkRow,
+    VariantRow,
+    MeasureRow,
+    (MetricName, f64),
+    (ThresholdId, ModelId, Option<f64>, Option<f64>, Option<f64>),
+);
+
+fn detail_row(
+    conn: &mut DbConnection,
+    project: &QueryProject,
+    alert: AlertUuid,
+) -> Result<DetailRow, HttpError> {
+    schema::alert::table
+        .inner_join(schema::boundary::table.on(schema::boundary::id.eq(schema::alert::boundary_id)))
+        .inner_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
+        .inner_join(
+            schema::report_benchmark::table
+                .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
+        )
+        .inner_join(
+            schema::report::table.on(schema::report::id.eq(schema::report_benchmark::report_id)),
+        )
+        .inner_join(schema::version::table.on(schema::version::id.eq(schema::report::version_id)))
+        .inner_join(schema::head::table.on(schema::head::id.eq(schema::report::head_id)))
+        .inner_join(schema::branch::table.on(schema::branch::id.eq(schema::head::branch_id)))
+        .inner_join(schema::testbed::table.on(schema::testbed::id.eq(schema::report::testbed_id)))
+        .inner_join(
+            schema::benchmark::table
+                .on(schema::benchmark::id.eq(schema::report_benchmark::benchmark_id)),
+        )
+        .inner_join(
+            schema::variant::table.on(schema::variant::id.eq(schema::report_benchmark::variant_id)),
+        )
+        .inner_join(schema::measure::table.on(schema::measure::id.eq(schema::metric::measure_id)))
+        .filter(schema::alert::project_id.eq(project.id))
+        .filter(schema::alert::uuid.eq(alert))
+        .select((
+            (
+                schema::alert::uuid,
+                schema::alert::boundary_limit,
+                schema::alert::status,
+                schema::alert::created,
+                schema::alert::modified,
+            ),
+            QueryReport::as_select(),
+            schema::version::hash,
+            (
+                (
+                    schema::branch::id,
+                    schema::branch::uuid,
+                    schema::branch::name,
+                    schema::branch::slug,
+                ),
+                schema::head::uuid,
+            ),
+            (
+                schema::testbed::id,
+                schema::testbed::uuid,
+                schema::testbed::name,
+                schema::testbed::slug,
+            ),
+            (
+                schema::benchmark::id,
+                schema::benchmark::uuid,
+                schema::benchmark::name,
+                schema::benchmark::slug,
+            ),
+            (
+                schema::variant::id,
+                schema::variant::uuid,
+                schema::variant::parameters,
+            ),
+            (
+                schema::measure::id,
+                schema::measure::uuid,
+                schema::measure::name,
+                schema::measure::slug,
+                schema::measure::units,
+            ),
+            (schema::metric::name, schema::metric::value),
+            (
+                schema::boundary::threshold_id,
+                schema::boundary::model_id,
+                schema::boundary::baseline,
+                schema::boundary::lower_limit,
+                schema::boundary::upper_limit,
+            ),
+        ))
+        .first::<DetailRow>(conn)
+        .map_err(resource_not_found_err!(Alert, (project, alert)))
 }
 
 /// Update many alerts
