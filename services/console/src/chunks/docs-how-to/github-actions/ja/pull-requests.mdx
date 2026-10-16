@@ -57,7 +57,11 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 13. [`GITHUB_HEAD_REF`のGitHub Actionsデフォルト環境変数][github default environment variables]を使用して、`--branch`オプションをPRブランチ名に設定します。
     全体を把握するために[`--branch`ドキュメント][branch option]を参照してください。
     (例: `--branch "$GITHUB_HEAD_REF"`)
-14. PRブランチの開始ポイントを設定します:
+14. [`pull_request`イベントのGitHub Actions][github action pull_request]を使用して、`--hash`オプションをPRブランチの`git`ハッシュに設定します。
+    `pull_request`イベントでは、`actions/checkout`はPRのコミットではないマージコミットをチェックアウトします。
+    全体を把握するために[`--hash`ドキュメント][hash option]を参照してください。
+    (例: `--hash '${{ github.event.pull_request.head.sha }}'`)
+15. PRブランチの開始ポイントを設定します:
     1. [`GITHUB_BASE_REF`のGitHub Actionsデフォルト環境変数][github default environment variables]を使用して、`--start-point`オプションをPRブランチの開始ポイントに設定します。
     全体を把握するために[`--start-point`ドキュメント][start point]を参照してください。
     (例: `--start-point "$GITHUB_BASE_REF"`)
@@ -70,20 +74,20 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
     4. ベンチマークデータのドリフトを防ぐために、PRブランチを開始ポイントに常にリセットする`--start-point-reset`フラグを設定します。
     全体を把握するために[`--start-point-reset`ドキュメント][start point reset]を参照してください。
     (例: `--start-point-reset`)
-15. `--testbed`オプションをテストベッド名に設定します。
+16. `--testbed`オプションをテストベッド名に設定します。
     これは`runs-on`で選択したマシンと一致する可能性があります。
     詳細は[`--tested`ドキュメント][testbed option]を参照してください。
     (例: `--testbed ubuntu-latest`)
-16. アラートが生成された場合にコマンドを失敗させるために、`--error-on-alert`フラグを設定します。
+17. アラートが生成された場合にコマンドを失敗させるために、`--error-on-alert`フラグを設定します。
    全体を把握するために[`--error-on-alert`ドキュメント][alert err]を参照してください。
    (例: `--error-on-alert`)
-17. Bencher Metric Format JSON (`json`)を生成する<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>を使用して、[`Bencher Metric Format JSON`（`json`）][bmf]に`--adapter`オプションを設定します。
+18. Bencher Metric Format JSON (`json`)を生成する<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>を使用して、[`Bencher Metric Format JSON`（`json`）][bmf]に`--adapter`オプションを設定します。
    ベンチマークハーネスアダプタを参照し、全体を把握してください。
    (例: `--adapter json`)
-18. [`GITHUB_TOKEN`環境変数を使用して][github token]GitHub API認証トークンを使ってGitHubチェックおよびプルリクエストへのコメントとして結果を投稿するために、`--github-actions`オプションを設定します。
+19. [`GITHUB_TOKEN`環境変数を使用して][github token]GitHub API認証トークンを使ってGitHubチェックおよびプルリクエストへのコメントとして結果を投稿するために、`--github-actions`オプションを設定します。
     詳細は[`--github-actions`ドキュメント][github actions option]を参照してください。
     (例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-19. ベンチマークコマンドの引数を指定します。
+20. ベンチマークコマンドの引数を指定します。
     全体を把握するために[ベンチマークコマンド][command argument]を参照してください。
     (例: `bencher mock`)
 
@@ -103,6 +107,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
 [key option]: /ja/docs/explanation/bencher-run/#--key-key
 [branch option]: /ja/docs/explanation/branches/#--branch-branch
+[hash option]: /ja/docs/explanation/branches/#--hash-hash
 [start point]: /ja/docs/explanation/branches/#--start-point-branch
 [start point hash]: /ja/docs/explanation/branches/#--start-point-hash-hash
 [start point clone thresholds]: /ja/docs/explanation/branches/#--start-point-clone-thresholds

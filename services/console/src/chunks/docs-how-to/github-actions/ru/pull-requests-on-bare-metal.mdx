@@ -59,27 +59,30 @@ workflow [Pull Requests из Fork][pull requests from forks] выше,
     используя [переменную окружения `GITHUB_HEAD_REF` по умолчанию GitHub Actions][github default environment variables].
     См. [документацию `--branch`][branch option] для полного обзора.
     (пример: `--branch "$GITHUB_HEAD_REF"`)
-14. Установите начальную точку для ветки PR, как в разделе [Pull Requests][pull requests] выше.
+14. Установите опцию `--hash` на `git` hash ветки PR, как в разделе [Pull Requests][pull requests] выше.
+    См. [документацию `--hash`][hash option] для полного обзора.
+    (пример: `--hash '${{ github.event.pull_request.head.sha }}'`)
+15. Установите начальную точку для ветки PR, как в разделе [Pull Requests][pull requests] выше.
     См. [документацию `--start-point`][start point] для полного обзора.
     (пример: `--start-point "$GITHUB_BASE_REF"`)
-15. Установите опцию `--adapter` на [Bencher Metric Format JSON (`json`)][bmf], который генерирует <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+16. Установите опцию `--adapter` на [Bencher Metric Format JSON (`json`)][bmf], который генерирует <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     См. [адаптеры тестовых харнесов][adapter json] для полного обзора.
     (пример: `--adapter json`)
-16. Установите опцию `--image` на ваш образ для выделенного оборудования.
+17. Установите опцию `--image` на ваш образ для выделенного оборудования.
     См. [документацию `--image`][image option] для полного обзора.
     (пример: `--image project-abc4567-wxyz123456789:latest`)
-17. Установите флаг `--detach`, чтобы завершиться сразу после отправки Job.
+18. Установите флаг `--detach`, чтобы завершиться сразу после отправки Job.
     См. [документацию `--detach`][detach option] для подробностей.
     (пример: `--detach`)
-18. Установите опцию `--github-actions` на токен аутентификации API GitHub, чтобы запустить проверку GitHub, используя
+19. Установите опцию `--github-actions` на токен аутентификации API GitHub, чтобы запустить проверку GitHub, используя
     [переменную окружения `GITHUB_TOKEN` GitHub Actions][github token].
     См. [документацию `--github-actions`][github actions option] для подробностей.
     (пример: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-19. Установите опцию `--ci-callback-token` на **секрет** репозитория `BENCHER_CALLBACK_TOKEN`,
+20. Установите опцию `--ci-callback-token` на **секрет** репозитория `BENCHER_CALLBACK_TOKEN`,
     чтобы Bencher мог отправить событие `repository_dispatch`, когда Job завершится.
     См. [документацию `--ci-callback-token`][ci callback token option] для подробностей.
     (пример: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-20. Укажите команду бенчмарка, которая выполняется в образе.
+21. Укажите команду бенчмарка, которая выполняется в образе.
     Команда передается точке входа образа, если она есть (см. [опцию `--entrypoint`][entrypoint option]).
     См. [команду бенчмарка][command argument] для полного обзора.
     (пример: `bencher mock`)
@@ -153,6 +156,7 @@ workflow [Pull Requests из Fork][pull requests from forks] выше,
 [project option]: /ru/docs/explanation/bencher-run/#--project-project
 [key option]: /ru/docs/explanation/bencher-run/#--key-key
 [branch option]: /ru/docs/explanation/branches/#--branch-branch
+[hash option]: /ru/docs/explanation/branches/#--hash-hash
 [start point]: /ru/docs/explanation/branches/#--start-point-branch
 [bmf]: /ru/docs/reference/bencher-metric-format/
 [adapter json]: /ru/docs/explanation/adapters/#-json

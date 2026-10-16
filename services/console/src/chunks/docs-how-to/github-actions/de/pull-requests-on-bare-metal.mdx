@@ -56,26 +56,29 @@ um Benchmarking auf dedizierter Hardware für Fork-PRs zu erhalten.
 13. Setzen Sie die `--branch`-Option auf den PR-Branch-Namen unter Verwendung [der GitHub Actions `GITHUB_HEAD_REF` Standard-Umgebungsvariable][github default environment variables].
     Siehe [die `--branch` Dokumentation][branch option] für einen vollständigen Überblick.
     (z.B.: `--branch "$GITHUB_HEAD_REF"`)
-14. Setzen Sie den Startpunkt für den PR-Branch, wie oben unter [Pull Requests][pull requests].
+14. Setzen Sie die `--hash`-Option auf den `git`-Hash des PR-Branches, wie oben unter [Pull Requests][pull requests].
+    Siehe [die `--hash` Dokumentation][hash option] für einen vollständigen Überblick.
+    (z.B.: `--hash '${{ github.event.pull_request.head.sha }}'`)
+15. Setzen Sie den Startpunkt für den PR-Branch, wie oben unter [Pull Requests][pull requests].
     Siehe [die `--start-point` Dokumentation][start point] für einen vollständigen Überblick.
     (z.B.: `--start-point "$GITHUB_BASE_REF"`)
-15. Setzen Sie die `--adapter`-Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
+16. Setzen Sie die `--adapter`-Option auf [Bencher Metric Format JSON (`json`)][bmf], das von <code><a href="/de/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> generiert wird.
     Siehe [Benchmark-Harness-Adapter][adapter json] für einen vollständigen Überblick.
     (z.B.: `--adapter json`)
-16. Setzen Sie die `--image`-Option auf Ihr Image für dedizierte Hardware.
+17. Setzen Sie die `--image`-Option auf Ihr Image für dedizierte Hardware.
     Siehe [die `--image` Dokumentation][image option] für einen vollständigen Überblick.
     (z.B.: `--image project-abc4567-wxyz123456789:latest`)
-17. Setzen Sie das `--detach` Flag, um sich zu beenden, sobald der Job eingereicht ist.
+18. Setzen Sie das `--detach` Flag, um sich zu beenden, sobald der Job eingereicht ist.
     Siehe [die `--detach` Dokumentation][detach option] für weitere Details.
     (z.B.: `--detach`)
-18. Setzen Sie die `--github-actions`-Option auf das GitHub API-Authentifizierungstoken, um die GitHub-Prüfung zu starten, unter Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token].
+19. Setzen Sie die `--github-actions`-Option auf das GitHub API-Authentifizierungstoken, um die GitHub-Prüfung zu starten, unter Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token].
     Siehe [die `--github-actions` Dokumentation][github actions option] für mehr Details.
     (z.B.: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-19. Setzen Sie die `--ci-callback-token`-Option auf das **Repository**-Geheimnis `BENCHER_CALLBACK_TOKEN`,
+20. Setzen Sie die `--ci-callback-token`-Option auf das **Repository**-Geheimnis `BENCHER_CALLBACK_TOKEN`,
     damit Bencher das `repository_dispatch`-Ereignis senden kann, wenn der Job beendet ist.
     Siehe [die `--ci-callback-token` Dokumentation][ci callback token option] für weitere Details.
     (z.B.: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-20. Geben Sie den Benchmark-Befehl an, der im Image ausgeführt wird.
+21. Geben Sie den Benchmark-Befehl an, der im Image ausgeführt wird.
     Der Befehl wird an den Entrypoint des Images übergeben, falls es einen hat (siehe [die Option `--entrypoint`][entrypoint option]).
     Siehe [Benchmark Befehl][command argument] für einen vollständigen Überblick.
     (z.B.: `bencher mock`)
@@ -146,6 +149,7 @@ um Benchmarking auf dedizierter Hardware für Fork-PRs zu erhalten.
 [project option]: /de/docs/explanation/bencher-run/#--project-project
 [key option]: /de/docs/explanation/bencher-run/#--key-key
 [branch option]: /de/docs/explanation/branches/#--branch-branch
+[hash option]: /de/docs/explanation/branches/#--hash-hash
 [start point]: /de/docs/explanation/branches/#--start-point-branch
 [bmf]: /de/docs/reference/bencher-metric-format/
 [adapter json]: /de/docs/explanation/adapters/#-json

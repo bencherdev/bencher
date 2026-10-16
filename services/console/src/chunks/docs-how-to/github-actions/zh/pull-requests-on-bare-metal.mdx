@@ -55,26 +55,29 @@ GitHub Actions 提供自托管运行器，
 13. 使用 [GitHub Actions `GITHUB_HEAD_REF` 默认环境变量][github default environment variables] 设置 `--branch` 选项为 PR 分支名称。
     查看 [`--branch` 文档][branch option] 以获取完整概览。
     （例如：`--branch "$GITHUB_HEAD_REF"`）
-14. 像上面的[拉取请求][pull requests]一样，设置 PR 分支的起点。
+14. 像上面的[拉取请求][pull requests]一样，将 `--hash` 选项设置为 PR 分支的 `git` hash。
+    查看 [`--hash` 文档][hash option] 以获取完整概览。
+    （例如：`--hash '${{ github.event.pull_request.head.sha }}'`）
+15. 像上面的[拉取请求][pull requests]一样，设置 PR 分支的起点。
     查看 [`--start-point` 文档][start point] 以获取完整概览。
     （例如：`--start-point "$GITHUB_BASE_REF"`）
-15. 将 `--adapter` 选项设置为由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 [Bencher Metric Format JSON (`json`)][bmf]。
+16. 将 `--adapter` 选项设置为由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 [Bencher Metric Format JSON (`json`)][bmf]。
     查看 [基准测试工具适配器][adapter json] 以获取完整概览。
     （例如：`--adapter json`）
-16. 将 `--image` 选项设置为您的裸机镜像。
+17. 将 `--image` 选项设置为您的裸机镜像。
     查看 [`--image` 文档][image option] 以获取完整概览。
     （例如：`--image project-abc4567-wxyz123456789:latest`）
-17. 设置 `--detach` 标志，以便在 Job 提交后立即退出。
+18. 设置 `--detach` 标志，以便在 Job 提交后立即退出。
     查看 [`--detach` 文档][detach option] 以获取详细信息。
     （例如：`--detach`）
-18. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以启动 GitHub 检查。
+19. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以启动 GitHub 检查。
     查看 [`--github-actions` 文档][github actions option] 以获取详细信息。
     （例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`）
-19. 将 `--ci-callback-token` 选项设置为 `BENCHER_CALLBACK_TOKEN` **仓库**密钥，
+20. 将 `--ci-callback-token` 选项设置为 `BENCHER_CALLBACK_TOKEN` **仓库**密钥，
     以便 Bencher 能在 Job 完成时发送 `repository_dispatch` 事件。
     查看 [`--ci-callback-token` 文档][ci callback token option] 以获取详细信息。
     （例如：`--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`）
-20. 指定在镜像中运行的基准测试命令。
+21. 指定在镜像中运行的基准测试命令。
     如果镜像有入口点，该命令会传给该入口点（参见 [`--entrypoint` 选项][entrypoint option]）。
     查看 [基准测试命令][command argument] 以获取完整概览。
     （例如：`bencher mock`）
@@ -142,6 +145,7 @@ GitHub Actions 提供自托管运行器，
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
 [key option]: /zh/docs/explanation/bencher-run/#--key-key
 [branch option]: /zh/docs/explanation/branches/#--branch-branch
+[hash option]: /zh/docs/explanation/branches/#--hash-hash
 [start point]: /zh/docs/explanation/branches/#--start-point-branch
 [bmf]: /zh/docs/reference/bencher-metric-format/
 [adapter json]: /zh/docs/explanation/adapters/#-json

@@ -23,6 +23,7 @@ jobs:
           --project project-abc4567-wxyz123456789 \
           --key '${{ secrets.BENCHER_API_KEY }}' \
           --branch "$GITHUB_HEAD_REF" \
+          --hash '${{ github.event.pull_request.head.sha }}' \
           --start-point "$GITHUB_BASE_REF" \
           --start-point-hash '${{ github.event.pull_request.base.sha }}' \
           --start-point-clone-thresholds \

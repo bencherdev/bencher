@@ -63,7 +63,12 @@ alors vous pouvez simplement créer un autre workflow pour fonctionner avec des 
     en utilisant [la variable d'environnement par défaut `GITHUB_HEAD_REF` de GitHub Actions][github default environment variables].
     Voir [la documentation `--branch`][branch option] pour un aperçu complet.
     (ex : `--branch "$GITHUB_HEAD_REF"`)
-14. Définissez le Point de Départ pour la branche PR :
+14. Définissez l'option `--hash` sur le hash `git` de la branche PR
+    en utilisant [l'événement `pull_request` de GitHub Actions][github action pull_request].
+    Lors d'un événement `pull_request`, `actions/checkout` extrait un commit de fusion qui ne fait pas partie des commits de la PR.
+    Voir [la documentation `--hash`][hash option] pour un aperçu complet.
+    (ex : `--hash '${{ github.event.pull_request.head.sha }}'`)
+15. Définissez le Point de Départ pour la branche PR :
     1. Définissez l'option `--start-point` sur le point de départ de la branche PR
     en utilisant [la variable d'environnement par défaut `GITHUB_BASE_REF` de GitHub Actions][github default environment variables].
     Voir [la documentation `--start-point`][start point] pour un aperçu complet.
@@ -79,21 +84,21 @@ alors vous pouvez simplement créer un autre workflow pour fonctionner avec des 
     Cela empêchera la dérive des données de benchmark.
     Voir [la documentation `--start-point-reset`][start point reset] pour un aperçu complet.
     (ex : `--start-point-reset`)
-15. Définissez l'option `--testbed` sur le nom du Banc d'Essai.
+16. Définissez l'option `--testbed` sur le nom du Banc d'Essai.
     Cela devrait probablement correspondre à la machine sélectionnée dans `runs-on`.
     Voir [la documentation `--testbed`][testbed option] pour plus de détails.
     (ex : `--testbed ubuntu-latest`)
-16. Définissez le drapeau `--error-on-alert` pour échouer la commande si une Alerte est générée.
+17. Définissez le drapeau `--error-on-alert` pour échouer la commande si une Alerte est générée.
    Voir [la documentation `--error-on-alert`][alert err] pour un aperçu complet.
    (ex : `--error-on-alert`)
-17. Définissez l'option `--adapter` sur le Format de Métrique Bencher JSON (`json`) généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+18. Définissez l'option `--adapter` sur le Format de Métrique Bencher JSON (`json`) généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Voir [les adaptateurs de harnais de benchmark][adapter json] pour un aperçu complet.
    (ex : `--adapter json`)
-18. Définissez l'option `--github-actions` sur le token d'authentification de l'API GitHub pour poster les résultats en tant que vérification GitHub et commentaire sur la Pull Request en utilisant
+19. Définissez l'option `--github-actions` sur le token d'authentification de l'API GitHub pour poster les résultats en tant que vérification GitHub et commentaire sur la Pull Request en utilisant
     [la variable d'environnement `GITHUB_TOKEN` de GitHub Actions][github token].
     Voir [la documentation `--github-actions`][github actions option] pour plus de détails.
     (ex : `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-19. Spécifiez les arguments de commande de benchmark.
+20. Spécifiez les arguments de commande de benchmark.
     Voir [la commande de benchmark][command argument] pour un aperçu complet.
     (ex : `bencher mock`)
 
@@ -113,6 +118,7 @@ alors vous pouvez simplement créer un autre workflow pour fonctionner avec des 
 [project option]: /fr/docs/explanation/bencher-run/#--project-project
 [key option]: /fr/docs/explanation/bencher-run/#--key-key
 [branch option]: /fr/docs/explanation/branches/#--branch-branch
+[hash option]: /fr/docs/explanation/branches/#--hash-hash
 [start point]: /fr/docs/explanation/branches/#--start-point-branch
 [start point hash]: /fr/docs/explanation/branches/#--start-point-hash-hash
 [start point clone thresholds]: /fr/docs/explanation/branches/#--start-point-clone-thresholds

@@ -35,6 +35,7 @@ as PR comments.
     bencher run \
       --project my-project \
       --branch "${{ github.head_ref }}" \
+      --hash "${{ github.event.pull_request.head.sha }}" \
       --start-point "${{ github.base_ref }}" \
       --start-point-hash "${{ github.event.pull_request.base.sha }}" \
       --start-point-clone-thresholds \
@@ -73,6 +74,7 @@ completes the check and the PR comment:
     bencher run \
       --project my-project \
       --branch "${{ github.head_ref }}" \
+      --hash "${{ github.event.pull_request.head.sha }}" \
       --image my-bench:latest \
       --detach \
       --github-actions "${{ secrets.GITHUB_TOKEN }}" \
