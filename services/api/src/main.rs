@@ -217,9 +217,9 @@ pub enum LitestreamError {
     #[error(
         "Failed to convert Bencher config to Litestream config. This is likely a bug. Please report this: {0}"
     )]
-    Yaml(serde_yaml::Error),
+    Serialize(serde_json::Error),
     #[error("Failed to write Litestream config ({0}): {1}")]
-    WriteYaml(PathBuf, std::io::Error),
+    WriteConfig(PathBuf, std::io::Error),
     #[error("Failed to run `litestream restore`: {0}")]
     Restore(std::io::Error),
     #[error("Failed to run `litestream replicate`: {0}")]
@@ -261,11 +261,11 @@ fn run_litestream(
     let config_path = PathBuf::from("etc/litestream.yml");
     #[cfg(not(debug_assertions))]
     let config_path = PathBuf::from("/etc/litestream.yml");
-    let yaml = disaster_recovery
-        .into_yaml(db_path.clone(), config.logging.log.level())
-        .map_err(LitestreamError::Yaml)?;
-    std::fs::write(&config_path, yaml)
-        .map_err(|e| LitestreamError::WriteYaml(config_path.clone(), e))?;
+    let litestream_config = disaster_recovery
+        .into_litestream_config(db_path.clone(), config.logging.log.level())
+        .map_err(LitestreamError::Serialize)?;
+    std::fs::write(&config_path, litestream_config)
+        .map_err(|e| LitestreamError::WriteConfig(config_path.clone(), e))?;
 
     let litestream_logger = log.clone();
     Ok(tokio::spawn(async move {

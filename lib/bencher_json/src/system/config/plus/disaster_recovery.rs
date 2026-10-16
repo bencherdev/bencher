@@ -117,11 +117,11 @@ mod db {
     use super::{JsonCheckpoint, JsonDisasterRecovery, JsonReplica, JsonSnapshot, JsonValidation};
 
     impl JsonDisasterRecovery {
-        pub fn into_yaml(
+        pub fn into_litestream_config(
             self,
             path: PathBuf,
             log_level: LogLevel,
-        ) -> Result<String, serde_yaml::Error> {
+        ) -> Result<String, serde_json::Error> {
             let Self {
                 replica,
                 snapshot,
@@ -160,7 +160,7 @@ mod db {
                 validation,
                 logging,
             };
-            serde_yaml::to_string(&litestream)
+            serde_json::to_string_pretty(&litestream)
         }
     }
 
@@ -310,7 +310,7 @@ mod db {
     }
 
     #[test]
-    fn into_yaml() {
+    fn into_litestream_config() {
         let json_disaster_recovery = JsonDisasterRecovery {
             replica: JsonReplica::S3 {
                 bucket: "bucket".to_owned(),
@@ -327,26 +327,34 @@ mod db {
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
-        let yaml = json_disaster_recovery.into_yaml(path, log_level).unwrap();
+        let litestream_config = json_disaster_recovery
+            .into_litestream_config(path, log_level)
+            .unwrap();
         pretty_assertions::assert_eq!(
-            yaml,
-            "dbs:
-- path: /path/to/db
-  replica:
-    type: s3
-    bucket: bucket
-    path: /path/to/backup
-    access-key-id: access_key_id
-    secret-access-key: secret_access_key
-  truncate-page-n: 0
-logging:
-  level: info
-"
+            litestream_config,
+            r#"{
+  "dbs": [
+    {
+      "path": "/path/to/db",
+      "replica": {
+        "type": "s3",
+        "bucket": "bucket",
+        "path": "/path/to/backup",
+        "access-key-id": "access_key_id",
+        "secret-access-key": "secret_access_key"
+      },
+      "truncate-page-n": 0
+    }
+  ],
+  "logging": {
+    "level": "info"
+  }
+}"#
         );
     }
 
     #[test]
-    fn into_yaml_with_snapshot_and_validation() {
+    fn into_litestream_config_with_snapshot_and_validation() {
         let json_disaster_recovery = JsonDisasterRecovery {
             replica: JsonReplica::S3 {
                 bucket: "bucket".to_owned(),
@@ -368,31 +376,41 @@ logging:
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
-        let yaml = json_disaster_recovery.into_yaml(path, log_level).unwrap();
+        let litestream_config = json_disaster_recovery
+            .into_litestream_config(path, log_level)
+            .unwrap();
         pretty_assertions::assert_eq!(
-            yaml,
-            "dbs:
-- path: /path/to/db
-  replica:
-    type: s3
-    bucket: bucket
-    path: /path/to/backup
-    access-key-id: access_key_id
-    secret-access-key: secret_access_key
-  truncate-page-n: 0
-snapshot:
-  interval: 1h
-  retention: 24h
-validation:
-  interval: 6h
-logging:
-  level: info
-"
+            litestream_config,
+            r#"{
+  "dbs": [
+    {
+      "path": "/path/to/db",
+      "replica": {
+        "type": "s3",
+        "bucket": "bucket",
+        "path": "/path/to/backup",
+        "access-key-id": "access_key_id",
+        "secret-access-key": "secret_access_key"
+      },
+      "truncate-page-n": 0
+    }
+  ],
+  "snapshot": {
+    "interval": "1h",
+    "retention": "24h"
+  },
+  "validation": {
+    "interval": "6h"
+  },
+  "logging": {
+    "level": "info"
+  }
+}"#
         );
     }
 
     #[test]
-    fn into_yaml_with_checkpoint_config() {
+    fn into_litestream_config_with_checkpoint_config() {
         let json_disaster_recovery = JsonDisasterRecovery {
             replica: JsonReplica::S3 {
                 bucket: "bucket".to_owned(),
@@ -413,28 +431,36 @@ logging:
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
-        let yaml = json_disaster_recovery.into_yaml(path, log_level).unwrap();
+        let litestream_config = json_disaster_recovery
+            .into_litestream_config(path, log_level)
+            .unwrap();
         pretty_assertions::assert_eq!(
-            yaml,
-            "dbs:
-- path: /path/to/db
-  replica:
-    type: s3
-    bucket: bucket
-    path: /path/to/backup
-    access-key-id: access_key_id
-    secret-access-key: secret_access_key
-  min-checkpoint-page-count: 2000
-  checkpoint-interval: 5m
-  truncate-page-n: 121359
-logging:
-  level: info
-"
+            litestream_config,
+            r#"{
+  "dbs": [
+    {
+      "path": "/path/to/db",
+      "replica": {
+        "type": "s3",
+        "bucket": "bucket",
+        "path": "/path/to/backup",
+        "access-key-id": "access_key_id",
+        "secret-access-key": "secret_access_key"
+      },
+      "min-checkpoint-page-count": 2000,
+      "checkpoint-interval": "5m",
+      "truncate-page-n": 121359
+    }
+  ],
+  "logging": {
+    "level": "info"
+  }
+}"#
         );
     }
 
     #[test]
-    fn into_yaml_file() {
+    fn into_litestream_config_file() {
         let json_disaster_recovery = JsonDisasterRecovery {
             replica: JsonReplica::File {
                 path: PathBuf::from("/path/to/replica"),
@@ -446,19 +472,27 @@ logging:
         };
         let path = PathBuf::from("/path/to/db");
         let log_level = LogLevel::Info;
-        let yaml = json_disaster_recovery.into_yaml(path, log_level).unwrap();
+        let litestream_config = json_disaster_recovery
+            .into_litestream_config(path, log_level)
+            .unwrap();
         pretty_assertions::assert_eq!(
-            yaml,
-            "dbs:
-- path: /path/to/db
-  replica:
-    type: file
-    path: /path/to/replica
-    sync-interval: 5s
-  truncate-page-n: 0
-logging:
-  level: info
-"
+            litestream_config,
+            r#"{
+  "dbs": [
+    {
+      "path": "/path/to/db",
+      "replica": {
+        "type": "file",
+        "path": "/path/to/replica",
+        "sync-interval": "5s"
+      },
+      "truncate-page-n": 0
+    }
+  ],
+  "logging": {
+    "level": "info"
+  }
+}"#
         );
     }
 
