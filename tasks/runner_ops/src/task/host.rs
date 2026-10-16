@@ -29,12 +29,13 @@ impl TryFrom<TaskHost> for Host {
             .unwrap_or_default();
         let scrub_day = file.as_ref().and_then(|f| f.scrub_day);
         let refresh_minute = file.as_ref().and_then(|f| f.refresh_minute);
+        let image_cache_gib = file.as_ref().and_then(|f| f.image_cache_gib);
         let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
         let label = runner.map_or_else(|| server.clone(), |runner| runner.to_string());
         Ok(Self {
             label,
             ssh: Ssh::new(server, ssh, user),
-            desired: Desired::new(update_channel, scrub_day, refresh_minute),
+            desired: Desired::new(update_channel, scrub_day, refresh_minute, image_cache_gib),
         })
     }
 }
@@ -85,7 +86,7 @@ mod tests {
 
     use super::*;
     use crate::task::desired::{BENCHER_CGROUP, SSH_HARDENING_PATH};
-    use crate::task::start::KEY_FILE;
+    use crate::task::start::{IMAGE_CACHE_SIZE, KEY_FILE};
 
     #[test]
     fn host_fails_when_a_setting_it_writes_still_differs() {
@@ -96,7 +97,7 @@ mod tests {
         let error = host(
             &ssh,
             "runner",
-            &Desired::new(UpdateChannel::Stable, None, None),
+            &Desired::new(UpdateChannel::Stable, None, None, None),
         )
         .unwrap_err()
         .to_string();
@@ -105,7 +106,7 @@ mod tests {
             "{error}"
         );
         assert!(error.contains(SSH_HARDENING_PATH), "{error}");
-        for set_elsewhere in [KEY_FILE, BENCHER_CGROUP] {
+        for set_elsewhere in [KEY_FILE, IMAGE_CACHE_SIZE, BENCHER_CGROUP] {
             assert!(!error.contains(set_elsewhere), "{error}");
         }
     }

@@ -6,6 +6,7 @@ use super::merge_ssh_with_extras;
 use super::ssh::Ssh;
 use super::start::Start;
 use crate::parser::TaskDeploy;
+use crate::parser::image_cache_gib::ImageCacheGib;
 
 #[derive(Debug)]
 pub struct Deploy {
@@ -14,6 +15,7 @@ pub struct Deploy {
     runner: RunnerResourceId,
     key: Secret,
     update_channel: Option<UpdateChannel>,
+    image_cache_gib: ImageCacheGib,
     run_id: Option<u64>,
 }
 
@@ -31,7 +33,7 @@ impl TryFrom<TaskDeploy> for Deploy {
             update_channel,
             run_id,
         } = task;
-        let (ssh, host, runner, key, update_channel) =
+        let (ssh, host, runner, key, update_channel, image_cache_gib) =
             merge_ssh_with_extras(runner, server, ssh, user, key, host, update_channel)?;
         Ok(Self {
             ssh,
@@ -39,6 +41,7 @@ impl TryFrom<TaskDeploy> for Deploy {
             runner,
             key,
             update_channel,
+            image_cache_gib,
             run_id,
         })
     }
@@ -52,12 +55,21 @@ impl Deploy {
             runner,
             key,
             update_channel,
+            image_cache_gib,
             run_id,
         } = self;
         let (runner_binary, _temp_dir) =
             download::download(update_channel.unwrap_or_default(), run_id)?;
         deploy_setup::deploy(&ssh, Some(runner_binary.as_path()))?;
-        let start = Start::new(ssh, host, runner, key, update_channel, false);
+        let start = Start::new(
+            ssh,
+            host,
+            runner,
+            key,
+            update_channel,
+            image_cache_gib,
+            false,
+        );
         start.exec()?;
         Ok(())
     }

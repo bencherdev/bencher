@@ -4,6 +4,7 @@ use bencher_json::{RunnerResourceId, Secret, UpdateChannel};
 use camino::Utf8PathBuf;
 use serde::Deserialize;
 
+use super::image_cache_gib::ImageCacheGib;
 use super::refresh_minute::RefreshMinute;
 use super::scrub_day::ScrubDay;
 
@@ -23,6 +24,7 @@ pub struct Server {
     pub update_channel: Option<UpdateChannel>,
     pub scrub_day: Option<ScrubDay>,
     pub refresh_minute: Option<RefreshMinute>,
+    pub image_cache_gib: Option<ImageCacheGib>,
 }
 
 pub fn load_server(runner: &RunnerResourceId) -> anyhow::Result<Option<Server>> {

@@ -6,7 +6,8 @@ use bencher_runner::maintenance::{JOB_LOCK, MARKER, RUN_DIR};
 
 use super::framed::{self, Output};
 use super::isolate::{format_cpu_list, parse_cpu_list};
-use super::start::KEY_FILE;
+use super::start::{IMAGE_CACHE_SIZE, KEY_FILE};
+use crate::parser::image_cache_gib::ImageCacheGib;
 use crate::parser::refresh_minute::RefreshMinute;
 use crate::parser::scrub_day::ScrubDay;
 
@@ -26,6 +27,7 @@ pub const RUNNER_CONTROLLERS: [&str; 3] = ["cpuset", "memory", "pids"];
 const STATE_DIR: &str = "/var/lib/bencher-runner";
 const STATE_DIR_STAT: &str = "700 root:root directory";
 const RUNNER_BINARY: &str = "/usr/local/bin/runner";
+const RUNNER_SERVICE: &str = "bencher-runner";
 const ROOT: &str = "root";
 // Units with no use on a runner that could wake during a Job; each socket, path, or timer comes before any service it starts.
 const MASKED_UNITS: [&str; 34] = [
@@ -122,6 +124,7 @@ impl Desired {
         update_channel: UpdateChannel,
         scrub_day: Option<ScrubDay>,
         refresh_minute: Option<RefreshMinute>,
+        image_cache_gib: Option<ImageCacheGib>,
     ) -> Self {
         let mut rows = vec![
             Row::File(File::root(
@@ -149,6 +152,7 @@ impl Desired {
                 None,
             )),
             Row::File(File::root(KEY_FILE, 0o600, Content::Secret, None)),
+            Row::ImageCache(image_cache_gib),
             // Before the masks, whose daemon reloads would re-arm a timer on its old calendar.
             Row::Timer(Timer::Scrub(scrub_day)),
             Row::Timer(Timer::AptLists(refresh_minute)),
@@ -333,6 +337,8 @@ enum Row {
     File(File),
     /// A unit masked and stopped, so it never runs beside a Job.
     Masked(&'static str),
+    /// The image cache size in the runner unit's environment, the bytes of its `image_cache_gib` from runners.json.
+    ImageCache(Option<ImageCacheGib>),
     /// A timer on the runner's own time from runners.json, with no random delay.
     Timer(Timer),
     /// The runner's own cgroup, which it sets up at startup.
@@ -387,6 +393,7 @@ impl Row {
         match self {
             Self::File(file) => file.path.clone(),
             Self::Masked(unit) => format!("{unit} masked"),
+            Self::ImageCache(_) => format!("{RUNNER_SERVICE} {IMAGE_CACHE_SIZE}"),
             Self::Timer(timer) => format!("{} {}", timer.unit(), timer.purpose()),
             Self::Cgroup(Cgroup::Controllers) => format!("{BENCHER_CGROUP} controllers"),
             Self::Cgroup(Cgroup::Cpus) => format!("{BENCHER_CGROUP} CPUs"),
@@ -402,7 +409,8 @@ impl Row {
             Self::File(File {
                 content: Content::Secret,
                 ..
-            }) => SetBy::Start,
+            })
+            | Self::ImageCache(_) => SetBy::Start,
             Self::File(_) | Self::Masked(_) | Self::Timer(_) => SetBy::Host,
             Self::Cgroup(_) | Self::StateDir => SetBy::Runner,
             Self::Binary(_) => SetBy::Deploy,
@@ -416,6 +424,10 @@ impl Row {
             Self::File(file) => file.read(),
             Self::Masked(unit) => format!(
                 "printf '%s\\n%s\\n' \"$(systemctl is-enabled {unit} 2>&1)\" \"$(systemctl is-active {unit} 2>&1)\""
+            ),
+            // The value systemd merges from every drop-in, filtered on the runner to digits alone, so no runner key leaves it.
+            Self::ImageCache(_) => format!(
+                "systemctl show -p Environment --value {RUNNER_SERVICE} | tr ' ' '\\n' | grep -x '{IMAGE_CACHE_SIZE}=[0-9]*' || [ $? = 1 ]"
             ),
             Self::Timer(timer) => format!(
                 "systemctl show {} -p TimersCalendar -p RandomizedDelayUSec -p ActiveState",
@@ -455,6 +467,13 @@ impl Row {
         match self {
             Self::File(file) => file.problem(text),
             Self::Masked(_) => masked_problem(text),
+            Self::ImageCache(image_cache_gib) => {
+                if let Some(image_cache_gib) = image_cache_gib {
+                    image_cache_problem(text, *image_cache_gib)
+                } else {
+                    Some("runners.json sets no image_cache_gib for this runner".to_owned())
+                }
+            },
             Self::Timer(timer) => {
                 if let Some(calendar) = timer.calendar() {
                     timer_problem(text, &calendar)
@@ -485,7 +504,11 @@ impl Row {
                 "systemctl mask --now {unit} && if systemctl is-failed --quiet {unit}; then systemctl reset-failed {unit}; fi"
             )),
             Self::Timer(timer) => timer_write(timer.unit(), timer.drop_in(), &timer.calendar()?),
-            Self::Cgroup(_) | Self::StateDir | Self::Binary(_) | Self::Vendor { .. } => None,
+            Self::ImageCache(_)
+            | Self::Cgroup(_)
+            | Self::StateDir
+            | Self::Binary(_)
+            | Self::Vendor { .. } => None,
         }
     }
 
@@ -614,6 +637,13 @@ fn frame(index: usize) -> String {
 
 fn if_present(path: &str, command: &str) -> String {
     format!("if [ -e {path} ]; then {command}; else echo {ABSENT}; fi")
+}
+
+/// `text` is the image cache size in the runner unit's environment, which must be `image_cache_gib`'s bytes.
+fn image_cache_problem(text: &str, image_cache_gib: ImageCacheGib) -> Option<String> {
+    let want = format!("{IMAGE_CACHE_SIZE}={}", image_cache_gib.bytes());
+    let lines: Vec<&str> = text.lines().collect();
+    (lines != [want.as_str()]).then(|| format!("sets [{}], want {want}", lines.join(", ")))
 }
 
 /// A masked unit that was running reads `failed` once stopped.
@@ -802,6 +832,7 @@ fn binary_problem(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::image_cache_gib::gib;
 
     fn no_checksum(channel: UpdateChannel) -> anyhow::Result<Sha256> {
         anyhow::bail!("the {channel} checksum was not fetched")
@@ -986,6 +1017,33 @@ mod tests {
         );
     }
 
+    #[test]
+    fn the_runner_unit_sets_the_bytes_of_the_image_cache_gib() {
+        // Kills a check that wants the GiB unconverted, passes a cap of 0 the
+        // unit does not set, or passes a runner with no image_cache_gib.
+        let row = Row::ImageCache(Some(gib(64)));
+        assert_eq!(
+            problem(&row, "BENCHER_IMAGE_CACHE_SIZE=68719476736\n"),
+            None
+        );
+        assert_eq!(
+            problem(&row, "BENCHER_IMAGE_CACHE_SIZE=64").as_deref(),
+            Some("sets [BENCHER_IMAGE_CACHE_SIZE=64], want BENCHER_IMAGE_CACHE_SIZE=68719476736")
+        );
+        assert_eq!(
+            problem(&Row::ImageCache(Some(gib(0))), "").as_deref(),
+            Some("sets [], want BENCHER_IMAGE_CACHE_SIZE=0")
+        );
+        assert_eq!(
+            problem(
+                &Row::ImageCache(None),
+                "BENCHER_IMAGE_CACHE_SIZE=68719476736"
+            )
+            .as_deref(),
+            Some("runners.json sets no image_cache_gib for this runner")
+        );
+    }
+
     fn day(day: u8) -> ScrubDay {
         ScrubDay::try_from(day).unwrap()
     }
@@ -1091,7 +1149,7 @@ mod tests {
     fn host_pins_each_timer_before_a_mask_reloads_systemd() {
         // Kills a timer row listed after the masks, whose reloads would re-arm
         // it on its old calendar first.
-        let desired = Desired::new(UpdateChannel::Stable, Some(day(5)), Some(minute(7)));
+        let desired = Desired::new(UpdateChannel::Stable, Some(day(5)), Some(minute(7)), None);
         let (writes, _) = desired.writes(&desired.check(&BTreeMap::new(), &mut no_checksum));
         let first_mask = writes
             .iter()
@@ -1137,13 +1195,14 @@ mod tests {
         // Kills a drop-in that takes effect only at the next reboot, a missing
         // unit, and a drift check that `host` would try to write.
         let quiet = Desired(
-            Desired::new(UpdateChannel::Stable, Some(day(5)), Some(minute(7)))
+            Desired::new(UpdateChannel::Stable, Some(day(5)), Some(minute(7)), None)
                 .0
                 .into_iter()
                 .filter(|row| match row {
                     Row::File(file) => file.path.ends_with(QUIET_DROP_IN),
                     Row::Vendor { .. } => true,
                     Row::Masked(_)
+                    | Row::ImageCache(_)
                     | Row::Timer(_)
                     | Row::Cgroup(_)
                     | Row::StateDir
@@ -1218,6 +1277,7 @@ mod tests {
 
         use super::super::*;
         use super::no_checksum;
+        use crate::parser::image_cache_gib::gib;
         use crate::task::ssh::write_executable;
 
         /// The user and group running the test, which its files belong to.
@@ -1325,7 +1385,7 @@ mod tests {
             write(&key, "BENCHER_RUNNER_KEY=not-a-real-key\n", 0o644);
 
             let (user, group) = owner();
-            let table = Desired::new(UpdateChannel::Canary, None, None);
+            let table = Desired::new(UpdateChannel::Canary, None, None, None);
             let read = sh(dir, &table.script().replace(KEY_FILE, key.as_str())).unwrap();
             assert!(!read.contains("not-a-real-key"), "{read}");
             let findings = table.check(&framed::parse(&read), &mut no_checksum);
@@ -1542,7 +1602,7 @@ esac
             let fake = |script: &str| sh(dir, &format!("PATH={dir}:$PATH\n{script}"));
             let masks = || {
                 Desired(
-                    Desired::new(UpdateChannel::Canary, None, None)
+                    Desired::new(UpdateChannel::Canary, None, None, None)
                         .0
                         .into_iter()
                         .filter(|row| matches!(row, Row::Masked(_)))
@@ -1595,6 +1655,80 @@ esac
             );
             fs::write(dir.join("isolated"), "1-5\n").unwrap();
             assert!(!check().iter().any(Finding::failed));
+        }
+
+        #[test]
+        fn the_image_cache_read_takes_the_effective_size_and_no_runner_key() {
+            // `systemctl show` output from systemd 255. Kills a table without
+            // the row, a read of `credentials.conf` alone that misses an
+            // override drop-in, one that fails on a runner with no unit, and
+            // one that carries a runner key off the runner.
+            let dir = tempfile::tempdir().unwrap();
+            let dir = Utf8Path::from_path(dir.path()).unwrap();
+            let environment = dir.join("environment");
+            write_executable(
+                &dir.join("systemctl"),
+                &format!(
+                    r#"#!/bin/sh
+case "$*" in
+  "show -p Environment --value bencher-runner") cat {environment} ;;
+  *) exit 1 ;;
+esac
+"#
+                ),
+            )
+            .unwrap();
+            let check = |image_cache_gib, shown: &str| {
+                write(&environment, shown, 0o644);
+                let desired = Desired(
+                    Desired::new(UpdateChannel::Canary, None, None, Some(image_cache_gib))
+                        .0
+                        .into_iter()
+                        .filter(|row| matches!(row, Row::ImageCache(_)))
+                        .collect(),
+                );
+                assert_eq!(desired.0.len(), 1);
+                let read = sh(dir, &format!("PATH={dir}:$PATH\n{}", desired.script())).unwrap();
+                assert!(!read.contains("bencher_runner_"), "{read}");
+                desired
+                    .check(&framed::parse(&read), &mut no_checksum)
+                    .pop()
+                    .unwrap()
+                    .problem
+            };
+
+            // `credentials.conf` as `start` writes it, then a legacy drop-in with the runner key.
+            let started = "BENCHER_HOST=https://api.example.com/ BENCHER_RUNNER=runner-a BENCHER_IMAGE_CACHE_SIZE=68719476736 BENCHER_RUNNER_KEY=bencher_runner_0123456789abcdef\n";
+            assert_eq!(check(gib(64), started), None);
+            assert_eq!(
+                check(gib(128), started).as_deref(),
+                Some(
+                    "sets [BENCHER_IMAGE_CACHE_SIZE=68719476736], want BENCHER_IMAGE_CACHE_SIZE=137438953472"
+                )
+            );
+            // An `override.conf` with `Environment=BENCHER_IMAGE_CACHE_SIZE=0 BENCHER_RUNNER_KEY=...`.
+            assert_eq!(
+                check(
+                    gib(64),
+                    "BENCHER_HOST=https://api.example.com/ BENCHER_RUNNER=runner-a BENCHER_IMAGE_CACHE_SIZE=0 BENCHER_RUNNER_KEY=bencher_runner_0123456789abcdef\n"
+                )
+                .as_deref(),
+                Some("sets [BENCHER_IMAGE_CACHE_SIZE=0], want BENCHER_IMAGE_CACHE_SIZE=68719476736")
+            );
+            // A runner key set as the image cache size itself.
+            assert_eq!(
+                check(
+                    gib(64),
+                    "BENCHER_HOST=https://api.example.com/ BENCHER_RUNNER=runner-a BENCHER_IMAGE_CACHE_SIZE=bencher_runner_0123456789abcdef\n"
+                )
+                .as_deref(),
+                Some("sets [], want BENCHER_IMAGE_CACHE_SIZE=68719476736")
+            );
+            // No runner unit.
+            assert_eq!(
+                check(gib(64), "\n").as_deref(),
+                Some("sets [], want BENCHER_IMAGE_CACHE_SIZE=68719476736")
+            );
         }
 
         #[test]

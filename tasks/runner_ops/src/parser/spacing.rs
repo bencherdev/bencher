@@ -14,11 +14,7 @@ where
     T: Copy + fmt::Display,
     F: Fn(T, T) -> u8,
 {
-    let mut problems: Vec<String> = values
-        .iter()
-        .filter(|(_, value)| value.is_none())
-        .map(|(runner, _)| format!("{runner} has no {field}"))
-        .collect();
+    let mut problems = missing(values, field);
     let set: Vec<(&RunnerResourceId, T)> = values
         .iter()
         .filter_map(|(runner, value)| value.map(|value| (runner, value)))
@@ -34,4 +30,13 @@ where
         }
     }
     problems
+}
+
+/// Every runner with no `field` in runners.json.
+pub fn missing<T>(values: &[(RunnerResourceId, Option<T>)], field: &str) -> Vec<String> {
+    values
+        .iter()
+        .filter(|(_, value)| value.is_none())
+        .map(|(runner, _)| format!("{runner} has no {field}"))
+        .collect()
 }
