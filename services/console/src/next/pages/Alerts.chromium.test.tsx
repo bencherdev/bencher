@@ -28,6 +28,7 @@ import { NEXT_PROJECTS } from "../paths";
 import { ProjectContext } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { bootstrapOf } from "../settings/testing";
+import { linesDrawn, readLinesTopToBottom } from "../report/testing";
 import Alerts from "./Alerts";
 
 const PATH = `${NEXT_PROJECTS}/hashbrown/alerts`;
@@ -916,9 +917,7 @@ test("the next batch waits for a change in flight", async () => {
 		top: document.documentElement.scrollHeight,
 		behavior: "instant",
 	});
-	for (let frames = 0; frames < 3; frames++) {
-		await new Promise((resolve) => requestAnimationFrame(resolve));
-	}
+	await linesDrawn(document);
 	expect(lists()).toHaveLength(1);
 	answer?.();
 	await expect.poll(() => lists().length).toBe(2);
@@ -1015,16 +1014,8 @@ const STATUS_BUTTON =
 /** Each alert row's name, top to bottom, read a screen at a time. */
 const alertNamesTopToBottom = async () => {
 	const names = new Map<number, string>();
-	for (
-		let top = 0;
-		top <= document.documentElement.scrollHeight;
-		top += window.innerHeight / 2
-	) {
-		window.scrollTo({ top, behavior: "instant" });
-		await new Promise((resolve) =>
-			requestAnimationFrame(() => requestAnimationFrame(resolve)),
-		);
-		for (const row of document.querySelectorAll("tbody tr[aria-rowindex]")) {
+	await readLinesTopToBottom(document, (rows) => {
+		for (const row of rows) {
 			const name = row
 				.querySelector(STATUS_BUTTON)
 				?.getAttribute("aria-label")
@@ -1033,7 +1024,7 @@ const alertNamesTopToBottom = async () => {
 				names.set(Number(row.getAttribute("aria-rowindex")), name);
 			}
 		}
-	}
+	});
 	return [...names].sort(([a], [b]) => a - b).map(([, name]) => name);
 };
 

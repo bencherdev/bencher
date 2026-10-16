@@ -26,6 +26,7 @@ import { decodeQuery } from "../query/query";
 import { fakeApi } from "../reports/testing";
 import { expectNameStartsWithText } from "../ui/testing";
 import { HEIGHTS } from "../report/LineTable";
+import { linesDrawn, readLinesTopToBottom } from "../report/testing";
 import { alertsBatch } from "../thresholds/query";
 import {
 	THRESHOLD,
@@ -488,9 +489,6 @@ const scrollToAlerts = async () => {
 	alertsTable()
 		.element()
 		.scrollIntoView({ block: "start", behavior: "instant" });
-	await new Promise((resolve) =>
-		requestAnimationFrame(() => requestAnimationFrame(resolve)),
-	);
 };
 
 for (const width of [900, 390, 360]) {
@@ -763,20 +761,8 @@ const dismissBench = (id: number) =>
 /** The rows' names, top to bottom, read a screen at a time. */
 const namesTopToBottom = async () => {
 	const names = new Map<number, string>();
-	const frame = () =>
-		new Promise((resolve) =>
-			requestAnimationFrame(() => requestAnimationFrame(resolve)),
-		);
-	for (
-		let top = 0;
-		top <= document.documentElement.scrollHeight;
-		top += window.innerHeight / 2
-	) {
-		window.scrollTo({ top, behavior: "instant" });
-		await frame();
-		for (const row of alertsTable()
-			.element()
-			.querySelectorAll("tbody tr[aria-rowindex]")) {
+	await readLinesTopToBottom(alertsTable().element(), (rows) => {
+		for (const row of rows) {
 			const name = row
 				.querySelector(".lr-twist")
 				?.getAttribute("aria-label")
@@ -785,7 +771,7 @@ const namesTopToBottom = async () => {
 				names.set(Number(row.getAttribute("aria-rowindex")), name);
 			}
 		}
-	}
+	});
 	return [...names]
 		.sort(([a], [b]) => a - b)
 		.map(([index, name]) => `${index} ${name}`);
@@ -846,9 +832,7 @@ test("the next batch of a threshold's alerts waits for a change in flight", asyn
 	await expect.element(dismissBench(0)).toBeVisible();
 	await dismissBench(0).click();
 	toBottom();
-	for (let frames = 0; frames < 3; frames++) {
-		await new Promise((resolve) => requestAnimationFrame(resolve));
-	}
+	await linesDrawn(alertsTable().element());
 	await wait(100);
 	expect(lists()).toHaveLength(1);
 	release();

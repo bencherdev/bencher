@@ -12,7 +12,7 @@ use futures_concurrency as _;
 use futures_util as _;
 #[cfg(feature = "sentry")]
 use sentry as _;
-use serde_yaml as _;
+use serde_json as _;
 use slog as _;
 use thiserror as _;
 use tokio_rustls as _;

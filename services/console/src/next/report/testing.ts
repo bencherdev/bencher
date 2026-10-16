@@ -1,3 +1,4 @@
+import { expect } from "vitest";
 import type {
 	JsonConsoleReport,
 	JsonConsoleReportLine,
@@ -137,3 +138,30 @@ export const batchOf = (report: JsonConsoleReport, url: URL) => {
 		lines: report.lines.slice((page - 1) * size, page * size),
 	};
 };
+
+/** Scrolls the window down half a screen at a time and hands `read` the line rows drawn on each screen. */
+export const readLinesTopToBottom = async (
+	root: ParentNode,
+	read: (rows: NodeListOf<Element>) => void,
+) => {
+	for (
+		let top = 0;
+		top <= document.documentElement.scrollHeight;
+		top += window.innerHeight / 2
+	) {
+		window.scrollTo({ top, behavior: "instant" });
+		await linesDrawn(root);
+		read(root.querySelectorAll("tbody tr[aria-rowindex]"));
+	}
+};
+
+/** Waits for the line rows on screen to be drawn by polling, since instant scrolls chained to animation frames can stop a headless Chromium page's frames for good on a starved CPU. */
+export const linesDrawn = (root: ParentNode) =>
+	expect.poll(() => spacerOnScreen(root), { timeout: 5_000 }).toBe(false);
+
+/** Whether the window shows any room a line table holds for rows it has not drawn. */
+const spacerOnScreen = (root: ParentNode) =>
+	[...root.querySelectorAll(".lr-spacer")].some((spacer) => {
+		const { top, bottom } = spacer.getBoundingClientRect();
+		return bottom - top >= 1 && bottom > 0 && top < window.innerHeight;
+	});
